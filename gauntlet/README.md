@@ -74,6 +74,10 @@ How they actually talk — sentence length, register, whether they swear, what t
 - Findings + reports: `gauntlet/runs/<run-id>/`
 - Judge verdict: `gauntlet/runs/<run-id>/VERDICT.md`
 - Lens rulings: `gauntlet/runs/<run-id>/LENSES.md`, promoted into `gauntlet/lens-spec.md` on `adopt`
+- **Concept docs: `docs/concepts/`** — where a proposal goes when it changes a shared contract and
+  the evidence has not been judged. Created 2026-08-12 with `chain-and-independence.md`; the skill
+  says `drain` must CREATE this home rather than assume it, because a home no mode ever wrote is how
+  a repo accumulates undrained runs.
 - Declined proposals: `gauntlet/declined.md`
 - Methodic edits land in the real files (`pipeline/*.md`, `app/_phases/research/*.ts`,
   `knowledge/*.md`) — never in a parallel document that describes what the methodic should be
