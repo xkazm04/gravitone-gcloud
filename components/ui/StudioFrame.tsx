@@ -9,7 +9,10 @@ import { DEV_AUTH } from "@/lib/devAuth";
 // The module list for this app. Projects is the shelf; the studio is opened
 // from a row on it and therefore has no context-free link of its own — /studio
 // without a project is not a page, it is a redirect back here.
-export const MODULES = [{ label: "Projects", href: "/projects" }];
+export const MODULES = [
+  { label: "Projects", href: "/projects" },
+  { label: "Library", href: "/library" },
+];
 
 /** Obsidian app shell: aurora atmosphere + top nav + the account control.
  *
