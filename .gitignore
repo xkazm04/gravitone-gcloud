@@ -56,3 +56,6 @@ uat/runs/*/captures/
 # /research working cache (craft-mode corpora live in knowledge/, not here)
 .research-cache/
 .next-drive/
+
+# Driven UI captures. Regenerable from the drive suites; heavy in git.
+pipeline/runs/*/captures/
