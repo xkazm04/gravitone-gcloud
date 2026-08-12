@@ -1,0 +1,777 @@
+{
+  "$schema": "../../../../../pipeline/NOTEBOOK-SCHEMA.md",
+  "id": "the-cost-exchange-ratio-is-a-property-of-the-layer",
+  "topic": "The drone-versus-interceptor cost exchange ratio is the most repeated statistic in air defence, and it is a property of which layer engages — not of the weapons.",
+  "researched": "2026-08-12",
+  "researcher": "conflict-osint (Dana Okonkwo) via WebSearch/WebFetch — Gauntlet L2 empirical",
+  "template_intent": "mid-educational-video",
+  "subject_domain": ["geopolitics", "defence-economics", "technology"],
+  "question": "A $4 million interceptor shooting down a $20,000 drone is presented as an unsustainable trade. Is the ratio real, and is it measuring what people think it measures?",
+  "verdict": "The ratio is arithmetically real and it is the wrong instrument: it is a property of which defensive layer engages, not of the two weapons, and over the same month the same engagement can be computed at 387:1 against the defender or 25:1 for them. The figure that is quoted is the worst cell of a matrix, and the cell is being read as the war.",
+
+  "prior": "Written before the first search. I expected the ratio to be real in direction and load-bearing on a contested denominator — that the cheap number excludes the operator, the training and the misses, and that the expensive number is a flyaway procurement figure rather than a replacement cost. I expected attrition and interception tallies to come from belligerents and to be uncheckable. I did not expect to find a published, mainstream counter-literature; I expected to have to construct the opposition.",
+  "prior_outcome": "discovery, twice over. (1) The counter-case is not merely findable, it is mainstream — CSIS and the Modern War Institute both publish it, which refutes my own L1 expectation and the brief's Phase-1 fallback pressure alike. (2) The load-bearing defect is not the denominator I predicted. It is that the ratio has no fixed value at all: the layer that engages moves it by roughly four orders of magnitude, and the quoted figure is a selection, not a measurement. My prior about belligerent counting was a mirror and is confirmed unchanged.",
+
+  "domains": [
+    "the-price — unit costs on both sides, and the spread inside each",
+    "the-baseline — where this ratio sits in the historical distribution of air-defence cost exchange (MANDATORY row)",
+    "the-engagement — which layer actually engages what, and the plumbing of the kill chain",
+    "the-count — who counts an interception, by what method, and who checks",
+    "industrial-base — production rates and magazine depth on both sides",
+    "procurement-politics — budget lines authorised versus delivered",
+    "the-counter-case — the strongest published argument that the ratio is the wrong metric (MANDATORY row)"
+  ],
+
+  "tension": {
+    "expectation": "A cheap attack drone against an expensive interceptor is a new and unsustainable cost exchange — the defender is being bankrupted one shot at a time, and this is a distinctive feature of the drone era.",
+    "reality": "The ratio has no single value. Computed from published unit costs over the same month of the same war, it runs from 387:1 against the defender (a PAC-3 MSE against a low-end Shahed estimate) to about 25:1 in the defender's favour (a $2,000 interceptor drone against a $50,000 Shahed) — a span of roughly 9,700x, driven entirely by which layer engages. And the adverse end sits inside a distribution that has been running since 2011: Iron Dome's own recomputable band is 62.5:1 to 266.7:1.",
+    "why_it_is_a_tension": "Shape 5 — the category error. The subject is being measured with an instrument that returns a different answer depending on an input nobody quotes. It is not that the famous number is false; it is that it is one cell of a matrix being read as a scalar, and the baseline row shows the adverse cell is not new. DOWNGRADED from high to moderate per Phase 2: the counter-case at `sm-value-not-cost` survives Phase 6 — CSIS's and the Modern War Institute's argument that the correct comparison is the interceptor against the LOSS PREVENTED, not against the threat destroyed, stands unrefuted and is not answered by anything I found. It does not win, because it does not dissolve the magazine-depth problem, but it survives, so the strength comes down one step.",
+    "strength": "moderate — the premise is checkable and widely held; it is not demonstrably wrong, it is under-determined, and a surviving counter-case took it down one step",
+    "strength_note": "FIELD CONFLICT, recorded rather than resolved. `pipeline/NOTEBOOK-SCHEMA.md:55` still defines high as 'checkable, widely held, and demonstrably wrong' — three conjoined properties. `pipeline/RESEARCH-PROMPT.md:79` now says strength 'stays a judgement about how checkable the tension is, not how large it is'. Those are two different fields with one name. I graded against the prompt, because it is the later document, and I am saying so rather than picking silently."
+  },
+
+  "normal_range": "Air-defence cost exchange has run heavily adverse for the entire modern era of the metric. Iron Dome, in continuous operation since 2011, is quoted at 100:1–500:1 adverse; its own published component prices recompute to 62.5:1–266.7:1 (see f-irondome-recompute). The PAC-3-versus-Shahed band of 20:1–387:1 overlaps that distribution across most of its range. This instance is NOT outside normal variation for the adverse cell. What is outside normal variation is the FAVOURABLE cell — a defender fielding a $2,000 interceptor against a $10,000–$50,000 threat is the new observation, and it is the one that is not being quoted.",
+
+  "facts": [
+    {
+      "id": "f-pac3-unit",
+      "claim": "The US Army's FY2026 missile procurement justification prices the PAC-3 MSE interceptor at approximately $3.871 million per missile in flyaway terms",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "US Army FY2026 Missile Procurement Budget Justification Book", "evidence_class": "primary", "locator": "asafm.army.mil/Portals/72/.../Missile Procurement Army.pdf — PAC-3 MSE line item", "interested": true },
+        { "name": "armyrecognition.com; thedefensenews.com — reporting the justification book figure", "evidence_class": "secondary", "interested": false }
+      ],
+      "confidence": "medium",
+      "confidence_note": "The primary document is published and I NAMED it but did not READ it — the host returned HTTP 403 to this run's fetch tool on 2026-08-12. Two independent secondary reports agree on $3.871m, which is why this is medium and not low. It is NOT high, because the figure I hold is a restatement and the exhibit line, the quantity it divides by, and whether it is a flyaway or gross weapon-system unit cost are all unread. See research_gaps.",
+      "as_of": "2026-08-12",
+      "event_date": "2025-06",
+      "period": "FY2026 procurement year",
+      "unit": "USD per missile",
+      "denominator": "flyaway unit cost — the round plus ancillary equipment and a production-resilience allowance; NOT a gross weapon-system unit cost, which would include the launcher, radar and support and would be larger",
+      "subject": "a US procurement programme; no unit, formation or individual"
+    },
+    {
+      "id": "f-shahed-cost-spread",
+      "claim": "Published estimates of a Shahed-136 unit cost span $10,000 to $193,000 — a factor of 19.3 between the low and high figure for the same airframe",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "twz.com — 'What Does A Shahed-136 Really Cost?'", "evidence_class": "secondary", "interested": false },
+        { "name": "phenomenalworld.org — Batmanghelidj, 'Drones Like Bicycles'", "evidence_class": "secondary", "interested": false },
+        { "name": "quwa.org — Shahed cost-exchange analysis", "evidence_class": "aggregator", "interested": false }
+      ],
+      "confidence": "high",
+      "confidence_note": "High confidence in the SPREAD, which is the claim. Low confidence in any single point inside it, which is why the claim is written as the spread. The estimates are not the same object measured differently: $193,000 is a negotiated export price for 6,000 units, ~$80,000 is Russian domestic assembly post-upgrade, $20,000–$50,000 is an Iranian factory build-run estimate, and $10,000 is the figure most often quoted in general reporting.",
+      "as_of": "2026-08-12",
+      "event_date": "2022-2026",
+      "period": "estimates published across the programme's life; not a single vintage",
+      "unit": "USD per airframe",
+      "denominator": "airframe and warhead as delivered. EXCLUDES launch infrastructure, transport, the crew, and the share of the salvo that is decoy airframes carrying no warhead.",
+      "subject": "a weapons programme; no unit or individual",
+      "qualifies": ["f-ratio-pac3", "f-ratio-interceptor"],
+      "note": "This is the fact the famous ratio hides. Every published ratio picks one number from this range and does not say which."
+    },
+    {
+      "id": "f-shahed-export-price",
+      "claim": "Iran's initial asking price to Russia was reported at $375,000 per airframe, settling at $193,000 each for a 6,000-unit order and $290,000 each for a 2,000-unit order",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "twz.com — 'What Does A Shahed-136 Really Cost?'", "evidence_class": "secondary", "interested": false }
+      ],
+      "confidence": "low",
+      "confidence_note": "Contract terms between two states, neither of which has published them. This is reporting of a leak or an assessment; I cannot see the document and neither can the reader. Load-bearing: false, deliberately — it is context for the spread, and nothing in the argument stands on it.",
+      "as_of": "2026-08-12",
+      "event_date": "2022-2023",
+      "period": "per-order pricing at contract",
+      "unit": "USD per airframe",
+      "denominator": "unit price at the stated order quantity; the two quantities are priced inversely, which is itself the tell that this is a negotiated price and not a cost",
+      "subject": "two states as parties to a transfer; no unit or individual named"
+    },
+    {
+      "id": "f-interceptor-cost",
+      "claim": "Ukrainian purpose-built anti-Shahed interceptor drones are quoted at $1,000 to $3,500 per unit, with named systems at $2,000 (ZIRKA), ~$2,300 (P1-SUN, January 2026) and ~$3,500 (MaXon fixed-wing)",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "militarytimes.com; euromaidanpress.com; defence-blog.com", "evidence_class": "secondary", "interested": false },
+        { "name": "manufacturer and Ukrainian government statements quoted within those reports", "evidence_class": "self-published", "interested": true }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Medium, and the reason matters: every one of these prices originates with a manufacturer seeking orders or a government seeking procurement support, and is then restated by press. That is `self-published` + `interested` wearing a `secondary` coat. It is not vendor research in the schema's sense and does not take the automatic vendor demotion — but a unit price announced by the party selling it is a claim, not a cost, and I have no invoice.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-01 to 2026-07",
+      "period": "unit prices quoted during 2026",
+      "unit": "USD per interceptor airframe",
+      "denominator": "airframe only. EXCLUDES the detection and cueing chain that tells it where to go, which is the expensive half of the system and is not in any quoted price.",
+      "subject": "manufacturers and a defence ministry; no unit or individual"
+    },
+    {
+      "id": "f-uaf-june-claim",
+      "claim": "The Ukrainian Air Force REPORTED, in its daily channel reporting for June 2026, that 5,749 Shahed-type UAVs were launched and 5,285 were 'shot down or suppressed', leaving 464 impacts",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Ukrainian Air Force official daily reports (t.me/kpszsu; facebook.com/kpszsu)", "evidence_class": "self-published", "locator": "daily reports, June 2026, compiled", "interested": true },
+        { "name": "Institute for Science and International Security — monthly Shahed deployment analysis", "evidence_class": "secondary", "locator": "isis-online.org monthly analysis, June 2026 table", "interested": false }
+      ],
+      "confidence": "high",
+      "confidence_note": "HIGH confidence that the Air Force said this. That is the entire claim, and `kind: utterance` is what lets me grade it high without asserting the number. Confidence that 5,285 Shaheds were destroyed is LOW and has no home on this card — see f-no-independent-verification and f-suppressed-denominator. This is the exact card that had no honest shape at L1.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-06",
+      "period": "calendar month, June 2026, and only the reporting window — see f-reporting-window",
+      "unit": "count of airframes",
+      "denominator": "Shahed-type UAVs only, as classified by the reporting party. 5285/5749 = 91.93%, which is the 92% the analysis states — the arithmetic is recomputable and correct. 5749-5285 = 464, also correct.",
+      "subject": "a belligerent's own air-defence performance; no unit or individual named",
+      "qualifies": [],
+      "note": "The interested party is reporting its own success rate against its own count of the attempt. Both the numerator and the denominator are supplied by the same interested party. That is not a reason to discard it; it is a reason it may never be rendered as a measurement."
+    },
+    {
+      "id": "f-suppressed-denominator",
+      "claim": "The reported category 'shot down/suppressed' combines kinetically destroyed UAVs with UAVs neutralised by electronic warfare or other suppression, in one number",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Institute for Science and International Security — stated methodology of its monthly analysis", "evidence_class": "secondary", "locator": "methodology section, monthly Shahed deployment analysis", "interested": false }
+      ],
+      "confidence": "high",
+      "confidence_note": "High — this is a documented methodological statement, quoted directly, not an inference about it.",
+      "as_of": "2026-08-12",
+      "event_date": "2026",
+      "period": "the whole reporting series",
+      "unit": "definitional; no quantity",
+      "denominator": "this fact IS a denominator correction — it establishes that the 5,285 in f-uaf-june-claim is not a count of destroyed airframes",
+      "subject": "a counting methodology; no unit or individual",
+      "qualifies": ["f-uaf-june-claim", "f-ratio-pac3", "f-ratio-interceptor"],
+      "note": "This is why no interceptor-cost-per-kill can be computed from the published figures at all. A jammed drone that crashes unengaged and a drone shot down by a $2,000 interceptor are the same row, so the cost of the average intercept is not derivable. Every published cost-per-intercept for this campaign is computed on a number that does not mean intercepts."
+    },
+    {
+      "id": "f-isis-derives-from-belligerent",
+      "claim": "The independent institute's monthly Shahed analysis derives its launch, interception and impact counts exclusively from official Ukrainian Air Force daily reporting, and states so",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Institute for Science and International Security — its own stated methodology", "evidence_class": "self-published", "locator": "'According to Ukrainian Air Force reporting compiled for this assessment'; 'Official Ukrainian Air Force daily reports compiled in Russian strikes in Ukraine (2026)'", "interested": false }
+      ],
+      "confidence": "high",
+      "confidence_note": "High, and it is to the institute's credit: they disclose it plainly in the methodology. The defect is not theirs. The defect is that a citation to a respected non-proliferation institute reads as independent corroboration of a belligerent's number when it is a restatement of it.",
+      "as_of": "2026-08-12",
+      "event_date": "2026",
+      "period": "August 2025 – June 2026 series",
+      "unit": "none — a provenance fact",
+      "denominator": "n/a",
+      "subject": "a research institute's method; no unit or individual",
+      "qualifies": ["f-uaf-june-claim"],
+      "note": "THE LAUNDERING PATH, stated as a fact rather than as a complaint. This is my pet peeve #1 with a citation attached: a belligerent claim becomes 'according to analysis by' in one hop, and the hop is honestly disclosed by the analyst and silently dropped by everyone downstream."
+    },
+    {
+      "id": "f-no-independent-verification",
+      "claim": "No independent body validates either belligerent's aggregate interception claims, and the counting methodologies of both remain undisclosed",
+      "kind": "absence",
+      "load_bearing": true,
+      "sources": [
+        { "name": "ABC News — explicit statement that it cannot independently verify aerial engagement data provided by either armed force", "evidence_class": "secondary", "interested": false },
+        { "name": "independent defence-analysis commentary on both sides' reported interception rates", "evidence_class": "secondary", "interested": false }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Medium, and the reason is structural: I am asserting a negative from one pass of searching. What I can state at high confidence is that I searched for a validating body and found none, and that at least one major outlet states in its own copy that it cannot verify these figures. What I cannot state is that no such body exists anywhere.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-12",
+      "period": "as of the search date",
+      "unit": "n/a",
+      "denominator": "n/a",
+      "subject": "the verification ecosystem; no unit or individual",
+      "search_scope": "WebSearch, 2026-08-12, English-language, query: 'independent verification Ukrainian air defense interception claims analysts unverifiable drone shootdown figures'. WHAT WOULD COUNT AS THIS ABSENCE ENDING: a named third party publishing an interception count derived from something other than a belligerent's daily report — impact-site cataloguing, wreckage recovery counts, insurance or municipal damage records, or a monitoring mission with observers. None was found. NOT SEARCHED: Ukrainian- and Russian-language sources, subscription defence-intelligence products, and academic literature behind paywalls.",
+      "note": "This is the fact my whole discipline rests on and at L1 it had no shape at all. It is not an unknown — it is not something I failed to settle. It is a settled finding about what the world does not contain, and it belongs in the script."
+    },
+    {
+      "id": "f-uaf-stopped-publishing",
+      "claim": "The Ukrainian Air Force stopped consistently publishing complete 24-hour monthly interception counts after May 2026, while continuing to publish launch counts",
+      "kind": "absence",
+      "load_bearing": false,
+      "sources": [
+        { "name": "Institute for Science and International Security — monthly analysis, noting July 2026 launch figures with the interception series discontinued", "evidence_class": "secondary", "interested": false }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Medium. The discontinuity is reported by the analyst tracking the series; I have not walked the daily channel myself to confirm it, which is exactly the check that would raise this to high.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-06 onward",
+      "period": "June–August 2026",
+      "unit": "n/a",
+      "denominator": "n/a",
+      "subject": "a belligerent's disclosure practice; no unit or individual",
+      "search_scope": "Derived from the tracker's own note, 2026-08-12. WHAT WOULD COUNT AS THIS ABSENCE ENDING: resumption of complete 24-hour interception counts in the official daily channel, or the publication of a back-series. NOT SEARCHED: the primary Telegram and Facebook channels directly.",
+      "note": "The series that produced the 92% figure is no longer being published in the form that produced it. I am recording this and NOT interpreting it — I do not know why, and every available explanation is a motive claim."
+    },
+    {
+      "id": "f-reporting-window",
+      "claim": "The daily reports the interception series is built from cover approximately 18:00 to 08:00–09:00 the following morning, so daytime attacks may fall outside the reporting window",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Institute for Science and International Security — stated methodological caveat", "evidence_class": "secondary", "interested": false }
+      ],
+      "confidence": "high",
+      "confidence_note": "High — quoted methodological caveat, stated by the compiler against its own numbers.",
+      "as_of": "2026-08-12",
+      "event_date": "2026",
+      "period": "the whole series",
+      "unit": "hours per day covered",
+      "denominator": "approximately 14–15 of every 24 hours",
+      "subject": "a reporting practice; no unit or individual",
+      "qualifies": ["f-uaf-june-claim"],
+      "note": "The denominator of the famous 92% is not 'Shaheds launched'. It is 'Shaheds launched during the overnight window and reported'."
+    },
+    {
+      "id": "f-russia-mirror-claim",
+      "claim": "Russia's defence ministry REPORTED downing approximately 64,000 Ukrainian drones over a six-month period",
+      "kind": "utterance",
+      "load_bearing": false,
+      "sources": [
+        { "name": "Russian Ministry of Defence statements", "evidence_class": "self-published", "interested": true },
+        { "name": "defence-blog.com reporting them", "evidence_class": "secondary", "interested": false }
+      ],
+      "confidence": "high",
+      "confidence_note": "High that the claim was made. No confidence at all in the figure, and none is expressed here. `kind: utterance` is doing the whole job.",
+      "as_of": "2026-08-12",
+      "event_date": "2025-2026",
+      "period": "a stated six-month window; the exact months are not given in what I read",
+      "unit": "count of airframes",
+      "denominator": "'Ukrainian drones' — an unbounded category spanning strike UAVs, reconnaissance quadcopters and first-person-view munitions, which are not comparable objects and are not separated",
+      "subject": "a belligerent's own air-defence performance; no unit or individual named",
+      "note": "Included as the symmetry check. Both sides claim extraordinary interception rates against each other, both are unverifiable by the same argument, and a script that treats one side's number as data and the other's as propaganda has made a choice it cannot defend from the evidence."
+    },
+    {
+      "id": "f-category-mismatch-57k",
+      "claim": "A widely-circulated monthly figure of ~57,400 'Russian aerial targets' destroyed is a different and much broader category than the ~5,053 Shahed-type UAVs claimed for the same month",
+      "kind": "derived",
+      "load_bearing": true,
+      "derived_from": ["f-uaf-june-claim"],
+      "method": "Arithmetic on two claimed May 2026 figures published in the same reporting ecosystem: 5,053 Shahed-type claimed against 57,400 aerial targets claimed. 5053/57400 = 8.80%. 57400/5053 = 11.36. So Shahed-type UAVs are approximately 8.8% of the broad figure, and any cost calculation that applies a Shahed price to the broad figure overstates by approximately 11.4x.",
+      "sources": [
+        { "name": "united24media.com (57,400 monthly aerial targets, May 2026); news.az (5,053 Shahed, May 2026)", "evidence_class": "aggregator", "interested": false },
+        { "name": "underlying Ukrainian Air Force claims restated by both", "evidence_class": "self-published", "interested": true }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Medium. The arithmetic is exact and recomputable; the inputs are two aggregator restatements of the same interested party's claims, published days apart, and I have not confirmed that both cover an identical May window. If the windows differ the ratio moves and the direction of the point does not.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-05",
+      "period": "calendar month, May 2026",
+      "unit": "ratio, dimensionless",
+      "denominator": "5,053 Shahed-type as a share of 57,400 claimed aerial targets of all classes",
+      "subject": "two published counts; no unit or individual",
+      "contests": [],
+      "note": "The two numbers circulate side by side in the same week and are not the same object. This is the arithmetic trap the schema's new unit/period/denominator rule exists to catch, and it caught it."
+    },
+    {
+      "id": "f-ratio-pac3",
+      "claim": "The PAC-3-against-Shahed cost exchange, computed from published unit costs, is 20:1 to 387:1 against the defender depending on which Shahed estimate is used",
+      "kind": "derived",
+      "load_bearing": true,
+      "derived_from": ["f-pac3-unit", "f-shahed-cost-spread"],
+      "method": "$3,871,000 divided by each published Shahed estimate. /$193,000 = 20.06. /$50,000 = 77.42. /$20,000 = 193.55. /$10,000 = 387.10. One interceptor per engagement assumed, which is the assumption every published version of this ratio makes and none of them states; a two-round salvo doubles every figure.",
+      "sources": [
+        { "name": "computed by this run from f-pac3-unit and f-shahed-cost-spread", "evidence_class": "primary", "locator": "arithmetic shown in `method`", "interested": true }
+      ],
+      "confidence": "medium",
+      "confidence_note": "The arithmetic is exact. The confidence is medium because both inputs are medium-or-spread and because the one-round-per-engagement assumption is unstated in every source and unverifiable here. A derived fact cannot be more confident than its inputs and this one is not.",
+      "as_of": "2026-08-12",
+      "event_date": "2026",
+      "period": "FY2026 procurement prices against 2022-2026 threat estimates — the two are NOT the same vintage, and that is a defect in every published version of this ratio including this one",
+      "unit": "ratio, dimensionless",
+      "denominator": "one interceptor against one threat airframe, flyaway costs both sides, excluding the radar, the crew, the launcher and the magazine on the defender's side and the launch infrastructure and decoy share on the attacker's",
+      "subject": "two weapons programmes; no unit or individual",
+      "contests": ["f-ratio-interceptor"],
+      "note": "This is the famous number. Note the 19.3x spread inside it before anyone has chosen a layer."
+    },
+    {
+      "id": "f-ratio-interceptor",
+      "claim": "The interceptor-drone-against-Shahed cost exchange, computed from published unit costs, is 2.9:1 to 25:1 in the DEFENDER's favour",
+      "kind": "derived",
+      "load_bearing": true,
+      "derived_from": ["f-interceptor-cost", "f-shahed-cost-spread"],
+      "method": "$2,000 against $50,000 = the defender spends 1/25th, i.e. 25:1 favourable. $3,500 against $10,000 = 2.857:1 favourable. Against the $193,000 export price, $2,000 gives 96.5:1 favourable. One interceptor per engagement assumed, as above — and this assumption is far weaker here, because a $2,000 airframe has a materially lower single-shot probability of kill than a PAC-3 and multiple interceptors per target is the expected case.",
+      "sources": [
+        { "name": "computed by this run from f-interceptor-cost and f-shahed-cost-spread", "evidence_class": "primary", "locator": "arithmetic shown in `method`", "interested": true }
+      ],
+      "confidence": "low",
+      "confidence_note": "LOW, and flagged for a second source per the quality bar. It is load-bearing and it is low, which is the most dangerous combination a notebook can hold, and I am not going to grade it up. Reasons: the interceptor prices originate with the sellers; the number of interceptors expended per kill is not published by anyone; and the detection-and-cueing chain that makes a $2,000 airframe work is excluded from the price and is not cheap. The DIRECTION of this fact is solid. The magnitude is not, and the script may use the direction only — see u-interceptor-pk and o-state-the-direction.",
+      "as_of": "2026-08-12",
+      "event_date": "2026",
+      "period": "2026 interceptor prices against 2022-2026 threat estimates — mismatched vintages, same defect as its sibling",
+      "unit": "ratio, dimensionless",
+      "denominator": "one interceptor against one threat airframe, airframe cost only both sides. The exclusions are LARGER on this side of the comparison than on the PAC-3 side, because a cheap interceptor externalises more of the system cost to the sensor chain.",
+      "subject": "two weapons programmes; no unit or individual",
+      "contests": ["f-ratio-pac3"],
+      "note": "THE SIDEWAYS EDGE, and it is the video. These two facts are both true, both computed from published prices, describe the same month of the same war, and point in opposite directions. Descoping either one resolves the contradiction and produces a confident, wrong script. That is precisely what `contests[]` exists to prevent."
+    },
+    {
+      "id": "f-ratio-span",
+      "claim": "Across the two layers the same engagement computes to a span of roughly 9,700x — from 387:1 against the defender to 25:1 for them",
+      "kind": "derived",
+      "load_bearing": true,
+      "derived_from": ["f-ratio-pac3", "f-ratio-interceptor"],
+      "method": "387.10 (worst adverse cell) x 25 (best favourable cell) = 9,677.5. The two extremes are computed from published prices for weapons in simultaneous use in the same campaign in the same month.",
+      "sources": [
+        { "name": "computed by this run", "evidence_class": "primary", "locator": "arithmetic shown in `method`", "interested": true }
+      ],
+      "confidence": "medium",
+      "confidence_note": "The arithmetic is exact; it inherits the weaker of its two inputs, one of which is low. Stated as 'roughly 9,700x' and never as a precise figure, because a precise product of two soft numbers is fake precision.",
+      "as_of": "2026-08-12",
+      "event_date": "2026",
+      "period": "same month, same campaign, both layers in simultaneous use",
+      "unit": "ratio of ratios, dimensionless",
+      "denominator": "the range of the metric itself, not a measurement of anything in the world",
+      "subject": "a metric; no unit or individual",
+      "note": "The thesis in one number. A metric whose plausible range spans four orders of magnitude on an input nobody quotes is not a measurement of the war. It is a measurement of which layer you chose."
+    },
+    {
+      "id": "f-interceptor-share",
+      "claim": "Ukrainian sources report interceptor drones accounting for approximately 30% of air-defence kills overall, and more than 70% of incoming Shaheds over Kyiv specifically",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Ukrainian government and military statements", "evidence_class": "self-published", "interested": true },
+        { "name": "united24media.com; nationaldefensemagazine.org restating them", "evidence_class": "aggregator", "interested": false }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Medium that the claims were made in these terms; the 30% and 70% figures are for different denominators (all air-defence kills nationally versus Shahed-type over one city) and are being quoted side by side as if they were the same measure. Both originate with a party seeking procurement support from allies, which does not make them false and does make them a claim.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-03 to 2026-07",
+      "period": "2026",
+      "unit": "percent",
+      "denominator": "TWO DIFFERENT ONES: 30% of all air-defence kills nationally; >70% of incoming Shaheds over Kyiv. Not comparable, and routinely compared.",
+      "subject": "a belligerent's own capability claim; no unit or individual",
+      "note": "The load-bearing mechanism fact. If the cheap layer is doing most of the intercepting, the expensive ratio is describing a shrinking minority of engagements — but the only evidence for the share comes from the party that wants more interceptors funded."
+    },
+    {
+      "id": "f-interceptor-scale",
+      "claim": "Ukraine's Ministry of Defence took delivery of approximately 40,000 interceptor drones in January 2026 alone",
+      "kind": "utterance",
+      "load_bearing": false,
+      "sources": [
+        { "name": "Ukrainian Ministry of Defence statements", "evidence_class": "self-published", "interested": true },
+        { "name": "nationaldefensemagazine.org; militarytimes.com", "evidence_class": "secondary", "interested": false }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Medium that it was stated. A delivery figure announced by the ministry that took delivery, in the period it was seeking allied funding for the programme.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-01",
+      "period": "one calendar month",
+      "unit": "count of airframes",
+      "denominator": "deliveries accepted, not airframes expended and not airframes that worked",
+      "subject": "a defence ministry's procurement; no unit or individual"
+    },
+    {
+      "id": "f-irondome-baseline",
+      "claim": "Iron Dome's cost exchange is commonly quoted at 100:1 to 500:1 in the attacker's favour, against component prices of $50,000–$80,000 per Tamir interceptor and $300–$800 per unguided rocket",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "missilestrikes.com; norskluftvern.com; editverse.com — restating the standard figures", "evidence_class": "aggregator", "interested": false }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Medium. These are the numbers that circulate; I did not reach a primary costing. The component prices and the headline range are quoted together by the same sources and, as f-irondome-recompute shows, they do not agree with each other.",
+      "as_of": "2026-08-12",
+      "event_date": "2011-2026",
+      "period": "the system's operational life since 2011",
+      "unit": "ratio, dimensionless; USD per round",
+      "denominator": "one interceptor against one rocket, ignoring that Iron Dome does not engage rockets predicted to land in open ground — which is the single largest cost saving in the system and is excluded from every published version of this ratio",
+      "subject": "a weapons programme; no unit or individual",
+      "contests": ["f-irondome-recompute"],
+      "note": "THE BASELINE ROW. This is what a heavily adverse cost exchange looks like when it has been running for fifteen years and nobody has been bankrupted by it."
+    },
+    {
+      "id": "f-irondome-recompute",
+      "claim": "The quoted 100:1–500:1 Iron Dome range is not recomputable from the component prices quoted beside it: those prices yield 62.5:1 to 266.7:1, and no pair inside the stated bands reaches 500:1",
+      "kind": "derived",
+      "load_bearing": true,
+      "derived_from": ["f-irondome-baseline"],
+      "method": "Cheapest interceptor over dearest rocket: 50,000/800 = 62.5. Dearest interceptor over cheapest rocket: 80,000/300 = 266.67. The stated lower bound of 100:1 IS reachable (50,000/500 = 100, and $500 is inside the $300–$800 band). The stated upper bound of 500:1 is NOT reachable from any pair in the stated bands; it would require a rocket priced at $160 against the dearest interceptor. Either the headline range is drawn from figures other than the ones printed beside it, or it is wrong.",
+      "sources": [
+        { "name": "computed by this run from f-irondome-baseline's own stated components", "evidence_class": "primary", "locator": "arithmetic shown in `method`", "interested": true }
+      ],
+      "confidence": "high",
+      "confidence_note": "High. This is arithmetic on figures the sources themselves print, and it is checkable in thirty seconds by anyone.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-12",
+      "period": "n/a — a check, not an observation",
+      "unit": "ratio, dimensionless",
+      "denominator": "the same one-round-per-engagement basis as the figure it checks",
+      "subject": "a widely-repeated statistic; no unit or individual",
+      "contests": ["f-irondome-baseline"],
+      "note": "Caught by the schema's new arithmetic rule, which is the first time in this run a rule found something I had not already suspected. I am NOT claiming the sources are dishonest — a range this old accretes and its components get updated separately. I am claiming the number cannot be recomputed from what is printed with it, and that a script may therefore not quote the 500."
+    },
+    {
+      "id": "f-vietnam-sam-belligerents",
+      "claim": "For the same historical air-defence campaign, the two belligerents' published expenditure-per-result figures differ by a factor of roughly 3 to 15: US assessments give 17 (1965), 63 (1966), 33 (1967) and 87 (1972) missiles per hit, while North Vietnamese accounts give 5.6 missiles per kill",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "globalsecurity.org; key.aero forum compilation of published assessments", "evidence_class": "aggregator", "interested": false },
+        { "name": "the underlying US and North Vietnamese official assessments, each self-reported", "evidence_class": "self-published", "interested": true }
+      ],
+      "confidence": "low",
+      "confidence_note": "Low, and load_bearing false. I am using this as an illustration of a pattern, not as evidence for a quantity. The two figures MAY NOT BE COMMENSURABLE — 'missiles per hit' and 'missiles per kill' are different metrics and a hit is not a kill, so the 3x–15x spread may partly be a definitional artefact rather than a disagreement. That ambiguity is the point and I am not resolving it in the script.",
+      "as_of": "2026-08-12",
+      "event_date": "1965-1972",
+      "period": "per year as stated",
+      "unit": "missiles expended per result",
+      "denominator": "CONTESTED AND UNRESOLVED: 'per hit' in one account, 'per kill' in the other",
+      "subject": "a historical campaign, fifty years closed; no unit or individual",
+      "note": "Fifty-one years after the last of these engagements, with both archives open, the two sides' accounts of the same missiles still differ by up to an order of magnitude. That is the shelf life of a belligerent attrition claim, and it is the strongest single argument for how the current figures should be treated."
+    },
+    {
+      "id": "f-counter-framing",
+      "claim": "Published defence analysis argues the correct comparison is the interceptor against the LOSS PREVENTED, not against the threat destroyed, and that air defence is better modelled as a reliability problem under zero tolerance for failure than as an exchange of costs",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "CSIS — 'Cost and Value in Air and Missile Defense Intercepts'", "evidence_class": "secondary", "locator": "csis.org/analysis/cost-and-value-air-and-missile-defense-intercepts", "interested": false },
+        { "name": "Modern War Institute — 'The Indispensable Interceptor: Air Defense and the Problem of Cost-Exchange Logic'", "evidence_class": "secondary", "locator": "mwi.westpoint.edu", "interested": false }
+      ],
+      "confidence": "high",
+      "confidence_note": "High that this is the published argument and that it is made by serious institutions in these terms. It is the counter-case and it is FOUND, not constructed.",
+      "as_of": "2026-08-12",
+      "event_date": "2025-2026",
+      "period": "current analytical literature",
+      "unit": "n/a",
+      "denominator": "n/a",
+      "subject": "an analytical position; no unit or individual",
+      "note": "Both institutions are inside the defence-policy ecosystem the argument benefits, which I record and do not weaponise: the argument stands or falls on its logic, and its logic is good."
+    },
+    {
+      "id": "f-approach-not-applicable",
+      "claim": "No party is accused or named in this notebook, so the approach-for-comment requirement has no addressee",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "this notebook's own conclusion set and fact set", "evidence_class": "primary", "locator": "every fact's `subject` field, each of which names a programme, a metric or a practice", "interested": true }
+      ],
+      "confidence": "high",
+      "confidence_note": "High and self-evident, and recorded explicitly rather than skipped. The quality bar's approach row is conditional ('if the topic has an accused or named party') and a conditional row that is silently skipped is indistinguishable from one that was forgotten.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-12",
+      "period": "n/a",
+      "unit": "n/a",
+      "denominator": "n/a",
+      "subject": "this notebook; no unit or individual",
+      "note": "Written because the row is the one card the board may not descope, and a card that does not exist cannot be seen not to have been descoped."
+    }
+  ],
+
+  "mechanisms": [
+    {
+      "id": "m-layer-not-weapon",
+      "name": "The ratio is a property of the layer, not of the weapons",
+      "chain": [
+        "A published cost-exchange ratio picks one defensive round and one threat airframe and divides",
+        "BUT a layered air defence fields several rounds at once, spanning three orders of magnitude in price, and assigns them by what the radar track looks like in the seconds available",
+        "THEREFORE the ratio realised on any given night is a weighted average over the assignment, not the price of the dearest round",
+        "BUT the assignment is decided under time pressure on an unlabelled track — speed, altitude, heading and radar cross-section, with asymmetric cost of error",
+        "THEREFORE the defender will sometimes spend a strategic interceptor on a cheap drone, and the famous ratio is the price of that specific mistake rather than the price of the campaign"
+      ],
+      "steps": [
+        { "text": "A published cost-exchange ratio picks one defensive round and one threat airframe and divides", "connector": "THEREFORE", "evidence": ["f-ratio-pac3"] },
+        { "text": "A layered air defence fields several rounds simultaneously, spanning three orders of magnitude in price", "connector": "BUT", "evidence": ["f-pac3-unit", "f-interceptor-cost", "f-interceptor-share"] },
+        { "text": "The ratio realised on a given night is a weighted average over the assignment, not the price of the dearest round", "connector": "THEREFORE", "evidence": ["f-ratio-span", "f-interceptor-share"] },
+        { "text": "The assignment is decided in seconds on an unlabelled radar track with asymmetric cost of error", "connector": "BUT", "evidence": ["f-counter-framing"] },
+        { "text": "The famous ratio is the price of a specific assignment error, not the price of the campaign", "connector": "THEREFORE", "evidence": ["f-ratio-span", "f-ratio-interceptor"] }
+      ],
+      "evidence": ["f-ratio-pac3", "f-ratio-interceptor", "f-ratio-span", "f-interceptor-share", "f-counter-framing"],
+      "explains": "Why the same engagement computes to 387:1 against and 25:1 for, and why both numbers are honestly derived",
+      "needs_analogy": true
+    },
+    {
+      "id": "m-how-a-rate-is-made",
+      "name": "How a 92% interception rate is manufactured, without anyone lying",
+      "chain": [
+        "A belligerent publishes a nightly count of launches and of targets shot down or suppressed",
+        "BUT the shot-down category combines kinetic kills with electronic-warfare neutralisations, and the reporting window covers roughly 14 of every 24 hours",
+        "THEREFORE the published rate is a ratio between two numbers supplied by the same interested party, over a partial window, on a category that does not mean what the word means",
+        "BUT a research institute compiles the series and publishes a monthly analysis, disclosing its sourcing plainly",
+        "THEREFORE the number acquires a second citation without acquiring a second observation, and downstream it reads as corroborated"
+      ],
+      "steps": [
+        { "text": "A belligerent publishes a nightly count of launches and of targets shot down or suppressed", "connector": "THEREFORE", "evidence": ["f-uaf-june-claim"] },
+        { "text": "The shot-down category merges kinetic kills with EW neutralisations, and the window covers roughly 14 of 24 hours", "connector": "BUT", "evidence": ["f-suppressed-denominator", "f-reporting-window"] },
+        { "text": "The published rate is one interested party's numerator over its own denominator, on a partial window, on a merged category", "connector": "THEREFORE", "evidence": ["f-uaf-june-claim", "f-suppressed-denominator", "f-reporting-window"] },
+        { "text": "A research institute compiles the series into a monthly analysis and discloses its sourcing plainly", "connector": "BUT", "evidence": ["f-isis-derives-from-belligerent"] },
+        { "text": "The number gains a second citation without gaining a second observation, and reads downstream as corroborated", "connector": "THEREFORE", "evidence": ["f-isis-derives-from-belligerent", "f-no-independent-verification"] }
+      ],
+      "evidence": ["f-uaf-june-claim", "f-suppressed-denominator", "f-reporting-window", "f-isis-derives-from-belligerent", "f-no-independent-verification"],
+      "explains": "Why no cost-per-intercept can be computed for this campaign at all, and why the number that looks best-sourced is the one with the fewest observations behind it",
+      "needs_analogy": true,
+      "note": "Nobody in this chain does anything wrong. The Air Force reports what it counts, the institute discloses its method, the press cites the institute. The defect is emergent and that is why it is a mechanism rather than an accusation."
+    }
+  ],
+
+  "reversals": [
+    {
+      "id": "r-the-ratio-is-real",
+      "obvious_reading": "A four-million-dollar missile shooting down a twenty-thousand-dollar drone is an obviously losing trade, and you do not need a defence economist to see it. The attacker buys a hundred of something for the price of one of yours. Run that for a year and the magazine is empty and the budget is gone. This is the clearest thing in modern war and everyone from procurement officials to the people quoting it on television has the arithmetic right.",
+      "why_wrong": "The arithmetic is right and the selection is not. That engagement happened; it is one cell of a matrix. Over the same month, in the same campaign, the same threat was also being engaged by a two-thousand-dollar airframe — and by that pairing the defender is twenty-five to one ahead. Both numbers come from published prices. Neither is a lie. The ratio has no value until you say which layer, and nobody who quotes it says which layer.",
+      "mechanism": "m-layer-not-weapon",
+      "evidence": ["f-ratio-pac3", "f-ratio-interceptor", "f-ratio-span", "f-interceptor-share"],
+      "escalation": "And the span between the best and worst cell is roughly nine thousand seven hundred times. A metric whose plausible range covers four orders of magnitude on an input nobody states is not measuring the war."
+    },
+    {
+      "id": "r-the-new-thing",
+      "obvious_reading": "Whatever the exact figure, the direction is new. Cheap mass-produced attack drones have inverted an economics that used to favour the defender, and that inversion is the defining change of this decade of warfare.",
+      "why_wrong": "The adverse cell is not new. Iron Dome has run at a heavily adverse cost exchange since 2011 — the recomputable band from its own published component prices is 62.5:1 to 266.7:1 — and the PAC-3-against-Shahed band overlaps that across most of its range. Air defence has always cost more per round than what it shoots at; that is what the round is for. The genuinely new observation is the other cell, the one nobody quotes: a defender fielding a two-thousand-dollar interceptor against a twenty-thousand-dollar threat is the first favourable cost exchange in the modern history of the metric, and it is being reported as a footnote to a crisis.",
+      "mechanism": "m-layer-not-weapon",
+      "evidence": ["f-irondome-baseline", "f-irondome-recompute", "f-ratio-pac3", "f-ratio-interceptor"],
+      "escalation": "The story that got told is the expensive half of a change whose cheap half is the actual news."
+    },
+    {
+      "id": "r-the-rate",
+      "obvious_reading": "Set the money aside — the defence is working. Ninety-two per cent of incoming drones are being stopped, and that figure is compiled and published by an independent research institute, not by a government press office.",
+      "why_wrong": "The institute says, in its own methodology, that the figure comes exclusively from one belligerent's daily reports. The category counted is 'shot down or suppressed', which merges a drone destroyed by an interceptor with a drone jammed into the ground. The reporting window covers roughly fourteen of every twenty-four hours. And no independent body validates the aggregate for either side. The ninety-two per cent is arithmetically correct — five thousand two hundred and eighty-five over five thousand seven hundred and forty-nine — and it is a number one interested party computed from its own count of both halves.",
+      "mechanism": "m-how-a-rate-is-made",
+      "evidence": ["f-uaf-june-claim", "f-suppressed-denominator", "f-reporting-window", "f-isis-derives-from-belligerent", "f-no-independent-verification"],
+      "escalation": "Fifty-one years after the last engagement of the Vietnam air war, with both archives open, the two sides' figures for the same missiles still differ by up to an order of magnitude. That is how long a belligerent attrition claim takes to settle, and this one is two months old."
+    }
+  ],
+
+  "steel_man": {
+    "provenance": "found",
+    "claim": "The cost-exchange ratio is the wrong comparison, but the people quoting it are directionally right and the correction does not rescue the defender.",
+    "evidence": ["f-counter-framing", "f-shahed-cost-spread", "f-interceptor-share"],
+    "statement": "You are correcting a comparison that was never meant to be precise, and the correction cuts against you. The relevant number is not the interceptor against the threat; it is the interceptor against the loss prevented — the substation, the barracks, the city block. On that comparison a four-million-dollar round is cheap and the whole cost-exchange frame is a category error in the other direction. Air defence is a reliability problem under zero tolerance for failure: you cannot decline the expensive engagement because the track was ambiguous and you had nine seconds. And the cheap-interceptor layer does not dissolve the problem. It is real, it is impressive, and it is a layer — it does not engage ballistic threats, it does not engage cruise missiles, and the sensor chain that makes a two-thousand-dollar airframe lethal is not two thousand dollars. Ukraine did not stop buying Patriot rounds. One can win every engagement on the favourable exchange and still lose, because magazine depth, not unit price, is the binding constraint, and no defence budget in the world is structured to sustain the adverse cell indefinitely.",
+    "why_include": "Because it is right about the frame and I am not going to win by pretending otherwise, and because the video's own verdict — the ratio measures the layer, not the war — is answered by it: yes, and the layer you cannot avoid is the expensive one. It survives. It does not win, because it does not explain why the metric's own range spans four orders of magnitude or why the favourable cell went unreported. Per Phase 2 it takes `tension.strength` down one step, and I have applied that.",
+    "provenance_note": "SCHEMA DEFECT, recorded. `steel_man.provenance` is mandated twice by `pipeline/RESEARCH-PROMPT.md` (lines 51 and 125) and by the quality bar's 'if constructed, it says so' row — and it is declared NOWHERE: not in `NOTEBOOK-SCHEMA.md`'s `steel_man` field list (line 137), not in the consumer table, and not in `SteelMan` in `app/_phases/_shared/notebook/types.ts:197-202`. I have written it anyway because the prompt names it. Under the schema's own Rule 11 it should not ship."
+  },
+
+  "counter_positions_to_state_fairly": [
+    {
+      "position": "The interception rates published by both belligerents should be treated as operational reporting rather than as propaganda, because a force that systematically inflates its own air-defence performance degrades its own targeting and resource allocation — the internal audience for these numbers is real.",
+      "holder": "defence analysts who work with open-source military reporting",
+      "evidence": ["f-uaf-june-claim", "f-russia-mirror-claim"],
+      "locator": "argued in general terms across the defence-analysis commentary surveyed; not attributed to a named individual in this notebook by choice"
+    },
+    {
+      "position": "The unit prices quoted for cheap interceptors are procurement-advocacy figures and should be discounted accordingly — the party quoting them is seeking allied funding for the programme in the same period.",
+      "holder": "this notebook, against its own most attractive fact",
+      "evidence": ["f-interceptor-cost", "f-interceptor-scale", "f-ratio-interceptor"],
+      "locator": "f-ratio-interceptor is graded `low` and flagged on exactly this ground"
+    }
+  ],
+
+  "scale_conversions": [
+    {
+      "for": "f-ratio-span",
+      "raw": "The cost exchange ratio spans 387:1 against to 25:1 for, a factor of roughly 9,700",
+      "felt": "It is the difference between a metric that says you are losing badly and the same metric, the same month, the same war, saying you are winning comfortably — and the only thing that changed is which of your own weapons fired.",
+      "kind": "ratio"
+    },
+    {
+      "for": "f-shahed-cost-spread",
+      "raw": "$10,000 to $193,000 for the same airframe",
+      "felt": "Nineteen times, for one object. Before anyone has picked a defender's round, the attacker's price tag alone can move the famous ratio by a factor of nineteen.",
+      "kind": "ratio"
+    },
+    {
+      "for": "f-pac3-unit",
+      "raw": "$3.871 million per PAC-3 MSE, FY2026 flyaway",
+      "felt": "$3.871 million, per the Army's FY2026 procurement justification. Quoted exactly and with its vintage, because a filed figure's precision is the handle you have on it — and because I have not read the exhibit line myself, only two reports of it.",
+      "kind": "cash"
+    },
+    {
+      "for": "f-uaf-june-claim",
+      "raw": "5,285 of 5,749 reported shot down or suppressed, June 2026 — 91.93%",
+      "felt": "Ninety-two per cent, computed by one side from its own count of both the shots and the hits, over about fourteen hours of each day, on a category that counts a jammed drone and a destroyed one as the same event.",
+      "kind": "ratio"
+    }
+  ],
+
+  "analogy_candidates": [
+    {
+      "for": "m-layer-not-weapon",
+      "analogy": "Quoting the cost-exchange ratio without naming the layer is like quoting a hospital's cost per patient using only the intensive-care ward. The number is real, the ward is real, and it is not the hospital.",
+      "quality": "good"
+    },
+    {
+      "for": "m-how-a-rate-is-made",
+      "analogy": "A company reporting its own revenue, its own costs and its own margin, with no auditor — and a respected journal publishing a quarterly analysis of the figures the company reported. The journal is honest, its methodology page says so, and by the third citation the number has become 'independently analysed'.",
+      "quality": "good"
+    }
+  ],
+
+  "candidate_questions": [
+    "What is the cost exchange ratio actually a ratio of?",
+    "Who counts an interception, and does anyone check?",
+    "If the cheap layer is doing most of the work, why is the expensive number the one that circulates?",
+    "Is an adverse air-defence cost exchange new, or is it what air defence has always looked like?",
+    "What would it take to know any of this independently?"
+  ],
+
+  "unknowns": [
+    {
+      "id": "u-interceptor-pk",
+      "what": "How many interceptor drones are expended per Shahed destroyed",
+      "why": "Nobody publishes it. The single-shot probability of kill for a $2,000 airframe is the input that decides whether the favourable ratio is 25:1 or 3:1 or worse, and it is the one number neither the manufacturers nor the ministry states.",
+      "impact": "The script may state the DIRECTION of the interceptor-drone exchange — that it is favourable to the defender — and may never state a favourable ratio as a figure. No '25 to 1'.",
+      "about": ["f-ratio-interceptor", "f-interceptor-cost"]
+    },
+    {
+      "id": "u-sensor-chain",
+      "what": "The cost of the detection, cueing and control chain that a cheap interceptor depends on",
+      "why": "Every quoted interceptor price is an airframe price. The radar, the acoustic sensor network and the fire-control that put the airframe on the target are excluded and unpriced in everything I found.",
+      "impact": "The script must not present the cheap-interceptor figure as a system cost. Say 'the airframe costs', never 'it costs'.",
+      "about": ["f-interceptor-cost", "f-ratio-interceptor"]
+    },
+    {
+      "id": "u-intercept-composition",
+      "what": "What share of 'shot down or suppressed' is kinetic destruction and what share is electronic-warfare neutralisation",
+      "why": "The categories are merged at source and neither belligerent separates them.",
+      "impact": "The script may never compute or state a cost per intercept for this campaign. Not as a figure, not as an approximation, not as a range.",
+      "about": ["f-uaf-june-claim", "f-suppressed-denominator"]
+    },
+    {
+      "id": "u-pac3-exhibit",
+      "what": "The PAC-3 MSE exhibit line as printed in the FY2026 justification book — the quantity, the basis, and whether $3.871m is flyaway or gross weapon-system unit cost",
+      "why": "The document is published and its host returned 403 to this run on 2026-08-12.",
+      "impact": "The script attributes the figure as 'reported from the Army's FY2026 justification', never as 'the Army's budget says'. The distinction is one word and it is the whole of my discipline.",
+      "about": ["f-pac3-unit", "f-ratio-pac3"]
+    },
+    {
+      "id": "u-vietnam-commensurability",
+      "what": "Whether the Vietnam-era 'missiles per hit' and 'missiles per kill' figures are the same metric",
+      "why": "A hit is not a kill, and the two accounts use different words. The 3x–15x disagreement may be partly definitional.",
+      "impact": "The script says the two sides' accounts 'still differ' and never quantifies the disagreement. No 'by a factor of fifteen'.",
+      "about": ["f-vietnam-sam-belligerents"]
+    },
+    {
+      "id": "u-500-to-1",
+      "what": "Where the widely-quoted 500:1 Iron Dome upper bound comes from",
+      "why": "It is not reachable from any pair of component prices printed alongside it.",
+      "impact": "The script may not quote 500:1. It quotes the recomputable band and says the higher figure could not be reproduced.",
+      "about": ["f-irondome-baseline", "f-irondome-recompute"]
+    }
+  ],
+
+  "obligations": [
+    {
+      "id": "o-name-the-layer",
+      "must": "Whenever a cost-exchange ratio is spoken, name the layer it was computed on in the same sentence.",
+      "why": "The entire thesis is that the ratio is meaningless without it. A render that states the ratio and names the layer in the next beat has already made the error the video is about.",
+      "about": ["f-ratio-pac3", "f-ratio-interceptor", "f-ratio-span"]
+    },
+    {
+      "id": "o-state-the-direction",
+      "must": "State that the interceptor-drone exchange is favourable to the defender, and state that the magnitude is not publicly derivable and why.",
+      "why": "u-interceptor-pk removes the figure. Without a matching must-say the render will simply route around the finding, and the favourable cell going unreported is half the video's point — a script that also fails to report it has enacted its own subject.",
+      "about": ["f-ratio-interceptor", "u-interceptor-pk"]
+    },
+    {
+      "id": "o-attribute-the-count",
+      "must": "Every interception figure spoken in the script is attributed in the same sentence to the party that produced it — 'the Ukrainian Air Force reported', 'the Russian defence ministry reported' — and the script states once, explicitly, that no independent body validates either.",
+      "why": "This is the single requirement of my beat. `kind: utterance` records it in the notebook; nothing carries it to the render, so it is written here as a must-say the render gate can fail on.",
+      "about": ["f-uaf-june-claim", "f-russia-mirror-claim", "f-interceptor-share", "f-no-independent-verification"]
+    },
+    {
+      "id": "o-symmetry",
+      "must": "If one belligerent's interception claim is stated, the other's is stated in the same segment and held to the same standard.",
+      "why": "A script that treats one side's unverifiable claim as data and the other's as propaganda has made a choice the evidence does not support. The symmetry is the discipline.",
+      "about": ["f-uaf-june-claim", "f-russia-mirror-claim"]
+    },
+    {
+      "id": "o-say-what-cannot-be-seen",
+      "must": "State plainly, once, that no independent body counts interceptions for this campaign and that this is a finding rather than a caveat.",
+      "why": "f-no-independent-verification is `kind: absence`, load-bearing, and the most important thing in the notebook. A hedge is not a delivery of it.",
+      "about": ["f-no-independent-verification"]
+    }
+  ],
+
+  "engine_fit": [
+    {
+      "engine": "D — Adjudication",
+      "fit": "excellent",
+      "why": "Four candidate readings genuinely compete: the ratio is real and decisive / real but describing a minority of engagements / a measurement artefact of layer selection / the right number for the wrong question. The D-honest tell — 'is the premise itself in the candidate set?' — is satisfied, because the premise (the ratio measures the war) is candidate one and must be adjudicated first.",
+      "recommended": true,
+      "hazard": "Adjudication renders as a ruling. On a subject where the underlying counts are two months old, unverified and supplied by interested parties, a confident ruling is a stronger claim than the evidence can carry — and the engine's pleasure is the confidence of the verdict. Mitigable: the ruling must be about the METRIC, which is fully checkable, and never about the campaign, which is not."
+    },
+    {
+      "engine": "A — Reversal Chain",
+      "fit": "good",
+      "why": "Three genuine reversals are pre-computed and they escalate cleanly: the ratio is a selection, the adverse cell is not new, the rate is one party's own arithmetic.",
+      "recommended": false,
+      "hazard": "The chain's load-bearing move is the self-attack, which requires having proved something first. This notebook never reaches proof — it reaches 'the metric is under-determined' — so the reversal has to turn on a claim it only weakened. Rendered anyway, the engine supplies a certainty the material does not have."
+    },
+    {
+      "engine": "B — Effort/Payoff Gap",
+      "fit": "good",
+      "why": "Structurally an excellent fit: the kill chain is a mechanism a viewer could operate, and the engine's pleasure is disproportion between labour and reward.",
+      "recommended": false,
+      "hazard": "HIGH FIT, HIGH HAZARD, and this is the cell the axis exists for. The disproportion between labour and reward IS the meme this notebook refutes. Engine B renders this material as the exact video it disputes, and renders it well. This is not a poor fit and grading it poor would hide the engine from the person selecting it. Do not select."
+    },
+    {
+      "engine": "E — Briefing",
+      "fit": "partial",
+      "why": "Wrong on subject — this is a standing claim, not news. But its obligations (must be dated, must disclose the author's exposure, must contain one move against its own enthusiasm) are closer to this domain's requirements than any other engine's.",
+      "recommended": false,
+      "hazard": "Low. The briefing form's dating discipline is protective here rather than risky."
+    },
+    {
+      "engine": "C — Parallel Case",
+      "fit": "poor",
+      "why": "Transfer needs a fully-mechanised familiar case. Iron Dome is the obvious candidate and it is not settled enough to be the familiar half — its own headline range does not recompute.",
+      "recommended": false
+    },
+    {
+      "engine": "F — Anchor Ladder",
+      "fit": "poor",
+      "why": "Needs naturally ordered difficulty. The material is a matrix, not a ladder.",
+      "recommended": false,
+      "hazard": "If forced, the rungs would become escalating classes of target — substation, barracks, city block. Per ENGINES.md the ladder is hazardous where the rungs are people, and the top rung here is the thing you cannot be funny about."
+    },
+    {
+      "engine": "G — Paradox Teaser",
+      "fit": "poor",
+      "why": "Short form, withholds by design, ends on an open loop.",
+      "recommended": false,
+      "hazard": "A withholding fifty-second clip about contested attrition figures in an active war is a thing that gets stripped of context and reposted. The withholding is the hazard, not a side effect of it. Do not select."
+    }
+  ],
+
+  "currency": {
+    "half_life": "About four months for the quantities; roughly two years for the argument.",
+    "why": "Interceptor unit prices are falling fast and the layer mix is moving month to month. The structural claim — that a cost-exchange ratio is a property of the layer and that nobody who quotes it names the layer — outlives every figure in the notebook.",
+    "expires_first": ["f-interceptor-cost", "f-interceptor-share", "f-uaf-june-claim", "f-interceptor-scale", "f-ratio-interceptor"],
+    "durable": ["f-shahed-cost-spread", "f-suppressed-denominator", "f-isis-derives-from-belligerent", "f-no-independent-verification", "f-irondome-recompute", "f-vietnam-sam-belligerents", "f-counter-framing"],
+    "advice": "Speak the interceptor exchange as a direction, never a level — 'the cheap layer is ahead' survives a year, '25 to 1' is wrong next quarter. Speak the PAC-3 figure exactly and with its vintage, because it is a filed number and rounding it destroys the reader's only handle. And date every interception claim in the sentence that carries it: 'in June, the Air Force reported' ages honestly in a way that 'ninety-two per cent are stopped' does not."
+  },
+
+  "sources": [
+    "https://www.twz.com/news-features/what-does-a-shahed-136-really-cost",
+    "https://phenomenalworld.org/analysis/cost-of-a-shahed/",
+    "https://quwa.org/iran/military-news-iran/shahed-drone-irans-attrition-weapon-and-the-cost-exchange-crisis-of-2026/",
+    "https://www.asafm.army.mil/Portals/72/Documents/BudgetMaterial/2026/Discretionary%20Budget/Procurement/Missile%20Procurement%20Army.pdf",
+    "https://www.armyrecognition.com/news/army-news/2025/us-army-multiplies-pac-3-mse-missile-production-by-four-to-support-long-term-air-defense-strategy",
+    "https://isis-online.org/isis-reports/monthly-analysis-of-russian-shahed-136-deployment-against-ukraine",
+    "https://united24media.com/war-in-ukraine/ukraine-shoots-down-nearly-57400-russian-drones-and-missiles-in-a-single-month-19422",
+    "https://news.az/news/ukrainian-air-defenses-down-over-5-000-shahed-drones-in-may",
+    "https://euromaidanpress.com/2026/07/01/russias-shaheds-cost-10000-each-ukraine-just-unveiled-drone-that-kills-them-for-2000/",
+    "https://defence-blog.com/ukraines-autonomous-shahed-killer-costs-3500-per-unit/",
+    "https://www.militarytimes.com/news/pentagon-congress/2026/03/11/these-are-ukraines-1000-interceptor-drones-the-pentagon-wants-to-buy/",
+    "https://www.nationaldefensemagazine.org/articles/2026/4/15/ukraine-flips-cost-imbalance-script-with-lowcost-interceptors",
+    "https://www.csis.org/analysis/cost-and-value-air-and-missile-defense-intercepts",
+    "https://mwi.westpoint.edu/the-indispensable-interceptor-air-defense-and-the-problem-of-cost-exchange-logic/",
+    "https://abcnews.com/amp/International/ukraines-interception-rates-russias-drones-missiles-slipping-data/story?id=127216305",
+    "https://defence-blog.com/russia-claims-it-shot-down-64000-ukrainian-drones-in-six-months/",
+    "https://www.globalsecurity.org/military/world/vietnam/nva-ad.htm",
+    "https://missilestrikes.com/guide/iron-dome-intercept-rate/"
+  ],
+
+  "research_gaps": [
+    "THE PRIMARY SOURCE I NAMED AND DID NOT READ. The Army FY2026 Missile Procurement justification book is published at asafm.army.mil and returned HTTP 403 to this run's fetch tool on 2026-08-12. f-pac3-unit is load-bearing and quantitative and therefore fails the schema's Rule 4 unless this gap is named. It is named. The figure is carried at `medium` on two agreeing secondary reports, and the exhibit line, the quantity and the cost basis are unread.",
+    "No Ukrainian- or Russian-language sources were searched. Both belligerents' primary reporting is in those languages and this run read only English restatements of it — including the daily channel that is the origin of every interception figure in this notebook.",
+    "The Ukrainian Air Force daily channels (t.me/kpszsu, facebook.com/kpszsu) were not read directly. Every interception figure here is at second or third hand from the party that published it, which is the exact laundering path f-isis-derives-from-belligerent describes. I am inside my own finding.",
+    "No visually-confirmed loss database (Oryx-class) was consulted, because interceptions have no visual-confirmation equivalent — you cannot geolocate a drone that did not arrive. This is a permanent structural gap in the domain, not an omission by this run, but it means the class of evidence my discipline is built on is entirely absent from this notebook.",
+    "Iron Dome costings were taken from aggregators. No primary Israeli procurement document was reached, which is why f-irondome-recompute can show the published range is unreproducible but cannot say which of the two figures is right.",
+    "The CSIS and MWI counter-case articles were read via search summary, not fetched in full. The steel-man is FOUND and its shape is confirmed, but I have not read either argument at length and may be understating it.",
+    "Magazine depth and production rates on both sides were not searched at all — an entire declared domain (industrial-base) went unworked. The steel-man rests part of its weight there and I did not go and check.",
+    "Not chased: whether any insurance, municipal or utility damage-record series exists that would permit an independent impact count, which is the most likely route to ending f-no-independent-verification."
+  ]
+}

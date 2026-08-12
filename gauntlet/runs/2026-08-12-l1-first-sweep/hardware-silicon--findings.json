@@ -1,0 +1,306 @@
+{
+  "run": "2026-08-12-l1-first-sweep",
+  "creator": "hardware-silicon",
+  "topic": "Everyone says the AI bottleneck is GPUs. The capacity numbers say it is high-bandwidth memory and the packaging step nobody can name.",
+  "area": "tech",
+  "lens": "tech",
+  "level": "L1",
+  "verdict": "L1-conditional",
+  "column_utilisation": {
+    "used": 7,
+    "total": 7,
+    "orphan_groups": 2,
+    "orphans": [
+      {
+        "name": "process physics — why the packaging/stacking step is hard",
+        "strength": "weak",
+        "note": "Absorbable into `flows` under 'whether it behaves as assumed'. Recorded because once absorbed, `flows` carries the pipeline, the physics and the allocation contracts — one column doing three jobs."
+      },
+      {
+        "name": "lead time — the lag between commitment and installed capacity",
+        "strength": "strong",
+        "note": "No column models elapsed time. `the-number` is a level over a window; `politics` is implemented-or-not, a binary; `macro` is cross-market. The lag IS the thesis, and it pairs with G-L1S-HS-03 in the schema."
+      }
+    ],
+    "note": "CONTRADICTS the orchestrator's first lead. The columns are market-WORDED, not market-SHAPED. Every column's underlying question survives translation to a physical supply chain; only its vocabulary does not."
+  },
+  "time_saved": {
+    "manual_baseline_min": 600,
+    "acceptance_threshold_min": 90,
+    "estimate_min_saved": 180,
+    "resulting_time_min": 420,
+    "clears_bar": false,
+    "confidence": "medium",
+    "confidence_cap_reason": "accepted-gaps.md § scope-note — no runner exists, so this estimates what the methodic would save if executed as written, not a product measurement.",
+    "reasoning": "The ~4h of reading/argument/story-selection is well attacked by Phases 2/3/4/6 and the notebook-as-asset reuse. The ~6h of unit reconciliation is untouched: no reconciliation step, no unit field, no arithmetic check in the quality bar. Then subtract ~30 min verification tax for re-deriving each quantity's basis from prose."
+  },
+  "scored_criteria": [
+    { "n": 1, "criterion": "Every quantity carries its unit and its period; mixed units are a fail", "result": "FAIL", "reason": "facts[] (NOTEBOOK-SCHEMA.md:42) has neither field; as_of is staleness not period (:47); the word 'unit' appears nowhere in the methodic; RESEARCH-PROMPT.md:27 asks for the period for one domain of six and gives it nowhere to land. Demonstrated failure in the reference run." },
+    { "n": 2, "criterion": "Announced and installed capacity are distinct facts, never merged", "result": "CONDITIONAL PASS", "reason": "Two facts plus reversals[] express both the distinction and the relationship, with a working precedent (f-sbr / f-sbr-unbuilt / r3). But no field marks a plan as a plan, nothing requires the pairing, and as_of is the wrong clock for a forward commitment." },
+    { "n": 3, "criterion": "The counter-case is present at full strength with its best source", "result": "PASS (paper)", "reason": "Mandated at RESEARCH-PROMPT.md:32, :34, :87-93, NOTEBOOK-SCHEMA.md:61-65 and dimensions.ts:36-37 — four independent reinforcements. L1 charity acknowledged: the reference run still skipped the strongest version and admitted it in research_gaps. Flagged for L2." },
+    { "n": 4, "criterion": "At least one reversal turns on a supply-chain mechanism, not a price", "result": "PASS", "reason": "reversals[].mechanism is required (NOTEBOOK-SCHEMA.md:56) and mechanisms[] are causal chains (:49-53). Neither field is price-typed. A yield/packaging reversal drops straight in." },
+    { "n": 5, "criterion": "`flows` holds the physical supply chain", "result": "PASS", "reason": "Content rename. dimensions.ts:28's load-bearing clauses are 'through what mechanism' and 'whether it behaves as assumed' — a conversion pipeline whose naive reading collapses its stages. The column's own incumbent card m-etf-plumbing ('an inflow is not a purchase') is structurally 'a wafer start is not a stack'." },
+    { "n": 6, "criterion": "No conclusion forecasts a price", "result": "PASS with a lean", "reason": "Nothing forbids it, but the mandatory falsifiableBy (conclusions.ts:49-50) rewards forecast-shaped claims because a dated prediction is the cheapest checkable falsifier. See G-L1S-HS-06." },
+    { "n": 7, "criterion": "Under 90 min equivalent", "result": "FAIL", "reason": "~180 min saved of 600, landing at ~7h against a 90-min bar. The gap is exactly the work the methodic has no field for." }
+  ],
+  "findings": [
+    {
+      "id": "G-L1S-HS-01",
+      "creator": "hardware-silicon",
+      "topic": "HBM and advanced packaging, not GPUs, as the AI capacity constraint",
+      "area": "tech",
+      "lens": "tech",
+      "level": "L1",
+      "targets": ["notebook-schema"],
+      "type": "schema-gap",
+      "dimension": "evidence",
+      "severity": "blocker",
+      "impact": { "frequency": "high", "reachability": "high", "trust_erosion": "high" },
+      "title": "`facts[]` carries no unit and no period — both live in unenforceable prose",
+      "expected": "A quantity in a notebook fact should carry its unit and the period it covers as structured fields, so that two facts can be checked for commensurability before either is used, and so a script step inherits the basis rather than re-parsing it from a sentence.",
+      "got": "`facts[]` is `{id, claim, load_bearing, source, confidence, as_of, note?}`. No `unit`, no `period`, no `basis`. The word 'unit' appears nowhere in NOTEBOOK-SCHEMA.md, RESEARCH-PROMPT.md, dimensions.ts or conclusions.ts. `as_of` is documented as driving `currency` — it records when a fact was captured, not what stretch of time the quantity covers, and on this topic those differ by years (a 2026 announcement of 2028 capacity). RESEARCH-PROMPT.md:27 asks for 'over what period' — for one domain row of six — and provides nowhere in the deliverable to put the answer, so it evaporates between Phase 1 and the notebook.",
+      "evidence": [
+        "pipeline/NOTEBOOK-SCHEMA.md:41-47",
+        "pipeline/NOTEBOOK-SCHEMA.md:42",
+        "pipeline/NOTEBOOK-SCHEMA.md:47",
+        "pipeline/RESEARCH-PROMPT.md:27",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json#facts[f-whale-absorb]",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json#facts[f-midtier-distribute]"
+      ],
+      "artifact_check": "confirmed-absent",
+      "verdict": "confirmed",
+      "refuter_pass": "Tried all four. (1) Methodic or hard topic? Methodic — wafer starts vs dies vs stacks vs shipped units is unusually acute in semiconductors but every numeric topic in the cast has a unit and a period, so this is a papercut with universal reach, not one domain's exotic need. (2) Would a competent execution have produced it anyway? A competent researcher writes the unit into `claim` — and the reference run's researcher was competent and still shipped a 30-day figure compared against a 60-day one. Competence is not the mechanism; that is the point. (3) Present somewhere unread? Grepped all four methodic files for unit/period/annualised/reconcile: exactly one hit, RESEARCH-PROMPT.md:27, prompt-side only, one domain of six, with no schema slot. Not present-but-missed. (4) content or lens? Content — adding two fields to a shared schema serves every domain, and no domain is harmed by them. Default holds.",
+      "resolution": "open",
+      "recurrence": 1,
+      "content_or_lens": "content",
+      "l2_priority": "Produce a notebook on this topic and count how many facts state a unit and a period inside `claim` unprompted, and how many quantities from different stages of the supply chain are placed adjacent without a stated basis. Then check whether any rendered script compares two of them."
+    },
+    {
+      "id": "G-L1S-HS-02",
+      "creator": "hardware-silicon",
+      "topic": "HBM and advanced packaging, not GPUs, as the AI capacity constraint",
+      "area": "tech",
+      "lens": "tech",
+      "level": "L1",
+      "targets": ["research-prompt"],
+      "type": "missing-instruction",
+      "dimension": "evidence",
+      "severity": "major",
+      "impact": { "frequency": "high", "reachability": "high", "trust_erosion": "high" },
+      "title": "The quality bar has no arithmetic or reconciliation check — and the reference run's cross-window comparison proves the cost",
+      "expected": "The done-check should contain at least one box that looks at the numbers themselves: that two compared quantities share a unit and a window, and that a stated comparison ('more than', 'larger than') runs in the direction the figures support.",
+      "got": "RESEARCH-PROMPT.md:119-130 lists ten boxes covering tension, sourcing, dating, confidence, chain connectors, reversals, steel-man, unknowns, engine fit and gaps. The only box touching a number is :127 — 'every significant number has a scale_conversion' — which requires a figure be made FELT, not checked. The result is live in the reference: `f-whale-absorb` states ~270,000 BTC accumulated over a 30-day window; `f-midtier-distribute` states ~77,800 BTC distributed 'over the same 60-day window — slightly more than the whale cohort absorbed'. The window is not the same and 77,800 is not more than 270,000. Both facts are `load_bearing: true`. It entered at followup-round-1.md:48-49, was written up at :52 as 'the answer to the whale question', is restated a third time in f-supply-2pct's note against a different figure (380,000), and is cited by conclusions.ts:136-146 (c-scarcity-not-a-floor, graded leap 'near') and c-borrowed-prosperity (:154). It survived a follow-up round whose stated job was to resolve exactly this question, and three scripts rendered off it.",
+      "evidence": [
+        "pipeline/RESEARCH-PROMPT.md:119-130",
+        "pipeline/RESEARCH-PROMPT.md:127",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/followup-round-1.md:48-49",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/followup-round-1.md:52",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json#facts[f-supply-2pct].note",
+        "app/_phases/_shared/notebook/conclusions.ts:136-146",
+        "app/_phases/_shared/notebook/conclusions.ts:154"
+      ],
+      "artifact_check": "confirmed-absent",
+      "verdict": "confirmed",
+      "refuter_pass": "(1) Methodic or topic? Methodic, and demonstrated on someone else's topic, not mine — the strongest available form of this evidence. (2) Would a competent execution have produced the check anyway? No: this IS the competent execution, held up in env.md as the worked reference of what 'it worked' looks like, and it did not. (3) Present elsewhere? Checked the schema's Rules (:91-100) and Anti-patterns (:102-110): rules 2 and 3 and the 'laundered confidence' anti-pattern all govern PROVENANCE. Nothing anywhere governs quantity. Not present-but-missed. (4) content or lens? Content — one more checkbox in a shared quality bar. Separate from HS-01 deliberately: HS-01 is the missing field, this is the missing check, and either could be fixed without the other.",
+      "resolution": "open",
+      "recurrence": 1,
+      "content_or_lens": "content",
+      "l2_priority": "Run the arithmetic check the quality bar does not contain, against a produced notebook: every pair of quantities the notebook compares, checked for shared unit, shared window, and direction of comparison. Report the count of mismatches, not a verdict."
+    },
+    {
+      "id": "G-L1S-HS-03",
+      "creator": "hardware-silicon",
+      "topic": "HBM and advanced packaging, not GPUs, as the AI capacity constraint",
+      "area": "tech",
+      "lens": "tech",
+      "level": "L1",
+      "targets": ["notebook-schema"],
+      "type": "schema-gap",
+      "dimension": "evidence",
+      "severity": "major",
+      "impact": { "frequency": "med", "reachability": "med", "trust_erosion": "high" },
+      "title": "Nothing marks a fact as an announced plan rather than a realised outcome",
+      "expected": "An announced 2028 packaging capacity and a shipped-units figure for 2026 should be distinguishable at the field level, not only by reading the prose — because treating a capacity announcement as capacity is the most common error in this beat and the schema is where the guard belongs.",
+      "got": "The schema handles the DISTINCTION and the RELATIONSHIP better than expected: two facts with different ids, joined by a `reversals[]` entry ({obvious_reading, why_wrong, mechanism, evidence[], escalation}, :55-56), and RESEARCH-PROMPT.md:48 even names the shape as tension type 4, 'The absent thing'. The reference run does it correctly with f-sbr / f-sbr-unbuilt / r3. What is missing is three things: (a) no field marks a quantity as a plan versus an outcome — both are the same seven fields; (b) nothing REQUIRES the pairing, since RESEARCH-PROMPT.md:126 asks only for 'at least one reversal', so a notebook of four announcements and no outcomes passes every box; (c) `as_of` records when the fact was captured, not the year the commitment refers to (see HS-01).",
+      "evidence": [
+        "pipeline/NOTEBOOK-SCHEMA.md:42",
+        "pipeline/NOTEBOOK-SCHEMA.md:55-56",
+        "pipeline/RESEARCH-PROMPT.md:48",
+        "pipeline/RESEARCH-PROMPT.md:126",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json#facts[f-sbr]",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json#facts[f-sbr-unbuilt]"
+      ],
+      "artifact_check": "present-but-missed",
+      "verdict": "confirmed",
+      "refuter_pass": "(1) Methodic or topic? Partly the topic — announced-vs-installed is unusually load-bearing in semiconductors and in infrastructure generally. But it is not exclusive to me: policy, film budgets and datacenter buildouts all have it, so reachability is medium, not low. (2) Competent execution? Yes, plausibly — the reference DID pair f-sbr with f-sbr-unbuilt without being told to, which is why artifact_check is present-but-missed rather than confirmed-absent and why severity is major rather than blocker. The mechanism can express it; nothing makes it. (3) Present elsewhere? The reversal machinery is the answer and I found it, so this is scoped down to the field-level marker and the absent requirement. (4) content or lens? Content — a `basis: announced | realised` enum on facts[], plus a quality-bar line, serves every domain that has commitments.",
+      "resolution": "open",
+      "recurrence": 1,
+      "content_or_lens": "content",
+      "l2_priority": "Count, in a produced notebook, how many facts are forward commitments and whether each is paired with an outcome fact or a reversal — or whether announcements sit unchallenged as capacity."
+    },
+    {
+      "id": "G-L1S-HS-04",
+      "creator": "hardware-silicon",
+      "topic": "HBM and advanced packaging, not GPUs, as the AI capacity constraint",
+      "area": "tech",
+      "lens": "tech",
+      "level": "L1",
+      "targets": ["notebook-schema"],
+      "type": "schema-gap",
+      "dimension": "evidence",
+      "severity": "major",
+      "impact": { "frequency": "high", "reachability": "high", "trust_erosion": "med" },
+      "title": "`facts[].source` is free text with no join to `sources[]` — an estimate can be cited without its analyst",
+      "expected": "A fact should point at a source ENTRY, so that 'who computed this number' is structurally answerable and a fact whose source is a routing description rather than a citation is detectable.",
+      "got": "`facts[].source` is a free string (:42) and `sources[]` (:88) is a flat URL array. Nothing joins them, so nothing can detect degradation. The reference degrades exactly as predicted, on load-bearing facts: 'CryptoQuant via search', 'on-chain data via intellectia', 'on-chain cohort analysis via aggregators'. None names who computed the figure. Related: f-drawdown ('That is a fall of nearly 50% from the October 2025 high') is arithmetic derived from f-ath and f-now, yet is given an unrelated external source ('coinpedia regulation timeline') because the field's only shape is a citation string — a derived quantity has nowhere to declare that it is derived.",
+      "evidence": [
+        "pipeline/NOTEBOOK-SCHEMA.md:42",
+        "pipeline/NOTEBOOK-SCHEMA.md:88",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json#facts[f-whale-absorb].source",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json#facts[f-midtier-distribute].source",
+        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json#facts[f-drawdown].source"
+      ],
+      "artifact_check": "confirmed-absent",
+      "verdict": "confirmed",
+      "refuter_pass": "(1) Methodic or topic? Methodic. My beat makes it acute — an analyst estimate cited without the analyst is my named pet peeve and the difference between a tracker's model and a company's disclosure is the whole argument — but every Creator citing a third party hits it. (2) Competent execution? The reference's researcher was diligent enough to state the reason inside `confidence` ('single aggregator, not verified against Glassnode/CryptoQuant primary') and still wrote 'via aggregators' in `source`. The discipline existed; the field did not hold it. (3) Present elsewhere? sources[] exists and research_gaps :89 requires declaring what was not done — that is the honest partial answer and it is why trust_erosion is med, not high. But neither joins a fact to a citation. (4) content or lens? Content — a source id reference is a shared-schema change.",
+      "resolution": "open",
+      "recurrence": 1,
+      "content_or_lens": "content",
+      "l2_priority": "Count facts whose `source` names a routing path ('via search', 'via aggregators') rather than an identifiable publisher, and count derived quantities carrying an external source they were not derived from."
+    },
+    {
+      "id": "G-L1S-HS-05",
+      "creator": "hardware-silicon",
+      "topic": "HBM and advanced packaging, not GPUs, as the AI capacity constraint",
+      "area": "tech",
+      "lens": "tech",
+      "level": "L1",
+      "targets": ["dimensions", "ui"],
+      "type": "taxonomy-gap",
+      "dimension": "dimensions",
+      "severity": "minor",
+      "impact": { "frequency": "med", "reachability": "med", "trust_erosion": "med" },
+      "title": "A column is an unordered set, but a supply chain's thesis is WHERE in the sequence the constraint sits",
+      "expected": "For a topic whose argument is positional — the binding constraint has moved from stage 2 to stage 4 — the board should let a reviewer see the stages in order, because the ordering IS the claim being reviewed.",
+      "got": "`DIMENSIONS` (dimensions.ts:25-40) is a list of columns and `CARD_DIMENSION` (:50-60) is a flat card-to-column map. Membership only; no ordering within a column and no relation between cards in one. My five-stage chain (wafer start → known-good die → stack → package → shipped unit) lands as five unordered cards in `flows`, and a reviewer cannot see that stage 4 is downstream of stage 3, which is the entire finding. The schema is fine here — `mechanisms[].chain` (NOTEBOOK-SCHEMA.md:49-53) authors exactly this sequence — so the loss happens at the surface, not in the notebook.",
+      "evidence": [
+        "app/_phases/_shared/notebook/dimensions.ts:25-40",
+        "app/_phases/_shared/notebook/dimensions.ts:50-60",
+        "app/_phases/_shared/notebook/dimensions.ts:28",
+        "pipeline/NOTEBOOK-SCHEMA.md:49-53"
+      ],
+      "artifact_check": "by-design",
+      "verdict": "uncertain",
+      "refuter_pass": "(1) Methodic or topic? Genuinely closer to my topic than to the methodic — a physical pipeline is more ordered than most subjects, which is why I scored it minor and verdict uncertain rather than confirmed. (2) Competent execution? A competent researcher writes the sequence into mechanisms[].chain and it renders correctly downstream; only the review board flattens it. (3) Present elsewhere? Yes — mechanisms[].chain holds it, which is why this is scoped to `dimensions`/`ui` and not to `notebook-schema`. (4) content or lens? Content, emphatically. A column that can render its cards in a declared order is a shared UI capability, not a fork of the process, and the incumbent Bitcoin run would be unaffected by it. I explicitly decline to argue this to a lens.",
+      "resolution": "open",
+      "recurrence": 1,
+      "content_or_lens": "content",
+      "l2_priority": "Check whether the notebook's mechanisms[].chain carries the stage order faithfully and whether the rendered script preserves it — if both hold, this is purely a board-surface item and drops to polish."
+    },
+    {
+      "id": "G-L1S-HS-06",
+      "creator": "hardware-silicon",
+      "topic": "HBM and advanced packaging, not GPUs, as the AI capacity constraint",
+      "area": "tech",
+      "lens": "tech",
+      "level": "L1",
+      "targets": ["conclusions"],
+      "type": "wrong-instruction",
+      "dimension": "conclusions",
+      "severity": "minor",
+      "impact": { "frequency": "med", "reachability": "high", "trust_erosion": "med" },
+      "title": "The mandatory falsifier leans toward forecast-shaped conclusions",
+      "expected": "The falsifier requirement should be indifferent about whether a conclusion is a claim about the present or a prediction about the future. My sixth criterion — no conclusion forecasts a price — should be neither helped nor hindered by it.",
+      "got": "`falsifiableBy` is required (conclusions.ts:49-50) and the header (:18-19) rightly says a synthesis that cannot be wrong is a vibe. But asked for the cheapest CHECKABLE falsifier, a writer reaches for a dated prediction, because a prediction is the easiest thing to check later. The reference's own output shows the lean: 'Sustained net inflows through a year in which price falls' (:83-84), 'A risk-off episode in which Bitcoin holds while the Nasdaq falls' (:99-100), 'Sustained price appreciation on falling exchange balances' (:143-144). Those are good falsifiers and they are also forecasts. Nothing in the file forbids a conclusion that forecasts a price, and the one field it mandates gently rewards one.",
+      "evidence": [
+        "app/_phases/_shared/notebook/conclusions.ts:18-19",
+        "app/_phases/_shared/notebook/conclusions.ts:49-50",
+        "app/_phases/_shared/notebook/conclusions.ts:83-84",
+        "app/_phases/_shared/notebook/conclusions.ts:99-100",
+        "app/_phases/_shared/notebook/conclusions.ts:143-144"
+      ],
+      "artifact_check": "by-design",
+      "verdict": "uncertain",
+      "refuter_pass": "(1) Methodic or topic? Both. My criterion 6 is mine, but the lean is a property of the field and it operates on every Creator. (2) Competent execution? A competent writer can produce a present-tense falsifier — 'wrong if a published wafer-out figure exceeds X for the quarter already reported' is checkable without predicting anything. So this is a lean, not a defect, which is why severity is minor and verdict uncertain. (3) Present elsewhere? Checked the whole file: no guidance on falsifier TYPE, only that one must exist. (4) content or lens? Content — one sentence of guidance in conclusions.ts ('prefer a falsifier checkable against the already-published record over one that requires waiting') would remove the lean for everyone and would not change a single Bitcoin conclusion's validity.",
+      "resolution": "open",
+      "recurrence": 1,
+      "content_or_lens": "content",
+      "l2_priority": "Classify each produced conclusion's falsifier as checkable-now versus checkable-later, and report the ratio. If most are checkable-later, the lean is real."
+    },
+    {
+      "id": "G-L1S-HS-07",
+      "creator": "hardware-silicon",
+      "topic": "HBM and advanced packaging, not GPUs, as the AI capacity constraint",
+      "area": "tech",
+      "lens": "tech",
+      "level": "L1",
+      "targets": ["dimensions"],
+      "type": "taxonomy-gap",
+      "dimension": "dimensions",
+      "severity": "minor",
+      "impact": { "frequency": "high", "reachability": "high", "trust_erosion": "low" },
+      "title": "Column purposes are market-worded, and `macro`'s `emptyMeans` states a domain-specific claim as universal",
+      "expected": "A column `purpose` should describe the question the column asks in domain-neutral terms, and an `emptyMeans` — which is a CLAIM about what an empty column signifies — should be true wherever the board is used, or the honest empty state becomes a dishonest one.",
+      "got": "All seven purposes hold my material, but four are worded for a traded asset and must be translated before use: 'What the PRICE actually did' (:26), 'Who is BUYING AND SELLING' (:28), 'Rates, currency, liquidity, correlation with other ASSETS' (:32). Tested two `emptyMeans` as env.md instructs. `the-number` (:27) — 'No measured baseline — every claim downstream is unanchored' — is true and domain-neutral; keep it verbatim. `macro` (:33) — 'The asset is being explained in isolation from the market it trades in' — is FALSE on my topic: my subject is not an asset and does not trade. An empty `macro` column here means 'the capacity story is being told without the memory cycle competing for the same wafers'. A reader shown the shipped string would conclude something untrue about my notebook, which is worse than a blank column.",
+      "evidence": [
+        "app/_phases/_shared/notebook/dimensions.ts:26",
+        "app/_phases/_shared/notebook/dimensions.ts:27",
+        "app/_phases/_shared/notebook/dimensions.ts:28",
+        "app/_phases/_shared/notebook/dimensions.ts:32",
+        "app/_phases/_shared/notebook/dimensions.ts:33",
+        "app/_phases/_shared/notebook/dimensions.ts:3-5"
+      ],
+      "artifact_check": "by-design",
+      "verdict": "confirmed",
+      "refuter_pass": "(1) Methodic or topic? Methodic, and by its own admission — dimensions.ts:3-5 says the columns were taken from RESEARCH-PROMPT.md Phase 1's 'causal domains a market/economics run must cover', so market wording is documented provenance, not an accident. That is what makes it a fixable content item rather than an indictment. (2) Competent execution? A researcher translates the labels mentally and files correctly; the `emptyMeans` is the part that cannot be translated, because it is shipped copy the reviewer reads rather than an instruction the researcher follows. (3) Present elsewhere? No per-domain purpose variants exist anywhere. (4) content or lens? CONTENT, and I want this recorded emphatically because it is the finding most likely to be misread as lens evidence. Seven of seven columns took my material. The mechanism holds; the strings are wrong. Per-domain `purpose`/`emptyMeans` strings against the SAME seven column ids is content by the definition in the rubric, and swapping strings cannot change the Bitcoin run's output.",
+      "resolution": "open",
+      "recurrence": 1,
+      "content_or_lens": "content",
+      "l2_priority": "Confirm the produced notebook's cards distribute across all seven columns as predicted, and check whether any column renders an empty state whose stated meaning is untrue for this topic."
+    }
+  ],
+  "not_findings": [
+    {
+      "observation": "Six of seven engines fit this topic; the skill's heuristic says 'seven is a smell'. I think the heuristic is wrong — it reads breadth as shapelessness, but a PROCESS is engine-fertile by nature and can be a correction, a walk-through, a ladder or a contested question without being less specific. Only A-vs-D is a real coin flip; the rest are different lengths.",
+      "why_not_a_finding": "The heuristic lives in the gauntlet SKILL.md, which is not a valid target. Recorded in the voice section per the rubric."
+    },
+    {
+      "observation": "Two evidence ladders coexist with no cross-reference: MEASURED/OBSERVED/INFERRED/ASSUMED for craft claims (knowledge/README.md:36-41) and high/medium/low for research facts (NOTEBOOK-SCHEMA.md:46). I graded my earnings-call sources against the wrong one for about ten minutes. This also means the orchestrator's second lead is misdirected: the MEASURED ladder is not applied to research material at all, so 'the ladder has no honest rung for interpretive evidence' cannot be tested against notebook facts.",
+      "why_not_a_finding": "Arguably a `knowledge` discoverability item, but it cost me ten minutes and no output, and I would rather the judge weigh the correction to the lead than field a minor finding. Escalate if another Creator hits it."
+    },
+    {
+      "observation": "On this topic the counter-case is computed from the same tracker dataset as the main case — the two readings disagree about which stage binds, not about the numbers. The notebook cannot record that a steel-man shares an underlying dataset with the case it opposes, so an entangled steel-man can look independent.",
+      "why_not_a_finding": "Uncertain the schema should model dataset provenance at all. Flagged for the judge rather than scored."
+    },
+    {
+      "observation": "Tracker data on this beat is low-confidence and load-bearing simultaneously, so nearly every fact trips the second-source rule and the second source is another tracker reading the same fab. The methodic will correctly report the notebook as thin.",
+      "why_not_a_finding": "That is a fact about semiconductors, not a defect. The vendor-research-is-low default (NOTEBOOK-SCHEMA.md:46) is right and I want it on the record as a strength."
+    }
+  ],
+  "engine_availability": {
+    "available": 6,
+    "total": 7,
+    "recommended": "reversal-chain",
+    "notable": "Engine B (Effort/Payoff Gap) converts the unit reconciliation itself into the viewer's pleasure — walk one wafer to one shipped accelerator, lose die at every step. The most useful thing this paper walk produced.",
+    "poor": ["briefing — standing condition, not news; same failure as the reference run's"]
+  },
+  "orchestrator_leads": [
+    {
+      "lead": "The seven columns are market-shaped and will collapse or leave orphans on non-market topics.",
+      "ruling": "CONTRADICTED. 7/7 used, 2 orphans, neither of which is a column collapse. The columns are market-WORDED. See G-L1S-HS-07 and §1a."
+    },
+    {
+      "lead": "The evidence ladder (MEASURED/OBSERVED/INFERRED/ASSUMED) has no honest rung for interpretive or practitioner-consensus evidence.",
+      "ruling": "MISDIRECTED. That ladder governs the knowledge library's craft claims (knowledge/README.md:36-41), not notebook facts, which use confidence high/medium/low (NOTEBOOK-SCHEMA.md:46). Against the actual axis, the vendor-research-is-low default plus the second-source rule is a strength, not a gap. The real evidence defect on this topic is that `confidence` does one job for two questions — did the source say it, and is it true — which is HS-04's neighbourhood."
+    },
+    {
+      "lead": "The `unhinged` leap tier is unsafe when a conclusion names a living person.",
+      "ruling": "NOT TESTED. My exposure bar is medium and my actors are companies, not individuals. No opinion offered — a Fraud or Geopolitics seat should own this."
+    },
+    {
+      "lead": "Phase 1's mandatory counter-case row is unsatisfiable for topics with no literature.",
+      "ruling": "NOT APPLICABLE HERE. My counter-case has abundant literature and is reachable at full strength. Cannot contradict or confirm; a hostile 48-hour-news seat should rule."
+    }
+  ],
+  "known_gaps_restated": ["G-000 — untagged cards fall through ?? DEFAULT_DIMENSION into 'The number' (dimensions.ts:42-49). Restated, not re-raised."]
+}

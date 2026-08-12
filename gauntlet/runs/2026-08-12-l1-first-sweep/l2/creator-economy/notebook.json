@@ -1,0 +1,498 @@
+{
+  "_meta": {
+    "run": "2026-08-12-l1-first-sweep",
+    "level": "L2",
+    "creator": "creator-economy",
+    "schema": "pipeline/NOTEBOOK-SCHEMA.md (AMENDED, post E1-E11)",
+    "produced": "2026-08-12",
+    "searches": { "web_search_calls": 8, "web_fetch_calls": 6, "budget_stated_in_phase_1": "4-8 searches" },
+    "note": "Internal test artifact for the Gauntlet. Not a publishable piece. Every source below was actually retrieved on 2026-08-12; nothing here is a remembered figure."
+  },
+
+  "topic": "The video-essay format that dominated 2021 is dead, and you can see it die inside the videos - the cold open got longer, the thesis moved later, and the payoff stopped arriving.",
+  "question": "If the video essay really is drifting, why does every measurement anyone publishes describe the outside of the video?",
+  "verdict": "The drift is a claim about the interior of the artefact, and every retrievable measurement - duration, views, watch time, algorithm response - is a measurement of its exterior. The evidence that would settle it is public, free and playable by anyone, and it is not indexed, which is not the same as not existing.",
+  "template_intent": "mid-educational-video",
+  "subject_domain": "entertainment / format criticism",
+
+  "prior": "I think the cold open got longer, the thesis moved later, and the payoff stopped arriving, and that the cause is structural drift inside the form rather than the algorithm. I expect to find no numbers, because the only variable that matters - where in the runtime the thesis lands - is not something anyone publishes. I expect the methodic to push me toward a proxy, most likely a view count or a video length, and I expect to refuse it.",
+  "prior_outcome": "MIRROR on the thesis, DISCOVERY on the instrument. The structural read survived unrefuted and untested. What I did not predict: the proxy did not have to be invented, it was waiting in the first search result, already measured, already dated, already sourced - and it measures the wrong variable. I also predicted no counter-case literature existed. That was wrong, and one search found it.",
+
+  "domains": [
+    { "id": "structure-in-the-cut", "label": "Structure in the cut", "purpose": "Where the thesis lands inside the runtime, and how long the front matter is before it. Cold-open duration, time-to-thesis, payoff present y/n, per video.",
+      "emptyByOmission": "Nobody watched anything. The central claim of this topic is unexamined and every downstream reading is a guess about an artefact nobody opened.",
+      "notApplicable": "Never for this topic. This column IS the topic; if it is empty the run has not started." },
+    { "id": "corpus-baseline", "label": "The corpus baseline", "purpose": "The spread of prior instances with an n and a stated window. Where does the 2026 cohort sit inside the 2019-2026 distribution?",
+      "emptyByOmission": "There is a reading and no distribution behind it - one video is an anecdote, forty is a baseline.",
+      "notApplicable": "Never. A claim that a form changed over time without a window is not a claim." },
+    { "id": "platform-rules", "label": "Platform rules", "purpose": "Monetisation thresholds, ad placement, algorithm changes - what the platform pays for and where it interrupts.",
+      "emptyByOmission": "The incentive environment is assumed rather than checked.",
+      "notApplicable": "The subject is off-platform or predates monetisation. Rare here." },
+    { "id": "practitioner-account", "label": "The practitioner's account", "purpose": "What the people who make these videos say about why theirs got longer, in their own words.",
+      "emptyByOmission": "Nobody asked the makers. The mechanism is being inferred from the outside when the inside is on the record.",
+      "notApplicable": "The practitioners are anonymous, dead, or have said nothing. State which." },
+    { "id": "format-discourse", "label": "Format discourse", "purpose": "The published criticism of the form, and crucially its dates - when did people start saying this, and did the saying precede or follow the change?",
+      "emptyByOmission": "The run believes it is first. It almost never is.",
+      "notApplicable": "The form is too new or too small to have a critical literature. Check the date before believing it." },
+    { "id": "counter-case", "label": "The counter-case", "purpose": "The strongest argument that the format is fine and the audience moved.",
+      "emptyByOmission": "DANGEROUS - without this the script can only produce a polemic (RESEARCH-PROMPT Phase 6).",
+      "notApplicable": "There is no legitimately-empty reading of this column." },
+    { "id": "conclusions", "label": "Conclusions", "purpose": "What the domains add up to. Reasoned, not researched - OFF until gated in.",
+      "emptyByOmission": "Nothing synthesised.",
+      "notApplicable": "Never." }
+  ],
+
+  "card_dimension": {
+    "f-interior-unreachable": "structure-in-the-cut",
+    "f-no-thesis-series": "structure-in-the-cut",
+    "f-lds-length": "format-discourse",
+    "f-lds-scale-conflict": "format-discourse",
+    "f-discourse-dates": "format-discourse",
+    "f-hbomb-plagiarism": "format-discourse",
+    "f-resetera-blocked": "format-discourse",
+    "f-midroll-2025": "platform-rules",
+    "f-midroll-threshold": "platform-rules",
+    "f-length-bucket-economics": "platform-rules",
+    "f-geller-length": "practitioner-account",
+    "f-solomons-counter": "counter-case"
+  },
+
+  "domain_fill": {
+    "structure-in-the-cut": { "cards": 2, "of_which_absence": 2, "state": "POPULATED BY ABSENCES - see note", "why": "I could not watch. Two WebFetch calls against youtube.com/watch returned the page shell only. The honest state of this column is emptyByOmission: it is applicable, it is the topic, and the work was not done. But the two cards that SAY SO are cards, and they are filed here because this is the column they are about - so the column renders with a count of 2 and does not render as empty at all. `kind: \"absence\"` is on the facts; the column dial does not read it. See G-2026-08-12-CE-L2-05." },
+    "corpus-baseline": { "cards": 0, "state": "emptyByOmission", "why": "Genuinely, cleanly empty. n=0 and no card claims otherwise. This is the column where E3's split actually gets to do its job, and the reading it produces is an accusation of me, correctly." },
+    "platform-rules": { "cards": 3, "state": "filled" },
+    "practitioner-account": { "cards": 1, "state": "filled", "why": "One practitioner, on the record, load-bearing. n=1 and it is stated as n=1." },
+    "format-discourse": { "cards": 5, "state": "filled - and this is the concentration" },
+    "counter-case": { "cards": 1, "state": "filled", "why": "FOUND, not constructed. My L1 report asserted no such literature existed. It does." },
+    "conclusions": { "cards": 3, "state": "filled - 3 conclusions, not facts" },
+    "untagged": { "cards": 0, "state": "empty", "why": "Every card is tagged. Per UNTAGGED_DIMENSION this column renders only when non-empty, so it does not render. E3 verified working." },
+    "orphans": 0,
+    "max_column_concentration": "format-discourse, 5/12 facts = 41.7%",
+    "concentration_note": "First count said 3/12 = 25% and it was wrong; recounted from the card_dimension table above. Worth recording that the tidier number was the one I reached first. 41.7% in `format-discourse` is the honest dial and it says something real: the column holding OTHER PEOPLE'S COMMENTARY ABOUT the format absorbed twice as much as any other, while the column holding the format itself holds two cards that both say the column is empty."
+  },
+
+  "tension": {
+    "expectation": "If a video format is drifting, the drift will show up in the numbers the platform and the analytics industry publish about video - length, views, watch time, algorithm response.",
+    "reality": "Every published series measures the exterior of the artefact. Average uploaded duration, watch-time share by length bucket, views per format. Not one measures where inside a video its argument arrives. The one variable the claim is actually about is unpublished by anyone and unreachable by search - and it is simultaneously the most checkable thing in the topic, because the videos are free and anyone can press play.",
+    "why_it_is_a_tension": "Phase 2 shape 5, the category error: the subject is being measured with the wrong instrument, and the wrong instrument is the only one with a dataset. The available number (35 minutes to 28 minutes of uploaded duration, f-lds-length) is real, sourced and dated, and substituting it for the claim would change the claim without anyone noticing. Downgraded from high to moderate by the counter-case at f-solomons-counter, which survives Phase 6: Solomons concedes the formula and attributes it to the attention economy rather than to the form, and nothing I retrieved distinguishes his account from mine.",
+    "strength": "moderate",
+    "normal_range": "UNESTABLISHED. There is no distribution of time-to-thesis for any period, so I cannot say whether the 2026 cohort sits outside normal variation. This is the honest state and it is why strength is not high."
+  },
+
+  "facts": [
+    {
+      "id": "f-interior-unreachable",
+      "claim": "The interior of a YouTube video is not retrievable by the research instrument this methodic assumes: two WebFetch requests to youtube.com/watch pages returned only footer navigation - no runtime, no chapter markers, no transcript, and in one case not even the title.",
+      "kind": "absence",
+      "load_bearing": true,
+      "sources": [
+        { "name": "WebFetch → https://www.youtube.com/watch?v=CgodsSmsCHo", "evidence_class": "primary", "locator": "tool response, 2026-08-12: 'The page excerpt contains only YouTube's footer navigation and legal links... The actual video page content is not present.'" },
+        { "name": "WebFetch → https://www.youtube.com/watch?v=9rFe_MuQb8g", "evidence_class": "primary", "locator": "tool response, 2026-08-12: title returned; channel, upload date, runtime, chapters, description all 'Not present in the fetched content'." }
+      ],
+      "confidence": "high",
+      "confidence_note": "This is a direct observation of the tool's own output, twice, on two different videos. It is the most primary source in this notebook and it is a source about the instrument rather than about the world.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-12",
+      "search_scope": "Two youtube.com/watch URLs returned by an allowed_domains WebSearch, fetched directly. Not attempted: third-party transcript services, yt-dlp, the YouTube Data API. What would count as this absence lifting: any retrieval path that returns a chapter list or a caption track with timings.",
+      "subject": { "names": "org", "who": "YouTube / the fetch tool" },
+      "note": "This fact is the run. Everything below it is context around a hole."
+    },
+    {
+      "id": "f-no-thesis-series",
+      "claim": "No published series measuring time-to-thesis, cold-open duration, or payoff presence inside video essays was found in eight searches.",
+      "kind": "absence",
+      "load_bearing": true,
+      "sources": [
+        { "name": "8 WebSearch queries, 2026-08-12", "evidence_class": "primary", "locator": "queries recorded in NOTES.md §Search log" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Eight searches is a floor, not a proof. An unindexed academic dataset would not surface here. Stated as 'not found in eight searches', never as 'does not exist'.",
+      "as_of": "2026-08-12",
+      "search_scope": "English-language web search, 2026-08-12, terms covering video-essay decline, length, cold opens, format criticism, and platform policy. What would count as it appearing: any dataset stating where in a runtime an argument lands, for any n greater than one.",
+      "note": "Contrast with f-lds-length, which measures the exterior and was the FIRST result of the FIRST search. The exterior is heavily instrumented and the interior is not instrumented at all."
+    },
+    {
+      "id": "f-lds-length",
+      "claim": "Average top-video length across Little Dot Studios' managed channels fell from about 35 minutes to about 28 minutes between December 2024 and May 2025, reported as a 21% drop.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "SkipTheWatch, 'Is Long-Form YouTube Dying? 2026 Data Says No'", "evidence_class": "aggregator", "locator": "https://skipthewatch.com/blog/death-of-long-form-youtube", "interested": true },
+        { "name": "Quasa, 'Insights from Little Dot Studios' 2026 YouTube Viewing Whitepaper'", "evidence_class": "aggregator", "locator": "https://quasa.io/media/insights-from-little-dot-studios-2026-youtube-viewing-whitepaper-evolving-trends-in-content-and-consumption" },
+        { "name": "Tubefilter, 2026-02-12", "evidence_class": "secondary", "locator": "https://www.tubefilter.com/2026/02/12/little-dot-youtube-video-length-whitepaper-viewer-habits-2026/" }
+      ],
+      "confidence": "low",
+      "confidence_note": "THREE reasons, and the first is arithmetic. (1) The published percentage is not recomputable from the published endpoints: (35 - 28) / 35 = 0.200 exactly, i.e. 20%, and the figure given is 21%. That is consistent with unrounded underlying values but it means the pair as published cannot be checked, and per the amended quality bar a comparison the checker cannot recompute is flagged, not shipped. (2) The whitepaper itself was never reached - three restatements, zero primary. (3) The restatements disagree on scale: see f-lds-scale-conflict.",
+      "as_of": "2026-08-12",
+      "event_date": "2025-05-31",
+      "period": "2024-12 to 2025-05 (6 months)",
+      "unit": "minutes",
+      "denominator": "the top-performing video per channel across 800+ Little Dot-managed channels",
+      "subject": { "names": "org", "who": "Little Dot Studios" },
+      "qualifies": ["f-no-thesis-series"],
+      "note": "THE PROXY, NAMED. This measures uploaded duration. My claim is about where the thesis lands inside a video. A format can shorten by seven minutes and defer its thesis harder in the seven that remain, and this series would show the same drop either way. It is admitted to the notebook as a fact about the exterior and it is barred from carrying the thesis. Nothing in the schema enforces that bar - see NOTES.md G-2026-08-12-CE-L2-01."
+    },
+    {
+      "id": "f-lds-scale-conflict",
+      "claim": "Two restatements of the same Little Dot whitepaper give incompatible scale: one describes '800+ channels, 930 million subscribers, 11.2 billion monthly views', the other 'over 1.2 billion views across more than 800 managed channels'.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "SkipTheWatch", "evidence_class": "aggregator", "locator": "https://skipthewatch.com/blog/death-of-long-form-youtube" },
+        { "name": "Quasa", "evidence_class": "aggregator", "locator": "https://quasa.io/media/insights-from-little-dot-studios-2026-youtube-viewing-whitepaper-evolving-trends-in-content-and-consumption" }
+      ],
+      "confidence": "high",
+      "confidence_note": "High confidence that the two restatements disagree - both were fetched. Zero confidence about which is right, because the whitepaper was not reached.",
+      "as_of": "2026-08-12",
+      "unit": "views",
+      "denominator": "unstated in both - one says monthly, the other says nothing about a window",
+      "contests": ["f-lds-length"],
+      "note": "11.2bn monthly versus 1.2bn unwindowed is not a rounding difference, it is a factor of roughly nine and possibly a different denominator entirely. Recorded via `contests` rather than muzzled in `unknowns` - this disagreement is a fact about how the only number in my topic reaches me."
+    },
+    {
+      "id": "f-geller-length",
+      "claim": "Jacob Geller says his video essays grew longer without him targeting length for the algorithm - 'I've never tried to do that' - and attributes the growth to due diligence and to pre-empting the comment section: 'for every claim you're making, you have to say three things that are not the claim.'",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Aftermath, 'Aftermath Hours' podcast write-up with Jacob Geller", "evidence_class": "secondary", "locator": "https://aftermath.site/aftermath-hours-podcast-jacob-geller-ubisoft-assassins-creed", "interested": true }
+      ],
+      "confidence": "medium",
+      "confidence_note": "The words are a practitioner's own account of his own process, which makes them authoritative about intent and weak about cause - a maker is not a neutral witness to why his work changed. `utterance` is doing real work here: this is 'Geller said it', not 'it is true'. Class is secondary because I read Aftermath's write-up of the podcast, not the audio.",
+      "as_of": "2026-08-12",
+      "event_date": "2024-09-27",
+      "subject": { "names": "living-person", "who": "Jacob Geller" },
+      "note": "This is the strongest support for m-deferral and it arrived from a search, not from watching. It is the one place the methodic bought me something my manual process would have taken an hour to find."
+    },
+    {
+      "id": "f-solomons-counter",
+      "claim": "Noah Solomons, writing in The Link, concedes the formula and locates its cause outside the form: 'Are video essays becoming formulaic? Probably' - attributing it to 'incredible pressure on creators to satisfy insatiable consumer demands' rather than to the medium.",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Noah Solomons, 'Don't blame the video essay', The Link (Opinions)", "evidence_class": "secondary", "locator": "https://thelinknewspaper.ca/article/dont-blame-the-video-essay, published 2026-03-11" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "An edited opinion column, not a study. Medium for what it is: evidence that the position is held and argued in public, which is exactly what a counter-case row asks for.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-03-11",
+      "subject": { "names": "living-person", "who": "Noah Solomons" },
+      "contests": ["f-geller-length"],
+      "note": "MY L1 REPORT SAID THIS DID NOT EXIST. I wrote that 'nobody publishes the video essay format is fine - there is no literature'. One search found a dated, published, on-the-nose defence that concedes my observation and refuses my cause. The counter-case row was satisfiable by retrieval and I asserted an absence I had not searched."
+    },
+    {
+      "id": "f-midroll-2025",
+      "claim": "From 2025-05-12 YouTube began automatically inserting mid-roll ad slots at 'natural break points' - pauses and transitions - and retroactively adding automatic slots to videos uploaded before 2025-02-24 that carried manual mid-rolls; creators may opt out in Studio.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "Search Engine Journal, 'YouTube Details Changes Coming To Mid-Roll Ads On May 12'", "evidence_class": "secondary", "locator": "https://www.searchenginejournal.com/youtube-details-changes-coming-to-mid-roll-ads-on-may-12/540924/" },
+        { "name": "Social Media Today, 'YouTube Announces Update to Mid-Roll Ad Placement Process'", "evidence_class": "secondary", "locator": "https://www.socialmediatoday.com/news/youtube-updates-mid-roll-ad-placement-process/741331/" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Two independent trade outlets agree. The primary - YouTube's own Help article and creator blog - was identified (support.google.com/youtube/answer/6175006) and NOT fetched. Named as a gap rather than laundered.",
+      "as_of": "2026-08-12",
+      "event_date": "2025-05-12",
+      "subject": { "names": "org", "who": "YouTube" }
+    },
+    {
+      "id": "f-midroll-threshold",
+      "claim": "A YouTube video must be at least 8 minutes long to carry mid-roll ads at all.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "vidIQ, 'YouTube Mid-Roll Ads: 8-Minute Minimum & Placement Rules'", "evidence_class": "aggregator", "locator": "https://vidiq.com/blog/post/youtube-8-minute-mid-roll-ads/", "interested": true },
+        { "name": "YouTube Help, 'Manage mid-roll ad breaks in long videos'", "evidence_class": "primary", "locator": "https://support.google.com/youtube/answer/6175006 - IDENTIFIED, NOT FETCHED" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Load-bearing and not reaching a primary source I actually opened. Flagged for a second source per the quality bar. The primary exists and is one fetch away; I ran out of budget and I am saying so rather than promoting the aggregator.",
+      "as_of": "2026-08-12",
+      "unit": "minutes",
+      "note": "Load-bearing because it is the whole of r1: the monetisation cliff sits at 8 minutes and the videos in the drift argument run 20 to 240. The threshold cannot explain a drift that happens entirely above it."
+    },
+    {
+      "id": "f-length-bucket-economics",
+      "claim": "In the Little Dot data, videos under 30 minutes are 61% of uploads but 18% of watch time and 30% of revenue; videos over 30 minutes are 39% of uploads, 82% of watch time and 70% of revenue.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "SkipTheWatch", "evidence_class": "aggregator", "locator": "https://skipthewatch.com/blog/death-of-long-form-youtube" },
+        { "name": "Quasa", "evidence_class": "aggregator", "locator": "https://quasa.io/media/insights-from-little-dot-studios-2026-youtube-viewing-whitepaper-evolving-trends-in-content-and-consumption" }
+      ],
+      "confidence": "low",
+      "confidence_note": "Same whitepaper, same aggregator-only chain as f-lds-length. Arithmetic check performed: 61+39=100 and 18+82=100 and 30+70=100, so the three pairs are internally consistent as complements. That is the only thing about them I could verify.",
+      "as_of": "2026-08-12",
+      "period": "2025 (window not stated by either restatement - flagged)",
+      "unit": "%",
+      "denominator": "uploads / watch time / revenue across 800+ Little Dot-managed channels",
+      "subject": { "names": "org", "who": "Little Dot Studios" },
+      "note": "The incentive to be long is real and it is in the revenue column, not the ad-threshold column. This is the fact that makes r1 interesting rather than merely contrarian."
+    },
+    {
+      "id": "f-hbomb-plagiarism",
+      "claim": "On 2023-12-02 Hbomberguy published 'Plagiarism and You(Tube)', a video of nearly four hours, which passed 4.5 million views within days and triggered a platform-wide reckoning over sourcing in video essays.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "PinkNews, 2023-12-14", "evidence_class": "secondary", "locator": "https://www.thepinknews.com/2023/12/14/hbomberguy-james-somerton-misinformation-queer-erasure/" },
+        { "name": "Know Your Meme, 'HBomberguy vs. James Somerton Plagiarism Scandal'", "evidence_class": "aggregator", "locator": "https://knowyourmeme.com/memes/events/hbomberguy-vs-james-somerton-plagiarism-scandal" },
+        { "name": "Tedium, 2023-12-05", "evidence_class": "secondary", "locator": "https://tedium.co/2023/12/05/hbomberguy-plagiarism-youtube-culture/" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Widely reported, consistently dated across three outlets. The runtime is reported as 'nearly four hours' / 'four-hour' and I have no exact figure - which is the joke of this notebook: the total runtime of a video is press-reportable and its interior is not.",
+      "as_of": "2026-08-12",
+      "event_date": "2023-12-02",
+      "subject": { "names": "living-person", "who": "Hbomberguy; James Somerton and others named as case studies" },
+      "note": "Kept in the notebook as a competing explanation for Engine D, and deliberately NOT built into a conclusion. Sourcing scandals are about individuals; my beat is about the form. The card is here so the adjudication is honest, not so the video names anyone."
+    },
+    {
+      "id": "f-discourse-dates",
+      "claim": "Published complaints that video essays have become too long and too formulaic are dated at least to 2024-01-28 ('Video essays have gotten too long') and 2023-12-31 ('Are Videos Getting too Long?'), with the same complaint still being published in 2025 and 2026.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "WebSearch result set, allowed_domains youtube.com, 2026-08-12", "evidence_class": "aggregator", "locator": "search snippets returning title + upload date for youtube.com/watch?v=CgodsSmsCHo (2024-01-28) and ?v=cF5u3aTYVOU (2023-12-31)" }
+      ],
+      "confidence": "low",
+      "confidence_note": "LOW and load-bearing, flagged. These dates come from search-result snippets, not from the video pages - the pages themselves returned nothing (f-interior-unreachable). I am citing a search engine's summary of metadata I could not independently open. That is exactly the laundered-confidence anti-pattern if it goes unmarked, so it is marked.",
+      "as_of": "2026-08-12",
+      "period": "2023-12 to 2026-06",
+      "note": "The dates matter more than the complaints: if the criticism predates the 35-to-28-minute shortening by a year, the discourse is not a reaction to the metric."
+    },
+    {
+      "id": "f-resetera-blocked",
+      "claim": "The single retrieved forum thread addressing this topic's exact structural complaint - 'Why do video essays on YouTube always do this?' - returned HTTP 403 and could not be read.",
+      "kind": "absence",
+      "load_bearing": false,
+      "sources": [
+        { "name": "WebFetch → resetera.com thread 386420", "evidence_class": "primary", "locator": "tool response, 2026-08-12: 'The server returned HTTP 403 Forbidden.'" }
+      ],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "search_scope": "One fetch attempt, no retry, no alternate route. What would count as lifting it: any readable mirror of the thread.",
+      "note": "Recorded because the vernacular layer - where format criticism actually lives, in forums and replies - is systematically behind bot walls. Two of my three most relevant primary destinations this run were unreadable, and both for infrastructure reasons rather than for lack of material."
+    }
+  ],
+
+  "mechanisms": [
+    {
+      "id": "m-deferral",
+      "name": "The deferral mechanism - why the thesis moves back",
+      "chain": [
+        "A larger audience raises the cost of being wrong in public",
+        "THEREFORE the writer pre-empts objections inside the argument rather than after it",
+        "BUT every pre-emption is a sentence that is not the claim",
+        "THEREFORE the claim arrives later in the runtime than it used to",
+        "BUT the only variable anyone publishes is total duration",
+        "THEREFORE a form can defer harder while its published numbers move the other way, and nothing notices"
+      ],
+      "steps": [
+        { "text": "A larger audience raises the cost of being wrong in public", "connector": "THEREFORE", "evidence": ["f-geller-length"] },
+        { "text": "The writer pre-empts objections inside the argument rather than after it", "connector": "BUT", "evidence": ["f-geller-length"] },
+        { "text": "Every pre-emption is a sentence that is not the claim", "connector": "THEREFORE", "evidence": ["f-geller-length"] },
+        { "text": "The claim arrives later in the runtime than it used to", "connector": "BUT", "evidence": [] },
+        { "text": "The only variable anyone publishes is total duration", "connector": "THEREFORE", "evidence": ["f-lds-length", "f-no-thesis-series"] },
+        { "text": "A form can defer harder while its published numbers move the other way, and nothing notices", "connector": "THEREFORE", "evidence": ["f-lds-length", "f-interior-unreachable"] }
+      ],
+      "explains": "Why the thesis moved later without anyone deciding it should.",
+      "needs_analogy": true,
+      "note": "STEP 4 CARRIES NO EVIDENCE AND IT IS THE STEP THE ARGUMENT TURNS ON. 'The claim arrives later in the runtime' is the empirical assertion of this entire topic and its evidence array is empty, because I could not watch. The amended schema's step-level `evidence[]` is what makes that visible in one glance instead of hiding it in prose. This is the single most useful thing E-whatever-numbered-it did for me, and what it did was convict me."
+    },
+    {
+      "id": "m-monetisation",
+      "name": "The incentive to be long, and where it actually sits",
+      "chain": [
+        "Mid-roll ads require a video of at least 8 minutes",
+        "THEREFORE there is a hard cliff at 8 minutes that every serious essay clears years ago",
+        "BUT long videos earn disproportionately - 39% of uploads take 70% of revenue",
+        "THEREFORE the real incentive is a gradient above the cliff, not the cliff",
+        "BUT a gradient rewards duration and is indifferent to where the argument sits inside it",
+        "THEREFORE monetisation explains longer and does not explain later"
+      ],
+      "steps": [
+        { "text": "Mid-roll ads require a video of at least 8 minutes", "connector": "THEREFORE", "evidence": ["f-midroll-threshold"] },
+        { "text": "There is a hard cliff at 8 minutes that every serious essay clears years ago", "connector": "BUT", "evidence": ["f-midroll-threshold"] },
+        { "text": "Long videos earn disproportionately - 39% of uploads take 70% of revenue", "connector": "THEREFORE", "evidence": ["f-length-bucket-economics"] },
+        { "text": "The real incentive is a gradient above the cliff, not the cliff", "connector": "BUT", "evidence": ["f-length-bucket-economics"] },
+        { "text": "A gradient rewards duration and is indifferent to where the argument sits inside it", "connector": "THEREFORE", "evidence": ["f-geller-length"] },
+        { "text": "Monetisation explains longer and does not explain later", "connector": "THEREFORE", "evidence": ["f-geller-length", "f-midroll-threshold"] }
+      ],
+      "explains": "Why the algorithm answer is incomplete rather than wrong.",
+      "needs_analogy": false
+    }
+  ],
+
+  "reversals": [
+    {
+      "id": "r1",
+      "obvious_reading": "Video essays got longer because YouTube pays for length - the 8-minute mid-roll threshold trained a generation of creators to pad, and the algorithm did the rest. This is the reading I would have led with, and it has real evidence behind it: the threshold is real, and long videos genuinely take a disproportionate share of revenue.",
+      "why_wrong": "The cliff sits at 8 minutes and the videos in the argument run 20 to 240. Nothing about a threshold you cleared in 2019 explains a drift that happened in 2023. And the practitioner most associated with the drift says he never targeted length: 'I've never tried to do that.'",
+      "mechanism": "m-monetisation",
+      "evidence": ["f-midroll-threshold", "f-length-bucket-economics", "f-geller-length"],
+      "escalation": "The incentive that does exist rewards duration and is completely blind to structure. So even the strong version of the algorithm story explains a longer video and cannot explain a later thesis - which means the thing I am actually claiming has no external cause on offer at all."
+    },
+    {
+      "id": "r2",
+      "obvious_reading": "The format is already correcting itself. Average top-video length fell 21% in six months, from about 35 minutes to about 28. The bloat peaked and the market fixed it.",
+      "why_wrong": "That figure measures uploaded duration across one company's managed channels. It says nothing about where inside any of those videos the argument arrives. A twenty-eight-minute video can defer its thesis harder than a thirty-five-minute one did, and this series would report an improvement either way.",
+      "mechanism": "m-deferral",
+      "evidence": ["f-lds-length", "f-no-thesis-series"],
+      "escalation": "And the number cannot be checked: 35 to 28 is exactly 20%, the published figure is 21%, and the whitepaper behind it was never reachable. The one measurement available for my topic measures the wrong variable AND does not recompute."
+    },
+    {
+      "id": "r3",
+      "obvious_reading": "There is no real evidence here, because there is no data. Format criticism is taste with a timeline attached, and a claim nobody has measured is a claim nobody should make.",
+      "why_wrong": "The data exists, it is public, and it is free. Every one of these videos is playable by anyone with a browser, and the claim 'at 4:12 the thesis has not landed' is checkable by a stranger in four minutes and twelve seconds. What is missing is not the evidence. It is the index.",
+      "mechanism": "m-deferral",
+      "evidence": ["f-interior-unreachable", "f-no-thesis-series"],
+      "escalation": "So the most checkable claim in this topic is the one a research tool cannot fetch, and the least checkable - a proprietary whitepaper restated by three aggregators that disagree with each other about scale - is the one that arrives first, formatted, dated, and ready to be believed. Unindexed is not unavailable. It just looks the same from inside a search box."
+    }
+  ],
+
+  "steel_man": {
+    "claim": "The format is fine. The audience moved, the attention economy squeezed, and what looks like decay from the inside of the craft is a market condition from the outside.",
+    "provenance": "found",
+    "evidence": ["f-solomons-counter", "f-lds-length", "f-length-bucket-economics"],
+    "statement": "The video essay remains, in Solomons' words, 'a unique discursive medium that promotes creative expression and deep thinking', and the medium is uniquely suited to visual criticism because unlike a written essay it 'can directly quote the object of their inquiry'. Yes - 'are video essays becoming formulaic? Probably.' But the cause is not in the form. It is 'incredible pressure on creators to satisfy insatiable consumer demands', an attention economy that rewards volume and duration, and a platform whose revenue curve pays 70% to the 39% of uploads that run long. The creators did not drift. They responded rationally to a payoff structure, and a critic mistaking an incentive gradient for an artistic decline is doing exactly what he accuses everyone else of - blaming the wrong layer.",
+    "why_include": "Because it is better sourced than my thesis. Solomons is dated and published; my structural read is, this run, unwatched. And because it concedes my observation and takes my cause, which is the only kind of counter-case worth having - it cannot be knocked down by adding more examples of formula, only by showing the drift happening inside a single creator's catalogue while the incentives held constant. That test is the video, and I did not run it."
+  },
+
+  "counter_positions_to_state_fairly": [
+    {
+      "position": "The formula is real and its cause is the attention economy, not the medium.",
+      "holder": "Noah Solomons, The Link",
+      "evidence": ["f-solomons-counter"],
+      "statement_verbatim": "Are video essays becoming formulaic? Probably.",
+      "locator": "https://thelinknewspaper.ca/article/dont-blame-the-video-essay, 2026-03-11"
+    },
+    {
+      "position": "Length grew from an increased sense of responsibility to an audience, not from optimisation.",
+      "holder": "Jacob Geller",
+      "evidence": ["f-geller-length"],
+      "statement_verbatim": "having a larger audience makes me feel more on the hook for 'I need to do due diligence about this.'",
+      "locator": "https://aftermath.site/aftermath-hours-podcast-jacob-geller-ubisoft-assassins-creed, 2024-09-27"
+    }
+  ],
+
+  "scale_conversions": [
+    { "for": "f-lds-length", "raw": "35 minutes to 28 minutes", "felt": "seven minutes off the front of a half-hour - about the length of the cold open the argument is supposed to be about", "kind": "count",
+      "note": "Written deliberately to show the failure mode: this felt version is accurate, vivid, and quietly promotes a claim about total duration into a claim about cold-open duration. Nothing in the schema catches it. `for` links the conversion to the fact; no field says the fact is a proxy for a different variable." },
+    { "for": "f-midroll-threshold", "raw": "8 minutes", "felt": "shorter than the sponsor read plus the cold open in most of the videos being accused", "kind": "count" },
+    { "for": "f-length-bucket-economics", "raw": "39% of uploads take 70% of revenue", "felt": "the long tail is the short one - four videos in ten earn seven dollars in ten", "kind": "ratio" }
+  ],
+
+  "analogy_candidates": [
+    { "for": "m-deferral", "analogy": "A paper that grows a longer literature review every revision because each reviewer wanted their objection answered up front - and the finding ends up on page nine.", "quality": "high" },
+    { "for": "f-lds-length", "analogy": "Measuring whether a restaurant got worse by weighing the plates.", "quality": "high" },
+    { "for": "m-monetisation", "analogy": "A toll that applies at the first mile, on a road where the argument is about what happens in mile twenty.", "quality": "medium" }
+  ],
+
+  "candidate_questions": [
+    "Why does every number about video essays measure the outside of the video?",
+    "If the thesis moved, when did it move - and did anyone notice before the criticism started?",
+    "Who decided the cold open should be two minutes, and did they decide it?",
+    "What would it take to check this, and why has nobody done it?"
+  ],
+
+  "unknowns": [
+    { "id": "u-1", "what": "Where the thesis actually lands in any of the videos named in this notebook.", "why": "The interior of a video is not retrievable by search and I did not watch.", "impact": "The script may not assert that time-to-thesis rose, and may not state any figure in seconds. It may state that the figure does not exist and that anyone can produce it.", "about": ["f-interior-unreachable", "f-no-thesis-series"] },
+    { "id": "u-2", "what": "The true scale of the Little Dot corpus - 11.2bn monthly views or 1.2bn unwindowed.", "why": "Two restatements disagree by roughly a factor of nine and the whitepaper was not reached.", "impact": "The script may cite the DIRECTION of the length change and may not cite the 21% or any corpus size.", "about": ["f-lds-length", "f-lds-scale-conflict"] },
+    { "id": "u-3", "what": "Whether the format criticism preceded or followed the measured shortening.", "why": "The discourse dates come from search snippets I could not independently open.", "impact": "The script may say the complaint is at least two years old; it may not say the complaint caused or was caused by anything.", "about": ["f-discourse-dates"] }
+  ],
+
+  "obligations": [
+    { "id": "o-1", "must": "State that the central measurement of this video was not taken, that it is takeable by any viewer, and how to take it: open the video, start a timer, mark the frame where the thesis lands.", "why": "The thesis of the piece is that the evidence is checkable and unindexed. A video that asserts that and does not hand the viewer the procedure has made the same move it is criticising.", "about": ["f-interior-unreachable", "f-no-thesis-series"] },
+    { "id": "o-2", "must": "Name the 35-to-28-minute figure, state that it is real, and state that it measures a different variable than the one in question.", "why": "The number is out there and is being used to argue both directions. Omitting it looks like avoidance; including it without the qualifier is the substitution this whole notebook is about.", "about": ["f-lds-length"] },
+    { "id": "o-3", "must": "State Solomons' concession and his cause in his own words before answering him.", "why": "The counter-case was found, not constructed, and a found counter-case gets quoted.", "about": ["f-solomons-counter"] }
+  ],
+
+  "conclusions": [
+    {
+      "id": "c-exterior-instrument",
+      "claim": "The video-essay format is measured entirely from the outside because the outside is what has an owner. Duration, views and watch time are instrumented because someone sells them; where the argument lands is instrumented by nobody because nobody bills for it.",
+      "reasoning": "Every series in this notebook came from a party with a commercial reason to produce it - a channel network's whitepaper, a platform's ad rules, an analytics blog. None of them needs to know where a thesis arrives, so none of them counts it. The absence is not a gap in knowledge, it is the shape of who was paying.",
+      "leap": "moderate",
+      "restsOn": ["f-lds-length", "f-no-thesis-series", "f-length-bucket-economics", "f-interior-unreachable"],
+      "precedent": { "domain": "clinical outcome measures", "note": "Trials long reported the endpoints that were cheap to record rather than the ones patients cared about, and the literature took decades to notice the substitution. What gets measured is a fact about the measurer's budget." },
+      "falsifiableBy": { "test": "A published dataset - academic, platform or commercial - stating time-to-thesis or an equivalent intra-video structural position for any corpus of n>1.", "kind": "document", "binds": "whole-claim" },
+      "subject": { "names": "none" },
+      "useFor": "thesis"
+    },
+    {
+      "id": "c-boundary-unwatched",
+      "claim": "The structural claim in this notebook is unestablished. The mechanism is sourced, the incentives are sourced, the counter-case is sourced, and the one assertion the argument turns on - that the thesis arrives later than it used to - rests on no evidence gathered in this run.",
+      "reasoning": "m-deferral step 4 carries an empty evidence array and it is the step the chain pivots on. Saying so is the finding; saying nothing would render as though the sourced steps around it carried the middle.",
+      "leap": "near",
+      "restsOn": ["f-interior-unreachable", "f-no-thesis-series"],
+      "falsifiableBy": { "test": "Forty videos, 2019 to 2026, timed. The procedure is a stopwatch and it is available to anyone reading this.", "kind": "measurement", "binds": "whole-claim" },
+      "subject": { "names": "none" },
+      "useFor": "boundary"
+    },
+    {
+      "id": "c-not-a-decline",
+      "claim": "If the drift is real, it is a sum of locally correct decisions and not a decline in anyone's ability. Every added minute answers a real objection, and the argument still ends up on page nine.",
+      "reasoning": "Geller's account describes a rational, conscientious process producing an outcome nobody chose: due diligence plus comment pre-emption plus a revenue curve that pays for duration. Nothing in that chain requires anyone to have got worse at their job, and the mechanism explains the observation without any claim about a person.",
+      "leap": "moderate",
+      "restsOn": ["f-geller-length", "f-length-bucket-economics", "m-deferral"],
+      "precedent": { "domain": "software feature creep", "note": "Every requested feature is individually justified by a real user, and the sum is an unusable product. Nobody made a bad decision and the result is bad." },
+      "falsifiableBy": { "test": "A creator's own catalogue showing the structure held constant while the stated pressures - audience size, sponsor load, comment volume - all rose. Published upload history plus the videos themselves.", "kind": "record", "binds": "whole-claim" },
+      "subject": { "names": "none" },
+      "useFor": "reframe",
+      "note": "There is a spicier version of this card available and I am not writing it. 'She stretched the cold open to reach the mid-roll' is a motive claim about a named living peer, it would pass conclusionIssues() with a `document` falsifier and a `living-person` subject at leap `moderate`, and it is the exact line my beat exists not to cross. Recorded as withheld rather than omitted so the next round does not rediscover it and print it."
+    }
+  ],
+
+  "withheld_note": "One conclusion was held: see c-not-a-decline.note. It was withheld by the researcher, not by the gate. The gate would have passed it.",
+
+  "engine_fit": [
+    { "engine": "A - Reversal Chain", "fit": "excellent", "why": "Three reversals built and every link is BUT or THEREFORE. r3 is the video.", "recommended": true,
+      "hazard": "A reversal chain about a format is one sentence away from a reversal chain about the people who make it. The turn 'so the format got worse - but no' only stays safe while the subject of every clause is the form. Render it on a named creator's catalogue and the same shape reads as an accusation of laziness." },
+    { "engine": "B - Effort/Payoff Gap", "fit": "good", "why": "The viewer can operate the mechanism in four minutes: open a video, start a timer. And the subject IS a payoff gap.",
+      "hazard": "Low. The worst case is a viewer who times one video and generalises from n=1 - which is the same error this notebook is confessing to." },
+    { "engine": "C - Parallel Case", "fit": "medium", "why": "The feature-creep and literature-review analogies are strong donors, but the parallel does the persuading and the evidence stays thin underneath it.",
+      "hazard": "HIGH relative to fit. This engine renders beautifully on an unestablished claim - the analogy supplies the conviction the evidence does not. Given that m-deferral step 4 has no evidence, C is the engine most likely to produce a confident video from a hole." },
+    { "engine": "D - Adjudication", "fit": "excellent", "why": "Four candidates genuinely compete: structural drift, monetisation gradient, the audience moved (Solomons), and the post-2023 sourcing reckoning. The counter-case is found and quotable.", "recommended": true,
+      "hazard": "The sourcing-reckoning candidate (f-hbomb-plagiarism) is about named living people and a plagiarism finding. Adjudicating it fairly requires stating an allegation about individuals in a video that is otherwise about a form. The honest move is to drop the candidate and say why - which weakens the adjudication. That trade is the hazard." },
+    { "engine": "E - Briefing", "fit": "poor", "why": "No news event. Standing condition. Same reason the reference run scored it poor." },
+    { "engine": "F - Anchor Ladder", "fit": "good", "why": "One video's timeline as the anchor, walked at increasing depth - if I had one timed. Currently blocked on the same hole as everything else.",
+      "hazard": "Requires naming one video and walking through it. That is the highest-exposure render available here: a single named creator's work as the worked example for a thesis about decline." },
+    { "engine": "G - Paradox Teaser", "fit": "good", "why": "'This video is four minutes old and hasn't said anything. Neither has this one.' Flat contradiction, repeated, 100% timestamps.",
+      "hazard": "It is 100% timestamps I do not have. G is the engine with the highest fit-to-evidence gap in this notebook: it needs exactly the material f-interior-unreachable says I could not get, and it would be trivially easy to write it from memory and impression. That is the failure this axis exists to flag." }
+  ],
+
+  "currency": {
+    "half_life": "18 months",
+    "why": "The platform-rules facts expire with the next monetisation change; the discourse dates do not expire at all; the structural claim, if it were ever measured, would be a historical finding and permanent.",
+    "expires_first": ["f-midroll-2025", "f-lds-length", "f-length-bucket-economics"],
+    "durable": ["f-interior-unreachable", "f-no-thesis-series", "m-deferral", "f-geller-length"],
+    "advice": "Say 'a threshold at eight minutes' rather than quoting the current ad rules, and 'top-video length fell by about a fifth in six months' rather than '21%' - the ratio survives a restatement and the percentage does not recompute anyway."
+  },
+
+  "research_gaps": [
+    "I did not watch a single video. The corpus is n=0 and the topic's central variable is unmeasured. This is a gap in the RESEARCH, and it is distinct from f-interior-unreachable, which is a fact about the instrument.",
+    "The YouTube Help primary for the mid-roll threshold (support.google.com/youtube/answer/6175006) was identified and not fetched. A load-bearing fact rests on an aggregator restatement.",
+    "The Little Dot whitepaper itself was never reached - three restatements, two of which disagree about corpus scale.",
+    "The ResetEra thread on this exact structural complaint returned 403 and was not routed around.",
+    "No non-English criticism was searched, and the video essay is not an anglophone form.",
+    "I did not approach any named creator. Nobody in this notebook is accused of anything, so no right of reply is triggered - but the Geller and Solomons cards are quotations of people who do not know they are in a research artifact, and if this were a publishable piece rather than a Gauntlet test fixture, that would be a card the board may not descope."
+  ],
+
+  "sources": [
+    { "name": "SkipTheWatch - Is Long-Form YouTube Dying? 2026 Data Says No", "url": "https://skipthewatch.com/blog/death-of-long-form-youtube", "evidence_class": "aggregator" },
+    { "name": "Quasa - Insights from Little Dot Studios' 2026 YouTube Viewing Whitepaper", "url": "https://quasa.io/media/insights-from-little-dot-studios-2026-youtube-viewing-whitepaper-evolving-trends-in-content-and-consumption", "evidence_class": "aggregator" },
+    { "name": "Tubefilter - Little Dot's new data digs into YouTube viewer habits", "url": "https://www.tubefilter.com/2026/02/12/little-dot-youtube-video-length-whitepaper-viewer-habits-2026/", "evidence_class": "secondary" },
+    { "name": "Aftermath - Aftermath Hours with Jacob Geller", "url": "https://aftermath.site/aftermath-hours-podcast-jacob-geller-ubisoft-assassins-creed", "evidence_class": "secondary" },
+    { "name": "The Link - Don't blame the video essay (Noah Solomons)", "url": "https://thelinknewspaper.ca/article/dont-blame-the-video-essay", "evidence_class": "secondary" },
+    { "name": "Search Engine Journal - YouTube Details Changes Coming To Mid-Roll Ads On May 12", "url": "https://www.searchenginejournal.com/youtube-details-changes-coming-to-mid-roll-ads-on-may-12/540924/", "evidence_class": "secondary" },
+    { "name": "Social Media Today - YouTube Announces Update to Mid-Roll Ad Placement Process", "url": "https://www.socialmediatoday.com/news/youtube-updates-mid-roll-ad-placement-process/741331/", "evidence_class": "secondary" },
+    { "name": "vidIQ - YouTube Mid-Roll Ads: 8-Minute Minimum & Placement Rules", "url": "https://vidiq.com/blog/post/youtube-8-minute-mid-roll-ads/", "evidence_class": "aggregator" },
+    { "name": "YouTube Help - Manage mid-roll ad breaks in long videos", "url": "https://support.google.com/youtube/answer/6175006", "evidence_class": "primary", "note": "IDENTIFIED, NOT FETCHED" },
+    { "name": "PinkNews - Hbomberguy on James Somerton", "url": "https://www.thepinknews.com/2023/12/14/hbomberguy-james-somerton-misinformation-queer-erasure/", "evidence_class": "secondary" },
+    { "name": "Tedium - Hbomberguy Explains Plagiarism's Problems To The Masses", "url": "https://tedium.co/2023/12/05/hbomberguy-plagiarism-youtube-culture/", "evidence_class": "secondary" },
+    { "name": "Know Your Meme - HBomberguy vs. James Somerton Plagiarism Scandal", "url": "https://knowyourmeme.com/memes/events/hbomberguy-vs-james-somerton-plagiarism-scandal", "evidence_class": "aggregator" },
+    { "name": "BFI - Chronically online criticism: how we're archiving the video essay boom", "url": "https://www.bfi.org.uk/features/chronically-online-criticism-how-were-archiving-video-essay-boom", "evidence_class": "secondary" },
+    { "name": "ResetEra - Why do video essays on YouTube always do this?", "url": "https://www.resetera.com/threads/why-do-video-essays-on-youtube-always-do-this.386420/", "evidence_class": "self-published", "note": "HTTP 403 - NOT READ" },
+    { "name": "YouTube - Video essays have gotten too long", "url": "https://www.youtube.com/watch?v=CgodsSmsCHo", "evidence_class": "self-published", "note": "PAGE SHELL ONLY - title and date from search snippet, not from the page" },
+    { "name": "YouTube - Plagiarism and the Death of the Video Essay", "url": "https://www.youtube.com/watch?v=9rFe_MuQb8g", "evidence_class": "self-published", "note": "PAGE SHELL ONLY - title returned, nothing else" }
+  ]
+}

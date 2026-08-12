@@ -1,0 +1,765 @@
+{
+  "$schema": "../../../../../pipeline/NOTEBOOK-SCHEMA.md",
+  "id": "l2-public-corruption-ppe-high-priority-lane",
+  "topic": "The UK COVID-19 PPE 'high priority lane' — what the published findings actually established",
+  "researched": "2026-08-12",
+  "researcher": "public-corruption (Agata Wisniewska), L2 empirical, gauntlet run 2026-08-12-l1-first-sweep",
+  "template_intent": "explainer, 8-10 min",
+  "subject_domain": "public procurement / public money",
+  "scope_note": "TEST ARTIFACT. This notebook exists to exercise pipeline/RESEARCH-PROMPT.md on a real topic. Every matter here is already adjudicated or already extensively publicly reported: a judgment of the High Court of England and Wales and two reports of the Comptroller and Auditor General. Nothing here is a novel allegation. No claim of illegality is made except where a body empowered to make it has made it, and no claim about motive is made about any person or body at all.",
+
+  "prior": "Written before the first search. I expect the UK COVID-19 PPE 'high priority lane' to be the best-documented procurement matter available: an NAO investigation and a High Court judgment both exist and are published, so nothing requires me to allege anything. I expect the NAO to have recorded absences — decisions taken with no written justification — and I expect the High Court to have found the lane unlawful in its OPERATION while finding the outcome would likely have been the same. My prior is that the tension is not 'corrupt vs clean' but that the strongest published findings are about MISSING RECORDS, and that the public conversation collapses irregular into illegal because the record gives it nowhere else to go. Mirror risk stated up front: this prior is also my L1 thesis about the methodic.",
+  "prior_verdict": "MIRROR ON THE FRAME, DISCOVERY ON THE POLARITY. The frame came back exactly as predicted — two empowered bodies, a route found unlawful, an outcome not attributed to it, and documentation absences at the centre. What I did not predict, and what changed the piece: the single most load-bearing absence in the record runs the OTHER WAY (NAO HC 959 para 20 / 3.23: 'we found no evidence of their involvement in procurement decisions'), and the baseline row is defeated not by my failure to search but by the auditor's own published exclusion of pandemic contracts from its competition analysis (NAO HC 1664, Part Two). An absence that exonerates is the thing my L1 report never once imagined, and it is the reason I now think the absence field is a general evidence primitive rather than an investigative one.",
+
+  "question": "The High Court called the VIP lane unlawful and the auditor found missing paperwork — so what, exactly, has been established about how those contracts were awarded?",
+  "verdict": "Two bodies empowered to make findings examined this, and both stopped on the same line: the route was found defective, and the awards were not found to have been bought. What the record establishes is an unfair route and an unestablished destination — and part of the reason the destination is unestablished is that, in the procurements the auditor examined, the documents that would settle it were not written.",
+
+  "domains": [
+    { "id": "the-award", "ask": "What was bought, from whom, for how much, under which procedure, on what dates." },
+    { "id": "the-record", "ask": "Which documents exist, and which have been established by an empowered body not to exist — and over what search scope." },
+    { "id": "the-rule", "ask": "The governing standard, cited: which regulation, which duty, which threshold. Never asserted without a citation." },
+    { "id": "the-adjudication", "ask": "What has been found, by a body empowered to find it, and what has expressly NOT been found." },
+    { "id": "the-baseline", "ask": "MANDATORY ROW. The distribution of ordinary instances with an n. How much public procurement is normally non-competitive, on what basis." },
+    { "id": "the-response", "ask": "MANDATORY ROW. What the awarding bodies and any named party have said — in their own words, with a locator — or that they declined." },
+    { "id": "the-counter-case", "ask": "MANDATORY ROW. The strongest reading in which nothing needs explaining beyond an emergency." }
+  ],
+
+  "tension": {
+    "expectation": "'The VIP lane was ruled unlawful' is widely understood to mean the PPE contracts were awarded because of political connection — the roughly one-in-ten versus one-in-a-hundred conversion disparity being taken as the proof of it.",
+    "reality": "The same judgment that held the lane's operation unlawful found at [401] and [403] that it is 'very likely that the offers would have resulted in the award' regardless of the lane; found at [515](i) that the Defendant 'did not place any reliance on their referral to the High Priority Lane when awarding the contracts to PestFix and Ayanda'; and refused the only relief sought under s.31(2A) Senior Courts Act 1981. The auditor that established the documentation absences also recorded, of the ministerial conflicts it examined, that it 'found no evidence of their involvement in procurement decisions or contract management'.",
+    "why_it_is_a_tension": "The finding everyone cites is about a ROUTE; the finding everyone believes it to be is about an OUTCOME; and the judgment separates them in terms. That is the irregular/illegal line drawn by the court itself. DOWNGRADED from high to moderate by the counter-case at steel_man, which survives Phase 6: the disparity is real, the court's counterfactual rests substantially on the Defendant's own witness evidence, and a refusal of relief under s.31(2A) is a statutory bar, not a merits vindication. A tension whose reality half depends on a counterfactual the losing party disputes is checkable but not clean.",
+    "strength": "moderate",
+    "normal_range": "UNRESOLVED — see f-baseline-2122 and research_gaps[0]. No comparable-basis prior distribution for non-competitive award rates was obtained, so this tension is NOT scored as outside normal variation. It is scored on the reasoning gap between two published findings, which is checkable without a base rate."
+  },
+
+  "facts": [
+    {
+      "id": "f-emergency-scale",
+      "claim": "By 31 July 2020 over 8,600 contracts related to the UK government's pandemic response had been awarded, with a value of 18.0 billion pounds, using emergency procurement regulations.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO, Investigation into government procurement during the COVID-19 pandemic, HC 959", "evidence_class": "primary", "locator": "paras 2.2 and 24", "interested": false }],
+      "confidence": "high",
+      "confidence_note": "Read from the report PDF, not from a summary.",
+      "as_of": "2026-08-12",
+      "event_date": "2020-07-31",
+      "period": "to 2020-07-31",
+      "unit": "GBP bn; contracts (count)",
+      "denominator": "all UK central government pandemic-response contracts awarded to 31 July 2020"
+    },
+    {
+      "id": "f-ppe-share",
+      "claim": "Across government over 6,900 contracts were awarded for PPE, with a total value of 12.3 billion pounds.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "Part Two, and footnote 2", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-07-31",
+      "period": "to 2020-07-31",
+      "unit": "GBP bn; contracts (count)",
+      "denominator": "all UK government PPE contracts awarded to 31 July 2020"
+    },
+    {
+      "id": "f-hpl-established",
+      "claim": "On 2 April 2020 the cross-government PPE team set up a high-priority lane to follow up leads from government officials, ministers' offices, MPs and members of the House of Lords, senior NHS staff and other health professionals, that it considered more credible.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "para 3.12", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-04-02",
+      "subject": { "names": "org", "who": "the cross-government PPE team (DHSC / Cabinet Office)" },
+      "note": "The referrer list is wider than 'politicians'. Senior NHS staff and other health professionals are in it. Any felt version that narrows it to political connection promotes the subject class — see scale_conversions rule."
+    },
+    {
+      "id": "f-hpl-conversion",
+      "claim": "About one in ten suppliers processed through the high-priority lane (47 out of 493) obtained contracts, compared with 104 out of 14,892 suppliers processed through the ordinary lane.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "paras 19 and 3.12", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-07-31",
+      "period": "2020-04-02 to 2020-07-31",
+      "unit": "suppliers awarded a contract / suppliers processed",
+      "denominator": "suppliers PROCESSED through each lane — not offers, not contracts, not companies with political connections"
+    },
+    {
+      "id": "f-hpl-ratio",
+      "claim": "The high-priority lane's supplier conversion rate was 9.53%; the ordinary lane's was 0.698%; the ratio is 13.65 to 1. Suppliers processed through the high-priority lane were 3.20% of all suppliers processed and 31.13% of all suppliers that obtained a contract.",
+      "kind": "derived",
+      "derived_from": ["f-hpl-conversion"],
+      "method": "47/493 = 0.095335 (9.53%). 104/14892 = 0.006984 (0.698%). 0.095335/0.006984 = 13.65. 493/(493+14892) = 3.20%. 47/(47+104) = 31.13%. Both source counts share one basis (suppliers processed), one period (to 31 July 2020) and one publisher, so the ratio is recomputable from the fields; magnitude, window and basis all check.",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "paras 19 and 3.12", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "period": "2020-04-02 to 2020-07-31",
+      "unit": "ratio (dimensionless); %",
+      "denominator": "suppliers processed through each lane"
+    },
+    {
+      "id": "f-hpl-value",
+      "claim": "The total value of contracts awarded to suppliers through the high-priority lane was reported as 1.7 billion pounds.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [{ "name": "House of Commons Committee of Public Accounts, COVID-19: Government procurement and supply of PPE", "evidence_class": "secondary", "locator": "report summary as restated in search results — NOT read in the original", "interested": false }],
+      "confidence": "low",
+      "confidence_note": "Flagged for a second source. Restated from a search summary of the PAC report; the report itself was not fetched. Deliberately NOT load-bearing, and named in research_gaps[3]. Rule 4 discharged by the named gap, not by pretending to a primary.",
+      "as_of": "2026-08-12",
+      "period": "to 2020-07-31",
+      "unit": "GBP bn"
+    },
+    {
+      "id": "f-abs-hpl-criteria",
+      "claim": "There were no criteria for referrals to the high-priority lane, and the source of the referral was not always recorded on the team's case management system.",
+      "kind": "absence",
+      "search_scope": "Established by the National Audit Office, not by this run. Scope as published: the NAO's examination of the cross-government PPE team's eight-stage process and case management system, plus a risk-based sample of PPE contracts with five suppliers, reported 26 November 2020 (HC 959 paras 3.12 and 3.14). This establishes (a) that no referral criteria existed and (b) that referral sources were not always recorded — as at the period examined. It does NOT establish that any particular referral is unrecorded, and it does not extend beyond 31 July 2020.",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "paras 3.12 and 3.14", "interested": false }],
+      "confidence": "high",
+      "confidence_note": "Two propositions, both high, and they are separable: that the record is missing (NAO says so) and that it should have existed (regulation 84 — f-rule-84). The second is the contested one everywhere else; here the auditor and the regulation agree, which is why this absence is unusually safe.",
+      "as_of": "2026-08-12",
+      "event_date": "2020-11-26",
+      "period": "2020-04-02 to 2020-07-31",
+      "subject": { "names": "org", "who": "the cross-government PPE team" }
+    },
+    {
+      "id": "f-abs-conflict-doc",
+      "claim": "For a Department of Health & Social Care contract for PPE face masks, no documentation was found that a potential or perceived conflict of interest had been considered by the awarding body in relation to a senior adviser to the supplier, or of how it was managed.",
+      "kind": "absence",
+      "search_scope": "Established by the NAO over its risk-based sample of 20 procurements (HC 959 para 3.17), reported at para 3.22 and Figure 10, 26 November 2020. Scope is ONE contract inside a 20-procurement sample. It says nothing about the other 8,600 contracts, and the sample was selected ON A RISK BASIS — i.e. deliberately enriched for problems, which cuts against generalising it.",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "para 3.22, Figure 10", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-11-26",
+      "subject": { "names": "org", "who": "Department of Health & Social Care as awarding body" }
+    },
+    {
+      "id": "f-abs-supplier-reasons",
+      "claim": "For a 3.2 million pound Cabinet Office contract awarded on 21 July 2020 with effect from 14 March 2020, no evidence was found that the Cabinet Office documented its reasons for its choice of supplier; and for a separate retrospective contract of up to 840,000 pounds there was a lack of documentation recording the process for choosing the supplier, the justification for using emergency procurement, or any considerations around potential conflicts of interest.",
+      "kind": "absence",
+      "search_scope": "Established by the NAO over the same risk-based sample of 20 procurements (HC 959 paras 3.17, 3.21), reported 26 November 2020. Three of the 20 were awarded retrospectively; these are two of the three. Scope is those specific procurements — not the Cabinet Office's contracting generally.",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "para 3.21", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-11-26",
+      "subject": { "names": "org", "who": "Cabinet Office as awarding body" }
+    },
+    {
+      "id": "f-abs-minister-involvement",
+      "claim": "In the examples examined where there were potential conflicts of interest involving ministers, the ministers had properly declared their interests, and no evidence was found of their involvement in procurement decisions or contract management.",
+      "kind": "absence",
+      "search_scope": "Established by the NAO over the risk-based sample of 20 procurements and Case study 4 (HC 959 paras 20 and 3.23), reported 26 November 2020. This is an absence of evidence over a defined, published search — it is NOT a finding that no such involvement occurred anywhere, and it must never be spoken as one. Equally it may not be omitted: it is the auditor's own answer to the question the disparity raises.",
+      "load_bearing": true,
+      "qualifies": ["f-hpl-ratio", "f-abs-hpl-criteria"],
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "paras 20 and 3.23, Figure 11", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-11-26",
+      "subject": { "names": "living-person", "who": "unnamed ministers, as described in NAO Case study 4" },
+      "note": "THE EXCULPATORY ABSENCE. It has exactly the same shape as the three above and the opposite valence, and it is the single most important card on this board for anyone who intends to publish."
+    },
+    {
+      "id": "f-ventilators-documented",
+      "claim": "For the ventilator programmes run by the Cabinet Office (around 277 million pounds) and DHSC (around 292 million pounds), both departments were found to have maintained sufficient record of their programmes' rationale, the key spending decisions taken, and the information they had to base those on.",
+      "kind": "found",
+      "load_bearing": true,
+      "contests": ["f-abs-supplier-reasons"],
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "para 3.18", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-11-26",
+      "unit": "GBP m",
+      "period": "2020",
+      "note": "Filed as `contests` deliberately. It is the same departments, in the same emergency, documenting adequately — which weakens 'there was no time' as a complete explanation for the gaps, and simultaneously weakens 'they never documented anything'. It cuts both ways and the wound graph should feel it if either sibling is descoped."
+    },
+    {
+      "id": "f-rule-84",
+      "claim": "Regulation 84 of the Public Contracts Regulations 2015 requires awarding bodies to document the progress of all procurement procedures and keep sufficient documentation to justify decisions taken at all stages; this applies to direct awards as well as competitive procurements, and for emergency procurements under regulation 32 includes recording the circumstances which justify its use.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Public Contracts Regulations 2015, reg 84", "evidence_class": "primary", "locator": "reg 84", "interested": false },
+        { "name": "NAO HC 959", "evidence_class": "primary", "locator": "para 3.15, first bullet", "interested": false }
+      ],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2015-02-05",
+      "note": "This is the ruler. No absence in this notebook may be spoken without it, per obligations[o-name-the-rule]."
+    },
+    {
+      "id": "f-rule-32",
+      "claim": "Regulation 32(2)(c) of the Public Contracts Regulations 2015 permits a direct contract award without prior publication in cases of extreme urgency brought about by events unforeseeable by the contracting authority.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Public Contracts Regulations 2015, reg 32(2)(c)", "evidence_class": "primary", "locator": "reg 32(2)(c)", "interested": false },
+        { "name": "NAO HC 959", "evidence_class": "primary", "locator": "Part Two, and para 3.15", "interested": false }
+      ],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2015-02-05",
+      "note": "The counter-case's foundation. Direct award in this emergency was lawful by design; that is the starting point, not a concession."
+    },
+    {
+      "id": "f-rule-24",
+      "claim": "Regulation 24 of the Public Contracts Regulations 2015 requires awarding bodies to take appropriate measures to effectively prevent, identify and remedy conflicts of interest in the conduct of procurement procedures.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [{ "name": "Public Contracts Regulations 2015, reg 24; NAO HC 959 para 3.15", "evidence_class": "primary", "locator": "reg 24", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2015-02-05"
+    },
+    {
+      "id": "f-judgment-unlawful",
+      "claim": "The High Court held that operation of the High Priority Lane was in breach of the obligation of equal treatment under the Public Contracts Regulations 2015, and that it was unlawful to confer preferential treatment on PestFix and on Ayanda simply on the basis of allocation to that lane.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "R (Good Law Project Ltd & EveryDoctor) v Secretary of State for Health and Social Care [2022] EWHC 46 (TCC), O'Farrell J, 12 January 2022", "evidence_class": "primary", "locator": "paras 398, 400(iv), 401, 403, 513(iv)", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2022-01-12",
+      "subject": { "names": "state", "who": "the Secretary of State for Health and Social Care" },
+      "note": "THE ONLY FINDING OF ILLEGALITY IN THIS NOTEBOOK, and it is quoted from the body empowered to make it. Everything else in the record is irregularity. Register: adjudicative, sourced to the adjudicator."
+    },
+    {
+      "id": "f-judgment-counterfactual",
+      "claim": "The same judgment found it 'very likely that the offers would have resulted in the award' of the PestFix and Ayanda contracts regardless of whether they were assessed through the High Priority Lane or the Portal, and found that the Defendant 'did not place any reliance on their referral to the High Priority Lane when awarding the contracts'.",
+      "kind": "found",
+      "load_bearing": true,
+      "contests": ["f-hpl-ratio"],
+      "sources": [{ "name": "[2022] EWHC 46 (TCC)", "evidence_class": "primary", "locator": "paras 401, 403, 515(i)", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2022-01-12",
+      "subject": { "names": "state", "who": "the Secretary of State for Health and Social Care" },
+      "note": "Register: adjudicative. The court reached the counterfactual on the evidence before it, substantially the Defendant's witness statements (Mr Dawson). That is stated, not disparaged — see counter_positions[cp-glp]."
+    },
+    {
+      "id": "f-judgment-relief",
+      "claim": "The court refused the only relief sought — a declaration — holding that under s.31(2A) Senior Courts Act 1981 it must refuse relief where it is highly likely the outcome would not have been substantially different, and that 'it is sufficient that the illegality is marked by this judgment'.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "[2022] EWHC 46 (TCC)", "evidence_class": "primary", "locator": "paras 510-512", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2022-01-12",
+      "subject": { "names": "state", "who": "the Secretary of State for Health and Social Care" },
+      "note": "A refusal of relief under s.31(2A) is a statutory consequence of the outcome test, not a holding that the conduct was acceptable. The court expressly marks the illegality in the same paragraph. Both halves, always — obligations[o-both-halves]."
+    },
+    {
+      "id": "f-lane-not-a-filter",
+      "claim": "The High Priority Lane did not act as a quality filter: it processed all offers allocated to it provided they were credible, and offers from it were likely to reach Technical Assurance within a shorter period, timeous consideration being 'a material advantage in obtaining the award of a contract given the urgency of the procurement'.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "[2022] EWHC 46 (TCC)", "evidence_class": "primary", "locator": "paras 396-398", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2022-01-12"
+    },
+    {
+      "id": "f-cairnduff-email",
+      "claim": "An internal email dated 25 April 2020 from an official reviewing the process recorded 'a substantial backlog of unallocated VIP cases (over 80 by my current count)' and that 'we're getting far more cases in VIP than [the team] can sensibly be expected to manage'.",
+      "kind": "utterance",
+      "load_bearing": false,
+      "sources": [{ "name": "[2022] EWHC 46 (TCC)", "evidence_class": "primary", "locator": "para 396, quoting the email in evidence", "interested": true }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-04-25",
+      "note": "`utterance` because it is what a participant SAID about the process, in evidence, not an independent finding about it. Marked interested: it is the Defendant's own material, adduced in the Defendant's defence, and the court used it against the Defendant's position on this point."
+    },
+    {
+      "id": "f-ayanda-value",
+      "claim": "The Ayanda contract was for a total cost of 252,500,000 pounds excluding VAT, varied on 27 August 2020 to 47 million FFP2 masks and 164 million IIR masks at the same total cost.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [{ "name": "[2022] EWHC 46 (TCC)", "evidence_class": "primary", "locator": "para 3", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-08-27",
+      "unit": "GBP",
+      "note": "Quoted exactly with its vintage per Phase 5: a filed figure is not rounded to a ratio. The PestFix (342m) and Clandeboye (123m) values circulating in legal press were NOT read from the judgment and are recorded only in research_gaps[2]."
+    },
+    {
+      "id": "f-dd-retrospective",
+      "claim": "Contracts were awarded to PestFix on 16 April 2020 and to Clandeboye on 28 April 2020, but retrospective financial and company due diligence for those companies was carried out only at the end of June 2020; the companies were rated amber and red respectively. By 28 April 2020, PPE contracts had been awarded to 71 suppliers with a total value of 1.5 billion pounds, before the due diligence process was standardised.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "paras 18 and 3.19", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-06-30",
+      "period": "2020-04-16 to 2020-06-30",
+      "unit": "GBP bn; suppliers (count)",
+      "note": "Register: DESCRIPTIVE. This says when checks happened relative to awards. It does not say the awards were improper, and the same paragraph records DHSC's statement that both contracts were delivered as agreed and that the failure rate across received equipment was 0.5% by volume."
+    },
+    {
+      "id": "f-dhsc-failure-rate",
+      "claim": "DHSC told the NAO that across all equipment bought by the cross-government PPE team and received, it had calculated the failure rate as 0.5% by volume, and that of contracts with the 71 pre-standardisation suppliers, 62 had been delivered, three cancelled and the remainder ongoing.",
+      "kind": "utterance",
+      "load_bearing": true,
+      "qualifies": ["f-dd-retrospective"],
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "paras 18 and 3.19, reported as DHSC's own account", "interested": true }],
+      "confidence": "medium",
+      "confidence_note": "`utterance` and `interested: true` — this is the awarding department's own figure, reported by the auditor as the department's account rather than verified by it. Authoritative as to what DHSC said; not independent as to whether it is right. Note the schema's own rule: interested is not a confidence demotion, so the medium here is about verification status, not about who said it.",
+      "as_of": "2026-08-12",
+      "event_date": "2020-11-26",
+      "unit": "% by volume",
+      "denominator": "all equipment bought by the cross-government PPE team and received"
+    },
+    {
+      "id": "f-transparency-late",
+      "claim": "Of the 1,644 contracts awarded across government to the end of July 2020 with a value above 25,000 pounds, 55% had not had their details published by 10 November 2020, and 25% were published on Contracts Finder within the 90-day target; for contracts already published it took on average 92 days from award.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO HC 959", "evidence_class": "primary", "locator": "paras 23 and 3.27", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2020-11-10",
+      "period": "awards to 2020-07-31, publication status as at 2020-11-10",
+      "unit": "% of contracts",
+      "denominator": "1,644 contracts above 25,000 pounds awarded across government to 31 July 2020",
+      "note": "ARITHMETIC: 100 - 55 = 45% published by 10 November; of that, 25 percentage points made the 90-day target, so 20 percentage points were published but late. The two published percentages do not sum to 100 and must never be spoken as if they partition the set."
+    },
+    {
+      "id": "f-baseline-2122",
+      "claim": "Of 16,000 contracts from major departments with a total lifetime value of 100 billion pounds awarded during 2021-22, 63% were competed to some extent (61% by value); 24% were direct awards and 13% were contract extensions, on Cabinet Office aggregate data.",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [{ "name": "NAO, Lessons learned: competition in public procurement, HC 1664, 19 July 2023", "evidence_class": "primary", "locator": "Part One and Figure 2", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2023-07-19",
+      "period": "2021-22 financial year",
+      "unit": "% of contracts; % of value",
+      "denominator": "16,000 major-department contracts, 100 billion pounds lifetime value, 2021-22",
+      "contests": [],
+      "note": "THE BASELINE ROW, AND IT DOES NOT CLOSE. It is a different period (2021-22, after the pandemic peak), a different population (major departments' contracts of all kinds), and a different unit of count (contracts, not suppliers processed). It may NOT be compared to f-hpl-ratio or f-emergency-scale: no recomputation from the published fields is possible for magnitude, window or basis. Recorded because Phase 1's baseline row is mandatory and reporting the nearest published distribution WITH its non-comparability is the honest discharge; asserting '24% is normal so 2020 was normal' is not."
+    },
+    {
+      "id": "f-baseline-excludes-pandemic",
+      "claim": "The NAO's competition analysis expressly excluded contracts related to urgent pandemic response, and excluded contracts where legislation allows single-source or direct award, restricting itself to contracts worth 10 million pounds or more.",
+      "kind": "found",
+      "load_bearing": true,
+      "qualifies": ["f-baseline-2122"],
+      "sources": [{ "name": "NAO HC 1664", "evidence_class": "primary", "locator": "Part Two, scope note on the Contracts Finder / Find a Tender analysis", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2023-07-19",
+      "note": "This is a FOUND fact about a published scope decision, not an absence. It is the reason the baseline row cannot close, and it is why research_gaps[0] is a gap in my effort rather than a hole in the world."
+    },
+    {
+      "id": "f-data-quality-6pc",
+      "claim": "Basic information on which procurement route was used was missing for 6% of contracts recorded on Contracts Finder from 2018 to 2022, those contracts listing 'other' as the procedure used.",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [{ "name": "NAO HC 1664", "evidence_class": "primary", "locator": "paras 15 and 2.13", "interested": false }],
+      "confidence": "high",
+      "as_of": "2026-08-12",
+      "event_date": "2023-07-19",
+      "period": "2018 to 2022",
+      "unit": "% of contracts",
+      "denominator": "contracts recorded on Contracts Finder 2018-2022 in the NAO's analysis",
+      "note": "Filed as `found`, NOT as an absence, and the distinction was live: an incomplete field on a published record is a data-quality fact. Compare f-abs-* where an empowered body searched for a document and reported it not to exist."
+    },
+    {
+      "id": "f-dhsc-response",
+      "claim": "A DHSC spokesperson said, of the January 2022 judgment: 'At the height of the pandemic there was a desperate need for PPE to protect health and social care staff and the government rightly took swift and decisive action to secure it.'",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [{ "name": "Press reporting of the 12 January 2022 judgment (careappointments / PA Media syndication)", "evidence_class": "secondary", "locator": "reports of 12-13 January 2022", "interested": true }],
+      "confidence": "medium",
+      "confidence_note": "Verbatim quotation reproduced consistently across several outlets, but taken from press reporting rather than a DHSC press notice this run did not locate. Named in research_gaps[4].",
+      "as_of": "2026-08-12",
+      "event_date": "2022-01-12",
+      "subject": { "names": "org", "who": "Department of Health & Social Care" },
+      "note": "RIGHT OF REPLY, part 1. Published response to the judgment, in the awarding department's own words. Per the quality bar this is the card the board may not descope. See counter_positions_to_state_fairly and the finding on how it got here."
+    },
+    {
+      "id": "f-hancock-response",
+      "claim": "A spokesman for the former Secretary of State for Health and Social Care said: 'We are delighted that the Department for Health has won this case, as the court found that the priority treatment was justified and rightly refused to grant any rectification for the way PPE was urgently bought in the height of the crisis.'",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [{ "name": "Press reporting of the 12 January 2022 judgment", "evidence_class": "secondary", "locator": "reports of 12-13 January 2022", "interested": true }],
+      "confidence": "medium",
+      "confidence_note": "Secondary; named in research_gaps[4].",
+      "as_of": "2026-08-12",
+      "event_date": "2022-01-12",
+      "subject": { "names": "living-person", "who": "Matt Hancock, former Secretary of State for Health and Social Care, via a spokesman" },
+      "note": "RIGHT OF REPLY, part 2. The only living person named in this notebook is named by quoting his own published statement, which is the safest available form of naming. Nothing is characterised about him and nothing is inferred from it."
+    }
+  ],
+
+  "mechanisms": [
+    {
+      "id": "m-lane-advantage",
+      "name": "Why a queue position was worth money",
+      "chain": [
+        "Around 15,000 suppliers approached DHSC offering PPE, and by 25 April 2020 the priority team alone had a backlog of over 80 unallocated cases",
+        "THEREFORE the binding constraint on an award was assessment capacity, not the supply of offers",
+        "THEREFORE being assessed sooner was itself the advantage — 'timeous consideration of an offer was a material advantage in obtaining the award of a contract given the urgency of the procurement'",
+        "BUT the lane was not a quality filter: it processed all offers allocated to it provided they were credible, so allocation was not a proxy for merit",
+        "THEREFORE the route conferred a real advantage that its stated purpose did not justify, and the court held that amounted to a breach of the principle of equal treatment",
+        "BUT the same court found the two challenged suppliers' offers justified priority consideration on their own merits in any event",
+        "THEREFORE an unfair route and an outcome the court declined to attribute to it are both established, and neither cancels the other"
+      ],
+      "steps": [
+        { "text": "Around 15,000 suppliers approached DHSC; by 25 April 2020 the priority team had a backlog of over 80 unallocated cases", "connector": "THEREFORE", "evidence": ["f-hpl-conversion", "f-cairnduff-email"] },
+        { "text": "The binding constraint on an award was assessment capacity, not the supply of offers", "connector": "THEREFORE", "evidence": ["f-cairnduff-email", "f-lane-not-a-filter"] },
+        { "text": "Being assessed sooner was itself a material advantage in obtaining an award", "connector": "BUT", "evidence": ["f-lane-not-a-filter"] },
+        { "text": "The lane was not a quality filter — allocation to it was not a proxy for merit", "connector": "THEREFORE", "evidence": ["f-lane-not-a-filter"] },
+        { "text": "The route conferred an advantage its stated basis did not justify: a breach of the obligation of equal treatment", "connector": "BUT", "evidence": ["f-judgment-unlawful"] },
+        { "text": "The two challenged suppliers' offers were found to justify priority on their merits regardless of the lane", "connector": "THEREFORE", "evidence": ["f-judgment-counterfactual"] },
+        { "text": "An unfair route and an outcome not attributed to it are both established", "connector": "THEREFORE", "evidence": ["f-judgment-unlawful", "f-judgment-counterfactual", "f-judgment-relief"] }
+      ],
+      "evidence": ["f-hpl-conversion", "f-hpl-ratio", "f-lane-not-a-filter", "f-cairnduff-email", "f-judgment-unlawful", "f-judgment-counterfactual", "f-judgment-relief"],
+      "explains": "Why the conversion disparity is real evidence of an advantage and is not, by itself, evidence of a purchase",
+      "needs_analogy": true
+    },
+    {
+      "id": "m-record-gap",
+      "name": "What a missing file actually costs — and what it does not buy",
+      "chain": [
+        "Regulation 84 requires sufficient documentation to justify decisions at every stage, and for a regulation 32 emergency award includes recording the circumstances that justify using it",
+        "THEREFORE where an award is made without competition the file is the only available substitute for the assurance a competition would have provided — transparency being 'particularly important in the case of direct awards where the assurance provided by a competitive process is absent'",
+        "BUT in the procurements the auditor examined the file was, in specific respects, not written",
+        "THEREFORE the auditor could not give assurance that the increased risks had been adequately mitigated",
+        "BUT an absence of assurance is not assurance of the contrary, and over the same sample the auditor also found no evidence of ministerial involvement in the decisions",
+        "THEREFORE the missing record does not support the accusation — it removes the instrument that would settle the question in either direction, which is the finding"
+      ],
+      "steps": [
+        { "text": "Regulation 84 requires sufficient documentation to justify decisions at every stage, including the justification for using regulation 32", "connector": "THEREFORE", "evidence": ["f-rule-84", "f-rule-32"] },
+        { "text": "Without competition, the file is the only substitute for the assurance a competition provides", "connector": "BUT", "evidence": ["f-rule-84", "f-rule-24"] },
+        { "text": "In the procurements examined, the file was in specific respects not written", "connector": "THEREFORE", "evidence": ["f-abs-hpl-criteria", "f-abs-conflict-doc", "f-abs-supplier-reasons"] },
+        { "text": "The auditor could not give assurance that the increased risks had been adequately mitigated", "connector": "BUT", "evidence": ["f-abs-supplier-reasons", "f-abs-conflict-doc"] },
+        { "text": "Absence of assurance is not assurance of the contrary; over the same sample no evidence of ministerial involvement was found", "connector": "THEREFORE", "evidence": ["f-abs-minister-involvement", "f-ventilators-documented"] },
+        { "text": "The missing record removes the instrument that would settle the question in either direction", "connector": "THEREFORE", "evidence": ["f-abs-hpl-criteria", "f-abs-minister-involvement", "f-rule-84"] }
+      ],
+      "evidence": ["f-rule-84", "f-rule-24", "f-rule-32", "f-abs-hpl-criteria", "f-abs-conflict-doc", "f-abs-supplier-reasons", "f-abs-minister-involvement", "f-ventilators-documented"],
+      "explains": "Why 'no paperwork' is affirmative evidence of a breach of a records duty and is NOT evidence of the reason for an award",
+      "needs_analogy": true,
+      "note": "This mechanism is the video. It cites eight facts, four of them absences, and descoping any of the absences should wound it."
+    }
+  ],
+
+  "reversals": [
+    {
+      "id": "r-vip-means-bought",
+      "obvious_reading": "A lane reserved for referrals from ministers' offices, MPs and peers converted suppliers into contract-holders at nearly fourteen times the ordinary rate, and a High Court judge called its operation unlawful. Nearly a third of every supplier who got a PPE contract came through it, from three per cent of the applicants. That is not a subtle pattern, and the plain reading — that access was worth money and someone monetised it — is the reading any reasonable person reaches from those numbers.",
+      "why_wrong": "Not wrong on the disparity, which is real and primary-sourced. Wrong on what has been established about its cause. The judgment that supplies the word 'unlawful' also found it very likely both challenged suppliers would have been awarded their contracts through the ordinary route, found the Defendant placed no reliance on the referral when awarding, and refused the only relief sought. The auditor that supplies the documentation findings also recorded no evidence of ministerial involvement in the decisions it examined. And the referrer list is not 'politicians': it included senior NHS staff and other health professionals.",
+      "mechanism": "m-lane-advantage",
+      "evidence": ["f-hpl-ratio", "f-judgment-unlawful", "f-judgment-counterfactual", "f-judgment-relief", "f-abs-minister-involvement", "f-hpl-established"],
+      "escalation": "And then the turn on the turn, which is the honest end of it: the court's counterfactual was reached substantially on the Defendant's own witness evidence about what would have happened, the refusal of relief is a statutory bar under s.31(2A) that operates whether or not the conduct was acceptable, and the court marked the illegality in the same breath. So the plain reading is unproven. It is not disproven, and nobody with the power to prove it either way has yet been asked the question."
+    },
+    {
+      "id": "r-absence-means-cover",
+      "obvious_reading": "The paperwork is missing. In the twenty procurements the auditor picked, nobody wrote down why this supplier and not that one, or whether anyone had a stake in the answer. Missing paperwork is what a cover-up looks like, and the people who would have written it are the people it would have incriminated.",
+      "why_wrong": "The records duty in regulation 84 is breached by the absence itself, independently of anyone's reason for it — which means the absence is a finding you can state without needing a reason, and the moment you supply the reason you have left what the record supports. And the same auditor, in the same report, found the ventilator programmes at both departments maintained sufficient record of their rationale and key decisions: the emergency did not universally destroy record-keeping.",
+      "mechanism": "m-record-gap",
+      "evidence": ["f-rule-84", "f-abs-supplier-reasons", "f-abs-conflict-doc", "f-ventilators-documented", "f-abs-minister-involvement"],
+      "escalation": "Which makes the gaps harder to explain by pace alone — and still does not identify a reason for them, and this piece will not be supplying one. The finding is that the instrument that would answer the question was not created, in a set of procurements where the regulation required it. That sentence is defensible against anyone. The next sentence is not, and there is no version of it that is."
+    }
+  ],
+
+  "steel_man": {
+    "claim": "Nothing here requires an explanation beyond an emergency.",
+    "provenance": "found",
+    "evidence": ["f-rule-32", "f-judgment-counterfactual", "f-judgment-relief", "f-abs-minister-involvement", "f-ventilators-documented", "f-dhsc-failure-rate", "f-lane-not-a-filter", "f-dhsc-response"],
+    "statement": "Direct award without competition in a genuine emergency is not a loophole — it is regulation 32(2)(c), written for exactly this and used as intended. Fifteen thousand approaches arrived at a team of twenty-one, in a global sellers' market where an offer withdrawn at noon was gone by evening. Triaging leads that came with a named, accountable referrer behind them is what any competent buyer does when the constraint is assessment capacity, and the referrers included senior NHS clinicians, not only politicians. The court examined the two suppliers actually challenged, heard the evidence, and found their offers justified priority on the merits; it found the department placed no reliance on the referral in awarding; it refused the declaration sought. The auditor found no evidence of ministerial involvement in the decisions. Ninety-nine and a half per cent of the equipment received worked. What is left is a paperwork failure during the worst four months in the department's history, found by an auditor who was looking for exactly that, in a risk-based sample selected because it looked worst.",
+    "why_include": "Because three of the five grounds pleaded failed on their merits, the relief was refused, and the strongest evidence for the ordinary explanation is in the same two documents that supply the criticism. A piece that omits it is arguing against a judgment it has not read. It also survives Phase 6 without winning — it does not touch the equal-treatment holding, it does not touch regulation 84, and 'the sample was risk-selected' explains why the gaps were found, not why they exist — which is why tension.strength is downgraded from high to moderate rather than abandoned."
+  },
+
+  "counter_positions_to_state_fairly": [
+    {
+      "position": "The government acted rightly and at speed to protect health and care staff, and the judgment is not a finding against the awards.",
+      "holder": "Department of Health & Social Care",
+      "evidence": ["f-dhsc-response", "f-judgment-counterfactual", "f-judgment-relief"],
+      "statement_verbatim": "At the height of the pandemic there was a desperate need for PPE to protect health and social care staff and the government rightly took swift and decisive action to secure it.",
+      "locator": "DHSC spokesperson, press reporting of 12 January 2022",
+      "approach_status": "published-response-used-not-solicited",
+      "must_not_descope": true,
+      "note": "APPROACH NOT MADE BY THIS RUN. This is a published statement given in response to the judgment, not a response to any question this run asked. The quality bar's checkbox reads 'they were approached, and the approach — or the refusal, or the non-reply — is recorded as a fact', and it has no vocabulary for this, which is the ORDINARY case for an adjudicated matter. Recorded here in full so that the distinction is visible rather than laundered. See findings G-L2-PC-05."
+    },
+    {
+      "position": "The department won the case; the court found the priority treatment justified and refused any remedy.",
+      "holder": "Matt Hancock, former Secretary of State for Health and Social Care, via a spokesman",
+      "evidence": ["f-hancock-response", "f-judgment-counterfactual", "f-judgment-relief"],
+      "statement_verbatim": "We are delighted that the Department for Health has won this case, as the court found that the priority treatment was justified and rightly refused to grant any rectification for the way PPE was urgently bought in the height of the crisis.",
+      "locator": "spokesman for Mr Hancock, press reporting of 12 January 2022",
+      "approach_status": "published-response-used-not-solicited",
+      "must_not_descope": true,
+      "note": "Stated in his own words and left standing. This notebook offers no view on it beyond noting that the judgment also holds, at [400](iv) and [513](iv), that operation of the lane breached the obligation of equal treatment — which is a matter of the same document and not a characterisation of the speaker."
+    },
+    {
+      "position": "The unlawfulness finding is the point; the counterfactual and the refusal of relief do not undo it, and the claim was brought because the government would not disclose the lane's existence or operation.",
+      "holder": "Good Law Project and EveryDoctor (claimants)",
+      "evidence": ["f-judgment-unlawful", "f-lane-not-a-filter"],
+      "locator": "claimants' published statements, January 2022; an appeal was announced",
+      "approach_status": "published-response-used-not-solicited",
+      "note": "The claimants' appeal and its outcome were NOT verified in this run — see research_gaps[5]. Their position is stated here at the strength their own case reached, without borrowing the strength of an appeal I did not read."
+    }
+  ],
+
+  "unknowns": [
+    {
+      "id": "u-who-referred",
+      "what": "Which referrer sent which supplier into the high-priority lane, in the cases where the source of the referral was not recorded.",
+      "why": "The auditor found the source of referral was not always recorded on the case management system; where it is unrecorded, no document answers this.",
+      "impact": "The script may not name, or imply, who referred any supplier. It may say that referrals came from the categories the auditor lists. It may not attach a category to a company.",
+      "about": ["f-abs-hpl-criteria", "f-hpl-established"]
+    },
+    {
+      "id": "u-sample-generalisation",
+      "what": "Whether the documentation gaps found in a risk-based sample of 20 procurements are representative of the 8,600 pandemic contracts.",
+      "why": "The sample was selected on a risk basis — deliberately enriched for procurements that looked problematic — so it cannot be read as a random sample of the population.",
+      "impact": "The script may never say 'the government did not document its decisions'. Every such sentence carries its scope: 'in the twenty procurements the auditor examined'. The word 'systematic' is forbidden.",
+      "about": ["f-abs-conflict-doc", "f-abs-supplier-reasons", "f-abs-hpl-criteria"]
+    },
+    {
+      "id": "u-baseline",
+      "what": "How the 2020 rate of non-competitive award compares with a normal year on a comparable basis.",
+      "why": "The nearest published distribution is a different period, population and unit of count, and the auditor's competition analysis expressly excluded pandemic contracts.",
+      "impact": "The script may not say the pandemic rate was unusually high or unusually normal. It may say that the comparison has not been published, and it must say so rather than implying either direction by silence.",
+      "about": ["f-baseline-2122", "f-baseline-excludes-pandemic"]
+    },
+    {
+      "id": "u-value-figures",
+      "what": "The exact contract values for PestFix and Clandeboye.",
+      "why": "Only the Ayanda figure was read from the judgment; the others come from legal-press restatement.",
+      "impact": "The script quotes 252,500,000 pounds excluding VAT for Ayanda with its vintage, and for the other two says 'the challenged contracts together ran to several hundred million' rather than a total.",
+      "about": ["f-ayanda-value"]
+    }
+  ],
+
+  "obligations": [
+    {
+      "id": "o-both-halves",
+      "must": "Wherever the judgment's unlawfulness finding is stated, the same beat states [401]/[403] and [510]-[512]: that the court found the awards very likely would have been made regardless of the lane, and refused the relief sought.",
+      "why": "Stating half of a judgment is the specific mechanism by which an accurate report becomes a defamatory implication. This is the must-say that the deny-list could never have carried: an impact can stop me saying something, it cannot make me say the other half.",
+      "about": ["f-judgment-unlawful", "f-judgment-counterfactual", "f-judgment-relief"]
+    },
+    {
+      "id": "o-scope-the-absence",
+      "must": "Every absence is spoken with its search scope attached — 'in the twenty procurements the auditor examined', 'the auditor found no evidence of' — never 'there are no records' and never 'the government kept none'.",
+      "why": "An unscoped absence claim about a public body is unfalsifiable, and an unfalsifiable claim about a public body is the one that gets defended for two years. The scope is what makes the absence checkable, and checkable is what makes it publishable.",
+      "about": ["f-abs-hpl-criteria", "f-abs-conflict-doc", "f-abs-supplier-reasons", "f-abs-minister-involvement"]
+    },
+    {
+      "id": "o-state-the-exculpatory-absence",
+      "must": "The auditor's finding of no evidence of ministerial involvement is stated in the same act as the documentation gaps, at the same weight, and not in a closing concession.",
+      "why": "It is an absence with identical evidentiary standing to the three that support the criticism. Carrying three and burying the fourth is selection, and selection is the thing the whole method exists to prevent.",
+      "about": ["f-abs-minister-involvement"]
+    },
+    {
+      "id": "o-name-the-rule",
+      "must": "Name regulation 84 and regulation 32(2)(c) of the Public Contracts Regulations 2015 whenever the documentation duty or the lawfulness of direct award is asserted.",
+      "why": "A claim that conduct fell short of a standard is meaningless — and unanswerable — without the standard. Any tool confident about a jurisdiction's procurement rules without citing them is guessing.",
+      "about": ["f-rule-84", "f-rule-32", "f-rule-24"]
+    },
+    {
+      "id": "o-referrer-breadth",
+      "must": "Whenever the referrer categories are described, senior NHS staff and other health professionals are named alongside ministers' offices, MPs and peers.",
+      "why": "The conversion disparity is about a lane whose referrers were broader than 'politicians'. Narrowing it in the felt version promotes the subject class and turns a queue statistic into an accusation.",
+      "about": ["f-hpl-established", "f-hpl-ratio"]
+    }
+  ],
+
+  "scale_conversions": [
+    {
+      "for": "f-hpl-ratio",
+      "raw": "9.53% versus 0.698% — a ratio of 13.65 to 1",
+      "felt": "A supplier whose offer reached the priority route cleared the whole process about one time in ten. A supplier who came in through the ordinary portal cleared it about one time in a hundred and forty-three.",
+      "kind": "ratio",
+      "note": "SUBJECT-CLASS CHECK, applied and it bit. The fact's subject is 'suppliers processed'. The felt version says 'a supplier whose offer reached the priority route' and NOT 'a company with a friend in government' — the referrer categories include senior NHS staff and other health professionals (f-hpl-established), so the political narrowing would be a promotion. Qualifier retained: 'processed', not 'applied'."
+    },
+    {
+      "for": "f-transparency-late",
+      "raw": "55% unpublished as at 10 November 2020; 25% within the 90-day target; average 92 days to publication",
+      "felt": "Of 1,644 contracts, a little over half had still not been published three and a half months after the July cut-off. A quarter made the 90-day deadline. The remaining fifth arrived, late.",
+      "kind": "count",
+      "note": "ARITHMETIC: 100 - 55 - 25 = 20, so 'the remaining fifth' is the published-but-late group and the three figures partition the set only once the middle group is named. 31 July 2020 to 10 November 2020 is 102 days, so 'three and a half months', not 'five and a half' — corrected during writing after computing it."
+    },
+    {
+      "for": "f-emergency-scale",
+      "raw": "18.0 billion pounds across over 8,600 contracts to 31 July 2020",
+      "felt": "About 2.1 million pounds a contract on average, and — because the count is 'over 8,600' — that average is an upper bound, not a figure.",
+      "kind": "cash",
+      "note": "18,000/8,600 = 2.093. Stated as an upper bound because the denominator is published as a floor. A mean over an open-ended count is not a number the script may harden."
+    },
+    {
+      "for": "f-ayanda-value",
+      "raw": "252,500,000 pounds excluding VAT",
+      "felt": "Two hundred and fifty-two and a half million pounds, excluding VAT, for one contract — quoted to the pound because it is a filed figure and its precision is what makes it checkable.",
+      "kind": "cash"
+    }
+  ],
+
+  "analogy_candidates": [
+    {
+      "for": "m-lane-advantage",
+      "analogy": "A hospital triage desk during a mass-casualty intake, where a second desk is opened for patients arriving with a doctor's note. The second desk does not treat anyone differently once they are seen — it just gets them seen, and being seen is the whole of the scarcity.",
+      "quality": "high",
+      "note": "It carries the mechanism (queue position IS the advantage, no differential standard needed) without importing motive. Risk to manage: triage analogies flatter the buyer. Pair it with the fact that the lane was not a quality filter."
+    },
+    {
+      "for": "m-record-gap",
+      "analogy": "A pharmacy that dispenses without writing the prescription down. The rule broken is the recording rule, and it is broken whether the drug was right or wrong — and afterwards nobody can establish which.",
+      "quality": "medium"
+    }
+  ],
+
+  "candidate_questions": [
+    "What did the High Court actually hold about the VIP lane, as opposed to what 'unlawful' has come to mean?",
+    "If a lane processed three per cent of suppliers and produced a third of the contract-holders, what does that number prove and what does it not?",
+    "What does a public body have to write down when it buys without competition, and who says so?",
+    "What did the auditor look for and fail to find — in both directions?",
+    "Who has answered for this, in their own words?"
+  ],
+
+  "engine_fit": [
+    {
+      "engine": "C",
+      "fit": "strong",
+      "recommended": true,
+      "why": "The familiar half is fully mechanised and, unusually, it is IN the notebook: regulation 32(2)(c) permits the direct award, regulation 84 says what must then be written down, regulation 24 says what must be done about conflicts. Establish that rule set first, then transfer to what happened. The twist deepens it — the rule that was breached is the recording rule, not the buying rule. ENGINES.md:120-123's 67/47 split puts the standard ahead of the case, which is both the better craft and the safer register.",
+      "hazard": "The familiar half's only storage is analogy_candidates[] as a one-line string (ENGINES.md:131-145), so this recommendation partly commits a renderer to original legal exposition. Get the rule wrong in the familiar half and every conclusion in the unfamiliar half inherits the error with the authority of an establishing act."
+    },
+    {
+      "engine": "A",
+      "fit": "strong",
+      "recommended": true,
+      "why": "Two pre-computed reversals, each with an escalation that turns on its own turn. r-vip-means-bought is the load-bearing self-attack the engine needs: knock down the plain reading, then knock down the knockdown by naming what the counterfactual rests on.",
+      "hazard": "The corrected version this engine owes the viewer is 'we do not know, and the document that would tell us was not written'. Rendered impatiently, the final reframe reads either as exoneration or as a sneer, and the engine's pleasure — being corrected — creates pressure to supply a firmer landing than the record has. Compose it as A's final act on a C spine so the reframe lands on the RULE, which is firm, rather than on the conduct, which is not."
+    },
+    {
+      "engine": "B",
+      "fit": "medium",
+      "recommended": false,
+      "why": "The disproportion is real — 125 pages of judgment and a 48-page audit to establish that a queue was unfair and that some forms were not filled in. But the labour here is the auditor's and the court's, not a mechanism the viewer can operate, and B's contract is that the viewer feels the labour by doing it.",
+      "hazard": "Low. Revised down from my L1 assessment, which called B the best fit in the catalogue. That was a judgment about the SHAPE of freedom-of-information work made without any material; with the material in hand, the labour is somebody else's and the payoff is not small."
+    },
+    {
+      "engine": "D",
+      "fit": "good",
+      "recommended": false,
+      "why": "Structurally this is an adjudication and the candidate set is genuine. It is not recommended because ENGINES.md:159-165 states the rule that applies here exactly: a verdict on the conduct of named parties is a finding of culpability, and subject is `state`. The verdict beat would have to rest on the filed judgment alone — at which point the engine is reading out a judgment, which C does better and more safely.",
+      "hazard": "HIGH, and it is the specific hazard the catalogue names. The engine's pleasure is watching a question get settled; the question here is expressly unsettled by the bodies empowered to settle it, so an honest D produces a verdict of 'not established', which is D's least watchable ending and the exact place a renderer will be tempted to improve on the record."
+    },
+    {
+      "engine": "E",
+      "fit": "poor",
+      "recommended": false,
+      "why": "Requires a subject the viewer has no position on. This is four and a half years old, extensively reported, and most viewers arrive with a settled position. Running E on it would manufacture novelty the material does not have.",
+      "hazard": "n/a"
+    },
+    {
+      "engine": "F",
+      "fit": "medium",
+      "recommended": false,
+      "why": "A ladder of documents is available — the referral, the assessment, the award, the due diligence dated two months after it. Genuinely elegant at short length.",
+      "hazard": "The rungs would be dates, and a chronology is not a difficulty ladder: monotonic escalation over a sequence of decisions by an identifiable team is a blame frame that asserts by shape what no sentence in it asserts. Precisely the hazard game-postmortem recorded."
+    },
+    {
+      "engine": "G",
+      "fit": "good",
+      "recommended": false,
+      "why": "The material offers a clean flat contradiction — 'the court called it unlawful; the court refused to do anything about it' — repeated, then resolved. It would work.",
+      "hazard": "REFUSE. Repeating a contradiction about a public body while asserting nothing is insinuation with a runtime: it produces the imputation in the viewer and leaves nothing on the page to defend. This is the one entry where a strong fit must lose to hazard outright, per the arbitration rule that hazard is the first cut."
+    }
+  ],
+
+  "currency": {
+    "half_life": "years",
+    "why": "The load-bearing material is a judgment and two audit reports. Judgments do not go stale; audit findings about a 2020 period do not either. What moves is the surrounding procedure — appeals, committee follow-ups, the replacement of the 2015 Regulations by the Procurement Act 2023.",
+    "expires_first": ["f-hpl-value", "f-dhsc-response", "f-hancock-response"],
+    "durable": ["f-judgment-unlawful", "f-judgment-counterfactual", "f-judgment-relief", "f-rule-84", "f-rule-32", "f-abs-hpl-criteria", "f-abs-minister-involvement", "m-record-gap"],
+    "advice": "Cite the regime by name and date — 'the Public Contracts Regulations 2015, which governed this and have since been replaced' — so the script survives the Procurement Act 2023 rather than being falsified by it. Date every absence out loud: an absence expires the instant the document is published, and an undated absence is a correction waiting to happen."
+  },
+
+  "conclusions": [
+    {
+      "id": "c-route-not-outcome",
+      "claim": "What has been established here is a route, not a reason. Two bodies empowered to make findings examined this, and neither reached the question of why any particular company was paid — one because it was not asked to, and one because in the procurements it examined the records that would answer it had not been written.",
+      "reasoning": "The court's holding is about the operation of a lane measured against an equal-treatment obligation; it expressly declined to attribute the awards to the lane. The auditor's findings are about documentation measured against regulation 84; it recorded that it could not give assurance either way. Both stop at the same line, and the line is the finding.",
+      "leap": "near",
+      "restsOn": ["f-judgment-unlawful", "f-judgment-counterfactual", "f-judgment-relief", "f-abs-hpl-criteria", "f-abs-minister-involvement", "f-rule-84"],
+      "subject": { "names": "state", "who": "the UK government as awarding body (DHSC and Cabinet Office)" },
+      "falsifiableBy": {
+        "test": "A finding on that question by a body empowered to make one: a judgment, a completed NAO conclusion on a named award, or a Committee of Public Accounts finding of fact identifying a decision-maker and a reason.",
+        "kind": "document",
+        "binds": "whole-claim",
+        "note": "Single-clause by construction. The claim asserts only the limit of the record, so there is no checkable half to hide an imputation behind."
+      },
+      "useFor": "boundary",
+      "gate_result": "PASSES conclusionIssues() with zero issues."
+    },
+    {
+      "id": "c-absence-is-the-finding",
+      "claim": "In this matter the absence is the finding: in the procurements the auditor examined, the specific documents that would show why a supplier was chosen and whether anyone involved had an interest were not written — and regulation 84 required them.",
+      "reasoning": "Regulation 84 makes the record a duty, not a courtesy, and makes it a duty specifically for direct awards. So the non-existence of the record is itself a completed fact about conduct against a published standard — affirmative, dated, scoped, and independent of anyone's reason for it.",
+      "leap": "near",
+      "restsOn": ["f-rule-84", "f-abs-hpl-criteria", "f-abs-conflict-doc", "f-abs-supplier-reasons"],
+      "subject": { "names": "org", "who": "Cabinet Office and DHSC as awarding bodies" },
+      "clauses": [
+        { "id": "not-written", "text": "the documents were not written in the procurements examined", "loadBearing": true },
+        { "id": "required", "text": "regulation 84 required them", "loadBearing": true }
+      ],
+      "falsifiableBy": {
+        "test": "Production of the documents — a contemporaneous record of the reasons for the choice of supplier, or of conflict-of-interest consideration, in the procurements at NAO HC 959 paras 3.21-3.22.",
+        "kind": "document",
+        "binds": "not-written",
+        "note": "Binds a load-bearing clause. The sibling clause is a question of law on a published statute and is not falsifiable by production of a document, which is why the two are declared separately."
+      },
+      "useFor": "thesis",
+      "gate_result": "PASSES conclusionIssues() with zero issues."
+    },
+    {
+      "id": "c-DANGEROUS-do-not-ship",
+      "claim": "The awarding bodies broke the record-keeping rule in regulation 84, and on the pattern of who was referred and who was paid, the lane existed to deliver contracts to people the referrers already knew.",
+      "reasoning": "Regulation 84 requires the documentation; the auditor found it absent in the procurements it examined; a lane that converted at 13.65 times the ordinary rate and applied no quality filter, fed by referrals with no criteria and often no recorded source, is a channel whose observed function was to move known parties to the front.",
+      "leap": "moderate",
+      "restsOn": ["f-rule-84", "f-abs-hpl-criteria", "f-abs-supplier-reasons", "f-hpl-ratio", "f-lane-not-a-filter", "f-judgment-unlawful"],
+      "subject": { "names": "state", "who": "the UK government as awarding body" },
+      "falsifiableBy": {
+        "test": "Production of the documentation the auditor recorded as absent, and of contemporaneous referral criteria for the lane.",
+        "kind": "document",
+        "binds": "whole-claim"
+      },
+      "useFor": "thesis",
+      "withheld": true,
+      "gate_result": "PASSES conclusionIssues() with ZERO ISSUES — and it must not be published. It asserts a legal conclusion no empowered body reached (no body has found a breach of regulation 84; the auditor found 'insufficient documentation') and a purpose claim about the state. It is carried here, withheld, as the demonstration of the gate hole documented in G-L2-PC-01. See NOTES.md for the four gate variants run against this card."
+    }
+  ],
+
+  "sources": [
+    { "name": "Comptroller and Auditor General, Investigation into government procurement during the COVID-19 pandemic, HC 959, Session 2019-21, National Audit Office, 26 November 2020", "evidence_class": "primary", "locator": "48pp; read in full from the published PDF" },
+    { "name": "R (Good Law Project Ltd & EveryDoctor) v Secretary of State for Health and Social Care [2022] EWHC 46 (TCC), Mrs Justice O'Farrell DBE, 12 January 2022", "evidence_class": "primary", "locator": "125pp approved judgment; paras 396-403, 509-515 read verbatim" },
+    { "name": "Comptroller and Auditor General, Lessons learned: competition in public procurement, HC 1664, Session 2022-23, National Audit Office, 19 July 2023", "evidence_class": "primary", "locator": "54pp; Part One Figure 2, paras 15, 2.11-2.13 and the Part Two scope note" },
+    { "name": "The Public Contracts Regulations 2015, regs 18, 24, 32(2)(c), 84", "evidence_class": "primary", "locator": "cited through NAO HC 959 para 3.15 and [2022] EWHC 46 (TCC) para 400" },
+    { "name": "House of Commons Committee of Public Accounts, COVID-19: Government procurement and supply of PPE", "evidence_class": "secondary", "locator": "restated from search summary only; NOT fetched" },
+    { "name": "Press reporting of the 12 January 2022 judgment carrying DHSC and Hancock spokesman statements", "evidence_class": "secondary", "locator": "reports of 12-13 January 2022" }
+  ],
+
+  "research_gaps": [
+    "NO COMPARABLE-BASIS BASELINE WAS OBTAINED for pre-pandemic non-competitive award rates. Two searches; the nearest published figure (NAO HC 1664: 63% competed in 2021-22) is a different period, population and unit of count, and the same report expressly excludes urgent pandemic contracts from its analysis. THIS IS A GAP IN MY EFFORT, NOT AN ABSENCE IN THE WORLD. I did not go to Contracts Finder or Find a Tender directly, I did not search a third time, and I did not read the pre-2020 NAO or Institute for Government procurement work. Filing it as facts[].kind: 'absence' was available, would have looked rigorous, and would have been laundering.",
+    "A SEARCH SUMMARY ASSERTED that government 'does not measure how much of public procurement is competitively tendered'. I nearly recorded that as an established absence on an empowered body's authority. Grepping the primary report for 'does not measure' and 'not measure' returns NOTHING, and HC 1664 in fact describes the Cabinet Office estimating competition from quarterly departmental aggregates. The aggregator's paraphrase was wrong in the direction that would have flattered my thesis. Recorded here because the near-miss is more instructive than the finding.",
+    "PestFix (342m) and Clandeboye (123m) contract values were seen only in legal-press restatement. Only the Ayanda figure was read from the judgment itself. No aggregate total is asserted anywhere in this notebook.",
+    "The 1.7bn high-priority-lane total (f-hpl-value) comes from a search summary of a PAC report that was not fetched. It is non-load-bearing for that reason.",
+    "NO APPROACH WAS MADE by this run to DHSC, the Cabinet Office, or any named party. The responses recorded are published statements made in response to the judgment and to the claimants, not to me. In real work this is the gap I would close before filing, and the ~12h of waiting in my baseline is exactly this.",
+    "The claimants' appeal and the Court of Appeal's permission decision were seen only in a chambers headline and are not recorded as facts.",
+    "NOT READ: the NAO's second November 2020 report (The supply of PPE during the COVID-19 pandemic), the PAC report on PPE Medpro, the Boardman reviews, and the COVID-19 Inquiry Module on procurement. Each would plausibly change the counter-case's strength; none was chased.",
+    "The DHSC and Hancock statements were not traced to a DHSC press notice or a primary transcript. Both are load-bearing for the right-of-reply requirement and both are secondary."
+  ],
+
+  "run_metrics": {
+    "web_searches": 7,
+    "web_fetches": 6,
+    "primary_documents_read_in_full": 3,
+    "budget": "RESEARCH-PROMPT.md Phase 1 budgets 4-8 searches. 7 used, within budget. Two of the seven were spent on the baseline row and both failed; that failure is research_gaps[0] and is the single most informative thing in this run."
+  }
+}

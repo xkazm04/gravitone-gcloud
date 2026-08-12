@@ -1,0 +1,33 @@
+
+=== PUBLISHABLE 1 — c-route-not-outcome (boundary card) ===
+  leap=near  subject=state  binds=whole-claim  clauses=0  filedOrAdmitted=none
+  >>> ZERO ISSUES — SHIPS CLEAN
+
+=== PUBLISHABLE 2 — c-absence-is-the-finding ===
+  leap=near  subject=org  binds=not-written  clauses=2  filedOrAdmitted=none
+  >>> ZERO ISSUES — SHIPS CLEAN
+
+=== DANGEROUS V1 — honest: far + clauses + falsifier binds the checkable half ===
+  leap=far  subject=state  binds=breach  clauses=2  filedOrAdmitted=none
+  [falsifier-binds] Falsifier binds the clause "the awarding bodies broke regulation 84", which is not the load-bearing one. Falsifying the checkable half does not discharge the requirement — the imputation walks.
+  [leap-cap] Claim is about the UK government as awarding body at leap "far". Named claims cap at "moderate" unless a filed action or a published admission is in restsOn.
+
+=== DANGEROUS V2 — evasion: regrade far -> moderate ===
+  leap=moderate  subject=state  binds=breach  clauses=2  filedOrAdmitted=none
+  [falsifier-binds] Falsifier binds the clause "the awarding bodies broke regulation 84", which is not the load-bearing one. Falsifying the checkable half does not discharge the requirement — the imputation walks.
+
+=== DANGEROUS V3 — evasion: declare NO clauses, bind whole-claim ===
+  leap=moderate  subject=state  binds=whole-claim  clauses=0  filedOrAdmitted=none
+  >>> ZERO ISSUES — SHIPS CLEAN
+
+=== DANGEROUS V4 — evasion: unhinged, but the filed judgment is in restsOn ===
+  leap=unhinged  subject=state  binds=breach  clauses=2  filedOrAdmitted=f-judgment-unlawful
+  [falsifier-binds] Falsifier binds the clause "the awarding bodies broke regulation 84", which is not the load-bearing one. Falsifying the checkable half does not discharge the requirement — the imputation walks.
+
+=== CONTROL V5 — same card, subject omitted entirely ===
+  leap=moderate  subject=ABSENT  binds=whole-claim  clauses=0  filedOrAdmitted=none
+  [subject-unassessed] No `subject`. Unassessed is not the same as nobody-is-named; the exposure axis is unread.
+
+=== CONTROL V6 — the L1 sentence: a near-leap legal conclusion nobody empowered has made ===
+  leap=near  subject=state  binds=whole-claim  clauses=0  filedOrAdmitted=none
+  >>> ZERO ISSUES — SHIPS CLEAN

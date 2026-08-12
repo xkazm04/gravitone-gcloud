@@ -1,0 +1,726 @@
+{
+  "$schema": "../../../../../pipeline/NOTEBOOK-SCHEMA.md",
+  "id": "2026-08-12-vela-nova-third-disabling",
+  "topic": "A US Navy helicopter disabled a Panama-flagged containership enforcing the blockade of Iranian ports",
+  "researched": "2026-08-12",
+  "researcher": "news-reaction / Marc Delacroix (gauntlet L2)",
+  "template_intent": "briefing",
+  "subject_domain": "geopolitics",
+  "question": "The third ship disabled under the US blockade of Iran was struck yesterday. Is the kinetic side of this campaign accelerating, and does anyone actually have the record to say?",
+  "verdict": "As of 2026-08-12 the only quantitative record of this campaign is the enforcing party's own tally, and on that tally the kinetic class is 5.0% of 60 recorded engagements with an interval that has lengthened, not shortened — while the risk assessment published the same morning calls escalation sustained. Neither reading is supportable: n=3 is two intervals, and two intervals is not a rate.",
+
+  "prior": "Written 2026-08-12 before the first Phase 1 search. This is escalation management dressed as routine enforcement. A disabling shot at the steering gear rather than a sinking is the signature of a state making a blockade credible without creating a casualty event. I expect the legal basis to be thin or unstated, the flag state and owner to be the contested parties rather than Iran directly, and the first 24 hours to produce one military's account and silence from everyone else.",
+  "prior_verdict": "MIRROR, on three of four clauses, and I am saying so rather than dressing it as a discovery. Legal basis unstated: confirmed. Counterparty silence: confirmed. Flag state / owner as the exposed parties rather than Iran: confirmed. The DISCOVERY is the part I did not expect and would not have looked for without the baseline row — that the enforcing party publishes a running tally, that the tally makes the kinetic class rare and lengthening, and that the record is far too small for either the escalation reading or my own de-escalation reading to be stated. My prior was directionally right and epistemically wrong, which is the more dangerous of the two.",
+
+  "domains": [
+    { "id": "the-event", "ask": "What physically happened, to which hull, where, when, and who says so." },
+    { "id": "the-baseline", "ask": "How many enforcement engagements under this blockade, of which classes, over what window, with an n. Where does a kinetic disabling sit inside that distribution?", "mandatory": true },
+    { "id": "legal-basis", "ask": "What authority is claimed for the blockade, and is the instrument published?" },
+    { "id": "structural-actors", "ask": "Flag state, registered owner, ISM manager, insurers, CENTCOM, Iran — who can act and what governs them." },
+    { "id": "counterparty-response", "ask": "Has any party other than the enforcing military spoken on the record?" },
+    { "id": "corridor-effects", "ask": "Transit volumes, AIS behaviour, anchorage build-up, route displacement." },
+    { "id": "the-counter-case", "ask": "Search explicitly for the strongest argument that nothing unusual is happening.", "mandatory": true }
+  ],
+
+  "tension": {
+    "expectation": "A third kinetic disabling reads as sustained escalation. The corridor risk assessment published the following morning rates the environment Critical and states that kinetic escalation and blockade enforcement are 'being actively sustained rather than easing'.",
+    "reality": "On the enforcing party's own published tally the kinetic class is 3 of 60 recorded engagements — 5.0% — and the interval between disablings ran 9 days (15 Jul to 24 Jul) then 18 days (24 Jul to 11 Aug), a doubling, while non-kinetic redirections continued at roughly 1.5 vessels per day throughout.",
+    "why_it_is_a_tension": "Not that escalation is disproven — it is not. The tension is that both readings are being published at a confidence the record cannot carry. Three events give two intervals; two intervals is not a distribution and cannot support 'accelerating' or 'easing'. And the only quantitative series in the story is self-reported by one of the belligerents, with no independent count anywhere in the material. The story is not the strike. The story is that everyone is scoring a trend off n=3, and the scoreboard belongs to a player. Downgraded one further step per Phase 2 by the surviving counter-case (cp-compliance-effect), which the tally supports as well as it supports mine.",
+    "strength": "weak"
+  },
+
+  "normal_range": {
+    "what": "Interval between kinetic disablings under blockade phase 2",
+    "n": 3,
+    "observations": ["2026-07-15 BELMA", "2026-07-24 MT LAVINE", "2026-08-11 VELA NOVA"],
+    "spread": "Two intervals: 9 days, 18 days. Mean 13.5 days; phase-2 rate 3 disablings / 28 days = one per 9.33 days.",
+    "where_this_one_sits": "UNCOMPUTABLE. An extremum is a single observation and a baseline is a spread; two points are neither. This row is recorded as a failure to establish a baseline, not as a baseline. Any strength score above 'weak' on this material would be scoring a trend off a doubling that a single re-ordering of two events would invert."
+  },
+
+  "facts": [
+    {
+      "id": "f-centcom-utterance",
+      "claim": "US Central Command stated that on 11 August 2026 its forces disabled the steering gear of the Panama-flagged M/V Vela Nova with two Hellfire missiles from an MH-60 helicopter as the vessel transited the Gulf of Oman toward an Iranian port, and that the blockade 'remains in full effect'",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "US Central Command, official post", "evidence_class": "primary", "locator": "x.com/CENTCOM status 2087251919555248599, 2026-08-11", "interested": true },
+        { "name": "gCaptain", "evidence_class": "secondary", "locator": "gcaptain.com, 2026-08-11" }
+      ],
+      "confidence": "high",
+      "confidence_note": "high AS AN UTTERANCE — CENTCOM demonstrably said this. The confidence attaches to the saying, not to the content; the content has no independent verification in any source reached. This split is the reason `kind` had to exist and `confidence` alone could not carry it.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-11",
+      "subject": { "names": "state", "who": "US Central Command" },
+      "contests": ["f-engine-room"]
+    },
+    {
+      "id": "f-engine-room",
+      "claim": "Multiple outlets report the two Hellfire missiles were fired into the vessel's engine room, not its steering gear",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "gCaptain", "evidence_class": "secondary", "locator": "gcaptain.com, 2026-08-11" },
+        { "name": "Maritime Executive", "evidence_class": "secondary", "locator": "maritime-executive.com, 2026-08-11" }
+      ],
+      "confidence": "low",
+      "confidence_note": "Two secondary outlets against one primary utterance, with no independent inspection of the hull by anyone. Steering gear and engine room are different compartments and imply different intents — disable-to-steer versus disable-to-move. Left UNRESOLVED.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-11",
+      "contests": ["f-centcom-utterance"]
+    },
+    {
+      "id": "f-strike-position",
+      "claim": "The Vela Nova was struck approximately 71 nautical miles off the coast of Pakistan, in international waters",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "UKMTO initial report, via gCaptain", "evidence_class": "primary", "locator": "UKMTO advisory relayed in gcaptain.com, 2026-08-11" },
+        { "name": "Windward", "evidence_class": "vendor", "locator": "windward.ai corridor report, 2026-08-12", "interested": true }
+      ],
+      "confidence": "medium",
+      "confidence_note": "UKMTO is the right register for a position report but I reached it through a trade outlet, not the advisory itself. Named as a gap.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-11",
+      "unit": "nautical miles",
+      "note": "Load-bearing because the position, not the act, is what makes this a blockade story rather than a territorial one — a container vessel struck 71nm off Pakistan is enforcement projected well outside the Strait."
+    },
+    {
+      "id": "f-crew",
+      "claim": "All 17 crew were accounted for with no injuries reported",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "gCaptain", "evidence_class": "secondary", "locator": "gcaptain.com, 2026-08-11" },
+        { "name": "MercoPress", "evidence_class": "secondary", "locator": "en.mercopress.com, 2026-08-12" }
+      ],
+      "confidence": "medium",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-11",
+      "unit": "crew"
+    },
+    {
+      "id": "f-vessel-identity",
+      "claim": "The Vela Nova is a 1997-built container ship, IMO 9136228, registered owner and commercial manager Golden Valley Marine INV, ISM manager Sino Hellenic Ships Management",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "MagicPort vessel register", "evidence_class": "aggregator", "locator": "magicport.ai IMO 9136228" },
+        { "name": "gCaptain", "evidence_class": "secondary", "locator": "gcaptain.com, 2026-08-11" }
+      ],
+      "confidence": "medium",
+      "as_of": "2026-08-12",
+      "subject": { "names": "org", "who": "Golden Valley Marine INV; Sino Hellenic Ships Management" },
+      "note": "Recorded as registry identity only. No conclusion in this notebook attributes knowledge, intent or affiliation to either company; nobody has been charged with anything and neither has spoken (see f-absence-counterparty)."
+    },
+    {
+      "id": "f-tally-aug11",
+      "claim": "As of 11 August 2026 CENTCOM reported 55 commercial vessels redirected, 3 non-compliant vessels disabled and 2 boarded under the blockade",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "US Central Command, official post", "evidence_class": "primary", "locator": "x.com/CENTCOM, 2026-08-11", "interested": true },
+        { "name": "gCaptain", "evidence_class": "secondary", "locator": "gcaptain.com, 2026-08-11" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "The tally is authoritative as the enforcing party's own count and is the ONLY quantitative series in this story. It is not independently audited by anyone in the material reached, and a count of one's own enforcement actions is interested in the schema's exact sense — authoritative and interested are not opposites.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-11",
+      "unit": "vessels",
+      "period": "UNRESOLVED — see f-absence-denominator. Almost certainly blockade phase 2 (from 2026-07-14), but CENTCOM does not state the window on the figure.",
+      "denominator": "60 recorded engagements (55 + 3 + 2), computed from the three classes in the same statement",
+      "subject": { "names": "state", "who": "US Central Command" },
+      "contests": ["f-absence-denominator"]
+    },
+    {
+      "id": "f-tally-aug3",
+      "claim": "As of 3 August 2026 CENTCOM reported 44 redirected, 2 disabled, 2 boarded",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "CENTCOM tally, via OANN / RSBN", "evidence_class": "secondary", "locator": "oann.com, rsbnetwork.com, 2026-08-03", "interested": true }
+      ],
+      "confidence": "medium",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-03",
+      "unit": "vessels",
+      "period": "cumulative, same unstated window as f-tally-aug11",
+      "denominator": "48 recorded engagements"
+    },
+    {
+      "id": "f-tally-aug6",
+      "claim": "As of 6 August 2026, 49 redirected, 2 disabled, 2 boarded",
+      "kind": "utterance",
+      "load_bearing": false,
+      "sources": [
+        { "name": "United Against Nuclear Iran, Iran Shipping Update", "evidence_class": "self-published", "locator": "unitedagainstnucleariran.com, 2026-08-07 update citing 2026-08-06 figures", "interested": true }
+      ],
+      "confidence": "low",
+      "confidence_note": "Relayed by an advocacy organisation whose stated purpose is pressure on Iran, restating a CENTCOM figure. Low not because the number is wrong but because I reached it through the one party in the story with a reason to publish it.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-06",
+      "unit": "vessels",
+      "denominator": "53 recorded engagements"
+    },
+    {
+      "id": "f-tally-aug10",
+      "claim": "As of 10 August 2026, 55 redirected, 2 disabled, 2 boarded",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "CNBC", "evidence_class": "secondary", "locator": "cnbc.com, 2026-08-10" }
+      ],
+      "confidence": "medium",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-10",
+      "unit": "vessels",
+      "denominator": "59 recorded engagements",
+      "note": "The pin that makes the Vela Nova the 3rd disabling rather than an unnumbered one: redirected was already 55 on 10 Aug and disabled was still 2."
+    },
+    {
+      "id": "f-prior-disablings",
+      "claim": "The two prior disablings under blockade phase 2 were the BELMA on 15 July 2026 and the MT LAVINE on 24 July 2026",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Windward corridor report", "evidence_class": "vendor", "locator": "windward.ai, 2026-08-12", "interested": true },
+        { "name": "gCaptain", "evidence_class": "secondary", "locator": "gcaptain.com, 2026-08-11" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Both dates come from a maritime-risk vendor that sells the corridor assessment these events feed. Flagged for a second, non-vendor source — this is a load-bearing fact at a class I would not normally build arithmetic on.",
+      "as_of": "2026-08-12",
+      "unit": "vessels",
+      "period": "2026-07-14 to 2026-08-11"
+    },
+    {
+      "id": "f-phase2-start",
+      "claim": "The blockade was imposed on 13 April 2026 after the failure of the Islamabad Talks, and reimposed on 14 July 2026 after the collapse of a 17 June memorandum of understanding",
+      "kind": "found",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Wikipedia, 2026 United States naval blockade of Iran", "evidence_class": "aggregator", "locator": "en.wikipedia.org, retrieved 2026-08-12" },
+        { "name": "United Against Nuclear Iran", "evidence_class": "self-published", "locator": "unitedagainstnucleariran.com, 2026-08-04", "interested": true }
+      ],
+      "confidence": "low",
+      "confidence_note": "LOAD-BEARING AT LOW CONFIDENCE, FLAGGED. Every interval in this notebook is measured from 2026-07-14 and the best source I reached for that date in one pass is an aggregator plus an advocacy organisation. No proclamation, executive order or Federal Register notice was located (see f-absence-legal-instrument). If the phase-2 start date is wrong, the rate arithmetic moves.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-07-14",
+      "period": "2026-04-13 onward"
+    },
+    {
+      "id": "f-derived-kinetic-share",
+      "claim": "Disablings are 5.0% of recorded blockade engagements: 3 of 60",
+      "kind": "derived",
+      "load_bearing": true,
+      "derived_from": ["f-tally-aug11"],
+      "method": "3 / (55 + 3 + 2) = 3 / 60 = 0.05000 = 5.000%. Redirections are 55/60 = 91.667%; boardings 2/60 = 3.333%. Sums to 100.000%.",
+      "sources": [{ "name": "computed from f-tally-aug11", "evidence_class": "primary", "locator": "this notebook, method field" }],
+      "confidence": "medium",
+      "confidence_note": "The arithmetic is exact. The inputs are one party's self-count, so the percentage is precise about a series whose completeness nobody has audited. Precision of a derived figure never exceeds the class of its input.",
+      "as_of": "2026-08-12",
+      "unit": "%",
+      "denominator": "60 recorded blockade engagements (redirected + disabled + boarded), as reported 2026-08-11",
+      "period": "2026-07-14 to 2026-08-11 (28 days), assuming the tally is phase-2 cumulative — UNRESOLVED, see f-absence-denominator"
+    },
+    {
+      "id": "f-derived-intervals",
+      "claim": "The interval between kinetic disablings doubled: 9 days, then 18 days",
+      "kind": "derived",
+      "load_bearing": true,
+      "derived_from": ["f-prior-disablings", "f-centcom-utterance"],
+      "method": "2026-07-15 to 2026-07-24 = 9 days. 2026-07-24 to 2026-08-11 = 18 days. 18 / 9 = 2.0x. Phase-2 aggregate: 2026-07-14 to 2026-08-11 = 28 days; 28 / 3 = 9.333 days per disabling.",
+      "sources": [{ "name": "computed from f-prior-disablings and f-centcom-utterance", "evidence_class": "primary", "locator": "this notebook, method field" }],
+      "confidence": "low",
+      "confidence_note": "The subtraction is exact and the inference from it is nearly worthless. Two intervals. Swap the order of any two events and the direction inverts. Recorded because the arithmetic is what shows the claim cannot be made, not because it makes one.",
+      "as_of": "2026-08-12",
+      "unit": "days",
+      "period": "2026-07-14 to 2026-08-11"
+    },
+    {
+      "id": "f-derived-redirect-rate",
+      "claim": "Non-kinetic redirections ran at roughly 1.5 vessels per day across the week before the strike, with no visible slowdown",
+      "kind": "derived",
+      "load_bearing": true,
+      "derived_from": ["f-tally-aug3", "f-tally-aug6", "f-tally-aug10"],
+      "method": "3 Aug to 10 Aug: (55 - 44) / 7 days = 11/7 = 1.571 vessels/day. Sub-intervals: 3-6 Aug (49-44)/3 = 1.667/day; 6-10 Aug (55-49)/4 = 1.500/day. All three windows agree within 0.17 vessels/day, so the series is internally consistent and the flat rate is not an artifact of the endpoints.",
+      "sources": [{ "name": "computed from f-tally-aug3, f-tally-aug6, f-tally-aug10", "evidence_class": "primary", "locator": "this notebook, method field" }],
+      "confidence": "medium",
+      "confidence_note": "Three points, three windows, mutually consistent. This is the strongest quantitative claim in the notebook and it is still built on one party's count. It compares like with like: same unit (vessels), same basis (cumulative redirections), adjacent non-overlapping windows.",
+      "as_of": "2026-08-12",
+      "unit": "vessels/day",
+      "period": "2026-08-03 to 2026-08-10 (7 days)"
+    },
+    {
+      "id": "f-vela-dark",
+      "claim": "The Vela Nova had a 15-day dark period and 12 further AIS gaps of 11 to 29 hours each before the strike",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "Windward", "evidence_class": "vendor", "locator": "windward.ai corridor report, 2026-08-12", "interested": true }
+      ],
+      "confidence": "low",
+      "confidence_note": "Vendor telemetry, unreproducible by the reader, from a company selling detection of exactly this behaviour. It is also the single fact most favourable to the enforcing party's account, which is a reason to hold it lower rather than higher.",
+      "as_of": "2026-08-12",
+      "unit": "hours / days",
+      "period": "pre-2026-08-11, window not stated by the source"
+    },
+    {
+      "id": "f-corridor-shift",
+      "claim": "Vessel presence on the Iran-Oman corridor rose from 3 vessels in February 2026 to 5 in April to 8 in August 2026, and Hormuz transit volumes are described as collapsed toward zero",
+      "kind": "found",
+      "load_bearing": false,
+      "sources": [
+        { "name": "Windward", "evidence_class": "vendor", "locator": "windward.ai corridor report, 2026-08-12", "interested": true }
+      ],
+      "confidence": "low",
+      "confidence_note": "3 to 5 to 8 vessels is a real direction on absurd magnitudes; 'collapsed toward zero' is unquantified prose from the same source. The script may state the direction and may not state 8 as a measurement of the corridor.",
+      "as_of": "2026-08-12",
+      "unit": "vessels",
+      "period": "2026-02 to 2026-08"
+    },
+    {
+      "id": "f-windward-assessment",
+      "claim": "Windward rated the operational risk environment across Hormuz, the Red Sea, the Gulf of Aden, the northern Arabian Gulf and the Gulf of Oman as Critical and stated that kinetic escalation and blockade enforcement are 'being actively sustained rather than easing'",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "Windward", "evidence_class": "vendor", "locator": "windward.ai, 2026-08-12", "interested": true }
+      ],
+      "confidence": "high",
+      "confidence_note": "high as an utterance. It is the expectation half of the tension and I need it stated accurately, not endorsed.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-12",
+      "subject": { "names": "org", "who": "Windward" }
+    },
+    {
+      "id": "f-uani-compliance-frame",
+      "claim": "United Against Nuclear Iran characterised the rising redirection count as an accelerating compliance rate, with vessels 'increasingly preempting U.S. intervention by altering course earlier, reducing the need for direct interdiction'",
+      "kind": "utterance",
+      "load_bearing": true,
+      "sources": [
+        { "name": "United Against Nuclear Iran, Iran Shipping Update", "evidence_class": "self-published", "locator": "unitedagainstnucleariran.com, 2026-08-04 and 2026-08-07", "interested": true }
+      ],
+      "confidence": "high",
+      "confidence_note": "high as an utterance. This is the found counter-case and its provenance matters more than usual: it is published by an advocacy organisation that favours the enforcement, and it predates the strike by four to seven days. It is a real argument that reads on this event; it was not made about this event.",
+      "as_of": "2026-08-12",
+      "event_date": "2026-08-07",
+      "subject": { "names": "org", "who": "United Against Nuclear Iran" },
+      "qualifies": ["f-derived-kinetic-share", "f-derived-redirect-rate"]
+    },
+    {
+      "id": "f-absence-legal-instrument",
+      "claim": "No published legal instrument establishing or authorising the blockade was located, and the reporting reached states it is not a formal UN-sanctioned blockade",
+      "kind": "absence",
+      "load_bearing": true,
+      "search_scope": {
+        "registers_searched": [
+          "open web search for the blockade's legal basis and Panama Maritime Authority response (2026-08-12)",
+          "the aggregate encyclopaedia entry for the 2026 blockade",
+          "seven trade and general outlets covering the strike"
+        ],
+        "not_searched": [
+          "Federal Register",
+          "White House proclamations and executive orders",
+          "US State Department and DoD general-counsel statements",
+          "IMO circulars",
+          "UN Security Council records"
+        ],
+        "period": "2026-04-13 to 2026-08-12",
+        "what_would_count": "A proclamation, executive order, Federal Register notice, or an on-the-record US legal-adviser statement naming the authority claimed — belligerent blockade under the law of naval warfare, Article 51 self-defence, or a domestic sanctions authority. Any one of the three would settle it.",
+        "as_of": "2026-08-12"
+      },
+      "sources": [
+        { "name": "search result set, no instrument returned", "evidence_class": "primary", "locator": "this run's Phase 1 searches 2 and 3, 2026-08-12" },
+        { "name": "reporting characterising the blockade as not UN-sanctioned", "evidence_class": "secondary", "locator": "search synthesis over gcaptain / marinelink / maritimeprofessional, 2026-08-11" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "MEDIUM, AND THE HONEST CEILING FOR THIS CARD. I established that the instrument is not in the reporting. I did NOT establish that it does not exist — I never opened the Federal Register, and five registers where it would live are listed above as unsearched. This is an absence in MY REACH, not an absence in the world, and the two must not be allowed to read the same. A same-day claim that the blockade has no published legal basis would be the single most reversible sentence in this notebook.",
+      "as_of": "2026-08-12"
+    },
+    {
+      "id": "f-absence-counterparty",
+      "claim": "As of 2026-08-12 no statement on the strike had been made by Iran, the Panama Maritime Authority, Golden Valley Marine INV or Sino Hellenic Ships Management in any source reached",
+      "kind": "absence",
+      "load_bearing": true,
+      "search_scope": {
+        "registers_searched": [
+          "targeted search naming the owner, the ISM manager, Panama and Iran (2026-08-12)",
+          "targeted search for the Panama Maritime Authority response (2026-08-12)",
+          "nine outlets returned across both, including Panamanian and Latin American press"
+        ],
+        "not_searched": [
+          "Persian-language Iranian state media (IRNA, Tasnim, Press TV)",
+          "Spanish-language Panamanian government bulletins directly",
+          "the companies' own filings or registry contacts"
+        ],
+        "period": "2026-08-11 to 2026-08-12",
+        "what_would_count": "Any on-the-record statement from the flag state, the registered owner, the ISM manager or the Iranian foreign ministry — including a refusal to comment, which is itself the finding.",
+        "as_of": "2026-08-12"
+      },
+      "sources": [
+        { "name": "search result set, no counterparty statement returned", "evidence_class": "primary", "locator": "this run's Phase 1 searches 3 and 7, 2026-08-12" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "Language coverage is the hole and I am naming it: an Iranian response would appear in Persian first and I searched only in English. Roughly 20 hours after the event, silence from three of four parties is expected rather than notable, which is why this card states the silence and draws nothing from it.",
+      "as_of": "2026-08-12",
+      "note": "This is the quality bar's approach-the-named-party row, discharged as far as a desk research run can discharge it — as a recorded non-response, not as an approach. A research run cannot telephone a shipowner and should not be scored as though it did."
+    },
+    {
+      "id": "f-absence-event-counter-case",
+      "claim": "As of 2026-08-12 no published argument was located holding that the Vela Nova strike specifically is unremarkable, proportionate or routine",
+      "kind": "absence",
+      "load_bearing": true,
+      "search_scope": {
+        "registers_searched": [
+          "explicit counter-case search: routine enforcement / proportionality / legal expert commentary on this strike (2026-08-12)",
+          "second, differently-framed counter-case search: analysts saying escalation is overstated (2026-08-12)"
+        ],
+        "not_searched": [
+          "Lawfare, Just Security, EJIL:Talk and the naval-law literature",
+          "the US Naval War College International Law Studies register",
+          "Persian- and Chinese-language commentary"
+        ],
+        "period": "2026-08-11 to 2026-08-12",
+        "what_would_count": "A named analyst, lawyer or institution arguing that this disabling falls inside established blockade-enforcement practice — for example, a law-of-naval-warfare argument that a disabling shot after refused warnings on a blockade-runner is the textbook lawful response and the notable thing would be its absence.",
+        "as_of": "2026-08-12"
+      },
+      "sources": [
+        { "name": "search result set, counter-case not returned", "evidence_class": "primary", "locator": "this run's Phase 1 searches 4 and 6, 2026-08-12" }
+      ],
+      "confidence": "medium",
+      "confidence_note": "MEDIUM, DELIBERATELY, AND THIS IS THE CARD MOST AT RISK OF BEING A LAUNDERED GAP. Two searches is a thin basis for an absence and the three unsearched registers above are exactly where this argument lives when it exists. The reason the card survives at all is that a strike roughly 20 hours old cannot yet have a law review response, so the absence is real for the window even though my search was not exhaustive. It expires fast: I would expect it to be false within 72 hours. See sm-provenance — the constructed steel-man rests on THIS card and inherits its ceiling.",
+      "as_of": "2026-08-12",
+      "qualifies": ["f-uani-compliance-frame"],
+      "note": "This absence is NOT total, and collapsing it to one would have been the easy lie. A general counter-frame WAS found (f-uani-compliance-frame) — high compliance, kinetic action rare. What is absent is that frame applied to this event by anyone. Found-but-adjacent and absent are different states and the notebook records both."
+    },
+    {
+      "id": "f-absence-denominator",
+      "claim": "The window covered by CENTCOM's 55/3/2 tally is not stated, and a separate figure of 85 vessels intercepted since 13 April 2026 is nowhere reconciled with it",
+      "kind": "absence",
+      "load_bearing": true,
+      "search_scope": {
+        "registers_searched": [
+          "targeted search for the blockade's cumulative totals since April with class breakdown (2026-08-12)",
+          "four sources carrying tallies dated 3, 6, 10 and 11 August"
+        ],
+        "not_searched": ["CENTCOM's own release archive", "DoD press transcripts"],
+        "period": "2026-04-13 to 2026-08-12",
+        "what_would_count": "A CENTCOM statement attaching a start date to the 55/3/2 figures, or reconciling them against the 85 intercepted.",
+        "as_of": "2026-08-12"
+      },
+      "sources": [
+        { "name": "search result set, no reconciliation returned", "evidence_class": "primary", "locator": "this run's Phase 1 search 5, 2026-08-12" }
+      ],
+      "confidence": "high",
+      "confidence_note": "high because the absence is demonstrable rather than searched-for: both figures appear in the retrieved material and neither is stated against the other anywhere in it.",
+      "as_of": "2026-08-12",
+      "contests": ["f-tally-aug11"],
+      "note": "85 since 13 April versus 60 engagements on a tally that is probably phase-2-only. If the 55 is cumulative from April instead, every rate in this notebook is wrong by a factor near three. The arithmetic is stated against the phase-2 reading and the alternative is named rather than picked silently."
+    }
+  ],
+
+  "mechanisms": [
+    {
+      "id": "m-scoreboard",
+      "name": "The belligerent keeps the only scoreboard",
+      "chain": [
+        "A blockade is enforced at sea, out of sight of any independent observer",
+        "THEREFORE the only running count of what enforcement did is published by the enforcing party",
+        "BUT a count of one's own actions is a count of the actions one chose to record, and the classes are the enforcer's own — redirected, disabled, boarded",
+        "THEREFORE every rate computed off it inherits a completeness nobody has audited",
+        "BUT the count is also the only thing that lets anyone size the kinetic class at all, so refusing to use it means having no baseline",
+        "THEREFORE the honest move is to compute on it and carry its class forward, not to launder it by restating it"
+      ],
+      "steps": [
+        { "text": "A blockade is enforced at sea, out of sight of any independent observer", "connector": "THEREFORE", "evidence": ["f-strike-position"] },
+        { "text": "The only running count of enforcement is published by the enforcing party", "connector": "BUT", "evidence": ["f-tally-aug11", "f-tally-aug3", "f-tally-aug10"] },
+        { "text": "A self-count records the actions the counter chose to record, in classes it defined", "connector": "THEREFORE", "evidence": ["f-tally-aug11", "f-absence-denominator"] },
+        { "text": "Every derived rate inherits an unaudited completeness", "connector": "BUT", "evidence": ["f-derived-kinetic-share", "f-derived-redirect-rate"] },
+        { "text": "Without it there is no baseline at all", "connector": "THEREFORE", "evidence": ["f-derived-intervals"] },
+        { "text": "Compute on it and carry its class forward rather than restating it as neutral fact", "connector": "THEREFORE", "evidence": ["f-tally-aug11"] }
+      ],
+      "evidence": ["f-tally-aug11", "f-tally-aug3", "f-tally-aug10", "f-derived-kinetic-share", "f-absence-denominator"],
+      "explains": "Why the tension is about the record rather than about the strike",
+      "needs_analogy": true
+    },
+    {
+      "id": "m-n-of-three",
+      "name": "Three events, two intervals, two confident readings",
+      "chain": [
+        "Blockade phase 2 has produced three kinetic disablings in 28 days",
+        "THEREFORE the intervals between them are 9 days and 18 days — two numbers",
+        "BUT a direction requires a spread and two points give a line through every possible slope",
+        "THEREFORE neither 'escalation is sustained' nor 'kinetic action is decelerating' is computable from this record",
+        "BUT both were published within 24 hours of the third event, one by a risk vendor and one implicitly by the arithmetic",
+        "THEREFORE the reportable finding is the gap between the confidence of the readings and the n beneath them"
+      ],
+      "steps": [
+        { "text": "Three kinetic disablings in 28 days of phase 2", "connector": "THEREFORE", "evidence": ["f-prior-disablings", "f-centcom-utterance", "f-phase2-start"] },
+        { "text": "Intervals of 9 and 18 days", "connector": "BUT", "evidence": ["f-derived-intervals"] },
+        { "text": "Two points do not constrain a slope", "connector": "THEREFORE", "evidence": ["f-derived-intervals"] },
+        { "text": "Neither directional reading is computable", "connector": "BUT", "evidence": ["f-windward-assessment"] },
+        { "text": "Both readings were published inside 24 hours anyway", "connector": "THEREFORE", "evidence": ["f-windward-assessment", "f-uani-compliance-frame"] },
+        { "text": "The gap between stated confidence and available n is the finding", "connector": "THEREFORE", "evidence": ["f-derived-intervals", "f-derived-redirect-rate"] }
+      ],
+      "evidence": ["f-prior-disablings", "f-derived-intervals", "f-windward-assessment", "f-uani-compliance-frame", "f-phase2-start"],
+      "explains": "The tension itself",
+      "needs_analogy": true,
+      "note": "This mechanism is the video and it cites eight facts, five of them load-bearing. Written that way deliberately after reading what the uncited-spine anti-pattern did to run 1."
+    }
+  ],
+
+  "reversals": [
+    {
+      "id": "r-third-strike",
+      "obvious_reading": "The third ship shot in four weeks. A blockade that started with warnings and redirections has moved to missiles, and the risk assessment published the next morning calls the whole corridor Critical. This is what an escalating campaign looks like from the outside, and the reading is a fair one — it is the reading I arrived with, and anyone watching the wires would reach it by lunchtime.",
+      "why_wrong": "Not wrong. Unsupported, in both directions. On the enforcing party's own tally the kinetic class is 5.0% of 60 engagements and the gap between disablings ran 9 days then 18, while redirections held at 1.571/day across the week before the strike with no slowdown. Read straight, that is deceleration of the kinetic class inside a steady campaign. But it is three events and two intervals, and it would take one more disabling next week to invert the whole picture.",
+      "mechanism": "m-n-of-three",
+      "evidence": ["f-derived-kinetic-share", "f-derived-intervals", "f-derived-redirect-rate"],
+      "escalation": "The turn is not from escalation to de-escalation. It is from either reading to neither — and then to the question of who owns the only numbers that could settle it."
+    },
+    {
+      "id": "r-the-record",
+      "obvious_reading": "At least there are numbers. The blockade is unusually well documented for a live military operation — a running public tally, updated within a day, broken out by enforcement class. That is more transparency than most naval operations offer and it is reasonable to treat it as the factual spine.",
+      "why_wrong": "The tally is published by CENTCOM about CENTCOM. Its classes are the enforcer's classes and its denominator is unstated — a separate figure of 85 vessels intercepted since 13 April sits in the same material with nothing reconciling the two. If the 55 is cumulative from April rather than from 14 July, every rate here is wrong by a factor near three. Neither Iran, nor Panama, nor the owner, nor the ISM manager has said anything at all.",
+      "mechanism": "m-scoreboard",
+      "evidence": ["f-tally-aug11", "f-absence-denominator", "f-absence-counterparty"],
+      "escalation": "A well-documented operation and an independently documented one are different things, and only one of them is on offer here."
+    }
+  ],
+
+  "steel_man": {
+    "claim": "Nothing unusual happened on 11 August. A blockade that turns 55 of 60 encountered vessels with a radio call and disables 3 is a blockade working as designed, and the disabling shot is the rare, non-lethal, last-resort branch of a procedure that mostly ends in a course change. Seventeen crew went home. The vessel had run 15 days dark and 12 further AIS gaps before it approached the line — this is a ship that behaved like a blockade runner and was treated like one. The interval between kinetic events has lengthened, not shortened, which is what deterrence looks like when it starts to bite: fewer ships test the line, so fewer ships get shot. Reading a third disabling as escalation mistakes the rarest branch of a procedure for the procedure.",
+    "evidence": ["f-derived-kinetic-share", "f-derived-intervals", "f-crew", "f-vela-dark", "f-uani-compliance-frame"],
+    "statement": "The system is working. The shooting is the exception that proves it.",
+    "why_include": "Because it is the better-evidenced of the two readings on this material and it argues against my own verdict. Every figure in it is one I computed myself, and I would rather the strongest version of it be stated by me than discovered by a reader.",
+    "provenance": "constructed",
+    "rests_on_absence": "f-absence-event-counter-case",
+    "provenance_note": "CONSTRUCTED, AND THE MARKING IS NOT A FORMALITY. What I found is a real but adjacent argument: UANI's compliance framing (f-uani-compliance-frame), published 4-7 days BEFORE the strike, about the blockade in general, by an organisation whose stated purpose is pressure on Iran. Nobody has argued this about the Vela Nova. So the case above is mine — I built it out of the enforcing party's tally, my own arithmetic, and a vendor's AIS telemetry, then wrote it in the voice its believers would use. It is bounded by my prior in exactly the way the schema warns: I found the deceleration first and then wrote the case that likes it. A reader should discount it accordingly, and if a naval lawyer publishes the real version on Thursday it will be better than mine and will say something I did not think of."
+  },
+
+  "counter_positions_to_state_fairly": [
+    {
+      "position": "Kinetic escalation and blockade enforcement are being actively sustained rather than easing; the corridor risk environment is Critical across five theatres.",
+      "holder": "Windward (maritime risk analytics vendor)",
+      "evidence": ["f-windward-assessment", "f-corridor-shift"],
+      "statement_verbatim": "the pace and geographic spread confirm that both kinetic escalation and U.S. blockade enforcement are being actively sustained rather than easing",
+      "locator": "windward.ai corridor report, 2026-08-12"
+    },
+    {
+      "position": "The rising redirection count is accelerating voluntary compliance; vessels alter course earlier, reducing the need for interdiction while achieving the same denial of access.",
+      "holder": "United Against Nuclear Iran (advocacy organisation, favours the enforcement)",
+      "evidence": ["f-uani-compliance-frame", "f-derived-redirect-rate"],
+      "locator": "unitedagainstnucleariran.com Iran Shipping Update, 2026-08-04 and 2026-08-07"
+    },
+    {
+      "position": "None stated.",
+      "holder": "Iran; the Panama Maritime Authority; Golden Valley Marine INV; Sino Hellenic Ships Management",
+      "evidence": ["f-absence-counterparty"],
+      "locator": "n/a — recorded non-response as of 2026-08-12, English-language sources only"
+    }
+  ],
+
+  "scale_conversions": [
+    {
+      "for": "f-derived-kinetic-share",
+      "raw": "3 of 60 recorded blockade engagements were kinetic disablings",
+      "felt": "Nineteen of every twenty vessels the blockade engaged turned around on the radio. One in twenty was disabled.",
+      "kind": "ratio",
+      "note": "55/60 = 91.667%, stated as 19-in-20 rather than 'almost all'. Subject class held: these are VESSELS, not crews, not companies, not countries. The felt version does not promote them."
+    },
+    {
+      "for": "f-derived-intervals",
+      "raw": "9 days, then 18 days between kinetic disablings",
+      "felt": "The gap between shots doubled — and it is a gap measured twice.",
+      "kind": "count",
+      "note": "The qualifier 'measured twice' is carried into the felt version on purpose. Dropping it would produce 'the gap between shots doubled', which is true, sounds like a trend and is not one."
+    },
+    {
+      "for": "f-derived-redirect-rate",
+      "raw": "1.571 vessels redirected per day, 3-10 August 2026",
+      "felt": "About three ships turned around every two days, every day, through the week before the missiles.",
+      "kind": "ratio"
+    },
+    {
+      "for": "f-strike-position",
+      "raw": "71 nautical miles off Pakistan",
+      "felt": "Roughly 130 kilometres out — far outside the Strait, in open water nobody claims.",
+      "kind": "count",
+      "note": "71 nm x 1.852 = 131.5 km. Stated as 'roughly 130' because the source figure is itself approximate; giving it three digits would invent precision the UKMTO report does not carry."
+    }
+  ],
+
+  "analogy_candidates": [
+    {
+      "for": "m-scoreboard",
+      "analogy": "A league where only one club submits the scores. The scores may be perfectly accurate. Nothing about the arrangement lets you find out.",
+      "quality": "high"
+    },
+    {
+      "for": "m-n-of-three",
+      "analogy": "Two data points and a ruler. You can always draw the line; the line is doing no work.",
+      "quality": "medium"
+    }
+  ],
+
+  "candidate_questions": [
+    "Who is counting this war, and how would you know if the count were incomplete?",
+    "How many events do you need before 'accelerating' means anything?",
+    "What does a blockade look like from the outside when the only witness is enforcing it?",
+    "Why did the third missile get a risk rating within 18 hours and the legal basis get four months of nothing?"
+  ],
+
+  "unknowns": [
+    {
+      "id": "u-window",
+      "what": "Whether CENTCOM's 55/3/2 tally covers blockade phase 2 (from 14 July) or the full period from 13 April",
+      "why": "Both figures appear in the retrieved material; a separate figure of 85 intercepted since April is never reconciled against the 60 engagements implied by the tally",
+      "impact": "The script may NOT state a per-day or per-week rate as a fact. It may state the ratio 3-in-60, which holds under either window, and must name the window as unstated wherever a rate is implied.",
+      "about": ["f-tally-aug11", "f-derived-kinetic-share", "f-derived-redirect-rate", "f-derived-intervals"],
+      "resolved_by": "A CENTCOM statement attaching a start date to the tally"
+    },
+    {
+      "id": "u-target",
+      "what": "Whether the missiles struck the steering gear or the engine room",
+      "why": "CENTCOM says steering gear; two trade outlets say engine room; nobody has inspected the hull",
+      "impact": "The script says 'disabled the vessel'. It may NOT name the compartment, and may not characterise the intent behind the aim point.",
+      "about": ["f-centcom-utterance", "f-engine-room"],
+      "resolved_by": "A salvage or class survey, or photographs of the damage"
+    },
+    {
+      "id": "u-legal-basis",
+      "what": "What authority the United States claims for the blockade",
+      "why": "No instrument located in one pass; five registers where it would live were not searched",
+      "impact": "The script may NOT say the blockade has no legal basis, is unlawful, or is undeclared. It may say the authority claimed was not stated in any source this run reached, and must attribute that to the run rather than to the world.",
+      "about": ["f-absence-legal-instrument"],
+      "resolved_by": "The Federal Register, a proclamation, or an on-the-record State Department legal adviser statement"
+    },
+    {
+      "id": "u-vessel-cargo",
+      "what": "What the Vela Nova was carrying and for whom",
+      "why": "Not stated in any source reached. A container vessel rather than a tanker is itself unusual on this route under this blockade.",
+      "impact": "The script may NOT characterise the cargo, the consignee or the purpose of the voyage, and may not imply sanctions evasion by the owner or manager. The AIS dark periods are behaviour, not cargo, and may not be used to stand in for it.",
+      "about": ["f-vessel-identity", "f-vela-dark"],
+      "resolved_by": "A manifest, a P&I club statement, or a US Treasury designation"
+    }
+  ],
+
+  "obligations": [
+    {
+      "id": "o-name-the-source-of-the-numbers",
+      "must": "Every time the script uses 55, 3, 2, 60, 5.0% or 1.5-per-day, it must say in the same sentence that the count is CENTCOM's own.",
+      "why": "The single largest risk in this notebook is that a belligerent's self-count gets restated as neutral fact by a piece that is otherwise about scepticism. Laundering it once destroys the whole argument. This is a must-say and it does not belong in unknowns[] as a prohibition, because the fix is a phrase to add, not a sentence to remove.",
+      "about": ["f-tally-aug11", "f-derived-kinetic-share", "f-derived-redirect-rate", "f-derived-intervals"]
+    },
+    {
+      "id": "o-state-the-n",
+      "must": "Wherever the 9-day and 18-day intervals are stated, the script must state that there are three events and two intervals.",
+      "why": "The doubling is the most quotable figure in the notebook and the most misleading one alone. u-window restricts the rate; nothing restricted the interval, and without this the script would broadcast a trend the notebook explicitly refuses to claim.",
+      "about": ["f-derived-intervals"]
+    },
+    {
+      "id": "o-mark-the-steel-man",
+      "must": "If the script uses the counter-case, it must say the case was constructed by this desk and that no published version of it exists as of 12 August.",
+      "why": "The steel-man is marked constructed in the notebook. If that marking does not survive into the render, the notebook's honesty is a private virtue.",
+      "about": ["f-absence-event-counter-case"]
+    },
+    {
+      "id": "o-record-the-silence",
+      "must": "The script must state that Iran, Panama, the owner and the ISM manager have not commented, and that only English-language sources were searched.",
+      "why": "A non-response is a finding and reads as one only if it is stated. Stating it without the language caveat converts my search's limit into the world's silence.",
+      "about": ["f-absence-counterparty"]
+    }
+  ],
+
+  "conclusions": [
+    {
+      "id": "c-the-boundary",
+      "claim": "The mechanics of this strike are establishable and its meaning is not, and as of 12 August that is the whole of what can be said. A hull was disabled 71 miles off Pakistan, seventeen people are unhurt, it was the third of its kind in 28 days, and every sentence about what that indicates rests on two intervals and one party's count.",
+      "reasoning": "Both directional readings in circulation — sustained escalation, and biting deterrence — are computable only from a series with n=3 published by a belligerent, and the notebook contains the arithmetic showing that neither survives its own denominator. The finding is the limit itself, not a third reading.",
+      "leap": "near",
+      "restsOn": ["f-derived-intervals", "f-derived-kinetic-share", "f-tally-aug11", "f-absence-denominator", "m-n-of-three"],
+      "falsifiableBy": {
+        "test": "A count of blockade enforcement engagements published by any party other than CENTCOM — a flag-state register, an IMO circular, a P&I club aggregate, an insurer's incident log — that can be set beside the 55/3/2 and reconciled or contradicted.",
+        "kind": "record",
+        "binds": "whole-claim",
+        "note": "Binds the whole claim because the claim is single: that the record cannot support a directional reading. One independent series and it is wrong."
+      },
+      "subject": { "names": "none" },
+      "useFor": "boundary"
+    },
+    {
+      "id": "c-scoreboard",
+      "claim": "The most consequential fact about this campaign is not any strike but that the enforcing party is the only party keeping score, and four months in, the classes, the denominator and the window are all still its own.",
+      "reasoning": "Every quantitative claim reached in this run traces to CENTCOM's tally or to a vendor selling risk assessment of the same waters. No flag state, insurer, port authority or international body publishes a competing count. That is a structural property of the operation rather than an accident of one day's coverage, and it determines what anyone outside can know.",
+      "leap": "moderate",
+      "restsOn": ["f-tally-aug11", "f-tally-aug3", "f-tally-aug10", "f-absence-denominator", "f-absence-legal-instrument", "m-scoreboard"],
+      "precedent": {
+        "domain": "self-reported operational statistics in air campaigns",
+        "note": "Where the operator publishes the only strike and casualty count, the count is generally accurate about what it counts and silent about its own class boundaries. The dispute that follows is never about the arithmetic; it is about what was in scope to be counted."
+      },
+      "falsifiableBy": {
+        "test": "An independent register of blockade engagements — an IMO circular, a Panama Maritime Authority incident list, or a war-risk underwriter's published aggregate — appearing and covering the same period.",
+        "kind": "record",
+        "binds": "sole-scorekeeper",
+        "note": "Binds the load-bearing clause. The claim is not that the tally is wrong; falsifying accuracy would leave the claim standing. The claim is that nobody else keeps one, so the test has to be the existence of a second register."
+      },
+      "subject": { "names": "state", "who": "US Central Command" },
+      "clauses": [
+        { "id": "sole-scorekeeper", "text": "the enforcing party is the only party keeping score", "loadBearing": true },
+        { "id": "own-classes", "text": "the classes, denominator and window are its own" },
+        { "id": "four-months", "text": "and this has held for four months" }
+      ],
+      "useFor": "thesis",
+      "gate_note": "conclusionIssues() run by hand against this card: falsifier typed (pass), kind is `record` and the subject is a state so document/record is required (pass), binds resolves to a declared load-bearing clause (pass), leap is `moderate` so the named-subject cap does not fire (pass). Zero issues. Recorded because the honest test of the gate is whether a named-state claim can be written to satisfy it, and this one can — see the L2 report on what that does and does not prove."
+    }
+  ],
+
+  "engine_fit": [
+    { "engine": "briefing", "fit": "good", "why": "New subject, viewer has no position, the question is 'is this escalation or is this the procedure' and the honest answer is 'the record cannot say'. Engine E's spine takes this without forcing a verdict.", "recommended": true, "hazard": "E requires a date, a disclosure of the author's exposure, and a move against its own enthusiasm. The notebook can carry the date. It has no field for the other two, so both would have to be authored at render time with nothing checking they happened." },
+    { "engine": "adjudication", "fit": "moderate", "why": "Two named readings with named holders and a constructed third — genuinely close to D's shape. Held at moderate rather than good because D's spine ends in a verdict and mine ends in a limit.", "hazard": "D on this material renders as 'the sceptic wins', which is a verdict, from a notebook whose entire point is that no verdict is available. The steel-man is also constructed and D leans on the steel-man as its honesty signal — running D here means the honesty signal is my own writing." },
+    { "engine": "parallel-case", "fit": "good", "why": "The 'only one side keeps score' pattern has rich precedent and needs no facts about today.", "recommended": false, "hazard": "HIGHEST IN THIS SET AND THE FIT SCORE HIDES IT. C renders confidently off a precedent while the subject is 20 hours old and n=3 — availability rises as evidence thins. A watchable, unfalsifiable video is the cheapest thing this notebook can produce and C is the way to produce it." },
+    { "engine": "reversal-chain", "fit": "moderate", "why": "Two real reversals exist (r-third-strike, r-the-record) with generously stated obvious readings.", "hazard": "A ends on a thesis. Both my turns end on 'neither reading is supported', which is a weaker close, and the pull to write a fourth reversal that resolves would be a pull to invent one." },
+    { "engine": "effort-payoff", "fit": "poor", "why": "No mechanism a viewer could operate." },
+    { "engine": "anchor-ladder", "fit": "poor", "why": "No naturally ordered difficulty in the material." },
+    { "engine": "paradox-teaser", "fit": "poor", "why": "The contradiction — everyone confident, nobody with an n — does not resolve today, and forcing a resolution is the fabrication this notebook exists to avoid." }
+  ],
+
+  "currency": {
+    "half_life": "72 hours, and shorter for three cards specifically",
+    "why": "Three of the four absences are absences in a 20-hour window and expire on contact with the next news cycle. f-absence-event-counter-case is the shortest-lived thing here: the naval-law commentary that does not exist today is the kind that appears within a week, and when it does the constructed steel-man should be replaced by the real one rather than carried alongside it.",
+    "expires_first": ["f-absence-event-counter-case", "f-absence-counterparty", "f-derived-intervals", "f-tally-aug11"],
+    "durable": ["m-scoreboard", "c-scoreboard", "f-derived-kinetic-share", "f-strike-position"],
+    "advice": "Write the counts as ratios attributed to their source — 'nineteen of every twenty, on CENTCOM's own count' survives a fourth disabling next week; '55 redirected' is wrong by Friday. Never write the interval doubling without the n beside it. And date the piece in its opening line, not its metadata: every absence in this notebook is a claim about 12 August and nothing else."
+  },
+
+  "sources": [
+    { "name": "US Central Command official post", "evidence_class": "primary", "locator": "x.com/CENTCOM 2087251919555248599, 2026-08-11", "interested": true },
+    { "name": "gCaptain", "evidence_class": "secondary", "locator": "gcaptain.com, 2026-08-11" },
+    { "name": "Windward corridor report", "evidence_class": "vendor", "locator": "windward.ai, 2026-08-12", "interested": true },
+    { "name": "United Against Nuclear Iran, Iran Shipping Update", "evidence_class": "self-published", "locator": "unitedagainstnucleariran.com, 2026-08-04 / 08-07", "interested": true },
+    { "name": "CNBC", "evidence_class": "secondary", "locator": "cnbc.com, 2026-08-10" },
+    { "name": "OANN / RSBN (CENTCOM tally relay)", "evidence_class": "secondary", "locator": "2026-08-03", "interested": true },
+    { "name": "Maritime Executive", "evidence_class": "secondary", "locator": "maritime-executive.com, 2026-08-11" },
+    { "name": "MercoPress", "evidence_class": "secondary", "locator": "en.mercopress.com, 2026-08-12" },
+    { "name": "Al Jazeera", "evidence_class": "secondary", "locator": "aljazeera.com, 2026-08-11" },
+    { "name": "MagicPort vessel register", "evidence_class": "aggregator", "locator": "magicport.ai IMO 9136228" },
+    { "name": "Wikipedia, 2026 United States naval blockade of Iran", "evidence_class": "aggregator", "locator": "en.wikipedia.org, retrieved 2026-08-12" }
+  ],
+
+  "research_gaps": [
+    "The UKMTO advisory was read through gCaptain, not obtained. A position report is a primary document and I used a trade restatement of it.",
+    "No primary US legal instrument was sought in the registers where it would live — Federal Register, proclamations, DoD general counsel. This is a genuine omission by me and is recorded here, separately from f-absence-legal-instrument, which records what the reporting does not contain. The two are different objects and are deliberately not merged.",
+    "English-language sources only. An Iranian response would appear in Persian first, and a Panamanian one in Spanish; both were within reach and neither was searched.",
+    "Both prior disabling dates (BELMA 15 July, MT LAVINE 24 July) rest on a single vendor source and every interval in this notebook is computed from them. Load-bearing, single-class, flagged, not resolved.",
+    "The phase-2 start date of 14 July rests on an aggregator and an advocacy organisation. Every rate here is anchored to it.",
+    "No war-risk insurance or P&I market data was sought, which is where an independent count of blockade engagements would most plausibly exist and would falsify c-scoreboard.",
+    "Search budget: 7 Phase 1 searches plus 2 page fetches, against a stated budget of 4-8. Over by one act on the search line and over on retrieval overall. The overrun is disclosed rather than netted, and it bought exactly one thing — the second counter-case search that turned a claimed absence into a found-but-adjacent argument."
+  ],
+
+  "followups": [
+    "Thursday: check Lawfare / Just Security / EJIL:Talk for the naval-law piece on this strike. If it exists, replace the constructed steel-man rather than keeping both.",
+    "Any CENTCOM statement attaching a window to 55/3/2 resolves u-window and unlocks the rate claims.",
+    "A fourth disabling before 20 August inverts f-derived-intervals and the reversal built on it.",
+    "Persian and Spanish sweep for the counterparty responses; f-absence-counterparty should be re-scoped or retired within 48 hours."
+  ]
+}
