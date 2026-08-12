@@ -65,23 +65,38 @@ const zero = page.getByTestId("cell-reversal-chain-c-correlation-is-the-product"
 check("an unused card shows 0s rather than vanishing", (await zero.innerText()).trim() === "0s",
       (await zero.innerText()).trim());
 
-/* ------------------------------------------------ 3 · the sticky notebook, x3 */
-for (const p of ["dock", "margin", "pad"]) {
-  await page.getByTestId(`notebook-${p}`).click();
-  await page.waitForTimeout(500);
-  check(`notebook placement ${p} renders`, (await page.getByTestId(`sticky-${p}`).count()) > 0);
-}
-await page.getByTestId("notebook-dock").click();
-await page.waitForTimeout(400);
+/* ---------------------------------- 3 · the sticky pad (the consolidated winner) */
+check("the pad is the only notebook", (await page.getByTestId("sticky-pad").count()) > 0);
+check("the placement switcher is gone", (await page.getByTestId("notebook-dock").count()) === 0);
 
 /* ---------------------------------------------- 4 · stacking notes on a track */
+const pickPreset = async (kind, card) => {
+  await page.getByTestId(`preset-open-${card}`).click();
+  await page.waitForTimeout(250);
+  await page.getByTestId(`note-${kind}-${card}`).click();
+  await page.waitForTimeout(300);
+};
+
 await page.getByTestId("note-handle-f-etf-absorbed").click();
 await page.waitForTimeout(400);
 check("clicking a track id opens a composer", (await page.getByTestId("composer-f-etf-absorbed").count()) > 0);
-await page.getByTestId("note-more-focus-f-etf-absorbed").click();
+
+// the presets are a themed dropdown, sorted by name ascending
+await page.getByTestId("preset-open-f-etf-absorbed").click();
 await page.waitForTimeout(300);
-await page.getByTestId("note-move-earlier-f-etf-absorbed").click();
-await page.waitForTimeout(300);
+const opts = await page.getByTestId("preset-list-f-etf-absorbed").locator("button").allInnerTexts();
+check("presets open as a list", opts.length === 5, `${opts.length} options`);
+check("presets are sorted by name ascending",
+      JSON.stringify(opts) === JSON.stringify([...opts].sort((a, b) => a.localeCompare(b))),
+      opts.join(" | "));
+check("the list is not a native select",
+      (await page.getByTestId("composer-f-etf-absorbed").locator("select").count()) === 0);
+await page.keyboard.press("Escape");
+await page.waitForTimeout(250);
+check("Escape closes the dropdown", (await page.getByTestId("preset-list-f-etf-absorbed").count()) === 0);
+
+await pickPreset("more-focus", "f-etf-absorbed");
+await pickPreset("move-earlier", "f-etf-absorbed");
 check("bullets stack against one track", (await page.getByTestId("note-handle-f-etf-absorbed").innerText()).includes("2"),
       await page.getByTestId("note-handle-f-etf-absorbed").innerText());
 

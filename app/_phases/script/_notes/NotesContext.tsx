@@ -3,9 +3,8 @@
 // The seam between the matrix and the sticky notebook.
 //
 // A matrix row does not know WHERE notes are shown — it only knows that its id
-// is clickable and how many notes it already carries. That is what lets the same
-// three matrix variants sit under three different notebook placements without
-// any of them being rewritten.
+// is clickable and how many notes it already carries. That is what lets all four
+// tabs share one note model without any of them being rewritten.
 
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
@@ -25,7 +24,6 @@ const Ctx = createContext<NotesCtx | null>(null);
 
 export function NotesProvider({
   api,
-  placement,
   children,
 }: {
   api: VersionsApi;
