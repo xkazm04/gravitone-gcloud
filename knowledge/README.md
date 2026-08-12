@@ -74,10 +74,11 @@ first is disposable and gitignored; the second is the asset, and it is versioned
 
 | Template | Step | State |
 |---|---|---|
-| *(shared)* | — | `CRAFT-BASELINE.md` · `ENGINES.md` (7 engines, n=10, corpus 2018-02-23 → 2026-08-10) · `TONE.md` |
+| *(shared)* | — | `CRAFT-BASELINE.md` · `ENGINES.md` (7 engines, n=10, corpus 2018-02-23 → 2026-08-10) · `TONE.md` · `VISUAL-STYLE.md` (**n=1** — the style-lock layer, opened 2026-08-12) |
 | `short-educational-video` (1–3 min) | `01-script` | n=4 · engines A/B/C · short-form composition MEASURED |
 | `mid-educational-video` (3–6 min) | `01-script` | n=3 · engines A/D/E · economy · tech · politics |
 | `short-form-clip` (≤60s) | `01-script` | n=3 · engines B/F/G · **nothing measured below 40s** |
-| all templates | 02-frames · 03-motion · 04-score · 05-cut | not started |
+| `short-educational-video` | `02-frames` | **n=1** · style-lock method · nothing MEASURED · no `params.json` yet, on purpose |
+| all templates | 03-motion · 04-score · 05-cut | not started |
 
 **10 sources across 6 channels**, each read in full, as of 2026-08-11 (3 research runs).
