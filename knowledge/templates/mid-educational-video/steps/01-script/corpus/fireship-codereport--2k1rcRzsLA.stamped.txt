@@ -1,0 +1,154 @@
+[00:00] yesterday China released a
+[00:01] state-of-the-art free and open source
+[00:03] Chain of Thought reasoning model with
+[00:05] performance that Rivals open AI o1 which
+[00:07] I'm stupidly paying $200 a month for
+[00:09] right now you see there's two types of
+[00:11] people in the tech world right now in
+[00:12] one camp we have the pessimists who
+[00:14] think that AI is overhyped in plateaued
+[00:16] with GPT 3.5 and the other camp we have
+[00:19] the optimists who think we're about to
+[00:20] see the emergence of an artificial super
+[00:22] intelligence that will Propel Humanity
+[00:24] into Ray K's technological singularity
+[00:27] nobody truly knows where things are
+[00:28] going but one thing to remember is that
+[00:30] pessimists sound smart while optimists
+[00:32] make money but sometimes it's hard to be
+[00:33] an AI Optimist because you need to trust
+[00:35] hype Jedi like Sam ultman and closed AI
+[00:38] companies like open aai well luckily on
+[00:40] the same day that Tik tok's band was
+[00:41] removed China gave the world a gift in
+[00:43] return in the form of deep seek R1 and
+[00:45] in today's video you'll learn exactly
+[00:47] how to use it like a senior prompt
+[00:48] engineer it is January 21st 2025 and
+[00:51] you're watching the code report
+[00:53] yesterday the course of history changed
+[00:54] forever and no I'm not talking about the
+[00:56] Return of the King but rather the
+[00:57] release of deep sea which is an MIT like
+[00:59] liced Chain of Thought model that you
+[01:01] can use freely and commercially to make
+[01:03] money in your own applications this
+[01:04] model came out while Sam Alman was busy
+[01:06] at Trump's inauguration which is a
+[01:08] perfect time to use this new meme
+[01:09] template where Zuckerberg appears to
+[01:11] detect a rack overflow in this
+[01:12] artificial binary code owned by Jeff
+[01:14] Bezos he's going to have some explaining
+[01:16] to do with his wife but Sam ultman also
+[01:18] reigned on the AI Optimus parade
+[01:19] recently when he said that the AI hype
+[01:21] was out of control and no they have not
+[01:23] achieved AGI internally and that's
+[01:25] pretty obvious with how buggy chat GPT
+[01:27] is like recently a security researcher
+[01:29] figured out how how to get chat gbt to
+[01:31] Dos websites for you all you have to do
+[01:33] is provide it with a list of similar
+[01:34] URLs that point to the same website and
+[01:36] it will crawl them all in parallel which
+[01:37] is something that no truly intelligent
+[01:39] being would do that being said the
+[01:41] release of 01 a few months ago was
+[01:43] another step forward in the AI race but
+[01:44] it didn't take long for open source to
+[01:46] catch up and that's what we have with
+[01:47] deep seek R1 as you can see from its
+[01:49] benchmarks deep seek R1 is on par with
+[01:51] open ai1 and even exceeds it in some
+[01:54] benchmarks like math and software
+[01:55] engineering but let me remind you once
+[01:57] again that you should never trust
+[01:59] benchmarks just recently this company
+[02:00] epic AI which provides a popular math
+[02:03] benchmark only recently disclosed that
+[02:04] they've been funded by open aai which
+[02:06] feels a bit like a conflict of interest
+[02:08] I don't care about benchmarks anyway and
+[02:10] just go off of Vibes so let's go ahead
+[02:11] and try out deep seek R1 right now and
+[02:13] they have a web-based UI but you can
+[02:15] also use it in places like hugging face
+[02:17] or download it locally with tools like
+[02:19] olama and that's what I did for it 7
+[02:21] billion parameter model which weighs
+[02:22] about 4.7 GB however if you want to use
+[02:25] it in its full Glory it'll take over 400
+[02:27] GB and some pretty heavy duty Hardware
+[02:29] to run it with 671 billion parameters
+[02:32] but if you want something that's on par
+[02:33] with 01 mini you want to go with 32
+[02:35] billion parameters now one thing that
+[02:37] makes deep seek different is that it
+[02:38] doesn't use any supervised fine tuning
+[02:40] instead it uses direct reinforcement
+[02:42] learning but what does that even mean
+[02:44] well normally with supervised fine
+[02:45] tuning you show the model a bunch of
+[02:47] examples and explain how to solve them
+[02:49] step by step then evaluate the answers
+[02:50] with another model or a human but R1
+[02:53] doesn't do that and pulls itself up by
+[02:54] its own bootstraps using direct or pure
+[02:57] reinforcement learning where you give
+[02:58] the model a bunch of examples without
+[02:59] without showing it the solution first
+[03:01] then it tries a bunch of things on its
+[03:02] own and learns or reinforces Itself by
+[03:05] eventually finding the right solution
+[03:06] just like a real human with reasoning
+[03:08] capabilities deeps also released a brief
+[03:10] paper that describes the reinforcement
+[03:12] learning algorithm it looks complicated
+[03:14] but basically for each problem the AI
+[03:16] tries multiple times to generate answers
+[03:18] which are called outputs the answers are
+[03:20] then grouped together and given a reward
+[03:21] score is so the AI learns to adjust its
+[03:23] approach for answers with a higher score
+[03:25] that's pretty cool and we can see the
+[03:27] model's actual Chain of Thought if we go
+[03:28] ahead and prompt it here with Lama when
+[03:30] prompting a Chain of Thought model like
+[03:31] R1 or o1 you want to keep the prompt as
+[03:34] concise and direct as possible because
+[03:36] unlike other models like gbt the idea is
+[03:38] that it does the thinking on its own
+[03:40] like if I ask it to solve a math problem
+[03:42] you'll notice that it first shows me all
+[03:43] the thinking steps and then after that
+[03:45] thinking process is done it'll show the
+[03:47] actual Solution that's pretty cool but
+[03:48] you might be wondering when to use a
+[03:50] Chain of Thought model instead of a
+[03:51] regular large language model well
+[03:53] basically the Chain of Thought models
+[03:54] are much better when it comes to complex
+[03:56] problem solving and things like advanced
+[03:58] math problems puzzles or cing problems
+[04:00] that require detailed planning but if
+[04:02] you want to build a future with AI you
+[04:03] need to learn it from the ground up and
+[04:05] you can do that today for free thanks to
+[04:07] this video sponsor brilliant their
+[04:09] platform provides interactive Hands-On
+[04:11] lessons that demystify the complexity of
+[04:13] deep learning with just a few minutes of
+[04:15] effort each day you can understand the
+[04:17] math and computer science behind this
+[04:19] seemingly magic technology I'd recommend
+[04:21] starting with python then check out
+[04:23] their full how large language models
+[04:25] work course if you really want to look
+[04:26] under the hood of chat gbt try
+[04:28] everything brilliant has to offer for
+[04:30] free for 30 days by going to
+[04:32] brilliant.org fireship or use the QR
+[04:35] code on screen this has been the code
+[04:37] report thanks for watching and I will
+[04:38] see you in the next one

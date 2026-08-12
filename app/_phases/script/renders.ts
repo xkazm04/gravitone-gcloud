@@ -1,0 +1,167 @@
+// The three candidate renders — one notebook, three engines, zero re-research.
+// Transcribed from pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/
+// script--reversal-chain.md · script--adjudication.md · script--derived-short.md,
+// including each file's own self-check table and declared deviations.
+
+import type { ScriptRender } from "./types";
+
+export const RENDERS: ScriptRender[] = [
+  {
+    id: "reversal-chain",
+    engine: "reversal-chain",
+    engineLabel: "Reversal Chain",
+    pleasure: "being corrected",
+    title: "Why Bitcoin's Price Won't Rise",
+    template: "mid-educational-video",
+    durationS: 300,
+    words: 947,
+    wordBudget: 950,
+    wpm: 190,
+    turns: 4,
+    turnBand: [3, 5],
+    questionsAloud: 1,
+    promiseForm: "topics",
+    feelsLike: "an argument",
+    bestFor: "an audience that already holds the wrong model",
+    weakness: "can read as contrarian if the steel-man is cut",
+    causalDensityPct: null,
+    beats: [
+      { at: "0:00", kind: "hook", label: "SCQA · situation", connector: null, text: "On the 6th of October 2025, Bitcoin hit one hundred and twenty six thousand dollars. The highest price in its history.", device: "situation" },
+      { at: "0:12", kind: "hook", label: "the wish list, delivered", connector: "THEREFORE", text: "In the ten months since, it has received almost everything it spent fifteen years asking for. A Strategic Bitcoin Reserve. The industry's flagship legislation. Regulators replaced by people who like it. Spot ETFs, then retirement accounts. Every single item. Delivered." },
+      { at: "0:30", kind: "hook", label: "the complication", connector: "BUT", text: "And in that same ten months, Bitcoin lost roughly half its value.", device: "scale conversion" },
+      { at: "0:35", kind: "question", label: "the only question asked aloud", connector: "THEREFORE", text: "So what went wrong?" },
+      { at: "0:40", kind: "answer", label: "the answer, stated immediately", connector: "BUT", text: "Nothing went wrong. That is the problem. Bitcoin got exactly what it asked for, and getting it is the reason the price stopped going up." },
+      { at: "0:50", kind: "promise", label: "three topics, one breath", connector: "THEREFORE", text: "To see why, we need three things: where the ETF money actually went, what happened to the buyers who promised they would never sell, and why Washington's approval turned out not to matter.", device: "promise form: topics" },
+      { at: "0:55", kind: "movement", label: "M1 · where the money went", connector: "THEREFORE", text: "The inflows have been real. Money has gone in. More demand, same fixed supply, higher price — that is not a stupid model. It is the model almost everyone was using.", device: "obvious reading, stated generously" },
+      { at: "1:20", kind: "turn", label: "TURN 1 · an inflow is not a purchase", connector: "BUT", text: "Authorised participants routinely create and short ETF shares before they buy any underlying Bitcoin. The purchase is lagged, and partly hedged. The inflow is a booking, not a meal.", device: "analogy — spent once" },
+      { at: "1:45", kind: "turn", label: "escalation", connector: "THEREFORE", text: "Long-term holders sold about three point six seven million Bitcoin into that range — a larger distribution than any previous cycle. The ETF was not a wave lifting the boat. It was an exit.", device: "scale conversion" },
+      { at: "2:05", kind: "movement", label: "M2 · the buyers who would never sell", connector: "THEREFORE", text: "If the market values your company above the Bitcoin on your balance sheet, you can issue shares, buy more, and every shareholder ends up owning more Bitcoin per share. It is genuinely accretive. It makes you a buyer who does not care what the price is.", device: "mechanism" },
+      { at: "2:50", kind: "turn", label: "TURN 2 · the machine only turns one way", connector: "BUT", text: "The moment mNAV drops under one, issuing shares to buy Bitcoin destroys value instead of creating it. The buying stops. Not because anyone lost conviction — because the arithmetic inverted. And in June, Strategy sold thirty two Bitcoin. As a transaction it is nothing. As a sentence, it ended the thing the model was built on." },
+      { at: "3:15", kind: "steelman", label: "the script attacks its own argument", connector: "BUT", text: "The obvious next step is to call these people forced sellers, and that is not what the evidence says. Strategy holds more than two and a half years of debt and dividend payments in cash. And long-term holders added roughly three hundred and eighty thousand Bitcoin in a single month this year — after the crash, not before.", device: "steel-man" },
+      { at: "3:35", kind: "movement", label: "M3 · why Washington didn't matter", connector: "THEREFORE", text: "In March 2025 the President signed an executive order creating a Strategic Bitcoin Reserve. For a fifteen-year-old argument about legitimacy, that was the end of the argument." },
+      { at: "4:00", kind: "turn", label: "TURN 3 · the reserve that was never built", connector: "BUT", text: "Sixteen months later it still is not built. Federal agencies cannot agree how much Bitcoin the government owns. And where the policy did land, the price fell anyway — because regulatory permission is not demand." },
+      { at: "4:15", kind: "turn", label: "TURN 4 · the thesis", connector: "BUT", text: "So institutional adoption failed? No. It succeeded completely. That is what did this. An asset inside a risk model gets sized, hedged, rebalanced — and cut when the environment turns. Bitcoin now moves on the ten-year Treasury yield: the single most boring number in finance." },
+      { at: "4:45", kind: "close", label: "reframe, not summary", connector: "THEREFORE", text: "Bitcoin spent fifteen years arguing it was an escape from the financial system. It won that argument, and the prize for winning was being absorbed into the thing it was escaping. The price isn't broken. The story is." },
+    ],
+    checks: [
+      { label: "but/therefore between adjacent beats, no AND THEN", state: "pass", detail: "every movement boundary is a turn" },
+      { label: "thesis stated early", state: "pass", detail: "0:40 of 5:00" },
+      { label: "turns in band (3–5 at mid-length)", state: "pass", detail: "4" },
+      { label: "turn cadence 60–90s", state: "declared", detail: "1:20 · 2:50 · 4:00 · 4:15 — the last two are stacked on purpose" },
+      { label: "analogies ≤ one per hard mechanism", state: "pass", detail: "2 total, both physical, both spent once" },
+      { label: "every significant number converted", state: "pass", detail: "6 conversions" },
+      { label: "steel-man present", state: "pass", detail: "3:15" },
+      { label: "close reframes, does not summarise", state: "pass", detail: "the prize for winning" },
+      { label: "low-confidence data excluded", state: "pass", detail: "the vendor liquidity-beta figures were cut" },
+      { label: "price stated as a ratio, not a number", state: "pass", detail: "'roughly half its value' — per notebook § currency" },
+      { label: "causal-opener density", state: "unmeasured", detail: "not counted on this render; measure before shipping" },
+    ],
+    deviations: [
+      "Turns 3 and 4 sit 15 seconds apart rather than 60–90. Deliberate: turn 3 is the setup for turn 4 and separating them would break the causal link. Flagged rather than silently allowed — see the run's NOTES.md, change #4.",
+    ],
+    cutFacts: [
+      { factId: "f-liquidity", why: "vendor research, single source, methodology unreviewed — very quotable, which is exactly why the confidence field had to catch it" },
+    ],
+  },
+
+  {
+    id: "adjudication",
+    engine: "adjudication",
+    engineLabel: "Adjudication",
+    pleasure: "watching a question get settled",
+    title: "Why Bitcoin's Price Won't Rise",
+    template: "mid-educational-video",
+    durationS: 250,
+    words: 762,
+    wordBudget: 770,
+    wpm: 185,
+    turns: null,
+    turnBand: null,
+    questionsAloud: 1,
+    promiseForm: "numbered candidates",
+    feelsLike: "a hearing",
+    bestFor: "an audience that has heard all four takes and wants a ruling",
+    weakness: "slower start; candidate 1 costs 40s before any momentum",
+    causalDensityPct: null,
+    beats: [
+      { at: "0:00", kind: "hook", label: "the contradiction", connector: null, text: "Bitcoin peaked at a hundred and twenty six thousand dollars in October 2025. It is now worth roughly half that. In between, the entire wish list arrived." },
+      { at: "0:25", kind: "promise", label: "numbered candidates", connector: "THEREFORE", text: "There are four serious explanations for that. Three of them are partly right. One of them is the actual answer, and it is not the one you would expect." },
+      { at: "0:35", kind: "candidate", label: "C1 · it's just the cycle", connector: "THEREFORE", text: "State it fairly: Bitcoin has done this four times. Test it: long-term holders added 380,000 BTC in a single month, after the fall — that is what the middle of a cycle looks like. Verdict: partly right, incomplete — it explains the shape and not the timing.", device: "the premise-challenging candidate, placed first" },
+      { at: "1:15", kind: "candidate", label: "C2 · the ETF demand was never real", connector: "BUT", text: "An inflow is not a purchase; APs create and short shares before buying the underlying, and what arrives is absorbed. Verdict: true, and underrated — but a transmission, not a cause." },
+      { at: "2:00", kind: "candidate", label: "C3 · the treasury flywheel reversed", connector: "BUT", text: "mNAV 3.89 to below 1.0; the buying stops when the arithmetic inverts. Then the self-correction: nobody is a forced seller — 2.5 years of coverage in cash. Verdict: real, but not a reason to sell.", device: "counter-evidence at full strength" },
+      { at: "2:50", kind: "candidate", label: "C4 · macro ate the news", connector: "BUT", text: "Yields near 4.5%, thirty-year at 5%, a stronger dollar. Verdict: closest — but it only describes the weather. It does not explain why Bitcoin now has weather at all." },
+      { at: "3:30", kind: "verdict", label: "the ruling", connector: "THEREFORE", text: "Because it won. Adoption put Bitcoin inside risk models, where it is sized, hedged, rebalanced and cut. Candidates one, two and three are the transmission. The cause is that Bitcoin won its argument." },
+      { at: "4:00", kind: "close", label: "reframe", connector: "THEREFORE", text: "It isn't that Bitcoin stopped working. It's that it started working like everything else." },
+    ],
+    checks: [
+      { label: "D-honest · is the premise itself in the candidate set?", state: "pass", detail: "candidate 1 argues there is nothing to explain, and goes first, not buried" },
+      { label: "D-honest · can any candidate win against the author's prior?", state: "pass", detail: "candidate 1 is given the strongest evidence and is explicitly not dismissed" },
+      { label: "D-honest · counter-evidence at full strength?", state: "pass", detail: "candidate 3 contains an explicit self-correction against the forced-seller reading" },
+      { label: "do the verdicts differ?", state: "pass", detail: "partly right · underrated · real but not a reason · the answer" },
+      { label: "causal-opener density ≥ 30%", state: "unmeasured", detail: "runs high by construction; Basic Logic's 15% on this engine is the warning case — measure before shipping" },
+      { label: "digression allowance", state: "pass", detail: "0% — the allowance is disabled for adjudication" },
+      { label: "steel-man present", state: "pass", detail: "carried inside candidate 3" },
+    ],
+    deviations: [
+      "Runtime 4:10 against a 5:00 target — the candidate structure came in short. Under the 3-6 min band, so not a violation, but the slot it fills is 50 seconds emptier than the reversal chain's.",
+    ],
+    cutFacts: [
+      { factId: "f-liquidity", why: "same vendor figure, cut for the same reason — the notebook's confidence rating held across both renders" },
+    ],
+  },
+
+  {
+    id: "derived-short",
+    engine: "paradox-teaser",
+    engineLabel: "Paradox Teaser",
+    pleasure: "a contradiction that must resolve",
+    title: "“They never sell”",
+    template: "short-form-clip",
+    durationS: 45,
+    words: 108,
+    wordBudget: 112,
+    wpm: 150,
+    turns: 1,
+    turnBand: null,
+    questionsAloud: 0,
+    promiseForm: "contradiction",
+    derivedFromId: "reversal-chain",
+    derivedFromBeat: "Movement 2, turn 2 — the treasury flywheel reversing",
+    feelsLike: "a magic trick with the method shown",
+    bestFor: "a cold audience with no context, pointing at the long video",
+    weakness: "no joke anywhere — neither the subject nor the notebook has one, and the library says humour has to ride inside information",
+    causalDensityPct: null,
+    beats: [
+      { at: "0:00", kind: "hook", label: "contradiction hook · 6 words", connector: null, text: "This company said it would never sell Bitcoin." },
+      { at: "0:04", kind: "movement", label: "the commitment", connector: "THEREFORE", text: "It bought billions of dollars of it. It borrowed money to buy more. It made “we never sell” the entire brand." },
+      { at: "0:12", kind: "movement", label: "the mechanism, one sentence", connector: "THEREFORE", text: "The trick was that its stock traded higher than the Bitcoin it owned — so it could keep issuing shares, buying more coins, and making every shareholder richer in Bitcoin terms." },
+      { at: "0:24", kind: "turn", label: "the reversal", connector: "BUT", text: "Then the stock fell below the value of its own Bitcoin. And the machine only runs one way." },
+      { at: "0:31", kind: "verdict", label: "the payoff, complete on its own", connector: "THEREFORE", text: "In June, Strategy sold thirty two Bitcoin. About two million dollars, from a company holding billions. Financially, nothing. As a sentence, everything." },
+      { at: "0:40", kind: "close", label: "the withheld loop — a DIFFERENT question", connector: "BUT", text: "Which raises a much bigger one: Bitcoin got every single thing it asked for this year, and it's still down fifty percent. Full video explains why." },
+    ],
+    checks: [
+      { label: "complete on its own", state: "pass", detail: "asks 'did the never-sellers sell?' and answers it fully" },
+      { label: "the withheld thing is a DIFFERENT question", state: "pass", detail: "closes the flywheel loop, opens the whole-asset loop" },
+      { label: "pointer explicit and last", state: "pass", detail: "a named thing, then the pointer — no 'watch to find out'" },
+      { label: "no dependence on the parent's setup", state: "pass", detail: "assumes neither the ETF nor the macro section" },
+      { label: "one idea", state: "pass", detail: "a mechanism that only runs in one direction" },
+      { label: "close lands a joke", state: "fail", detail: "there is no joke. The pointer replaces it — a real limitation, recorded in NOTES.md #4" },
+    ],
+    deviations: [
+      "Word budget assumes image-led production at 150 wpm. If produced narration-led it needs ~60 more words, and the beat timings move.",
+    ],
+    cutFacts: [],
+  },
+];
+
+export const RENDER_BY_ID = Object.fromEntries(RENDERS.map((r) => [r.id, r]));
+
+/** The candidates this notebook did NOT derive, recorded so the next session
+ *  does not re-derive them (script--derived-short.md § unused candidates). */
+export const UNUSED_SHORTS = [
+  { title: "The ETF was an exit", why: "3.67m BTC sold into the ETF bid. Strong — but the create-and-short mechanism needs ~20s and will not fit under 45." },
+  { title: "The reserve that was never built", why: "Punchy and self-contained, but political rather than mechanical, and the payoff is an absence rather than an event." },
+  { title: "Bitcoin is a tech stock now", why: "This is the thesis. Using it in the clip would spend the parent's ending." },
+];
+
+export const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;

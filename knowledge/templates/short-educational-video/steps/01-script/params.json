@@ -1,0 +1,408 @@
+{
+  "$comment": "Machine-readable form of PATTERNS.md. This encodes COMPOSITION (engines, act structure, beat linking, validation) — not prose styling. Delivery metrics live in `delivery` and are applied last. Every value traces to a labelled claim in PATTERNS.md; do not invent values here.",
+  "version": 3,
+  "template": "short-educational-video",
+  "step": "01-script",
+  "updated": "2026-08-11",
+  "sample_size": 4,
+  "confidence": "n=4, one witness per engine. Short-form reversal timing is now MEASURED, not inferred.",
+  "supersedes": "v2 encoded a 60-90s per-reversal duration floor inferred from an 18-minute source. MEASURED against a 64-second essay: two full reversals, ~18s each. The floor was wrong by 3-4x and is replaced by the compression rule (which steps get dropped).",
+  "the_law": {
+    "id": "but-therefore",
+    "rule": "Between any two adjacent beats you must be able to say BUT or THEREFORE. If the only honest connector is AND THEN, the beats have no causal relation and the script is a list.",
+    "connectors": {
+      "THEREFORE": "consequence — the previous beat causes this one",
+      "BUT": "complication or reversal — this beat contradicts or qualifies the previous",
+      "AND_THEN": "DEFECT — no causal relation; merge, reorder, or find the missing beat"
+    },
+    "note": "The connector need not appear in the prose; it must be TRUE of the relationship. Economics Explained opens only 5% of sentences with 'But' while every act boundary is a reversal.",
+    "evidence": "CRAFT-BASELINE.md §1 · PATTERNS.md §1"
+  },
+  "engines": [
+    {
+      "id": "reversal-chain",
+      "label": "Reversal chain",
+      "use_when": "The idea contains a claim a reasonable person could dispute.",
+      "viewer_pleasure": "being corrected",
+      "exemplar": "economics-explained--north-korea",
+      "acts": [
+        {
+          "id": "hook",
+          "shape": "SCQA",
+          "note": "Situation → Complication → Question → Answer. State the thesis early; nothing is withheld."
+        },
+        {
+          "id": "questions",
+          "shape": "promise",
+          "note": "1 question (<=3 min) or 3 (long), asked aloud in the first 12s. These ARE the acts."
+        },
+        {
+          "id": "mechanism",
+          "shape": "explain",
+          "note": "The obvious reading, stated plainly and generously, with evidence."
+        },
+        {
+          "id": "reversal",
+          "shape": "turn",
+          "repeatable": true,
+          "note": "Why the obvious reading is wrong. See reversal_anatomy."
+        },
+        {
+          "id": "steelman",
+          "shape": "self-attack",
+          "note": "Attack your own reversal. 'but in practice, who cares?' This is what makes it thinking rather than arguing."
+        },
+        {
+          "id": "synthesis",
+          "shape": "settle",
+          "note": "'The honest reading sits somewhere in the middle.'"
+        },
+        {
+          "id": "durability",
+          "shape": "turn",
+          "note": "Can it last? The final reversal, usually the darkest."
+        },
+        {
+          "id": "reframe",
+          "shape": "close",
+          "note": "Re-describe, never summarise. One repeatable sentence."
+        }
+      ],
+      "reversal_count": {
+        "long_form": 4,
+        "short_form": 2,
+        "measured": "2 full reversals in a 64s essay body (MinutePhysics) — supersedes the v2 estimate of 1"
+      },
+      "evidence": "PATTERNS.md §2, §5"
+    },
+    {
+      "id": "effort-payoff-gap",
+      "label": "Effort / payoff gap",
+      "use_when": "The idea contains a mechanism a viewer could operate — especially a strange, tedious or extreme one.",
+      "viewer_pleasure": "the disproportion between labour and result",
+      "exemplar": "fireship--brainfk-100-seconds",
+      "acts": [
+        {
+          "id": "absurd-premise",
+          "note": "Name the thing and its attitude in one breath, with a BUT inside: 'Turing complete BUT not designed to build actual software'."
+        },
+        {
+          "id": "legitimacy",
+          "note": "It's real, someone made it, here are hard facts. 1993, Urban Müller, under 200 bytes."
+        },
+        {
+          "id": "model",
+          "note": "The mental model the viewer needs to follow the labour."
+        },
+        {
+          "id": "mechanism",
+          "note": "The whole mechanism, one clause per element, no elaboration."
+        },
+        {
+          "id": "punch",
+          "note": "Notice what's missing / what this implies. Reframes absence as character."
+        },
+        {
+          "id": "labour",
+          "note": "The deliberately painful worked example. THE LONGEST BEAT — 33% of runtime in the exemplar. Protect it.",
+          "pct_of_runtime": 33
+        },
+        {
+          "id": "payoff",
+          "note": "Trivially small result. The disproportion IS the lesson — the viewer now feels what the thing costs."
+        },
+        {
+          "id": "callback",
+          "note": "Answer the title out loud."
+        }
+      ],
+      "evidence": "PATTERNS.md §2"
+    },
+    {
+      "id": "parallel-case",
+      "label": "Parallel case",
+      "use_when": "The idea is a principle with a surprising instance — the interesting thing is 'this holds even here', not 'you're wrong'.",
+      "viewer_pleasure": "pattern recognition — watching a rule survive a harder test",
+      "exemplar": "minuteearth--blue-whales-krill",
+      "acts": [
+        {
+          "id": "paired-observation",
+          "note": "Two domains showing the same surprising pattern, stated flatly."
+        },
+        {
+          "id": "question",
+          "note": "The single question. 'Why do such big things eat such small things?'"
+        },
+        {
+          "id": "familiar-case",
+          "note": "Establish the rule where the viewer already has intuition. FULLY mechanised — this half does all the work.",
+          "pct_of_body": 59
+        },
+        {
+          "id": "evidence-flourish",
+          "note": "A famous confirming instance, if the subject has one (dinosaurs)."
+        },
+        {
+          "id": "domain-transfer",
+          "note": "'But what about the ocean?' — the turn."
+        },
+        {
+          "id": "twist",
+          "note": "The rule holds BUT needs one adjustment. Not a reversal of the thesis — an obstacle it overcomes.",
+          "pct_of_body": 41
+        },
+        {
+          "id": "reverse-analogy",
+          "note": "Carry the NEW mechanism back into the familiar domain as a prediction. Closing device only."
+        },
+        {
+          "id": "reframe",
+          "note": "One repeatable sentence."
+        }
+      ],
+      "split_measured": {
+        "familiar_case_s": 67,
+        "unfamiliar_case_s": 47,
+        "note": "The familiar half comes first and is ~30% longer; the second half can be shorter because the viewer already owns the rule."
+      },
+      "evidence": "PATTERNS.md §2 · MEASURED from a 149s source"
+    }
+  ],
+  "engines_incomplete": "Three engines from four videos, one witness each. A 'detective' engine (evidence accumulating to a reveal) remains plausible and unstudied — OPEN-QUESTIONS q1.",
+  "question_stack": {
+    "required": true,
+    "count": {
+      "duration_under_180s": 1,
+      "duration_over_600s": 3,
+      "note": "MEASURED at both ends: 1 question in both short sources, 3 at 17:53. The 3-10 minute middle is untested."
+    },
+    "asked_aloud": true,
+    "answered_in_order": true,
+    "navigation_required": "Announce entry into each act ('which brings us to our third question'). Disorientation kills retention faster than boredom.",
+    "note": "Generate and approve this BEFORE any prose exists. Highest-value artifact in the step.",
+    "evidence": "PATTERNS.md §3 · MEASURED n=4",
+    "placement": "within the first 12 seconds",
+    "answering_does_not_close_the_gap": "MinutePhysics answers its title question in the second word ('No.') and then says 'but you were probably hoping for a more in-depth answer'. The gap was never WHAT, it was WHY — say so out loud."
+  },
+  "reversal_anatomy": {
+    "steps": [
+      {
+        "step": "Let the viewer settle on the obvious reading, generously, with evidence",
+        "short_form": "keep, ~11s"
+      },
+      {
+        "step": "Signal the turn",
+        "short_form": "keep, compress to ~4 words"
+      },
+      {
+        "step": "Give the MECHANISM, not the verdict",
+        "short_form": "keep"
+      },
+      {
+        "step": "Make it concrete with one physical analogy",
+        "short_form": "DROP — too expensive"
+      },
+      {
+        "step": "Generalise so it doesn't feel rigged",
+        "short_form": "DROP — too expensive"
+      },
+      {
+        "step": "Escalate once",
+        "short_form": "keep"
+      }
+    ],
+    "duration_s": {
+      "long_form": 90,
+      "short_form": 20,
+      "measured": "two reversals in a 64s essay body, ~18s each (MinutePhysics)"
+    },
+    "compensation": "Without the generalise step a short reversal can read as a trick. Both short sources compensate by staying rigorously quantitative through the turn.",
+    "evidence": "PATTERNS.md §5 — CORRECTED 2026-08-11"
+  },
+  "concretes": {
+    "analogy": {
+      "per_hard_mechanism": 1,
+      "max_short_form": 1,
+      "must_be": "physical, immediately graspable, abandoned right after use",
+      "spend_on": "the one step where a smart viewer would otherwise stop believing you",
+      "evidence": "PATTERNS.md §7 — EE uses exactly 3 in 18 minutes",
+      "may_be_zero": true,
+      "note": "MinutePhysics uses none in 64s and substitutes a number ladder."
+    },
+    "scale_conversion": {
+      "required_for": "every significant number",
+      "rule": "A number without a comparison is a number the script wasted",
+      "examples": [
+        "an economy smaller than Vermont's",
+        "barely 3% of what the average South Korean earns",
+        "proportionally similar to the US finding an extra $9 trillion of foreign demand"
+      ],
+      "evidence": "PATTERNS.md §6"
+    },
+    "sensory_image": {
+      "per_act": 1,
+      "example": "twin missile-shaped towers painted red"
+    },
+    "reverse_analogy": {
+      "what": "Carry the newly-explained mechanism BACK into the domain the viewer already owns, as a prediction.",
+      "placement": "close only — needs both domains held at once",
+      "example": "if there were slow-moving swarms of grasshoppers, elephants could get even bigger",
+      "evidence": "OBSERVED · MinuteEarth 2:01"
+    },
+    "number_ladder": {
+      "what": "Run the SAME measurement across several conditions so the viewer learns the shape of a relationship, not a fact.",
+      "example": "ice melts at -4C at 500x atm, -9C at 1000x; then the whole ladder again for salt water",
+      "evidence": "OBSERVED · MinutePhysics"
+    },
+    "numbers_are_not_required": {
+      "rule": "Numeric density is subject-dependent and must NOT be a parameter the UI asks a writer to set.",
+      "evidence": "MEASURED · MinuteEarth 0.0 numbers/1k across 488 words vs MinutePhysics 28.6/1k — comparable length, both effective",
+      "what_is_required": "concreteness — physical imagery buys it just as well as numbers"
+    }
+  },
+  "hard_rules": [
+    {
+      "id": "but-therefore-chain",
+      "rule": "No AND THEN between adjacent beats",
+      "severity": "defect",
+      "evidence": "baseline §1"
+    },
+    {
+      "id": "hook-opens-a-gap",
+      "rule": "After 15s the viewer can state the question the video answers",
+      "evidence": "PATTERNS.md §4"
+    },
+    {
+      "id": "answer-early",
+      "rule": "State the thesis in the first minute; the tension is why/how, not what",
+      "evidence": "OBSERVED · EE gives its answer at 1:00 of 17:53"
+    },
+    {
+      "id": "no-housekeeping",
+      "rule": "Nothing before the hook. Branding AFTER the gap is open is fine (MinuteEarth: 3s at 0:12).",
+      "evidence": "REFINED at n=4 — zero of four open with housekeeping, but one does introduce itself at 0:12"
+    },
+    {
+      "id": "one-thesis",
+      "rule": "Exactly one; an adjacent idea is a different video",
+      "evidence": "OBSERVED · EE refuses one explicitly"
+    },
+    {
+      "id": "no-recap-ending",
+      "rule": "Reframe or pay off the demo — never summarise",
+      "evidence": "PATTERNS.md §8"
+    },
+    {
+      "id": "hook-and-close-paired",
+      "rule": "Write the closing line with the hook, not last",
+      "evidence": "PATTERNS.md §8"
+    },
+    {
+      "id": "joke-carries-info",
+      "rule": "A joke may not occupy a beat of its own; if deleting it deletes information, it earned its place",
+      "evidence": "PATTERNS.md §11"
+    },
+    {
+      "id": "reflection-interleaved",
+      "rule": "No long mechanism stretch without saying what it means",
+      "evidence": "baseline §4"
+    },
+    {
+      "id": "refuse-what-you-cant-explain",
+      "rule": "If a mechanism is too messy for the runtime, say so plainly rather than faking it.",
+      "evidence": "OBSERVED · MinutePhysics 'for various reasons... for complicated reasons' — hedges 18.2/1k, the highest measured, and it reads as honest rather than weak"
+    }
+  ],
+  "composition_procedure": [
+    "Find the tension — counterintuitive, contested or absurd. No tension, no video.",
+    "Pick the engine from the shape of the tension",
+    "Write the question stack (2–3 questions = the acts)",
+    "Draft beats as one-line claims under each question — NO PROSE",
+    "Run the but/therefore test on every adjacent pair; fix every AND THEN",
+    "Place reversals, check each has its duration floor",
+    "Assign concretes — analogy slots, scale conversions, sensory images",
+    "Write hook and closing line together",
+    "NOW write prose, and only now apply the duration budget",
+    "Read it aloud"
+  ],
+  "delivery": {
+    "$comment": "Applied at procedure step 9. Consequences of the engine, NOT independent dials — Engine A hedges and connects because it argues about a contested world; Engine B commands and never hedges because it walks a knowable mechanism.",
+    "duration_s": {
+      "min": 60,
+      "max": 180,
+      "default": 130,
+      "note": "template target; sources studied are 128s and 1073s"
+    },
+    "wpm": {
+      "min": 197,
+      "max": 252,
+      "default": 215,
+      "measured": {
+        "minuteearth": 197,
+        "economics_explained": 206,
+        "fireship": 221,
+        "minutephysics_essay_body": 252
+      },
+      "note": "The v1/v2 assumed ~230 ceiling is exceeded. Top of range = dense, numerate, no-analogy script."
+    },
+    "word_budget_formula": "round(duration_s * wpm / 60)",
+    "editor_counts": "seconds",
+    "by_engine": {
+      "reversal-chain": {
+        "hedges_per_1k": 7,
+        "connectives_per_1k": 15,
+        "second_person_per_1k": 6,
+        "sentence_words_mean": 22,
+        "pct_sentences_over_25_words": 38,
+        "short_form_variant": {
+          "hedges_per_1k": 18,
+          "numbers_per_1k": 29,
+          "second_person_per_1k": 23,
+          "note": "MinutePhysics. Hedging spikes because the subject is genuinely messy — not a style choice."
+        }
+      },
+      "effort-payoff-gap": {
+        "hedges_per_1k": 0,
+        "connectives_per_1k": 2,
+        "second_person_per_1k": 17,
+        "sentence_words_mean": null,
+        "note": "ASR captions — sentence rhythm unmeasurable, recorded as unknown"
+      },
+      "parallel-case": {
+        "hedges_per_1k": 6,
+        "connectives_per_1k": 14,
+        "second_person_per_1k": 2,
+        "numbers_per_1k": 0,
+        "note": "Zero numbers. Concreteness came entirely from physical imagery."
+      }
+    },
+    "budget_is_net_of_sponsor": "MEASURED · MinutePhysics: 100s runtime, 64s essay, 35% sponsor. State budgets as essay time.",
+    "causal_opener_density": {
+      "long_form_pct": 24,
+      "short_form_pct": [
+        38,
+        40
+      ],
+      "rule": "Short form cannot afford a sentence that merely sits there — nearly every sentence must move the argument.",
+      "note": "Checkable property of a generated draft."
+    }
+  },
+  "ui_contract": {
+    "$comment": "What app/_phases/script/ must expose. See PATTERNS.md §12.",
+    "primary_object": "the beat list, rearrangeable and re-linkable — not a text area",
+    "engine_is_first_decision": true,
+    "question_stack_is_an_editable_artifact": true,
+    "every_beat_shows_its_connector": true,
+    "and_then_renders_as_a_defect": true,
+    "reversals_are_first_class_beats_with_a_duration_floor": true,
+    "concretes_are_visible_slots": [
+      "analogy",
+      "scale_conversion",
+      "sensory_image"
+    ],
+    "hook_and_close_are_one_surface": true,
+    "duration_applied_last_as_a_budget": true,
+    "forbidden": "a single 'generate script' button over a topic string — steps 1–8 of the procedure are where the quality is",
+    "numbers_are_not_a_dial": "Subject-dependent, not a format parameter. Do not ask the writer to set it."
+  }
+}

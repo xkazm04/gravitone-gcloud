@@ -1,0 +1,130 @@
+# gravitone-gcloud
+
+A content creation studio, prototyped UI-first. Next.js 16 (App Router,
+Turbopack) + React 19 + Tailwind v4.
+
+## What this is
+
+A studio extracted from `dolla/arm/gravitone/web`'s `/studio` route on
+2026-08-11 and cut loose from the Arm hackathon project it grew inside. Three
+routes:
+
+- **`/`** — the door. No copy at all: a contact sheet of the fixture project's
+  own frame candidates at page scale, and one button that opens Google sign-in.
+- **`/projects`** — the shelf, drawn as a progress matrix: projects down, the
+  six steps across, one thin row each. Read a column and you see where the whole
+  shelf is jammed. Create, edit and delete live here. Signed-in only.
+- **`/studio?p=<id>`** — one production walked through six steps: Research
+  (Triage board), Script (Manuscript), Frames (Lightbox), Motion (Shot lab),
+  Score (Spotting), Cut (Timeline), over a **Library** view (Shelves) where
+  every asset is captioned, filed and traceable to the direction that made it.
+  Signed-in only, and it needs a project — `/studio` on its own is a redirect
+  back to the shelf.
+
+**Auth is Google, and only Google** — Firebase Auth, ported from the parent
+project, same Firebase project (see `.env.example`; three public variables, no
+service account, no server). Sessions expire after 12 hours. Every gated route
+fails CLOSED: no config means nobody gets in, not everybody.
+
+**Projects are real; everything inside them is mocked.** A project record —
+name, logline, template, target runtime, per-step progress — is created by the
+user and persisted to the browser's IndexedDB (`lib/studioDb.ts`,
+`lib/projects.ts`). Below that seam, `app/_studio/*.ts` still holds fixture data
+(scenes, runs, assets, score cues) and no model, backend or third-party service
+is called anywhere in this app. The plan is to prototype the flow at the UI
+layer first and only then decide what the backend and the providers have to be.
+
+## Who owns what
+
+This repo is managed by the **Personas** app (project `gravitone`). Two artifacts here are generated
+by it and must not be hand-edited — the next scan overwrites both from its database:
+
+- `context-map.json` — the context taxonomy every skill in `.claude/skills/` reads.
+- the `<!-- personas:context-map -->` block inside `CLAUDE.md`.
+
+To change the taxonomy, change it in the app (Dev Tools → Context Ledger) and rescan. Everything
+else in this repo — including `README.md`, `AGENTS.md` and the skills — is hand-authored and yours.
+
+## Layout
+
+```
+app/page.tsx        the door — the wordless landing
+app/_landing/       the door's art + the Enter button
+app/projects/       the shelf (gated)
+app/_projects/      the shelf's surface — the progress matrix + the create/edit dialog
+app/studio/         the studio (gated) — the one-row stepper and the step router
+app/_studio/        shared fixtures, types and small render parts
+app/_phases/<step>/ one directory per production step (research · script · frames · motion · score · cut)
+                    — each step grows its own components, state and step-only fixtures here
+app/_library/       the Shelves library view
+components/ui/      the design language (see below), plus AuthGate, UserMenu and the form primitives
+lib/                auth + storage: firebase, useAuth, studioDb (IndexedDB), projects, useProjects
+knowledge/          craft knowledge per project template and production step (see below)
+pipeline/           terminal-first prototype of topic -> notebook -> script (see below)
+```
+
+## The knowledge library
+
+`knowledge/` holds what we know about **making the content**, as opposed to building the app: one
+folder per project template, one per production step, each with grounded craft rules
+(`PATTERNS.md`), machine-readable defaults the UI consumes (`params.json`), the sources those rules
+came from, and the corpus they cite.
+
+It exists because the prototype's real blocker was not UI, it was grounding: a step designed without
+craft rules produces surfaces invented from intuition, and output that is shallow because nothing
+told it what good looks like. Every claim in there carries an evidence label (MEASURED · OBSERVED ·
+INFERRED · ASSUMED) and a sample size.
+
+**Read the relevant `PATTERNS.md` before designing or building a step surface**, and
+`knowledge/CRAFT-BASELINE.md` before that — it holds the narrative theory every step builds on, and
+names the failure the library prevents: the *wiki timeline*, correct facts joined by "and then",
+accurate and unwatchable.
+
+First entry: `knowledge/templates/short-educational-video/steps/01-script/` — beat composition for
+educational video, from Economics Explained and Fireship. It identifies two narrative engines and the
+one law (every adjacent beat joined by BUT or THEREFORE). `/research` (craft mode) writes these.
+
+## The script pipeline
+
+`pipeline/` is where the Script phase is being fine-tuned by hand before it becomes UI. The shape:
+
+```
+topic  →  notebook.json  →  script renders
+          (the asset)       (disposable)
+```
+
+A **notebook** is researched once and rendered many times — different engines, lengths and tones.
+It stores tensions, mechanisms and pre-linked causal chains rather than prose, which is why one
+notebook can produce a 5-minute reversal chain, a 4-minute adjudication and a 45-second derived clip
+with no additional research. `pipeline/RESEARCH-PROMPT.md` is the instruction set being tuned;
+`pipeline/runs/*/NOTES.md` is where each run's process findings land.
+
+## The design language
+
+Carried over intact so the extraction changed no pixels:
+
+- `components/ui/tokens.ts` — **the single source of truth**, and the only file
+  here allowed to contain a colour literal. It exports both the TS constants
+  components render with (`SURFACE`, `TEXT`, `EASE`) and the `--gt-*` custom
+  properties CSS reads.
+- `components/ui/GravitoneTokens.tsx` — emits those properties as a
+  server-rendered `<style>` in `app/layout.tsx`, so they resolve on first paint.
+- `app/globals.css` — consumes the vars: aurora, grain, glass panel, focus ring,
+  themed scrollbars. It contains no literals of its own.
+- `components/ui/Primitives.tsx` — Eyebrow, Panel, Button, Waveform, Wordmark.
+- `components/ui/StudioFrame.tsx` — the app shell (aurora + nav). Descended from
+  the source repo's `AppFrame` **minus its auth gate**: this prototype has no
+  session, so there is nothing to gate. Re-add the gate here, not per-route.
+
+Deliberately left behind in the source repo: Firebase auth, the AudioBus /
+narration / feedback docks, Sentry, the API-key and voice modules. The Signal
+Layer CSS in `globals.css` is kept but currently inert — no bus writes the
+channels yet; the comment there says so and says what mounting one would take.
+
+## Develop
+
+```
+npm install
+npm run dev     # http://localhost:3000
+npm run build
+```

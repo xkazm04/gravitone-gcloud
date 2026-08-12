@@ -1,0 +1,26 @@
+[00:01] Does Pressure Keep The Deep Ocean From Freezing? No.
+[00:04] But you were probably hoping for a more in-depth answer, so let's take a deep dive to the bottom of
+[00:07] the Mariana trench, the deepest part of the ocean. Down here, there's 11km of water pressing down on
+[00:12] you from above, and the weight of all that water generates around 1000 times atmospheric pressure.
+[00:16] And pressure can melt ice - like, you only need 500 times atmospheric pressure
+[00:20] to melt ice down to negative four degrees celsius. If you have 1000 times atmospheric
+[00:24] pressure (like at the bottom of the Mariana trench), then you'll melt ice down to around
+[00:27] negative nine celsius. But that's for fresh water. For salty sea water, everything more or less gets
+[00:31] shifted colder depending on the salinity: on the ocean's surface,
+[00:33] salt water doesn't freeze until around two degrees celsius below zero; at 500 times
+[00:37] atmospheric pressure salt water doesn't freeze until around six degrees celsius below zero, and
+[00:41] at the bottom of the Mariana trench, salt water wouldn't freeze until around 11 degrees below 0.
+[00:45] But for various reasons related to circulation and salinity and temperature and convection and the
+[00:48] fact salt water freezes into freshwater ice... for complicated reasons, deep ocean water is
+[00:53] often around 0° to 4° celsius, and doesn't get much colder than 2 degrees celsius below zero,
+[00:57] which are temperatures at which the water would stay liquid from salt alone,
+[01:00] even without the additional pressure. So while pressure could in principle keep the ocean from
+[01:03] freezing, it doesn't really get a chance. Alright, now's your chance to try out the
+[01:09] new math and science courses from this video's sponsor, Brilliant.org. This course shows you
+[01:14] how to analyze Airbnb data to figure out the best place to buy a rental property,
+[01:17] and this one teaches you how to program by coding a familiar-looking game. Hands-on
+[01:20] problem solving like in these courses is a method proven to be more effective than just
+[01:24] watching videos - sign up for Brilliant (for free) and get 30 days of full access to all of
+[01:27] their courses at Brilliant.org/MinutePhysics, or click on the link in the description. Plus,
+[01:31] you'll get 20% off an annual premium subscription for all of Brilliant's content. Again,
+[01:35] that's Brilliant.org/MinutePhysics - thanks to Brilliant for their support.

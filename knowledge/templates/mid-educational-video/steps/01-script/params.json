@@ -1,0 +1,114 @@
+{
+  "$comment": "Machine-readable form of this template's PATTERNS.md. Engines live in knowledge/ENGINES.md and are referenced by id, never duplicated here. Tone dials live in knowledge/TONE.md. Every value traces to a labelled claim; do not invent values.",
+  "version": 1,
+  "template": "mid-educational-video",
+  "step": "01-script",
+  "updated": "2026-08-11",
+  "sample_size": 3,
+  "confidence": "n=3, one engine per source, one source 34% above the band",
+  "subjects": ["economy", "tech", "politics"],
+
+  "duration": {
+    "unit": "seconds", "min": 180, "max": 360, "default": 300,
+    "measured_sources": [280, 301, 484],
+    "note": "Budget ESSAY time, not runtime — sponsor is excluded. See sponsor_slot."
+  },
+
+  "engines": {
+    "$ref": "../../../ENGINES.md",
+    "available": ["reversal-chain", "effort-payoff-gap", "parallel-case", "adjudication", "briefing"],
+    "native_to_this_length": ["adjudication", "briefing"],
+    "note": "Adjudication and Briefing need mid-length: both must state an opposing position at full strength before answering it, which costs 20-30s."
+  },
+
+  "structure": {
+    "movements": {"min": 2, "max": 3, "announced": true},
+    "promise_form": {
+      "questions": "Reversal Chain, Briefing — 'but what does that even mean?'",
+      "topics": "when the movements are naturally nouns — 'how it got so wealthy, why this is a problem, and what they'll buy next' (PolyMatter 0:23)",
+      "numbered_candidates": "Adjudication — 'Theory one... Theory two... Theory three'",
+      "note": "Pick the form from the engine. Topics are the most economical: three noun-phrases in one breath."
+    },
+    "turns": {"min": 3, "max": 5, "cadence_s": [60, 90],
+      "below_min": "reads as a lecture", "above_max": "no conclusion stands long enough to matter",
+      "scaling_across_corpus": "2 turns in 64s; 3-5 at 3-6min; 4+ at 18min. Turn DENSITY falls as length rises."}
+  },
+
+  "digression": {
+    "max_pct_of_runtime": 10,
+    "measured": "12% (Fireship, 35s of 280)",
+    "legal_position": "after the promise, before the mechanism",
+    "disabled_for_engines": ["adjudication"],
+    "note": "Engine-dependent allowance. Briefing tolerates it because presenter judgment is part of the product; Adjudication cannot — a candidate left hanging is a candidate the viewer stops tracking.",
+    "evidence": "PATTERNS.md §3 — one observation on one channel"
+  },
+
+  "sponsor_slot": {
+    "excluded_from_word_budget": true,
+    "measured": [
+      {"source": "fireship", "seconds": 35, "pct": 12, "at": "4:00 — after the mechanism, before the close"},
+      {"source": "polymatter", "seconds": 120, "pct": 25, "at": "6:52 — post-roll, after the reframe"},
+      {"source": "economics-explained", "seconds": 60, "pct": 6, "at": "2:20 — after the hook and promise land"}
+    ],
+    "rule": "Always after a payoff, never inside an argument. Three legal positions: after the promise, after the mechanism, after the reframe.",
+    "confidence": "INFERRED from 3 placements; varies by sponsor contract as much as by craft"
+  },
+
+  "devices": {
+    "hidden_premise": {
+      "what": "Name the unstated assumption under the opposing argument, then attack THAT rather than the conclusion.",
+      "example": "'But implied in this argument is another. If Microsoft and Google acquire companies left and right but Apple rarely does, they must be sleeping on the job.'",
+      "requires": "mid-length — you must state the opposing case fully and fairly first",
+      "evidence": "OBSERVED · PolyMatter 5:40 — the strongest single move in the corpus"},
+    "skeptical_check": {
+      "what": "A move against the script's own enthusiasm, with a concrete instance.",
+      "required_for": ["briefing"],
+      "example": "'never trust benchmarks' + the benchmark provider is funded by the company it benchmarks",
+      "evidence": "OBSERVED · Fireship 1:58"},
+    "declared_exposure": {
+      "what": "State the author's stake before offering judgment.",
+      "example": "'which I'm stupidly paying $200 a month for right now' (0:04)",
+      "evidence": "OBSERVED · Fireship"},
+    "the_frame": {
+      "what": "Give a viewer with no position an axis to stand on, before the evidence.",
+      "example": "'two types of people... pessimists sound smart while optimists make money'",
+      "evidence": "OBSERVED · Fireship 0:10"},
+    "institutions_with_dialogue": {
+      "what": "Give abstract actors motives and speech.",
+      "example": "'Ireland rolled its eyes and shook its head'; Apple 'can wink at the IRS'",
+      "belongs_to": "reference world — see TONE.md; PolyMatter signature, not a universal rule"},
+    "rate_as_opening_number": {
+      "what": "A rate is felt where a total is not.",
+      "example": "'Every second, Apple makes $1,444 of profit'",
+      "evidence": "OBSERVED · PolyMatter 0:00"}
+  },
+
+  "delivery": {
+    "wpm": {"min": 156, "max": 234, "measured": {"basic_logic": 156, "polymatter": 176, "fireship": 234},
+      "note": "78-wpm spread on one format. The low end reflects visual density, not slower speech — resolve in the Frames step, never as a 'pace' dial."},
+    "essay_words": {"min": 600, "max": 1100},
+    "causal_opener_pct": {"measured": {"basic_logic": 15, "polymatter": 38},
+      "note": "Measures argumentative density, NOT length. A low score on Adjudication is a signal the candidates are being announced rather than weighed."}
+  },
+
+  "currency": {
+    "required_field": true,
+    "what": "How long is this script true for?",
+    "why": "Tech and politics scripts are dated by construction. Fireship says the date out loud.",
+    "example_of_decay": "PolyMatter's 'everything is about to change' beat referenced a 2018 tax change."
+  },
+
+  "ui_contract": {
+    "movement_rail": "2-3 movements, each with a name, promise form and second budget",
+    "turn_counter_with_band": [3, 5],
+    "sponsor_slot": "three legal positions, excluded from the essay word budget",
+    "digression_allowance": "visible, capped ~10%, disabled for adjudication",
+    "currency_metadata": "how long is this true for — findable later when facts expire",
+    "adjudication_honesty_checklist": [
+      "Is the premise itself in the candidate set?",
+      "Can any candidate actually win against the author's prior?",
+      "Is the counter-evidence admitted at full strength, or pre-excluded?"
+    ],
+    "checklist_is": "review items, not blockers"
+  }
+}

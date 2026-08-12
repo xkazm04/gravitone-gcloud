@@ -1,0 +1,455 @@
+{
+  "$schema": "../../NOTEBOOK-SCHEMA.md",
+  "id": "why-bitcoin-price-does-not-rise",
+  "topic": "Why Bitcoin price does not rise",
+  "researched": "2026-08-11",
+  "researcher": "claude-opus-5 via WebSearch",
+  "template_intent": "mid-educational-video",
+  "subject_domain": [
+    "economy",
+    "politics",
+    "tech"
+  ],
+  "question": "Bitcoin got everything it spent fifteen years asking for. Why is it down 50%?",
+  "verdict": "Because it got what it asked for. Institutional adoption was supposed to be the demand engine; instead it turned Bitcoin into an ordinary risk asset — correlated, liquidity-sensitive, and owned by people who sell when yields rise.",
+  "tension": {
+    "expectation": "Spot ETFs, a Strategic Bitcoin Reserve, friendly regulators, corporate treasuries and retirement-account access were the entire bull case. All of them happened.",
+    "reality": "Bitcoin peaked at $126,198 on 2025-10-06 and trades near $60–65k in August 2026 — down roughly 50%.",
+    "why_it_is_a_tension": "The causal story everyone held (adoption → demand → price) ran forward exactly as predicted and produced the opposite outcome. That is not a disappointment, it is a broken model, and a broken model is the only thing worth 5 minutes.",
+    "strength": "high — the premise is checkable, widely believed, and demonstrably wrong"
+  },
+  "facts": [
+    {
+      "id": "f-ath",
+      "claim": "Bitcoin's all-time high was $126,198.07 on 6 October 2025",
+      "load_bearing": true,
+      "source": "99bitcoins / investingnews price history",
+      "confidence": "high",
+      "as_of": "2025-10-06"
+    },
+    {
+      "id": "f-nov-crash",
+      "claim": "By 21 November 2025 it had fallen to $80,660 — a >30% drawdown in six weeks",
+      "load_bearing": true,
+      "source": "investingnews.com price history",
+      "confidence": "high",
+      "as_of": "2025-11-21"
+    },
+    {
+      "id": "f-now",
+      "claim": "In August 2026 Bitcoin trades near $60–65k, repeatedly capped at the $65,500–$67,000 region",
+      "load_bearing": true,
+      "source": "invezz, crypto.news, intellectia",
+      "confidence": "medium — price sources vary by a few thousand",
+      "as_of": "2026-08-10"
+    },
+    {
+      "id": "f-drawdown",
+      "claim": "That is a fall of nearly 50% from the October 2025 high",
+      "load_bearing": true,
+      "source": "coinpedia regulation timeline",
+      "confidence": "high",
+      "as_of": "2026-08"
+    },
+    {
+      "id": "f-sbr",
+      "claim": "Trump signed the executive order establishing a Strategic Bitcoin Reserve on 6 March 2025",
+      "load_bearing": true,
+      "source": "whitehouse.gov fact sheet",
+      "confidence": "high",
+      "as_of": "2025-03-06"
+    },
+    {
+      "id": "f-sbr-unbuilt",
+      "claim": "16 months later the White House concedes the long-term stockpile process is still being worked out, and agencies do not agree on how much BTC the US owns",
+      "load_bearing": true,
+      "source": "coindesk 2026-07-06, cryptoslate",
+      "confidence": "high",
+      "as_of": "2026-07-06",
+      "note": "The flagship policy win is, in practice, unimplemented. Strong irony beat."
+    },
+    {
+      "id": "f-genius",
+      "claim": "The GENIUS Act passed; regulators were replaced with crypto-friendly appointees; crypto access was expanded to retirement accounts",
+      "load_bearing": true,
+      "source": "coinpedia regulation timeline",
+      "confidence": "medium",
+      "as_of": "2026"
+    },
+    {
+      "id": "f-lth-distribution",
+      "claim": "Long-term holders realised 3.67 million BTC in profit in the $100,000–$126,000 range — a larger distribution than any previous cycle",
+      "load_bearing": true,
+      "source": "on-chain data via intellectia",
+      "confidence": "medium — single aggregator, not verified against Glassnode/CryptoQuant primary",
+      "as_of": "2026"
+    },
+    {
+      "id": "f-etf-lag",
+      "claim": "ETF inflows are not immediate spot demand: authorised participants often create and short ETF shares before buying the underlying bitcoin",
+      "load_bearing": true,
+      "source": "coindesk 2026-03-04, analyst explanation",
+      "confidence": "medium — mechanism reported by one analyst",
+      "as_of": "2026-03-04"
+    },
+    {
+      "id": "f-etf-absorbed",
+      "claim": "Inflows have been positive but insufficient: holders who bought near these levels use recoveries to reduce positions, so ETF buying is absorbed by sellers rather than lifting price",
+      "load_bearing": true,
+      "source": "invezz 2026-08-10",
+      "confidence": "medium",
+      "as_of": "2026-08-10"
+    },
+    {
+      "id": "f-mnav",
+      "claim": "Strategy's mNAV fell from 3.89x (Nov 2024) to below 1.0 — its market cap is worth less than the bitcoin it holds",
+      "load_bearing": true,
+      "source": "KuCoin, phemex, bitcoinworld",
+      "confidence": "high",
+      "as_of": "2026"
+    },
+    {
+      "id": "f-mstr-drop",
+      "claim": "MSTR fell ~70% between August 2025 and February 2026; the company reported a $12.4bn loss in Q4 2025",
+      "load_bearing": true,
+      "source": "bydfi / decrypt",
+      "confidence": "medium",
+      "as_of": "2026-02"
+    },
+    {
+      "id": "f-mstr-sold",
+      "claim": "In June 2026 Strategy sold 32 BTC — a break from its 'never sell bitcoin' stance",
+      "load_bearing": true,
+      "source": "decrypt / bitcoinworld",
+      "confidence": "medium",
+      "as_of": "2026-06",
+      "note": "32 BTC is trivially small in dollars. Its entire significance is symbolic — the policy broke, not the balance sheet."
+    },
+    {
+      "id": "f-mstr-defence",
+      "claim": "Strategy built a cash reserve (from $1.44bn in Dec 2025) covering 2.5+ years of debt and dividends; Saylor claims it can cover $6bn of debt even at $8,000 BTC",
+      "load_bearing": false,
+      "source": "decrypt",
+      "confidence": "medium",
+      "as_of": "2026-02",
+      "note": "The steel-man. Include it — the forced-seller thesis is weaker than it looks."
+    },
+    {
+      "id": "f-correlation",
+      "claim": "Bitcoin's correlation with the Nasdaq 100 and S&P 500 sits in the 0.70–0.80 range in risk-on conditions",
+      "load_bearing": true,
+      "source": "quasa.io, arxiv 2501.09911",
+      "confidence": "medium",
+      "as_of": "2026"
+    },
+    {
+      "id": "f-yields",
+      "claim": "The 10-year Treasury yield approached a one-year high near 4.5% in March 2026; the 30-year hit 5% in April 2026",
+      "load_bearing": true,
+      "source": "coindesk 2026-03-27, 2026-04-30",
+      "confidence": "high",
+      "as_of": "2026-04-30"
+    },
+    {
+      "id": "f-macro-cause",
+      "claim": "Analysts attribute price pressure to rising Treasury yields, a stronger dollar, tariffs, geopolitical tension and Fed policy — outweighing regulatory progress",
+      "load_bearing": true,
+      "source": "coinpedia, investing.com",
+      "confidence": "medium",
+      "as_of": "2026"
+    },
+    {
+      "id": "f-supply-2pct",
+      "claim": "Long-term holders added ~380,000 BTC (~$24.3bn, almost 2% of supply) over a 30-day window in mid-2026",
+      "load_bearing": false,
+      "source": "CryptoQuant via search",
+      "confidence": "medium",
+      "as_of": "2026-08",
+      "note": "Corroborated in follow-up round 1 — but it was ONE COHORT, not the market. Mid-tier holders distributed more over the same window, which limits how much comfort it gives the steel-man."
+    },
+    {
+      "id": "f-m2-divergence",
+      "claim": "Global M2 grew more than 12% over the last twelve months while Bitcoin fell roughly 12% — the liquidity relationship broke down through 2026",
+      "load_bearing": true,
+      "source": "CF Benchmarks; Onramp research",
+      "confidence": "medium",
+      "as_of": "2026-08-11",
+      "note": "Replaced f-liquidity in follow-up round 1. Stronger than what it replaces AND argues the same thesis: an asset that stopped responding to liquidity is being managed as a position."
+    },
+    {
+      "id": "f-whale-absorb",
+      "claim": "Wallets holding over 1,000 BTC accumulated roughly 270,000 BTC in the 30 days to 23 April 2026, and again over a fortnight in late June/early July while price fell below $58,000",
+      "load_bearing": true,
+      "source": "CryptoQuant via aggregators",
+      "confidence": "medium",
+      "as_of": "2026-08-11",
+      "note": "From follow-up round 1.",
+      "unit": "BTC",
+      "period": "30 days to 2026-04-23, and a fortnight in late Jun/early Jul",
+      "kind": "found"
+    },
+    {
+      "id": "f-midtier-distribute",
+      "claim": "Holders of 100-1,000 BTC distributed about 77,800 BTC, over a window the sources do not agree on",
+      "load_bearing": true,
+      "source": "on-chain cohort analysis via aggregators",
+      "confidence": "low",
+      "as_of": "2026-08-11",
+      "note": "CORRECTED 2026-08-12 by the gauntlet control migration. The original read \"about 77,800 BTC over the same 60-day window - slightly more than the whale cohort absorbed\": two arithmetic errors in one load-bearing sentence. The sibling f-whale-absorb dates its window at 30 days, not 60; and 77,800 is 29% of ~270,000, not \"slightly more\". It shipped into three scripts and fed c-scarcity-not-a-floor at leap:near. The cohort figure is kept because it is sourced; the comparison is gone because it was never true. This is the fact that forced facts[].unit/period and the arithmetic quality-bar row.",
+      "unit": "BTC",
+      "period": "UNRESOLVED - see note",
+      "kind": "found",
+      "contests": [
+        "f-whale-absorb"
+      ]
+    }
+  ],
+  "mechanisms": [
+    {
+      "id": "m-etf-plumbing",
+      "name": "An ETF inflow is not a purchase",
+      "chain": [
+        "A dollar enters a spot bitcoin ETF",
+        "THEREFORE the market reads it as new demand",
+        "BUT authorised participants can create and short ETF shares before buying the underlying",
+        "THEREFORE the buying is lagged and partly hedged",
+        "AND sellers at the same price level absorb what does arrive",
+        "THEREFORE inflow can be positive while price is flat"
+      ],
+      "explains": "Why 'record inflows' headlines coexist with a flat chart",
+      "needs_analogy": true
+    },
+    {
+      "id": "m-treasury-flywheel",
+      "name": "The flywheel that only turns one way",
+      "chain": [
+        "A treasury company's stock trades above the bitcoin it holds (mNAV > 1)",
+        "THEREFORE it can issue equity and buy more bitcoin, accretively",
+        "THEREFORE it becomes a permanent, price-insensitive buyer",
+        "BUT if the stock falls below the value of its holdings (mNAV < 1), issuing equity destroys shareholder value",
+        "THEREFORE the buying stops",
+        "AND the company's remaining tools are buybacks, dividends — and eventually selling bitcoin",
+        "THEREFORE the biggest structural buyer becomes, at the margin, a seller"
+      ],
+      "explains": "How the demand engine reversed direction",
+      "needs_analogy": true
+    },
+    {
+      "id": "m-institutionalisation",
+      "name": "Adoption is correlation",
+      "chain": [
+        "Institutions buy bitcoin",
+        "THEREFORE it enters portfolios governed by risk models",
+        "THEREFORE it is sized, hedged and rebalanced like any other risk asset",
+        "THEREFORE when real yields rise, it is sold alongside tech stocks",
+        "THEREFORE the adoption that was supposed to make it valuable is what made it ordinary"
+      ],
+      "explains": "THE THESIS — why the bull case was self-defeating",
+      "needs_analogy": false,
+      "note": "This is the video. Everything else is evidence for it."
+    }
+  ],
+  "reversals": [
+    {
+      "id": "r1",
+      "obvious_reading": "ETF inflows are positive, so demand is real and price should rise",
+      "why_wrong": "An inflow is not a spot purchase, and what does get bought is absorbed by holders selling into it",
+      "mechanism": "m-etf-plumbing",
+      "evidence": [
+        "f-etf-lag",
+        "f-etf-absorbed",
+        "f-lth-distribution"
+      ],
+      "escalation": "The largest distribution of any cycle happened into exactly this demand"
+    },
+    {
+      "id": "r2",
+      "obvious_reading": "Corporate treasuries are permanent buyers — they never sell",
+      "why_wrong": "The buying was a function of the share price, not conviction. Below mNAV 1.0 the mechanism reverses.",
+      "mechanism": "m-treasury-flywheel",
+      "evidence": [
+        "f-mnav",
+        "f-mstr-drop",
+        "f-mstr-sold"
+      ],
+      "escalation": "In June 2026 the company that made 'never sell' a brand sold 32 coins"
+    },
+    {
+      "id": "r3",
+      "obvious_reading": "Washington delivered — a reserve, an act, friendly regulators. That has to be bullish.",
+      "why_wrong": "Regulatory permission is not demand, and the reserve was never actually built",
+      "mechanism": null,
+      "evidence": [
+        "f-sbr",
+        "f-sbr-unbuilt",
+        "f-genius",
+        "f-macro-cause"
+      ],
+      "escalation": "16 months on, agencies cannot agree how much bitcoin the government owns"
+    },
+    {
+      "id": "r4",
+      "obvious_reading": "So institutional adoption failed",
+      "why_wrong": "It succeeded completely. That is the problem.",
+      "mechanism": "m-institutionalisation",
+      "evidence": [
+        "f-correlation",
+        "f-yields",
+        "f-m2-divergence"
+      ],
+      "escalation": "Bitcoin now moves on the 10-year Treasury yield — the single most boring number in finance",
+      "note": "This is the final turn and the thesis. Save it."
+    }
+  ],
+  "steel_man": {
+    "claim": "The forced-seller story is weaker than it looks, and the accumulation story is real",
+    "evidence": [
+      "f-mstr-defence",
+      "f-supply-2pct"
+    ],
+    "statement": "Strategy holds 2.5+ years of debt and dividend coverage in cash and has not been forced to liquidate; 32 coins is a rounding error. And long-term holders added ~380,000 BTC in a single month this year — after the drawdown, not before. Nothing here says the asset is broken. Follow-up round 1 qualifies this: the accumulation was one cohort, and the tier directly below it sold slightly more over the same window.",
+    "why_include": "Without it the script is a bear case wearing an explainer's clothes. The honest position is 'the model changed', not 'it is going to zero'."
+  },
+  "scale_conversions": [
+    {
+      "raw": "$126,198 → ~$62,000",
+      "felt": "half the value, in ten months, while every piece of good news it ever wanted arrived"
+    },
+    {
+      "raw": "3.67 million BTC distributed",
+      "felt": "more coins sold into strength than in any previous cycle — the people who held longest sold most"
+    },
+    {
+      "raw": "mNAV 3.89x → below 1.0",
+      "felt": "the market went from paying $3.89 for every dollar of bitcoin the company held, to under a dollar"
+    },
+    {
+      "raw": "32 BTC sold",
+      "felt": "about $2 million — for a company holding billions. The number is meaningless; the sentence 'Strategy sold bitcoin' is not."
+    },
+    {
+      "raw": "0.70–0.80 correlation with Nasdaq",
+      "felt": "on most days, bitcoin is a tech stock with extra steps"
+    },
+    {
+      "raw": "10-year yield ~4.5%",
+      "felt": "when a government bond pays you to do nothing, an asset that yields nothing has to argue harder"
+    }
+  ],
+  "analogy_candidates": [
+    {
+      "for": "m-treasury-flywheel",
+      "analogy": "A company that borrows against its own house to buy more houses. It works beautifully while house prices rise — and the moment the market values the company below the houses it owns, the only way to keep the lights on is to sell a house.",
+      "quality": "strong — physical, familiar, carries the reversal"
+    },
+    {
+      "for": "m-etf-plumbing",
+      "analogy": "Money going into a fund is a promise to buy, not a purchase — like a restaurant taking a booking. A full reservation book and an empty dining room can be true at the same hour.",
+      "quality": "medium — the shorting mechanism is not fully captured"
+    },
+    {
+      "for": "m-institutionalisation",
+      "analogy": "Bitcoin spent fifteen years trying to get invited to the party, and the price of admission was becoming a guest like any other — subject to the same house rules.",
+      "quality": "medium — abstract; consider dropping, the thesis may be stronger unadorned"
+    }
+  ],
+  "candidate_questions": [
+    "If the bull case came true, why is the price down?",
+    "Where did the ETF money actually go?",
+    "What happened to the buyers who said they would never sell?",
+    "Did Washington's approval matter at all?",
+    "Is this a broken asset, or a changed one?"
+  ],
+  "counter_positions_to_state_fairly": [
+    "Four-year-cycle believers read this as an ordinary post-halving drawdown, not a structural change",
+    "The accumulation data (f-supply-2pct) genuinely cuts against the distribution narrative",
+    "Regulatory wins may have long lead times that a 10-month window cannot measure"
+  ],
+  "unknowns": [
+    {
+      "what": "RESOLVED (follow-up round 1) — the accumulation and the distribution are different cohorts",
+      "why": "Wallets >1,000 BTC absorbed ~270k BTC; holders of 100-1,000 BTC distributed ~77,800 BTC over the same window, slightly more. Retail distributed too.",
+      "impact": "The script may now STATE the answer instead of hedging between competing readings. Say who the seller is."
+    },
+    {
+      "what": "The precise spot price on the day of writing",
+      "why": "Sources in the same week quote $60k, $62k and $65k",
+      "impact": "Say 'around $60,000' or 'roughly half its high'. Never a precise figure."
+    },
+    {
+      "what": "Causality between yields and bitcoin",
+      "why": "Correlation is measured; causation is asserted by analysts",
+      "impact": "Phrase as 'moves with', not 'because of'."
+    }
+  ],
+  "engine_fit": [
+    {
+      "engine": "reversal-chain",
+      "fit": "excellent",
+      "why": "The material is literally a chain of four wrong obvious readings, ending in a thesis that reframes the whole subject. r1→r2→r3→r4 is the spine.",
+      "recommended": true
+    },
+    {
+      "engine": "adjudication",
+      "fit": "good",
+      "why": "The candidate explanations (ETF plumbing / treasury reversal / macro / it's just the cycle) are genuinely competing and can be weighed. Note the D-honest requirement: 'the premise is wrong — it IS rising in some frame' must be in the candidate set."
+    },
+    {
+      "engine": "briefing",
+      "fit": "poor",
+      "why": "No news event. This is a standing condition, not something that happened yesterday."
+    },
+    {
+      "engine": "parallel-case",
+      "fit": "poor",
+      "why": "No second domain to transfer to. Gold or equities would be forced."
+    }
+  ],
+  "currency": {
+    "half_life": "weeks",
+    "why": "Price levels date immediately; the structural argument (institutionalisation → correlation) has a half-life measured in years",
+    "expires_first": [
+      "f-now",
+      "f-drawdown"
+    ],
+    "durable": [
+      "m-institutionalisation",
+      "m-treasury-flywheel",
+      "f-mnav"
+    ],
+    "advice": "Write the price as a ratio ('roughly half its high') rather than a number, and the script survives months instead of days."
+  },
+  "sources": [
+    "https://invezz.com/pk/news/2026/08/10/why-is-bitcoin-stuck-near-dollar65000-despite-stronger-etf-inflows/",
+    "https://www.coindesk.com/markets/2026/03/04/over-a-billion-flows-into-bitcoin-etfs-yet-the-price-isn-t-rising-an-analyst-explains-why",
+    "https://www.coindesk.com/policy/2026/07/06/bitcoin-s-u-s-reserve-still-a-work-in-progress-as-federal-agencies-hash-it-out",
+    "https://www.whitehouse.gov/fact-sheets/2025/03/fact-sheet-president-donald-j-trump-establishes-the-strategic-bitcoin-reserve-and-u-s-digital-asset-stockpile/",
+    "https://www.kucoin.com/news/flash/strategy-s-bitcoin-strategy-under-fire-as-mnav-ratio-falls-below-1-0",
+    "https://decrypt.co/resources/what-is-strategy-microstrategy-mstr-the-bitcoin-treasury-company",
+    "https://quasa.io/media/crypto-trends-2026-2027-why-bitcoin-is-becoming-a-high-beta-macro-asset",
+    "https://www.coindesk.com/markets/2026/04/30/ouch-the-u-s-30-year-treasury-yield-just-hit-5-and-bitcoin-may-pay-the-price",
+    "https://coinpedia.org/research-report/donald-trumps-crypto-regulation-timeline-2025-2026-and-bitcoin-price-reaction/",
+    "https://keyrock.com/the-liquidity-source-that-leads-bitcoin/",
+    "https://cryptoslate.com/the-us-says-it-has-a-bitcoin-reserve-but-nobody-can-agree-on-how-much-it-owns/",
+    "https://www.cfbenchmarks.com/blog/the-m2-bitcoin-relationship-what-the-data-actually-shows",
+    "https://www.cryptoseyes.com/insights/whale-accumulation-270k-btc-april-2026/",
+    "https://www.cryptopolitan.com/this-btc-cohort-has-the-fastest-accumulation-rate-in-2026/"
+  ],
+  "research_gaps": [
+    "Still no PRIMARY on-chain data — follow-up round 1 improved the cohort picture but every figure remains aggregator-sourced, and several sources wrap them in a bullish framing this notebook does not adopt.",
+    "No price series — a chart would settle the price ambiguity and give the Frames step real material.",
+    "No bear-case-is-wrong source — did not search for the strongest 'this is normal cycle behaviour' argument, which weakens the steel-man.",
+    "Miner economics not researched (post-halving hashprice, capitulation) — a plausible fifth mechanism left unexplored."
+  ],
+  "followups": [
+    {
+      "round": 1,
+      "date": "2026-08-11",
+      "requests": [
+        "deepen f-liquidity",
+        "question: on-chain hints about whale behaviour"
+      ],
+      "record": "followup-round-1.md"
+    }
+  ]
+}

@@ -1,0 +1,393 @@
+{
+  "contexts": [
+    {
+      "api_surface": "",
+      "business_feature": "Application Shell",
+      "category": "config",
+      "cross_refs": [
+        "studio-design-system"
+      ],
+      "db_tables": [],
+      "description": "The Next.js App Router root config and authentication/persistence layer. layout.tsx injects Google Fonts and mounts GravitoneTokens as the first body child. lib/firebase.ts initializes Firebase Auth with a 12-hour session ceiling enforced client-side (Google-only provider, browserLocalPersistence). lib/useAuth.tsx exposes the signed-in user to the component tree. lib/studioDb.ts and lib/projects.ts implement a zero-dependency IndexedDB layer (gravitone-studio DB) for project CRUD scoped to the owning Firebase uid; lib/useProjects.ts is the React hook that drives the /projects shelf.",
+      "entry_points": [
+        "app/layout.tsx",
+        "next.config.ts"
+      ],
+      "file_paths": [
+        "app/layout.tsx",
+        "next.config.ts",
+        "postcss.config.mjs",
+        "next-env.d.ts",
+        "lib/firebase.ts",
+        "lib/useAuth.tsx",
+        "lib/studioDb.ts",
+        "lib/projects.ts",
+        "lib/useProjects.ts"
+      ],
+      "group": "Application Infrastructure",
+      "group_id": "6740aa5f-9fc3-41e2-b858-92808c5f84be",
+      "id": "de5bdd42-0e8f-4ced-a1bb-5ff4fef12f28",
+      "keywords": [
+        "firebase",
+        "google-auth",
+        "indexeddb",
+        "session-policy",
+        "projects-crud",
+        "app-router",
+        "layout",
+        "persistence",
+        "useAuth",
+        "useProjects"
+      ],
+      "last_written_at": "2026-08-12T08:44:15.690765+00:00",
+      "name": "app-infrastructure",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "TypeScript 5",
+        "Tailwind CSS 4",
+        "PostCSS"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Asset Library & AI Commissioning",
+      "category": "ui",
+      "cross_refs": [
+        "production-phases",
+        "studio-design-system"
+      ],
+      "db_tables": [],
+      "description": "Implements the production asset library: a browse/search/filter grid across all media kinds (image, audio, video, script) organized by collection with a persistent commission dock where users direct the AI agent to generate new assets. A slide-in drawer shows full asset metadata, caption status (written/pending/failed), and a clickable provenance chain tracing model, run ID, step, and parent assets. Mocked agent run data (runs.ts) powers the live-status commission dock and demonstrates the AgentRun → RunStep → Asset lineage contract intended for the future /v1 API.",
+      "entry_points": [
+        "app/_library/LibraryShelves.tsx",
+        "app/_studio/AssetDrawer.tsx",
+        "app/_studio/assets.ts"
+      ],
+      "file_paths": [
+        "app/_library/LibraryShelves.tsx",
+        "app/_studio/AssetDrawer.tsx",
+        "app/_studio/assetParts.tsx",
+        "app/_studio/assets.ts",
+        "app/_studio/assetsGenerated.ts",
+        "app/_studio/assetsSource.ts",
+        "app/_studio/types.ts",
+        "app/_studio/runs.ts"
+      ],
+      "group": "Asset Management",
+      "group_id": "8687615f-2846-4079-bec5-77472fd3bc6b",
+      "id": "4c4736ce-971c-4b7c-b68a-0cb8b892ed12",
+      "keywords": [
+        "asset",
+        "library",
+        "browse",
+        "search",
+        "filter",
+        "commission",
+        "provenance",
+        "caption",
+        "collection",
+        "drawer",
+        "agent",
+        "run",
+        "generation"
+      ],
+      "last_written_at": "2026-08-11T09:48:00.624950100+00:00",
+      "name": "asset-library",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "React 19.2",
+        "TypeScript 5",
+        "lucide-react 1.31"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Film Production Workflow",
+      "category": "ui",
+      "cross_refs": [
+        "asset-library",
+        "studio-design-system"
+      ],
+      "db_tables": [],
+      "description": "The five production-phase panels (Script, Frames, Motion, Score, Cut) rendered inside the Studio. ScriptStep presents the screenplay view against mock Glass Harbor data; FramesLightbox provides the lightbox frame-selection UI; MotionShotLab shows the VFX causal chain from frame to rendered clip; ScoreSpotting overlays music cues on picture; CutTimeline provides the multi-track timeline with drift-nudge controls. Shared fixture data (scenes.ts, score.ts, projectTypes.ts, projectParts.tsx) drives all five surfaces at identical proportional scales.",
+      "entry_points": [
+        "app/page.tsx",
+        "app/_phases/script/ScriptManuscript.tsx",
+        "app/_studio/scenes.ts"
+      ],
+      "file_paths": [
+        "app/_phases/script/ScriptStep.tsx",
+        "app/_phases/cut/CutTimeline.tsx",
+        "app/_phases/frames/FramesLightbox.tsx",
+        "app/_phases/motion/MotionShotLab.tsx",
+        "app/_phases/score/ScoreSpotting.tsx",
+        "app/_studio/projectParts.tsx",
+        "app/_studio/projectTypes.ts",
+        "app/_studio/scenes.ts",
+        "app/_studio/score.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "4322a53f-e895-4eef-b2e2-d599beb9e88b",
+      "keywords": [
+        "script",
+        "frames",
+        "motion",
+        "score",
+        "cut",
+        "timeline",
+        "lightbox",
+        "vfx",
+        "spotting",
+        "beat-chain"
+      ],
+      "last_written_at": "2026-08-12T08:44:15.690230900+00:00",
+      "name": "production-phases",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 16.3",
+        "React 19.2",
+        "TypeScript 5",
+        "Tailwind CSS 4",
+        "lucide-react 1.31"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Research Step",
+      "category": "ui",
+      "cross_refs": [
+        "production-phases",
+        "studio-navigation"
+      ],
+      "db_tables": [],
+      "description": "The Research step is the first production phase — a topic goes in, a structured notebook comes out. The shared module defines all notebook types (Fact, Mechanism, Reversal, ScriptRender, EngineFit) and the hooks that simulate a local Claude Code research run (useResearchRun) and the creator's scoping decisions (useScope). ResearchStep.tsx presents a run-trace, a triage board of notebook cards, and a follow-up queue, culminating in a scope-confirmation gate that freezes the material before the Script step begins.",
+      "entry_points": [
+        "app/_phases/research/ResearchStep.tsx",
+        "app/_phases/_shared/types.ts",
+        "app/_phases/_shared/notebook.ts"
+      ],
+      "file_paths": [
+        "app/_phases/_shared/types.ts",
+        "app/_phases/_shared/notebook.ts",
+        "app/_phases/_shared/research.ts",
+        "app/_phases/_shared/renders.ts",
+        "app/_phases/_shared/followup.ts",
+        "app/_phases/_shared/scope.ts",
+        "app/_phases/_shared/NotebookBody.tsx",
+        "app/_phases/_shared/parts.tsx",
+        "app/_phases/_shared/useResearchRun.ts",
+        "app/_phases/_shared/useScope.ts",
+        "app/_phases/research/ResearchStep.tsx",
+        "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/_phases/research/_research/FollowUpQueue.tsx",
+        "app/_phases/research/_research/parts.tsx"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "fab029ff-06dc-49e8-b694-c43d79e707f5",
+      "keywords": [
+        "research",
+        "notebook",
+        "scope",
+        "triage",
+        "followup",
+        "facts",
+        "mechanisms",
+        "reversals",
+        "engine-fit",
+        "run-trace"
+      ],
+      "last_written_at": "2026-08-12T08:44:15.667121800+00:00",
+      "name": "research-step",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "React 19",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Design System",
+      "category": "lib",
+      "cross_refs": [
+        "production-phases",
+        "asset-library",
+        "app-infrastructure"
+      ],
+      "db_tables": [],
+      "description": "The Gravitone 'Obsidian' dark-cinematic design system. tokens.ts is the single source for all color literals, easing curves, surface classes, and motion presets; GravitoneTokens emits every --gt-* CSS variable server-side to prevent FOUC; globals.css defines the Signal Layer contract for audio-reactive visuals. Primitives.tsx, Equalizer.tsx, and StudioFrame.tsx provide core atoms. Modal, Field, AuthGate, and UserMenu extend the library with interactive surface patterns used across the project management and research flows.",
+      "entry_points": [
+        "components/ui/tokens.ts",
+        "components/ui/Primitives.tsx",
+        "app/globals.css"
+      ],
+      "file_paths": [
+        "components/ui/tokens.ts",
+        "components/ui/Primitives.tsx",
+        "components/ui/Equalizer.tsx",
+        "components/ui/GravitoneTokens.tsx",
+        "components/ui/StudioFrame.tsx",
+        "components/ui/Modal.tsx",
+        "components/ui/Field.tsx",
+        "components/ui/AuthGate.tsx",
+        "components/ui/UserMenu.tsx",
+        "app/globals.css"
+      ],
+      "group": "Design System",
+      "group_id": "15dbffba-869c-4a06-8a0f-99debfb50f85",
+      "id": "5e10d5d4-71e2-4a69-8ffc-518cfa9cb987",
+      "keywords": [
+        "design-tokens",
+        "css-variables",
+        "signal-layer",
+        "audio-reactive",
+        "dark-theme",
+        "modal",
+        "auth-gate",
+        "field",
+        "primitives",
+        "obsidian"
+      ],
+      "last_written_at": "2026-08-12T08:44:15.690560800+00:00",
+      "name": "studio-design-system",
+      "pinned": false,
+      "tech_stack": [
+        "React 19.2",
+        "TypeScript 5",
+        "Tailwind CSS 4"
+      ]
+    },
+    {
+      "api_surface": "GET /projects, GET /studio?p=<id>",
+      "business_feature": "Project Management",
+      "category": "ui",
+      "cross_refs": [
+        "research-step",
+        "production-phases",
+        "asset-library"
+      ],
+      "db_tables": [],
+      "description": "The project management and studio routing layer. The landing page gates entry behind Google auth (GateContactSheet); /projects displays the production matrix shelf — a heat-grid of projects × six pipeline steps — after a prototype round that ran three variants (ledger, call sheet, matrix) and kept only the matrix; /studio opens a named project on its active step via a horizontal Stepper rail. Together these three routes form the entry-to-work flow: sign in → pick or create a project → navigate through the six-step production pipeline.",
+      "entry_points": [
+        "app/projects/ProjectsView.tsx",
+        "app/studio/StudioView.tsx",
+        "app/_landing/GateContactSheet.tsx"
+      ],
+      "file_paths": [
+        "app/page.tsx",
+        "app/_landing/GateContactSheet.tsx",
+        "app/_landing/parts.tsx",
+        "app/projects/page.tsx",
+        "app/projects/ProjectsView.tsx",
+        "app/_projects/ProjectDialog.tsx",
+        "app/_projects/ProjectsMatrix.tsx",
+        "app/_projects/parts.tsx",
+        "app/_studio/projectSeed.ts",
+        "app/studio/page.tsx",
+        "app/studio/StudioView.tsx",
+        "app/studio/Stepper.tsx",
+        "app/studio/phases.tsx"
+      ],
+      "group": "Studio Hub",
+      "group_id": "3d91fe00-fa81-4526-a642-4f24470db9e1",
+      "id": "115ef1be-a232-4f4b-8952-e878df48ff53",
+      "keywords": [
+        "projects",
+        "ledger",
+        "call-sheet",
+        "matrix",
+        "studio",
+        "stepper",
+        "landing",
+        "auth-gate",
+        "project-crud",
+        "phase-navigation"
+      ],
+      "last_written_at": "2026-08-12T10:07:08.555707100+00:00",
+      "name": "studio-navigation",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "React 19",
+        "TypeScript"
+      ]
+    }
+  ],
+  "generated_at": "2026-08-12T10:07:08.714866200+00:00",
+  "generator": "personas-context-scan",
+  "groups": [
+    {
+      "color": "amber",
+      "context_count": 0,
+      "domain": "feature",
+      "id": "bbbfd1a2-8667-4f76-aa74-9bcefe5339d0",
+      "name": "Production Lifecycle"
+    },
+    {
+      "color": "blue",
+      "context_count": 1,
+      "domain": "feature",
+      "id": "8687615f-2846-4079-bec5-77472fd3bc6b",
+      "name": "Asset Management"
+    },
+    {
+      "color": "violet",
+      "context_count": 1,
+      "domain": "shared",
+      "id": "15dbffba-869c-4a06-8a0f-99debfb50f85",
+      "name": "Design System"
+    },
+    {
+      "color": "indigo",
+      "context_count": 1,
+      "domain": "infrastructure",
+      "id": "6740aa5f-9fc3-41e2-b858-92808c5f84be",
+      "name": "Application Infrastructure"
+    },
+    {
+      "color": "emerald",
+      "context_count": 1,
+      "domain": "feature",
+      "id": "3d91fe00-fa81-4526-a642-4f24470db9e1",
+      "name": "Studio Hub"
+    }
+  ],
+  "project": {
+    "id": "91d8170c-2be4-45ac-b509-256bfa7726f1",
+    "name": "gravitone",
+    "root": "C:/Users/mkdol/dolla/gravitone-gcloud"
+  },
+  "provenance": {
+    "git_commit": null,
+    "git_commit_count": null
+  },
+  "stats": {
+    "contexts": 6,
+    "files": 63,
+    "groups": 5,
+    "use_cases": 0
+  },
+  "taxonomy": {
+    "context_categories": [
+      "ui",
+      "api",
+      "lib",
+      "data",
+      "test",
+      "config"
+    ],
+    "group_domains": [
+      "feature",
+      "infrastructure",
+      "shared",
+      "integration",
+      "data"
+    ]
+  },
+  "use_cases": [],
+  "version": 2
+}

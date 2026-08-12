@@ -1,0 +1,247 @@
+{
+  "generated_at": "2026-08-12T10:07:08.746993+00:00",
+  "library_path": "C:/Users/mkdol/.claude/skills",
+  "note": "Snapshot written by the Personas app; may be up to one scan old. Compare `version` fields (major.minor; null = unversioned, treat as 1.0) to judge staleness — not hashes. `library: null` means the skill is not in the workspace library. See docs/skill-standard.md for the reflection and sync contract that consumes this file.",
+  "project": {
+    "id": "91d8170c-2be4-45ac-b509-256bfa7726f1",
+    "name": "gravitone",
+    "root_path": "C:/Users/mkdol/dolla/gravitone-gcloud"
+  },
+  "skills": [
+    {
+      "invokes_30d": 0,
+      "library": null,
+      "name": "README",
+      "siblings": [],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": {
+        "version": null
+      },
+      "name": "explorer",
+      "siblings": [
+        {
+          "invokes_30d": 0,
+          "project": "Pumper",
+          "root_path": "C:/Users/mkdol/dolla/pumper",
+          "version": null
+        },
+        {
+          "invokes_30d": 0,
+          "project": "brainiac",
+          "root_path": "C:/Users/mkdol/dolla/brainiac",
+          "version": null
+        },
+        {
+          "invokes_30d": 0,
+          "project": "personas",
+          "root_path": "C:/Users/mkdol/dolla/personas",
+          "version": "1.0"
+        },
+        {
+          "invokes_30d": 0,
+          "project": "politicas",
+          "root_path": "C:/Users/mkdol/dolla/politicas",
+          "version": null
+        }
+      ],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": {
+        "version": null
+      },
+      "name": "leonardo",
+      "siblings": [
+        {
+          "invokes_30d": 0,
+          "project": "personas",
+          "root_path": "C:/Users/mkdol/dolla/personas",
+          "version": "1.0"
+        }
+      ],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": {
+        "version": null
+      },
+      "name": "motionize",
+      "siblings": [
+        {
+          "invokes_30d": 2,
+          "project": "personas",
+          "root_path": "C:/Users/mkdol/dolla/personas",
+          "version": "1.0"
+        }
+      ],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": null,
+      "name": "patterns",
+      "siblings": [],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": {
+        "version": null
+      },
+      "name": "perfect",
+      "siblings": [
+        {
+          "invokes_30d": 5,
+          "project": "Grant Writing Nonprofits",
+          "root_path": "C:/Users/mkdol/xprice/grant-writing-nonprofits",
+          "version": null
+        },
+        {
+          "invokes_30d": 2,
+          "project": "Pumper",
+          "root_path": "C:/Users/mkdol/dolla/pumper",
+          "version": null
+        },
+        {
+          "invokes_30d": 8,
+          "project": "brainiac",
+          "root_path": "C:/Users/mkdol/dolla/brainiac",
+          "version": null
+        },
+        {
+          "invokes_30d": 0,
+          "project": "personas",
+          "root_path": "C:/Users/mkdol/dolla/personas",
+          "version": "1.0"
+        }
+      ],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": {
+        "version": null
+      },
+      "name": "prototype",
+      "siblings": [
+        {
+          "invokes_30d": 0,
+          "project": "Grant Writing Nonprofits",
+          "root_path": "C:/Users/mkdol/xprice/grant-writing-nonprofits",
+          "version": null
+        },
+        {
+          "invokes_30d": 2,
+          "project": "brainiac",
+          "root_path": "C:/Users/mkdol/dolla/brainiac",
+          "version": null
+        },
+        {
+          "invokes_30d": 5,
+          "project": "personas",
+          "root_path": "C:/Users/mkdol/dolla/personas",
+          "version": null
+        },
+        {
+          "invokes_30d": 0,
+          "project": "politicas",
+          "root_path": "C:/Users/mkdol/dolla/politicas",
+          "version": null
+        }
+      ],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": {
+        "version": null
+      },
+      "name": "research",
+      "siblings": [
+        {
+          "invokes_30d": 0,
+          "project": "Pumper",
+          "root_path": "C:/Users/mkdol/dolla/pumper",
+          "version": null
+        },
+        {
+          "invokes_30d": 2,
+          "project": "personas",
+          "root_path": "C:/Users/mkdol/dolla/personas",
+          "version": "1.0"
+        }
+      ],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": {
+        "version": null
+      },
+      "name": "ship-loop",
+      "siblings": [
+        {
+          "invokes_30d": 0,
+          "project": "Pumper",
+          "root_path": "C:/Users/mkdol/dolla/pumper",
+          "version": null
+        },
+        {
+          "invokes_30d": 0,
+          "project": "personas",
+          "root_path": "C:/Users/mkdol/dolla/personas",
+          "version": "1.0"
+        }
+      ],
+      "sync_state": "local_only",
+      "version": null
+    },
+    {
+      "invokes_30d": 0,
+      "library": {
+        "version": null
+      },
+      "name": "uat",
+      "siblings": [
+        {
+          "invokes_30d": 0,
+          "project": "Grant Writing Nonprofits",
+          "root_path": "C:/Users/mkdol/xprice/grant-writing-nonprofits",
+          "version": null
+        },
+        {
+          "invokes_30d": 1,
+          "project": "brainiac",
+          "root_path": "C:/Users/mkdol/dolla/brainiac",
+          "version": null
+        },
+        {
+          "invokes_30d": 0,
+          "project": "personas",
+          "root_path": "C:/Users/mkdol/dolla/personas",
+          "version": "1.1"
+        }
+      ],
+      "sync_state": "local_only",
+      "version": null
+    }
+  ],
+  "version": 1,
+  "workspace": {
+    "id": "9c6a73a4-e3cf-4635-8bdd-31b0b29b0bde",
+    "name": "Personas Core"
+  }
+}

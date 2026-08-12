@@ -1,0 +1,31 @@
+[00:00] if you want to get a job as a programmer
+[00:01] you need to know Big O imagine you have
+[00:03] a shuffled deck of cards if you want to
+[00:05] pop one card off the stack that's
+[00:07] extremely fast or o of one constant time
+[00:10] but if you then want to count the cards
+[00:11] you'll need to Loop over the entire deck
+[00:13] resulting in O of n or linear time but
+[00:16] now let's imagine we need to sort the
+[00:18] deck in perfect order that's going to
+[00:19] require a strategy or algorithm like
+[00:21] bubble sort where we Loop over the deck
+[00:23] repeatedly and swap out adjacent cards
+[00:25] until the entire thing is perfectly
+[00:27] sorted worst case we Loop over it 52
+[00:29] times giving us o of n^ s or quadratic
+[00:32] time alternatively if you're stupid you
+[00:34] could throw the cards up in the air and
+[00:35] hope that they land perfectly sorted on
+[00:37] the ground that's called BOGO sort and
+[00:39] gives you o of n factorial the worst
+[00:41] possible time complexity but now we want
+[00:43] to find the eight of hearts in the
+[00:44] sorted deck instead of looping through
+[00:46] every card you could do a binary search
+[00:48] by splitting the deck in the middle if
+[00:49] the shown card is greater than nine go
+[00:51] left otherwise go right continue that
+[00:53] process to cut your work in half after
+[00:55] every step thus giving you o of log n or
+[00:57] logarithmic time

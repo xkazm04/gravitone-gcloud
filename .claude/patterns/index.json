@@ -1,0 +1,1710 @@
+{
+  "patterns": [
+    {
+      "id": "35802c28-6fbe-4e39-a800-6bcb856eb968",
+      "state_here": "proposed",
+      "title": "Route each cross-cutting concern through exactly one governed door",
+      "topic": "architecture/chokepoints/doors"
+    },
+    {
+      "id": "d13a15c4-cc5f-461e-b40b-414163f57a0a",
+      "state_here": "proposed",
+      "title": "Make adding a variant one declarative edit against a registry",
+      "topic": "architecture/extensibility/registries"
+    },
+    {
+      "id": "b727a840-3550-4015-b98a-bc7b3d45d16a",
+      "state_here": "proposed",
+      "title": "Derive route-keyed maps from the nav registry, not alongside it",
+      "topic": "architecture/extensibility/registries"
+    },
+    {
+      "id": "8d476a6f-ae43-4c5b-b0e5-02940ce9d0e6",
+      "state_here": "proposed",
+      "title": "Derive the value instead of storing a copy that can drift",
+      "topic": "data/modeling/derived-values"
+    },
+    {
+      "id": "48f7fd89-5f49-49ca-9f27-71a8d6f27af0",
+      "state_here": "proposed",
+      "title": "Depend on a module's boundary, never on its internals",
+      "topic": "architecture/boundaries/modules"
+    },
+    {
+      "id": "6a96f2fe-bdd8-4bb1-b487-682ad4400459",
+      "state_here": "proposed",
+      "title": "Stop peer features importing another feature's internal modals",
+      "topic": "architecture/boundaries/modules"
+    },
+    {
+      "id": "0f03cab9-f937-49ac-9be6-4673e95762c5",
+      "state_here": "proposed",
+      "title": "Keep every SQL statement behind a repository module",
+      "topic": "data/persistence-layer/repositories"
+    },
+    {
+      "id": "c41a332a-f950-425b-933c-a0d6ba48a302",
+      "state_here": "proposed",
+      "title": "Give the shared lib root a curated barrel instead of a flat drawer",
+      "topic": "architecture/boundaries/modules"
+    },
+    {
+      "id": "c800cfad-36d1-4210-ab1c-a2fa832cf38c",
+      "state_here": "proposed",
+      "title": "Give plugin panels one page contract the shell can host uniformly",
+      "topic": "architecture/extensibility/plugins"
+    },
+    {
+      "id": "44ea4a2d-23b5-487c-8a52-88a5f8bba51a",
+      "state_here": "proposed",
+      "title": "Write a cross-cutting contract down only if a test enforces it",
+      "topic": "architecture/contracts/artifacts"
+    },
+    {
+      "id": "d87b94b2-465e-46d6-97ae-7de4d1d36233",
+      "state_here": "proposed",
+      "title": "Fix the template checksum gate's key contract before re-enabling it",
+      "topic": "architecture/contracts/artifacts"
+    },
+    {
+      "id": "5044807a-bb79-40d6-9ca2-8ad97e43c1cb",
+      "state_here": "proposed",
+      "title": "Generate the module ownership table instead of hand-maintaining it",
+      "topic": "architecture/contracts/artifacts"
+    },
+    {
+      "id": "ea89a558-3e76-480c-a7b8-9100c3ccc847",
+      "state_here": "proposed",
+      "title": "Make the prompt/gate keyword pairing compiler-enforced",
+      "topic": "architecture/contracts/artifacts"
+    },
+    {
+      "id": "83a45d59-bd3c-47d8-ac1e-b61a017ddb5f",
+      "state_here": "proposed",
+      "title": "Stage long-running pipelines and bound every step",
+      "topic": "concurrency/pipelines/stages"
+    },
+    {
+      "id": "215a6675-8f55-4b0f-a77a-4a2511e1ddd0",
+      "state_here": "proposed",
+      "title": "Give every list query a default bound, no exceptions",
+      "topic": "data/reads/pagination"
+    },
+    {
+      "id": "4854f4b2-62e8-4eba-bd3c-b640c32b9e82",
+      "state_here": "proposed",
+      "title": "Keep secret handling in one trusted process, gated explicitly",
+      "topic": "security/trust-boundaries/guards"
+    },
+    {
+      "id": "a5055031-dfcc-4406-b93e-9943891c780f",
+      "state_here": "proposed",
+      "title": "Funnel every model call through one provider-agnostic function",
+      "topic": "llm/call-seam/chokepoints"
+    },
+    {
+      "id": "ab58abda-ebcb-497b-a5a9-e93faeeb02ba",
+      "state_here": "proposed",
+      "title": "Verify model output against a server-built fact digest",
+      "topic": "llm/outputs/grounding"
+    },
+    {
+      "id": "06fc976f-501c-4cdc-8538-fd4843c3827a",
+      "state_here": "proposed",
+      "title": "Wrap every metered route in one envelope owning the four concerns",
+      "topic": "billing/metering/route-guards"
+    },
+    {
+      "id": "60042081-2cb6-48d1-89a8-fea3fa45840c",
+      "state_here": "proposed",
+      "title": "Store money as integer minor units and convert at one seam",
+      "topic": "data/modeling/payloads"
+    },
+    {
+      "id": "d4ef65c1-c2d5-4adf-af0f-76d9109f5c7f",
+      "state_here": "proposed",
+      "title": "Decide access in a pure function; keep persistence separate",
+      "topic": "auth/authorization/policies"
+    },
+    {
+      "id": "caf602ed-ed10-4b2f-94f7-3f1cbb8a45da",
+      "state_here": "proposed",
+      "title": "Restrict cross-feature imports to public barrels, checked by a test",
+      "topic": "architecture/boundaries/barrels"
+    },
+    {
+      "id": "71479c37-e762-4f55-bfa9-86d71c1c3bd0",
+      "state_here": "proposed",
+      "title": "Debit before the model call, refund on every failure path",
+      "topic": "billing/ledger/charge-reclaim"
+    },
+    {
+      "id": "c5989cae-1b01-40e6-a37d-364530762e88",
+      "state_here": "proposed",
+      "title": "Tell 'not configured' apart from a real outage before logging",
+      "topic": "errors/classification/transient-failures"
+    },
+    {
+      "id": "7a20db73-4a36-4840-a3bb-682a6aaf593d",
+      "state_here": "proposed",
+      "title": "Commit to one SQL dialect so drivers never fork the query strings",
+      "topic": "data/persistence-layer/drivers"
+    },
+    {
+      "id": "ddce0f66-02e4-4b0d-a9aa-b8ee623aa429",
+      "state_here": "proposed",
+      "title": "Keep business logic pure and inject the provider seam",
+      "topic": "testing/testability/pure-functions"
+    },
+    {
+      "id": "64e7b1c9-f488-4f76-8e90-ab64e1480bf0",
+      "state_here": "proposed",
+      "title": "Deep-import the pure modules; keep the barrel off client paths",
+      "topic": "security/trust-boundaries/guards"
+    },
+    {
+      "id": "d8a705d4-a9f5-4cf5-a53f-179a84d77da9",
+      "state_here": "proposed",
+      "title": "Ban provider SDK imports outside the call seam with a lint rule",
+      "topic": "llm/call-seam/chokepoints"
+    },
+    {
+      "id": "579f906e-2dbd-4438-9b37-3791db985b29",
+      "state_here": "proposed",
+      "title": "Keep providers dumb; put cross-cutting AI concerns in the dispatcher",
+      "topic": "llm/call-seam/chokepoints"
+    },
+    {
+      "id": "c7409ee9-ae16-4b7a-ae73-1d65bd2d3a4f",
+      "state_here": "proposed",
+      "title": "Return a result at every domain boundary; throw only for bugs",
+      "topic": "errors/result-contracts/results"
+    },
+    {
+      "id": "1cf19d74-e83a-4819-a982-87fc0ee8ad0b",
+      "state_here": "proposed",
+      "title": "Flatten results into a reason union before crossing the network",
+      "topic": "errors/result-contracts/envelopes"
+    },
+    {
+      "id": "096a5947-a2fa-443d-803a-d5c720700981",
+      "state_here": "proposed",
+      "title": "Own durable state on the server; keep client state ephemeral",
+      "topic": "frontend/state/stores"
+    },
+    {
+      "id": "986971a9-18f1-4628-bf9b-34cd282be69e",
+      "state_here": "proposed",
+      "title": "Register every feature's storage through one shared store factory",
+      "topic": "data/persistence-layer/stores"
+    },
+    {
+      "id": "b2ad6dc6-2f75-4122-a6af-60af549e5430",
+      "state_here": "proposed",
+      "title": "Enforce load-bearing invariants with branded types, not runtime checks",
+      "topic": "architecture/contracts/types"
+    },
+    {
+      "id": "ecc97bfc-4d9a-4f0e-be3c-967dfb15a168",
+      "state_here": "proposed",
+      "title": "Gate an integration by config, and fail closed on network errors",
+      "topic": "integration/resilience/fallbacks"
+    },
+    {
+      "id": "7b936ad2-cd1a-41d6-96b2-a206bfffa30b",
+      "state_here": "proposed",
+      "title": "Choose the entry-point form by caller identity, not convenience",
+      "topic": "api/request-pipeline/routes"
+    },
+    {
+      "id": "8acb387d-d6c4-4723-a189-ac63f9849ae9",
+      "state_here": "proposed",
+      "title": "Log through one closed event union, never a bare console call",
+      "topic": "observability/logging/events"
+    },
+    {
+      "id": "fc397b85-cb0f-4aaa-bf58-b19800ca95a7",
+      "state_here": "proposed",
+      "title": "Pass cross-feature enrichment as an optional parameter",
+      "topic": "architecture/boundaries/modules"
+    },
+    {
+      "id": "6535b618-08ba-49fa-8ce1-040740addc9a",
+      "state_here": "proposed",
+      "title": "Consolidate every connection into one pool with one tuning point",
+      "topic": "data/persistence-layer/pools"
+    },
+    {
+      "id": "39c9cc25-1df2-4959-8afb-3f1456fff150",
+      "state_here": "proposed",
+      "title": "Cap the request body before the charge, not after it",
+      "topic": "billing/metering/route-guards"
+    },
+    {
+      "id": "0e075a36-28c7-4924-a587-ace26fd2d274",
+      "state_here": "proposed",
+      "title": "Let transient provider failures escape the degradation path",
+      "topic": "errors/classification/transient-failures"
+    },
+    {
+      "id": "082bdec8-5d46-481a-88ee-3d8bb96c71c1",
+      "state_here": "proposed",
+      "title": "Refuse silent cross-provider fallback on a money-critical path",
+      "topic": "llm/call-seam/fallbacks"
+    },
+    {
+      "id": "2f2fe3b5-e58f-4658-8cb9-43d8319f8ddb",
+      "state_here": "proposed",
+      "title": "Fail open in dev and closed in production behind one predicate",
+      "topic": "auth/authorization/policies"
+    },
+    {
+      "id": "03075b3a-7744-4872-93e0-7a04c380d33c",
+      "state_here": "proposed",
+      "title": "Refetch after each mutation instead of keeping a client cache",
+      "topic": "frontend/state/stores"
+    },
+    {
+      "id": "6cc94ace-194e-43ac-bc6c-30589c6d5a9e",
+      "state_here": "proposed",
+      "title": "Close the outbound seam — the inbound one-door leaves it half done",
+      "topic": "api/client-seam/clients"
+    },
+    {
+      "id": "0cd2eda6-faf6-4372-8782-25d978c15537",
+      "state_here": "proposed",
+      "title": "Pick one validation idiom and make the wrapper demand it",
+      "topic": "api/request-pipeline/validation"
+    },
+    {
+      "id": "590c881b-9011-414e-9d14-be92145d0d2e",
+      "state_here": "proposed",
+      "title": "Make the client/server storage split a stated rule, not a precedent",
+      "topic": "data/persistence-layer/stores"
+    },
+    {
+      "id": "0ed77e4f-eb62-41ec-a186-c0e5bd0f4217",
+      "state_here": "proposed",
+      "title": "Migrate stored settings forward, then deep-merge over defaults",
+      "topic": "data/schema-evolution/migrations"
+    },
+    {
+      "id": "1053596b-f621-45a6-b110-c7acdbd12944",
+      "state_here": "proposed",
+      "title": "Return a typed store error for writes, and preflight the quota",
+      "topic": "errors/result-contracts/results"
+    },
+    {
+      "id": "e963f57a-f3cc-4a60-a2e0-808d83ef4f50",
+      "state_here": "proposed",
+      "title": "Track applied migrations in a table and make the run idempotent",
+      "topic": "data/schema-evolution/migrations"
+    },
+    {
+      "id": "060d4055-781e-422a-b114-b27cc2609274",
+      "state_here": "proposed",
+      "title": "Give every API route the same error envelope and status map",
+      "topic": "errors/result-contracts/envelopes"
+    },
+    {
+      "id": "1e430be8-48eb-41a5-aec2-18b84962d378",
+      "state_here": "proposed",
+      "title": "Fold schema issues into a path-keyed error map before the UI",
+      "topic": "frontend/forms/validation"
+    },
+    {
+      "id": "219c7f5e-abd1-49cc-b4d9-e27a3ccd5819",
+      "state_here": "proposed",
+      "title": "Derive every primitive's classes from one shared token hook",
+      "topic": "frontend/components/primitives"
+    },
+    {
+      "id": "51900b9b-f129-4b34-a8dd-1369ba907083",
+      "state_here": "proposed",
+      "title": "Separate a stale-deploy chunk failure from a render error",
+      "topic": "errors/surfacing/boundaries"
+    },
+    {
+      "id": "edcab8c2-38ff-4397-a51f-38338acc98ce",
+      "state_here": "proposed",
+      "title": "Don't collapse integration failures into null or an empty list",
+      "topic": "errors/result-contracts/sentinels"
+    },
+    {
+      "id": "648a94ce-ad10-46a5-a582-9718e9c1667a",
+      "state_here": "proposed",
+      "title": "Split crates along data-flow stages, one job per crate",
+      "topic": "architecture/boundaries/layers"
+    },
+    {
+      "id": "4a6dc28f-d5db-4b5a-8ccd-3faf80644eab",
+      "state_here": "proposed",
+      "title": "Make the database enforce tenancy by demoting the app's role",
+      "topic": "auth/tenancy/row-level-security"
+    },
+    {
+      "id": "e0263d5b-d2e3-486c-a97b-434518f6f217",
+      "state_here": "proposed",
+      "title": "Bind a provider per pipeline stage behind one chat trait",
+      "topic": "llm/call-seam/providers"
+    },
+    {
+      "id": "15cb9e28-daad-4629-9f9f-a47b143ce19f",
+      "state_here": "proposed",
+      "title": "Generate the API contract from the live handlers",
+      "topic": "integration/protocol-contracts/schemas"
+    },
+    {
+      "id": "9a62682b-5445-498e-bbe4-a216325487df",
+      "state_here": "proposed",
+      "title": "Split bootstrap tokens from scoped managed tokens",
+      "topic": "auth/tokens/api-keys"
+    },
+    {
+      "id": "06d3ac67-37dd-47db-9e4f-6d75b0528076",
+      "state_here": "proposed",
+      "title": "Keep the mintable scope vocabulary and enforcement in one place",
+      "topic": "auth/tokens/api-keys"
+    },
+    {
+      "id": "9db3b473-c843-48ea-9a81-b111f68de0a4",
+      "state_here": "proposed",
+      "title": "Claim a batch with SKIP LOCKED and give each job its own transaction",
+      "topic": "concurrency/queues/claiming"
+    },
+    {
+      "id": "1f000b03-d2bb-483c-b16f-29c754f1de3c",
+      "state_here": "proposed",
+      "title": "Gate evals on curated fixtures: hard zero-tolerance, soft baselines",
+      "topic": "testing/harnesses/fixtures"
+    },
+    {
+      "id": "a840534d-72d2-404d-afa8-cedc55b3e5ee",
+      "state_here": "proposed",
+      "title": "Fuse heterogeneous retrievers by rank, not by normalized score",
+      "topic": "llm/retrieval/ranking"
+    },
+    {
+      "id": "0343b6df-6cdc-422d-ab17-c0cc138622a1",
+      "state_here": "proposed",
+      "title": "Type error variants only where a caller matches on them",
+      "topic": "errors/classification/taxonomies"
+    },
+    {
+      "id": "1a1de099-335e-4049-94ad-959539daa6cb",
+      "state_here": "proposed",
+      "title": "Name every table that sits outside your RLS boundary",
+      "topic": "auth/tenancy/row-level-security"
+    },
+    {
+      "id": "23511964-aba4-4c91-a94b-073d09dfcef0",
+      "state_here": "proposed",
+      "title": "Resume long jobs from a persisted cursor, never restart them",
+      "topic": "concurrency/pipelines/checkpoints"
+    },
+    {
+      "id": "146a79dc-45fa-4329-a8af-0ffab0816d24",
+      "state_here": "proposed",
+      "title": "Make throttling a typed error, never an empty result",
+      "topic": "errors/classification/taxonomies"
+    },
+    {
+      "id": "ed362ef3-8f51-4b6a-81f5-78fc6b35a08c",
+      "state_here": "proposed",
+      "title": "Leave unknown values unknown and report the gap to the user",
+      "topic": "data/modeling/derived-values"
+    },
+    {
+      "id": "2e500c66-2658-4a78-8328-2a0c91161cff",
+      "state_here": "proposed",
+      "title": "Beat a provider's per-call cap by chunking and accumulating locally",
+      "topic": "concurrency/pipelines/chunking"
+    },
+    {
+      "id": "6c883398-bba7-4409-acbd-fd1be3559a49",
+      "state_here": "proposed",
+      "title": "Share one small client-only value with a module-level pub/sub",
+      "topic": "frontend/state/stores"
+    },
+    {
+      "id": "1a47cb60-dfc0-4d1f-8c2c-3d9e9235a445",
+      "state_here": "proposed",
+      "title": "Re-run one load callback on mount and after every mutation",
+      "topic": "frontend/data-fetching/refresh"
+    },
+    {
+      "id": "e1a6f251-8542-4a2b-8fe1-18a36ef88539",
+      "state_here": "proposed",
+      "title": "Compose the store interface from narrow per-domain repositories",
+      "topic": "data/persistence-layer/stores"
+    },
+    {
+      "id": "66442b59-1309-4d1e-8611-9165b3e3e0f5",
+      "state_here": "proposed",
+      "title": "Let each feature own its types, storage, validation and components",
+      "topic": "architecture/boundaries/modules"
+    },
+    {
+      "id": "9e5539a5-be04-42fc-9024-d04e15906b44",
+      "state_here": "proposed",
+      "title": "Route client-facing failures through one sanitizing chokepoint",
+      "topic": "errors/surfacing/messages"
+    },
+    {
+      "id": "397f4254-d0fc-4edd-a912-040a02637fa0",
+      "state_here": "proposed",
+      "title": "Standardize one parse-result shape across every form validator",
+      "topic": "errors/result-contracts/parsers"
+    },
+    {
+      "id": "377afd0f-ee2c-4888-8618-268c6185d0f6",
+      "state_here": "proposed",
+      "title": "Arm auto-reclaim on the abort signal, and disarm it on settle",
+      "topic": "billing/ledger/durability"
+    },
+    {
+      "id": "37b19955-e39d-450c-90c0-905c2c5bfe74",
+      "state_here": "proposed",
+      "title": "Resolve the tenant once at the request boundary and thread it down",
+      "topic": "auth/tenancy/scope-resolution"
+    },
+    {
+      "id": "445e8cbf-552b-4245-84b7-2dca52674011",
+      "state_here": "proposed",
+      "title": "Merge partial updates in the database, never read-modify-write",
+      "topic": "data/writes/merges"
+    },
+    {
+      "id": "99399074-39d2-4b26-ad4a-b9da25ca0bba",
+      "state_here": "proposed",
+      "title": "Implement rate limiting once and configure it per endpoint",
+      "topic": "concurrency/throttling/rate-limits"
+    },
+    {
+      "id": "441a83a8-9793-41e1-8a91-f81eca14f117",
+      "state_here": "proposed",
+      "title": "Strip forged delimiters from untrusted text in one shared helper",
+      "topic": "llm/prompts/injection"
+    },
+    {
+      "id": "c043aafc-45fb-4e16-b6a4-96dbd973a7b0",
+      "state_here": "proposed",
+      "title": "Keep provider selection pure and gate per-request overrides",
+      "topic": "llm/call-seam/providers"
+    },
+    {
+      "id": "1565088c-8a0f-43eb-bf7a-de73abd1d90d",
+      "state_here": "proposed",
+      "title": "Run one storage suite against every driver, real or faked",
+      "topic": "testing/parity/drivers"
+    },
+    {
+      "id": "ce052b2d-d1fd-4f65-bfa6-c47eeaf97d2f",
+      "state_here": "proposed",
+      "title": "Use the point lookup you already have, and read shared docs once",
+      "topic": "performance/data-access/queries"
+    },
+    {
+      "id": "ba633fc3-93c6-4dd0-adff-526adbcd8b9a",
+      "state_here": "proposed",
+      "title": "Select the persistence driver lazily behind one cached accessor",
+      "topic": "data/persistence-layer/stores"
+    },
+    {
+      "id": "452ea327-dd1a-4fae-abf5-9fd1501122b0",
+      "state_here": "proposed",
+      "title": "Resolve null, access and shaping once at the data-adapter seam",
+      "topic": "errors/result-contracts/results"
+    },
+    {
+      "id": "874ff9f3-90b3-41fa-a790-f2ad3d212fac",
+      "state_here": "proposed",
+      "title": "Make a metered AI route a spec object, not hand-rolled pipeline code",
+      "topic": "llm/agent-loops/pipelines"
+    },
+    {
+      "id": "bd20eaba-dd89-49e9-ab0c-a98b6a1452c9",
+      "state_here": "proposed",
+      "title": "Fold the idempotency key into the ledger ref to stop double-billing",
+      "topic": "billing/ledger/charge-reclaim"
+    },
+    {
+      "id": "60c5d56a-606a-41fb-9764-43de5ae065e6",
+      "state_here": "proposed",
+      "title": "Apply guardrails and telemetry as decorators built once at the seam",
+      "topic": "llm/call-seam/chokepoints"
+    },
+    {
+      "id": "2b50d693-633b-4536-8353-4783c95cd5fc",
+      "state_here": "proposed",
+      "title": "Guard server-only modules at runtime and inject their deps lazily",
+      "topic": "testing/testability/injection"
+    },
+    {
+      "id": "745f16a8-b543-4a88-b9a5-0ee0c691195d",
+      "state_here": "proposed",
+      "title": "Isolate every event subscriber with its own timeout and error boundary",
+      "topic": "architecture/events/buses"
+    },
+    {
+      "id": "7f3c9b5a-4480-4cc1-ab57-245c958ddeab",
+      "state_here": "proposed",
+      "title": "Express route authorization as one composable fail-closed policy",
+      "topic": "auth/authorization/policies"
+    },
+    {
+      "id": "7a71fd68-1dbc-4435-aa91-8b2dae3d1f7d",
+      "state_here": "proposed",
+      "title": "Soft-delete evidence rows and append rather than edit consent",
+      "topic": "data/modeling/tables"
+    },
+    {
+      "id": "89a70634-b5fa-4798-b0a2-2f09df57eb79",
+      "state_here": "proposed",
+      "title": "Layer the test surface by what only that layer can catch",
+      "topic": "testing/strategy/scope"
+    },
+    {
+      "id": "234389f3-3f5a-40b8-b997-cf2731fc9580",
+      "state_here": "proposed",
+      "title": "Apply status changes conditionally on the status you expect",
+      "topic": "data/writes/state-transitions"
+    },
+    {
+      "id": "96f4120e-76f4-4ef5-a13d-5ce4009ee5b7",
+      "state_here": "proposed",
+      "title": "Enforce the persistence boundary in the linter, then test the rule",
+      "topic": "data/persistence-layer/stores"
+    },
+    {
+      "id": "a43c4579-dd7f-40b5-9e45-4be039a2550f",
+      "state_here": "proposed",
+      "title": "Write the pending-charge marker in the debit's own transaction",
+      "topic": "billing/ledger/durability"
+    },
+    {
+      "id": "43bb6ed6-38a7-46a6-a1dc-9697fba0e946",
+      "state_here": "proposed",
+      "title": "Separate the fallback ordering policy from provider execution",
+      "topic": "llm/call-seam/fallbacks"
+    },
+    {
+      "id": "eaced591-e08c-497c-93df-ab8708020d57",
+      "state_here": "proposed",
+      "title": "Claim shared work first-writer-wins, and release on failure",
+      "topic": "concurrency/idempotency/claims"
+    },
+    {
+      "id": "0c4df903-a51e-4c88-934a-097464b04998",
+      "state_here": "proposed",
+      "title": "Funnel every client fetch into one typed error with a timeout",
+      "topic": "errors/result-contracts/envelopes"
+    },
+    {
+      "id": "5995175c-15c4-4761-a94a-3a14d250c470",
+      "state_here": "proposed",
+      "title": "Write output quality gates as pure functions shared by CI and replay",
+      "topic": "llm/evaluation/gates"
+    },
+    {
+      "id": "dbf15747-c587-4c4c-ab15-d1867cd7f2b5",
+      "state_here": "proposed",
+      "title": "Count forwarded-for hops from the right, and admit the limits",
+      "topic": "security/trust-boundaries/client-claims"
+    },
+    {
+      "id": "e143383f-30b9-49ab-9ba0-7458947de057",
+      "state_here": "proposed",
+      "title": "Extract framework-free predicates out of middleware plumbing",
+      "topic": "testing/testability/pure-functions"
+    },
+    {
+      "id": "5c4a78bc-cd78-4147-91ad-bdf102194e77",
+      "state_here": "proposed",
+      "title": "Retry only transient failures through one shared backoff wrapper",
+      "topic": "concurrency/idempotency/retries"
+    },
+    {
+      "id": "a0b72155-6c8b-4ce4-a566-a5fa851d699d",
+      "state_here": "proposed",
+      "title": "State whether a spend cap counts gross or net, on the money path",
+      "topic": "billing/limits/budgets"
+    },
+    {
+      "id": "7682f95c-6bc1-41d3-a885-d58984fe8369",
+      "state_here": "proposed",
+      "title": "Say so at the interface when two backends model a concept differently",
+      "topic": "data/modeling/tables"
+    },
+    {
+      "id": "7e9bc7a1-248a-4745-a2e7-447dbbcf862c",
+      "state_here": "proposed",
+      "title": "Load providers lazily and order the seam decorators deliberately",
+      "topic": "llm/call-seam/chokepoints"
+    },
+    {
+      "id": "b7e467fe-6407-402e-b815-8448c63e9a2d",
+      "state_here": "proposed",
+      "title": "Never cache a 'no driver configured' result — let late config heal",
+      "topic": "data/persistence-layer/stores"
+    },
+    {
+      "id": "8419dbc4-75c1-48b8-93b2-66e8fafc1326",
+      "state_here": "proposed",
+      "title": "Declare billable operations once in a typed registry",
+      "topic": "billing/metering/operations"
+    },
+    {
+      "id": "036d830b-8729-4fa5-8b57-146319f763c0",
+      "state_here": "proposed",
+      "title": "Fail closed when production cannot meter or identify the caller",
+      "topic": "billing/metering/route-guards"
+    },
+    {
+      "id": "5cab69cd-6987-4665-a855-d46d4f796788",
+      "state_here": "proposed",
+      "title": "Hydrate from local storage first, then reconcile with the server",
+      "topic": "frontend/state/persistence"
+    },
+    {
+      "id": "16e01fd7-d327-4ccf-aaf2-cb6bad0feb0b",
+      "state_here": "proposed",
+      "title": "Put money and lifecycle invariants in the store contract",
+      "topic": "concurrency/idempotency/invariants"
+    },
+    {
+      "id": "5d22ca91-f53a-414c-b309-a435da8a4041",
+      "state_here": "proposed",
+      "title": "Log auth failures loudly only when they signal misconfiguration",
+      "topic": "errors/classification/transient-failures"
+    },
+    {
+      "id": "fa48f6c7-2567-491c-a387-46378fb82f08",
+      "state_here": "proposed",
+      "title": "End every decision record with what this increment must not touch",
+      "topic": "process/decisions/adrs"
+    },
+    {
+      "id": "8d430c6f-6627-4f60-90cd-e78fca8f7eca",
+      "state_here": "proposed",
+      "title": "Measure coverage on logic layers and ratchet the floor",
+      "topic": "testing/strategy/coverage"
+    },
+    {
+      "id": "1f70e40c-497c-409e-9ea9-f72139a544d6",
+      "state_here": "proposed",
+      "title": "Treat an auth-provider flip as a session drain, not a config toggle",
+      "topic": "auth/sessions/providers"
+    },
+    {
+      "id": "f39ac6c3-edbf-4895-968f-aea0df3d6181",
+      "state_here": "proposed",
+      "title": "Assign the store promise before the first await, not after it",
+      "topic": "data/persistence-layer/stores"
+    },
+    {
+      "id": "f33b6250-35da-4d8a-963c-91462c72e98d",
+      "state_here": "proposed",
+      "title": "Load feature data in a loader that degrades, never throws",
+      "topic": "errors/degradation/fallbacks"
+    },
+    {
+      "id": "bf358702-79f0-4cb2-8b0f-afcd2c8faf06",
+      "state_here": "proposed",
+      "title": "A lint on catch-block shape does not enforce its own intent",
+      "topic": "errors/degradation/fallbacks"
+    },
+    {
+      "id": "56945079-74d3-4a9d-89c9-a3ced2054521",
+      "state_here": "proposed",
+      "title": "Keep the shared catalog domain-free, and let a lint rule enforce it",
+      "topic": "frontend/components/primitives"
+    },
+    {
+      "id": "1fcf8957-6f1c-46b2-92e8-0cdd4e382a97",
+      "state_here": "proposed",
+      "title": "Size the auth model to the operator count, and say when it's unset",
+      "topic": "auth/tokens/api-keys"
+    },
+    {
+      "id": "5499028d-64b0-4c2f-9aa6-faa5575f79fd",
+      "state_here": "proposed",
+      "title": "Never let a best-effort follow-up fail a confirmed write",
+      "topic": "errors/degradation/partial-results"
+    },
+    {
+      "id": "56983945-7f4d-4b51-acfd-77d9e104b0a9",
+      "state_here": "proposed",
+      "title": "Have repository writes return ok/error for domain failures",
+      "topic": "errors/result-contracts/results"
+    },
+    {
+      "id": "2e875347-d72a-4c39-ade4-1167f737d0e7",
+      "state_here": "proposed",
+      "title": "Keep route files to metadata and mounting one feature component",
+      "topic": "architecture/boundaries/modules"
+    },
+    {
+      "id": "3410b315-cf28-48a5-b306-c79178d5d622",
+      "state_here": "proposed",
+      "title": "Make each use case a crate implementing one trait over a shared core",
+      "topic": "architecture/boundaries/layers"
+    },
+    {
+      "id": "68eb6df9-d8cd-47ba-bf5a-711a7278f906",
+      "state_here": "proposed",
+      "title": "Expose metered capabilities only as methods on a context object",
+      "topic": "architecture/chokepoints/doors"
+    },
+    {
+      "id": "94982299-0ff7-4e06-9d71-5c6c19e644a1",
+      "state_here": "proposed",
+      "title": "Escalate to a costlier fetch tier only on evidence of failure",
+      "topic": "integration/resilience/fallbacks"
+    },
+    {
+      "id": "63e8c1d2-c5ce-46d4-bd66-c52285a70aed",
+      "state_here": "proposed",
+      "title": "Carry the client-fault distinction in the error enum itself",
+      "topic": "errors/classification/taxonomies"
+    },
+    {
+      "id": "2e83de9d-7a53-4069-b8e7-a8bb33cc3b83",
+      "state_here": "proposed",
+      "title": "Define the plugin trait in core, keep the runtime in its own crate",
+      "topic": "architecture/extensibility/plugins"
+    },
+    {
+      "id": "4a1303f4-3923-405d-a62b-a597946d59ff",
+      "state_here": "proposed",
+      "title": "Separate incremental batches from full-snapshot syncs at the API",
+      "topic": "data/writes/upserts"
+    },
+    {
+      "id": "432dfdde-3fb9-4ed2-8bce-d04ca7f64bac",
+      "state_here": "proposed",
+      "title": "Mirror a running total in memory instead of re-aggregating per call",
+      "topic": "performance/caching/memoization"
+    },
+    {
+      "id": "f8cec2d9-6ee6-4690-9691-3bb3f0fe648b",
+      "state_here": "proposed",
+      "title": "Drain in-flight work with one shared cancellation token",
+      "topic": "concurrency/background-work/shutdown"
+    },
+    {
+      "id": "2de3af29-3bfb-4425-99b0-88d3ad2b396d",
+      "state_here": "proposed",
+      "title": "Test against a real migrated database and control time by writing it",
+      "topic": "testing/harnesses/databases"
+    },
+    {
+      "id": "0817639b-0eb4-4d8e-8a97-fabe3e40cc39",
+      "state_here": "proposed",
+      "title": "Wrap every route in one handler that owns errors and the envelope",
+      "topic": "api/request-pipeline/handlers"
+    },
+    {
+      "id": "cb07ae53-8e00-4793-8f38-f1d91f3cc26f",
+      "state_here": "proposed",
+      "title": "Give every entity one hook module owning its client and its cache",
+      "topic": "frontend/data-fetching/caching"
+    },
+    {
+      "id": "94917efb-39ab-4e1c-ab34-d500238aaea9",
+      "state_here": "proposed",
+      "title": "Map HTTP status to user copy in one place, not per component",
+      "topic": "errors/surfacing/messages"
+    },
+    {
+      "id": "782deec6-f545-4780-9faa-3e411bd9d2b6",
+      "state_here": "proposed",
+      "title": "Wire the resilience stack to your main surface, not a side capability",
+      "topic": "llm/call-seam/providers"
+    },
+    {
+      "id": "e5397644-17d2-4c7c-b818-fec9e6304de7",
+      "state_here": "proposed",
+      "title": "Split global state into many small stores, not one combined object",
+      "topic": "frontend/state/stores"
+    },
+    {
+      "id": "d54e7b53-db69-4d53-b772-76039492a2a3",
+      "state_here": "proposed",
+      "title": "Make the charge-then-reclaim handshake durable, not in-process",
+      "topic": "billing/ledger/durability"
+    },
+    {
+      "id": "eb23b54d-7bc9-40de-9036-7e1ae8f7e311",
+      "state_here": "proposed",
+      "title": "Give the browser one typed request helper for your own routes",
+      "topic": "api/client-seam/clients"
+    },
+    {
+      "id": "453e4de1-30d3-4c68-842c-873c5aee2d91",
+      "state_here": "proposed",
+      "title": "A degraded path must be classified and logged, never silently swallowed",
+      "topic": "errors/degradation/fallbacks"
+    },
+    {
+      "id": "6b772c99-fb6b-49a4-8f34-372629e92328",
+      "state_here": "proposed",
+      "title": "Treat a spawned CLI as a dev or agentic engine, never the prod path",
+      "topic": "llm/call-seam/providers"
+    },
+    {
+      "id": "a0166a4b-ac5c-4654-9729-cce2e76e2554",
+      "state_here": "proposed",
+      "title": "Make failover an explicit ordering policy with telemetry on every hop",
+      "topic": "llm/call-seam/fallbacks"
+    },
+    {
+      "id": "96f30396-3bef-43f6-9b81-f5cd6cebdbe3",
+      "state_here": "proposed",
+      "title": "Boundary parsers must return a reason, through one canonical result contract",
+      "topic": "errors/result-contracts/parsers"
+    },
+    {
+      "id": "1ff99bcd-e632-4603-a631-247285f6cdd9",
+      "state_here": "proposed",
+      "title": "A door that only convention protects is not a chokepoint",
+      "topic": "architecture/chokepoints/enforcement"
+    },
+    {
+      "id": "1962a99a-54e6-48be-8c01-2bff3d2714ef",
+      "state_here": "proposed",
+      "title": "A multi-driver store needs a parity suite, not a shared interface",
+      "topic": "testing/parity/drivers"
+    },
+    {
+      "id": "84f49d9b-0faa-4b50-950c-382052739f09",
+      "state_here": "proposed",
+      "title": "Make tenant scope structurally unforgettable, not per-call discipline",
+      "topic": "auth/tenancy/boundaries"
+    },
+    {
+      "id": "ddf55be6-b527-41e3-ba1d-3add87979a0b",
+      "state_here": "proposed",
+      "title": "Pin every model surface with offline gates, not runtime checks alone",
+      "topic": "llm/evaluation/gates"
+    },
+    {
+      "id": "711a795b-e085-4ce2-9e02-0c8013a3dbd5",
+      "state_here": "proposed",
+      "title": "Put all persistence behind one store interface and a lazy driver",
+      "topic": "data/persistence-layer/stores"
+    },
+    {
+      "id": "0123462a-51c7-46a0-91f0-e237fb2f53a3",
+      "state_here": "proposed",
+      "title": "Sequence auth, metering, validation and shaping once per request",
+      "topic": "architecture/chokepoints/doors"
+    },
+    {
+      "id": "bf9ee2a8-246a-4c17-8f85-4e8c1bf160e9",
+      "state_here": "proposed",
+      "title": "Write policy decisions as pure functions over plain data",
+      "topic": "testing/testability/pure-functions"
+    },
+    {
+      "id": "057b3a3e-6e6c-4283-b784-6704394d4add",
+      "state_here": "proposed",
+      "title": "Discriminated result unions at domain boundaries, exceptions only for programmer error",
+      "topic": "errors/result-contracts/results"
+    },
+    {
+      "id": "866e3ec7-0fc4-4698-a15a-0a0f50a296fa",
+      "state_here": "proposed",
+      "title": "Slice by domain and keep the route layer routing only",
+      "topic": "architecture/boundaries/modules"
+    },
+    {
+      "id": "71bc9a9a-2070-4f6e-9993-1c1d19441050",
+      "state_here": "proposed",
+      "title": "A fallback layer hides absence: check translated VALUES, not just key parity",
+      "topic": "errors/degradation/fallbacks"
+    },
+    {
+      "id": "360a9194-d829-4b73-8e2d-08bb0c69bd6c",
+      "state_here": "proposed",
+      "title": "Put the loading delay on the placeholder, never on the content",
+      "topic": "frontend/motion/loading"
+    },
+    {
+      "id": "d581776b-4e03-4628-bcd5-d5254a2a7ef6",
+      "state_here": "proposed",
+      "title": "Count the swallows inside the helper, not at the call sites",
+      "topic": "observability/instrumentation/chokepoints"
+    },
+    {
+      "id": "440acd1a-28bb-448b-8d10-c1e837e3b153",
+      "state_here": "proposed",
+      "title": "Classify an error once through one pipeline, not at every site",
+      "topic": "errors/classification/taxonomies"
+    },
+    {
+      "id": "09a020ca-7105-490d-b5ae-8a2b8849fcab",
+      "state_here": "proposed",
+      "title": "Turn every repeated review comment into a local lint rule",
+      "topic": "process/gates/lint-rules"
+    },
+    {
+      "id": "0650cd63-bb6a-4dde-ad76-ea74e7b5b4ca",
+      "state_here": "proposed",
+      "title": "Split localisation per route section and preload before mount",
+      "topic": "performance/startup/chunks"
+    },
+    {
+      "id": "66e8026b-e42a-4b05-8bc1-cd461372a26c",
+      "state_here": "proposed",
+      "title": "Tombstone deleted ids so an in-flight fetch can't resurrect them",
+      "topic": "frontend/data-fetching/races"
+    },
+    {
+      "id": "dc5292d7-0473-4fdc-9d2d-a1c073482207",
+      "state_here": "proposed",
+      "title": "Centralise the latest-wins token so the compare is right once",
+      "topic": "frontend/data-fetching/races"
+    },
+    {
+      "id": "463bac69-2b8c-4115-8f97-d351aa95acd6",
+      "state_here": "proposed",
+      "title": "Run one timer per cadence bucket, not one per poller",
+      "topic": "performance/resource-budgets/polling"
+    },
+    {
+      "id": "aa6ae5a2-8a5a-41c3-b242-5571ebb7a54a",
+      "state_here": "proposed",
+      "title": "Attach realtime subscriptions in priority waves, retry failures on a budget, then tell the user",
+      "topic": "errors/degradation/retries"
+    },
+    {
+      "id": "70b12318-24d5-415c-9700-9c8fab5dc047",
+      "state_here": "proposed",
+      "title": "Retry a failed chunk import, but keep one stable lazy instance",
+      "topic": "frontend/routing/lazy-chunks"
+    },
+    {
+      "id": "4bc843ff-b026-407b-b67e-93879a17ec82",
+      "state_here": "proposed",
+      "title": "Keep one transport subscription and fan out to components in JS",
+      "topic": "architecture/events/subscriptions"
+    },
+    {
+      "id": "ba2a0d49-9f15-4c92-aab5-08355b26e5f7",
+      "state_here": "proposed",
+      "title": "Drain speculative imports one at a time, most likely first",
+      "topic": "performance/startup/chunks"
+    },
+    {
+      "id": "cbeb7efe-4317-44d2-b863-09c7494f987a",
+      "state_here": "proposed",
+      "title": "Make the unmount guard automatic in the hook, never opt-in",
+      "topic": "frontend/state/subscriptions"
+    },
+    {
+      "id": "04f0e897-314b-4d25-87b1-53e7e3c3d2ad",
+      "state_here": "proposed",
+      "title": "Give every concurrently-runnable mode its own lifecycle flag",
+      "topic": "concurrency/cancellation/lifecycle"
+    },
+    {
+      "id": "0e538cef-9eb9-4b0c-9412-690e4686968e",
+      "state_here": "proposed",
+      "title": "Group draft fields per save operation and assert coverage in types",
+      "topic": "frontend/forms/drafts"
+    },
+    {
+      "id": "ce35d86d-33e8-468e-bc4f-011d2631fea6",
+      "state_here": "proposed",
+      "title": "Snapshot the target entity id before an await and re-check after",
+      "topic": "concurrency/cancellation/teardown"
+    },
+    {
+      "id": "153e2852-d3cf-487e-8bb5-5f09beab5481",
+      "state_here": "proposed",
+      "title": "Diff a serialized autosave against the in-flight snapshot",
+      "topic": "concurrency/queues/serialization"
+    },
+    {
+      "id": "d4e39d7f-dcbd-44da-9294-ac611ade35b9",
+      "state_here": "proposed",
+      "title": "Treat a dirty section with no save callback as a save failure",
+      "topic": "errors/surfacing/success-claims"
+    },
+    {
+      "id": "a957cc68-4a6e-4f07-9914-ceb101132118",
+      "state_here": "proposed",
+      "title": "Persist an undo before moving the baseline, or it silently vanishes",
+      "topic": "frontend/forms/drafts"
+    },
+    {
+      "id": "bcb6788a-b8e8-4d11-bb9a-7f856f0c7ec8",
+      "state_here": "proposed",
+      "title": "Give a multi-section editor one dirty/save registry, wired via refs",
+      "topic": "architecture/chokepoints/doors"
+    },
+    {
+      "id": "dbedff81-95b1-4279-90f3-2ecfee76e936",
+      "state_here": "proposed",
+      "title": "Serialize the form's answers into the intent so the model won't re-ask",
+      "topic": "llm/agent-loops/intents"
+    },
+    {
+      "id": "9a2f86f9-ac95-4854-a698-7a0e9d3ec4f3",
+      "state_here": "proposed",
+      "title": "Mine your corpus for the option set and ship each option's directive",
+      "topic": "llm/prompts/directives"
+    },
+    {
+      "id": "e8175ae7-9fac-45db-90cd-59073418206d",
+      "state_here": "proposed",
+      "title": "Read the result payload before claiming something is ready",
+      "topic": "errors/surfacing/success-claims"
+    },
+    {
+      "id": "27b2fe79-ff69-45ee-ab83-324eeab4a442",
+      "state_here": "proposed",
+      "title": "Preview a cascading change, but let the backend decide the reconcile",
+      "topic": "data/writes/cascades"
+    },
+    {
+      "id": "722e018e-b22d-47cc-8138-3049866e9aeb",
+      "state_here": "proposed",
+      "title": "Give a sprawling feature folder an owns / does NOT own table",
+      "topic": "process/documentation/readmes"
+    },
+    {
+      "id": "7ced455b-2294-446a-add9-99f92b5f020a",
+      "state_here": "proposed",
+      "title": "Drive the router from a typed registry with a completeness guard",
+      "topic": "frontend/routing/routes"
+    },
+    {
+      "id": "7242f5a3-a956-435e-b03c-ee8b73e39c56",
+      "state_here": "proposed",
+      "title": "Persist a background session's view state and re-attach on reload",
+      "topic": "frontend/state/persistence"
+    },
+    {
+      "id": "378edc6a-61f7-41fd-9756-05893e268521",
+      "state_here": "proposed",
+      "title": "Compute the composite score in one module and re-export it everywhere",
+      "topic": "llm/evaluation/scores"
+    },
+    {
+      "id": "9ac2271b-af82-4b2c-8433-7f5d3d3a0637",
+      "state_here": "proposed",
+      "title": "Treat an unscored judge metric as absent, never as zero",
+      "topic": "llm/evaluation/scores"
+    },
+    {
+      "id": "eabb95b7-814e-4603-930f-329ded9c5901",
+      "state_here": "proposed",
+      "title": "Ship each score with its provenance: samples, coverage, degraded runs",
+      "topic": "llm/evaluation/scores"
+    },
+    {
+      "id": "fd0a55aa-7875-4f3a-a491-06a075e9b5f3",
+      "state_here": "proposed",
+      "title": "Measure regression against a pinned baseline on the same axis",
+      "topic": "llm/evaluation/baselines"
+    },
+    {
+      "id": "0f211367-40a5-4761-81e2-4528a97e5efc",
+      "state_here": "proposed",
+      "title": "Feed the judge's rationale into the rewriter, not just its scores",
+      "topic": "llm/evaluation/judges"
+    },
+    {
+      "id": "63d4d65c-eda6-4dad-8c75-a9fd8f9c6d44",
+      "state_here": "proposed",
+      "title": "Collapse an unrecognized status to unknown, never to green",
+      "topic": "integration/resilience/status-mapping"
+    },
+    {
+      "id": "4fda21ad-d9ca-4661-9530-559729095b1a",
+      "state_here": "proposed",
+      "title": "Show tokens beside cost, and rank on cost per success",
+      "topic": "billing/cost-visibility/cost-metrics"
+    },
+    {
+      "id": "bc2f3ef9-f527-470d-a5d7-ae7ad11e6f65",
+      "state_here": "proposed",
+      "title": "Virtualise a table with spacer rows and an opted-in scroll parent",
+      "topic": "performance/rendering/virtualization"
+    },
+    {
+      "id": "9594993f-d5c2-4d93-b7d6-9038776ac70a",
+      "state_here": "proposed",
+      "title": "Extract anchored-portal positioning into one shared hook",
+      "topic": "frontend/components/overlays"
+    },
+    {
+      "id": "2a0e5daa-7d6b-4ffa-9422-9d8c475f587c",
+      "state_here": "proposed",
+      "title": "Block double-submit with a synchronous ref, only for async handlers",
+      "topic": "concurrency/idempotency/double-submit"
+    },
+    {
+      "id": "63b58f6f-25ea-4bda-bb56-f399152fcec0",
+      "state_here": "proposed",
+      "title": "Explain a disabled control through a focusable wrapper",
+      "topic": "frontend/components/accessibility"
+    },
+    {
+      "id": "901e6f71-1d84-4225-a4cc-4eb0aecbac56",
+      "state_here": "proposed",
+      "title": "Make row entrance animations one-shot and id-guarded",
+      "topic": "frontend/motion/reveals"
+    },
+    {
+      "id": "9215acd9-687f-4df9-9969-c063823628b1",
+      "state_here": "proposed",
+      "title": "Keep every motion timing in one preset module, as data",
+      "topic": "frontend/motion/timings"
+    },
+    {
+      "id": "c735ce3f-b0bf-417a-bf6f-a3b95b1f2f1c",
+      "state_here": "proposed",
+      "title": "Pin a virtualized group header through the range extractor",
+      "topic": "frontend/components/tables"
+    },
+    {
+      "id": "70f5f3ae-cde6-49b1-839b-cc221dd5e20d",
+      "state_here": "proposed",
+      "title": "Move a component's computation into a React-free sibling module",
+      "topic": "testing/testability/pure-functions"
+    },
+    {
+      "id": "3a128833-7dc3-42a3-bdce-4ebf6380a517",
+      "state_here": "proposed",
+      "title": "Queue and re-key live-region announcements so none are lost",
+      "topic": "frontend/components/accessibility"
+    },
+    {
+      "id": "8a6fbd02-83e7-41f0-8443-a7ead32066ab",
+      "state_here": "proposed",
+      "title": "Let fields self-register errors, and split the context in two",
+      "topic": "frontend/forms/validation"
+    },
+    {
+      "id": "0284d8c1-f865-4848-9963-173fd8c9aedd",
+      "state_here": "proposed",
+      "title": "Default validation feedback to first blur, and name the policy",
+      "topic": "frontend/forms/validation"
+    },
+    {
+      "id": "65c62849-61bd-4f1f-814d-3c564c4df261",
+      "state_here": "proposed",
+      "title": "Debounce inline availability checks, abort stale ones, fail open",
+      "topic": "frontend/forms/validation"
+    },
+    {
+      "id": "d5d3dc43-5736-4c7c-99de-2485f2c2ea0f",
+      "state_here": "proposed",
+      "title": "Add to a shared primitive behind an isolated, opt-in render path",
+      "topic": "frontend/components/primitives"
+    },
+    {
+      "id": "2ff96304-878b-4864-a178-646a6b8317ce",
+      "state_here": "proposed",
+      "title": "Defer heavy below-fold subtrees behind a named priority wrapper",
+      "topic": "performance/startup/deferral"
+    },
+    {
+      "id": "59f71c1d-0d1a-42db-9934-09be68bec844",
+      "state_here": "proposed",
+      "title": "Host app-wide background hooks in one lazy render-nothing component",
+      "topic": "performance/startup/chunks"
+    },
+    {
+      "id": "ea14fa76-5aa5-431f-bb18-758784e31f23",
+      "state_here": "proposed",
+      "title": "Animate collapse with grid rows, and keep the unmount you replaced",
+      "topic": "frontend/motion/transitions"
+    },
+    {
+      "id": "48c5a172-2a1d-46db-99e6-ffb9c58bc71c",
+      "state_here": "proposed",
+      "title": "Express theme variance in CSS, not by reading the theme store",
+      "topic": "frontend/components/primitives"
+    },
+    {
+      "id": "55ac88ce-06a0-49a8-87e8-67dcee0c3ee4",
+      "state_here": "proposed",
+      "title": "Show an honest asymptotic bar for unknown-duration work",
+      "topic": "frontend/motion/loading"
+    },
+    {
+      "id": "303748e6-9b12-49c3-8861-0a63139814ce",
+      "state_here": "proposed",
+      "title": "Namespace persisted view preferences by view id, and guard the parse",
+      "topic": "frontend/state/persistence"
+    },
+    {
+      "id": "dd069d3a-e608-4dbf-809f-b0504e422fe8",
+      "state_here": "proposed",
+      "title": "Ship a tablist with roving tabindex and arrow-key navigation",
+      "topic": "frontend/components/accessibility"
+    },
+    {
+      "id": "97b94b75-572c-46e8-96bf-c5cc68695185",
+      "state_here": "proposed",
+      "title": "Adapt rows into the UI shape once; never let one row break the list",
+      "topic": "api/client-seam/adapters"
+    },
+    {
+      "id": "2f065386-58d8-4c59-92c1-3938214124ce",
+      "state_here": "proposed",
+      "title": "Dedupe inside the serialized write, not in a pre-flight check",
+      "topic": "concurrency/idempotency/claims"
+    },
+    {
+      "id": "92a2efe6-c3f3-47ff-841d-3650fb66b62c",
+      "state_here": "proposed",
+      "title": "A partially-succeeded batch needs its own UI state and an idempotent repair action",
+      "topic": "errors/degradation/partial-results"
+    },
+    {
+      "id": "0476af56-af9c-4709-86f0-fe2c0d9a940e",
+      "state_here": "proposed",
+      "title": "Cache derived parses in a WeakMap keyed on the row object",
+      "topic": "performance/caching/memoization"
+    },
+    {
+      "id": "669cb86f-d3ce-401a-9e3f-88932683530e",
+      "state_here": "proposed",
+      "title": "Autosave by diffing a small derived slice, debounced, flushed on exit",
+      "topic": "data/writes/saves"
+    },
+    {
+      "id": "a66318b1-bc94-4db0-9d6b-961064a0ef55",
+      "state_here": "proposed",
+      "title": "Gate an imported artifact in layers, one message per rejection",
+      "topic": "security/input-hardening/payloads"
+    },
+    {
+      "id": "1ef10fb6-c455-4781-8849-db63bcd041ee",
+      "state_here": "proposed",
+      "title": "Give every background poller three ways to stop",
+      "topic": "performance/resource-budgets/polling"
+    },
+    {
+      "id": "cec686cd-fec3-44eb-9cdf-faf62bd46431",
+      "state_here": "proposed",
+      "title": "On a failed save, show the real error and rescue the draft",
+      "topic": "errors/surfacing/messages"
+    },
+    {
+      "id": "35f757c2-4c07-42d5-b340-abbe58c2fcb5",
+      "state_here": "proposed",
+      "title": "Rehydrate derived state from a remount cache, not just the input",
+      "topic": "frontend/state/persistence"
+    },
+    {
+      "id": "49474601-3d90-4c9b-86b6-60a19b80b68d",
+      "state_here": "proposed",
+      "title": "Replace N modal booleans with one typed modal stack",
+      "topic": "frontend/components/modals"
+    },
+    {
+      "id": "566b1c73-b31d-4db3-90bb-ed5dec20e228",
+      "state_here": "proposed",
+      "title": "Wipe a secret off the clipboard on a timer, forcibly if unsure",
+      "topic": "security/secrets/handoff"
+    },
+    {
+      "id": "3c7884c2-ea1e-41cf-b7aa-bcc32f2bb28b",
+      "state_here": "proposed",
+      "title": "Gate a once-only secret reveal behind an acknowledgement",
+      "topic": "security/secrets/handoff"
+    },
+    {
+      "id": "eb62db73-797d-424d-be5a-6f09ccf6ae15",
+      "state_here": "proposed",
+      "title": "Tag danger consent by which danger was shown, and bind the apply call to the exact preview it approved",
+      "topic": "security/trust-boundaries/consent"
+    },
+    {
+      "id": "ee9f971f-928b-4c9f-87b5-6c76d28259c5",
+      "state_here": "proposed",
+      "title": "Disarm the approve button for a beat whenever a queued consent request is replaced",
+      "topic": "security/trust-boundaries/consent"
+    },
+    {
+      "id": "47b55b54-9319-45da-81d1-96a383338f71",
+      "state_here": "proposed",
+      "title": "Enumerate expensive scopes per resource and time-box by default",
+      "topic": "auth/authorization/scopes"
+    },
+    {
+      "id": "612d7d8f-5ac3-4d6a-be13-059ee977271a",
+      "state_here": "proposed",
+      "title": "Refuse to save a config whose load failed",
+      "topic": "data/writes/saves"
+    },
+    {
+      "id": "6ab58ac9-f6b8-4777-adb2-31f21a1fe0cb",
+      "state_here": "proposed",
+      "title": "Prefetch route chunks on pointer intent through one cached helper",
+      "topic": "performance/startup/chunks"
+    },
+    {
+      "id": "df0da2e1-40dc-4783-affa-1cbe9301fe04",
+      "state_here": "proposed",
+      "title": "Choose a mount policy per tab surface instead of remounting",
+      "topic": "performance/rendering/mount-policy"
+    },
+    {
+      "id": "26491742-b994-4ee6-abd3-4f3c20af0ace",
+      "state_here": "proposed",
+      "title": "Seed unmounting panels from a module-scoped cache of the last fetch",
+      "topic": "performance/caching/warm-state"
+    },
+    {
+      "id": "ef2a580a-8541-4767-a0d0-034f37fd28fc",
+      "state_here": "proposed",
+      "title": "Model a fetch as a phase enum so failed never renders as empty",
+      "topic": "errors/surfacing/phases"
+    },
+    {
+      "id": "a2cfbe15-0990-4f36-ac65-3fa658cea2de",
+      "state_here": "proposed",
+      "title": "Report whether the cache answered from freshness or from rescue",
+      "topic": "integration/resilience/caching"
+    },
+    {
+      "id": "753285bc-143c-4d23-b05d-2b758a0d5965",
+      "state_here": "proposed",
+      "title": "Demote an unknown enum value visibly, with a breadcrumb",
+      "topic": "integration/protocol-contracts/schemas"
+    },
+    {
+      "id": "570c6275-1c88-493e-bb04-033ba15fbe12",
+      "state_here": "proposed",
+      "title": "Compose the model-driven surface deterministically before any call",
+      "topic": "llm/agent-loops/fallbacks"
+    },
+    {
+      "id": "c195e8c6-0c10-4497-b148-3f53fa6570dd",
+      "state_here": "proposed",
+      "title": "Cancel a tour step's queued effects, and survive a missing anchor",
+      "topic": "frontend/onboarding/tours"
+    },
+    {
+      "id": "fdfd1067-fa41-4028-9332-54c69e5f4a9d",
+      "state_here": "proposed",
+      "title": "Carry a monotonic key so a repeated identical arrival still fires",
+      "topic": "frontend/data-fetching/races"
+    },
+    {
+      "id": "bac53ae6-66d7-4e7d-a195-25883422b5e4",
+      "state_here": "proposed",
+      "title": "Float zero-setup options to the top of the first-run picker",
+      "topic": "frontend/onboarding/first-run"
+    },
+    {
+      "id": "c610174f-ebbe-423a-8f6f-8d87416d56b3",
+      "state_here": "proposed",
+      "title": "Measure adoption with a data probe, not with a 'Try it' click",
+      "topic": "frontend/onboarding/adoption"
+    },
+    {
+      "id": "dfc9a647-6e60-4c25-ae1d-82a06368aa58",
+      "state_here": "proposed",
+      "title": "Anchor time buckets on the data's own dates, not the client clock",
+      "topic": "data/reads/timestamps"
+    },
+    {
+      "id": "ccece962-3ef4-4465-9731-0864e0c9e856",
+      "state_here": "proposed",
+      "title": "Hand the renderer a session ref, redeem the token server-side",
+      "topic": "security/secrets/credentials"
+    },
+    {
+      "id": "76e8bf10-8d64-4607-a1d9-c6e99d02df5b",
+      "state_here": "proposed",
+      "title": "Move a 'refresh all' loop server-side into one privileged call",
+      "topic": "api/client-seam/batching"
+    },
+    {
+      "id": "12f923b2-07b7-4f4b-b63f-92a9d4db1ec3",
+      "state_here": "proposed",
+      "title": "Recompute dependents on every write, and resolve them before a delete",
+      "topic": "data/writes/cascades"
+    },
+    {
+      "id": "27cc6bd0-e35c-4df0-b62f-f60ff53f4cad",
+      "state_here": "proposed",
+      "title": "Bind a destructive confirm to the target it was raised against",
+      "topic": "frontend/components/modals"
+    },
+    {
+      "id": "76136f12-cbe0-47fb-8544-a854baf26170",
+      "state_here": "proposed",
+      "title": "Make 'unknown' a first-class state, distinct from zero and absent",
+      "topic": "observability/metrics/unknowns"
+    },
+    {
+      "id": "fe8744d7-ba20-4020-b9d4-056e862925ae",
+      "state_here": "proposed",
+      "title": "Bound every fan-out with one limiter sized by cost class",
+      "topic": "concurrency/throttling/fan-out"
+    },
+    {
+      "id": "74ab4004-09a0-4daa-9a98-3c8fc6262dfe",
+      "state_here": "proposed",
+      "title": "Publish an aggregate in phases, each frame complete and honest",
+      "topic": "performance/startup/first-paint"
+    },
+    {
+      "id": "ecf034d1-a954-47fc-aec0-5db14244b52a",
+      "state_here": "proposed",
+      "title": "In a non-transactional multi-step create, classify every step as critical, degradable, or optional",
+      "topic": "errors/degradation/partial-results"
+    },
+    {
+      "id": "ea7a4e8e-f6b0-4bfa-8dc1-36f6e855ffc6",
+      "state_here": "proposed",
+      "title": "Bulk mutations return per-item outcomes with machine reasons; the client applies successes and summarizes failures by reason",
+      "topic": "errors/result-contracts/bulk-outcomes"
+    },
+    {
+      "id": "572968ce-8fd6-4a41-a90f-2d4b19a448c1",
+      "state_here": "proposed",
+      "title": "Re-run the original pre-flight gate on every replay or rerun",
+      "topic": "concurrency/idempotency/retries"
+    },
+    {
+      "id": "69a4a774-2577-4ceb-9ff2-9fde37533eeb",
+      "state_here": "proposed",
+      "title": "Release a dedupe mark on failure and on leaving the state",
+      "topic": "concurrency/idempotency/claims"
+    },
+    {
+      "id": "d0ed1529-73bc-4457-8217-daa43179853d",
+      "state_here": "proposed",
+      "title": "Guard double-submit with a ref, not with render state",
+      "topic": "frontend/forms/submission"
+    },
+    {
+      "id": "069093eb-b0f2-4c2c-ba16-9b1deb264305",
+      "state_here": "proposed",
+      "title": "Keep a run-once backfill effect's deps empty, or it wipes live state",
+      "topic": "frontend/data-fetching/effects"
+    },
+    {
+      "id": "1ece1512-e68b-4177-8807-effc430435c0",
+      "state_here": "proposed",
+      "title": "Poll short calls for long work, with a cap and a cancel check",
+      "topic": "concurrency/cancellation/teardown"
+    },
+    {
+      "id": "4ba1cb42-829d-49ad-a22c-6c224c8b2832",
+      "state_here": "proposed",
+      "title": "Warn when you rewrite a value to satisfy a platform limit",
+      "topic": "errors/surfacing/success-claims"
+    },
+    {
+      "id": "ec7b6a7d-0c16-423e-9d6a-cd973adb3cb1",
+      "state_here": "proposed",
+      "title": "Version every persisted document and sanitise it on read",
+      "topic": "data/modeling/payloads"
+    },
+    {
+      "id": "59d927a9-2c75-434a-b1b5-604e8d79cedc",
+      "state_here": "proposed",
+      "title": "A worker is only usable if its client handles every degenerate case",
+      "topic": "performance/rendering/workers"
+    },
+    {
+      "id": "768fb97e-bcb7-4e26-bfe6-9d5953b389ce",
+      "state_here": "proposed",
+      "title": "Flatten a grouped list into one indexed sequence in a pure module",
+      "topic": "performance/rendering/virtualization"
+    },
+    {
+      "id": "0e406f39-bcfc-4fab-a82a-8d514f2e5eaa",
+      "state_here": "proposed",
+      "title": "Derive stall state from output silence when there is no heartbeat",
+      "topic": "observability/liveness/stalls"
+    },
+    {
+      "id": "e492e4ba-524b-4dc7-8928-b4f51977507e",
+      "state_here": "proposed",
+      "title": "Resume by real session handle, degrade to a reconstructed hint",
+      "topic": "llm/agent-loops/resumption"
+    },
+    {
+      "id": "e3978dad-640c-4dc5-a8b9-018b0c8d0c8e",
+      "state_here": "proposed",
+      "title": "Give every orphan class its own bucket in a hierarchical view",
+      "topic": "frontend/state/view-models"
+    },
+    {
+      "id": "ba1e247c-fd47-424d-84c9-56bd2f8d10e4",
+      "state_here": "proposed",
+      "title": "Prototype visual variants against one shared data-and-actions hook",
+      "topic": "process/delivery/prototypes"
+    },
+    {
+      "id": "ed13533a-b830-4713-a650-f9afb44e7fbe",
+      "state_here": "proposed",
+      "title": "Never fabricate a trend from a single loaded window",
+      "topic": "observability/metrics/trends"
+    },
+    {
+      "id": "7c8258b3-12e1-44fc-b1c9-e7e647dfa59e",
+      "state_here": "proposed",
+      "title": "Alert evaluation must not live in the tab that displays alerts",
+      "topic": "observability/alerting/evaluation"
+    },
+    {
+      "id": "ce4b26a2-d234-40a2-9620-50713a11b4b8",
+      "state_here": "proposed",
+      "title": "Supersede stale responses with a request token, not a boolean",
+      "topic": "concurrency/cancellation/tokens"
+    },
+    {
+      "id": "bd0ad824-dd8f-4c59-b234-2fe224e2b99c",
+      "state_here": "proposed",
+      "title": "Render a merged feed only down to the horizon every source loaded",
+      "topic": "frontend/data-fetching/pagination"
+    },
+    {
+      "id": "816bb8fc-7233-479e-962c-88ce8d29e0cf",
+      "state_here": "proposed",
+      "title": "Aggregate feeds with one refcounted subscription, not N hidden ones",
+      "topic": "performance/data-access/subscriptions"
+    },
+    {
+      "id": "ecb8b881-c3bf-4a2a-ac01-ebcd14fd1f9e",
+      "state_here": "proposed",
+      "title": "Absorb history at mount and bound every set a live overlay grows",
+      "topic": "frontend/state/streams"
+    },
+    {
+      "id": "0b5deed9-f7d2-4b20-956d-111add2ecf86",
+      "state_here": "proposed",
+      "title": "Resolve entity state once, then fold it per view density",
+      "topic": "frontend/state/view-models"
+    },
+    {
+      "id": "6d29bd89-a6bb-4cf3-8b4f-70a613a5beab",
+      "state_here": "proposed",
+      "title": "Derive view rows in a React-free, store-free model module",
+      "topic": "frontend/state/view-models"
+    },
+    {
+      "id": "70a62447-13f6-4a64-8797-0b9271fb17b8",
+      "state_here": "proposed",
+      "title": "Latch one attempt per session for self-scheduled jobs",
+      "topic": "concurrency/background-work/timers"
+    },
+    {
+      "id": "567c2870-75a1-4a16-9de1-e7ca7d921cdf",
+      "state_here": "proposed",
+      "title": "Give a multi-tab dashboard one fetch owner at the shell level",
+      "topic": "frontend/data-fetching/refresh"
+    },
+    {
+      "id": "99d0cdec-f84e-43cc-be02-54df3f24c50c",
+      "state_here": "proposed",
+      "title": "Lazy-mount monitoring surfaces and pause them when nobody looks",
+      "topic": "performance/startup/deferral"
+    },
+    {
+      "id": "48cfa0a3-b81d-409b-97e6-129f091a739a",
+      "state_here": "proposed",
+      "title": "Show a judge's verdict only beside hard gates and what was delivered",
+      "topic": "llm/evaluation/judges"
+    },
+    {
+      "id": "21354ce9-5ad4-4bf6-8913-f79d066ab1a5",
+      "state_here": "proposed",
+      "title": "Give every dashboard number a healthy range and a destination",
+      "topic": "frontend/components/metrics"
+    },
+    {
+      "id": "c05068cc-1d29-4e15-ab9c-d3949116c59a",
+      "state_here": "proposed",
+      "title": "Format metrics to survive both extremes of their range",
+      "topic": "frontend/components/metrics"
+    },
+    {
+      "id": "b4f2dc36-fc2f-49ee-9943-f9d3dfac20eb",
+      "state_here": "proposed",
+      "title": "Group look-alike panels by data tier and commit the routing rubric",
+      "topic": "architecture/boundaries/modules"
+    },
+    {
+      "id": "d3fb20f8-c19d-4607-934b-8187d7a799f6",
+      "state_here": "proposed",
+      "title": "Cancel by advancing a generation counter, never by resetting a flag",
+      "topic": "concurrency/cancellation/tokens"
+    },
+    {
+      "id": "b05d7097-6c49-45f5-be06-d06bef3906e4",
+      "state_here": "proposed",
+      "title": "Put every concurrent dimension into an out-of-process job's dedup key",
+      "topic": "concurrency/idempotency/keys"
+    },
+    {
+      "id": "363e253c-6977-4ba1-9d17-13bace16ef87",
+      "state_here": "proposed",
+      "title": "Bound media caches by bytes, and dedupe loads through an in-flight map",
+      "topic": "performance/caching/eviction"
+    },
+    {
+      "id": "53e27817-ce7f-4d0c-b470-7d0c724c18a7",
+      "state_here": "proposed",
+      "title": "Free decoded media with the same observer that allocated it",
+      "topic": "performance/resource-budgets/memory"
+    },
+    {
+      "id": "3b1161b2-120c-41a9-b147-3c5dcdcd3109",
+      "state_here": "proposed",
+      "title": "Own expensive instances in a registry — detach is not dispose",
+      "topic": "performance/resource-budgets/memory"
+    },
+    {
+      "id": "970a2949-8ece-4316-b720-c513d3fd69d6",
+      "state_here": "proposed",
+      "title": "Gate polls on visibility, one owner, and the job still being alive",
+      "topic": "performance/resource-budgets/polling"
+    },
+    {
+      "id": "91910975-2bf4-45f9-ae0e-c7e88c23fa96",
+      "state_here": "proposed",
+      "title": "Keep frame-rate values in refs, and coalesce stream deltas per frame",
+      "topic": "performance/rendering/high-frequency-updates"
+    },
+    {
+      "id": "6b0b90dc-30d0-463b-b58d-bc5768d2e6e4",
+      "state_here": "proposed",
+      "title": "Tear down subscriptions on re-entry, and store the listen promise",
+      "topic": "frontend/state/subscriptions"
+    },
+    {
+      "id": "811dc509-42d2-4fdc-b480-204646ecdec3",
+      "state_here": "proposed",
+      "title": "Render plugin tabs from a lazy table with a self-healing allowlist",
+      "topic": "frontend/routing/lazy-chunks"
+    },
+    {
+      "id": "3c28ba5c-ec72-4670-b4c6-391bc063ac61",
+      "state_here": "proposed",
+      "title": "Defend a flaky embed against errors, stalls and repeat failures",
+      "topic": "integration/resilience/fallbacks"
+    },
+    {
+      "id": "24db37e5-819c-4de3-95bf-ad2add91d5a7",
+      "state_here": "proposed",
+      "title": "Pair a snapshot with live events and dedupe by request id",
+      "topic": "integration/protocol-contracts/subscriptions"
+    }
+  ],
+  "playbooks": [],
+  "workspace": "Personas Core"
+}

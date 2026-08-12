@@ -1,0 +1,159 @@
+"use client";
+
+// COVERAGE — read across. Who used this piece of research, and for how long?
+//
+// The tab for challenging the weight of each part of the script. Every card is
+// here whether a render used it or not: a row of zeros is the loudest thing on
+// the grid, because "nobody spent a second on this" is the finding you came for.
+//
+// Layout: two rows per card. The first carries the clickable track id, the three
+// render cells and the total; the second carries the FULL title, unwrapped and
+// untruncated. Titles were being cut mid-sentence to hold a single-line grid,
+// which traded the one thing you are judging for the shape of the table.
+
+import { useState } from "react";
+
+import type { Card } from "../../_shared/notebook/cards";
+import type { ScopeApi } from "../../research/useScope";
+import { stateOf } from "../../research/scope";
+import { NoteHandle } from "../_notes/NotesContext";
+import { coverageIn, totalIn, usageIn, type Version } from "../versions";
+import { DIMENSIONS, DeltaTag, MatrixFootnotes, RENDERS, ScopePip, TONE, deltaOf, secs } from "./shared";
+
+export default function MatrixCoverage({
+  api,
+  version,
+  baseline,
+  comparing,
+}: {
+  api: ScopeApi;
+  version: Version;
+  baseline: Version;
+  comparing: boolean;
+}) {
+  const [only, setOnly] = useState(false);
+  const ids = api.cards.map((c) => c.id);
+
+  return (
+    <div data-testid="matrix-coverage">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <p className="font-hanken max-w-xl text-sm text-slate-400">
+          Every card, every render. Read across a row to see who used it and for how long; a row of
+          zeros is research no script spent a second on.
+        </p>
+        <button
+          onClick={() => setOnly((v) => !v)}
+          className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] tracking-[0.1em] transition ${
+            only ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/12 text-white/45 hover:text-white/75"
+          }`}
+        >
+          {only ? "showing used only" : "hide the zero rows"}
+        </button>
+      </div>
+
+      <div className="mt-4 grid grid-cols-[1.4rem_1fr_repeat(3,4.75rem)_3.25rem] items-end gap-x-2 border-b border-white/12 pb-1.5">
+        <span />
+        <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">research</span>
+        {RENDERS.map((r) => {
+          const c = coverageIn(version, r.id, ids);
+          return (
+            <span key={r.id} className="text-right">
+              <span className="font-jetbrains block truncate text-[10px] tracking-[0.1em] text-white/60 uppercase">
+                {r.engineLabel.split(" ")[0]}
+              </span>
+              <span className={`font-jetbrains block text-[10px] ${c.overrunS ? "text-amber-200" : "text-white/30"}`}>
+                {c.spoken} used{c.overrunS ? ` · +${c.overrunS}s over` : ""}
+              </span>
+            </span>
+          );
+        })}
+        <span className="font-jetbrains text-right text-[10px] tracking-[0.1em] text-white/35 uppercase">all</span>
+      </div>
+
+      {DIMENSIONS.map((d) => {
+        const rows = api.cards
+          .filter((c) => c.dimension === d.id)
+          .filter((c) => !only || totalIn(version, c.id) > 0);
+        if (!rows.length) return null;
+        return (
+          <section key={d.id} data-testid={`coverage-dim-${d.id}`}>
+            <h4
+              className={`font-jetbrains mt-3 border-b border-white/8 pb-1 text-[11px] tracking-[0.16em] uppercase ${
+                d.id === "conclusions" ? "text-cyan-300" : "text-white/70"
+              }`}
+            >
+              {d.label}
+            </h4>
+            <ul>
+              {rows.map((c) => (
+                <Row key={c.id} card={c} api={api} version={version} baseline={baseline} comparing={comparing} />
+              ))}
+            </ul>
+          </section>
+        );
+      })}
+
+      <MatrixFootnotes cards={api.cards} version={version} />
+    </div>
+  );
+}
+
+function Row({
+  card,
+  api,
+  version,
+  baseline,
+  comparing,
+}: {
+  card: Card;
+  api: ScopeApi;
+  version: Version;
+  baseline: Version;
+  comparing: boolean;
+}) {
+  const descoped = stateOf(api.scope, card.id).descoped;
+  const total = totalIn(version, card.id);
+  const baseTotal = totalIn(baseline, card.id);
+  const moved = comparing && total !== baseTotal;
+
+  return (
+    <li
+      data-testid={`row-${card.id}`}
+      className={`border-b border-white/[0.04] py-1 ${descoped ? "bg-amber-400/[0.03]" : ""} ${
+        moved ? "bg-cyan-400/[0.04]" : ""
+      }`}
+    >
+      <div className="grid grid-cols-[1.4rem_1fr_repeat(3,4.75rem)_3.25rem] items-center gap-x-2">
+        <ScopePip card={card} api={api} />
+        <span className="flex items-center gap-1.5">
+          <NoteHandle cardId={card.id} />
+          {moved && <DeltaTag d={total - baseTotal} />}
+        </span>
+        {RENDERS.map((r) => {
+          const u = usageIn(version, r.id, card.id);
+          const t = TONE[u.kind];
+          const dl = comparing ? deltaOf(baseline, version, r.id, card.id) : null;
+          return (
+            <span
+              key={r.id}
+              data-testid={`cell-${r.id}-${card.id}`}
+              data-usage={u.kind}
+              title={u.kind === "cut" ? u.why : u.kind === "spoken" ? `beats ${u.beats.join(", ")}` : "no render used this"}
+              className={`font-jetbrains rounded border px-1 py-0.5 text-center text-[11px] ${t.cell} ${t.text} ${
+                dl ? "ring-1 ring-cyan-400/40" : ""
+              }`}
+            >
+              {u.kind === "spoken" ? secs(u.seconds) : t.mark}
+            </span>
+          );
+        })}
+        <span className={`font-jetbrains text-right text-[11px] ${total ? "text-white/60" : "text-white/25"}`}>
+          {secs(total)}
+        </span>
+      </div>
+
+      {/* The title, in full, on its own line. */}
+      <p className="pr-2 pl-6 text-[12px] leading-snug text-slate-300">{card.title}</p>
+    </li>
+  );
+}

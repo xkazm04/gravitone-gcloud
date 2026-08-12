@@ -1,0 +1,193 @@
+"use client";
+
+// STEP 2 · SCRIPT
+//
+// Four standalone tabs, because they answer four different questions and none of
+// them is a variant of another:
+//
+//   · CANDIDATES — three renders, measured against the library's bands. WHICH.
+//   · COVERAGE   — every card × every render. WHO USED WHAT, and for how long.
+//   · SPEND BAR  — the same weights as one budget. HOW MUCH, and what moved.
+//   · TRACKS     — running order per script. WHERE it lands. The bridge to
+//                  Step 3 (Frames), not a weight surface.
+//
+// The step no longer runs research. It had a topic field, a run rack and a log
+// left over from when this was Step 1, which meant two steps could each start a
+// run and disagree about whether one had happened. Step 1 produces the notebook;
+// this reads it. The evidence log moved to Step 1 with the rest of the evidence.
+//
+// Versions: notes stack against tracks and ONE recalibration answers all of them
+// (useVersions.ts). Coverage and Spend can show the staged candidate; Candidates
+// and Tracks stay on the accepted baseline, because a re-weighting cannot be
+// read as two interleaved beat chains.
+
+import { useEffect, useState } from "react";
+
+import Modal from "@/components/ui/Modal";
+
+import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
+import { loadStep } from "../_shared/stepStore";
+import Notice from "../_shared/ui/Notice";
+import { useScope } from "../research/useScope";
+
+import BeatList from "./_parts/BeatList";
+import HypothesisColumn from "./_parts/HypothesisColumn";
+import MatrixCoverage from "./_matrix/MatrixCoverage";
+import MatrixSpend from "./_matrix/MatrixSpend";
+import MatrixTracks from "./_matrix/MatrixTracks";
+import VersionBar from "./_matrix/VersionBar";
+import StickyNotebook from "./_notes/StickyNotebook";
+import { RENDERS, RENDER_BY_ID } from "./renders";
+import BaselineOnlyNote from "./_parts/BaselineOnlyNote";
+import { useVersions } from "./useVersions";
+
+type Tab = "candidates" | "coverage" | "spend" | "tracks";
+
+const TABS: { key: Tab; label: string; sub: string }[] = [
+  { key: "candidates", label: "Candidates", sub: "three renders, measured" },
+  { key: "coverage", label: "Coverage", sub: "who used what, and for how long" },
+  { key: "spend", label: "Spend bar", sub: "the runtime as a budget" },
+  { key: "tracks", label: "Tracks", sub: "running order — the bridge to Frames" },
+];
+
+export default function ScriptAssayBench({ projectId }: { projectId: string }) {
+  const [tab, setTab] = useState<Tab>("candidates");
+  const [showing, setShowing] = useState<"baseline" | "candidate">("candidate");
+  const [researched, setResearched] = useState<boolean | null>(null);
+  const [adopted, setAdopted] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
+
+  // The same scope record the triage board writes, and the project's own note
+  // and version history.
+  const scope = useScope(projectId);
+  const versions = useVersions(projectId);
+
+  useEffect(() => {
+    let alive = true;
+    void loadStep(projectId, "research").then((saved) => {
+      if (alive) setResearched(!!saved?.researched);
+    });
+    return () => { alive = false; };
+  }, [projectId]);
+
+  if (researched === null)
+    return <p className="font-jetbrains text-[12px] text-white/35">opening the project’s research…</p>;
+
+  if (!researched)
+    return (
+      <Notice severity="info" title="no notebook for this project yet">
+        <p>
+          The Script step writes against research, it does not produce it. Run Step 1 — or load the
+          saved Bitcoin run there — and three candidate scripts appear here.
+        </p>
+      </Notice>
+    );
+
+  const weighing = tab === "coverage" || tab === "spend";
+  const comparing = weighing && !!versions.candidate && showing === "candidate";
+  const shown = comparing ? versions.candidate! : versions.baseline;
+  const ready = scope.hydrated && versions.hydrated;
+
+  return (
+    <div>
+      <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+        <div className="min-w-0 grow">
+          <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/35 uppercase">written against</p>
+          <p className="font-jetbrains mt-1 text-[12px] text-white/60">
+            {NOTEBOOK_COUNTS.facts} claims · {NOTEBOOK_COUNTS.loadBearing} load-bearing ·{" "}
+            {NOTEBOOK_COUNTS.mechanisms} mechanisms · {NOTEBOOK_COUNTS.reversals} reversals ·{" "}
+            <span className="text-amber-200">half-life {NOTEBOOK.currency.halfLife}</span>
+          </p>
+          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-400">
+            tension strength — {NOTEBOOK.tension.strength}
+          </p>
+        </div>
+        <p className="font-jetbrains shrink-0 text-[10px] leading-snug text-white/30">
+          the notebook and the evidence log
+          <br />
+          live in step 1
+        </p>
+      </section>
+
+      <div className="font-jetbrains mt-4 flex flex-wrap gap-2 text-[12px]">
+        {TABS.map((t) => (
+          <button
+            key={t.key}
+            data-testid={`view-${t.key}`}
+            onClick={() => setTab(t.key)}
+            className={`rounded-xl border px-3.5 py-2 text-left transition ${
+              tab === t.key
+                ? "border-cyan-400/40 bg-cyan-400/[0.07]"
+                : "border-white/8 bg-white/[0.02] hover:border-white/20"
+            }`}
+          >
+            <span className="block text-white/85">{t.label}</span>
+            <span className="mt-0.5 block text-[10px] text-white/35">{t.sub}</span>
+          </button>
+        ))}
+      </div>
+
+      {!ready ? (
+        <p className="font-jetbrains mt-4 text-[12px] text-white/35">loading this project’s scope…</p>
+      ) : (
+        <div className="mt-4">
+          {weighing && (
+            <div className="mb-3">
+              <VersionBar api={versions} showing={showing} setShowing={setShowing} />
+            </div>
+          )}
+
+          {tab === "candidates" && (
+            <>
+              <BaselineOnlyNote api={versions} what="The beat chains below are the baseline." />
+              <div className="grid gap-3 lg:grid-cols-3">
+                {RENDERS.map((r) => (
+                  <HypothesisColumn
+                    key={r.id}
+                    render={r}
+                    adopted={adopted === r.id}
+                    onAdopt={() => setAdopted(adopted === r.id ? null : r.id)}
+                    expanded={expanded === r.id}
+                    onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {tab === "coverage" && (
+            <StickyNotebook api={versions}>
+              <MatrixCoverage api={scope} version={shown} baseline={versions.baseline} comparing={comparing} />
+            </StickyNotebook>
+          )}
+
+          {tab === "spend" && (
+            <StickyNotebook api={versions}>
+              <MatrixSpend api={scope} version={shown} baseline={versions.baseline} comparing={comparing} />
+            </StickyNotebook>
+          )}
+
+          {tab === "tracks" && (
+            <StickyNotebook api={versions}>
+              <>
+                <BaselineOnlyNote api={versions} what="Running order is shown for the baseline." />
+                <MatrixTracks api={scope} version={versions.baseline} />
+              </>
+            </StickyNotebook>
+          )}
+        </div>
+      )}
+
+      <Modal
+        open={!!expanded}
+        onClose={() => setExpanded(null)}
+        title={expanded ? `${RENDER_BY_ID[expanded].engineLabel} · full beat chain` : ""}
+        footer={
+          expanded ? `${RENDER_BY_ID[expanded].beats.length} beats · ${RENDER_BY_ID[expanded].words} words` : ""
+        }
+      >
+        {expanded && <BeatList beats={RENDER_BY_ID[expanded].beats} />}
+      </Modal>
+    </div>
+  );
+}

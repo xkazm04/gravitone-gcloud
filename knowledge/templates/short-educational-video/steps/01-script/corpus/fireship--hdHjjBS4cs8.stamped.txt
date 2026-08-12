@@ -1,0 +1,67 @@
+[00:00] brain [bleep] a minimal esoteric
+[00:02] programming language designed to make
+[00:03] your brain hurt it's Turing complete but
+[00:05] not designed to build actual software
+[00:07] it's more like a work of art that
+[00:09] challenges the status quo it was created
+[00:11] in 1993 by Swiss physics student Urban
+[00:13] Mueller where the goal was to create a
+[00:15] language with the smallest possible
+[00:17] compiler it was built for the amga 2.0
+[00:19] operating system and the compiler weighs
+[00:21] in at under 200 bytes a brain program
+[00:24] starts with a 30,000 by one-dimensional
+[00:26] array all values are initialized to zero
+[00:28] then it provides a movable point that
+[00:30] you can manipulate with eight different
+[00:32] commands use angle brackets to move the
+[00:34] pointer left or right by one cell at a
+[00:36] time then increment or decrement the
+[00:37] value in a Cell using plus or minus use
+[00:40] a period to Output the bite at the
+[00:42] Pointer's current location or use a
+[00:44] comma to accept input and store it at
+[00:46] the Pointer's current location and
+[00:47] finally use opening and closing brackets
+[00:50] to create a loop notice how brain Fu
+[00:52] doesn't require silly things like
+[00:53] variables functions and classes to get
+[00:55] started with brain [bleep] delete your
+[00:57] operating system and install a migga OS
+[01:00] then create a file ending inbf which
+[01:02] stands for brain Fu any characters that
+[01:04] are not the eight I mentioned previously
+[01:06] will be ignored as a common at this
+[01:08] point we have an array with 30,000 8bit
+[01:10] numbers all set to zero to say hi mom
+[01:12] we'll need to set each number to its
+[01:14] corresponding asky character we can
+[01:16] increment the first cell then enter a
+[01:18] loop with an opening bracket for each
+[01:20] iteration of the loop we'll decrement
+[01:21] the current cell by five then use an
+[01:23] angle bracket to move one cell to the
+[01:25] right we'll increment that cell by three
+[01:27] then move back to the left and close the
+[01:29] loop the loop will will continue until
+[01:30] the original cell goes back to zero at
+[01:32] which point it will exit we now have a
+[01:34] value of 103 at index one we can move
+[01:37] the pointer to it increment it to 104
+[01:39] then use a period to Output it that
+[01:41] corresponds to the letter H in asky we
+[01:43] can increment it again to get 105 which
+[01:45] corresponds to the letter I now we
+[01:47] continue this process of manipulating
+[01:48] memory like cavemen until we output all
+[01:50] the characters that we need now to run
+[01:52] your code use rightclick copy and paste
+[01:54] it into one of the many online
+[01:56] interpreters congratulations you just
+[01:58] said hi to your mom and brain [bleep] this
+[02:00] has been brain [bleep] in 100 seconds if
+[02:02] you want to see more brain [bleep] content
+[02:03] on this channel make sure to hit the
+[02:05] like button and subscribe thanks for
+[02:07] watching and I will see you in the next
+[02:08] one

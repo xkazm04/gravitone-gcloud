@@ -1,0 +1,392 @@
+---
+name: prototype
+memory: none
+category: Development
+description: Iteratively prototype a Gravitone Studio surface through directional variants behind a tab switcher, then consolidate and refactor the winner. Grounded in the Obsidian design language (components/ui/tokens.ts) and the mocked fixture seam. Use when the user wants to improve a component they consider a pillar of the app (visual appeal, creativity, UX clarity).
+argument-hint: "[component path]"
+allowed-tools: Read, Write, Edit, Bash, Glob, Grep, Agent
+---
+
+# Prototype — Directional Variant Workflow
+
+A disciplined A/B prototyping loop for refining a UI component. Start from a named file, produce radically different directional variants behind a tab switcher, let the user prune/fuse across rounds until one direction wins, then consolidate + refactor. The workflow is distilled from an actual session where it took 5 rounds to go from "prototype these ideas" to "ship-quality consolidated component" — the guardrails below are there to cut the rounds needed next time.
+
+---
+
+## When to use
+
+The user says things like "help me master this component", "prototype ideas on top of X", "this is a pillar of the app and I want it to be amazing", or "iterate until we reach an amazing result". The request carries an **open direction** and **visual quality bar**, not a specific change list.
+
+## When NOT to use
+
+- Fixed-scope requests ("change the button color to blue") — just edit.
+- Bug fixes.
+- Non-visual code (business logic, API layer, state store).
+- User asks for "three layouts" but wants them all shipped — that's different from prototyping.
+
+---
+
+## Coordination — Active-Runs Ledger
+
+After Phase 1 confirms which file is actually-rendered, but BEFORE Phase 2 generates the first variant, register this session in `.vault/active-runs.md` (create it if absent — same convention the other adopted skills use: an `## Active` section of `started` entries with declared paths, and a `## Recently completed` section). Read the file's `## Active` section first; if any `started`-status entry overlaps the target component or its parents and is <2h old, surface the conflict to the user before proceeding (a concurrent edit on the same component would clobber both sessions). Overlap on `.vault/active-runs.md` itself is expected and is not a conflict.
+
+**Declared paths for `/prototype`:** the named component file plus its sibling variant siblings (the variants live next to the original):
+- The actually-rendered component file (resolved in Phase 1)
+- Variant siblings: `<dir>/<Name>Variant{1..N}.tsx` (created during prototyping, removed during consolidation)
+- The tab switcher host file if it lives elsewhere
+- Always: `.vault/active-runs.md`
+
+**At session end** (after the consolidation commit lands and variant files are deleted): move your entry to the top of `## Recently completed`. Update `Status` to `completed (commit: <consolidation-sha>)` or `aborted (<reason>: e.g. user picked no winner)`. Trim entries older than 14 days while you're there.
+
+The ledger exists because several CLI sessions share this checkout; it is not versioned and costs nothing to keep honest.
+
+### Parallel-safety primitives (mandatory)
+
+Every CLI session sharing this checkout must:
+
+1. **Never `git stash`** other sessions' work — not even with `--keep-index`. If your commit step needs a clean stage, use `git add <path>` per file (NOT `git add -A` / `git add .` / `git add -u`); leave everything else alone.
+2. **Use a worktree.** Prototyping ALWAYS creates multiple variant files plus a tab switcher = multi-file by definition. Default to:
+   ```bash
+   git worktree add .claude/worktrees/prototype-<component-name> -b worktree-prototype-<component-name>
+   cd .claude/worktrees/prototype-<component-name>
+   ```
+   The worktree also lets the user open both the main checkout (untouched) and the worktree (with variants) side-by-side in their browser — run each dev server on its own port (`npm run dev -p 3178`), never on 3000.
+   **Windows note:** a worktree has no `node_modules`. Junction it to the main checkout's before briefing anyone, and assert the link resolves (`Test-Path "<link>/node_modules/.bin/tsc"` must print True) rather than trusting "Junction created". Remove the junction with `cmd //c rmdir` BEFORE `git worktree remove`.
+3. **Atomic commits per round.** One commit per round of variants generated, one per pruning decision, one per consolidation. Never bundle a multi-round prototyping arc into one commit — the per-round history is valuable for understanding what was tried.
+4. **Verify the staged index before commit.** After `git add` and before `git commit`, run `git diff --cached --stat`. If the staged file count is greater than the variants you just generated, another session pre-staged work in the index — `git restore --staged <path>` per unrelated file, or use `git commit --only <files>` to bypass the shared index entirely.
+5. **Clean up the worktree after merge.** Once the consolidation commit (and variant-file deletions) is in `git log main`, from the main checkout: `git worktree remove .claude/worktrees/prototype-<component-name>` and `git branch -D worktree-prototype-<component-name>`. Treat as part of the session-end ledger ritual.
+
+---
+
+## Step 0: Collect the starting file
+
+The skill takes no arguments. When invoked, immediately ask the user **one short question** and wait for their reply before doing anything else:
+
+> "Which component should I prototype on? Paste the path (e.g. `app/_phases/motion/MotionShotLab.tsx`)."
+
+Do not attempt to guess the file from conversation context unless the user has already named a specific path in the same turn. If their reply isn't a concrete path (e.g. they describe the component by purpose), ask a clarifying follow-up rather than guessing — picking the wrong file wastes whole rounds of work.
+
+Once you have a path, proceed to Phase 1.
+
+---
+
+## Phase 1: Verify the actually-rendered component
+
+**Don't trust the filename.** The file the user named may not be what actually renders in the app. This was the single most expensive mistake in the source session — two rounds of work landed on the wrong file.
+
+Steps:
+1. Read the component the user named.
+2. Grep for JSX usage: `<ComponentName` (rg pattern: `<{Name}\b`).
+3. Grep for imports: `from ['"].*{Name}['"]`.
+4. If the named component has **zero JSX usages**, it's a library file, not a rendered view. Find the one that IS rendered — follow imports from a known entry point (the user-facing feature's top-level view).
+5. **Confirm with the user in one sentence** before proceeding: "The named file re-exports helpers; the actually-rendered component is X — prototyping on X. OK?"
+
+Never silently assume. The file name is a hint, not ground truth.
+
+---
+
+## Phase 2: Scaffold the tab switcher
+
+Goal: add a top-of-component tab strip that lets the user A/B between variants without forking call sites.
+
+1. Rename the current exported function to `{Name}Baseline` (internal, same file).
+2. Re-export the original name as a wrapper that:
+   - Holds a `variant` state.
+   - Renders a small tab strip at the top (label + 1-line subtitle each).
+   - Delegates body to the active variant, all receiving identical props (`inline`-ish semantics).
+3. Every variant must accept the same `Props` shape the component already uses — consumers stay untouched.
+4. Keep baseline as the default selected tab so nothing visually changes on load.
+
+Principle: the scaffold is throwaway. Don't over-engineer it. A 15-line tab switcher is enough — it's the one piece exempt from the shared-catalog rule *because it never ships*: Phase 5 deletes it. That exemption is exactly why the no-lingering-switcher rule in Phase 5 exists.
+
+---
+
+## Phase 3: Generate 2 **directional** variants
+
+### 3a. Prerequisite — ground your variants in the codebase's actual quality bar
+
+Before writing *any* variant code, spend a few tool calls to calibrate quality. This is the single biggest round-1 uplift: variants that mine the codebase feel like siblings of the app. Variants invented in isolation feel like prototypes.
+
+Do these four things, in order, every time:
+
+0. **Read the craft knowledge for this step, if it exists.** `knowledge/templates/<template>/steps/`
+   holds grounded rules for the content work the surface serves — for a Script surface, that is
+   `01-script/PATTERNS.md` (the rules) and `params.json` (defaults and ranges the UI should show).
+   **This outranks your instincts about what controls a step needs**: the controls a step needs are
+   the parameters the craft actually varies, and PATTERNS.md §9 usually names them outright. A
+   variant that ignores an existing PATTERNS.md is a round wasted — and if there is no entry for the
+   step, say so in the round summary, because that gap is why prototypes come out shallow.
+
+1. **Read the shared primitives before building ANY widget.** In this repo they are
+   `components/ui/Primitives.tsx` (`Eyebrow`, `Panel`, `Button`, `Waveform`, `Wordmark`, and the
+   exported `EYEBROW_CLASS`), `components/ui/Equalizer.tsx` (`EqBars` + `usePauseOffscreen`), and
+   `components/ui/StudioFrame.tsx` (the shell). The catalog is small enough to read in one pass —
+   **so read it, and do not hand-roll a panel, pill, button or bar field that already exists.** The
+   repo is young: if a variant genuinely needs a widget that does not exist (a select, a slider, a
+   modal), build it *as a new primitive in `components/ui/`* with the tokens, and say in the round
+   summary that you added it. A raw `<select>` renders OS-styled options against a near-black studio
+   and will read as broken — never ship one into a variant.
+
+2. **Read the design system.** `README.md § The design language` is the map;
+   `components/ui/tokens.ts` is the territory and the **single source of truth** — it is the only
+   file in this repo allowed to contain a colour literal. Everything else consumes the `--gt-*`
+   custom properties it publishes (`--gt-ink`, `--gt-accent-cyan/violet/emerald`, `--gt-surface-*`,
+   `--gt-hairline`, `--gt-ease`) or its exported TS constants (`SURFACE`, `HAIRLINE`, `TEXT`,
+   `EASE`). The composed classes live in `app/globals.css`: `.aurora`, `.grain`, `.glass-panel`,
+   `.text-aurora`, `.cta-glow`, `.eq-bar`, `.scroll-y`. Three type families, no others:
+   `font-instrument` (display serif), `font-hanken` (body), `font-jetbrains` (mono labels, uppercase,
+   tracked).
+
+   **Token compliance is a disqualification gate, not a style preference.** Before presenting a round,
+   self-audit every variant: grep your new files for hex literals, `rgb(`/`rgba(`, and raw palette
+   classes used as accents. Tailwind's cyan/violet/emerald scales appear in existing code as the
+   *rendered* form of the accents — matching that is fine; inventing a fourth accent hue is not. A
+   variant that fails the audit does not go in front of the user. They should only ever be choosing
+   between *directions*, never spending a round on "use the tokens".
+
+3. **Find one or two sibling surfaces in the same repo that exemplify the quality bar.** Every
+   surface here is already a prototype-round winner, so the bar is visible in-tree. Strong references:
+   `app/_library/LibraryShelves.tsx` (the densest surface — captioned assets, filed and traceable),
+   `app/_phases/motion/MotionShotLab.tsx` (state-per-item done honestly: on film / rejected / rendering /
+   blocked) and `app/_phases/cut/CutTimeline.tsx` (a timeline that shows its own gaps). **If the user
+   names inspiration folders, treat that as authoritative** — including surfaces in the parent
+   project `../arm/gravitone/web`, which is where this design language was built.
+
+4. **Extract three things from each reference:** (a) *layout shape* — e.g. eyebrow + serif headline +
+   mono meta rail + panel grid; (b) *motion language* — entrance-only, still-aware, and note that
+   `globals.css` kills all animation under `prefers-reduced-motion`, so anything JS-driven must opt
+   out itself; (c) *typography + data patterns* — what earns `font-instrument`, where the
+   uppercase-tracked `font-jetbrains` labels sit, how a state string is rendered next to its subject.
+
+Skip this and your first round of variants will get thrown away wholesale. Spend the tool calls.
+
+### 3b. Directional variants
+
+The critical word is *directional*. A variant is not "baseline with spacing tweaked"; it's a completely different **mental model** for the same data.
+
+Good variant pairs:
+- orbital (spatial, SVG animation) + blueprint (engineering drawing, technical aesthetic)
+- dialogue (chat metaphor) + dashboard (dense data grid)
+- scroll/journey (linear narrative) + card-deck (discrete decisions)
+- studio / atelier (atmospheric 3-pane with decorative background) + ledger / record (data-dense single-column with a "benefit" column)
+- filmstrip / contact-sheet (spatial, every take visible at once) + call-sheet (production document: what is blocked, what is waiting, who is next)
+
+Each variant should earn its name by carrying a **single central metaphor** through:
+- Layout
+- Typography choices
+- Motion language
+- Iconography
+- Copy voice (if applicable)
+
+Deliverables per variant:
+- File: `{Name}{Variant}.tsx` in the same folder.
+- Short header comment describing the metaphor + why it's different from baseline.
+- Reuse shared primitives (`Primitives.tsx`, `EqBars`, the `_studio/*Parts.tsx` render fragments,
+  lucide icons) — don't reinvent panels, pills, spinners or tooltips. Built entirely on the design
+  tokens (see 3a.2's disqualification gate).
+- Degrade gracefully for edge cases the baseline handles (blocked credentials, dynamic options, etc.).
+- **Prefer data-concrete symbols over abstract markers.** A brand logo or parsed channel chip beats a coloured presence dot. The user evaluates variants partly on "does this encode *real* template data the user already cares about, or is it an abstract diagram?" When the metaphor allows, pull from the live data model (connector names, event types, cron strings) over stylised shapes.
+- **Design for extraction.** The user scores a variant partly on what it contributes back to the rest of the app: named sub-components (`ConnectorTotem`, `DimensionPanel`, `CapabilitySigil`) that could live elsewhere, not a monolithic `.tsx`. If a variant has no extractable pieces, it may be killed on reusability grounds even if it looks good.
+- **Answer "what am I working with?" in round 1.** The nouns here are scenes, takes, runs, cues and
+  assets, and the affordance for picking one must show the facts a director would actually decide on.
+  Name-only chips with a decorative icon are a round-1 failure mode. For a shot: duration, the
+  direction that produced it, its state and why. For an asset: what made it, when, from which scene,
+  and whether anything downstream uses it. Derive these from the real types — read
+  `app/_studio/types.ts` and `projectTypes.ts` and surface the non-obvious fields rather than
+  inventing new ones.
+
+- **Fixtures may be extended, but not flattered.** A variant needing richer data may add entries to
+  `app/_studio/*` — that is normal prototyping. What it may not do is invent a state the product
+  could never reach (instant renders, zero failures, a cost of nothing). The honest states are the
+  interesting design problem; a variant that designs them away has dodged the round.
+- **Answer "what did I gain?" in round 1 for output-producing surfaces.** Every phase here produces
+  candidates, so each result must carry *signal about why it matters*, not just a thumbnail: a verdict
+  (on film / runner-up / rejected and why), a delta against the other takes of the same scene, and a
+  plain-language derivation line (`from the 'slow push-in, dusk' direction, seed 4`). Raw grids of
+  identical cards are a round-1 failure mode.
+
+**Do not propose 3+ variants in round 1.** Two is the right number. More = analysis paralysis, and the user will pick direction by round 2 anyway.
+
+---
+
+## Phase 4: Iterate by subtraction and fusion
+
+After round 1, the user will usually:
+1. **Reject one variant outright** ("I don't like Blueprint — delete it, create new one").
+2. **Identify a strong element in another** ("Constellation's orbit is interesting — move it into Focus as background").
+3. **Give specific feedback on the leading candidate** (typography, stacking, spacing, keyboard nav).
+
+How to process each:
+
+**Rejection → delete immediately.**
+- Remove file, remove import, remove tab entry. Don't keep the file "just in case".
+- Dead code is a distraction in future rounds.
+
+**Fusion → extract + merge + delete source.**
+- Take the strong element out of variant A.
+- Merge it into variant B's layout in the position user specified.
+- Delete variant A entirely.
+- This shrinks the live tab count every round — a good signal.
+
+**Specific feedback → apply inside the chosen variant.**
+- Do NOT spawn a new variant for a specific fix.
+- The user didn't ask for more options; they asked for refinement of this one.
+
+**Add a new variant only when asked.** "Create new variant with X direction" is explicit. Absent that, keep iterating within the current set.
+
+**Hoist shared pieces mid-prototype, not only in Phase 6.** The moment two variants start rendering the same structure (even if styled differently), extract the shared sub-component and let both import it. Waiting until refactor time doubles the refinement cost — every tweak has to be made twice. Specifically: when variant A is kept and variant B is being created *on top of A's sigil/card/strip*, export the shared primitive from A the same turn you create B.
+
+Each round: end with an **explicit menu** of what you changed, then ask the user for the next move. Don't auto-advance.
+
+---
+
+## Phase 5: Declare the winner and consolidate
+
+Transition keywords that trigger this phase: "I think we have it", "this is the one", "promote X to default", **"set X as the production baseline"**, "X becomes our go-to". The last two carry a broader mandate than the first three — they authorise cleanup that extends beyond the prototyping variants (see step 3).
+
+1. Stop iterating.
+2. **One atomic consolidation step:** remove the switcher, delete ALL loser variant files from disk, remove their imports and tab entries, and make the winner the sole render — in the same commit. Never leave a "winner as default tab, losers still selectable" intermediate state. **If the transition keyword was "production baseline" or equivalent, the cleanup scope extends to *legacy variants on the same surface* that the user never asked to prototype but is now willing to cut** — e.g. the old matrix/theme variant the prototype was competing against. Ask once if unsure; don't delete silently.
+3. **No switcher survives the session.** Leftover A/B switchers have historically lingered in this codebase for weeks (four were consolidated in a single ship-loop milestone). If the user defers the winner decision ("let me live with both for a few days"), that's allowed — but record a dated follow-up before ending the session: a `TODO(prototype, <YYYY-MM-DD>): consolidate <Component> switcher` comment at the switcher plus a line in the active-runs ledger entry (`handoff: switcher pending user decision`). A deferred decision with no dated trace is the failure mode.
+4. **LOC cap (standing user directive):** if the consolidated winner exceeds ~200 LOC, extract named sub-components in the same consolidation step — this is not "premature refactor", it's a standing user directive (never ship 200+ LOC components). Anything already hoisted during Phase 4 makes this cheap. Deeper restructuring (subfolder, barrel, hooks split) stays in Phase 6 on explicit request.
+5. **Fold the winner's data back into the fixtures.** If a variant grew richer data inline, move it
+   into `app/_studio/` behind the existing types before consolidating — a winner that carries its own
+   private mock is a seam the backend will not fit. If it added a design token, add it to
+   `components/ui/tokens.ts` (the only file allowed a colour literal) in the same commit.
+6. Run `npx tsc --noEmit`, then `npm run build` — the build is the only check that catches an App
+   Router mistake, and it is cheap here.
+
+Exit this phase with: one component, zero variant files, zero switcher, typecheck + build clean, the
+user can reload and see the winner as the live render.
+
+---
+
+## Phase 6: Refactor (only on request)
+
+When the user explicitly asks to refactor (e.g. "split into smaller files, max N LOC per file, put under subfolder/"):
+
+**Check for a sibling folder to mirror.** Before inventing a structure, look at sibling modules in the same parent directory — the user often references one by name ("match the questionnaire folder pattern") or expects the new folder to follow whatever convention is already there: one `types.ts`, one `helpers.ts`, co-located `.tsx` files for components, lowercase filenames for hooks, a one-line `index.ts` barrel. If a sibling pattern exists, match it file-name-for-file-name. If none exists, use the order below.
+
+1. Create a subfolder named after the component's domain (lowercased).
+2. Split by responsibility, roughly in this order of "most valuable to extract first":
+   - **Types** — `types.ts` with shared interfaces + discriminated unions.
+   - **Pure helpers** — geometry, formatters, normalizers.
+   - **Hooks** — extracted stateful logic (`useCategoryData`, `usePulses`, `useKeyboardNav` patterns).
+   - **Leaf components** — option cards, icons, status pills.
+   - **Pane components** — header band, left rail, centre hero, right rail, footer.
+   - **Main orchestrator** — the assembled component, state + layout only.
+   - **Barrel `index.ts`** — one-line re-export for stable consumer imports.
+3. **LOC cap per file is a guideline, not a rule.** If a component is genuinely 210 LOC and splitting it would create awkward prop drilling, 210 is fine. But ≤200 is a useful forcing function against sprawl.
+4. Update the single consumer import in the one place the component is rendered. Use `Grep` to find all import sites first — don't assume one.
+5. Keep sibling exports (shared constants, helpers used elsewhere) stable. Don't move re-export shims breakably.
+6. Typecheck at the end, not between files.
+
+---
+
+## Guardrails (learned the hard way)
+
+### Watch for external reverts
+
+Linters, pre-commit hooks, auto-formatters, or other concurrent Claude sessions can revert your writes. After every significant Write, watch for `Note: <file> was modified, either by the user or by a linter` markers in the next tool-result message. If the markers contradict your most recent change, don't re-argue — just re-apply the change (the user is aware and wants it).
+
+**Reverts can accumulate.** A single orchestrator file (e.g. `MatrixAdoptionView.tsx`) may be reverted more than once during a long session, silently rolling back imports / tab entries / type union members / render branches. If the user says *"some process seems to have reverted the progress"* or you see a system note snapshotting an outdated version of a file you already edited, re-apply the full round's wiring in one batch (import + type + tabs + variants + render branch all at once) rather than trying to reconstruct which pieces survived. One grep to enumerate what's still missing, then one edit per missing piece.
+
+### Don't touch files outside the prototype scope
+
+A sharp correction in the source session was "did you stash or throw any changes elsewhere? I lost progress elsewhere, this cannot happen." If a file is modified locally (shown in `git status` as `M`), **do not write to it** unless the user explicitly said to. Apply edits with tight, single-line diffs so unstaged work is preserved.
+
+### Typography is a recurring quality axis
+
+Small type (under `text-sm` / 14px) is a frequent correction target. Lean toward `text-base` for body content and readable copy. Reserve `text-xs` for uppercase tracking-wide labels only. Never use pixel-valued arbitrary sizes (`text-[10px]`) in shipped variants — that's a prototype-grade shortcut, not a design decision.
+
+**Brighter, not muted.** When promoting a piece of copy (use-case subtitle, card description), don't just bump the font size — also remove opacity muting. `text-foreground/90` → `text-foreground`, `font-normal` → `font-medium`. "Promote" means "make more present", not just "make slightly larger". The user will often correct both axes in the same sentence.
+
+### Animation austerity
+
+Infinite/always-on motion is treated as noise and gets rejected wholesale. Specifically avoid in any shipped variant:
+- `repeat: Infinity` / `animation: ... infinite` / `<animate repeatCount="indefinite">`
+- SVG `<animateMotion>` along orbits, scan lines sweeping on loops, drifting particle layers
+- Ambient rotations of large elements (e.g. rotating a whole crest a few degrees on a 12s loop)
+- `hover:-translate-y-*` on cards — moving DOM geometry on hover reads as aggressive, not polished
+
+What *is* welcome:
+- Entry animations (opacity/y fade-in, once on mount).
+- Hover-gated transitions on colour, shadow, border, gradient opacity.
+- Click-gated state transitions (drawer expand, panel slide-in).
+- `AnimatePresence` for mount/unmount of specific UI elements.
+
+Rule of thumb: if the user would see the animation after leaving the screen idle, cut it.
+
+### Preserve shared exports during consolidation
+
+If the baseline file re-exports helpers used by sibling files (icons, category meta, small utilities), keep those re-exports stable even when refactoring internals. Unexpected broken imports in unrelated files erode trust.
+
+### One-shot typecheck, not continuous
+
+Don't run `tsc --noEmit` after every file write — it's slow. Batch file writes, typecheck once at the end of a round. If it fails, triangulate from the error list, fix, and run once more.
+
+### Keep baseline as reference, not as a ceiling
+
+The baseline is preserved for A/B, not because it's the target. Early rounds should feel radically different from it. If the user's feedback keeps pushing variants closer to the baseline, propose a new direction — don't keep compressing.
+
+### Framer-motion on SVG `cx` / `cy` / `r` attributes — use transforms instead
+
+Animating raw SVG attributes via `animate={{ cx: ..., cy: ..., r: ... }}` on a `motion.circle` can briefly render the attribute as literal `"undefined"` during mount, which fails DOM validation and shows up as dev-console errors like `<circle> attribute cx: Expected length, "undefined"`. Two safe patterns:
+
+1. **Position** — wrap in `motion.g` and animate `x` / `y` on the group; children stay at `cx={0} cy={0}`:
+   ```tsx
+   <motion.g initial={false} animate={{ x: px, y: py }} transition={{ type: 'spring', ... }}>
+     <circle cx={0} cy={0} r={5} fill="currentColor" />
+     <circle cx={0} cy={0} r={9} fill="none" stroke="currentColor" />
+   </motion.g>
+   ```
+2. **Size pulse** — keep the static `r={...}` attribute and animate `scale` instead of `r`:
+   ```tsx
+   <motion.circle cx={0} cy={0} r={coreR}
+     animate={{ scale: isActive ? [1, 1.06, 1] : [1, 1.03, 1] }}
+     transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+   />
+   ```
+
+Other safe-to-animate properties on SVG: `strokeDashoffset`, `pathLength`, `opacity`, and any transform (`x`, `y`, `scale`, `rotate`). Unsafe without a concrete `initial`: `cx`, `cy`, `r`, `width`, `height`, `cx`/`cy` on `radialGradient`.
+
+### Don't use `useMemo` for side effects
+
+During consolidation it's easy to write something like:
+```tsx
+useMemo(() => { if (results.length > 0) setStage('offspring'); }, [results.length]);
+```
+This is wrong — `useMemo` is for returning values, not firing effects, and it causes setState during render. The intent is `useEffect`. Before every consolidation or variant-write step, grep your own output for `useMemo\(.*set[A-Z]` and swap to `useEffect`.
+
+---
+
+## Signals the iteration is converging
+
+Green flags:
+- Tab count is decreasing round-over-round (3 → 2 → 1).
+- User's feedback is shifting from "I don't like this direction" to "tweak this specific thing".
+- User names the winning metaphor positively ("Constellation looks interesting", "the three-pane thing works").
+- User gives layout-level specifics (sidebar width, option-stacking, keyboard numbers).
+
+Red flags → slow down and reset direction:
+- User keeps rejecting wholesale ("terrible", "poorly executed") round after round.
+- User restates the baseline as their preference.
+- Variants are being asked to gain features baseline has (back-porting).
+
+---
+
+## Exit checklist
+
+At the end of the workflow, confirm:
+- [ ] Winner variant is the sole rendered component — **switcher removed** (or, if the user deferred, a dated `TODO(prototype, …)` + ledger handoff line exist).
+- [ ] All non-winner variants deleted from disk, imports, and tab configs.
+- [ ] Winner uses the design tokens only — no hex/`rgb()` literal outside `components/ui/tokens.ts`, no invented accent hue — and the shared primitives.
+- [ ] Winner ≤ ~200 LOC per file, or sub-components extracted.
+- [ ] Any new mock data lives in `app/_studio/` behind the existing types — no private fixture inside the component.
+- [ ] `npx tsc --noEmit` clean, and `npm run build` green. (There is no linter and no test suite in this repo — don't claim a command you didn't run.)
+- [ ] Every state the winner can render is one the product could actually reach.
+- [ ] Consumer import paths still resolve (grep for old filename confirms zero references).
+- [ ] If refactored: new subfolder exists under `app/_phases/` or `components/ui/`, imports updated, max file size within budget.
+- [ ] If the consolidation added, moved or deleted a file, the user is told the context map needs a
+      Personas rescan — `context-map.json` is a generated export and must not be hand-edited.
+
+When every box is checked, summarize the journey in 1-2 sentences (what metaphor won, what the winning variant does differently) — that summary is what the user will quote in a PR description or changelog entry.

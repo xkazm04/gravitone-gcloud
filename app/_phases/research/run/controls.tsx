@@ -1,0 +1,107 @@
+"use client";
+
+// The controls around a run: what you feed it, which ending to drive, and the
+// standing note about what the engine actually is.
+
+import { OUTCOMES } from "./trace";
+import type { RunOutcome } from "./types";
+import { LOAD_NOTE } from "./useResearchRun";
+
+/** The topic field. One string, one button — no engine picker, no duration, no
+ *  tone: those are decisions the notebook has not earned yet. */
+export function TopicField({
+  topic,
+  setTopic,
+  disabled,
+  placeholder = "a topic — “Why Bitcoin price does not rise”",
+  className = "",
+}: {
+  topic: string;
+  setTopic: (v: string) => void;
+  disabled?: boolean;
+  placeholder?: string;
+  className?: string;
+}) {
+  return (
+    <input
+      value={topic}
+      onChange={(e) => setTopic(e.target.value)}
+      disabled={disabled}
+      placeholder={placeholder}
+      aria-label="Topic"
+      className={`font-hanken w-full rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3 text-base text-white placeholder:text-white/25 focus-visible:border-cyan-400/40 disabled:opacity-50 ${className}`}
+    />
+  );
+}
+
+/** Which ending to drive. Prototype scaffolding, and labelled as such — the
+ *  three outcomes are real states the surface has to render, so they must be
+ *  reachable without waiting for a bad day. */
+export function OutcomePicker({
+  outcome,
+  setOutcome,
+  disabled,
+  onLoad,
+  loaded,
+}: {
+  outcome: RunOutcome;
+  setOutcome: (o: RunOutcome) => void;
+  disabled?: boolean;
+  /** Jump straight to the finished notebook, skipping the simulated run. */
+  onLoad?: () => void;
+  loaded?: boolean;
+}) {
+  return (
+    <div className="font-jetbrains flex flex-wrap items-center gap-1.5 text-[10px]">
+      <span className="tracking-[0.16em] text-white/25 uppercase">prototype · drive the ending</span>
+      {OUTCOMES.map((o) => (
+        <button
+          key={o.key}
+          onClick={() => setOutcome(o.key)}
+          disabled={disabled}
+          title={o.hint}
+          className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition disabled:opacity-40 ${
+            outcome === o.key
+              ? "border-white/25 bg-white/[0.06] text-white/80"
+              : "border-white/10 text-white/35 hover:text-white/70"
+          }`}
+        >
+          {o.label}
+        </button>
+      ))}
+
+      {/* Load the saved run. Separated by a hairline because it is a different
+          KIND of control: the outcome pills choose which ending the mocked run
+          walks to, this one skips the walk entirely. Cyan — it is the only
+          affordance here that is doing you a favour. */}
+      {onLoad && (
+        <>
+          <span aria-hidden className="mx-1 h-3 w-px bg-white/10" />
+          <button
+            onClick={onLoad}
+            data-testid="load-saved-run"
+            title={LOAD_NOTE}
+            className="rounded-full border border-cyan-400/30 bg-cyan-400/5 px-2.5 py-1 tracking-[0.1em] text-cyan-300/90 transition hover:border-cyan-400/50 hover:bg-cyan-400/10 hover:text-cyan-200"
+          >
+            load saved run
+          </button>
+          {loaded && (
+            <span className="text-white/30" data-testid="load-saved-note">
+              saved research · not re-run
+            </span>
+          )}
+        </>
+      )}
+    </div>
+  );
+}
+
+/** The honest line about what the engine actually is. Every surface carries it. */
+export function LocalProcessNote({ className = "" }: { className?: string }) {
+  return (
+    <p className={`font-jetbrains text-[11px] leading-relaxed text-white/35 ${className}`}>
+      research runs as a local Claude Code process — minutes, not milliseconds, and it can exit
+      non-zero. Prototype: the trace is replayed at 8× from run 1 and nothing is executed.
+    </p>
+  );
+}

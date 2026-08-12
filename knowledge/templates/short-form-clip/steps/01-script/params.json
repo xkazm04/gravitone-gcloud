@@ -1,0 +1,89 @@
+{
+  "$comment": "Machine-readable form of this template's PATTERNS.md. Engines live in knowledge/ENGINES.md; tone dials in knowledge/TONE.md. NOTHING here is measured below 40 seconds — see evidence_gap.",
+  "version": 1,
+  "template": "short-form-clip",
+  "step": "01-script",
+  "updated": "2026-08-11",
+  "sample_size": 3,
+  "confidence": "n=3, two from one channel, nothing measured below 40s",
+
+  "evidence_gap": {
+    "target_duration_s": 30,
+    "measured_durations_s": [40, 53, 57],
+    "note": "The brief asks for max 30s. The best available short-form work from the modelled channels sits at 40-60s (the Shorts ceiling). Compression from 40s to 25s is INFERRED and untested — the template's first open question."
+  },
+
+  "duration": {"unit": "seconds", "measured_min": 40, "measured_max": 57, "target_max": 30},
+  "words": {"min": 110, "max": 235},
+
+  "engines": {
+    "$ref": "../../../ENGINES.md",
+    "available": ["anchor-ladder", "paradox-teaser", "effort-payoff-gap"],
+    "note": "Engine B (Effort/Payoff) was observed at 2:08 and again at 0:40 unchanged — engines are length-independent."
+  },
+
+  "hook": {
+    "at_second": 0,
+    "no_setup": true, "no_branding": true, "no_in_this_video": true,
+    "shapes": [
+      {"id": "contradiction", "when": "there is a visual paradox", "example": "this is not Target"},
+      {"id": "scenario", "when": "the subject is a felt problem", "example": "it's 3am, your code is broken, you have no idea where your kids are"},
+      {"id": "stake", "when": "the subject is a skill or a risk", "example": "if you want to get a job as a programmer you need to know Big O"}
+    ],
+    "anti_pattern": {
+      "id": "announced-fact",
+      "forms": ["did you know", "fun fact", "here's something interesting"],
+      "why": "Signals that a fact is coming and gives the viewer a clean moment to leave. Zero of three studied shorts use it.",
+      "ui_rule": "Do not offer this as a template option — if the tool offers it, it will be used."
+    }
+  },
+
+  "one_idea": {
+    "required": true,
+    "anchor_ladder_is_not_an_exception": "Big O teaches five complexity classes but ONE idea (cost grows differently for different work), on ONE object.",
+    "anchor_rule": "Establish the anchor within 2 seconds and never replace it. A second metaphor is the most expensive mistake available at this length."
+  },
+
+  "visual_mode": {
+    "required_field": true,
+    "values": {
+      "image-led": {"wpm": 125, "note": "the pictures argue, narration labels them (PolyMatter Target)"},
+      "narration-led": {"wpm": [224, 247], "note": "visuals follow the words (both Fireship shorts)"}
+    },
+    "note": "Rate in short form is a function of the visual plan, not pacing taste. The Script step cannot resolve it — emit a word-budget RANGE and hand the mode to the Frames step. Guessing wrong by 2x is the difference between a clip that breathes and one nobody can follow."
+  },
+
+  "derived_short_contract": {
+    "applies_when": "the clip is scoped from a mid-length script",
+    "rules": [
+      "The clip must be COMPLETE on its own — a viewer who never clicks through has still received something",
+      "The withheld thing must be a DIFFERENT question, not the missing half of the one just closed",
+      "The pointer is explicit and last — a named thing that happened, then the link",
+      "The clip must not depend on the parent video's setup"
+    ],
+    "anti_pattern": {
+      "id": "amputated-clip",
+      "what": "Cutting a segment from the middle of a long video, where the hook is a mid-argument sentence and the payoff was established minutes earlier.",
+      "why_it_persists": "It reads as complete to the person who made it and as noise to everyone else."
+    },
+    "confidence": "INFERRED from a single witness (PolyMatter, This is Not Target)"
+  },
+
+  "close": {
+    "form": "joke",
+    "replaces": "the reframe",
+    "why": "No room to re-describe at this length; the last beat buys memorability instead of insight.",
+    "joke_still_carries_info": "BOGO sort is the punchline AND teaches the top of the complexity scale.",
+    "confidence": "OBSERVED in 2 of 3, both from the same channel"
+  },
+
+  "ui_contract": {
+    "hook_shape_picker": ["contradiction", "scenario", "stake"],
+    "anchor_is_a_single_named_field": "refuse a second one",
+    "visual_mode_is_explicit": ["image-led", "narration-led"],
+    "derived_mode": "pick the parent script, then the four contract checks as review items",
+    "forbidden": "a 'did you know' template"
+  },
+
+  "not_validated": "No engagement, retention or completion data. These are craft observations from work that appears to succeed; view counts are not evidence of craft."
+}

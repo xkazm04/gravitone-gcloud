@@ -1,0 +1,105 @@
+{
+  "$note": "Two tone profiles authored for the TONE.md validation experiment (TONE-TEST.md). Shape follows knowledge/TONE.md §2 — dials only, plus the two non-numeric identity carriers. These are profiles for HYPOTHETICAL creators, constructed to sit near opposite ends of the MEASURED corpus ranges. They are not impersonations of Fireship, PolyMatter or any other channel; the measured numbers of those channels were used only to set plausible far-apart targets.",
+  "experiment": "same-beat-chain re-render of script--reversal-chain.md",
+  "template": "mid-educational-video",
+  "engine": "reversal-chain",
+  "target_duration_s": 300,
+  "profiles": [
+    {
+      "id": "voice-a",
+      "name": "Null Pointer",
+      "one_line": "A working developer talking fast to other developers, with a stake in the outcome and a joke every forty seconds.",
+      "creator_is_hypothetical": true,
+      "near_neighbour_in_corpus": "Fireship (Code Report), used only to set numeric targets",
+      "dials": {
+        "rate_wpm": 235,
+        "author_presence_i_per1k": {"target": 9.0, "note": "at or just above the highest MEASURED (8.3). The author is a character with money on the line."},
+        "address_you_per1k": {"target": 22.0, "note": "near the corpus ceiling of 24.0"},
+        "inclusion_we_per1k": {"target": 6.0, "note": "low — this is commentary, not a walkthrough. High 'we' is procedural (TONE.md §2)."},
+        "formality_contractions_per1k": {"target": 30.0},
+        "humour_frequency_per_s": 45,
+        "sentence_shape": "short, fragmentary, frequent one-clause sentences; comfortable ending a beat on a four-word line"
+      },
+      "reference_world": {
+        "permitted": [
+          "software engineering practice — CI, deploys, pull requests, tests, incident postmortems",
+          "developer-culture internet — timelines, posting, hype cycles",
+          "self-deprecation about the author's own competence and portfolio",
+          "consumer tech and its marketing"
+        ],
+        "forbidden": [
+          "sport",
+          "war and military metaphor",
+          "film/comic-book franchises",
+          "food service and restaurants",
+          "anything that requires the viewer to have a mortgage"
+        ]
+      },
+      "signature_bookends": {
+        "open": "It's the eleventh of August, 2026, and the number is still going down.",
+        "close": "That's the mechanism. I'll see you in the next one.",
+        "note": "Template slots. Never generated fresh. The close is NOT the reframe — the reframe is composed per script and sits before it."
+      },
+      "declared_persona_furniture": {
+        "exposure_disclosure": true,
+        "note": "Engine E's declared-exposure move, imported. Costs runtime; see TONE-TEST.md finding 3."
+      }
+    },
+    {
+      "id": "voice-b",
+      "name": "The Long Way Round",
+      "one_line": "An almost absent narrator, moving slowly through physical objects and rooms, letting institutions speak for themselves.",
+      "creator_is_hypothetical": true,
+      "near_neighbour_in_corpus": "PolyMatter, used only to set numeric targets",
+      "dials": {
+        "rate_wpm": 172,
+        "author_presence_i_per1k": {"target": 0.0, "note": "hard zero. The narrator has no body and no portfolio."},
+        "address_you_per1k": {"target": 12.0, "note": "mid-range. Addresses the viewer, but as a companion looking at the same object, not as a student."},
+        "inclusion_we_per1k": {"target": 7.0},
+        "formality_contractions_per1k": {"target": 13.0, "note": "near the corpus floor of 11.4 — written, not spoken"},
+        "humour_frequency_per_s": 0,
+        "humour_note": "Dry understatement only, carried inside declarative sentences. Never a line whose sole job is the laugh.",
+        "sentence_shape": "longer, balanced, frequent three-part lists; periodic sentences that hold the verb back"
+      },
+      "reference_world": {
+        "permitted": [
+          "domestic and physical objects — doors, houses, rooms, furniture, weather",
+          "institutions given dialogue and body language",
+          "the ordinary machinery of commerce — ledgers, filing, paperwork, queues",
+          "understated comparison of scale"
+        ],
+        "forbidden": [
+          "internet culture and memes",
+          "software and engineering jargon as metaphor",
+          "sport",
+          "brand names used as punchlines",
+          "first-person anecdote of any kind"
+        ]
+      },
+      "signature_bookends": {
+        "open": "Consider what happens when you finally get what you asked for.",
+        "close": "Whether that was worth fifteen years is a different question, and one for another week.",
+        "note": "Template slots. The close is a next-video handoff, not the reframe."
+      },
+      "declared_persona_furniture": {
+        "exposure_disclosure": false,
+        "note": "A narrator with no 'I' cannot declare exposure. See TONE-TEST.md finding 3 — this is a measurable honesty cost of a dial setting."
+      }
+    }
+  ],
+  "held_fixed_by_construction": {
+    "beat_chain": "all 15 beats of script--reversal-chain.md, same order, same connectors",
+    "turn_count": 4,
+    "turn_positions": "hook / M1 / M2 / M3 as in the original",
+    "questions_asked_aloud": 1,
+    "promise_form": "topics",
+    "facts": "identical set from notebook.json — no re-research",
+    "target_duration_s": 300
+  },
+  "deliberately_not_dials": {
+    "hedging_density": "determined by the subject's knowability (TONE.md §2)",
+    "numeric_density": "determined by whether the subject is quantitative (TONE.md §2)",
+    "causal_opener_density": "determined by the engine (TONE.md §2)",
+    "note": "Neither profile sets a target for these three. Whether they nonetheless moved is the second question of the experiment."
+  }
+}

@@ -1,0 +1,23 @@
+[00:00] it's 3:00 a.m. your code is broken you
+[00:02] have no idea where your kids are and
+[00:03] you're starting to wonder if building
+[00:04] your own operating system kernel from
+[00:06] scratch was a bad idea when this happens
+[00:08] it's time to whip out your rubber duck
+[00:10] what you do is teach your imaginary
+[00:12] friend how your code Works line by line
+[00:14] the duck is a great listener who won't
+[00:16] judge and criticize you normal people
+[00:17] will think you're crazy which you are
+[00:19] but verbalizing your thought process out
+[00:21] loud is a weirdly effective way to
+[00:23] trigger a higher level of cognitive
+[00:25] functioning even senica knew this 2,000
+[00:26] years ago who said while we teach we
+[00:28] learn magically that missing semicolon
+[00:31] on line
+[00:32] 6233 becomes glaringly obvious not only
+[00:35] does rubber duck debugging make you more
+[00:36] productive but it's also a great way to
+[00:38] prepare for all your upcoming technical
+[00:40] interview failures
