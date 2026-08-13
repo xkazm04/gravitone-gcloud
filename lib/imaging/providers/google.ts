@@ -176,6 +176,7 @@ export function googleProvider(): ImagingProvider {
         },
         req.count ?? 1,
         "generation",
+        req.seed,
       );
     },
 
@@ -245,16 +246,22 @@ async function runImage(
   body: Record<string, unknown>,
   count: number,
   what: string,
+  seed?: number,
 ): Promise<GeneratedImages> {
   const started = Date.now();
   const key = keyFor("google");
   const n = Math.min(Math.max(count, 1), 8);
 
-  const calls = Array.from({ length: n }, () =>
+  const calls = Array.from({ length: n }, (_, i) =>
     requestJson<Interaction>("google", ENDPOINT, {
       method: "POST",
       headers: { "x-goog-api-key": key },
-      body,
+      // seed + i, NOT the bare seed. N candidates are N separate calls here, so
+      // one seed across all of them would return the same picture n times — a
+      // filmstrip of identical frames, which is the opposite of what a caller
+      // asking for candidates wants. Offsetting keeps the run reproducible
+      // (same seed → same set) while keeping the candidates different.
+      body: seed === undefined ? body : { ...body, seed: seed + i },
       timeoutMs: 180_000,
     }),
   );

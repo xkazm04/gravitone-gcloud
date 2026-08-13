@@ -93,6 +93,15 @@ export async function requestJson<T>(
   throw last ?? new ImagingError(`${provider} failed.`, "failed", provider);
 }
 
+/**
+ * Ceiling on a single downloaded image. A plate at 4K is a few MB, so this is
+ * far above anything legitimate — it exists because the alternative is
+ * unbounded: `arrayBuffer()` buffers whatever the far end sends, and the far
+ * end is a URL a model handed us. A runaway or hostile response should fail
+ * the call, not the process.
+ */
+const MAX_IMAGE_BYTES = 32 * 1024 * 1024;
+
 /** Download an image the vendor parked on a CDN, as base64. */
 export async function fetchImageBase64(
   provider: ProviderId,
@@ -109,7 +118,26 @@ export async function fetchImageBase64(
         res.status === 404 ? "bad-response" : "failed",
         provider,
       );
+
+    // Cheap check first: refuse before reading a body that declares itself
+    // oversized. A missing or lying header is caught by the check after.
+    const declared = Number(res.headers.get("content-length"));
+    if (Number.isFinite(declared) && declared > MAX_IMAGE_BYTES) {
+      ctl.abort();
+      throw new ImagingError(
+        `${provider} offered a ${Math.round(declared / 1024 / 1024)}MB image; the ceiling is ${MAX_IMAGE_BYTES / 1024 / 1024}MB.`,
+        "bad-response",
+        provider,
+      );
+    }
+
     const buf = Buffer.from(await res.arrayBuffer());
+    if (buf.length > MAX_IMAGE_BYTES)
+      throw new ImagingError(
+        `${provider} returned a ${Math.round(buf.length / 1024 / 1024)}MB image; the ceiling is ${MAX_IMAGE_BYTES / 1024 / 1024}MB.`,
+        "bad-response",
+        provider,
+      );
     if (buf.length === 0)
       throw new ImagingError(`${provider} returned an empty image.`, "bad-response", provider);
     return {

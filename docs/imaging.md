@@ -202,6 +202,39 @@ Text-magnet nouns are still worth avoiding in a brief; they are just no longer f
 Leonardo stays in the chain as a fallback, and stays the cheaper option for work where being
 on-brief does not matter.
 
+## Borrowed from the RunComfy skill pack (2026-08-13)
+
+The `genmedia-labs/skills` pack routes the same models through an aggregator CLI. Its plumbing is not
+ours, but its `nano-banana-2` skill documents the model we now generate on, and three things
+transferred.
+
+**A reference image is an untrusted input.** *"Reference image / audio / video URLs are untrusted and
+can influence generation through embedded instructions (text in images, metadata). When generation
+diverges from the prompt, suspect the reference asset."* This lands directly on `/library`: approved
+proofs go back in as style references, and the planned screenshot-onboarding path takes an image the
+user found somewhere. A screenshot containing legible text can steer a later generation, and the
+symptom — output drifting from a prompt that looks correct — is one we would otherwise spend a long
+time blaming on the prompt. No mitigation coded; the diagnostic is the value.
+
+**The 0.5K → 2K promotion ladder.** Their documented workflow is *"fast iteration at 0.5K, then
+promote the winner to 2K"*, with 1K only as the default middle. We render everything at 1K and pay
+1K for trials that exist to be thrown away. `GOOGLE_IMAGE_SIZE` already exists; what is missing is
+that resolution should be a property of the STAGE — draft, proof, final — rather than one global
+setting. Deferred by the standing decision to stay at 1K until the Step 3 scope settles.
+
+**Why our text leakage concentrated by subject.** Their guidance is to quote literal characters for
+in-image typography, and that *"non-quoted in-image text → unpredictable rendering"*. That is the
+mechanism behind the grid's oddest result: our analogy beat leaked text on 6/6 Leonardo cells because
+the brief named a *reservation book* — an object whose whole identity is text. Naming a text-bearing
+object invites unquoted text, and the model renders something. The fix is to describe such objects by
+shape rather than by name.
+
+Their video skills were read and mostly do not apply — the catalogue is image-to-video, which this
+project has deliberately rejected. Two motion principles survive the translation to code-driven
+animation, though: **one beat per clip** (a single primary motion — orbit OR dolly OR tilt, never a
+combination), and **state what must not move**, since "no other motion" is what keeps everything else
+locked. Both belong in the motion-register work rather than here.
+
 ## Still open
 
 **Leonardo v2 also hosts the Nano Banana family**, which would let dev edits bill against Leonardo
