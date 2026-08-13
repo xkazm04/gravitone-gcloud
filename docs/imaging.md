@@ -15,9 +15,13 @@ leonardo  google    qwen
 
 | Capability | dev | prod |
 |---|---|---|
-| `generate` | **Leonardo** · Lucid Origin | **Google** · Nano Banana 2 Lite |
-| `edit` | **Google** · Nano Banana 2 Lite | same |
+| `generate` | **Leonardo** · Lucid Origin | **Google** · Nano Banana 2 |
+| `edit` | **Google** · Nano Banana 2 | same |
 | `recognize` | **Qwen** · qwen3.8-max | **Google** · Gemini 3.6 Flash |
+
+Nano Banana **2**, not Lite: Lite is cheaper but supports only *object* references — no style
+references. `/library`'s whole premise is that approved plates condition later frames, so Lite
+cannot hold the product's central promise.
 
 Dev leans on Leonardo and Qwen because those credits are already bought. Production is one vendor on
 purpose: one style-lock mechanism, one reference-image window, one bill.
@@ -96,15 +100,33 @@ in the `personas` repo.
 - Fallback SKUs (`qwen3.7-plus`, `qwen3.6-flash`) exist for **quota**, not quality: they bill against
   separate allowances, so a 429 on one says nothing about the next. Only `rate-limited` rotates.
 
-## Two open items
+## Measured on the first live run (2026-08-13)
 
-**Nano Banana 2 Lite cannot take style-reference images.** It supports up to 14 *object* references
-but has no style-reference or character-consistency support — those are Nano Banana 2 / Pro
-features. This matters directly to `/library`, whose lock gate assumes approved plates condition
-later frames. The text style block still carries style (and research says it must be restated in
-full every time regardless), but if reference-conditioned style lock proves necessary, generation
-has to move to `gemini-3.1-flash-image` (NB2) and `GOOGLE_IMAGE_MODEL` exists to make that a
-one-line change.
+All five probe cases green. What the run taught, beyond "it works":
+
+**Google image output is JPEG-only.** `response_format.mime_type` rejects `image/png` outright:
+*"Supported values: 'image/jpeg'."* Lossy compression on flat colour fields is the one thing that
+would worry me, since ringing shows worst on exactly the hard edges this style is built from. It is
+tolerable only because of the layer split — the plate carries colour and shape, every crisp element
+is vector drawn on top by us. Revisit if plates ever have to carry fine detail alone.
+
+**Google does not return an exact aspect.** A `16:9` request at `1K` came back **1376×768**, a ratio
+of 1.792 against 16∶9's 1.778 — about 0.8% wide. Leonardo returned exactly **1472×832**. The probe
+tolerates ±0.02 because the vendor snaps to its own grid and will not be argued out of it, but
+anything compositing a plate under a vector layer must normalise rather than assume.
+
+**The two vision models disagree on the same plate.** Grading one Leonardo image, Qwen said
+`isFlat: true` and Gemini said `isFlat: false` — with identical colour readings. Both are arguable
+(there is a soft contact shadow), which is the point: a single vision model is an opinion, not a
+measurement. Anything gating on a judgement should ask two and treat disagreement as "needs a human".
+
+**Early model-fit signal, n=1 and not a verdict.** Leonardo's Lucid Origin was the purer style —
+genuinely flat, no shading — but ignored the mechanism instruction (the beam came out level when the
+brief said one pan rides higher). Nano Banana 2 got the mechanism right and correctly restricted
+cyan to the arrows, but smuggled in soft gradients and light dimensionality. Style purity versus
+instruction precision, in the two directions you would least like to choose between.
+
+## Still open
 
 **Leonardo v2 also hosts the Nano Banana family**, which would let dev edits bill against Leonardo
 credits instead of a Google key. Model strings are `nano-banana-2-lite`, `nano-banana-2`,
@@ -113,3 +135,8 @@ credits instead of a Google key. Model strings are `nano-banana-2-lite`, `nano-b
 for two reasons: v2 references images by **uploaded id**, so an edit needs the presigned-upload flow
 first, and v2 has no `inpaint`/`mask` at all — it is reference-guided regeneration, not masked
 editing. True masked edits must go direct to Google either way.
+
+**Style references are wired but unproven.** `references[]` reaches NB2, and NB2 is the variant that
+supports style conditioning — but no probe case exercises it yet. The test that matters is the one
+`/library` depends on: lock a style from approved plates, generate a *different* subject, and check
+the two read as the same publication. That is the next case to add.

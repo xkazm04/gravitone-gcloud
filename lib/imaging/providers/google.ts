@@ -1,8 +1,8 @@
 // GOOGLE — the production vendor, and the dev-environment editor.
 //
 // Two models, one endpoint:
-//   gemini-3.1-flash-lite-image  ("Nano Banana 2 Lite")  generate + edit
-//   gemini-3.6-flash                                      recognize
+//   gemini-3.1-flash-image  ("Nano Banana 2")  generate + edit
+//   gemini-3.6-flash                           recognize
 //
 // WIRE FORMAT WARNING, and the reason this file is written the way it is:
 // Google replaced `generateContent` with the **Interactions API**. The old
@@ -34,11 +34,36 @@ import type {
 
 const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
 
-/** Nano Banana 2 Lite. NOTE: Lite renders at 1K only, and supports OBJECT
- *  reference images but NOT style-reference images — see the caveat in
- *  docs/imaging.md before relying on `references` for style lock. */
-const IMAGE_MODEL = process.env.GOOGLE_IMAGE_MODEL?.trim() || "gemini-3.1-flash-lite-image";
+/**
+ * Nano Banana 2 — the full model, deliberately NOT the Lite variant.
+ *
+ * Lite is cheaper and would do for one-off plates, but it supports only OBJECT
+ * reference images: no style references, no character consistency. /library's
+ * whole premise is that approved plates condition every later frame, so Lite
+ * cannot hold the product's central promise. `gemini-3.1-flash-lite-image`
+ * remains a valid value for GOOGLE_IMAGE_MODEL if a caller ever wants the
+ * cheaper path for something style-lock does not touch.
+ */
+const IMAGE_MODEL = process.env.GOOGLE_IMAGE_MODEL?.trim() || "gemini-3.1-flash-image";
 const VISION_MODEL = process.env.GOOGLE_VISION_MODEL?.trim() || "gemini-3.6-flash";
+
+/** 0.5K · 1K · 2K · 4K — an NB2 capability; Lite is 1K-only. 1K by default
+ *  because plates are iterated on, and the price roughly doubles per step. */
+const IMAGE_SIZE = process.env.GOOGLE_IMAGE_SIZE?.trim() || "1K";
+
+/**
+ * JPEG, and not by choice: the API rejects anything else outright —
+ * "The value 'image/png' is not supported for 'response_format.mime_type'.
+ * Supported values: 'image/jpeg'." (measured, 2026-08-13).
+ *
+ * Lossy compression on flat colour fields is the one thing that would worry me
+ * here, since ringing shows up hardest on exactly the hard edges this style is
+ * made of. It is acceptable because of the layer split: the plate carries
+ * colour and shape, while every crisp element — captions, numbers, rules,
+ * arrows — is vector drawn on top by us. If plates ever have to carry fine
+ * detail alone, this constraint is the first thing to re-examine.
+ */
+const IMAGE_MIME = "image/jpeg";
 
 /* ── The Interactions wire shape ──────────────────────────────────────────── */
 
@@ -134,9 +159,9 @@ export function googleProvider(): ImagingProvider {
           input,
           response_format: {
             type: "image",
-            mime_type: "image/png",
+            mime_type: IMAGE_MIME,
             aspect_ratio: req.aspect,
-            image_size: "1K",
+            image_size: IMAGE_SIZE,
           },
         },
         req.count ?? 1,
@@ -151,7 +176,7 @@ export function googleProvider(): ImagingProvider {
       for (const r of (req.references ?? []).slice(0, 13)) input.push(imagePart(r));
 
       return runImage(
-        { model: IMAGE_MODEL, input, response_format: { type: "image", mime_type: "image/png" } },
+        { model: IMAGE_MODEL, input, response_format: { type: "image", mime_type: IMAGE_MIME } },
         1,
         "edit",
       );
