@@ -25,7 +25,9 @@ const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 
 await page.goto(`${BASE}/library`, { waitUntil: "domcontentloaded" });
-await page.waitForTimeout(1500);
+// Wait for the client component to hydrate rather than guessing a duration —
+// a fixed 1500ms passed locally and failed under a cold Turbopack compile.
+await page.getByRole("button", { name: "Styles", exact: true }).waitFor({ timeout: 30_000 });
 
 check("dev-auth reached /library", new URL(page.url()).pathname === "/library", page.url());
 
@@ -34,7 +36,7 @@ for (const label of ["Styles", "Assets", "Animations"])
   check(`module tab "${label}" exists`, await page.getByRole("button", { name: label, exact: true }).isVisible());
 
 await page.getByRole("button", { name: "Assets", exact: true }).click();
-await page.waitForTimeout(2000); // seed = fetch + IndexedDB write
+await page.waitForTimeout(2500); // seed = fetch + IndexedDB write
 
 // --- the seed
 const tiles = page.locator("figure");
@@ -54,11 +56,18 @@ await page.waitForTimeout(400);
 const five = await page.locator("figure").count();
 check("a preset folder holds 5 images", five === 5, `${five} tiles`);
 
-// --- every image actually decoded. A wrong src is invisible otherwise.
-const broken = await page.$$eval("figure img", (imgs) =>
-  imgs.filter((i) => !i.complete || i.naturalWidth === 0).map((i) => i.getAttribute("src")),
-);
-check("every visible image loaded", broken.length === 0, broken.slice(0, 3).join(", "));
+// --- every image actually decoded. A wrong src is invisible otherwise: it
+// renders as an empty box, not an error. Poll rather than snapshot — asserting
+// mid-decode reports a slow image as a broken one.
+let broken = [];
+for (let i = 0; i < 20; i++) {
+  broken = await page.$$eval("figure img", (imgs) =>
+    imgs.filter((x) => !x.complete || x.naturalWidth === 0).map((x) => x.getAttribute("src")),
+  );
+  if (!broken.length) break;
+  await page.waitForTimeout(500);
+}
+check("every visible image loaded", broken.length === 0, broken.slice(0, 2).join(", "));
 
 // --- the context menu
 await page.locator("figure").first().click({ button: "right" });
@@ -81,9 +90,9 @@ const afterRemove = await page.locator("figure").count();
 check("removal drops the tile", afterRemove === 4, `${afterRemove} tiles`);
 
 await page.reload({ waitUntil: "domcontentloaded" });
-await page.waitForTimeout(1800);
+await page.getByRole("button", { name: "Assets", exact: true }).waitFor({ timeout: 30_000 });
 await page.getByRole("button", { name: "Assets", exact: true }).click();
-await page.waitForTimeout(1200);
+await page.waitForTimeout(2000);
 const afterReload = await page.locator("figure").count();
 check("removal survives a reload", afterReload === 29, `${afterReload} tiles`);
 

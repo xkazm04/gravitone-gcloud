@@ -69,7 +69,14 @@ async function seedFromTrials(uid: string): Promise<Asset[]> {
   return (doc.entries ?? [])
     .filter((e) => (e.provider ?? "leonardo") === "google")
     .map((e, i) => ({
-      id: `as-${now.toString(36)}-${i.toString(36)}`,
+      // CONTENT-ADDRESSED, not time-or-index-addressed. React invokes effects
+      // twice in development, so two seeds can run concurrently, both find an
+      // empty shelf, and both write — which with random ids produced sixty
+      // assets instead of thirty (measured, drive-assets.mjs). A deterministic
+      // id makes the second write an overwrite of the first, so the seed is
+      // idempotent by construction rather than by locking, and re-seeding after
+      // a regenerated grid updates rows instead of duplicating them.
+      id: `as-${e.provider ?? "leonardo"}-${e.styleId}-${e.trialId}`,
       uid,
       // styles › presets › <preset>. The folder chain the shelf is browsed by.
       path: ["styles", "presets", e.styleId],
