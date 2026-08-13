@@ -5,13 +5,13 @@
 // is stated once, in lib/projects' PHASES, which /projects reads too.
 //
 // Each surface is its own prototype-round winner: Triage board, Manuscript,
-// Lightbox, Shot lab, Spotting, Timeline.
+// Frames (in prototype), Shot lab, Spotting, Timeline.
 
 import { PHASES, PHASE_TITLE, type PhaseKey } from "@/lib/projects";
 
 import ResearchStep from "../../_phases/research/ResearchStep";
 import ScriptStep from "../../_phases/script/ScriptStep";
-import FramesLightbox from "../../_phases/frames/FramesLightbox";
+import FramesStep from "../../_phases/frames/FramesStep";
 import MotionShotLab from "../../_phases/motion/MotionShotLab";
 import ScoreSpotting from "../../_phases/score/ScoreSpotting";
 import CutTimeline from "../../_phases/cut/CutTimeline";
@@ -22,7 +22,7 @@ import CutTimeline from "../../_phases/cut/CutTimeline";
 const SURFACE: Record<PhaseKey, (projectId: string) => React.ReactNode> = {
   research: (projectId) => <ResearchStep projectId={projectId} />,
   script: (projectId) => <ScriptStep projectId={projectId} />,
-  frames: () => <FramesLightbox />,
+  frames: (projectId) => <FramesStep projectId={projectId} />,
   motion: () => <MotionShotLab />,
   score: () => <ScoreSpotting />,
   cut: () => <CutTimeline />,
