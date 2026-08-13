@@ -13,9 +13,12 @@ const DB_NAME = "gravitone-studio";
 export const PROJECTS_STORE = "projects";
 /** Per-project step content — see app/_phases/_shared/stepStore.ts. */
 export const STEPS_STORE = "steps";
+/** Visual identities — see lib/themes.ts. Account-scoped like projects, and
+ *  read by /library and by the gate on project creation. */
+export const THEMES_STORE = "themes";
 /** Index over the owning uid — listing is always "this account's projects". */
 export const BY_UID = "by-uid";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -35,6 +38,10 @@ export function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(PROJECTS_STORE)) {
         const store = db.createObjectStore(PROJECTS_STORE, { keyPath: "id" });
         store.createIndex(BY_UID, "uid", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(THEMES_STORE)) {
+        const themes = db.createObjectStore(THEMES_STORE, { keyPath: "id" });
+        themes.createIndex(BY_UID, "uid", { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);

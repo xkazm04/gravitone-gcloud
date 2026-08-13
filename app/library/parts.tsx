@@ -1,10 +1,13 @@
 "use client";
 
-// Shared leaves for the library variants: the nouns both metaphors render —
-// hoisted from day one so a refinement never has to be made twice.
+// Shared leaves for /library. These used to draw gradient mocks; they now draw
+// real generated pixels, so the only thing that changed conceptually is that a
+// proof can be WRONG — hence the judge affordances.
 
-import type { Proof, ProofState, Theme, ThemeStatus } from "./themes";
-import { STATUS_WORD, lockedCount } from "./themes";
+import { Check, X } from "lucide-react";
+
+import type { PaletteColor, Proof, ProofState, Theme, ThemeStatus } from "@/lib/themes";
+import { STATUS_WORD, statusOf } from "@/lib/themes";
 
 const STATUS_CLS: Record<ThemeStatus, string> = {
   draft: "border-white/12 text-white/50",
@@ -12,7 +15,6 @@ const STATUS_CLS: Record<ThemeStatus, string> = {
   locked: "border-cyan-400/40 bg-cyan-400/10 text-cyan-200",
 };
 
-/** The theme's one-word state, worn as a stamp. */
 export function StatusStamp({ status }: { status: ThemeStatus }) {
   return (
     <span
@@ -23,14 +25,24 @@ export function StatusStamp({ status }: { status: ThemeStatus }) {
   );
 }
 
-/** The three named colours, shown as what they are. */
-export function PaletteDots({ palette, withNames = false }: { palette: Theme["block"]["palette"]; withNames?: boolean }) {
+/** The three colours, shown doing their jobs. The role is the part that keeps a
+ *  style consistent, so it is what the swatch labels. */
+export function PaletteDots({ palette, withNames = false }: { palette: PaletteColor[]; withNames?: boolean }) {
   return (
-    <span className="flex items-center gap-2">
+    <span className="flex flex-wrap items-center gap-2">
       {palette.map((c) => (
         <span key={c.name} className="flex items-center gap-1.5">
-          <span className="h-3 w-3 rounded-full border border-white/20" style={{ background: c.hex }} aria-hidden />
-          {withNames && <span className="font-jetbrains text-[11px] text-white/55">{c.name}</span>}
+          <span
+            className="h-3.5 w-3.5 rounded-full border border-white/25"
+            style={{ background: c.hex }}
+            aria-hidden
+          />
+          {withNames && (
+            <span className="font-jetbrains text-[11px] text-white/55">
+              {c.name}
+              <span className="text-white/30"> · {c.role}</span>
+            </span>
+          )}
         </span>
       ))}
     </span>
@@ -38,52 +50,82 @@ export function PaletteDots({ palette, withNames = false }: { palette: Theme["bl
 }
 
 const PROOF_RING: Record<ProofState, string> = {
-  approved: "border-cyan-300/50",
-  pending: "border-white/10",
-  rejected: "border-rose-400/50",
+  approved: "border-cyan-300/60",
+  pending: "border-white/12",
+  rejected: "border-rose-400/50 opacity-55",
 };
 
-/** One plate on the proof sheet — gradient mock, verdict drawn on it. */
+/** One plate on the proof sheet — a real image, with its verdict on it. */
 export function ProofThumb({
   proof,
-  className = "h-16",
+  className = "aspect-video",
+  onJudge,
   onClick,
   selected = false,
 }: {
   proof: Proof;
   className?: string;
+  onJudge?: (state: ProofState) => void;
   onClick?: () => void;
   selected?: boolean;
 }) {
-  const Tag = onClick ? "button" : "div";
   return (
-    <Tag
-      onClick={onClick}
-      className={`relative w-full overflow-hidden rounded-lg border text-left transition ${PROOF_RING[proof.state]} ${
+    <div
+      className={`group relative overflow-hidden rounded-lg border transition ${PROOF_RING[proof.state]} ${
         selected ? "ring-1 ring-cyan-300/60" : ""
-      } ${onClick ? "hover:border-cyan-400/40" : ""} ${className}`}
+      } ${className}`}
     >
-      <div className={`absolute inset-0 bg-gradient-to-br ${proof.tone}`} aria-hidden />
-      <span className="font-jetbrains absolute bottom-1 left-1.5 rounded bg-black/55 px-1 py-0.5 text-[9px] text-white/70">
+      {/* eslint-disable-next-line @next/next/no-img-element -- data: URL held in
+          IndexedDB; there is no remote file for next/image to optimise. */}
+      <img
+        src={`data:${proof.mime};base64,${proof.base64}`}
+        alt={proof.label}
+        onClick={onClick}
+        className={`h-full w-full object-cover ${onClick ? "cursor-zoom-in" : ""}`}
+      />
+
+      <span className="font-jetbrains pointer-events-none absolute bottom-1 left-1.5 rounded bg-black/60 px-1 py-0.5 text-[9px] text-white/80">
         {proof.label}
       </span>
+
+      {proof.state === "approved" && (
+        <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-cyan-300/90 px-1.5 py-0.5 text-[9px] font-semibold text-slate-950">
+          APPROVED
+        </span>
+      )}
       {proof.state === "rejected" && (
-        <span className="font-jetbrains absolute top-1 right-1 rounded bg-rose-400/90 px-1 py-0.5 text-[9px] font-semibold text-slate-950">
-          NO
+        <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-rose-400/90 px-1.5 py-0.5 text-[9px] font-semibold text-slate-950">
+          REJECTED
         </span>
       )}
-      {proof.state === "pending" && (
-        <span className="font-jetbrains absolute top-1 right-1 rounded bg-black/55 px-1 py-0.5 text-[9px] text-white/60">
-          …
-        </span>
+
+      {/* The verdict is the whole job of this surface, so the controls are
+          always reachable — revealed on hover, but never hidden behind a menu. */}
+      {onJudge && (
+        <div className="absolute top-1 right-1 flex gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
+          <button
+            onClick={() => onJudge("approved")}
+            aria-label={`Approve ${proof.label}`}
+            className="rounded bg-black/70 p-1 text-cyan-300 transition hover:bg-cyan-300 hover:text-slate-950"
+          >
+            <Check className="h-3 w-3" aria-hidden />
+          </button>
+          <button
+            onClick={() => onJudge("rejected")}
+            aria-label={`Reject ${proof.label}`}
+            className="rounded bg-black/70 p-1 text-rose-300 transition hover:bg-rose-400 hover:text-slate-950"
+          >
+            <X className="h-3 w-3" aria-hidden />
+          </button>
+        </div>
       )}
-    </Tag>
+    </div>
   );
 }
 
 /** The rule this page exists to enforce, stated where the user starts. */
-export function GateChip() {
-  const n = lockedCount();
+export function GateChip({ themes }: { themes: Theme[] }) {
+  const n = themes.filter((t) => statusOf(t) === "locked").length;
   const open = n > 0;
   return (
     <span
