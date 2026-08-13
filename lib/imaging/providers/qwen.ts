@@ -1,0 +1,132 @@
+// QWEN — the dev-environment eye.
+//
+// Recognition only. This is what lets the app (and an agent working on it)
+// actually SEE what we generated, rather than trusting a prompt was honoured:
+// the /library proof sheet is judged, not just displayed.
+//
+// Endpoint is Qwen's OpenAI-compatible surface, so the request is a normal
+// chat completion with a multimodal content array. Verified against both the
+// live docs and a working client in the reference repo.
+//
+// Two improvements over that reference client, deliberately:
+//   1. NATIVE structured output. It asks for JSON in the prompt and returns
+//      whatever arrives, leaving parsing to the caller — which in practice
+//      means nobody validates. Qwen3.8-Max supports `json_schema` with
+//      `strict`, so a schema is enforced at the vendor and re-checked here.
+//   2. Model rotation on quota, kept from the reference because the reason is
+//      sound: the SKUs bill against separate quotas, so a 429 on one is not a
+//      429 on the next.
+
+import { ImagingError } from "../errors";
+import { keyFor } from "../env";
+import { requestJson } from "../http";
+import { parseAgainstSchema, schemaInstruction } from "../json";
+import { dataUrl, type ImagingProvider, type RecognizeRequest, type Recognition } from "../types";
+
+const BASE =
+  process.env.QWEN_BASE_URL?.trim() || "https://dashscope-intl.aliyuncs.com/compatible-mode/v1";
+
+/** Primary first. The fallbacks exist for quota, not for quality — they bill
+ *  against separate allowances, so a 429 on one says nothing about the next. */
+const MODELS = ["qwen3.8-max", "qwen3.7-plus", "qwen3.6-flash"] as const;
+
+/** Qwen's documented ceiling for an inline base64 image is 10 MB. Checked here
+ *  so the failure is a clear message rather than a vendor 400 after upload. */
+const MAX_INLINE_BYTES = 10 * 1024 * 1024;
+
+interface ChatResponse {
+  choices?: { message?: { content?: string } }[];
+  usage?: { prompt_tokens?: number; completion_tokens?: number };
+}
+
+export function qwenProvider(): ImagingProvider {
+  return {
+    id: "qwen",
+    capabilities: ["recognize"],
+
+    async recognize(req: RecognizeRequest): Promise<Recognition> {
+      const started = Date.now();
+      const key = keyFor("qwen");
+
+      const bytes = Math.ceil((req.image.base64.length * 3) / 4);
+      if (bytes > MAX_INLINE_BYTES)
+        throw new ImagingError(
+          `The image is ${(bytes / 1024 / 1024).toFixed(1)} MB; Qwen accepts at most 10 MB inline.`,
+          "bad-response",
+          "qwen",
+        );
+
+      // Image part first, then the instruction — the order the vendor's own
+      // examples and the reference client both use.
+      const content = [
+        { type: "image_url", image_url: { url: dataUrl(req.image) } },
+        { type: "text", text: req.instruction + (req.schema ? schemaInstruction(req.schema) : "") },
+      ];
+
+      let lastQuotaError: ImagingError | null = null;
+
+      for (const model of MODELS) {
+        try {
+          const res = await requestJson<ChatResponse>("qwen", `${BASE}/chat/completions`, {
+            method: "POST",
+            headers: { authorization: `Bearer ${key}` },
+            body: {
+              model,
+              messages: [{ role: "user", content }],
+              temperature: 0.2,
+              max_tokens: 4096,
+              // Enforced at the vendor where available. The prompt-side
+              // instruction above stays regardless: it costs nothing and it is
+              // what carries the schema on the fallback SKUs.
+              ...(req.schema
+                ? {
+                    response_format: {
+                      type: "json_schema",
+                      json_schema: { name: "recognition", schema: req.schema, strict: true },
+                    },
+                  }
+                : {}),
+            },
+            timeoutMs: 120_000,
+            attempts: 1, // rotation is the retry strategy here
+          });
+
+          const text = res.choices?.[0]?.message?.content?.trim();
+          if (!text) {
+            // Empty content is a soft failure in the reference client too —
+            // try the next SKU rather than failing the call.
+            lastQuotaError ??= new ImagingError(
+              `Qwen ${model} returned empty content.`,
+              "bad-response",
+              "qwen",
+            );
+            continue;
+          }
+
+          return {
+            text,
+            json: req.schema ? parseAgainstSchema("qwen", text, req.schema) : undefined,
+            provenance: {
+              provider: "qwen",
+              model,
+              durationMs: Date.now() - started,
+              cleanup: "not-applicable",
+            },
+          };
+        } catch (e) {
+          const err =
+            e instanceof ImagingError ? e : new ImagingError(String(e), "failed", "qwen");
+          // Only quota/rate problems justify moving to another SKU. A malformed
+          // request or a bad key will fail identically on every one of them.
+          if (err.kind !== "rate-limited") throw err;
+          lastQuotaError = err;
+        }
+      }
+
+      throw (
+        lastQuotaError ??
+        new ImagingError("Every Qwen model was exhausted.", "rate-limited", "qwen")
+      );
+    },
+  };
+}

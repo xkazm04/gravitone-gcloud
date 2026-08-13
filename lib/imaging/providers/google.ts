@@ -1,0 +1,259 @@
+// GOOGLE — the production vendor, and the dev-environment editor.
+//
+// Two models, one endpoint:
+//   gemini-3.1-flash-lite-image  ("Nano Banana 2 Lite")  generate + edit
+//   gemini-3.6-flash                                      recognize
+//
+// WIRE FORMAT WARNING, and the reason this file is written the way it is:
+// Google replaced `generateContent` with the **Interactions API**. The old
+// shape (`contents[].parts[]`, `generationConfig`, `responseMimeType`,
+// `responseSchema`) is legacy; the legacy Interactions response schema
+// (`outputs[]`) was removed outright in June 2026 and the wire format is now
+// `steps[]`. Anything written from memory of the old API is wrong in SHAPE,
+// not merely in model id — so do not "correct" this file toward the older
+// pattern you may recognise.
+//
+// Raw fetch rather than @google/genai on purpose: the repo has four runtime
+// dependencies and this needs none of what the SDK adds. It also keeps the key
+// server-side by construction — @google/genai has no browser guard at all,
+// only a README warning.
+
+import { ImagingError } from "../errors";
+import { keyFor } from "../env";
+import { requestJson } from "../http";
+import { parseAgainstSchema } from "../json";
+import type {
+  EditRequest,
+  GenerateRequest,
+  GeneratedImages,
+  ImageRef,
+  ImagingProvider,
+  RecognizeRequest,
+  Recognition,
+} from "../types";
+
+const ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/interactions";
+
+/** Nano Banana 2 Lite. NOTE: Lite renders at 1K only, and supports OBJECT
+ *  reference images but NOT style-reference images — see the caveat in
+ *  docs/imaging.md before relying on `references` for style lock. */
+const IMAGE_MODEL = process.env.GOOGLE_IMAGE_MODEL?.trim() || "gemini-3.1-flash-lite-image";
+const VISION_MODEL = process.env.GOOGLE_VISION_MODEL?.trim() || "gemini-3.6-flash";
+
+/* ── The Interactions wire shape ──────────────────────────────────────────── */
+
+type InputPart =
+  | { type: "text"; text: string }
+  | { type: "image"; mime_type: string; data: string };
+
+interface Interaction {
+  status?: "completed" | "in_progress" | "requires_action" | "failed";
+  steps?: { type?: string; content?: { type?: string; text?: string; mime_type?: string; data?: string }[] }[];
+  output_text?: string;
+  output_image?: { data?: string; mime_type?: string };
+  usage?: Record<string, unknown>;
+  error?: { message?: string; reason?: string };
+}
+
+const imagePart = (img: ImageRef): InputPart => ({
+  type: "image",
+  mime_type: img.mime,
+  data: img.base64,
+});
+
+/** Every image the interaction produced, from either accessor. The convenience
+ *  field is not guaranteed, so `steps[]` is the source of truth and
+ *  `output_image` only a fast path. */
+function imagesFrom(res: Interaction): { data: string; mime: string }[] {
+  const out: { data: string; mime: string }[] = [];
+  for (const step of res.steps ?? [])
+    for (const c of step.content ?? [])
+      if (c.type === "image" && c.data) out.push({ data: c.data, mime: c.mime_type || "image/png" });
+
+  if (!out.length && res.output_image?.data)
+    out.push({ data: res.output_image.data, mime: res.output_image.mime_type || "image/png" });
+  return out;
+}
+
+function textFrom(res: Interaction): string {
+  if (res.output_text) return res.output_text;
+  const parts: string[] = [];
+  for (const step of res.steps ?? [])
+    for (const c of step.content ?? []) if (c.type === "text" && c.text) parts.push(c.text);
+  return parts.join("\n").trim();
+}
+
+/**
+ * Turn a non-answer into the right error kind.
+ *
+ * The safety-block shape for the Interactions API is UNDOCUMENTED — Google's
+ * published block fields (`promptFeedback.blockReason`, `finishReason: SAFETY`)
+ * all describe the legacy endpoint. So this reads `status` first and sniffs the
+ * error text second, and there is a known class of bug where a block arrives as
+ * a silently empty result. An empty result is therefore treated as a refusal
+ * rather than a success, which is the safe direction: a refusal re-routes to
+ * another vendor, where a false success would hand the caller nothing.
+ */
+function assertUsable(res: Interaction, what: string): void {
+  const blocked = /safety|blocked|prohibited|policy|violat/i;
+  if (res.status === "failed") {
+    const msg = res.error?.message || res.error?.reason || "";
+    throw new ImagingError(
+      blocked.test(msg)
+        ? `Google declined this ${what} on safety grounds.`
+        : `Google could not complete this ${what}. ${msg}`.trim(),
+      blocked.test(msg) ? "refused" : "failed",
+      "google",
+      res.error,
+    );
+  }
+  if (res.status === "in_progress" || res.status === "requires_action")
+    throw new ImagingError(
+      `Google returned an unfinished interaction (${res.status}).`,
+      "bad-response",
+      "google",
+      res.status,
+    );
+}
+
+/* ── The provider ─────────────────────────────────────────────────────────── */
+
+export function googleProvider(): ImagingProvider {
+  return {
+    id: "google",
+    capabilities: ["generate", "edit", "recognize"],
+
+    async generate(req: GenerateRequest): Promise<GeneratedImages> {
+      const input: InputPart[] = [{ type: "text", text: buildPrompt(req.prompt, req.negativePrompt) }];
+      // Reference plates go in as image parts alongside the instruction.
+      for (const r of (req.references ?? []).slice(0, 14)) input.push(imagePart(r));
+
+      return runImage(
+        {
+          model: IMAGE_MODEL,
+          input,
+          response_format: {
+            type: "image",
+            mime_type: "image/png",
+            aspect_ratio: req.aspect,
+            image_size: "1K",
+          },
+        },
+        req.count ?? 1,
+        "generation",
+      );
+    },
+
+    async edit(req: EditRequest): Promise<GeneratedImages> {
+      // Editing is the SAME endpoint with an image in the input — there is no
+      // separate edit route. The instruction leads, the subject follows.
+      const input: InputPart[] = [{ type: "text", text: req.instruction }, imagePart(req.image)];
+      for (const r of (req.references ?? []).slice(0, 13)) input.push(imagePart(r));
+
+      return runImage(
+        { model: IMAGE_MODEL, input, response_format: { type: "image", mime_type: "image/png" } },
+        1,
+        "edit",
+      );
+    },
+
+    async recognize(req: RecognizeRequest): Promise<Recognition> {
+      const started = Date.now();
+      const key = keyFor("google");
+
+      const res = await requestJson<Interaction>("google", ENDPOINT, {
+        method: "POST",
+        headers: { "x-goog-api-key": key },
+        body: {
+          model: VISION_MODEL,
+          input: [{ type: "text", text: req.instruction }, imagePart(req.image)],
+          // Native schema enforcement. NOTE the shape: responseMimeType and
+          // responseSchema no longer exist; this is the current form.
+          ...(req.schema
+            ? {
+                response_format: {
+                  type: "text",
+                  mime_type: "application/json",
+                  schema: req.schema,
+                },
+              }
+            : {}),
+        },
+        timeoutMs: 120_000,
+      });
+
+      assertUsable(res, "recognition");
+      const text = textFrom(res);
+      if (!text)
+        throw new ImagingError("Google returned an empty recognition.", "refused", "google", res.status);
+
+      return {
+        text,
+        json: req.schema ? parseAgainstSchema("google", text, req.schema) : undefined,
+        provenance: {
+          provider: "google",
+          model: VISION_MODEL,
+          durationMs: Date.now() - started,
+          cleanup: "not-applicable",
+        },
+      };
+    },
+  };
+}
+
+/** One image call, repeated when the caller wants several candidates.
+ *
+ *  The Interactions image response carries a single image, so N candidates are
+ *  N calls. They run concurrently — the alternative is N × latency for a
+ *  filmstrip the user is waiting on. */
+async function runImage(
+  body: Record<string, unknown>,
+  count: number,
+  what: string,
+): Promise<GeneratedImages> {
+  const started = Date.now();
+  const key = keyFor("google");
+  const n = Math.min(Math.max(count, 1), 8);
+
+  const calls = Array.from({ length: n }, () =>
+    requestJson<Interaction>("google", ENDPOINT, {
+      method: "POST",
+      headers: { "x-goog-api-key": key },
+      body,
+      timeoutMs: 180_000,
+    }),
+  );
+
+  const results = await Promise.all(calls);
+  const images: ImageRef[] = [];
+  for (const res of results) {
+    assertUsable(res, what);
+    for (const img of imagesFrom(res))
+      images.push({ base64: img.data, mime: (img.mime as ImageRef["mime"]) ?? "image/png" });
+  }
+
+  if (!images.length)
+    throw new ImagingError(
+      `Google returned no image for this ${what}. This is how a safety block usually presents.`,
+      "refused",
+      "google",
+      results[0]?.status,
+    );
+
+  return {
+    images,
+    provenance: {
+      provider: "google",
+      model: String(body.model),
+      durationMs: Date.now() - started,
+      cleanup: "not-applicable", // nothing is stored server-side to clean up
+    },
+  };
+}
+
+/** Google takes no negative-prompt field, so a negative becomes an explicit
+ *  exclusion clause rather than being silently dropped — the probe prompt in
+ *  pipeline/FRAMES-PROMPT.md depends on one. */
+function buildPrompt(prompt: string, negative?: string): string {
+  return negative?.trim() ? `${prompt}\n\nDo not include any of the following: ${negative.trim()}.` : prompt;
+}

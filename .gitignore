@@ -32,6 +32,10 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# ...and the template IS the opt-in. It holds no secrets — only the variable
+# names and what each is for — and an example file that is not in the repo
+# cannot onboard anybody, which is exactly what had happened to it.
+!.env.example
 
 # vercel
 .vercel
@@ -59,3 +63,7 @@ uat/runs/*/captures/
 
 # Driven UI captures. Regenerable from the drive suites; heavy in git.
 pipeline/runs/*/captures/
+
+# Integration-probe output (pipeline/integration-imaging.mts) — real generated
+# images, written for a human to look at. Never versioned.
+/imaging-probe-out/
