@@ -34,6 +34,9 @@ export interface FrameElement {
   w: number;
   h: number;
   accent?: boolean;
+  /** Hidden layers stay in the frame and out of the picture — the fastest way
+   *  to ask "was this element carrying anything?" without deleting it. */
+  hidden?: boolean;
 }
 
 export type TextRole = "caption" | "figure" | "label" | "kicker";
@@ -47,6 +50,7 @@ export interface FrameText {
   /** The notebook fact this asserts, when it asserts one. A figure with no
    *  factId is a number nobody checked — the gate Step 3 exists to hold. */
   factId?: string;
+  hidden?: boolean;
 }
 
 export type PlateState = "empty" | "generating" | "ready" | "refused";
@@ -199,6 +203,11 @@ export function subjectFor(frame: Frame): string {
   };
   return `${shape[base] ?? shape.statement} Large simple shapes, generous empty space, nothing in the lower third.`;
 }
+
+/** A layer reference — which array, which index. Selection and every layer
+ *  operation speak this, so the canvas and the panel cannot disagree about
+ *  what is selected. */
+export type LayerRef = { type: "element" | "text"; id: string } | null;
 
 export const isComposed = (f: Frame) => f.plate.state === "ready";
 export const composedCount = (fs: Frame[]) => fs.filter(isComposed).length;

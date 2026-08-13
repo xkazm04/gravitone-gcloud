@@ -1,53 +1,154 @@
 "use client";
 
-// Shared leaves for every Frames variant.
+// Shared leaves for Frames.
 //
 // FrameCanvas is the important one: it is the only place the three layers are
-// composited, so all three variants agree on what a frame LOOKS like and differ
-// only in how you get there. Hoisted from the first variant rather than at
-// refactor time — the moment two variants render the same structure, a tweak
-// has to be made twice.
+// composited, and now also the only place they are MOVED. Read-only by default;
+// pass `edit` and it becomes a compositor.
+//
+// Coordinates are percentages of the frame everywhere — texts as CSS left/top,
+// elements scaled into the SVG's own viewBox. One unit system, so a layer that
+// reads x=50 sits at the same place whichever kind it is.
 
-import type { Frame, FrameElement, FrameText } from "./frames";
+import { useCallback, useRef } from "react";
 
-/* ── The composite ────────────────────────────────────────────────────────── */
+import type { Frame, FrameElement, FrameText, LayerRef } from "./frames";
 
-/** Plate, then elements, then texts — in that order, always.
- *
- *  Elements and texts are drawn as DOM/SVG rather than baked into the plate, so
- *  they stay crisp at any output size and a wrong number is a text edit rather
- *  than a regeneration. That is the whole architectural bet, made visible. */
+/** The SVG's vertical extent. 100 wide × 56 tall is 16:9, so an x and a y in
+ *  percent land where the eye expects rather than being squashed. */
+const VB_H = 56;
+
+export interface CanvasEdit {
+  selected: LayerRef;
+  onSelect: (ref: LayerRef) => void;
+  onMove: (ref: NonNullable<LayerRef>, x: number, y: number) => void;
+  onResize: (elId: string, w: number, h: number) => void;
+}
+
 export function FrameCanvas({
   frame,
   show = { plate: true, elements: true, texts: true },
   className = "",
+  edit,
 }: {
   frame: Frame;
   show?: { plate: boolean; elements: boolean; texts: boolean };
   className?: string;
+  edit?: CanvasEdit;
 }) {
+  const box = useRef<HTMLDivElement>(null);
+
+  /** Pointer → percent of the frame. The rect is read per drag rather than
+   *  cached: the row this canvas sits in expands and collapses, and a stale
+   *  rect puts every layer somewhere the user did not click. */
+  const pctOf = useCallback((e: React.PointerEvent) => {
+    const r = box.current?.getBoundingClientRect();
+    if (!r) return null;
+    return { x: ((e.clientX - r.left) / r.width) * 100, y: ((e.clientY - r.top) / r.height) * 100 };
+  }, []);
+
+  const startDrag = useCallback(
+    (e: React.PointerEvent, ref: NonNullable<LayerRef>, originX: number, originY: number) => {
+      if (!edit) return;
+      e.preventDefault();
+      e.stopPropagation();
+      edit.onSelect(ref);
+      const start = pctOf(e);
+      if (!start) return;
+      const offX = start.x - originX;
+      const offY = start.y - originY;
+
+      const el = e.currentTarget as Element;
+      el.setPointerCapture(e.pointerId);
+      const move = (ev: PointerEvent) => {
+        const r = box.current?.getBoundingClientRect();
+        if (!r) return;
+        edit.onMove(
+          ref,
+          ((ev.clientX - r.left) / r.width) * 100 - offX,
+          ((ev.clientY - r.top) / r.height) * 100 - offY,
+        );
+      };
+      const up = () => {
+        el.releasePointerCapture(e.pointerId);
+        el.removeEventListener("pointermove", move as EventListener);
+        el.removeEventListener("pointerup", up as EventListener);
+      };
+      el.addEventListener("pointermove", move as EventListener);
+      el.addEventListener("pointerup", up as EventListener);
+    },
+    [edit, pctOf],
+  );
+
+  const sel = edit?.selected;
+  const isSel = (type: "element" | "text", id: string) => sel?.type === type && sel.id === id;
+
   return (
-    <div className={`relative aspect-video overflow-hidden rounded-xl border border-white/10 bg-slate-950 ${className}`}>
+    <div
+      ref={box}
+      onPointerDown={() => edit?.onSelect(null)}
+      className={`relative aspect-video overflow-hidden rounded-xl border border-white/10 bg-slate-950 ${
+        edit ? "cursor-default select-none" : ""
+      } ${className}`}
+    >
       {show.plate && frame.plate.src ? (
         // eslint-disable-next-line @next/next/no-img-element -- data: URL from a
         // just-generated buffer; next/image optimises files, not blobs.
-        <img src={frame.plate.src} alt="" className="absolute inset-0 h-full w-full object-cover" />
+        <img src={frame.plate.src} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),transparent)]" aria-hidden />
       )}
 
       {show.elements && (
-        <svg viewBox="0 0 100 56" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-          {frame.elements.map((el) => (
-            <ElementMark key={el.id} el={el} />
-          ))}
+        <svg viewBox={`0 0 100 ${VB_H}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+          {frame.elements.map((el) =>
+            el.hidden ? null : (
+              <g
+                key={el.id}
+                onPointerDown={edit ? (e) => startDrag(e, { type: "element", id: el.id }, el.x, el.y) : undefined}
+                className={edit ? "cursor-move" : ""}
+                // The hit area is the mark itself, which for a hairline arrow is
+                // a few pixels — so a transparent box sits behind it while
+                // editing, or the layer is effectively undraggable.
+              >
+                {edit && (
+                  <rect
+                    x={el.x}
+                    y={(el.y / 100) * VB_H}
+                    width={el.w}
+                    height={(el.h / 100) * VB_H}
+                    fill="transparent"
+                    stroke={isSel("element", el.id) ? "var(--gt-accent-cyan)" : "transparent"}
+                    strokeWidth={0.4}
+                    strokeDasharray="1.5 1"
+                    vectorEffect="non-scaling-stroke"
+                  />
+                )}
+                <ElementMark el={el} />
+              </g>
+            ),
+          )}
         </svg>
       )}
 
       {show.texts &&
-        frame.texts.map((t) => (
-          <TextMark key={t.id} t={t} />
-        ))}
+        frame.texts.map((t) =>
+          t.hidden ? null : (
+            <TextMark
+              key={t.id}
+              t={t}
+              selected={isSel("text", t.id)}
+              onPointerDown={edit ? (e) => startDrag(e, { type: "text", id: t.id }, t.x, t.y) : undefined}
+              editing={Boolean(edit)}
+            />
+          ),
+        )}
+
+      {/* Resize lives outside the SVG so it is a constant on-screen size rather
+          than scaling with the element it resizes. */}
+      {edit && sel?.type === "element" && (
+        <ResizeHandle frame={frame} elId={sel.id} onResize={edit.onResize} box={box} />
+      )}
 
       {frame.plate.state === "generating" && (
         <div className="absolute inset-0 animate-pulse bg-white/[0.04]" aria-hidden />
@@ -61,12 +162,58 @@ export function FrameCanvas({
   );
 }
 
+function ResizeHandle({
+  frame,
+  elId,
+  onResize,
+  box,
+}: {
+  frame: Frame;
+  elId: string;
+  onResize: (elId: string, w: number, h: number) => void;
+  box: React.RefObject<HTMLDivElement | null>;
+}) {
+  const el = frame.elements.find((e) => e.id === elId);
+  if (!el || el.hidden) return null;
+
+  const down = (e: React.PointerEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const target = e.currentTarget as Element;
+    target.setPointerCapture(e.pointerId);
+    const move = (ev: PointerEvent) => {
+      const r = box.current?.getBoundingClientRect();
+      if (!r) return;
+      onResize(elId, ((ev.clientX - r.left) / r.width) * 100 - el.x, ((ev.clientY - r.top) / r.height) * 100 - el.y);
+    };
+    const up = () => {
+      target.releasePointerCapture(e.pointerId);
+      target.removeEventListener("pointermove", move as EventListener);
+      target.removeEventListener("pointerup", up as EventListener);
+    };
+    target.addEventListener("pointermove", move as EventListener);
+    target.addEventListener("pointerup", up as EventListener);
+  };
+
+  return (
+    <span
+      onPointerDown={down}
+      role="slider"
+      aria-label="Resize element"
+      aria-valuenow={Math.round(el.w)}
+      tabIndex={0}
+      style={{ left: `${el.x + el.w}%`, top: `${el.y + el.h}%` }}
+      className="absolute -ml-1.5 -mt-1.5 h-3 w-3 cursor-nwse-resize rounded-sm border border-slate-950 bg-cyan-300"
+    />
+  );
+}
+
 function ElementMark({ el }: { el: FrameElement }) {
   const stroke = el.accent ? "var(--gt-accent-cyan)" : "rgba(255,255,255,0.85)";
-  const x = (el.x / 100) * 100;
-  const y = (el.y / 100) * 56;
-  const w = (el.w / 100) * 100;
-  const h = (el.h / 100) * 56;
+  const x = el.x;
+  const y = (el.y / 100) * VB_H;
+  const w = el.w;
+  const h = (el.h / 100) * VB_H;
 
   switch (el.kind) {
     case "arrow":
@@ -85,9 +232,7 @@ function ElementMark({ el }: { el: FrameElement }) {
         </g>
       );
     case "bracket":
-      return (
-        <path d={`M${x + w} ${y} L${x} ${y} L${x} ${y + h} L${x + w} ${y + h}`} stroke={stroke} strokeWidth={1.2} fill="none" />
-      );
+      return <path d={`M${x + w} ${y} L${x} ${y} L${x} ${y + h} L${x + w} ${y + h}`} stroke={stroke} strokeWidth={1.2} fill="none" />;
     case "rule":
       return <line x1={x} y1={y} x2={x + w} y2={y} stroke={stroke} strokeWidth={0.8} />;
     case "marker":
@@ -108,11 +253,24 @@ const TEXT_CLASS: Record<FrameText["role"], string> = {
   label: "font-jetbrains text-[9px] text-white/70",
 };
 
-function TextMark({ t }: { t: FrameText }) {
+function TextMark({
+  t,
+  selected,
+  onPointerDown,
+  editing,
+}: {
+  t: FrameText;
+  selected: boolean;
+  onPointerDown?: (e: React.PointerEvent) => void;
+  editing: boolean;
+}) {
   return (
     <span
-      className={`absolute max-w-[52%] ${TEXT_CLASS[t.role]}`}
+      onPointerDown={onPointerDown}
       style={{ left: `${t.x}%`, top: `${t.y}%` }}
+      className={`absolute max-w-[52%] ${TEXT_CLASS[t.role]} ${
+        editing ? "cursor-move rounded-sm px-0.5 outline-dashed outline-1 outline-transparent hover:outline-white/30" : ""
+      } ${selected ? "outline-cyan-300/80" : ""}`}
     >
       {t.value}
       {/* A figure with no fact behind it is the defect this step exists to
@@ -147,8 +305,6 @@ export function KindChip({ kind }: { kind: string }) {
   );
 }
 
-/** The three layers as a readable breakdown — the row-level "what is in this
- *  frame" the module is organised around. */
 export function LayerBreakdown({ frame, compact = false }: { frame: Frame; compact?: boolean }) {
   const bits = [
     { label: "plate", n: frame.plate.state === "ready" ? 1 : 0, total: 1 },

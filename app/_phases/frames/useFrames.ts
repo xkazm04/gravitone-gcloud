@@ -26,7 +26,7 @@ import { PRESETS } from "@/app/library/presets";
 import { loadStep, saveStep } from "../_shared/stepStore";
 import { FACTS } from "../_shared/notebook/facts";
 import { RENDERS } from "../script/renders";
-import { framesFromRender, subjectFor, type Frame, type FrameText } from "./frames";
+import { framesFromRender, subjectFor, type Frame, type FrameElement, type FrameText } from "./frames";
 import { applySceneSpecs, parseSceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
 
 const PHASE = "frames";
@@ -181,6 +181,66 @@ export function useFrames(projectId: string) {
     [patch],
   );
 
+  /* ── layout ─────────────────────────────────────────────────────────────── */
+
+  const clamp = (v: number) => Math.max(0, Math.min(100, v));
+
+  /** Move a layer to an absolute position, in percent of the frame.
+   *
+   *  Absolute rather than a delta: a drag emits many moves, and accumulating
+   *  deltas drifts against the pointer as rounding compounds. The canvas knows
+   *  where the pointer is; it should say so. */
+  const moveLayer = useCallback(
+    (id: string, ref: { type: "element" | "text"; id: string }, x: number, y: number) =>
+      patch(id, (f) =>
+        ref.type === "element"
+          ? { ...f, elements: f.elements.map((e) => (e.id === ref.id ? { ...e, x: clamp(x), y: clamp(y) } : e)) }
+          : { ...f, texts: f.texts.map((t) => (t.id === ref.id ? { ...t, x: clamp(x), y: clamp(y) } : t)) },
+      ),
+    [patch],
+  );
+
+  /** Resize an element. Texts have no box — they are set in type and size with
+   *  their role, so a resize handle on one would be a lie. */
+  const resizeElement = useCallback(
+    (id: string, elId: string, w: number, h: number) =>
+      patch(id, (f) => ({
+        ...f,
+        elements: f.elements.map((e) =>
+          e.id === elId ? { ...e, w: Math.max(2, clamp(w)), h: Math.max(2, clamp(h)) } : e,
+        ),
+      })),
+    [patch],
+  );
+
+  /** Reorder within a layer group. Array order IS paint order, so this is the
+   *  z-control — and it stays WITHIN elements or WITHIN texts on purpose:
+   *  texts always paint above elements, because a caption behind an arrow is
+   *  not a look, it is a bug. */
+  const reorderLayer = useCallback(
+    (id: string, ref: { type: "element" | "text"; id: string }, dir: -1 | 1) =>
+      patch(id, (f) => {
+        const key = ref.type === "element" ? "elements" : "texts";
+        const list = [...(f[key] as (FrameElement | FrameText)[])];
+        const i = list.findIndex((l) => l.id === ref.id);
+        const j = i + dir;
+        if (i === -1 || j < 0 || j >= list.length) return f;
+        [list[i], list[j]] = [list[j], list[i]];
+        return { ...f, [key]: list } as Frame;
+      }),
+    [patch],
+  );
+
+  const toggleHidden = useCallback(
+    (id: string, ref: { type: "element" | "text"; id: string }) =>
+      patch(id, (f) =>
+        ref.type === "element"
+          ? { ...f, elements: f.elements.map((e) => (e.id === ref.id ? { ...e, hidden: !e.hidden } : e)) }
+          : { ...f, texts: f.texts.map((t) => (t.id === ref.id ? { ...t, hidden: !t.hidden } : t)) },
+      ),
+    [patch],
+  );
+
   const removeElement = useCallback(
     (id: string, elId: string) => patch(id, (f) => ({ ...f, elements: f.elements.filter((e) => e.id !== elId) })),
     [patch],
@@ -261,6 +321,10 @@ export function useFrames(projectId: string) {
     setSubject,
     setText,
     bindFact,
+    moveLayer,
+    resizeElement,
+    reorderLayer,
+    toggleHidden,
     addText,
     removeText,
     removeElement,

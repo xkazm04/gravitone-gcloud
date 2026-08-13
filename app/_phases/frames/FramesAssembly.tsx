@@ -18,15 +18,19 @@
 import { useState } from "react";
 import { ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
-import { durationOf, isComposed, type Frame, type FrameText } from "./frames";
+import { durationOf, isComposed, type Frame, type FrameText, type LayerRef } from "./frames";
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
+import LayerPanel from "./LayerPanel";
 import type { useFrames } from "./useFrames";
 
 export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFrames> }) {
   const { frames, render, busy, generatePlate, setSubject, totalCost } = ctl;
   const [openId, setOpenId] = useState<string | null>(null);
   const [runningAll, setRunningAll] = useState(false);
+  // One selection, shared by the canvas and the panel. Held here rather than in
+  // either of them so they cannot disagree about what is selected.
+  const [selected, setSelected] = useState<LayerRef>(null);
 
   const missing = frames.filter((f) => !isComposed(f));
 
@@ -88,7 +92,10 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
             holdS={durationOf(frames, i, render.durationS)}
             open={openId === f.id}
             busy={busy.has(f.id)}
-            onToggle={() => setOpenId(openId === f.id ? null : f.id)}
+            onToggle={() => {
+              setOpenId(openId === f.id ? null : f.id);
+              setSelected(null);
+            }}
             onRender={() => void generatePlate(f.id)}
             onSubject={(v) => setSubject(f.id, v)}
             facts={ctl.facts}
@@ -96,6 +103,15 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
             onBind={(tid, fid) => ctl.bindFact(f.id, tid, fid)}
             onRemoveText={(tid) => ctl.removeText(f.id, tid)}
             onAddText={(role) => ctl.addText(f.id, role)}
+            selected={openId === f.id ? selected : null}
+            onSelect={setSelected}
+            onMove={(ref, x, y) => ctl.moveLayer(f.id, ref, x, y)}
+            onResize={(elId, w, h) => ctl.resizeElement(f.id, elId, w, h)}
+            onReorder={(ref, dir) => ctl.reorderLayer(f.id, ref, dir)}
+            onToggleHidden={(ref) => ctl.toggleHidden(f.id, ref)}
+            onRemoveLayer={(ref) =>
+              ref.type === "element" ? ctl.removeElement(f.id, ref.id) : ctl.removeText(f.id, ref.id)
+            }
           />
         ))}
       </div>
@@ -124,6 +140,13 @@ function Row({
   onBind,
   onRemoveText,
   onAddText,
+  selected,
+  onSelect,
+  onMove,
+  onResize,
+  onReorder,
+  onToggleHidden,
+  onRemoveLayer,
 }: {
   frame: Frame;
   index: number;
@@ -138,6 +161,13 @@ function Row({
   onBind: (textId: string, factId: string | undefined) => void;
   onRemoveText: (textId: string) => void;
   onAddText: (role: FrameText["role"]) => void;
+  selected: LayerRef;
+  onSelect: (ref: LayerRef) => void;
+  onMove: (ref: NonNullable<LayerRef>, x: number, y: number) => void;
+  onResize: (elId: string, w: number, h: number) => void;
+  onReorder: (ref: NonNullable<LayerRef>, dir: -1 | 1) => void;
+  onToggleHidden: (ref: NonNullable<LayerRef>) => void;
+  onRemoveLayer: (ref: NonNullable<LayerRef>) => void;
 }) {
   const plate = PLATE_WORD[frame.plate.state];
   return (
@@ -167,7 +197,26 @@ function Row({
 
       {open && (
         <div className="grid gap-4 px-3 pb-4 lg:grid-cols-[1fr_300px]">
-          <FrameCanvas frame={frame} />
+          <div className="space-y-3">
+            <FrameCanvas
+              frame={frame}
+              edit={{ selected, onSelect, onMove, onResize }}
+            />
+            <p className="font-jetbrains text-[10px] text-white/30">
+              drag any layer to move it · a selected element gets a resize handle
+            </p>
+            <LayerPanel
+              frame={frame}
+              selected={selected}
+              onSelect={onSelect}
+              onReorder={onReorder}
+              onToggleHidden={onToggleHidden}
+              onRemove={(ref) => {
+                onRemoveLayer(ref);
+                onSelect(null);
+              }}
+            />
+          </div>
           <div className="space-y-2.5">
             <p className="font-hanken text-[13px] leading-snug text-slate-400">&ldquo;{frame.line}&rdquo;</p>
             {frame.device && (
