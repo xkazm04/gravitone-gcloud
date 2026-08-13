@@ -21,12 +21,9 @@ import { imgSrc, generateImage, ImagingRequestError, type GenerateResult } from 
 import { compilePrompt, NEGATIVE_PROMPT, PROMPT_CHAR_LIMIT } from "@/lib/stylePrompt";
 import type { StyleBlock } from "@/lib/themes";
 
-const TRIALS = [
-  { id: "bars", label: "chart", text: "Three ascending bars on a ground line, with one arrow arcing over them." },
-  { id: "map", label: "map", text: "A simple coastline with three ports marked along it, and a route line between two of them." },
-  { id: "gears", label: "mechanism", text: "Two interlocking gears, the larger one turning the smaller, on a plain ground." },
-  { id: "people", label: "figures", text: "Three simple human figures standing in a row, one of them clearly apart from the other two." },
-];
+import { TRIALS } from "./trials";
+
+const DEFAULT_SUBJECT = TRIALS[0].subject;
 
 /** How many approved proofs to send as style references.
  *
@@ -50,7 +47,7 @@ export default function Playground({
   keepLabel?: string;
   disabled?: boolean;
 }) {
-  const [subject, setSubject] = useState(TRIALS[0].text);
+  const [subject, setSubject] = useState(DEFAULT_SUBJECT);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
@@ -102,9 +99,10 @@ export default function Playground({
         {TRIALS.map((t) => (
           <button
             key={t.id}
-            onClick={() => setSubject(t.text)}
+            onClick={() => setSubject(t.subject)}
+            title={`${t.problem} · ${t.beat}`}
             className={`font-jetbrains rounded-full border px-2.5 py-1 text-[11px] transition ${
-              subject === t.text
+              subject === t.subject
                 ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
                 : "border-white/10 text-white/50 hover:text-white/80"
             }`}

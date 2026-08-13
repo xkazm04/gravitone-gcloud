@@ -1,4 +1,4 @@
-// THE PRESETS — eight starting points for a visual identity.
+// THE PRESETS — six starting points for a visual identity.
 //
 // Each is a complete four-slot style block (technique · subject · palette ·
 // finish), not a mood word. That shape is the research batch's finding: styles
@@ -10,9 +10,9 @@
 // one image and shreds consistency across a project, because the model is free
 // to re-cast which colour carries meaning each time.
 //
-// THUMBNAILS: all eight are generated from the SAME subject (CANON_SUBJECT
+// THUMBNAILS: all six are generated from the SAME subject (CANON_SUBJECT
 // below) by pipeline/build-preset-thumbs.mts and committed under public/presets/.
-// One subject across all eight is the point — the grid then varies by style
+// One subject across all six is the point — the grid then varies by style
 // alone, so the user is comparing the only thing they are actually choosing.
 
 import type { StyleBlock } from "@/lib/themes";
@@ -103,22 +103,6 @@ export const PRESETS: Preset[] = [
     },
   },
   {
-    id: "isometric-works",
-    name: "Isometric Works",
-    line: "Systems as little machines. Strong for process and infrastructure.",
-    elements: ["diagrams", "maps", "icons"],
-    block: {
-      technique: "isometric vector at a strict 30 degree projection, flat faces",
-      subject: "systems built as connected modules on an implied isometric grid",
-      palette: [
-        { name: "slate", hex: "#243447", role: "ground" },
-        { name: "mint", hex: "#BFE3D0", role: "objects" },
-        { name: "ember orange", hex: "#FF8548", role: "accent" },
-      ],
-      finish: "flat faces with one darker side per solid, no gradients",
-    },
-  },
-  {
     id: "paper-relief",
     name: "Paper Relief",
     line: "Layered cut paper with real depth. Warm, tactile, slower-feeling.",
@@ -132,22 +116,6 @@ export const PRESETS: Preset[] = [
         { name: "rust", hex: "#C4551F", role: "accent" },
       ],
       finish: "soft contact shadow under every sheet, visible paper fibre",
-    },
-  },
-  {
-    id: "risograph",
-    name: "Risograph",
-    line: "Two-ink print with honest misregistration. Distinctive, quietly retro.",
-    elements: ["icons", "charts", "captions"],
-    block: {
-      technique: "two-colour risograph print, ink layers slightly out of register",
-      subject: "simple bold shapes overprinted so the two inks mix where they overlap",
-      palette: [
-        { name: "newsprint", hex: "#EDE6D6", role: "ground" },
-        { name: "riso blue", hex: "#0B4FA8", role: "objects" },
-        { name: "fluoro pink", hex: "#FF4D8D", role: "accent" },
-      ],
-      finish: "visible ink texture, 2mm misregistration, no fine detail",
     },
   },
   {

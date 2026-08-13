@@ -1,0 +1,759 @@
+{
+  "styles": [
+    {
+      "id": "signal-ledger",
+      "name": "Signal Ledger"
+    },
+    {
+      "id": "newsprint-cutout",
+      "name": "Newsprint Cutout"
+    },
+    {
+      "id": "blueprint",
+      "name": "Blueprint"
+    },
+    {
+      "id": "chalk-argument",
+      "name": "Chalk Argument"
+    },
+    {
+      "id": "paper-relief",
+      "name": "Paper Relief"
+    },
+    {
+      "id": "data-neon",
+      "name": "Data Neon"
+    }
+  ],
+  "trials": [
+    {
+      "id": "peak-and-fall",
+      "label": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone"
+    },
+    {
+      "id": "wish-list",
+      "label": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs"
+    },
+    {
+      "id": "booking-not-meal",
+      "label": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room"
+    },
+    {
+      "id": "flywheel",
+      "label": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts"
+    },
+    {
+      "id": "the-exit",
+      "label": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them"
+    }
+  ],
+  "entries": [
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/blueprint/booking-not-meal.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "blue",
+          "white"
+        ],
+        "clutter": 4,
+        "description": "A blue blueprint sheet covered in grid lines and scattered white technical sketches including an open book, chairs, a table, a stand, and miscellaneous scribbled annotations."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/blueprint/flywheel.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "blue",
+          "white"
+        ],
+        "clutter": 2,
+        "description": "A blueprint-style drawing of a circular loop with four arrowheads around a central stack of coins, with small glyph-like marks on the ring."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/blueprint/peak-and-fall.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "gradedBy": "qwen3.8-max",
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "blue",
+          "white",
+          "yellow"
+        ],
+        "clutter": 3,
+        "description": "A blueprint-style chart on a blue grid showing a white rising curve with a dashed yellow companion curve and several text labels, but no falling descent after the peak."
+      }
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/blueprint/the-exit.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "white",
+          "yellow"
+        ],
+        "clutter": 4,
+        "description": "On a blue blueprint grid, two opposing cone-shaped streams of small white and yellow technical doodle icons converge and meet at the center of the frame."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/blueprint/wish-list.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "white",
+          "orange"
+        ],
+        "clutter": 1,
+        "description": "A blueprint-style blue background with four white line icons in a row (columned building, rolled scroll with ribbon, balance scale, bank card) separated by small orange chevron marks."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/chalk-argument/booking-not-meal.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 2,
+        "description": "A chalkboard-style sketch split by a vertical line, with a filled reservation list labeled CLAIMS on the left and a table with two empty chairs on the right."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/chalk-argument/flywheel.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "green",
+          "white",
+          "silver",
+          "yellow"
+        ],
+        "clutter": 2,
+        "description": "A chalkboard-style diagram of four curved chalk arrows circling a central stack of coins, with four labelled boxes in the corners containing garbled text."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/chalk-argument/peak-and-fall.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 1,
+        "description": "A chalkboard drawing shows white axes and a single rising chalk curve with an arrowhead ending at a small yellow disc marker, but no falling section after the peak."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/chalk-argument/the-exit.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 2,
+        "description": "Two chalk arrows filled with small doodled shapes point toward each other on a green chalkboard with a yellow crossed arrow symbol between them."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/chalk-argument/wish-list.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 1,
+        "description": "Chalk-style drawings on a green blackboard show a columned building, a scrolled document with a rolled ribbon, a balance scale, and a yellow bank card connected by arrows, but no tick marks beside them."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/data-neon/booking-not-meal.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "black",
+          "pink",
+          "green"
+        ],
+        "clutter": 2,
+        "description": "A split frame showing a neon open reservation book with filled lines and gauge doodles on the left and a pink round table with two empty chairs on the right, divided by a vertical pink line on a black grid background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/data-neon/flywheel.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "black",
+          "green",
+          "grey",
+          "magenta"
+        ],
+        "clutter": 3,
+        "description": "Two green dial gauges with numbers and a Q4 label flank a central stack of coins pointed at by two grey arrows, with a magenta plus button below."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/data-neon/peak-and-fall.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "gradedBy": "qwen3.8-max",
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "black",
+          "pink"
+        ],
+        "clutter": 2,
+        "description": "A pink bell-shaped curve on a black gridded chart with numeric axis labels and a small marker dot at the peak."
+      }
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/data-neon/the-exit.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "black",
+          "green",
+          "pink",
+          "blue"
+        ],
+        "clutter": 2,
+        "description": "Translucent green and blue wave streams collide mid-frame in a pink particle burst over a faint grid on a black background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/data-neon/wish-list.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "black",
+          "green",
+          "beige"
+        ],
+        "clutter": 1,
+        "description": "Four neon-outlined icons in a row on a black grid background: a columned government building, a rolled scroll with ribbon, a balance scale, and a bank card, each with a faint tick mark beside it."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/newsprint-cutout/booking-not-meal.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "blue",
+          "coral",
+          "white",
+          "black"
+        ],
+        "clutter": 1,
+        "description": "A split-frame illustration showing an open lined notebook on a navy background and a small empty table with two chairs on a coral background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/newsprint-cutout/flywheel.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "blue",
+          "coral",
+          "gray",
+          "silver"
+        ],
+        "clutter": 2,
+        "description": "Four torn-paper collage arrows circle a central stack of coins on a split blue and coral background, with the lower-left arrow pointing counter-clockwise against the flow."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/newsprint-cutout/peak-and-fall.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "red",
+          "gray",
+          "white"
+        ],
+        "clutter": 2,
+        "description": "A coral mountain-like curve with a small dot marker at its sharp peak rises against a dark navy background, with torn black-and-white photo collage fragments of trees and a stone tower peeking out behind the slope."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/newsprint-cutout/the-exit.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "navy",
+          "beige",
+          "white",
+          "black"
+        ],
+        "clutter": 3,
+        "description": "A split-background composition with white pebble-like objects streaming from the left on dark navy and black-and-white patterned objects streaming from the right on cream, meeting near a small orange semicircle at the center."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/newsprint-cutout/wish-list.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "red",
+          "beige",
+          "gray"
+        ],
+        "clutter": 1,
+        "description": "Four torn-paper tiles in a row on a dark blue background, each holding a grayscale emblem (columned building, ribbon-tied rolled document, balance scale, and a Visa-style bank card) with a small check mark beside it."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/paper-relief/booking-not-meal.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "cream",
+          "brown",
+          "beige"
+        ],
+        "clutter": 1,
+        "description": "A split papercut-style scene showing an open reservation book with ruled lines on the left and a minimalist table with two chairs and a vase on the right."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/paper-relief/flywheel.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "gradedBy": "qwen3.8-max",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "beige",
+          "gold",
+          "blue",
+          "red"
+        ],
+        "clutter": 2,
+        "description": "A paper-cut style illustration of stacked gold coins surrounded by two curved arrows forming a circle, with torn white paper edges around the border."
+      }
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/paper-relief/peak-and-fall.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "gradedBy": "qwen3.8-max",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "beige",
+          "dark blue",
+          "orange"
+        ],
+        "clutter": 1,
+        "description": "Layered paper-cut style mountain-like curve with a sharp peak right of centre topped by a small marker, in navy and orange bands on a cream background."
+      }
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/paper-relief/the-exit.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "beige",
+          "orange",
+          "red",
+          "brown"
+        ],
+        "clutter": 2,
+        "description": "A layered papercut-style landscape of rolling hills and pine trees in warm cream, orange and red tones."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/paper-relief/wish-list.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "beige",
+          "tan",
+          "orange"
+        ],
+        "clutter": 1,
+        "description": "A papercut-style row of four emblems (columned building, ribbon-tied scroll, balance scale, and bank card) on layered beige hills, with line marks on the scroll and a tick only on the card."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/signal-ledger/booking-not-meal.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "navy",
+          "cream",
+          "teal"
+        ],
+        "clutter": 1,
+        "description": "A split-panel illustration showing an open reservation book with pen on a dark navy left half and a small table with two wine glasses and two empty chairs on a cream right half."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/signal-ledger/flywheel.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "blue",
+          "beige",
+          "teal"
+        ],
+        "clutter": 1,
+        "description": "A thin broken circle with one teal arrow at top and a small beige square at lower left surrounds three stacks of coins marked with dollar signs on a dark blue background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/signal-ledger/peak-and-fall.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "gradedBy": "qwen3.8-max",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "dark blue",
+          "white",
+          "teal"
+        ],
+        "clutter": 1,
+        "description": "A minimalist line chart on a dark teal background showing a curve rising to a peak marked by a teal pin, then descending toward a horizontal baseline with a few thin construction lines and dots."
+      }
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/signal-ledger/the-exit.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "dark blue",
+          "tan",
+          "light blue"
+        ],
+        "clutter": 2,
+        "description": "Two horizontal streams of dots and lines, tan from the left and blue from the right, converge and meet at a narrow pinch point in the center against a dark navy background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/signal-ledger/wish-list.jpg",
+      "model": "lucid-origin",
+      "costUsd": 0.025699999999999997,
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "dark blue",
+          "cream",
+          "teal"
+        ],
+        "clutter": 1,
+        "description": "Four evenly spaced flat icons on a dark teal background: a columned government building, a rolled document with a bow, a balance scale, and a bank card, each with a small checkmark below it."
+      },
+      "gradedBy": "qwen3.8-max"
+    }
+  ]
+}

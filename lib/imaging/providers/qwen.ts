@@ -116,9 +116,13 @@ export function qwenProvider(): ImagingProvider {
         } catch (e) {
           const err =
             e instanceof ImagingError ? e : new ImagingError(String(e), "failed", "qwen");
-          // Only quota/rate problems justify moving to another SKU. A malformed
-          // request or a bad key will fail identically on every one of them.
-          if (err.kind !== "rate-limited") throw err;
+          // Quota and TIMEOUT both justify moving to another SKU: the first is
+          // per-SKU by definition, and the second is usually load on that
+          // model rather than on the account — measured, a batch at
+          // concurrency 3 timed out four times on the primary and the
+          // fallbacks answered fine. A malformed request or a bad key, by
+          // contrast, will fail identically on every one of them.
+          if (err.kind !== "rate-limited" && err.kind !== "timeout") throw err;
           lastQuotaError = err;
         }
       }

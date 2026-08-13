@@ -9,14 +9,14 @@ import { DEV_AUTH } from "@/lib/devAuth";
 // The module list for this app. Projects is the shelf; the studio is opened
 // from a row on it and therefore has no context-free link of its own — /studio
 // without a project is not a page, it is a redirect back here.
-// "Styles", not "Library": the studio already owns that word for a different
-// thing — the per-project asset shelves at app/_library (StudioView's
-// view === "library"), which hold what a project PRODUCED. This route holds
-// what a project is BUILT FROM, and is entered before a project exists. The
-// path stays /library; the label is the half that has to disambiguate.
+// "Library" holds several modules now — Styles is the first, with Assets and
+// Animations beside it — so the nav names the place and the page's own tab
+// strip names the module. That also settles the earlier collision with the
+// studio's per-project asset shelves (app/_library): those are what ONE project
+// produced, this is the cross-project shelf everything is built from.
 export const MODULES = [
   { label: "Projects", href: "/projects" },
-  { label: "Styles", href: "/library" },
+  { label: "Library", href: "/library" },
 ];
 
 /** Obsidian app shell: aurora atmosphere + top nav + the account control.
