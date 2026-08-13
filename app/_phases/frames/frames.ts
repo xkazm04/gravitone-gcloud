@@ -78,6 +78,10 @@ export interface Frame {
   plate: Plate;
   elements: FrameElement[];
   texts: FrameText[];
+  /** Why THIS picture for THIS beat — the art director's one line. Present only
+   *  on authored frames, which is exactly how you tell them apart from seeded
+   *  ones at a glance. */
+  rationale?: string;
 }
 
 export const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;

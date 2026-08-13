@@ -16,9 +16,10 @@
 // action, serially, because sixteen clicks is not a workflow.
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, Sparkles } from "lucide-react";
+import { ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
-import { durationOf, isComposed, type Frame } from "./frames";
+import { durationOf, isComposed, type Frame, type FrameText } from "./frames";
+import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
 import type { useFrames } from "./useFrames";
 
@@ -43,7 +44,22 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
         <p className="font-jetbrains text-[12px] text-white/50">
           {frames.length - missing.length}/{frames.length} composed
           {totalCost > 0 && <span className="text-white/30"> · ${totalCost.toFixed(3)} spent</span>}
+          {/* The integrity number. A figure nobody sourced is the defect this
+              step exists to catch, so it is on the header rather than buried. */}
+          {ctl.unboundFigures > 0 && (
+            <span className="text-amber-200/90"> · {ctl.unboundFigures} unsourced figure{ctl.unboundFigures === 1 ? "" : "s"}</span>
+          )}
         </p>
+        <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => void ctl.direct()}
+          disabled={ctl.directing}
+          title="Read the whole script and art-direct every frame in one pass"
+          className="inline-flex items-center gap-2 rounded-xl border border-violet-300/35 bg-violet-300/10 px-3.5 py-1.5 text-[12px] font-semibold text-violet-100 transition hover:bg-violet-300/20 disabled:opacity-40"
+        >
+          {ctl.directing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Wand2 className="h-3.5 w-3.5" aria-hidden />}
+          {ctl.directing ? "directing…" : "direct the cut"}
+        </button>
         <button
           onClick={() => void renderMissing()}
           disabled={runningAll || missing.length === 0}
@@ -52,6 +68,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
           {runningAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
           {runningAll ? "rendering…" : `render ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`}
         </button>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-white/8">
@@ -74,6 +91,11 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
             onToggle={() => setOpenId(openId === f.id ? null : f.id)}
             onRender={() => void generatePlate(f.id)}
             onSubject={(v) => setSubject(f.id, v)}
+            facts={ctl.facts}
+            onText={(tid, v) => ctl.setText(f.id, tid, v)}
+            onBind={(tid, fid) => ctl.bindFact(f.id, tid, fid)}
+            onRemoveText={(tid) => ctl.removeText(f.id, tid)}
+            onAddText={(role) => ctl.addText(f.id, role)}
           />
         ))}
       </div>
@@ -97,6 +119,11 @@ function Row({
   onToggle,
   onRender,
   onSubject,
+  facts,
+  onText,
+  onBind,
+  onRemoveText,
+  onAddText,
 }: {
   frame: Frame;
   index: number;
@@ -106,6 +133,11 @@ function Row({
   onToggle: () => void;
   onRender: () => void;
   onSubject: (v: string) => void;
+  facts: Fact[];
+  onText: (textId: string, v: string) => void;
+  onBind: (textId: string, factId: string | undefined) => void;
+  onRemoveText: (textId: string) => void;
+  onAddText: (role: FrameText["role"]) => void;
 }) {
   const plate = PLATE_WORD[frame.plate.state];
   return (
@@ -141,6 +173,70 @@ function Row({
             {frame.device && (
               <p className="font-jetbrains text-[10px] text-white/35">device · {frame.device}</p>
             )}
+
+            {/* The director's reasoning, shown. It is the difference between a
+                composed frame and a templated one, so it belongs on screen
+                where it can be disagreed with — not in a log. */}
+            {frame.rationale && (
+              <p className="font-hanken rounded-lg border border-violet-300/20 bg-violet-300/[0.06] px-2.5 py-2 text-[12px] leading-snug text-violet-100/90">
+                {frame.rationale}
+              </p>
+            )}
+
+            <div>
+              <p className="font-jetbrains mb-1 text-[10px] tracking-[0.14em] text-white/40 uppercase">texts</p>
+              <div className="space-y-1.5">
+                {frame.texts.map((t) => (
+                  <div key={t.id} className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <span className="font-jetbrains w-11 shrink-0 text-[9px] text-white/35">{t.role}</span>
+                      <input
+                        value={t.value}
+                        onChange={(e) => onText(t.id, e.target.value)}
+                        className="font-hanken min-w-0 flex-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1 text-[12px] text-slate-200 focus:border-cyan-400/40 focus:outline-none"
+                      />
+                      <button
+                        onClick={() => onRemoveText(t.id)}
+                        aria-label={`Remove ${t.role}`}
+                        className="shrink-0 rounded p-1 text-white/30 transition hover:text-rose-300"
+                      >
+                        <Trash2 className="h-3 w-3" aria-hidden />
+                      </button>
+                    </div>
+                    {/* A figure is a claim. Binding it to a sourced row is the
+                        only thing that separates this from a caption someone
+                        typed, so the control sits on the figure itself. */}
+                    {t.role === "figure" && (
+                      <select
+                        value={t.factId ?? ""}
+                        onChange={(e) => onBind(t.id, e.target.value || undefined)}
+                        className={`font-jetbrains ml-[3.1rem] w-[calc(100%-3.1rem)] rounded border bg-slate-950 px-1.5 py-1 text-[10px] focus:outline-none ${
+                          t.factId ? "border-white/10 text-white/60" : "border-amber-300/40 text-amber-200"
+                        }`}
+                      >
+                        <option value="">— cites no fact —</option>
+                        {facts.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.id} · {f.claim.slice(0, 60)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
+                <div className="flex gap-1.5 pt-0.5">
+                  {(["caption", "figure", "label"] as FrameText["role"][]).map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => onAddText(r)}
+                      className="font-jetbrains rounded border border-white/12 px-1.5 py-1 text-[10px] text-white/55 transition hover:text-white/85"
+                    >
+                      + {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
             <div>
               <p className="font-jetbrains mb-1 text-[10px] tracking-[0.14em] text-white/40 uppercase">plate subject</p>
               <textarea

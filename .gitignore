@@ -75,3 +75,8 @@ pipeline/runs/*/captures/
 # (public/presets/*.jpg are NOT here — those are product assets the rail
 # renders at runtime, not experiment output.)
 /public/trials/**/*.jpg
+
+# Art-direction output (pipeline/direct-frames.mts) — scene specs plus the
+# authored/template comparison plates. Regenerable, and deleted once Step 3
+# settles; the finding lives in the commit message and docs.
+/frames-direction-out/
