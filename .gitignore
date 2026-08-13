@@ -67,3 +67,11 @@ pipeline/runs/*/captures/
 # Integration-probe output (pipeline/integration-imaging.mts) — real generated
 # images, written for a human to look at. Never versioned.
 /imaging-probe-out/
+
+# Trial plates (pipeline/build-style-trials.mts) — regenerable experiment
+# artifacts, and they will be deleted outright once Step 3 is settled. The
+# JUDGEMENTS in public/trials/index.json stay versioned: that file is the
+# finding, the JPEGs are only the evidence behind it.
+# (public/presets/*.jpg are NOT here — those are product assets the rail
+# renders at runtime, not experiment output.)
+/public/trials/**/*.jpg

@@ -37,6 +37,8 @@ const { PRESETS } = await import("../app/library/presets");
 const { TRIALS } = await import("../app/library/trials");
 const { compilePrompt, NEGATIVE_PROMPT, PROMPT_CHAR_LIMIT } = await import("../lib/stylePrompt");
 const { generate, recognize } = await import("../lib/imaging/router");
+const { leonardoProvider } = await import("../lib/imaging/providers/leonardo");
+const { googleProvider } = await import("../lib/imaging/providers/google");
 const { ImagingError } = await import("../lib/imaging/errors");
 
 const argv = process.argv.slice(2);
@@ -46,6 +48,23 @@ const onlyTrial = arg("--trial");
 const force = argv.includes("--force");
 /** Re-read plates that are on disk but carry no grade. Costs recognition only. */
 const regrade = argv.includes("--regrade");
+/**
+ * Force one vendor instead of following the router.
+ *
+ * The grid is a comparison instrument, so which model drew a plate has to be a
+ * variable rather than an environment side effect — and the whole reason to
+ * run it twice is that a failure shared by six style blocks is far more likely
+ * to be the MODEL than the prompts.
+ */
+const provider = (arg("--provider") ?? "leonardo") as "leonardo" | "google";
+if (!["leonardo", "google"].includes(provider)) {
+  console.error(`unknown --provider "${provider}" (leonardo | google)`);
+  process.exit(2);
+}
+const renderWith =
+  provider === "google"
+    ? (req: Parameters<typeof generate>[0]) => googleProvider().generate!(req)
+    : (req: Parameters<typeof generate>[0]) => leonardoProvider().generate!(req);
 /** Kept low on purpose: Leonardo's rate limits are unpublished, and the failure
  *  mode of guessing high is a half-finished grid plus a cooldown. */
 const CONCURRENCY = 3;
@@ -76,6 +95,7 @@ interface Entry {
   problem: string;
   beat: string;
   file: string;
+  provider?: string;
   model?: string;
   costUsd?: number;
   grade?: unknown;
@@ -86,14 +106,18 @@ interface Entry {
 const prior: Entry[] = existsSync(indexFile)
   ? (JSON.parse(readFileSync(indexFile, "utf8")).entries ?? [])
   : [];
-const priorBy = new Map(prior.map((e) => [`${e.styleId}/${e.trialId}`, e]));
+// Keyed by provider too: the two grids coexist in one index so they can be
+// diffed cell for cell, which is the only comparison worth making.
+const priorBy = new Map(prior.map((e) => [`${e.provider ?? "leonardo"}/${e.styleId}/${e.trialId}`, e]));
 
 const jobs = PRESETS.filter((p) => !onlyStyle || p.id === onlyStyle).flatMap((preset) =>
   TRIALS.filter((t) => !onlyTrial || t.id === onlyTrial).map((trial) => ({ preset, trial })),
 );
 
 console.log(`\nstyle trials → ${outDir}`);
-console.log(`${PRESETS.length} styles × ${TRIALS.length} trials · ${jobs.length} cells · concurrency ${CONCURRENCY}\n`);
+console.log(
+  `${PRESETS.length} styles × ${TRIALS.length} trials · ${jobs.length} cells · provider ${provider} · concurrency ${CONCURRENCY}\n`,
+);
 
 let made = 0;
 let skipped = 0;
@@ -122,9 +146,9 @@ async function gradeImage(
 }
 
 async function runCell({ preset, trial }: (typeof jobs)[number]): Promise<void> {
-  const key = `${preset.id}/${trial.id}`;
-  const rel = `/trials/${preset.id}/${trial.id}.jpg`;
-  const abs = path.join(outDir, preset.id, `${trial.id}.jpg`);
+  const key = `${provider}/${preset.id}/${trial.id}`;
+  const rel = `/trials/${provider}/${preset.id}/${trial.id}.jpg`;
+  const abs = path.join(outDir, provider, preset.id, `${trial.id}.jpg`);
 
   const base: Entry = {
     styleId: preset.id,
@@ -134,6 +158,7 @@ async function runCell({ preset, trial }: (typeof jobs)[number]): Promise<void> 
     problem: trial.problem,
     beat: trial.beat,
     file: rel,
+    provider,
   };
 
   if (existsSync(abs) && !force) {
@@ -166,7 +191,7 @@ async function runCell({ preset, trial }: (typeof jobs)[number]): Promise<void> 
   }
 
   try {
-    const gen = await generate({ prompt, negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1 });
+    const gen = await renderWith({ prompt, negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1 });
     const img = gen.images[0];
     if (!img) throw new Error("no image returned");
 
@@ -216,7 +241,19 @@ writeFileSync(
       // partial re-run would make the diff noise rather than signal.
       styles: PRESETS.map((p) => ({ id: p.id, name: p.name })),
       trials: TRIALS.map((t) => ({ id: t.id, label: t.label, problem: t.problem, beat: t.beat })),
-      entries: results.sort((a, b) => a.styleId.localeCompare(b.styleId) || a.trialId.localeCompare(b.trialId)),
+      // Carry forward every cell this run did not touch — a google run must
+      // not wipe the leonardo grid it is being compared against.
+      entries: [
+        ...prior.filter(
+          (e) => !results.some((r) => r.provider === (e.provider ?? "leonardo") && r.styleId === e.styleId && r.trialId === e.trialId),
+        ),
+        ...results,
+      ].sort(
+        (a, b) =>
+          (a.provider ?? "").localeCompare(b.provider ?? "") ||
+          a.styleId.localeCompare(b.styleId) ||
+          a.trialId.localeCompare(b.trialId),
+      ),
     },
     null,
     2,
