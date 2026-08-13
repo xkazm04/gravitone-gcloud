@@ -16,9 +16,12 @@ export const STEPS_STORE = "steps";
 /** Visual identities — see lib/themes.ts. Account-scoped like projects, and
  *  read by /library and by the gate on project creation. */
 export const THEMES_STORE = "themes";
+/** Reusable shelf entries — see lib/assets.ts. Pointers to bytes that live
+ *  elsewhere, so this store stays small however many plates it indexes. */
+export const ASSETS_STORE = "assets";
 /** Index over the owning uid — listing is always "this account's projects". */
 export const BY_UID = "by-uid";
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -42,6 +45,10 @@ export function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(THEMES_STORE)) {
         const themes = db.createObjectStore(THEMES_STORE, { keyPath: "id" });
         themes.createIndex(BY_UID, "uid", { unique: false });
+      }
+      if (!db.objectStoreNames.contains(ASSETS_STORE)) {
+        const assets = db.createObjectStore(ASSETS_STORE, { keyPath: "id" });
+        assets.createIndex(BY_UID, "uid", { unique: false });
       }
     };
     req.onsuccess = () => resolve(req.result);

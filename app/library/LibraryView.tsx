@@ -19,11 +19,12 @@ import { useState } from "react";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
 
+import AssetsBrowser from "./AssetsBrowser";
 import LibraryAtelier from "./LibraryAtelier";
 
 const MODULES = [
   { id: "styles", label: "Styles", blurb: "Visual identities. A locked one is required before any project." },
-  { id: "assets", label: "Assets", blurb: "Reusable source material — plates, cutouts, references." },
+  { id: "assets", label: "Assets", blurb: "Reusable source material. Seeded from the trial grid — right-click a tile to remove it." },
   { id: "animations", label: "Animations", blurb: "Reusable motion — entrance and ambient registers." },
 ] as const;
 
@@ -60,7 +61,13 @@ export default function LibraryView() {
         </header>
 
         <section className="mt-6">
-          {module === "styles" ? <LibraryAtelier /> : <ComingSoon label={active.label} blurb={active.blurb} />}
+          {module === "styles" ? (
+            <LibraryAtelier />
+          ) : module === "assets" ? (
+            <AssetsBrowser />
+          ) : (
+            <ComingSoon label={active.label} blurb={active.blurb} />
+          )}
         </section>
       </main>
     </StudioFrame>
