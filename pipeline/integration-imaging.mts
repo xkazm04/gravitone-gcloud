@@ -257,6 +257,117 @@ await check("google.recognize", async () => {
   return `${res.provenance.model} · ${JSON.stringify(res.json).slice(0, 90)}`;
 });
 
+/* ── style lock: the assertion /library actually rests on ─────────────────── */
+//
+// Everything above proves the plumbing. This proves the PRODUCT claim: that
+// approving plates makes a later frame — of a different subject — come back in
+// the same visual language.
+//
+// It is built as a controlled comparison rather than a vibe check, because
+// "these look similar" is exactly the judgement a single generation will
+// flatter. Three renders share one style block:
+//
+//   A   subject 1, unconditioned          the anchor
+//   B   subject 2, conditioned on A       the claim
+//   C   subject 2, unconditioned          the control
+//
+// A vision model then reads all three back through one schema, and we compare
+// how much of A's palette survives into B versus into C. Without C the test
+// could not tell style-lock from the style block already being specific enough
+// on its own — which, given the block names three hex colours, is a genuinely
+// plausible alternative explanation.
+
+const LOCK_SCHEMA = {
+  type: "object",
+  required: ["dominantColors", "technique"],
+  properties: {
+    dominantColors: {
+      type: "array",
+      items: { type: "string" },
+      description: "two to four plain lowercase colour names, most prominent first",
+    },
+    technique: { type: "string", description: "a short phrase naming the rendering technique" },
+  },
+} as const;
+
+const SUBJECT_1 = "Three ascending bars on a ground line, with one arrow arcing over them.";
+const SUBJECT_2 = "Two interlocking gears, the larger turning the smaller, on a plain ground.";
+
+const norm = (s: string) => s.toLowerCase().replace(/[^a-z ]/g, "").trim();
+/** Share of A's colours that also appear in X. Substring-tolerant, because a
+ *  model may say "dark navy" where it earlier said "navy". */
+function paletteOverlap(a: string[], x: string[]): number {
+  if (!a.length) return 0;
+  const xs = x.map(norm);
+  const hit = a
+    .map(norm)
+    .filter((c) => xs.some((y) => y.includes(c) || c.includes(y))).length;
+  return hit / a.length;
+}
+
+await check("style-lock.holds", async () => {
+  if (!isConfigured("google")) skip("GOOGLE_AI_API_KEY not set");
+
+  const google = googleProvider();
+  const style = STYLE; // one block across all three renders
+
+  const gen = async (subject: string, references?: ImageRef[]) =>
+    references
+      ? // Through the ROUTER on purpose: a referenced request must be moved off
+        // Leonardo, and this is where that routing decision gets proved.
+        (await import("../lib/imaging/router")).generate({
+          prompt: `${style}\n\n${subject}`,
+          negativePrompt: NEGATIVE,
+          aspect: "16:9",
+          count: 1,
+          references,
+        })
+      : google.generate!({ prompt: `${style}\n\n${subject}`, negativePrompt: NEGATIVE, aspect: "16:9", count: 1 });
+
+  const a = await gen(SUBJECT_1);
+  if (!a.images.length) throw new Error("anchor produced no image");
+  save("lock-a-anchor", a.images[0]);
+
+  const b = await gen(SUBJECT_2, [a.images[0]]);
+  if (!b.images.length) throw new Error("conditioned render produced no image");
+  save("lock-b-conditioned", b.images[0]);
+  if (b.provenance.provider !== "google")
+    throw new Error(
+      `a referenced request was routed to ${b.provenance.provider}, which cannot honour style references`,
+    );
+
+  const c = await gen(SUBJECT_2);
+  if (!c.images.length) throw new Error("control produced no image");
+  save("lock-c-control", c.images[0]);
+
+  const read = async (img: ImageRef) => {
+    const r = await google.recognize!({
+      image: img,
+      instruction: "Describe only what you can see of this image's visual style.",
+      schema: LOCK_SCHEMA as unknown as Record<string, unknown>,
+    });
+    return r.json as { dominantColors: string[]; technique: string };
+  };
+
+  const [ra, rb, rc] = [await read(a.images[0]), await read(b.images[0]), await read(c.images[0])];
+  const locked = paletteOverlap(ra.dominantColors, rb.dominantColors);
+  const control = paletteOverlap(ra.dominantColors, rc.dominantColors);
+
+  // The absolute bar is the assertion; the comparison is EVIDENCE, reported
+  // either way. Failing on (locked > control) at n=1 would be a coin flip
+  // dressed as a test — the block names three hex colours, so the control is
+  // expected to score well too.
+  const verdict =
+    `anchor=[${ra.dominantColors.join("|")}] · locked ${(locked * 100).toFixed(0)}% ` +
+    `vs control ${(control * 100).toFixed(0)}% · technique "${rb.technique}"` +
+    (locked < control ? "  ⚠ conditioning scored WORSE than the control" : "");
+
+  if (locked < 0.5)
+    throw new Error(`style did not survive the subject change — only ${(locked * 100).toFixed(0)}% of the anchor palette held. ${verdict}`);
+
+  return verdict;
+});
+
 /* ── summary ──────────────────────────────────────────────────────────────── */
 
 console.log(

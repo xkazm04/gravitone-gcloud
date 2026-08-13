@@ -165,6 +165,12 @@ export default function LibraryAtelier() {
                 <div className="border-t border-white/8 pt-4">
                   <Playground
                     block={selected.block}
+                    // Newest approved first: the most recent approval is the
+                    // best statement of where the style landed.
+                    references={approvedProofs(selected)
+                      .slice()
+                      .sort((a, b) => b.createdAt - a.createdAt)
+                      .map((p) => ({ base64: p.base64, mime: p.mime }))}
                     disabled={selected.proofs.length >= PROOF_CAP}
                     onKeep={(r, subject) => keepAsProof(selected, r, subject)}
                   />

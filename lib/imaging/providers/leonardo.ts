@@ -87,6 +87,9 @@ export function leonardoProvider(): ImagingProvider {
     // `edit` capability promises — claiming it would make the router hand
     // Leonardo work it cannot do.
     capabilities: ["generate"],
+    // v1 takes no style-reference image. Declared false so the router sends
+    // style-locked work elsewhere instead of this adapter dropping the field.
+    supportsReferences: false,
 
     async generate(req: GenerateRequest): Promise<GeneratedImages> {
       const started = Date.now();

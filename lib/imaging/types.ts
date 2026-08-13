@@ -116,6 +116,19 @@ export type Capability = "generate" | "edit" | "recognize";
 export interface ImagingProvider {
   readonly id: ProviderId;
   readonly capabilities: readonly Capability[];
+  /**
+   * Can this provider CONDITION a generation on reference images?
+   *
+   * Separate from `capabilities` because it is not about which methods exist —
+   * both providers generate — but about whether a field of the request is
+   * honoured or quietly ignored. Leonardo's v1 API takes no style reference,
+   * so routing a style-locked request there would return a perfectly good
+   * image that is not in the locked style, and nothing would report a problem.
+   * That silent near-miss is the worst failure this layer could have, so the
+   * router treats reference support as a routing constraint rather than
+   * letting adapters drop the field on the floor.
+   */
+  readonly supportsReferences?: boolean;
   generate?(req: GenerateRequest): Promise<GeneratedImages>;
   edit?(req: EditRequest): Promise<GeneratedImages>;
   recognize?(req: RecognizeRequest): Promise<Recognition>;

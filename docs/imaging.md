@@ -126,6 +126,41 @@ brief said one pan rides higher). Nano Banana 2 got the mechanism right and corr
 cyan to the arrows, but smuggled in soft gradients and light dimensionality. Style purity versus
 instruction precision, in the two directions you would least like to choose between.
 
+## Style lock, measured
+
+The probe's `style-lock.holds` case tests the claim `/library` is built on, as a controlled
+comparison rather than a vibe check. Three renders share one style block:
+
+```
+A   subject 1, unconditioned        the anchor
+B   subject 2, conditioned on A     the claim
+C   subject 2, unconditioned        the control
+```
+
+A vision model reads all three through one schema, and we compare how much of A's palette survives
+into B versus into C. **The control is the point**: without it the test cannot tell style-lock from
+the style block already being specific enough on its own — and since the block names three hex
+colours, that is a genuinely plausible alternative explanation.
+
+First run: **locked 67% vs control 33%**. Conditioning doubled palette retention, and by eye the
+difference is subtler than that ratio suggests — both renders hold the navy/cream/cyan, but the
+conditioned one inherits the anchor's *simplicity* (solid shapes, no interior detail) where the
+control invents spokes and finer articulation. So the honest reading is: the style block does most
+of the work on colour, and references do the work on everything colour cannot describe.
+
+The assertion is the absolute bar (≥50% of the anchor palette), not `locked > control`. At n=1 the
+latter would be a coin flip dressed as a test. The comparison is reported either way, and the case
+prints a warning if conditioning ever scores *worse* — which would be a real finding.
+
+**Routing is part of this test.** The conditioned render goes through the router, which must move it
+off Leonardo: `supportsReferences` is a routing constraint, not a capability, because Leonardo's v1
+API silently ignores reference images. An unconditioned image in the wrong style is not a cheaper
+success, it is a failure that looks like one. The probe asserts the request landed on Google.
+
+One variance worth knowing: across two runs the same Leonardo prompt produced a plate with **no**
+text leakage and then one **with** it. Text leakage is a per-generation risk, not a per-model verdict
+— which is the argument for judging every plate rather than sampling.
+
 ## Still open
 
 **Leonardo v2 also hosts the Nano Banana family**, which would let dev edits bill against Leonardo
@@ -136,7 +171,14 @@ for two reasons: v2 references images by **uploaded id**, so an edit needs the p
 first, and v2 has no `inpaint`/`mask` at all — it is reference-guided regeneration, not masked
 editing. True masked edits must go direct to Google either way.
 
-**Style references are wired but unproven.** `references[]` reaches NB2, and NB2 is the variant that
-supports style conditioning — but no probe case exercises it yet. The test that matters is the one
-`/library` depends on: lock a style from approved plates, generate a *different* subject, and check
-the two read as the same publication. That is the next case to add.
+**Style-lock is proven at n=1, on palette only.** The measured 67/33 is one run, and the metric is
+palette overlap because that is what a vision model reports reliably. The properties that actually
+separate a publication from a folder of images — stroke weight, level of detail, how much empty
+space — are the ones the eye caught and the metric did not. A sharper test would ask the vision
+model to compare two images directly rather than describing each alone; our `recognize` takes one
+image, so that needs a compositing step or a two-image call.
+
+**Nothing has been rendered at 2K.** `GOOGLE_IMAGE_SIZE` exists and NB2 supports up to 4K, but every
+plate so far is 1K. For frames that will be composited under a vector layer and shown full-screen,
+1K is probably a floor rather than a target — worth one deliberate comparison before it hardens into
+a default nobody revisits.

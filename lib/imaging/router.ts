@@ -67,9 +67,12 @@ export function planFor(cap: Capability, env: ImagingEnv = currentEnv()): Provid
 async function run<T>(
   cap: Capability,
   call: (p: ImagingProvider) => Promise<T> | undefined,
+  /** Extra constraint the chosen provider must satisfy for THIS request. */
+  needs?: (p: ImagingProvider) => boolean,
 ): Promise<T> {
   const chain = planFor(cap);
   let first: ImagingError | null = null;
+  let rejected = 0;
 
   for (let i = 0; i < chain.length; i++) {
     const id = chain[i];
@@ -83,6 +86,13 @@ async function run<T>(
       if (i === 0) throw unsupported(id, cap);
       continue;
     }
+    // A provider that cannot honour this request is passed over even when it
+    // is the preferred one — silently dropping the field would be worse.
+    if (needs && !needs(provider)) {
+      rejected++;
+      continue;
+    }
+    if (needs && !isConfigured(id)) continue;
 
     try {
       const out = call(provider);
@@ -101,11 +111,25 @@ async function run<T>(
 
   // Everything in the chain refused, was rate-limited, or had no key. The
   // FIRST error is the honest one — it describes the vendor we meant to use.
+  if (!first && rejected)
+    throw new ImagingError(
+      `This request needs a provider that supports reference images, and none is configured for ${cap}. ` +
+        `Set GOOGLE_AI_API_KEY, or generate without a locked style's references.`,
+      "no-key",
+    );
   throw first ?? new ImagingError(`No provider is configured for ${cap}.`, "no-key");
 }
 
 export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>
-  run("generate", (p) => p.generate?.(req));
+  run(
+    "generate",
+    (p) => p.generate?.(req),
+    // Style-locked generation must go to a provider that actually reads the
+    // references. In dev that means the request leaves Leonardo for Google —
+    // deliberately: an unconditioned image in the wrong style is not a cheaper
+    // success, it is a failure that looks like one.
+    req.references?.length ? (p) => Boolean(p.supportsReferences) : undefined,
+  );
 
 export const edit = (req: EditRequest): Promise<GeneratedImages> =>
   run("edit", (p) => p.edit?.(req));

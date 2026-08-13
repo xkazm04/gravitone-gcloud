@@ -147,11 +147,21 @@ export function googleProvider(): ImagingProvider {
   return {
     id: "google",
     capabilities: ["generate", "edit", "recognize"],
+    // Nano Banana 2 (not Lite) conditions on style references — the reason
+    // this project is on the full model.
+    supportsReferences: true,
 
     async generate(req: GenerateRequest): Promise<GeneratedImages> {
-      const input: InputPart[] = [{ type: "text", text: buildPrompt(req.prompt, req.negativePrompt) }];
-      // Reference plates go in as image parts alongside the instruction.
-      for (const r of (req.references ?? []).slice(0, 14)) input.push(imagePart(r));
+      const refs = (req.references ?? []).slice(0, 14);
+      const input: InputPart[] = [
+        { type: "text", text: buildPrompt(req.prompt, req.negativePrompt, refs.length) },
+      ];
+      // Reference plates go in as image parts after the instruction — and the
+      // instruction has already said what they are FOR. An unlabelled reference
+      // is read as content to reproduce, which on a style-lock request means
+      // getting the previous frame's subject back in the new frame's style:
+      // exactly backwards.
+      for (const r of refs) input.push(imagePart(r));
 
       return runImage(
         {
@@ -276,9 +286,24 @@ async function runImage(
   };
 }
 
-/** Google takes no negative-prompt field, so a negative becomes an explicit
- *  exclusion clause rather than being silently dropped — the probe prompt in
- *  pipeline/FRAMES-PROMPT.md depends on one. */
-function buildPrompt(prompt: string, negative?: string): string {
-  return negative?.trim() ? `${prompt}\n\nDo not include any of the following: ${negative.trim()}.` : prompt;
+/**
+ * Google takes no negative-prompt field, so a negative becomes an explicit
+ * exclusion clause rather than being silently dropped — the probe prompt in
+ * pipeline/FRAMES-PROMPT.md depends on one.
+ *
+ * `refCount` adds the clause that makes style-lock work. Attached images are
+ * ambiguous by default: the model has no way to know whether it is being shown
+ * a subject to redraw or a look to imitate, and it guesses "subject". Saying so
+ * explicitly is the difference between locking a style and cloning a frame.
+ */
+function buildPrompt(prompt: string, negative?: string, refCount = 0): string {
+  const parts = [prompt];
+  if (refCount > 0)
+    parts.push(
+      `The ${refCount === 1 ? "attached image is a STYLE REFERENCE" : `${refCount} attached images are STYLE REFERENCES`}, ` +
+        "not content to reproduce. Match their technique, palette, line weight and finish exactly. " +
+        "Do NOT copy their subject matter — draw the subject described above, in their visual language.",
+    );
+  if (negative?.trim()) parts.push(`Do not include any of the following: ${negative.trim()}.`);
+  return parts.join("\n\n");
 }

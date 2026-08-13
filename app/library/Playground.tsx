@@ -28,13 +28,24 @@ const TRIALS = [
   { id: "people", label: "figures", text: "Three simple human figures standing in a row, one of them clearly apart from the other two." },
 ];
 
+/** How many approved proofs to send as style references.
+ *
+ *  The model accepts 14, but each is a ~250KB base64 payload and they go up the
+ *  wire on every trial. Four is where the style is unambiguous and the request
+ *  is still quick — past that you are paying seconds for agreement you already
+ *  had. */
+const MAX_REFS = 4;
+
 export default function Playground({
   block,
+  references = [],
   onKeep,
   keepLabel = "keep as proof",
   disabled,
 }: {
   block: StyleBlock;
+  /** Approved proofs from this theme, newest first. */
+  references?: { base64: string; mime: string }[];
   onKeep?: (r: GenerateResult, subject: string) => void | Promise<void>;
   keepLabel?: string;
   disabled?: boolean;
@@ -44,6 +55,13 @@ export default function Playground({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [kept, setKept] = useState(false);
+  // On by default once proofs exist — style-locked is the intended behaviour.
+  // The toggle exists so the difference can be SEEN, which is the only way to
+  // know whether locking is doing anything.
+  const [useRefs, setUseRefs] = useState(true);
+
+  const refs = references.slice(0, MAX_REFS);
+  const conditioned = useRefs && refs.length > 0;
 
   const prompt = compilePrompt(block, subject);
   const tooLong = prompt.length > PROMPT_CHAR_LIMIT;
@@ -54,7 +72,15 @@ export default function Playground({
     setResult(null);
     setKept(false);
     try {
-      setResult(await generateImage({ prompt, negativePrompt: NEGATIVE_PROMPT, aspect: "16:9", count: 1 }));
+      setResult(
+        await generateImage({
+          prompt,
+          negativePrompt: NEGATIVE_PROMPT,
+          aspect: "16:9",
+          count: 1,
+          references: conditioned ? refs : undefined,
+        }),
+      );
     } catch (e) {
       setError(
         e instanceof ImagingRequestError
@@ -108,7 +134,29 @@ export default function Playground({
         <span className="font-jetbrains text-[10px] text-white/30">
           {prompt.length}/{PROMPT_CHAR_LIMIT} chars
         </span>
+
+        {references.length > 0 && (
+          <label className="font-jetbrains ml-auto flex cursor-pointer items-center gap-1.5 text-[11px] text-white/55">
+            <input
+              type="checkbox"
+              checked={useRefs}
+              onChange={(e) => setUseRefs(e.target.checked)}
+              className="accent-cyan-300"
+            />
+            style-locked on {refs.length} proof{refs.length > 1 ? "s" : ""}
+          </label>
+        )}
       </div>
+
+      {conditioned && (
+        // Worth saying out loud: a style-locked trial cannot run on Leonardo,
+        // because its v1 API has no style reference. The router moves the call
+        // to Nano Banana rather than dropping the references silently, and the
+        // user should not be surprised that the model name changed.
+        <p className="font-jetbrains text-[10px] leading-relaxed text-white/30">
+          conditioned trials render on Nano Banana — Leonardo takes no style reference
+        </p>
+      )}
 
       {tooLong && (
         <p className="text-[12px] leading-snug text-amber-200/90">
