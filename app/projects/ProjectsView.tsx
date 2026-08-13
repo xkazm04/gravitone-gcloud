@@ -10,10 +10,14 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import Link from "next/link";
+
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
+import { useThemes } from "@/lib/useThemes";
+import { statusOf } from "@/lib/themes";
 import type { Project, ProjectDraft } from "@/lib/projects";
 
 import ProjectDialog, { ConfirmDelete } from "../_projects/ProjectDialog";
@@ -23,6 +27,11 @@ export default function ProjectsView() {
   const { user } = useAuth();
   const router = useRouter();
   const { projects, error, loading, create, update, remove } = useProjects(user?.uid ?? null);
+  // The gate: a project is rendered against a locked visual identity, so one
+  // has to exist before there is anything to create. See /library.
+  const { themes } = useThemes(user?.uid ?? null);
+  const lockedThemes = (themes ?? []).filter((t) => statusOf(t) === "locked");
+  const gated = themes !== null && lockedThemes.length === 0;
 
   const [dialog, setDialog] = useState<{ open: boolean; project: Project | null }>({
     open: false,
@@ -52,6 +61,20 @@ export default function ProjectsView() {
           <h1 className="font-instrument mt-3 text-4xl text-white">Projects</h1>
         </header>
 
+        {gated && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/[0.06] px-4 py-3">
+            <p className="font-hanken text-sm text-amber-100">
+              A project is rendered against a locked visual style, and this account has none yet.
+            </p>
+            <Link
+              href="/library"
+              className="font-jetbrains shrink-0 rounded-lg border border-amber-300/40 px-3 py-1.5 text-[12px] text-amber-100 transition hover:bg-amber-300/10"
+            >
+              make one in the library →
+            </Link>
+          </div>
+        )}
+
         {error && (
           <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
             {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
@@ -75,7 +98,11 @@ export default function ProjectsView() {
               }
               onEdit={(p) => setDialog({ open: true, project: p })}
               onDelete={(p) => setDoomed(p)}
-              onCreate={() => setDialog({ open: true, project: null })}
+              // Gated rather than disabled: a dead button teaches nothing,
+              // whereas landing on /library is the actual next step.
+              onCreate={() =>
+                gated ? router.push("/library") : setDialog({ open: true, project: null })
+              }
             />
           )}
         </section>
@@ -84,6 +111,7 @@ export default function ProjectsView() {
       <ProjectDialog
         open={dialog.open}
         project={dialog.project}
+        lockedThemes={lockedThemes}
         onClose={() => setDialog({ open: false, project: null })}
         onSubmit={submit}
       />

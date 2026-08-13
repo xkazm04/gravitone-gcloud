@@ -89,6 +89,15 @@ export interface Project {
   /** One line about what it is. Optional: a project can exist before it has one. */
   logline: string;
   template: TemplateId;
+  /**
+   * The locked visual identity this project is built on — see lib/themes.ts.
+   *
+   * Optional on the TYPE, required by the create path. That split is
+   * deliberate: projects created before /library existed have no theme, and
+   * treating them as invalid would break the shelf for the sake of a field
+   * they never had the chance to fill.
+   */
+  themeId?: string;
   /** Target runtime in seconds. Seeded from the template, then user-owned. */
   targetS: number;
   createdAt: number;
@@ -99,7 +108,7 @@ export interface Project {
 }
 
 /** What the create/edit dialog collects. Everything else is derived. */
-export type ProjectDraft = Pick<Project, "title" | "logline" | "template" | "targetS">;
+export type ProjectDraft = Pick<Project, "title" | "logline" | "template" | "targetS" | "themeId">;
 
 export const emptyProgress = (): Record<PhaseKey, PhaseState> =>
   Object.fromEntries(PHASES.map((p) => [p, "empty"])) as Record<PhaseKey, PhaseState>;
@@ -113,6 +122,7 @@ export function newProject(uid: string, draft: ProjectDraft): Project {
     title: draft.title.trim(),
     logline: draft.logline.trim(),
     template: draft.template,
+    themeId: draft.themeId,
     targetS: draft.targetS,
     createdAt: now,
     updatedAt: now,

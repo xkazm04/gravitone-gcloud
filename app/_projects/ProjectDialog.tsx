@@ -21,23 +21,29 @@ import {
   type ProjectDraft,
   type TemplateId,
 } from "@/lib/projects";
+import type { Theme } from "@/lib/themes";
 
 const blank = (): ProjectDraft => ({
   title: "",
   logline: "",
   template: "short-educational-video",
   targetS: templateOf("short-educational-video").defaultS,
+  themeId: undefined,
 });
 
 export default function ProjectDialog({
   open,
   project,
+  lockedThemes,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   /** Absent = create. Present = edit that record. */
   project: Project | null;
+  /** Locked visual identities this account can build on. Create requires one;
+   *  /projects does not open this dialog when the list is empty. */
+  lockedThemes: Theme[];
   onClose: () => void;
   onSubmit: (draft: ProjectDraft) => void;
 }) {
@@ -49,17 +55,22 @@ export default function ProjectDialog({
   useEffect(() => {
     if (!open) return;
     if (project) {
-      const { title, logline, template, targetS } = project;
-      setDraft({ title, logline, template, targetS });
+      const { title, logline, template, targetS, themeId } = project;
+      setDraft({ title, logline, template, targetS, themeId });
       setOwnDuration(true);
     } else {
-      setDraft(blank());
+      // Pre-select the most recently locked style. It is the one they almost
+      // certainly just made, and a required field that starts empty is a
+      // speed bump on the eight-second create this dialog promises.
+      setDraft({ ...blank(), themeId: lockedThemes[0]?.id });
       setOwnDuration(false);
     }
-  }, [open, project]);
+  }, [open, project, lockedThemes]);
 
   const tpl = templateOf(draft.template);
-  const valid = draft.title.trim().length > 0;
+  // A style is required to CREATE and immutable on EDIT — reskinning a project
+  // midway would orphan every frame already rendered against the old identity.
+  const valid = draft.title.trim().length > 0 && (Boolean(project) || Boolean(draft.themeId));
 
   const pickTemplate = (template: TemplateId) =>
     setDraft((d) => ({
@@ -140,6 +151,40 @@ export default function ProjectDialog({
           onChange={pickTemplate}
         />
 
+        {project ? (
+          // Immutable after creation. Shown rather than hidden, because "which
+          // style is this on" is a question the shelf should always answer.
+          <Field label="Visual style" hint="Fixed at creation — frames are rendered against it.">
+            <p className="font-hanken flex items-center gap-2.5 text-sm text-slate-300">
+              <StyleSwatch theme={lockedThemes.find((t) => t.id === draft.themeId)} />
+              {lockedThemes.find((t) => t.id === draft.themeId)?.name ?? "— (created before styles existed)"}
+            </p>
+          </Field>
+        ) : (
+          <Field
+            label="Visual style"
+            hint="A locked style from the library. Every frame this project renders is built on it."
+          >
+            <div className="flex flex-wrap gap-1.5">
+              {lockedThemes.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setDraft((d) => ({ ...d, themeId: t.id }))}
+                  className={`font-jetbrains flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] transition ${
+                    draft.themeId === t.id
+                      ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
+                      : "border-white/12 text-white/60 hover:text-white/85"
+                  }`}
+                >
+                  <StyleSwatch theme={t} />
+                  {t.name}
+                </button>
+              ))}
+            </div>
+          </Field>
+        )}
+
         <Field
           label="Target runtime"
           htmlFor="p-dur"
@@ -159,6 +204,19 @@ export default function ProjectDialog({
         </Field>
       </form>
     </Modal>
+  );
+}
+
+/** A style, at a glance: its three colours in their roles. Enough to tell two
+ *  styles apart in a pill without spending a thumbnail on it. */
+function StyleSwatch({ theme }: { theme?: Theme }) {
+  if (!theme) return <span className="h-3 w-8 rounded-full border border-white/15" aria-hidden />;
+  return (
+    <span className="flex h-3 w-8 overflow-hidden rounded-full border border-white/20" aria-hidden>
+      {theme.block.palette.map((c) => (
+        <span key={c.name} className="flex-1" style={{ background: c.hex }} />
+      ))}
+    </span>
   );
 }
 
