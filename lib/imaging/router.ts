@@ -37,7 +37,20 @@ import type {
  */
 const PLAN: Record<ImagingEnv, Record<Capability, ProviderId[]>> = {
   dev: {
-    generate: ["leonardo", "google"],
+    // MEASURED, not assumed. Leonardo was the dev generator on the premise
+    // that Lucid Origin had the better quality-per-credit. The 6-style × 5-beat
+    // grid (pipeline/build-style-trials.mts, both providers, 60 graded cells)
+    // says the opposite once "quality" means USABLE — on-brief AND free of
+    // text, which is the bar a plate has to clear to be worth anything:
+    //
+    //   leonardo   7/30 usable (23%)   $0.0257/render →  $0.110 per usable
+    //   google    26/30 usable (87%)   $0.0450/render →  $0.052 per usable
+    //
+    // 14 cells flipped between the two and every one flipped the same way.
+    // Leonardo drew the countable mechanism 0 times out of 6; Nano Banana drew
+    // it 4. So the cheaper render was the more expensive plate, and Leonardo
+    // stays in the chain as a fallback rather than as the default.
+    generate: ["google", "leonardo"],
     // Leonardo is absent on purpose: its only adjustment surface is background
     // removal, not instruction-driven editing, so even in dev an edit is a
     // Nano Banana call.

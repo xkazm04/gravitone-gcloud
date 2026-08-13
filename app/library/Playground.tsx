@@ -146,15 +146,6 @@ export default function Playground({
         )}
       </div>
 
-      {conditioned && (
-        // Worth saying out loud: a style-locked trial cannot run on Leonardo,
-        // because its v1 API has no style reference. The router moves the call
-        // to Nano Banana rather than dropping the references silently, and the
-        // user should not be surprised that the model name changed.
-        <p className="font-jetbrains text-[10px] leading-relaxed text-white/30">
-          conditioned trials render on Nano Banana — Leonardo takes no style reference
-        </p>
-      )}
 
       {tooLong && (
         <p className="text-[12px] leading-snug text-amber-200/90">

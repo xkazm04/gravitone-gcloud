@@ -30,31 +30,31 @@
       "id": "peak-and-fall",
       "label": "the fall",
       "problem": "quantity",
-      "beat": "HOOK \u00b7 the record high, then half of it gone"
+      "beat": "HOOK · the record high, then half of it gone"
     },
     {
       "id": "wish-list",
       "label": "the wish list",
       "problem": "inventory",
-      "beat": "HOOK \u00b7 every item delivered \u2014 reserve, law, regulators, ETFs"
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs"
     },
     {
       "id": "booking-not-meal",
       "label": "the booking",
       "problem": "analogy",
-      "beat": "MOVEMENT 1 \u00b7 a full reservation book, an empty dining room"
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room"
     },
     {
       "id": "flywheel",
       "label": "the flywheel",
       "problem": "mechanism",
-      "beat": "MOVEMENT 2 \u00b7 the mNAV machine, and the moment it inverts"
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts"
     },
     {
       "id": "the-exit",
       "label": "the exit",
       "problem": "flow",
-      "beat": "MOVEMENT 1 \u00b7 long-term holders selling into the demand meant to lift them"
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them"
     }
   ],
   "entries": [
@@ -64,7 +64,700 @@
       "trialId": "booking-not-meal",
       "trialLabel": "the booking",
       "problem": "analogy",
-      "beat": "MOVEMENT 1 \u00b7 a full reservation book, an empty dining room",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/google/blueprint/booking-not-meal.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "white",
+          "yellow"
+        ],
+        "clutter": 2,
+        "description": "A blueprint-style split frame showing an open book filled with ruled lines on the left and a table with two empty chairs on the right, marked with dimension lines."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/google/blueprint/flywheel.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "white",
+          "yellow"
+        ],
+        "clutter": 2,
+        "description": "A blueprint-style line drawing of three curved arrows circling a stack of coins, with the lower-left arrow in yellow pointing counter to the white clockwise arrows."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/google/blueprint/peak-and-fall.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "white",
+          "yellow"
+        ],
+        "clutter": 2,
+        "description": "A blueprint-style chart showing a white curve rising to a sharp peak marked with a yellow diamond, then falling to about half height, with dimension lines and a ground line on a blue grid."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/google/blueprint/the-exit.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "white",
+          "yellow"
+        ],
+        "clutter": 3,
+        "description": "A blueprint-style diagram on a dark blue grid showing a left stream of circles and squares colliding with a rightward stream of rectangles and arcs, with a congested white-and-yellow tangle at the meeting point."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/google/blueprint/wish-list.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "blue",
+          "white",
+          "yellow"
+        ],
+        "clutter": 1,
+        "description": "A blueprint-style illustration on a blue grid showing four white line-art icons in a row: a columned government building, a scrolled document with a gold seal, a balance scale, and a bank card, each with tick marks and dimension lines above a clean ground line."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/google/chalk-argument/booking-not-meal.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 1,
+        "description": "A chalkboard-style drawing shows an open book with filled lines on the left and an arrow pointing to a table with two empty chairs on the right, one chair circled in yellow."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/google/chalk-argument/flywheel.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 2,
+        "description": "A chalkboard-style diagram of three curved arrows circling a stack of coins and a '$5 million' label, with extra annotation arrows and yellow text reading 'Critical point the argument'."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/google/chalk-argument/peak-and-fall.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 1,
+        "description": "A white chalk curve on a dark green chalkboard rises to a sharp peak marked by a small yellow dot, then descends to about half the peak height above a plain horizontal ground line."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/google/chalk-argument/the-exit.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 2,
+        "description": "A chalkboard-style diagram of two opposing streams of small white shapes converging through rectangular gates into a congested yellow pile of shapes at the center, with arrows indicating flow directions."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "chalk-argument",
+      "styleName": "Chalk Argument",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/google/chalk-argument/wish-list.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "green",
+          "white",
+          "yellow"
+        ],
+        "clutter": 1,
+        "description": "Chalk-style line icons on a dark green board showing a capitol building, a rolled document with seal, a balance scale, and a bank card in a row above a ground line, each with a check mark beside it."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/google/data-neon/booking-not-meal.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "black",
+          "green",
+          "pink"
+        ],
+        "clutter": 1,
+        "description": "A split frame showing a green open book with filled line marks on the left and a green table with two empty chairs (one green, one pink) on the right against a dark grid background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/google/data-neon/flywheel.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": false,
+        "dominantColors": [
+          "green",
+          "pink",
+          "black"
+        ],
+        "clutter": 2,
+        "description": "A ring of four glowing curved arrows (three light green, one pink at lower left) circles a green coin-stack database icon on a dark grid background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/google/data-neon/peak-and-fall.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "black",
+          "green",
+          "pink"
+        ],
+        "clutter": 1,
+        "description": "A glowing light-green line curve on a dark gridded background rises to a sharp peak marked by a small pink square, then decays to about half its peak height above a plain baseline."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/google/data-neon/the-exit.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "black",
+          "green",
+          "pink"
+        ],
+        "clutter": 2,
+        "description": "A narrow stream of green dots from the left converges through a congested pink pinch point and expands into a wider, denser green stream flowing right on a dark gridded background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "data-neon",
+      "styleName": "Data Neon",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/google/data-neon/wish-list.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "green",
+          "black",
+          "pink"
+        ],
+        "clutter": 1,
+        "description": "Four light-green icons (columned building, sealed scroll, balance scale, bank card) in an evenly spaced row on a dark grid background, each with a check mark and small trend-line accents."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/google/newsprint-cutout/booking-not-meal.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "navy blue",
+          "cream",
+          "gray",
+          "red"
+        ],
+        "clutter": 2,
+        "description": "A split-frame illustration showing an open reservation ledger filled with handwritten lines on the left and an empty table with two chairs marked by a red X on the right, divided by a thin vertical line on a dark blue background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/google/newsprint-cutout/flywheel.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "navy",
+          "cream",
+          "red",
+          "silver"
+        ],
+        "clutter": 1,
+        "description": "A stack of silver coins sits centred inside a ring of three thick cut-out arrows on a dark navy background, with the lower-left red arrow pointing counter-clockwise against the two cream clockwise arrows."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/google/newsprint-cutout/peak-and-fall.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "navy",
+          "cream",
+          "red"
+        ],
+        "clutter": 1,
+        "description": "A paper-collage style mountain-shaped curve rising to a peak right of centre topped with a small red flag, set against a dark navy background with a plain ground line."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/google/newsprint-cutout/the-exit.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "navy",
+          "cream",
+          "red"
+        ],
+        "clutter": 2,
+        "description": "A thin stream of cream paper-like scraps from the left collides with a wider denser stream sweeping to the right, congested around a single red scrap at the center on a dark navy background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "newsprint-cutout",
+      "styleName": "Newsprint Cutout",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/google/newsprint-cutout/wish-list.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "navy blue",
+          "cream",
+          "coral",
+          "gray"
+        ],
+        "clutter": 1,
+        "description": "Four cream panels on a dark navy background each hold a collage-style emblem—a columned courthouse, a rolled scroll with ribbon, a coral balance scale, and a bank card—with a checkmark beside each."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/google/paper-relief/booking-not-meal.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "beige",
+          "brown",
+          "black"
+        ],
+        "clutter": 1,
+        "description": "A minimalist two-panel illustration showing an open book with filled lines on the left and a table with two empty chairs on the right, separated by a thin vertical line."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/google/paper-relief/flywheel.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "black",
+          "orange",
+          "beige"
+        ],
+        "clutter": 1,
+        "description": "A paper-cut style icon of three curved arrows circling a stack of coins, with the lower-left orange arrow pointing counter to the two black arrows."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/google/paper-relief/peak-and-fall.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "beige",
+          "brown",
+          "orange"
+        ],
+        "clutter": 1,
+        "description": "A minimalist paper-cut style line chart showing a dark line rising to a sharp peak marked with a small orange flag, then descending to about half height above a plain ground line on a beige background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/google/paper-relief/the-exit.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "beige",
+          "black",
+          "orange"
+        ],
+        "clutter": 2,
+        "description": "Two streams of dark circles, squares and triangles converge from the left and right into a congested meeting point marked by a single orange shape, on a plain beige background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "paper-relief",
+      "styleName": "Paper Relief",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/google/paper-relief/wish-list.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "beige",
+          "brown",
+          "orange"
+        ],
+        "clutter": 1,
+        "description": "Four dark brown icons in a row on a beige background: a columned government building, a rolled document with an orange seal ribbon, a balance scale, and a bank card, each accompanied by a small check mark."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
+      "file": "/trials/google/signal-ledger/booking-not-meal.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": true,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "dark blue",
+          "cream",
+          "turquoise"
+        ],
+        "clutter": 1,
+        "description": "A split-frame illustration showing an open book filled with scribbled lines on the left and an empty table with two turquoise-cushioned chairs on the right, divided by a thin vertical line."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "flywheel",
+      "trialLabel": "the flywheel",
+      "problem": "mechanism",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
+      "file": "/trials/google/signal-ledger/flywheel.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "dark blue",
+          "cream",
+          "cyan"
+        ],
+        "clutter": 1,
+        "description": "A circular loop of three thick curved arrows surrounds a central stack of coins, with the lower-left arrow in cyan pointing counter to the cream clockwise arrows."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "peak-and-fall",
+      "trialLabel": "the fall",
+      "problem": "quantity",
+      "beat": "HOOK · the record high, then half of it gone",
+      "file": "/trials/google/signal-ledger/peak-and-fall.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "black",
+          "white",
+          "blue"
+        ],
+        "clutter": 1,
+        "description": "A minimalist cream line chart on a dark navy background rises exponentially to a sharp peak marked by a small cyan square, then drops to a plateau above a plain horizontal baseline."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "the-exit",
+      "trialLabel": "the exit",
+      "problem": "flow",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
+      "file": "/trials/google/signal-ledger/the-exit.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "dark blue",
+          "cream",
+          "cyan"
+        ],
+        "clutter": 2,
+        "description": "A sparse stream of cream dashes from the left collides with a denser brick-like flow of dashes spreading to the right, with a few cyan accents at the congested junction on a dark navy background."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "signal-ledger",
+      "styleName": "Signal Ledger",
+      "trialId": "wish-list",
+      "trialLabel": "the wish list",
+      "problem": "inventory",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
+      "file": "/trials/google/signal-ledger/wish-list.jpg",
+      "provider": "google",
+      "model": "gemini-3.1-flash-image",
+      "grade": {
+        "hasText": false,
+        "drewWhatWasAsked": true,
+        "dominantColors": [
+          "dark blue",
+          "cream",
+          "cyan"
+        ],
+        "clutter": 1,
+        "description": "Four cream line-art icons (columned building, rolled diploma with ribbon, balance scale, bank card) sit in an evenly spaced row on a dark blue background, each followed by a cyan checkmark above a single ground line."
+      },
+      "gradedBy": "qwen3.8-max"
+    },
+    {
+      "styleId": "blueprint",
+      "styleName": "Blueprint",
+      "trialId": "booking-not-meal",
+      "trialLabel": "the booking",
+      "problem": "analogy",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
       "file": "/trials/leonardo/blueprint/booking-not-meal.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -87,7 +780,7 @@
       "trialId": "flywheel",
       "trialLabel": "the flywheel",
       "problem": "mechanism",
-      "beat": "MOVEMENT 2 \u00b7 the mNAV machine, and the moment it inverts",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
       "file": "/trials/leonardo/blueprint/flywheel.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -110,7 +803,7 @@
       "trialId": "peak-and-fall",
       "trialLabel": "the fall",
       "problem": "quantity",
-      "beat": "HOOK \u00b7 the record high, then half of it gone",
+      "beat": "HOOK · the record high, then half of it gone",
       "file": "/trials/leonardo/blueprint/peak-and-fall.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -134,7 +827,7 @@
       "trialId": "the-exit",
       "trialLabel": "the exit",
       "problem": "flow",
-      "beat": "MOVEMENT 1 \u00b7 long-term holders selling into the demand meant to lift them",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
       "file": "/trials/leonardo/blueprint/the-exit.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -158,7 +851,7 @@
       "trialId": "wish-list",
       "trialLabel": "the wish list",
       "problem": "inventory",
-      "beat": "HOOK \u00b7 every item delivered \u2014 reserve, law, regulators, ETFs",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
       "file": "/trials/leonardo/blueprint/wish-list.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -182,7 +875,7 @@
       "trialId": "booking-not-meal",
       "trialLabel": "the booking",
       "problem": "analogy",
-      "beat": "MOVEMENT 1 \u00b7 a full reservation book, an empty dining room",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
       "file": "/trials/leonardo/chalk-argument/booking-not-meal.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -206,7 +899,7 @@
       "trialId": "flywheel",
       "trialLabel": "the flywheel",
       "problem": "mechanism",
-      "beat": "MOVEMENT 2 \u00b7 the mNAV machine, and the moment it inverts",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
       "file": "/trials/leonardo/chalk-argument/flywheel.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -231,7 +924,7 @@
       "trialId": "peak-and-fall",
       "trialLabel": "the fall",
       "problem": "quantity",
-      "beat": "HOOK \u00b7 the record high, then half of it gone",
+      "beat": "HOOK · the record high, then half of it gone",
       "file": "/trials/leonardo/chalk-argument/peak-and-fall.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -255,7 +948,7 @@
       "trialId": "the-exit",
       "trialLabel": "the exit",
       "problem": "flow",
-      "beat": "MOVEMENT 1 \u00b7 long-term holders selling into the demand meant to lift them",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
       "file": "/trials/leonardo/chalk-argument/the-exit.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -279,7 +972,7 @@
       "trialId": "wish-list",
       "trialLabel": "the wish list",
       "problem": "inventory",
-      "beat": "HOOK \u00b7 every item delivered \u2014 reserve, law, regulators, ETFs",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
       "file": "/trials/leonardo/chalk-argument/wish-list.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -303,7 +996,7 @@
       "trialId": "booking-not-meal",
       "trialLabel": "the booking",
       "problem": "analogy",
-      "beat": "MOVEMENT 1 \u00b7 a full reservation book, an empty dining room",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
       "file": "/trials/leonardo/data-neon/booking-not-meal.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -327,7 +1020,7 @@
       "trialId": "flywheel",
       "trialLabel": "the flywheel",
       "problem": "mechanism",
-      "beat": "MOVEMENT 2 \u00b7 the mNAV machine, and the moment it inverts",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
       "file": "/trials/leonardo/data-neon/flywheel.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -352,7 +1045,7 @@
       "trialId": "peak-and-fall",
       "trialLabel": "the fall",
       "problem": "quantity",
-      "beat": "HOOK \u00b7 the record high, then half of it gone",
+      "beat": "HOOK · the record high, then half of it gone",
       "file": "/trials/leonardo/data-neon/peak-and-fall.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -375,7 +1068,7 @@
       "trialId": "the-exit",
       "trialLabel": "the exit",
       "problem": "flow",
-      "beat": "MOVEMENT 1 \u00b7 long-term holders selling into the demand meant to lift them",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
       "file": "/trials/leonardo/data-neon/the-exit.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -400,7 +1093,7 @@
       "trialId": "wish-list",
       "trialLabel": "the wish list",
       "problem": "inventory",
-      "beat": "HOOK \u00b7 every item delivered \u2014 reserve, law, regulators, ETFs",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
       "file": "/trials/leonardo/data-neon/wish-list.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -424,7 +1117,7 @@
       "trialId": "booking-not-meal",
       "trialLabel": "the booking",
       "problem": "analogy",
-      "beat": "MOVEMENT 1 \u00b7 a full reservation book, an empty dining room",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
       "file": "/trials/leonardo/newsprint-cutout/booking-not-meal.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -449,7 +1142,7 @@
       "trialId": "flywheel",
       "trialLabel": "the flywheel",
       "problem": "mechanism",
-      "beat": "MOVEMENT 2 \u00b7 the mNAV machine, and the moment it inverts",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
       "file": "/trials/leonardo/newsprint-cutout/flywheel.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -474,7 +1167,7 @@
       "trialId": "peak-and-fall",
       "trialLabel": "the fall",
       "problem": "quantity",
-      "beat": "HOOK \u00b7 the record high, then half of it gone",
+      "beat": "HOOK · the record high, then half of it gone",
       "file": "/trials/leonardo/newsprint-cutout/peak-and-fall.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -499,7 +1192,7 @@
       "trialId": "the-exit",
       "trialLabel": "the exit",
       "problem": "flow",
-      "beat": "MOVEMENT 1 \u00b7 long-term holders selling into the demand meant to lift them",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
       "file": "/trials/leonardo/newsprint-cutout/the-exit.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -524,7 +1217,7 @@
       "trialId": "wish-list",
       "trialLabel": "the wish list",
       "problem": "inventory",
-      "beat": "HOOK \u00b7 every item delivered \u2014 reserve, law, regulators, ETFs",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
       "file": "/trials/leonardo/newsprint-cutout/wish-list.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -549,7 +1242,7 @@
       "trialId": "booking-not-meal",
       "trialLabel": "the booking",
       "problem": "analogy",
-      "beat": "MOVEMENT 1 \u00b7 a full reservation book, an empty dining room",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
       "file": "/trials/leonardo/paper-relief/booking-not-meal.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -573,7 +1266,7 @@
       "trialId": "flywheel",
       "trialLabel": "the flywheel",
       "problem": "mechanism",
-      "beat": "MOVEMENT 2 \u00b7 the mNAV machine, and the moment it inverts",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
       "file": "/trials/leonardo/paper-relief/flywheel.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -598,7 +1291,7 @@
       "trialId": "peak-and-fall",
       "trialLabel": "the fall",
       "problem": "quantity",
-      "beat": "HOOK \u00b7 the record high, then half of it gone",
+      "beat": "HOOK · the record high, then half of it gone",
       "file": "/trials/leonardo/paper-relief/peak-and-fall.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -622,7 +1315,7 @@
       "trialId": "the-exit",
       "trialLabel": "the exit",
       "problem": "flow",
-      "beat": "MOVEMENT 1 \u00b7 long-term holders selling into the demand meant to lift them",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
       "file": "/trials/leonardo/paper-relief/the-exit.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -647,7 +1340,7 @@
       "trialId": "wish-list",
       "trialLabel": "the wish list",
       "problem": "inventory",
-      "beat": "HOOK \u00b7 every item delivered \u2014 reserve, law, regulators, ETFs",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
       "file": "/trials/leonardo/paper-relief/wish-list.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -671,7 +1364,7 @@
       "trialId": "booking-not-meal",
       "trialLabel": "the booking",
       "problem": "analogy",
-      "beat": "MOVEMENT 1 \u00b7 a full reservation book, an empty dining room",
+      "beat": "MOVEMENT 1 · a full reservation book, an empty dining room",
       "file": "/trials/leonardo/signal-ledger/booking-not-meal.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -695,7 +1388,7 @@
       "trialId": "flywheel",
       "trialLabel": "the flywheel",
       "problem": "mechanism",
-      "beat": "MOVEMENT 2 \u00b7 the mNAV machine, and the moment it inverts",
+      "beat": "MOVEMENT 2 · the mNAV machine, and the moment it inverts",
       "file": "/trials/leonardo/signal-ledger/flywheel.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -719,7 +1412,7 @@
       "trialId": "peak-and-fall",
       "trialLabel": "the fall",
       "problem": "quantity",
-      "beat": "HOOK \u00b7 the record high, then half of it gone",
+      "beat": "HOOK · the record high, then half of it gone",
       "file": "/trials/leonardo/signal-ledger/peak-and-fall.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -743,7 +1436,7 @@
       "trialId": "the-exit",
       "trialLabel": "the exit",
       "problem": "flow",
-      "beat": "MOVEMENT 1 \u00b7 long-term holders selling into the demand meant to lift them",
+      "beat": "MOVEMENT 1 · long-term holders selling into the demand meant to lift them",
       "file": "/trials/leonardo/signal-ledger/the-exit.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,
@@ -767,7 +1460,7 @@
       "trialId": "wish-list",
       "trialLabel": "the wish list",
       "problem": "inventory",
-      "beat": "HOOK \u00b7 every item delivered \u2014 reserve, law, regulators, ETFs",
+      "beat": "HOOK · every item delivered — reserve, law, regulators, ETFs",
       "file": "/trials/leonardo/signal-ledger/wish-list.jpg",
       "model": "lucid-origin",
       "costUsd": 0.025699999999999997,

@@ -15,13 +15,16 @@ leonardo  google    qwen
 
 | Capability | dev | prod |
 |---|---|---|
-| `generate` | **Leonardo** · Lucid Origin | **Google** · Nano Banana 2 |
+| `generate` | **Google** · Nano Banana 2 (Leonardo as fallback) | **Google** · Nano Banana 2 |
 | `edit` | **Google** · Nano Banana 2 | same |
 | `recognize` | **Qwen** · qwen3.8-max | **Google** · Gemini 3.6 Flash |
 
 Nano Banana **2**, not Lite: Lite is cheaper but supports only *object* references — no style
 references. `/library`'s whole premise is that approved plates condition later frames, so Lite
 cannot hold the product's central promise.
+
+Leonardo was the dev generator until the trial grid measured it. See *The provider verdict* below —
+the short version is that the cheaper render turned out to be the more expensive plate.
 
 Dev leans on Leonardo and Qwen because those credits are already bought. Production is one vendor on
 purpose: one style-lock mechanism, one reference-image window, one bill.
@@ -160,6 +163,44 @@ success, it is a failure that looks like one. The probe asserts the request land
 One variance worth knowing: across two runs the same Leonardo prompt produced a plate with **no**
 text leakage and then one **with** it. Text leakage is a per-generation risk, not a per-model verdict
 — which is the argument for judging every plate rather than sampling.
+
+## The provider verdict
+
+Six style blocks × five beats from the repo's own Bitcoin script, rendered on both providers and
+graded by a vision model against the brief that made each plate. 60 cells. Read it with
+`npx tsx pipeline/report-style-trials.mts`.
+
+```
+google     30 cells · on-brief 93% · text leak 10% · clutter 1.4
+leonardo   30 cells · on-brief 47% · text leak 57% · clutter 1.8
+```
+
+A plate is **usable** only if it is on-brief *and* free of text — text is an unconditional fail,
+because captions are the vector layer we draw ourselves. On that bar:
+
+```
+leonardo   7/30 usable (23%)   $0.0257/render →  $0.110 per usable plate
+google    26/30 usable (87%)   $0.0450/render →  $0.052 per usable plate
+```
+
+**Nano Banana is half the price per usable plate despite costing 1.75× per render.** The premise
+Leonardo was chosen on — better quality per credit — inverts once "quality" means "a plate you can
+actually composite".
+
+Two details make this a verdict rather than a sample. **Fourteen cells flipped between the two
+providers, and every one flipped the same way** — there is no task in the grid where Leonardo won.
+And the failure that motivated the comparison is model-bound, not prompt-bound: Leonardo drew the
+countable mechanism (three arrows, one reversed) **0 times out of 6**, across six unrelated style
+blocks, where Nano Banana drew it 4. A failure that survives six different prompts is not a prompt
+problem.
+
+The other measured difference is what *kind* of subject breaks each model. Leonardo's text leakage
+concentrated by subject rather than by style — the analogy beat leaked on 6/6, because asking for a
+"reservation book" invites the model to write in it. Nano Banana leaked on 2/6 for the same beat.
+Text-magnet nouns are still worth avoiding in a brief; they are just no longer fatal.
+
+Leonardo stays in the chain as a fallback, and stays the cheaper option for work where being
+on-brief does not matter.
 
 ## Still open
 
