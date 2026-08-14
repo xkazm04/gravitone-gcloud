@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
-import { getProject, type Project } from "@/lib/projects";
+import { getProject, reportPhase, type PhaseState, type Project } from "@/lib/projects";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
 import { projectStyle, STYLE_MISS_WORD, type StyleBlock } from "@/lib/themes";
 import { useThemes } from "@/lib/useThemes";
@@ -29,6 +29,7 @@ import { FACTS } from "../_shared/notebook/facts";
 import { RENDERS } from "../script/renders";
 import {
   authoredClipCount,
+  composedCount,
   emptyClip,
   framesFromRender,
   subjectFor,
@@ -436,6 +437,57 @@ export function useFrames(projectId: string) {
   /** How much of the cut knows what it does. Authored, not rendered — nothing
    *  here can render a clip, and the surfaces reading this say so. */
   const clipsAuthored = useMemo(() => authoredClipCount(frames), [frames]);
+
+  /* ── what this step tells the shelf ─────────────────────────────────────── */
+
+  /**
+   * ONE WORD ABOUT THIS STEP, computed from the same numbers the surface draws.
+   *
+   * Frames is the first surface in the app to report at all, so the shape of
+   * this is the precedent: it derives, it never asserts. Every branch below is
+   * a fact already on screen a few pixels away.
+   *
+   *  · `blocked`  a plate came back refused, or the last direction pass left
+   *               reasons on rows. Worst news first, the same order
+   *               `worseOf`/`projectState` already rank by.
+   *  · `review`   every beat is composed AND a figure still asserts a number
+   *               nobody sourced. That is precisely "needs a call": the picture
+   *               is finished and a human has to decide about the claim on it.
+   *  · `working`  something exists that the user paid for or authored.
+   *  · null       NOTHING TO SAY. Deriving frames from the script is not work
+   *               the user did — every project would light up merely by opening
+   *               the step. `reportPhase` cannot write `empty` anyway; this is
+   *               the same rule stated from the reporter's side.
+   *
+   * `done` IS DELIBERATELY UNREACHABLE. `done` reads as "locked" on every
+   * surface (PHASE_STATE_WORD), and locking is a sign-off — a human saying this
+   * is finished. Frames has no such control, so a reporter that promoted a full
+   * plate count to `done` would be inventing the one state the matrix totals in
+   * its footer. Until a lock exists, the honest ceiling is `review`.
+   */
+  const reported = useMemo<Exclude<PhaseState, "empty"> | null>(() => {
+    if (!stepLoaded) return null;
+    const refused = frames.filter((f) => f.plate.state === "refused").length;
+    if (refused > 0 || Object.keys(rejections).length > 0) return "blocked";
+    const composed = composedCount(frames);
+    if (composed === 0 && clipsAuthored === 0 && !direction) return null;
+    if (frames.length > 0 && composed === frames.length && unboundFigures > 0) return "review";
+    return "working";
+  }, [stepLoaded, frames, rejections, clipsAuthored, direction, unboundFigures]);
+
+  // Written once per CHANGE of that word, not once per render — the ref carries
+  // the project id so switching projects cannot suppress the first report of
+  // the second one. A failed write is swallowed on purpose: the cell simply
+  // stays where it was, which claims nothing, and taking the step down over a
+  // ledger entry would be the wrong trade.
+  const lastReport = useRef<string | null>(null);
+  useEffect(() => {
+    if (!reported) return;
+    const stamp = `${projectId}:${reported}`;
+    if (lastReport.current === stamp) return;
+    lastReport.current = stamp;
+    void reportPhase(projectId, PHASE, reported).catch(() => undefined);
+  }, [reported, projectId]);
 
   return {
     render,

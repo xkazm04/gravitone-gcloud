@@ -151,8 +151,20 @@ export interface Project {
   targetS: number;
   createdAt: number;
   updatedAt: number;
-  /** Where the work is now — the step /studio opens on. */
+  /**
+   * THE BOOKMARK — the step /studio opens on. Not a claim about progress.
+   *
+   * It answers "where was I standing", which is a different question from
+   * "how far has this got" (`progress`) and from "when was this worked on"
+   * (`updatedAt`). `parkAt` is the only writer, and it deliberately leaves both
+   * of the other two alone — see the note there.
+   */
   phase: PhaseKey;
+  /**
+   * What each step says about ITSELF. Written only by `reportPhase`, only by a
+   * surface that computed it from its own data. Everything here starts `empty`
+   * and stays `empty` until a step has something real to report.
+   */
   progress: Record<PhaseKey, PhaseState>;
 }
 
@@ -187,10 +199,15 @@ export function doneCount(p: Project): number {
   return PHASES.filter((k) => p.progress[k] === "done").length;
 }
 
-/** The first step that is not finished — what the project is actually waiting on. */
-export function openStep(p: Project): PhaseKey | null {
-  return PHASES.find((k) => p.progress[k] !== "done") ?? null;
-}
+// `openStep(p)` used to live here — "the first step that is not `done`" — with
+// no consumers, and it is gone rather than wired up. Nothing in this app can
+// LOCK a step: `done` is a human act of sign-off and there is no sign-off
+// control on any of the five surfaces (see `reportPhase` below, and the note in
+// app/_phases/frames/useFrames.ts on why the Frames reporter stops at
+// `working`/`review`). So the function was guaranteed to answer "research" for
+// every project a user creates, forever. An exported helper that can only ever
+// be wrong is worse than no helper — `project.phase` answers "where is this
+// project" honestly, and that is what the studio reads.
 
 /** A project is blocked if any step is. Sorting and grouping both read this. */
 export function isBlocked(p: Project): boolean {
@@ -233,17 +250,27 @@ export async function getProject(id: string): Promise<Project | undefined> {
   }
 }
 
-/** Write one project. THROWS when it could not be stored — the caller says so. */
-export async function putProject(p: Project): Promise<Project> {
-  const stamped = { ...p, updatedAt: Date.now() };
+/** The raw write, exactly as given. THROWS when it could not be stored.
+ *
+ *  Private on purpose: `updatedAt` is what the shelf sorts on, so "write this
+ *  record without touching it" is a decision that has to be made deliberately
+ *  at each call site rather than fallen into. `parkAt` is the only caller that
+ *  makes it. */
+async function writeProject(p: Project): Promise<Project> {
   let db: IDBDatabase | null = null;
   try {
     db = await openDb();
-    await runTx(db, PROJECTS_STORE, "readwrite", (store) => store.put(stamped));
-    return stamped;
+    await runTx(db, PROJECTS_STORE, "readwrite", (store) => store.put(p));
+    return p;
   } finally {
     db?.close();
   }
+}
+
+/** Write one project, marking it as touched. THROWS when it could not be
+ *  stored — the caller says so. */
+export async function putProject(p: Project): Promise<Project> {
+  return writeProject({ ...p, updatedAt: Date.now() });
 }
 
 /** Write several at once — one transaction, so a partial seed cannot commit. */
@@ -255,6 +282,73 @@ export async function putProjects(rows: Project[]): Promise<void> {
   } finally {
     db?.close();
   }
+}
+
+/* ── What the studio writes back ──────────────────────────────────────────── */
+
+// TWO WRITERS, AND THEY ARE NOT THE SAME KIND OF FACT. This is the whole design
+// of this section, so it is stated once here rather than half-argued twice
+// below.
+//
+// StudioView's rail used to write nothing at all, defended by a comment that is
+// still right as far as it goes: *browsing is not progress*, and a shelf sorted
+// by "last touched" starts lying the moment looking at something counts as
+// working on it. But that is an argument against writing PROGRESS and
+// `updatedAt` on a browse. It was never an argument against remembering where
+// somebody was standing. Frozen at `"research"`, `project.phase` made the user
+// re-walk the rail on every single re-entry to say something the app already
+// knew.
+//
+// So the two facts are separated:
+//
+//   parkAt      · a BOOKMARK. Moves `phase`, touches nothing else — not
+//                 `progress`, not `updatedAt`. Costs the shelf nothing: the
+//                 matrix does not draw `phase`, and its sort order does not
+//                 move. Cheap enough to fire on every rail click.
+//   reportPhase · a CLAIM, and the only door `progress` opens through. A step
+//                 states what it computed about ITSELF, and that IS work, so it
+//                 stamps `updatedAt` and the shelf re-sorts. `ProjectDraft` is
+//                 deliberately not this door: progress is not a form field, and
+//                 no dialog should be able to type a project into `done`.
+//
+// Both read-modify-write, and both are no-ops when nothing changed — which is
+// what lets callers fire them from a render-driven effect without churning the
+// store. Neither rejects to its caller by contract; both THROW like every other
+// write here, and both call sites catch, because a ledger entry that did not
+// land must not take a working step down with it.
+//
+// Single-tab prototype: read-modify-write can race a concurrent writer in
+// another tab. It cannot corrupt anything (last write wins on whole records),
+// and the day this record is server-backed the seam is one PATCH per function.
+
+/** Remember where the user is standing. See the note above: this is a bookmark,
+ *  so `updatedAt` and `progress` are left exactly where they were. */
+export async function parkAt(id: string, phase: PhaseKey): Promise<void> {
+  const current = await getProject(id);
+  if (!current || current.phase === phase) return;
+  await writeProject({ ...current, phase });
+}
+
+/**
+ * A step says what it has got to. The ONE mechanism — five surfaces do not each
+ * invent a write.
+ *
+ * `empty` is not sayable, and that is the honest shape rather than a missing
+ * case: `empty` means "nothing has been reported here", which is what the
+ * record already holds until something is. A reporter with nothing to say says
+ * NOTHING and leaves the cell alone — so a step that has no reporter at all and
+ * a step whose reporter found nothing read identically, which is true, and
+ * neither one can quietly wipe a state it did not write.
+ */
+export async function reportPhase(
+  id: string,
+  phase: PhaseKey,
+  state: Exclude<PhaseState, "empty">,
+): Promise<Project | undefined> {
+  const current = await getProject(id);
+  if (!current) return undefined;
+  if (current.progress[phase] === state) return current;
+  return putProject({ ...current, progress: { ...current.progress, [phase]: state } });
 }
 
 export async function deleteProject(id: string): Promise<void> {

@@ -20,7 +20,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
 import { useAuth } from "@/lib/useAuth";
-import { PHASES, getProject, templateOf, type PhaseKey, type Project } from "@/lib/projects";
+import { PHASES, getProject, parkAt, templateOf, type PhaseKey, type Project } from "@/lib/projects";
 
 import LibraryShelves from "../../_library/LibraryShelves";
 import { STEPS } from "./phases";
@@ -57,9 +57,8 @@ export default function StudioView({ projectId }: { projectId: string }) {
           return;
         }
         setProject(p);
-        // Open on the step the work is parked at. Navigating the rail does NOT
-        // write this back — browsing is not progress, and a ledger sorted by
-        // "last touched" would start lying if it were.
+        // Open on the step the work is parked at — see `pick` below for what
+        // moves that bookmark, and for the reasoning this replaces.
         setPhaseKey(
           wanted && (PHASES as readonly string[]).includes(wanted)
             ? (wanted as PhaseKey)
@@ -71,6 +70,48 @@ export default function StudioView({ projectId }: { projectId: string }) {
       alive = false;
     };
   }, [id, user, router]);
+
+  /**
+   * Moving along the rail.
+   *
+   * The comment this replaces refused to write anything here, on the grounds
+   * that *browsing is not progress* and a shelf sorted by "last touched" would
+   * start lying. That reasoning is right and is kept — it is an argument about
+   * `progress` and `updatedAt`, both of which this still leaves alone. What it
+   * was never an argument for is forgetting: `project.phase` stayed frozen at
+   * `"research"` for the life of every project, so a creator who finished
+   * Research and moved to Script re-walked the rail by hand on every re-entry.
+   *
+   * So "arrived at this step" is defined as narrowly as it can be and still be
+   * useful: THE USER MOVED THE RAIL THEMSELVES. Not a `?step=` deep link —
+   * that is somebody else's navigation arriving in your tab, and it should not
+   * repark the project on a step you did not choose. Not the initial open,
+   * which is where the bookmark already pointed. `parkAt` writes `phase` and
+   * nothing else, so the matrix draws the same row in the same place with the
+   * same "Updated" column as before the click.
+   *
+   * Re-reading the record afterwards is the other half: a step reports its own
+   * state while you stand on it (see lib/projects#reportPhase), so leaving one
+   * is exactly the moment the rail's badges can go stale. Cheap — one keyed
+   * read — and it means the number you just changed is tinted correctly by the
+   * time you look back at it.
+   */
+  const pick = (key: PhaseKey) => {
+    setPhaseKey(key);
+    if (!id || !user) return;
+    void (async () => {
+      try {
+        await parkAt(id, key);
+        const fresh = await getProject(id);
+        if (fresh && fresh.uid === user.uid) setProject(fresh);
+      } catch {
+        // The bookmark did not land, or the re-read did not answer. Neither is
+        // worth interrupting the user mid-navigation over: the step they asked
+        // for is already on screen, and the rail keeps showing the states it
+        // last read rather than inventing fresher ones.
+      }
+    })();
+  };
 
   const step = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
 
@@ -125,7 +166,7 @@ export default function StudioView({ projectId }: { projectId: string }) {
           <>
             {project && (
               <div className="mt-6">
-                <Stepper active={phaseKey} progress={project.progress} onPick={setPhaseKey} />
+                <Stepper active={phaseKey} progress={project.progress} onPick={pick} />
               </div>
             )}
             <section className="mt-8">{project ? step.render(project.id) : null}</section>
