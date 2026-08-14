@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "check:notebook": "tsx pipeline/check-notebook.mts"
   },
   "dependencies": {
     "firebase": "^12.17.1",

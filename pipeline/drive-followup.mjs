@@ -1,4 +1,29 @@
 /**
+ * ⚠ THIS SUITE IS DEAD. It does not pass, and it has not passed since before
+ * 2026-08-14. Do not read a failure here as a regression in the app until the
+ * three causes below are addressed — two of them predate any recent work.
+ *
+ *   1. ITS SUBJECT NO LONGER EXISTS. The suite deepens `f-liquidity`, which
+ *      follow-up round 1 killed outright and replaced with `f-m2-divergence`.
+ *      The id now survives only in prose (facts.ts:35's note, unknowns.ts:55's
+ *      resolution text) — there is no `card-f-liquidity` to click. This broke
+ *      when the fixture absorbed round 1, long before this suite was last run.
+ *   2. ITS CANNED ANSWER IS UNREACHABLE for the same reason: `CANNED`'s
+ *      `f-liquidity` entry can no longer be dispatched from any card.
+ *   3. ITS LAST ASSERTION TESTS A SENTENCE THAT WAS REMOVED ON PURPOSE.
+ *      `/current script is unaffected/` came from copy claiming an applied
+ *      effect "writes a new notebook revision" — a promise the app could not
+ *      keep, since no apply action ever existed and the notebook is one static
+ *      global. Commit `185525f` cut the claim rather than fake the mechanism;
+ *      each effect now reports its real standing, derived from live data.
+ *
+ * WHAT A REPAIR LOOKS LIKE: point test 1 at a fact that still exists and has a
+ * reachable canned answer — today that is only the whale question — and replace
+ * the final assertion with the standings the surface now derives
+ * (`already in the notebook` / `changes no decision` / `no such id here`).
+ * The property this suite exists to defend is still worth defending and is
+ * stated below; it is the SUBJECT that rotted, not the idea.
+ *
  * The two tests asked for:
  *   1. deepen f-liquidity — the load-bearing, LOW-confidence vendor stat
  *   2. ask "What about onchain data, do they provide any hints regarding

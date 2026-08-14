@@ -110,7 +110,16 @@ const Ctx = createContext<JobsApi | null>(null);
  *  nine seconds that used to sit in this table were the defect — the job flipped
  *  to `done` while a minutes-long Opus 5 call was still running, which re-armed
  *  the button and let a second run silently discard the first. */
-const DURATION: Record<"research" | "followup", number> = { research: 14_000, followup: 7_000 };
+// Mocked durations, for the job kinds that still have a timer and nothing behind
+// it. The list only ever shrinks: `recalibrate` left when it got a real model
+// call, and `research` and `followup` left on 2026-08-14 when both became DRIVEN
+// — the research trace steps its own clock, and the follow-up settles in the
+// same tick it writes its results.
+//
+// Nothing is left. The table and the timer below survive because a mocked job
+// kind is a legitimate thing for this prototype to add next, and deleting the
+// machinery would mean rebuilding it — but if this stays empty, delete both.
+const DURATION: Record<string, number> = {};
 
 /** Kinds limited to one in flight per project. Research is deliberately absent. */
 const SERIALISED = new Set<JobKind>(["followup", "recalibrate"]);
@@ -270,7 +279,11 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
       // and nothing here draws a fraction over it.
       if (driven) return job;
 
-      const total = DURATION[kind as "research" | "followup"];
+      // A kind with no entry has no timer to run. Today that is every kind — the
+      // three that existed all became driven — so this is unreachable, and it
+      // must NOT divide by undefined if a future mocked kind forgets its row.
+      const total = DURATION[kind];
+      if (!total) return job;
       const started = Date.now();
       const iv = setInterval(() => {
         const p = Math.min(1, (Date.now() - started) / total);
