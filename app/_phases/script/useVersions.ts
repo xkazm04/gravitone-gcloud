@@ -27,7 +27,7 @@ import { loadStep, saveStep } from "../_shared/stepStore";
 import { recalibrate, recalibrateFromPlan } from "./recalibrate";
 import { NOTEBOOK } from "../_shared/notebook/notebook";
 import { RENDERS } from "./renders";
-import { BASELINE, type Note, type NoteKind, type Version } from "./versions";
+import { BASELINE, engineRunOf, type Note, type NoteKind, type Version } from "./versions";
 import type { Card } from "../_shared/notebook/cards";
 import type { Scope } from "../research/scope";
 
@@ -195,9 +195,15 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
           settle(j.id, "done", `Simulated instead — ${why}`);
           return;
         }
-        const { plan } = await res.json();
+        const { plan, engine } = await res.json();
         setEngineNote(null);
-        setCandidate(recalibrateFromPlan(base, runNotes, plan, id, Date.now(), ctx));
+        // The receipt is attached here rather than inside the transform: what a
+        // run cost is a fact about the CALL, not about the edit plan, and the
+        // transform is shared with the path that never makes one.
+        setCandidate({
+          ...recalibrateFromPlan(base, runNotes, plan, id, Date.now(), ctx),
+          engineRun: engineRunOf(engine),
+        });
         settle(j.id, "done", "A recalibrated set of scripts is staged — compare it, then accept or run again.");
       } catch (e) {
         // An abort is not a failure: whoever aborted has already settled the

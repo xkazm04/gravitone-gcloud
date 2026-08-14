@@ -13,6 +13,7 @@
 import { useEffect, useState } from "react";
 
 import { RENDERS } from "../renders";
+import { receiptOf } from "../versions";
 import { inertNotes } from "../recalibrate";
 import { MODEL } from "@/lib/model";
 import DeclinedList, { declinedCount } from "./DeclinedList";
@@ -66,6 +67,20 @@ export default function RecalibrateControl({ api }: { api: VersionsApi }) {
         )}
         {api.candidate.summary && (
           <p className="mt-1 text-[12px] leading-snug text-slate-300">{api.candidate.summary}</p>
+        )}
+        {/* What it cost, beside the button that decides whether it was worth it. */}
+        {receiptOf(api.candidate) && (
+          <p
+            data-testid="candidate-receipt"
+            title={
+              api.candidate.engineRun?.sessionId
+                ? `claude session ${api.candidate.engineRun.sessionId}`
+                : undefined
+            }
+            className="font-jetbrains mt-1.5 text-[10px] text-white/40"
+          >
+            {receiptOf(api.candidate)}
+          </p>
         )}
         {over.length > 0 && (
           <p data-testid="overrun" className="font-jetbrains mt-1.5 text-[11px] leading-snug text-amber-200">

@@ -18,6 +18,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { CliError, runClaude } from "@/lib/claudeCli";
+import { MODEL } from "@/lib/model";
 import { EDIT_PLAN_SCHEMA, PlanError, parseEditPlan } from "@/app/_phases/script/editPlan";
 
 export const runtime = "nodejs";
@@ -75,13 +76,18 @@ export async function POST(req: Request) {
   try {
     const run = await runClaude(prompt);
     const plan = parseEditPlan(run.text);
+    // The receipt travels with the plan. A run that took minutes and cost real
+    // money and could tell the creator neither was the defect; the client keeps
+    // this on the version it stages, so what a version cost survives with it.
     return Response.json({
       plan,
       engine: {
         kind: "local-claude-code",
+        model: MODEL,
         sessionId: run.sessionId,
         costUsd: run.costUsd,
         durationMs: run.durationMs,
+        promptChars: prompt.length,
       },
     });
   } catch (e) {
