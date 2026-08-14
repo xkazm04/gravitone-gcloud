@@ -15,6 +15,7 @@
 // Harbor fixture whatever project is open. The pill in the header says so.
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import StudioFrame from "@/components/ui/StudioFrame";
@@ -26,6 +27,38 @@ import LibraryShelves from "../../_library/LibraryShelves";
 import { STEPS } from "./phases";
 import Stepper from "./Stepper";
 
+/**
+ * WHAT HAPPENED AT THE DOOR. Three different facts used to be one
+ * `.catch(() => router.replace("/projects"))`, which threw away the message
+ * lib/studioDb.ts had carefully built (quota, blocked tab, unavailable) and
+ * bounced the user with no explanation — while the identical failure one route
+ * over, on /projects, gets a banner.
+ *
+ * `absent` COVERS TWO CASES ON PURPOSE: no such project, and a project owned by
+ * another account on this browser. They are presented identically, and the
+ * choice is deliberate rather than lazy:
+ *
+ *  · There is no secret to keep from a determined reader. lib/projects.ts says
+ *    it out loud — the uid scoping is a data-shape decision, not a security
+ *    boundary, and any code on this page can read the whole store.
+ *  · But the case that scoping exists for is TWO PEOPLE ON ONE MACHINE, and
+ *    "this project belongs to someone else" is the one sentence that turns a
+ *    shared laptop into a disclosure. It confirms a stranger's work exists to
+ *    somebody with no claim on it.
+ *  · And it buys the user nothing. Either way there is nothing here for THEM to
+ *    open and the next move is the same. So the copy names both possibilities
+ *    and refuses to say which — true, and it leaks nothing.
+ *
+ * `storage` is not merged into that, because it is the one of the three that is
+ * NOT the user's fault, the work is on disk and merely out of reach, and the
+ * thing to do about it is different.
+ */
+type Door =
+  | { kind: "opening" }
+  | { kind: "open" }
+  | { kind: "absent" }
+  | { kind: "storage"; message: string };
+
 export default function StudioView({ projectId }: { projectId: string }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -36,14 +69,14 @@ export default function StudioView({ projectId }: { projectId: string }) {
   const wanted = useSearchParams().get("step");
 
   const [project, setProject] = useState<Project | null>(null);
+  const [door, setDoor] = useState<Door>({ kind: "opening" });
   const [view, setView] = useState<"project" | "library">("project");
   const [phaseKey, setPhaseKey] = useState<PhaseKey>("script");
 
   useEffect(() => {
     // No project in the URL is not an error state, it is a wrong door: the
-    // studio has nothing to be the studio OF. Same for an id that belongs to
-    // another account — IndexedDB is shared per browser, so the ownership check
-    // is what keeps two people on one machine out of each other's work.
+    // studio has nothing to be the studio OF, and there is no page to draw the
+    // explanation on. That one still redirects.
     if (!id || !user) {
       if (!id) router.replace("/projects");
       return;
@@ -53,10 +86,11 @@ export default function StudioView({ projectId }: { projectId: string }) {
       .then((p) => {
         if (!alive) return;
         if (!p || p.uid !== user.uid) {
-          router.replace("/projects");
+          setDoor({ kind: "absent" });
           return;
         }
         setProject(p);
+        setDoor({ kind: "open" });
         // Open on the step the work is parked at — see `pick` below for what
         // moves that bookmark, and for the reasoning this replaces.
         setPhaseKey(
@@ -65,7 +99,17 @@ export default function StudioView({ projectId }: { projectId: string }) {
             : p.phase,
         );
       })
-      .catch(() => router.replace("/projects"));
+      .catch((e: unknown) => {
+        if (!alive) return;
+        // studioDb rejects with a SENTENCE — "storage is open in another tab",
+        // "IndexedDB unavailable", the browser's own quota error. It is the
+        // only thing that knows which of those happened, so it is carried
+        // through rather than replaced with a generic apology.
+        setDoor({
+          kind: "storage",
+          message: e instanceof Error ? e.message : "could not read this project",
+        });
+      });
     return () => {
       alive = false;
     };
@@ -114,6 +158,18 @@ export default function StudioView({ projectId }: { projectId: string }) {
   };
 
   const step = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
+  // The headline is the project's name when there is one. When there is not, it
+  // says which of the three doors this is rather than sitting on "opening…"
+  // forever, which is what a caught failure used to look like for the instant
+  // before the redirect took the page away.
+  const headline =
+    door.kind === "open" && project
+      ? project.title
+      : door.kind === "absent"
+        ? "Nothing to open here"
+        : door.kind === "storage"
+          ? "This project could not be read"
+          : "opening…";
 
   return (
     <StudioFrame>
@@ -155,13 +211,51 @@ export default function StudioView({ projectId }: { projectId: string }) {
             </div>
           </div>
 
-          <h1 className="font-instrument mt-4 text-4xl text-white">
-            {project ? project.title : <span className="text-white/30">opening…</span>}
+          <h1
+            className={`font-instrument mt-4 text-4xl ${door.kind === "opening" ? "text-white/30" : "text-white"}`}
+          >
+            {headline}
           </h1>
         </header>
 
         {view === "library" ? (
           <LibraryShelves />
+        ) : door.kind === "absent" ? (
+          <div
+            data-testid="door-absent"
+            className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4"
+          >
+            <p className="font-hanken text-sm leading-snug text-slate-300">
+              This address does not name a project on your account. Either it was deleted, or it
+              belongs to a different account signed in on this browser — the studio will not say
+              which, and cannot open it either way.
+            </p>
+            <Link
+              href="/projects"
+              className="font-jetbrains mt-3 inline-block rounded-lg border border-white/15 px-3 py-1.5 text-[12px] text-white/70 transition hover:bg-white/5"
+            >
+              back to your projects →
+            </Link>
+          </div>
+        ) : door.kind === "storage" ? (
+          <div
+            data-testid="door-storage"
+            className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-400/5 px-5 py-4"
+          >
+            {/* Same voice as /projects' banner, because it is the same failure —
+                and it says the same thing about whose fault it is. The work is
+                not gone; this browser would not hand it over. */}
+            <p className="font-hanken text-sm leading-snug text-rose-200">
+              {door.message} — this project lives in this browser&rsquo;s storage, and it did not
+              answer. Nothing has been lost; nothing can be read or saved until it does.
+            </p>
+            <Link
+              href="/projects"
+              className="font-jetbrains mt-3 inline-block rounded-lg border border-rose-400/30 px-3 py-1.5 text-[12px] text-rose-200 transition hover:bg-rose-400/10"
+            >
+              back to your projects →
+            </Link>
+          </div>
         ) : (
           <>
             {project && (

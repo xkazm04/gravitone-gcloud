@@ -8,14 +8,39 @@
 //
 // Running work is shown too, above the events, because "is it still going?" is
 // the question a bell is actually opened to answer.
+//
+// AND STORAGE TROUBLE, which is the same kind of thing and had nowhere to go.
+// `useStorageTrouble` was built in wave 3 so a surface could learn that the
+// store is failing, and grep found exactly one reference to it: its own
+// definition. Meanwhile this component — the app's one "things that happened
+// while you weren't looking" surface, mounted on every framed route by
+// StudioFrame — was not listening. A creator editing for an hour against a full
+// quota found out by closing the tab.
 
 import { useEffect, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 
+import {
+  clearStorageTrouble,
+  useStorageTrouble,
+  type StorageFailure,
+} from "@/app/_phases/_shared/stepStore";
 import { elapsed, useJobs } from "@/lib/jobs";
+
+/** What each failure MEANS FOR THE USER, in the user's terms. studioDb and
+ *  stepStore classify; this is the only place that has to say what to do about
+ *  it, and the five destinations call for different things. */
+const TROUBLE_WORD: Record<StorageFailure, string> = {
+  quota: "This browser's storage is full. Nothing more will be saved until you free space — open work is still on screen, but a reload would lose it.",
+  blocked: "Another tab has this app open on an older version of the database. Close it, then reload this one.",
+  unavailable: "This browser session cannot store anything — private mode, or storage is switched off. Nothing written here will survive a reload.",
+  "missing-store": "This browser's database is missing the store the studio writes to. Reload; if it comes back, the database needs rebuilding.",
+  failed: "The browser refused the operation.",
+};
 
 export default function NotificationBell() {
   const { unread, jobs, markRead, markAllRead } = useJobs();
+  const trouble = useStorageTrouble();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -40,6 +65,11 @@ export default function NotificationBell() {
   }, [open]);
 
   const count = unread.length;
+  // The badge counts storage trouble as one more unread thing, because that is
+  // exactly what it is — and because a failure the user has to OPEN the bell to
+  // discover is barely better than one nobody reports. The list below still
+  // keys off `count`: trouble has its own card and is not an event.
+  const badge = count + (trouble ? 1 : 0);
 
   return (
     <div ref={ref} className="relative">
@@ -47,22 +77,27 @@ export default function NotificationBell() {
         data-testid="bell"
         onClick={() => setOpen((v) => !v)}
         aria-label={
-          count ? `${count} unread notification${count === 1 ? "" : "s"}` : "Notifications"
+          badge ? `${badge} unread notification${badge === 1 ? "" : "s"}` : "Notifications"
         }
         aria-expanded={open}
         className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/60 transition hover:border-white/25 hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <Bell className="h-4 w-4" />
-        {count > 0 && (
+        {badge > 0 && (
           <span
             data-testid="bell-count"
-            className="font-jetbrains absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full bg-cyan-300 px-1 text-[9px] font-semibold text-slate-950"
+            // Rose when the store is failing: an unread result and "your work is
+            // not being saved" are not the same news, and the badge is the only
+            // thing on screen before the panel opens.
+            className={`font-jetbrains absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-semibold ${
+              trouble ? "bg-rose-400 text-slate-950" : "bg-cyan-300 text-slate-950"
+            }`}
           >
-            {count > 9 ? "9+" : count}
+            {badge > 9 ? "9+" : badge}
           </span>
         )}
         {/* running work gets a quiet pulse, distinct from the unread badge */}
-        {(running.length > 0 || interrupted.length > 0) && count === 0 && (
+        {(running.length > 0 || interrupted.length > 0) && badge === 0 && (
           <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-cyan-300/70" />
         )}
       </button>
@@ -88,6 +123,37 @@ export default function NotificationBell() {
               </button>
             )}
           </div>
+
+          {/* First, above everything: work that is still going is a question,
+              and a store that stopped answering is a problem. */}
+          {trouble && (
+            <div
+              data-testid="bell-storage-trouble"
+              className="mb-2 rounded-xl border border-rose-400/35 bg-rose-400/[0.07] px-3 py-2"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-jetbrains text-[10px] tracking-[0.12em] text-rose-200 uppercase">
+                  storage {trouble.op} failed
+                </p>
+                <button
+                  onClick={clearStorageTrouble}
+                  className="font-jetbrains shrink-0 text-[10px] text-white/30 transition hover:text-white/70"
+                >
+                  dismiss
+                </button>
+              </div>
+              <p className="mt-1 text-[12px] leading-snug text-rose-100/90">
+                {TROUBLE_WORD[trouble.kind]}
+              </p>
+              {/* WHERE it happened, and what the browser actually said. The step
+                  is the difference between "a notebook did not save" and "a
+                  theme sheet did not save", and the raw message is the only
+                  thing that survives from studioDb's own classification. */}
+              <p className="font-jetbrains mt-1 truncate text-[10px] text-white/35">
+                {trouble.phase} · {trouble.message}
+              </p>
+            </div>
+          )}
 
           {running.length > 0 && (
             <div className="mb-2 space-y-1.5">
@@ -149,11 +215,13 @@ export default function NotificationBell() {
 
           {count === 0 ? (
             <p className="px-1 py-3 text-[12px] text-white/35">
-              {running.length
-                ? "Nothing to report yet — work is still running."
-                : interrupted.length
-                  ? "Nothing unread. The interrupted run above did not finish."
-                  : "Nothing unread. Finished runs stay in the step's own log."}
+              {trouble
+                ? "No run has reported anything — the failure above is the storage layer itself."
+                : running.length
+                  ? "Nothing to report yet — work is still running."
+                  : interrupted.length
+                    ? "Nothing unread. The interrupted run above did not finish."
+                    : "Nothing unread. Finished runs stay in the step's own log."}
             </p>
           ) : (
             <ul className="max-h-[19rem] space-y-1.5 overflow-y-auto scroll-y">
@@ -183,7 +251,13 @@ export default function NotificationBell() {
                     </button>
                   </div>
                   <p className="mt-1 text-[12px] leading-snug text-slate-300">{e.detail}</p>
-                  <p className="font-jetbrains mt-1 truncate text-[10px] text-white/30">{e.title.includes("failed") ? "" : ""}{e.detail && ""}{`“${eventLabel(e.jobId, jobs)}”`}</p>
+                  {/* What the user asked for, in their own words. Two dead
+                      ternaries used to sit in front of this — both branches
+                      `""`, on a live component — so all they ever did was cost
+                      a reader the time to work out that they did nothing. */}
+                  <p className="font-jetbrains mt-1 truncate text-[10px] text-white/30">
+                    {`“${eventLabel(e.jobId, jobs)}”`}
+                  </p>
                 </li>
               ))}
             </ul>
