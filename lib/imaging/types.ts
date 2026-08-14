@@ -8,9 +8,10 @@
 //   recognize  an image + a question                       → text, or JSON
 //
 // The vendor split is an ENVIRONMENT decision, not a code decision (see
-// router.ts): dev runs on Leonardo + Qwen because the credits are already paid
-// for, production runs on Google. A surface that imported a vendor directly
-// would nail that decision into the UI, so nothing outside lib/imaging/ may.
+// router.ts): dev generates and edits on Google with Leonardo behind it as the
+// re-route target, and recognises on Qwen; production runs on Google
+// throughout. A surface that imported a vendor directly would nail that
+// decision into the UI, so nothing outside lib/imaging/ may.
 //
 // SERVER ONLY. Every provider holds an API key. Nothing here may be imported
 // from a component — the seam is app/api/imaging/*.

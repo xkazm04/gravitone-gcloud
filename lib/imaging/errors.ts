@@ -45,7 +45,28 @@ export class ImagingError extends Error {
     return this.kind === "rate-limited" || this.kind === "timeout";
   }
 
-  /** Would another vendor plausibly succeed where this one did not? */
+  /**
+   * Would another vendor plausibly succeed where this one did not?
+   *
+   * `failed` and `bad-response` are deliberately NOT in this list, and the next
+   * reader who wants to add them should read this first — it has been weighed:
+   *
+   *  1. Everything transient has already been retried. http.ts makes three
+   *     attempts with backoff on 429 and every 5xx; what survives that and
+   *     arrives as `failed` is a 4xx, an unreachable host, or a bug in our own
+   *     adapter. A second vendor fixes none of the three.
+   *  2. Re-routing bills a vendor for a request the first one never declined.
+   *     The chain exists to cross a POLICY edge (a refusal is deterministic and
+   *     only another vendor's policy can clear it), not to paper over an
+   *     outage — see the header of router.ts.
+   *  3. In dev the only generate fallback is Leonardo, which reads no style
+   *     references. Re-routing an unexplained failure there returns a perfectly
+   *     good image in the wrong style — the silent near-miss types.ts calls the
+   *     worst failure this layer could have.
+   *
+   * `bad-response` is the same argument with the adapter-bug case louder: the
+   * vendor answered, and we could not read it. That is ours to fix.
+   */
   get reroutable(): boolean {
     return this.kind === "refused" || this.kind === "rate-limited" || this.kind === "no-key";
   }

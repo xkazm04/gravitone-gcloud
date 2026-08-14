@@ -2,9 +2,15 @@
 // where a vendor's status code becomes our ImagingError kind.
 //
 // Written once rather than per adapter because the three vendors fail in the
-// same four ways and disagree only about the JSON around it. Adapters pass a
-// `classify` hook for the vendor-specific part (a refusal usually arrives as a
-// 200 with a reason field, not as a status code).
+// same four ways and disagree only about the JSON around it. What this helper
+// classifies is the TRANSPORT (`kindForStatus` below): a status code means the
+// same thing everywhere.
+//
+// Refusals are deliberately NOT classified here. A safety block arrives as a
+// 200 with a vendor-specific reason field — Google's is an undocumented message
+// string matched by regex (providers/google.ts), Leonardo's is a terminal job
+// status (providers/leonardo.ts) — so there is no shared shape to hook. Each
+// adapter raises its own `refused` after this function has returned a body.
 
 import { ImagingError, type ImagingErrorKind } from "./errors";
 import type { ProviderId } from "./types";

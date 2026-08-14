@@ -1,8 +1,11 @@
 // Which vendor answers, and with whose key.
 //
-// The dev/prod split is the user's standing decision, encoded once here:
+// The dev/prod split is the user's standing decision, and the table that
+// encodes it lives in router.ts (PLAN) — this file only answers "is there a key
+// for that vendor". As of the 60-cell style trial:
 //
-//   dev   Leonardo generates (credits already bought), Qwen recognises.
+//   dev   Google generates and edits, Leonardo is the re-route target for
+//         generate, Qwen recognises.
 //   prod  Google does everything — one vendor, one style-lock mechanism, and
 //         the reference-image window the production style block is tuned for.
 //
