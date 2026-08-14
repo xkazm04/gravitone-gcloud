@@ -32,9 +32,22 @@ purpose: one style-lock mechanism, one reference-image window, one bill.
 ## Running the integration probe
 
 ```bash
-npx tsx pipeline/integration-imaging.mts              # every configured vendor
-npx tsx pipeline/integration-imaging.mts --only qwen  # one
+npx tsx pipeline/integration-imaging.mts              # OFFLINE — free, no vendor reached
+npx tsx pipeline/integration-imaging.mts --live       # the real vendors; spends real credits
+npx tsx pipeline/integration-imaging.mts --live --only qwen
 ```
+
+**The default changed on 2026-08-14 and it changed which command costs money.** A bare invocation
+used to reach every configured vendor; it now runs the OFFLINE half only. That half replaces
+`globalThis.fetch` before the engine loads and throws on any unrecognised host, then drives the real
+route handlers over canned wire bodies — 27 checks in about a second, no framework, no dependency,
+nothing billed. It seals the process twice: that an unexpected host is blocked *and* recorded,
+because a thrown fetch alone is swallowed by `http.ts` into an ordinary `failed` and a negative case
+could otherwise pass for the wrong reason.
+
+It exists because the live half could report **"0 failed" while exercising nothing** — every case
+skips cleanly when a key is absent, so a zero-key run read as green and proved nothing. Both
+summaries now name both halves, and a fully-skipped live run says so in as many words.
 
 It hits the live APIs and costs real credits, so it generates the minimum that proves the path: one
 plate, one look at it, one edit of it. Images land in `imaging-probe-out/` (gitignored) so a human
