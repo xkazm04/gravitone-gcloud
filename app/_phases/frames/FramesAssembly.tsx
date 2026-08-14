@@ -16,7 +16,7 @@
 // action, serially, because sixteen clicks is not a workflow.
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
 import { durationOf, isComposed, type Frame, type FrameText, type LayerRef } from "./frames";
 import type { Fact } from "../_shared/notebook/types";
@@ -100,6 +100,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
               setSelected(null);
             }}
             onRender={() => void generatePlate(f.id)}
+            rejection={ctl.rejections[f.at]}
             onSubject={(v) => setSubject(f.id, v)}
             onMotion={(v) => ctl.setMotion(f.id, v)}
             facts={ctl.facts}
@@ -138,6 +139,7 @@ function Row({
   busy,
   onToggle,
   onRender,
+  rejection,
   onSubject,
   onMotion,
   facts,
@@ -160,6 +162,8 @@ function Row({
   busy: boolean;
   onToggle: () => void;
   onRender: () => void;
+  /** Why the last direction pass refused this beat, if it did. */
+  rejection?: string;
   onSubject: (v: string) => void;
   onMotion: (v: string) => void;
   facts: Fact[];
@@ -200,6 +204,19 @@ function Row({
 
         <span className="font-jetbrains text-right text-[11px] text-white/35">{holdS}s</span>
       </div>
+
+      {/* What the last direction pass said about THIS beat. It sits on the row
+          rather than in a summary line because that is where it can be acted
+          on: the reason names the defect, and the frame beside it still holds
+          whatever it had before the pass ran. */}
+      {rejection && (
+        <p className="font-jetbrains flex items-start gap-1.5 px-3 pb-2 text-[11px] leading-snug text-amber-200/85">
+          <AlertTriangle className="mt-[2px] h-3 w-3 shrink-0" aria-hidden />
+          <span>
+            {rejection} <span className="text-white/35">This beat kept what it had.</span>
+          </span>
+        </p>
+      )}
 
       {open && (
         <div className="grid gap-4 px-3 pb-4 lg:grid-cols-[1fr_300px]">

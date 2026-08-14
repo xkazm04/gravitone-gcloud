@@ -47,6 +47,17 @@ export default function FramesStep({ projectId }: { projectId: string }) {
         </p>
       )}
 
+      {/* PARTIAL SUCCESS, which is neither an error nor silence. A direction
+          pass is minutes of real money over the whole script; when most of it
+          lands and a few beats do not, saying so in rose would read as "the run
+          failed" and send the user to pay for it again. The per-beat reasons
+          are on the rows — this is only the count. */}
+      {ctl.notice && (
+        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-[13px] leading-snug text-amber-100/90">
+          {ctl.notice}
+        </p>
+      )}
+
       <FramesAssembly ctl={ctl} />
     </div>
   );

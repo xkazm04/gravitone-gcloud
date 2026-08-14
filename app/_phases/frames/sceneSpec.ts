@@ -88,20 +88,120 @@ const clamp = (v: number) => Math.max(0, Math.min(100, v));
  *  layer is vector and ours, so no generated frame may be asked to carry it. */
 const ASKS_FOR_TEXT = /\b(text|label(l)?ed|caption|write|written|word|letter|number|digit|title)\b/i;
 
+/** One scene the parser refused, and the sentence that says why.
+ *
+ *  `beatAt` is what the ENGINE claimed, which is not necessarily a beat in this
+ *  script — a scene invented for a timestamp that does not exist is one of the
+ *  things caught here, and it has no row to sit on. */
+export interface SpecRejection {
+  beatAt: string;
+  reason: string;
+}
+
+/** What a direction pass actually produced: what survived, what did not and
+ *  why, and which beats it never mentioned. */
+export interface SceneSpecReport {
+  specs: SceneSpec[];
+  rejected: SpecRejection[];
+  /** Beats the engine never MENTIONED. Disjoint from `rejected` on purpose: a
+   *  beat it tried and got wrong has a reason attached, and reporting that beat
+   *  as missing too would replace the reason with a vaguer one and count the
+   *  same defect twice. Their frames keep what they had — a report rather than a
+   *  throw, because fifteen good scenes are worth having even when the
+   *  sixteenth never arrived. */
+  missing: string[];
+}
+
+/** One scene, validated. Throws `SceneSpecError` describing the FIRST thing
+ *  wrong with THIS beat — the caller catches it and moves to the next one.
+ *
+ *  Messages here are written to be read on the beat's own row, so they do not
+ *  repeat the timestamp: the row already said it. */
+function parseScene(s: Record<string, unknown>, knownFactIds: Set<string>): Omit<SceneSpec, "beatAt"> {
+  const subject = String(s.subject ?? "").trim();
+  if (subject.length < 20) throw new SceneSpecError("The subject is too short to be a composition.");
+  // The plate must not be asked for glyphs. A subject that says "labelled" or
+  // quotes a word is asking for exactly the defect that makes a plate
+  // unusable, and it is far cheaper to reject it here than to render it.
+  if (ASKS_FOR_TEXT.test(subject))
+    throw new SceneSpecError("The subject asks the model for text. Plates carry no glyphs.");
+
+  // The motion is held to the subject's standard, for the subject's reason: a
+  // move nobody can picture is not a direction, it is a word. What is NOT
+  // checked is as deliberate — no verb whitelist, no duration, no easing
+  // vocabulary. Nothing has measured those, and a validator built on an
+  // impression rejects good direction with total confidence.
+  const motion = String(s.motion ?? "").trim();
+  if (motion.length < 12) throw new SceneSpecError("The motion is too short to describe a move.");
+  if (ASKS_FOR_TEXT.test(motion))
+    throw new SceneSpecError("The motion moves text. Our text layer is vector and ours — move the picture.");
+  if (motion.toLowerCase() === subject.toLowerCase())
+    throw new SceneSpecError("The motion just restates the subject. A still is not a move.");
+
+  const elements = (Array.isArray(s.elements) ? s.elements : []).map((e) => {
+    const el = e as Record<string, unknown>;
+    const kind = String(el.kind ?? "");
+    if (!(ELEMENT_KINDS as readonly string[]).includes(kind))
+      throw new SceneSpecError(`Unknown element kind "${kind}".`);
+    return {
+      kind: kind as FrameElement["kind"],
+      label: String(el.label ?? "").slice(0, 60),
+      x: clamp(num(el.x, 10)),
+      y: clamp(num(el.y, 40)),
+      w: clamp(num(el.w, 30)),
+      h: clamp(num(el.h, 20)),
+      accent: Boolean(el.accent),
+    };
+  });
+
+  const texts = (Array.isArray(s.texts) ? s.texts : []).map((t) => {
+    const tx = t as Record<string, unknown>;
+    const role = String(tx.role ?? "");
+    if (!(TEXT_ROLES as readonly string[]).includes(role)) throw new SceneSpecError(`Unknown text role "${role}".`);
+    const factId = tx.factId ? String(tx.factId) : undefined;
+    // The integrity gate, enforced rather than requested.
+    if (role === "figure" && !factId)
+      throw new SceneSpecError("A figure cites no fact. Every number on screen must be traceable.");
+    if (factId && !knownFactIds.has(factId))
+      throw new SceneSpecError(`It cites "${factId}", which is not in this notebook.`);
+    return {
+      role: role as FrameText["role"],
+      value: String(tx.value ?? "").slice(0, 90),
+      x: clamp(num(tx.x, 6)),
+      y: clamp(num(tx.y, 40)),
+      factId,
+    };
+  });
+
+  return { subject, motion, rationale: String(s.rationale ?? "").slice(0, 200), elements, texts };
+}
+
 /**
- * Validate a scene spec against the beats it claims to describe.
+ * Review a direction pass against the beats it claims to describe.
+ *
+ * PER BEAT, and that is the whole point of this function's shape. "Direct the
+ * cut" is a multi-minute call to a local Claude process over the entire script;
+ * throwing on the first defect anywhere in the batch discarded every good scene
+ * the model produced and charged the user again to find out whether it was a
+ * fluke. So findings are COLLECTED: a bad scene is still rejected — nothing here
+ * is more forgiving than it was — it just no longer takes its fifteen siblings
+ * down with it.
+ *
+ * What still fails hard is what invalidates the whole response rather than one
+ * beat of it: no JSON object, malformed JSON, no `scenes` array. There is
+ * nothing to salvage from those and pretending otherwise would apply garbage.
  *
  * The checks are the ones that catch a spec which is confidently wrong:
- *   · every beat covered, no beat invented
+ *   · no beat invented, no beat covered twice — now reported, not thrown
  *   · a subject that mentions text or numbers — the one unconditional defect
  *   · a motion that is missing, unpicturable, or the subject said twice
  *   · a figure with no factId, or a factId the notebook does not contain
  */
-export function parseSceneSpecs(
+export function reviewSceneSpecs(
   raw: string,
   frames: Frame[],
   knownFactIds: Set<string>,
-): SceneSpec[] {
+): SceneSpecReport {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
   if (start === -1 || end <= start) throw new SceneSpecError("The engine returned no JSON object.");
@@ -115,84 +215,50 @@ export function parseSceneSpecs(
   if (!Array.isArray(doc.scenes)) throw new SceneSpecError("The engine returned no `scenes` array.");
 
   const byAt = new Map(frames.map((f) => [f.at, f]));
-  const seen = new Set<string>();
+  /** Beats a scene was ACCEPTED for — the duplicate guard, and what "applied"
+   *  means. A beat whose only scene was rejected is not in here. */
+  const accepted = new Set<string>();
+  /** Beats the engine claimed at all, right or wrong. What `missing` is the
+   *  complement of. */
+  const mentioned = new Set<string>();
   const specs: SceneSpec[] = [];
+  const rejected: SpecRejection[] = [];
 
   for (const s of doc.scenes as Record<string, unknown>[]) {
     const beatAt = String(s.beatAt ?? "");
-    if (!byAt.has(beatAt)) throw new SceneSpecError(`It returned a scene for "${beatAt}", which is not a beat in this script.`);
-    if (seen.has(beatAt)) throw new SceneSpecError(`It returned two scenes for ${beatAt}.`);
-    seen.add(beatAt);
-
-    const subject = String(s.subject ?? "").trim();
-    if (subject.length < 20) throw new SceneSpecError(`The subject for ${beatAt} is too short to be a composition.`);
-    // The plate must not be asked for glyphs. A subject that says "labelled" or
-    // quotes a word is asking for exactly the defect that makes a plate
-    // unusable, and it is far cheaper to reject it here than to render it.
-    if (ASKS_FOR_TEXT.test(subject))
-      throw new SceneSpecError(`The subject for ${beatAt} asks the model for text. Plates carry no glyphs.`);
-
-    // The motion is held to the subject's standard, for the subject's reason: a
-    // move nobody can picture is not a direction, it is a word. What is NOT
-    // checked is as deliberate — no verb whitelist, no duration, no easing
-    // vocabulary. Nothing has measured those, and a validator built on an
-    // impression rejects good direction with total confidence.
-    const motion = String(s.motion ?? "").trim();
-    if (motion.length < 12) throw new SceneSpecError(`The motion for ${beatAt} is too short to describe a move.`);
-    if (ASKS_FOR_TEXT.test(motion))
-      throw new SceneSpecError(`The motion for ${beatAt} moves text. Our text layer is vector and ours — move the picture.`);
-    if (motion.toLowerCase() === subject.toLowerCase())
-      throw new SceneSpecError(`The motion for ${beatAt} just restates the subject. A still is not a move.`);
-
-    const elements = (Array.isArray(s.elements) ? s.elements : []).map((e) => {
-      const el = e as Record<string, unknown>;
-      const kind = String(el.kind ?? "");
-      if (!(ELEMENT_KINDS as readonly string[]).includes(kind))
-        throw new SceneSpecError(`Unknown element kind "${kind}" on ${beatAt}.`);
-      return {
-        kind: kind as FrameElement["kind"],
-        label: String(el.label ?? "").slice(0, 60),
-        x: clamp(num(el.x, 10)),
-        y: clamp(num(el.y, 40)),
-        w: clamp(num(el.w, 30)),
-        h: clamp(num(el.h, 20)),
-        accent: Boolean(el.accent),
-      };
-    });
-
-    const texts = (Array.isArray(s.texts) ? s.texts : []).map((t) => {
-      const tx = t as Record<string, unknown>;
-      const role = String(tx.role ?? "");
-      if (!(TEXT_ROLES as readonly string[]).includes(role))
-        throw new SceneSpecError(`Unknown text role "${role}" on ${beatAt}.`);
-      const factId = tx.factId ? String(tx.factId) : undefined;
-      // The integrity gate, enforced rather than requested.
-      if (role === "figure" && !factId)
-        throw new SceneSpecError(`A figure on ${beatAt} cites no fact. Every number on screen must be traceable.`);
-      if (factId && !knownFactIds.has(factId))
-        throw new SceneSpecError(`${beatAt} cites "${factId}", which is not in this notebook.`);
-      return {
-        role: role as FrameText["role"],
-        value: String(tx.value ?? "").slice(0, 90),
-        x: clamp(num(tx.x, 6)),
-        y: clamp(num(tx.y, 40)),
-        factId,
-      };
-    });
-
-    specs.push({ beatAt, subject, motion, rationale: String(s.rationale ?? "").slice(0, 200), elements, texts });
+    mentioned.add(beatAt);
+    try {
+      if (!byAt.has(beatAt)) throw new SceneSpecError(`"${beatAt}" is not a beat in this script.`);
+      if (accepted.has(beatAt)) throw new SceneSpecError(`A second scene for ${beatAt} — the first one stands.`);
+      specs.push({ beatAt, ...parseScene(s, knownFactIds) });
+      accepted.add(beatAt);
+    } catch (e) {
+      // Only OUR refusals are per-beat findings. A TypeError from this parser is
+      // a bug in it, and swallowing that would turn a crash into sixteen quiet
+      // rejections nobody could explain.
+      if (!(e instanceof SceneSpecError)) throw e;
+      rejected.push({ beatAt: beatAt || "(no beatAt)", reason: e.message });
+    }
   }
 
-  const missing = frames.filter((f) => !seen.has(f.at));
-  if (missing.length)
-    throw new SceneSpecError(
-      `It returned ${specs.length} scenes for ${frames.length} beats — missing ${missing.slice(0, 3).map((f) => f.at).join(", ")}.`,
-    );
-
-  return specs;
+  return { specs, rejected, missing: frames.filter((f) => !mentioned.has(f.at)).map((f) => f.at) };
 }
 
-/** Fold authored specs into the frames, replacing the seeded layers. */
+/** The surviving specs alone.
+ *
+ *  Kept for `pipeline/direct-frames.mts`, the measurement harness, which wants
+ *  the scenes and reports its own counts. Anything that has to TELL the user
+ *  what happened wants `reviewSceneSpecs` — the findings are the point there. */
+export function parseSceneSpecs(raw: string, frames: Frame[], knownFactIds: Set<string>): SceneSpec[] {
+  return reviewSceneSpecs(raw, frames, knownFactIds).specs;
+}
+
+/** Fold authored specs into the frames, replacing the seeded layers.
+ *
+ *  Frames with no spec in the list are returned untouched — which is exactly
+ *  what a rejected or unmentioned beat gets. It keeps whatever it had, which is
+ *  usually the template output this pass exists to replace, and the row says so
+ *  rather than the frame quietly emptying. */
 export function applySceneSpecs(frames: Frame[], specs: SceneSpec[]): Frame[] {
   const byAt = new Map(specs.map((s) => [s.beatAt, s]));
   return frames.map((f) => {

@@ -36,7 +36,7 @@ import {
   type FrameElement,
   type FrameText,
 } from "./frames";
-import { applySceneSpecs, parseSceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
+import { applySceneSpecs, reviewSceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
 
 const PHASE = "frames";
 
@@ -270,6 +270,14 @@ export function useFrames(projectId: string) {
 
   const [directing, setDirecting] = useState(false);
 
+  /** What the last pass refused, keyed by the beat it refused, so the ledger can
+   *  say it ON that beat's row. A rejection printed as one error line is a
+   *  sentence about sixteen frames; printed on a row it is a fix. */
+  const [rejections, setRejections] = useState<Record<string, string>>({});
+  /** The pass's own summary — partial success, which is neither an error nor
+   *  silence and deserves its own voice. */
+  const [notice, setNotice] = useState<string | null>(null);
+
   /**
    * Art-direct the whole cut in one pass.
    *
@@ -282,6 +290,8 @@ export function useFrames(projectId: string) {
   const direct = useCallback(async () => {
     setDirecting(true);
     setError(null);
+    setNotice(null);
+    setRejections({});
     try {
       const res = await fetch("/api/frames", {
         method: "POST",
@@ -297,8 +307,30 @@ export function useFrames(projectId: string) {
       const json = await res.json().catch(() => ({}) as Record<string, unknown>);
       if (!res.ok) throw new Error(typeof json.detail === "string" ? json.detail : "The scene direction failed.");
 
-      const specs = parseSceneSpecs(String(json.raw ?? ""), frames, new Set(FACTS.map((f) => f.id)));
-      setFrames((fs) => applySceneSpecs(fs, specs));
+      const report = reviewSceneSpecs(String(json.raw ?? ""), frames, new Set(FACTS.map((f) => f.id)));
+      // Apply what survived. Rejected and unmentioned beats keep exactly what
+      // they had — applySceneSpecs only touches frames it has a spec for.
+      setFrames((fs) => applySceneSpecs(fs, report.specs));
+
+      // Findings go to the rows they belong to. A rejection for a timestamp
+      // that is not in this script has no row, so it goes to the summary.
+      const inScript = new Set(frames.map((f) => f.at));
+      const notes: Record<string, string> = {};
+      for (const r of report.rejected) if (inScript.has(r.beatAt)) notes[r.beatAt] = r.reason;
+      for (const at of report.missing) notes[at] = "The pass returned no scene for this beat.";
+      setRejections(notes);
+
+      const orphans = report.rejected.filter((r) => !inScript.has(r.beatAt));
+      if (report.rejected.length || report.missing.length) {
+        const parts = [`${report.specs.length} of ${frames.length} beats directed`];
+        if (report.rejected.length) parts.push(`${report.rejected.length} rejected`);
+        if (report.missing.length) parts.push(`${report.missing.length} with no scene returned`);
+        setNotice(
+          `${parts.join(" · ")}. ${
+            report.specs.length ? "The reasons are on those rows; every other beat was applied." : "Nothing was applied."
+          }${orphans.length ? ` The engine also invented ${orphans.map((o) => `"${o.beatAt}"`).join(", ")}.` : ""}`,
+        );
+      }
     } catch (e) {
       setError(
         e instanceof SceneSpecError
@@ -339,6 +371,8 @@ export function useFrames(projectId: string) {
     setFrames,
     directing,
     direct,
+    rejections,
+    notice,
     generatePlate,
     setSubject,
     setMotion,
