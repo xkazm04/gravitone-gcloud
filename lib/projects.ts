@@ -284,12 +284,40 @@ export async function putProject(p: Project): Promise<Project> {
   return writeProject({ ...p, updatedAt: Date.now() });
 }
 
-/** Write several at once — one transaction, so a partial seed cannot commit. */
-export async function putProjects(rows: Project[]): Promise<void> {
+/**
+ * Write several at once, ONLY if none of them is there yet — the seed's writer.
+ *
+ * One transaction, so a partial seed cannot commit. And `add` rather than `put`,
+ * so a CONCURRENT seed cannot double-write: two tabs opening a fresh account
+ * both read an empty shelf and both see "not seeded", because `alreadySeeded` is
+ * a localStorage flag read outside any transaction and localStorage has no
+ * compare-and-swap to give it. `add` moves the guard to the one place that can
+ * actually keep it. The second transaction raises `ConstraintError` on the first
+ * id that already exists, aborts as a whole, and writes NOTHING; the loser
+ * re-lists and finds the winner's rows.
+ *
+ * Losing that race is not an error and does not reject — `seedProjects` mints
+ * stable, content-addressed ids for exactly this reason, so the winner's rows
+ * are the rows this call was going to write. Anything else (quota, a blocked
+ * upgrade) still throws, because that IS an error and the shelf has a banner.
+ */
+export async function addProjects(rows: Project[]): Promise<void> {
   let db: IDBDatabase | null = null;
   try {
     db = await openDb();
-    await runTx(db, PROJECTS_STORE, "readwrite", (store) => rows.forEach((r) => store.put(r)));
+    await runTx(db, PROJECTS_STORE, "readwrite", (store) => rows.forEach((r) => store.add(r)));
+  } catch (e) {
+    // Duck-typed on `name`, like stepStore's classifier and for the same reason:
+    // `DOMException` is not a global in every runtime this module is imported
+    // into, and a check that throws while checking is worse than what it reads.
+    //
+    // This depends on `runTx` rejecting with the REQUEST's error rather than the
+    // transaction's — see the note there. It did not, until this was measured:
+    // `tx.error` is null when `tx.onerror` fires, so a lost seed race arrived
+    // here as a nameless "write failed" and would have been rethrown, putting a
+    // storage banner over a shelf that is perfectly fine.
+    const name = typeof e === "object" && e !== null ? (e as { name?: string }).name : undefined;
+    if (name !== "ConstraintError") throw e;
   } finally {
     db?.close();
   }

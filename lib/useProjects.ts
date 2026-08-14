@@ -27,11 +27,11 @@ import { useCallback, useEffect, useState } from "react";
 import { reportStorageTrouble, type StorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { seedProjects } from "@/app/_studio/projectSeed";
 import {
+  addProjects,
   deleteProject as dbDelete,
   listProjects,
   newProject,
   putProject,
-  putProjects,
   type Project,
   type ProjectContents,
   type ProjectDraft,
@@ -41,6 +41,14 @@ import {
  * Marks an account as seeded. Kept OUT of IndexedDB on purpose: it must survive
  * the user deleting every seeded project, otherwise an empty shelf silently
  * refills itself and "delete" stops meaning delete.
+ *
+ * It is NOT the guard against seeding twice, and it never could be: it is read
+ * and written outside any transaction, so two tabs opening a fresh account can
+ * both read "not seeded" before either writes. That guard lives in the write
+ * itself — see `addProjects` in ./projects, which uses `add` in one transaction
+ * and lets the second tab abort with nothing written. This flag answers a
+ * different question: "has this account ALREADY been offered the demo shelf",
+ * which outlives the rows themselves.
  */
 const seededKey = (uid: string) => `gravitone.seeded.${uid}`;
 
@@ -102,8 +110,11 @@ export function useProjects(uid: string | null) {
       // something to open. See app/_studio/projectSeed.ts — deleting that file
       // leaves the empty state, which is already correct.
       if (rows.length === 0 && !alreadySeeded(uid)) {
-        rows = seedProjects(uid);
-        await putProjects(rows);
+        // The flag below cannot be the whole guard — see `addProjects`, which
+        // holds the half of it that survives two tabs. Marking is unconditional
+        // and correct either way: whoever wrote the rows, this account is seeded
+        // and must not be offered a demo shelf again.
+        await addProjects(seedProjects(uid));
         markSeeded(uid);
         rows = await listProjects(uid);
       }
