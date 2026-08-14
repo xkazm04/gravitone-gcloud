@@ -110,10 +110,17 @@ export default function ScoreSpotting() {
         <p className={`mt-1.5 text-sm leading-snug ${cue.status === "failed" ? "text-rose-200/90" : "text-slate-400"}`}>
           {cue.note}
         </p>
+        {/* A "retry cue" button used to sit here, styled as the primary CTA and
+            carrying no `onClick` at all. There is no music engine in this app —
+            no route under app/api generates audio, and every cue on this
+            surface is fixture data — so it could not be wired, only removed.
+            What a refused cue needs said is what the model did and what that
+            costs the cut, and the sentence above already says the first. */}
         {cue.status === "failed" && (
-          <button className="mt-3 rounded-full bg-cyan-300/90 px-4 py-1.5 text-[13px] font-semibold text-slate-950 transition hover:brightness-110">
-            retry cue
-          </button>
+          <p className="font-jetbrains mt-3 text-[11px] leading-snug text-rose-200/60">
+            {cue.durS}s of the {PROJECT.totalS}s clock plays silent. Re-asking the model is a seam
+            this app has not built — nothing here generates music yet.
+          </p>
         )}
       </div>
     </div>
