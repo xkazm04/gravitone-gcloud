@@ -9,7 +9,8 @@
 //
 // A follow-up UI that only knows how to render "here is more" is wrong.
 
-import { UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
+import { FACT_BY_ID, UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
+import type { Confidence } from "../_shared/notebook/types";
 
 export type FollowUpKind = "deepen-card" | "question";
 
@@ -93,6 +94,71 @@ export const CANNED: Record<string, FollowUpResult> = {
     ],
   },
 };
+
+/* ------------------------------------------- where the transcript has been overtaken */
+
+/** THE TRANSCRIPT IS EVIDENCE, AND EVIDENCE CAN BE WRONG.
+ *
+ *  `CANNED["q-whales"]` states that mid-tier holders distributed 77,800 BTC —
+ *  "slightly MORE than the whales absorbed". It is not: 77,800 is 29% of
+ *  ~270,000, and the two figures cover different windows. The notebook caught
+ *  this (facts.ts, `f-midtier-distribute`) and carries the corrected row, the
+ *  arithmetic, and a confidence downgraded to `low`.
+ *
+ *  Two bad options and one good one. EDITING THE TRANSCRIPT destroys the
+ *  evidence — this is what a real run returned on 2026-08-11, and a fixture
+ *  quietly rewritten to be right is a fixture that can no longer show how a run
+ *  goes wrong. RENDERING IT ALONE lets a reader carry a false sentence away as a
+ *  finding, on the one surface whose whole job is to report what research found.
+ *  So the transcript stands verbatim and the notebook's version stands beside
+ *  it, DERIVED — a hand-typed correction is exactly how the original error
+ *  survived three renders.
+ *
+ *  WHAT COUNTS AS A CORRECTION, and why it is not just "the strings differ".
+ *  `f-whale-absorb` also reads differently from its transcript ("over a
+ *  fortnight" was dropped) and nothing is wrong with either version. Flagging
+ *  that would train the reader to ignore the flag, which is the whole alarm
+ *  gone. So a divergence is reported only when the notebook SAYS WHY its row is
+ *  what it is — `confidenceNote`, the field the schema requires to be "stated,
+ *  never implied". THE LIMIT, stated rather than discovered: a correction landed
+ *  without a `confidenceNote` is invisible here. That is a reason to write one,
+ *  not a reason to widen this to every wording difference.
+ *
+ *  Not a general fact-checker. It compares the facts THIS transcript claims to
+ *  have added against the notebook's own rows for them, and nothing else. */
+export interface Revision {
+  factId: string;
+  /** What the run returned, verbatim. */
+  transcribed: string;
+  transcribedConfidence: Confidence;
+  /** What the notebook carries now. */
+  current: string;
+  currentConfidence: Confidence;
+  /** Why the confidence is what it is. Present by construction — it is the test. */
+  why: string;
+  /** The notebook's fuller account of the correction, where it has one. */
+  detail?: string;
+}
+
+export function revisionsOf(result: FollowUpResult): Revision[] {
+  const out: Revision[] = [];
+  for (const e of result.effects) {
+    if (e.kind !== "adds-fact") continue;
+    const f = FACT_BY_ID[e.factId];
+    if (!f?.confidenceNote) continue;
+    if (f.claim.trim() === e.claim.trim() && f.confidence === e.confidence) continue;
+    out.push({
+      factId: e.factId,
+      transcribed: e.claim,
+      transcribedConfidence: e.confidence,
+      current: f.claim,
+      currentConfidence: f.confidence,
+      why: f.confidenceNote,
+      detail: f.note,
+    });
+  }
+  return out;
+}
 
 /* ------------------------------------------------- where an effect actually stands */
 

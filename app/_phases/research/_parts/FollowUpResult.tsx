@@ -17,8 +17,17 @@
 // than propped up with an invented mechanism, and each effect now says where it
 // actually stands instead (`standingOf`). Most of them have already landed: the
 // notebook on screen has absorbed the very round these transcripts came from.
+//
+// AND THE SUMMARY IS A QUOTE, NOT A FINDING. One sentence in the whale result is
+// arithmetically false, the notebook says so and carries the corrected row, and
+// the transcript still says what it said — because it is the record of a real
+// run on 2026-08-11 and rewriting it would destroy the one thing it is for. So
+// the quote is marked as a quote and the notebook's version is drawn against it
+// (`revisionsOf`), derived from the fact rather than retyped. A reader can no
+// longer take the false sentence away as a finding, and the run's own words are
+// still there to be read.
 
-import { standingOf, type Effect, type FollowUpRequest } from "../followup";
+import { revisionsOf, standingOf, type Effect, type FollowUpRequest } from "../followup";
 
 const EFFECT_TONE: Record<Effect["kind"], { label: string; cls: string }> = {
   confirms: { label: "confirms", cls: "border-emerald-400/35 bg-emerald-400/[0.07] text-emerald-200" },
@@ -44,16 +53,67 @@ export default function FollowUpResult({
 }) {
   const standings = result.effects.map((e) => standingOf(e, cardIds));
   const landed = standings.filter((s) => s.landed).length;
+  const revisions = revisionsOf(result);
 
   return (
     <div className="mt-3 border-t border-white/8 pt-3">
-      <p className="text-[13px] leading-relaxed text-slate-300">{result.summary}</p>
+      {/* The quote, drawn as a quote. The rule on the ruled margin is the whole
+          device: everything to the right of it is the run's words, unedited,
+          and the correction below is not. */}
+      <p className="font-jetbrains text-[10px] tracking-[0.16em] text-white/30 uppercase">
+        what the run returned{revisions.length > 0 ? " — one claim has since been corrected" : ""}
+      </p>
+      <p
+        className={`mt-1.5 border-l-2 pl-3 text-[13px] leading-relaxed text-slate-300 ${
+          revisions.length > 0 ? "border-amber-400/40" : "border-white/10"
+        }`}
+      >
+        {result.summary}
+      </p>
+
+      {/* THE CORRECTION, BESIDE THE RECORD — never instead of it. Every string
+          below comes off the notebook's own fact row; nothing here is typed
+          twice. See `revisionsOf`. */}
+      {revisions.map((r) => (
+        <div
+          key={r.factId}
+          data-testid={`revision-${r.factId}`}
+          className="mt-2.5 rounded-xl border border-amber-400/25 bg-amber-400/[0.04] px-3 py-2.5"
+        >
+          <p className="font-jetbrains text-[10px] tracking-[0.14em] text-amber-200/90 uppercase">
+            corrected since — {r.factId}
+          </p>
+          <p className="mt-1.5 text-[12px] leading-relaxed text-white/45">
+            <span className="font-jetbrains text-[10px] tracking-[0.1em] text-white/30 uppercase">
+              returned ·{" "}
+            </span>
+            <span className="line-through decoration-amber-300/40">{r.transcribed}</span>{" "}
+            <span className="font-jetbrains text-[10px] text-white/25">({r.transcribedConfidence})</span>
+          </p>
+          <p className="mt-1 text-[12px] leading-relaxed text-slate-200">
+            <span className="font-jetbrains text-[10px] tracking-[0.1em] text-amber-200/70 uppercase">
+              notebook ·{" "}
+            </span>
+            {r.current}{" "}
+            <span className="font-jetbrains text-[10px] text-amber-200/60">({r.currentConfidence})</span>
+          </p>
+          <p className="font-jetbrains mt-1.5 text-[11px] leading-relaxed text-amber-200/75">{r.why}</p>
+          {r.detail && (
+            <p className="mt-1 text-[11px] leading-relaxed text-white/40 italic">{r.detail}</p>
+          )}
+        </div>
+      ))}
 
       <ul className="mt-3 space-y-1.5">
         {result.effects.map((e, k) => {
           const t = EFFECT_TONE[e.kind];
           const target = "targetId" in e ? e.targetId : e.factId;
           const s = standings[k];
+          // The false sentence is in the effect's claim as well as in the
+          // summary, so the mark has to be in both places. Struck where it was
+          // corrected — the words stay readable, and nobody copies them out as
+          // a finding.
+          const corrected = revisions.some((r) => r.factId === target);
           return (
             <li key={k} className="flex flex-wrap items-start gap-2 text-[12px]">
               <span className={`font-jetbrains shrink-0 rounded border px-1.5 py-0.5 text-[10px] tracking-[0.1em] ${t.cls}`}>
@@ -61,8 +121,19 @@ export default function FollowUpResult({
               </span>
               <span className="font-jetbrains shrink-0 text-[10px] text-white/35">{target}</span>
               <span className="flex-1 text-white/60">
-                {"claim" in e ? e.claim : ""}
-                {"note" in e && e.note ? <span className="block text-white/45 italic">{e.note}</span> : null}
+                <span className={corrected ? "text-white/40 line-through decoration-amber-300/40" : ""}>
+                  {"claim" in e ? e.claim : ""}
+                </span>
+                {corrected && (
+                  <span className="font-jetbrains mt-0.5 block text-[10px] tracking-[0.1em] text-amber-200/70 uppercase">
+                    corrected — the notebook&rsquo;s row is above
+                  </span>
+                )}
+                {"note" in e && e.note ? (
+                  <span className={`block italic ${corrected ? "text-white/30 line-through decoration-amber-300/30" : "text-white/45"}`}>
+                    {e.note}
+                  </span>
+                ) : null}
                 {/* Where this effect stands against the notebook on screen —
                     derived, so it cannot drift out of date the way a written
                     caption did. */}
