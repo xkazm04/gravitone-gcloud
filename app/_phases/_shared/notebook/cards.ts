@@ -101,11 +101,15 @@ export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
  *  DEFAULT_DIMENSION — the price column — where they were both invisible to the
  *  reviewer who needed them and load-bearing enough to keep that column
  *  permanently non-empty, so its `emptyMeans` alarm could never fire. They now
- *  land in the `untagged` bucket, which says what it is.
+ *  carry the `untagged` dimension, which says what it is.
  *
- *  Exported so the mis-filing is checkable rather than invisible; a follow-up
- *  that writes facts without tagging them is exactly how this happens. Feed it
- *  to `columnsFor({ hasUntagged })` so the bucket appears only when it has to. */
+ *  WHERE THE MIS-FILING BECOMES VISIBLE: here, through `notebookIssues()` below
+ *  — the dev console on every page load and `npx tsx pipeline/check-notebook.mts`
+ *  in a terminal. It is NOT yet visible on a board: neither
+ *  research/ResearchTriageBoard.tsx nor script/_matrix/MatrixCoverage.tsx calls
+ *  `columnsFor()`, so both still map the incumbent seven and an untagged card
+ *  renders in no column at all. Stated rather than implied — see the note on
+ *  `columnsFor` in dimensions.ts. */
 export function untaggedIds(nb: Notebook = NOTEBOOK): string[] {
   const ids = [
     ...nb.facts.map((f) => f.id),
@@ -113,4 +117,113 @@ export function untaggedIds(nb: Notebook = NOTEBOOK): string[] {
     ...nb.reversals.map((r) => r.id),
   ];
   return ids.filter((id) => !CARD_DIMENSION[id]);
+}
+
+/* ──────────────── the graph is checked, and was assumed ──────────────────── */
+
+/** The notebook is a graph held together by string ids, and nothing checked
+ *  that the graph was real. Two failures, both silent:
+ *
+ *    · `woundsOf()` (research/scope.ts) wounds only when a dependency id is
+ *      EXPLICITLY DESCOPED. A typo'd or deleted id is never in the `gone` set,
+ *      so it never wounds anything — a stale reference and a healthy one are
+ *      indistinguishable, and the safety graph answers with confidence.
+ *    · `FACT_BY_ID` / `UNKNOWN_BY_ID` are `Object.fromEntries`, so a reused id
+ *      overwrites the earlier row. The loser does not error; it vanishes. */
+export type GraphIssueKind = "duplicate-id" | "dangling-ref" | "untagged" | "stale-tag";
+
+/** Both ends of the broken edge, always. `from` holds the reference, `ref` is
+ *  what it points at — an unresolvable id, or the one spent twice. */
+export interface GraphIssue {
+  kind: GraphIssueKind;
+  from: string;
+  ref: string;
+  detail: string;
+}
+
+export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
+  const issues: GraphIssue[] = [];
+  const add = (kind: GraphIssueKind, from: string, ref: string, detail: string) =>
+    issues.push({ kind, from, ref, detail });
+
+  // ONE namespace, deliberately. Ids are quoted across sections with no type
+  // tag — `restsOn: ["f-mnav", "m-treasury-flywheel"]` — so two sections may
+  // not spend the same string, whatever their prefixes suggest.
+  const owner = new Map<string, string>();
+  const claim = (id: string, where: string) => {
+    const prior = owner.get(id);
+    if (prior)
+      add("duplicate-id", where, id, `also declared by ${prior}. The by-id maps are built with Object.fromEntries: the later row wins and the earlier one disappears without an error.`);
+    else owner.set(id, where);
+  };
+  nb.facts.forEach((f) => claim(f.id, "facts[]"));
+  nb.mechanisms.forEach((m) => claim(m.id, "mechanisms[]"));
+  nb.reversals.forEach((r) => claim(r.id, "reversals[]"));
+  nb.unknowns.forEach((u) => claim(u.id, "unknowns[]"));
+  (nb.obligations ?? []).forEach((o) => claim(o.id, "obligations[]"));
+  CONCLUSIONS.forEach((c) => claim(c.id, "conclusions[]"));
+  claim("steel-man", "steelMan");
+
+  const factIds = new Set(nb.facts.map((f) => f.id));
+  const cards = buildCards(nb);
+  const cardIds = new Set(cards.map((c) => c.id));
+
+  const edge = (
+    from: string,
+    field: string,
+    refs: readonly (string | null | undefined)[] | undefined,
+    universe: Set<string>,
+    what: string,
+  ) => {
+    for (const r of refs ?? []) {
+      if (r == null) continue;
+      if (!universe.has(r))
+        add("dangling-ref", `${from}.${field}`, r, `names no ${what} in this notebook. An id that resolves to nothing can never be descoped, so it can never wound what rests on it.`);
+    }
+  };
+
+  // The edge woundsOf() actually reads.
+  for (const c of cards) edge(c.id, "dependsOn", c.dependsOn, cardIds, "card");
+  // And the edges that never become card edges, so nothing else reaches them.
+  for (const f of nb.facts) {
+    edge(f.id, "contests", f.contests, factIds, "fact");
+    edge(f.id, "qualifies", f.qualifies, factIds, "fact");
+    edge(f.id, "derivedFrom", f.derivedFrom, factIds, "fact");
+  }
+  for (const m of nb.mechanisms) {
+    edge(m.id, "evidence", m.evidence, factIds, "fact");
+    (m.steps ?? []).forEach((s, i) => edge(m.id, `steps[${i}].evidence`, s.evidence, factIds, "fact"));
+  }
+  edge("steelMan", "restsOnAbsence", [nb.steelMan.restsOnAbsence], factIds, "fact");
+  for (const u of nb.unknowns) edge(u.id, "about", u.about, factIds, "fact");
+  for (const o of nb.obligations ?? []) edge(o.id, "about", o.about, factIds, "fact");
+  for (const c of CONCLUSIONS) edge(c.id, "licensedBy", [c.licensedBy], factIds, "fact");
+  nb.scaleConversions.forEach((s, i) => edge(`scaleConversions[${i}]`, "for", [s.for], factIds, "fact"));
+  nb.analogyCandidates.forEach((a, i) => edge(`analogyCandidates[${i}]`, "for", [a.for], cardIds, "card"));
+  edge("currency", "expiresFirst", nb.currency.expiresFirst, cardIds, "card");
+  edge("currency", "durable", nb.currency.durable, cardIds, "card");
+
+  for (const id of Object.keys(CARD_DIMENSION))
+    if (!cardIds.has(id))
+      add("stale-tag", "CARD_DIMENSION", id, `tags an id this notebook does not have. If the card was renamed, the tag is dead AND the card is now untagged.`);
+  for (const id of untaggedIds(nb))
+    add("untagged", "CARD_DIMENSION", id, `has no dimension. It carries "${UNTAGGED_DIMENSION_ID}" and renders in no column on either board — invisible to the reviewer who needs it. Tag it in dimensions.ts::CARD_DIMENSION.`);
+
+  return issues;
+}
+
+/** THE CHECK RUNS WHERE A DEVELOPER LOOKS. In the browser, in dev, once per
+ *  module instantiation: a broken edge announces itself the moment the notebook
+ *  is imported, rather than waiting for somebody to remember a script. Not in
+ *  production, and not in Node — there `pipeline/check-notebook.mts` owns the
+ *  report and this would only prefix it with noise. This repo has no test suite
+ *  and declined to add one (pipeline/integration-imaging.mts:8), so a module
+ *  assertion and a script is the whole apparatus, on purpose. */
+if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
+  const found = notebookIssues();
+  if (found.length)
+    console.error(
+      `NOTEBOOK GRAPH — ${found.length} broken edge(s). Run: npx tsx pipeline/check-notebook.mts\n` +
+        found.map((i) => `  · [${i.kind}] ${i.from} → ${i.ref} — ${i.detail}`).join("\n"),
+    );
 }

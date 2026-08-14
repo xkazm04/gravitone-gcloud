@@ -118,9 +118,14 @@ export const DIMENSIONS: Dimension[] = MARKET_DIMENSIONS;
  *  where a reviewer looking for the demand story would never find them.
  *
  *  An untagged card now says it is untagged. This bucket is a SYSTEM column, not
- *  a domain: it carries no purpose, it holds nothing on merit, and it is
- *  rendered only when it is non-empty (see `columnsFor`). Emptying it is the
- *  goal; hiding it is what we did before.
+ *  a domain: it carries no purpose and holds nothing on merit. Emptying it is
+ *  the goal; hiding it is what we did before.
+ *
+ *  IT IS NOT RENDERED BY ANY BOARD YET — see `columnsFor` below, which is what
+ *  would render it and which nothing calls. Until a board adopts it, an
+ *  untagged card appears in no column at all, and the thing that makes the
+ *  mis-filing visible is `notebookIssues()` in cards.ts: the dev console on
+ *  every page load, and `npx tsx pipeline/check-notebook.mts`.
  *
  *  Anti-shape: pointing the fallback at any column that also means something. */
 export const UNTAGGED_DIMENSION: Dimension = {
@@ -137,7 +142,15 @@ export const UNTAGGED_DIMENSION: Dimension = {
  *  them (RESEARCH-PROMPT Phase 1 → `domains[]`); absent, the incumbent market
  *  set stands in, which is what every existing run gets. `untagged` appears only
  *  when something is actually untagged — pass `untaggedIds(nb).length > 0` from
- *  cards.ts, which already computes it. */
+ *  cards.ts, which already computes it.
+ *
+ *  ZERO CALLERS TODAY, and this comment says so rather than reading as a
+ *  working safety net. Both boards still map `DIMENSIONS` directly —
+ *  `research/ResearchTriageBoard.tsx:23,48` and
+ *  `script/_matrix/MatrixCoverage.tsx:73` — so a derived-domain run renders
+ *  seven columns that are not its own, and an untagged card renders nowhere.
+ *  Adopting this is a one-line change in each board and belongs to those
+ *  contexts, not to this file. */
 export function columnsFor(opts: { derived?: Dimension[]; hasUntagged?: boolean } = {}): Dimension[] {
   const base = opts.derived?.length ? opts.derived : DIMENSIONS;
   return opts.hasUntagged ? [...base, UNTAGGED_DIMENSION] : base;
