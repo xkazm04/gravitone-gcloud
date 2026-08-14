@@ -140,13 +140,19 @@ Carried over intact so the extraction changed no pixels:
 - `components/ui/GravitoneTokens.tsx` — emits those properties as a
   server-rendered `<style>` in `app/layout.tsx`, so they resolve on first paint.
 - `app/globals.css` — consumes the vars: aurora, grain, glass panel, focus ring,
-  themed scrollbars. It is *meant* to hold no colour literals of its own, and it
-  currently holds six, on five lines: the three `rgba(103,232,249,…)` scrollbar
-  values (`:140,146,149` — that triple is `--gt-glow-cyan` written out by hand
-  instead of referenced) and `.chip-tech`'s three emerald values (`:152-153`).
-  They are the exception the rule is written against, not evidence that there is
-  no rule: hold new CSS to the rule, and fold those five lines back into tokens
-  when the file is next opened for that purpose.
+  themed scrollbars. It holds no colour literal that draws anything. The three
+  hand-written `rgba(103,232,249,…)` scrollbar values became
+  `--gt-scroll-thumb{,-hover}`, and `.chip-tech` went with the rest of the dead
+  code. What remains are two hex values **inside comments** — `--gt-ink`'s own
+  value where the focus ring's contrast is explained, and the ~13.7:1
+  measurement — which the rule exempts by name: prose recording a measurement is
+  not a colour that draws chrome.
+
+  The rule itself is scoped rather than absolute, because it had to be. Three
+  standing exemptions: Tailwind utility classes (names, not literals); **style
+  preset data** in `app/library/presets.ts` and `LibraryAtelier.tsx`, whose hexes
+  describe what a *generated image* should look like and are prompt input rather
+  than furniture; and prose like the above.
 - `components/ui/Primitives.tsx` — Eyebrow, Panel, Button, Waveform, Wordmark.
 - `components/ui/StudioFrame.tsx` — the app shell (aurora + nav). Descended from
   the source repo's `AppFrame`, and it carries **no auth gate of its own**. The
