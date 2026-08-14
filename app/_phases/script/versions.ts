@@ -69,9 +69,58 @@ export interface Version {
   impact: Record<string, Record<string, Usage>>;
   /** Per render: attributed seconds vs the runtime available. */
   budget: Record<string, { attributed: number; duration: number; overrunS: number }>;
+  /** Notes the recalibration REFUSED, and why. A rebalance that can quietly do
+   *  what the triage board forbids is not a rebalance, it is a bypass. */
+  refusals: Refusal[];
+  /** Two notes on one track that cannot both hold. */
+  conflicts: Conflict[];
+  /** Cards still spoken whose supporting evidence this version removed. */
+  unsupported: Unsupported[];
+  /** WHICH ENGINE PRODUCED THIS.
+   *
+   *  The `simulated` label on the pad is derived from this field rather than
+   *  hand-removed: a version built by the model says so, a version built by the
+   *  fallback transform says so, and neither can be mistaken for the other by
+   *  editing a string. A label you delete when you believe the wiring is done is
+   *  a label that lies the first time the wiring falls back. */
+  engine: "model" | "simulated";
+  /** Set on `engine: "model"` — the beats the edit plan produced, per render.
+   *  Absent on a simulated version, which re-weights without rewriting text. */
+  beats?: Record<string, import("./types").Beat[]>;
+  /** The model's own account of what it did and would not do. */
+  summary?: string;
+  modelRefusals?: { note: string; why: string }[];
 }
 
-function budgetOf(impact: Record<string, Record<string, Usage>>) {
+/** A note that was not applied. */
+export interface Refusal {
+  cardId: string;
+  kind: NoteKind;
+  why: string;
+}
+
+/** Two instructions on one track that cannot both hold. */
+export interface Conflict {
+  cardId: string;
+  kinds: NoteKind[];
+  applied: NoteKind;
+  why: string;
+}
+
+/** A turn left arguing from evidence this version cut.
+ *
+ *  Severity mirrors the scope layer's wound graph (`research/scope.ts`) rather
+ *  than inventing a second vocabulary: `broken` = nothing it rests on survived,
+ *  `weakened` = some did. The first UAT fix only reported `broken`, so cutting
+ *  all three facts under a reversal that also cites a mechanism reported
+ *  nothing — the mechanism counted as a survivor and the turn looked fine. */
+export interface Unsupported {
+  cardId: string;
+  lost: string[];
+  severity: "broken" | "weakened";
+}
+
+export function budgetOf(impact: Record<string, Record<string, Usage>>) {
   const out: Version["budget"] = {};
   for (const r of RENDERS) {
     const attributed = Object.values(impact[r.id] ?? {}).reduce((n, u) => n + u.seconds, 0);
@@ -92,67 +141,11 @@ export const BASELINE: Version = {
   createdAt: 0,
   impact: IMPACT,
   budget: budgetOf(IMPACT),
+  refusals: [],
+  conflicts: [],
+  unsupported: [],
+  engine: "simulated",
 };
-
-/** The mocked transform. Deterministic, and deliberately unable to invent prose:
- *  a `custom` note changes no seconds at all, because nothing here can read it.
- *  Saying so is better than moving a bar by a made-up amount. */
-export function recalibrate(base: Version, notes: Note[], id: string, at: number): Version {
-  const byCard = new Map<string, NoteKind[]>();
-  for (const n of notes) byCard.set(n.cardId, [...(byCard.get(n.cardId) ?? []), n.kind]);
-
-  const impact: Record<string, Record<string, Usage>> = {};
-  for (const r of RENDERS) {
-    const src = base.impact[r.id] ?? {};
-    const next: Record<string, Usage> = {};
-    for (const [cardId, u] of Object.entries(src)) next[cardId] = { ...u };
-
-    for (const [cardId, kinds] of byCard) {
-      const cur: Usage = next[cardId] ?? { kind: "unused", seconds: 0, beats: [] };
-
-      if (kinds.includes("descope")) {
-        next[cardId] = {
-          kind: "cut",
-          seconds: 0,
-          beats: [],
-          why: "descoped by your note — removed from every render in this recalibration",
-        };
-        continue;
-      }
-      if (kinds.includes("more-focus")) {
-        next[cardId] =
-          cur.kind === "spoken"
-            ? { ...cur, seconds: Math.round(cur.seconds * 1.6) }
-            : // Nothing used it, and you asked for focus — so it has to be brought
-              // IN, at a slot sized to the render rather than a flat number.
-              { kind: "spoken", seconds: Math.max(3, Math.round(RENDER_BY_ID[r.id].durationS * 0.06)), beats: ["new"] };
-        continue;
-      }
-      if (kinds.includes("less-focus") && cur.kind === "spoken") {
-        next[cardId] = { ...cur, seconds: Math.max(2, Math.round(cur.seconds * 0.55)) };
-        continue;
-      }
-      // move-earlier / move-later / custom change no weight here.
-    }
-    impact[r.id] = next;
-  }
-
-  return {
-    id,
-    label: `Recalibration ${id.replace(/^v/, "")}`,
-    basedOn: base.id,
-    notes,
-    createdAt: at,
-    impact,
-    budget: budgetOf(impact),
-  };
-}
-
-/** Notes whose intent this prototype cannot act on, so the UI can say so rather
- *  than imply the bars moved because of them. */
-export function inertNotes(notes: Note[]) {
-  return notes.filter((n) => n.kind === "custom" || n.kind === "move-earlier" || n.kind === "move-later");
-}
 
 export function usageIn(v: Version, renderId: string, cardId: string): Usage {
   return v.impact[renderId]?.[cardId] ?? { kind: "unused", seconds: 0, beats: [] };

@@ -60,7 +60,7 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
   // The same scope record the triage board writes, and the project's own note
   // and version history.
   const scope = useScope(projectId);
-  const versions = useVersions(projectId);
+  const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope });
 
   useEffect(() => {
     let alive = true;

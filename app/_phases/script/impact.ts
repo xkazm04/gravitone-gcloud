@@ -20,7 +20,7 @@ import { RENDERS, RENDER_BY_ID } from "./renders";
 /** beat mark → the card ids that beat states. */
 type Attribution = Record<string, string[]>;
 
-const ATTRIBUTION: Record<string, Attribution> = {
+export const ATTRIBUTION: Record<string, Attribution> = {
   "reversal-chain": {
     "0:00": ["f-ath"],
     "0:12": ["f-sbr", "f-genius"],
@@ -144,3 +144,7 @@ export function coverage(renderId: string, cardIds: string[]) {
     unattributedS: Math.max(0, (RENDER_BY_ID[renderId]?.durationS ?? 0) - seconds),
   };
 }
+
+/** The baseline beat→cards map for one render. The model path re-derives every
+ *  weight from the beats an edit plan produces, and starts from this. */
+export const ATTRIBUTION_OF = (renderId: string): Attribution => ATTRIBUTION[renderId] ?? {};

@@ -11,11 +11,16 @@
 //   3. A candidate is not a baseline until you accept it. Accepting is the only
 //      thing that changes what Candidates and Tracks show.
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useJobs } from "@/lib/jobs";
 import { loadStep, saveStep } from "../_shared/stepStore";
-import { BASELINE, recalibrate, type Note, type NoteKind, type Version } from "./versions";
+import { recalibrate, recalibrateFromPlan } from "./recalibrate";
+import { NOTEBOOK } from "../_shared/notebook/notebook";
+import { RENDERS } from "./renders";
+import { BASELINE, type Note, type NoteKind, type Version } from "./versions";
+import type { Card } from "../_shared/notebook/cards";
+import type { Scope } from "../research/scope";
 
 const PHASE = "script-versions";
 
@@ -26,8 +31,12 @@ interface Stored {
   savedAt?: number;
 }
 
-export function useVersions(projectId: string) {
+export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scope }) {
   const jobs = useJobs();
+  // Held in a ref so the job-landing effect reads the CURRENT cards+scope
+  // without re-running (and re-staging a candidate) every time scope changes.
+  const ctxRef = useRef(ctx);
+  ctxRef.current = ctx;
   const [notes, setNotes] = useState<Note[]>([]);
   const [accepted, setAccepted] = useState<Version[]>([]);
   const [candidate, setCandidate] = useState<Version | null>(null);
@@ -58,13 +67,54 @@ export function useVersions(projectId: string) {
   const running = jobs.busy(projectId, "recalibrate");
   const myJob = jobId ? jobs.jobs.find((j) => j.id === jobId) : undefined;
 
-  // The job lands → stage the candidate. Staged, never auto-accepted: the whole
-  // point of the compare step is that the creator decides.
+  const [engineNote, setEngineNote] = useState<string | null>(null);
+
+  // The job lands → ask the model, then stage the candidate. Staged, never
+  // auto-accepted: the whole point of the compare step is that the creator
+  // decides. If the model cannot be reached the simulated transform runs
+  // instead — and the version it produces is LABELLED simulated, so a fallback
+  // can never be mistaken for a real result.
   useEffect(() => {
-    if (!myJob || myJob.status === "running") return;
-    if (myJob.status === "done")
-      setCandidate(recalibrate(baseline, notes, `v${accepted.length + 2}`, myJob.endedAt ?? myJob.startedAt));
-    setJobId(null);
+    if (!myJob || myJob.status !== "done") {
+      if (myJob && myJob.status !== "running") setJobId(null);
+      return;
+    }
+    const id = `v${accepted.length + 2}`;
+    const at = myJob.endedAt ?? myJob.startedAt;
+    const ctx = ctxRef.current;
+    let alive = true;
+
+    void (async () => {
+      try {
+        const res = await fetch("/api/recalibrate", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            notebook: NOTEBOOK,
+            renders: RENDERS,
+            scope: ctx.scope,
+            notes,
+          }),
+        });
+        if (!alive) return;
+        if (!res.ok) {
+          const { detail } = await res.json().catch(() => ({ detail: "" }));
+          setEngineNote(detail || "The model could not be reached.");
+          setCandidate(recalibrate(baseline, notes, id, at, ctx));
+          return;
+        }
+        const { plan } = await res.json();
+        setEngineNote(null);
+        setCandidate(recalibrateFromPlan(baseline, notes, plan, id, at, ctx));
+      } catch {
+        if (!alive) return;
+        setEngineNote("The recalibration request failed. Nothing was changed.");
+        setCandidate(recalibrate(baseline, notes, id, at, ctx));
+      } finally {
+        if (alive) setJobId(null);
+      }
+    })();
+    return () => { alive = false; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myJob?.status]);
 
@@ -121,6 +171,8 @@ export function useVersions(projectId: string) {
     run,
     accept,
     discard,
+    /** Why the simulated engine ran, when it did. Null on a real model result. */
+    engineNote,
   };
 }
 

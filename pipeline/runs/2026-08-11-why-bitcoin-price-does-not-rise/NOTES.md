@@ -482,3 +482,276 @@ document nobody else could see. It takes `projectId`, persists under its own
 persistence 7). `drive-signed-in` is back to 42/42 — the concurrent session's
 hover-unmute work landed. `CardTile.tsx` (230 LOC) is still theirs and still
 untouched.
+
+---
+
+## 2026-08-12 (late) · the notepad consolidated
+
+Pad won. Dock and Margin deleted, the placement switcher gone, and the plumbing
+that existed only to support three placements (`Placement`, `MarginSlot`, the
+`placement` field on the notes context) removed with them. **No switcher
+survives the session.**
+
+- **Width** 19rem → **22.8rem** (+20%), driven and measured at 365px.
+- **Presets** moved from a chip row into a themed listbox
+  (`_notes/PresetSelect.tsx`), **sorted by name ascending**. Deliberately not a
+  native `<select>`: its option list is drawn by the OS and would land as a grey
+  system menu on top of an amber pad. Same keyboard contract — Escape closes,
+  arrows move, Enter picks.
+- **Copy stripped** to functional parts. Gone: "Click any track id…", "Nothing
+  regenerates until you recalibrate", "Compare it in Coverage or the Spend
+  bar…", the free-text explainer paragraph, the empty-state tutorial.
+
+**Two disclosures kept, on purpose**, and they are the ones to challenge if the
+brief was stricter than I read it:
+1. `simulated · re-weights only` under the Recalibrate button. The button
+   produces mocked output; a control that generates fake results without saying
+   so is the one line this pad cannot afford to lose.
+2. `· no weight change` on each free-text bullet. It replaced a whole paragraph
+   and now rides on the row it applies to — the information survived, the
+   tutorial did not.
+
+### Gates
+
+`tsc` clean · `next build` clean · **150/150 driven**
+(recalibration 38 · signed-in 42 · matrix 23 · script 22 · research 18 ·
+persistence 7).
+
+### Files over 200 LOC, all from the concurrent session, none touched by me
+
+`_shared/notebook/conclusions.ts` 484 · `script/gate.ts` 455 ·
+`_shared/notebook/types.ts` 398 · `research/_parts/CardTile.tsx` 230.
+
+---
+
+## 2026-08-12 · /uat on the rebalance loop — four guards that did not exist
+
+Ran the rebalance journey against four characters (essayist, producer, standards
+editor, evaluating owner) at L1 over the code and L2 in a real browser. Overlay
+scaffolded at `uat/`; run at `uat/runs/2026-08-12-rebalance/`.
+
+**The headline: before this run, the rebalance was the one surface that could
+quietly undo decisions every other surface protects.**
+
+| Finding | What it did |
+|---|---|
+| F1 **blocker** | A note descoped the **steel-man** — material Step 1's control refuses to descope and states why. The rebalance walked around the scope layer entirely. |
+| F2 **blocker** | A note gave screen time to a card the creator had taken **out of scope**. Two systems, opposite answers, no complaint. |
+| F3 major | "More focus" + "descope" on one track resolved silently. The creator was never told which note lost. |
+| F4 major | Cutting every fact a turn argues from left the turn at full weight, arguing from nothing. `woundsOf` already modelled this; the rebalance was not asking. |
+| F5 major | After **accepting**, weights were the new version's and every check beside them — craft checks, constraint ledger, gate — was computed against the original script, shown with no attribution. |
+
+All five fixed. F1–F4 became four guards in the new `script/recalibrate.ts`
+(split out of `versions.ts`), each reported in the pad rather than applied
+silently — a guard that fires without saying so is the bug it was meant to fix.
+F5 became a version-attribution line on the baseline-only tabs.
+
+### Two mis-specified assertions of my own, corrected mid-run
+
+- `unsupportedIn` first reported only `broken` (all dependencies gone). `r2`
+  cites three facts **and** a mechanism, so cutting all three facts reported
+  nothing — the mechanism counted as a survivor. Now mirrors the scope layer's
+  `broken | weakened`.
+- The scope-conflict scenario asserted the card would stop being `spoken`.
+  Wrong: `f-yields` is spoken in the **baseline**, and the matrix reports what
+  the render did. The guard's job is to refuse the *increase*, which it did.
+- A third assertion was a **false pass**: it looked for beat text on the
+  Candidates column, where beats never render (they are in a modal). Corrected,
+  it failed — and became accepted gap + contract.
+
+### The contract for a real model (uat/accepted-gaps.md)
+
+1. Re-weighting without new beats leaves Candidates lying.
+2. New beats must be re-run through `gate.ts` + the constraint ledger before a
+   candidate can be accepted.
+3. Guards 1–4 apply to a model's output exactly as to the mock — a plan that
+   descopes required material is **refused**, not accepted-and-flagged.
+4. **`simulated · re-weights only` comes off when 1–3 hold, and not before.**
+
+### Gates
+
+`tsc` clean · `next build` clean · **UAT 10/10** · **regression 150/150**
+(recalibration 38 · signed-in 42 · matrix 23 · script 22 · research 18 ·
+persistence 7).
+
+---
+
+## 2026-08-12 · the recalibration engine, wired
+
+Same engine and model as research — `claude-opus-5`, the model the notebook's own
+`researcher` field names. Prompt lives at `pipeline/RECALIBRATE-PROMPT.md`,
+beside `RESEARCH-PROMPT.md`, because the two are the same kind of artifact.
+
+### Edit, don't regenerate — enforced by the output shape
+
+The model returns an **edit plan**, not scripts: `retime | rewrite | cut |
+insert`, each naming a beat and carrying its `why`. Structured outputs
+(`output_config.format`) guarantee the shape, so nothing downstream parses free
+text or repairs malformed JSON.
+
+The prompt states the reason in the terms that matter: a regenerated script
+voids the review the creator already did, and voids every check computed against
+the beats it discarded. **An edit list longer than the notes is a regeneration
+wearing an edit list's clothes.**
+
+Two design choices worth keeping:
+- **Beats declare their cards.** `rewrite`/`insert` must list the notebook ids
+  the beat rests on, and every weight in the matrix is recomputed from that. A
+  beat whose cards are wrong produces a matrix that lies — so the declaration is
+  required, not optional.
+- **Beat marks are derived, never trusted.** Retiming beat 3 moves beats 4..n;
+  asking a model to keep a timeline arithmetically consistent is asking it to do
+  what a `reduce` does perfectly. The app re-lays the timeline.
+
+This closes the UAT gap: a model-produced version now carries new beats, so
+Candidates and the weights no longer disagree.
+
+### The guards apply to the model exactly as to the mock
+
+`recalibrateFromPlan()` runs the same four guards before applying anything: an
+edit speaking an out-of-scope card is dropped, required material that the plan
+removed is refused, and stranded turns are reported. **The model does not get a
+weaker rule than the deterministic transform it replaced.**
+
+### The `simulated` label is now derived, not deleted
+
+`Version.engine` is `"model" | "simulated"`, and the pad reads it. A version
+built by the model says so; a fallback says so and states *why* (no key, refusal,
+rate limit, failure). The label disappears on its own and comes back on its own.
+
+**A label you delete when you believe the wiring is done is a label that lies the
+first time the wiring falls back.**
+
+### Honest status
+
+**The real call has never been executed.** There is no `ANTHROPIC_API_KEY`, no
+`ANTHROPIC_AUTH_TOKEN` and no `ant` CLI on this machine, so every run so far took
+the 503 → simulated-fallback path. What is verified: the route's contract
+(400 on bad input, 503 with no credentials, ordering fixed so a malformed request
+is told it is malformed), the fallback, the labelling, and that `tsc`/`next build`
+are clean. What is **not** verified: that the model returns a schema-valid plan,
+that its edits apply sensibly, or that the guards catch a real violation.
+
+Set `ANTHROPIC_API_KEY` and re-run `pipeline/drive-recalibration.mjs` to close that.
+
+### Gates
+
+`tsc` clean · `next build` clean · **190/190 driven** (recalibration 40 ·
+signed-in 42 · matrix 23 · script 22 · research 18 · persistence 7 · UAT 10).
+
+---
+
+## 2026-08-12 (later) · the engine is a local Claude Code process — and it ran
+
+Replaced the API-key path with the **local Claude Code CLI**, driven headlessly
+(`lib/claudeCli.ts`). It authenticates with the machine's logged-in subscription,
+so there is now **no API key anywhere in this app** — not in env, not in a vault,
+not in a bundle. `@anthropic-ai/sdk` and `lib/anthropic.ts` are gone.
+
+This also makes the app's oldest copy literally true: "research runs as a local
+Claude Code process — minutes, not milliseconds, and it can exit non-zero."
+
+    claude -p --output-format json --model claude-opus-5 --effort high \
+           --allowed-tools "" --max-turns 1      # prompt on stdin
+
+- **`--allowed-tools ""` is load-bearing.** This is pure reasoning over JSON it
+  is handed. An engine that could read the filesystem or search the web could
+  source a figure the notebook does not contain — the one thing the prompt
+  forbids absolutely. Take the tools away rather than asking it not to use them.
+- **Everything goes down stdin.** The notebook plus three beat chains is far past
+  any command-line argument limit, and on Windows that limit fails as a
+  *truncated argument*, not an error — silent corruption of the only input.
+
+### What the CLI costs versus the SDK
+
+1. **No `output_config.format`.** The plan's shape is a request, not a guarantee
+   — so `parseEditPlan()` validates and **rejects rather than repairs**. A plan
+   with the wrong shape means the engine misunderstood the job; quietly patching
+   it produces edits nobody specified, which is the hardest failure to notice
+   because the result still looks like a plan.
+2. **No cross-call prompt caching.** Each run re-reads the notebook. Runs are
+   minutes either way — a cost line, not a latency one.
+
+### It ran. Three findings from the live runs.
+
+**A real recalibration takes ~184 seconds.** Measured, not estimated.
+
+**The real engine is SAFER than the mock it replaced.** Asked to descope
+`f-supply-2pct`, the simulated transform cut it blindly. The engine refused:
+
+> *"f-supply-2pct is one of the two evidence cards that steel-man rests on.
+> Cutting it removes the steel-man from the render, which is required material
+> and may not be dropped … I may not write a line the notebook does not support."*
+
+Rules 3 and 5 of the prompt, unprompted, on the first real run. **Four of my
+tests were asserting the mock's worse behaviour** and had to be corrected.
+
+**Two drive scripts were reading pre-candidate state.** Both waited a fixed 11s,
+which fit the 9s mock and not a 184s engine — so assertions scored the state
+*before* the candidate existed. Both now poll. This is the third time a fixed
+sleep has produced a false pass in this repo.
+
+### Open finding (not fixed)
+
+**Accepting a version discards the engine's refusals.** "not done · <why>" lives
+in the candidate bar, and accept clears it — so the record of what was declined,
+and why, vanishes at the moment it becomes the baseline. A refusal is part of the
+version's history, not a transient notice. UAT S8 is the failing case.
+
+### Gates
+
+`tsc` clean · `next build` clean · **190/191 driven** — recalibration 40/40
+(live), signed-in 42, matrix 23, script 22, research 18, persistence 7,
+UAT 9/10 (the open finding above).
+
+---
+
+## 2026-08-13 · refusals no longer die on accept
+
+The open finding from the previous session, fixed — and the fix was wrong once
+before it was right, which is the part worth recording.
+
+### The obvious half
+
+Every declined item (`modelRefusals`, guard `refusals`, `conflicts`,
+`unsupported`) was rendered inline in `RecalibrateControl`'s `if (api.candidate)`
+branch. Accepting clears the candidate, so the whole record vanished at the
+moment it became the version of record. Extracted to `_notes/DeclinedList.tsx`
+and rendered for the accepted baseline too.
+
+Kept the four kinds distinct rather than merging them into one "problems" list:
+whether a request was **refused upstream by the engine**, **blocked by a guard**,
+**overruled by a conflicting note**, or **merely survived on less evidence** is
+exactly what a person deciding what to do next needs to tell apart.
+
+### The half I got wrong
+
+That fix still showed nothing, and the diagnostic mattered: the engine had put
+its entire decision in **`summary`** and returned an **empty `refusals[]`**:
+
+> *"The descoped supply card appeared in two beats, never as a beat of its own,
+> so both were rewritten rather than cut — the whale-accumulation card carries
+> the same point and is in scope."*
+
+So a record keyed on the itemised lists lost the reasoning anyway. The UI now
+treats `summary` and the lists as one record and shows whichever exists.
+Recorded in `uat/accepted-gaps.md`: **never key "did it refuse?" on
+`refusals.length` alone.**
+
+Two things this run also showed about the engine, unprompted:
+- It **swapped evidence to an in-scope card** rather than cutting a required
+  beat — a repair neither the mock nor the prompt spells out.
+- Its choices **vary run to run** on the same note. One UAT scenario passed on a
+  rerun with no code change between them. Worth knowing before anyone treats a
+  single green run as proof.
+
+### Gates
+
+`tsc` clean · `next build` clean · **164/164 driven, all against the live local
+engine** — recalibration 40, signed-in 42, matrix 23, script 22, research 18,
+persistence 7, UAT 12/12 (was 9/10; the S8 gap is closed and two assertions
+were added).
+
+Files over 200 LOC in `_phases`, for a later split pass: `editPlan.ts` 268,
+`recalibrate.ts` 259 (mine); `conclusions.ts` 484, `gate.ts` 455, `types.ts` 398,
+`CardTile.tsx` 230 (the concurrent session's).

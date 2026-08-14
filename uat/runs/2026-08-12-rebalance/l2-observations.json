@@ -1,0 +1,74 @@
+[
+  {
+    "scenario": "S4",
+    "label": "Step 1's scope control refuses to descope the steel-man",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "scenario": "S4",
+    "label": "a note cannot do what the scope control forbids",
+    "ok": true,
+    "detail": "steel-man is now \"spoken\" in the reversal chain"
+  },
+  {
+    "scenario": "S2",
+    "label": "both contradictory notes are kept",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "scenario": "S2",
+    "label": "the result explains which note won",
+    "ok": true,
+    "detail": "f-mnav resolved to \"spoken\""
+  },
+  {
+    "scenario": "S5",
+    "label": "a stranded turn is reported, or the cut that would strand it is refused",
+    "ok": true,
+    "detail": "r2's three supporting facts"
+  },
+  {
+    "scenario": "SC",
+    "label": "a card out of scope gains no screen time",
+    "ok": true,
+    "detail": "30s -> 30s"
+  },
+  {
+    "scenario": "SC",
+    "label": "and the refusal is stated",
+    "ok": true,
+    "detail": ""
+  },
+  {
+    "scenario": "S8",
+    "label": "the candidate stated what it did with the note",
+    "ok": true,
+    "detail": "RECALIBRATION 2 · 1 NOTE The descoped 380,000-BTC accumulation figure appeared in two places, and both were load-bearing for a required structure — the steel-man in the reversal chain and the premise-challenging first ca"
+  },
+  {
+    "scenario": "S8",
+    "label": "the accepted baseline reflects the decision that was made",
+    "ok": true,
+    "detail": "refused, and the refusal survived accept"
+  },
+  {
+    "scenario": "S8",
+    "label": "and it still says why, after accept",
+    "ok": true,
+    "detail": "RECALIBRATION 2"
+  },
+  {
+    "scenario": "S8",
+    "label": "known: beats are not rewritten, and the tab says so",
+    "ok": true,
+    "detail": "beat text unchanged — attribution note carries it"
+  },
+  {
+    "scenario": "S8",
+    "label": "the craft checks say which version they were computed against",
+    "ok": true,
+    "detail": "checks and constraint ledger render with no version attribution"
+  }
+]
