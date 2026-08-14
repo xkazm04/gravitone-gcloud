@@ -9,6 +9,14 @@
 // weight — a 6px drop over 160ms, because a menu falls out of the control that
 // opened it. It used to be a `gt-menu-in` keyframe declared here and injected
 // by a <style> tag inside the open panel.
+//
+// NOT role="menu". It claimed the role — and role="menuitem" on its one item —
+// which promises arrow-key navigation and Escape-to-close-and-restore, and it
+// had neither; it had no Escape handler at all, while the bell beside it in the
+// same nav did. Rather than build an ARIA menu widget for a panel with one
+// button in it, the roles are gone and the contract is the plain one the markup
+// already implements: Tab walks it, Enter fires, Escape closes and returns
+// focus to the trigger, aria-expanded says which state it is in.
 
 import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
@@ -18,6 +26,8 @@ export default function UserMenu() {
   const { user, profile, loading, ready, signIn, signOut } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const firstItemRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -26,6 +36,23 @@ export default function UserMenu() {
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
   }, []);
+
+  // ESCAPE, which this panel did not have at all. NotificationBell and
+  // ContextMenu — the same dropdown shape, ten lines away in the same nav —
+  // both closed on Escape; this one left a keyboard user with an open panel and
+  // no way to dismiss it. Focus goes back to the trigger, so the next Tab
+  // continues from where the user was rather than from the top of the document.
+  useEffect(() => {
+    if (!open) return;
+    firstItemRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
 
   if (!ready) {
     return <span className="font-jetbrains text-[11px] text-white/40">auth off</span>;
@@ -46,8 +73,9 @@ export default function UserMenu() {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
-        aria-haspopup="menu"
+        aria-haspopup="true"
         aria-expanded={open}
         className="flex cursor-pointer items-center gap-2 rounded-full border border-white/12 py-1 pr-3 pl-1 transition hover:border-white/25"
       >
@@ -71,7 +99,6 @@ export default function UserMenu() {
 
       {open && (
         <div
-          role="menu"
           style={{ "--gt-rise-y": "-6px", "--gt-rise-dur": "160ms" } as React.CSSProperties}
           className="gt-rise glass-panel absolute top-full right-0 z-50 mt-2 w-60 rounded-xl p-2"
         >
@@ -81,7 +108,7 @@ export default function UserMenu() {
           </div>
           <div className="my-1 h-px bg-white/8" />
           <button
-            role="menuitem"
+            ref={firstItemRef}
             onClick={() => void signOut()}
             className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm text-white/80 transition hover:bg-white/5"
           >

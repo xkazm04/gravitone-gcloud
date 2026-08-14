@@ -256,7 +256,7 @@ export default function Playground({
         value={subject}
         onChange={(e) => setSubject(e.target.value)}
         rows={3}
-        className="font-hanken w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[13px] leading-snug text-white placeholder:text-white/30 focus:border-cyan-400/40 focus:outline-none"
+        className="font-hanken w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[13px] leading-snug text-white placeholder:text-white/30 focus:border-cyan-400/40"
         placeholder="What should this style draw?"
       />
 

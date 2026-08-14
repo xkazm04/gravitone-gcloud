@@ -173,7 +173,7 @@ function Tile({
           onDelete();
         }
       }}
-      className="group overflow-hidden rounded-xl border border-white/8 transition hover:border-cyan-400/35 focus:border-cyan-400/50 focus:outline-none"
+      className="group overflow-hidden rounded-xl border border-white/8 transition hover:border-cyan-400/35 focus:border-cyan-400/50"
     >
       <span className="relative block aspect-video w-full bg-white/[0.03]">
         <Image src={asset.src} alt={asset.name} fill sizes="(min-width:1280px) 22vw, 45vw" className="object-cover" />

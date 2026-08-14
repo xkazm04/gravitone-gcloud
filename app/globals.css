@@ -18,6 +18,15 @@ body { margin: 0; }
    nothing to follow. This is the floor: every focusable element gets the accent
    ring unless it asks for something else.
 
+   AND NOTHING OPTS OUT — true now, rather than aspirational. Ten places carried
+   `focus:outline-none`: three with no replacement indicator at all (the style
+   rename field, the fact-binding <select> in frames, and the right-click menu,
+   which then moved focus onto the very element it had blinded), and seven with
+   only a `focus:` border tint. All ten are gone. `focus:outline-none` no longer
+   appears anywhere in app/ or components/, and if you are about to type it, you
+   are deleting the only thing telling someone where they are. Tint the border
+   as well by all means — do not tint it instead.
+
    Deliberately inside `@layer base`, NOT unlayered like the .aurora/.glass-panel
    rules below. Tailwind utilities live in `@layer utilities`, which outranks
    base — so a component that declares its own `focus-visible:outline-*` keeps
@@ -32,7 +41,8 @@ body { margin: 0; }
    system was ported from):
      components/ui/Primitives.tsx  · Button
      components/ui/Field.tsx       · CONTROL, and Segmented via has-[:focus-visible]
-     components/ui/NotificationBell.tsx
+     components/ui/NotificationBell.tsx · the bell, and its tray (which takes
+       focus on open, so it needs a ring of its own to show it)
      app/_projects/ProjectsMatrix.tsx
      app/_phases/research/_parts/CardTile.tsx
      app/_phases/research/_parts/FollowUpQueue.tsx

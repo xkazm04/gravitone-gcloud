@@ -43,6 +43,8 @@ export default function NotificationBell() {
   const trouble = useStorageTrouble();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
   const running = jobs.filter((j) => j.status === "running");
   // Work that was live when the page reloaded. Not running, not finished, and
@@ -52,10 +54,22 @@ export default function NotificationBell() {
 
   useEffect(() => {
     if (!open) return;
+    // Focus moves into the tray on open and back to the bell on close. The
+    // panel used to claim role="dialog" and do neither — nor aria-modal, nor a
+    // trap — while Modal.tsx, twenty lines of import away, does all four. The
+    // role is gone rather than faked: this is a disclosure, aria-expanded on
+    // the trigger says so, and a tray you can Tab out of is the RIGHT shape for
+    // a notification list. What it owes a keyboard user is a way in, a way out,
+    // and a visible ring at every stop — which it now has.
+    panelRef.current?.focus();
     const onDoc = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
-    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      setOpen(false);
+      triggerRef.current?.focus();
+    };
     document.addEventListener("mousedown", onDoc);
     document.addEventListener("keydown", onKey);
     return () => {
@@ -74,11 +88,13 @@ export default function NotificationBell() {
   return (
     <div ref={ref} className="relative">
       <button
+        ref={triggerRef}
         data-testid="bell"
         onClick={() => setOpen((v) => !v)}
         aria-label={
           badge ? `${badge} unread notification${badge === 1 ? "" : "s"}` : "Notifications"
         }
+        aria-haspopup="true"
         aria-expanded={open}
         className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/60 transition hover:border-white/25 hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
@@ -104,10 +120,12 @@ export default function NotificationBell() {
 
       {open && (
         <div
+          ref={panelRef}
           data-testid="bell-panel"
-          role="dialog"
+          role="group"
           aria-label="Notifications"
-          className="gt-float absolute right-0 z-50 mt-2 w-[22rem] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl"
+          tabIndex={-1}
+          className="gt-float absolute right-0 z-50 mt-2 w-[22rem] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <div className="flex items-center justify-between px-1 pb-2">
             <p className="font-jetbrains text-[10px] tracking-[0.16em] text-white/45 uppercase">

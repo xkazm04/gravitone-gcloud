@@ -124,11 +124,16 @@ export default function Modal({
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
-      {/* Backdrop. Out of the tab order on purpose — the dialog traps focus and
-          Escape is the keyboard way out; a full-screen tab stop is noise. */}
-      <button
-        aria-hidden
-        tabIndex={-1}
+      {/* Backdrop. A DIV, not a button: it used to be `<button aria-hidden
+          tabIndex={-1}>`, which is an ARIA violation — aria-hidden on a
+          focusable element hides from assistive tech something the browser will
+          still hand focus to (tabIndex={-1} mitigates the tab order without
+          resolving the contradiction). It has no keyboard affordance and needs
+          none: the dialog traps focus and Escape is the keyboard way out, so a
+          full-screen tab stop would be noise. Click-to-dismiss is a mouse
+          convenience layered on top of a keyboard route that already works. */}
+      <div
+        aria-hidden="true"
         onClick={onClose}
         className="absolute inset-0 h-full w-full cursor-default bg-[var(--gt-ink)]/80 backdrop-blur-sm"
       />

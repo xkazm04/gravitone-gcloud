@@ -14,6 +14,15 @@
 // Rendered inline rather than through a portal: the page has no stacking
 // contexts above it, and a portal would buy z-index safety we do not yet need
 // at the cost of a ref dance.
+//
+// NOT role="menu". It claimed that role — and role="menuitem" on each button —
+// while delivering none of the keyboard contract the role promises: no arrow
+// keys, no Home/End, no typeahead. Worse, it moved focus onto the container it
+// had blinded with `focus:outline-none`, so the one element it focused was the
+// one a keyboard user could not see. It is a stack of ordinary buttons now,
+// which is what it always behaved like: Tab walks it, Enter fires, Escape
+// closes and puts focus back where it came from, and every stop shows the
+// studio's own focus ring. Same contract as the bell tray and the user menu.
 
 import { useEffect, useRef } from "react";
 
@@ -35,9 +44,15 @@ export default function ContextMenu({
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
+  const firstRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
-    ref.current?.focus();
+    // Focus the first ITEM, not the container: it is the first thing you would
+    // want to press, and it carries the focus ring so you can see you have it.
+    // Where focus came from is restored on close — a dismissed menu that leaves
+    // focus on <body> strands a keyboard user at the top of the document.
+    const opener = document.activeElement as HTMLElement | null;
+    firstRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
     };
@@ -55,6 +70,7 @@ export default function ContextMenu({
       window.removeEventListener("mousedown", onDown, true);
       window.removeEventListener("scroll", onClose, true);
       window.removeEventListener("resize", onClose);
+      if (opener && document.contains(opener)) opener.focus();
     };
   }, [onClose]);
 
@@ -68,15 +84,13 @@ export default function ContextMenu({
   return (
     <div
       ref={ref}
-      role="menu"
-      tabIndex={-1}
       style={{ left, top, width: W }}
-      className="gt-float fixed z-50 rounded-xl border border-white/12 bg-slate-950/95 p-1 backdrop-blur-md focus:outline-none"
+      className="gt-float fixed z-50 rounded-xl border border-white/12 bg-slate-950/95 p-1 backdrop-blur-md"
     >
-      {items.map((item) => (
+      {items.map((item, i) => (
         <button
           key={item.label}
-          role="menuitem"
+          ref={i === 0 ? firstRef : undefined}
           onClick={() => {
             item.onSelect();
             onClose();

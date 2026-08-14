@@ -59,21 +59,33 @@ export function TextArea({
   return <textarea {...rest} className={`${CONTROL} resize-none ${className}`} />;
 }
 
-/** A number with its unit welded on, so "300" can never be read as minutes. */
+/** A number with its unit welded on, so "300" can never be read as minutes.
+ *
+ *  Welded for the SCREEN READER too, via aria-describedby. The unit used to be
+ *  a purely decorative span sitting beside the box, so the field this component
+ *  exists to disambiguate announced as a bare number — exactly the ambiguity it
+ *  was built to remove, for the users least able to resolve it from context. A
+ *  caller's own `aria-describedby` is kept and the unit appended to it. */
 export function NumberInput({
   unit,
   className = "",
+  "aria-describedby": describedBy,
   ...rest
 }: React.InputHTMLAttributes<HTMLInputElement> & { unit: string }) {
+  const unitId = useId();
   return (
     <div className="relative">
       <input
         type="number"
         inputMode="numeric"
+        aria-describedby={[describedBy, unitId].filter(Boolean).join(" ")}
         {...rest}
         className={`${CONTROL} font-jetbrains pr-10 ${className}`}
       />
-      <span className="font-jetbrains pointer-events-none absolute inset-y-0 right-3.5 grid place-items-center text-sm text-white/35">
+      <span
+        id={unitId}
+        className="font-jetbrains pointer-events-none absolute inset-y-0 right-3.5 grid place-items-center text-sm text-white/35"
+      >
         {unit}
       </span>
     </div>

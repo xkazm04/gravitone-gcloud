@@ -206,7 +206,7 @@ export function StyleSheet({
             value={theme.name}
             onChange={(e) => onRename(e.target.value)}
             disabled={locked}
-            className="font-instrument w-full bg-transparent text-2xl text-white focus:outline-none disabled:opacity-100"
+            className="font-instrument w-full rounded bg-transparent text-2xl text-white disabled:opacity-100"
             aria-label="Style name"
           />
           {/* The cap counts what it caps: approved proofs are the model's

@@ -92,7 +92,7 @@ export default function LibraryShelves() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search titles, captions, tags — captions make everything findable"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-4 pl-10 text-sm text-white placeholder:text-white/30 focus:border-cyan-400/40 focus:outline-none"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-4 pl-10 text-sm text-white placeholder:text-white/30 focus:border-cyan-400/40"
           />
         </label>
 

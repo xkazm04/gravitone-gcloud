@@ -291,7 +291,7 @@ function Row({
                       <input
                         value={t.value}
                         onChange={(e) => onText(t.id, e.target.value)}
-                        className="font-hanken min-w-0 flex-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1 text-[12px] text-slate-200 focus:border-cyan-400/40 focus:outline-none"
+                        className="font-hanken min-w-0 flex-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1 text-[12px] text-slate-200 focus:border-cyan-400/40"
                       />
                       <button
                         onClick={() => onRemoveText(t.id)}
@@ -308,7 +308,7 @@ function Row({
                       <select
                         value={t.factId ?? ""}
                         onChange={(e) => onBind(t.id, e.target.value || undefined)}
-                        className={`font-jetbrains ml-[3.1rem] w-[calc(100%-3.1rem)] rounded border bg-slate-950 px-1.5 py-1 text-[10px] focus:outline-none ${
+                        className={`font-jetbrains ml-[3.1rem] w-[calc(100%-3.1rem)] rounded border bg-slate-950 px-1.5 py-1 text-[10px] ${
                           t.factId ? "border-white/10 text-white/60" : "border-amber-300/40 text-amber-200"
                         }`}
                       >
@@ -342,7 +342,7 @@ function Row({
                 onChange={(e) => onSubject(e.target.value)}
                 rows={3}
                 placeholder="derived from the beat's role — edit to steer"
-                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-cyan-400/40 focus:outline-none"
+                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-cyan-400/40"
               />
             </div>
 
@@ -361,7 +361,7 @@ function Row({
                 onChange={(e) => onMotion(e.target.value)}
                 rows={2}
                 placeholder="what this plate does — e.g. a slow push in as the left stack settles"
-                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-violet-300/40 focus:outline-none"
+                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-violet-300/40"
               />
               <p className="font-jetbrains mt-1 text-[10px] leading-snug text-white/30">
                 holds {holdS}s ·{" "}
