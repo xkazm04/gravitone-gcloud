@@ -8,7 +8,7 @@
         "studio-design-system"
       ],
       "db_tables": [],
-      "description": "The Next.js App Router root config and authentication/persistence layer. layout.tsx injects Google Fonts and mounts GravitoneTokens as the first body child. lib/firebase.ts initializes Firebase Auth with a 12-hour session ceiling enforced client-side (Google-only provider, browserLocalPersistence). lib/useAuth.tsx exposes the signed-in user to the component tree. lib/studioDb.ts and lib/projects.ts implement a zero-dependency IndexedDB layer (gravitone-studio DB) for project CRUD scoped to the owning Firebase uid; lib/useProjects.ts is the React hook that drives the /projects shelf.",
+      "description": "The Next.js App Router root config and authentication/persistence layer. layout.tsx injects Google Fonts and mounts GravitoneTokens as the first body child. lib/firebase.ts initializes Firebase Auth with a 12-hour session ceiling; lib/studioDb.ts and lib/projects.ts implement a zero-dependency IndexedDB layer for project CRUD; lib/jobs.tsx is the background-job system that lets long-running AI tasks (research, follow-up, recalibration) survive navigation without holding a screen hostage; lib/claudeCli.ts spawns a headless local Claude Code process authenticated via the machine's subscription, and lib/model.ts holds the model constant that routes and CLI calls share.",
       "entry_points": [
         "app/layout.tsx",
         "next.config.ts"
@@ -22,7 +22,10 @@
         "lib/useAuth.tsx",
         "lib/studioDb.ts",
         "lib/projects.ts",
-        "lib/useProjects.ts"
+        "lib/useProjects.ts",
+        "lib/jobs.tsx",
+        "lib/claudeCli.ts",
+        "lib/model.ts"
       ],
       "group": "Application Infrastructure",
       "group_id": "6740aa5f-9fc3-41e2-b858-92808c5f84be",
@@ -39,7 +42,7 @@
         "useAuth",
         "useProjects"
       ],
-      "last_written_at": "2026-08-12T08:44:15.690765+00:00",
+      "last_written_at": "2026-08-12T21:18:21.569324900+00:00",
       "name": "app-infrastructure",
       "pinned": false,
       "tech_stack": [
@@ -58,7 +61,7 @@
         "studio-design-system"
       ],
       "db_tables": [],
-      "description": "Implements the production asset library: a browse/search/filter grid across all media kinds (image, audio, video, script) organized by collection with a persistent commission dock where users direct the AI agent to generate new assets. A slide-in drawer shows full asset metadata, caption status (written/pending/failed), and a clickable provenance chain tracing model, run ID, step, and parent assets. Mocked agent run data (runs.ts) powers the live-status commission dock and demonstrates the AgentRun → RunStep → Asset lineage contract intended for the future /v1 API.",
+      "description": "Implements the production asset library across two surfaces and the underlying data layer. The legacy grid (LibraryShelves + AssetsBrowser) provides folder-tree navigation, gallery tiles, right-click/keyboard removal, and a context menu; the new Atelier view is a studio-wall metaphor where visual themes are commissioned works pinned for approval across a brief/preset commission panel, a wall of looks, and a dossier lock flow. The data layer (lib/assets.ts + useAssets, lib/themes.ts + useThemes) stores assets and visual-identity themes as IndexedDB records — assets are pointers (src URLs), themes are four-slot style blocks with approved proof sheets; both are seeded from the trials index and mocked agent-run data.",
       "entry_points": [
         "app/_library/LibraryShelves.tsx",
         "app/_studio/AssetDrawer.tsx",
@@ -72,27 +75,40 @@
         "app/_studio/assetsGenerated.ts",
         "app/_studio/assetsSource.ts",
         "app/_studio/types.ts",
-        "app/_studio/runs.ts"
+        "app/_studio/runs.ts",
+        "app/library/LibraryAtelier.tsx",
+        "app/library/LibraryView.tsx",
+        "app/library/page.tsx",
+        "app/library/parts.tsx",
+        "app/library/AssetsBrowser.tsx",
+        "app/library/ContextMenu.tsx",
+        "app/library/FolderTree.tsx",
+        "app/library/Playground.tsx",
+        "app/library/PresetRail.tsx",
+        "app/library/SpecEditor.tsx",
+        "app/library/presets.ts",
+        "app/library/trials.ts",
+        "lib/assets.ts",
+        "lib/themes.ts",
+        "lib/useAssets.ts",
+        "lib/useThemes.ts"
       ],
       "group": "Asset Management",
       "group_id": "8687615f-2846-4079-bec5-77472fd3bc6b",
       "id": "4c4736ce-971c-4b7c-b68a-0cb8b892ed12",
       "keywords": [
         "asset",
+        "theme",
         "library",
-        "browse",
-        "search",
-        "filter",
-        "commission",
-        "provenance",
-        "caption",
-        "collection",
-        "drawer",
-        "agent",
-        "run",
-        "generation"
+        "atelier",
+        "style",
+        "folder",
+        "gallery",
+        "proof",
+        "lock",
+        "preset"
       ],
-      "last_written_at": "2026-08-11T09:48:00.624950100+00:00",
+      "last_written_at": "2026-08-14T10:50:25.241348600+00:00",
       "name": "asset-library",
       "pinned": false,
       "tech_stack": [
@@ -100,6 +116,114 @@
         "React 19.2",
         "TypeScript 5",
         "lucide-react 1.31"
+      ]
+    },
+    {
+      "api_surface": "POST /api/frames",
+      "business_feature": "Frame Composition Step",
+      "category": "ui",
+      "cross_refs": [
+        "script-step",
+        "imaging-providers",
+        "shared-notebook"
+      ],
+      "db_tables": [],
+      "description": "Step 3 of the production pipeline — script beats in, composed picture plates out. FramesStep/FramesAssembly render a ledger-style shot list (one row per beat, three layer columns for plate/elements/texts) so the question 'what is not done' is answered by scanning a column, not scrolling a canvas. frames.ts defines the epistemic three-layer architecture (plate generated, elements vector-drawn, texts our own) and the Frame/FrameElement/FrameText types; useFrames orchestrates the IndexedDB state and calls /api/frames to derive scene specs via a local Claude CLI run; LayerPanel handles per-layer inspection and editing.",
+      "entry_points": [
+        "app/_phases/frames/FramesStep.tsx",
+        "app/_phases/frames/frames.ts",
+        "app/api/frames/route.ts"
+      ],
+      "file_paths": [
+        "app/_phases/frames/FramesStep.tsx",
+        "app/_phases/frames/FramesAssembly.tsx",
+        "app/_phases/frames/LayerPanel.tsx",
+        "app/_phases/frames/frames.ts",
+        "app/_phases/frames/parts.tsx",
+        "app/_phases/frames/sceneSpec.ts",
+        "app/_phases/frames/useFrames.ts",
+        "app/api/frames/route.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "6bdc9182-5119-4439-86a4-14dcbaa274fd",
+      "keywords": [
+        "frames",
+        "plate",
+        "layer",
+        "assembly",
+        "scene",
+        "beat",
+        "generate",
+        "script",
+        "composition",
+        "ledger"
+      ],
+      "last_written_at": "2026-08-14T10:50:24.949287900+00:00",
+      "name": "frames-step",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "React 19",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "POST /api/imaging/generate, POST /api/imaging/edit, POST /api/imaging/recognize",
+      "business_feature": "Multi-Provider Image Generation",
+      "category": "api",
+      "cross_refs": [
+        "frames-step",
+        "asset-library"
+      ],
+      "db_tables": [],
+      "description": "The server-side imaging abstraction layer — three capabilities (generate, edit, recognize) routed across three vendors (Google, Leonardo, Qwen) with zero vendor coupling above lib/imaging/. router.ts reads the environment to pick the right provider per capability; types.ts defines the single ImagingProvider interface all adapters satisfy; lib/stylePrompt.ts is the style-block-to-prompt compiler that ensures every generation carries the locked theme's full colour-role, element-vocabulary, and no-text constraints. The three app/api/imaging/* routes are the only seam components may cross — no provider import may escape lib/imaging/.",
+      "entry_points": [
+        "lib/imaging/router.ts",
+        "lib/imaging/types.ts",
+        "app/api/imaging/generate/route.ts"
+      ],
+      "file_paths": [
+        "lib/imaging/types.ts",
+        "lib/imaging/router.ts",
+        "lib/imaging/api.ts",
+        "lib/imaging/env.ts",
+        "lib/imaging/errors.ts",
+        "lib/imaging/http.ts",
+        "lib/imaging/json.ts",
+        "lib/imaging/providers/google.ts",
+        "lib/imaging/providers/leonardo.ts",
+        "lib/imaging/providers/qwen.ts",
+        "lib/imagingClient.ts",
+        "lib/stylePrompt.ts",
+        "app/api/imaging/generate/route.ts",
+        "app/api/imaging/edit/route.ts",
+        "app/api/imaging/recognize/route.ts"
+      ],
+      "group": "Imaging Pipeline",
+      "group_id": "f51b597e-76d8-4820-b519-0020c25074a1",
+      "id": "9c62ab0b-7ff9-49ba-a123-0e4eff5b2a0d",
+      "keywords": [
+        "imaging",
+        "generate",
+        "edit",
+        "recognize",
+        "provider",
+        "leonardo",
+        "google",
+        "qwen",
+        "style",
+        "plate"
+      ],
+      "last_written_at": "2026-08-14T10:50:24.947093900+00:00",
+      "name": "imaging-providers",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "TypeScript",
+        "Google Imagen",
+        "Leonardo AI",
+        "Qwen VL"
       ]
     },
     {
@@ -111,17 +235,14 @@
         "studio-design-system"
       ],
       "db_tables": [],
-      "description": "The five production-phase panels (Script, Frames, Motion, Score, Cut) rendered inside the Studio. ScriptStep presents the screenplay view against mock Glass Harbor data; FramesLightbox provides the lightbox frame-selection UI; MotionShotLab shows the VFX causal chain from frame to rendered clip; ScoreSpotting overlays music cues on picture; CutTimeline provides the multi-track timeline with drift-nudge controls. Shared fixture data (scenes.ts, score.ts, projectTypes.ts, projectParts.tsx) drives all five surfaces at identical proportional scales.",
+      "description": "The non-script, non-frames production-phase panels (Score, Cut) rendered inside the Studio, plus the shared fixture data that drives all phases at identical proportional scales. ScoreSpotting overlays music cues on picture; CutTimeline provides the multi-track timeline with drift-nudge controls. scenes.ts and score.ts are read by two or more steps each, which is why they live here as shared fixtures rather than inside any one step directory. The Frames step has graduated to its own context; MotionShotLab has been removed as the VFX panel is not yet rebuilt.",
       "entry_points": [
         "app/page.tsx",
         "app/_phases/script/ScriptManuscript.tsx",
         "app/_studio/scenes.ts"
       ],
       "file_paths": [
-        "app/_phases/script/ScriptStep.tsx",
         "app/_phases/cut/CutTimeline.tsx",
-        "app/_phases/frames/FramesLightbox.tsx",
-        "app/_phases/motion/MotionShotLab.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
         "app/_studio/projectParts.tsx",
         "app/_studio/projectTypes.ts",
@@ -143,7 +264,7 @@
         "spotting",
         "beat-chain"
       ],
-      "last_written_at": "2026-08-12T08:44:15.690230900+00:00",
+      "last_written_at": "2026-08-14T10:50:25.235038600+00:00",
       "name": "production-phases",
       "pinned": false,
       "tech_stack": [
@@ -163,27 +284,30 @@
         "studio-navigation"
       ],
       "db_tables": [],
-      "description": "The Research step is the first production phase — a topic goes in, a structured notebook comes out. The shared module defines all notebook types (Fact, Mechanism, Reversal, ScriptRender, EngineFit) and the hooks that simulate a local Claude Code research run (useResearchRun) and the creator's scoping decisions (useScope). ResearchStep.tsx presents a run-trace, a triage board of notebook cards, and a follow-up queue, culminating in a scope-confirmation gate that freezes the material before the Script step begins.",
+      "description": "Step 1 of the production pipeline — a topic goes in, a structured notebook comes out. ResearchStep presents a two-section view (Topic for input and run control; Board for triage once a notebook exists) with a background-job model so the research run survives navigation. The _parts/ directory contains the triage card tiles, follow-up queue, scope bar/gate, and topic panel; the run/ directory models the run trace, types, and useResearchRun hook; scope.ts and followup.ts carry the business logic for creator-scoping decisions and follow-up interrogation.",
       "entry_points": [
         "app/_phases/research/ResearchStep.tsx",
         "app/_phases/_shared/types.ts",
         "app/_phases/_shared/notebook.ts"
       ],
       "file_paths": [
-        "app/_phases/_shared/types.ts",
-        "app/_phases/_shared/notebook.ts",
-        "app/_phases/_shared/research.ts",
-        "app/_phases/_shared/renders.ts",
-        "app/_phases/_shared/followup.ts",
-        "app/_phases/_shared/scope.ts",
-        "app/_phases/_shared/NotebookBody.tsx",
-        "app/_phases/_shared/parts.tsx",
-        "app/_phases/_shared/useResearchRun.ts",
-        "app/_phases/_shared/useScope.ts",
         "app/_phases/research/ResearchStep.tsx",
         "app/_phases/research/ResearchTriageBoard.tsx",
-        "app/_phases/research/_research/FollowUpQueue.tsx",
-        "app/_phases/research/_research/parts.tsx"
+        "app/_phases/research/_parts/CardActions.tsx",
+        "app/_phases/research/_parts/CardTile.tsx",
+        "app/_phases/research/_parts/FollowUpQueue.tsx",
+        "app/_phases/research/_parts/FollowUpResult.tsx",
+        "app/_phases/research/_parts/ScopeBar.tsx",
+        "app/_phases/research/_parts/ScopeGate.tsx",
+        "app/_phases/research/_parts/TopicPanel.tsx",
+        "app/_phases/research/followup.ts",
+        "app/_phases/research/run/RunTrace.tsx",
+        "app/_phases/research/run/controls.tsx",
+        "app/_phases/research/run/trace.ts",
+        "app/_phases/research/run/types.ts",
+        "app/_phases/research/run/useResearchRun.ts",
+        "app/_phases/research/scope.ts",
+        "app/_phases/research/useScope.ts"
       ],
       "group": null,
       "group_id": null,
@@ -200,13 +324,140 @@
         "engine-fit",
         "run-trace"
       ],
-      "last_written_at": "2026-08-12T08:44:15.667121800+00:00",
+      "last_written_at": "2026-08-12T21:18:21.570227100+00:00",
       "name": "research-step",
       "pinned": false,
       "tech_stack": [
         "Next.js 15",
         "React 19",
         "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "POST /api/recalibrate",
+      "business_feature": "Script Step",
+      "category": "ui",
+      "cross_refs": [
+        "research-step",
+        "shared-notebook",
+        "app-infrastructure"
+      ],
+      "db_tables": [],
+      "description": "Step 2 of the production pipeline — reads the Research notebook and outputs a scored, versioned screenplay. ScriptStep presents four tabs answering four distinct questions: Candidates (which render to use), Coverage (who used what card and for how long), Spend (how weight is distributed across one budget), and Tracks (running order bridging to the Frames step). The _notes/ directory manages the sticky notebook and recalibration controls; _matrix/ provides the four measurement surfaces; _parts/ carries BeatList, HypothesisColumn, Meters, ConstraintLedger, and GatePanel; recalibrate.ts enforces four contract guards discovered in UAT; the /api/recalibrate route drives a headless Claude Code process to turn accumulated notes into an edit plan.",
+      "entry_points": [
+        "app/_phases/script/ScriptStep.tsx",
+        "app/_phases/script/recalibrate.ts",
+        "app/api/recalibrate/route.ts"
+      ],
+      "file_paths": [
+        "app/_phases/script/ScriptStep.tsx",
+        "app/_phases/script/_matrix/MatrixCoverage.tsx",
+        "app/_phases/script/_matrix/MatrixSpend.tsx",
+        "app/_phases/script/_matrix/MatrixTracks.tsx",
+        "app/_phases/script/_matrix/VersionBar.tsx",
+        "app/_phases/script/_matrix/shared.tsx",
+        "app/_phases/script/_notes/DeclinedList.tsx",
+        "app/_phases/script/_notes/NoteComposer.tsx",
+        "app/_phases/script/_notes/NotesContext.tsx",
+        "app/_phases/script/_notes/PresetSelect.tsx",
+        "app/_phases/script/_notes/RecalibrateControl.tsx",
+        "app/_phases/script/_notes/StickyNotebook.tsx",
+        "app/_phases/script/_parts/BaselineOnlyNote.tsx",
+        "app/_phases/script/_parts/BeatList.tsx",
+        "app/_phases/script/_parts/ConstraintLedger.tsx",
+        "app/_phases/script/_parts/GatePanel.tsx",
+        "app/_phases/script/_parts/HypothesisColumn.tsx",
+        "app/_phases/script/_parts/Meters.tsx",
+        "app/_phases/script/constraints.ts",
+        "app/_phases/script/editPlan.ts",
+        "app/_phases/script/gate.ts",
+        "app/_phases/script/impact.ts",
+        "app/_phases/script/recalibrate.ts",
+        "app/_phases/script/renders.ts",
+        "app/_phases/script/types.ts",
+        "app/_phases/script/useVersions.ts",
+        "app/_phases/script/versions.ts",
+        "app/api/recalibrate/route.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "99a9ac98-40f7-4f99-bac6-2888372c9de6",
+      "keywords": [
+        "screenplay",
+        "recalibrate",
+        "versions",
+        "notebook",
+        "beats",
+        "tracks",
+        "coverage",
+        "spend",
+        "edit-plan",
+        "claude-cli"
+      ],
+      "last_written_at": "2026-08-12T21:18:21.502789300+00:00",
+      "name": "script-step",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "React 19",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": null,
+      "business_feature": "Shared Notebook",
+      "category": "data",
+      "cross_refs": [
+        "research-step",
+        "script-step",
+        "app-infrastructure"
+      ],
+      "db_tables": [],
+      "description": "The cross-step notebook module — the canonical data structure a research run produces and that all downstream steps (Script, Frames, Motion, Score, Cut) read from. types.ts defines Fact, Mechanism, Reversal, and the Notebook type; facts.ts, unknowns.ts, cards.ts, conclusions.ts, and dimensions.ts are the live fixture from the 2026-08-11 Bitcoin run used as real prototype content across all surfaces. NotebookBody.tsx and EvidenceLog.tsx are the read-surface components; sections/ (Apparatus, Argument, H) break the notebook into structured sections; stepStore.ts provides the per-project IndexedDB key-value store that keeps step content isolated between projects.",
+      "entry_points": [
+        "app/_phases/_shared/notebook/types.ts",
+        "app/_phases/_shared/notebook/notebook.ts",
+        "app/_phases/_shared/stepStore.ts"
+      ],
+      "file_paths": [
+        "app/_phases/_shared/notebook/types.ts",
+        "app/_phases/_shared/notebook/notebook.ts",
+        "app/_phases/_shared/notebook/facts.ts",
+        "app/_phases/_shared/notebook/unknowns.ts",
+        "app/_phases/_shared/notebook/cards.ts",
+        "app/_phases/_shared/notebook/conclusions.ts",
+        "app/_phases/_shared/notebook/dimensions.ts",
+        "app/_phases/_shared/notebook/NotebookBody.tsx",
+        "app/_phases/_shared/notebook/EvidenceLog.tsx",
+        "app/_phases/_shared/notebook/FactRow.tsx",
+        "app/_phases/_shared/notebook/Chips.tsx",
+        "app/_phases/_shared/notebook/sections/Apparatus.tsx",
+        "app/_phases/_shared/notebook/sections/Argument.tsx",
+        "app/_phases/_shared/notebook/sections/H.tsx",
+        "app/_phases/_shared/stepStore.ts",
+        "app/_phases/_shared/ui/Notice.tsx"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "f779a6a6-6ece-4c0b-a85e-329ef4fa5d6f",
+      "keywords": [
+        "notebook",
+        "fact",
+        "mechanism",
+        "reversal",
+        "research",
+        "evidence",
+        "indexeddb",
+        "step-store",
+        "fixture",
+        "bitcoin"
+      ],
+      "last_written_at": "2026-08-12T21:18:21.504329200+00:00",
+      "name": "shared-notebook",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "React 19"
       ]
     },
     {
@@ -219,7 +470,7 @@
         "app-infrastructure"
       ],
       "db_tables": [],
-      "description": "The Gravitone 'Obsidian' dark-cinematic design system. tokens.ts is the single source for all color literals, easing curves, surface classes, and motion presets; GravitoneTokens emits every --gt-* CSS variable server-side to prevent FOUC; globals.css defines the Signal Layer contract for audio-reactive visuals. Primitives.tsx, Equalizer.tsx, and StudioFrame.tsx provide core atoms. Modal, Field, AuthGate, and UserMenu extend the library with interactive surface patterns used across the project management and research flows.",
+      "description": "The Gravitone 'Obsidian' dark-cinematic design system. tokens.ts is the single source for all color literals, easing curves, surface classes, and motion presets; GravitoneTokens emits every --gt-* CSS variable server-side to prevent FOUC; globals.css defines the Signal Layer contract for audio-reactive visuals. Primitives.tsx, Equalizer.tsx, StudioFrame.tsx, and NotificationBell.tsx provide core atoms; Modal, Field, AuthGate, and UserMenu extend the library with interactive surface patterns used across project management, research, and background-job notification flows.",
       "entry_points": [
         "components/ui/tokens.ts",
         "components/ui/Primitives.tsx",
@@ -235,6 +486,7 @@
         "components/ui/Field.tsx",
         "components/ui/AuthGate.tsx",
         "components/ui/UserMenu.tsx",
+        "components/ui/NotificationBell.tsx",
         "app/globals.css"
       ],
       "group": "Design System",
@@ -252,7 +504,7 @@
         "primitives",
         "obsidian"
       ],
-      "last_written_at": "2026-08-12T08:44:15.690560800+00:00",
+      "last_written_at": "2026-08-12T21:18:21.565386500+00:00",
       "name": "studio-design-system",
       "pinned": false,
       "tech_stack": [
@@ -271,7 +523,7 @@
         "asset-library"
       ],
       "db_tables": [],
-      "description": "The project management and studio routing layer. The landing page gates entry behind Google auth (GateContactSheet); /projects displays the production matrix shelf — a heat-grid of projects × six pipeline steps — after a prototype round that ran three variants (ledger, call sheet, matrix) and kept only the matrix; /studio opens a named project on its active step via a horizontal Stepper rail. Together these three routes form the entry-to-work flow: sign in → pick or create a project → navigate through the six-step production pipeline.",
+      "description": "The project management and studio routing layer. The landing page gates entry behind Google auth (GateContactSheet); /projects displays the production matrix shelf — a heat-grid of projects × six pipeline steps — after a prototype round that ran three variants and kept the matrix; /studio/[projectId] opens a named project on its active step via a horizontal Stepper rail. The studio route moved to a dynamic segment so the project ID is URL-native, enabling direct linking to any step of any project.",
       "entry_points": [
         "app/projects/ProjectsView.tsx",
         "app/studio/StudioView.tsx",
@@ -287,10 +539,10 @@
         "app/_projects/ProjectsMatrix.tsx",
         "app/_projects/parts.tsx",
         "app/_studio/projectSeed.ts",
-        "app/studio/page.tsx",
-        "app/studio/StudioView.tsx",
-        "app/studio/Stepper.tsx",
-        "app/studio/phases.tsx"
+        "app/studio/[projectId]/page.tsx",
+        "app/studio/[projectId]/StudioView.tsx",
+        "app/studio/[projectId]/Stepper.tsx",
+        "app/studio/[projectId]/phases.tsx"
       ],
       "group": "Studio Hub",
       "group_id": "3d91fe00-fa81-4526-a642-4f24470db9e1",
@@ -307,7 +559,7 @@
         "project-crud",
         "phase-navigation"
       ],
-      "last_written_at": "2026-08-12T10:07:08.555707100+00:00",
+      "last_written_at": "2026-08-12T21:18:21.564368200+00:00",
       "name": "studio-navigation",
       "pinned": false,
       "tech_stack": [
@@ -317,7 +569,7 @@
       ]
     }
   ],
-  "generated_at": "2026-08-12T10:07:08.714866200+00:00",
+  "generated_at": "2026-08-14T10:50:26.906059300+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -354,6 +606,13 @@
       "domain": "feature",
       "id": "3d91fe00-fa81-4526-a642-4f24470db9e1",
       "name": "Studio Hub"
+    },
+    {
+      "color": "pink",
+      "context_count": 1,
+      "domain": "integration",
+      "id": "f51b597e-76d8-4820-b519-0020c25074a1",
+      "name": "Imaging Pipeline"
     }
   ],
   "project": {
@@ -362,13 +621,13 @@
     "root": "C:/Users/mkdol/dolla/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": null,
-    "git_commit_count": null
+    "git_commit": "b4cb2581d15ec00ae041f680be141030202bb2ca",
+    "git_commit_count": 26
   },
   "stats": {
-    "contexts": 6,
-    "files": 63,
-    "groups": 5,
+    "contexts": 10,
+    "files": 150,
+    "groups": 6,
     "use_cases": 0
   },
   "taxonomy": {
