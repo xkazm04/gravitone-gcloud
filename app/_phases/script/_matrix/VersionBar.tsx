@@ -12,7 +12,7 @@
 // returned the cost — it was simply thrown away at the fetch. Where it is not
 // known it says so; a figure the engine did not report is never drawn as zero.
 
-import { receiptOf } from "../versions";
+import { overrideLineOf, receiptOf } from "../versions";
 import type { Version } from "../versions";
 import type { VersionsApi } from "../useVersions";
 
@@ -25,6 +25,19 @@ function Receipt({ v }: { v: Version }) {
       title={v.engineRun?.sessionId ? `claude session ${v.engineRun.sessionId}` : undefined}
       className="font-jetbrains text-[10px] text-white/35"
     >
+      {line}
+    </span>
+  );
+}
+
+/** A version accepted over a blocking gate says so WHEREVER it is named, not
+ *  only in the second the button was clicked. This is the other place a version
+ *  is chosen, so it is the other place the receipt belongs. */
+function Override({ v }: { v: Version }) {
+  const line = overrideLineOf(v);
+  if (!line) return null;
+  return (
+    <span data-testid={`override-${v.id}`} className="font-jetbrains text-[10px] text-rose-200/90">
       {line}
     </span>
   );
@@ -48,6 +61,7 @@ export default function VersionBar({
             : "Showing the baseline. Stack notes on a track id, then recalibrate to get something to compare."}
         </p>
         <Receipt v={api.baseline} />
+        <Override v={api.baseline} />
       </div>
     );
 
@@ -83,10 +97,11 @@ export default function VersionBar({
           ? "deltas are against the baseline · nothing is committed until you accept"
           : "switch to the candidate to see what your notes did"}
       </span>
-      {receiptOf(shown) && (
+      {(receiptOf(shown) || overrideLineOf(shown)) && (
         <>
           <span className="basis-full" />
           <Receipt v={shown} />
+          <Override v={shown} />
         </>
       )}
     </div>

@@ -27,7 +27,7 @@ import { loadStep, saveStep } from "../_shared/stepStore";
 import { recalibrate, recalibrateFromPlan } from "./recalibrate";
 import { NOTEBOOK } from "../_shared/notebook/notebook";
 import { RENDERS } from "./renders";
-import { BASELINE, engineRunOf, type Note, type NoteKind, type Version } from "./versions";
+import { BASELINE, engineRunOf, type GateOverride, type Note, type NoteKind, type Version } from "./versions";
 import type { Card } from "../_shared/notebook/cards";
 import type { Scope } from "../research/scope";
 
@@ -221,13 +221,22 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
   }, [running, notes, baseline, accepted.length, jobs, projectId]);
 
   /** Accept the candidate as the new baseline. The notes that produced it travel
-   *  with the version and are cleared from the pad — they have been answered. */
-  const accept = useCallback(() => {
-    if (!candidate) return;
-    setAccepted((a) => [...a, candidate]);
-    setCandidate(null);
-    setNotes([]);
-  }, [candidate]);
+   *  with the version and are cleared from the pad — they have been answered.
+   *
+   *  `override` is passed only when the accept happened over a BLOCKING gate
+   *  verdict, and it is stamped onto the version rather than held beside it: the
+   *  receipt has to survive the reload that persists `accepted`, and a record of
+   *  an override that outlives the version it describes is worse than none.
+   *  Call it explicitly — `onClick={api.accept}` would hand it a MouseEvent. */
+  const accept = useCallback(
+    (override?: GateOverride) => {
+      if (!candidate) return;
+      setAccepted((a) => [...a, override ? { ...candidate, override } : candidate]);
+      setCandidate(null);
+      setNotes([]);
+    },
+    [candidate],
+  );
 
   const discard = useCallback(() => setCandidate(null), []);
 

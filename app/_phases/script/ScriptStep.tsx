@@ -108,6 +108,13 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
   // The gate, re-run over what is on screen. `runGate` had exactly one caller
   // before this and it read a fixture, which is why an accepted recalibration
   // used to inherit a verdict about the script it replaced.
+  //
+  // Computed ONCE and threaded — to the note under the chains and, through
+  // StickyNotebook, to the accept button on every tab. A verdict that lives
+  // three tabs from the button is a verdict nobody reads before deciding, and a
+  // second `gateChains` call beside the button would be a second answer waiting
+  // to disagree with this one. When a candidate is staged `reading` IS that
+  // candidate, so this is the verdict on the chain about to be accepted.
   const gate = useMemo(() => gateChains(chains, { conclusions: CONCLUSIONS }), [chains]);
 
   if (researched === null)
@@ -178,7 +185,7 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
           )}
 
           {tab === "candidates" && (
-            <StickyNotebook api={versions}>
+            <StickyNotebook api={versions} gate={gate}>
               <>
                 <BaselineOnlyNote
                   api={versions}
@@ -205,19 +212,19 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
           )}
 
           {tab === "coverage" && (
-            <StickyNotebook api={versions}>
+            <StickyNotebook api={versions} gate={gate}>
               <MatrixCoverage api={scope} version={shown} baseline={versions.baseline} comparing={comparing} />
             </StickyNotebook>
           )}
 
           {tab === "spend" && (
-            <StickyNotebook api={versions}>
+            <StickyNotebook api={versions} gate={gate}>
               <MatrixSpend api={scope} version={shown} baseline={versions.baseline} comparing={comparing} />
             </StickyNotebook>
           )}
 
           {tab === "tracks" && (
-            <StickyNotebook api={versions}>
+            <StickyNotebook api={versions} gate={gate}>
               <>
                 <BaselineOnlyNote api={versions} what="Running order is shown for the baseline." />
                 <MatrixTracks api={scope} version={versions.baseline} />

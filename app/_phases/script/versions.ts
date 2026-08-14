@@ -25,6 +25,7 @@
 // the recalibration reports an overrun rather than quietly rescaling everyone's
 // seconds to fit. A plan that does not fit is a finding, not a rounding error.
 
+import type { GateRollup } from "./gate";
 import { IMPACT, type Usage } from "./impact";
 import { RENDERS, RENDER_BY_ID } from "./renders";
 
@@ -92,6 +93,50 @@ export interface Version {
   modelRefusals?: { note: string; why: string }[];
   /** WHAT THE TURN ACTUALLY COST. Absent on a simulated version — see EngineRun. */
   engineRun?: EngineRun;
+  /** Set only where this version was made the baseline over a BLOCKING gate
+   *  verdict. Absent is the common case and means the gate was clean. */
+  override?: GateOverride;
+}
+
+/** A HUMAN OVERRODE THE GATE, AND THE VERSION CARRIES THE RECEIPT.
+ *
+ *  Not a hard block, deliberately. `gate.ts` is LEXICAL: it matches patterns and
+ *  cannot read meaning, and its own header concedes the band is narrow —
+ *  `checkTraceability` reports spelled-out numbers as `unmeasured` and admits it
+ *  "covers a minority of what a viewer actually hears". A checker like that must
+ *  not be able to strand a script whose author knows it is fine, or running the
+ *  gate at all becomes the expensive choice. But an override that leaves no
+ *  trace is exactly the silent failure this repo exists to refuse. So the
+ *  version carries its own receipt and a later reader can see that a person
+ *  overrode a violation, which one, and when.
+ *
+ *  FROZEN AT THE CLICK, never recomputed. The verdict that was overridden is a
+ *  fact about a moment; re-running the gate later answers a different question
+ *  and would quietly rewrite history if the probes or the notebook moved. */
+export interface GateOverride {
+  at: number;
+  violations: number;
+  /** Which renders were blocking. A verdict you cannot locate is a rumour. */
+  blocking: string[];
+  /** How much of the gate could execute at all, on the weakest render — the
+   *  number that says how much the overridden verdict was worth. */
+  enforced: number;
+}
+
+export function overrideFrom(g: GateRollup, at: number): GateOverride {
+  return { at, violations: g.violations, blocking: [...g.blocking], enforced: g.enforced };
+}
+
+/** UTC and fixed-width, not localised. A receipt is read months later by
+ *  somebody in another timezone, and a locale-formatted date rendered from
+ *  state would also differ between the server pass and the client one. */
+const stampedAt = (ms: number) => `${new Date(ms).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+
+/** One line of override receipt, or null where there was nothing to override. */
+export function overrideLineOf(v: Version): string | null {
+  const o = v.override;
+  if (!o) return null;
+  return `accepted over the gate — ${o.violations} blocking finding${o.violations === 1 ? "" : "s"} on ${o.blocking.join(", ")}, ${o.enforced}% of the gate enforced · overridden ${stampedAt(o.at)}`;
 }
 
 /** The engine's own account of the turn that produced a version.

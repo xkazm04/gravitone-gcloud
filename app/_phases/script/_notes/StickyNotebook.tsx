@@ -14,24 +14,31 @@ import { useState } from "react";
 import { NotesProvider, useNotes } from "./NotesContext";
 import NoteComposer, { NoteList } from "./NoteComposer";
 import RecalibrateControl from "./RecalibrateControl";
+import type { GateRollup } from "../gate";
 import type { VersionsApi } from "../useVersions";
 
 export default function StickyNotebook({
   api,
+  gate,
   children,
 }: {
   api: VersionsApi;
+  /** The gate, re-run over the chain on screen (ScriptStep). Threaded rather
+   *  than recomputed here: the verdict and the accept button must be the same
+   *  verdict, and a second `gateChains` call is a second answer waiting to
+   *  disagree with the first. */
+  gate?: GateRollup;
   children: React.ReactNode;
 }) {
   return (
     <NotesProvider api={api}>
       {children}
-      <Pad api={api} />
+      <Pad api={api} gate={gate} />
     </NotesProvider>
   );
 }
 
-function Pad({ api }: { api: VersionsApi }) {
+function Pad({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
   const [open, setOpen] = useState(true);
   const ctx = useNotes();
   const cards = [...new Set(api.notes.map((n) => n.cardId))];
@@ -73,7 +80,7 @@ function Pad({ api }: { api: VersionsApi }) {
             )}
 
             <div className="mt-2.5 border-t border-white/10 pt-2.5">
-              <RecalibrateControl api={api} />
+              <RecalibrateControl api={api} gate={gate} />
             </div>
           </>
         )}

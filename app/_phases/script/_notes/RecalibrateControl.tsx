@@ -9,14 +9,21 @@
 // percentage bar off a nine-second mock timer while a minutes-long Claude Opus 5
 // turn was still in flight — a duration the app did not know, animated as though
 // it did. An indeterminate bar is the honest shape for work with no schedule.
+//
+// THE GATE REACHES THE BUTTON. A blocking verdict does not disable accepting —
+// `gate.ts` is lexical and says so about itself, and a checker that can strand a
+// script its author knows is fine makes running the gate the expensive choice.
+// It makes the click DELIBERATE, and the version keeps the receipt
+// (versions.ts::GateOverride). A clean candidate is one click, unchanged.
 
 import { useEffect, useState } from "react";
 
 import { RENDERS } from "../renders";
-import { receiptOf } from "../versions";
+import { overrideFrom, overrideLineOf, receiptOf } from "../versions";
 import { inertNotes } from "../recalibrate";
 import { MODEL } from "@/lib/model";
 import DeclinedList, { declinedCount } from "./DeclinedList";
+import type { GateRollup } from "../gate";
 import type { VersionsApi } from "../useVersions";
 
 /** Elapsed, in the unit the number deserves. Minutes-long work should read as
@@ -26,7 +33,7 @@ function elapsedSince(started: number, now: number) {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
 }
 
-export default function RecalibrateControl({ api }: { api: VersionsApi }) {
+export default function RecalibrateControl({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     if (!api.running) return;
@@ -35,6 +42,14 @@ export default function RecalibrateControl({ api }: { api: VersionsApi }) {
     return () => clearInterval(iv);
   }, [api.running]);
 
+  // Armed = the first of the two deliberate actions has been taken. Keyed on
+  // the candidate's own timestamp so a discard-and-rerun starts disarmed: an
+  // override armed against one verdict may not be spent on another.
+  const [armed, setArmed] = useState(false);
+  const staged = api.candidate?.createdAt;
+  useEffect(() => setArmed(false), [staged]);
+
+  const blocked = Boolean(gate?.blocked);
   const n = api.notes.length;
   const inert = inertNotes(api.notes).length;
   // Only a recalibrated baseline can have declined anything — the original
@@ -44,7 +59,12 @@ export default function RecalibrateControl({ api }: { api: VersionsApi }) {
   // explained itself in `summary` and returned an empty `refusals[]` — so a
   // record keyed only on the itemised lists still lost the reasoning. The
   // summary is part of the version's history too.
-  const baselineHasRecord = Boolean(api.baseline.basedOn) && (declinedBaseline > 0 || Boolean(api.baseline.summary));
+  // An override is part of that record too, and the loudest part: a baseline
+  // accepted over a violation says so for as long as it IS the baseline, not
+  // only in the second the button was clicked.
+  const baselineHasRecord =
+    Boolean(api.baseline.basedOn) &&
+    (declinedBaseline > 0 || Boolean(api.baseline.summary) || Boolean(api.baseline.override));
 
   if (api.candidate) {
     const over = RENDERS.filter((r) => (api.candidate!.budget[r.id]?.overrunS ?? 0) > 0);
@@ -89,22 +109,37 @@ export default function RecalibrateControl({ api }: { api: VersionsApi }) {
           </p>
         )}
 
+        {blocked && (
+          <p data-testid="gate-blocking" className="font-jetbrains mt-1.5 text-[11px] leading-snug text-rose-200">
+            The gate is blocking on {gate!.blocking.join(", ")} — {gate!.violations} finding
+            {gate!.violations === 1 ? "" : "s"}, {gate!.enforced}% of it enforced. It reads a narrow
+            lexical band, so it cannot stop you; accepting anyway is recorded on the version.
+          </p>
+        )}
+
         <DeclinedList version={api.candidate} />
 
         <div className="mt-2 flex flex-wrap gap-1.5">
+          {/* Two deliberate actions when the gate blocks, one when it does not.
+              The label changes with the meaning: the first click no longer
+              accepts, so it may not go on saying that it does. */}
           <button
             data-testid="accept-candidate"
-            onClick={api.accept}
-            className="font-jetbrains rounded-full border border-cyan-400/45 bg-cyan-400/10 px-3 py-1 text-[11px] text-cyan-200 transition hover:bg-cyan-400/20"
+            onClick={() => (blocked && !armed ? setArmed(true) : api.accept(armed && gate ? overrideFrom(gate, Date.now()) : undefined))}
+            className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] transition ${
+              blocked
+                ? "border-rose-400/45 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20"
+                : "border-cyan-400/45 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20"
+            }`}
           >
-            accept as baseline
+            {!blocked ? "accept as baseline" : armed ? "record the override and accept" : "accept over the gate…"}
           </button>
           <button
-            data-testid="discard-candidate"
-            onClick={api.discard}
+            data-testid={armed ? "cancel-override" : "discard-candidate"}
+            onClick={() => (armed ? setArmed(false) : api.discard())}
             className="font-jetbrains rounded-full border border-white/15 px-3 py-1 text-[11px] text-white/60 transition hover:bg-white/5"
           >
-            discard
+            {armed ? "not yet" : "discard"}
           </button>
         </div>
       </div>
@@ -190,6 +225,11 @@ export default function RecalibrateControl({ api }: { api: VersionsApi }) {
             {api.baseline.label}
             {declinedBaseline > 0 ? ` · declined ${declinedBaseline}` : ""}
           </p>
+          {overrideLineOf(api.baseline) && (
+            <p data-testid="baseline-override" className="font-jetbrains mt-1 text-[11px] leading-snug text-rose-200/90">
+              {overrideLineOf(api.baseline)}
+            </p>
+          )}
           {api.baseline.summary && (
             <p className="mt-1 text-[12px] leading-snug text-slate-300">{api.baseline.summary}</p>
           )}
