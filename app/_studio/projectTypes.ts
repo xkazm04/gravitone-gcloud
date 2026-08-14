@@ -1,65 +1,48 @@
 // The project lifecycle's nouns — scenes walked through phases. Data lives
 // in scenes.ts (story) and score.ts (music + the cut's timeline).
-
-export interface Beat {
-  act: 1 | 2 | 3;
-  title: string;
-  summary: string;
-}
-
-export interface SceneLine {
-  speaker: string;
-  kind: "vo" | "dialogue";
-  text: string;
-}
+//
+// SCOPED TO WHAT IS READ (2026-08-14). Deleting the Motion step left a tail of
+// authored-but-unread shape here, and `Scene.clip: Clip` was the worst of it:
+// it looked like the live clip model while the live one is `Frame.clip` in
+// app/_phases/frames/frames.ts. Twelve types and fields with no reader anywhere
+// are gone. What survives with no reader of its own survives for a stated
+// reason, written next to it — being unable to tell "kept deliberately" from
+// "nobody remembered to delete it" is the defect this pass closes.
 
 export interface FrameCandidate {
   id: string;
-  prompt: string;
-  model: string;
   tone: string; // mock gradient stops
-  note?: string; // why picked / why not
 }
 
+/** NOT Motion residue. Frames' own `FrameClip` reuses this union
+ *  (app/_phases/frames/frames.ts) rather than declaring a second one, and
+ *  `ClipStatusWord` in projectParts.tsx renders it for frames/LayerPanel.tsx.
+ *  All four members are reachable through that path. */
 export type ClipStatus = "rendered" | "rendering" | "failed" | "not-started";
-
-export interface Clip {
-  id: string;
-  status: ClipStatus;
-  durS?: number;
-  model: string;
-  motionPrompt: string;
-  /** One honest sentence — especially when status is failed/not-started. */
-  note: string;
-}
 
 export interface Scene {
   id: string;
   index: number; // 1-based, narrative order
   slug: string;
-  synopsis: string;
+  /** Read, not decoration: the Cut finds the act-two turn by testing this for
+   *  /turn/i (cut/CutTimeline.tsx) rather than hard-coding 13s. */
   mood: string;
   targetS: number;
-  lines: SceneLine[];
   frames: FrameCandidate[];
   pickedFrameId: string | null;
-  clip: Clip | null;
-  vfx: string[];
 }
 
-export type CueStatus = "rendered" | "failed" | "draft";
+export type CueStatus = "rendered" | "failed";
 
 export interface Cue {
   id: string;
   title: string;
-  mood: string;
   bpm: number;
   startS: number;
   durS: number;
   status: CueStatus;
   model: string;
   note: string;
-  sceneSpan: [number, number]; // scene indices covered
 }
 
 export type TrackId = "video" | "vo" | "music";
@@ -71,5 +54,7 @@ export interface TimelineClip {
   startS: number;
   durS: number;
   status: "ok" | "drift" | "missing";
-  offsetMs?: number; // present when status === "drift"
+  /** Present when status === "drift". Read AND written by the Cut's sync bench
+   *  (099d079) — it seeds the nudge control and moves the block on the ruler. */
+  offsetMs?: number;
 }
