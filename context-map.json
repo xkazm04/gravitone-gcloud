@@ -177,7 +177,7 @@
         "asset-library"
       ],
       "db_tables": [],
-      "description": "The server-side imaging abstraction layer — three capabilities (generate, edit, recognize) routed across three vendors (Google, Leonardo, Qwen) with zero vendor coupling above lib/imaging/. router.ts reads the environment to pick the right provider per capability; types.ts defines the single ImagingProvider interface all adapters satisfy; lib/stylePrompt.ts is the style-block-to-prompt compiler that ensures every generation carries the locked theme's full colour-role, element-vocabulary, and no-text constraints. The three app/api/imaging/* routes are the only seam components may cross — no provider import may escape lib/imaging/.",
+      "description": "The server-side imaging abstraction layer — three capabilities (generate, edit, recognize) routed across three vendors (Google, Leonardo, Qwen) with zero vendor coupling above lib/imaging/. router.ts reads the environment to pick the right provider per capability; types.ts defines the single ImagingProvider interface all adapters satisfy; lib/stylePrompt.ts is the style-block-to-prompt compiler that ensures every generation carries the locked theme's full colour-role, element-vocabulary, and no-text constraints. pricing.ts is the single source of truth for per-call cost figures (measured or explicitly unpriced), served to the browser exclusively via GET /api/imaging/pricing to prevent price literals from scattering across components; log.ts provides a one-line-per-call structured server log with credential scrubbing. The three app/api/imaging/* routes are the only seam components may cross — no provider import may escape lib/imaging/.",
       "entry_points": [
         "lib/imaging/router.ts",
         "lib/imaging/types.ts",
@@ -191,6 +191,8 @@
         "lib/imaging/errors.ts",
         "lib/imaging/http.ts",
         "lib/imaging/json.ts",
+        "lib/imaging/log.ts",
+        "lib/imaging/pricing.ts",
         "lib/imaging/providers/google.ts",
         "lib/imaging/providers/leonardo.ts",
         "lib/imaging/providers/qwen.ts",
@@ -198,7 +200,8 @@
         "lib/stylePrompt.ts",
         "app/api/imaging/generate/route.ts",
         "app/api/imaging/edit/route.ts",
-        "app/api/imaging/recognize/route.ts"
+        "app/api/imaging/recognize/route.ts",
+        "app/api/imaging/pricing/route.ts"
       ],
       "group": "Imaging Pipeline",
       "group_id": "f51b597e-76d8-4820-b519-0020c25074a1",
@@ -215,7 +218,7 @@
         "style",
         "plate"
       ],
-      "last_written_at": "2026-08-14T10:50:24.947093900+00:00",
+      "last_written_at": "2026-08-14T17:29:33.345093500+00:00",
       "name": "imaging-providers",
       "pinned": false,
       "tech_stack": [
@@ -569,7 +572,7 @@
       ]
     }
   ],
-  "generated_at": "2026-08-14T10:50:26.906059300+00:00",
+  "generated_at": "2026-08-14T17:29:34.226089200+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -621,12 +624,12 @@
     "root": "C:/Users/mkdol/dolla/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "b4cb2581d15ec00ae041f680be141030202bb2ca",
-    "git_commit_count": 26
+    "git_commit": "d5ea0437034a64e1c2c27815707975446246688e",
+    "git_commit_count": 82
   },
   "stats": {
     "contexts": 10,
-    "files": 150,
+    "files": 153,
     "groups": 6,
     "use_cases": 0
   },
