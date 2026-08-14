@@ -9,7 +9,7 @@
 // measured, and the note under the pills is that template's own one-liner. A
 // project should be creatable in eight seconds.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
 import { Eyebrow, Button } from "@/components/ui/Primitives";
@@ -21,7 +21,7 @@ import {
   type ProjectDraft,
   type TemplateId,
 } from "@/lib/projects";
-import type { Theme } from "@/lib/themes";
+import { lockedOnly, projectStyle, STYLE_MISS_WORD, type Theme } from "@/lib/themes";
 
 const blank = (): ProjectDraft => ({
   title: "",
@@ -34,16 +34,19 @@ const blank = (): ProjectDraft => ({
 export default function ProjectDialog({
   open,
   project,
-  lockedThemes,
+  themes,
   onClose,
   onSubmit,
 }: {
   open: boolean;
   /** Absent = create. Present = edit that record. */
   project: Project | null;
-  /** Locked visual identities this account can build on. Create requires one;
-   *  /projects does not open this dialog when the list is empty. */
-  lockedThemes: Theme[];
+  /** EVERY visual identity on this account, not only the locked ones. Create
+   *  offers the locked subset (and /projects does not open this dialog when
+   *  that subset is empty); EDIT has to resolve the style a project already
+   *  has, which is a different question — a style that is missing from this
+   *  list is missing for a reason the user is owed. */
+  themes: Theme[];
   onClose: () => void;
   onSubmit: (draft: ProjectDraft) => void;
 }) {
@@ -51,6 +54,8 @@ export default function ProjectDialog({
   // Whether the user has taken ownership of the runtime. Until they do,
   // switching template moves it; after they do, we never overwrite their number.
   const [ownDuration, setOwnDuration] = useState(false);
+
+  const lockedThemes = useMemo(() => lockedOnly(themes), [themes]);
 
   useEffect(() => {
     if (!open) return;
@@ -68,6 +73,10 @@ export default function ProjectDialog({
   }, [open, project, lockedThemes]);
 
   const tpl = templateOf(draft.template);
+  // The SAME resolver the studio renders with (lib/themes.ts) — so what this
+  // dialog says a project's style is, and what its frames actually come back
+  // in, cannot disagree.
+  const chosen = projectStyle(themes, draft.themeId);
   // A style is required to CREATE and immutable on EDIT — reskinning a project
   // midway would orphan every frame already rendered against the old identity.
   const valid = draft.title.trim().length > 0 && (Boolean(project) || Boolean(draft.themeId));
@@ -155,10 +164,21 @@ export default function ProjectDialog({
           // Immutable after creation. Shown rather than hidden, because "which
           // style is this on" is a question the shelf should always answer.
           <Field label="Visual style" hint="Fixed at creation — frames are rendered against it.">
-            <p className="font-hanken flex items-center gap-2.5 text-sm text-slate-300">
-              <StyleSwatch theme={lockedThemes.find((t) => t.id === draft.themeId)} />
-              {lockedThemes.find((t) => t.id === draft.themeId)?.name ?? "— (created before styles existed)"}
-            </p>
+            {chosen.theme ? (
+              <p className="font-hanken flex items-center gap-2.5 text-sm text-slate-300">
+                <StyleSwatch theme={chosen.theme} />
+                {chosen.theme.name}
+              </p>
+            ) : (
+              // A style that cannot be resolved is SAID, and said accurately.
+              // This line used to read "created before styles existed" for both
+              // cases, which turned a deleted style into a reassuring sentence
+              // about an old record.
+              <p className="font-hanken text-sm text-amber-200/90">
+                Not available — {STYLE_MISS_WORD[chosen.miss]}. Its frames render on a fallback preset,
+                and the Frames step names it.
+              </p>
+            )}
           </Field>
         ) : (
           <Field

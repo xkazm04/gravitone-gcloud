@@ -7,7 +7,7 @@
 // this matrix. The matrix won and the other two are gone — a list tells you
 // what you have, and only the grid tells you where the whole shelf is jammed.
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Link from "next/link";
@@ -17,7 +17,7 @@ import { Eyebrow } from "@/components/ui/Primitives";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
-import { statusOf } from "@/lib/themes";
+import { lockedOnly } from "@/lib/themes";
 import type { Project, ProjectDraft } from "@/lib/projects";
 
 import ProjectDialog, { ConfirmDelete } from "../_projects/ProjectDialog";
@@ -29,8 +29,12 @@ export default function ProjectsView() {
   const { projects, error, loading, create, update, remove } = useProjects(user?.uid ?? null);
   // The gate: a project is rendered against a locked visual identity, so one
   // has to exist before there is anything to create. See /library.
+  //
+  // Memoised because the dialog reseeds its draft when this identity changes,
+  // and a fresh array on every render is a fresh identity on every render.
   const { themes } = useThemes(user?.uid ?? null);
-  const lockedThemes = (themes ?? []).filter((t) => statusOf(t) === "locked");
+  const allThemes = useMemo(() => themes ?? [], [themes]);
+  const lockedThemes = useMemo(() => lockedOnly(allThemes), [allThemes]);
   const gated = themes !== null && lockedThemes.length === 0;
 
   const [dialog, setDialog] = useState<{ open: boolean; project: Project | null }>({
@@ -111,7 +115,7 @@ export default function ProjectsView() {
       <ProjectDialog
         open={dialog.open}
         project={dialog.project}
-        lockedThemes={lockedThemes}
+        themes={allThemes}
         onClose={() => setDialog({ open: false, project: null })}
         onSubmit={submit}
       />

@@ -140,6 +140,13 @@ export function canLock(t: Theme): boolean {
   return approvedProofs(t).length > 0 && t.proofs.every((p) => p.state !== "pending");
 }
 
+/** The locked styles in a list — the only ones a project may be built on.
+ *
+ *  One definition because "is this style locked" is asked by the create gate,
+ *  the dialog's picker and the library's chip, and three copies of
+ *  `statusOf(t) === "locked"` is how they start disagreeing. */
+export const lockedOnly = (ts: Theme[]): Theme[] => ts.filter((t) => statusOf(t) === "locked");
+
 /** Why the lock button is disabled, in the user's words. */
 export function lockBlocker(t: Theme): string | null {
   if (t.lockedAt) return null;
@@ -149,6 +156,55 @@ export function lockBlocker(t: Theme): string | null {
   if (!approvedProofs(t).length) return "every proof was rejected — generate another";
   return null;
 }
+
+/* ── Which style a project renders in ─────────────────────────────────────── */
+
+/**
+ * Why a project is NOT rendering in the style it was created with. The normal
+ * case — it is — has no entry here; it is `miss: null`.
+ *
+ *   unset    the record carries no `themeId`. Projects made before /library
+ *            existed, and the demo shelf, are in this state (`themeId` is
+ *            optional on the type for exactly that reason, projects.ts).
+ *   deleted  it carries one, and no theme with that id is on this account.
+ */
+export type StyleMiss = "unset" | "deleted";
+
+/** Resolved, as a union so a caller cannot read a name off a miss. */
+export type ProjectStyle = { theme: Theme; miss: null } | { theme: null; miss: StyleMiss };
+
+/**
+ * THE one place a project's visual identity is resolved.
+ *
+ * Every surface that draws, prints or GENERATES against a project's style reads
+ * this. What it replaces is worth naming, because it shipped: the frames step
+ * resolved the style as `themes.find(t => statusOf(t) === "locked")` — the
+ * account's most recently touched lock, which has nothing to do with the
+ * project in hand. The create dialog refuses to make a project without a style
+ * and then the studio rendered a different one, silently. On an account with
+ * two locked styles that was wrong for at least one project, always.
+ *
+ * It deliberately does NOT stand another theme in when the project's own is
+ * gone. A caller that needs pixels supplies its own fallback and SAYS which
+ * miss it is covering (see STYLE_MISS_WORD) — an unannounced stand-in is the
+ * bug this function exists to end, not the behaviour it should re-implement.
+ *
+ * A theme that exists but is no longer locked is not a case here: the lock is a
+ * one-way ratchet (nothing clears `lockedAt`) and only locked styles are
+ * offered at creation, so there is no way to reach it and nothing to draw.
+ */
+export function projectStyle(themes: Theme[], themeId?: string): ProjectStyle {
+  if (!themeId) return { theme: null, miss: "unset" };
+  const theme = themes.find((t) => t.id === themeId);
+  return theme ? { theme, miss: null } : { theme: null, miss: "deleted" };
+}
+
+/** What to say, in the user's words, wherever a fallback is drawn. Written to
+ *  read mid-sentence — the surface supplies what it fell back TO. */
+export const STYLE_MISS_WORD: Record<StyleMiss, string> = {
+  unset: "this project has no style of its own",
+  deleted: "the style it was made with was deleted",
+};
 
 /* ── CRUD ─────────────────────────────────────────────────────────────────── */
 

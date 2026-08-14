@@ -7,7 +7,7 @@
 import { Check, X } from "lucide-react";
 
 import type { PaletteColor, Proof, ProofState, Theme, ThemeStatus } from "@/lib/themes";
-import { STATUS_WORD, statusOf } from "@/lib/themes";
+import { lockedOnly, STATUS_WORD } from "@/lib/themes";
 
 const STATUS_CLS: Record<ThemeStatus, string> = {
   draft: "border-white/12 text-white/50",
@@ -125,7 +125,7 @@ export function ProofThumb({
 
 /** The rule this page exists to enforce, stated where the user starts. */
 export function GateChip({ themes }: { themes: Theme[] }) {
-  const n = themes.filter((t) => statusOf(t) === "locked").length;
+  const n = lockedOnly(themes).length;
   const open = n > 0;
   return (
     <span

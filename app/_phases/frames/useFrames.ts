@@ -17,8 +17,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
+import { getProject, type Project } from "@/lib/projects";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
-import { statusOf, type StyleBlock } from "@/lib/themes";
+import { projectStyle, STYLE_MISS_WORD, type StyleBlock } from "@/lib/themes";
 import { useThemes } from "@/lib/useThemes";
 import { useAuth } from "@/lib/useAuth";
 
@@ -57,13 +58,45 @@ export function useFrames(projectId: string) {
   const { user } = useAuth();
   const { themes } = useThemes(user?.uid ?? null);
 
-  const locked = (themes ?? []).find((t) => statusOf(t) === "locked");
-  const block: StyleBlock = locked?.block ?? PRESETS[0].block;
-  const styleName = locked?.name ?? `${PRESETS[0].name} (no locked style yet)`;
+  /* ── the style THIS project chose ───────────────────────────────────────── */
+  // The record is read here for one field, `themeId`. It used to be ignored
+  // entirely: the block below was the account's most recently touched lock, so
+  // a user picked a style at creation, the app gated on it, and then every
+  // plate came back in somebody else's identity. lib/themes.ts#projectStyle is
+  // now the ONE resolver; this hook only decides what to draw when it misses.
+  const [project, setProject] = useState<Project | null>(null);
+  const [projectRead, setProjectRead] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    void getProject(projectId)
+      .catch(() => undefined)
+      .then((p) => {
+        if (!alive) return;
+        setProject(p ?? null);
+        setProjectRead(true);
+      });
+    return () => {
+      alive = false;
+    };
+  }, [projectId]);
+
+  const chosen = projectStyle(themes ?? [], project?.themeId);
+  const fallback = PRESETS[0];
+  const block: StyleBlock = chosen.theme?.block ?? fallback.block;
+  /** The identity on screen, said out loud. A fallback NAMES ITSELF as one and
+   *  says why — the surface renders this in amber when `hasProjectStyle` is
+   *  false, and a stand-in the user cannot see is the bug being fixed here. */
+  const styleName = chosen.theme
+    ? chosen.theme.name
+    : `${fallback.name} — a fallback preset, because ${STYLE_MISS_WORD[chosen.miss]}`;
+  /** Both reads have to land before the label means anything: mid-load, a
+   *  project whose style is perfectly fine looks exactly like one whose style
+   *  was deleted. It is folded into `loaded` below rather than flashed. */
+  const styleReady = projectRead && themes !== null;
 
   const render = RENDERS[0];
   const [frames, setFrames] = useState<Frame[]>([]);
-  const [loaded, setLoaded] = useState(false);
+  const [stepLoaded, setStepLoaded] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   /** What the art-direction passes have cost this cut. Null until one has run —
@@ -89,7 +122,7 @@ export function useFrames(projectId: string) {
       // frames away, and carrying its bill onto the new ones would be the same
       // lie as omitting it — a figure that describes work not on screen.
       setDirection(sameCut ? (stored?.direction ?? null) : null);
-      setLoaded(true);
+      setStepLoaded(true);
     })();
     return () => {
       alive = false;
@@ -101,7 +134,10 @@ export function useFrames(projectId: string) {
   // array over a stored cut is the one bug persistence layers reliably ship.
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
-    if (!loaded) return;
+    // Gated on the STEP's own load, not on the style: the frames are what is
+    // being written, and waiting on a theme read to save them would be a new
+    // way to lose a cut.
+    if (!stepLoaded) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       void saveStep<FramesStepData>(projectId, PHASE, {
@@ -113,7 +149,7 @@ export function useFrames(projectId: string) {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [frames, direction, loaded, projectId, render.id]);
+  }, [frames, direction, stepLoaded, projectId, render.id]);
 
   const patch = useCallback((id: string, fn: (f: Frame) => Frame) => {
     setFrames((fs) => fs.map((f) => (f.id === id ? fn(f) : f)));
@@ -405,12 +441,15 @@ export function useFrames(projectId: string) {
     render,
     facts: FACTS,
     frames,
-    loaded,
+    // The step does not draw until the style is known — see `styleReady`.
+    loaded: stepLoaded && styleReady,
     busy,
     error,
     block,
     styleName,
-    hasLockedStyle: Boolean(locked),
+    /** Whether the plates are in the project's OWN style. False means the
+     *  label above is a fallback, and the surface colours it as a warning. */
+    hasLockedStyle: Boolean(chosen.theme),
     plateCost,
     totalCost,
     direction,
