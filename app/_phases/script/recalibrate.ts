@@ -18,13 +18,15 @@
 // The guards do not make the mocked transform smart. They make its CONTRACT
 // explicit — which is the thing a real model will have to satisfy too, and the
 // reason this file exists before the model does. A model that returns a plan
-// violating these rules gets the same refusal.
+// violating these rules gets the same refusal, in the same ORDER: refused before
+// the result is computed, never applied-and-flagged afterwards. That ordering is
+// the whole difference between a guard and a complaint.
 
 import type { Card } from "../_shared/notebook/cards";
 import type { Scope } from "../research/scope";
 import { stateOf } from "../research/scope";
 import { ATTRIBUTION_OF as baseAttributionOf, type Usage } from "./impact";
-import { applyEdits, impactFrom, type AppliedRender, type EditPlan } from "./editPlan";
+import { applyEdits, impactFrom, type AppliedRender, type Edit, type EditPlan } from "./editPlan";
 import type { Beat } from "./types";
 import { RENDERS, RENDER_BY_ID } from "./renders";
 import {
@@ -45,6 +47,74 @@ export function inertNotes(notes: Note[]) {
 
 const WEIGHTY: NoteKind[] = ["more-focus", "less-focus"];
 
+/* ─────────────────────────── guards 1-3, on the notes ──────────────────────
+   These read the NOTES, and both engines owe the creator the same answer about
+   them: a note that cannot be honoured is refused whoever is holding the pen.
+   Shared rather than re-typed, because the model path silently drifting away
+   from these three rules is the exact failure this file exists to prevent. */
+
+interface NoteGuards {
+  refusals: Refusal[];
+  /** cardId → the kinds that survived. The mock APPLIES these; the model path
+   *  only needs to know which ones were refused. */
+  keep: Map<string, NoteKind[]>;
+  /** Cards carrying a descope AND a focus note — GUARD 3's subjects. WHICH
+   *  instruction won is the engine's answer rather than the guard's, so the
+   *  caller stamps the verdict. */
+  contested: { cardId: string; kinds: NoteKind[] }[];
+}
+
+function guardNotes(notes: Note[], ctx: { cards: Card[]; scope: Scope }): NoteGuards {
+  const cardById = new Map(ctx.cards.map((c) => [c.id, c]));
+  const byCard = new Map<string, NoteKind[]>();
+  for (const n of notes) byCard.set(n.cardId, [...(byCard.get(n.cardId) ?? []), n.kind]);
+
+  const refusals: Refusal[] = [];
+  const keep = new Map<string, NoteKind[]>();
+  const contested: { cardId: string; kinds: NoteKind[] }[] = [];
+
+  for (const [cardId, kinds] of byCard) {
+    const card = cardById.get(cardId);
+    const descopedInScope = stateOf(ctx.scope, cardId).descoped;
+    let surviving = [...kinds];
+
+    // GUARD 1 — a note may not descope what the scope layer refuses to descope.
+    if (surviving.includes("descope") && card?.required) {
+      refusals.push({
+        cardId,
+        kind: "descope",
+        why: card.requiredWhy ?? "This material is required and cannot be removed.",
+      });
+      surviving = surviving.filter((k) => k !== "descope");
+    }
+
+    // GUARD 2 — a card the creator has taken out of scope may not be given
+    // screen time by a note. The scope decision is the earlier and stronger one;
+    // the fix is to bring it back on the triage board, not to route around it.
+    if (descopedInScope && surviving.some((k) => WEIGHTY.includes(k))) {
+      for (const k of surviving.filter((x) => WEIGHTY.includes(x)))
+        refusals.push({
+          cardId,
+          kind: k,
+          why: "out of scope on the triage board — bring it back into scope there first",
+        });
+      surviving = surviving.filter((k) => !WEIGHTY.includes(k));
+    }
+
+    // GUARD 3 — two instructions that cannot both hold. The destructive one is
+    // the one the creator can SEE the result of; what they could not see was
+    // that their other note had been dropped.
+    if (surviving.includes("descope") && surviving.some((k) => WEIGHTY.includes(k))) {
+      contested.push({ cardId, kinds: surviving.filter((k) => k === "descope" || WEIGHTY.includes(k)) });
+      surviving = surviving.filter((k) => !WEIGHTY.includes(k));
+    }
+
+    keep.set(cardId, surviving);
+  }
+
+  return { refusals, keep, contested };
+}
+
 export function recalibrate(
   base: Version,
   notes: Note[],
@@ -52,58 +122,16 @@ export function recalibrate(
   at: number,
   ctx: { cards: Card[]; scope: Scope },
 ): Version {
-  const cardById = new Map(ctx.cards.map((c) => [c.id, c]));
-  const byCard = new Map<string, NoteKind[]>();
-  for (const n of notes) byCard.set(n.cardId, [...(byCard.get(n.cardId) ?? []), n.kind]);
+  const { refusals, keep: applied, contested } = guardNotes(notes, ctx);
 
-  const refusals: Refusal[] = [];
-  const conflicts: Conflict[] = [];
-  /** cardId → the kinds that survived the guards. */
-  const applied = new Map<string, NoteKind[]>();
-
-  for (const [cardId, kinds] of byCard) {
-    const card = cardById.get(cardId);
-    const descopedInScope = stateOf(ctx.scope, cardId).descoped;
-    let keep = [...kinds];
-
-    // GUARD 1 — a note may not descope what the scope layer refuses to descope.
-    if (keep.includes("descope") && card?.required) {
-      refusals.push({
-        cardId,
-        kind: "descope",
-        why: card.requiredWhy ?? "This material is required and cannot be removed.",
-      });
-      keep = keep.filter((k) => k !== "descope");
-    }
-
-    // GUARD 2 — a card the creator has taken out of scope may not be given
-    // screen time by a note. The scope decision is the earlier and stronger one;
-    // the fix is to bring it back on the triage board, not to route around it.
-    if (descopedInScope && keep.some((k) => WEIGHTY.includes(k))) {
-      for (const k of keep.filter((x) => WEIGHTY.includes(x)))
-        refusals.push({
-          cardId,
-          kind: k,
-          why: "out of scope on the triage board — bring it back into scope there first",
-        });
-      keep = keep.filter((k) => !WEIGHTY.includes(k));
-    }
-
-    // GUARD 3 — two instructions that cannot both hold. Descope wins because it
-    // is the destructive one and the creator can see the result; what they could
-    // NOT see was that their other note had been dropped.
-    if (keep.includes("descope") && keep.some((k) => WEIGHTY.includes(k))) {
-      conflicts.push({
-        cardId,
-        kinds: keep.filter((k) => k === "descope" || WEIGHTY.includes(k)),
-        applied: "descope",
-        why: "descope removes the card, so a focus note on the same track cannot also apply",
-      });
-      keep = keep.filter((k) => !WEIGHTY.includes(k));
-    }
-
-    applied.set(cardId, keep);
-  }
+  // GUARD 3's verdict on this path: descope wins, because the mock resolves the
+  // conflict itself and removing the card leaves a focus note nothing to act on.
+  const conflicts: Conflict[] = contested.map((c) => ({
+    cardId: c.cardId,
+    kinds: c.kinds,
+    applied: "descope",
+    why: "descope removes the card, so a focus note on the same track cannot also apply",
+  }));
 
   /* ------------------------------------------------------- apply what is left */
   const impact: Record<string, Record<string, Usage>> = {};
@@ -152,13 +180,84 @@ export function recalibrate(
   };
 }
 
-/** THE MODEL PATH — an edit plan in, a Version out, through the SAME guards.
+/* ────────────────────── projecting a plan before applying it ────────────────
+   The trick that lets the model path run GUARD 1 in the mock's ORDER. Applying
+   a plan and checking afterwards can only produce a complaint; projecting what
+   it would leave behind produces a refusal, which is what the contract above
+   actually promises.
+
+   It mirrors `applyEdits` deliberately, including the part that looks like a
+   bug and is not: cuts and rewrites resolve against the ORIGINAL beat marks,
+   because marks are only re-laid once every edit in the plan has landed. */
+
+/** Every card the renders would still SPEAK if `edits` were applied. */
+function spokenAfter(edits: Edit[]): Set<string> {
+  const out = new Set<string>();
+  let inserted = 0;
+  for (const r of RENDERS) {
+    const base = baseAttributionOf(r.id);
+    const rows = new Map<string, string[]>();
+    for (const b of r.beats) rows.set(b.at, base[b.at] ?? []);
+
+    for (const e of edits) {
+      if (e.renderId !== r.id) continue;
+      if (e.op === "cut") {
+        if (e.beatAt) rows.delete(e.beatAt);
+        continue;
+      }
+      if (e.op === "rewrite") {
+        if (e.beatAt && e.cards && rows.has(e.beatAt)) rows.set(e.beatAt, e.cards);
+        continue;
+      }
+      if (e.op === "insert") rows.set(`+${inserted++}`, e.cards ?? []);
+      // `retime` moves seconds, never attribution.
+    }
+
+    for (const ids of rows.values()) for (const id of ids) out.add(id);
+  }
+  return out;
+}
+
+/** Does this edit take `cardId` off the beat that was carrying it? A `cut`
+ *  always does; a `rewrite` does when its new card list drops it. */
+function removesCard(e: Edit, cardId: string): boolean {
+  if (e.op !== "cut" && e.op !== "rewrite") return false;
+  if (!e.beatAt) return false;
+  if (!(baseAttributionOf(e.renderId)[e.beatAt] ?? []).includes(cardId)) return false;
+  return e.op === "cut" || !(e.cards ?? []).includes(cardId);
+}
+
+/** THE MODEL PATH — an edit plan in, a Version out, through the SAME guards in
+ *  the SAME order.
  *
- *  This is the point the UAT contract turns on: guards 1-4 apply to a model's
- *  output exactly as they apply to the mock's. A returned plan that descopes
- *  required material, funds an out-of-scope card, or strands a turn is refused
- *  here, not accepted-and-flagged — the model does not get a weaker rule than
- *  the deterministic transform it replaced. */
+ *  Where each one lands, stated precisely, because a comment claiming more
+ *  parity than the code delivers is worse than no comment at all:
+ *
+ *   · GUARD 1 (required material) runs twice, and both times BEFORE anything is
+ *     applied. On the notes, so a descope aimed at the steel-man is refused
+ *     whichever engine holds the pen. And on the PLAN, by projecting what the
+ *     edits would leave each render speaking: a `cut` or `rewrite` that would
+ *     strand required material is dropped from the plan, not applied and
+ *     regretted. That second half is what this function used to lack — it
+ *     computed the beats and the matrix first and then appended a line to a
+ *     list, so a model could ship a script with the steel-man actually gone.
+ *   · GUARD 2 (scope) runs on the notes and on every edit that names cards. A
+ *     `cut` and a `retime` carry no `cards` and cannot grant screen time, so
+ *     they cannot violate this guard by construction — which is why the
+ *     edit-level filter inspects `e.cards` only, and why that is not the hole it
+ *     looks like.
+ *   · GUARD 3 (conflicting notes) is DETECTED identically. Only the verdict
+ *     differs, and it has to: the mock resolves the conflict itself so it knows
+ *     descope won, while here the model resolved it and the winner is read back
+ *     off the result rather than assumed.
+ *   · GUARD 4 (stranded turns) is literally the same function on both paths.
+ *
+ *  The one thing this path cannot do that the mock can, stated rather than
+ *  hidden: it cannot tell you a note was IGNORED. The mock applies notes itself,
+ *  so silence is measurable; a model that read a note and chose not to act on it
+ *  is indistinguishable from one that never saw it. `plan.refusals` is the
+ *  model's own account of that, and it is shown as the model's word, never as
+ *  this file's guarantee. */
 export function recalibrateFromPlan(
   base: Version,
   notes: Note[],
@@ -168,11 +267,11 @@ export function recalibrateFromPlan(
   ctx: { cards: Card[]; scope: Scope },
 ): Version {
   const cardById = new Map(ctx.cards.map((c) => [c.id, c]));
-  const refusals: Refusal[] = [];
+  const { refusals, contested } = guardNotes(notes, ctx);
 
-  // GUARDS 1 + 2, applied to the PLAN before it is applied to anything. An edit
-  // whose beat rests on required-but-cut or out-of-scope material is dropped.
-  const legal = plan.edits.filter((e) => {
+  // GUARD 2, on the plan — an edit may not fund material the board took out of
+  // scope, whatever reason the model gives for it.
+  const inScope = plan.edits.filter((e) => {
     for (const cardId of e.cards ?? []) {
       if (stateOf(ctx.scope, cardId).descoped) {
         refusals.push({
@@ -186,6 +285,42 @@ export function recalibrateFromPlan(
     return true;
   });
 
+  // GUARD 1, on the plan — required material may not be cut. Projected, so the
+  // refusal lands before the beats and the matrix exist rather than beside them.
+  const spokenBefore = spokenAfter([]);
+  const wouldSpeak = spokenAfter(inScope);
+  const dropped = new Set<Edit>();
+
+  for (const c of ctx.cards) {
+    if (!c.required || wouldSpeak.has(c.id)) continue;
+    const why = cardById.get(c.id)?.requiredWhy ?? "This material is required and cannot be removed.";
+
+    if (!spokenBefore.has(c.id)) {
+      // Not this plan's doing — no render spoke it beforehand either. Blaming
+      // the model for a gap it inherited is its own kind of dishonesty.
+      refusals.push({
+        cardId: c.id,
+        kind: "descope",
+        why: `${why} No render speaks it, and no edit in this plan removed it — the gap predates this recalibration.`,
+      });
+      continue;
+    }
+
+    const guilty = inScope.filter((e) => removesCard(e, c.id));
+    for (const e of guilty) dropped.add(e);
+    refusals.push({
+      cardId: c.id,
+      kind: "descope",
+      why: `${why} ${guilty.length} model edit${guilty.length === 1 ? " that" : "s that"} would have removed it ${
+        guilty.length === 1 ? "was" : "were"
+      } refused before the plan was applied.`,
+    });
+  }
+
+  // Dropping every edit that touched the beats carrying the card restores it by
+  // construction, so one pass is enough — a refusal can only add material back.
+  const legal = dropped.size ? inScope.filter((e) => !dropped.has(e)) : inScope;
+
   const applied: Record<string, AppliedRender> = {};
   const beats: Record<string, Beat[]> = {};
   for (const r of RENDERS) {
@@ -195,17 +330,40 @@ export function recalibrateFromPlan(
   }
   const impact = impactFrom(applied);
 
-  // GUARD 3 — required material must still be spoken somewhere.
+  // The projection follows the same rules `applyEdits` does, so this cannot
+  // fire. It stays because a guarantee nobody checks is a guarantee that rots:
+  // if the two ever drift apart, the creator hears it here rather than from a
+  // script that quietly lost its steel-man.
   for (const c of ctx.cards) {
     if (!c.required) continue;
-    const stillSpoken = RENDERS.some((r) => impact[r.id]?.[c.id]?.kind === "spoken");
-    if (!stillSpoken)
-      refusals.push({
-        cardId: c.id,
-        kind: "descope",
-        why: c.requiredWhy ?? "This material is required and the plan removed it.",
-      });
+    if (RENDERS.some((r) => impact[r.id]?.[c.id]?.kind === "spoken")) continue;
+    if (refusals.some((f) => f.cardId === c.id)) continue;
+    refusals.push({
+      cardId: c.id,
+      kind: "descope",
+      why: `${c.requiredWhy ?? "This material is required."} No render speaks it after the plan was applied and the guard that should have caught that did not — treat this version as unsafe.`,
+    });
   }
+
+  // GUARD 3's verdict on this path: read off the result, because the model —
+  // not this file — decided which of the two notes it honoured.
+  const conflicts: Conflict[] = contested.map((c) => {
+    const kept = RENDERS.some((r) => impact[r.id]?.[c.cardId]?.kind === "spoken");
+    const weighty = c.kinds.find((k) => WEIGHTY.includes(k));
+    return kept && weighty
+      ? {
+          cardId: c.cardId,
+          kinds: c.kinds,
+          applied: weighty,
+          why: "the plan kept this card on screen, so the descope note on the same track was not applied",
+        }
+      : {
+          cardId: c.cardId,
+          kinds: c.kinds,
+          applied: "descope" as NoteKind,
+          why: "the plan removed the card, so a focus note on the same track could not also apply",
+        };
+  });
 
   return {
     id,
@@ -216,7 +374,7 @@ export function recalibrateFromPlan(
     impact,
     budget: budgetOf(impact),
     refusals,
-    conflicts: [],
+    conflicts,
     unsupported: unsupportedIn(impact, ctx),
     engine: "model",
     beats,
