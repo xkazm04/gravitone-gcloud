@@ -4,10 +4,9 @@
 // run log. Everything up to the point a notebook exists.
 
 import { Button, Eyebrow } from "@/components/ui/Primitives";
-import type { Job } from "@/lib/jobs";
 import { LocalProcessNote, OutcomePicker, TopicField } from "../run/controls";
 import RunTrace from "../run/RunTrace";
-import type { useResearchRun } from "../run/useResearchRun";
+import { secs, type useResearchRun } from "../run/useResearchRun";
 import { NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
 
@@ -17,7 +16,6 @@ export default function TopicPanel({
   run,
   topic,
   setTopic,
-  job,
   running,
   onStart,
   onAbort,
@@ -29,7 +27,6 @@ export default function TopicPanel({
   run: Run;
   topic: string;
   setTopic: (v: string) => void;
-  job?: Job;
   running: boolean;
   onStart: () => void;
   onAbort: () => void;
@@ -39,7 +36,7 @@ export default function TopicPanel({
   onGoToBoard: () => void;
 }) {
   const ready = run.state.status === "done";
-  const pct = Math.round((job?.progress ?? 0) * 100);
+  const noTension = run.state.status === "no-tension";
 
   return (
     <>
@@ -82,6 +79,11 @@ export default function TopicPanel({
         </div>
         <LocalProcessNote className="mt-3" />
 
+        {/* No fraction. The job is DRIVEN — `measured: false`, and lib/jobs is
+            explicit that `progress` means nothing on one — so the bar that used
+            to sit here would now read 0% for the whole run. The run's own clock
+            is the honest number, and the trace below is the real answer to
+            "how far along". */}
         {running && (
           <div
             data-testid="running-note"
@@ -91,17 +93,13 @@ export default function TopicPanel({
               <p className="font-jetbrains text-[11px] tracking-[0.14em] text-cyan-200 uppercase">
                 running in the background
               </p>
-              <span className="font-jetbrains text-[10px] text-white/40">{pct}%</span>
+              <span className="font-jetbrains text-[10px] text-white/40">
+                {run.state.status === "running" ? secs(run.state.elapsedMs) : ""}
+              </span>
             </div>
             <p className="mt-1.5 text-[13px] text-slate-300">
               You can leave this step. The bell reports the result.
             </p>
-            <div className="mt-2 h-0.5 overflow-hidden rounded-full bg-white/10">
-              <span
-                className="block h-full rounded-full bg-cyan-300/70 transition-[width] duration-200"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
           </div>
         )}
       </section>
@@ -112,6 +110,18 @@ export default function TopicPanel({
           <div className="mt-3">
             <RunTrace state={run.state} emitted={run.emitted} />
           </div>
+
+          {/* An ending of its own. "Finds no tension" used to walk to the full
+              Bitcoin notebook — the exact opposite of what was asked for. The
+              run succeeded; it just has no video in it, and the reason it gives
+              is the product decision, not an error message. */}
+          {noTension && run.state.status === "no-tension" && (
+            <div className="mt-4 border-t border-white/8 pt-4">
+              <Notice severity="warning" title="no tension found">
+                <p data-testid="no-tension-reason">{run.state.reason}</p>
+              </Notice>
+            </div>
+          )}
 
           {ready && (
             <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-white/8 pt-4">
@@ -146,7 +156,7 @@ export default function TopicPanel({
         </section>
       )}
 
-      {run.state.status === "idle" && !running && (
+      {run.state.status === "idle" && (
         <Notice severity="info" title="no notebook yet">
           <p>Run the research, or load the saved Bitcoin run, and the board unlocks.</p>
         </Notice>

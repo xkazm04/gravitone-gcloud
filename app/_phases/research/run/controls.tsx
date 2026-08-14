@@ -77,11 +77,15 @@ export function OutcomePicker({
       {onLoad && (
         <>
           <span aria-hidden className="mx-1 h-3 w-px bg-white/10" />
+          {/* Disabled mid-run for the same reason the pills are: this jumps the
+              state straight to a finished notebook, and doing that while the
+              engine is stepping would abandon a run whose job is still open. */}
           <button
             onClick={onLoad}
             data-testid="load-saved-run"
+            disabled={disabled}
             title={LOAD_NOTE}
-            className="rounded-full border border-cyan-400/30 bg-cyan-400/5 px-2.5 py-1 tracking-[0.1em] text-cyan-300/90 transition hover:border-cyan-400/50 hover:bg-cyan-400/10 hover:text-cyan-200"
+            className="rounded-full border border-cyan-400/30 bg-cyan-400/5 px-2.5 py-1 tracking-[0.1em] text-cyan-300/90 transition hover:border-cyan-400/50 hover:bg-cyan-400/10 hover:text-cyan-200 disabled:opacity-40 disabled:hover:border-cyan-400/30 disabled:hover:bg-cyan-400/5"
           >
             load saved run
           </button>

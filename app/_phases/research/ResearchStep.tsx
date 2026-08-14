@@ -11,6 +11,14 @@
 // work; holding the screen for it would be the wrong trade, so the step starts a
 // job and the bell reports back. Navigating away — even to another project —
 // does not cancel it.
+//
+// The job is started DRIVEN, and `useResearchRun` is the clock that drives it.
+// There used to be two: a 14-second mock timer inside lib/jobs and a run engine
+// with the real 15-step trace that nothing ever called. The mock always landed
+// first and always landed `done`, so choosing "finds no tension" produced the
+// full Bitcoin notebook — the outcome picker offered three endings and delivered
+// one. Now the engine steps the trace and the ending it lands on is what settles
+// the job. One clock, and the control tells the truth.
 
 import { useEffect, useState } from "react";
 
@@ -33,7 +41,7 @@ type Tab = "topic" | "board";
 
 export default function ResearchStep({ projectId }: { projectId: string }) {
   const [tab, setTab] = useState<Tab>("topic");
-  const run = useResearchRun();
+  const run = useResearchRun(projectId);
   const api = useScope(projectId);
   const jobs = useJobs();
 
@@ -48,7 +56,8 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
   /* ---------------------------------------------------------- load on mount */
   // A project's step content is its own. The seeded Bitcoin project ships with
   // the real notebook as its saved state, which is why opening it shows a
-  // finished run rather than an empty field.
+  // finished run rather than an empty field. `load` refuses mid-run, so coming
+  // back to a step whose run is still going shows the run, not the saved result.
   useEffect(() => {
     let alive = true;
     void loadStep(projectId, "research").then((saved) => {
@@ -68,25 +77,50 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
   }, [projectId, topic, ready, hydrated]);
 
   /* ------------------------------------------- the background job round-trip */
-  const myJob = jobId ? jobs.jobs.find((j) => j.id === jobId) : undefined;
-  const running = myJob?.status === "running";
-
-  useEffect(() => {
-    if (!myJob || myJob.status === "running") return;
-    if (myJob.status === "done") run.load();
-    else run.reset();
-    setJobId(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [myJob?.status]);
+  // "Is it running" has one answer, and the engine owns it. The job is the
+  // NOTIFICATION vehicle — it survives the step, it rings the bell — but it no
+  // longer schedules anything, so it can no longer disagree with the trace.
+  const running = run.state.status === "running";
 
   const startResearch = () => {
     // Parallel research is allowed on purpose — different topics are
     // independent, and a creator who wants three subjects investigated at once
     // should get three. Only follow-ups are serialised.
-    const j = jobs.start("research", projectId, topic, {
-      failAfter: run.outcome === "process-failed",
+    const j = jobs.start("research", projectId, topic, { driven: true });
+    if (!j) return;
+
+    // Frozen at click time, and deliberately not read off state later: this
+    // closure has to survive leaving the step. `jobs.settle` is stable and
+    // `JobsProvider` is mounted above the router, so a run that lands while the
+    // step is unmounted still closes its job.
+    const settle = jobs.settle;
+    const started = run.start((final) => {
+      if (final.status === "done") {
+        settle(j.id, "done", "A notebook is ready for review.");
+      } else if (final.status === "no-tension") {
+        // A successful run, not a defect: RESEARCH-PROMPT § Phase 2 requires a
+        // topic with no tension to stop and say so, and it did.
+        settle(j.id, "done", "No tension in this topic — the run finished and says why. There is no notebook.");
+      } else if (final.status === "failed") {
+        settle(j.id, "failed", final.error);
+      }
     });
-    if (j) setJobId(j.id);
+
+    // A run was already live here. Don't leave a job open that nothing settles.
+    if (!started) {
+      jobs.cancel(j.id);
+      return;
+    }
+    setJobId(j.id);
+  };
+
+  /** Pull the process. The engine stops WITHOUT firing its ending — this handler
+   *  owns the job from here, and `cancel` is the one job exit that fires no bell
+   *  event, because you already know you stopped it. */
+  const abortResearch = () => {
+    run.stop();
+    if (jobId) jobs.cancel(jobId);
+    setJobId(null);
   };
 
   const doClear = () => {
@@ -130,10 +164,9 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
           run={run}
           topic={topic}
           setTopic={setTopic}
-          job={myJob}
           running={running}
           onStart={startResearch}
-          onAbort={() => myJob && jobs.cancel(myJob.id)}
+          onAbort={abortResearch}
           onClear={() => setConfirmClear(true)}
           onOpenNotebook={() => setArtifact("notebook")}
           onOpenEvidence={() => setArtifact("evidence")}
