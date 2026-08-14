@@ -58,20 +58,23 @@ const IMAGES_PER_RUN = 1;
 const ESTIMATED_USD_PER_IMAGE = 0.045;
 
 /**
- * The money line after a render — a comparison rather than a flag, on purpose.
+ * The money line after a render.
  *
- * `Provenance` carries the figure but not its BASIS: nothing says whether the
- * vendor reported the number or `pricing.ts` derived it. Divergence from our own
- * estimate is the only signal the browser has — a figure that differs can only
- * have come from the vendor, so it shows plain, as a receipt. When the two
- * coincide we keep the cautious "~", because calling a receipt an estimate is
- * the safe error and the reverse puts a guess in front of a user as fact.
- * SEAM: a `costBasis` field on `Provenance` would make this exact.
+ * This used to infer its own answer: `Provenance` carried the figure but not its
+ * basis, so the browser guessed from DIVERGENCE — a number unlike our estimate
+ * could only have come from the vendor — and stayed cautious whenever the two
+ * happened to coincide. That was the safe error in the right direction, and it
+ * was still a guess. `Provenance.costBasis` now says outright, so the label is
+ * read rather than deduced.
+ *
+ * `basis` may be absent on a call made before the field existed. Falling back to
+ * the tilde is deliberate: an unknown basis is not a receipt, and the one thing
+ * this line must never do is put our own arithmetic in front of a user as fact.
  */
-function costLine(usd: number | undefined, estimate: number): string {
+function costLine(usd: number | undefined, basis: string | undefined): string {
   // Never $0.00 — that is a claim about money nobody can support.
   if (usd === undefined) return "cost not reported";
-  return `${Math.abs(usd - estimate) < 0.0005 ? "~" : ""}$${usd.toFixed(4)}`;
+  return `${basis === "vendor-reported" ? "" : "~"}$${usd.toFixed(4)}`;
 }
 
 export default function Playground({
@@ -252,7 +255,7 @@ export default function Playground({
               {(result.provenance.durationMs / 1000).toFixed(1)}s ·{" "}
               {/* Whatever came back WINS over the estimate shown before the
                   click — including when it came back as nothing. */}
-              {costLine(result.provenance.costUsd, estimate)}
+              {costLine(result.provenance.costUsd, result.provenance.costBasis)}
               {/* The studio-cleanliness receipt, shown rather than hidden: if a
                   remote generation survived, the user should know. */}
               {result.provenance.cleanup === "failed" && (

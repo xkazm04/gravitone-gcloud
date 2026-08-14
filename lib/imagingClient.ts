@@ -41,6 +41,9 @@ export interface ClientProvenance {
   provider: string;
   model: string;
   costUsd?: number;
+  /** How to read `costUsd`: a vendor receipt, our own arithmetic, or nothing.
+   *  A client that prints a dollar sign without checking this is guessing. */
+  costBasis?: "vendor-reported" | "estimated" | "unpriced";
   durationMs: number;
   cleanup?: "deleted" | "failed" | "not-applicable";
   reroutedFrom?: { provider: string; why: string }[];

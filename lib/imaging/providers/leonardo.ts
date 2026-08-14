@@ -132,12 +132,13 @@ export function leonardoProvider(): ImagingProvider {
       // The vendor's own figure if it sent one; otherwise the declared rate in
       // pricing.ts. `priceCall` short-circuits on `vendorUsd`, so a stale table
       // can never overwrite a receipt — the fallback only fills a silence.
-      const costUsd = priceCall({
+      const price = priceCall({
         provider: "leonardo",
         model: "lucid-origin",
         images: count,
         vendorUsd: costUsdFrom(start.sdGenerationJob),
-      }).usd;
+      });
+      const costUsd = price.usd;
 
       // From here on the generation EXISTS remotely, so every exit path must
       // go through cleanup — hence the try/finally rather than a tidy
@@ -163,6 +164,7 @@ export function leonardoProvider(): ImagingProvider {
           model: "lucid-origin",
           remoteIds: [generationId],
           costUsd,
+          costBasis: price.basis,
           durationMs: Date.now() - started,
           cleanup,
         },

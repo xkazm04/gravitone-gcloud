@@ -126,12 +126,35 @@ export interface RerouteStep {
  * PERSISTING: an asset outlives the response it arrived in, and after the fact
  * the vendor is not re-derivable from the pixels.
  */
+/**
+ * Where a cost figure came from. The distinction is the point: a vendor-reported
+ * figure is a receipt, an estimated one is our arithmetic over the table in
+ * `pricing.ts`, and downstream must be able to say which before it prints a
+ * dollar sign.
+ *
+ * Declared HERE rather than in `pricing.ts` — which is where the reasoning about
+ * prices lives — because it travels on `Provenance`, and a type that crosses the
+ * wire belongs with the other wire types. `pricing.ts` re-exports it so the
+ * pricing code still reads as one piece.
+ */
+export type CostBasis = "vendor-reported" | "estimated" | "unpriced";
+
 export interface Provenance {
   provider: ProviderId;
   model: string;
   /** Vendor-side ids, kept so a failed cleanup can be chased by hand. */
   remoteIds?: string[];
   costUsd?: number;
+  /**
+   * How to read `costUsd`. Absent on a call made before this field existed.
+   *
+   * Without it a reader can only INFER whether a figure is a receipt or our own
+   * arithmetic — Playground did exactly that, by noticing when the number
+   * differed from its own estimate, and had to stay cautious whenever the two
+   * happened to coincide. An estimate presented as a receipt is the error worth
+   * spending two lines to make impossible.
+   */
+  costBasis?: CostBasis;
   durationMs: number;
   cleanup?: "deleted" | "failed" | "not-applicable";
   /** Vendors eliminated before the one that served, most-preferred first.

@@ -104,6 +104,7 @@ export function qwenProvider(): ImagingProvider {
             continue;
           }
 
+          const qwenPrice = priceCall({ provider: "qwen", model });
           return {
             text,
             json: req.schema ? parseAgainstSchema("qwen", text, req.schema) : undefined,
@@ -116,7 +117,8 @@ export function qwenProvider(): ImagingProvider {
               // separate allowances, and nobody has checked the rate card. The
               // reason is recorded in the table rather than implied by silence
               // here, and the moment a rate lands there this line prices itself.
-              costUsd: priceCall({ provider: "qwen", model }).usd,
+              costUsd: qwenPrice.usd,
+              costBasis: qwenPrice.basis,
               durationMs: Date.now() - started,
               cleanup: "not-applicable",
             },

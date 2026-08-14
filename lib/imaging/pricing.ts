@@ -24,14 +24,13 @@
 // it through a prop or the API, never through an import (see
 // app/library/Playground.tsx).
 
-import type { ProviderId } from "./types";
+import type { CostBasis, ProviderId } from "./types";
 
 /**
- * Where a cost figure came from. The distinction is the point: a vendor-reported
- * figure is a receipt, an estimated one is our arithmetic over the table below,
- * and downstream must be able to say which before it prints a dollar sign.
+ * Where a cost figure came from — declared in `types.ts` because it travels on
+ * `Provenance`, re-exported here so the pricing code still reads as one piece.
  */
-export type CostBasis = "vendor-reported" | "estimated" | "unpriced";
+export type { CostBasis } from "./types";
 
 export interface PriceQuote {
   /** USD for the WHOLE call. `undefined` iff `basis` is "unpriced". */

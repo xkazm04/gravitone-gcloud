@@ -235,6 +235,7 @@ export function googleProvider(): ImagingProvider {
       if (!text)
         throw new ImagingError("Google returned an empty recognition.", "refused", "google", res.status);
 
+      const vision = priceCall({ provider: "google", model: VISION_MODEL });
       return {
         text,
         json: req.schema ? parseAgainstSchema("google", text, req.schema) : undefined,
@@ -246,7 +247,8 @@ export function googleProvider(): ImagingProvider {
           // USD-per-token rate has been checked. The row in pricing.ts carries
           // that reason, so the day someone checks the rate this line starts
           // reporting without being touched.
-          costUsd: priceCall({ provider: "google", model: VISION_MODEL }).usd,
+          costUsd: vision.usd,
+          costBasis: vision.basis,
           durationMs: Date.now() - started,
           cleanup: "not-applicable",
         },
@@ -315,6 +317,7 @@ async function runImage(
       provider: "google",
       model,
       costUsd: price.usd,
+      costBasis: price.basis,
       durationMs: Date.now() - started,
       cleanup: "not-applicable", // nothing is stored server-side to clean up
     },
