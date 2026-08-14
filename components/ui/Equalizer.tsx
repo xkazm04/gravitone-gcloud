@@ -3,12 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * Pause CSS animations while an element is scrolled off-viewport, so the
- * aurora / equalizer / grain loops don't burn CPU when nobody can see them.
- * Returns a ref to attach and a `paused` flag; the caller adds `anim-paused`
+ * Pause CSS animations while an element is scrolled off-viewport, so the bar
+ * keyframe below doesn't burn CPU for a nav that has scrolled away. Returns a
+ * ref to attach and a `paused` flag; the caller adds `anim-paused`
  * (globals.css) which sets `animation-play-state: paused` on the node and its
  * descendants. Reduced-motion is unaffected — those animations are already
  * disabled globally, so pausing them is a no-op.
+ *
+ * ONE CALLER, AND IT IS THE ONE THAT RENDERS: <Waveform> in Primitives.tsx,
+ * which is every bar field on screen. This hook used to be wired only into a
+ * default `Equalizer` export of this file that nothing imported, so the
+ * offscreen pause it documents had never once run. The two components were the
+ * same div; they are now one.
  */
 export function usePauseOffscreen<T extends HTMLElement>() {
   const ref = useRef<T>(null);
@@ -35,8 +41,8 @@ const GRAD: Record<BarColor, string> = {
 };
 
 /**
- * The shared bar field behind both <Equalizer> and <Primitives.Waveform> —
- * previously two copies of the same markup that had already drifted.
+ * The shared bar field behind <Primitives.Waveform> — previously two copies of
+ * the same markup that had already drifted.
  *
  * Two modes, one DOM:
  *  • no audio registered → the CSS keyframe (`.eq-bar`) runs, exactly as before,
@@ -80,16 +86,5 @@ export function EqBars({
         );
       })}
     </>
-  );
-}
-
-/** Live equalizer bars. Shared by the landing hero and the on-page sections;
- *  animation pauses automatically when the bars scroll off-screen. */
-export default function Equalizer({ bars = 28, className = "" }: { bars?: number; className?: string }) {
-  const { ref, paused } = usePauseOffscreen<HTMLDivElement>();
-  return (
-    <div ref={ref} className={`flex items-end gap-[3px] ${paused ? "anim-paused" : ""} ${className}`} aria-hidden>
-      <EqBars bars={bars} height={40} />
-    </div>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
 import { SURFACE } from "./tokens";
-import { EqBars, type BarColor } from "./Equalizer";
+import { EqBars, usePauseOffscreen, type BarColor } from "./Equalizer";
 
-/** The eyebrow pill's class list, exported so surfaces that need their own
- *  element (StudioDark animates its eyebrow with framer-motion) share the
- *  definition instead of re-typing it — this markup was duplicated. */
-export const EYEBROW_CLASS =
+/** The eyebrow pill's class list. Module-local: it was exported for a
+ *  `StudioDark` surface that has never existed in this repo (it belonged to the
+ *  app this design system was ported from) and nothing here ever imported it.
+ *  If a surface does need the pill without <Eyebrow>'s dot, export it then. */
+const EYEBROW_CLASS =
   "font-jetbrains inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-cyan-300";
 
 /** Mono uppercase eyebrow pill with a live dot. */
@@ -58,7 +59,8 @@ export function Button({ variant = "primary", className = "", children, ...rest 
 
 /** Live equalizer / waveform. Decorative keyframe when nothing is playing; real
  *  amplitude off the AudioBus the moment a source is registered (see EqBars).
- *  Reduced motion is honoured at the bus + in globals.css. */
+ *  Reduced motion is honoured at the bus + in globals.css, and the keyframe
+ *  stops entirely once the field scrolls out of view (usePauseOffscreen). */
 export function Waveform({
   bars = 28,
   className = "",
@@ -68,8 +70,13 @@ export function Waveform({
   className?: string;
   color?: BarColor;
 }) {
+  const { ref, paused } = usePauseOffscreen<HTMLDivElement>();
   return (
-    <div className={`flex items-end gap-[3px] ${className}`} aria-hidden>
+    <div
+      ref={ref}
+      className={`flex items-end gap-[3px] ${paused ? "anim-paused" : ""} ${className}`}
+      aria-hidden
+    >
       <EqBars bars={bars} color={color} height="100%" />
     </div>
   );

@@ -13,8 +13,10 @@
 //  · Escape closes; the backdrop closes; the page behind cannot scroll
 //  · focus moves into the dialog on open and returns to the opener on close
 //  · the BODY scrolls, not the page — header and footer stay put
-//  · no colour literal: cyan/rose/white-alpha utilities are the rendered form
-//    of the accents already declared in tokens.ts
+//  · no colour literal: every colour here is a Tailwind utility (white-alpha
+//    hairlines, and `bg-[var(--gt-ink)]/80` on the backdrop), which is the
+//    rendered form of what tokens.ts declares — see the scoped colour-literal
+//    rule at the top of that file
 //
 // Entrance motion only (one fade + rise, on mount). globals.css disables all
 // animation under prefers-reduced-motion, so nothing here needs its own guard.

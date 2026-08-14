@@ -20,11 +20,22 @@ body { margin: 0; }
 
    Deliberately inside `@layer base`, NOT unlayered like the .aurora/.glass-panel
    rules below. Tailwind utilities live in `@layer utilities`, which outranks
-   base — so the ~18 places that already declare their own
-   `focus-visible:outline-*` (Region, Track, TakePlayer, NarrationDock,
-   FeedbackDock, ScriptScore, TakeTimeline, voices/new) keep their bespoke width
-   and offset. They only inherit `outline-color` from here, since `outline-2`
-   sets width alone and would otherwise fall back to currentColor.
+   base — so a component that declares its own `focus-visible:outline-*` keeps
+   its bespoke width and offset and inherits only `outline-color` from here,
+   since `outline-2` sets width alone and would otherwise fall back to
+   currentColor.
+
+   Six files do that today, and they are the whole list (this comment used to
+   name eight components — Region, Track, TakePlayer, NarrationDock,
+   FeedbackDock, ScriptScore, TakeTimeline, voices/new — none of which has ever
+   existed in this repo; the list was carried over from the app this design
+   system was ported from):
+     components/ui/Primitives.tsx  · Button
+     components/ui/Field.tsx       · CONTROL, and Segmented via has-[:focus-visible]
+     components/ui/NotificationBell.tsx
+     app/_projects/ProjectsMatrix.tsx
+     app/_phases/research/_parts/CardTile.tsx
+     app/_phases/research/_parts/FollowUpQueue.tsx
 
    Contrast: #67e8f9 on #080a10 is ~13.7:1 — far past the 3:1 WCAG 2.2 (1.4.11 /
    2.4.11) floor for a non-text focus indicator, and it holds on the glass
@@ -86,11 +97,16 @@ body { margin: 0; }
 /* ---------------------------------------------------------------------------
    SIGNAL LAYER readers (contract C4)
 
-   AudioBus writes --gt-level / --gt-peak / --gt-centroid / --gt-hue /
-   --gt-working on ONE scoped node ([data-gt-bus]); everything below reads them
-   through transform / opacity / filter only, so a reacting studio costs no
-   layout and no React renders. At the :root defaults (level 0, working 0) every
-   rule here is the identity transform — the idle studio looks exactly as it did.
+   AudioBus writes --gt-level / --gt-peak / --gt-centroid / --gt-working on ONE
+   scoped node ([data-gt-bus]); everything below reads them through transform /
+   opacity / filter only, so a reacting studio costs no layout and no React
+   renders. At the :root defaults (level 0, working 0) every rule here is the
+   identity transform — the idle studio looks exactly as it did.
+
+   Those four channels are the contract because those four are READ, below. A
+   fifth, --gt-hue, was published as a channel and documented as part of C4
+   while no rule in this file ever read it; it is gone. Bring it back in the
+   same commit as the rule that tints something by it.
 
    NOTE: this app ships no AudioBus yet, so nothing carries [data-gt-bus] and
    these rules are currently inert — the equalizer runs its decorative keyframe.
@@ -137,35 +153,58 @@ body { margin: 0; }
    their content to FIT — these exist so that when a small viewport forces a
    scroll anyway, the scrollbar is ours and not the OS chrome). Thin, hairline
    track, cyan-tinted thumb that brightens under the cursor. */
-.scroll-y, .scroll-x { scrollbar-width: thin; scrollbar-color: rgba(103,232,249,0.25) transparent; }
+.scroll-y, .scroll-x { scrollbar-width: thin; scrollbar-color: var(--gt-scroll-thumb) transparent; }
 .scroll-y { overflow-y: auto; overflow-x: hidden; }
 .scroll-x { overflow-x: auto; overflow-y: hidden; }
 .scroll-y::-webkit-scrollbar, .scroll-x::-webkit-scrollbar { width: 6px; height: 6px; }
 .scroll-y::-webkit-scrollbar-track, .scroll-x::-webkit-scrollbar-track { background: transparent; }
 .scroll-y::-webkit-scrollbar-thumb, .scroll-x::-webkit-scrollbar-thumb {
-  border-radius: 9999px; background: rgba(103,232,249,0.22);
+  border-radius: 9999px; background: var(--gt-scroll-thumb);
 }
 .scroll-y::-webkit-scrollbar-thumb:hover, .scroll-x::-webkit-scrollbar-thumb:hover {
-  background: rgba(103,232,249,0.45);
-}
-.chip-tech {
-  border: 1px solid rgba(16,185,129,0.35); background: rgba(16,185,129,0.06);
-  color: #34d399; letter-spacing: 0.12em;
+  background: var(--gt-scroll-thumb-hover);
 }
 
-/* Indeterminate progress — the ONE place this app is allowed an infinite
-   animation, and only because the alternative is a lie.
+/* ---------------------------------------------------------------------------
+   INDETERMINATE PROGRESS — and the honest account of what loops in this app.
 
-   A driven job (lib/jobs.tsx) has a real process behind it and no way to know
-   how far along it is. Its `progress` is 0 for the whole run, so a determinate
-   track drawn off that number reports "0% done" for minutes — the same false
-   claim, inverted, that the nine-second recalibrate timer used to make. This
-   sweep says "running" and claims no position.
+   This rule used to introduce itself as "the ONE place this app is allowed an
+   infinite animation". That was false the moment it was written: two rules
+   further up this same file already loop. The doctrine is real and worth
+   keeping — MOTION IS ENTRANCE-ONLY — so here is the rule with its exceptions
+   named, rather than a rule with a hole in it.
 
-   Everything else in this app is entrance-only (see the animation austerity
-   note in components/ui/tokens.ts). The reduced-motion block below switches
-   this off with the rest, which is correct: the elapsed-seconds count beside
-   it carries the same information without moving. */
+   Ten loops run in this app. Every one falls in one of three exempt classes,
+   and nothing outside them may loop:
+
+   A · AMBIENT ATMOSPHERE — `.aurora` (22s drift, :50) and `.eq-bar` (:80).
+       These are the room, not feedback: they carry no information, so they
+       never claim anything false. The bars pause when they scroll out of view
+       (`.anim-paused`, wired by usePauseOffscreen in components/ui/Equalizer);
+       the aurora is `inset-0` on the page shell, so it is never out of view —
+       its exemption is that a 22-second composited transform on one element is
+       the cheapest loop in the file. Two rules. No third is coming easily.
+
+   B · BUSY INDICATORS — a spinner or a skeleton, alive only while a request is
+       in flight and gone with it: `animate-spin` in app/library/Playground.tsx
+       and three buttons of app/_phases/frames/FramesAssembly.tsx;
+       `animate-pulse` on the Playground's render skeleton, the frames plate
+       skeleton (app/_phases/frames/parts.tsx) and the recalibrate bar
+       (app/_phases/script/_notes/RecalibrateControl.tsx). Seven of the ten.
+       Their lifetime IS the work's lifetime, which is what keeps them honest.
+
+   C · THIS SWEEP. A driven job (lib/jobs.tsx) has a real process behind it and
+       no way to know how far along it is. Its `progress` is 0 for the whole
+       run, so a determinate track drawn off that number reports "0% done" for
+       minutes — the same false claim, inverted, that the nine-second
+       recalibrate timer used to make. This sweep says "running" and claims no
+       position.
+
+   Everything else is entrance-only (see components/ui/tokens.ts). The
+   reduced-motion block at the foot of this file switches all ten off, which is
+   correct here: the elapsed-seconds count beside the sweep carries the same
+   information without moving.
+--------------------------------------------------------------------------- */
 @keyframes gt-indeterminate {
   0%   { transform: translateX(-100%); }
   100% { transform: translateX(300%); }

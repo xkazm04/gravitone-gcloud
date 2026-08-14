@@ -96,7 +96,7 @@ export function FrameCanvas({
         // just-generated buffer; next/image optimises files, not blobs.
         <img src={frame.plate.src} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
-        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,255,255,0.04),transparent)]" aria-hidden />
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,var(--gt-wash),transparent)]" aria-hidden />
       )}
 
       {show.elements && (
@@ -209,7 +209,7 @@ function ResizeHandle({
 }
 
 function ElementMark({ el }: { el: FrameElement }) {
-  const stroke = el.accent ? "var(--gt-accent-cyan)" : "rgba(255,255,255,0.85)";
+  const stroke = el.accent ? "var(--gt-accent-cyan)" : "var(--gt-frame-mark)";
   const x = el.x;
   const y = (el.y / 100) * VB_H;
   const w = el.w;

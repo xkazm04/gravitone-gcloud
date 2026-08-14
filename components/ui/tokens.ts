@@ -2,13 +2,53 @@
 // Import these instead of re-deriving colors/motion so modules read as siblings
 // of the landing page, not one-off prototypes.
 //
-// SINGLE SOURCE OF TRUTH. The design language used to be declared three times
-// (here, hand-copied into globals.css, and again inline in StudioDark) and the
-// three had already drifted. Now every literal lives in THIS file, is emitted
-// once as CSS custom properties by <GravitoneTokens> (layout.tsx), and both
-// globals.css and the variants consume the vars. This file is the only place in
-// web/ that may contain colour literals.
+// SINGLE SOURCE OF TRUTH. The design language used to be declared twice — here,
+// and hand-copied into globals.css — and the two had already drifted. Now every
+// chrome literal lives in THIS file, is emitted once as CSS custom properties by
+// <GravitoneTokens> (layout.tsx), and globals.css and the components consume the
+// vars.
+//
+// ── THE COLOUR-LITERAL RULE, SCOPED ─────────────────────────────────────────
+//
+// This file is the only place that may DECLARE a colour used to draw the app's
+// CHROME — surfaces, hairlines, accents, glows, shadows, focus rings, the
+// furniture. Chrome colour is a shared vocabulary, and two files spelling the
+// same grey differently is drift.
+//
+// Three things sit outside that rule, and always did; the rule simply never
+// said so, which made it read as violated when it was not:
+//
+//  1. TAILWIND UTILITY CLASSES — `text-cyan-300`, `bg-white/5`,
+//     `border-rose-400/30`. Those are names resolved from Tailwind's own
+//     palette, not literals, and they are the rendered form of the accents
+//     declared below. Nearly all of this app's colour is spelled that way.
+//  2. STYLE-PRESET DATA — the 21 hexes in `app/library/presets.ts` and
+//     `app/library/LibraryAtelier.tsx`. Those describe what a GENERATED IMAGE
+//     should look like: they are prompt input, and they are shown to the user
+//     as the palette a style draws in. They are CONTENT, not chrome. Editing
+//     one changes a picture the model makes, not a pixel of this app's
+//     furniture, and each belongs beside the preset it describes. This file
+//     must never absorb them.
+//  3. PROSE. A comment that records a measurement ("#67e8f9 on #080a10 is
+//     ~13.7:1") has to name the values it measured, or the measurement cannot
+//     be rechecked.
+//
+// Everything that actually draws chrome obeys. Audited 2026-08-14: outside this
+// file the chrome holds five colour literals, all of them box-shadows — the
+// four hand-typed float shadows (NotificationBell, StickyNotebook, PresetSelect,
+// ContextMenu) and the Button glow. They are one duplication rather than five
+// colours, and they are folded into `--gt-shadow-*` by the commit that follows
+// this one (see .vault/Perfect/directions/one-shadow-one-glow-one-entrance.md).
 
+/**
+ * The one curve. Every entrance in the app eases on this and nothing else.
+ *
+ * MOTION LIVES IN CSS HERE, not in TypeScript: every entrance in this app is a
+ * `@keyframes` rule that eases on `var(--gt-ease)`. This repo carries no
+ * framer-motion (check package.json before writing a variant object — a
+ * `makeRise`/`rise` variant pair used to sit in this file for a library that
+ * was never a dependency, and nothing imported it for as long as it existed).
+ */
 export const EASE = [0.22, 1, 0.36, 1] as const;
 /** The same curve as EASE, in CSS form (`--gt-ease`). */
 export const EASE_CSS = `cubic-bezier(${EASE[0]}, ${EASE[1]}, ${EASE[2]}, ${EASE[3]})`;
@@ -21,69 +61,6 @@ export const ACCENT = {
 
 /** Page ink — the studio background. */
 export const INK = "#080a10";
-
-/**
- * Chart series colours — the landing pricing comparison, and any chart after it.
- *
- * NOT the ACCENT trio. The accents are display colours, tuned to glow on ink at
- * 24px type; as 2px data strokes they are far too light (OKLCH L 0.71–0.87)
- * and cyan sits close enough to emerald that the two are hard to tell apart at
- * hairline weight even with full colour vision. These steps were chosen by
- * running the dataviz palette validator against this page's own surface
- * (#080a10, dark mode) until every check passed:
- *
- *   categorical (identity): `el` vs `box`     — lightness band, chroma floor,
- *     CVD separation (worst adjacent ΔE 10.8 deutan), normal-vision floor
- *     (ΔE 20.8), contrast ≥ 3:1 — all PASS.
- *   ordinal (magnitude): `box` → `boxLarge`   — one hue (1° spread), monotone
- *     lightness, ΔL ≥ 0.06, light end 6.5:1 vs surface — all PASS.
- *
- * The two Arm boxes share a hue *because they are the same kind of thing*; the
- * bigger, costlier box is the darker step. ElevenLabs gets its own hue because
- * it is a different identity — deliberately violet and not a status colour:
- * amber/rose mean warning/error everywhere else in this app (ErrorBanner), and
- * a competitor's price line is not a fault condition.
- *
- * If you restyle a chart, re-run the validator rather than eyeballing it:
- *   node scripts/validate_palette.js "<hex,hex>" --mode dark --surface "#080a10"
- */
-export const CHART = {
-  /** ElevenLabs list price — the other bill. */
-  el: "#9a6cf9",
-  /** An Arm box, 24/7 — the small preset (t4g). */
-  box: "#09a1c1",
-  /** An Arm box, 24/7 — the larger preset (c7g); darker = costs more. */
-  boxLarge: "#0b6d84",
-  /** Recessive chrome: hairline grid, axis text. Never a data colour. */
-  grid: "rgba(255,255,255,0.06)",
-  axisText: "rgba(255,255,255,0.45)",
-  /** STATUS, not a series. The amber the rest of the app already means
-   *  "warning" with (ErrorBanner severity="warning", Tailwind amber-400/-200) —
-   *  spelled here only because SVG attributes cannot take a Tailwind class.
-   *  It marks the region where our own product is the worse buy. */
-  warn: "#fbbf24",
-  warnText: "#fde68a",
-} as const;
-
-/**
- * framer-motion entrance preset (entry-only — never infinite; see /prototype
- * "animation austerity"). Use custom={i} to stagger.
- *
- * `makeRise` exists because surfaces legitimately want different weights (the
- * landing hero rises further and slower than a dense module panel). The curve —
- * the part that must never drift — is always EASE.
- */
-export function makeRise({ y = 20, duration = 0.6, stagger = 0.07 } = {}) {
-  return {
-    hidden: { opacity: 0, y },
-    show: (i = 0) => ({
-      opacity: 1,
-      y: 0,
-      transition: { duration, ease: EASE, delay: i * stagger },
-    }),
-  };
-}
-export const rise = makeRise();
 
 // canonical surface + text classes
 export const SURFACE =
@@ -102,6 +79,14 @@ export const TEXT = {
  * value at runtime. Every entry here replaces a literal that used to be
  * hand-copied into globals.css — the values are byte-identical to what shipped,
  * so publishing them changes zero pixels.
+ *
+ * EVERY TOKEN BELOW HAS A READER. That is the entry condition, not a nicety: a
+ * `--gt-chart-*` trio once lived here, justified in forty lines of validator
+ * output by "the pricing section and its lazy chart module" — neither of which
+ * has ever existed in this repo, which carries no charting dependency and no
+ * `scripts/validate_palette.js` to re-run. It was deleted rather than kept
+ * warm. If you need a chart palette, `git log` this file and bring back the one
+ * that was measured, together with the chart that reads it.
  */
 export const CSS_TOKENS: Record<string, string> = {
   // accents
@@ -109,13 +94,6 @@ export const CSS_TOKENS: Record<string, string> = {
   "--gt-accent-violet": ACCENT.violet,
   "--gt-accent-emerald": ACCENT.emerald,
   "--gt-ink": INK,
-
-  // chart series (see CHART above — validated, not eyeballed). Published as
-  // vars so the legend swatches in the pricing section and the recharts strokes
-  // in its lazy chart module cannot drift apart.
-  "--gt-chart-el": CHART.el,
-  "--gt-chart-box": CHART.box,
-  "--gt-chart-box-large": CHART.boxLarge,
 
   // glass surface (.glass-panel / SURFACE)
   "--gt-surface-top": "rgba(255,255,255,0.05)",
@@ -135,6 +113,23 @@ export const CSS_TOKENS: Record<string, string> = {
   // landing bill-calculator slider they were the only consumer of. A token
   // nothing reads is drift waiting to happen.)
 
+  // themed scrollbars (.scroll-y / .scroll-x). One thumb colour, spelled once:
+  // the standard `scrollbar-color` property and the ::-webkit-scrollbar-thumb
+  // fallback are two ways of drawing the same 6px thumb, and they had drifted
+  // 0.03 apart in alpha.
+  "--gt-scroll-thumb": "rgba(103,232,249,0.25)",
+  "--gt-scroll-thumb-hover": "rgba(103,232,249,0.45)",
+
+  // storyboard element marks (app/_phases/frames/parts.tsx). SVG `stroke` takes
+  // a paint value, not a Tailwind class, so the non-accent mark needs a var.
+  "--gt-frame-mark": "rgba(255,255,255,0.85)",
+
+  // "there is nothing here yet" — the diagonal wash behind an ungenerated
+  // plate. A var rather than Tailwind's gradient utilities because those
+  // interpolate `in oklab`; this one fades to `transparent` in sRGB and is
+  // staying exactly as it renders today.
+  "--gt-wash": "rgba(255,255,255,0.04)",
+
   // motion
   "--gt-ease": EASE_CSS,
   "--gt-eq-period": "1.1s",
@@ -146,12 +141,18 @@ export const CSS_TOKENS: Record<string, string> = {
  * reader resolves even when no AudioBus is mounted or no source is registered —
  * at these values every reader is a no-op, which is what preserves the idle
  * look. AudioBus overrides them on its own scoped node.
+ *
+ * A CHANNEL IS ONLY IN THE CONTRACT IF A RULE READS IT. Each of the four below
+ * is read by name in globals.css (level/peak/centroid by `.eq-bar`, level and
+ * working by `.aurora` and `.cta-glow::after`). A fifth, `--gt-hue`, was
+ * published and documented as a channel for months while no rule anywhere read
+ * it — a default nobody consumes is a promise, not a contract. Add it back in
+ * the same commit as the rule that tints something by it.
  */
 export const SIGNAL_DEFAULTS: Record<string, string> = {
   "--gt-level": "0",
   "--gt-peak": "0",
   "--gt-centroid": "0.5",
-  "--gt-hue": "190",
   "--gt-working": "0",
 };
 
