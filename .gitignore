@@ -60,6 +60,10 @@ uat/runs/*/captures/
 # /research working cache (craft-mode corpora live in knowledge/, not here)
 .research-cache/
 .next-drive/
+# A builder or a UAT run starts `next dev -p 31xx` on its own port, and Next
+# writes .next-<port>/ beside it and appends that dir to tsconfig's `include`.
+# Both are per-session artifacts. Ignore the dirs; revert the tsconfig edit.
+.next-*/
 
 # Driven UI captures. Regenerable from the drive suites; heavy in git.
 pipeline/runs/*/captures/

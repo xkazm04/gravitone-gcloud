@@ -153,6 +153,27 @@ body { margin: 0; }
   color: #34d399; letter-spacing: 0.12em;
 }
 
+/* Indeterminate progress — the ONE place this app is allowed an infinite
+   animation, and only because the alternative is a lie.
+
+   A driven job (lib/jobs.tsx) has a real process behind it and no way to know
+   how far along it is. Its `progress` is 0 for the whole run, so a determinate
+   track drawn off that number reports "0% done" for minutes — the same false
+   claim, inverted, that the nine-second recalibrate timer used to make. This
+   sweep says "running" and claims no position.
+
+   Everything else in this app is entrance-only (see the animation austerity
+   note in components/ui/tokens.ts). The reduced-motion block below switches
+   this off with the rest, which is correct: the elapsed-seconds count beside
+   it carries the same information without moving. */
+@keyframes gt-indeterminate {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+.gt-indeterminate {
+  animation: gt-indeterminate 1.4s var(--gt-ease) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }

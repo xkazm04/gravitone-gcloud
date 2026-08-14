@@ -104,11 +104,23 @@ export default function NotificationBell() {
                     <span className="font-jetbrains text-[10px] text-white/35">{elapsed(j)}</span>
                   </div>
                   <p className="mt-1 truncate text-[12px] text-slate-300">{j.label}</p>
+                  {/* A DRIVEN job has no progress fraction — nobody knows how far
+                      along a minutes-long model call is, and `j.progress` sits at
+                      0. Drawing a determinate track off that number would report
+                      "0% done" for the whole run, which is the same lie the
+                      nine-second recalibrate timer used to tell from the other
+                      side. `measured` is the jobs store's own word for "progress
+                      means something"; unmeasured work gets a shimmer that says
+                      running without claiming a position. */}
                   <div className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/10">
-                    <span
-                      className="block h-full rounded-full bg-cyan-300/70 transition-[width] duration-200"
-                      style={{ width: `${Math.round(j.progress * 100)}%` }}
-                    />
+                    {j.measured ? (
+                      <span
+                        className="block h-full rounded-full bg-cyan-300/70 transition-[width] duration-200"
+                        style={{ width: `${Math.round(j.progress * 100)}%` }}
+                      />
+                    ) : (
+                      <span className="gt-indeterminate block h-full w-1/3 rounded-full bg-cyan-300/70" />
+                    )}
                   </div>
                 </div>
               ))}
