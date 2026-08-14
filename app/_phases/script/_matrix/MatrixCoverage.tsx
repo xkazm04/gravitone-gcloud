@@ -17,8 +17,9 @@ import type { Card } from "../../_shared/notebook/cards";
 import type { ScopeApi } from "../../research/useScope";
 import { stateOf } from "../../research/scope";
 import { NoteHandle } from "../_notes/NotesContext";
+import { UNTAGGED_DIMENSION_ID, columnsFor } from "../../_shared/notebook/dimensions";
 import { coverageIn, totalIn, usageIn, type Version } from "../versions";
-import { DIMENSIONS, DeltaTag, MatrixFootnotes, RENDERS, ScopePip, TONE, deltaOf, secs } from "./shared";
+import { DeltaTag, MatrixFootnotes, RENDERS, ScopePip, TONE, deltaOf, secs } from "./shared";
 
 export default function MatrixCoverage({
   api,
@@ -33,6 +34,15 @@ export default function MatrixCoverage({
 }) {
   const [only, setOnly] = useState(false);
   const ids = api.cards.map((c) => c.id);
+
+  /** Same test the triage board runs, off the same cards, for the same reason:
+   *  a card with no dimension had no section to sit under here either, so it
+   *  vanished from the coverage grid entirely — and a card that renders nowhere
+   *  cannot show a row of zeros, which is the one thing this tab is for. The
+   *  column appears only when it is occupied; a fully tagged notebook sees no
+   *  change at all. */
+  const hasUntagged = api.cards.some((c) => c.dimension === UNTAGGED_DIMENSION_ID);
+  const columns = columnsFor({ hasUntagged });
 
   return (
     <div data-testid="matrix-coverage">
@@ -70,20 +80,29 @@ export default function MatrixCoverage({
         <span className="font-jetbrains text-right text-[10px] tracking-[0.1em] text-white/35 uppercase">all</span>
       </div>
 
-      {DIMENSIONS.map((d) => {
+      {columns.map((d) => {
         const rows = api.cards
           .filter((c) => c.dimension === d.id)
           .filter((c) => !only || totalIn(version, c.id) > 0);
         if (!rows.length) return null;
+        const orphan = d.id === UNTAGGED_DIMENSION_ID;
         return (
           <section key={d.id} data-testid={`coverage-dim-${d.id}`}>
             <h4
-              className={`font-jetbrains mt-3 border-b border-white/8 pb-1 text-[11px] tracking-[0.16em] uppercase ${
-                d.id === "conclusions" ? "text-cyan-300" : "text-white/70"
+              className={`font-jetbrains mt-3 border-b pb-1 text-[11px] tracking-[0.16em] uppercase ${
+                orphan
+                  ? "border-amber-400/25 text-amber-200"
+                  : `border-white/8 ${d.id === "conclusions" ? "text-cyan-300" : "text-white/70"}`
               }`}
             >
               {d.label}
             </h4>
+            {orphan && (
+              <p className="font-jetbrains mt-1 text-[10px] leading-relaxed text-amber-200/70">
+                no dimension — tag {rows.length === 1 ? "it" : "them"} in
+                dimensions.ts::CARD_DIMENSION. The triage board says the same thing.
+              </p>
+            )}
             <ul>
               {rows.map((c) => (
                 <Row key={c.id} card={c} api={api} version={version} baseline={baseline} comparing={comparing} />
