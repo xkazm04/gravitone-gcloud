@@ -1,11 +1,11 @@
 "use client";
 
-// The controls around a run: what you feed it, which ending to drive, and the
-// standing note about what the engine actually is.
+// The controls around a run: what you feed it, which ending to drive, where it
+// has got to, and the standing note about what the engine actually is.
 
 import { OUTCOMES } from "./trace";
-import type { RunOutcome } from "./types";
-import { LOAD_NOTE } from "./useResearchRun";
+import type { RunOutcome, RunState } from "./types";
+import { LOAD_NOTE, secs } from "./useResearchRun";
 
 /** The topic field. One string, one button — no engine picker, no duration, no
  *  tone: those are decisions the notebook has not earned yet. */
@@ -97,6 +97,49 @@ export function OutcomePicker({
         </>
       )}
     </div>
+  );
+}
+
+const STATUS_TONE: Record<RunState["status"], string> = {
+  idle: "text-white/30",
+  running: "text-cyan-300/80",
+  done: "text-white/35",
+  "no-tension": "text-amber-300/80",
+  failed: "text-rose-300/80",
+};
+
+function statusOf(state: RunState): string {
+  switch (state.status) {
+    case "running":
+      return `running · ${secs(state.elapsedMs)}`;
+    case "done":
+      return `complete · ${secs(state.elapsedMs)}`;
+    case "no-tension":
+      return `no tension · ${secs(state.elapsedMs)}`;
+    case "failed":
+      return `ended early · ${secs(state.elapsedMs)}`;
+    default:
+      return "";
+  }
+}
+
+/** Where the run has got to, in one line beside the log's title.
+ *
+ *  This replaced a percentage box: the job is driven, so `progress` means
+ *  nothing on it, and a fraction over a replayed fixture was never the answer to
+ *  "how far along" anyway — the trace is. The clock here is the run's OWN mocked
+ *  wall time, the same units the per-step durations are in, so it agrees with
+ *  the list underneath it rather than competing with it. `aria-live` because the
+ *  ending is the part a reader must not have to poll for. */
+export function RunStatus({ state }: { state: RunState }) {
+  return (
+    <span
+      data-testid="run-status"
+      aria-live="polite"
+      className={`font-jetbrains text-[10px] tracking-[0.14em] uppercase ${STATUS_TONE[state.status]}`}
+    >
+      {statusOf(state)}
+    </span>
   );
 }
 
