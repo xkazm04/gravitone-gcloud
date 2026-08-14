@@ -16,11 +16,16 @@
 import { useCallback, useEffect, useState } from "react";
 
 import {
+  assetFromProof,
   deleteAsset as dbDelete,
+  hydrateProofSrcs,
   listAssets,
+  promotedFrom,
   putAssets,
+  readProofPointer,
   type Asset,
 } from "./assets";
+import { listThemes, type Proof, type Theme } from "./themes";
 
 const seededKey = (uid: string) => `gravitone.assets.seeded.${uid}`;
 
@@ -96,7 +101,21 @@ async function seedFromTrials(uid: string): Promise<Asset[]> {
     }));
 }
 
-export function useAssets(uid: string | null) {
+/** Read the bytes a promoted proof points at. Only pays for the theme read when
+ *  something on the shelf actually needs it — a sheet is base64 in the record,
+ *  so listing every theme is not free. */
+async function hydrate(uid: string, rows: Asset[]): Promise<Asset[]> {
+  if (!rows.some((a) => readProofPointer(a.src))) return rows;
+  return hydrateProofSrcs(rows, await listThemes(uid));
+}
+
+/**
+ * @param seed  Whether this mount may hand a first-time account the trial grid.
+ *   The atelier passes false: it reads the shelf to know what is already on it
+ *   and to promote onto it, and filling a shelf as a side effect of opening a
+ *   different tab would be a surprise.
+ */
+export function useAssets(uid: string | null, { seed = true }: { seed?: boolean } = {}) {
   const [assets, setAssets] = useState<Asset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -104,21 +123,24 @@ export function useAssets(uid: string | null) {
     if (!uid) return;
     try {
       let rows = await listAssets(uid);
-      if (rows.length === 0 && !alreadySeeded(uid)) {
-        const seed = await seedFromTrials(uid);
-        if (seed.length) {
-          await putAssets(seed);
+      // Gated on the MARK alone, not on an empty shelf. A promoted proof is a
+      // row, and an account that promoted one before ever opening Assets would
+      // otherwise never be given the trial grid at all.
+      if (seed && !alreadySeeded(uid)) {
+        const seeded = await seedFromTrials(uid);
+        if (seeded.length) {
+          await putAssets(seeded);
           markSeeded(uid);
           rows = await listAssets(uid);
         }
       }
-      setAssets(rows);
+      setAssets(await hydrate(uid, rows));
       setError(null);
     } catch (e) {
       setAssets([]);
       setError(e instanceof Error ? e.message : "could not read your assets");
     }
-  }, [uid]);
+  }, [uid, seed]);
 
   useEffect(() => {
     if (!uid) {
@@ -138,5 +160,58 @@ export function useAssets(uid: string | null) {
     }
   }, []);
 
-  return { assets, error, loading: assets === null, reload, remove };
+  /**
+   * Put an approved proof on the shelf.
+   *
+   * Idempotent by construction, not by checking: the id is content-addressed
+   * (assets.ts#promotedId), so a second promotion overwrites the same row. The
+   * local list is updated the same way — replace by id, never append — because
+   * React 19 can run the caller twice.
+   */
+  const promote = useCallback(
+    async (theme: Theme, proof: Proof): Promise<Asset | null> => {
+      if (!uid) return null;
+      try {
+        const asset = assetFromProof(uid, theme, proof);
+        await putAssets([asset]);
+        // The stored row holds the pointer; the list holds what a gallery can
+        // draw. Same record, dereferenced — see assets.ts.
+        const [shown] = hydrateProofSrcs([asset], [theme]);
+        setAssets((as) =>
+          [...(as ?? []).filter((a) => a.id !== asset.id), shown].sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
+        );
+        setError(null);
+        return asset;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "could not put it on the shelf");
+        return null;
+      }
+    },
+    [uid],
+  );
+
+  /** Drop every shelf entry promoted out of one theme — what deleting that
+   *  theme has to do, since a promoted asset POINTS at bytes inside it and
+   *  would otherwise be left pointing at nothing. */
+  const removeFromTheme = useCallback(
+    async (themeId: string) => {
+      if (!uid) return;
+      try {
+        // From the STORE, not from local state: this runs beside a theme
+        // deletion, and the shelf may never have been opened in this session.
+        const doomed = promotedFrom(await listAssets(uid), themeId);
+        for (const a of doomed) await dbDelete(a.id);
+        const ids = new Set(doomed.map((a) => a.id));
+        setAssets((as) => (as ?? []).filter((a) => !ids.has(a.id)));
+        setError(null);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "could not clear the promoted plates");
+      }
+    },
+    [uid],
+  );
+
+  return { assets, error, loading: assets === null, reload, remove, promote, removeFromTheme };
 }

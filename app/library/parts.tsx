@@ -4,12 +4,25 @@
 // real generated pixels, so the only thing that changed conceptually is that a
 // proof can be WRONG — hence the judge affordances.
 
-import { Check, X } from "lucide-react";
+import { Check, Library, X } from "lucide-react";
 
 import Modal from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Primitives";
+import { Panel, Button } from "@/components/ui/Primitives";
+import { promotedId } from "@/lib/assets";
+import type { GenerateResult } from "@/lib/imagingClient";
 import type { PaletteColor, Proof, ProofState, Theme, ThemeStatus } from "@/lib/themes";
-import { approvedProofs, lockedOnly, sheetSpend, STATUS_WORD } from "@/lib/themes";
+import {
+  approvedProofs,
+  lockedOnly,
+  ORIGIN_WORD,
+  PROOF_CAP,
+  sheetFull,
+  sheetSpend,
+  STATUS_WORD,
+  statusOf,
+} from "@/lib/themes";
+
+import Playground from "./Playground";
 
 const STATUS_CLS: Record<ThemeStatus, string> = {
   draft: "border-white/12 text-white/50",
@@ -62,12 +75,21 @@ export function ProofThumb({
   proof,
   className = "aspect-video",
   onJudge,
+  onPromote,
+  promoted = false,
   onClick,
   selected = false,
 }: {
   proof: Proof;
   className?: string;
   onJudge?: (state: ProofState) => void;
+  /** Put this plate on the asset shelf. Offered on APPROVED proofs only — the
+   *  shelf is for work that was judged good, and promoting a rejection would
+   *  file the record of a mistake as reusable material. */
+  onPromote?: () => void;
+  /** Already on the shelf. Shown as state, not hidden behind hover: the answer
+   *  to "did that work" has to be on the plate. */
+  promoted?: boolean;
   onClick?: () => void;
   selected?: boolean;
 }) {
@@ -101,27 +123,153 @@ export function ProofThumb({
         </span>
       )}
 
+      {promoted && (
+        <span className="font-jetbrains pointer-events-none absolute right-1.5 bottom-1 flex items-center gap-1 rounded bg-black/60 px-1 py-0.5 text-[9px] text-white/75">
+          <Library className="h-2.5 w-2.5" aria-hidden />
+          on the shelf
+        </span>
+      )}
+
       {/* The verdict is the whole job of this surface, so the controls are
           always reachable — revealed on hover, but never hidden behind a menu. */}
-      {onJudge && (
+      {(onJudge || onPromote) && (
         <div className="absolute top-1 right-1 flex gap-1 opacity-0 transition group-hover:opacity-100 focus-within:opacity-100">
-          <button
-            onClick={() => onJudge("approved")}
-            aria-label={`Approve ${proof.label}`}
-            className="rounded bg-black/70 p-1 text-cyan-300 transition hover:bg-cyan-300 hover:text-slate-950"
-          >
-            <Check className="h-3 w-3" aria-hidden />
-          </button>
-          <button
-            onClick={() => onJudge("rejected")}
-            aria-label={`Reject ${proof.label}`}
-            className="rounded bg-black/70 p-1 text-rose-300 transition hover:bg-rose-400 hover:text-slate-950"
-          >
-            <X className="h-3 w-3" aria-hidden />
-          </button>
+          {onPromote && !promoted && (
+            <button
+              onClick={onPromote}
+              aria-label={`Keep ${proof.label} on the shelf`}
+              title="keep on the asset shelf"
+              className="rounded bg-black/70 p-1 text-white/70 transition hover:bg-white hover:text-slate-950"
+            >
+              <Library className="h-3 w-3" aria-hidden />
+            </button>
+          )}
+          {onJudge && (
+            <>
+              <button
+                onClick={() => onJudge("approved")}
+                aria-label={`Approve ${proof.label}`}
+                className="rounded bg-black/70 p-1 text-cyan-300 transition hover:bg-cyan-300 hover:text-slate-950"
+              >
+                <Check className="h-3 w-3" aria-hidden />
+              </button>
+              <button
+                onClick={() => onJudge("rejected")}
+                aria-label={`Reject ${proof.label}`}
+                className="rounded bg-black/70 p-1 text-rose-300 transition hover:bg-rose-400 hover:text-slate-950"
+              >
+                <X className="h-3 w-3" aria-hidden />
+              </button>
+            </>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * THE SHEET — one style, worked: its name, what the sheet holds, every proof
+ * with its verdict, and the playground that fills it.
+ *
+ * A leaf rather than part of the atelier because the atelier is a three-pane
+ * layout and this is the pane that keeps growing; at 80 lines inline it was
+ * what pushed that surface past the line the design language draws.
+ */
+export function StyleSheet({
+  theme,
+  locked,
+  shelved,
+  note,
+  onRename,
+  onJudge,
+  onPromote,
+  onKeepTrial,
+}: {
+  theme: Theme;
+  locked: boolean;
+  /** Ids of everything already on the asset shelf. */
+  shelved: Set<string>;
+  /** What just happened to the shelf, if anything. */
+  note: string | null;
+  onRename: (name: string) => void;
+  onJudge: (proofId: string, state: ProofState) => void;
+  onPromote: (proof: Proof) => void;
+  onKeepTrial: (r: GenerateResult, subject: string) => void | Promise<void>;
+}) {
+  const full = sheetFull(theme);
+  return (
+    <Panel className="space-y-4 p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <input
+            value={theme.name}
+            onChange={(e) => onRename(e.target.value)}
+            disabled={locked}
+            className="font-instrument w-full bg-transparent text-2xl text-white focus:outline-none disabled:opacity-100"
+            aria-label="Style name"
+          />
+          {/* The cap counts what it caps: approved proofs are the model's
+              reference window, and the total is just how much judging has
+              been done. */}
+          <p className="font-jetbrains mt-0.5 text-[11px] text-white/40">
+            {ORIGIN_WORD[theme.origin]} · {approvedProofs(theme).length}/{PROOF_CAP} approved ·{" "}
+            {theme.proofs.length} on the sheet
+          </p>
+        </div>
+        <StatusStamp status={statusOf(theme)} />
+      </div>
+
+      {theme.proofs.length > 0 && (
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          {theme.proofs.map((p) => (
+            <ProofThumb
+              key={p.id}
+              proof={p}
+              onJudge={locked ? undefined : (state) => onJudge(p.id, state)}
+              // Approved only: the shelf is for work that was judged good. A
+              // locked style's plates are the most promotable of all, so this
+              // is offered whether or not it locked.
+              onPromote={p.state === "approved" ? () => onPromote(p) : undefined}
+              promoted={shelved.has(promotedId(theme.id, p.id))}
+            />
+          ))}
+        </div>
+      )}
+
+      {note && <p className="font-jetbrains text-[11px] text-white/45">{note}</p>}
+
+      <div className="border-t border-white/8 pt-4">
+        <Playground
+          block={theme.block}
+          // Newest approved first: the most recent approval is the best
+          // statement of where the style landed.
+          references={approvedProofs(theme)
+            .slice()
+            .sort((a, b) => b.createdAt - a.createdAt)
+            .map((p) => ({ base64: p.base64, mime: p.mime }))}
+          // A locked sheet is closed, so trials still RENDER — that is how you
+          // see what the style does — they simply cannot join it. Offering a
+          // keep that lands as a proof nobody may ever judge is the dead end
+          // one row down.
+          disabled={!locked && full}
+          onKeep={locked ? undefined : onKeepTrial}
+        />
+        {locked ? (
+          <p className="font-jetbrains mt-2 text-[11px] text-white/40">
+            Locked — the sheet is final. Trials still render so you can see what this style does; they
+            cannot join it.
+          </p>
+        ) : (
+          full && (
+            <p className="mt-2 text-[12px] text-amber-200/90">
+              {PROOF_CAP} approved proofs — the model&rsquo;s whole reference-image window. Reject one to
+              make room; it stays on the sheet as the record of what this style is not.
+            </p>
+          )
+        )}
+      </div>
+    </Panel>
   );
 }
 
@@ -139,11 +287,15 @@ export type Dependents = number | "counting" | "unknown";
 export function ConfirmDeleteStyle({
   theme,
   dependents,
+  promoted,
   onClose,
   onConfirm,
 }: {
   theme: Theme | null;
   dependents: Dependents;
+  /** Proofs from this style that were promoted to the asset shelf. They point
+   *  at bytes inside the theme, so they go with it — said here, before. */
+  promoted: number;
   onClose: () => void;
   onConfirm: () => void;
 }) {
@@ -183,6 +335,13 @@ export function ConfirmDeleteStyle({
             )}
             . None of it can be got back.
           </p>
+
+          {promoted > 0 && (
+            <p className="text-sm text-amber-200/90">
+              {promoted} of them {promoted === 1 ? "is" : "are"} on the asset shelf. A promoted plate
+              points at the bytes inside this style, so {promoted === 1 ? "it goes" : "they go"} with it.
+            </p>
+          )}
 
           <p className="text-sm text-amber-200/90">
             {dependents === "counting"

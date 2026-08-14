@@ -14,22 +14,15 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Panel } from "@/components/ui/Primitives";
+import { promotedFrom } from "@/lib/assets";
 import { listProjects } from "@/lib/projects";
+import { useAssets } from "@/lib/useAssets";
 import { useAuth } from "@/lib/useAuth";
 import { useThemes } from "@/lib/useThemes";
-import {
-  approvedProofs,
-  ORIGIN_WORD,
-  PROOF_CAP,
-  sheetFull,
-  statusOf,
-  type Proof,
-  type Theme,
-} from "@/lib/themes";
+import { statusOf, type Proof, type Theme } from "@/lib/themes";
 import type { GenerateResult } from "@/lib/imagingClient";
 
-import { ConfirmDeleteStyle, GateChip, PaletteDots, ProofThumb, StatusStamp, type Dependents } from "./parts";
-import Playground from "./Playground";
+import { ConfirmDeleteStyle, GateChip, PaletteDots, StyleSheet, type Dependents } from "./parts";
 import PresetRail from "./PresetRail";
 import SpecEditor from "./SpecEditor";
 import { CANON_SUBJECT, type Preset } from "./presets";
@@ -60,6 +53,13 @@ export default function LibraryAtelier() {
    *  only needed at the moment it is being weighed. */
   const [doomed, setDoomed] = useState<Theme | null>(null);
   const [dependents, setDependents] = useState<Dependents>("counting");
+  /** The shelf, read (never seeded) from here so an approved proof can be put
+   *  ON it from where the user is already looking, and so a plate that is
+   *  already there says so instead of offering to go twice. */
+  const { assets, promote, removeFromTheme } = useAssets(user?.uid ?? null, { seed: false });
+  const [shelfNote, setShelfNote] = useState<string | null>(null);
+  /** Which shelf entries exist, by id. The sheet asks it per plate. */
+  const shelved = useMemo(() => new Set((assets ?? []).map((a) => a.id)), [assets]);
 
   const rows = useMemo(() => themes ?? [], [themes]);
   const selected = rows.find((t) => t.id === selectedId) ?? rows[0] ?? null;
@@ -104,6 +104,9 @@ export default function LibraryAtelier() {
       mime: img.mime,
       state: "pending",
       model: r.provenance.model,
+      // The vendor, kept from here on: a plate promoted to the shelf carries
+      // its lineage, and "which vendor made this" is not re-derivable later.
+      provider: r.provenance.provider,
       costUsd: r.provenance.costUsd,
       createdAt: Date.now(),
     };
@@ -124,10 +127,24 @@ export default function LibraryAtelier() {
     }
   };
 
+  /** An approved proof, filed on the shelf. The asset is a POINTER at the proof
+   *  — nothing is copied — so this costs a row, not a second megabyte. */
+  const keepOnShelf = async (t: Theme, p: Proof) => {
+    const made = await promote(t, p);
+    setShelfNote(
+      made
+        ? `“${p.label}” is on the shelf — Assets › ${made.path.join(" › ")}`
+        : `“${p.label}” could not be put on the shelf.`,
+    );
+  };
+
   const confirmDelete = async () => {
     const gone = doomed;
     setDoomed(null);
     if (!gone) return;
+    // The promoted plates first: they point INTO this theme, so they have to go
+    // with it rather than be left addressing bytes that no longer exist.
+    await removeFromTheme(gone.id);
     await remove(gone.id);
     // Fall back to whatever is left rather than holding a dead selection.
     setSelectedId((cur) => (cur === gone.id ? null : cur));
@@ -170,70 +187,16 @@ export default function LibraryAtelier() {
             </div>
 
             {selected && (
-              <Panel className="space-y-4 p-5">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <input
-                      value={selected.name}
-                      onChange={(e) => void update(selected.id, { name: e.target.value })}
-                      disabled={isLocked}
-                      className="font-instrument w-full bg-transparent text-2xl text-white focus:outline-none disabled:opacity-100"
-                      aria-label="Style name"
-                    />
-                    {/* The cap counts what it caps: approved proofs are the
-                        model's reference window, and the total is just how much
-                        judging has been done. */}
-                    <p className="font-jetbrains mt-0.5 text-[11px] text-white/40">
-                      {ORIGIN_WORD[selected.origin]} · {approvedProofs(selected).length}/{PROOF_CAP} approved
-                      · {selected.proofs.length} on the sheet
-                    </p>
-                  </div>
-                  <StatusStamp status={statusOf(selected)} />
-                </div>
-
-                {selected.proofs.length > 0 && (
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                    {selected.proofs.map((p) => (
-                      <ProofThumb
-                        key={p.id}
-                        proof={p}
-                        onJudge={isLocked ? undefined : (state) => void judgeProof(selected.id, p.id, state)}
-                      />
-                    ))}
-                  </div>
-                )}
-
-                <div className="border-t border-white/8 pt-4">
-                  <Playground
-                    block={selected.block}
-                    // Newest approved first: the most recent approval is the
-                    // best statement of where the style landed.
-                    references={approvedProofs(selected)
-                      .slice()
-                      .sort((a, b) => b.createdAt - a.createdAt)
-                      .map((p) => ({ base64: p.base64, mime: p.mime }))}
-                    // A locked sheet is closed, so trials still RENDER — that is
-                    // how you see what the style does — they simply cannot join
-                    // it. Offering a keep that lands as a proof nobody may ever
-                    // judge is the dead end one row down.
-                    disabled={!isLocked && sheetFull(selected)}
-                    onKeep={isLocked ? undefined : (r, subject) => keepAsProof(selected, r, subject)}
-                  />
-                  {isLocked ? (
-                    <p className="font-jetbrains mt-2 text-[11px] text-white/40">
-                      Locked — the sheet is final. Trials still render so you can see what this style does;
-                      they cannot join it.
-                    </p>
-                  ) : (
-                    sheetFull(selected) && (
-                      <p className="mt-2 text-[12px] text-amber-200/90">
-                        {PROOF_CAP} approved proofs — the model&rsquo;s whole reference-image window. Reject
-                        one to make room; it stays on the sheet as the record of what this style is not.
-                      </p>
-                    )
-                  )}
-                </div>
-              </Panel>
+              <StyleSheet
+                theme={selected}
+                locked={isLocked}
+                shelved={shelved}
+                note={shelfNote}
+                onRename={(name) => void update(selected.id, { name })}
+                onJudge={(proofId, state) => void judgeProof(selected.id, proofId, state)}
+                onPromote={(p) => void keepOnShelf(selected, p)}
+                onKeepTrial={(r, subject) => keepAsProof(selected, r, subject)}
+              />
             )}
           </>
         )}
@@ -278,6 +241,7 @@ export default function LibraryAtelier() {
       <ConfirmDeleteStyle
         theme={doomed}
         dependents={dependents}
+        promoted={doomed ? promotedFrom(assets ?? [], doomed.id).length : 0}
         onClose={() => setDoomed(null)}
         onConfirm={() => void confirmDelete()}
       />

@@ -16,7 +16,10 @@
 // claim it. The cost is that you cannot make an empty folder, which for a shelf
 // of generated work is the right trade.
 
+import type { Provenance } from "@/app/_studio/types";
+
 import { getByIndex, getRecord, openDb, runTx, ASSETS_STORE, BY_UID } from "./studioDb";
+import type { Proof, StyleBlock, Theme } from "./themes";
 
 export type AssetKind = "image";
 
@@ -36,6 +39,150 @@ export interface Asset {
 }
 
 export const pathKey = (path: string[]) => path.join("/");
+
+/* ── Promoted proofs ──────────────────────────────────────────────────────── */
+//
+// A proof the user approved is a plate they paid for and liked enough to lock a
+// style on. Until now it terminated inside `Theme.proofs[]` and could never
+// reach the shelf, which meant the only writer to this store was the trial
+// seed.
+//
+// It arrives here as a POINTER, keeping the promise at the top of this file:
+// `src` is `proof:<themeId>/<proofId>` and the bytes stay where they already
+// live, inside the theme. Nothing is copied, so promoting a sheet of fourteen
+// costs a few hundred bytes rather than a second copy of several megabytes,
+// and a proof cannot go stale against its asset. The pointer is dereferenced at
+// READ time (see hydrateProofSrcs) — the store never holds an image.
+
+const PROOF_SCHEME = "proof:";
+
+export const proofPointer = (themeId: string, proofId: string) =>
+  `${PROOF_SCHEME}${themeId}/${proofId}`;
+
+/** The two ids inside a pointer, or null for any other kind of `src`. */
+export function readProofPointer(src: string): { themeId: string; proofId: string } | null {
+  if (!src.startsWith(PROOF_SCHEME)) return null;
+  const [themeId, proofId] = src.slice(PROOF_SCHEME.length).split("/");
+  return themeId && proofId ? { themeId, proofId } : null;
+}
+
+/**
+ * The ONE id a promoted proof can have.
+ *
+ * Content-addressed, exactly as the trial seed is and for the same measured
+ * reason (useAssets: React 19 double-invokes effects, and random ids put sixty
+ * assets on a thirty-plate shelf). A second promotion of the same proof — a
+ * double click, a re-render, a user who forgot — is then an overwrite of the
+ * same row rather than a second tile of the same picture.
+ */
+export const promotedId = (themeId: string, proofId: string) => `as-proof-${themeId}-${proofId}`;
+
+/** Folder segment for a style. Its NAME, not its id: the tree is what the user
+ *  reads, and `th-m4x8k2-9f1a` tells them nothing. */
+const styleFolder = (t: Theme) =>
+  t.name
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || t.id;
+
+/** What a promoted proof carries. `provenance` is the studio's own Provenance
+ *  shape (app/_studio/types.ts) — the one the lineage UI already walks — rather
+ *  than a third description of the same fact. */
+export type PromotedMeta = {
+  provenance: Provenance;
+  /** The gallery tile's caption reads this. */
+  styleName: string;
+  themeId: string;
+  proofId: string;
+  /** The four slots that produced THESE pixels. Copied rather than referenced
+   *  because a theme's block can be edited afterwards, and the asset is
+   *  evidence of what the plate was rendered from, not of what the style says
+   *  today. */
+  block: StyleBlock;
+  /** The vendor. Absent on proofs kept before it was recorded — absence, not
+   *  a guess. */
+  provider?: string;
+  costUsd?: number;
+  promotedAt: number;
+  /** Set at READ time when the theme holding the bytes is gone. */
+  unresolved?: boolean;
+};
+
+/** A shelf entry for one approved proof. Pure — the caller writes it. */
+export function assetFromProof(uid: string, theme: Theme, proof: Proof): Asset {
+  const meta: PromotedMeta = {
+    provenance: {
+      source: "generated",
+      model: proof.model,
+      // The compiled prompt is not kept on a proof, so it is absent here rather
+      // than reconstructed from the label — which is a truncated subject, not
+      // what the model was sent.
+      //
+      // The parent is the THEME: the lineage of a promoted plate is
+      // style → proof → asset, and the style is the only ancestor that exists
+      // as a record. No agent run made it, so runId/stepId stay absent.
+      parentIds: [theme.id],
+    },
+    styleName: theme.name,
+    themeId: theme.id,
+    proofId: proof.id,
+    block: theme.block,
+    provider: proof.provider,
+    costUsd: proof.costUsd,
+    promotedAt: Date.now(),
+  };
+  return {
+    id: promotedId(theme.id, proof.id),
+    uid,
+    path: ["styles", "proofs", styleFolder(theme)],
+    name: proof.label || proof.id,
+    src: proofPointer(theme.id, proof.id),
+    kind: "image",
+    meta,
+    createdAt: proof.createdAt,
+  };
+}
+
+/** Every shelf entry promoted out of one theme.
+ *
+ *  Matched on `meta.themeId` rather than on the pointer in `src`, because a row
+ *  that has been through hydrateProofSrcs carries the bytes there instead — and
+ *  a filter that quietly stopped matching after a read would be the worst kind
+ *  of bug to put behind a delete confirmation. */
+export const promotedFrom = (assets: Asset[], themeId: string): Asset[] =>
+  assets.filter((a) => (a.meta as PromotedMeta | undefined)?.themeId === themeId);
+
+/** A 1×1 fully transparent PNG. It stands in for a promoted proof whose bytes
+ *  are gone: the tile draws as an empty frame and the NAME says why. It is not
+ *  a colour and not an illustration of a failure — there is nothing in it. */
+const NO_BYTES =
+  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR4nGNgAAIAAAUAAXpeqz8AAAAASUVORK5CYII=";
+
+/**
+ * Dereference every `proof:` pointer against the themes that hold the bytes.
+ * Returns rows a gallery can draw — the STORED rows are untouched.
+ *
+ * A pointer that no longer resolves is not dropped and not silently blanked:
+ * the row stays, marked, and renames itself so the shelf says what happened.
+ * Deleting a style takes its promoted plates with it (LibraryAtelier), so this
+ * is the residual case — a second tab, or a style deleted before that did.
+ */
+export function hydrateProofSrcs(assets: Asset[], themes: Theme[]): Asset[] {
+  const byId = new Map(themes.map((t) => [t.id, t]));
+  return assets.map((a) => {
+    const ref = readProofPointer(a.src);
+    if (!ref) return a;
+    const proof = byId.get(ref.themeId)?.proofs.find((p) => p.id === ref.proofId);
+    return proof
+      ? { ...a, src: `data:${proof.mime};base64,${proof.base64}` }
+      : {
+          ...a,
+          src: NO_BYTES,
+          name: `${a.name} — source deleted`,
+          meta: { ...(a.meta ?? {}), unresolved: true },
+        };
+  });
+}
 
 /* ── The derived tree ─────────────────────────────────────────────────────── */
 

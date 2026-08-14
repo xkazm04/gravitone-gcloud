@@ -54,8 +54,12 @@ export interface Proof {
   mime: string;
   state: ProofState;
   note?: string;
-  /** What produced it, kept so a sheet can be audited later. */
+  /** What produced it, kept so a sheet can be audited later — and so a proof
+   *  promoted to the shelf can carry its lineage there (lib/assets.ts).
+   *  `provider` is absent on proofs kept before it was recorded; that is
+   *  absence, and the surfaces reading it show absence rather than a guess. */
   model?: string;
+  provider?: string;
   costUsd?: number;
   createdAt: number;
 }
