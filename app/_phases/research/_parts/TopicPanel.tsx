@@ -108,8 +108,20 @@ export default function TopicPanel({
         <section className="rounded-2xl border border-white/8 bg-white/[0.015] p-5">
           <p className="font-jetbrains text-[11px] tracking-[0.16em] text-white/50 uppercase">run log</p>
           <div className="mt-3">
-            <RunTrace state={run.state} emitted={run.emitted} />
+            <RunTrace state={run.state} emitted={run.emitted} failedStepId={run.failedStepId} />
           </div>
+
+          {/* The run died and the reason used to die with it: the step reset to
+              "no notebook yet" and threw away the one sentence the user most
+              needs — that re-running resumes from the cached spine. The trace
+              row above says WHERE it stopped; this says what and what now. */}
+          {run.state.status === "failed" && (
+            <div className="mt-4 border-t border-white/8 pt-4">
+              <Notice severity="error" title="the run did not finish">
+                <p data-testid="run-error">{run.state.error}</p>
+              </Notice>
+            </div>
+          )}
 
           {/* An ending of its own. "Finds no tension" used to walk to the full
               Bitcoin notebook — the exact opposite of what was asked for. The
