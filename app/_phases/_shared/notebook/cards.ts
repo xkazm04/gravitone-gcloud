@@ -103,13 +103,13 @@ export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
  *  permanently non-empty, so its `emptyMeans` alarm could never fire. They now
  *  carry the `untagged` dimension, which says what it is.
  *
- *  WHERE THE MIS-FILING BECOMES VISIBLE: here, through `notebookIssues()` below
- *  — the dev console on every page load and `npx tsx pipeline/check-notebook.mts`
- *  in a terminal. It is NOT yet visible on a board: neither
- *  research/ResearchTriageBoard.tsx nor script/_matrix/MatrixCoverage.tsx calls
- *  `columnsFor()`, so both still map the incumbent seven and an untagged card
- *  renders in no column at all. Stated rather than implied — see the note on
- *  `columnsFor` in dimensions.ts. */
+ *  WHERE THE MIS-FILING BECOMES VISIBLE: three places, since `c7b2bd6`.
+ *  `notebookIssues()` below reports it to the dev console on every page load and
+ *  to `npm run check:notebook` in a terminal — and BOTH boards now draw it.
+ *  research/ResearchTriageBoard.tsx and script/_matrix/MatrixCoverage.tsx call
+ *  `columnsFor()` off the same card set, so an untagged card appears on both or
+ *  neither; it can no longer be visible on one surface and invisible on the
+ *  other. */
 export function untaggedIds(nb: Notebook = NOTEBOOK): string[] {
   const ids = [
     ...nb.facts.map((f) => f.id),
@@ -207,7 +207,7 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
     if (!cardIds.has(id))
       add("stale-tag", "CARD_DIMENSION", id, `tags an id this notebook does not have. If the card was renamed, the tag is dead AND the card is now untagged.`);
   for (const id of untaggedIds(nb))
-    add("untagged", "CARD_DIMENSION", id, `has no dimension. It carries "${UNTAGGED_DIMENSION_ID}" and renders in no column on either board — invisible to the reviewer who needs it. Tag it in dimensions.ts::CARD_DIMENSION.`);
+    add("untagged", "CARD_DIMENSION", id, `has no dimension. It carries "${UNTAGGED_DIMENSION_ID}" and renders in the Untagged column on both boards — a queue awaiting a domain, not a domain. Tag it in dimensions.ts::CARD_DIMENSION.`);
 
   return issues;
 }
