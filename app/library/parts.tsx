@@ -6,8 +6,10 @@
 
 import { Check, X } from "lucide-react";
 
+import Modal from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Primitives";
 import type { PaletteColor, Proof, ProofState, Theme, ThemeStatus } from "@/lib/themes";
-import { lockedOnly, STATUS_WORD } from "@/lib/themes";
+import { approvedProofs, lockedOnly, sheetSpend, STATUS_WORD } from "@/lib/themes";
 
 const STATUS_CLS: Record<ThemeStatus, string> = {
   draft: "border-white/12 text-white/50",
@@ -120,6 +122,87 @@ export function ProofThumb({
         </div>
       )}
     </div>
+  );
+}
+
+/** How many projects were created on a style: a number, or the two states that
+ *  are not one. `unknown` is not folded into 0 — "no project uses this" and "we
+ *  could not find out" are opposite facts to delete a paid sheet on. */
+export type Dependents = number | "counting" | "unknown";
+
+/**
+ * Deleting a style is the one destructive act in the atelier, and the only one
+ * in this app that discards work a vendor was PAID to produce. So it asks
+ * first, and it names all of it: how many proofs, what they cost, and which
+ * projects were built on the style and will lose it.
+ */
+export function ConfirmDeleteStyle({
+  theme,
+  dependents,
+  onClose,
+  onConfirm,
+}: {
+  theme: Theme | null;
+  dependents: Dependents;
+  onClose: () => void;
+  onConfirm: () => void;
+}) {
+  const spend = theme ? sheetSpend(theme) : { usd: 0, unpriced: 0 };
+  const approved = theme ? approvedProofs(theme).length : 0;
+  return (
+    <Modal
+      open={Boolean(theme)}
+      onClose={onClose}
+      title={theme ? `Delete “${theme.name}”?` : ""}
+      className="max-w-md"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose}>
+            Keep it
+          </Button>
+          <button
+            onClick={onConfirm}
+            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-[12px] text-rose-200 transition hover:bg-rose-400/20"
+          >
+            Delete the style
+          </button>
+        </div>
+      }
+    >
+      {theme && (
+        <div className="font-hanken space-y-3 text-base text-slate-300">
+          <p>
+            Its sheet goes with it: {theme.proofs.length} proof{theme.proofs.length === 1 ? "" : "s"},{" "}
+            {approved} of them approved
+            {spend.usd > 0 && (
+              <>
+                {" "}
+                — ${spend.usd.toFixed(2)} of renders
+                {spend.unpriced > 0 && `, and ${spend.unpriced} the vendor did not price`}
+              </>
+            )}
+            . None of it can be got back.
+          </p>
+
+          <p className="text-sm text-amber-200/90">
+            {dependents === "counting"
+              ? "Checking which projects were built on it…"
+              : dependents === "unknown"
+                ? "Which projects were built on it could not be read — check /projects before you delete."
+                : dependents === 0
+                  ? "No project was built on it."
+                  : dependents === 1
+                    ? "1 project was built on it. It is NOT deleted — it keeps working, renders on a fallback preset, and says so."
+                    : `${dependents} projects were built on it. They are NOT deleted — they keep working, render on a fallback preset, and say so.`}
+          </p>
+
+          <p className="font-jetbrains text-[11px] text-white/35">
+            The style goes from this browser&rsquo;s storage. Nothing is deleted anywhere else — there is
+            nowhere else yet.
+          </p>
+        </div>
+      )}
+    </Modal>
   );
 }
 

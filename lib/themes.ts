@@ -60,8 +60,14 @@ export interface Proof {
   createdAt: number;
 }
 
-/** The production model's reference-image window. A sheet may not exceed it,
- *  because every approved proof is a reference on the next generation. */
+/** The production model's reference-image window.
+ *
+ *  It caps the APPROVED proofs on a sheet, not the sheet: an approved proof is
+ *  a reference on the next generation, a rejected one is a record of what the
+ *  style is not and is never sent anywhere. Counting rejections against the
+ *  window is what turned a sheet of fourteen into a dead end — the playground
+ *  switched off permanently and told the user to "reject one to make room",
+ *  which did nothing at all. */
 export const PROOF_CAP = 14;
 
 /* ── The record ───────────────────────────────────────────────────────────── */
@@ -128,6 +134,21 @@ export function statusOf(t: Theme): ThemeStatus {
 }
 
 export const approvedProofs = (t: Theme): Proof[] => t.proofs.filter((p) => p.state === "approved");
+
+/** Whether the sheet already holds the model's whole reference window. The one
+ *  thing that makes room is rejecting an approved proof — which is exactly what
+ *  the surface tells the user to do, and now the only thing it needs to be. */
+export const sheetFull = (t: Theme): boolean => approvedProofs(t).length >= PROOF_CAP;
+
+/** What a sheet cost, as far as the vendor said. `unpriced` is counted rather
+ *  than assumed free — it is what makes the total a floor, and anything asking
+ *  a user to throw this away has to say so honestly. */
+export function sheetSpend(t: Theme): { usd: number; unpriced: number } {
+  return {
+    usd: t.proofs.reduce((sum, p) => sum + (p.costUsd ?? 0), 0),
+    unpriced: t.proofs.filter((p) => p.costUsd === undefined).length,
+  };
+}
 
 /**
  * The lock gate. A theme locks when it has at least one approved proof and

@@ -14,12 +14,21 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Panel } from "@/components/ui/Primitives";
+import { listProjects } from "@/lib/projects";
 import { useAuth } from "@/lib/useAuth";
 import { useThemes } from "@/lib/useThemes";
-import { approvedProofs, ORIGIN_WORD, PROOF_CAP, statusOf, type Proof, type Theme } from "@/lib/themes";
+import {
+  approvedProofs,
+  ORIGIN_WORD,
+  PROOF_CAP,
+  sheetFull,
+  statusOf,
+  type Proof,
+  type Theme,
+} from "@/lib/themes";
 import type { GenerateResult } from "@/lib/imagingClient";
 
-import { GateChip, PaletteDots, ProofThumb, StatusStamp } from "./parts";
+import { ConfirmDeleteStyle, GateChip, PaletteDots, ProofThumb, StatusStamp, type Dependents } from "./parts";
 import Playground from "./Playground";
 import PresetRail from "./PresetRail";
 import SpecEditor from "./SpecEditor";
@@ -40,13 +49,23 @@ const BLANK = {
 
 export default function LibraryAtelier() {
   const { user } = useAuth();
-  const { themes, error, loading, create, update, addProof, judgeProof, lock } = useThemes(user?.uid ?? null);
+  const { themes, error, loading, create, update, addProof, judgeProof, lock, remove } = useThemes(
+    user?.uid ?? null,
+  );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** The style the user has asked to delete, and how many projects it would
+   *  cost. Counted on demand rather than held for every style — the answer is
+   *  only needed at the moment it is being weighed. */
+  const [doomed, setDoomed] = useState<Theme | null>(null);
+  const [dependents, setDependents] = useState<Dependents>("counting");
 
   const rows = useMemo(() => themes ?? [], [themes]);
   const selected = rows.find((t) => t.id === selectedId) ?? rows[0] ?? null;
+  /** A locked style is finished: its sheet is the reference set, and nothing —
+   *  a rename, a verdict, a new proof — may move under the projects built on it. */
+  const isLocked = selected ? statusOf(selected) === "locked" : false;
 
   // Follow the newest style in rather than leaving the user on a stale one.
   useEffect(() => {
@@ -89,6 +108,29 @@ export default function LibraryAtelier() {
       createdAt: Date.now(),
     };
     await addProof(t.id, proof);
+  };
+
+  const askDelete = async (t: Theme) => {
+    setDoomed(t);
+    setDependents("counting");
+    if (!user) return;
+    try {
+      const projects = await listProjects(user.uid);
+      setDependents(projects.filter((p) => p.themeId === t.id).length);
+    } catch {
+      // Unknown stays unknown. Reporting "no projects" because the read failed
+      // is how a user deletes the style three productions are built on.
+      setDependents("unknown");
+    }
+  };
+
+  const confirmDelete = async () => {
+    const gone = doomed;
+    setDoomed(null);
+    if (!gone) return;
+    await remove(gone.id);
+    // Fall back to whatever is left rather than holding a dead selection.
+    setSelectedId((cur) => (cur === gone.id ? null : cur));
   };
 
   return (
@@ -134,13 +176,16 @@ export default function LibraryAtelier() {
                     <input
                       value={selected.name}
                       onChange={(e) => void update(selected.id, { name: e.target.value })}
-                      disabled={statusOf(selected) === "locked"}
+                      disabled={isLocked}
                       className="font-instrument w-full bg-transparent text-2xl text-white focus:outline-none disabled:opacity-100"
                       aria-label="Style name"
                     />
+                    {/* The cap counts what it caps: approved proofs are the
+                        model's reference window, and the total is just how much
+                        judging has been done. */}
                     <p className="font-jetbrains mt-0.5 text-[11px] text-white/40">
-                      {ORIGIN_WORD[selected.origin]} · {approvedProofs(selected).length} approved ·{" "}
-                      {selected.proofs.length}/{PROOF_CAP} on the sheet
+                      {ORIGIN_WORD[selected.origin]} · {approvedProofs(selected).length}/{PROOF_CAP} approved
+                      · {selected.proofs.length} on the sheet
                     </p>
                   </div>
                   <StatusStamp status={statusOf(selected)} />
@@ -152,11 +197,7 @@ export default function LibraryAtelier() {
                       <ProofThumb
                         key={p.id}
                         proof={p}
-                        onJudge={
-                          statusOf(selected) === "locked"
-                            ? undefined
-                            : (state) => void judgeProof(selected.id, p.id, state)
-                        }
+                        onJudge={isLocked ? undefined : (state) => void judgeProof(selected.id, p.id, state)}
                       />
                     ))}
                   </div>
@@ -171,14 +212,25 @@ export default function LibraryAtelier() {
                       .slice()
                       .sort((a, b) => b.createdAt - a.createdAt)
                       .map((p) => ({ base64: p.base64, mime: p.mime }))}
-                    disabled={selected.proofs.length >= PROOF_CAP}
-                    onKeep={(r, subject) => keepAsProof(selected, r, subject)}
+                    // A locked sheet is closed, so trials still RENDER — that is
+                    // how you see what the style does — they simply cannot join
+                    // it. Offering a keep that lands as a proof nobody may ever
+                    // judge is the dead end one row down.
+                    disabled={!isLocked && sheetFull(selected)}
+                    onKeep={isLocked ? undefined : (r, subject) => keepAsProof(selected, r, subject)}
                   />
-                  {selected.proofs.length >= PROOF_CAP && (
-                    <p className="mt-2 text-[12px] text-amber-200/90">
-                      The sheet is full at {PROOF_CAP} — that is the model&rsquo;s reference-image window.
-                      Reject one to make room.
+                  {isLocked ? (
+                    <p className="font-jetbrains mt-2 text-[11px] text-white/40">
+                      Locked — the sheet is final. Trials still render so you can see what this style does;
+                      they cannot join it.
                     </p>
+                  ) : (
+                    sheetFull(selected) && (
+                      <p className="mt-2 text-[12px] text-amber-200/90">
+                        {PROOF_CAP} approved proofs — the model&rsquo;s whole reference-image window. Reject
+                        one to make room; it stays on the sheet as the record of what this style is not.
+                      </p>
+                    )
                   )}
                 </div>
               </Panel>
@@ -193,13 +245,24 @@ export default function LibraryAtelier() {
           <GateChip themes={rows} />
         </div>
         {selected ? (
-          <Panel className="p-4">
-            <SpecEditor
-              theme={selected}
-              onChange={(block) => void update(selected.id, { block })}
-              onLock={() => void lock(selected.id)}
-            />
-          </Panel>
+          <>
+            <Panel className="p-4">
+              <SpecEditor
+                theme={selected}
+                onChange={(block) => void update(selected.id, { block })}
+                onLock={() => void lock(selected.id)}
+              />
+            </Panel>
+            {/* The way OUT of the wall. A style used to be un-deletable — the
+                hook exported `remove()` and nothing called it — so a wall of
+                abandoned drafts could only ever grow. */}
+            <button
+              onClick={() => void askDelete(selected)}
+              className="font-jetbrains w-full cursor-pointer rounded-lg border border-white/10 px-3 py-1.5 text-[11px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300"
+            >
+              delete this style
+            </button>
+          </>
         ) : (
           <Panel className="p-4">
             <p className="text-[13px] leading-snug text-slate-400">
@@ -211,6 +274,13 @@ export default function LibraryAtelier() {
           preset or brief → render trials → approve the ones that hold → locked
         </p>
       </aside>
+
+      <ConfirmDeleteStyle
+        theme={doomed}
+        dependents={dependents}
+        onClose={() => setDoomed(null)}
+        onConfirm={() => void confirmDelete()}
+      />
     </div>
   );
 }
