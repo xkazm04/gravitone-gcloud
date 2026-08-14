@@ -5,7 +5,7 @@
 // for the same bad input. The routes stay thin enough to read in one screen.
 
 import { ImagingError, statusFor } from "./errors";
-import { logUnexpected } from "./log";
+import { logUnexpected, scrub } from "./log";
 import {
   ASPECT_PX,
   PROVIDER_IDS,
@@ -100,11 +100,28 @@ export async function readJson(req: Request): Promise<Record<string, unknown>> {
  *  this function sees one exception; logging it again would double every
  *  failure line. A BadRequest never reached a vendor at all. */
 export function errorResponse(e: unknown): Response {
+  // A BadRequest is ours end to end — this layer built the sentence from the
+  // caller's own field names, and no vendor text can reach it.
   if (e instanceof BadRequest) return Response.json({ detail: e.message, code: "bad-request" }, { status: 400 });
 
+  // SCRUBBED, for the reason log.ts already gives about the same string: an
+  // ImagingError's `message` READS as ours, but providers/google.ts:130 splices
+  // the vendor's own `error.message` into it verbatim, so it is not provably
+  // free of vendor-supplied text — and a vendor that echoes our key back puts
+  // that key in this response body.
+  //
+  // Measured 2026-08-14, before this line existed: the log said
+  //   msg="… upstream rejected credential [redacted] at line 3"
+  // and the HTTP body said
+  //   "detail":"… upstream rejected credential offline-probe-google-key-0000 …"
+  // Same string, one defended and one not. The log was scrubbed because it was
+  // the audited surface; this one was simply never looked at.
+  //
+  // `e.detail` — up to 600 chars of raw vendor body, which can echo the user's
+  // own prompt — has never been in this response and must not be added.
   if (e instanceof ImagingError)
     return Response.json(
-      { detail: e.message, code: e.kind, provider: e.provider },
+      { detail: scrub(e.message), code: e.kind, provider: e.provider },
       { status: statusFor(e.kind) },
     );
 

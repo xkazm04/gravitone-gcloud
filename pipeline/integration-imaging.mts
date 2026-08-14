@@ -628,6 +628,35 @@ if (!LIVE) {
     return "502 · the body stayed in ImagingError.detail, which is never serialised";
   });
 
+  await probe("api.scrubs-the-vendor-sentence-it-quotes-back", async () => {
+    useKeys("google");
+    process.env.IMAGING_ENV = "prod";
+    // The case ABOVE covers `ImagingError.detail`, which is never serialised.
+    // This one covers `message`, which always is — and which is NOT ours end to
+    // end: providers/google.ts:130 splices the vendor's own `error.message`
+    // into it verbatim on the failed-interaction path.
+    //
+    // Measured on 2026-08-14, before api.ts scrubbed this: the log line was
+    // defended and the HTTP body was not, for the same string. That asymmetry
+    // is what this check exists to prevent coming back — the log was audited,
+    // the response simply was never looked at.
+    wire = (m, u) =>
+      u.host === GOOGLE_HOST
+        ? jsonWire(
+            { status: "failed", error: { message: `upstream rejected credential ${FAKE.google} at line 3` } },
+            200,
+          )
+        : null;
+
+    const res = await call("generate", { prompt: "x", aspect: "16:9" });
+    const text = await res.text();
+    if (text.includes(FAKE.google))
+      throw new Error("the key the vendor echoed back reached the caller in `detail`");
+    if (!text.includes("[redacted]"))
+      throw new Error(`expected the masked form in the body, got: ${text.slice(0, 200)}`);
+    return "the vendor's sentence is quoted back masked, not verbatim";
+  });
+
   /* ── the price table's own promise ─────────────────────────────────────── */
 
   await probe("pricing.serves-prices-and-tells-nobody-which-keys-are-set", async () => {
