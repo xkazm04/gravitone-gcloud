@@ -9,6 +9,8 @@
 //
 // A follow-up UI that only knows how to render "here is more" is wrong.
 
+import { UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
+
 export type FollowUpKind = "deepen-card" | "question";
 
 /** What a returned result does to the notebook. */
@@ -91,6 +93,91 @@ export const CANNED: Record<string, FollowUpResult> = {
     ],
   },
 };
+
+/* ------------------------------------------------- where an effect actually stands */
+
+/** WHERE AN EFFECT STANDS against the notebook on screen. Derived every render
+ *  from the live card set, never trusted from the transcript.
+ *
+ *  THERE IS NO APPLY ACTION, and this function does not pretend there could be
+ *  one. Applying an effect means editing the notebook, and the notebook here is
+ *  a single static module shared by every project — there is nowhere per-project
+ *  to write one. The one per-project document that DOES persist is the scope
+ *  (useScope.ts), and it records kept-or-cut, not confidence and not new facts.
+ *  So every branch below is a statement of fact about what already IS. None of
+ *  them is a promise.
+ *
+ *  Derived rather than written down because the fixture already moved once: these
+ *  two results were transcribed from a real terminal run, and the notebook has
+ *  since absorbed that run — the facts they add are already cards, the fact they
+ *  kill is already deleted, the unknown they resolve is already flagged resolved.
+ *  A hardcoded caption would have been true on the day it was written and a lie
+ *  by the next fixture change. Same rule `orphanedCuts` follows in the Script
+ *  step: a record naming a card the notebook no longer has gets REPORTED, not
+ *  quietly drawn as though it still pointed at something. */
+export interface Standing {
+  /** A few words, drawn beside the effect. */
+  label: string;
+  /** The whole reason, for the title. */
+  why: string;
+  /** The notebook on screen already carries this. The effect is not pending —
+   *  it landed, before the user ever saw it. */
+  landed: boolean;
+}
+
+const GLOBAL_NOTEBOOK =
+  "The notebook in this prototype is one static document shared by every project, so there is nowhere per-project to write it.";
+
+export function standingOf(e: Effect, cardIds: ReadonlySet<string>): Standing {
+  switch (e.kind) {
+    case "adds-fact":
+      return cardIds.has(e.factId)
+        ? {
+            label: "already in the notebook",
+            landed: true,
+            why: `${e.factId} is already a card on the triage board. This result was transcribed from a real run and that run's output is already in the fixture.`,
+          }
+        : { label: "not applied", landed: false, why: `Adding a fact edits the notebook. ${GLOBAL_NOTEBOOK}` };
+
+    case "kills":
+      return cardIds.has(e.targetId)
+        ? { label: "not applied", landed: false, why: `Nothing on this surface writes an effect anywhere. ${GLOBAL_NOTEBOOK}` }
+        : {
+            label: "already gone",
+            landed: true,
+            why: `This notebook has no card ${e.targetId}. The fact was deleted outright when this round landed — not descoped, removed.`,
+          };
+
+    case "confirms":
+      return cardIds.has(e.targetId)
+        ? {
+            label: "changes no decision",
+            landed: true,
+            why: `A confirmation leaves ${e.targetId} exactly where it is — still a card, still yours to keep or cut. There is nothing to write.`,
+          }
+        : { label: "no such id here", landed: false, why: `This notebook has no card ${e.targetId}.` };
+
+    case "resolves-unknown": {
+      const u = UNKNOWN_BY_ID[e.targetId];
+      if (!u)
+        return {
+          label: "no such id here",
+          landed: false,
+          why: `This notebook carries no unknown ${e.targetId} — the transcript names an id the fixture does not have.`,
+        };
+      return u.resolvedBy
+        ? { label: "already resolved", landed: true, why: `The notebook already records ${e.targetId} as resolved.` }
+        : { label: "not applied", landed: false, why: `Unknowns live in the notebook. ${GLOBAL_NOTEBOOK}` };
+    }
+
+    case "downgrades":
+      return {
+        label: "not applied",
+        landed: false,
+        why: `Scope records kept or cut, not confidence — a downgrade has nowhere per-project to go. ${GLOBAL_NOTEBOOK}`,
+      };
+  }
+}
 
 /** The system writes the reason where it can infer one, so a creator queueing a
  *  card does not have to articulate what the notebook already knows. */

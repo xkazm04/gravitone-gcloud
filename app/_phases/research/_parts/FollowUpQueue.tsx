@@ -16,7 +16,7 @@
 // in front of unmeasured work is the same defect the script step had; the driven
 // job exists so nobody has to invent a third lifecycle to avoid it.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Primitives";
 import { useJobs } from "@/lib/jobs";
@@ -50,6 +50,10 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
   const [asked, setAsked] = useState<FollowUpRequest[]>([]);
   const [q, setQ] = useState("");
   const inFlight = useRef<{ jobId: string; timer: ReturnType<typeof setTimeout> } | null>(null);
+  // A result reports where each of its effects stands against the notebook ON
+  // SCREEN, so it is handed the live card set rather than reasoning off the
+  // transcript it was written from.
+  const cardIds = useMemo(() => new Set(api.cards.map((c) => c.id)), [api.cards]);
 
   // Closing the queue ends the run. The results land in this component's state,
   // so once it is gone there is nothing left to receive them — `interrupted` is
@@ -243,7 +247,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
                 </p>
               )}
 
-              {r.result && <FollowUpResult result={r.result} />}
+              {r.result && <FollowUpResult result={r.result} cardIds={cardIds} />}
             </li>
           ))}
         </ul>
