@@ -46,7 +46,19 @@ export default function ContextMenu({
   const ref = useRef<HTMLDivElement>(null);
   const firstRef = useRef<HTMLButtonElement>(null);
 
+  // Read onClose through a ref so the effect below runs ONCE per open. Its
+  // caller passes an inline arrow (AssetsBrowser: `onClose={() => setMenu(null)}`)
+  // so keying on it re-ran the whole effect on every re-render of the shelf —
+  // which re-focused the first item under the user, and, worse, re-captured
+  // `opener` as whatever was focused THEN, losing the tile the menu was opened
+  // from and stranding focus on <body> when it closed. Same fix as Modal.tsx.
+  const onCloseRef = useRef(onClose);
   useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  useEffect(() => {
+    const close = () => onCloseRef.current();
     // Focus the first ITEM, not the container: it is the first thing you would
     // want to press, and it carries the focus ring so you can see you have it.
     // Where focus came from is restored on close — a dismissed menu that leaves
@@ -54,25 +66,25 @@ export default function ContextMenu({
     const opener = document.activeElement as HTMLElement | null;
     firstRef.current?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") close();
     };
     const onDown = (e: MouseEvent) => {
-      if (!ref.current?.contains(e.target as Node)) onClose();
+      if (!ref.current?.contains(e.target as Node)) close();
     };
     window.addEventListener("keydown", onKey);
     // `capture` so the menu closes before the click lands on whatever is
     // underneath — otherwise dismissing it also activates that thing.
     window.addEventListener("mousedown", onDown, true);
-    window.addEventListener("scroll", onClose, true);
-    window.addEventListener("resize", onClose);
+    window.addEventListener("scroll", close, true);
+    window.addEventListener("resize", close);
     return () => {
       window.removeEventListener("keydown", onKey);
       window.removeEventListener("mousedown", onDown, true);
-      window.removeEventListener("scroll", onClose, true);
-      window.removeEventListener("resize", onClose);
+      window.removeEventListener("scroll", close, true);
+      window.removeEventListener("resize", close);
       if (opener && document.contains(opener)) opener.focus();
     };
-  }, [onClose]);
+  }, []);
 
   // Flip rather than clamp near an edge: a menu shoved back inside the viewport
   // covers the thing it was opened on.
