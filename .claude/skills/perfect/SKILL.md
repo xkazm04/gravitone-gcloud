@@ -5,6 +5,7 @@ memory: vault
 category: Development
 description: Session-after-session product perfection loop for Gravitone Studio. The strongest available model at xhigh reasoning (currently Fable 5) directs — it walks the repo's context map context-by-context, proposes 5 challenged, high-value directions per context (features, design elevations, significant optimizations), gates them with the user until 10 are accepted, then orchestrates Opus-class builder subagents on ONE shared branch — grouped so their write sets cannot collide — while making every review/merge decision itself. All state lives in the repo's `.vault/` (Obsidian-openable) so any future session resumes the loop exactly where the last one stopped. Invoke with `/perfect [init|propose|build|status|reflect] [context-name]`.
 argument-hint: "[init|propose|build|status|reflect] [context]"
+version: 1.0
 ---
 
 # Perfect — the direction-and-delivery loop
@@ -17,8 +18,12 @@ argument-hint: "[init|propose|build|status|reflect] [context]"
 
 - **Stack**: Next.js 16 (App Router, Turbopack) + React 19 + TypeScript + Tailwind v4. No backend, no
   database, no third-party service. `app/_studio/*` holds the mocked fixtures every surface reads.
-- **The product**: one production walked through five phases (Script · Frames · Motion · Score · Cut)
-  over a Library that knows every asset's lineage. `app/page.tsx` is the composition root.
+- **The product**: one production walked through five steps (Research · Script · Frames · Score · Cut)
+  over a Library that knows every asset's lineage. `lib/projects.ts`'s `PHASES` is the ONE source of
+  that order; `app/studio/[projectId]/` is the composition root. **Motion was retired as a step on
+  2026-08-14** — Frames owns the still and the clip made from it, because they are one art-direction
+  decision against one source frame. A direction proposing "the motion step" is proposing a regression;
+  a direction deepening Frames' clip half is exactly in season.
 - **The design language** came intact from `gravitone/web` (DESIGN.md there is the long form):
   `components/ui/tokens.ts` is the single source of truth and the ONLY file allowed a colour literal;
   `globals.css` consumes the `--gt-*` vars it publishes. A direction that hard-codes a colour is
@@ -455,8 +460,38 @@ per direction → status (done|blocked|decision-needed), commits, files, verific
 - **Interruptibility is a feature**: write the vault incrementally (after every context in P, after every merge in B) so a killed session resumes losslessly.
 - **The user is the product owner**: the gate is theirs; the Director challenges but never overrides a rejection, and repeated rejections of a lens/context recalibrate the queue scores.
 
-## App context coverage
+## App context coverage (Personas-managed repos)
 
-This repo is not Personas-managed: there is no `.personas/` dir and no memory
-outbox to append to. The vault under `.vault/` IS the coverage record — keep it
-current and skip any outbox step the engine mentions elsewhere.
+This skill declares `contexts: tracked` — the Personas app measures per-context memory coverage for it. **This repo IS Personas-managed** (`.personas/` exists; project `gravitone`, id `91d8170c-2be4-45ac-b509-256bfa7726f1`). Append JSON lines to `.personas/memory-outbox.jsonl` at the repo root (append, never rewrite) — one node per context you meaningfully worked on:
+
+```json
+{"type":"node","kind":"progress","title":"<=200 chars: what you did in this context","body":"optional detail","context":"<a context name the app knows>","skill":"perfect"}
+```
+
+**Which name — this is the part that silently fails.** The ingest matches `context` against the names the app actually knows, case-insensitively. An unrecognized name is NOT an error: the node is stored with a null context and never counts toward coverage. In this repo the authority is the app's own DB, and `context-map.json` is its export — same machine, one scan, so the map's `contexts[].name` values ARE the matching set. Confirm through the bridge when it is up (`GET http://127.0.0.1:<17400+>/dev-tools/projects`, then the context ledger) rather than trusting a name you remember; a map that predates the last scan can name a context the DB has since retired.
+
+Always set both `"skill":"perfect"` and `"context":"<name>"` — together they drive the per-skill context-coverage % (last 30 days).
+
+**Append incrementally, not at the end** — same rule as the vault: one line the moment a context's proposal pass closes, one more when a direction from it ships. "Before finishing" loses everything when a session is killed, and this loop's sessions get killed.
+
+**Who ingests it:** the app sweeps the outbox into the Memory Ledger and deletes the file when a *Fleet-spawned* session exits, and whenever the Skills Manager panel (Dev Tools → Skills) is opened for the project. A `/perfect` run in a plain terminal is neither, so its lines sit on disk until the user next opens that panel — that is expected, not a failure. Never hand-write into the ledger DB; the outbox is the only door.
+
+The vault under `.vault/Perfect/` remains the loop's own memory; the outbox is the app's view of it. Both, not either.
+
+---
+
+## Skill Reflection
+
+After the run's real work is done, reflect twice — autonomously, without asking the user. Be honest about volume: most runs produce NOTHING for lane 2. An empty reflection is a valid result; a forced lesson is pollution. Calibration: nothing (common) / one line (sometimes) / a lesson entry (occasionally) / a redesign proposal (rare).
+
+Lane 1 — PROJECT learnings (what the next session in THIS repo needs): write via the MEMORY BLOCK contract if this prompt carries one, else append node lines to `.personas/memory-outbox.jsonl` per the contract above. Project-specific insight only.
+
+Lane 2 — METHOD learnings (what would improve THIS SKILL for every project):
+1. If nothing generalizes beyond this repo, stop here.
+2. Append an entry to `LESSONS.md` in this skill's directory: `## <version-used> — <YYYY-MM-DD> — <project-name>` followed by `- ` bullets (create the file with a `# Lessons — perfect` heading if absent). Record the version the run USED, not a bump target. Wrap a bullet in a `### Redesign proposal` sub-block when it argues for a methodic redesign you are NOT applying now.
+3. Version bump — ONLY when you also edit SKILL.md to apply the improvement in the same change: minor (1.2 → 1.3) for a prompt/step refinement, major (1.x → 2.0) for a methodic redesign. Update the `version:` frontmatter field. Never bump without an applied edit; never edit the method without a bump.
+4. Sync ritual (only when you bumped): (a) commit the skill directory as a STANDALONE commit on the current branch — message `skill(perfect): v<new> — <one-line reason>` — containing nothing but this skill's files; (b) copy the updated skill directory to `~/.claude/skills/perfect/` (overwrite) so sibling projects can adopt it. EXCEPTION: read `.personas/skill-registry.json` first — if the library already carries a HIGHER version than yours, do not overwrite it; keep your lesson in LESSONS.md and note the version conflict in the entry.
+
+**Repo-specific caution on lane 2:** this copy is a Gravitone ADAPTATION of the workspace engine (the upstream at `dolla/personas` is Tauri/Rust/i18n-shaped). A lesson that is really about Next.js, `.vault/`, or this repo's gates is lane 1, not lane 2 — pushing it upstream would break the sibling repos that run the same skill.
+
+Sibling awareness: `.personas/skill-registry.json` (repo root) lists this skill's installed version, the workspace library version, and which sibling projects run it at which version with recent usage. Use it to judge whether a lesson is worth a bump (heavily-used siblings raise the bar for majors) and to notice you are BEHIND (library newer than yours → prefer recording the lesson over editing a stale method).
