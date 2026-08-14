@@ -21,8 +21,17 @@
 // a secret — it holds none — but because the directory is the seam that keeps
 // keys out of the browser bundle, and a component reaching in for a price would
 // be the first crack in it. A surface that needs a price before the call gets
-// it through a prop or the API, never through an import (see
-// app/library/Playground.tsx).
+// it through a prop or the API, never through an import.
+//
+// THE BROWSER'S ROUTE INTO THIS TABLE is `GET /api/imaging/pricing`, served by
+// `priceTable()` at the bottom of this file. It exists because the alternative
+// was a component restating a number this table owns — app/library/Playground.tsx
+// carried its own `0.045` — and a price declared twice is a price that rots.
+// What crosses that wire is audited in the route handler, and the audit rests on
+// one property of this module: **it reads no `process.env` and imports nothing
+// that does.** Its only import is type-only and therefore erased. Keep it that
+// way; a `keyFor()` or an `isConfigured()` in here would put the seam's whole
+// purpose behind one convenience.
 
 import type { CostBasis, ProviderId } from "./types";
 
@@ -40,10 +49,23 @@ export interface PriceQuote {
   note: string;
 }
 
+/**
+ * What the vendor counts when it bills this model.
+ *
+ * Machine-readable rather than left to the prose in `source`, because the
+ * pre-call estimate has to pick out the rows that could price ONE IMAGE and
+ * ignore the ones billed per token. Inferring that from "does `usdPerImage`
+ * happen to be set" would be right today by luck and wrong the day somebody
+ * measures a per-call figure for the vision model.
+ */
+export type BillingUnit = "per-image" | "per-token";
+
 interface ModelPrice {
   provider: ProviderId;
   /** Exact model id as it goes on the wire, and as it lands in `Provenance`. */
   model: string;
+  /** What the vendor counts. See BillingUnit. */
+  bills: BillingUnit;
   /** USD per image. Absent = deliberately unpriced; `source` says why. */
   usdPerImage?: number;
   /**
@@ -73,6 +95,7 @@ export const PRICES: readonly ModelPrice[] = [
   {
     provider: "google",
     model: "gemini-3.1-flash-image",
+    bills: "per-image",
     usdPerImage: 0.045,
     atSize: "1K",
     source:
@@ -82,6 +105,7 @@ export const PRICES: readonly ModelPrice[] = [
   {
     provider: "google",
     model: "gemini-3.1-flash-lite-image",
+    bills: "per-image",
     // UNPRICED ON PURPOSE.
     source:
       "Never measured here — the repo runs the full model, because Lite supports object references only and cannot hold style-lock (providers/google.ts:37-46). Lite is known to be cheaper than NB2 and by no established amount, and 'cheaper' is not a number. Measure a batch or read Google's rate card, then price this row.",
@@ -90,6 +114,7 @@ export const PRICES: readonly ModelPrice[] = [
   {
     provider: "google",
     model: "gemini-3.6-flash",
+    bills: "per-token",
     // UNPRICED ON PURPOSE.
     source:
       "Recognition is billed per TOKEN — prompt, completion and the image's own tokens — not per call, so there is no per-call figure to put here. The Interactions response carries a `usage` block that this adapter does not decode, and no USD-per-token rate has been checked. Decoding usage and pricing it is the work that would fill this row.",
@@ -98,6 +123,7 @@ export const PRICES: readonly ModelPrice[] = [
   {
     provider: "leonardo",
     model: "lucid-origin",
+    bills: "per-image",
     usdPerImage: 0.0257,
     // No `atSize`: our Leonardo calls always send an ASPECT_PX size (~1.2MP),
     // and the measurement was taken at one of them.
@@ -113,6 +139,7 @@ export const PRICES: readonly ModelPrice[] = [
   {
     provider: "qwen",
     model: "qwen3.8-max",
+    bills: "per-token",
     source:
       "DashScope bills per token against a prepaid balance, and the three SKUs this adapter rotates through bill at DIFFERENT rates against SEPARATE allowances. The chat response returns `usage.prompt_tokens`/`completion_tokens`, but no USD-per-token rate has been checked against Alibaba's published card. Unpriced until someone reads that card.",
     checked: "2026-08-14",
@@ -120,12 +147,14 @@ export const PRICES: readonly ModelPrice[] = [
   {
     provider: "qwen",
     model: "qwen3.7-plus",
+    bills: "per-token",
     source: "Per-token, rate unchecked — see the qwen3.8-max row.",
     checked: "2026-08-14",
   },
   {
     provider: "qwen",
     model: "qwen3.6-flash",
+    bills: "per-token",
     source: "Per-token, rate unchecked — see the qwen3.8-max row.",
     checked: "2026-08-14",
   },
@@ -194,3 +223,96 @@ export function priceCall(args: {
 /** The `costUsd` for a `Provenance`, or `undefined` when we cannot price it. */
 export const costUsdFor = (args: Parameters<typeof priceCall>[0]): number | undefined =>
   priceCall(args).usd;
+
+/* ── The public half: what a surface may know BEFORE the call ─────────────── */
+//
+// Everything above prices a call that already happened. A surface that is about
+// to spend money needs the figure BEFORE the click, and it cannot import this
+// file to get it (see the header). So the two functions below are the wire
+// shape, served by app/api/imaging/pricing/route.ts.
+//
+// They are deliberately derived from `PRICES` alone. Nothing here reads the
+// environment, asks which vendors are configured, or consults the router's
+// plan — a caller must not be able to work out from a price response which keys
+// this deployment holds, and the cheapest way to guarantee that is to have
+// nothing to leak in the first place.
+
+/**
+ * A table row as the wire carries it.
+ *
+ * Field-for-field the same as `ModelPrice`, and written out longhand rather
+ * than by spreading the row. That is the point: a projection you have to edit
+ * to widen cannot accidentally widen. If a future row grows a field that should
+ * not be public, the default is that it stays private.
+ */
+export interface PublicPrice {
+  provider: ProviderId;
+  model: string;
+  bills: BillingUnit;
+  usdPerImage?: number;
+  atSize?: string;
+  source: string;
+  checked: string;
+}
+
+export interface PriceTable {
+  /** What ONE generated image is likely to cost. See `estimatePerImage`. */
+  perImage: PriceQuote;
+  /** Every declared row, priced and unpriced alike. */
+  prices: PublicPrice[];
+}
+
+/**
+ * The pre-click estimate: the DEAREST declared per-image rate.
+ *
+ * A surface asking before the call cannot know which vendor the router will
+ * pick — that depends on the environment, on which keys are set, and on whether
+ * the first choice refuses. It must not learn any of those from us either. So
+ * the answer is the ceiling over the priced per-image rows, which errs HIGH,
+ * and erring high is the right direction for a warning about money.
+ *
+ * Unpriced when no per-image row carries a figure. That is a real outcome and
+ * not a placeholder: a surface that gets it must say it does not know the
+ * price, never $0.00.
+ */
+export function estimatePerImage(): PriceQuote {
+  const priced = PRICES.filter(
+    (p): p is ModelPrice & { usdPerImage: number } =>
+      p.bills === "per-image" && p.usdPerImage !== undefined,
+  );
+  if (!priced.length)
+    return {
+      basis: "unpriced",
+      note:
+        "No per-image rate is declared in lib/imaging/pricing.ts, so there is no estimate to show " +
+        "before the call. The vendor's own figure, when it sends one, still arrives with the result.",
+    };
+
+  const dearest = priced.reduce((a, b) => (b.usdPerImage > a.usdPerImage ? b : a));
+  return {
+    usd: dearest.usdPerImage,
+    basis: "estimated",
+    note:
+      `Estimated at the dearest declared per-image rate: $${dearest.usdPerImage} on ` +
+      `${dearest.provider}/${dearest.model}` +
+      (dearest.atSize ? ` at image_size ${dearest.atSize}` : "") +
+      `, checked ${dearest.checked}. Which vendor answers is decided per call, so this errs high on ` +
+      "purpose. Whatever the render reports afterwards replaces it.",
+  };
+}
+
+/** The whole public table, and the one estimate most callers actually want. */
+export function priceTable(): PriceTable {
+  return {
+    perImage: estimatePerImage(),
+    prices: PRICES.map((p) => ({
+      provider: p.provider,
+      model: p.model,
+      bills: p.bills,
+      usdPerImage: p.usdPerImage,
+      atSize: p.atSize,
+      source: p.source,
+      checked: p.checked,
+    })),
+  };
+}

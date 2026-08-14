@@ -14,7 +14,7 @@
 // how the theme eventually locks. The playground is not a toy bolted to the
 // side; it is the only route to a locked style.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
 import { imgSrc, generateImage, ImagingRequestError, type GenerateResult } from "@/lib/imagingClient";
@@ -38,24 +38,55 @@ const MAX_REFS = 4;
 const IMAGES_PER_RUN = 1;
 
 /**
- * THE PRICE SEAM — why a literal sits in a client component, and how it leaves.
+ * THE PRICE SEAM, now crossed.
  *
- * The authoritative table is `lib/imaging/pricing.ts`, and it is SERVER ONLY:
- * everything under `lib/imaging/` reads API keys, so a component importing from
- * there is exactly how a key reaches the browser bundle. Nothing serves a price
- * over the wire and no server parent passes one down, so it is declared here —
- * overridable by prop, which is the shape the fix takes. Removing the literal
- * needs one of two edits nobody in this write set owns: a `GET
- * /api/imaging/pricing` handler, or the price threaded from app/library/page.tsx.
+ * This component used to declare `ESTIMATED_USD_PER_IMAGE = 0.045` — a second
+ * copy of a number `lib/imaging/pricing.ts` owns — because that table is SERVER
+ * ONLY (everything under `lib/imaging/` reads API keys, so a component importing
+ * from there is how a key reaches the browser bundle) and nothing served the
+ * figure over the wire. `GET /api/imaging/pricing` now does. The route hands
+ * back the table's own pre-click estimate; nothing in this file restates it, so
+ * the price cannot drift out of step with the one declaration of it.
  *
- * The figure is the PRODUCTION vendor's measured rate: $0.045/render on Google
- * at 1K, from the 60-cell trial grid (docs/imaging.md § The provider verdict,
- * restated at lib/imaging/router.ts:46-47). The browser cannot know which
- * environment will answer and the dev vendor is cheaper, so quoting production
- * errs HIGH — the right direction for a warning about money. KEEP IN STEP with
- * pricing.ts.
+ * The estimate is the dearest declared per-image rate, which is the honest
+ * answer to a question asked before the router has picked a vendor. Read the
+ * route handler for what that response does and does not contain — the short
+ * version is that it is derived from a module constant and carries no key, no
+ * environment and no clue about which vendors this deployment can reach.
+ *
+ * Any surface with the same need — Frames spends far more here than the
+ * playground does — fetches the same route rather than copying this code.
  */
-const ESTIMATED_USD_PER_IMAGE = 0.045;
+interface PreClickPrice {
+  /** Absent when the table declares no per-image rate. NOT zero. */
+  usd?: number;
+  /** Already written for a person; goes straight into the tooltip. */
+  note: string;
+}
+
+/** Asked once per page load and shared by every playground on it. The table is
+ *  a module constant on the server, so a second fetch could only ever return
+ *  the same bytes. */
+let pricePromise: Promise<PreClickPrice> | null = null;
+
+function perImagePrice(): Promise<PreClickPrice> {
+  pricePromise ??= (async () => {
+    const res = await fetch("/api/imaging/pricing");
+    if (!res.ok) throw new Error(`pricing answered ${res.status}`);
+    const doc = (await res.json()) as { perImage?: { usd?: unknown; note?: unknown } };
+    const q = doc.perImage;
+    if (!q || typeof q.note !== "string") throw new Error("pricing returned a body we cannot read");
+    // A non-number `usd` becomes ABSENT, never 0 — the whole point of the
+    // unpriced basis is that a missing figure must not print as free.
+    return { usd: typeof q.usd === "number" ? q.usd : undefined, note: q.note };
+  })().catch((e: unknown) => {
+    // One blip must not poison the rest of the session: drop the memo so the
+    // next mount asks again.
+    pricePromise = null;
+    throw e;
+  });
+  return pricePromise;
+}
 
 /**
  * The money line after a render.
@@ -77,13 +108,38 @@ function costLine(usd: number | undefined, basis: string | undefined): string {
   return `${basis === "vendor-reported" ? "" : "~"}$${usd.toFixed(4)}`;
 }
 
+/**
+ * The money line BEFORE the click, in all four of its states.
+ *
+ * Three of them are ways of not knowing, and they are kept apart rather than
+ * collapsed into one blank: still asking, asked and the route did not answer,
+ * and the table declaring no rate for a per-image render. None of them may
+ * render as $0.000 — an unknown price is unknown, and a zero is a claim.
+ */
+function priceLabel(price: PreClickPrice | "unknown" | null): { text: string; title: string } {
+  if (price === null)
+    return { text: "checking the price…", title: "Asking /api/imaging/pricing what a render costs." };
+  if (price === "unknown")
+    return {
+      text: "price unknown",
+      title:
+        "The price table could not be reached, so this render's cost is not known in advance. " +
+        "Whatever it actually costs is reported under the image afterwards.",
+    };
+  if (price.usd === undefined) return { text: "price not declared", title: price.note };
+  return {
+    text: `est. $${(price.usd * IMAGES_PER_RUN).toFixed(3)} · ${IMAGES_PER_RUN} image${IMAGES_PER_RUN > 1 ? "s" : ""}`,
+    title: price.note,
+  };
+}
+
 export default function Playground({
   block,
   references = [],
   onKeep,
   keepLabel = "keep as proof",
   disabled,
-  usdPerImage = ESTIMATED_USD_PER_IMAGE,
+  usdPerImage,
 }: {
   block: StyleBlock;
   /** Approved proofs from this theme, newest first. */
@@ -91,7 +147,9 @@ export default function Playground({
   onKeep?: (r: GenerateResult, subject: string) => void | Promise<void>;
   keepLabel?: string;
   disabled?: boolean;
-  /** Estimated USD per image, for the price shown BEFORE the click. */
+  /** Estimated USD per image, for the price shown BEFORE the click. Left unset
+   *  the panel asks /api/imaging/pricing itself; a server parent that already
+   *  holds the figure can pass it and save the round trip. */
   usdPerImage?: number;
 }) {
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
@@ -107,8 +165,32 @@ export default function Playground({
   // the vendor would not price, which is what turns the total into a FLOOR
   // rather than a figure — the same idiom the Frames spend line uses.
   const [spend, setSpend] = useState({ usd: 0, runs: 0, unpriced: 0 });
+  /** `null` while the answer is still in flight, `"unknown"` when it never
+   *  arrived. Three distinguishable states, because "we are asking", "we asked
+   *  and nobody knows" and "$0.045" are three different things to tell someone
+   *  standing in front of a button that spends money. */
+  const [price, setPrice] = useState<PreClickPrice | "unknown" | null>(
+    usdPerImage === undefined
+      ? null
+      : { usd: usdPerImage, note: "Supplied by the surface this playground sits in." },
+  );
 
-  const estimate = usdPerImage * IMAGES_PER_RUN;
+  useEffect(() => {
+    if (usdPerImage !== undefined) return;
+    let live = true;
+    void perImagePrice().then(
+      (p) => live && setPrice(p),
+      // Deliberately not an error banner: failing to fetch a price is not a
+      // failed render, and the panel still works. It just stops claiming to
+      // know what a click costs.
+      () => live && setPrice("unknown"),
+    );
+    return () => {
+      live = false;
+    };
+  }, [usdPerImage]);
+
+  const estimate = priceLabel(price);
   const refs = references.slice(0, MAX_REFS);
   const conditioned = useRefs && refs.length > 0;
 
@@ -191,12 +273,14 @@ export default function Playground({
             real money and the user used to learn the figure afterwards, in the
             provenance line. A modal on each click would kill the one thing a
             playground is for, so the bar is that the number is simply visible
-            next to the button that spends it, with the session total beside it. */}
+            next to the button that spends it, with the session total beside it.
+            The figure comes from /api/imaging/pricing, so it is the same
+            declaration the server bills against rather than a copy of it. */}
         <span
-          className="font-jetbrains text-[10px] text-white/40"
-          title="Estimated from the production vendor's measured rate. The dev vendor is cheaper, so this errs high; the vendor's own figure replaces it after the render."
+          className={`font-jetbrains text-[10px] ${price === "unknown" ? "text-amber-300/70" : "text-white/40"}`}
+          title={estimate.title}
         >
-          est. ${estimate.toFixed(3)} · {IMAGES_PER_RUN} image{IMAGES_PER_RUN > 1 ? "s" : ""}
+          {estimate.text}
           {spend.runs > 0 && (
             <span className="text-white/30">
               {" · "}
