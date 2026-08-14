@@ -20,6 +20,7 @@
 import { ImagingError } from "../errors";
 import { keyFor } from "../env";
 import { fetchImageBase64, requestJson } from "../http";
+import { priceCall } from "../pricing";
 import {
   ASPECT_PX,
   type GenerateRequest,
@@ -128,7 +129,15 @@ export function leonardoProvider(): ImagingProvider {
           start,
         );
 
-      const costUsd = costUsdFrom(start.sdGenerationJob);
+      // The vendor's own figure if it sent one; otherwise the declared rate in
+      // pricing.ts. `priceCall` short-circuits on `vendorUsd`, so a stale table
+      // can never overwrite a receipt — the fallback only fills a silence.
+      const costUsd = priceCall({
+        provider: "leonardo",
+        model: "lucid-origin",
+        images: count,
+        vendorUsd: costUsdFrom(start.sdGenerationJob),
+      }).usd;
 
       // From here on the generation EXISTS remotely, so every exit path must
       // go through cleanup — hence the try/finally rather than a tidy

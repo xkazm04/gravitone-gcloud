@@ -21,6 +21,7 @@ import { ImagingError } from "../errors";
 import { keyFor } from "../env";
 import { requestJson } from "../http";
 import { parseAgainstSchema, schemaInstruction } from "../json";
+import { priceCall } from "../pricing";
 import { dataUrl, type ImagingProvider, type RecognizeRequest, type Recognition } from "../types";
 
 const BASE =
@@ -109,6 +110,13 @@ export function qwenProvider(): ImagingProvider {
             provenance: {
               provider: "qwen",
               model,
+              // Same route through pricing.ts as every other adapter, and the
+              // same honest `undefined` at the end of it: DashScope bills per
+              // token, the three SKUs above bill at different rates against
+              // separate allowances, and nobody has checked the rate card. The
+              // reason is recorded in the table rather than implied by silence
+              // here, and the moment a rate lands there this line prices itself.
+              costUsd: priceCall({ provider: "qwen", model }).usd,
               durationMs: Date.now() - started,
               cleanup: "not-applicable",
             },

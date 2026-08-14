@@ -22,6 +22,7 @@ import { ImagingError } from "../errors";
 import { keyFor } from "../env";
 import { requestJson } from "../http";
 import { parseAgainstSchema } from "../json";
+import { priceCall } from "../pricing";
 import type {
   EditRequest,
   GenerateRequest,
@@ -177,6 +178,10 @@ export function googleProvider(): ImagingProvider {
         req.count ?? 1,
         "generation",
         req.seed,
+        // The size we ACTUALLY asked for, handed to the price table rather than
+        // assumed by it: the measured figure is a 1K figure, and a 2K render
+        // quoted at the 1K rate would be a fiction, not a rounding error.
+        IMAGE_SIZE,
       );
     },
 
@@ -186,6 +191,13 @@ export function googleProvider(): ImagingProvider {
       const input: InputPart[] = [{ type: "text", text: req.instruction }, imagePart(req.image)];
       for (const r of (req.references ?? []).slice(0, 13)) input.push(imagePart(r));
 
+      // NO `image_size` here, and therefore NO PRICE — deliberately, on both
+      // counts. An edit should come back at the resolution of the plate it was
+      // given; pinning 1K to make the call priceable would silently downsample
+      // a 2K plate, which is trading the user's pixels for our bookkeeping. So
+      // the vendor's default applies, we have not measured what that default
+      // costs, and `pricing.ts` reports the edit unpriced with that reason
+      // attached. Measure an edit, or pin a size, and it prices itself.
       return runImage(
         { model: IMAGE_MODEL, input, response_format: { type: "image", mime_type: IMAGE_MIME } },
         1,
@@ -229,6 +241,12 @@ export function googleProvider(): ImagingProvider {
         provenance: {
           provider: "google",
           model: VISION_MODEL,
+          // Routed through the same table as everything else, and it comes back
+          // undefined on purpose: recognition is billed per token, and no
+          // USD-per-token rate has been checked. The row in pricing.ts carries
+          // that reason, so the day someone checks the rate this line starts
+          // reporting without being touched.
+          costUsd: priceCall({ provider: "google", model: VISION_MODEL }).usd,
           durationMs: Date.now() - started,
           cleanup: "not-applicable",
         },
@@ -247,6 +265,8 @@ async function runImage(
   count: number,
   what: string,
   seed?: number,
+  /** The `image_size` this request pins, when it pins one. See pricing.ts. */
+  size?: string,
 ): Promise<GeneratedImages> {
   const started = Date.now();
   const key = keyFor("google");
@@ -282,11 +302,19 @@ async function runImage(
       results[0]?.status,
     );
 
+  // Google's Interactions response carries no money field, so the cost comes
+  // from the declared table instead of being left undefined. It is an ESTIMATE
+  // — priced per image actually returned, at the size we asked for — and
+  // pricing.ts is where that claim is sourced and dated.
+  const model = String(body.model);
+  const price = priceCall({ provider: "google", model, images: images.length, size });
+
   return {
     images,
     provenance: {
       provider: "google",
-      model: String(body.model),
+      model,
+      costUsd: price.usd,
       durationMs: Date.now() - started,
       cleanup: "not-applicable", // nothing is stored server-side to clean up
     },
