@@ -4,7 +4,7 @@
 //
 // Every preset swatch is a REAL render of that preset, generated from the one
 // canonical subject by pipeline/build-preset-thumbs.mts. One subject across all
-// eight is the whole point: the grid varies by style alone, so the user is
+// six is the whole point: the grid varies by style alone, so the user is
 // comparing the only thing they are actually choosing. A gradient placeholder
 // here would be a lie about the product's central claim.
 
@@ -50,7 +50,7 @@ export default function PresetRail({
             >
               {/* next/image, not <img>: the swatches are committed at the
                   generator's full 1472px and this rail shows them at 240. Left
-                  raw that is ~1.7MB of wire for eight pictures the size of a
+                  raw that is ~1.3MB of wire for six pictures the size of a
                   postage stamp. `fill` avoids hardcoding dimensions, which
                   matters because Leonardo and Google return different sizes for
                   the same 16:9 request. */}

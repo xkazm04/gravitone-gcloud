@@ -2,20 +2,25 @@
 
 // SHELVES — round 1's winner, consolidated as the LIBRARY view. An archive
 // room: every asset sits on a shelf, filterable by kind, collection and
-// search over the captions the library wrote; the agent is a librarian you
-// commission from a dock at the bottom, and whatever it makes appears on
-// the shelves with lineage.
+// search over the captions the library wrote.
+//
+// THE COMMISSION DOCK IS GONE, and its absence is the honest state. It was a
+// fixed bar across the bottom holding an input with no `value` and no
+// `onChange` beside a button with no `onClick` — you could type in it and press
+// it and nothing anywhere would happen. It drew the product's most ambitious
+// promise ("commission the studio") at the exact size and prominence of a
+// working feature, which is the one thing a surface here may not do: it may not
+// draw what the product cannot do. Rebuilding it as something that works is a
+// real piece of work and belongs to whoever does that work; until then the
+// shelves are what this screen is, and they are honest.
 
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 
-import { Button } from "@/components/ui/Primitives";
-
 import { ASSETS, COLLECTIONS } from "../_studio/assets";
-import { RUNS } from "../_studio/runs";
 import type { AssetKind } from "../_studio/types";
 import { AssetDrawer } from "../_studio/AssetDrawer";
-import { KindGlyph, MockPreview, StepDot, fmtDur } from "../_studio/assetParts";
+import { KindGlyph, MockPreview, fmtDur } from "../_studio/assetParts";
 
 const KINDS: AssetKind[] = ["image", "audio", "video", "script"];
 
@@ -38,12 +43,13 @@ export default function LibraryShelves() {
     );
   }, [kind, collection, q]);
 
-  const running = RUNS.find((r) => r.status === "running");
-  const runningStep = running?.steps.find((s) => s.status === "running");
   const selectedAsset = selected ? ASSETS.find((a) => a.id === selected) : null;
 
   return (
-    <div className="mt-8 grid gap-6 pb-28 lg:grid-cols-[210px_1fr]">
+    // pb-8, not pb-28: the deep bottom padding existed to clear the fixed
+    // commission dock, and a gap held open for something that is no longer
+    // there reads as a rendering fault.
+    <div className="mt-8 grid gap-6 pb-8 lg:grid-cols-[210px_1fr]">
       {/* ——— the rail: what's on the shelves ——— */}
       <aside className="space-y-6">
         <div>
@@ -125,23 +131,6 @@ export default function LibraryShelves() {
           </ul>
         )}
       </section>
-
-      {/* ——— the commission dock: the agent as librarian ——— */}
-      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
-        <div className="mx-auto flex max-w-6xl items-center gap-4 px-6 py-3.5">
-          <input
-            placeholder="Commission the studio — “cut a 30s trailer VO for Glass Harbor…”"
-            className="min-w-0 flex-1 rounded-xl border border-white/10 bg-white/[0.03] px-4 py-2.5 text-sm text-white placeholder:text-white/30 focus:border-cyan-400/40 focus:outline-none"
-          />
-          <Button className="shrink-0 px-5 py-2.5">direct</Button>
-          {running && runningStep && (
-            <p className="font-jetbrains hidden shrink-0 items-center gap-2 text-[12px] text-white/60 md:flex">
-              <StepDot status="running" />
-              {running.id} · {runningStep.title.toLowerCase()}
-            </p>
-          )}
-        </div>
-      </div>
 
       {selectedAsset && (
         <AssetDrawer asset={selectedAsset} onClose={() => setSelected(null)} onSelect={setSelected} />

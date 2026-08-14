@@ -4,15 +4,16 @@
 // here, as opposed to the studio's own shelves (app/_library), which hold what
 // one project PRODUCED.
 //
-// Three modules, one of which exists:
+// Three modules, two of which exist:
 //   Styles      visual identities — the gate every project stands behind
-//   Assets      reusable source material                        (not yet)
+//   Assets      reusable source material — the trial grid, and every plate
+//               promoted off a style's proof sheet
 //   Animations  reusable motion                                 (not yet)
 //
-// The empty two are named rather than hidden on purpose. This shelf is where
-// Step 3 will reach for both, so the slots are part of the map now — and a tab
-// that says what is coming is a smaller lie than a surface that pretends the
-// library is only ever about styles.
+// The empty one is named rather than hidden on purpose. This shelf is where
+// Step 3 will reach for it, so the slot is part of the map now — and a tab that
+// says what is coming is a smaller lie than a surface that pretends the library
+// is only ever about styles.
 
 import { useState } from "react";
 
@@ -64,7 +65,11 @@ export default function LibraryView() {
           {module === "styles" ? (
             <LibraryAtelier />
           ) : module === "assets" ? (
-            <AssetsBrowser />
+            // The shelf fills from Styles, so its empty state needs a way back
+            // there. The module is this component's state, so the handler is
+            // this component's to pass — an empty state that can only describe
+            // the next step is half a surface.
+            <AssetsBrowser onOpenStyles={() => setModule("styles")} />
           ) : (
             <ComingSoon label={active.label} blurb={active.blurb} />
           )}
