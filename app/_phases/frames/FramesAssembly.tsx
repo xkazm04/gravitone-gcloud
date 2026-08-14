@@ -18,14 +18,14 @@
 import { useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
-import { durationOf, isComposed, type Frame, type FrameText, type LayerRef } from "./frames";
+import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef } from "./frames";
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
 import LayerPanel from "./LayerPanel";
 import type { useFrames } from "./useFrames";
 
 export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFrames> }) {
-  const { frames, render, busy, generatePlate, setSubject, totalCost } = ctl;
+  const { frames, render, busy, generatePlate, setSubject, plateCost, totalCost, direction } = ctl;
   const [openId, setOpenId] = useState<string | null>(null);
   const [runningAll, setRunningAll] = useState(false);
   // One selection, shared by the canvas and the panel. Held here rather than in
@@ -45,9 +45,35 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-jetbrains text-[12px] text-white/50">
+        <p
+          className="font-jetbrains text-[12px] text-white/50"
+          title={
+            direction || plateCost > 0
+              ? `${direction?.unpriced ? "at least " : ""}$${totalCost.toFixed(3)} spent on this step in total`
+              : undefined
+          }
+        >
           {frames.length - missing.length}/{frames.length} composed
-          {totalCost > 0 && <span className="text-white/30"> · ${totalCost.toFixed(3)} spent</span>}
+          {/* THE SPEND LINE, and the reason it is two figures rather than one:
+              plates are many small charges made one at a time, the direction
+              pass is one large charge made rarely, and the header used to show
+              only the first — an undercount that omitted the most expensive
+              call in the step. Merging them back would hide the same thing
+              behind a bigger number. */}
+          {plateCost > 0 && <span className="text-white/30"> · ${plateCost.toFixed(3)} plates</span>}
+          {direction && (
+            <span className="text-white/30">
+              {" · "}
+              {/* A pass the engine did not price reads as unknown. Never zero:
+                  zero is a claim about money that nobody can support. */}
+              {direction.costUsd > 0
+                ? `${direction.unpriced ? "at least " : ""}$${direction.costUsd.toFixed(3)} direction`
+                : "direction · cost unknown"}
+              {direction.runs > 1 && ` (${direction.runs} passes)`}
+              {/* This call takes minutes. The user paid for those too. */}
+              {direction.lastMs !== undefined && ` · last pass ${humanMs(direction.lastMs)}`}
+            </span>
+          )}
           {/* The integrity number. A figure nobody sourced is the defect this
               step exists to catch, so it is on the header rather than buried. */}
           {ctl.unboundFigures > 0 && (

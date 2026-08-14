@@ -143,7 +143,43 @@ export interface Frame {
   rationale?: string;
 }
 
+/* ── What the step has cost ───────────────────────────────────────────────── */
+
+/**
+ * The art-direction pass's spend, persisted with the step.
+ *
+ * It exists because the header used to show a dollar figure that omitted the
+ * single most expensive call in the step: `/api/frames` computes and returns the
+ * pass's cost, and the client dropped it on the floor. A money number that
+ * silently undercounts is worse than no number.
+ *
+ * It ACCUMULATES across passes, because the money did. And `unpriced` is why
+ * this is a record rather than a float: the local Claude CLI does not always
+ * report a cost, and a pass whose cost nobody knows must read as unknown, never
+ * as zero. While `unpriced` is above nought, `costUsd` is a FLOOR.
+ */
+export interface DirectionSpend {
+  /** How many art-direction passes this step has paid for. */
+  runs: number;
+  /** Summed cost of the passes the engine priced. */
+  costUsd: number;
+  /** Passes the engine reported no cost for. */
+  unpriced: number;
+  /** The LAST pass's wall time. Not summed — "this call takes minutes" is a
+   *  fact about one call, and a running total of minutes answers no question. */
+  lastMs?: number;
+  lastAt: number;
+}
+
 export const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`;
+
+/** A duration a human reads at a glance. Minutes are spelled out because the
+ *  direction pass is the one call in this step measured in them, and "251s" is
+ *  a number the reader has to do arithmetic on. */
+export function humanMs(ms: number): string {
+  const s = Math.round(ms / 1000);
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+}
 
 export function secondsOf(at: string): number {
   const [m, s] = at.split(":").map(Number);

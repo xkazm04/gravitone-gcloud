@@ -32,6 +32,7 @@ import {
   framesFromRender,
   subjectFor,
   withClips,
+  type DirectionSpend,
   type Frame,
   type FrameElement,
   type FrameText,
@@ -45,6 +46,10 @@ interface FramesStepData {
   /** Which script render the frames were derived from. A different render is a
    *  different cut, so the frames are stale rather than merely out of date. */
   renderId: string;
+  /** What the art-direction passes cost. Persisted with the step because the
+   *  money was spent on the step, not on the session — a reload that forgets it
+   *  turns the header's spend line back into an undercount. */
+  direction?: DirectionSpend;
   savedAt?: number;
 }
 
@@ -61,6 +66,9 @@ export function useFrames(projectId: string) {
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
+  /** What the art-direction passes have cost this cut. Null until one has run —
+   *  which is absence, and reads as absence, rather than $0.00. */
+  const [direction, setDirection] = useState<DirectionSpend | null>(null);
 
   /* ── load ───────────────────────────────────────────────────────────────── */
   useEffect(() => {
@@ -70,12 +78,17 @@ export function useFrames(projectId: string) {
       if (!alive) return;
       // A stored cut derived from a DIFFERENT render is not this cut. Re-derive
       // rather than showing frames whose beats no longer exist.
+      const sameCut = Boolean(stored?.frames?.length && stored.renderId === render.id);
       setFrames(
-        stored?.frames?.length && stored.renderId === render.id
+        sameCut && stored
           ? // A cut stored before Frames inherited the clip has no clip on it.
             withClips(stored.frames)
           : framesFromRender(render),
       );
+      // The spend belongs to the cut it directed. A different render throws the
+      // frames away, and carrying its bill onto the new ones would be the same
+      // lie as omitting it — a figure that describes work not on screen.
+      setDirection(sameCut ? (stored?.direction ?? null) : null);
       setLoaded(true);
     })();
     return () => {
@@ -91,12 +104,16 @@ export function useFrames(projectId: string) {
     if (!loaded) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      void saveStep<FramesStepData>(projectId, PHASE, { frames, renderId: render.id });
+      void saveStep<FramesStepData>(projectId, PHASE, {
+        frames,
+        renderId: render.id,
+        ...(direction ? { direction } : {}),
+      });
     }, 600);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [frames, loaded, projectId, render.id]);
+  }, [frames, direction, loaded, projectId, render.id]);
 
   const patch = useCallback((id: string, fn: (f: Frame) => Frame) => {
     setFrames((fs) => fs.map((f) => (f.id === id ? fn(f) : f)));
@@ -307,6 +324,28 @@ export function useFrames(projectId: string) {
       const json = await res.json().catch(() => ({}) as Record<string, unknown>);
       if (!res.ok) throw new Error(typeof json.detail === "string" ? json.detail : "The scene direction failed.");
 
+      // The bill, before the parse. `/api/frames` has always returned what this
+      // pass cost and how long it took; the client used to destructure `raw`
+      // and `detail` and drop `engine` on the floor, which made the header's
+      // dollar figure an undercount of the single most expensive call here.
+      //
+      // Read it before parsing on purpose: a response this app cannot USE was
+      // still a response the user PAID for, and a rejected pass that costs
+      // nothing on screen is the same lie in a different direction.
+      const engine = (json.engine ?? {}) as { costUsd?: unknown; durationMs?: unknown };
+      const costUsd = typeof engine.costUsd === "number" && Number.isFinite(engine.costUsd) ? engine.costUsd : undefined;
+      const durationMs =
+        typeof engine.durationMs === "number" && Number.isFinite(engine.durationMs) ? engine.durationMs : undefined;
+      setDirection((d) => ({
+        runs: (d?.runs ?? 0) + 1,
+        costUsd: (d?.costUsd ?? 0) + (costUsd ?? 0),
+        // A pass the engine did not price is COUNTED, not assumed free. It is
+        // what turns the total into a floor, and the header says so.
+        unpriced: (d?.unpriced ?? 0) + (costUsd === undefined ? 1 : 0),
+        lastMs: durationMs,
+        lastAt: Date.now(),
+      }));
+
       const report = reviewSceneSpecs(String(json.raw ?? ""), frames, new Set(FACTS.map((f) => f.id)));
       // Apply what survived. Rejected and unmentioned beats keep exactly what
       // they had — applySceneSpecs only touches frames it has a spec for.
@@ -344,7 +383,14 @@ export function useFrames(projectId: string) {
     }
   }, [frames, block, render.title]);
 
-  const totalCost = useMemo(() => frames.reduce((t, f) => t + (f.plate.costUsd ?? 0), 0), [frames]);
+  /** What the plates cost. Kept apart from the direction pass rather than
+   *  merged: one is many small charges the user makes one at a time, the other
+   *  is one large charge they make rarely, and a single opaque figure lets
+   *  neither be reasoned about. */
+  const plateCost = useMemo(() => frames.reduce((t, f) => t + (f.plate.costUsd ?? 0), 0), [frames]);
+  /** Everything this step has spent, as far as anyone knows. A floor whenever
+   *  `direction.unpriced` is above nought. */
+  const totalCost = plateCost + (direction?.costUsd ?? 0);
   /** Figures asserting something nobody sourced. The number that should be zero
    *  before this step is called done. */
   const unboundFigures = useMemo(
@@ -365,7 +411,9 @@ export function useFrames(projectId: string) {
     block,
     styleName,
     hasLockedStyle: Boolean(locked),
+    plateCost,
     totalCost,
+    direction,
     unboundFigures,
     clipsAuthored,
     setFrames,
