@@ -4,6 +4,13 @@
 //
 // The rules it enforces: one run at a time, a candidate is never auto-accepted,
 // and a plan that does not fit the runtime says so.
+//
+// The running state shows ELAPSED TIME and nothing else. It used to draw a
+// percentage bar off a nine-second mock timer while a minutes-long Claude Opus 5
+// turn was still in flight — a duration the app did not know, animated as though
+// it did. An indeterminate bar is the honest shape for work with no schedule.
+
+import { useEffect, useState } from "react";
 
 import { RENDERS } from "../renders";
 import { inertNotes } from "../recalibrate";
@@ -11,7 +18,22 @@ import { MODEL } from "@/lib/model";
 import DeclinedList, { declinedCount } from "./DeclinedList";
 import type { VersionsApi } from "../useVersions";
 
+/** Elapsed, in the unit the number deserves. Minutes-long work should read as
+ *  minutes, not as a three-digit second count. */
+function elapsedSince(started: number, now: number) {
+  const s = Math.max(0, Math.round((now - started) / 1000));
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+}
+
 export default function RecalibrateControl({ api }: { api: VersionsApi }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!api.running) return;
+    setNow(Date.now());
+    const iv = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(iv);
+  }, [api.running]);
+
   const n = api.notes.length;
   const inert = inertNotes(api.notes).length;
   // Only a recalibrated baseline can have declined anything — the original
@@ -81,14 +103,17 @@ export default function RecalibrateControl({ api }: { api: VersionsApi }) {
           <p className="font-jetbrains text-[10px] tracking-[0.14em] text-cyan-200 uppercase">
             recalibrating
           </p>
-          <span className="font-jetbrains text-[10px] text-white/40">{Math.round(api.progress * 100)}%</span>
+          <span data-testid="recalibrate-elapsed" className="font-jetbrains text-[10px] text-white/40">
+            {api.runningSince === null ? "starting…" : elapsedSince(api.runningSince, now)}
+          </span>
         </div>
+        {/* Indeterminate on purpose — see the header note. */}
         <div className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/10">
-          <span
-            className="block h-full rounded-full bg-cyan-300/70 transition-[width] duration-200"
-            style={{ width: `${Math.round(api.progress * 100)}%` }}
-          />
+          <span className="block h-full w-full animate-pulse rounded-full bg-cyan-300/70" />
         </div>
+        <p className="font-jetbrains mt-1.5 text-[10px] leading-snug text-white/35">
+          a real {MODEL} turn — minutes, not seconds. the pad stays locked until it lands.
+        </p>
       </div>
     );
 
@@ -120,6 +145,20 @@ export default function RecalibrateControl({ api }: { api: VersionsApi }) {
       </div>
       {inert > 0 && (
         <p className="font-jetbrains text-[10px] text-white/35">{inert} will not move a bar</p>
+      )}
+
+      {/* A candidate is staged, never persisted — accepting is what makes a
+          version real. So closing the project throws one away, and saying so is
+          the difference between "my run vanished" and "I never accepted it". */}
+      {api.lostCandidate && (
+        <p data-testid="lost-candidate" className="font-jetbrains text-[10px] leading-snug text-amber-200/90">
+          {api.lostCandidate.label} was staged when this project last closed and never accepted, so it is
+          gone.{" "}
+          {api.lostCandidate.notes === 1
+            ? "The note that produced it is still on the pad"
+            : `The ${api.lostCandidate.notes} notes that produced it are still on the pad`}{" "}
+          — recalibrate to rebuild it.
+        </p>
       )}
 
       {/* THE ACCEPTED BASELINE'S OWN REFUSALS.
