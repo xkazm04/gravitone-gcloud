@@ -10,10 +10,27 @@
 // object store, keyed `${projectId}:${phase}`. Kept separate from the project
 // record deliberately — step content is large and grows, and a project row that
 // carried every notebook would have to be read in full just to draw the shelf.
+//
+// FAILURE IS NOT SWALLOWED HERE, and it used to be. `withStore` wrapped every
+// operation in `try { … } catch { return fallback }`, so a quota-exceeded write,
+// a blocked-tab upgrade and a missing object store all resolved to the same
+// quiet nothing — one layer above lib/studioDb.ts's own header promising the
+// opposite ("Failures are NOT swallowed here… has to reach the caller"). Base64
+// proofs and plates make quota exhaustion a real destination and not a
+// theoretical one: a composed 16-frame cut is ~5MB (frames/useFrames.ts) and a
+// theme proof sheet ~3.5MB (lib/themes.ts), both measured in this repo.
+//
+// The shape of the fix is chosen for the call sites that exist. Every caller
+// fires and forgets — `void saveStep(...)` on every keystroke — and that is the
+// RIGHT ergonomics for a save that runs that often. So nothing here rejects:
+// `saveStep` RESOLVES to an outcome a caller may ignore, and every failure is
+// also pushed to the one channel below, which a surface subscribes to once. The
+// point was never that each call site grows a try/catch; it is that failure
+// stops being unobservable.
+
+import { useSyncExternalStore } from "react";
 
 import { STEPS_STORE, openDb, runTx } from "@/lib/studioDb";
-
-
 
 export interface ResearchStepData {
   topic: string;
@@ -32,49 +49,166 @@ export interface ScopeStepData {
   savedAt?: number;
 }
 
+/* ────────────────────────────── what went wrong ──────────────────────────── */
+
+/** WHY the storage operation failed. Five destinations that used to be one
+ *  `return fallback`, and they call for different things from a surface:
+ *  `quota` means stop and export, `blocked` means close the other tab, and
+ *  `unavailable` means this browser session was never going to persist. */
+export type StorageFailure =
+  | "unavailable" // no IndexedDB at all — private mode, or a server render
+  | "missing-store" // the DB opened without the steps store
+  | "blocked" // another tab holds the old version open (studioDb's onblocked)
+  | "quota" // out of room. The expensive one, and the reachable one
+  | "failed"; // everything else, reported rather than guessed at
+
+export interface StorageTrouble {
+  kind: StorageFailure;
+  op: "read" | "write";
+  projectId: string;
+  phase: string;
+  message: string;
+  at: number;
+}
+
+/** A caller may ignore this — `void saveStep(...)` still compiles, and still
+ *  reports through `onStorageTrouble`. Reading it is the stronger option, not
+ *  the required one. */
+export type SaveOutcome = { ok: true } | { ok: false; trouble: StorageTrouble };
+
+/** `ok: true, data: undefined` means THIS KEY HAS NEVER BEEN WRITTEN.
+ *  `ok: false` means the read failed. Both used to be `undefined`, and they mean
+ *  opposite things: the first is a new project, the second is a project whose
+ *  work is on disk and out of reach. */
+export type ReadOutcome<T> = { ok: true; data: T | undefined } | { ok: false; trouble: StorageTrouble };
+
+/* ──────────────────────── the one place to learn about it ────────────────── */
+
+let latest: StorageTrouble | null = null;
+const listeners = new Set<() => void>();
+
+/** Subscribe to storage trouble. `useSyncExternalStore`-shaped on purpose —
+ *  see `useStorageTrouble` below, which is the one-line way to mount it. */
+export function onStorageTrouble(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => void listeners.delete(listener);
+}
+
+/** The most recent failure, or null. Referentially stable between failures, so
+ *  it is a valid `useSyncExternalStore` snapshot. */
+export function lastStorageTrouble(): StorageTrouble | null {
+  return latest;
+}
+
+/** Nothing has failed on the server, and nothing can: there is no IndexedDB
+ *  there. A constant, so hydration does not tear. */
+function serverTrouble(): StorageTrouble | null {
+  return null;
+}
+
+export function clearStorageTrouble(): void {
+  if (!latest) return;
+  latest = null;
+  listeners.forEach((l) => l());
+}
+
+/** The whole subscription, for a surface that wants to say so. A user editing
+ *  for an hour against a full quota finds out from this, before they close the
+ *  tab — mounting it anywhere in the tree is enough. */
+export function useStorageTrouble(): StorageTrouble | null {
+  return useSyncExternalStore(onStorageTrouble, lastStorageTrouble, serverTrouble);
+}
+
+/** Duck-typed on `name` rather than `instanceof DOMException`: the global is
+ *  absent in some runtimes this module is merely IMPORTED into, and a classifier
+ *  that throws while classifying is worse than the failure it was reading.
+ *  The two message matches are studioDb's own two literal rejections — a
+ *  coupling worth naming, because that file is the only source of them. */
+function classify(e: unknown): StorageFailure {
+  const name = typeof e === "object" && e !== null ? (e as { name?: string }).name : undefined;
+  if (name === "QuotaExceededError" || name === "NS_ERROR_DOM_QUOTA_REACHED") return "quota";
+  const message = e instanceof Error ? e.message : String(e);
+  if (message.includes("another tab")) return "blocked";
+  if (message.includes("IndexedDB unavailable")) return "unavailable";
+  return "failed";
+}
+
+function report(t: StorageTrouble): { ok: false; trouble: StorageTrouble } {
+  latest = t;
+  listeners.forEach((l) => l());
+  return { ok: false, trouble: t };
+}
+
+/* ────────────────────────────────── the store ────────────────────────────── */
+
 const key = (projectId: string, phase: string) => `${projectId}:${phase}`;
 
 /** The steps store is created lazily rather than in the projects upgrade path,
  *  so an existing browser DB does not need a version bump to gain it. */
-async function withStore<T>(fn: (db: IDBDatabase) => Promise<T>, fallback: T): Promise<T> {
-  if (typeof indexedDB === "undefined") return fallback;
+async function withStore<T>(
+  op: "read" | "write",
+  projectId: string,
+  phase: string,
+  fn: (db: IDBDatabase) => Promise<T>,
+): Promise<{ ok: true; value: T } | { ok: false; trouble: StorageTrouble }> {
+  const trouble = (kind: StorageFailure, message: string) =>
+    report({ kind, op, projectId, phase, message, at: Date.now() });
+
+  if (typeof indexedDB === "undefined")
+    return trouble("unavailable", "IndexedDB unavailable — nothing written in this session will survive it.");
   try {
     const db = await openDb();
-    if (!db.objectStoreNames.contains(STEPS_STORE)) return fallback;
-    return await fn(db);
-  } catch {
-    return fallback;
+    if (!db.objectStoreNames.contains(STEPS_STORE))
+      return trouble("missing-store", `The "${STEPS_STORE}" store is not in this database.`);
+    return { ok: true, value: await fn(db) };
+  } catch (e) {
+    return trouble(classify(e), e instanceof Error ? e.message : String(e));
   }
 }
 
+/** The honest read: tells a never-written key from a failed read. */
+export async function readStep<T = ResearchStepData>(
+  projectId: string,
+  phase: string,
+): Promise<ReadOutcome<T>> {
+  const r = await withStore("read", projectId, phase, (db) =>
+    new Promise<T | undefined>((resolve, reject) => {
+      const tx = db.transaction(STEPS_STORE, "readonly");
+      const req = tx.objectStore(STEPS_STORE).get(key(projectId, phase));
+      req.onsuccess = () => resolve(req.result?.data);
+      req.onerror = () => reject(req.error ?? new Error("read failed"));
+    }),
+  );
+  if (!r.ok) return r;
+  return { ok: true, data: (r.value ?? seededFor(projectId, phase)) as T | undefined };
+}
+
+/** The flattened read, unchanged for its five callers: the stored value, or the
+ *  seeded default when nothing is stored. A FAILED read also lands here as the
+ *  seeded default — it is reported through `onStorageTrouble`, and a caller that
+ *  needs to tell the two apart calls `readStep` instead. */
 export async function loadStep<T = ResearchStepData>(
   projectId: string,
   phase: string,
 ): Promise<T | undefined> {
-  return withStore(
-    (db) =>
-      new Promise<T | undefined>((resolve) => {
-        const tx = db.transaction(STEPS_STORE, "readonly");
-        const req = tx.objectStore(STEPS_STORE).get(key(projectId, phase));
-        req.onsuccess = () => resolve(req.result?.data);
-        req.onerror = () => resolve(undefined);
-      }),
-    undefined,
-  ).then((v) => v ?? (seededFor(projectId, phase) as T | undefined));
+  const r = await readStep<T>(projectId, phase);
+  return r.ok ? r.data : (seededFor(projectId, phase) as T | undefined);
 }
 
+/** Never rejects: an ignored `void saveStep(...)` must not become an unhandled
+ *  rejection, and a save on every keystroke is a caller with nowhere to put a
+ *  catch. The outcome is returned AND pushed to the trouble channel. */
 export async function saveStep<T>(
   projectId: string,
   phase: string,
   data: T,
-): Promise<void> {
-  await withStore(
-    (db) =>
-      runTx(db, STEPS_STORE, "readwrite", (store) => {
-        store.put({ id: key(projectId, phase), projectId, phase, data: { ...data, savedAt: Date.now() } });
-      }),
-    undefined as void,
+): Promise<SaveOutcome> {
+  const r = await withStore("write", projectId, phase, (db) =>
+    runTx(db, STEPS_STORE, "readwrite", (store) => {
+      store.put({ id: key(projectId, phase), projectId, phase, data: { ...data, savedAt: Date.now() } });
+    }),
   );
+  return r.ok ? { ok: true } : r;
 }
 
 /** The Bitcoin project ships researched.
