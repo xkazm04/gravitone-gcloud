@@ -19,6 +19,10 @@ const TEXT_ROLES = ["kicker", "caption", "figure", "label"] as const;
 export interface SceneSpec {
   beatAt: string;
   subject: string;
+  /** What the plate DOES — authored in the same pass that composes it, because
+   *  a move decided apart from the composition fights it. Nothing renders this
+   *  yet and the surfaces say so; see `FrameClip` in ./frames. */
+  motion: string;
   rationale: string;
   elements: Omit<FrameElement, "id">[];
   texts: Omit<FrameText, "id">[];
@@ -33,10 +37,11 @@ export const SCENE_SCHEMA = {
       type: "array",
       items: {
         type: "object",
-        required: ["beatAt", "subject", "rationale"],
+        required: ["beatAt", "subject", "motion", "rationale"],
         properties: {
           beatAt: { type: "string" },
           subject: { type: "string" },
+          motion: { type: "string" },
           rationale: { type: "string" },
           elements: {
             type: "array",
@@ -77,12 +82,19 @@ export const SCENE_SCHEMA = {
 const num = (v: unknown, fallback: number) => (typeof v === "number" && Number.isFinite(v) ? v : fallback);
 const clamp = (v: number) => Math.max(0, Math.min(100, v));
 
+/** Asking a generative layer for glyphs is the one unconditional defect: a plate
+ *  that comes back carrying letters is not a nicer plate, it is an unusable one.
+ *  The same is true of a move described as "the label slides in" — our text
+ *  layer is vector and ours, so no generated frame may be asked to carry it. */
+const ASKS_FOR_TEXT = /\b(text|label(l)?ed|caption|write|written|word|letter|number|digit|title)\b/i;
+
 /**
  * Validate a scene spec against the beats it claims to describe.
  *
  * The checks are the ones that catch a spec which is confidently wrong:
  *   · every beat covered, no beat invented
  *   · a subject that mentions text or numbers — the one unconditional defect
+ *   · a motion that is missing, unpicturable, or the subject said twice
  *   · a figure with no factId, or a factId the notebook does not contain
  */
 export function parseSceneSpecs(
@@ -117,8 +129,20 @@ export function parseSceneSpecs(
     // The plate must not be asked for glyphs. A subject that says "labelled" or
     // quotes a word is asking for exactly the defect that makes a plate
     // unusable, and it is far cheaper to reject it here than to render it.
-    if (/\b(text|label(l)?ed|caption|write|written|word|letter|number|digit|title)\b/i.test(subject))
+    if (ASKS_FOR_TEXT.test(subject))
       throw new SceneSpecError(`The subject for ${beatAt} asks the model for text. Plates carry no glyphs.`);
+
+    // The motion is held to the subject's standard, for the subject's reason: a
+    // move nobody can picture is not a direction, it is a word. What is NOT
+    // checked is as deliberate — no verb whitelist, no duration, no easing
+    // vocabulary. Nothing has measured those, and a validator built on an
+    // impression rejects good direction with total confidence.
+    const motion = String(s.motion ?? "").trim();
+    if (motion.length < 12) throw new SceneSpecError(`The motion for ${beatAt} is too short to describe a move.`);
+    if (ASKS_FOR_TEXT.test(motion))
+      throw new SceneSpecError(`The motion for ${beatAt} moves text. Our text layer is vector and ours — move the picture.`);
+    if (motion.toLowerCase() === subject.toLowerCase())
+      throw new SceneSpecError(`The motion for ${beatAt} just restates the subject. A still is not a move.`);
 
     const elements = (Array.isArray(s.elements) ? s.elements : []).map((e) => {
       const el = e as Record<string, unknown>;
@@ -156,7 +180,7 @@ export function parseSceneSpecs(
       };
     });
 
-    specs.push({ beatAt, subject, rationale: String(s.rationale ?? "").slice(0, 200), elements, texts });
+    specs.push({ beatAt, subject, motion, rationale: String(s.rationale ?? "").slice(0, 200), elements, texts });
   }
 
   const missing = frames.filter((f) => !seen.has(f.at));
@@ -181,6 +205,10 @@ export function applySceneSpecs(frames: Frame[], specs: SceneSpec[]): Frame[] {
       // the new subject may well produce the same image; re-render is a
       // decision the user makes per frame.
       plate: { ...f.plate, subject: s.subject },
+      // The clip's STATUS is carried through untouched rather than reset. There
+      // is nothing to reset it from — no renderer has ever set it — and folding
+      // direction in is authoring, not un-rendering.
+      clip: { ...(f.clip ?? { status: "not-started" as const, motion: "" }), motion: s.motion },
       elements: s.elements.map((e, i) => ({ ...e, id: `e-${f.id}-${i}` })),
       texts: s.texts.map((t, i) => ({ ...t, id: `t-${f.id}-${i}` })),
     };

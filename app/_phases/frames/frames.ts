@@ -17,6 +17,13 @@
 // SCENES COME FROM STEP 2. A beat already carries timing, rhetorical role and
 // the sentence being spoken — strictly more than a subtitle file would — so the
 // frame list is derived, never authored. Nobody retypes the script here.
+//
+// AND SINCE 2026-08-14 A FRAME ALSO OWNS ITS CLIP. Motion stopped being a step
+// of its own that day and landed here, which means a frame is no longer only a
+// picture: it is a picture plus what that picture DOES. See `FrameClip` — and
+// read the honesty note on it before drawing anything from it.
+
+import type { ClipStatus } from "@/app/_studio/projectTypes";
 
 import type { Beat, BeatKind, ScriptRender } from "../script/types";
 
@@ -66,6 +73,52 @@ export interface Plate {
   note?: string;
 }
 
+/* ── The clip ─────────────────────────────────────────────────────────────── */
+
+/**
+ * What the plate DOES — the fourth layer, and the only one nothing in this app
+ * can render.
+ *
+ * HONESTY, and it is the whole design of this type: there is no video provider
+ * here. `lib/imagingClient.ts` exposes generate / edit / recognize and all three
+ * return stills. So a clip in this app is AUTHORED, never rendered, and
+ * `status` can only ever hold `"not-started"`. The field exists anyway, typed
+ * against the SAME `ClipStatus` the lifecycle fixtures use rather than a second
+ * private enum, so that the day a render seam is built the model does not have
+ * to be reshaped around it — but until that day, every surface reading this must
+ * say "not rendered" and mean it. No progress bar. No fake preview.
+ *
+ * There is deliberately NO duration field. A frame already knows how long it
+ * holds — `durationOf()` derives it from the gap to the next beat, which is a
+ * real number from the script. The craft library has no measured range for clip
+ * length (`knowledge/.../02-frames/PATTERNS.md` says so explicitly and refuses
+ * to ship a `params.json` over impressions), so inventing a default here would
+ * be inventing a number the UI then shows as if someone had checked it.
+ */
+export interface FrameClip {
+  status: ClipStatus;
+  /** The motion intent: what moves, in what direction, how far. Empty until the
+   *  art-direction pass authors it or the user types one. */
+  motion: string;
+  /** One honest sentence when there is one to say. */
+  note?: string;
+}
+
+/** A clip nobody has authored yet. Absence, stated. */
+export const emptyClip = (): FrameClip => ({ status: "not-started", motion: "" });
+
+/** A clip is authored when it says what moves. Nothing else can be true of it
+ *  yet — see the note on `FrameClip`. */
+export const isAuthoredClip = (f: Frame) => Boolean(f.clip?.motion.trim());
+export const authoredClipCount = (fs: Frame[]) => fs.filter(isAuthoredClip).length;
+
+/** Cuts stored before the clip layer existed have no `clip` key at all, and a
+ *  renderer meeting `undefined` there is a crash rather than a blank row. Fill
+ *  it on read — the store is IndexedDB on the user's own machine and there is no
+ *  migration seam to hang this off. */
+export const withClips = (fs: Frame[]): Frame[] =>
+  fs.map((f) => (f.clip ? f : { ...f, clip: emptyClip() }));
+
 /* ── The frame ────────────────────────────────────────────────────────────── */
 
 export interface Frame {
@@ -80,6 +133,8 @@ export interface Frame {
   line: string;
   device?: string;
   plate: Plate;
+  /** What the plate does. Authored here, rendered nowhere — see `FrameClip`. */
+  clip: FrameClip;
   elements: FrameElement[];
   texts: FrameText[];
   /** Why THIS picture for THIS beat — the art director's one line. Present only
@@ -176,6 +231,10 @@ export function framesFromRender(render: ScriptRender): Frame[] {
       line: b.text,
       device: b.device,
       plate: { state: "empty" as PlateState },
+      // Seeded empty on purpose. A motion guessed from the beat's kind is the
+      // same lookup table `/api/frames` exists to replace — nine roles, nine
+      // canned moves — and it would read as authored when nobody authored it.
+      clip: emptyClip(),
       elements,
       texts,
     };

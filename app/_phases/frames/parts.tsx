@@ -308,6 +308,10 @@ export function KindChip({ kind }: { kind: string }) {
 export function LayerBreakdown({ frame, compact = false }: { frame: Frame; compact?: boolean }) {
   const bits = [
     { label: "plate", n: frame.plate.state === "ready" ? 1 : 0, total: 1 },
+    // The clip's dot means AUTHORED, not rendered — nothing in this app can
+    // render one. Every other dot here means "exists"; this one means "someone
+    // said what it does", which is the only claim the step can honestly make.
+    { label: "clip", n: frame.clip?.motion.trim() ? 1 : 0, total: 1 },
     { label: "elements", n: frame.elements.length, total: frame.elements.length },
     { label: "texts", n: frame.texts.length, total: frame.texts.length },
   ];

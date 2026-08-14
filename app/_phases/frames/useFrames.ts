@@ -26,7 +26,16 @@ import { PRESETS } from "@/app/library/presets";
 import { loadStep, saveStep } from "../_shared/stepStore";
 import { FACTS } from "../_shared/notebook/facts";
 import { RENDERS } from "../script/renders";
-import { framesFromRender, subjectFor, type Frame, type FrameElement, type FrameText } from "./frames";
+import {
+  authoredClipCount,
+  emptyClip,
+  framesFromRender,
+  subjectFor,
+  withClips,
+  type Frame,
+  type FrameElement,
+  type FrameText,
+} from "./frames";
 import { applySceneSpecs, parseSceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
 
 const PHASE = "frames";
@@ -63,7 +72,8 @@ export function useFrames(projectId: string) {
       // rather than showing frames whose beats no longer exist.
       setFrames(
         stored?.frames?.length && stored.renderId === render.id
-          ? stored.frames
+          ? // A cut stored before Frames inherited the clip has no clip on it.
+            withClips(stored.frames)
           : framesFromRender(render),
       );
       setLoaded(true);
@@ -144,6 +154,14 @@ export function useFrames(projectId: string) {
 
   const setSubject = useCallback(
     (id: string, subject: string) => patch(id, (f) => ({ ...f, plate: { ...f.plate, subject } })),
+    [patch],
+  );
+
+  /** Author what the plate DOES. Only ever authoring — nothing in this app can
+   *  render a clip, so there is no generate counterpart to this and the surface
+   *  says as much rather than offering a button that cannot fire. */
+  const setMotion = useCallback(
+    (id: string, motion: string) => patch(id, (f) => ({ ...f, clip: { ...(f.clip ?? emptyClip()), motion } })),
     [patch],
   );
 
@@ -301,6 +319,9 @@ export function useFrames(projectId: string) {
     () => frames.reduce((n, f) => n + f.texts.filter((t) => t.role === "figure" && !t.factId).length, 0),
     [frames],
   );
+  /** How much of the cut knows what it does. Authored, not rendered — nothing
+   *  here can render a clip, and the surfaces reading this say so. */
+  const clipsAuthored = useMemo(() => authoredClipCount(frames), [frames]);
 
   return {
     render,
@@ -314,11 +335,13 @@ export function useFrames(projectId: string) {
     hasLockedStyle: Boolean(locked),
     totalCost,
     unboundFigures,
+    clipsAuthored,
     setFrames,
     directing,
     direct,
     generatePlate,
     setSubject,
+    setMotion,
     setText,
     bindFact,
     moveLayer,

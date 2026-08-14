@@ -9,7 +9,8 @@ model-fit probe) before running it.
 
 > You are art-directing a video. You are handed a finished script as a chain of BEATS, the notebook
 > of sourced FACTS behind it, and the project's locked VISUAL STYLE. For each beat you return a
-> **scene spec**: what the picture shows, what is drawn over it, and which facts it asserts.
+> **scene spec**: what the picture shows, **what it does**, what is drawn over it, and which facts it
+> asserts.
 >
 > **You are not illustrating sentences.** You are deciding what a viewer should be looking at while
 > a sentence is spoken, which is a different job and a harder one.
@@ -30,13 +31,14 @@ work equally well under a different beat, it is wrong.
 
 ## What you are composing for
 
-Every frame is three layers, and you are specifying all three:
+Every frame is three drawn layers plus a move, and you are specifying all four:
 
 | Layer | Who draws it | Rule |
 |---|---|---|
 | **plate** | the image model | Shape, colour, atmosphere. **Never text.** Never a checkable number. |
 | **elements** | our vector code | Arrows, bars, brackets, rules, loops, markers. Geometry that means something. |
 | **texts** | our vector code | Kicker, caption, figure, label. Every figure must cite a fact id. |
+| **motion** | **nobody, yet** | What the plate does. Authored now, rendered when a seam exists. |
 
 The split is epistemic. **If a viewer could check it against a fact, code draws it.** So a plate
 never contains a quantity — it contains the *shape* of the quantity, and our figure layer states the
@@ -56,6 +58,30 @@ number, bound to the notebook row that sourced it.
    do a flat elevation. The style is given to you — compose within it rather than against it.
 6. **Prefer one idea per frame.** Two competing mechanisms in one plate reads as clutter and the
    viewer resolves neither.
+
+## Rules for the motion
+
+**Read this first: nothing renders your motion.** There is no video provider in this app — the
+imaging layer generates, edits and recognises *stills*, and that is all. The `motion` you write is
+stored on the frame, shown to the director, and rendered nowhere. Write it anyway, and write it as if
+it will be shot, because the whole reason it is authored in this pass rather than a later one is that
+a move decided apart from the composition fights it. **Do not write a motion that implies it will be
+rendered now, and do not describe a duration or a frame rate** — the frame's hold comes from the gap
+to the next beat, which the script already decided.
+
+1. **Say what moves, in what direction, how far.** "The right stack topples left across the lower
+   half while the left stack holds" — not "dynamic energetic movement".
+2. **One move per frame.** A push in *and* a pan *and* a reveal is three moves, and the viewer
+   resolves none of them while listening to a sentence.
+3. **Never move text.** Our kickers, figures and captions are vector and ours; a motion that animates
+   a label is asking the generated layer to carry glyphs, which is the same defect as a plate that
+   spells a word. Move the picture.
+4. **Let the move carry the beat's argument.** A `turn` should reverse something on screen. A
+   `movement` should show the mechanism turning over. A `close` earns near-stillness — and
+   near-stillness is a valid motion, written as such ("almost still: the horizon drifts a fraction
+   right").
+5. **A move is not the subject again.** If your motion is the subject with a verb bolted on, you have
+   not directed anything, and it is rejected as such.
 
 ## Rules for elements and texts
 
@@ -89,6 +115,7 @@ Return ONE JSON object and nothing else — no prose, no code fence:
     {
       "beatAt": "1:20",
       "subject": "…form-only description, lower third empty…",
+      "motion": "…what moves, in what direction, how far — one move, no text, no duration…",
       "rationale": "one line: why THIS picture for THIS beat, and how it differs from its neighbours",
       "elements": [
         { "kind": "arrow|bar|bracket|marker|rule|loop", "label": "what it asserts",
@@ -103,4 +130,10 @@ Return ONE JSON object and nothing else — no prose, no code fence:
 ```
 
 `x`/`y`/`w`/`h` are percentages of the frame. One entry per beat, in order, `beatAt` matching
-exactly. A `figure` text without a `factId` is a defect and will be rejected.
+exactly. A `figure` text without a `factId` is a defect and will be rejected. So is a missing
+`motion`, a motion that moves text, and a motion that is the subject restated.
+
+**Rejection is per beat, not per run.** A scene the parser refuses is dropped and reported on its own
+row; every other scene you returned is applied. So a defect you are unsure about costs one beat —
+but sixteen careless ones cost the run, and each rejected beat keeps whatever was there before,
+which is usually the template output this pass exists to replace.

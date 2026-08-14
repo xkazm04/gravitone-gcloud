@@ -53,6 +53,9 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
           {ctl.unboundFigures > 0 && (
             <span className="text-amber-200/90"> · {ctl.unboundFigures} unsourced figure{ctl.unboundFigures === 1 ? "" : "s"}</span>
           )}
+          {/* The clip layer's own "what is not done". Authored, never rendered —
+              this app has no video engine, and the word says exactly that. */}
+          <span className="text-white/30"> · {ctl.clipsAuthored}/{frames.length} clips authored</span>
         </p>
         <div className="flex flex-wrap items-center gap-2">
         <button
@@ -76,7 +79,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
       </div>
 
       <div className="overflow-hidden rounded-xl border border-white/8">
-        <div className="font-jetbrains grid grid-cols-[52px_1fr_150px_120px_86px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-[10px] tracking-[0.14em] text-white/35 uppercase">
+        <div className="font-jetbrains grid grid-cols-[52px_1fr_206px_120px_86px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-[10px] tracking-[0.14em] text-white/35 uppercase">
           <span>at</span>
           <span>scene</span>
           <span>breakdown</span>
@@ -98,6 +101,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
             }}
             onRender={() => void generatePlate(f.id)}
             onSubject={(v) => setSubject(f.id, v)}
+            onMotion={(v) => ctl.setMotion(f.id, v)}
             facts={ctl.facts}
             onText={(tid, v) => ctl.setText(f.id, tid, v)}
             onBind={(tid, fid) => ctl.bindFact(f.id, tid, fid)}
@@ -135,6 +139,7 @@ function Row({
   onToggle,
   onRender,
   onSubject,
+  onMotion,
   facts,
   onText,
   onBind,
@@ -156,6 +161,7 @@ function Row({
   onToggle: () => void;
   onRender: () => void;
   onSubject: (v: string) => void;
+  onMotion: (v: string) => void;
   facts: Fact[];
   onText: (textId: string, v: string) => void;
   onBind: (textId: string, factId: string | undefined) => void;
@@ -172,7 +178,7 @@ function Row({
   const plate = PLATE_WORD[frame.plate.state];
   return (
     <div className={`border-b border-white/6 last:border-0 ${open ? "bg-white/[0.02]" : ""}`}>
-      <div className="grid grid-cols-[52px_1fr_150px_120px_86px] items-center gap-2 px-3 py-2">
+      <div className="grid grid-cols-[52px_1fr_206px_120px_86px] items-center gap-2 px-3 py-2">
         <button onClick={onToggle} className="flex items-center gap-1 text-left">
           {open ? (
             <ChevronDown className="h-3 w-3 shrink-0 text-white/40" aria-hidden />
@@ -295,6 +301,30 @@ function Row({
                 placeholder="derived from the beat's role — edit to steer"
                 className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-cyan-400/40 focus:outline-none"
               />
+            </div>
+
+            {/* What the picture DOES. Frames inherited motion on 2026-08-14 and
+                this is where it landed — beside the subject, because a move
+                decided apart from the composition fights it.
+
+                There is no render button under this box and there will not be
+                one until something can render it. Saying "the seam is unbuilt"
+                costs a line; a disabled button that implies a provider exists
+                costs the user's trust in every other number on this screen. */}
+            <div>
+              <p className="font-jetbrains mb-1 text-[10px] tracking-[0.14em] text-white/40 uppercase">clip motion</p>
+              <textarea
+                value={frame.clip?.motion ?? ""}
+                onChange={(e) => onMotion(e.target.value)}
+                rows={2}
+                placeholder="what this plate does — e.g. a slow push in as the left stack settles"
+                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-violet-300/40 focus:outline-none"
+              />
+              <p className="font-jetbrains mt-1 text-[10px] leading-snug text-white/30">
+                holds {holdS}s ·{" "}
+                {frame.clip?.motion.trim() ? "authored · not rendered" : "no motion authored"} — this app has no
+                video engine, so a clip is written here and rendered nowhere. The render seam is unbuilt.
+              </p>
             </div>
             <button
               onClick={onRender}

@@ -14,7 +14,9 @@
 
 import { ArrowDown, ArrowUp, Eye, EyeOff, Trash2 } from "lucide-react";
 
-import type { Frame, LayerRef } from "./frames";
+import { ClipStatusWord } from "@/app/_studio/projectParts";
+
+import { isAuthoredClip, type Frame, type LayerRef } from "./frames";
 
 export default function LayerPanel({
   frame,
@@ -81,6 +83,30 @@ export default function LayerPanel({
         <p className="font-jetbrains px-1 py-1 text-[11px] text-white/40">
           {frame.plate.state === "ready" ? "rendered · always the ground" : "not rendered"}
         </p>
+      </Group>
+
+      {/* The clip sits beside the plate because it IS the plate, moving — not a
+          fifth thing stacked over the other four. It is the one row in this
+          panel with nothing to select, reorder or hide, and that asymmetry is
+          the honest shape: there is no video provider in this app, so a clip is
+          authored and never rendered. The line below says so every time rather
+          than once in a tooltip. */}
+      <Group label="clip">
+        <div className="space-y-1 px-1 py-1">
+          {isAuthoredClip(frame) ? (
+            <>
+              <p className="font-jetbrains flex items-center gap-1.5 text-[11px] text-white/40">
+                authored ·<ClipStatusWord status={frame.clip.status} />
+              </p>
+              <p className="font-hanken text-[11px] leading-snug text-white/60">{frame.clip.motion}</p>
+            </>
+          ) : (
+            <p className="font-jetbrains text-[11px] text-white/40">no motion authored</p>
+          )}
+          <p className="font-jetbrains text-[10px] leading-snug text-white/25">
+            no video engine is wired here — the render seam is unbuilt
+          </p>
+        </div>
       </Group>
     </div>
   );
