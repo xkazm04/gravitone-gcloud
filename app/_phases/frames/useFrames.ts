@@ -24,7 +24,7 @@ import { useThemes } from "@/lib/useThemes";
 import { useAuth } from "@/lib/useAuth";
 
 import { PRESETS } from "@/app/library/presets";
-import { loadStep, saveStep } from "../_shared/stepStore";
+import { loadStep, reportStorageTrouble, saveStep } from "../_shared/stepStore";
 import { FACTS } from "../_shared/notebook/facts";
 import { RENDERS } from "../script/renders";
 import {
@@ -477,16 +477,24 @@ export function useFrames(projectId: string) {
 
   // Written once per CHANGE of that word, not once per render — the ref carries
   // the project id so switching projects cannot suppress the first report of
-  // the second one. A failed write is swallowed on purpose: the cell simply
-  // stays where it was, which claims nothing, and taking the step down over a
-  // ledger entry would be the wrong trade.
+  // the second one. A failed write stays SILENT IN THIS SURFACE on purpose: the
+  // cell simply stays where it was, which claims nothing, and taking the step
+  // down over a ledger entry would be the wrong trade.
+  //
+  // But it no longer vanishes. `.catch(() => undefined)` made a failed write
+  // unobservable to anyone, anywhere — including the case that matters, which is
+  // a full quota, because plates are the reason this project is near one. It now
+  // reaches the same trouble channel every other storage failure reaches, and the
+  // bell says so. Silent in the step, visible in the app.
   const lastReport = useRef<string | null>(null);
   useEffect(() => {
     if (!reported) return;
     const stamp = `${projectId}:${reported}`;
     if (lastReport.current === stamp) return;
     lastReport.current = stamp;
-    void reportPhase(projectId, PHASE, reported).catch(() => undefined);
+    void reportPhase(projectId, PHASE, reported).catch((e: unknown) => {
+      reportStorageTrouble("write", projectId, `${PHASE} · progress`, e);
+    });
   }, [reported, projectId]);
 
   return {

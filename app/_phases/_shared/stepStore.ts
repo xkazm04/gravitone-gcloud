@@ -139,6 +139,40 @@ function report(t: StorageTrouble): { ok: false; trouble: StorageTrouble } {
   return { ok: false, trouble: t };
 }
 
+/**
+ * Publish a storage failure raised somewhere OTHER than this module's store,
+ * through this module's channel and this module's five kinds.
+ *
+ * Exported so the PROJECT record's writes (lib/projects.ts, lib/useProjects.ts,
+ * the studio's bookmark and the frames step's progress report) land in the same
+ * place with the same vocabulary, instead of growing a second error taxonomy one
+ * layer up. They already fail for identical reasons — the quota is one quota and
+ * a blocked upgrade blocks both stores — and `useProjects` used to degrade all
+ * of it to a bare `e.message` with no kind, while `parkAt` and `reportPhase`
+ * failures were swallowed by empty catches and reached nobody at all.
+ *
+ * `phase` is the WHERE, and it is what the bell prints; for a project-level
+ * operation pass a short label ("projects", "bookmark") rather than a step key.
+ * Returns the classified trouble so a caller can also show it locally.
+ */
+export function reportStorageTrouble(
+  op: "read" | "write",
+  projectId: string,
+  phase: string,
+  e: unknown,
+): StorageTrouble {
+  const t: StorageTrouble = {
+    kind: classify(e),
+    op,
+    projectId,
+    phase,
+    message: e instanceof Error ? e.message : String(e),
+    at: Date.now(),
+  };
+  report(t);
+  return t;
+}
+
 /* ────────────────────────────────── the store ────────────────────────────── */
 
 const key = (projectId: string, phase: string) => `${projectId}:${phase}`;

@@ -13,7 +13,18 @@
 // the whole store. It exists so two accounts on one machine do not see each
 // other's work, and so the record already has the field a server would key on.
 
-import { getByIndex, getRecord, openDb, PROJECTS_STORE, runTx, BY_UID } from "./studioDb";
+import {
+  BY_PROJECT,
+  BY_UID,
+  PROJECTS_STORE,
+  STEPS_STORE,
+  deleteByIndex,
+  getByIndex,
+  getKeysByIndex,
+  getRecord,
+  openDb,
+  runTx,
+} from "./studioDb";
 
 /* ── The lifecycle ────────────────────────────────────────────────────────── */
 
@@ -351,11 +362,98 @@ export async function reportPhase(
   return putProject({ ...current, progress: { ...current.progress, [phase]: state } });
 }
 
-export async function deleteProject(id: string): Promise<void> {
+/* ── Deleting, and saying first what that takes ───────────────────────────── */
+
+/** What a project is holding, WITHOUT reading a byte of it.
+ *
+ *  Derived from the step store's primary keys alone (`${projectId}:${phase}`),
+ *  which is why it is cheap enough to run while a confirmation dialog opens: a
+ *  project with a composed cut in it is several megabytes of base64, and asking
+ *  "how much would I destroy" must not be the thing that loads it. */
+export interface ProjectContents {
+  /** How many step records this project owns. */
+  steps: number;
+  /** Which ones, by phase key — `["research", "script", "frames"]`. Ordered as
+   *  PHASES orders them, with anything unrecognised (a retired step, a future
+   *  one) kept at the end rather than dropped: the confirmation must not
+   *  under-count what it is about to take. */
+  phases: string[];
+}
+
+export const EMPTY_CONTENTS: ProjectContents = { steps: 0, phases: [] };
+
+/** Split `${projectId}:${phase}` back into its phase half.
+ *
+ *  Coupled to app/_phases/_shared/stepStore.ts#key, which is the only writer of
+ *  these keys. Sliced by the id's own length rather than split on ":" because a
+ *  project id is user-adjacent and a colon in one must not shift the answer. */
+function phaseOfStepKey(id: string, key: IDBValidKey): string {
+  const s = String(key);
+  return s.startsWith(`${id}:`) ? s.slice(id.length + 1) : s;
+}
+
+function orderPhases(raw: string[]): string[] {
+  const known = PHASES.filter((p) => raw.includes(p)) as string[];
+  const rest = raw.filter((p) => !(PHASES as readonly string[]).includes(p)).sort();
+  return [...known, ...rest];
+}
+
+/** What `deleteProject(id)` would destroy. Never rejects: a confirmation that
+ *  cannot count is still a confirmation, and refusing to open the dialog because
+ *  the store hiccuped would be the worse failure. An unreadable store answers
+ *  `{ steps: 0 }`, and the delete itself still reports what it actually took. */
+export async function projectContents(id: string): Promise<ProjectContents> {
   let db: IDBDatabase | null = null;
   try {
     db = await openDb();
-    await runTx(db, PROJECTS_STORE, "readwrite", (store) => store.delete(id));
+    if (!db.objectStoreNames.contains(STEPS_STORE)) return EMPTY_CONTENTS;
+    const keys = await getKeysByIndex(db, STEPS_STORE, BY_PROJECT, id);
+    return { steps: keys.length, phases: orderPhases(keys.map((k) => phaseOfStepKey(id, k))) };
+  } catch {
+    return EMPTY_CONTENTS;
+  } finally {
+    db?.close();
+  }
+}
+
+/**
+ * Delete a project AND everything it owns, in one transaction.
+ *
+ * This used to remove the project row alone. Every step record it owned — the
+ * research scope, the script versions, the frames with their base64 plates at
+ * roughly 5MB per composed cut — stayed behind, orphaned and unreachable: no
+ * surface could list it, no count included it, and nothing would ever delete it,
+ * while it went on consuming the same quota the storage-trouble banner exists to
+ * warn about. `studioDb`'s `by-project` index was created for exactly this and
+ * had never been queried.
+ *
+ * ONE TRANSACTION over both stores, so a partial delete cannot commit — the
+ * guarantee `putProjects` already gives the seed. Half-deleting is the one
+ * outcome worse than not deleting: a project row without its steps is a project
+ * that opens empty, and steps without their row are the leak this fixes.
+ *
+ * Returns what it took, so the caller can say so afterwards rather than assume.
+ */
+export async function deleteProject(id: string): Promise<ProjectContents> {
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    // The steps store is created in the upgrade path, but a database that
+    // predates it would make `db.transaction([...])` throw NotFoundError and
+    // take the project row down with it. Name only what is there.
+    const hasSteps = db.objectStoreNames.contains(STEPS_STORE);
+    let took: ProjectContents = EMPTY_CONTENTS;
+    await runTx(db, hasSteps ? [PROJECTS_STORE, STEPS_STORE] : PROJECTS_STORE, "readwrite", (projects, tx) => {
+      projects.delete(id);
+      if (!hasSteps) return;
+      // Scoped by the INDEX on the `projectId` field — an equality match on the
+      // owning id, never a prefix scan over the composite key. `p-abc` and
+      // `p-abcd` are different values and cannot select each other.
+      deleteByIndex(tx.objectStore(STEPS_STORE), BY_PROJECT, id, (keys) => {
+        took = { steps: keys.length, phases: orderPhases(keys.map((k) => phaseOfStepKey(id, k))) };
+      });
+    });
+    return took;
   } finally {
     db?.close();
   }

@@ -15,9 +15,13 @@ import Modal from "@/components/ui/Modal";
 import { Eyebrow, Button } from "@/components/ui/Primitives";
 import { Field, NumberInput, Segmented, TextArea, TextInput } from "@/components/ui/Field";
 import {
+  PHASE_TITLE,
   TEMPLATES,
+  projectContents,
   templateOf,
+  type PhaseKey,
   type Project,
+  type ProjectContents,
   type ProjectDraft,
   type TemplateId,
 } from "@/lib/projects";
@@ -241,7 +245,19 @@ function StyleSwatch({ theme }: { theme?: Theme }) {
 }
 
 /** Deleting is the one destructive act on this shelf; it asks first, and it
- *  names what it is about to take. */
+ *  names what it is about to take.
+ *
+ *  It now names ALL of it. The delete used to remove the project row and orphan
+ *  every step record under it — which made this copy accidentally accurate ("the
+ *  record goes") and the behaviour wrong. Now that the delete is a cascade, this
+ *  sentence would be an understatement instead, so the dialog reads the project's
+ *  own step keys and says which steps go with it.
+ *
+ *  Counting costs nothing: `projectContents` reads primary KEYS off the
+ *  by-project index and never touches the records, which for a composed cut are
+ *  several megabytes of base64. The Delete button waits for that count anyway —
+ *  a confirmation that has not finished saying what it will destroy has not
+ *  finished being a confirmation. */
 export function ConfirmDelete({
   project,
   onClose,
@@ -251,6 +267,30 @@ export function ConfirmDelete({
   onClose: () => void;
   onConfirm: () => void;
 }) {
+  const [holds, setHolds] = useState<ProjectContents | null>(null);
+  const id = project?.id ?? null;
+
+  useEffect(() => {
+    setHolds(null);
+    if (!id) return;
+    let alive = true;
+    void projectContents(id).then((c) => {
+      if (alive) setHolds(c);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  // Step keys the app no longer knows a title for (a retired step, a future one)
+  // are still named, in their raw form — under-naming what goes is the one thing
+  // this dialog must not do.
+  const named = (holds?.phases ?? []).map(
+    (p) => PHASE_TITLE[p as PhaseKey] ?? p,
+  );
+  // Frames hold generated plates, and a plate is a vendor call that was paid for.
+  const paid = (holds?.phases ?? []).includes("frames");
+
   return (
     <Modal
       open={Boolean(project)}
@@ -264,9 +304,11 @@ export function ConfirmDelete({
           </Button>
           <button
             onClick={onConfirm}
-            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-[12px] text-rose-200 transition hover:bg-rose-400/20"
+            disabled={!holds}
+            data-testid="confirm-delete"
+            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-[12px] text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/30"
           >
-            Delete
+            {holds ? "Delete" : "reading…"}
           </button>
         </div>
       }
@@ -275,6 +317,27 @@ export function ConfirmDelete({
         The record goes from this browser&rsquo;s storage and does not come back. Nothing is deleted
         anywhere else — there is nowhere else yet.
       </p>
+
+      {holds && holds.steps > 0 && (
+        <p
+          data-testid="delete-takes"
+          className="font-hanken mt-3 rounded-xl border border-rose-400/25 bg-rose-400/[0.06] px-4 py-3 text-sm leading-snug text-rose-100"
+        >
+          <span className="font-jetbrains text-[11px] tracking-[0.14em] text-rose-200/80 uppercase">
+            and its work goes with it
+          </span>
+          <br />
+          {holds.steps} saved {holds.steps === 1 ? "step" : "steps"} — {named.join(", ")}.
+          {paid && " The frames include generated plates, which cost real money to produce."} There
+          is no undo.
+        </p>
+      )}
+
+      {holds && holds.steps === 0 && (
+        <p data-testid="delete-takes" className="font-hanken mt-3 text-sm text-slate-400">
+          Nothing has been saved into its steps yet, so the record is all there is to take.
+        </p>
+      )}
     </Modal>
   );
 }

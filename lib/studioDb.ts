@@ -21,6 +21,10 @@ export const THEMES_STORE = "themes";
 export const ASSETS_STORE = "assets";
 /** Index over the owning uid — listing is always "this account's projects". */
 export const BY_UID = "by-uid";
+/** Index over the owning project, on STEPS_STORE only. Named here rather than
+ *  spelled as a literal at the one call site, because that call site is
+ *  `deleteProject` and a typo there deletes nothing while reporting success. */
+export const BY_PROJECT = "by-project";
 const DB_VERSION = 4;
 
 export function openDb(): Promise<IDBDatabase> {
@@ -35,8 +39,11 @@ export function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(STEPS_STORE)) {
         // Keyed `${projectId}:${phase}`, with a projectId index so a project's
         // whole body of work can be found (and deleted) in one query.
+        // That promise is kept by lib/projects.ts#deleteProject — it was written
+        // here, indexed here, and then not used for a long time, so every
+        // deleted project left its steps orphaned in this store forever.
         const steps = db.createObjectStore(STEPS_STORE, { keyPath: "id" });
-        steps.createIndex("by-project", "projectId", { unique: false });
+        steps.createIndex(BY_PROJECT, "projectId", { unique: false });
       }
       if (!db.objectStoreNames.contains(PROJECTS_STORE)) {
         const store = db.createObjectStore(PROJECTS_STORE, { keyPath: "id" });
@@ -59,20 +66,28 @@ export function openDb(): Promise<IDBDatabase> {
   });
 }
 
-/** Run one transaction to completion, resolving when it commits. */
+/** Run one transaction to completion, resolving when it commits.
+ *
+ *  `stores` may name SEVERAL, in which case they share one transaction and
+ *  therefore one all-or-nothing commit — the guarantee `putProjects` already
+ *  gave the seed, extended to the delete that spans the project row and its
+ *  steps. `work` gets the first named store directly (what every single-store
+ *  caller wants) and the transaction itself (how a multi-store caller reaches
+ *  the others). */
 export function runTx(
   db: IDBDatabase,
-  store: string,
+  stores: string | string[],
   mode: IDBTransactionMode,
-  work: (store: IDBObjectStore) => void,
+  work: (store: IDBObjectStore, tx: IDBTransaction) => void,
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    const tx = db.transaction(store, mode);
+    const names = Array.isArray(stores) ? stores : [stores];
+    const tx = db.transaction(names.length === 1 ? names[0] : names, mode);
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error ?? new Error("write failed"));
     tx.onabort = () => reject(tx.error ?? new Error("write aborted"));
     try {
-      work(tx.objectStore(store));
+      work(tx.objectStore(names[0]), tx);
     } catch (e) {
       // A synchronous throw (quota, DataCloneError) never reaches tx.onerror.
       reject(e);
@@ -87,6 +102,57 @@ export function getRecord<T>(db: IDBDatabase, store: string, key: string): Promi
     req.onsuccess = () => resolve(req.result as T | undefined);
     req.onerror = () => reject(req.error ?? new Error("read failed"));
   });
+}
+
+/** Read every PRIMARY KEY on one index value — keys only, no records.
+ *
+ *  The distinction is the whole point at the one size that matters: the records
+ *  behind a project's steps hold base64 plates, ~5MB for a composed sixteen-frame
+ *  cut (app/_phases/frames/useFrames.ts). Counting them, or naming which steps
+ *  they are, must not read a single one of those bytes.
+ *
+ *  EXACT MATCH, not a prefix scan. `getAllKeys(value)` on an index compares the
+ *  indexed FIELD for equality, so a project whose id is a prefix of another
+ *  project's id cannot be caught by its neighbour's query. That is the property
+ *  the delete path depends on and the reason it goes through the index rather
+ *  than an `IDBKeyRange` over the `${projectId}:${phase}` key. */
+export function getKeysByIndex(
+  db: IDBDatabase,
+  store: string,
+  index: string,
+  value: IDBValidKey,
+): Promise<IDBValidKey[]> {
+  return new Promise((resolve, reject) => {
+    const req = db.transaction(store, "readonly").objectStore(store).index(index).getAllKeys(value);
+    req.onsuccess = () => resolve((req.result as IDBValidKey[]) ?? []);
+    req.onerror = () => reject(req.error ?? new Error("read failed"));
+  });
+}
+
+/** Delete every record on one index value, INSIDE a transaction the caller owns.
+ *
+ *  Synchronous by shape because that is what an IDB transaction requires: the
+ *  `getAllKeys` request is issued now and the deletes are issued from its own
+ *  success callback, which keeps the transaction alive rather than letting it
+ *  auto-commit between the read and the writes. An error on either half is left
+ *  unhandled ON PURPOSE — it propagates to the transaction and aborts the whole
+ *  thing, so a delete that spans two stores cannot half-commit.
+ *
+ *  `onKeys` is called once, with exactly the keys about to go, before any of
+ *  them do — so a caller can report what it destroyed and have that number be
+ *  the one the transaction acted on, not an estimate from a separate read. */
+export function deleteByIndex(
+  store: IDBObjectStore,
+  index: string,
+  value: IDBValidKey,
+  onKeys?: (keys: IDBValidKey[]) => void,
+): void {
+  const req = store.index(index).getAllKeys(value);
+  req.onsuccess = () => {
+    const keys = (req.result as IDBValidKey[]) ?? [];
+    onKeys?.(keys);
+    for (const k of keys) store.delete(k);
+  };
 }
 
 /** Read every record on one index value. */

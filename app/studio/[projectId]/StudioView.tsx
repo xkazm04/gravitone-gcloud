@@ -20,6 +20,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
+import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useAuth } from "@/lib/useAuth";
 import { PHASES, getProject, parkAt, templateOf, type PhaseKey, type Project } from "@/lib/projects";
 
@@ -148,11 +149,19 @@ export default function StudioView({ projectId }: { projectId: string }) {
         await parkAt(id, key);
         const fresh = await getProject(id);
         if (fresh && fresh.uid === user.uid) setProject(fresh);
-      } catch {
+      } catch (e) {
         // The bookmark did not land, or the re-read did not answer. Neither is
         // worth interrupting the user mid-navigation over: the step they asked
         // for is already on screen, and the rail keeps showing the states it
         // last read rather than inventing fresher ones.
+        //
+        // SILENT IN THIS SURFACE IS NOT THE SAME AS UNOBSERVABLE, and it used to
+        // be both. A failed bookmark does not deserve a banner; it does deserve
+        // to exist somewhere. It goes to the shared trouble channel, which the
+        // bell already draws — so a user whose quota is full learns that from
+        // one place, whether it was a notebook, a plate or this that could not
+        // be written.
+        reportStorageTrouble("write", id, "bookmark", e);
       }
     })();
   };
