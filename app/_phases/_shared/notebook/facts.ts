@@ -4,6 +4,12 @@
 //
 // Split out of notebook.ts because it is the half that GROWS: every follow-up
 // round adds rows here and touches nothing else in the document.
+//
+// No row here carries `kind: "utterance"`, so `gate.ts::checkUtterances` is a
+// no-op against this fixture. That is a property of the DATA, not a broken
+// check, and `f-mstr-defence` is deliberately left untagged rather than
+// fabricated into one — see the note on `FactKind` in types.ts for why tagging
+// a compound row would flag the reported half of it.
 
 import type { Fact } from "./types";
 

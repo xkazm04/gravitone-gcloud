@@ -355,6 +355,14 @@ export function conclusionIssues(
    them is a finding — they are what the material adds up to.
 --------------------------------------------------------------------------- */
 
+/** THE SEPARATE EXPORT, and the reason it is separate: a conclusion has no
+ *  source, so it may not be filed inside `Notebook` beside the sourced facts.
+ *  `buildCards` is the only place the two are joined.
+ *
+ *  A consumer serialising "the notebook" for a model must therefore send this
+ *  array ALONGSIDE the notebook object. `app/api/recalibrate/route.ts` does not
+ *  — see the note on `Notebook` in types.ts for exactly what that costs and the
+ *  one line that fixes it. */
 export const CONCLUSIONS: Conclusion[] = [
   {
     id: "c-one-time-rerating",
@@ -481,4 +489,7 @@ export const CONCLUSIONS: Conclusion[] = [
   },
 ];
 
-export const CONCLUSION_IDS = new Set(CONCLUSIONS.map((c) => c.id));
+/* `CONCLUSION_IDS` was here: `new Set(CONCLUSIONS.map(c => c.id))`, with no
+   caller. The set that IS used is `research/scope.ts::OPT_IN_IDS`, which
+   computes the same thing for the reason that matters — a conclusion is OUT of
+   scope until the creator takes it. One export, at the point of use. */

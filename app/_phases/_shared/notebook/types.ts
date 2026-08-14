@@ -36,7 +36,18 @@ export type EvidenceClass =
  *  and never what kind of claim it was, so an announced reserve and a built one
  *  were the same shape — and "we asked, they did not reply" had nowhere to go
  *  but a research gap, where it reads as the researcher's omission rather than
- *  the subject's refusal. `absence` is the container for that. */
+ *  the subject's refusal. `absence` is the container for that.
+ *
+ *  `utterance` HAS A CONSUMER AND NO DATA. `gate.ts::checkUtterances` reads it
+ *  and is a no-op against the shipped fixture, because no fact here carries the
+ *  kind — stated rather than left for the next reader to discover. The one
+ *  candidate is deliberately untagged: `f-mstr-defence` is a compound row whose
+ *  first clause is a reported balance-sheet figure ("2.5+ years of coverage",
+ *  which a shipped render states at renders.ts:91) and whose second is an
+ *  utterance ("Saylor claims…"). Tagging the row flags the reported half, and a
+ *  gate that flags the correct sentence is a gate its user learns to ignore.
+ *  The fixture is the control and is not rewritten to arm a check — the honest
+ *  fix is a notebook that splits the row, which is a run's job, not an edit. */
 export type FactKind =
   | "found" // a claim about the world, sourced
   | "derived" // computed from other facts — carries its inputs and method
@@ -101,10 +112,27 @@ export interface Fact {
    *  support only, so descoping one of a contradicting pair silently RESOLVED a
    *  live source conflict and reported no wound — a safety graph blind to the
    *  one relation that matters is worse than none, because it produces
-   *  confidence. Descoping one of a contested pair must WOUND. */
+   *  confidence.
+   *
+   *  WHAT IS BUILT, so nobody reads more into this field than it does:
+   *    · authored — `f-midtier-distribute` contests `f-whale-absorb` in facts.ts
+   *    · RENDERED — the fact table draws the edge and resolves the other end
+   *      (`FactRow.tsx`), so a reader sees the conflict without hunting for it
+   *    · CHECKED  — a contest pointing at nothing is a dangling-ref finding
+   *      (`cards.ts::notebookIssues`)
+   *
+   *  WHAT IS NOT: it does not wound. `woundsOf()` (research/scope.ts:59-71)
+   *  reads `Card.dependsOn`, and `buildCards` does not put contest edges there —
+   *  correctly, because `dependsOn` means "needs in order to stand" and a
+   *  contested fact does not NEED its opponent. Descoping one of a contested
+   *  pair still reports no wound. Closing that needs a second edge on `Card`
+   *  and a second pass in `woundsOf` — one file in the research context, not
+   *  this one. Until then: authored, visible, checked, not enforced. */
   contests?: string[];
   /** Fact ids this one qualifies or bounds — the measured/inferred pair that
-   *  lost its binding when the two halves landed in different columns. */
+   *  lost its binding when the two halves landed in different columns. Same
+   *  three-of-four state as `contests` above: authored, rendered, checked, not
+   *  enforced. Unused by the shipped fixture. */
   qualifies?: string[];
   note?: string;
 }
@@ -250,7 +278,24 @@ export interface Unknown {
   about?: string[];
   /** Set when a later round answered it. The unknown is KEPT rather than
    *  deleted: a constraint that used to bind is part of the notebook's history,
-   *  and deleting it is what broke the ledger in the first place. */
+   *  and deleting it is what broke the ledger in the first place.
+   *
+   *  WHAT RESOLUTION MEANS TO THE GATE, since the two must agree and it is not
+   *  obvious: `gate.ts` deliberately keeps enforcing a resolved unknown. It is
+   *  render-agnostic — it cannot know whether the render in front of it was
+   *  written before or after the resolution — so it applies the strict reading,
+   *  and supersession is recorded PER RENDER where that is knowable:
+   *  `script/constraints.ts:90-94` downgrades `honoured` to `superseded` when
+   *  the unknown carries this field. Skipping resolved unknowns in the gate
+   *  would silently drop them from the `enforced` denominator, which is the
+   *  measure that exists to stop a conscientious-in-prose gate scoring itself.
+   *
+   *  THE RESIDUAL, named rather than hidden: a resolution that WIDENS what may
+   *  be said is enforced as if it never happened. `u-cohorts` resolved to "the
+   *  script MAY now name the seller", and its probe still tests that no single
+   *  seller is named — so an honest new render trips it. Fixing that is a
+   *  gate.ts change (a resolved unknown whose resolution widens needs its probe
+   *  retired with it), and gate.ts is another lot's file. */
   resolvedBy?: string;
 }
 
@@ -261,8 +306,17 @@ export interface Unknown {
  *  unknown term, attribute the width to it" is a must-say, and its only home was
  *  a field whose entire purpose is taking sentences away — so the strongest
  *  material a researcher had to offer arrived phrased as a restriction on
- *  herself. `must` is the obligation; the render gate checks it was discharged,
- *  the way `impact` is checked for being violated.
+ *  herself.
+ *
+ *  DECLARED, NOT BUILT, and this sentence used to claim otherwise ("the render
+ *  gate checks it was discharged, the way `impact` is checked for being
+ *  violated" — it does not; nothing reads this type). No run writes an
+ *  obligation, no notebook populates `Notebook.obligations`, no surface renders
+ *  one and no gate checks one. It is kept as the CONTRACT a new notebook writes
+ *  against (pipeline/NOTEBOOK-SCHEMA.md mandates it), and the empty
+ *  `OBLIGATIONS` array that sat in unknowns.ts pretending to be a registry is
+ *  gone. An omission cannot be caught by a prohibition, so the discharge check
+ *  is real work still to do — in gate.ts, beside `checkConstraints`.
  *
  *  Anti-shape: an obligation written as a negation ("do not omit the range") to
  *  smuggle a must-say through the deny-list. */
@@ -355,6 +409,25 @@ export interface CounterPosition {
   locator?: string;
 }
 
+/** The notebook document.
+ *
+ *  CONCLUSIONS ARE NOT IN IT, deliberately and consequentially. A conclusion is
+ *  reasoned, not researched: it has no source, it is OFF until the creator lets
+ *  it in, and putting it in this object would file it beside the sourced facts —
+ *  which is the one thing conclusions.ts's header exists to prevent. They live
+ *  in their own export (`conclusions.ts::CONCLUSIONS`) and are joined to the
+ *  rest only at the card layer, by `buildCards`.
+ *
+ *  WHAT THAT COSTS A CONSUMER, stated here because one is paying it: anything
+ *  that serialises "the notebook" for a model must send `CONCLUSIONS`
+ *  ALONGSIDE this object, or the model never sees a card class the UI lets the
+ *  user annotate. `app/api/recalibrate/route.ts:47-56` does not — its comment
+ *  says "a card is a fact, a mechanism, a reversal, a conclusion or the
+ *  steel-man… every one of those slices stays, in full", and the payload it
+ *  builds by dropping keys from THIS object contains no conclusions at all. A
+ *  note on a `c-*` card therefore names a card the model has never seen. The
+ *  fix is in that route: send `{ ...notebook, conclusions: CONCLUSIONS }`, or
+ *  add `conclusions` to the payload beside it — one line, another lot's file. */
 export interface Notebook {
   id: string;
   topic: string;
@@ -381,7 +454,8 @@ export interface Notebook {
   unknowns: Unknown[];
   /** The must-say half of the honesty layer. Optional in the TYPE because run 1
    *  predates it; a notebook whose unknowns imply a range and carries no
-   *  obligation is a notebook that will render around the number. */
+   *  obligation is a notebook that will render around the number. No notebook
+   *  populates it yet — see `Obligation` above for what is and is not built. */
   obligations?: Obligation[];
   engineFit: EngineFit[];
   currency: {

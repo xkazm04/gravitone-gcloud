@@ -164,7 +164,16 @@ export const NOTEBOOK: Notebook = {
   ],
 };
 
-/** Facts by id — the renders cite them, the notebook modal resolves them. */
+/** Facts by id — the notebook modal resolves them: `FactRow.tsx` reads it to
+ *  draw the other end of a `contests` / `qualifies` edge.
+ *
+ *  The half of this comment that was not true is gone. It also claimed "the
+ *  renders cite them", and no render does — `script/renders.ts` carries beats
+ *  whose `cards` are ids, and the gate matches them lexically against
+ *  `NOTEBOOK.facts` rather than through this map.
+ *
+ *  `Object.fromEntries` means a duplicate id silently overwrites the earlier
+ *  fact, which is why `cards.ts::notebookIssues` checks for one. */
 export const FACT_BY_ID = Object.fromEntries(NOTEBOOK.facts.map((f) => [f.id, f]));
 
 /** Unknowns by id — what script/constraints.ts scores each render against. */

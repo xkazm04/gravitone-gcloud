@@ -9,9 +9,15 @@
 // `impact` is a PROHIBITION and stays one — it is the field the script step
 // actually scores against, and its force is a guardrail. What it never was is a
 // container for the two things that kept being filed under it: required ranges
-// (see OBLIGATIONS, below) and established absences (see `facts[].kind:
-// "absence"`). Both were being expressed as a rule about what may not be said,
-// which inverts the polarity of material that is a finding in its own right.
+// (see `Obligation` in types.ts, and the note at the bottom of this file) and
+// established absences (see `facts[].kind: "absence"`). Both were being
+// expressed as a rule about what may not be said, which inverts the polarity of
+// material that is a finding in its own right.
+//
+// A resolved unknown is still ENFORCED by gate.ts, and that is deliberate — the
+// gate cannot know when a render was written, so supersession is recorded per
+// render in script/constraints.ts instead. The rule, and the one case where it
+// is currently wrong (`u-cohorts`), are written out on `Unknown.resolvedBy`.
 
 import type { Unknown } from "./types";
 
@@ -58,34 +64,16 @@ export const UNKNOWNS: UnknownRow[] = [
 
 /* --------------------------------------------------------------- obligations
 
-   THE OTHER HALF. `unknowns[].impact` is a deny-list, and it is the best field
-   in the schema for exactly that job — it is not softened here, and nothing in
-   this block may weaken it (Guardrail 5). What it cannot hold is the opposite
-   polarity: what the script MUST say.
+   THE OTHER HALF LIVES IN types.ts, and the empty `OBLIGATIONS` array that sat
+   here is gone.
 
-   A deny-list alone produces an evasive video. "The precise spot price is
-   contested" forbids a figure and requires nothing, so the honest render —
-   *state the range $60k–$65k, name the term that is unsettled, attribute the
-   width to it* — was a must-say with no home, and a render that simply omitted
-   the number scored clean. An omission cannot be caught by a prohibition.
+   It was a second declaration of the `Obligation` noun, permanently `[]`, with
+   no reader — thirty lines of design that read, to anyone grepping the types,
+   as a working half of the honesty layer. What the array said is true and is
+   said where it belongs: `unknowns[].impact` is a deny-list and stays one; what
+   the script MUST say is `Obligation` (types.ts); an established absence is
+   neither, and goes in `facts[].kind: "absence"` with its search scope.
 
-   Established absences do NOT live here either, in either field: a record shown
-   NOT to exist is a `facts[]` entry with `kind: "absence"` and its search scope.
-   Phase 7's framing — *what the research could not settle* — is the wrong
-   polarity for *what the world has been shown not to contain*, and filing the
-   second under the first is how "we asked, they did not reply" rendered as the
-   researcher's omission rather than the subject's refusal.
-
-   Typed structurally on purpose: `Obligation` is landing in the notebook
-   contract (types.ts, E8) and this file must not race it with a second
-   declaration of the same noun. Empty for now — the control fixture's
-   obligations are the migration's to write, and a control that quietly grew new
-   material is not a control (Rule 1). */
-export const OBLIGATIONS: {
-  id: string;
-  /** What the script must say. Stated as a positive requirement, checkable. */
-  must: string;
-  why: string;
-  /** Which figures or cards it binds — per-figure, like `Unknown.about`. */
-  about?: string[];
-}[] = [];
+   Run 1 wrote no obligations and this file will not invent them — a control
+   that quietly grew new material is not a control. When a run writes some, they
+   go in `Notebook.obligations`, beside `unknowns`, not in a module const. */
