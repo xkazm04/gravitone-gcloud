@@ -48,7 +48,27 @@ export const dataUrl = (img: ImageRef): string => `data:${img.mime};base64,${img
 
 /* ── Requests ─────────────────────────────────────────────────────────────── */
 
-export interface GenerateRequest {
+/**
+ * The caller's vendor steer — carried by all three requests.
+ *
+ * It exists for one measured reason: knowledge/VISUAL-STYLE.md §7 records that
+ * a safety refusal is cleared by "a different model for one hop", not by a
+ * better prompt. Without `avoid`, a surface that has just been refused has no
+ * move to offer.
+ *
+ * A steer is a PREFERENCE, not a command. It reorders the router's plan, it
+ * never escapes it: a vendor that is not planned for the capability, or has no
+ * key, is not promoted. `avoid` is the one half with teeth — see router.ts
+ * `orderFor` for what it means when there is nowhere left to go.
+ */
+export interface ProviderSteer {
+  /** Try this vendor first, if it is planned for the capability and configured. */
+  prefer?: ProviderId;
+  /** Never send this request to this vendor. */
+  avoid?: ProviderId;
+}
+
+export interface GenerateRequest extends ProviderSteer {
   prompt: string;
   negativePrompt?: string;
   aspect: Aspect;
@@ -60,14 +80,14 @@ export interface GenerateRequest {
   seed?: number;
 }
 
-export interface EditRequest {
+export interface EditRequest extends ProviderSteer {
   image: ImageRef;
   /** What to change, in plain language. */
   instruction: string;
   references?: ImageRef[];
 }
 
-export interface RecognizeRequest {
+export interface RecognizeRequest extends ProviderSteer {
   image: ImageRef;
   instruction: string;
   /** When set, the provider MUST return JSON conforming to it. Providers that
@@ -78,7 +98,11 @@ export interface RecognizeRequest {
 
 /* ── Results ──────────────────────────────────────────────────────────────── */
 
-export type ProviderId = "leonardo" | "google" | "qwen";
+/** The vendor roster, as a value: a request may name a vendor, so validation
+ *  needs the list at runtime and there may be exactly one copy of it. */
+export const PROVIDER_IDS = ["leonardo", "google", "qwen"] as const;
+
+export type ProviderId = (typeof PROVIDER_IDS)[number];
 
 /**
  * What happened, kept with the result. `cleanup` is here because Leonardo is a

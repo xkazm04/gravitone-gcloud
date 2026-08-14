@@ -1,10 +1,20 @@
 // POST /api/imaging/generate — a prompt in, plate images out.
 //
 // The seam exists because the API key must never reach the browser. Which
-// vendor answers is the router's decision, not the caller's: in dev that is
-// Leonardo (Lucid Origin), in production Nano Banana 2 Lite.
+// vendor answers is the router's decision — Google in both environments, with
+// Leonardo behind it in dev. A caller may steer that with `prefer`/`avoid`
+// (`avoid` is the move after a safety refusal), but it cannot name a vendor
+// outright: the plan still decides, and provenance reports who served.
 
-import { asAspect, asCount, asImages, asString, errorResponse, readJson } from "@/lib/imaging/api";
+import {
+  asAspect,
+  asCount,
+  asImages,
+  asSteer,
+  asString,
+  errorResponse,
+  readJson,
+} from "@/lib/imaging/api";
 import { generate } from "@/lib/imaging/router";
 
 export const runtime = "nodejs";
@@ -15,6 +25,7 @@ export async function POST(req: Request) {
   try {
     const body = await readJson(req);
     const out = await generate({
+      ...asSteer(body),
       prompt: asString(body.prompt, "prompt"),
       negativePrompt: body.negativePrompt === undefined ? undefined : asString(body.negativePrompt, "negativePrompt"),
       aspect: asAspect(body.aspect),

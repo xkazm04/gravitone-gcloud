@@ -19,6 +19,10 @@ export type ImagingErrorKind =
   | "unsupported"
   /** The vendor's safety layer declined. Re-route, never retry. */
   | "refused"
+  /** The caller ruled out the only vendor that could have served this. Not a
+   *  refusal and not a missing key — the request and the config are both fine,
+   *  they just cannot be satisfied together. Nowhere to route. */
+  | "no-alternative"
   /** 429 / quota. Retry with backoff, or re-route. */
   | "rate-limited"
   /** The call did not finish in time. */
@@ -82,6 +86,24 @@ export const noKey = (provider: ProviderId, envVar: string) =>
 export const unsupported = (provider: ProviderId, cap: Capability) =>
   new ImagingError(`The ${provider} adapter does not implement ${cap}.`, "unsupported", provider);
 
+/**
+ * A request asked to avoid the only vendor planned for the capability.
+ *
+ * This is the honest end of `avoid`, and it is the common case rather than the
+ * exotic one: every PRODUCTION chain is single-entry by design, so in prod
+ * avoiding a vendor always lands here. Serving the avoided vendor's work
+ * anyway would be the one unacceptable answer — a surface that offers "try a
+ * different model" after a refusal would show the same refusing model's output
+ * and call it a re-route.
+ */
+export const noAlternative = (avoided: ProviderId, cap: Capability) =>
+  new ImagingError(
+    `This request asked to avoid ${avoided}, and ${avoided} is the only provider planned for ` +
+      `${cap} in this environment. There is no second vendor to hand it to.`,
+    "no-alternative",
+    avoided,
+  );
+
 /** HTTP status for a route handler to return. One place, so two routes cannot
  *  disagree about what a refusal is. */
 export function statusFor(kind: ImagingErrorKind): number {
@@ -92,6 +114,8 @@ export function statusFor(kind: ImagingErrorKind): number {
       return 501;
     case "refused":
       return 422; // understood, and declined — not a client format error
+    case "no-alternative":
+      return 409; // the request is well-formed; it conflicts with the roster
     case "rate-limited":
       return 429;
     case "timeout":

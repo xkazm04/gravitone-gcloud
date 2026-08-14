@@ -1,8 +1,13 @@
 // THE CHOKEPOINT — every image call in the app enters here.
 //
-// Callers ask for a CAPABILITY, never a vendor. That is the whole design: the
-// dev/prod vendor split is one table in this file, and changing it is a
-// one-line edit rather than a search across surfaces.
+// Callers ask for a CAPABILITY. That is the whole design: the dev/prod vendor
+// split is one table in this file, and changing it is a one-line edit rather
+// than a search across surfaces.
+//
+// A caller may also STEER (`prefer` / `avoid`, see orderFor) — but a steer
+// moves within the table, it does not replace it. No caller anywhere names a
+// vendor and gets it: it names one it would rather have, or one it must not
+// have, and the plan still decides.
 //
 // The fallback chain is not defensive padding. Google's image models refuse
 // recognisable public figures outright, and the fix that works in practice is
@@ -17,7 +22,7 @@
 // The chain may bill a fallback when the preferred vendor has no key; what it
 // may never do is leave the caller unable to find out that it did.
 
-import { ImagingError, noKey, unsupported } from "./errors";
+import { ImagingError, noAlternative, noKey, unsupported } from "./errors";
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { googleProvider } from "./providers/google";
 import { leonardoProvider } from "./providers/leonardo";
@@ -28,6 +33,7 @@ import type {
   GeneratedImages,
   ImagingProvider,
   ProviderId,
+  ProviderSteer,
   RecognizeRequest,
   Recognition,
   EditRequest,
@@ -87,6 +93,40 @@ export function planFor(cap: Capability, env: ImagingEnv = currentEnv()): Provid
 }
 
 /**
+ * The chain this request will actually walk: the plan, steered.
+ *
+ * `avoid` REMOVES. It is the half that VISUAL-STYLE.md §7 needs — the move
+ * after a safety refusal is another vendor, and a re-route that could quietly
+ * land back on the refusing vendor is not a re-route. So when avoidance empties
+ * the chain this throws `no-alternative` rather than serving the avoided
+ * vendor: in production it ALWAYS empties the chain, because every prod
+ * capability is single-entry by design.
+ *
+ * `prefer` only REORDERS, and only when it can be honoured — the named vendor
+ * has to be planned for this capability and have a key. A preference that
+ * cannot be honoured is dropped, not raised: the caller asked for a better
+ * first try, not for a failure. Which vendor actually served is in
+ * `provenance.provider`, so a dropped preference is visible after the fact.
+ *
+ * Exported so a diagnostics surface can show the real order without restating
+ * the rules — the same reason planFor is exported.
+ */
+export function orderFor(
+  cap: Capability,
+  steer: ProviderSteer = {},
+  env: ImagingEnv = currentEnv(),
+): ProviderId[] {
+  const chain = planFor(cap, env);
+  const kept = steer.avoid ? chain.filter((id) => id !== steer.avoid) : chain;
+  if (!kept.length) throw noAlternative(steer.avoid as ProviderId, cap);
+
+  const p = steer.prefer;
+  if (p && p !== steer.avoid && kept.includes(p) && isConfigured(p))
+    return [p, ...kept.filter((id) => id !== p)];
+  return kept;
+}
+
+/**
  * A per-request narrowing of the chain: what this request needs, and the test
  * that decides who has it.
  *
@@ -102,9 +142,10 @@ interface Constraint {
 async function run<T>(
   cap: Capability,
   call: (p: ImagingProvider) => Promise<T> | undefined,
+  steer: ProviderSteer,
   constraint?: Constraint,
 ): Promise<T> {
-  const chain = planFor(cap);
+  const chain = orderFor(cap, steer);
   /** The first thing that went wrong. It describes the vendor we MEANT to use,
    *  which is the honest headline when the whole chain comes up empty. */
   let first: ImagingError | null = null;
@@ -184,6 +225,7 @@ export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>
   run(
     "generate",
     (p) => p.generate?.(req),
+    req,
     // Style-locked generation must go to a provider that actually reads the
     // references. In dev that means the request never falls back to Leonardo —
     // deliberately: an unconditioned image in the wrong style is not a cheaper
@@ -194,7 +236,7 @@ export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>
   );
 
 export const edit = (req: EditRequest): Promise<GeneratedImages> =>
-  run("edit", (p) => p.edit?.(req));
+  run("edit", (p) => p.edit?.(req), req);
 
 export const recognize = (req: RecognizeRequest): Promise<Recognition> =>
-  run("recognize", (p) => p.recognize?.(req));
+  run("recognize", (p) => p.recognize?.(req), req);

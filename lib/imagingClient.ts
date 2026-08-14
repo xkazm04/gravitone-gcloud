@@ -13,6 +13,26 @@ export interface ClientImage {
   height?: number;
 }
 
+/**
+ * A vendor steer, carried by all three calls.
+ *
+ * `avoid` is the one the craft library asks for: a safety refusal is cleared by
+ * a different model for one hop, so a surface that has just been refused can
+ * re-send with `avoid: provenance.provider` (or with the `provider` the error
+ * response carried) instead of offering a retry that cannot succeed.
+ *
+ * Typed as `string`, not as a union of vendor names, ON PURPOSE — this module
+ * knows no vendor, and the roster is the server's to hold. The ids come back
+ * from the server in `provenance.provider`; an id the server does not know is
+ * a 400, never a silent fall back to default routing. A `no-alternative` code
+ * (409) means the avoidance left nowhere to go — in production that is the
+ * normal answer, because each capability runs on one vendor.
+ */
+export interface ClientSteer {
+  prefer?: string;
+  avoid?: string;
+}
+
 export interface ClientProvenance {
   provider: string;
   model: string;
@@ -61,7 +81,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   return json as T;
 }
 
-export const generateImage = (body: {
+export const generateImage = (body: ClientSteer & {
   prompt: string;
   negativePrompt?: string;
   aspect: "16:9" | "9:16" | "1:1" | "4:5";
@@ -69,13 +89,13 @@ export const generateImage = (body: {
   references?: ClientImage[];
 }) => post<GenerateResult>("/api/imaging/generate", body);
 
-export const editImage = (body: {
+export const editImage = (body: ClientSteer & {
   image: ClientImage;
   instruction: string;
   references?: ClientImage[];
 }) => post<GenerateResult>("/api/imaging/edit", body);
 
-export const recognizeImage = (body: {
+export const recognizeImage = (body: ClientSteer & {
   image: ClientImage;
   instruction: string;
   schema?: Record<string, unknown>;

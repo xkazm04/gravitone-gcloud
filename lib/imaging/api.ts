@@ -5,7 +5,14 @@
 // for the same bad input. The routes stay thin enough to read in one screen.
 
 import { ImagingError, statusFor } from "./errors";
-import { ASPECT_PX, type Aspect, type ImageRef } from "./types";
+import {
+  ASPECT_PX,
+  PROVIDER_IDS,
+  type Aspect,
+  type ImageRef,
+  type ProviderId,
+  type ProviderSteer,
+} from "./types";
 
 export class BadRequest extends Error {}
 
@@ -49,6 +56,29 @@ export function asCount(v: unknown): number | undefined {
   const n = Number(v);
   if (!Number.isInteger(n) || n < 1 || n > 8) throw new BadRequest("`count` must be 1–8.");
   return n;
+}
+
+export function asProviderId(v: unknown, field: string): ProviderId | undefined {
+  if (v === undefined || v === null) return undefined;
+  if (typeof v !== "string" || !(PROVIDER_IDS as readonly string[]).includes(v))
+    throw new BadRequest(`\`${field}\` must be one of ${PROVIDER_IDS.join(", ")}.`);
+  return v as ProviderId;
+}
+
+/**
+ * The caller's vendor steer, validated like every other field.
+ *
+ * An unknown vendor id is a 400 rather than a shrug, and `avoid` is why: a
+ * typo'd avoidance that fell back to default routing would send the request to
+ * the very vendor the caller ruled out, and answer 200. That is the one
+ * outcome this field may never have.
+ */
+export function asSteer(body: Record<string, unknown>): ProviderSteer {
+  const prefer = asProviderId(body.prefer, "prefer");
+  const avoid = asProviderId(body.avoid, "avoid");
+  if (prefer && avoid && prefer === avoid)
+    throw new BadRequest("`prefer` and `avoid` name the same provider.");
+  return { prefer, avoid };
 }
 
 export async function readJson(req: Request): Promise<Record<string, unknown>> {

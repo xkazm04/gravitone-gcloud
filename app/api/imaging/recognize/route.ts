@@ -5,7 +5,7 @@
 // what the style block asked for. Qwen 3.8-Max in dev, Gemini 3.6 Flash in
 // production.
 
-import { asImage, asString, errorResponse, readJson } from "@/lib/imaging/api";
+import { asImage, asSteer, asString, errorResponse, readJson } from "@/lib/imaging/api";
 import { BadRequest } from "@/lib/imaging/api";
 import { recognize } from "@/lib/imaging/router";
 
@@ -24,6 +24,7 @@ export async function POST(req: Request) {
     }
 
     const out = await recognize({
+      ...asSteer(body),
       image: asImage(body.image, "image"),
       instruction: asString(body.instruction, "instruction"),
       schema,
