@@ -194,6 +194,24 @@ export interface Unsupported {
   severity: "broken" | "weakened";
 }
 
+/** Attributed seconds against the runtime available, per render.
+ *
+ *  `attributed` sums each card's SHARE of the beats that state it, so it is
+ *  bounded by the runtime and `overrunS` means what it says. It used to sum a
+ *  full beat duration per card — 1.96x the reversal chain's runtime, 2.80x the
+ *  adjudication's — so every version was drawn "over budget" by hundreds of
+ *  seconds, baseline included. See impact.ts::splitAcross.
+ *
+ *  WHAT IT MEASURES, AND WHAT IT CANNOT SEE. This is over-COMMITMENT — have more
+ *  seconds been promised to cards than the render has to give — which is the
+ *  question the simulated path can answer at all, because that path moves card
+ *  weights and never touches a beat. On the model path a chain can also run long
+ *  in a way this misses: a render's hook, question, promise and close rest on no
+ *  card, so up to `unattributedS` of extra chain length is absorbed here before
+ *  the number moves. Measuring that instead means measuring the CHAIN, which
+ *  lives in `AppliedRender.seconds` and would have to be threaded through
+ *  `recalibrate.ts` — a different number with a different name, not a correction
+ *  to this one. */
 export function budgetOf(impact: Record<string, Record<string, Usage>>) {
   const out: Version["budget"] = {};
   for (const r of RENDERS) {

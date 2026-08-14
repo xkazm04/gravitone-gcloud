@@ -99,8 +99,9 @@ export function MatrixFootnotes({ cards, version }: { cards: Card[]; version: Ve
         </p>
       )}
       <p className="font-jetbrains text-[11px] leading-relaxed text-white/30">
-        Seconds are computed from each render’s own beat marks, not estimated. Runtime not
-        attributed to any card is hook, promise and close.
+        Seconds are computed from each render’s own beat marks, not estimated. A beat resting on
+        several cards splits its seconds between them, so every column sums to the runtime it came
+        from. Runtime not attributed to any card is hook, promise and close.
       </p>
     </div>
   );

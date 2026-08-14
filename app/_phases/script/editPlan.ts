@@ -12,7 +12,7 @@
 
 import type { Beat, Connector, ScriptRender } from "./types";
 import { RENDERS } from "./renders";
-import type { Usage } from "./impact";
+import { splitAcross, type Usage } from "./impact";
 
 export type EditOp = "retime" | "rewrite" | "cut" | "insert";
 
@@ -99,6 +99,15 @@ const toS = (m: string) => {
 };
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
 
+/** How long a beat holds, as a whole second.
+ *
+ *  The schema asks for an integer, but the local CLI has no `output_config`, so
+ *  that is a request rather than a guarantee (see the note on EDIT_PLAN_SCHEMA)
+ *  — and a fractional duration has nowhere to live: `mmss` would lay the next
+ *  beat at "1:07.5", and the share split would have to round it anyway. Rounded
+ *  once, here, where the number enters. */
+const holds = (s: number) => Math.max(1, Math.round(s));
+
 export interface AppliedRender {
   beats: Beat[];
   /** beat mark → card ids, carried by the beats themselves. */
@@ -141,7 +150,7 @@ export function applyEdits(
     }
     if (e.op === "retime") {
       const i = at(e.beatAt);
-      if (i >= 0 && typeof e.seconds === "number") rows[i].seconds = Math.max(1, e.seconds);
+      if (i >= 0 && typeof e.seconds === "number") rows[i].seconds = holds(e.seconds);
       continue;
     }
     if (e.op === "rewrite") {
@@ -150,7 +159,7 @@ export function applyEdits(
       if (e.text) rows[i].beat = { ...rows[i].beat, text: e.text };
       if (e.label) rows[i].beat = { ...rows[i].beat, label: e.label };
       if (e.cards) rows[i].cards = e.cards;
-      if (typeof e.seconds === "number") rows[i].seconds = Math.max(1, e.seconds);
+      if (typeof e.seconds === "number") rows[i].seconds = holds(e.seconds);
       continue;
     }
     if (e.op === "insert") {
@@ -163,7 +172,7 @@ export function applyEdits(
           connector: (e.connector ?? "THEREFORE") as Connector,
           text: e.text ?? "",
         },
-        seconds: Math.max(1, e.seconds ?? 8),
+        seconds: holds(e.seconds ?? 8),
         cards: e.cards ?? [],
       });
     }
@@ -184,22 +193,31 @@ export function applyEdits(
   return { beats, attribution, seconds };
 }
 
-/** Turn applied renders into the `impact` map the matrix reads. */
+/** Turn applied renders into the `impact` map the matrix reads.
+ *
+ *  `splitAcross` rather than a loop that adds the beat's whole duration once per
+ *  card — the SAME function the baseline is built with (impact.ts), because a
+ *  delta between two differently-computed numbers is not a delta. Crediting the
+ *  full duration to every card a beat rests on is what made `budgetOf` sum to a
+ *  multiple of the runtime and report a candidate as hundreds of seconds over
+ *  budget while the engine's own summary said ten. */
 export function impactFrom(applied: Record<string, AppliedRender>): Record<string, Record<string, Usage>> {
   const out: Record<string, Record<string, Usage>> = {};
   for (const r of RENDERS) {
     const a = applied[r.id];
     const map: Record<string, Usage> = {};
     if (a) {
-      for (const [mark, cards] of Object.entries(a.attribution))
-        for (const id of cards) {
+      for (const [mark, cards] of Object.entries(a.attribution)) {
+        const shares = splitAcross(a.seconds[mark] ?? 0, cards.length);
+        cards.forEach((id, i) => {
           const prev = map[id];
           map[id] = {
             kind: "spoken",
-            seconds: (prev?.seconds ?? 0) + (a.seconds[mark] ?? 0),
+            seconds: (prev?.seconds ?? 0) + shares[i],
             beats: [...(prev?.beats ?? []), mark],
           };
-        }
+        });
+      }
     }
     out[r.id] = map;
   }

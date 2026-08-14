@@ -10,6 +10,15 @@
 // honest when a beat moves: the numbers follow the script rather than a table
 // somebody forgot to update.
 //
+// A CARD OWNS A SHARE OF ITS BEAT, NOT ALL OF IT. A beat that rests on three
+// cards is not three beats: its seconds are SPLIT across them (`splitAcross`
+// below), so attributed time sums to the runtime it came from. Crediting the
+// full duration to each card summed to a multiple of the runtime — 1.96x on the
+// reversal chain, 2.80x on the adjudication — and `budgetOf` then reported both
+// as hundreds of seconds "over budget" while the engine's own summary said the
+// script over-ran by about ten. The baseline was inflated by the same factor as
+// the candidate, so the two errors hid each other in the delta.
+//
 // Three usage states, and the difference matters when you are deciding what to
 // cut: `spoken` is screen time, `cut` is a deliberate exclusion the render
 // recorded with a reason, and absence is absence — which for the conclusions is
@@ -69,11 +78,35 @@ function beatSeconds(renderId: string): Record<string, number> {
   return out;
 }
 
+/** ONE BEAT'S SECONDS, SPLIT ACROSS THE CARDS IT RESTS ON.
+ *
+ *  EQUAL SHARES, and that is a decision rather than the absence of one. Nothing
+ *  in this app claims the order of a beat's card list means anything: the tables
+ *  above are hand-authored in reading order, `EDIT_PLAN_SCHEMA` asks the engine
+ *  for card ids and never for a primary, and RECALIBRATE-PROMPT.md nowhere says
+ *  the first one leads. Weighting by position would therefore be inventing a
+ *  signal to spend it — the exact move that produced the number this replaces.
+ *  If a primary ever gets declared, this is the one function that changes.
+ *
+ *  Largest remainder, so the parts sum EXACTLY to the beat. Rounding each share
+ *  independently would put the arithmetic error back, smaller and harder to see;
+ *  the leftover second going to the earlier ids is a deterministic tie-break and
+ *  says nothing about which card matters more. */
+export function splitAcross(seconds: number, cards: number): number[] {
+  if (cards <= 0) return [];
+  const whole = Math.max(0, Math.round(seconds));
+  const base = Math.floor(whole / cards);
+  let rem = whole - base * cards;
+  return Array.from({ length: cards }, () => base + (rem-- > 0 ? 1 : 0));
+}
+
 export type UsageKind = "spoken" | "cut" | "unused";
 
 export interface Usage {
   kind: UsageKind;
-  /** Seconds of screen time. 0 for cut and unused. */
+  /** This card's SHARE of the screen time of the beats that state it — a beat's
+   *  seconds divided among the cards it rests on, never replicated per card.
+   *  0 for cut and unused. */
   seconds: number;
   /** Which beats state it — the receipt for `seconds`. */
   beats: string[];
@@ -88,14 +121,15 @@ for (const r of RENDERS) {
   const secs = beatSeconds(r.id);
   const map: Record<string, Usage> = {};
   for (const [mark, ids] of Object.entries(ATTRIBUTION[r.id] ?? {})) {
-    for (const id of ids) {
+    const shares = splitAcross(secs[mark] ?? 0, ids.length);
+    ids.forEach((id, i) => {
       const prev = map[id];
       map[id] = {
         kind: "spoken",
-        seconds: (prev?.seconds ?? 0) + (secs[mark] ?? 0),
+        seconds: (prev?.seconds ?? 0) + shares[i],
         beats: [...(prev?.beats ?? []), mark],
       };
-    }
+    });
   }
   for (const c of r.cutFacts) {
     // A cut is a decision, and it outranks nothing: a fact cannot be both
