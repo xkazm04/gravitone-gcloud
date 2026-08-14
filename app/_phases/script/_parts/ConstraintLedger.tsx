@@ -11,17 +11,39 @@ const MARK: Record<EffectiveState, { glyph: string; cls: string }> = {
   "not-applicable": { glyph: "—", cls: "text-white/25" },
 };
 
-export default function ConstraintLedger({ renderId }: { renderId: string }) {
+/** `stale` — the chain on screen is not the one these rows were typed about.
+ *
+ *  Every row here is a sentence a person wrote about a specific script: "the
+ *  93% / 7.6x vendor figures were cut entirely". Recalibrate that script and the
+ *  sentence is a claim about a render that no longer exists — and the header's
+ *  "clean" is then the most confident lie on the page. There is nothing to
+ *  re-run: the ledger has no probe, which is exactly the defect `gate.ts` was
+ *  built to answer. So it says it was not re-scored, and the computed gate below
+ *  it carries the verdict instead. */
+export default function ConstraintLedger({ renderId, stale }: { renderId: string; stale?: boolean }) {
   const { rows, dangling, atRisk, superseded } = ledgerFor(renderId);
 
   return (
     <div className="mt-3 border-t border-white/8 pt-3" data-testid={`ledger-${renderId}`}>
       <p className="font-jetbrains flex items-baseline justify-between text-[11px] tracking-[0.14em] uppercase">
         <span className="text-white/35">constraint ledger</span>
-        <span className={atRisk ? "text-amber-200" : superseded ? "text-cyan-200" : "text-emerald-300"}>
-          {atRisk ? `${atRisk} at risk` : superseded ? `${superseded} superseded` : "clean"}
-        </span>
+        {stale ? (
+          <span data-testid={`ledger-stale-${renderId}`} className="text-amber-200">
+            not re-scored
+          </span>
+        ) : (
+          <span className={atRisk ? "text-amber-200" : superseded ? "text-cyan-200" : "text-emerald-300"}>
+            {atRisk ? `${atRisk} at risk` : superseded ? `${superseded} superseded` : "clean"}
+          </span>
+        )}
       </p>
+
+      {stale && (
+        <p className="font-jetbrains mt-1 text-[10px] leading-snug text-amber-200/70">
+          hand-written about the original chain. It has no probe, so it cannot follow a rewrite — read
+          the computed gate below instead.
+        </p>
+      )}
 
       <ul className="mt-2 space-y-1.5">
         {rows.map((r) => {

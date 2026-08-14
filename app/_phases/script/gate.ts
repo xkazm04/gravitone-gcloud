@@ -46,7 +46,20 @@ import { NOTEBOOK, UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
 import { conclusionIssues } from "../_shared/notebook/conclusions";
 import type { Conclusion } from "../_shared/notebook/conclusions";
 import type { Fact, Unknown } from "../_shared/notebook/types";
-import type { ScriptRender } from "./types";
+import type { Beat } from "./types";
+
+/* ───────────────────────────── what the gate reads ──────────────────────────
+   This used to be typed `ScriptRender` — a fixture — and that single word was
+   the reason the gate could only ever run on scripts that shipped in the repo.
+   Every check below touches exactly two fields, so the narrower type is both
+   the honest one and the one that lets a RECALIBRATED chain be gated before it
+   is accepted. A `ScriptRender` still satisfies it structurally, so nothing
+   that already called this had to change to keep working. */
+
+export interface GateSubject {
+  id: string;
+  beats: Beat[];
+}
 
 /* ────────────────────────────────── probes ─────────────────────────────────
    An `impact` is prose for a human. A `probe` is the same rule for a machine.
@@ -92,7 +105,7 @@ const CAUSAL = /\b(because|caused?|drove|drives|triggered|led to|resulted in|so 
  *  nobody believes is worth less than none. */
 const DENIAL = /(not because|never because|rather than|does not (?:explain|cause|mean)|is not (?:why|because))/i;
 
-const renderText = (r: ScriptRender) => r.beats.map((b) => b.text).join(" ");
+const renderText = (r: GateSubject) => r.beats.map((b) => b.text).join(" ");
 
 /** Sentence-ish split. Good enough: every demonstrated failure was intra-sentence. */
 const sentences = (s: string) =>
@@ -111,7 +124,7 @@ const DIGITS = /\d[\d,.]*\s*(%|percent|bn|m\b|k\b)?/gi;
 /* ─────────────────────────── 1 · constraint probes ───────────────────────── */
 
 export function checkConstraints(
-  r: ScriptRender,
+  r: GateSubject,
   unknowns: Unknown[],
   probes: Record<string, Probe>,
 ): GateFinding[] {
@@ -215,7 +228,7 @@ export function checkConstraints(
  *  supply)" — by the step whose job is to make numbers FELT. The beat chain was
  *  preserved throughout, which is why "tone may never change the beat chain"
  *  was satisfied while the epistemic layer was being stripped. */
-export function checkQualifiers(r: ScriptRender, facts: Fact[]): GateFinding[] {
+export function checkQualifiers(r: GateSubject, facts: Fact[]): GateFinding[] {
   const text = renderText(r);
   const out: GateFinding[] = [];
 
@@ -247,7 +260,7 @@ export function checkQualifiers(r: ScriptRender, facts: Fact[]): GateFinding[] {
  *  re-typed by hand as an obligation, which is the tell that a field is not
  *  travelling. The check is deliberately strict: same sentence, not same script.
  *  Five cheap words per figure sit in exactly the position hedges do. */
-export function checkUtterances(r: ScriptRender, facts: Fact[]): GateFinding[] {
+export function checkUtterances(r: GateSubject, facts: Fact[]): GateFinding[] {
   const out: GateFinding[] = [];
   const sents = sentences(renderText(r));
 
@@ -285,7 +298,7 @@ const PERSON_WORDS = /\b(people|person|investors?|believers?|holders who|familie
  *  conclusion about "people who believed in it". Three hops, no flag. The step
  *  built to make a number felt is also a laundering path from measured data to
  *  imputed human intent. */
-export function checkScalePromotion(r: ScriptRender): GateFinding[] {
+export function checkScalePromotion(r: GateSubject): GateFinding[] {
   const out: GateFinding[] = [];
   for (const sc of NOTEBOOK.scaleConversions ?? []) {
     const rawIsHuman = PERSON_WORDS.test(sc.raw);
@@ -310,7 +323,7 @@ export function checkScalePromotion(r: ScriptRender): GateFinding[] {
  *  nothing calls is a gate nobody passes and nobody fails. This is its caller:
  *  any conclusion whose claim reaches the render is judged at the boundary. */
 export function checkConclusions(
-  r: ScriptRender,
+  r: GateSubject,
   conclusions: Conclusion[],
   filedOrAdmitted?: ReadonlySet<string>,
 ): GateFinding[] {
@@ -338,7 +351,7 @@ export function checkConclusions(
 /** Every figure a viewer hears should exist somewhere in the notebook. This is
  *  the weakest check here and it is honest about that: it matches digits, so a
  *  spelled-out number is reported `unmeasured` rather than passed. */
-export function checkTraceability(r: ScriptRender, facts: Fact[]): GateFinding[] {
+export function checkTraceability(r: GateSubject, facts: Fact[]): GateFinding[] {
   const corpus = facts.map((f) => f.claim).join(" ") +
     " " + (NOTEBOOK.scaleConversions ?? []).map((s) => `${s.raw} ${s.felt}`).join(" ");
   const out: GateFinding[] = [];
@@ -384,7 +397,7 @@ export interface GateReport {
 }
 
 export function runGate(
-  r: ScriptRender,
+  r: GateSubject,
   opts: {
     facts?: Fact[];
     unknowns?: Unknown[];
@@ -421,6 +434,43 @@ export function runGate(
     notEngaged: count("not-engaged"),
     enforced: testable ? Math.round(((passes + violations) / testable) * 100) : 0,
     blocked: violations > 0,
+  };
+}
+
+/* ──────────────────── the gate over a whole version's chains ────────────────
+   The call site `uat/accepted-gaps.md` has been asking for since 2026-08-12:
+   "a model that returns new beats must be re-run through script/gate.ts before
+   it can be accepted." Until now `runGate` had exactly one caller and it read a
+   fixture, so an accepted recalibration inherited a verdict computed against
+   the script it replaced. */
+
+export interface GateRollup {
+  byRender: Record<string, GateReport>;
+  violations: number;
+  unmeasured: number;
+  /** The WEAKEST render's coverage, not the mean. Averaging an unenforced
+   *  render away is the same lie the hand-authored ledger told, in arithmetic. */
+  enforced: number;
+  blocked: boolean;
+  /** Which renders are blocking — a verdict you cannot locate is a rumour. */
+  blocking: string[];
+}
+
+export function gateChains(
+  chains: Record<string, Beat[]>,
+  opts: Parameters<typeof runGate>[1] = {},
+): GateRollup {
+  const byRender: Record<string, GateReport> = {};
+  for (const [id, beats] of Object.entries(chains)) byRender[id] = runGate({ id, beats }, opts);
+
+  const reports = Object.values(byRender);
+  return {
+    byRender,
+    violations: reports.reduce((n, r) => n + r.violations, 0),
+    unmeasured: reports.reduce((n, r) => n + r.unmeasured, 0),
+    enforced: reports.length ? Math.min(...reports.map((r) => r.enforced)) : 0,
+    blocked: reports.some((r) => r.blocked),
+    blocking: reports.filter((r) => r.blocked).map((r) => r.renderId),
   };
 }
 

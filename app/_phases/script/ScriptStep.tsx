@@ -17,19 +17,30 @@
 // this reads it. The evidence log moved to Step 1 with the rest of the evidence.
 //
 // Versions: notes stack against tracks and ONE recalibration answers all of them
-// (useVersions.ts). Coverage and Spend can show the staged candidate; Candidates
-// and Tracks stay on the accepted baseline, because a re-weighting cannot be
-// read as two interleaved beat chains.
+// (useVersions.ts). Coverage and Spend can show the staged candidate; Tracks
+// stays on the accepted baseline, because a running order cannot be read as two
+// interleaved orders.
+//
+// CANDIDATES NO LONGER DOES. It used to map the static fixture whatever version
+// was live, so the app spent minutes of Opus 5 rewriting the beats, stored them
+// in `Version.beats`, and showed the creator the script those beats replaced —
+// labelled "the baseline". A version that carries its own chain is now drawn as
+// itself, diffed against the chain it was built on, and re-gated: `gateChains`
+// runs over what is actually on screen rather than over `RENDERS`. The sticky
+// pad comes with it, so the verdict and the accept button are one glance apart.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
 
+import { CONCLUSIONS } from "../_shared/notebook/conclusions";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
 import { loadStep } from "../_shared/stepStore";
 import Notice from "../_shared/ui/Notice";
 import { useScope } from "../research/useScope";
 
+import { gateChains } from "./gate";
+import type { Version } from "./versions";
 import BeatList from "./_parts/BeatList";
 import HypothesisColumn from "./_parts/HypothesisColumn";
 import MatrixCoverage from "./_matrix/MatrixCoverage";
@@ -42,6 +53,17 @@ import BaselineOnlyNote from "./_parts/BaselineOnlyNote";
 import { useVersions } from "./useVersions";
 
 type Tab = "candidates" | "coverage" | "spend" | "tracks";
+
+/** The beats a version actually shows for one render. A version with no chain
+ *  of its own (the simulated transform re-weights without rewriting) falls back
+ *  to the fixture — which is the true answer, not a placeholder. */
+const chainOf = (v: Version | null, renderId: string) =>
+  v?.beats?.[renderId] ?? RENDER_BY_ID[renderId].beats;
+
+/** Counted from the chain on screen, never read off the fixture — the fixture's
+ *  `words` describes a script a recalibration may have replaced. */
+const wordsIn = (beats: { text: string }[]) =>
+  beats.map((b) => b.text).join(" ").split(/\s+/).filter(Boolean).length;
 
 const TABS: { key: Tab; label: string; sub: string }[] = [
   { key: "candidates", label: "Candidates", sub: "three renders, measured" },
@@ -69,6 +91,24 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
     });
     return () => { alive = false; };
   }, [projectId]);
+
+  // WHICH SCRIPT THE CANDIDATES TAB IS ABOUT: the staged candidate if there is
+  // one, otherwise the accepted version of record — and the chain it replaced,
+  // so the two can be read against each other rather than one at a time.
+  const reading: Version | null =
+    versions.candidate ?? (versions.baseline.basedOn ? versions.baseline : null);
+  const replaced: Version | null = versions.candidate
+    ? versions.baseline
+    : versions.accepted[versions.accepted.length - 2] ?? null;
+
+  const chains = useMemo(
+    () => Object.fromEntries(RENDERS.map((r) => [r.id, chainOf(reading, r.id)])),
+    [reading],
+  );
+  // The gate, re-run over what is on screen. `runGate` had exactly one caller
+  // before this and it read a fixture, which is why an accepted recalibration
+  // used to inherit a verdict about the script it replaced.
+  const gate = useMemo(() => gateChains(chains, { conclusions: CONCLUSIONS }), [chains]);
 
   if (researched === null)
     return <p className="font-jetbrains text-[12px] text-white/35">opening the project’s research…</p>;
@@ -138,21 +178,30 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
           )}
 
           {tab === "candidates" && (
-            <>
-              <BaselineOnlyNote api={versions} what="The beat chains below are the baseline." />
-              <div className="grid gap-3 lg:grid-cols-3">
-                {RENDERS.map((r) => (
-                  <HypothesisColumn
-                    key={r.id}
-                    render={r}
-                    adopted={adopted === r.id}
-                    onAdopt={() => setAdopted(adopted === r.id ? null : r.id)}
-                    expanded={expanded === r.id}
-                    onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
-                  />
-                ))}
-              </div>
-            </>
+            <StickyNotebook api={versions}>
+              <>
+                <BaselineOnlyNote
+                  api={versions}
+                  what="The beat chains below are the baseline."
+                  showing={reading}
+                  gate={reading ? gate : undefined}
+                />
+                <div className="grid gap-3 lg:grid-cols-3">
+                  {RENDERS.map((r) => (
+                    <HypothesisColumn
+                      key={r.id}
+                      render={r}
+                      beats={chains[r.id]}
+                      chainLabel={reading?.beats ? reading.label : undefined}
+                      adopted={adopted === r.id}
+                      onAdopt={() => setAdopted(adopted === r.id ? null : r.id)}
+                      expanded={expanded === r.id}
+                      onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                    />
+                  ))}
+                </div>
+              </>
+            </StickyNotebook>
           )}
 
           {tab === "coverage" && (
@@ -181,12 +230,19 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
       <Modal
         open={!!expanded}
         onClose={() => setExpanded(null)}
-        title={expanded ? `${RENDER_BY_ID[expanded].engineLabel} · full beat chain` : ""}
-        footer={
-          expanded ? `${RENDER_BY_ID[expanded].beats.length} beats · ${RENDER_BY_ID[expanded].words} words` : ""
+        title={
+          expanded
+            ? `${RENDER_BY_ID[expanded].engineLabel} · ${reading?.beats ? `${reading.label}'s chain` : "full beat chain"}`
+            : ""
         }
+        footer={expanded ? `${chains[expanded].length} beats · ${wordsIn(chains[expanded])} words` : ""}
       >
-        {expanded && <BeatList beats={RENDER_BY_ID[expanded].beats} />}
+        {expanded && (
+          <BeatList
+            beats={chains[expanded]}
+            against={reading?.beats ? chainOf(replaced, expanded) : undefined}
+          />
+        )}
       </Modal>
     </div>
   );

@@ -17,9 +17,10 @@
 
 import { useMemo } from "react";
 
-import { RENDERS } from "../renders";
+import { RENDER_BY_ID } from "../renders";
 import { runGate, type GateFinding, type Verdict } from "../gate";
 import { CONCLUSIONS } from "../../_shared/notebook/conclusions";
+import type { Beat } from "../types";
 
 const MARK: Record<Verdict, { glyph: string; cls: string; label: string }> = {
   violation: { glyph: "✕", cls: "text-rose-300", label: "violation" },
@@ -30,11 +31,23 @@ const MARK: Record<Verdict, { glyph: string; cls: string; label: string }> = {
   "not-engaged": { glyph: "—", cls: "text-white/25", label: "n/a" },
 };
 
-export default function GatePanel({ renderId }: { renderId: string }) {
+/** `beats` is the chain to gate. Omitted, the fixture's own chain is used — and
+ *  the panel says which it read, because a verdict is only worth as much as the
+ *  script it was computed against. That attribution is the whole difference
+ *  between this panel and the ledger above it. */
+export default function GatePanel({
+  renderId,
+  beats,
+  chainLabel,
+}: {
+  renderId: string;
+  beats?: Beat[];
+  chainLabel?: string;
+}) {
   const report = useMemo(() => {
-    const r = RENDERS.find((x) => x.id === renderId);
-    return r ? runGate(r, { conclusions: CONCLUSIONS }) : null;
-  }, [renderId]);
+    const chain = beats ?? RENDER_BY_ID[renderId]?.beats;
+    return chain ? runGate({ id: renderId, beats: chain }, { conclusions: CONCLUSIONS }) : null;
+  }, [renderId, beats]);
 
   if (!report) return null;
 
@@ -62,6 +75,15 @@ export default function GatePanel({ renderId }: { renderId: string }) {
           <span className="text-amber-200/80"> · {report.unmeasured} not checked</span>
         )}
       </p>
+
+      {/* WHICH SCRIPT THIS VERDICT IS ABOUT. A gate re-run on a recalibrated
+          chain and a gate inherited from the original are worth different
+          amounts, and the difference is invisible without this line. */}
+      {chainLabel && (
+        <p data-testid={`gate-chain-${renderId}`} className="font-jetbrains mt-1 text-[10px] text-white/30">
+          read the {chainLabel} chain
+        </p>
+      )}
 
       <ul className="mt-2 space-y-1.5">
         {shown.map((f, i) => {
