@@ -2,7 +2,9 @@
 
 // Firebase client init — ported from dolla/arm/gravitone/web/lib/firebase.ts,
 // the project this studio was extracted from. Same Firebase project, same
-// Google-only posture, same session ceiling.
+// Google-only posture. The parent's 12-hour session ceiling did NOT survive the
+// port past 2026-08-12 — see the policy note below, which is the one place that
+// describes what this app's sessions actually do.
 //
 // What was DROPPED in the port, deliberately: Firestore (`getFirestore`) and
 // the API-key vault (`clearStoredKey`). Both existed to serve the TTS backend
@@ -31,8 +33,18 @@ const firebaseConfig = {
   projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
 };
 
-/** Firebase config is present. NOT "the user is signed in" — see useAuth. */
-export const firebaseReady = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId);
+/** Firebase config is present. NOT "the user is signed in" — see useAuth.
+ *
+ *  EVERY field above is required, `authDomain` included, because every field
+ *  above is load-bearing: the Google popup and its redirect fallback both go
+ *  through `authDomain`, and Firebase resolves the auth endpoint from it. This
+ *  check used to ask only for `apiKey` and `projectId`, so a deployment that had
+ *  filled in two of three variables reported READY, skipped useAuth's friendly
+ *  "Firebase is not configured — see .env.example", and failed at the popup with
+ *  a raw `auth/…` code instead. A partial config is a missing config. */
+export const firebaseReady = Boolean(
+  firebaseConfig.apiKey && firebaseConfig.authDomain && firebaseConfig.projectId,
+);
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 
