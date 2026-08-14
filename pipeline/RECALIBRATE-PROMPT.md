@@ -44,15 +44,18 @@ Your output is a list of edits, not a script.
    notebook rather than inside it, because a conclusion is *reasoned* rather than
    researched and has no source of its own. Each carries `inScope`. `false` means
    the creator has not taken it, and rule 4 binds it like any other descoped card.
-3. **The current renders** — each with its beats, every beat carrying `at`,
+3. **`CONCLUSIONS NOT SENT`**, when that block is present — conclusions you were
+   given the `id` of and not the text of. The block states its own rules. Read it
+   as *this exists and you have not read it*, never as *this does not exist*.
+4. **The current renders** — each with its beats, every beat carrying `at`,
    `label`, `connector`, `text`, and `cards`: the notebook ids **this app's own
    attribution** records that beat as resting on. `cards: null` means the app has
    **no record** for that beat — usually a hook, a question, a promise or a close
    that states no notebook claim, but the table is hand-authored and its silence
    is not a guarantee. Read `null` as *unknown*, never as "rests on nothing".
-4. **The scope** — which cards the creator has taken out. Descoped material may
+5. **The scope** — which cards the creator has taken out. Descoped material may
    not be spoken.
-5. **The notes** — the creator's feedback, each attached to one card.
+6. **The notes** — the creator's feedback, each attached to one card.
 
 ---
 
@@ -121,7 +124,8 @@ one is **refused wholesale**, not partially applied — so check before you emit
    not be given a beat, however good the note's reasoning. A conclusion with
    `inScope: false` is descoped — conclusions are opt-IN, so silence about one is
    a refusal, not an omission. A note asking to give it screen time is refused,
-   naming the card and saying it has not been taken into scope.
+   naming the card and saying it has not been taken into scope. This binds
+   anything in `CONCLUSIONS NOT SENT` too.
 5. **A turn keeps its evidence.** If cutting a beat would leave a reversal with
    nothing supporting it, either keep the evidence or cut the turn too — do not
    leave an assertion standing where an argument was.

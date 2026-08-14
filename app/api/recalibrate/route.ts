@@ -16,9 +16,12 @@
 //
 // Which is why the prompt is BUILT rather than forwarded. There is no cache to
 // amortise a payload nobody reads, so every character that cannot change the
-// answer is bought once per run, at Opus-5-at-high-effort prices. Two cuts, both
-// below, both stated as what they are: the notebook slices no beat can cite, and
-// the renders these notes cannot reach.
+// answer is bought once per run, at Opus-5-at-high-effort prices. THREE cuts,
+// all below, all stated as what they are: the notebook slices no beat can cite,
+// the renders these notes cannot reach, and the conclusions no edit may rest on.
+// The last two share a shape — NAMED, never hidden, and a plan that acts on one
+// is refused wholesale — because a payload that silently omits material teaches
+// the engine to reason about a notebook it was not given.
 //
 // And TWO ADDITIONS, which cost more than those cuts saved and are worth it,
 // because both were the payload failing to carry what the prompt claimed it did:
@@ -30,7 +33,9 @@
 //     `c-*` card named a card the engine had never read.
 // The rule both break is the same one: a prompt that describes a payload it did
 // not receive buys a confident answer to a question nobody asked. Tokens that
-// make the matrix true beat tokens saved making it fiction.
+// make the matrix true beat tokens saved making it fiction — which is also why
+// the third cut sends every conclusion whole the moment a note, a beat or the
+// creator's scope can reach one.
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -141,12 +146,82 @@ function withAttribution(r: Loose): Loose {
  *  named. The alternative is a payload whose sign the engine has to guess, which
  *  is the defect this whole change exists to close.
  *
- *  Out-of-scope conclusions are sent too, and that is not a hole: rule 4 forbids
- *  speaking them, and a note CAN be written on one — refusing a note about a
- *  card the engine never read is how this went wrong the first time. */
+ *  Out-of-scope conclusions are NAMED even when they are not sent, and that is
+ *  not a hole: rule 4 forbids speaking them, and a note CAN be written on one —
+ *  refusing a note about a card the engine never read is how this went wrong the
+ *  first time. See `splitConclusions` for what "named" means and what it costs. */
 function conclusionsFor(scope: unknown) {
   const rec = (scope && typeof scope === "object" ? scope : {}) as Record<string, { descoped?: boolean } | undefined>;
   return CONCLUSIONS.map((c) => ({ ...c, inScope: rec[c.id]?.descoped === false }));
+}
+
+type ScopedConclusion = ReturnType<typeof conclusionsFor>[number];
+
+/** WHICH CONCLUSIONS THIS RUN CAN ACT ON.
+ *
+ *  e225446 measured the conclusions block at 8,613 characters of a 40,384-char
+ *  prompt, and every conclusion is `optIn: true` — so the common case shipped
+ *  ~8.6KB of synthesis the note could not touch, on every run, at Opus-5 prices.
+ *  This is the same cut `RENDERS NOT SENT` makes one section down, and it is
+ *  made with the same care: NAMED, never hidden, and refused if acted on.
+ *
+ *  A conclusion travels WHOLE — claim, reasoning, precedent, falsifier, the lot
+ *  — if ANY of these is true. They are ORs, and each one is a way the engine
+ *  could legitimately need to read it:
+ *
+ *    · `inScope` — the creator took it. It may be given a beat, so it must be
+ *      readable. This is the whole worst case: take every conclusion and the
+ *      payload is byte-identical to what it was before this change.
+ *    · A NOTE NAMES IT. A note on a `c-*` card is answered against the card, and
+ *      "refusing a note about a card the engine never read" is the exact defect
+ *      e225446 closed. Nothing here reopens it.
+ *    · ANY note is `custom`. Free text is read literally and may name a
+ *      conclusion in prose with no `cardId` to match on, so one custom note
+ *      sends every conclusion whole. `rendersInScope` fails open on the same
+ *      input for the same reason.
+ *    · ITS ID APPEARS ANYWHERE ELSE IN THE PAYLOAD. Checked as a substring of
+ *      the serialised notebook and the serialised renders rather than re-derived
+ *      through `touches()`, because the question is literally "can the engine
+ *      see this id somewhere it cannot resolve". That covers a beat whose
+ *      `cards` cite a conclusion — which `ATTRIBUTION` does not do today, but a
+ *      plan that adds one is applied back into it (`recalibrateFromPlan`) — plus
+ *      `cutFacts`, `currency.expiresFirst/durable` and `analogyCandidates[].for`,
+ *      all of which are card-id edges that may point at a `c-*`. A false hit
+ *      sends more, which is the direction it is safe to be wrong in.
+ *
+ *  What is left over is a conclusion that is out of scope, unnamed by any note,
+ *  and unreferenced anywhere the engine can see. There is no edit it may emit
+ *  that rests on one — rule 4 forbids the only such edit — so what it needs is
+ *  the knowledge that the material exists and was withheld, which is its id.
+ *  `useFor` and `leap` ride along for the same reason `RENDERS NOT SENT` carries
+ *  `engineLabel` and `durationS`: they cost ~40 characters and let a refusal
+ *  name what kind of thing it is refusing.
+ *
+ *  THE ONE THING THIS MAY NOT BECOME: a saving that lets the engine reason about
+ *  something it cannot see. The gate after `parseEditPlan` is the enforcement —
+ *  a plan whose `cards` name a held conclusion is refused wholesale, exactly as
+ *  one naming an unsent render is. */
+function splitConclusions(
+  conclusions: ScopedConclusion[],
+  notes: unknown[],
+  visibleElsewhere: string,
+): { whole: ScopedConclusion[]; held: { id: string; useFor: string; leap: string }[] } {
+  const named = new Set<string>();
+  for (const raw of notes) {
+    const n = (raw ?? {}) as Loose;
+    // A note with no kind is read as `custom` here for the same reason
+    // `rendersInScope` reads it that way: the unknown case fails open.
+    if ((typeof n.kind === "string" ? n.kind : "custom") === "custom")
+      return { whole: conclusions, held: [] };
+    if (typeof n.cardId === "string") named.add(n.cardId);
+  }
+  const whole: ScopedConclusion[] = [];
+  const held: { id: string; useFor: string; leap: string }[] = [];
+  for (const c of conclusions) {
+    if (c.inScope || named.has(c.id) || visibleElsewhere.includes(c.id)) whole.push(c);
+    else held.push({ id: c.id, useFor: c.useFor, leap: c.leap });
+  }
+  return { whole, held };
 }
 
 /** Does this render's baseline say anything about this card? Either it speaks it
@@ -210,6 +285,18 @@ export async function POST(req: Request) {
     .filter((r) => !inScope.has(String(r.id)))
     .map((r) => ({ id: r.id, engineLabel: r.engineLabel, durationS: r.durationS }));
 
+  // Serialised once, and read twice: these two strings ARE the payload the
+  // engine can see, so asking whether a conclusion id occurs in them is the
+  // exact question `splitConclusions` needs answered.
+  const notebookJson = JSON.stringify(without(body.notebook, NOTEBOOK_DROP));
+  const sentJson = JSON.stringify(sent);
+  const { whole: conclusions, held } = splitConclusions(
+    conclusionsFor(body.scope),
+    body.notes,
+    notebookJson + sentJson,
+  );
+  const heldIds = new Set(held.map((h) => h.id));
+
   // Everything goes down stdin. The notebook and three beat chains are far past
   // any platform's command-line argument limit, and on Windows that limit fails
   // as a truncated argument rather than an error — a silent corruption of the
@@ -227,17 +314,34 @@ export async function POST(req: Request) {
     JSON.stringify(EDIT_PLAN_SCHEMA, null, 2),
     "",
     "## NOTEBOOK",
-    JSON.stringify(without(body.notebook, NOTEBOOK_DROP)),
+    notebookJson,
     "",
     "## CONCLUSIONS (reasoned, not researched — beside the notebook, never in it)",
     "A conclusion has no source of its own: it is synthesis over the cards in its",
     "`restsOn` plus an analogy, and the creator opts each one IN. `inScope: false`",
     "means they have not, so rule 4 binds it exactly as it binds any descoped card —",
     "it may not be given a beat, and a note on it can only be refused, by name.",
-    JSON.stringify(conclusionsFor(body.scope)),
+    JSON.stringify(conclusions),
+    // Named, never hidden — the same shape and the same rule as RENDERS NOT SENT
+    // below. The engine has to know this material exists so it does not reason
+    // as though the notebook synthesised nothing, and it has to know it did not
+    // read it so it cannot act on a claim it only saw the name of.
+    ...(held.length
+      ? [
+          "",
+          "## CONCLUSIONS NOT SENT",
+          "Each of these is out of scope, unnamed by any note, and cited nowhere in what you",
+          "were given — so no edit you may emit can rest on one, and the text is withheld.",
+          "They exist and you have not read them: the notebook DID synthesise, and a summary",
+          "saying otherwise is wrong. Refuse any note asking for one, by name. Never write",
+          "the idea yourself instead — uncited, that breaks rule 1. Emit NO `cards` entry",
+          "naming one; a plan that does is rejected wholesale.",
+          JSON.stringify(held),
+        ]
+      : []),
     "",
     "## CURRENT RENDERS",
-    JSON.stringify(sent),
+    sentJson,
     ...(notSent.length
       ? [
           "",
@@ -271,6 +375,20 @@ export async function POST(req: Request) {
       return Response.json(
         {
           detail: `The engine returned edits for renders it was not given (${stray.join(", ")}), so it was editing a beat chain it could not read. Nothing was changed.`,
+        },
+        { status: 502 },
+      );
+    // Same rule, other axis: a beat may not rest on a conclusion whose text this
+    // run withheld. Being told a card's NAME is not being handed the card, and a
+    // beat's `cards` is what every coverage number is recomputed from — an id
+    // declared from the name alone produces a matrix that cites reasoning the
+    // engine never read. Refused wholesale, like the stray render above, for the
+    // same reason: the rest of a plan built around that guess is not salvage.
+    const blind = [...new Set(plan.edits.flatMap((e) => e.cards ?? []).filter((id) => heldIds.has(id)))];
+    if (blind.length)
+      return Response.json(
+        {
+          detail: `The engine declared beats resting on conclusions whose text it was not sent (${blind.join(", ")}). Those are out of scope, so no beat may rest on them, and it had only their names. Nothing was changed.`,
         },
         { status: 502 },
       );
