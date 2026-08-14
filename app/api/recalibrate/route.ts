@@ -19,12 +19,25 @@
 // answer is bought once per run, at Opus-5-at-high-effort prices. Two cuts, both
 // below, both stated as what they are: the notebook slices no beat can cite, and
 // the renders these notes cannot reach.
+//
+// And TWO ADDITIONS, which cost more than those cuts saved and are worth it,
+// because both were the payload failing to carry what the prompt claimed it did:
+//   · THE ATTRIBUTION. § WHAT YOU RECEIVE promised each beat's `cards`, and the
+//     payload never sent them — so the engine invented the one field every
+//     coverage number, spend bar and track weight is recomputed from.
+//   · THE CONCLUSIONS. They are not in the `Notebook` object by design, so a
+//     payload built by dropping keys from it contained none — and a note on a
+//     `c-*` card named a card the engine had never read.
+// The rule both break is the same one: a prompt that describes a payload it did
+// not receive buys a confident answer to a question nobody asked. Tokens that
+// make the matrix true beat tokens saved making it fiction.
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { CliError, runClaude } from "@/lib/claudeCli";
 import { MODEL } from "@/lib/model";
+import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
 import { EDIT_PLAN_SCHEMA, PlanError, parseEditPlan } from "@/app/_phases/script/editPlan";
 import { ATTRIBUTION } from "@/app/_phases/script/impact";
 import { RENDER_BY_ID } from "@/app/_phases/script/renders";
@@ -47,9 +60,12 @@ async function systemPrompt(): Promise<string> {
 /** Notebook slices no beat can ever cite, so no edit can rest on them.
  *
  *  A beat declares `cards`, and a card is a fact, a mechanism, a reversal, a
- *  conclusion or the steel-man (`_shared/notebook/cards.ts`). Every one of those
- *  slices stays, in full, because `more-focus` may bring in material no render
- *  currently speaks. What goes:
+ *  conclusion or the steel-man (`_shared/notebook/cards.ts`). Four of those five
+ *  live in this object and stay in it, in full, because `more-focus` may bring in
+ *  material no render currently speaks. The fifth does not live here at all:
+ *  conclusions are a separate export and are sent in their own block below —
+ *  this comment used to claim otherwise while the payload shipped none. What
+ *  goes:
  *    · engineFit — which engine suits this material. The three renders already
  *      exist; this run edits them, it does not choose between engines.
  *    · sources   — a bibliography. Not a card, so nothing can cite it, and every
@@ -77,6 +93,61 @@ const without = (o: unknown, keys: string[]): unknown => {
   for (const k of keys) delete out[k];
   return out;
 };
+
+/** THE ATTRIBUTION THE PROMPT PROMISES.
+ *
+ *  § WHAT YOU RECEIVE told the engine that every beat carries "the notebook card
+ *  ids it rests on". It did not. `ATTRIBUTION` was imported for `touches()`
+ *  below and then never transmitted — so on every rewrite the engine GUESSED the
+ *  one field the app recomputes the whole matrix from (`impactFrom`), while
+ *  being told it had been handed it.
+ *
+ *  `null`, never `[]`, where the app has no row. The table is hand-authored
+ *  against each render's text (impact.ts) and records the beats that STATE a
+ *  claim; hooks, questions, promises and closes usually state none. But "no row
+ *  in a hand-authored table" is a different fact from "rests on nothing", and an
+ *  empty array asserts the second. The prompt says which is which rather than
+ *  letting the engine pick.
+ *
+ *  It is the FIXTURE attribution, deliberately: `recalibrateFromPlan` applies
+ *  the returned plan against `ATTRIBUTION_OF(renderId)`, so the base the engine
+ *  reads is the same document the app will edit. */
+function withAttribution(r: Loose): Loose {
+  const marks = ATTRIBUTION[String(r.id)] ?? {};
+  const beats = Array.isArray(r.beats) ? (r.beats as Loose[]) : [];
+  return {
+    ...r,
+    beats: beats.map((raw) => {
+      const b = (raw ?? {}) as Loose;
+      return { ...b, cards: marks[String(b.at)] ?? null };
+    }),
+  };
+}
+
+/** THE CONCLUSIONS, WITH THE ONE BIT THE SCOPE RECORD CANNOT SAY.
+ *
+ *  They are not in `Notebook` and must not be: a conclusion is reasoned rather
+ *  than researched, it has no source, and filing it beside the sourced facts is
+ *  precisely what conclusions.ts exists to prevent. So they travel BESIDE the
+ *  notebook, in their own block, with that separation intact — which is also the
+ *  one of the two shapes `types.ts` sanctions for a consumer paying this cost.
+ *
+ *  `inScope` is computed here rather than left to the engine to infer, because
+ *  the sign is invisible in the SCOPE record: a conclusion is OUT until the
+ *  creator takes it, so a `c-*` id absent from that record is descoped, while an
+ *  `f-*` id absent from it is kept (`research/scope.ts::OPT_IN_DEFAULT`, which
+ *  owns this rule). That module is `"use client"` and cannot be imported into a
+ *  route handler, so the rule is restated in one expression with its owner
+ *  named. The alternative is a payload whose sign the engine has to guess, which
+ *  is the defect this whole change exists to close.
+ *
+ *  Out-of-scope conclusions are sent too, and that is not a hole: rule 4 forbids
+ *  speaking them, and a note CAN be written on one — refusing a note about a
+ *  card the engine never read is how this went wrong the first time. */
+function conclusionsFor(scope: unknown) {
+  const rec = (scope && typeof scope === "object" ? scope : {}) as Record<string, { descoped?: boolean } | undefined>;
+  return CONCLUSIONS.map((c) => ({ ...c, inScope: rec[c.id]?.descoped === false }));
+}
 
 /** Does this render's baseline say anything about this card? Either it speaks it
  *  in a beat, or it recorded a deliberate decision to cut it — a `more-focus`
@@ -129,7 +200,9 @@ export async function POST(req: Request) {
   const allRenders = Array.isArray(body.renders) ? (body.renders as Loose[]) : [];
   const ids = allRenders.map((r) => String(r.id));
   const inScope = rendersInScope(ids, body.notes);
-  const sent = allRenders.filter((r) => inScope.has(String(r.id))).map((r) => without(r, RENDER_DROP));
+  const sent = allRenders
+    .filter((r) => inScope.has(String(r.id)))
+    .map((r) => withAttribution(without(r, RENDER_DROP) as Loose));
   // Named, never hidden: the engine has to know these exist so it does not
   // reason as though the project has one render, and the creator has to be able
   // to tell "left alone" from "never looked at".
@@ -155,6 +228,13 @@ export async function POST(req: Request) {
     "",
     "## NOTEBOOK",
     JSON.stringify(without(body.notebook, NOTEBOOK_DROP)),
+    "",
+    "## CONCLUSIONS (reasoned, not researched — beside the notebook, never in it)",
+    "A conclusion has no source of its own: it is synthesis over the cards in its",
+    "`restsOn` plus an analogy, and the creator opts each one IN. `inScope: false`",
+    "means they have not, so rule 4 binds it exactly as it binds any descoped card —",
+    "it may not be given a beat, and a note on it can only be refused, by name.",
+    JSON.stringify(conclusionsFor(body.scope)),
     "",
     "## CURRENT RENDERS",
     JSON.stringify(sent),
