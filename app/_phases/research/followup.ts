@@ -28,7 +28,11 @@ export interface FollowUpRequest {
   prompt: string;
   /** Where the system itself suggested the reason. */
   systemReason?: string;
-  status: "queued" | "running" | "returned";
+  /** `unanswered` is a TERMINAL state, and it exists because the alternative was
+   *  worse: a request this prototype has no transcribed answer for used to sit
+   *  at `queued` after the run finished, indistinguishable from one still
+   *  waiting its turn. A dispatch that returns nothing has to say so. */
+  status: "queued" | "running" | "returned" | "unanswered";
   result?: FollowUpResult;
 }
 
@@ -108,4 +112,13 @@ export function matchQuestion(q: string): string | null {
   const s = q.toLowerCase();
   if (/whale|on.?chain|cohort|holder/.test(s)) return "q-whales";
   return null;
+}
+
+/** What a dispatch of this request comes back with — or `undefined`, which is
+ *  the honest majority case: there are two transcribed answers and nothing else.
+ *  One function so the queue cannot decide "answered" one way when it dispatches
+ *  and another way when it resolves. */
+export function resultFor(r: Pick<FollowUpRequest, "kind" | "cardId" | "prompt">): FollowUpResult | undefined {
+  const key = r.kind === "question" ? matchQuestion(r.prompt) : (r.cardId ?? null);
+  return key ? CANNED[key] : undefined;
 }
