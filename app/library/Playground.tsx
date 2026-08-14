@@ -33,12 +33,54 @@ const DEFAULT_SUBJECT = TRIALS[0].subject;
  *  had. */
 const MAX_REFS = 4;
 
+/** One candidate per trial. Declared once so the price shown before the click
+ *  and the count sent to the vendor cannot drift apart. */
+const IMAGES_PER_RUN = 1;
+
+/**
+ * THE PRICE SEAM — why a literal sits in a client component, and how it leaves.
+ *
+ * The authoritative table is `lib/imaging/pricing.ts`, and it is SERVER ONLY:
+ * everything under `lib/imaging/` reads API keys, so a component importing from
+ * there is exactly how a key reaches the browser bundle. Nothing serves a price
+ * over the wire and no server parent passes one down, so it is declared here —
+ * overridable by prop, which is the shape the fix takes. Removing the literal
+ * needs one of two edits nobody in this write set owns: a `GET
+ * /api/imaging/pricing` handler, or the price threaded from app/library/page.tsx.
+ *
+ * The figure is the PRODUCTION vendor's measured rate: $0.045/render on Google
+ * at 1K, from the 60-cell trial grid (docs/imaging.md § The provider verdict,
+ * restated at lib/imaging/router.ts:46-47). The browser cannot know which
+ * environment will answer and the dev vendor is cheaper, so quoting production
+ * errs HIGH — the right direction for a warning about money. KEEP IN STEP with
+ * pricing.ts.
+ */
+const ESTIMATED_USD_PER_IMAGE = 0.045;
+
+/**
+ * The money line after a render — a comparison rather than a flag, on purpose.
+ *
+ * `Provenance` carries the figure but not its BASIS: nothing says whether the
+ * vendor reported the number or `pricing.ts` derived it. Divergence from our own
+ * estimate is the only signal the browser has — a figure that differs can only
+ * have come from the vendor, so it shows plain, as a receipt. When the two
+ * coincide we keep the cautious "~", because calling a receipt an estimate is
+ * the safe error and the reverse puts a guess in front of a user as fact.
+ * SEAM: a `costBasis` field on `Provenance` would make this exact.
+ */
+function costLine(usd: number | undefined, estimate: number): string {
+  // Never $0.00 — that is a claim about money nobody can support.
+  if (usd === undefined) return "cost not reported";
+  return `${Math.abs(usd - estimate) < 0.0005 ? "~" : ""}$${usd.toFixed(4)}`;
+}
+
 export default function Playground({
   block,
   references = [],
   onKeep,
   keepLabel = "keep as proof",
   disabled,
+  usdPerImage = ESTIMATED_USD_PER_IMAGE,
 }: {
   block: StyleBlock;
   /** Approved proofs from this theme, newest first. */
@@ -46,6 +88,8 @@ export default function Playground({
   onKeep?: (r: GenerateResult, subject: string) => void | Promise<void>;
   keepLabel?: string;
   disabled?: boolean;
+  /** Estimated USD per image, for the price shown BEFORE the click. */
+  usdPerImage?: number;
 }) {
   const [subject, setSubject] = useState(DEFAULT_SUBJECT);
   const [busy, setBusy] = useState(false);
@@ -56,7 +100,12 @@ export default function Playground({
   // The toggle exists so the difference can be SEEN, which is the only way to
   // know whether locking is doing anything.
   const [useRefs, setUseRefs] = useState(true);
+  // What this panel has spent since it mounted. `unpriced` counts the renders
+  // the vendor would not price, which is what turns the total into a FLOOR
+  // rather than a figure — the same idiom the Frames spend line uses.
+  const [spend, setSpend] = useState({ usd: 0, runs: 0, unpriced: 0 });
 
+  const estimate = usdPerImage * IMAGES_PER_RUN;
   const refs = references.slice(0, MAX_REFS);
   const conditioned = useRefs && refs.length > 0;
 
@@ -69,15 +118,21 @@ export default function Playground({
     setResult(null);
     setKept(false);
     try {
-      setResult(
-        await generateImage({
-          prompt,
-          negativePrompt: NEGATIVE_PROMPT,
-          aspect: "16:9",
-          count: 1,
-          references: conditioned ? refs : undefined,
-        }),
-      );
+      const res = await generateImage({
+        prompt,
+        negativePrompt: NEGATIVE_PROMPT,
+        aspect: "16:9",
+        count: IMAGES_PER_RUN,
+        references: conditioned ? refs : undefined,
+      });
+      setResult(res);
+      // The money left the account whether or not the vendor named a figure, so
+      // a render that came back unpriced is COUNTED rather than treated as free.
+      setSpend((s) => ({
+        usd: s.usd + (res.provenance.costUsd ?? 0),
+        runs: s.runs + 1,
+        unpriced: s.unpriced + (res.provenance.costUsd === undefined ? 1 : 0),
+      }));
     } catch (e) {
       setError(
         e instanceof ImagingRequestError
@@ -129,6 +184,24 @@ export default function Playground({
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
           {busy ? "rendering…" : "render a trial"}
         </button>
+        {/* THE PRICE, BEFORE THE CLICK — not a dialog. Every render here spends
+            real money and the user used to learn the figure afterwards, in the
+            provenance line. A modal on each click would kill the one thing a
+            playground is for, so the bar is that the number is simply visible
+            next to the button that spends it, with the session total beside it. */}
+        <span
+          className="font-jetbrains text-[10px] text-white/40"
+          title="Estimated from the production vendor's measured rate. The dev vendor is cheaper, so this errs high; the vendor's own figure replaces it after the render."
+        >
+          est. ${estimate.toFixed(3)} · {IMAGES_PER_RUN} image{IMAGES_PER_RUN > 1 ? "s" : ""}
+          {spend.runs > 0 && (
+            <span className="text-white/30">
+              {" · "}
+              {spend.unpriced ? "at least " : "~"}${spend.usd.toFixed(3)} over {spend.runs} render
+              {spend.runs > 1 ? "s" : ""}
+            </span>
+          )}
+        </span>
         <span className="font-jetbrains text-[10px] text-white/30">
           {prompt.length}/{PROMPT_CHAR_LIMIT} chars
         </span>
@@ -176,8 +249,10 @@ export default function Playground({
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="font-jetbrains text-[10px] text-white/35">
               {result.provenance.provider} · {result.provenance.model} ·{" "}
-              {(result.provenance.durationMs / 1000).toFixed(1)}s
-              {result.provenance.costUsd !== undefined && ` · $${result.provenance.costUsd.toFixed(4)}`}
+              {(result.provenance.durationMs / 1000).toFixed(1)}s ·{" "}
+              {/* Whatever came back WINS over the estimate shown before the
+                  click — including when it came back as nothing. */}
+              {costLine(result.provenance.costUsd, estimate)}
               {/* The studio-cleanliness receipt, shown rather than hidden: if a
                   remote generation survived, the user should know. */}
               {result.provenance.cleanup === "failed" && (
