@@ -2,7 +2,7 @@
 
 // THE SHELF — a progress matrix.
 //
-// Metaphor: the wall chart. Rows are projects, columns are the six steps, and
+// Metaphor: the wall chart. Rows are projects, columns are the five steps, and
 // the cell is the whole record — which means the grid answers a question a list
 // cannot: read DOWN a column and you see every project stuck at Frames, or that
 // Score has never once been started. Prototype round 1 ran this against a
@@ -17,7 +17,7 @@
 //  · the bars are half-height, because a bar that only has to be distinguished
 //    by colour does not need to be tall
 //
-// ~32px a row, and the footer totals each step: six numbers that say where the
+// ~32px a row, and the footer totals each step: five numbers that say where the
 // whole shelf is jammed.
 
 import {
@@ -56,7 +56,7 @@ const LEGEND: PhaseState[] = ["done", "working", "review", "blocked", "empty"];
 // only stay aligned if they read the same rule.
 //
 // Real CSS rather than a Tailwind arbitrary value: `md:grid-cols-[minmax(0,1fr)
-// _repeat(6,4.25rem)_…]` silently failed to generate (measured — the breakpoint
+// _repeat(5,4.25rem)_…]` silently failed to generate (measured — the breakpoint
 // columns never applied and every cell rendered at the mobile track width), and
 // a ten-track template with commas and decimals inside a variant is past what
 // arbitrary values should be asked to carry. Declared per-surface, the way
@@ -69,12 +69,12 @@ const GRID = "gt-matrix";
 const GRID_CSS = `
 .gt-matrix{
   display:grid; align-items:center; column-gap:.375rem; min-width:33rem;
-  grid-template-columns:minmax(0,1fr) repeat(6,1.75rem) 3rem 3.5rem 2.5rem;
+  grid-template-columns:minmax(0,1fr) repeat(5,1.75rem) 3rem 3.5rem 2.5rem;
 }
 @media (min-width:768px){
   .gt-matrix{
     column-gap:.5rem;
-    grid-template-columns:minmax(0,1fr) repeat(6,4.25rem) 3.5rem 5.5rem 4.5rem;
+    grid-template-columns:minmax(0,1fr) repeat(5,4.25rem) 3.5rem 5.5rem 4.5rem;
   }
 }`;
 
@@ -98,7 +98,7 @@ export default function ProjectsMatrix({
       </div>
 
       <div className="scroll-x rounded-2xl border border-white/8 bg-white/[0.015]">
-        {/* column heads. The six steps are the spine of this surface, so they
+        {/* column heads. The five steps are the spine of this surface, so they
             are the accent and everything else on this row recedes. */}
         <div
           className={`${GRID} font-jetbrains border-b border-white/8 bg-white/[0.02] px-3 py-2 text-[10px] tracking-[0.18em] text-white/35 uppercase`}

@@ -1,6 +1,6 @@
 "use client";
 
-// THE STUDIO — one production walked through six steps. This was the home page
+// THE STUDIO — one production walked through five steps. This was the home page
 // until projects existed; it now opens from a row on /projects and is addressed
 // by the project it is working on (`/studio/<projectId>`).
 //

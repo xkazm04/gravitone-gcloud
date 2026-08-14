@@ -7,8 +7,9 @@
 //
 // The states are deliberately uneven. Glass Harbor is the production the rest
 // of app/_studio actually describes, so its progress reads the way those
-// surfaces render it: script locked, one frame still unpicked, one clip
-// rejected and one still rendering, a cue refused, gaps in the cut. The other
+// surfaces render it: script locked, one frame still unpicked and one clip
+// rejected (both Frames' problem now that Motion is folded into it), a cue
+// refused, gaps in the cut. The other
 // four exist so the list has range — a project with nothing but a title, one
 // stuck on a real blocker, one finished, one that never got past research.
 // Nothing here is a state the product could not reach.
@@ -30,12 +31,11 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
       targetS: 31,
       createdAt: now - 9 * DAY,
       updatedAt: now - 2 * 60 * 60 * 1000,
-      phase: "motion",
+      phase: "frames",
       progress: {
         research: "done",
         script: "done",
-        frames: "review", // scene 5 unpicked
-        motion: "working", // 1 rendering, 1 rejected
+        frames: "review", // scene 5 unpicked, 1 clip rejected, 1 rendering
         score: "review", // a cue was refused
         cut: "working", // playable with gaps
       },
@@ -54,7 +54,6 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
         research: "done",
         script: "working",
         frames: "empty",
-        motion: "empty",
         score: "empty",
         cut: "empty",
       },
@@ -75,7 +74,6 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
         // Every candidate for the archive scene came back refused — a real
         // wall, not a slow render, and the reason /projects has a blocked word.
         frames: "blocked",
-        motion: "empty",
         score: "empty",
         cut: "empty",
       },
@@ -94,7 +92,6 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
         research: "done",
         script: "done",
         frames: "done",
-        motion: "done",
         score: "done",
         cut: "done",
       },

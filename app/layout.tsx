@@ -16,7 +16,7 @@ const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrai
 export const metadata: Metadata = {
   title: "Gravitone — a content studio",
   description:
-    "A content creation studio: one production walked through six steps — research, script, frames, motion, score, cut — over a library that knows where every asset came from.",
+    "A content creation studio: one production walked through five steps — research, script, frames, score, cut — over a library that knows where every asset came from.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

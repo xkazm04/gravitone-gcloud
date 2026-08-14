@@ -17,19 +17,68 @@ import { getByIndex, getRecord, openDb, PROJECTS_STORE, runTx, BY_UID } from "./
 
 /* ── The lifecycle ────────────────────────────────────────────────────────── */
 
-/** The six studio steps, in production order. The ONE source of that order —
- *  the /studio stepper and every /projects surface read it from here. */
-export const PHASES = ["research", "script", "frames", "motion", "score", "cut"] as const;
+/** The five studio steps, in production order. The ONE source of that order —
+ *  the /studio stepper and every /projects surface read it from here.
+ *
+ *  Motion used to sit between Frames and Score as its own step. It is gone:
+ *  a still and the movement given to it are one art-direction decision made
+ *  against one source frame, and splitting them put a step boundary through
+ *  the middle of a single act. Frames owns both now — the picked still AND
+ *  the clip made from it. */
+export const PHASES = ["research", "script", "frames", "score", "cut"] as const;
 export type PhaseKey = (typeof PHASES)[number];
 
 export const PHASE_TITLE: Record<PhaseKey, string> = {
   research: "Research",
   script: "Script",
   frames: "Frames",
-  motion: "Motion",
   score: "Score",
   cut: "Cut",
 };
+
+/** Steps that no longer exist, and the step that absorbed each one.
+ *
+ *  Records written before a step was retired still name it — in `phase`, and
+ *  as a key in `progress`. Both are read on every load, so the rename happens
+ *  at the read seam (`getProject`/`listProjects`) rather than in each surface:
+ *  a stored
+ *  `phase: "motion"` would otherwise match no step in the rail, and the studio
+ *  would silently open on Research instead of where the work actually is. */
+const RETIRED_PHASES: Record<string, PhaseKey> = { motion: "frames" };
+
+/** Bring a stored record up to the current step list. Cheap and idempotent —
+ *  a record with nothing retired in it is returned untouched.
+ *
+ *  Progress merges worst-news-first: if Frames was locked but Motion was
+ *  blocked, the merged Frames is blocked. Reporting the survivor as "done"
+ *  when half of what it now covers had stopped would be the one lie this
+ *  migration must not tell. */
+export function migrateProject(p: Project): Project {
+  const legacy = Object.keys(RETIRED_PHASES).filter((k) => k in p.progress);
+  if (legacy.length === 0 && !(p.phase in RETIRED_PHASES)) return p;
+
+  const progress = { ...p.progress };
+  for (const old of legacy) {
+    const heir = RETIRED_PHASES[old];
+    const state = progress[old as PhaseKey];
+    delete progress[old as PhaseKey];
+    progress[heir] = worseOf(progress[heir], state);
+  }
+  return {
+    ...p,
+    phase: RETIRED_PHASES[p.phase] ?? p.phase,
+    progress: progress as Record<PhaseKey, PhaseState>,
+  };
+}
+
+/** Rank used by the merge above — the further left, the more it needs saying. */
+const STATE_RANK: PhaseState[] = ["blocked", "review", "working", "done", "empty"];
+
+function worseOf(a: PhaseState | undefined, b: PhaseState | undefined): PhaseState {
+  if (!a) return b ?? "empty";
+  if (!b) return a;
+  return STATE_RANK.indexOf(a) <= STATE_RANK.indexOf(b) ? a : b;
+}
 
 /**
  * What a step is, honestly. `blocked` is not decoration — every phase surface
@@ -133,7 +182,7 @@ export function newProject(uid: string, draft: ProjectDraft): Project {
 
 /* ── Derived facts the list surfaces read ─────────────────────────────────── */
 
-/** Steps locked, out of six. The one number every variant shows. */
+/** Steps locked, out of five. The one number every variant shows. */
 export function doneCount(p: Project): number {
   return PHASES.filter((k) => p.progress[k] === "done").length;
 }
@@ -167,7 +216,7 @@ export async function listProjects(uid: string): Promise<Project[]> {
   try {
     db = await openDb();
     const rows = await getByIndex<Project>(db, PROJECTS_STORE, BY_UID, uid);
-    return rows.sort((a, b) => b.updatedAt - a.updatedAt);
+    return rows.map(migrateProject).sort((a, b) => b.updatedAt - a.updatedAt);
   } finally {
     db?.close();
   }
@@ -177,7 +226,8 @@ export async function getProject(id: string): Promise<Project | undefined> {
   let db: IDBDatabase | null = null;
   try {
     db = await openDb();
-    return await getRecord<Project>(db, PROJECTS_STORE, id);
+    const row = await getRecord<Project>(db, PROJECTS_STORE, id);
+    return row && migrateProject(row);
   } finally {
     db?.close();
   }

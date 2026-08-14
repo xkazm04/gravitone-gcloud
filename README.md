@@ -12,11 +12,12 @@ routes:
 - **`/`** — the door. No copy at all: a contact sheet of the fixture project's
   own frame candidates at page scale, and one button that opens Google sign-in.
 - **`/projects`** — the shelf, drawn as a progress matrix: projects down, the
-  six steps across, one thin row each. Read a column and you see where the whole
+  five steps across, one thin row each. Read a column and you see where the whole
   shelf is jammed. Create, edit and delete live here. Signed-in only.
-- **`/studio?p=<id>`** — one production walked through six steps: Research
-  (Triage board), Script (Manuscript), Frames (Lightbox), Motion (Shot lab),
-  Score (Spotting), Cut (Timeline), over a **Library** view (Shelves) where
+- **`/studio?p=<id>`** — one production walked through five steps: Research
+  (Triage board), Script (Manuscript), Frames (Lightbox — the still AND the
+  clip made from it), Score (Spotting), Cut (Timeline), over a **Library**
+  view (Shelves) where
   every asset is captioned, filed and traceable to the direction that made it.
   Signed-in only, and it needs a project — `/studio` on its own is a redirect
   back to the shelf.
@@ -54,7 +55,7 @@ app/projects/       the shelf (gated)
 app/_projects/      the shelf's surface — the progress matrix + the create/edit dialog
 app/studio/         the studio (gated) — the one-row stepper and the step router
 app/_studio/        shared fixtures, types and small render parts
-app/_phases/<step>/ one directory per production step (research · script · frames · motion · score · cut)
+app/_phases/<step>/ one directory per production step (research · script · frames · score · cut)
                     — each step grows its own components, state and step-only fixtures here
 app/_library/       the Shelves library view
 components/ui/      the design language (see below), plus AuthGate, UserMenu and the form primitives

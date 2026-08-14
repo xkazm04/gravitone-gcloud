@@ -1,18 +1,18 @@
 "use client";
 
-// The six studio steps and the surface each one renders. Split out of the view
+// The five studio steps and the surface each one renders. Split out of the view
 // so the stepper is a list of titles and the view is layout — and so the ORDER
 // is stated once, in lib/projects' PHASES, which /projects reads too.
 //
 // Each surface is its own prototype-round winner: Triage board, Manuscript,
-// Frames (in prototype), Shot lab, Spotting, Timeline.
+// Frames (in prototype), Spotting, Timeline. Frames covers what the retired
+// Motion step used to — the still and the clip made from it are one decision.
 
 import { PHASES, PHASE_TITLE, type PhaseKey } from "@/lib/projects";
 
 import ResearchStep from "../../_phases/research/ResearchStep";
 import ScriptStep from "../../_phases/script/ScriptStep";
 import FramesStep from "../../_phases/frames/FramesStep";
-import MotionShotLab from "../../_phases/motion/MotionShotLab";
 import ScoreSpotting from "../../_phases/score/ScoreSpotting";
 import CutTimeline from "../../_phases/cut/CutTimeline";
 
@@ -23,7 +23,6 @@ const SURFACE: Record<PhaseKey, (projectId: string) => React.ReactNode> = {
   research: (projectId) => <ResearchStep projectId={projectId} />,
   script: (projectId) => <ScriptStep projectId={projectId} />,
   frames: (projectId) => <FramesStep projectId={projectId} />,
-  motion: () => <MotionShotLab />,
   score: () => <ScoreSpotting />,
   cut: () => <CutTimeline />,
 };
