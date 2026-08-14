@@ -16,6 +16,10 @@
 // SERVER ONLY. Every provider holds an API key. Nothing here may be imported
 // from a component — the seam is app/api/imaging/*.
 
+// Type-only, and it must stay that way: errors.ts imports this file back, so a
+// value import here would be a runtime cycle. `import type` is erased.
+import type { ImagingErrorKind } from "./errors";
+
 /* ── Aspect: a project-level contract, never a vendor default ─────────────── */
 
 // The research batch's cheapest lesson, learned by someone else the hard way:
@@ -104,11 +108,23 @@ export const PROVIDER_IDS = ["leonardo", "google", "qwen"] as const;
 
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
+/** One vendor that did NOT serve the request, and why it dropped out. */
+export interface RerouteStep {
+  provider: ProviderId;
+  /** The error it raised, or `constraint` when the request itself ruled the
+   *  vendor out — a field it cannot honour — before it was ever called. */
+  why: ImagingErrorKind | "constraint";
+}
+
 /**
  * What happened, kept with the result. `cleanup` is here because Leonardo is a
  * STUDIO as well as an API: every generation we leave behind is clutter in the
  * user's account, so the wrapper deletes them and this field is the receipt.
  * A vendor with no server-side artifact reports "not-applicable".
+ *
+ * `provider` is the answer to "which vendor made this image", and it is worth
+ * PERSISTING: an asset outlives the response it arrived in, and after the fact
+ * the vendor is not re-derivable from the pixels.
  */
 export interface Provenance {
   provider: ProviderId;
@@ -118,6 +134,10 @@ export interface Provenance {
   costUsd?: number;
   durationMs: number;
   cleanup?: "deleted" | "failed" | "not-applicable";
+  /** Vendors eliminated before the one that served, most-preferred first.
+   *  Absent on the ordinary single-hop call — its PRESENCE is the re-route,
+   *  which is how "why is this plate from Leonardo?" stays answerable later. */
+  reroutedFrom?: RerouteStep[];
 }
 
 export interface GeneratedImages {

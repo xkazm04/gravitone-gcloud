@@ -17,13 +17,15 @@
 // THE INVARIANT THIS FILE KEEPS: **no elimination is silent.** A candidate can
 // drop out of the chain four ways — it lacks the capability, it cannot honour a
 // field of THIS request, it has no key, or it failed when called — and every
-// one of them is recorded and reaches the caller, either as the error thrown at
-// the end or (when a later vendor served) as the vendor named in `provenance`.
-// The chain may bill a fallback when the preferred vendor has no key; what it
-// may never do is leave the caller unable to find out that it did.
+// one of them lands in `trail`, which reaches the caller three ways: as the
+// error thrown at the end, as `provenance.reroutedFrom` when a later vendor
+// served, and as one line on the server log either way. The chain may bill a
+// fallback when the preferred vendor has no key; what it may never do is leave
+// anyone unable to find out that it did.
 
 import { ImagingError, noAlternative, noKey, unsupported } from "./errors";
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
+import { logCall } from "./log";
 import { googleProvider } from "./providers/google";
 import { leonardoProvider } from "./providers/leonardo";
 import { qwenProvider } from "./providers/qwen";
@@ -32,10 +34,12 @@ import type {
   GenerateRequest,
   GeneratedImages,
   ImagingProvider,
+  Provenance,
   ProviderId,
   ProviderSteer,
   RecognizeRequest,
   Recognition,
+  RerouteStep,
   EditRequest,
 } from "./types";
 
@@ -139,86 +143,130 @@ interface Constraint {
   readonly test: (p: ImagingProvider) => boolean;
 }
 
-async function run<T>(
+async function run<T extends { provenance: Provenance }>(
   cap: Capability,
   call: (p: ImagingProvider) => Promise<T> | undefined,
   steer: ProviderSteer,
   constraint?: Constraint,
 ): Promise<T> {
-  const chain = orderFor(cap, steer);
-  /** The first thing that went wrong. It describes the vendor we MEANT to use,
-   *  which is the honest headline when the whole chain comes up empty. */
-  let first: ImagingError | null = null;
-  /** How many candidates the request-level constraint eliminated. */
-  let rejected = 0;
-
-  for (let i = 0; i < chain.length; i++) {
-    const id = chain[i];
-    const provider = PROVIDERS[id]();
-
-    // A plan entry that cannot do the job is a bug in the table above, not a
-    // runtime condition. As the FIRST choice it throws — nothing else was asked
-    // for, so there is no result to hide it behind.
-    if (!provider.capabilities.includes(cap)) {
-      if (i === 0) throw unsupported(id, cap);
-      first ??= unsupported(id, cap);
-      continue;
-    }
-
-    // A provider that cannot honour this request is passed over even when it
-    // is the preferred one — silently dropping the field would be worse.
-    if (constraint && !constraint.test(provider)) {
-      rejected++;
-      continue;
-    }
-
-    // No key: step over it, at ANY position, but record it. Calling it instead
-    // would reach the same place by a longer road — the adapter's own keyFor()
-    // throws `no-key`, which is reroutable — while spending a provider
-    // construction to get there. Recording is what makes the skip non-silent:
-    // an unconfigured primary is why the caller ends up on a fallback, and it
-    // is the message they get if the fallback has no key either.
-    if (!isConfigured(id)) {
-      first ??= noKey(id, KEY_VAR[id]);
-      continue;
-    }
-
-    try {
-      const out = call(provider);
-      if (out === undefined) throw unsupported(id, cap);
-      return await out;
-    } catch (e) {
-      const err =
-        e instanceof ImagingError
-          ? e
-          : new ImagingError(`${id} failed unexpectedly.`, "failed", id, String(e));
-      first ??= err;
-      if (!err.reroutable) throw err;
-      // else: try the next configured vendor
-    }
+  const started = Date.now();
+  /** Every vendor that dropped out, and why. This is the same record twice
+   *  over: it settles into `provenance.reroutedFrom` when a later vendor
+   *  served, and into the settle log either way. */
+  const trail: RerouteStep[] = [];
+  try {
+    return await walk();
+  } catch (e) {
+    const err = e instanceof ImagingError ? e : null;
+    logCall({
+      cap,
+      env: currentEnv(),
+      ms: Date.now() - started,
+      steer,
+      tried: trail,
+      kind: err?.kind ?? "failed",
+      provider: err?.provider,
+      message: err?.message ?? String(e),
+    });
+    throw e;
   }
 
-  // Nothing served the request. Report the most specific cause we hold, and the
-  // request-level constraint outranks the vendor error: "no API key for google"
-  // on its own does not explain why google was the only candidate for a request
-  // that carries references, and the reader is left to guess at the narrowing.
-  if (constraint && rejected) {
-    const eligible = chain.filter((id) => constraint.test(PROVIDERS[id]()));
-    const why = first ? ` ${first.message}` : "";
-    throw new ImagingError(
-      eligible.length
-        ? `This request needs a provider that supports ${constraint.needs}; for ${cap} that is ` +
-          `${eligible.join(" or ")}, which could not serve it.${why}`
-        : `This request needs a provider that supports ${constraint.needs}, and none of the ` +
-          `${cap} chain (${chain.join(", ")}) does.${why}`,
-      first?.kind ?? (eligible.length ? "no-key" : "unsupported"),
-      first?.provider,
-      first?.detail,
-    );
+  async function walk(): Promise<T> {
+    const chain = orderFor(cap, steer);
+    /** The first thing that went wrong. It describes the vendor we MEANT to
+     *  use, which is the honest headline when the whole chain comes up empty. */
+    let first: ImagingError | null = null;
+    /** How many candidates the request-level constraint eliminated. */
+    let rejected = 0;
+
+    for (let i = 0; i < chain.length; i++) {
+      const id = chain[i];
+      const provider = PROVIDERS[id]();
+
+      // A plan entry that cannot do the job is a bug in the table above, not a
+      // runtime condition. As the FIRST choice it throws — nothing else was
+      // asked for, so there is no result to hide it behind.
+      if (!provider.capabilities.includes(cap)) {
+        if (i === 0) throw unsupported(id, cap);
+        first ??= unsupported(id, cap);
+        trail.push({ provider: id, why: "unsupported" });
+        continue;
+      }
+
+      // A provider that cannot honour this request is passed over even when it
+      // is the preferred one — silently dropping the field would be worse.
+      if (constraint && !constraint.test(provider)) {
+        rejected++;
+        trail.push({ provider: id, why: "constraint" });
+        continue;
+      }
+
+      // No key: step over it, at ANY position, but record it. Calling it
+      // instead would reach the same place by a longer road — the adapter's own
+      // keyFor() throws `no-key`, which is reroutable — while spending a
+      // provider construction to get there. Recording is what makes the skip
+      // non-silent: an unconfigured primary is why the caller ends up on a
+      // fallback, and it is the message they get if the fallback has no key
+      // either.
+      if (!isConfigured(id)) {
+        first ??= noKey(id, KEY_VAR[id]);
+        trail.push({ provider: id, why: "no-key" });
+        continue;
+      }
+
+      try {
+        const out = call(provider);
+        if (out === undefined) throw unsupported(id, cap);
+        const served = await out;
+        // The re-route is kept WITH the result, not only in the log: an asset
+        // outlives the process that made it.
+        if (trail.length) served.provenance = { ...served.provenance, reroutedFrom: [...trail] };
+        logCall({
+          cap,
+          env: currentEnv(),
+          ms: Date.now() - started,
+          steer,
+          tried: trail,
+          provider: served.provenance.provider,
+          model: served.provenance.model,
+          costUsd: served.provenance.costUsd,
+        });
+        return served;
+      } catch (e) {
+        const err =
+          e instanceof ImagingError
+            ? e
+            : new ImagingError(`${id} failed unexpectedly.`, "failed", id, String(e));
+        first ??= err;
+        trail.push({ provider: id, why: err.kind });
+        if (!err.reroutable) throw err;
+        // else: try the next configured vendor
+      }
+    }
+
+    // Nothing served the request. Report the most specific cause we hold, and
+    // the request-level constraint outranks the vendor error: "no API key for
+    // google" on its own does not explain why google was the only candidate for
+    // a request that carries references, and the reader is left to guess at the
+    // narrowing.
+    if (constraint && rejected) {
+      const eligible = chain.filter((id) => constraint.test(PROVIDERS[id]()));
+      const why = first ? ` ${first.message}` : "";
+      throw new ImagingError(
+        eligible.length
+          ? `This request needs a provider that supports ${constraint.needs}; for ${cap} that is ` +
+            `${eligible.join(" or ")}, which could not serve it.${why}`
+          : `This request needs a provider that supports ${constraint.needs}, and none of the ` +
+            `${cap} chain (${chain.join(", ")}) does.${why}`,
+        first?.kind ?? (eligible.length ? "no-key" : "unsupported"),
+        first?.provider,
+        first?.detail,
+      );
+    }
+    // The floor only fires if a PLAN row above were emptied — every other way
+    // out of the loop records `first`.
+    throw first ?? new ImagingError(`No provider is configured for ${cap}.`, "no-key");
   }
-  // The floor only fires if a PLAN row above were emptied — every other way out
-  // of the loop records `first`.
-  throw first ?? new ImagingError(`No provider is configured for ${cap}.`, "no-key");
 }
 
 export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>

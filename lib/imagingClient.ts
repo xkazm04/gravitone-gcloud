@@ -33,12 +33,17 @@ export interface ClientSteer {
   avoid?: string;
 }
 
+/** Who made this image, on what, at what cost. Worth STORING alongside the
+ *  pixels rather than reading once: after the fact none of it is re-derivable
+ *  from the image. `reroutedFrom` is present only when the first vendor did not
+ *  serve — its presence is the re-route, and the reason it lost is in `why`. */
 export interface ClientProvenance {
   provider: string;
   model: string;
   costUsd?: number;
   durationMs: number;
   cleanup?: "deleted" | "failed" | "not-applicable";
+  reroutedFrom?: { provider: string; why: string }[];
 }
 
 export interface GenerateResult {

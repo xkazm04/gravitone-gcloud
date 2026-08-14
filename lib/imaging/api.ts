@@ -5,6 +5,7 @@
 // for the same bad input. The routes stay thin enough to read in one screen.
 
 import { ImagingError, statusFor } from "./errors";
+import { logUnexpected } from "./log";
 import {
   ASPECT_PX,
   PROVIDER_IDS,
@@ -92,7 +93,12 @@ export async function readJson(req: Request): Promise<Record<string, unknown>> {
 }
 
 /** One error vocabulary for every imaging route. `code` is the machine-readable
- *  half; `detail` is already written for a person to read. */
+ *  half; `detail` is already written for a person to read.
+ *
+ *  Only the LAST branch logs. An ImagingError has already been logged by the
+ *  router, which knows the whole attempt — capability, chain, timings — where
+ *  this function sees one exception; logging it again would double every
+ *  failure line. A BadRequest never reached a vendor at all. */
 export function errorResponse(e: unknown): Response {
   if (e instanceof BadRequest) return Response.json({ detail: e.message, code: "bad-request" }, { status: 400 });
 
@@ -102,6 +108,8 @@ export function errorResponse(e: unknown): Response {
       { status: statusFor(e.kind) },
     );
 
-  console.error("[imaging]", e);
+  // Not one of ours: a bug, not a vendor. `console.error(e)` printed the whole
+  // object, `detail` and all — see log.ts on why that is not a log line.
+  logUnexpected(e);
   return Response.json({ detail: "The imaging call failed.", code: "failed" }, { status: 502 });
 }
