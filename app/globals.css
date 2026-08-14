@@ -82,7 +82,54 @@ body { margin: 0; }
   background: linear-gradient(92deg, var(--gt-accent-cyan), var(--gt-accent-violet) 55%, var(--gt-accent-emerald));
   -webkit-background-clip: text; background-clip: text; color: transparent;
 }
-.cta-glow { box-shadow: 0 0 0 1px var(--gt-ring-cyan), 0 8px 40px -8px var(--gt-glow-cyan); }
+/* ---------------------------------------------------------------------------
+   THE THREE EFFECTS — one float, one glow, one entrance.
+
+   The header of components/ui/tokens.ts warns about a language declared three
+   times that had already drifted. It was happening again one layer down, in the
+   effects built on the tokens rather than in the tokens: four hand-typed float
+   shadows across four floating panels, no two alike; the cyan glow declared
+   once here and re-typed as a raw literal inside the shared <Button>; and four
+   entrance keyframes in three component files, injected at runtime by <style>
+   tags. Each is now declared exactly once, here, off a token.
+--------------------------------------------------------------------------- */
+
+/* A panel that has left the page: the bell tray, the sticky notepad, the note
+   preset list, the right-click menu. They used to cast 0/20/60/-20 @0.9 (twice),
+   0/16/40/-16 @0.9 and 0/12/40/-8 @0.8 — the same intent, four spellings. */
+.gt-float { box-shadow: var(--gt-shadow-float); }
+
+/* A primary action. `.cta-glow` is the same glow plus the 1px ring the landing
+   door wears; the shared <Button> takes the glow alone, which is exactly what
+   its hand-typed literal used to say. */
+.gt-glow  { box-shadow: var(--gt-shadow-glow); }
+.cta-glow { box-shadow: 0 0 0 1px var(--gt-ring-cyan), var(--gt-shadow-glow); }
+
+/* THE ENTRANCE. One shape (fade up from a distance), one curve (--gt-ease),
+   weight set per surface: the landing hero rises further and slower than a
+   dropdown, and that part is a legitimate difference. What was not legitimate
+   was gt-rise (10px/700ms), gt-modal-in (14px/220ms) and gt-menu-in
+   (-6px/160ms) being three separate declarations of the same three lines.
+
+   `gt-bloom` below is deliberately NOT folded in: it is a different shape — a
+   scale, not a translate — used by the landing contact sheet's tiles. One
+   surface, one reason, stated. It lives here rather than in that surface so
+   that every entrance in the app is in one place.
+
+   Reduced motion needs no special handling: both are CSS animations, so the
+   blanket rule at the foot of this file switches them off. Keep it that way —
+   an entrance that moves to JS has to disable itself. */
+@keyframes gt-rise {
+  from { opacity: 0; transform: translate3d(0, var(--gt-rise-y, 10px), 0); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes gt-bloom {
+  from { opacity: 0; transform: scale(0.86); }
+  to   { opacity: 1; transform: none; }
+}
+.gt-rise {
+  animation: gt-rise var(--gt-rise-dur, 220ms) var(--gt-ease) var(--gt-rise-delay, 0ms) both;
+}
 
 /* live equalizer bars (used in A + C) */
 @keyframes eq {

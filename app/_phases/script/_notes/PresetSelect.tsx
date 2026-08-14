@@ -73,7 +73,7 @@ export default function PresetSelect({
         <ul
           role="listbox"
           data-testid={`preset-list-${cardId}`}
-          className="absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-amber-400/35 bg-[var(--gt-ink)]/97 shadow-[0_16px_40px_-16px_rgba(0,0,0,0.9)] backdrop-blur-xl"
+          className="gt-float absolute z-50 mt-1 w-full overflow-hidden rounded-lg border border-amber-400/35 bg-[var(--gt-ink)]/97 backdrop-blur-xl"
         >
           {PRESETS.map((k, i) => (
             <li key={k.kind} role="option" aria-selected={i === active}>

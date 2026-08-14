@@ -48,7 +48,7 @@ function Pad({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
       data-testid="sticky-pad"
       className="fixed right-5 bottom-5 z-40 w-[22.8rem] max-w-[calc(100vw-2.5rem)]"
     >
-      <div className="rounded-2xl border border-amber-400/35 bg-[var(--gt-ink)]/95 p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl">
+      <div className="gt-float rounded-2xl border border-amber-400/35 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl">
         <button
           data-testid="pad-toggle"
           onClick={() => setOpen((v) => !v)}

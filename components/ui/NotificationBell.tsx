@@ -107,7 +107,7 @@ export default function NotificationBell() {
           data-testid="bell-panel"
           role="dialog"
           aria-label="Notifications"
-          className="absolute right-0 z-50 mt-2 w-[22rem] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 shadow-[0_20px_60px_-20px_rgba(0,0,0,0.9)] backdrop-blur-xl"
+          className="gt-float absolute right-0 z-50 mt-2 w-[22rem] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl"
         >
           <div className="flex items-center justify-between px-1 pb-2">
             <p className="font-jetbrains text-[10px] tracking-[0.16em] text-white/45 uppercase">

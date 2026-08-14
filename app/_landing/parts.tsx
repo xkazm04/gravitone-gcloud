@@ -11,18 +11,16 @@
 // Motion is entrance-only and hover-gated, per the repo's animation austerity
 // rule: nothing here is still running once you have looked at it. All of it is
 // CSS, so globals.css's prefers-reduced-motion block already switches it off.
+//
+// The two keyframes the door's art uses — `gt-rise` (the app's shared entrance,
+// at this surface's own weight) and `gt-bloom` (a scale, the one entrance in
+// the app that is genuinely a different shape) — are declared in globals.css
+// with every other entrance, rather than being injected here by a <style> tag.
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 
 import { useAuth } from "@/lib/useAuth";
-
-/** The two entrance keyframes the door uses. Declared here rather than in
- *  globals.css (the Modal precedent) — they belong to this one surface. */
-export const LANDING_KEYFRAMES = `
-@keyframes gt-rise{from{opacity:0;transform:translate3d(0,10px,0)}to{opacity:1;transform:none}}
-@keyframes gt-bloom{from{opacity:0;transform:scale(0.86)}to{opacity:1;transform:none}}
-`;
 
 /**
  * The door. Signed out it opens Google's popup (lib/useAuth falls back to a
@@ -68,7 +66,6 @@ export function LandingShell({
 }) {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[var(--gt-ink)] grain">
-      <style>{LANDING_KEYFRAMES}</style>
       <div className="pointer-events-none absolute inset-0 aurora" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
       <main

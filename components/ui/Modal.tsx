@@ -18,8 +18,11 @@
 //    rendered form of what tokens.ts declares — see the scoped colour-literal
 //    rule at the top of that file
 //
-// Entrance motion only (one fade + rise, on mount). globals.css disables all
-// animation under prefers-reduced-motion, so nothing here needs its own guard.
+// Entrance motion only: the app's shared `.gt-rise` (globals.css) at this
+// surface's own weight, 14px over 220ms. It used to be a `gt-modal-in` keyframe
+// declared in this file and injected by a <style> tag on every open — one of
+// three near-identical copies. globals.css disables all animation under
+// prefers-reduced-motion, so nothing here needs its own guard.
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -48,6 +51,20 @@ export default function Modal({
   const panelRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<Element | null>(null);
 
+  // The lock effect below must run ONCE per open, and it used to key on
+  // `[open, onClose]` while every single consumer passes an inline arrow for
+  // onClose. So any unrelated re-render of the owning surface — a job tick, a
+  // keystroke in a field behind the dialog — tore down the keydown listener,
+  // unlocked the page, re-measured the scrollbar gap and re-locked, mid-lock,
+  // with a `panelRef.current?.focus()` that yanked focus back out of whatever
+  // the user was typing in. Reading onClose through a ref makes the component
+  // robust to the calling convention all of its consumers already use, instead
+  // of asking each of them for a useCallback.
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
   useEffect(() => setMounted(true), []);
 
   useEffect(() => {
@@ -55,7 +72,7 @@ export default function Modal({
     openerRef.current = document.activeElement;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose();
+        onCloseRef.current();
         return;
       }
       // Focus trap: Tab must not walk out of the dialog into the page behind
@@ -101,13 +118,12 @@ export default function Modal({
       document.body.style.paddingRight = prev.pad;
       (openerRef.current as HTMLElement | null)?.focus?.();
     };
-  }, [open, onClose]);
+  }, [open]);
 
   if (!mounted || !open) return null;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
-      <style>{MODAL_KEYFRAMES}</style>
       {/* Backdrop. Out of the tab order on purpose — the dialog traps focus and
           Escape is the keyboard way out; a full-screen tab stop is noise. */}
       <button
@@ -122,8 +138,8 @@ export default function Modal({
         aria-modal="true"
         aria-label={title}
         tabIndex={-1}
-        style={{ animation: "gt-modal-in 220ms var(--gt-ease) both" }}
-        className={`glass-panel relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl sm:max-h-[85vh] sm:rounded-2xl ${className}`}
+        style={{ "--gt-rise-y": "14px" } as React.CSSProperties}
+        className={`gt-rise glass-panel relative flex max-h-[92vh] w-full flex-col overflow-hidden rounded-t-2xl sm:max-h-[85vh] sm:rounded-2xl ${className}`}
       >
         <header className="flex shrink-0 items-start justify-between gap-4 border-b border-white/8 bg-white/[0.02] px-5 py-4">
           <div className="min-w-0">
@@ -150,5 +166,3 @@ export default function Modal({
     document.body,
   );
 }
-
-const MODAL_KEYFRAMES = `@keyframes gt-modal-in{from{opacity:0;transform:translate3d(0,14px,0)}to{opacity:1;transform:none}}`;

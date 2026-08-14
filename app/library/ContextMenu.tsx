@@ -71,7 +71,7 @@ export default function ContextMenu({
       role="menu"
       tabIndex={-1}
       style={{ left, top, width: W }}
-      className="fixed z-50 rounded-xl border border-white/12 bg-slate-950/95 p-1 shadow-[0_12px_40px_-8px_rgba(0,0,0,0.8)] backdrop-blur-md focus:outline-none"
+      className="gt-float fixed z-50 rounded-xl border border-white/12 bg-slate-950/95 p-1 backdrop-blur-md focus:outline-none"
     >
       {items.map((item) => (
         <button

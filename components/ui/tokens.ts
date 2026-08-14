@@ -33,12 +33,12 @@
 //     ~13.7:1") has to name the values it measured, or the measurement cannot
 //     be rechecked.
 //
-// Everything that actually draws chrome obeys. Audited 2026-08-14: outside this
-// file the chrome holds five colour literals, all of them box-shadows — the
-// four hand-typed float shadows (NotificationBell, StickyNotebook, PresetSelect,
-// ContextMenu) and the Button glow. They are one duplication rather than five
-// colours, and they are folded into `--gt-shadow-*` by the commit that follows
-// this one (see .vault/Perfect/directions/one-shadow-one-glow-one-entrance.md).
+// Everything that actually draws chrome obeys, and as of 2026-08-14 the chrome
+// is clean: outside this file, the only colour literals left in app/ and
+// components/ are the three in globals.css prose that record the focus ring's
+// contrast measurement, plus the style-preset data. The last five to go were
+// box-shadows — four hand-typed float shadows and the Button glow — which is
+// why two complete shadows are declared below alongside the colours.
 
 /**
  * The one curve. Every entrance in the app eases on this and nothing else.
@@ -112,6 +112,24 @@ export const CSS_TOKENS: Record<string, string> = {
   // (--gt-glow-cyan-strong / --gt-track-* / --gt-thumb-ring went with the
   // landing bill-calculator slider they were the only consumer of. A token
   // nothing reads is drift waiting to happen.)
+
+  // ── THE THREE EFFECTS ──────────────────────────────────────────────────
+  // Above this line are colours. These two are complete box-shadows, and they
+  // are here for the same reason the colours are: each was hand-typed at every
+  // call site, and the copies had drifted.
+
+  /** What a panel that has left the page casts. The bell tray, the notepad, the
+   *  preset list and the right-click menu each spelled this out for themselves
+   *  and no two of the four agreed; this is what two of them said, and now what
+   *  all four do. Consumed as `.gt-float` (globals.css). */
+  "--gt-shadow-float": "0 20px 60px -20px rgba(0,0,0,0.9)",
+
+  /** What a primary action glows with. The shared <Button> re-typed this
+   *  literal at the exact opacity --gt-glow-cyan already held, which is the
+   *  failure the header of this file exists to prevent. One definition,
+   *  consumed as `.gt-glow`; `.cta-glow` is this plus the 1px ring the landing
+   *  door wears. */
+  "--gt-shadow-glow": "0 8px 40px -8px var(--gt-glow-cyan)",
 
   // themed scrollbars (.scroll-y / .scroll-x). One thumb colour, spelled once:
   // the standard `scrollbar-color` property and the ::-webkit-scrollbar-thumb

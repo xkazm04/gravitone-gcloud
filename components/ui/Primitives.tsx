@@ -44,11 +44,17 @@ export function Button({ variant = "primary", className = "", children, ...rest 
   // its own cyan glow, and the 2px offset is what keeps the ring legible
   // against that halo. Colour still comes from the base rule (--gt-accent-cyan)
   // so no colour literal leaves tokens.ts.
+  //
+  // `gt-glow` is that halo, and it is the SHARED definition (globals.css, off
+  // --gt-shadow-glow). It used to be a raw box-shadow literal typed out here at
+  // the exact opacity --gt-glow-cyan already held — a design-system primitive
+  // re-deriving the token layer, which is the one thing tokens.ts exists to
+  // stop.
   const base =
     "rounded-full px-6 py-3 text-sm font-semibold transition disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2";
   const styles =
     variant === "primary"
-      ? "bg-gradient-to-r from-cyan-300 to-cyan-200 text-slate-950 hover:brightness-110 shadow-[0_8px_40px_-8px_rgba(103,232,249,0.45)]"
+      ? "gt-glow bg-gradient-to-r from-cyan-300 to-cyan-200 text-slate-950 hover:brightness-110"
       : "font-jetbrains border border-white/15 text-white/85 hover:bg-white/5";
   return (
     <button className={`${base} ${styles} ${className}`} {...rest}>
