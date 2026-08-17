@@ -220,10 +220,6 @@ export function priceCall(args: {
   };
 }
 
-/** The `costUsd` for a `Provenance`, or `undefined` when we cannot price it. */
-export const costUsdFor = (args: Parameters<typeof priceCall>[0]): number | undefined =>
-  priceCall(args).usd;
-
 /* ── The public half: what a surface may know BEFORE the call ─────────────── */
 //
 // Everything above prices a call that already happened. A surface that is about
