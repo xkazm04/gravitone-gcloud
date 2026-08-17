@@ -39,7 +39,7 @@ export default function LibraryShelves() {
         (!needle ||
           a.title.toLowerCase().includes(needle) ||
           (a.caption ?? "").toLowerCase().includes(needle) ||
-          a.tags.some((t) => t.includes(needle))),
+          a.tags.some((t) => t.toLowerCase().includes(needle))),
     );
   }, [kind, collection, q]);
 

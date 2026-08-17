@@ -18,7 +18,7 @@
 
 import type { Provenance } from "@/app/_studio/types";
 
-import { getByIndex, getRecord, openDb, runTx, ASSETS_STORE, BY_UID } from "./studioDb";
+import { getByIndex, openDb, runTx, ASSETS_STORE, BY_UID } from "./studioDb";
 import type { Proof, StyleBlock, Theme } from "./themes";
 
 export type AssetKind = "image";
@@ -247,16 +247,6 @@ export async function listAssets(uid: string): Promise<Asset[]> {
     db = await openDb();
     const rows = await getByIndex<Asset>(db, ASSETS_STORE, BY_UID, uid);
     return rows.sort((a, b) => a.name.localeCompare(b.name));
-  } finally {
-    db?.close();
-  }
-}
-
-export async function getAsset(id: string): Promise<Asset | undefined> {
-  let db: IDBDatabase | null = null;
-  try {
-    db = await openDb();
-    return await getRecord<Asset>(db, ASSETS_STORE, id);
   } finally {
     db?.close();
   }
