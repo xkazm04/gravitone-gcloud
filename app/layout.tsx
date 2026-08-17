@@ -6,6 +6,7 @@ import {
 } from "next/font/google";
 import "./globals.css";
 import GravitoneTokens from "@/components/ui/GravitoneTokens";
+import GlobalErrorBridge from "@/lib/GlobalErrorBridge";
 import { AuthProvider } from "@/lib/useAuth";
 import { JobsProvider } from "@/lib/jobs";
 
@@ -29,6 +30,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             than a manual <head> — the App Router owns <head> through the
             Metadata API.) */}
         <GravitoneTokens />
+        {/* Routes unhandled promise rejections to the storage-trouble bell so a
+            fire-and-forget save that fails reaches the operator, not just the
+            console. Render throws are caught by error.tsx / global-error.tsx. */}
+        <GlobalErrorBridge />
         {/* One auth context for the whole app. Mounted at the root — not per
             route — because the landing page reads it too (its only CTA is
             sign-in), and because a provider remounted on navigation would
