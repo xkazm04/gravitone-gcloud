@@ -20,18 +20,6 @@ export const PHASE_LABEL: Record<TracePhase, string> = {
   gaps: "9 · declare your gaps",
 };
 
-export const PHASE_ORDER: TracePhase[] = [
-  "spine",
-  "tension",
-  "mechanisms",
-  "turns",
-  "numbers",
-  "steelman",
-  "unknowns",
-  "fit",
-  "gaps",
-];
-
 export const TRACE: TraceStep[] = [
   { id: "t1", phase: "spine", kind: "search", label: "the number", detail: "bitcoin all-time high 2025 price history — $126,198.07 on 6 Oct 2025, $80,660 by 21 Nov", ms: 2600 },
   { id: "t2", phase: "spine", kind: "search", label: "flows & plumbing", detail: "spot ETF inflows vs price — an analyst explanation of create-and-short by authorised participants", ms: 3100 },
@@ -49,8 +37,6 @@ export const TRACE: TraceStep[] = [
   { id: "t14", phase: "fit", kind: "judgement", label: "5 engines assessed from the material", detail: "reversal-chain excellent · adjudication good · paradox-teaser good · briefing and parallel-case poor, with reasons", ms: 2400 },
   { id: "t15", phase: "gaps", kind: "write", label: "4 gaps declared", detail: "no primary on-chain data, no price series, no bear-case-is-wrong source, miner economics unexplored", ms: 1800 },
 ];
-
-export const TOTAL_MS = TRACE.reduce((n, s) => n + s.ms, 0);
 
 /** The three ways a run can end, as a driveable prototype control. Two are not
  *  a notebook, and only one of those two is a defect. */
@@ -73,7 +59,7 @@ export const OUTCOMES = [
 ];
 
 export const NO_TENSION_REASON =
-  "Nine searches, no tension. What people believe about this topic and what the evidence shows are the same thing — there is no expectation to break. A topic with no tension is not a video yet, and writing one anyway produces a wiki timeline. Reporting this is the correct end of the run, not a failure of it.";
+  "Six searches, no tension. What people believe about this topic and what the evidence shows are the same thing — there is no expectation to break. A topic with no tension is not a video yet, and writing one anyway produces a wiki timeline. Reporting this is the correct end of the run, not a failure of it.";
 
 export const PROCESS_ERROR =
   "claude exited 1 during phase 3 (build the mechanisms) — the local process was killed after 41s. Six searches completed and their results are on disk; the mechanisms are not written, so there is no beat chain and no notebook. Re-running resumes from the cached spine.";
