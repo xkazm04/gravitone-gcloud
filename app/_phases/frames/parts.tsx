@@ -162,7 +162,9 @@ export function FrameCanvas({
   );
 }
 
-function ResizeHandle({
+/** Exported for the golden-path keyboard-activation probe. Hook-free, so it can
+ *  be called as a pure function of props. */
+export function ResizeHandle({
   frame,
   elId,
   onResize,
@@ -195,9 +197,31 @@ function ResizeHandle({
     target.addEventListener("pointerup", up as EventListener);
   };
 
+  // A role="slider" that only listens for the pointer is an announced-but-inert
+  // control: an AT user is told it is adjustable, presses the arrows, and nothing
+  // moves. Give it the keyboard the role promises. Arrows nudge width (←/→) and
+  // height (↑/↓) by one percent, Shift makes the step coarse (ten), and the box
+  // is clamped to a floor so a layer cannot be resized to nothing or negative.
+  const key = (e: React.KeyboardEvent) => {
+    const step = e.shiftKey ? 10 : 1;
+    let w = el.w;
+    let h = el.h;
+    switch (e.key) {
+      case "ArrowRight": w += step; break;
+      case "ArrowLeft": w -= step; break;
+      case "ArrowDown": h += step; break;
+      case "ArrowUp": h -= step; break;
+      default: return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    onResize(elId, Math.max(1, Math.round(w)), Math.max(1, Math.round(h)));
+  };
+
   return (
     <span
       onPointerDown={down}
+      onKeyDown={key}
       role="slider"
       aria-label="Resize element"
       aria-valuenow={Math.round(el.w)}
