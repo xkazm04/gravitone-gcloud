@@ -371,8 +371,17 @@ export function checkTraceability(r: GateSubject, facts: Fact[]): GateFinding[] 
     if (SPELLED.test(beat.text)) SPELLED.lastIndex = 0;
   }
   if (!out.length) {
-    out.push({ rule: "traceability", subject: "digits", verdict: "pass",
-      detail: "Every digit-form figure in the render traces to a fact or a scale conversion." });
+    // THE ONE HONESTY RULE: never `pass` for something we did not check. A `pass`
+    // is earned only when at least one digit-form figure was actually matched and
+    // cleared (`seen` collects the distinct figures examined). A render that
+    // states every figure in words matched nothing, so it gets `not-engaged` —
+    // which stays OUT of runGate's enforced denominator — rather than a pass that
+    // inflates how much of the render was really checked.
+    out.push(seen.size > 0
+      ? { rule: "traceability", subject: "digits", verdict: "pass",
+          detail: "Every digit-form figure in the render traces to a fact or a scale conversion." }
+      : { rule: "traceability", subject: "digits", verdict: "not-engaged",
+          detail: "No digit-form figure was spoken, so there was nothing to trace. This check examined nothing and does not count as enforcement." });
   }
   out.push({ rule: "traceability", subject: "spelled-out figures", verdict: "unmeasured",
     detail: "Numbers written as words are not matched. A spoken script states most of its figures this way, so this check covers a minority of what a viewer actually hears." });
