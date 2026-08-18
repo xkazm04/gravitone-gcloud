@@ -84,3 +84,6 @@ pipeline/runs/*/captures/
 # authored/template comparison plates. Regenerable, and deleted once Step 3
 # settles; the finding lives in the commit message and docs.
 /frames-direction-out/
+
+# Playwright golden-path probe artifacts
+/test-results/
