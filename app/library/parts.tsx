@@ -246,7 +246,7 @@ export function StyleSheet({
           // statement of where the style landed.
           references={approvedProofs(theme)
             .slice()
-            .sort((a, b) => b.createdAt - a.createdAt)
+            .sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id))
             .map((p) => ({ base64: p.base64, mime: p.mime }))}
           // A locked sheet is closed, so trials still RENDER — that is how you
           // see what the style does — they simply cannot join it. Offering a

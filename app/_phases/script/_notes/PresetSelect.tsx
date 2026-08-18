@@ -14,7 +14,7 @@ import { NOTE_KINDS, type NoteKind } from "../versions";
 /** Presets only — `custom` is the free-text field beneath, not a preset.
  *  Sorted by name, ascending. */
 const PRESETS = NOTE_KINDS.filter((k) => k.kind !== "custom").sort((a, b) =>
-  a.label.localeCompare(b.label),
+  a.label.localeCompare(b.label) || a.kind.localeCompare(b.kind),
 );
 
 export default function PresetSelect({

@@ -39,11 +39,13 @@ export default function MatrixSpend({
   const ids = api.cards.map((c) => c.id);
 
   const peak = Math.max(1, ...ids.map((id) => Math.max(totalIn(version, id), totalIn(baseline, id))));
-  const rows = [...api.cards].sort((a, b) =>
-    sort === "change" && comparing
-      ? Math.abs(totalIn(version, b.id) - totalIn(baseline, b.id)) -
-        Math.abs(totalIn(version, a.id) - totalIn(baseline, a.id))
-      : totalIn(version, b.id) - totalIn(version, a.id),
+  const rows = [...api.cards].sort(
+    (a, b) =>
+      (sort === "change" && comparing
+        ? Math.abs(totalIn(version, b.id) - totalIn(baseline, b.id)) -
+          Math.abs(totalIn(version, a.id) - totalIn(baseline, a.id))
+        : totalIn(version, b.id) - totalIn(version, a.id)) ||
+      a.id.localeCompare(b.id),
   );
 
   return (

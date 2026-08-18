@@ -53,7 +53,7 @@ export function useThemes(uid: string | null) {
       const stored = await putTheme(next);
       setThemes((ts) => {
         const rest = (ts ?? []).filter((t) => t.id !== stored.id);
-        return [stored, ...rest].sort((a, b) => b.updatedAt - a.updatedAt);
+        return [stored, ...rest].sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
       });
       setError(null);
       return stored;

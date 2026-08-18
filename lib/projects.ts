@@ -244,7 +244,7 @@ export async function listProjects(uid: string): Promise<Project[]> {
   try {
     db = await openDb();
     const rows = await getByIndex<Project>(db, PROJECTS_STORE, BY_UID, uid);
-    return rows.map(migrateProject).sort((a, b) => b.updatedAt - a.updatedAt);
+    return rows.map(migrateProject).sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
   } finally {
     db?.close();
   }

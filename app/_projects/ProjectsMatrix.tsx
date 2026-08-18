@@ -87,7 +87,7 @@ export default function ProjectsMatrix({
 }: ShelfProps) {
   if (projects.length === 0) return <EmptyShelf onCreate={onCreate} />;
 
-  const rows = [...projects].sort((a, b) => b.updatedAt - a.updatedAt);
+  const rows = [...projects].sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
 
   return (
     <div>

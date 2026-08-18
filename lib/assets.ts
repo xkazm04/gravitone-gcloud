@@ -221,7 +221,7 @@ export function buildTree(assets: Asset[]): FolderNode[] {
   }
 
   const sort = (ns: FolderNode[]) => {
-    ns.sort((x, y) => x.name.localeCompare(y.name));
+    ns.sort((x, y) => x.name.localeCompare(y.name) || pathKey(x.path).localeCompare(pathKey(y.path)));
     ns.forEach((n) => sort(n.children));
   };
   sort(roots);
@@ -246,7 +246,7 @@ export async function listAssets(uid: string): Promise<Asset[]> {
   try {
     db = await openDb();
     const rows = await getByIndex<Asset>(db, ASSETS_STORE, BY_UID, uid);
-    return rows.sort((a, b) => a.name.localeCompare(b.name));
+    return rows.sort((a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id));
   } finally {
     db?.close();
   }

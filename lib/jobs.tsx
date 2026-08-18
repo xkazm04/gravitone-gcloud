@@ -226,7 +226,7 @@ function mergeJobs(mine: Job[], theirs: Job[]): Job[] {
     if (own?.ownerTab === TAB) continue;
     byId.set(j.id, own ? fresher(own, j) : j);
   }
-  return [...byId.values()].sort((a, b) => b.startedAt - a.startedAt);
+  return [...byId.values()].sort((a, b) => b.startedAt - a.startedAt || a.id.localeCompare(b.id));
 }
 
 /** Union by id. `read` is sticky: dismissing a notification in one tab dismisses
@@ -237,7 +237,7 @@ function mergeEvents(mine: JobEvent[], theirs: JobEvent[]): JobEvent[] {
     const prev = byId.get(e.id);
     byId.set(e.id, prev ? { ...prev, read: prev.read || e.read } : e);
   }
-  return [...byId.values()].sort((a, b) => b.at - a.at);
+  return [...byId.values()].sort((a, b) => b.at - a.at || a.id.localeCompare(b.id));
 }
 
 /**

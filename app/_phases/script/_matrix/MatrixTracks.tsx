@@ -59,7 +59,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
           const used = api.cards
             .map((c) => ({ card: c, u: usageIn(version, r.id, c.id) }))
             .filter((x) => x.u.kind === "spoken")
-            .sort((a, b) => toS(a.u.beats[0]) - toS(b.u.beats[0]));
+            .sort((a, b) => toS(a.u.beats[0]) - toS(b.u.beats[0]) || a.card.id.localeCompare(b.card.id));
           const cut = api.cards.filter((c) => usageIn(version, r.id, c.id).kind === "cut");
 
           return (

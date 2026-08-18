@@ -161,7 +161,7 @@ export function useProjects(uid: string | null) {
         setProjects((ps) =>
           (ps ?? [])
             .map((p) => (p.id === id ? stored : p))
-            .sort((a, b) => b.updatedAt - a.updatedAt),
+            .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id)),
         );
         ok();
         return stored;

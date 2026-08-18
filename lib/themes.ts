@@ -238,7 +238,7 @@ export async function listThemes(uid: string): Promise<Theme[]> {
   try {
     db = await openDb();
     const rows = await getByIndex<Theme>(db, THEMES_STORE, BY_UID, uid);
-    return rows.sort((a, b) => b.updatedAt - a.updatedAt);
+    return rows.sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
   } finally {
     db?.close();
   }

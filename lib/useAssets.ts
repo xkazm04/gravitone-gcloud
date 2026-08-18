@@ -179,7 +179,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
         const [shown] = hydrateProofSrcs([asset], [theme]);
         setAssets((as) =>
           [...(as ?? []).filter((a) => a.id !== asset.id), shown].sort((a, b) =>
-            a.name.localeCompare(b.name),
+            a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
           ),
         );
         setError(null);
