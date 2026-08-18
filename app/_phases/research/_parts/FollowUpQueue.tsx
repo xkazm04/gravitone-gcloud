@@ -96,7 +96,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
   const ask = () => {
     const text = q.trim();
     if (!text) return;
-    setAsked((a) => [...a, { id: `q-${a.length}`, kind: "question", prompt: text, status: "queued" }]);
+    setAsked((a) => [...a, { id: `q-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`, kind: "question", prompt: text, status: "queued" }]);
     setQ("");
   };
 
