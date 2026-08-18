@@ -18,6 +18,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { CliError, runClaude } from "@/lib/claudeCli";
+import { guardRequest } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 /** Sixteen art-direction decisions over a whole script is minutes, not seconds. */
@@ -31,6 +32,11 @@ async function systemPrompt(): Promise<string> {
 }
 
 export async function POST(req: Request) {
+  // Local-compute route (spends the machine's Claude subscription) — auth +
+  // rate limit before anything is read or dispatched.
+  const denied = guardRequest(req);
+  if (denied) return denied;
+
   let body: { beats?: unknown; facts?: unknown; style?: unknown; schema?: unknown; title?: unknown };
   try {
     body = await req.json();

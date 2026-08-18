@@ -3,11 +3,15 @@
 
 import { asImage, asImages, asSteer, asString, errorResponse, readJson } from "@/lib/imaging/api";
 import { edit } from "@/lib/imaging/router";
+import { guardRequest } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
+  // Money route — auth + rate limit before anything is read or spent.
+  const denied = guardRequest(req);
+  if (denied) return denied;
   try {
     const body = await readJson(req);
     const out = await edit({

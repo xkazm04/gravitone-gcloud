@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
+import { accessHeader, generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
 import { getProject, reportPhase, type PhaseState, type Project } from "@/lib/projects";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
 import { projectStyle, STYLE_MISS_WORD, type StyleBlock } from "@/lib/themes";
@@ -349,7 +349,7 @@ export function useFrames(projectId: string) {
     try {
       const res = await fetch("/api/frames", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: { "content-type": "application/json", ...accessHeader() },
         body: JSON.stringify({
           title: render.title,
           schema: SCENE_SCHEMA,

@@ -16,12 +16,16 @@ import {
   readJson,
 } from "@/lib/imaging/api";
 import { generate } from "@/lib/imaging/router";
+import { guardRequest } from "@/lib/apiAuth";
 
 export const runtime = "nodejs";
 /** Leonardo polls for up to three minutes; give the handler room past that. */
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
+  // Money route — auth + rate limit before anything is read or spent.
+  const denied = guardRequest(req);
+  if (denied) return denied;
   try {
     const body = await readJson(req);
     const out = await generate({

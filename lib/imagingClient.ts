@@ -68,12 +68,29 @@ export class ImagingRequestError extends Error {
   }
 }
 
+/**
+ * The access header the money/compute routes now require (lib/apiAuth.ts).
+ *
+ * A browser can only present a secret that shipped in its bundle, so this is
+ * `NEXT_PUBLIC_IMAGING_ACCESS_SECRET` — PUBLIC by construction, and therefore a
+ * rate-limit + casual-abuse gate rather than a cryptographic identity check.
+ * The real upgrade is Firebase ID-token verification server-side once
+ * firebase-admin is wired; the server already accepts a Bearer token, so that
+ * swap is header-value-only on this side. Empty when unset — the server then
+ * fails closed with a 401, which is the honest signal that the gate is on but
+ * unconfigured.
+ */
+export function accessHeader(): Record<string, string> {
+  const s = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET;
+  return s && s.trim() ? { authorization: `Bearer ${s.trim()}` } : {};
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: { "content-type": "application/json", ...accessHeader() },
       body: JSON.stringify(body),
     });
   } catch {
