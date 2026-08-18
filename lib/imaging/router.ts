@@ -24,6 +24,7 @@
 // anyone unable to find out that it did.
 
 import { ImagingError, noAlternative, noKey, unsupported } from "./errors";
+import { assertWithinBudget, estimatePendingUsd, recordSpend } from "./budget";
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
 import { googleProvider } from "./providers/google";
@@ -148,6 +149,7 @@ async function run<T extends { provenance: Provenance }>(
   call: (p: ImagingProvider) => Promise<T> | undefined,
   steer: ProviderSteer,
   constraint?: Constraint,
+  pendingImages: number = 1,
 ): Promise<T> {
   const started = Date.now();
   /** Every vendor that dropped out, and why. This is the same record twice
@@ -155,6 +157,11 @@ async function run<T extends { provenance: Provenance }>(
    *  served, and into the settle log either way. */
   const trail: RerouteStep[] = [];
   try {
+    // SPEND CEILING (lib/imaging/budget.ts). Priced with the pre-call estimate
+    // and refused BEFORE any vendor is touched — once per request, not per
+    // candidate in the chain. An `over-budget` throw here lands in the same
+    // catch/log path as any other failure and never reroutes.
+    assertWithinBudget(estimatePendingUsd(pendingImages));
     return await walk();
   } catch (e) {
     const err = e instanceof ImagingError ? e : null;
@@ -221,6 +228,10 @@ async function run<T extends { provenance: Provenance }>(
         // The re-route is kept WITH the result, not only in the log: an asset
         // outlives the process that made it.
         if (trail.length) served.provenance = { ...served.provenance, reroutedFrom: [...trail] };
+        // Book the spend against the window. Prefer the figure the call actually
+        // carried (vendor-reported or estimated); fall back to the pre-call
+        // estimate so an unreported cost still counts toward the next ceiling.
+        recordSpend(served.provenance.costUsd ?? estimatePendingUsd(pendingImages));
         logCall({
           cap,
           env: currentEnv(),
@@ -281,6 +292,8 @@ export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>
     req.references?.length
       ? { needs: "reference images", test: (p) => Boolean(p.supportsReferences) }
       : undefined,
+    // A batch of N images is priced (and gated) as N, not 1.
+    req.count ?? 1,
   );
 
 export const edit = (req: EditRequest): Promise<GeneratedImages> =>

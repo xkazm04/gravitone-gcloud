@@ -29,6 +29,12 @@ export type ImagingErrorKind =
   | "timeout"
   /** The vendor answered, but with something we cannot use. */
   | "bad-response"
+  /** The call would push spend in the current window past the configured
+   *  ceiling. Refused BEFORE any vendor is touched — the request and the config
+   *  are both fine, there is simply no budget left to spend. Not reroutable
+   *  (another vendor spends the same budget) and not retryable (the ceiling
+   *  does not move on retry). See lib/imaging/budget.ts. */
+  | "over-budget"
   /** Anything else the vendor did. */
   | "failed";
 
@@ -104,6 +110,14 @@ export const noAlternative = (avoided: ProviderId, cap: Capability) =>
     avoided,
   );
 
+/**
+ * The spend ceiling for the current window has been reached. Thrown at the
+ * chokepoint before a vendor is called, with the numbers in the message so the
+ * reason is legible in the log and the response alike.
+ */
+export const overBudget = (message: string) =>
+  new ImagingError(message, "over-budget");
+
 /** HTTP status for a route handler to return. One place, so two routes cannot
  *  disagree about what a refusal is. */
 export function statusFor(kind: ImagingErrorKind): number {
@@ -116,6 +130,8 @@ export function statusFor(kind: ImagingErrorKind): number {
       return 422; // understood, and declined — not a client format error
     case "no-alternative":
       return 409; // the request is well-formed; it conflicts with the roster
+    case "over-budget":
+      return 402; // Payment Required — understood, and refused on cost
     case "rate-limited":
       return 429;
     case "timeout":
