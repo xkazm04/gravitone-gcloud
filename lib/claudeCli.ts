@@ -63,9 +63,10 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
 
     child.stdout.on("data", (c) => (out += c));
     child.stderr.on("data", (c) => (err += c));
-    child.on("error", () =>
-      reject(new CliError("The `claude` CLI is not installed or not on PATH.", "not-installed")),
-    );
+    child.on("error", () => {
+      clearTimeout(timer);
+      reject(new CliError("The `claude` CLI is not installed or not on PATH.", "not-installed"));
+    });
 
     child.on("close", (code) => {
       clearTimeout(timer);
