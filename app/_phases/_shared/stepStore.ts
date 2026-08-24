@@ -73,8 +73,16 @@ export interface StorageTrouble {
 
 /** A caller may ignore this — `void saveStep(...)` still compiles, and still
  *  reports through `onStorageTrouble`. Reading it is the stronger option, not
- *  the required one. */
-export type SaveOutcome = { ok: true } | { ok: false; trouble: StorageTrouble };
+ *  the required one.
+ *
+ *  `superseded` is a SUCCESS: the write was deliberately abandoned because a
+ *  later save for the same key had already been issued, so the newer data is
+ *  what reaches disk. It is not a failure and must not be reported as one —
+ *  nothing went wrong, and the user's most recent keystroke is what survives. */
+export type SaveOutcome =
+  | { ok: true; superseded?: false }
+  | { ok: true; superseded: true }
+  | { ok: false; trouble: StorageTrouble };
 
 /** `ok: true, data: undefined` means THIS KEY HAS NEVER BEEN WRITTEN.
  *  `ok: false` means the read failed. Both used to be `undefined`, and they mean
@@ -177,6 +185,65 @@ export function reportStorageTrouble(
 
 const key = (projectId: string, phase: string) => `${projectId}:${phase}`;
 
+/* ───────────────────────── latest-wins (added 2026-08-24) ──────────────────
+ *
+ * THE BUG. Every caller fires `void saveStep(...)` on a keystroke, which is the
+ * right ergonomics for a save that runs that often and was, until now, missing
+ * its other half: nothing decided which of two in-flight writes for one
+ * `${projectId}:${phase}` key was allowed to land. They settled in ARRIVAL
+ * order, and arrival order is not issue order — `openDb()` is awaited on every
+ * call, a slow first write can be overtaken by a fast second, and the older
+ * snapshot then lands on top of the newer one. The user watches their last
+ * sentence disappear, the store reports success, and nothing anywhere is wrong
+ * enough to notice.
+ *
+ * THE FIX is a monotonic ticket per key, taken at CALL time — not at write time,
+ * which would be the same race one layer down — and checked immediately before
+ * the `put` is queued into the transaction. Only the newest ticket for a key may
+ * write; anything older abandons. Because the check and the `put` are in the same
+ * synchronous block, nothing can be issued between them.
+ *
+ * Abandoning is a SUCCESS. The newer save carries the newer data, so the older
+ * one had nothing left to contribute; reporting it as a failure would put a
+ * storage alert in the bell for a keystroke that was superseded a millisecond
+ * later. */
+
+/** The newest ticket issued per key. One entry per key ever written in this
+ *  session — bounded by the number of steps in the open project, not by the
+ *  number of keystrokes. */
+const newestTicket = new Map<string, number>();
+let ticketSeq = 0;
+
+export interface SaveSlot {
+  ticket: number;
+  /** Is this still the newest save issued for its key? Checked immediately
+   *  before the write is queued; false means abandon. */
+  stillNewest: () => boolean;
+}
+
+/**
+ * Claim the right to write this key, and get back the test for whether that
+ * right still holds.
+ *
+ * Exported and separated from `saveStep` on purpose: the IndexedDB write itself
+ * cannot be driven in this repo's Node-context probe suite, and a latest-wins
+ * rule that cannot be asserted is a rule nobody can trust. This is the whole
+ * ordering decision, and it is a pure function of call order.
+ */
+export function claimSaveSlot(projectId: string, phase: string): SaveSlot {
+  const k = key(projectId, phase);
+  const ticket = ++ticketSeq;
+  newestTicket.set(k, ticket);
+  return { ticket, stillNewest: () => newestTicket.get(k) === ticket };
+}
+
+/** Test hook — forget every issued ticket, so one probe's ordering never leaks
+ *  into the next one's. */
+export function __resetSaveSlots(): void {
+  newestTicket.clear();
+  ticketSeq = 0;
+}
+
 /** The steps store is created lazily rather than in the projects upgrade path,
  *  so an existing browser DB does not need a version bump to gain it. */
 async function withStore<T>(
@@ -237,12 +304,27 @@ export async function saveStep<T>(
   phase: string,
   data: T,
 ): Promise<SaveOutcome> {
+  // Ticket taken HERE — at call time, in issue order — not inside the write,
+  // which would be the same race one layer down. See the block above.
+  const slot = claimSaveSlot(projectId, phase);
+  // An early out for the common overtaking case, so a superseded keystroke does
+  // not even open the database. It is an optimisation, not the guard: the guard
+  // is the check inside the transaction callback, which is the only one that
+  // cannot be raced.
+  if (!slot.stillNewest()) return { ok: true, superseded: true };
+
+  let wrote = false;
   const r = await withStore("write", projectId, phase, (db) =>
     runTx(db, STEPS_STORE, "readwrite", (store) => {
+      // The check and the put are in ONE synchronous block, so no later save can
+      // be issued between them.
+      if (!slot.stillNewest()) return;
+      wrote = true;
       store.put({ id: key(projectId, phase), projectId, phase, data: { ...data, savedAt: Date.now() } });
     }),
   );
-  return r.ok ? { ok: true } : r;
+  if (!r.ok) return r;
+  return wrote ? { ok: true } : { ok: true, superseded: true };
 }
 
 /** The Bitcoin project ships researched.

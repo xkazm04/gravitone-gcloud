@@ -16,7 +16,7 @@
 // Gated routes wait for authResolved and then fail CLOSED, so a missing config
 // bounces visitors to the landing rather than rendering the studio to everyone.
 
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import {
   browserLocalPersistence,
   getRedirectResult,
@@ -34,6 +34,10 @@ import {
 // unlikely.
 import { authClient, firebaseReady, googleProvider } from "./firebase";
 import { DEV_AUTH, DEV_USER } from "./devAuth";
+// The eviction OWNER. It imports every user-scoped store; nothing it clears
+// imports it, and this context does not own the list — see lib/identityEviction.ts
+// for the enumerated triggers and the one deliberate exclusion.
+import { evictIdentity, transitionFor, type EvictionReason } from "./identityEviction";
 
 // Popup can fail (blocked, closed, COOP, internal-error) — fall back to a
 // full-page redirect, which always works. getRedirectResult (on mount) then
@@ -59,6 +63,8 @@ type AuthState = {
   loading: boolean;
   ready: boolean;
   authResolved: boolean;
+  /** Why the last identity transition happened, or null if none has. */
+  lastTransition: EvictionReason | null;
   signIn: () => Promise<void>;
   signOut: () => Promise<void>;
   error: string | null;
@@ -71,6 +77,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [authResolved, setAuthResolved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** WHY the last identity transition happened, or null if none has. Carried so a
+   *  surface can tell "you signed out" from "your session ended" — the eviction is
+   *  identical either way, the narration is not, and treating them alike is what
+   *  produces the familiar report of being "randomly logged out". */
+  const [lastTransition, setLastTransition] = useState<EvictionReason | null>(null);
+  /** The uid we currently believe we are. A ref, not state: the auth listener
+   *  compares against it inside a callback registered once, and a state read there
+   *  would be the value captured at subscribe time — always null. */
+  const heldUid = useRef<string | null>(null);
 
   useEffect(() => {
     // DEV BYPASS — non-production builds only, and only with the flag set.
@@ -95,7 +110,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getRedirectResult(auth).catch((e) =>
       setError(e instanceof Error ? e.message : "sign-in failed"),
     );
+    // onAuthStateChanged, NOT onIdTokenChanged. That is not an arbitrary choice
+    // of subscription: a plain credential refresh fires the token listener and is
+    // NOT an identity flip, so listening there would wipe the user's own work on
+    // Firebase's refresh cadence. See lib/identityEviction.ts.
     return onAuthStateChanged(auth, (u) => {
+      // IDENTITY IS COMPARED BY DURABLE IDENTIFIER. Never by display name or
+      // email — those change without the person changing, and a reclaimed address
+      // stays equal while pointing at somebody else.
+      const was = heldUid.current;
+      const now = u?.uid ?? null;
+      // The trigger table lives at the owner, not here — including the case that
+      // is NOT a flip. This context asks; it does not decide.
+      const reason = transitionFor(was, now);
+      if (was && reason) {
+        setLastTransition(reason);
+        void evictIdentity(was, reason);
+      }
+      heldUid.current = now;
       setUser(u);
       setLoading(false);
       setAuthResolved(true);
@@ -133,7 +165,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // but the guard is stated rather than assumed, because the accessor throws
     // and a sign-out button is the last place anyone wants a stack trace.
     if (!firebaseReady) return;
-    await fbSignOut(authClient());
+    const uid = heldUid.current;
+    setLastTransition("signed-out");
+    try {
+      await fbSignOut(authClient());
+    } finally {
+      // THE SETTLEMENT PATH, deliberately. Telling Firebase to end the session
+      // can fail — offline, timed out, an authority that is down — and the local
+      // wipe has to happen anyway. A sign-out that leaves this machine's copies
+      // intact because a request failed is the worst outcome available: the user
+      // has been told they are signed out, the screen agrees, and the data is
+      // still resident. Remote invalidation is best-effort; local eviction is the
+      // guarantee.
+      //
+      // The onAuthStateChanged listener above ALSO sees this transition, and
+      // evicting twice is harmless — the second pass finds nothing and reports
+      // zeroes — while relying on the listener alone would make the guarantee
+      // depend on the very call that just failed.
+      if (uid) await evictIdentity(uid, "signed-out");
+      heldUid.current = null;
+    }
   }, []);
 
   const profile = useMemo<Profile | null>(
@@ -156,11 +207,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       loading,
       ready: firebaseReady,
       authResolved,
+      lastTransition,
       signIn,
       signOut,
       error,
     }),
-    [user, profile, loading, authResolved, signIn, signOut, error],
+    [user, profile, loading, authResolved, lastTransition, signIn, signOut, error],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
