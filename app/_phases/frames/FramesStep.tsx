@@ -13,11 +13,20 @@
 // veo-3 clip — the image-to-video architecture this project measured its way
 // out of.
 
+import { useState } from "react";
+
+import AlternativesView from "./alternatives/AlternativesView";
 import FramesAssembly from "./FramesAssembly";
 import { useFrames } from "./useFrames";
 
+const VIEWS = [
+  { id: "assembly", name: "assembly", sub: "the cut as a production ledger" },
+  { id: "alternatives", name: "alternatives", sub: "keep, compare and choose plates per scene" },
+] as const;
+
 export default function FramesStep({ projectId }: { projectId: string }) {
   const ctl = useFrames(projectId);
+  const [view, setView] = useState<(typeof VIEWS)[number]["id"]>("assembly");
 
   if (!ctl.loaded)
     return (
@@ -29,9 +38,25 @@ export default function FramesStep({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-jetbrains text-[11px] text-white/35">
-          {ctl.frames.length} frames derived from &ldquo;{ctl.render.title}&rdquo; ({ctl.render.engineLabel})
-        </p>
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/[0.02] p-1">
+            {VIEWS.map((v) => (
+              <button
+                key={v.id}
+                onClick={() => setView(v.id)}
+                title={v.sub}
+                className={`font-jetbrains rounded-lg px-3 py-1 text-[11px] tracking-[0.1em] uppercase transition ${
+                  view === v.id ? "bg-cyan-400/15 text-cyan-100" : "text-white/40 hover:text-white/70"
+                }`}
+              >
+                {v.name}
+              </button>
+            ))}
+          </div>
+          <p className="font-jetbrains text-[11px] text-white/35">
+            {ctl.frames.length} frames derived from &ldquo;{ctl.render.title}&rdquo; ({ctl.render.engineLabel})
+          </p>
+        </div>
 
         {/* Which identity these plates are in. Stated rather than assumed: a
             fallback preset is not the project's style, and a surface that let
@@ -58,7 +83,7 @@ export default function FramesStep({ projectId }: { projectId: string }) {
         </p>
       )}
 
-      <FramesAssembly ctl={ctl} />
+      {view === "assembly" ? <FramesAssembly ctl={ctl} /> : <AlternativesView ctl={ctl} projectId={projectId} />}
     </div>
   );
 }
