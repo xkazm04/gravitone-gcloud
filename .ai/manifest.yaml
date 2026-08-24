@@ -1,10 +1,15 @@
 # .ai/manifest.yaml — the agent-facing contract for this repo.
 # Capabilities are tool-NEUTRAL (a name -> the command that fulfils it), and unknown fields MUST be
-# ignored — so this survives tool churn and schema growth. Shape reference: personas/.ai/manifest.yaml
+# ignored — so this survives tool churn and schema growth.
+#
+# THE CONTRACT SHIPS WITH THE ARTIFACT: `.ai/SPEC.md`, in this repository, resolves in a fresh clone
+# with no network. It used to cite `personas/.ai/manifest.yaml` — a path outside this repo, which
+# resolves to nothing in a clone and forfeited the whole self-describing-clone guarantee.
+# `npm run check:manifest` enforces this file against that spec; the spec names every check by id.
 schema: ai-manifest
 schemaVersion: 0.1.0
 generatedAt: "2026-08-24"
-generatedFrom: [package.json, playwright.config.ts, tsconfig.json]
+generatedFrom: [package.json, playwright.config.ts, tsconfig.json, eslint.config.mjs, .github/workflows/gates.yml]
 # 2026-08-24: `test` and `typecheck` scripts were ADDED to package.json by the registry-conformance
 # pass, and both commands were then actually run (typecheck clean; 60 probes green) — which is what
 # `verified: true` claims below and nothing weaker.
@@ -27,12 +32,20 @@ capabilities:
   # 2026-08-24: the probes that guard MONEY (imaging-budget) and AUTH (imaging-auth) were runnable
   # only by someone who already knew to type `npx playwright test`, which is a gate nothing invokes.
   test: { command: "npm test", verified: true }
+  # 2026-08-24: the repo had NO linter at all until this date. `lint` is the ratchet wrapper, not bare
+  # eslint — it holds errors at zero AND freezes the pre-existing warning population per rule against
+  # lint-baseline.json. Run, 0 errors / 21 warnings / 4 buckets at baseline.
+  lint: { command: "npm run lint:ratchet", verified: true }
+  # Checks THIS file against .ai/SPEC.md. Run, clean.
+  check-manifest: { command: "npm run check:manifest", verified: true }
   # `strict: true` in tsconfig.json; this is the repo's real check and, until the script above
   # existed, the only one that ran automatically (via `next build`).
   typecheck: { command: "npm run typecheck", verified: true }
-  # NOTE: this repo has no linter — no eslint config, no lint script. Do not claim one.
+  # (Was, until 2026-08-24: "this repo has no linter". It has one now — eslint.config.mjs, flat
+  # config over eslint-config-next@16.3.0, wired into .github/workflows/gates.yml.)
 
 paths:
+  spec: .ai/SPEC.md
   contextMap: context-map.json
   patterns: .claude/patterns/
   knowledge: knowledge/

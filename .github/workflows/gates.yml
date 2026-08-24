@@ -42,6 +42,12 @@
 #                        lint-baseline.json AND from eslint.config.mjs, and the
 #                        rule stands at plain blocking severity.
 #
+#   manifest             BLOCKING.  Input: .ai/manifest.yaml against .ai/SPEC.md,
+#                        both committed here, plus the package.json scripts and
+#                        repository paths the manifest names. Nothing outside the
+#                        tree can move the verdict.
+#                        Changes the answer: nothing; this stays blocking.
+#
 #   probes               BLOCKING.  Input: the repo's own modules. The suite is
 #                        Node-context with no browser and no webServer, and
 #                        `sealNetwork()` in the imaging probes proves no call
@@ -73,8 +79,8 @@
 # ------------------------------------------------------------------------------
 # ONE AUTHORITY FOR THE RULE SET. Every job below invokes an npm script that a
 # developer runs identically on their own machine (`npm run typecheck`,
-# `npm run lint:ratchet`, `npm test`, `npm run build`). There is no second,
-# CI-only definition of any check to drift against the local one.
+# `npm run lint:ratchet`, `npm run check:manifest`, `npm test`, `npm run build`).
+# There is no second, CI-only definition of any check to drift against the local one.
 # ==============================================================================
 
 name: gates
@@ -133,7 +139,16 @@ jobs:
       - name: lint (errors at zero, warning debt ratcheted)
         run: npm run lint:ratchet
 
-      # BLOCKING. 60 Node-context probes. Not skipped when earlier steps are
+      # BLOCKING. Checks .ai/manifest.yaml against .ai/SPEC.md, the contract that
+      # ships in this repository. Input: two committed files plus package.json and
+      # the paths they name — entirely deterministic. Same three outcomes and
+      # three exit codes as the lint ratchet; a manifest that parses to nothing is
+      # could-not-run, never a clean pass.
+      # Changes the answer: nothing; this stays blocking.
+      - name: manifest
+        run: npm run check:manifest
+
+      # BLOCKING. Node-context probes. Not skipped when earlier steps are
       # green-but-uninteresting: this is the rung that refuses.
       - name: probes
         run: npm test
