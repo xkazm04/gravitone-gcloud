@@ -49,6 +49,22 @@ export class ImagingError extends Error {
     this.name = "ImagingError";
   }
 
+  /**
+   * Did this request actually reach the vendor before it failed?
+   *
+   * EVIDENCE, NOT INFERENCE. Set to true only by the one place that can know —
+   * http.ts, on the paths where a response was received or a request was aborted
+   * mid-flight — and left false everywhere else, including a connection that was
+   * never established. It is deliberately NOT derived from `kind`: a `failed` can
+   * be a 400 the vendor answered or a DNS lookup that never left the machine, and
+   * the two owe different money.
+   *
+   * The consumer is the spend meter (lib/imaging/budget.ts, via the router's
+   * inner catch): a call the vendor ran and billed must be booked even though it
+   * produced nothing, and a call that never left must not be.
+   */
+  dispatched = false;
+
   /** Is a plain retry against the SAME vendor worth attempting? A refusal is
    *  deterministic — the same prompt refuses again — so it is not. */
   get retryable(): boolean {

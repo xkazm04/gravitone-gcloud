@@ -60,6 +60,10 @@ export async function requestJson<T>(
           provider,
           text.slice(0, 600),
         );
+        // The vendor answered, so the request unambiguously reached it. Whether
+        // it BILLED for it is a separate question the router decides by kind;
+        // this flag only records that the bytes arrived.
+        err.dispatched = true;
         // 5xx and 429 are worth another go; a 400 will fail identically forever.
         if (err.retryable || res.status >= 500) {
           last = err;
@@ -75,7 +79,9 @@ export async function requestJson<T>(
       try {
         return JSON.parse(text) as T;
       } catch {
-        throw new ImagingError(`${provider} returned a body that was not JSON.`, "bad-response", provider, text.slice(0, 600));
+        const err = new ImagingError(`${provider} returned a body that was not JSON.`, "bad-response", provider, text.slice(0, 600));
+        err.dispatched = true; // it answered — we just could not read it
+        throw err;
       }
     } catch (e) {
       if (e instanceof ImagingError) {
@@ -87,8 +93,16 @@ export async function requestJson<T>(
           "timeout",
           provider,
         );
+        // The request was in flight when we hung up. The vendor may well have
+        // finished the work and will bill for it; our clock ran out, not theirs.
+        last.dispatched = true;
         if (attempt >= attempts) throw last;
       } else {
+        // NOT dispatched, on purpose: this is the transport refusing to connect
+        // — DNS, TLS, an unreachable host — so nothing ever reached a vendor and
+        // nothing can have been billed. It shares `kind: "failed"` with errors
+        // that DID arrive, which is exactly why the meter reads the flag rather
+        // than the kind.
         throw new ImagingError(`${provider} could not be reached.`, "failed", provider, String(e));
       }
       await sleep(400 * 2 ** (attempt - 1));

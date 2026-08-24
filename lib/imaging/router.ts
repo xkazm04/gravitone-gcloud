@@ -144,6 +144,59 @@ interface Constraint {
   readonly test: (p: ImagingProvider) => boolean;
 }
 
+/**
+ * Did this failure cost money?
+ *
+ * The rule is: the vendor is presumed to have billed only where it is presumed
+ * to have DONE WORK. Erring in either direction has a cost, and they are not
+ * symmetric — an over-count refuses calls the operator could afford, an
+ * under-count is a ceiling that lets an incident run. The kinds are enumerated
+ * rather than defaulted so that a new kind added to the taxonomy fails to
+ * compile here instead of silently landing on whichever side is written last.
+ *
+ *   timeout        BILLED. The request was in flight when our clock ran out. The
+ *                  vendor very likely finished and will invoice it; the one thing
+ *                  we know for certain is that we cannot know, and a spend guard
+ *                  that guesses should guess high.
+ *   bad-response   BILLED. The vendor answered. It ran.
+ *   refused        BILLED. A safety block is a decision the model makes AFTER
+ *                  reading the prompt, and the adapters raise it from a 200 body
+ *                  (see http.ts's header) — inference happened.
+ *   failed         BILLED ONLY IF DISPATCHED. This kind covers both a 4xx the
+ *                  vendor answered and a host that could not be reached at all.
+ *                  Only http.ts knows which, and it says so on the error.
+ *
+ *   rate-limited   NOT billed. A 429 is the door refusing before anything ran.
+ *   no-key         NOT billed. Rejected at authentication, or never attempted.
+ *   unsupported    NOT billed. A routing-table fact; no call is made.
+ *   no-alternative NOT billed. The chain emptied before a vendor was chosen.
+ *   over-budget    NOT billed. Refused by our own ceiling, before any vendor.
+ *
+ * The last three cannot reach this function anyway — each is a `continue` or a
+ * throw upstream of the try block — and they are listed so the reasoning is
+ * complete rather than because the branch is live.
+ *
+ * Exported so the probe suite asserts THIS predicate rather than restating the
+ * table, which is the same reason planFor and orderFor are exported: a second
+ * copy of a decision is a second authority for it.
+ */
+export function billedOnFailure(err: ImagingError): boolean {
+  switch (err.kind) {
+    case "timeout":
+    case "bad-response":
+    case "refused":
+      return true;
+    case "failed":
+      return err.dispatched;
+    case "rate-limited":
+    case "no-key":
+    case "unsupported":
+    case "no-alternative":
+    case "over-budget":
+      return false;
+  }
+}
+
 async function run<T extends { provenance: Provenance }>(
   cap: Capability,
   call: (p: ImagingProvider) => Promise<T> | undefined,
@@ -231,7 +284,14 @@ async function run<T extends { provenance: Provenance }>(
         // Book the spend against the window. Prefer the figure the call actually
         // carried (vendor-reported or estimated); fall back to the pre-call
         // estimate so an unreported cost still counts toward the next ceiling.
-        recordSpend(served.provenance.costUsd ?? estimatePendingUsd(pendingImages));
+        recordSpend({
+          usd: served.provenance.costUsd ?? estimatePendingUsd(pendingImages),
+          cap,
+          provider: served.provenance.provider,
+          model: served.provenance.model,
+          outcome: "served",
+          basis: served.provenance.costUsd !== undefined ? "vendor" : "estimate",
+        });
         logCall({
           cap,
           env: currentEnv(),
@@ -248,6 +308,32 @@ async function run<T extends { provenance: Provenance }>(
           e instanceof ImagingError
             ? e
             : new ImagingError(`${id} failed unexpectedly.`, "failed", id, String(e));
+        // BOOK THE FAILURE IF THE VENDOR RAN IT (added 2026-08-24).
+        //
+        // Spend used to be booked only on the branch above, so a call that
+        // reached the vendor, was executed, and then timed out or came back
+        // unusable consumed units the vendor WILL bill and booked nothing. The
+        // meter therefore under-read most during an incident, which is the worst
+        // shape an under-count can have.
+        //
+        // The judgement is per candidate, not per request, and it is made here
+        // rather than in budget.ts because this is the only place that knows
+        // whether the vendor was actually asked. See `billedOnFailure` for which
+        // kinds count and — more importantly — which do not: `no-key`,
+        // `unsupported` and the request-constraint drop-out never leave this
+        // process, and every one of the three is handled by a `continue` above
+        // that does not reach this catch at all.
+        if (billedOnFailure(err)) {
+          recordSpend({
+            usd: estimatePendingUsd(pendingImages),
+            cap,
+            provider: id,
+            outcome: "failed",
+            // Always an estimate: a call that failed reported no figure of its
+            // own, so this is our dearest declared rate standing in for one.
+            basis: "estimate",
+          });
+        }
         first ??= err;
         trail.push({ provider: id, why: err.kind });
         if (!err.reroutable) throw err;

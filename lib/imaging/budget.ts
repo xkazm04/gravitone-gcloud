@@ -52,6 +52,7 @@
 
 import { overBudget } from "./errors";
 import { estimatePerImage } from "./pricing";
+import type { Capability, ProviderId } from "./types";
 
 export const BUDGET_VAR = "IMAGING_BUDGET_USD_PER_WINDOW";
 export const WINDOW_VAR = "IMAGING_BUDGET_WINDOW_MS";
@@ -72,11 +73,51 @@ export function budgetWindowMs(): number {
   return Number.isFinite(n) && n > 0 ? n : DEFAULT_WINDOW_MS;
 }
 
-interface Spend {
+/**
+ * Did the vendor serve the request, or bill us for a call that failed?
+ *
+ * `failed` rows are the reason this file stopped booking only on success — see
+ * `recordSpend`. They are tagged rather than merged so a reader can subtract
+ * them: "how much of this window went on calls that produced nothing" is the
+ * question an incident actually asks.
+ */
+export type SpendOutcome = "served" | "failed";
+
+/** Where the dollar figure came from. A vendor-reported figure is a fact; an
+ *  estimate is our dearest declared rate standing in for one, and a window made
+ *  mostly of estimates should be read as such rather than as an invoice. */
+export type SpendBasis = "vendor" | "estimate";
+
+/**
+ * One booked call.
+ *
+ * ── WHY THE ROW IS WIDE (widened 2026-08-24) ───────────────────────────────
+ *
+ * It used to be `{ at, usd }` and nothing else, which meant the ledger could not
+ * answer a single question anyone asks of a spend ledger. "Which step spent this
+ * month's budget", "is the fallback vendor costing more than the primary", "how
+ * much went on calls that failed" — all unanswerable, and the server log line
+ * (log.ts) that DOES carry capability, provider and model had no key to join on.
+ * Two records of the same event, neither complete.
+ *
+ * The axes below are exactly the ones log.ts already emits, deliberately: the
+ * ledger and the log now describe the same call in the same vocabulary.
+ */
+export interface SpendRow {
+  /** When the call SETTLED. The window is measured against this. */
   at: number;
   usd: number;
+  /** What was asked for — the attribution axis a spend surface leads with. */
+  cap: Capability;
+  /** Who actually served (or failed), after any re-route. Not who was preferred. */
+  provider: ProviderId;
+  /** The vendor's own model id, when the call carried one. */
+  model?: string;
+  outcome: SpendOutcome;
+  basis: SpendBasis;
 }
-let ledger: Spend[] = [];
+
+let ledger: SpendRow[] = [];
 
 /**
  * What the meter has done to itself. Every field is a COUNT of an event the
@@ -90,6 +131,13 @@ export interface BudgetCounters {
   refusedUsd: number;
   /** Rows `recordSpend` actually booked. */
   booked: number;
+  /** Of those, rows booked for a call that FAILED after reaching the vendor.
+   *  Booking these is what stopped the meter under-reading precisely during an
+   *  incident; counting them separately is what stops them being mistaken for
+   *  work delivered. */
+  bookedFailed: number;
+  /** The spend those failed rows carried — money with nothing to show for it. */
+  failedUsd: number;
   /** `recordSpend` calls that booked NOTHING because the figure was absent,
    *  non-finite or non-positive. An unpriced call is unpriced, not free, so it
    *  is counted rather than dropped: a high share here means the window total
@@ -108,6 +156,8 @@ const zeroCounters = (): BudgetCounters => ({
   refusals: 0,
   refusedUsd: 0,
   booked: 0,
+  bookedFailed: 0,
+  failedUsd: 0,
   unpriced: 0,
   evicted: 0,
   evictedUsd: 0,
@@ -124,7 +174,7 @@ function note(line: string): void {
 
 function prune(now: number): void {
   const cutoff = now - budgetWindowMs();
-  const kept: Spend[] = [];
+  const kept: SpendRow[] = [];
   let droppedUsd = 0;
   let dropped = 0;
   for (const s of ledger) {
@@ -230,24 +280,103 @@ export function assertWithinBudget(pendingUsd: number, now: number = Date.now())
   }
 }
 
+/** What a caller hands `recordSpend`. `at` defaults to now. */
+export interface SpendEntry {
+  usd: number | undefined;
+  cap: Capability;
+  provider: ProviderId;
+  model?: string;
+  outcome: SpendOutcome;
+  basis: SpendBasis;
+  at?: number;
+}
+
 /**
- * Book spend against the window. Called AFTER a vendor served, with the figure
- * the call actually carried (vendor-reported or estimated) — the pre-call
- * estimate is a fallback when the call reported nothing. A non-positive or
- * non-finite figure is ignored: an unpriced call books nothing, which is honest
- * (see pricing.ts on why a call we cannot price must not surface as spend).
+ * Book spend against the window, with the axes that make it answerable.
+ *
+ * Called after a call SETTLES — served or failed — with the figure the call
+ * carried (vendor-reported) or the pre-call estimate standing in for one. A
+ * non-positive or non-finite figure is ignored: an unpriced call books nothing,
+ * which is honest (see pricing.ts on why a call we cannot price must not surface
+ * as spend), and the drop is counted rather than silent, so the window total can
+ * be read as the lower bound it is.
+ *
+ * ── FAILED CALLS ARE BOOKED TOO (changed 2026-08-24) ───────────────────────
+ *
+ * This function used to be reached only from the router's success branch. That
+ * made the meter under-read in exactly the situation where an accurate reading
+ * matters most: a call that reached the vendor, ran, and then timed out or came
+ * back unusable consumed units the vendor WILL bill, and the ceiling saw none of
+ * it. The failure mode was an incident that drove real spend up while the meter
+ * showed it flat — an under-count correlated with trouble, which is the worst
+ * shape a meter can have.
+ *
+ * The router decides WHICH failures reached the vendor (see its inner catch);
+ * this function's only job is to keep them separable once booked. They enter the
+ * same window total — the money is the same money and the ceiling must see it —
+ * and carry `outcome: "failed"` so a reader can subtract them.
  */
-export function recordSpend(usd: number | undefined, now: number = Date.now()): void {
+export function recordSpend(entry: SpendEntry): void {
+  const { usd, cap, provider, model, outcome, basis } = entry;
+  const now = entry.at ?? Date.now();
   if (typeof usd === "number" && Number.isFinite(usd) && usd > 0) {
     prune(now);
-    ledger.push({ at: now, usd });
+    ledger.push({ at: now, usd, cap, provider, model, outcome, basis });
     counters.booked++;
+    if (outcome === "failed") {
+      counters.bookedFailed++;
+      counters.failedUsd += usd;
+    }
     return;
   }
-  // The drop is deliberate (see above) but it is no longer silent: a booking
-  // that wrote nothing is counted, so the window total can be read as the lower
-  // bound it is rather than as a complete figure.
   counters.unpriced++;
+}
+
+/**
+ * The window's spend, split by each axis the row carries.
+ *
+ * This is the whole point of widening the row: `{at, usd}` could report a total
+ * and nothing else, so "which capability spent the budget" had no answer and the
+ * log line that carried the axes had no key to join on. Returned as plain records
+ * so a surface renders them without re-deriving anything — the same reason
+ * `budgetStats` hands out its window boundary.
+ *
+ * `unattributedUsd` is not a bucket; it is the honesty field. Nothing writes it
+ * today because every booking path supplies axes, and it stays so that a future
+ * path that does not is visible as a number rather than as a silently smaller
+ * total.
+ */
+export function spendByAxis(now: number = Date.now()): {
+  totalUsd: number;
+  byCapability: Record<string, number>;
+  byProvider: Record<string, number>;
+  byModel: Record<string, number>;
+  byOutcome: Record<SpendOutcome, number>;
+  unattributedUsd: number;
+} {
+  prune(now);
+  const byCapability: Record<string, number> = {};
+  const byProvider: Record<string, number> = {};
+  const byModel: Record<string, number> = {};
+  const byOutcome: Record<SpendOutcome, number> = { served: 0, failed: 0 };
+  let totalUsd = 0;
+  let unattributedUsd = 0;
+  for (const r of ledger) {
+    totalUsd += r.usd;
+    byOutcome[r.outcome] += r.usd;
+    if (r.cap) byCapability[r.cap] = (byCapability[r.cap] ?? 0) + r.usd;
+    else unattributedUsd += r.usd;
+    if (r.provider) byProvider[r.provider] = (byProvider[r.provider] ?? 0) + r.usd;
+    if (r.model) byModel[r.model] = (byModel[r.model] ?? 0) + r.usd;
+  }
+  return { totalUsd, byCapability, byProvider, byModel, byOutcome, unattributedUsd };
+}
+
+/** The window's rows, newest last. A copy — a reader cannot reach in and edit
+ *  the ledger by mutating what it was shown. */
+export function spendRows(now: number = Date.now()): readonly SpendRow[] {
+  prune(now);
+  return ledger.map((r) => ({ ...r }));
 }
 
 /** Test hook — clear the window ledger AND the counters, so one probe's
