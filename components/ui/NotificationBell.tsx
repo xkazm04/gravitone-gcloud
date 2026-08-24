@@ -26,6 +26,7 @@ import {
   type StorageFailure,
 } from "@/app/_phases/_shared/stepStore";
 import { elapsed, useJobs } from "@/lib/jobs";
+import { politenessFor, useAnnounce } from "@/lib/announcer";
 
 /** What each failure MEANS FOR THE USER, in the user's terms. studioDb and
  *  stepStore classify; this is the only place that has to say what to do about
@@ -38,9 +39,30 @@ const TROUBLE_WORD: Record<StorageFailure, string> = {
   failed: "The browser refused the operation.",
 };
 
+/**
+ * The spoken form of a storage failure.
+ *
+ * Deliberately NOT `TROUBLE_WORD` verbatim: those strings are written to be read
+ * with the card's heading beside them ("storage save failed") and the phase line
+ * underneath, and an announcement arrives with neither. So it carries its own
+ * context and stays one sentence — a paragraph read aloud into the middle of
+ * someone's work is worse than silence.
+ */
+export function troubleAnnouncement(kind: StorageFailure, phase: string): string {
+  const what: Record<StorageFailure, string> = {
+    quota: "this browser's storage is full",
+    blocked: "another tab is holding an older version of the database",
+    unavailable: "this browser session cannot store anything",
+    "missing-store": "this browser's database is missing the studio's store",
+    failed: "the browser refused the operation",
+  };
+  return `Not saved: ${what[kind]}. ${phase} was not written. Open notifications for what to do.`;
+}
+
 export default function NotificationBell() {
   const { unread, jobs, markRead, markAllRead } = useJobs();
   const trouble = useStorageTrouble();
+  const announce = useAnnounce();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -51,6 +73,43 @@ export default function NotificationBell() {
   // NOT something to hide: the user asked for research and is owed the truth
   // that it did not complete.
   const interrupted = jobs.filter((j) => j.status === "interrupted");
+
+  // ── ANNOUNCE (added 2026-08-24) ─────────────────────────────────────────
+  //
+  // This component is the app's primary feedback channel and it was silent to
+  // assistive technology: the badge changed, the tray filled, and nothing was
+  // spoken. Everything below funnels through the ONE announcer service
+  // (lib/announcer.tsx), keyed on event identity — so a re-render, a remount, or
+  // reopening the tray says nothing, and the same news is never voiced twice.
+  //
+  // Nothing here touches focus. Arrival must never relocate the caret or the
+  // reading position; the announcement IS the notification.
+
+  useEffect(() => {
+    for (const e of unread) {
+      announce({
+        key: `event:${e.id}`,
+        text: `${e.title}. ${e.detail}`,
+        // A finished run — good or bad — does not block the keystroke being
+        // typed. It waits its turn, exactly as the visual card waits in a tray.
+        assertive: politenessFor(e.ok ? "ok" : "failure"),
+      });
+    }
+  }, [unread, announce]);
+
+  useEffect(() => {
+    if (!trouble) return;
+    announce({
+      // Identity is the FAILURE, not the render: the same failure re-reported by
+      // a later save of the same phase is the same news.
+      key: `trouble:${trouble.kind}:${trouble.phase}:${trouble.op}`,
+      text: troubleAnnouncement(trouble.kind, trouble.phase),
+      // The one assertive case in the app. The store has stopped accepting
+      // writes, so what the user is doing RIGHT NOW is not being saved — hearing
+      // that after the current sentence finishes is too late to be useful.
+      assertive: politenessFor("blocking"),
+    });
+  }, [trouble, announce]);
 
   useEffect(() => {
     if (!open) return;

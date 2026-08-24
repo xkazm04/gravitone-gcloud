@@ -9,6 +9,7 @@ import GravitoneTokens from "@/components/ui/GravitoneTokens";
 import GlobalErrorBridge from "@/lib/GlobalErrorBridge";
 import { AuthProvider } from "@/lib/useAuth";
 import { JobsProvider } from "@/lib/jobs";
+import { AnnouncerProvider } from "@/lib/announcer";
 
 const instrument = Instrument_Serif({ weight: "400", subsets: ["latin"], variable: "--font-instrument", display: "swap" });
 const hanken = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-hanken", display: "swap" });
@@ -42,9 +43,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             sits at the root: navigating away from the studio must not cancel a
             research run, and the bell must keep counting while you are on the
             shelf. */}
-        <AuthProvider>
-          <JobsProvider>{children}</JobsProvider>
-        </AuthProvider>
+        {/* The screen-reader announcement channel. It sits ABOVE JobsProvider
+            because its two live regions must be mounted and EMPTY before any
+            news exists — assistive technology announces mutations inside a
+            region it is already observing, so a region that arrives carrying its
+            text announces nowhere. Wrapping the tree also makes it the one
+            writer: no component owns an aria-live node of its own, so two
+            messages in the same breath cannot race and drop one. */}
+        <AnnouncerProvider>
+          <AuthProvider>
+            <JobsProvider>{children}</JobsProvider>
+          </AuthProvider>
+        </AnnouncerProvider>
       </body>
     </html>
   );
