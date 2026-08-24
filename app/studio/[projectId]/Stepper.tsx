@@ -44,6 +44,14 @@ export default function Stepper({
           <li key={s.key} className={`min-w-0 flex-1 ${i > 0 ? "border-l border-white/8" : ""}`}>
             <button
               onClick={() => onPick(s.key)}
+              // Named for the step's ROLE in the production, never for its
+              // position: the rail is reordered by editing STEPS in phases.ts,
+              // and `step-3` would then point at a different surface while every
+              // harness journey went on passing. See the test-identifier
+              // contract in lib/harness/protocol.ts — this attribute exists to
+              // be found, and renaming it is a breaking change made WITH
+              // tests/live/.
+              data-testid={`step-${s.key}`}
               aria-current={on ? "step" : undefined}
               title={`${s.title} — ${PHASE_STATE_WORD[state]}`}
               className={`flex w-full cursor-pointer items-center justify-center gap-2 px-3 py-2.5 transition ${

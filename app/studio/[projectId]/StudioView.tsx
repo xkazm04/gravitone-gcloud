@@ -221,6 +221,13 @@ export default function StudioView({ projectId }: { projectId: string }) {
           </div>
 
           <h1
+            // The one element that says WHICH of the four doors this is — the
+            // project's name, or the sentence for absent / unreadable / still
+            // opening. `data-door` carries the machine-readable half so a
+            // harness asserts the state rather than pattern-matching the copy,
+            // which is the half that gets rewritten.
+            data-testid="studio-headline"
+            data-door={door.kind}
             className={`font-instrument mt-4 text-4xl ${door.kind === "opening" ? "text-white/30" : "text-white"}`}
           >
             {headline}

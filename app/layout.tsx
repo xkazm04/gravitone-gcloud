@@ -10,6 +10,7 @@ import GlobalErrorBridge from "@/lib/GlobalErrorBridge";
 import { AuthProvider } from "@/lib/useAuth";
 import { JobsProvider } from "@/lib/jobs";
 import { AnnouncerProvider } from "@/lib/announcer";
+import HarnessBridge from "@/components/ui/HarnessBridge";
 
 const instrument = Instrument_Serif({ weight: "400", subsets: ["latin"], variable: "--font-instrument", display: "swap" });
 const hanken = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-hanken", display: "swap" });
@@ -52,7 +53,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             messages in the same breath cannot race and drop one. */}
         <AnnouncerProvider>
           <AuthProvider>
-            <JobsProvider>{children}</JobsProvider>
+            <JobsProvider>
+              {/* The live-app harness's control surface, installed on `window`
+                  ONLY in a non-production build with NEXT_PUBLIC_DEV_AUTH=1.
+                  It sits inside both providers because the two things it has to
+                  report — which account the app thinks is signed in, and what
+                  background work is outstanding — are theirs to answer. In any
+                  production bundle this component's effect body is unreachable
+                  and is dropped; see components/ui/HarnessBridge.tsx and the
+                  gate in pipeline/check-bundle.mjs. */}
+              <HarnessBridge />
+              {children}
+            </JobsProvider>
           </AuthProvider>
         </AnnouncerProvider>
       </body>
