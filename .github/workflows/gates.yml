@@ -64,6 +64,17 @@
 #                        is the proof of it.
 #                        Changes the answer: nothing; this stays blocking.
 #
+#   bundle               BLOCKING.  Reads the browser chunks the build just
+#                        emitted for server-only variable names, live secret
+#                        values and server-module fingerprints. Input: the output
+#                        of the deterministic build above, so deterministic too.
+#                        It runs AFTER build because it is the only check in the
+#                        project that reads what SHIPPED rather than what was
+#                        written — a module imported by both a route and a client
+#                        component inlines into browser output with no line of
+#                        source saying so.
+#                        Changes the answer: nothing; this stays blocking.
+#
 # NO SUPPLY-CHAIN JOB IS WIRED, AND THAT IS THE HONEST ANSWER, NOT AN OVERSIGHT.
 # `npm audit` reads an advisory feed that moves without this repository: an entry
 # published overnight against a transitive dependency would wall the next
@@ -79,7 +90,8 @@
 # ------------------------------------------------------------------------------
 # ONE AUTHORITY FOR THE RULE SET. Every job below invokes an npm script that a
 # developer runs identically on their own machine (`npm run typecheck`,
-# `npm run lint:ratchet`, `npm run check:manifest`, `npm test`, `npm run build`).
+# `npm run lint:ratchet`, `npm run check:manifest`, `npm test`, `npm run build`,
+# `npm run check:bundle`).
 # There is no second, CI-only definition of any check to drift against the local one.
 # ==============================================================================
 
@@ -156,3 +168,11 @@ jobs:
       # BLOCKING. Deliberately no `env:` block — see the header.
       - name: build
         run: npm run build
+
+      # BLOCKING, and it must run after `build`: it inspects the emitted browser
+      # chunks, which is the only way to see a server-only module that got inlined
+      # into client output. Three outcomes, three exit codes, and it asserts a
+      # POSITIVE CONTROL before reporting clean — a grep over the wrong directory
+      # says "no leaks found" in a voice indistinguishable from success.
+      - name: bundle (browser/credential boundary)
+        run: npm run check:bundle

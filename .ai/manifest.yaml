@@ -38,6 +38,10 @@ capabilities:
   lint: { command: "npm run lint:ratchet", verified: true }
   # Checks THIS file against .ai/SPEC.md. Run, clean.
   check-manifest: { command: "npm run check:manifest", verified: true }
+  # Reads the BUILT browser chunks for server-only variable names, live secret values and
+  # server-module fingerprints. Requires a build first; run in both directions on 2026-08-24
+  # (clean on the real tree; red on a seeded client import of lib/imaging/budget).
+  check-bundle: { command: "npm run check:bundle", verified: true }
   # `strict: true` in tsconfig.json; this is the repo's real check and, until the script above
   # existed, the only one that ran automatically (via `next build`).
   typecheck: { command: "npm run typecheck", verified: true }

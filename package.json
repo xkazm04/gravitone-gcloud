@@ -8,6 +8,7 @@
     "start": "next start",
     "check:notebook": "npx tsx pipeline/check-notebook.mts",
     "check:manifest": "node pipeline/check-manifest.mjs",
+    "check:bundle": "node pipeline/check-bundle.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:ratchet": "node pipeline/lint-ratchet.mjs",
