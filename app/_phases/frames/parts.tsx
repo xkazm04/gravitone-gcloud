@@ -92,8 +92,8 @@ export function FrameCanvas({
       } ${className}`}
     >
       {show.plate && frame.plate.src ? (
-        // eslint-disable-next-line @next/next/no-img-element -- data: URL from a
-        // just-generated buffer; next/image optimises files, not blobs.
+        // data: URL from a just-generated buffer; next/image optimises files, not blobs.
+        // eslint-disable-next-line @next/next/no-img-element
         <img src={frame.plate.src} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover" />
       ) : (
         <div className="absolute inset-0 bg-[linear-gradient(135deg,var(--gt-wash),transparent)]" aria-hidden />

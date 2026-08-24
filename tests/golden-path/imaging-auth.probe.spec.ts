@@ -87,7 +87,10 @@ test("rate limit: refuses once the per-IP bucket is drained", () => {
   const now = 1_000_000;
   let allowed = 0;
   let refused = 0;
-  for (let i = 0; i < 8; i++) (rateLimit(ip, now).allowed ? allowed++ : refused++);
+  for (let i = 0; i < 8; i++) {
+    if (rateLimit(ip, now).allowed) allowed++;
+    else refused++;
+  }
   console.log(`[auth] capacity=5 over 8 calls -> allowed=${allowed}, refused=${refused}`);
   expect(allowed).toBe(5);
   expect(refused).toBe(3);

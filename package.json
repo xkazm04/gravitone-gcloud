@@ -8,6 +8,8 @@
     "start": "next start",
     "check:notebook": "npx tsx pipeline/check-notebook.mts",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "lint:ratchet": "node pipeline/lint-ratchet.mjs",
     "test": "playwright test"
   },
   "dependencies": {
@@ -23,6 +25,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

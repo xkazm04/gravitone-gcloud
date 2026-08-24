@@ -1,0 +1,35 @@
+{
+  "$comment": [
+    "Lint debt ratchet baseline. NOT a config file — a measurement, committed so that",
+    "its version history IS the metric's trajectory.",
+    "",
+    "PREDICATE (what was counted, over which population, matched how):",
+    "  ESLint warning-severity findings, grouped by rule id, produced by the flat",
+    "  config in eslint.config.mjs over the whole repository minus that config's",
+    "  `ignores` block, using the rule set pinned by eslint-config-next@16.3.0.",
+    "  Error-severity findings are NOT in this file: the ratchet holds them at zero",
+    "  unconditionally.",
+    "",
+    "COUNTER (the exact command that recomputes every number below):",
+    "  npm run lint:ratchet",
+    "",
+    "RULES OF THE RATCHET (see registry quality-gates/ratchet-design):",
+    "  - Any mismatch fails, in EITHER direction. A drop is actionable divergence,",
+    "    not silent good news — it can also mean the matcher broke or the file was",
+    "    deleted, and those three produce a byte-identical baseline diff.",
+    "  - Re-baselining is a human diff. The commit message must NAME THE CAUSE.",
+    "  - Never auto-update. A pipeline that rewrites this file has turned the gate",
+    "    into a recorder.",
+    "  - GRADUATION: when a bucket reaches 0, delete its entry here AND its",
+    "    downgrade in eslint.config.mjs, so the rule stands at plain blocking",
+    "    severity."
+  ],
+  "measuredAt": "2026-08-24",
+  "filesFloor": 150,
+  "warnings": {
+    "react-hooks/set-state-in-effect": 14,
+    "react-hooks/immutability": 2,
+    "react-hooks/exhaustive-deps": 2,
+    "react-hooks/refs": 3
+  }
+}
