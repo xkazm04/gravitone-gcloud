@@ -12,7 +12,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:ratchet": "node pipeline/lint-ratchet.mjs",
-    "test": "playwright test"
+    "test": "playwright test",
+    "test:live": "playwright test -c playwright.live.config.ts"
   },
   "dependencies": {
     "firebase": "^12.17.1",
