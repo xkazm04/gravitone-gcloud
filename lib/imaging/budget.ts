@@ -23,6 +23,32 @@
 // ledger to a shared store. It imports estimatePerImage (pure, env-free) and so
 // does NOT compromise pricing.ts's no-env property — this module reads env, that
 // one still does not.
+//
+// ── THE METER WATCHES ITSELF (added 2026-08-24) ────────────────────────────
+//
+// A ceiling that never reports its own activity is only half a limit. Two things
+// used to happen silently here and now do not:
+//
+//   · REFUSALS WERE NOT COUNTED. assertWithinBudget threw and that was the end of
+//     it. Refusal volume is the budget system's own health metric — a spike is
+//     either the ceiling doing its job or a ceiling strangling real work, and
+//     without a count there is no way to tell which. Zero recorded refusals,
+//     forever, is indistinguishable from a gate that is not on the spending path.
+//   · THE WINDOW RESET WAS INVISIBLE. `prune` dropped aged-out rows with no trace,
+//     so spend appeared to vanish: an operator reading `currentSpendUsd` across a
+//     rollover sees a number fall and cannot tell a reset from a mis-booking. The
+//     window is now the only thing that may remove spend, and it says so.
+//
+// ENFORCEMENT SEMANTICS ARE UNCHANGED — the same calls pass and the same calls
+// are refused, with the same message. Everything below is accounting ADDED beside
+// the gate, never a new condition inside it. The counters are read through
+// `budgetStats()`, which returns the window boundary WITH the total so a reader
+// renders the window it was actually given instead of re-deriving its own.
+//
+// The lines these counters write are safe by construction: numbers, env-var
+// NAMES, and nothing else. No vendor text, no prompt, no credential ever reaches
+// them, so they need none of log.ts's scrubbing (and this module deliberately
+// does not depend on log.ts).
 
 import { overBudget } from "./errors";
 import { estimatePerImage } from "./pricing";
@@ -52,15 +78,113 @@ interface Spend {
 }
 let ledger: Spend[] = [];
 
+/**
+ * What the meter has done to itself. Every field is a COUNT of an event the
+ * gate would otherwise have performed silently; none of them is read by
+ * `assertWithinBudget`, so none of them can change who gets refused.
+ */
+export interface BudgetCounters {
+  /** Calls `assertWithinBudget` refused. The budget system's health metric. */
+  refusals: number;
+  /** Estimated spend those refusals prevented — what the ceiling saved. */
+  refusedUsd: number;
+  /** Rows `recordSpend` actually booked. */
+  booked: number;
+  /** `recordSpend` calls that booked NOTHING because the figure was absent,
+   *  non-finite or non-positive. An unpriced call is unpriced, not free, so it
+   *  is counted rather than dropped: a high share here means the window total
+   *  is a lower bound wearing a number's confidence. */
+  unpriced: number;
+  /** Rows the rolling window aged out. The window is the ONLY thing that may
+   *  remove spend, so this is the whole explanation for any fall in the total. */
+  evicted: number;
+  /** The spend those aged-out rows carried. */
+  evictedUsd: number;
+  /** When the window last dropped anything, or null if it never has. */
+  lastEvictionAt: number | null;
+}
+
+const zeroCounters = (): BudgetCounters => ({
+  refusals: 0,
+  refusedUsd: 0,
+  booked: 0,
+  unpriced: 0,
+  evicted: 0,
+  evictedUsd: 0,
+  lastEvictionAt: null,
+});
+
+let counters: BudgetCounters = zeroCounters();
+
+/** One greppable line, same `[imaging]` prefix as log.ts's call lines so a
+ *  single grep finds the engine's whole trace. Numbers only — see the header. */
+function note(line: string): void {
+  console.log(`[imaging] budget ${line}`);
+}
+
 function prune(now: number): void {
   const cutoff = now - budgetWindowMs();
-  ledger = ledger.filter((s) => s.at >= cutoff);
+  const kept: Spend[] = [];
+  let droppedUsd = 0;
+  let dropped = 0;
+  for (const s of ledger) {
+    if (s.at >= cutoff) kept.push(s);
+    else {
+      dropped++;
+      droppedUsd += s.usd;
+    }
+  }
+  if (dropped === 0) return; // nothing rolled over; stay silent
+  ledger = kept;
+  counters.evicted += dropped;
+  counters.evictedUsd += droppedUsd;
+  counters.lastEvictionAt = now;
+  const remaining = kept.reduce((a, s) => a + s.usd, 0);
+  // The reset is the ONLY sanctioned way spend leaves the window, so it says so
+  // out loud: a total that fell without one of these lines is a bug, not a roll.
+  note(
+    `window-reset evicted=${dropped} usd=$${droppedUsd.toFixed(4)} ` +
+      `remaining=$${remaining.toFixed(4)} windowMs=${budgetWindowMs()}`,
+  );
 }
 
 /** Total spend inside the current window. */
 export function currentSpendUsd(now: number = Date.now()): number {
   prune(now);
   return ledger.reduce((a, s) => a + s.usd, 0);
+}
+
+/**
+ * The window's own numbers, for a spend surface or an operator.
+ *
+ * The BOUNDARY travels with the total deliberately: a consumer renders the
+ * window it was handed rather than re-deriving one, which is how a dashboard
+ * and an enforcer end up disagreeing about the same screen. `counters` is a
+ * copy — a caller cannot reach in and reset the meter by mutating a snapshot.
+ */
+export function budgetStats(now: number = Date.now()): {
+  ceilingUsd: number;
+  spentUsd: number;
+  remainingUsd: number;
+  windowMs: number;
+  windowStart: number;
+  windowEnd: number;
+  rows: number;
+  counters: BudgetCounters;
+} {
+  const spentUsd = currentSpendUsd(now); // prunes first, so the counters are current
+  const ceilingUsd = budgetCeilingUsd();
+  const windowMs = budgetWindowMs();
+  return {
+    ceilingUsd,
+    spentUsd,
+    remainingUsd: Math.max(ceilingUsd - spentUsd, 0),
+    windowMs,
+    windowStart: now - windowMs,
+    windowEnd: now,
+    rows: ledger.length,
+    counters: { ...counters },
+  };
 }
 
 /**
@@ -86,6 +210,16 @@ export function assertWithinBudget(pendingUsd: number, now: number = Date.now())
   const ceiling = budgetCeilingUsd();
   const spent = currentSpendUsd(now);
   if (spent + pendingUsd > ceiling) {
+    // Counted BEFORE the throw, so a refusal cannot escape unrecorded down the
+    // one path that leaves this function without returning. The count is the
+    // difference between "the ceiling is working" and "the ceiling is
+    // strangling something", and neither is legible without it.
+    counters.refusals++;
+    counters.refusedUsd += pendingUsd;
+    note(
+      `refused est=$${pendingUsd.toFixed(4)} spent=$${spent.toFixed(4)} ` +
+        `ceiling=$${ceiling.toFixed(2)} windowMs=${budgetWindowMs()} refusals=${counters.refusals}`,
+    );
     const windowMin = Math.round(budgetWindowMs() / 60000);
     throw overBudget(
       `Imaging spend ceiling reached: this call is estimated at $${pendingUsd.toFixed(4)} and ` +
@@ -107,10 +241,18 @@ export function recordSpend(usd: number | undefined, now: number = Date.now()): 
   if (typeof usd === "number" && Number.isFinite(usd) && usd > 0) {
     prune(now);
     ledger.push({ at: now, usd });
+    counters.booked++;
+    return;
   }
+  // The drop is deliberate (see above) but it is no longer silent: a booking
+  // that wrote nothing is counted, so the window total can be read as the lower
+  // bound it is rather than as a complete figure.
+  counters.unpriced++;
 }
 
-/** Test hook — clear the window ledger. */
+/** Test hook — clear the window ledger AND the counters, so one probe's
+ *  refusals never show up in the next one's reading. */
 export function __resetBudget(): void {
   ledger = [];
+  counters = zeroCounters();
 }

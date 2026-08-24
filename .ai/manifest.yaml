@@ -5,6 +5,9 @@ schema: ai-manifest
 schemaVersion: 0.1.0
 generatedAt: "2026-08-24"
 generatedFrom: [package.json, playwright.config.ts, tsconfig.json]
+# 2026-08-24: `test` and `typecheck` scripts were ADDED to package.json by the registry-conformance
+# pass, and both commands were then actually run (typecheck clean; 60 probes green) — which is what
+# `verified: true` claims below and nothing weaker.
 
 repo:
   name: gravity
@@ -20,10 +23,13 @@ capabilities:
   build: { command: "npm run build", verified: false }
   start: { command: "npm run start", verified: false }
   check-notebook: { command: "npm run check:notebook", verified: false }
-  # no "test" script exists; the suite is the golden-path probe project in playwright.config.ts
-  test: { command: "npx playwright test", verified: false }
-  # no tsc script exists; typescript + tsconfig.json are present and this is the repo's real check
-  typecheck: { command: "npx tsc --noEmit", verified: false }
+  # The suite is the golden-path probe project in playwright.config.ts. It had no script until
+  # 2026-08-24: the probes that guard MONEY (imaging-budget) and AUTH (imaging-auth) were runnable
+  # only by someone who already knew to type `npx playwright test`, which is a gate nothing invokes.
+  test: { command: "npm test", verified: true }
+  # `strict: true` in tsconfig.json; this is the repo's real check and, until the script above
+  # existed, the only one that ran automatically (via `next build`).
+  typecheck: { command: "npm run typecheck", verified: true }
   # NOTE: this repo has no linter — no eslint config, no lint script. Do not claim one.
 
 paths:

@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "check:notebook": "npx tsx pipeline/check-notebook.mts"
+    "check:notebook": "npx tsx pipeline/check-notebook.mts",
+    "typecheck": "tsc --noEmit",
+    "test": "playwright test"
   },
   "dependencies": {
     "firebase": "^12.17.1",
