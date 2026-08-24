@@ -5,7 +5,7 @@ Scope: **software-engineering only.** The `media-generation` bundle this repo al
 (`.ai/manifest.yaml` → `knowledge.domains`) is deliberately **out of scope** here and none of its
 subjects are judged below.
 
-13 subjects selected against surfaces this repo actually has: the governed imaging chokepoint
+14 subjects selected against surfaces this repo actually has: the governed imaging chokepoint
 (`lib/imaging/`), the IndexedDB persistence layer, the five-step studio, the probe harness, the
 generated context map, and the `.ai` contract itself. Subjects with no surface here (embedded-db,
 i18n, packaging, voice-io, p2p-networking, fleet-orchestration, migrations, …) are omitted rather
