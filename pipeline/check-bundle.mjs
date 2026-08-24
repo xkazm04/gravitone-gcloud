@@ -84,6 +84,34 @@ const SERVER_MODULE_FINGERPRINTS = [
   "[api] rate ", // lib/apiAuth.ts rateNote()
 ];
 
+/**
+ * TEST-ONLY SEAMS THAT MUST NOT REACH A SHIPPED BUILD.
+ *
+ * The live-app harness drives the gated studio through a control surface
+ * installed on `window` (components/ui/HarnessBridge.tsx). Its gate is a
+ * BUILD-TIME switch — `process.env.NODE_ENV === "production"` as the first line
+ * of the effect, so webpack inlines the literal, the body becomes unreachable
+ * and the minifier drops it along with every string in it. That claim is exactly
+ * the kind of thing that is true when written and quietly false three refactors
+ * later: move the implementation into an imported module, or gate on the
+ * imported DEV_AUTH constant instead of the inline expression, and the surface
+ * ships as reachable code with nothing in any diff saying so.
+ *
+ * So it is checked HERE, in the emitted output, which is the only place absence
+ * is a fact. MEASURED 2026-08-24 on the real build: 0 chunks contain either
+ * string, while `dev-automation-user` (lib/devAuth.ts's exported fixture) is
+ * still present in 1 — the distinction NOTES.md drew between "behaviour is
+ * gated" and "nothing ships" is real, and this list is on the second side of it.
+ *
+ * `tests/golden-path/harness-gate.probe.spec.ts` holds the source-level half:
+ * that the guards are still inline, still first, and that the vocabulary module
+ * stays types-only so these strings have nowhere else to come from.
+ */
+const TEST_ONLY_FINGERPRINTS = [
+  "__gravitoneHarness", // the control surface's key on `window`
+  "gravitone control surface installed", // the bridge's console banner
+];
+
 /** Something we KNOW is in browser output. If this is not found, the gate is not
  *  reading the browser bundle and every clean verdict below is manufactured. */
 const POSITIVE_CONTROL = "--gt-"; // the design tokens, published by GravitoneTokens
@@ -162,6 +190,13 @@ for (const file of files) {
   for (const f of SERVER_MODULE_FINGERPRINTS)
     if (text.includes(f))
       findings.push(`${rel}\n      contains ${JSON.stringify(f)} — a server-only module was bundled`);
+
+  for (const f of TEST_ONLY_FINGERPRINTS)
+    if (text.includes(f))
+      findings.push(
+        `${rel}\n      contains ${JSON.stringify(f)} — the LIVE-HARNESS CONTROL SURFACE ` +
+          "reached a shipped build",
+      );
 }
 
 // THE POSITIVE CONTROL, checked before the verdict. "Found nothing" only means
@@ -176,18 +211,25 @@ if (!controlSeen)
   ]);
 
 if (findings.length)
-  die(1, `BUNDLE: ${findings.length} server-only artefact(s) reached browser output.`, [
+  die(1, `BUNDLE: ${findings.length} artefact(s) that must not ship reached browser output.`, [
     ...findings,
     "",
     "A module imported by BOTH a route and a client component is inlined into the",
     "browser bundle with no line of source saying so. Find the import that crosses",
     "the boundary — it will look exactly like every other import — and move the",
     "work behind app/api/imaging/*, which is the one trust boundary this app has.",
+    "",
+    "If the finding is the LIVE-HARNESS CONTROL SURFACE, the cause is different and",
+    "so is the fix: its gate is a build-time switch that only works while the guard",
+    "is the INLINE `process.env.NODE_ENV` expression and the whole implementation",
+    "sits inside that one function. Gating on the imported DEV_AUTH constant, or",
+    "moving the body into a module the bridge calls, defeats it. See",
+    "components/ui/HarnessBridge.tsx and tests/golden-path/harness-gate.probe.spec.ts.",
   ]);
 
 console.log(
   `bundle OK — ${files.length} browser chunk(s), ${(bytes / 1024).toFixed(0)}KB scanned; ` +
     `positive control found; ${SERVER_ONLY_VARS.length} server-only var name(s), ` +
-    `${liveSecrets.length} live value(s) and ${SERVER_MODULE_FINGERPRINTS.length} module ` +
-    `fingerprint(s) all absent.`,
+    `${liveSecrets.length} live value(s), ${SERVER_MODULE_FINGERPRINTS.length} module ` +
+    `fingerprint(s) and ${TEST_ONLY_FINGERPRINTS.length} test-only seam(s) all absent.`,
 );

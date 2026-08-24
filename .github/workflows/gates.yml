@@ -57,6 +57,37 @@
 #                        vendor, that probe must be split out into its own
 #                        advisory job on a schedule; it may not stay in here.
 #
+#   live                 BLOCKING, and it is its OWN JOB — see below for why that
+#                        is not a stylistic choice. Input: this repo's sources, a
+#                        `@playwright/test` version resolved from the committed
+#                        lock, and the Chromium build that version pins (fetched
+#                        by `npx playwright install`, which is the same
+#                        "nominally external but effectively pinned" shape as
+#                        `npm ci` and is already accepted as deterministic
+#                        above). The lane runs `next dev` on a NON-DEFAULT port
+#                        it starts and stops itself, drives the studio's golden
+#                        path in a real browser, and reaches NO network service:
+#                        the research run it exercises is a local mocked clock
+#                        (app/_phases/research/run/useResearchRun.ts) and the
+#                        imaging routes are never touched. Nothing outside the
+#                        tree can move the verdict, so it may block.
+#                        Changes the answer: pointing any journey at a real
+#                        vendor, or at anything behind a network call — that
+#                        journey must then be split into its own advisory job on
+#                        a schedule. `retries` staying at 0 in
+#                        playwright.live.config.ts is the standing signal that
+#                        this grading is still honest; the day somebody needs a
+#                        retry to get green is the day this line is wrong.
+#
+#                        WHY A SEPARATE JOB. It is the only check here that needs
+#                        a browser binary (~150MB) and minutes of wall clock, and
+#                        it is the only one whose failure means something
+#                        different from the others': the seven checks in `gates`
+#                        read what was WRITTEN, this one reports on what the
+#                        assembled product DID. Folding it in would make a
+#                        two-minute typo cost a browser download, and would hide
+#                        which half of the ladder actually broke.
+#
 #   build                BLOCKING.  Input: the committed sources and lock. Runs
 #                        with NO environment variables on purpose — the repo's
 #                        optional-dependency contract says an absent key must
@@ -66,7 +97,9 @@
 #
 #   bundle               BLOCKING.  Reads the browser chunks the build just
 #                        emitted for server-only variable names, live secret
-#                        values and server-module fingerprints. Input: the output
+#                        values, server-module fingerprints and the LIVE-HARNESS
+#                        CONTROL SURFACE, whose build-time gate is only provable
+#                        from the emitted output. Input: the output
 #                        of the deterministic build above, so deterministic too.
 #                        It runs AFTER build because it is the only check in the
 #                        project that reads what SHIPPED rather than what was
@@ -91,7 +124,7 @@
 # ONE AUTHORITY FOR THE RULE SET. Every job below invokes an npm script that a
 # developer runs identically on their own machine (`npm run typecheck`,
 # `npm run lint:ratchet`, `npm run check:manifest`, `npm test`, `npm run build`,
-# `npm run check:bundle`).
+# `npm run check:bundle`, `npm run test:live`).
 # There is no second, CI-only definition of any check to drift against the local one.
 # ==============================================================================
 
@@ -176,3 +209,62 @@ jobs:
       # says "no leaks found" in a voice indistinguishable from success.
       - name: bundle (browser/credential boundary)
         run: npm run check:bundle
+
+  # ============================================================================
+  # THE LIVE LANE — the assembled product, in a real browser.
+  #
+  # BLOCKING; graded in the header above. Its own job because it is the only
+  # check here that needs a browser binary and minutes of wall clock, and because
+  # its failure means something the other seven cannot say: not "what was written
+  # is wrong" but "what ships does not do the thing".
+  #
+  # It runs INDEPENDENTLY of `gates` rather than after it. A live failure and a
+  # typecheck failure are different findings and a reader wants both on the same
+  # run, not the second one hidden behind the first.
+  # ============================================================================
+  live:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: install
+        run: npm ci
+
+      # The browser, at the version `@playwright/test` pins in the committed
+      # lockfile — not "latest Chrome". `--with-deps` installs the shared
+      # libraries a headless Chromium needs on a bare runner; without it the
+      # launch fails with a missing-.so error that reads like a test failure.
+      - name: install chromium
+        run: npx playwright install --with-deps chromium
+
+      # BLOCKING. Starts `next dev` on port 3187 (NOT 3000), waits for it,
+      # drives the golden path, and stops the process it started — see
+      # playwright.live.config.ts, which owns the launcher and states why the
+      # lane is serial.
+      #
+      # NO `env:` BLOCK, deliberately, and it is the same reasoning as `build`'s:
+      # the lane must run with no Firebase configuration at all. The auth bypass
+      # it drives through (lib/devAuth.ts) does not use Firebase, and a green run
+      # with an empty environment is the proof that the bypass — not a real
+      # credential that leaked into CI — is what opened the gate.
+      - name: live (golden path, real browser)
+        run: npm run test:live
+
+      # The traces and screenshots the lane keeps ONLY for failures. Uploaded
+      # only when something failed, because a slow lane whose failures cannot be
+      # diagnosed without re-running it is a lane people learn to re-run.
+      - name: failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: live-lane-traces
+          path: test-results/
+          retention-days: 7
+          if-no-files-found: ignore
