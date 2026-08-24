@@ -1,5 +1,5 @@
 # Registry conformance — software-engineering
-contributor: mkdol-dev-box · audited: 2026-08-24 · **wave 2 drained the same day** · bundle: `software-engineering` (146 subjects / 930 techniques)
+contributor: mkdol-dev-box · audited: 2026-08-24 · **waves 2 and 2b drained the same day — 0 `deviation` rows remain** · bundle: `software-engineering` (146 subjects / 930 techniques)
 
 Scope: **software-engineering only.** The `media-generation` bundle this repo also consumes
 (`.ai/manifest.yaml` → `knowledge.domains`) is deliberately **out of scope** here and none of its
@@ -33,15 +33,15 @@ and is one of the strongest artifacts in the repo.
 | codebase-scanning | evidence-scoping | partial | the scan glob is `app/**` + `components/**`; `lib/` (26 files incl. the whole imaging engine), `pipeline/` and `tests/` are wholly unmapped, so the map understates where the risk is |
 | codebase-scanning | dead-code-detection | n/a | no reachability sensor or orphan detector in this repo; the map's `unmapped` arm is coverage accounting, not dead-code detection |
 | **quality-gates** | gate-liveness | followed | a trigger that fires unasked (`.github/workflows/gates.yml`, push + PR), and every checker this wave added has THREE outcomes and three exit codes — `lint-ratchet`, `check-manifest` and `check-bundle` each exit 2 for could-not-run, each asserts its own instrument (short file walk / unparsed manifest / missing positive control) and each resolves the repo root from its own location, not cwd |
-| quality-gates | gate-laddering | followed | the binding rung exists: `.github/workflows/gates.yml` runs install → typecheck → lint → manifest → probes → build → bundle on push and PR, green since 2026-08-24. One authority per rule — every job invokes the same npm script a developer runs locally, so there is no CI-only definition to drift. Local rungs are still absent (no hooks), which is a latency choice, not an enforcement gap |
+| quality-gates | gate-laddering | followed | the binding rung exists: `.github/workflows/gates.yml` runs install → typecheck → lint → manifest → probes → build → bundle on push and PR, green since 2026-08-24, and since the same day a SECOND job, `live`, drives the assembled product in a real browser. The two are separate jobs on purpose — the seven read what was written, the eighth reports what ships actually does, and a reader wants both verdicts on one run rather than the second hidden behind the first. Every job invokes the same npm script a developer runs locally (`npm run test:live` included), so there is no CI-only definition to drift. Local rungs are still absent (no hooks), which is a latency choice, not an enforcement gap |
 | quality-gates | hook-hygiene | n/a | no hook system installed, so there is nothing to keep hygienic. Now a deliberate absence rather than an unconsidered one: the binding rung exists, and a local rung would only move the moment of discovery earlier |
 | quality-gates | severity-by-construction | followed | `eslint.config.mjs` over `eslint-config-next@16.3.0`, and the exit path is traced and written down: at the merge rung ERROR findings fail above 0, and WARNING findings fail on any movement from `lint-baseline.json` in either direction. Not a threshold flag left off — a ratchet whose semantics are stated in the workflow header |
 | quality-gates | ratchet-design | followed | `lint-baseline.json` is a plain committed file with per-RULE buckets, names its counter (`npm run lint:ratchet`) and its predicate, refuses in BOTH directions (a drop is actionable divergence, since fixed / deleted / matcher-broke produce an identical diff), never auto-updates, and states its graduation rule. Earned its keep the day it shipped: it caught a `react-hooks/immutability` staleness bug in five-minute-old code |
 | quality-gates | false-positive-economics | partial | detectors now ship, and one measured false positive was found and fixed at birth — `check-bundle` flagged `NEXT_PUBLIC_IMAGING_ACCESS_SECRET` as the server-only name it ends with, on the one variable the design says is public. Precision over the lint rules themselves is still unmeasured; there is no finding population to score yet |
 | **test-harness** | negative-control-tests | followed | `sort-stability.probe.spec.ts:53` "Controlled counterfactual … (Synthetic control, not a repo site)"; `imaging-auth.probe.spec.ts:9` records that the probes fail against the pre-fix routes |
-| test-harness | suite-partitioning | followed | one real config per suite (`playwright.config.ts` → `tests/golden-path` only); membership by location, not annotation |
-| test-harness | isolation-lanes | partial | `integration-imaging.mts:33` "THE TWO HALVES DO NOT SHARE A PROCESS, deliberately" + `sealNetwork()` `:93`; but `fullyParallel: false` carries **no stated reason**, and probes mutate `process.env` in one shared process |
-| test-harness | live-app-harness | deviation | 9 ad-hoc `pipeline/drive-*.mjs` browser drivers with no designed control surface, no launcher, no build-time test-only gate — the improvised door the technique names. **The one deviation left after wave 2**, and the only backlog item that is a design job rather than a contained fix |
+| test-harness | suite-partitioning | followed | one real config per suite, and now there are two: `playwright.config.ts` → `tests/golden-path` (Node probes), `playwright.live.config.ts` → `tests/live` (browser). Separate FILES rather than two `projects` in one, because a browser lane needs a `webServer` and `webServer` is config-wide — folding them would start a Next dev server every time somebody ran the fast probes. Membership by location in both |
+| test-harness | isolation-lanes | followed | `integration-imaging.mts:33` "THE TWO HALVES DO NOT SHARE A PROCESS, deliberately" + `sealNetwork()` `:93`. `fullyParallel: false` now carries its reason in BOTH configs, as a stated property with the mechanism named: the node lane's probes mutate `process.env` (imaging-auth deletes `NEXT_PUBLIC_DEV_AUTH`, imaging-budget sets the ceiling) in one shared process; the live lane's product is a singleton — one origin, therefore one IndexedDB — so two workers would be two tabs racing four object stores. The corollary is written down too: independence comes from state reset between tests, and in `live` that reset (`freshShelf`) runs through the product's own `evictIdentity` rather than a teardown that could drift from it |
+| test-harness | live-app-harness | followed | **drained 2026-08-24** (`a8b2bcd`, `ab4aa37`, `d1fca61`). A designed door, not an improvised one: `lib/harness/protocol.ts` is a TYPES-ONLY command vocabulary (3 product-level commands) implemented by `components/ui/HarnessBridge.tsx` and consumed by `tests/live/_control.ts`, so both sides break `tsc` on a shape change. The build-time gate is real and MEASURED IN THE EMITTED BUNDLE — 0 of 21 browser chunks carry the key or the banner, and `npm run check:bundle` fails if either appears (watched red by gating on the imported `DEV_AUTH` constant instead of the inline expression, which does ship). The launcher is `playwright.live.config.ts`: `next dev` on **3187**, never 3000, its own `NEXT_DIST_DIR` lock, and Playwright tears down the PID it started and nothing else. Readback-for-fire-and-forget is `Control.until` with three distinguishable outcomes. Runs in CI as its own job, graded BLOCKING on input determinism. 4 journeys, each watched going red on a seeded defect. The 9 `drive-*.mjs` scripts survive as exploratory one-offs — `pipeline/DRIVERS.md` says so, nothing invokes them, and no claim here rests on them |
 | test-harness | fixture-economics | followed | `tests/golden-path/_helpers.ts` builders (`mkProject`) with defaults; no shared mutable fixture; no hand-maintained truncate list |
 | test-harness | flake-lifecycle | n/a | no retained run history and no quarantine register exists to judge |
 | **data-access** | layering-rules | partial | `lib/studioDb.ts` owns every IDB primitive and is partitioned by aggregate; `openDb`/`runTx` are still **exported raw handles**. The blocker changed rather than the state: a linter now exists, so an import-boundary rule is finally POSSIBLE — none is written |
@@ -62,7 +62,7 @@ and is one of the strongest artifacts in the repo.
 | error-handling | crash-capture | partial | `app/error.tsx` + `app/global-error.tsx` cover both App Router levels and `global-error` deliberately depends on nothing from the design system; but no breadcrumb ring, no spool, nothing persists or ships |
 | error-handling | user-facing-mapping | partial | `NotificationBell.tsx:30` maps each `StorageFailure` to user terms with a suggestion; the imaging side has no equivalent registry — route errors surface the raw `message` |
 | error-handling | structured-propagation | followed | `ImagingError` wraps with `kind`+`provider`+`detail` preserved; the category is decided at the boundary (`http.ts:30`) and never re-derived from prose upstream |
-| **browser-credential-boundary** | public-vs-server-env-split | followed | `pipeline/check-bundle.mjs` reads the emitted browser chunks for server-only variable NAMES, live secret VALUES and server-module fingerprints, after `build` in CI. It asserts a positive control before reporting clean, so a grep over the wrong directory is could-not-run rather than success. Proved red through a real build with a seeded client import of `lib/imaging/budget` |
+| **browser-credential-boundary** | public-vs-server-env-split | followed | `pipeline/check-bundle.mjs` reads the emitted browser chunks for server-only variable NAMES, live secret VALUES, server-module fingerprints and — since 2026-08-24 — the TEST-ONLY SEAMS (the live harness's control surface), after `build` in CI. It asserts a positive control before reporting clean, so a grep over the wrong directory is could-not-run rather than success. Proved red twice through real builds: a seeded client import of `lib/imaging/budget`, and the harness bridge gated on an imported constant instead of the inline `process.env.NODE_ENV` expression |
 | browser-credential-boundary | broker-proxy-attaches-secret | followed | `app/api/imaging/*` is the one trust boundary; the browser reaches it only via `lib/imagingClient.ts`; keys are attached inside `lib/imaging/` and the caller never holds one |
 | browser-credential-boundary | opaque-upstream-errors | followed | `errors.ts:123` derives our own status per kind rather than passing the vendor's through; `ImagingError.detail` (up to 600 chars of vendor body) is **never serialised** — proved at `integration-imaging.mts:611` |
 | browser-credential-boundary | omit-the-column-not-the-value | n/a | no client-held database credential and no row-level policy surface; persistence is same-origin IndexedDB |
@@ -74,7 +74,7 @@ and is one of the strongest artifacts in the repo.
 | optional-dependency-degradation | probe-the-grant-not-the-config | partial | `isConfigured` tests key presence, which is a configuration fact; a key present but revoked passes the gate and fails at the vendor as `failed` |
 | **repo-manifest-standard** | capability-not-tool-vocabulary | followed | `.ai/manifest.yaml` capabilities are `dev`/`build`/`test`/`typecheck`, each a name → an invocation; no field names the tool behind the command |
 | repo-manifest-standard | must-ignore-unknown | followed | stated in the file's own header: "unknown fields MUST be ignored — so this survives tool churn and schema growth" |
-| repo-manifest-standard | pointers-not-embeds | followed | `paths:` points at `context-map.json`, `.claude/patterns/`, `knowledge/`, `pipeline/`, `tests/golden-path/` — all committed, all resolving in a fresh clone |
+| repo-manifest-standard | pointers-not-embeds | followed | `paths:` points at `context-map.json`, `.claude/patterns/`, `knowledge/`, `pipeline/`, `tests/` — all committed, all resolving in a fresh clone. `tests` moved from `tests/golden-path/` to the parent on 2026-08-24, when a second lane arrived: a pointer at one of two lanes makes the other invisible to a reader who trusts the manifest |
 | repo-manifest-standard | generated-from-provenance | partial | `generatedFrom:` records its inputs and every `verified: true` names a run. A DRIFT CHECK now exists (`npm run check:manifest`, blocking in CI) and caught real drift on its first run — a capability naming a script nobody had added. There is still **no synthesizer**: the file is hand-maintained and gated, not generated |
 | repo-manifest-standard | semver-additive-evolution | followed | `schema: ai-manifest` + `schemaVersion: 0.1.0` — contract identity as a plain name, not a fetchable address, versioned separately from the repo |
 | repo-manifest-standard | spec-ships-with-artifact | followed | `.ai/SPEC.md` ships in this repository and resolves in a clone with no network. It carries the reimplementation clause (any implementation performing its checks is conformant; `check-manifest.mjs` is a runner, not the definition) and gives every check an id, so the runner's output and the spec read side by side |
@@ -97,12 +97,52 @@ and is one of the strongest artifacts in the repo.
 | toasts-notifications | announcement-accessibility | followed | `lib/announcer.tsx`: two regions mounted EMPTY with the app shell above the whole tree, one writer, politeness derived from severity in one exported function, keyed on event identity so renders are inaudible, serial drain with clear-before-write, assertive jumping the queue without erasing it, oldest-polite shed under storm, and focus never touched |
 | toasts-notifications | queue-discipline | partial | the ANNOUNCEMENT queue now has all of it — dedup by event key, serial drain, bounded shedding. The VISUAL tray still has none: it folds `storage-trouble` in with job events with no dedup or cooldown keyed by failure identity |
 
+## Tally, after wave 2b (2026-08-24)
+
+Counted off the table above, one line per subject. `deviations` counts rows still
+at status `deviation`; `deferred` counts rows an operator has explicitly parked.
+
+| subject | deviations | deferred | followed | partial | n/a |
+|---|---|---|---|---|---|
+| cost-metering | 0 | 0 | 5 | 1 | 1 |
+| codebase-scanning | 0 | 0 | 3 | 2 | 1 |
+| quality-gates | 0 | 0 | 4 | 1 | 1 |
+| test-harness | 0 | 0 | 5 | 0 | 1 |
+| data-access | 0 | 0 | 3 | 2 | 1 |
+| client-state | 0 | 0 | 4 | 2 | 0 |
+| error-handling | 0 | 0 | 4 | 2 | 0 |
+| browser-credential-boundary | 0 | 0 | 3 | 0 | 2 |
+| optional-dependency-degradation | 0 | 0 | 3 | 2 | 0 |
+| repo-manifest-standard | 0 | 0 | 5 | 1 | 0 |
+| rate-limiting | 0 | 0 | 4 | 0 | 0 |
+| design-tokens | 0 | 0 | 3 | 1 | 1 |
+| async-ui-states | 0 | 0 | 3 | 2 | 0 |
+| toasts-notifications | 0 | 0 | 3 | 1 | 0 |
+
+**deferred is 0 everywhere, and that is a finding rather than an omission.** The
+2026-08-24 operator decisions park two classes of work — authentication /
+authorization schemes, and data retention or deletion policy — until a production
+timeline, audience and auth strategy exist. Neither class has a row in this map:
+the 14 subjects selected here are about the imaging chokepoint, persistence, the
+studio surfaces, the gates and the `.ai` contract, and none of them judges a grant
+model or a retention policy. Nothing was reclassified to fit the decisions; there
+was nothing to reclassify. Note that this is not the same as saying the repo has
+no auth question — it has one, and `lib/devAuth.ts` plus the gate in
+`components/ui/AuthGate.tsx` are where it lives; it is simply not a technique this
+bundle's selected subjects judge.
+
 ## Deviations backlog
 
 Ranked by value — what a future wave should drain, hardest-hitting first.
-**Wave 2 (2026-08-24) drained 11 of the 15.** What is left is below; everything
-struck is under `## Drained 2026-08-24`, with the commit that closed it, so the
-history stays legible rather than disappearing.
+**Wave 2 (2026-08-24) drained 11 of the 15; wave 2b, the same day, drained the
+12th — item 3, the improvised harness, which wave 2 had put out of budget as a
+design job.** What is left is below; everything struck is under
+`## Drained 2026-08-24`, with the commit that closed it, so the history stays
+legible rather than disappearing.
+
+**THERE ARE NO `deviation` ROWS LEFT IN THE MAP.** What remains below is four
+items that are `partial` or `blocked` — three of them blocked on a decision no
+agent should make, and one on a file that is not in this repository.
 
 1. **No spend surface.** (cost-metering / spend-observability) `budgetStats()` and now
    `spendByAxis()` return totals, the window boundary, the counters and a split by
@@ -117,12 +157,8 @@ history stays legible rather than disappearing.
    half that matters is deciding what happens to the millions of already-written records that
    carry no key at all, and getting that wrong strands persisted work. It wants a stated
    policy first.
-3. **Browser drivers are an improvised harness.** (test-harness / live-app-harness) 9
-   `pipeline/drive-*.mjs` scripts drive a real browser with no control surface, no launcher and
-   no build-time test-only gate. **The only remaining `deviation` row in the map.** Out of
-   budget for this wave: it is a design job — a control surface has to be invented, not
-   applied — and it is worth doing next, because the drivers are the only thing that
-   exercises the real UI.
+3. ~~**Browser drivers are an improvised harness.**~~ (test-harness / live-app-harness)
+   **DRAINED 2026-08-24 (wave 2b)** — see `## Drained 2026-08-24 (wave 2b)` below.
 4. **The five ungrouped contexts.** (codebase-scanning / verify-after-generate) `frames-step`,
    `production-phases`, `research-step`, `script-step`, `shared-notebook` sit with `group: null`
    while `Production Lifecycle` owns zero contexts. **blocked: USER-ONLY.** `context-map.json`
@@ -172,6 +208,45 @@ invocation and then restored — the list of those injections is in each commit 
 | 13 | The manifest points outside the repository | `08dc2d0` | `.ai/SPEC.md` ships here with a reimplementation clause, and `npm run check:manifest` gates the manifest against it |
 | — | (not on the list) Firebase constructed its client at module scope | `4a8bd65` | found by the new gate's env-less build on its first green install: `auth/invalid-api-key` at import time killed the whole build. Replaced with a guarded accessor |
 | — | (not on the list) `npm ci` could never have worked on linux | `c0485d6`, `c640015` | the lockfile was missing hoisted @emnapi entries at `b4ec3b9` and earlier. Nothing had ever tried; a clean linux room found it on the first run |
+
+## Drained 2026-08-24 (wave 2b)
+
+Backlog item **3**, the last `deviation` row in the map, and the one wave 2 had put
+out of budget because it was a design job rather than a contained fix. Commits
+`a8b2bcd` (the control surface), `ab4aa37` (the lane), `d1fca61` (the gates).
+
+| What the technique asks for | What landed |
+|---|---|
+| A designed control surface, not an improvised door | `lib/harness/protocol.ts` — 3 product-level commands (`snapshot`, `project`, `reset`). Small on purpose: every command is product surface the harness can drift against, so the door stays narrow and the journeys work through the UI like a user does |
+| Typed on both sides | one `HarnessControl` interface; `components/ui/HarnessBridge.tsx` implements it, `tests/live/_control.ts` consumes it, `tsc --noEmit` in CI holds them together. The `page.evaluate` bodies are the only untyped inch and are confined to one file |
+| A build-time feature switch, never a runtime flag | both guards written INLINE and the whole implementation inside ONE function, so webpack folds the literal and the minifier drops an unreachable body with every string in it. **Measured on a real build both ways**: as written, 0 of 21 browser chunks carry the key or the banner; gated on the imported `DEV_AUTH` const instead, both appear and `npm run check:bundle` fails |
+| The production build provably does not contain it | `TEST_ONLY_FINGERPRINTS` in `pipeline/check-bundle.mjs`, run after `build` in CI. `tests/golden-path/harness-gate.probe.spec.ts` holds the source half a bundle cannot show — the real `DEV_AUTH` expression against a 6-row truth table, the bridge's guards inline and in front of the install, and the vocabulary module kept types-only so the fingerprints stay meaningful |
+| The serial law, stated with its reason | in both configs, with the mechanism named rather than "for safety" — see the isolation-lanes row |
+| Readback for fire-and-forget | `Control.until` — three distinguishable outcomes: predicate holds; deadline expires while the surface kept answering (a FINDING, with the last snapshot in the message); the surface stops answering (a harness failure, thrown as one). Watched producing the middle one by stopping `finish()` from notifying |
+| The test-identifier contract | the product already had a rich role-named set; two were added WITH the harness — `step-<phase>` on the stepper and `studio-headline` carrying `data-door`, both named for role, never for position |
+| Population discipline | 4 journeys, each phrasable as "does the assembled product, driven the way a user drives it, do the thing?" — hydration, self-seeding, opening a project at its URL, surviving a hard reload in Chrome's own IndexedDB, and a background run landing |
+
+Not asked for by the technique but required by the wave's dispatch, and done:
+a launcher on a **non-default port** (3187; Playwright records the PID it spawned
+and tears down that tree, never a kill-by-name), seed data from the app's own
+bootstrapping only (the harness empties the account and lets `lib/useProjects`
+seed the demo shelf — the same path a first sign-in takes), and a **CI job of its
+own**, graded BLOCKING on input determinism in the workflow header like every
+other job in that file.
+
+Every journey was **watched going red** on a seeded defect and restored:
+truncating `ProjectsMatrix` to one row; ignoring `?step=` in `StudioView`;
+disabling the research write in `saveStep`; stopping `finish()` from notifying.
+The third injection also corrected the test — polling `steps > 0` was GREEN
+against a notebook that was never saved, because the scope hook writes its own
+record on the same surface, so the poll now waits for the research PHASE.
+
+Two measured environment footguns are recorded at the lines that avoid them, in
+`playwright.live.config.ts`: driving `127.0.0.1` instead of `localhost` makes Next
+16 serve the document 200 and every `_next/` chunk 403, so the page never hydrates
+and it reads exactly like a broken auth bypass; and a `webServer.env` that does not
+spread `process.env` produces a Windows child that starts, prints Ready, and
+answers **every** route 404.
 
 ### Recorded, not a deviation
 
