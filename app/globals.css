@@ -222,6 +222,17 @@ body { margin: 0; }
   background: var(--gt-scroll-thumb-hover);
 }
 
+/* RAIL grade. `.scroll-x` above is for the rare surface a small viewport
+   forces to overflow; a rail (Frames → alternatives contact sheet) is the
+   opposite — horizontal scroll IS the navigation, across a hundred columns.
+   So the thumb is a touch taller to be a target rather than a hint, and the
+   scroll chain is cut so overshooting the rail's end does not fling the page.
+   Wheel-to-horizontal translation is the surface's own job (JS — a mouse
+   wheel only emits deltaY, and CSS cannot re-aim it). Same tokens, same
+   hairline language — this is a size, not a new colour. */
+.scroll-rail { overscroll-behavior-x: contain; }
+.scroll-rail::-webkit-scrollbar { height: 8px; }
+
 /* ---------------------------------------------------------------------------
    INDETERMINATE PROGRESS — and the honest account of what loops in this app.
 

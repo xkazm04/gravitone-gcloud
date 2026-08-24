@@ -83,8 +83,14 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
       <div
         ref={rail}
         onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}
-        style={{ height: "68vh", overscrollBehaviorX: "contain" }}
-        className="flex gap-3 overflow-x-auto overflow-y-hidden rounded-xl border border-white/8 bg-white/[0.02] p-3"
+        // A mouse wheel only emits deltaY; on a rail the axis it means is X.
+        // Trackpads already emit deltaX and keep their native feel — only a
+        // pure vertical tick is re-aimed.
+        onWheel={(e) => {
+          if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.currentTarget.scrollLeft += e.deltaY;
+        }}
+        style={{ height: "68vh" }}
+        className="scroll-x scroll-rail flex gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3"
       >
         {/* Spacers stand in for the unmounted columns. They carry one GAP less
             than the runs they replace, because the flex gap between the spacer
@@ -194,7 +200,7 @@ function SheetColumn({
         </div>
       </header>
 
-      <div className="flex-1 space-y-2 overflow-y-auto p-2.5">
+      <div className="scroll-y flex-1 space-y-2 p-2.5">
         {col.alts.length === 0 && (
           <div className="rounded-xl border border-white/8 bg-white/[0.02] px-2.5 py-6 text-center">
             <p className="font-jetbrains text-[10px] tracking-[0.12em] text-white/30 uppercase">no alternatives kept</p>
