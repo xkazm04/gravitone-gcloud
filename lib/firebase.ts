@@ -20,9 +20,7 @@ import {
   browserLocalPersistence,
   getAuth,
   GoogleAuthProvider,
-  onIdTokenChanged,
   setPersistence,
-  signOut,
 } from "firebase/auth";
 
 // Minimal init (apiKey/authDomain/projectId) — the proven shape from the

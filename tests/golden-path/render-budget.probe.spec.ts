@@ -27,8 +27,8 @@ test("Lane1: per-row DOM weight is bounded (the DOM-economy claim HOLDS)", () =>
   const now = Date.now();
   const one = render([mkProject("a", now)]);
   const fifty = render(Array.from({ length: 50 }, (_, i) => mkProject(`p${i}`, now - i * 1000)));
-  const perRow1 = one.total; // header+chrome+1 row
-  // Marginal element cost of each additional row (chrome cancels out).
+  // Marginal element cost of each additional row (chrome cancels out; `one.total`
+  // is header+chrome+1 row, so the difference over 49 rows is the per-row cost).
   const marginal = (fifty.total - one.total) / 49;
   console.log(`[Lane1] elements: N=1 -> ${one.total}, N=50 -> ${fifty.total}; marginal/row ~= ${marginal.toFixed(1)}`);
   console.log(`[Lane1] cells: N=1 -> ${one.cells} (=5), N=50 -> ${fifty.cells} (=250)`);

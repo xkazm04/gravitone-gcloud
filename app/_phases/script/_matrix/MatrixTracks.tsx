@@ -32,7 +32,6 @@ import { useState } from "react";
 import type { Card } from "../../_shared/notebook/cards";
 import type { ScopeApi } from "../../research/useScope";
 import { stateOf } from "../../research/scope";
-import { RENDER_BY_ID } from "../renders";
 import { coverageIn, usageIn, type Version } from "../versions";
 import { NoteHandle } from "../_notes/NotesContext";
 import { MatrixFootnotes, RENDERS, ScopePip, secs } from "./shared";

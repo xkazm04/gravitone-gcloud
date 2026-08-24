@@ -22,7 +22,6 @@
 
 import {
   PHASES,
-  type PhaseKey,
   PHASE_STATE_WORD,
   PHASE_TITLE,
   projectState,

@@ -27,7 +27,7 @@
 
 import type { GateRollup } from "./gate";
 import { IMPACT, type Usage } from "./impact";
-import { RENDERS, RENDER_BY_ID } from "./renders";
+import { RENDERS } from "./renders";
 
 export type NoteKind =
   | "more-focus"
