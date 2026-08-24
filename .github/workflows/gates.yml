@@ -107,6 +107,16 @@ jobs:
 
       # BLOCKING. `npm ci` — not `npm install` — so the lockfile is authority and
       # a lock that disagrees with package.json is itself a failure.
+      #
+      # FOOTGUN, MEASURED 2026-08-24. This repo is maintained from Windows, and
+      # `npm install` there resolves only the optional native/wasm packages that
+      # match the host platform. The hoisted entries the LINUX tree needs
+      # (@emnapi/core, @emnapi/runtime — pulled in by @tailwindcss/oxide-wasm32-wasi
+      # and @img/sharp-wasm32) get pruned out of the lock, and this step is the
+      # only thing in the project that can see it. `npm install
+      # --package-lock-only` on Windows will strip them again. If this step ever
+      # reports "Missing: @emnapi/... from lock file", re-add the hoisted entries
+      # rather than regenerating the lock on a Windows box.
       - name: install
         run: npm ci
 
