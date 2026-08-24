@@ -28,7 +28,11 @@ import {
   type AuthError,
   type User,
 } from "firebase/auth";
-import { auth, firebaseReady, googleProvider } from "./firebase";
+// `authClient()` is a guarded accessor, not a constant — see lib/firebase.ts.
+// Every call below sits behind the `firebaseReady` predicate from that same
+// module, which is what makes the throw unreachable here rather than merely
+// unlikely.
+import { authClient, firebaseReady, googleProvider } from "./firebase";
 import { DEV_AUTH, DEV_USER } from "./devAuth";
 
 // Popup can fail (blocked, closed, COOP, internal-error) — fall back to a
@@ -86,6 +90,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setAuthResolved(true);
       return;
     }
+    const auth = authClient();
     // Complete a redirect-based sign-in if we came back from one.
     getRedirectResult(auth).catch((e) =>
       setError(e instanceof Error ? e.message : "sign-in failed"),
@@ -103,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setError("Firebase is not configured — see .env.example");
       return;
     }
+    const auth = authClient();
     await setPersistence(auth, browserLocalPersistence);
     try {
       await signInWithPopup(auth, googleProvider);
@@ -123,7 +129,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await fbSignOut(auth);
+    // Unreachable without a config — a signed-in user implies a live client —
+    // but the guard is stated rather than assumed, because the accessor throws
+    // and a sign-out button is the last place anyone wants a stack trace.
+    if (!firebaseReady) return;
+    await fbSignOut(authClient());
   }, []);
 
   const profile = useMemo<Profile | null>(
