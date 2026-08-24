@@ -1,0 +1,133 @@
+# ==============================================================================
+# THE BINDING RUNG.
+#
+# Before this file existed, every check in this repository was a courtesy: the
+# probes that guard MONEY (`imaging-budget`) and AUTH (`imaging-auth`) ran only
+# when a human already knew to type the command. A check that runs only when
+# asked is not a gate — nothing here refuses anything. This workflow is the
+# moment of refusal. (registry: quality-gates/gate-laddering, "a check that runs
+# only locally is a courtesy, not a gate".)
+#
+# ------------------------------------------------------------------------------
+# GRADING: blocking vs advisory, decided on INPUT DETERMINISM, not on severity.
+# (registry: quality-gates/blocking-by-input-determinism.)
+#
+# The question asked of every job below is NOT "how serious are its findings" but
+# "could this same commit, re-checked next month, produce a different answer with
+# nobody changing anything?" If no, the job may block. If yes, it may not, because
+# a blocking gate promises the author it stops that they can make it green.
+#
+#   install (npm ci)     BLOCKING.  Input: package.json + package-lock.json, both
+#                        committed. The lockfile pins exact versions AND integrity
+#                        hashes, so the registry is "nominally external but
+#                        effectively pinned" — deterministic given the commit.
+#                        Changes the answer: nothing; this stays blocking.
+#
+#   typecheck            BLOCKING.  Input: this repo's own .ts/.tsx/.mts sources
+#                        plus a `typescript` version resolved from the committed
+#                        lock. Nothing outside the tree can move the verdict.
+#                        Changes the answer: nothing; this stays blocking.
+#
+#   lint                 BLOCKING at error severity, RATCHETED at warning
+#                        severity. Input: this repo's sources plus a rule set
+#                        pinned by eslint-config-next@16.3.0 in the committed
+#                        lock — deterministic. Error count is held at zero
+#                        outright. The warning population is pre-existing debt
+#                        (React-Compiler hook analyses over the studio's
+#                        load-first hooks), frozen bucket-by-bucket in
+#                        `lint-baseline.json`; the ratchet refuses any movement in
+#                        EITHER direction. This is debt-shaped advisory with an
+#                        expiry, not input-shaped advisory.
+#                        Changes the answer: a bucket reaching 0 — delete it from
+#                        lint-baseline.json AND from eslint.config.mjs, and the
+#                        rule stands at plain blocking severity.
+#
+#   probes               BLOCKING.  Input: the repo's own modules. The suite is
+#                        Node-context with no browser and no webServer, and
+#                        `sealNetwork()` in the imaging probes proves no call
+#                        leaves the process — so there is no live service whose
+#                        mood can redden a clean tree.
+#                        Changes the answer: if a probe is ever pointed at a real
+#                        vendor, that probe must be split out into its own
+#                        advisory job on a schedule; it may not stay in here.
+#
+#   build                BLOCKING.  Input: the committed sources and lock. Runs
+#                        with NO environment variables on purpose — the repo's
+#                        optional-dependency contract says an absent key must
+#                        degrade, not crash, and a green build with an empty env
+#                        is the proof of it.
+#                        Changes the answer: nothing; this stays blocking.
+#
+# NO SUPPLY-CHAIN JOB IS WIRED, AND THAT IS THE HONEST ANSWER, NOT AN OVERSIGHT.
+# `npm audit` reads an advisory feed that moves without this repository: an entry
+# published overnight against a transitive dependency would wall the next
+# unrelated pull request, which is a true positive and still an illegitimate
+# refusal. Its correct form is a scheduled advisory job with a named human reading
+# the output — and this repo has no such rotation staffed. Per the technique, a
+# project whose advisory findings reach nobody does not have an advisory
+# supply-chain check; it has none. Recording the absence here, dated and
+# deliberate, is the requirement that absence carries.
+# Changes the answer: someone takes the rotation. Then add a `schedule:`-triggered
+# `npm audit --omit=dev` job, advisory, and name its reader in this header.
+#
+# ------------------------------------------------------------------------------
+# ONE AUTHORITY FOR THE RULE SET. Every job below invokes an npm script that a
+# developer runs identically on their own machine (`npm run typecheck`,
+# `npm run lint:ratchet`, `npm test`, `npm run build`). There is no second,
+# CI-only definition of any check to drift against the local one.
+# ==============================================================================
+
+name: gates
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+# A newer push to the same ref makes the older run's verdict irrelevant.
+concurrency:
+  group: gates-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # BLOCKING. `npm ci` — not `npm install` — so the lockfile is authority and
+      # a lock that disagrees with package.json is itself a failure.
+      - name: install
+        run: npm ci
+
+      # BLOCKING. Fast, and it covers pipeline/*.mts and tests/, which the
+      # production build does not compile.
+      - name: typecheck
+        run: npm run typecheck
+
+      # BLOCKING at error severity; ratcheted at warning severity.
+      # `npm run lint:ratchet` is the same command a developer runs locally. It has
+      # three outcomes and three exit codes — 0 pass, 1 fail, 2 COULD-NOT-RUN —
+      # and it asserts its own instrument (a short file walk is fatal, never
+      # "clean"). See pipeline/lint-ratchet.mjs.
+      - name: lint (errors at zero, warning debt ratcheted)
+        run: npm run lint:ratchet
+
+      # BLOCKING. 60 Node-context probes. Not skipped when earlier steps are
+      # green-but-uninteresting: this is the rung that refuses.
+      - name: probes
+        run: npm test
+
+      # BLOCKING. Deliberately no `env:` block — see the header.
+      - name: build
+        run: npm run build
