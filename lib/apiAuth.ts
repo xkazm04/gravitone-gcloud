@@ -31,7 +31,7 @@
 // lib/imaging/env.ts) so a handler that booted before .env.local was filled in
 // does not hold a stale absence.
 
-import { timingSafeEqual } from "node:crypto";
+import { createHash, timingSafeEqual } from "node:crypto";
 
 export const ACCESS_SECRET_VAR = "IMAGING_ACCESS_SECRET";
 
@@ -96,14 +96,52 @@ export function checkAccess(req: Request): AccessVerdict {
 // rather than failing if this is ever scaled out — a real deployment would move
 // this to a shared store.
 
+// ── THE LIMITER WATCHES ITSELF, AND BOUNDS ITSELF (added 2026-08-24) ────────
+//
+// Two things used to be true here and are not any more. They are the same two
+// faults the spend ceiling next door had, one file over.
+//
+//   · IT COUNTED NOTHING. `rateLimit` returned a verdict and kept no series, so
+//     there was no way to answer "is the limiter doing anything", "is it
+//     strangling a legitimate caller", or "did we come close". Zero observable
+//     activity forever is indistinguishable from a limiter that is not on the
+//     request path at all.
+//   · THE MAP GREW FOREVER. One entry per client IP, no cap and no staleness
+//     rule, in a module-scoped Map that lives as long as the process. A spray of
+//     distinct forwarded-for values — trivially forged, and the header is
+//     attacker-controlled — grew it without bound. A rate limiter whose own
+//     memory is the unbounded resource is defending the wrong thing.
+//
+// ENFORCEMENT SEMANTICS ARE UNCHANGED for any key the reaper has not touched:
+// the same calls are admitted and the same calls are refused, with the same
+// retry-after arithmetic. The counters are read, never consulted.
+
 export const RATE_CAPACITY_VAR = "IMAGING_RATE_CAPACITY";
 export const RATE_WINDOW_SEC_VAR = "IMAGING_RATE_WINDOW_SEC";
+/** Ceiling on how many distinct keys the limiter will hold. */
+export const RATE_KEY_CAP_VAR = "IMAGING_RATE_KEY_CAP";
+
+const DEFAULT_KEY_CAP = 10_000;
+/** A bucket idle for this many windows, and full, carries no information. */
+const IDLE_WINDOWS = 2;
+/** Admitting a call that leaves a bucket below this share of capacity is worth
+ *  one line — the operator hears about pressure BEFORE the refusals start. */
+const NEAR_LIMIT_SHARE = 0.2;
 
 interface Bucket {
   tokens: number;
   updated: number;
+  /** Whether this bucket has already announced that it is running low. Reset
+   *  when it refills past the threshold, so the warning is one per approach and
+   *  not one per request. */
+  warned: boolean;
 }
 const buckets = new Map<string, Bucket>();
+
+/** Calls between idle sweeps. Small enough that a quiet process still returns
+ *  memory, large enough that the O(keys) walk is amortised to nothing. */
+const SWEEP_EVERY = 200;
+let sinceSweep = 0;
 
 function rateCapacity(): number {
   const n = Number(process.env[RATE_CAPACITY_VAR]);
@@ -112,6 +150,120 @@ function rateCapacity(): number {
 function rateWindowSec(): number {
   const n = Number(process.env[RATE_WINDOW_SEC_VAR]);
   return Number.isFinite(n) && n > 0 ? n : 60;
+}
+function rateKeyCap(): number {
+  const n = Number(process.env[RATE_KEY_CAP_VAR]);
+  return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_KEY_CAP;
+}
+
+/**
+ * What the limiter has done. Every field is a count of an event it would
+ * otherwise have performed silently; none is read by `rateLimit`, so none can
+ * change who is refused.
+ */
+export interface RateCounters {
+  /** Calls let through. */
+  admitted: number;
+  /** Calls refused. The limiter's health metric — a spike is either the limiter
+   *  doing its job or the limiter strangling real work, and without a count
+   *  there is no way to tell which. */
+  refused: number;
+  /** Admissions that left a bucket below the near-limit share, counted once per
+   *  approach. Pressure is legible before it becomes refusal. */
+  nearLimit: number;
+  /** Buckets the reaper dropped as full-and-idle. Losing these costs no
+   *  enforcement: a full bucket is byte-identical to a fresh one. */
+  evictedIdle: number;
+  /** Buckets dropped because the key cap was reached. These MAY cost
+   *  enforcement — see `reap` — so they are counted apart from the idle ones. */
+  evictedPressure: number;
+  lastEvictionAt: number | null;
+  /** The most keys ever held at once. The number that says whether the cap is
+   *  near being hit at all. */
+  peakKeys: number;
+}
+
+const zeroRateCounters = (): RateCounters => ({
+  admitted: 0,
+  refused: 0,
+  nearLimit: 0,
+  evictedIdle: 0,
+  evictedPressure: 0,
+  lastEvictionAt: null,
+  peakKeys: 0,
+});
+
+let rateCounters: RateCounters = zeroRateCounters();
+
+/** One greppable line. Numbers, env-var NAMES, and a key FINGERPRINT — never the
+ *  raw key, which is a client IP. Eight hex characters is enough to correlate two
+ *  lines about the same caller and not enough to be an address in a log. */
+function rateNote(line: string): void {
+  console.log(`[api] rate ${line}`);
+}
+function fingerprint(key: string): string {
+  return createHash("sha256").update(key).digest("hex").slice(0, 8);
+}
+
+/**
+ * Bound the key population.
+ *
+ * Two passes, in order of what they cost:
+ *
+ *   IDLE — a bucket that is FULL and has not been touched for `IDLE_WINDOWS`
+ *   windows is information-free: recreating it on the next request produces
+ *   exactly the state that was dropped. Removing these is free, and on any
+ *   normal workload it is the only pass that ever runs.
+ *
+ *   PRESSURE — if the map is still over the cap, the honest thing is to say so:
+ *   this pass CAN cost enforcement, because it may drop a bucket that still had
+ *   a hold on someone. It therefore evicts in the order that loses the least —
+ *   most tokens remaining first, oldest first among equals — and it is counted
+ *   separately from the idle pass so the two are never read as one number.
+ *   Reaching it at all means either the cap is set too low or the keyspace is
+ *   being sprayed, and a caller can force it by forging `x-forwarded-for`. That
+ *   is a real weakness and it is the lesser one: an unbounded map is a way to
+ *   take the process down, while this is a way to buy back some allowance.
+ */
+function reap(now: number, capacity: number, windowSec: number): void {
+  const idleMs = windowSec * 1000 * IDLE_WINDOWS;
+  const refillPerSec = capacity / windowSec;
+  let idle = 0;
+  for (const [k, b] of buckets) {
+    const idleMsHere = now - b.updated;
+    // Refill FIRST. `b.tokens` is the count as of `b.updated`, so reading it raw
+    // asks "was this bucket full when we last touched it" — which is nearly
+    // always no, and would have made the idle pass collect almost nothing while
+    // looking like it worked.
+    const refilled = Math.min(capacity, b.tokens + Math.max(0, idleMsHere / 1000) * refillPerSec);
+    if (refilled >= capacity && idleMsHere >= idleMs) {
+      buckets.delete(k);
+      idle++;
+    }
+  }
+  if (idle) {
+    rateCounters.evictedIdle += idle;
+    rateCounters.lastEvictionAt = now;
+    rateNote(`reaped idle=${idle} keys=${buckets.size} windowSec=${windowSec}`);
+  }
+
+  const cap = rateKeyCap();
+  // AT the cap, not past it. The reap runs before the current key is inserted,
+  // so firing only above the cap would let the held population settle at cap+1 —
+  // a bound that is off by one is a bound nobody can assert.
+  if (buckets.size < cap) return;
+
+  const target = Math.floor(cap * 0.9);
+  const victims = [...buckets.entries()]
+    .sort((a, b) => b[1].tokens - a[1].tokens || a[1].updated - b[1].updated)
+    .slice(0, buckets.size - target);
+  for (const [k] of victims) buckets.delete(k);
+  rateCounters.evictedPressure += victims.length;
+  rateCounters.lastEvictionAt = now;
+  rateNote(
+    `PRESSURE evicted=${victims.length} keys=${buckets.size} cap=${cap} (${RATE_KEY_CAP_VAR}) ` +
+      `— some allowance was returned; raise the cap or find the sprayer`,
+  );
 }
 
 export interface RateResult {
@@ -126,18 +278,79 @@ export interface RateResult {
  */
 export function rateLimit(key: string, now: number = Date.now()): RateResult {
   const capacity = rateCapacity();
-  const refillPerSec = capacity / rateWindowSec();
-  const b = buckets.get(key) ?? { tokens: capacity, updated: now };
+  const windowSec = rateWindowSec();
+  const refillPerSec = capacity / windowSec;
+
+  // Reap BEFORE inserting, so the cap is a ceiling on what is HELD rather than
+  // on what was held one request ago.
+  //
+  // The sweep is O(keys), so it is amortised rather than run per request: every
+  // SWEEP_EVERY calls for the idle pass, and unconditionally at the cap, which is
+  // the only case where skipping it would let the bound be exceeded. On the
+  // common path this costs two integer comparisons.
+  sinceSweep++;
+  if (sinceSweep >= SWEEP_EVERY || buckets.size >= rateKeyCap()) {
+    sinceSweep = 0;
+    reap(now, capacity, windowSec);
+  }
+
+  const b = buckets.get(key) ?? { tokens: capacity, updated: now, warned: false };
   const elapsedSec = Math.max(0, (now - b.updated) / 1000);
   b.tokens = Math.min(capacity, b.tokens + elapsedSec * refillPerSec);
   b.updated = now;
   if (b.tokens < 1) {
     buckets.set(key, b);
+    rateCounters.refused++;
+    rateCounters.peakKeys = Math.max(rateCounters.peakKeys, buckets.size);
     return { allowed: false, retryAfterSec: Math.max(1, Math.ceil((1 - b.tokens) / refillPerSec)) };
   }
   b.tokens -= 1;
+
+  // Pressure before refusal. Once per approach: `warned` clears when the bucket
+  // refills past the threshold, so a caller sitting at the limit produces one
+  // line per descent rather than one per request.
+  const share = b.tokens / capacity;
+  if (share < NEAR_LIMIT_SHARE) {
+    if (!b.warned) {
+      b.warned = true;
+      rateCounters.nearLimit++;
+      rateNote(
+        `near-limit key=${fingerprint(key)} left=${b.tokens.toFixed(1)}/${capacity} ` +
+          `windowSec=${windowSec} (${RATE_CAPACITY_VAR}, ${RATE_WINDOW_SEC_VAR})`,
+      );
+    }
+  } else {
+    b.warned = false;
+  }
+
   buckets.set(key, b);
+  rateCounters.admitted++;
+  rateCounters.peakKeys = Math.max(rateCounters.peakKeys, buckets.size);
   return { allowed: true, retryAfterSec: 0 };
+}
+
+/**
+ * The limiter's own numbers, for an operator or a diagnostics surface.
+ *
+ * The configured bounds travel WITH the counts, for the same reason
+ * `budgetStats` hands out its window boundary: a reader that re-derives the
+ * capacity from the environment can disagree with the limiter that enforced it.
+ * `counters` is a copy — a caller cannot reset the meter by mutating a snapshot.
+ */
+export function rateStats(): {
+  capacity: number;
+  windowSec: number;
+  keyCap: number;
+  keys: number;
+  counters: RateCounters;
+} {
+  return {
+    capacity: rateCapacity(),
+    windowSec: rateWindowSec(),
+    keyCap: rateKeyCap(),
+    keys: buckets.size,
+    counters: { ...rateCounters },
+  };
 }
 
 /** Best-effort client IP from the usual proxy headers. `unknown` collapses all
@@ -148,9 +361,19 @@ export function clientIp(req: Request): string {
   return req.headers.get("x-real-ip")?.trim() || "unknown";
 }
 
-/** Test hook — drop all rate-limit state. */
+/** Test hook — drop all rate-limit state AND the counters, so one probe's
+ *  refusals never show up in the next one's reading. */
 export function __resetRateLimit(): void {
   buckets.clear();
+  rateCounters = zeroRateCounters();
+  sinceSweep = 0;
+}
+
+/** Test hook — run the reaper now, instead of waiting for the amortised sweep.
+ *  Exported so a probe drives the REAL reap rather than a copy of its rules. */
+export function __reapNow(now: number = Date.now()): void {
+  sinceSweep = 0;
+  reap(now, rateCapacity(), rateWindowSec());
 }
 
 /* ── The one call each route makes ─────────────────────────────────────────── */

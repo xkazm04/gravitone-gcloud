@@ -16,8 +16,13 @@ import {
   checkAccess,
   guardRequest,
   rateLimit,
+  rateStats,
+  __reapNow,
   __resetRateLimit,
   ACCESS_SECRET_VAR,
+  RATE_CAPACITY_VAR,
+  RATE_KEY_CAP_VAR,
+  RATE_WINDOW_SEC_VAR,
 } from "@/lib/apiAuth";
 import { POST as generatePOST } from "@/app/api/imaging/generate/route";
 import { POST as editPOST } from "@/app/api/imaging/edit/route";
@@ -110,6 +115,156 @@ test("rate limit: guardRequest answers 429 past capacity (before it even checks 
   console.log(`[auth] flood statuses = ${statuses.join(",")}`);
   expect(statuses.filter((s) => s === 429).length).toBeGreaterThanOrEqual(1);
   delete process.env.IMAGING_RATE_CAPACITY;
+});
+
+// ── The limiter watches itself, and bounds itself (added 2026-08-24) ────────
+//
+// Before this, `rateLimit` returned a verdict and kept nothing: no admitted or
+// refused series, no near-limit signal, and a `buckets` Map that grew one entry
+// per client IP forever with no cap and no staleness rule. A rate limiter whose
+// own memory is the unbounded resource is defending the wrong thing.
+
+test("limiter counters: admissions and refusals are both counted", () => {
+  process.env[RATE_CAPACITY_VAR] = "5";
+  process.env[RATE_WINDOW_SEC_VAR] = "60";
+  const now = 2_000_000;
+  for (let i = 0; i < 8; i++) rateLimit("10.1.0.1", now);
+
+  const s = rateStats();
+  console.log(`[auth] admitted=${s.counters.admitted} refused=${s.counters.refused} keys=${s.keys}`);
+  expect(s.counters.admitted).toBe(5);
+  expect(s.counters.refused).toBe(3);
+  // The configured bounds travel WITH the counts, so a reader cannot disagree
+  // with the limiter about what the limit was.
+  expect(s.capacity).toBe(5);
+  expect(s.windowSec).toBe(60);
+  expect(s.keys).toBe(1);
+  delete process.env[RATE_CAPACITY_VAR];
+  delete process.env[RATE_WINDOW_SEC_VAR];
+});
+
+test("limiter counters: pressure is announced ONCE per approach, before refusal", () => {
+  process.env[RATE_CAPACITY_VAR] = "10";
+  process.env[RATE_WINDOW_SEC_VAR] = "60";
+  const now = 2_000_000;
+  // 10 tokens; the near-limit share is 20%, so the warning arrives when fewer
+  // than 2 remain — i.e. on the 9th call — and NOT again on the 10th.
+  for (let i = 0; i < 10; i++) rateLimit("10.1.0.2", now);
+  const after = rateStats();
+  console.log(`[auth] nearLimit=${after.counters.nearLimit} refused=${after.counters.refused}`);
+  expect(after.counters.nearLimit).toBe(1);
+  // The point of the warning is that it precedes refusal, not accompanies it.
+  expect(after.counters.refused).toBe(0);
+
+  // A full window later the bucket has refilled, and the NEXT descent warns
+  // again — the flag is per approach, not once per process.
+  for (let i = 0; i < 10; i++) rateLimit("10.1.0.2", now + 60_000);
+  expect(rateStats().counters.nearLimit).toBe(2);
+  delete process.env[RATE_CAPACITY_VAR];
+  delete process.env[RATE_WINDOW_SEC_VAR];
+});
+
+test("reaper: a FULL, idle bucket is dropped — and dropping it costs no enforcement", () => {
+  process.env[RATE_CAPACITY_VAR] = "5";
+  process.env[RATE_WINDOW_SEC_VAR] = "60";
+  const t0 = 3_000_000;
+  rateLimit("10.2.0.1", t0); // 4 tokens left — NOT full
+  rateLimit("10.2.0.2", t0);
+  expect(rateStats().keys).toBe(2);
+
+  // Two idle windows later both have refilled to capacity, so both are
+  // information-free: recreating either produces exactly the state dropped.
+  __reapNow(t0 + 121_000);
+  const s = rateStats();
+  console.log(`[auth] reaped -> keys=${s.keys} evictedIdle=${s.counters.evictedIdle}`);
+  expect(s.keys).toBe(0);
+  expect(s.counters.evictedIdle).toBe(2);
+  expect(s.counters.evictedPressure).toBe(0);
+  expect(s.counters.lastEvictionAt).toBe(t0 + 121_000);
+
+  // The proof that it cost nothing: the recreated bucket admits exactly what a
+  // surviving one would have.
+  let allowed = 0;
+  for (let i = 0; i < 8; i++) if (rateLimit("10.2.0.1", t0 + 121_000).allowed) allowed++;
+  expect(allowed).toBe(5);
+  delete process.env[RATE_CAPACITY_VAR];
+  delete process.env[RATE_WINDOW_SEC_VAR];
+});
+
+test("reaper: a bucket still holding someone survives — the hold is not laundered", () => {
+  // The failure this forbids: a caller who has been refused waits a moment, the
+  // reaper drops their bucket, and their allowance comes back for free. The idle
+  // pass drops a bucket only when it is BOTH full at `now` AND untouched for two
+  // windows, and this pins the first half of that conjunction.
+  //
+  // Note the second half cannot be pinned separately, and the reason is
+  // arithmetic rather than an oversight: the bucket refills at capacity/window,
+  // so after two idle windows EVERY bucket is full by construction. Two windows
+  // of silence is exactly when the hold has genuinely expired — which is why
+  // "full and idle" is the right predicate and not a coincidence of two.
+  process.env[RATE_CAPACITY_VAR] = "3";
+  process.env[RATE_WINDOW_SEC_VAR] = "60";
+  const t0 = 4_000_000;
+  for (let i = 0; i < 4; i++) rateLimit("10.3.0.1", t0); // drained: 3 admitted, 1 refused
+  expect(rateStats().counters.refused).toBe(1);
+
+  // Half a window later it has refilled to 1.5 of 3 — not full, so not
+  // information-free, so it stays and keeps holding what it holds.
+  __reapNow(t0 + 30_000);
+  console.log(`[auth] partially-refilled bucket after reap -> keys=${rateStats().keys}`);
+  expect(rateStats().keys).toBe(1);
+  expect(rateStats().counters.evictedIdle).toBe(0);
+
+  // And the hold is real: only the 1 refilled token is available, not 3.
+  let allowed = 0;
+  for (let i = 0; i < 3; i++) if (rateLimit("10.3.0.1", t0 + 30_000).allowed) allowed++;
+  expect(allowed).toBe(1);
+  delete process.env[RATE_CAPACITY_VAR];
+  delete process.env[RATE_WINDOW_SEC_VAR];
+});
+
+test("reaper: the key population is BOUNDED by the cap, not by the caller", () => {
+  // The unbounded-growth defect, driven: `x-forwarded-for` is attacker-controlled,
+  // so a spray of forged values used to grow the Map without limit for the life
+  // of the process.
+  process.env[RATE_KEY_CAP_VAR] = "50";
+  process.env[RATE_CAPACITY_VAR] = "1000000"; // every bucket stays non-full
+  process.env[RATE_WINDOW_SEC_VAR] = "100000000";
+  const t0 = 5_000_000;
+  for (let i = 0; i < 500; i++) rateLimit(`10.4.${Math.floor(i / 256)}.${i % 256}`, t0);
+
+  const s = rateStats();
+  console.log(
+    `[auth] sprayed 500 keys, cap=50 -> keys=${s.keys} peak=${s.counters.peakKeys} ` +
+      `evictedPressure=${s.counters.evictedPressure}`,
+  );
+  expect(s.keys).toBeLessThanOrEqual(50);
+  // The pressure pass is counted APART from the idle pass, because unlike the
+  // idle pass it can cost enforcement and must never be read as free.
+  expect(s.counters.evictedPressure).toBeGreaterThan(0);
+  expect(s.counters.evictedIdle).toBe(0);
+  expect(s.counters.peakKeys).toBeLessThanOrEqual(50);
+  delete process.env[RATE_KEY_CAP_VAR];
+  delete process.env[RATE_CAPACITY_VAR];
+  delete process.env[RATE_WINDOW_SEC_VAR];
+});
+
+test("limiter counters: the meter reads, it does not decide", () => {
+  // The regression a counter beside a gate always risks: becoming a condition
+  // inside it. A limiter with a long refusal history admits exactly what a fresh
+  // one admits.
+  process.env[RATE_CAPACITY_VAR] = "2";
+  process.env[RATE_WINDOW_SEC_VAR] = "60";
+  const t0 = 6_000_000;
+  for (let i = 0; i < 10; i++) rateLimit("10.5.0.1", t0);
+  expect(rateStats().counters.refused).toBe(8);
+
+  // A different key, same process, same instant: unaffected by the history above.
+  let allowed = 0;
+  for (let i = 0; i < 5; i++) if (rateLimit("10.5.0.2", t0).allowed) allowed++;
+  expect(allowed).toBe(2);
+  delete process.env[RATE_CAPACITY_VAR];
+  delete process.env[RATE_WINDOW_SEC_VAR];
 });
 
 // ── The real routes: 401 without auth (the fail-before), pass with it ──
