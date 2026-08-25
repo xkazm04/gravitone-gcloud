@@ -209,6 +209,30 @@ async function run<T extends { provenance: Provenance }>(
    *  over: it settles into `provenance.reroutedFrom` when a later vendor
    *  served, and into the settle log either way. */
   const trail: RerouteStep[] = [];
+
+  /**
+   * The figure to book when the call itself reported none.
+   *
+   * `estimatePendingUsd` is the dearest declared PER-IMAGE rate — `pricing.ts`'s
+   * `estimatePerImage` builds it by filtering to `bills: "per-image"` rows. It
+   * can therefore only stand in for a capability the vendor bills per image.
+   *
+   * `recognize` is billed per TOKEN by both vendors that serve it, and all four
+   * recognize rows in pricing.ts are deliberately unpriced for exactly that
+   * reason. Substituting the image rate there is not a conservative guess, it is
+   * a category error with a price tag: at $0.045 a call, 111 recognitions
+   * exhaust the default $5 window and every generation after them is refused for
+   * money that was never spent. The /library proof sheet recognises every plate
+   * it shows, so that is an afternoon's work, not a pathological loop.
+   *
+   * `undefined` is the honest answer and budget.ts already knows what to do with
+   * it: book nothing, and count it in `counters.unpriced` so the window total
+   * reads as the lower bound it is. The pre-call GATE is deliberately left
+   * erring high (see assertWithinBudget below) — a guard may guess, a ledger
+   * may not.
+   */
+  const standInUsd = (): number | undefined =>
+    cap === "recognize" ? undefined : estimatePendingUsd(pendingImages);
   try {
     // SPEND CEILING (lib/imaging/budget.ts). Priced with the pre-call estimate
     // and refused BEFORE any vendor is touched — once per request, not per
@@ -285,12 +309,18 @@ async function run<T extends { provenance: Provenance }>(
         // carried (vendor-reported or estimated); fall back to the pre-call
         // estimate so an unreported cost still counts toward the next ceiling.
         recordSpend({
-          usd: served.provenance.costUsd ?? estimatePendingUsd(pendingImages),
+          usd: served.provenance.costUsd ?? standInUsd(),
           cap,
           provider: served.provenance.provider,
           model: served.provenance.model,
           outcome: "served",
-          basis: served.provenance.costUsd !== undefined ? "vendor" : "estimate",
+          // The call's OWN basis, not a re-derivation from "did a number
+          // arrive". Every Google generate arrives carrying a figure that
+          // pricing.ts labelled `estimated` — our arithmetic over a declared
+          // rate, not a receipt — and booking it as "vendor" made a window
+          // built entirely of estimates read as an invoice. Telling those two
+          // apart is the whole reason SpendBasis exists.
+          basis: served.provenance.costBasis === "vendor-reported" ? "vendor" : "estimate",
         });
         logCall({
           cap,
@@ -325,12 +355,14 @@ async function run<T extends { provenance: Provenance }>(
         // that does not reach this catch at all.
         if (billedOnFailure(err)) {
           recordSpend({
-            usd: estimatePendingUsd(pendingImages),
+            usd: standInUsd(),
             cap,
             provider: id,
             outcome: "failed",
             // Always an estimate: a call that failed reported no figure of its
-            // own, so this is our dearest declared rate standing in for one.
+            // own, so this is our dearest declared rate standing in for one —
+            // and `undefined` where that rate is the wrong UNIT, which books
+            // nothing rather than inventing a number (see standInUsd).
             basis: "estimate",
           });
         }
