@@ -77,6 +77,10 @@ export default function FramesStep({ projectId }: { projectId: string }) {
                 key={v.id}
                 onClick={() => setView(v.id)}
                 title={v.sub}
+                // Which view is current is drawn in cyan and nowhere else. A
+                // switcher whose state lives only in a colour is a switcher an
+                // assistive-tech user cannot read.
+                aria-pressed={view === v.id}
                 className={`font-jetbrains rounded-lg px-3 py-1 text-[11px] tracking-[0.1em] uppercase transition ${
                   view === v.id ? "bg-cyan-400/15 text-cyan-100" : "text-white/40 hover:text-white/70"
                 }`}

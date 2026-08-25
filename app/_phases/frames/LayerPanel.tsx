@@ -158,7 +158,14 @@ function Row({
         selected ? "bg-cyan-400/12" : "hover:bg-white/5"
       } ${hidden ? "opacity-45" : ""}`}
     >
-      <button onClick={onSelect} className="flex min-w-0 flex-1 items-center gap-1.5 py-0.5 text-left">
+      {/* Selected is a background tint and a text colour, and nothing else.
+          `aria-pressed` is what makes the same fact available to a reader who
+          gets no colour. */}
+      <button
+        onClick={onSelect}
+        aria-pressed={selected}
+        className="flex min-w-0 flex-1 items-center gap-1.5 py-0.5 text-left"
+      >
         <span className="font-jetbrains w-11 shrink-0 text-[9px] text-white/35">{kind}</span>
         <span className={`font-hanken truncate text-[12px] ${selected ? "text-cyan-100" : "text-white/75"}`}>
           {name}

@@ -247,7 +247,10 @@ function Row({
   return (
     <div className={`border-b border-white/6 last:border-0 ${open ? "bg-white/[0.02]" : ""}`}>
       <div className="grid grid-cols-[52px_1fr_206px_120px_86px] items-center gap-2 px-3 py-2">
-        <button onClick={onToggle} className="flex items-center gap-1 text-left">
+        {/* Both halves of the row toggle the same panel, so both carry the
+            state. Without it the chevron is the only thing that says whether
+            this row is open, and a chevron is a picture. */}
+        <button onClick={onToggle} aria-expanded={open} className="flex items-center gap-1 text-left">
           {open ? (
             <ChevronDown className="h-3 w-3 shrink-0 text-white/40" aria-hidden />
           ) : (
@@ -256,7 +259,7 @@ function Row({
           <span className="font-jetbrains text-[11px] text-white/55">{frame.at}</span>
         </button>
 
-        <button onClick={onToggle} className="flex min-w-0 items-center gap-2 text-left">
+        <button onClick={onToggle} aria-expanded={open} className="flex min-w-0 items-center gap-2 text-left">
           <span className="font-jetbrains w-5 shrink-0 text-[10px] text-white/25">{String(index + 1).padStart(2, "0")}</span>
           <span className="font-hanken truncate text-[13px] text-white/85">{frame.title}</span>
           <KindChip kind={frame.kind} />
@@ -348,6 +351,9 @@ function Row({
                       <select
                         value={t.factId ?? ""}
                         onChange={(e) => onBind(t.id, e.target.value || undefined)}
+                        // The control's meaning comes from the row it sits
+                        // under; on its own it announced as an unnamed combo box.
+                        aria-label={`Notebook fact cited by the figure "${t.value}"`}
                         className={`font-jetbrains ml-[3.1rem] w-[calc(100%-3.1rem)] rounded border bg-slate-950 px-1.5 py-1 text-[10px] ${
                           t.factId ? "border-white/10 text-white/60" : "border-amber-300/40 text-amber-200"
                         }`}
