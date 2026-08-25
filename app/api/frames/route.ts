@@ -19,6 +19,7 @@ import path from "node:path";
 
 import { CliError, runClaude } from "@/lib/claudeCli";
 import { guardRequest } from "@/lib/apiAuth";
+import { compileFormatBrief } from "@/lib/formatBrief";
 
 export const runtime = "nodejs";
 /** Sixteen art-direction decisions over a whole script is minutes, not seconds. */
@@ -37,7 +38,21 @@ export async function POST(req: Request) {
   const denied = guardRequest(req);
   if (denied) return denied;
 
-  let body: { beats?: unknown; facts?: unknown; style?: unknown; schema?: unknown; title?: unknown };
+  // `template` and `targetS` are the project record's own two format fields, and
+  // they are `unknown` here like everything else that arrives as JSON: the seam
+  // that decides whether they can be trusted is lib/formatBrief.ts, which refuses
+  // to invent either. A run that omits them is not an error — it is a run whose
+  // format block says it was not told, which is the honest shape for a caller
+  // (the direction probe, an older client) that has no project record to read.
+  let body: {
+    beats?: unknown;
+    facts?: unknown;
+    style?: unknown;
+    schema?: unknown;
+    title?: unknown;
+    template?: unknown;
+    targetS?: unknown;
+  };
   try {
     body = await req.json();
   } catch {
@@ -61,6 +76,12 @@ export async function POST(req: Request) {
     "It must satisfy this schema:",
     "",
     JSON.stringify(body.schema ?? {}, null, 2),
+    "",
+    // FIRST of the run's four blocks, ahead of the script. What kind of piece
+    // this is changes how every beat after it should be read, and a brief that
+    // arrives after the material it governs is a brief the model has already
+    // started without.
+    compileFormatBrief(body.template, body.targetS),
     "",
     `## THE SCRIPT — ${String(body.title ?? "untitled")}`,
     "Beats in order. `at` is the timestamp you must echo as `beatAt`.",

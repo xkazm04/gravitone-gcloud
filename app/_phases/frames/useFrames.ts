@@ -354,6 +354,24 @@ export function useFrames(projectId: string) {
           title: render.title,
           schema: SCENE_SCHEMA,
           style: block,
+          // THE FORMAT — the second thing this hook reads the project record for.
+          // Until this landed, the direction pass knew the style but not the kind
+          // of piece or its length, so a thirty-second clip and a six-minute
+          // argument were art-directed against an identical brief. Sent raw and
+          // resolved server-side by lib/formatBrief.ts; both are omitted while the
+          // record is still loading, and the prompt then says it was not told
+          // rather than guessing.
+          //
+          // A SEAM THIS DOES NOT CLOSE: the beats come from `render`, a fixture,
+          // and `ScriptRender` declares a `template` of its own (a loose `string`
+          // — app/_phases/script/types.ts:53) which need not agree with the
+          // project's. RENDERS[0] says "mid-educational-video" for every project
+          // whatever its record says. The record is the right authority — it is
+          // what the director chose — but the disagreement is real today, so the
+          // prompt's `## The format` §2 tells the model to direct the beats it has
+          // and say so, rather than editing them toward a number.
+          template: project?.template,
+          targetS: project?.targetS,
           facts: FACTS.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
           beats: frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device })),
         }),
@@ -418,7 +436,7 @@ export function useFrames(projectId: string) {
     } finally {
       setDirecting(false);
     }
-  }, [frames, block, render.title]);
+  }, [frames, block, render.title, project?.template, project?.targetS]);
 
   /** What the plates cost. Kept apart from the direction pass rather than
    *  merged: one is many small charges the user makes one at a time, the other
