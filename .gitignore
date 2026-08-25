@@ -95,6 +95,7 @@ pipeline/runs/*/captures/
 /vlm-probe-out/
 /pipeline/vlm-probe/media/
 /pipeline/vlm-probe/replicas/
+/pipeline/vlm-probe/gallery/
 /pipeline/vlm-probe/.ingest/
 __pycache__/
 *.pyc

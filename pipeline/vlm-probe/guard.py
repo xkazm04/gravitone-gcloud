@@ -104,6 +104,34 @@ def free_comfy():
 
 COMFY_DIR = r"C:\Users\kazda\ComfyUI"
 
+# Host RAM, not VRAM, is what actually takes this machine down. Measured
+# 2026-08-25 mid-run: the card sat at 69% used while system RAM went to
+# **0.0 GB free of 63** -- a single ComfyUI holding Flux 2 reached a 37.5 GB
+# working set. Generation keeps fp8 weights and the text encoder in host
+# memory while the card holds only the working set, so VRAM headroom says
+# nothing about whether the next load is safe. Exhaustion then presents as a
+# hang, never as an error, which is why it has to be refused in advance.
+RAM_FLOOR_GB = 12.0
+
+
+def comfy_process_ids():
+    """Live ComfyUI process IDs, by command line rather than by port.
+
+    NOTE: a running ComfyUI shows up as TWO pids -- a launcher parent and the
+    server child that owns the port. That is one instance, not two. Killing
+    the pid that does not hold 8188 takes the server down with it (confirmed
+    twice on 2026-08-25). Treat a non-empty list as "an instance exists",
+    never as "there is a duplicate to clean up".
+    """
+    r = subprocess.run(
+        ["powershell", "-NoProfile", "-Command",
+         "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | "
+         "Where-Object { $_.CommandLine -match 'main\\.py' -and "
+         "$_.CommandLine -match 'ComfyUI|disable-pinned-memory' } | "
+         "ForEach-Object { $_.ProcessId }"],
+        capture_output=True, text=True)
+    return [int(x) for x in r.stdout.split() if x.strip().isdigit()]
+
 
 def start_comfy(wait=180):
     """Bring ComfyUI up if it died, with the flags that survive memory pressure.
@@ -120,6 +148,18 @@ def start_comfy(wait=180):
     """
     if comfy_up():
         return True
+    # An HTTP probe is NOT proof that no server exists: an instance still
+    # loading weights does not answer yet, and spawning a second one on top of
+    # it is the worst possible move on a memory-tight box. Wait for the
+    # existing process instead of racing it.
+    if comfy_process_ids():
+        print("  guard: a ComfyUI process exists but is not answering yet; waiting")
+        deadline = time.time() + wait
+        while time.time() < deadline:
+            time.sleep(5)
+            if comfy_up():
+                return True
+        return False
     exe = f"{COMFY_DIR}\\venv\\Scripts\\python.exe"
     subprocess.run(
         ["powershell", "-NoProfile", "-Command",
@@ -133,6 +173,72 @@ def start_comfy(wait=180):
         if comfy_up():
             return True
     return False
+
+
+def commit():
+    """(used_gb, limit_gb) of the system commit charge.
+
+    The number that actually predicts failure on this box. Free physical RAM
+    can look survivable while commit sits against its limit, and it is commit
+    exhaustion -- not a full working set -- that produces the allocation
+    failures the generation stack reports as `HostBuffer.read_file_slice
+    failed`. Measured 2026-08-25 mid-run: 167.5 GB used of a 176.8 GB limit,
+    95%, with generations still nominally succeeding but crawling.
+    """
+    r = subprocess.run(
+        ["powershell", "-NoProfile", "-Command",
+         "$o=Get-CimInstance Win32_OperatingSystem; "
+         "'{0} {1}' -f ($o.TotalVirtualMemorySize-$o.FreeVirtualMemory),"
+         "$o.TotalVirtualMemorySize"],
+        capture_output=True, text=True)
+    used_kb, limit_kb = (float(x) for x in r.stdout.strip().split())
+    return used_kb / 1048576, limit_kb / 1048576
+
+
+def stop_comfy(wait=30):
+    """Kill ComfyUI outright and wait for the memory to come back.
+
+    `/free` unloads models but does not return the process's accumulated
+    footprint; across a long batch that footprint only grows. A restart is the
+    only reliable way to give it back.
+    """
+    pids = comfy_process_ids()
+    if not pids:
+        return True
+    subprocess.run(
+        ["powershell", "-NoProfile", "-Command",
+         "Stop-Process -Id " + ",".join(str(p) for p in pids) +
+         " -Force -ErrorAction SilentlyContinue"],
+        capture_output=True, text=True)
+    deadline = time.time() + wait
+    while time.time() < deadline:
+        time.sleep(2)
+        if not comfy_process_ids():
+            return True
+    return False
+
+
+def recycle_comfy(reason=""):
+    """Hard-restart ComfyUI to reclaim what a long batch has accumulated."""
+    used, limit = commit()
+    rf, _ = ram()
+    print(f"  guard: recycling ComfyUI{' (' + reason + ')' if reason else ''} "
+          f"-- RAM {rf:.1f} free, commit {used:.0f}/{limit:.0f} GB")
+    stop_comfy()
+    time.sleep(3)
+    ok = start_comfy()
+    used, limit = commit()
+    rf, _ = ram()
+    print(f"  guard: back up -- RAM {rf:.1f} free, commit {used:.0f}/{limit:.0f} GB")
+    return ok
+
+
+def headroom_ok(ram_floor=None, commit_frac=0.90):
+    """Is it safe to keep going? False means recycle before the next load."""
+    ram_floor = RAM_FLOOR_GB if ram_floor is None else ram_floor
+    rf, _ = ram()
+    used, limit = commit()
+    return rf >= ram_floor and (used / limit) < commit_frac
 
 
 def status():

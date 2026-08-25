@@ -191,7 +191,8 @@ def main():
             import guard
             for m in models:
                 if not m.startswith(("gemini", "cloud/")):
-                    guard.require_model(m, vram_gb=args.require_vram, free=["comfy"])
+                    guard.require_model(m, vram_gb=args.require_vram,
+                                        ram_gb=guard.RAM_FLOOR_GB, free=["comfy"])
                     break
         except RuntimeError as e:
             sys.exit(f"GUARD: {e}")

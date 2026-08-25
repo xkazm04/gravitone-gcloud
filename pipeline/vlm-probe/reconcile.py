@@ -1,7 +1,7 @@
 """Adjudicate a local model's annotations with a thinking model.
 
     python reconcile.py --run arcane-prompt-channel --limit 12
-    python reconcile.py --run arcane-prompt-channel --annotator qwen3.8:27b --effort high
+    python reconcile.py --run arcane-prompt-channel --annotator qwen3.8:27b
 
 The bake-off left two fields unresolved. `lighting_key` tracked brightness
 rather than shadow depth; `lens_impression` returned one constant, then
@@ -22,29 +22,32 @@ The judge is also asked which fields this frame simply cannot answer. A field
 that keeps coming back unanswerable is not a model failure — it is a schema
 defect, and it should be cut rather than defended.
 
-Costs real money (Fable 5 is the premium tier), so `--limit` is honoured and
-the estimated spend is printed before the run.
+Runs on the Claude Code CLI subscription rather than the metered API, so a
+whole corpus can be adjudicated without a per-frame bill. Interrupted runs
+resume: frames already in reconciled.jsonl are skipped.
 """
 
 import argparse
-import base64
 import json
+import subprocess
 import sys
 import time
 from pathlib import Path
 
-import anthropic
-
 sys.path.insert(0, str(Path(__file__).parent))
-from schema import ENUM_FIELDS, FIELDS  # noqa: E402
+from schema import ENUM_FIELDS, FIELDS, PROMPT, json_schema  # noqa: E402
 
 HERE = Path(__file__).parent
 FRAMES_DIR = HERE / "frames"
 OUT_ROOT = HERE.parent.parent / "vlm-probe-out"
-ENV_FILE = Path(r"C:\Users\kazda\kiro\personas\.env")
 
-MODEL = "claude-fable-5"
-MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp": "image/webp"}
+# Runs through the Claude Code CLI rather than the Anthropic API: the work is
+# covered by the existing subscription, so adjudicating a whole corpus costs
+# nothing per frame. The CLI reads the image with its own Read tool -- verified
+# genuinely viewing it, not inferring from the filename -- and `--json-schema`
+# gives the same structured-output guarantee the API's response schema does.
+MODEL = "fable"
+CLI_TIMEOUT = 300
 
 JUDGE_PROMPT = """You are auditing a machine-generated cinematography annotation \
 against the frame it describes. Your corrections become ground truth for a \
@@ -72,11 +75,69 @@ completist — a field that is merely hard is not unanswerable.
 Describe craft only. Do not name the title, characters or franchise."""
 
 
-def load_key():
-    for line in ENV_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
-        if line.strip().startswith("ANTHROPIC_API_KEY="):
-            return line.split("=", 1)[1].strip().strip('"').strip("'")
-    return None
+def judge(frame_rel, annotation, schema, model=MODEL):
+    """One adjudication through the Claude Code CLI.
+
+    The prompt names a path rather than carrying pixels: the CLI's own Read
+    tool opens the image, so nothing is base64'd through an argument list.
+    Only Read is allowed -- the judge has no business editing anything, and a
+    narrow tool list also means no permission prompt can stall a batch.
+    """
+    prompt = (
+        f"{JUDGE_PROMPT}\n\n"
+        f"Read the image file {frame_rel} and look at it carefully.\n\n"
+        f"An automated annotator produced this for that frame:\n\n"
+        f"{json.dumps(annotation, indent=2)}\n\n"
+        f"Audit it field by field and return your verdict."
+    )
+    r = subprocess.run(
+        ["claude", "-p", prompt, "--model", model,
+         "--json-schema", json.dumps(schema),
+         "--output-format", "json", "--allowedTools", "Read"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=CLI_TIMEOUT, cwd=str(HERE))
+    if r.returncode != 0:
+        raise RuntimeError(f"cli exit {r.returncode}: {(r.stderr or r.stdout)[:200]}")
+    env = json.loads(r.stdout)
+    if env.get("is_error"):
+        raise RuntimeError(f"cli reported error: {str(env.get('result'))[:200]}")
+    # `structured_output` is the already-parsed object when the schema holds;
+    # `result` is the same JSON as text. Prefer the former, fall back cleanly.
+    out = env.get("structured_output")
+    if not isinstance(out, dict):
+        out = json.loads(env["result"])
+    return out, env.get("usage", {}), env.get("total_cost_usd")
+
+
+def judge_blind(frame_rel, model=MODEL):
+    """Annotate from the frame ALONE, never shown the local model's answer.
+
+    The anchored pass asks "is this right?", and a judge shown a candidate
+    answer tends to ratify it: measured on this corpus, it kept `indeterminate`
+    33/36 while listing that field unanswerable only 4/36, and in 9 frames kept
+    a value it declared unanswerable in the same breath. Those numbers are
+    agreement with an anchor, not truth.
+
+    A blind annotation has nothing to ratify. Comparing it to the local model's
+    answer afterwards is the uncontaminated measurement.
+    """
+    prompt = (f"{PROMPT}\n\nRead the image file {frame_rel} and look at it "
+              f"carefully, then annotate it.")
+    r = subprocess.run(
+        ["claude", "-p", prompt, "--model", model,
+         "--json-schema", json.dumps(json_schema()),
+         "--output-format", "json", "--allowedTools", "Read"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=CLI_TIMEOUT, cwd=str(HERE))
+    if r.returncode != 0:
+        raise RuntimeError(f"cli exit {r.returncode}: {(r.stderr or r.stdout)[:200]}")
+    env = json.loads(r.stdout)
+    if env.get("is_error"):
+        raise RuntimeError(f"cli error: {str(env.get('result'))[:200]}")
+    out = env.get("structured_output")
+    if not isinstance(out, dict):
+        out = json.loads(env["result"])
+    return out, env.get("usage", {}), env.get("total_cost_usd")
 
 
 def judge_schema():
@@ -121,15 +182,15 @@ def main():
     ap.add_argument("--run", required=True)
     ap.add_argument("--annotator", default="qwen3.8:27b")
     ap.add_argument("--limit", type=int, default=0)
-    ap.add_argument("--effort", default="high", choices=["low", "medium", "high", "xhigh", "max"])
+    ap.add_argument("--blind", action="store_true",
+                    help="annotate from the frame alone, never shown the local answer. "
+                         "The anchored pass cannot validate -- measured 2026-08-25, the "
+                         "judge kept a value it simultaneously called unanswerable in 9 "
+                         "of 36 frames, and accepted `indeterminate` 33/36 while believing "
+                         "the field answerable. Only a blind pass is a truth set.")
     ap.add_argument("--prefix", default="arcane-fights",
                     help="only adjudicate frames whose name starts with this")
     args = ap.parse_args()
-
-    key = load_key()
-    if not key:
-        sys.exit("ANTHROPIC_API_KEY not found in personas/.env")
-    client = anthropic.Anthropic(api_key=key)
 
     src = OUT_ROOT / args.run / "results.jsonl"
     rows = [json.loads(l) for l in src.read_text(encoding="utf-8").splitlines() if l.strip()]
@@ -141,66 +202,58 @@ def main():
     if not rows:
         sys.exit(f"no annotations to adjudicate in {src}")
 
-    out_path = OUT_ROOT / args.run / "reconciled.jsonl"
-    print(f"adjudicating {len(rows)} frame(s) with {MODEL} (effort={args.effort})")
+    out_path = OUT_ROOT / args.run / ("reconciled-blind.jsonl" if args.blind else "reconciled.jsonl")
+    print(f"adjudicating {len(rows)} frame(s) with claude-{MODEL} via the Claude Code CLI")
     print(f"  -> {out_path}\n")
 
-    tot_in = tot_out = 0
+    done = set()
+    if out_path.exists():
+        # Resume rather than re-adjudicate: a 36-frame batch outlives most
+        # command timeouts, and re-judging a frame is pure waste.
+        for line in out_path.read_text(encoding="utf-8").splitlines():
+            if line.strip():
+                done.add(json.loads(line)["frame"])
+        if done:
+            print(f"  ({len(done)} already adjudicated, skipping)")
+
+    schema = judge_schema()
+    notional = 0.0
     for n, r in enumerate(rows, 1):
-        frame = FRAMES_DIR / r["frame"]
-        b64 = base64.b64encode(frame.read_bytes()).decode("ascii")
+        if r["frame"] in done:
+            continue
         annotation = {f: r["parsed"].get(f) for f in ENUM_FIELDS}
         t0 = time.time()
-        # Beta surface: `betas` + `fallbacks` live there. Fable 5 rejects
-        # `temperature` and `budget_tokens` outright, so neither appears --
-        # thinking is always on and depth is set through output_config.effort.
-        # `fallbacks: "default"` reroutes by refusal category rather than
-        # making us maintain a model list.
-        resp = client.beta.messages.create(
-            model=MODEL,
-            max_tokens=16000,
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
-            system=JUDGE_PROMPT,
-            output_config={
-                "effort": args.effort,
-                "format": {"type": "json_schema", "schema": judge_schema()},
-            },
-            messages=[{"role": "user", "content": [
-                {"type": "image", "source": {
-                    "type": "base64",
-                    "media_type": MIME[frame.suffix.lower()],
-                    "data": b64}},
-                {"type": "text", "text":
-                    "The annotator produced this for the frame above:\n\n"
-                    + json.dumps(annotation, indent=2)
-                    + "\n\nAudit it field by field."},
-            ]}],
-        )
-
-        if resp.stop_reason == "refusal":
-            print(f"  {r['frame']:26s} REFUSED ({getattr(resp, 'stop_details', None)})")
+        try:
+            if args.blind:
+                verdict, usage, cost = judge_blind(f"frames/{r['frame']}")
+            else:
+                verdict, usage, cost = judge(f"frames/{r['frame']}", annotation, schema)
+        except Exception as e:
+            print(f"  [{n:2d}/{len(rows)}] {r['frame']:24s} FAILED: {str(e)[:90]}")
             continue
-
-        text = next(b.text for b in resp.content if b.type == "text")
-        verdict = json.loads(text)
-        tot_in += resp.usage.input_tokens
-        tot_out += resp.usage.output_tokens
+        notional += cost or 0.0
 
         rec = {
             "frame": r["frame"], "annotator": args.annotator, "judge": MODEL,
-            "effort": args.effort, "latency_s": round(time.time() - t0, 1),
+            "latency_s": round(time.time() - t0, 1),
             "annotation": annotation, **verdict,
         }
         with out_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(rec, ensure_ascii=False) + "\n")
 
-        fixed = ", ".join(f"{c['field']}:{c['from']}->{c['to']}" for c in verdict["corrections"][:3])
-        print(f"  [{n:2d}/{len(rows)}] {r['frame']:24s} {len(verdict['corrections'])} corrections"
-              f"{'  ' + fixed if fixed else ''}")
+        if args.blind:
+            diff = [f for f in ENUM_FIELDS
+                    if f in annotation and verdict.get(f) != annotation.get(f)]
+            print(f"  [{n:2d}/{len(rows)}] {r['frame']:24s} differs on {len(diff):2d}/{len(annotation)}"
+                  f"  {', '.join(diff[:4])}")
+        else:
+            fixed = ", ".join(f"{c['field']}:{c['from']}->{c['to']}" for c in verdict["corrections"][:3])
+            print(f"  [{n:2d}/{len(rows)}] {r['frame']:24s} {len(verdict['corrections'])} corrections"
+                  f"{'  ' + fixed if fixed else ''}")
 
-    cost = tot_in / 1e6 * 10 + tot_out / 1e6 * 50
-    print(f"\ntokens: {tot_in:,} in / {tot_out:,} out  ~${cost:.2f}")
+    # Reported for scale intuition only -- this runs on the CLI subscription,
+    # so it is not a bill.
+    print(f"\nnotional API-equivalent cost ${notional:.2f} (subscription-billed, not charged)")
     print(f"written -> {out_path}")
 
 

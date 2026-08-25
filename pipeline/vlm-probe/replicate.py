@@ -202,6 +202,10 @@ def main():
     ap.add_argument("--limit", type=int, default=4)
     ap.add_argument("--seed", type=int, default=20260825)
     ap.add_argument("--annotator", default=ANNOTATOR)
+    ap.add_argument("--recycle-every", type=int, default=6,
+                    help="hard-restart ComfyUI after N generations. Its footprint only "
+                         "grows across a batch (28 GB observed), and a preflight cannot "
+                         "bound growth -- only a restart reclaims it.")
     ap.add_argument("--reuse-replicas", action="store_true",
                     help="skip generation and score replicas already on disk")
     args = ap.parse_args()
@@ -238,21 +242,55 @@ def main():
         print(f"  found {len(made)} replica(s)")
     else:
         print("phase 1: generating replicas (ComfyUI holds the card)")
-        guard.require(vram_gb=16, free=["ollama"], verbose=False)
-        if not guard.start_comfy():
+        # Start from a FRESH engine, always. A ComfyUI left up by a previous
+        # run carries its whole accumulated footprint (32.9 GB observed), so a
+        # relaunch would begin already starved and the preflight below would
+        # refuse a run that is perfectly viable once the stale process is
+        # reclaimed. Recycle first, measure second -- the other order just
+        # fails on memory the previous run should have given back.
+        guard.require(ram_gb=0, free=["ollama"], verbose=False)
+        if guard.comfy_process_ids():
+            guard.recycle_comfy("stale engine from a previous run")
+        elif not guard.start_comfy():
             sys.exit("ComfyUI is not running and could not be started")
+
+        try:
+            guard.require(vram_gb=16, ram_gb=guard.RAM_FLOOR_GB, verbose=False)
+        except RuntimeError as e:
+            sys.exit(f"GUARD: {e}")
+        since_recycle = 0
         for n, r in enumerate(rows, 1):
+            replica = REPLICA_DIR / f"replica-{Path(r['frame']).stem}.png"
             prompt = compose_prompt(r["parsed"])
+
+            # Resume: generation is deterministic per seed, and three runs have
+            # now been interrupted by memory pressure. Never pay for a replica
+            # that already exists.
+            if replica.exists():
+                made.append((r, replica, prompt))
+                print(f"  [{n}/{len(rows)}] {r['frame']:24s} -> have it")
+                continue
+
+            # ComfyUI's footprint only grows across a batch -- `/free` unloads
+            # models but does not hand back the process's accumulated memory.
+            # A preflight cannot bound that; only a restart does. Recycle on a
+            # fixed interval, and early whenever headroom is already gone.
+            if since_recycle >= args.recycle_every or not guard.headroom_ok():
+                guard.recycle_comfy("interval" if since_recycle >= args.recycle_every
+                                    else "headroom")
+                since_recycle = 0
+
             try:
                 img = comfy_generate(prompt, args.seed + n)
             except Exception as e:
                 print(f"  [{n}/{len(rows)}] {r['frame']:24s} FAILED: {str(e)[:70]}")
-                if not guard.start_comfy():   # it may have died; one recovery try
+                if not guard.recycle_comfy("after failure"):
                     break
+                since_recycle = 0
                 continue
-            replica = REPLICA_DIR / f"replica-{Path(r['frame']).stem}.png"
             shutil.copy2(img, replica)
             made.append((r, replica, prompt))
+            since_recycle += 1
             print(f"  [{n}/{len(rows)}] {r['frame']:24s} -> {replica.name}")
 
     if not made:
@@ -260,7 +298,8 @@ def main():
 
     # --- phase 2: annotate every replica, annotator resident throughout -----
     print(f"\nphase 2: re-annotating {len(made)} replica(s) (annotator holds the card)")
-    guard.require_model(args.annotator, vram_gb=20, free=["comfy"], verbose=False)
+    guard.require_model(args.annotator, vram_gb=20, ram_gb=guard.RAM_FLOOR_GB,
+                        free=["comfy"], verbose=False)
 
     import base64
     scores = []
