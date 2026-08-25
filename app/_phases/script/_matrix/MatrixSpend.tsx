@@ -58,6 +58,7 @@ export default function MatrixSpend({
         {comparing && (
           <button
             data-testid="sort-change"
+            aria-pressed={sort === "change"}
             onClick={() => setSort((s) => (s === "change" ? "spend" : "change"))}
             className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] tracking-[0.1em] transition ${
               sort === "change"

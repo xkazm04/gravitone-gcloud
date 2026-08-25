@@ -51,6 +51,9 @@ function Pad({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
       <div className="gt-float rounded-2xl border border-amber-400/35 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl">
         <button
           data-testid="pad-toggle"
+          // Collapsed or not was a ▾/▸ glyph, which is decoration in an
+          // accessibility tree, not state.
+          aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
           className="font-jetbrains flex w-full items-center justify-between text-[10px] tracking-[0.16em] text-amber-200/90 uppercase"
         >

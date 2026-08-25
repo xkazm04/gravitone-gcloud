@@ -156,11 +156,17 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
         </p>
       </section>
 
+      {/* `aria-pressed` rather than a tablist: which of the four views you are in
+          was carried by a cyan border and a tinted background and nothing else,
+          so it did not exist for a reader without colour. Toggle-button state is
+          the honest promise here — a `role="tab"` set would also promise arrow-key
+          navigation and a roving tabindex, which these buttons do not implement. */}
       <div className="font-jetbrains mt-4 flex flex-wrap gap-2 text-[12px]">
         {TABS.map((t) => (
           <button
             key={t.key}
             data-testid={`view-${t.key}`}
+            aria-pressed={tab === t.key}
             onClick={() => setTab(t.key)}
             className={`rounded-xl border px-3.5 py-2 text-left transition ${
               tab === t.key

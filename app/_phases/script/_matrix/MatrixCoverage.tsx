@@ -52,6 +52,7 @@ export default function MatrixCoverage({
           zeros is research no script spent a second on.
         </p>
         <button
+          aria-pressed={only}
           onClick={() => setOnly((v) => !v)}
           className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] tracking-[0.1em] transition ${
             only ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/12 text-white/45 hover:text-white/75"

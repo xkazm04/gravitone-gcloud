@@ -82,6 +82,10 @@ export default function VersionBar({
         <button
           key={v.key}
           data-testid={`show-${v.key}`}
+          // Which version the weight tabs are drawing was a border colour and a
+          // tint. The labels are version NAMES, so nothing in the text says which
+          // of the two is live.
+          aria-pressed={showing === v.key}
           onClick={() => setShowing(v.key)}
           className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] transition ${
             showing === v.key
