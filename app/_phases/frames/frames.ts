@@ -26,6 +26,7 @@
 import type { ClipStatus } from "@/app/_studio/projectTypes";
 
 import type { Beat, BeatKind, ScriptRender } from "../script/types";
+import { atSeconds } from "../script/trailer/types";
 
 /* ── Layers ───────────────────────────────────────────────────────────────── */
 
@@ -125,7 +126,11 @@ export interface Frame {
   id: string;
   /** Position in the cut, from the beat. */
   at: string;
-  atS: number;
+  /** Seconds, or NULL when `at` is not a timecode. Null rather than a number
+   *  because there is no honest number for "nobody can place this beat" — see
+   *  `secondsOf`. Every reader must decide what to do about it; `durationOf`
+   *  answers `null` and the ledger draws a dash. */
+  atS: number | null;
   kind: BeatKind;
   /** The beat's own label — the scene title, not something invented here. */
   title: string;
@@ -181,15 +186,49 @@ export function humanMs(ms: number): string {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
 }
 
-export function secondsOf(at: string): number {
-  const [m, s] = at.split(":").map(Number);
-  return (m || 0) * 60 + (s || 0);
+/**
+ * "m:ss" or "h:mm:ss" → seconds, or NULL when the string is not a timecode.
+ *
+ * ONE PARSER, and this is the delegation that makes that true: the beat lane's
+ * `atSeconds()` is it, `shots.ts#beatSeconds` already defers to it, and this
+ * was the third and only disagreeing copy.
+ *
+ * What it used to do is worth recording, because all three failures were
+ * SILENT and all three produced a confident number:
+ *
+ *   `"tbd"`     → `[NaN]`, and `(m || 0) * 60 + (s || 0)` folded it to **0** —
+ *                 the beat took a position at the head of the cut, and
+ *                 `durationOf` then measured its hold from there.
+ *   `"1:02:03"` → destructured to `[1, 2]` and returned **62**, silently
+ *                 discarding the hours field on any cut past an hour.
+ *   `"90"`      → `[90]`, `s` undefined, and returned **5400** — a bare seconds
+ *                 count read as ninety minutes.
+ *
+ * None of them could fail loudly, because every one of them is a number.
+ */
+export function secondsOf(at: string): number | null {
+  return atSeconds(at);
 }
 
-/** How long a frame holds — until the next beat starts. */
-export function durationOf(frames: Frame[], i: number, totalS: number): number {
-  const next = frames[i + 1];
-  return Math.max(1, (next ? next.atS : totalS) - frames[i].atS);
+/** How long a frame holds — until the next beat starts, or null when its own
+ *  position does not parse.
+ *
+ *  The NEXT boundary is the next frame whose position is known, not simply the
+ *  next frame: an unplaceable beat is not a boundary, it is a beat nobody can
+ *  place, and ending this frame at it would be ending it at a time nobody
+ *  knows. A frame with no placeable successor runs to the end of the cut, which
+ *  is the honest read of "nothing is known to follow". */
+export function durationOf(frames: Frame[], i: number, totalS: number): number | null {
+  const startS = frames[i].atS;
+  if (startS === null) return null;
+  let nextS: number | null = null;
+  for (let j = i + 1; j < frames.length; j++) {
+    if (frames[j].atS !== null) {
+      nextS = frames[j].atS;
+      break;
+    }
+  }
+  return Math.max(1, (nextS ?? totalS) - startS);
 }
 
 /* ── Derivation ───────────────────────────────────────────────────────────── */

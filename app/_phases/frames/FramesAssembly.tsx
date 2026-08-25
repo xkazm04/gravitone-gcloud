@@ -183,7 +183,9 @@ function Row({
 }: {
   frame: Frame;
   index: number;
-  holdS: number;
+  /** Null when the beat's position does not parse — an unknown hold, drawn as a
+   *  dash rather than as a number nobody can support. */
+  holdS: number | null;
   open: boolean;
   busy: boolean;
   onToggle: () => void;
@@ -228,7 +230,9 @@ function Row({
 
         <span className={`font-jetbrains text-[11px] ${plate.cls}`}>{plate.word}</span>
 
-        <span className="font-jetbrains text-right text-[11px] text-white/35">{holdS}s</span>
+        <span className="font-jetbrains text-right text-[11px] text-white/35" title={holdS === null ? "this beat's position is not a timecode, so its hold is unknown" : undefined}>
+          {holdS === null ? "—" : `${holdS}s`}
+        </span>
       </div>
 
       {/* What the last direction pass said about THIS beat. It sits on the row
@@ -364,7 +368,7 @@ function Row({
                 className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-violet-300/40"
               />
               <p className="font-jetbrains mt-1 text-[10px] leading-snug text-white/30">
-                holds {holdS}s ·{" "}
+                {holdS === null ? "hold unknown — the beat's position is not a timecode" : `holds ${holdS}s`} ·{" "}
                 {frame.clip?.motion.trim() ? "authored · not rendered" : "no motion authored"} — this app has no
                 video engine, so a clip is written here and rendered nowhere. The render seam is unbuilt.
               </p>
