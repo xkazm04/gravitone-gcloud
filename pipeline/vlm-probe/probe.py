@@ -166,6 +166,8 @@ def main():
     ap.add_argument("--repeat", type=int, default=1,
                     help="runs per (frame, model) -- above 1 measures self-consistency")
     ap.add_argument("--run-id", default=None)
+    ap.add_argument("--require-vram", type=float, default=20.0,
+                    help="GB of free VRAM to demand before loading a local model")
     args = ap.parse_args()
 
     env = load_env()
@@ -180,6 +182,21 @@ def main():
                         if p.is_file() and p.suffix.lower() in MIME)
     if not frames:
         sys.exit(f"no frames found in {FRAMES_DIR} -- drop images there first")
+
+    # One 24 GB card, two engines that do not know about each other. The
+    # annotator needs ~22.3 GB of it, so ComfyUI holding models is the
+    # difference between a 7-second call and a spilled, minutes-long one.
+    if any(m in LOCAL_MODELS or (not m.startswith(("gemini", "cloud/"))) for m in models):
+        try:
+            import guard
+            for m in models:
+                if not m.startswith(("gemini", "cloud/")):
+                    guard.require_model(m, vram_gb=args.require_vram, free=["comfy"])
+                    break
+        except RuntimeError as e:
+            sys.exit(f"GUARD: {e}")
+        except ImportError:
+            pass
 
     run_id = args.run_id or datetime.now(timezone.utc).strftime("%Y-%m-%dT%H%M%SZ")
     out_dir = OUT_ROOT / run_id

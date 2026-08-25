@@ -93,6 +93,9 @@ pipeline/runs/*/captures/
 # the result rows are regenerable evidence. The FINDING gets committed — to the
 # ai-registry, as knowledge — not the rows behind it.
 /vlm-probe-out/
+/pipeline/vlm-probe/media/
+/pipeline/vlm-probe/replicas/
+/pipeline/vlm-probe/.ingest/
 __pycache__/
 *.pyc
 /pipeline/vlm-probe/frames/*
