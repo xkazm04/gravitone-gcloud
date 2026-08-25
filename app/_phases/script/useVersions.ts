@@ -70,12 +70,25 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
    *  turn instead of being dropped on the floor client-side. */
   const inFlight = useRef<{ ac: AbortController; jobId: string } | null>(null);
 
+  /** THE NOTE ORDINAL, AND IT MUST NOT REWIND.
+   *
+   *  Both the id and `Note.at` used to be minted from `notes.length`, which goes
+   *  DOWN when a note is removed. Stack two "more focus" bullets on one track,
+   *  delete the first, stack another: the third is minted `n-<card>-more-focus-1`,
+   *  which the second already holds. `removeNote` filters by id, so one ✕ then
+   *  deletes both, and React draws two list children under one key. A counter
+   *  that only ever climbs cannot do that — and it is seeded past whatever the
+   *  stored notes already used, so a reload cannot collide with them either. */
+  const seq = useRef(0);
+
   useEffect(() => {
     let alive = true;
     setHydrated(false);
     void loadStep<Stored>(projectId, PHASE).then((s) => {
       if (!alive) return;
-      setNotes(s?.notes ?? []);
+      const loaded = s?.notes ?? [];
+      seq.current = loaded.reduce((n, x) => Math.max(n, Number.isFinite(x.at) ? x.at + 1 : 0), 0);
+      setNotes(loaded);
       setAccepted(s?.accepted ?? []);
       setCandidate(null);
       setLostCandidate(s?.staged ?? null);
@@ -132,10 +145,10 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
   const addNote = useCallback(
     (cardId: string, kind: NoteKind, text?: string) => {
       if (running) return false; // rule 2 — stated as a rule, not just a disabled button
-      setNotes((n) => [
-        ...n,
-        { id: `n-${cardId}-${kind}-${n.length}`, cardId, kind, text, at: n.length },
-      ]);
+      // Taken here rather than inside the updater: a state updater is invoked
+      // twice under StrictMode, and a counter incremented in one would skip.
+      const at = seq.current++;
+      setNotes((n) => [...n, { id: `n-${cardId}-${kind}-${at}`, cardId, kind, text, at }]);
       return true;
     },
     [running],
