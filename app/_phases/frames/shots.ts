@@ -65,7 +65,6 @@
 // The seam note at the bottom of this file records why that separation is
 // load-bearing rather than merely cautious.
 
-import { secondsOf } from "./frames";
 
 /* ── What this layer consumes ─────────────────────────────────────────────── */
 
@@ -79,13 +78,29 @@ import { secondsOf } from "./frames";
  * kinds — and `ScriptRender.beats` satisfies the shape structurally today.
  */
 export interface ShotSourceBeat {
+  /**
+   * The beat's stable id. Optional only because the explainer's `Beat` has none;
+   * the beat lane's `ShotLaneBeat` always carries one, and its reason is right:
+   * `at` is NOT unique, and a finding you cannot locate is a rumour.
+   */
+  id?: string;
   at: string;
+  /**
+   * Seconds, ALREADY PARSED by the beat layer, with `null` meaning `at` is not a
+   * timecode. Prefer it over re-parsing: the beat layer's `atSeconds()` "returns
+   * null rather than guessing", and `frames.ts#secondsOf` — which this file used
+   * until the two lanes were reconciled — does the opposite. `"tbd".split(":")`
+   * gives `[NaN]` and `(m || 0) * 60 + (s || 0)` folds that to **0**, silently
+   * placing the beat at the head of the cut and stealing every following beat's
+   * span. `beatSeconds` below refuses the same way the beat layer does.
+   */
+  atS?: number | null;
   /** The beat vocabulary's own term. Read only through `ROLE_HINTS`, never branched on. */
   kind: string;
   label: string;
   text: string;
-  /** The act/movement this beat belongs to, when the beat layer models one. Carried, not interpreted. */
-  movementId?: string;
+  /** The act/movement this beat belongs to, when the beat layer models one. Carried, not interpreted. Named `movement` to match `ShotLaneBeat`. */
+  movement?: string;
   /**
    * The ONE thing this layer needs the beat layer to classify. When it is
    * absent `ROLE_HINTS` is consulted, and when that misses too the beat is
@@ -129,19 +144,20 @@ export const TRAILER_ROLES: readonly TrailerRole[] = ["setup", "rung", "reset", 
  * through to "role undeclared", which is reported, never guessed.
  */
 export const ROLE_HINTS: Readonly<Record<string, TrailerRole>> = {
+  // These eight are `TrailerBeatKind` exactly, as the beat lane declares it —
+  // cold-open · stakes · rung · reset · peak · title · button · cta. The map was
+  // first written against the registry's PART names (introduction, escalation,
+  // climax, breath, world), which is what the golden path calls the spine's
+  // sections; the beat lane named its KINDS differently and this is the one line
+  // per term that reconciles them. Every key here resolves; no key here is dead.
   "cold-open": "setup",
-  "cold open": "setup",
-  introduction: "setup",
-  world: "setup",
-  escalation: "rung",
+  stakes: "setup",
   rung: "rung",
   reset: "reset",
-  breath: "reset",
-  climax: "peak",
   peak: "peak",
   title: "tail",
   button: "tail",
-  tail: "tail",
+  cta: "tail",
 };
 
 /**
@@ -178,7 +194,12 @@ export type SubjectPlacement = "crosshair" | "thirds";
 
 export interface Shot {
   id: string;
-  /** The parent beat's timestamp — the beat layer's identity, the same key `frames.ts` uses. */
+  /**
+   * The parent beat's stable id, when it had one. This is the identity a finding
+   * should be located by; `beatAt` is a position and positions repeat.
+   */
+  beatId?: string;
+  /** The parent beat's timestamp — the key `frames.ts` and `sceneSpec.ts` use. NOT unique. */
   beatAt: string;
   /** The beat's own label, carried so a surface never has to re-look-up the beat. */
   beatLabel: string;
@@ -186,7 +207,7 @@ export interface Shot {
   ordinal: number;
   /** How many shots that beat carries in total. `1` of `1` is a beat that did not decompose. */
   ofBeat: number;
-  /** The act/movement, when the beat layer declared one. Opaque here. */
+  /** The act/movement's id, when the beat layer declared one. Opaque here. */
   movementId?: string;
   role: TrailerRole;
   /** True when the role came from `ROLE_HINTS` or was absent entirely — the review says which. */
@@ -318,6 +339,31 @@ export const isTrailerFormat = (template: string) => TRAILER_TEMPLATES.has(templ
 
 /* ── Derivation ───────────────────────────────────────────────────────────── */
 
+/**
+ * "m:ss" or "h:mm:ss" → seconds, or null.
+ *
+ * Deliberately NOT `frames.ts#secondsOf`, and deliberately identical in
+ * behaviour to the beat lane's `atSeconds()`: an unparseable position is
+ * reported, never defaulted to 0. Reconcile to that one function when the two
+ * branches merge — one parser, not two.
+ */
+export function beatSeconds(b: ShotSourceBeat): number | null {
+  // The beat layer already did this, including deciding it was unparseable.
+  if (b.atS !== undefined) return b.atS;
+  const parts = b.at.trim().split(":");
+  if (parts.length < 2 || parts.length > 3) return null;
+  let total = 0;
+  for (const p of parts) {
+    if (!/^\d+$/.test(p)) return null;
+    total = total * 60 + Number(p);
+  }
+  return total;
+}
+
+/** The beats no shot could be derived for, because their position does not parse. Surfaced, never swallowed. */
+export const unplaceableBeats = (beats: readonly ShotSourceBeat[]): ShotSourceBeat[] =>
+  beats.filter((b) => beatSeconds(b) === null);
+
 const roleOf = (b: ShotSourceBeat): { role: TrailerRole | null; declared: boolean } => {
   if (b.role) return { role: b.role, declared: true };
   const hint = ROLE_HINTS[b.kind.trim().toLowerCase()];
@@ -420,12 +466,17 @@ export function shotsFromBeats(beats: readonly ShotSourceBeat[], totalS: number)
   let previousSize: ShotSize | null = null;
 
   beats.forEach((b, i) => {
-    const startS = secondsOf(b.at);
-    const next = beats[i + 1];
+    const startS = beatSeconds(b);
+    // A beat nobody can place yields NO shots rather than shots at the wrong
+    // time. `unplaceableBeats` is how a surface says so — the alternative,
+    // folding an unparseable timecode to 0, is the defect this refuses.
+    if (startS === null) return;
+    const nextS = beats[i + 1] ? beatSeconds(beats[i + 1]) : totalS;
     // The beat's own span, from the script's own clock — the same derivation
     // `durationOf` runs over frames, and the only number in this file that is
-    // not a rule.
-    const beatS = Math.max(1, (next ? secondsOf(next.at) : totalS) - startS);
+    // not a rule. A next beat that does not parse leaves this one running to the
+    // end of the cut, which is the honest read of "nothing is known to follow".
+    const beatS = Math.max(1, (nextS ?? totalS) - startS);
 
     const { role, declared } = roleOf(b);
     const n = shotCountFor(role, beatS);
@@ -437,11 +488,12 @@ export function shotsFromBeats(beats: readonly ShotSourceBeat[], totalS: number)
       if (size) previousSize = size;
       out.push({
         id: `sh-${i}-${k}`,
+        beatId: b.id,
         beatAt: b.at,
         beatLabel: b.label,
         ordinal: k,
         ofBeat: n,
-        movementId: b.movementId,
+        movementId: b.movement,
         role: role ?? "rung",
         roleDeclared: declared,
         holdS,
@@ -506,4 +558,27 @@ export function shotsByBeat(shots: readonly Shot[]): { beatAt: string; beatLabel
  *
  * Nothing in this file imports `BeatKind`, and that absence is deliberate: the
  * explainer vocabulary and the trailer one are the beat layer's business, and
- * this layer reads a beat's `kind` only through `ROLE_HINTS`. */
+ * this layer reads a beat's `kind` only through `ROLE_HINTS`.
+ *
+ * ─── AND THE SEAM WITH THE BEAT LANE, WHICH IS NOT YET ONE FILE ─────────────
+ *
+ * `ShotSourceBeat` is the shape `app/_phases/script/trailer/types.ts` exports on
+ * branch `trailer/story-model` as `ShotLaneBeat`, via `toShotLaneBeat()`. THE
+ * TWO ARE NOT YET THE SAME DECLARATION and must be made one on merge: import
+ * `ShotLaneBeat` and delete `ShotSourceBeat`, and import `atSeconds` and delete
+ * `beatSeconds`'s parsing half. Field-by-field they already agree — `id`, `at`,
+ * `atS: number | null`, `kind`, `label`, `text`, and `movement` (which this
+ * layer stores as `Shot.movementId`, because on a shot it is an id).
+ *
+ * ONE THING THIS LAYER CANNOT SUPPLY, and the reason is doctrinal rather than
+ * an implementation gap: the beat lane's magnitude check wants an injected
+ * `magnitudeOf` resolver, and a shot list is the wrong place to get one. The
+ * only magnitude-adjacent quantity here is CUT RATE, and
+ * [R] escalation-without-mechanism names precisely that as the naive
+ * substitute — "the naive substitute is size — bigger images, louder hits,
+ * faster cuts. That produces the form's most common defect". A resolver built
+ * on shots-per-second would encode the defect the check exists to find, and
+ * turn its honest `unmeasured` into a confident wrong answer. The field that
+ * would carry it is `TrailerBeat.raises`, which the beat lane already models
+ * and which is where the doctrine puts it: "In a tool, make the raised variable
+ * an explicit field." */

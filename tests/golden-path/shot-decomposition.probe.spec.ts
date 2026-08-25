@@ -17,10 +17,13 @@ import { test, expect } from "@playwright/test";
 
 import { reviewShotList } from "@/app/_phases/frames/shotReview";
 import {
+  ROLE_HINTS,
+  beatSeconds,
   isTrailerFormat,
   shotCountFor,
   shotsFromBeats,
   shotsFromRender,
+  unplaceableBeats,
   type Shot,
   type ShotSourceBeat,
   type TrailerRole,
@@ -331,4 +334,47 @@ test("the prompt checks are not-engaged when there are no prompts, and never sco
   // No check anywhere claims to have graded a prompt, and the gap is named.
   expect(full.checks.some((x) => /quality|good|score/i.test(x.rule))).toBe(false);
   expect(full.notChecked.some((n) => /is GOOD/.test(n))).toBe(true);
+});
+
+/* ── 5. the seam with the beat lane ──────────────────────────────────────── */
+
+test("an unparseable position yields NO shots — it is never folded to zero", () => {
+  // `frames.ts#secondsOf` folds "tbd" to 0 and would place the beat at the head
+  // of the cut, stealing every following beat's span. The beat lane's
+  // `atSeconds()` returns null instead, and this layer matches it.
+  expect(beatSeconds({ at: "tbd", kind: "rung", label: "l", text: "t" })).toBeNull();
+  expect(beatSeconds({ at: "1:20", kind: "rung", label: "l", text: "t" })).toBe(80);
+  expect(beatSeconds({ at: "1:02:03", kind: "rung", label: "l", text: "t" })).toBe(3723);
+  // An `atS` the beat layer already resolved wins, INCLUDING its null.
+  expect(beatSeconds({ at: "0:10", atS: null, kind: "rung", label: "l", text: "t" })).toBeNull();
+
+  const bad: ShotSourceBeat[] = [
+    { at: "0:00", kind: "cold-open", label: "ok", text: "t" },
+    { at: "soon", kind: "peak", label: "broken", text: "t" },
+  ];
+  expect(unplaceableBeats(bad)).toHaveLength(1);
+  const shots = shotsFromBeats(bad, 40);
+  expect(shots.every((s) => s.beatAt === "0:00")).toBe(true);
+});
+
+test("every kind the beat lane can emit resolves to a role — no key is dead", () => {
+  // TrailerBeatKind, as declared on `trailer/story-model`. If that union grows,
+  // this list and ROLE_HINTS are the one line each that reconciles it.
+  const KINDS = ["cold-open", "stakes", "rung", "reset", "peak", "title", "button", "cta"];
+  for (const k of KINDS) expect(ROLE_HINTS[k], `${k} has no role`).toBeTruthy();
+  expect(Object.keys(ROLE_HINTS).sort()).toEqual([...KINDS].sort());
+
+  // And a hinted beat really does decompose — the hint path is not decorative.
+  const hinted = shotsFromBeats(
+    [
+      { id: "b1", at: "0:00", kind: "cold-open", label: "open", text: "t", movement: "m1" },
+      { id: "b2", at: "0:20", kind: "reset", label: "stop", text: "t", movement: "m2" },
+    ],
+    30,
+  );
+  expect(hinted.every((s) => s.roleDeclared)).toBe(false);
+  expect(hinted.map((s) => s.role)).toEqual(["setup", "setup", "reset"]);
+  // The ids and the movement come across rather than being dropped.
+  expect(hinted[0].beatId).toBe("b1");
+  expect(hinted[0].movementId).toBe("m1");
 });

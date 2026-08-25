@@ -23,6 +23,7 @@ import {
   isTrailerFormat,
   shotsByBeat,
   shotsFromRender,
+  unplaceableBeats,
   type Shot,
   type ShotSourceRender,
 } from "./shots";
@@ -133,6 +134,10 @@ export default function ShotSheet({
   // The style half is the project's and is restated in every prompt — the law
   // is `style-is-restated-not-remembered`, and `promptsForShots` cannot be
   // called without a block, which is how it is honoured rather than remembered.
+  // Beats whose timecode does not parse derive no shots at all. Named here
+  // rather than quietly missing from the table — a shot list short by two rows
+  // and silent about it is the failure mode this page exists against.
+  const unplaceable = unplaceableBeats(render.beats);
   const prompts = promptsForShots(shots, block);
   const byShot = new Map(prompts.map((p) => [p.shotId, p]));
   const report = reviewShotList(shots, prompts, block);
@@ -151,6 +156,14 @@ export default function ShotSheet({
         <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-[12px] leading-snug text-amber-100/90">
           These prompts restate a fallback style preset, not this project&rsquo;s locked style. Lock a style
           before reading them as the identity the plates would come back in.
+        </p>
+      )}
+
+      {unplaceable.length > 0 && (
+        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-2.5 text-[12px] leading-snug text-rose-200">
+          {unplaceable.length} beat{unplaceable.length === 1 ? "" : "s"} could not be placed and derived no
+          shots — {unplaceable.map((b) => `"${b.at}"`).join(", ")} {unplaceable.length === 1 ? "is" : "are"}{" "}
+          not a timecode. Nothing here guessed a position for them.
         </p>
       )}
 
