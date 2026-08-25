@@ -40,6 +40,33 @@ export default function FramesStep({ projectId }: { projectId: string }) {
       </p>
     );
 
+  // A STEP THAT COULD NOT BE READ IS NOT AN EMPTY STEP, and the two render
+  // identically if this branch is missing: an unreadable cut would come up as a
+  // ledger of freshly seeded frames, which reads as "nothing has been done here"
+  // about work that may be several dollars of plates deep. Nothing below this
+  // point is drawn, and `useFrames` has disarmed its save, so the record on disk
+  // is left exactly as it is until the trouble clears.
+  if (ctl.loadTrouble)
+    return (
+      <div className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-4">
+        <p className="text-[13px] leading-snug text-rose-200">
+          This project&rsquo;s frames could not be read from local storage
+          {ctl.loadTrouble.kind === "quota"
+            ? " — the browser is out of room."
+            : ctl.loadTrouble.kind === "blocked"
+              ? " — another tab is holding the database open."
+              : ctl.loadTrouble.kind === "unavailable"
+                ? " — this browser session has no storage at all."
+                : "."}
+        </p>
+        <p className="mt-2 text-[12px] leading-relaxed text-white/45">
+          Nothing was derived and nothing was written. Whatever is on disk is still there — reload once the
+          reason above is gone rather than composing over it.
+        </p>
+        <p className="font-jetbrains mt-2 text-[11px] text-white/30">{ctl.loadTrouble.message}</p>
+      </div>
+    );
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">

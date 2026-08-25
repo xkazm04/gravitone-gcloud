@@ -24,7 +24,7 @@ import { useThemes } from "@/lib/useThemes";
 import { useAuth } from "@/lib/useAuth";
 
 import { PRESETS } from "@/app/library/presets";
-import { loadStep, reportStorageTrouble, saveStep } from "../_shared/stepStore";
+import { readStep, reportStorageTrouble, saveStep, type StorageTrouble } from "../_shared/stepStore";
 import { FACTS } from "../_shared/notebook/facts";
 import { RENDERS } from "../script/renders";
 import {
@@ -105,11 +105,31 @@ export function useFrames(projectId: string) {
   const [direction, setDirection] = useState<DirectionSpend | null>(null);
 
   /* ── load ───────────────────────────────────────────────────────────────── */
+  /** The read that did not happen, when one did not.
+   *
+   *  `loadStep` flattens a FAILED read and a NEVER-WRITTEN key to the same
+   *  `undefined` — its own doc says "a caller that needs to tell the two apart
+   *  calls `readStep` instead", and this is that caller. The two are opposites
+   *  here: a never-written key means derive a fresh cut, and a failed read means
+   *  a cut worth several dollars of plates is on disk and out of reach. Taking
+   *  the first branch on the second fact re-derived seeded frames over it and
+   *  the debounced save below then wrote them to the key 600ms later, which is
+   *  the whole cut destroyed by a transient quota error nobody saw. */
+  const [loadTrouble, setLoadTrouble] = useState<StorageTrouble | null>(null);
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const stored = await loadStep<FramesStepData>(projectId, PHASE);
+      const read = await readStep<FramesStepData>(projectId, PHASE);
       if (!alive) return;
+      if (!read.ok) {
+        // Nothing is derived and nothing is armed — see the save effect's gate.
+        // The step says it cannot read rather than showing an empty ledger,
+        // which would read as "this project has no frames".
+        setLoadTrouble(read.trouble);
+        setStepLoaded(true);
+        return;
+      }
+      const stored = read.data;
       // A stored cut derived from a DIFFERENT render is not this cut. Re-derive
       // rather than showing frames whose beats no longer exist.
       const sameCut = Boolean(stored?.frames?.length && stored.renderId === render.id);
@@ -139,6 +159,10 @@ export function useFrames(projectId: string) {
     // being written, and waiting on a theme read to save them would be a new
     // way to lose a cut.
     if (!stepLoaded) return;
+    // AND never after a failed read. `frames` is then whatever this hook has in
+    // memory — nothing — and writing that to the key would replace a stored cut
+    // we could not read with one we invented.
+    if (loadTrouble) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       void saveStep<FramesStepData>(projectId, PHASE, {
@@ -150,7 +174,7 @@ export function useFrames(projectId: string) {
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [frames, direction, stepLoaded, projectId, render.id]);
+  }, [frames, direction, stepLoaded, loadTrouble, projectId, render.id]);
 
   const patch = useCallback((id: string, fn: (f: Frame) => Frame) => {
     setFrames((fs) => fs.map((f) => (f.id === id ? fn(f) : f)));
@@ -519,6 +543,10 @@ export function useFrames(projectId: string) {
     render,
     facts: FACTS,
     frames,
+    /** Set when the step's own record could not be READ. The surface refuses to
+     *  draw a ledger over it: an empty cut and an unreadable one look identical
+     *  and mean opposite things. */
+    loadTrouble,
     // The step does not draw until the style is known — see `styleReady`.
     loaded: stepLoaded && styleReady,
     busy,
