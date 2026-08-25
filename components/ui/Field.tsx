@@ -19,7 +19,27 @@ const CONTROL =
   "placeholder:text-white/25 transition hover:border-white/20 focus:border-cyan-400/40 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2";
 
-/** Label + optional hint + the control it names. */
+const LABEL_TEXT =
+  "font-jetbrains mb-1.5 block text-[11px] tracking-[0.18em] text-white/45 uppercase";
+
+/**
+ * Label + optional hint + the control it names.
+ *
+ * TWO SHAPES, because `htmlFor` is optional and the two cases are not the same
+ * accessibility object. With an id, this is a labelled control and the markup is
+ * a real <label for>. WITHOUT one it used to render a <label> ALL THE SAME — a
+ * label element with no `for` and no control nested inside it, which names
+ * nothing. To a screen reader that is loose text, and the thing it was meant to
+ * name is announced unlabelled.
+ *
+ * That is not hypothetical: the two `Visual style` fields in ProjectDialog pass
+ * no `htmlFor` because their content is a pill GROUP, not one input, so the
+ * group had no accessible name at all. A group is what those are, so the
+ * no-`htmlFor` branch now says so — role="group" + aria-label — and the label
+ * text renders as a <span> carrying the identical classes, so nothing moves by a
+ * pixel. <Segmented> below is the same idea done natively (fieldset + legend);
+ * this is the shape for content that is not a radio set.
+ */
 export function Field({
   label,
   hint,
@@ -31,16 +51,26 @@ export function Field({
   htmlFor?: string;
   children: React.ReactNode;
 }) {
-  return (
-    <div>
-      <label
-        htmlFor={htmlFor}
-        className="font-jetbrains mb-1.5 block text-[11px] tracking-[0.18em] text-white/45 uppercase"
-      >
-        {label}
-      </label>
+  const body = (
+    <>
       {children}
       {hint && <p className="font-hanken mt-1.5 text-sm text-slate-400">{hint}</p>}
+    </>
+  );
+  if (!htmlFor) {
+    return (
+      <div role="group" aria-label={label}>
+        <span className={LABEL_TEXT}>{label}</span>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <div>
+      <label htmlFor={htmlFor} className={LABEL_TEXT}>
+        {label}
+      </label>
+      {body}
     </div>
   );
 }
