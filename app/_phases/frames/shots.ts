@@ -66,6 +66,8 @@
 // load-bearing rather than merely cautious.
 
 
+import { atSeconds, type ShotLaneBeat } from "../script/trailer/types";
+
 /* ── What this layer consumes ─────────────────────────────────────────────── */
 
 /**
@@ -109,6 +111,17 @@ export interface ShotSourceBeat {
    */
   role?: TrailerRole;
 }
+
+/* The producer must keep satisfying the consumer.
+   `ShotLaneBeat` (the beat layer's output) and `ShotSourceBeat` (this layer's
+   input) are deliberately NOT the same type — the consumer is wider, so today's
+   explainer `ScriptRender.beats` also satisfies it structurally. What must hold
+   is one direction: everything the beat layer emits, this layer can read. That
+   is a claim no reviewer can hold in their head across two files, so `tsc`
+   holds it. It keeps passing when `TrailerBeatKind` widens, because `kind` here
+   is `string` — which is the point. */
+type AssertAssignable<A extends B, B> = [A, B] extends [B, B] ? true : never;
+type _ShotLaneBeatIsReadable = AssertAssignable<ShotLaneBeat, ShotSourceBeat>;
 
 /** A render, narrowed the same way. `ScriptRender` satisfies it structurally. */
 export interface ShotSourceRender {
@@ -350,14 +363,17 @@ export const isTrailerFormat = (template: string) => TRAILER_TEMPLATES.has(templ
 export function beatSeconds(b: ShotSourceBeat): number | null {
   // The beat layer already did this, including deciding it was unparseable.
   if (b.atS !== undefined) return b.atS;
-  const parts = b.at.trim().split(":");
-  if (parts.length < 2 || parts.length > 3) return null;
-  let total = 0;
-  for (const p of parts) {
-    if (!/^\d+$/.test(p)) return null;
-    total = total * 60 + Number(p);
-  }
-  return total;
+  // Otherwise defer to the beat layer's parser rather than keeping a copy.
+  // This body WAS a verbatim duplicate of `atSeconds` until the two lanes were
+  // merged. Two identical parsers of the same format is one drift away from the
+  // exact defect this function exists to avoid: `frames.ts#secondsOf` folds an
+  // unparseable position to 0 and silently steals the next beat's span.
+  //
+  // This is the ONLY edge from this layer to the beat layer, and it is a
+  // FUNCTION, not the beat vocabulary — so the reason `ShotSourceBeat.kind`
+  // stays `string` (widening `TrailerBeatKind` must not break this file) is
+  // untouched by it.
+  return atSeconds(b.at);
 }
 
 /** The beats no shot could be derived for, because their position does not parse. Surfaced, never swallowed. */
