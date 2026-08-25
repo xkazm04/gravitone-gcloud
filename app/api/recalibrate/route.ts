@@ -51,12 +51,26 @@ export const runtime = "nodejs";
 /** A real run is minutes. Give the handler room rather than truncating it. */
 export const maxDuration = 800;
 
+/** The system prompt is a file on disk, so it is a thing that can be MISSING —
+ *  `pipeline/` is not part of the app's module graph and a build or a deployment
+ *  that does not carry it produces exactly this. Named as its own failure because
+ *  the generic answer is a lie here: nothing was reached and nothing ran, and
+ *  telling the creator "the model could not be reached" sends them to go and
+ *  check Claude Code, which is fine. */
+class PromptUnavailable extends Error {}
+
 let cachedPrompt: string | null = null;
 async function systemPrompt(): Promise<string> {
   // A versioned document beside the research prompt, not a string literal here —
   // it is edited far more often than this handler is.
-  if (!cachedPrompt)
-    cachedPrompt = await readFile(path.join(process.cwd(), "pipeline", "RECALIBRATE-PROMPT.md"), "utf8");
+  if (!cachedPrompt) {
+    const at = path.join(process.cwd(), "pipeline", "RECALIBRATE-PROMPT.md");
+    try {
+      cachedPrompt = await readFile(at, "utf8");
+    } catch {
+      throw new PromptUnavailable(`The recalibration prompt could not be read from ${at}.`);
+    }
+  }
   return cachedPrompt;
 }
 
@@ -301,66 +315,74 @@ export async function POST(req: Request) {
   // any platform's command-line argument limit, and on Windows that limit fails
   // as a truncated argument rather than an error — a silent corruption of the
   // one input the whole run depends on.
-  const prompt = [
-    await systemPrompt(),
-    "",
-    "---",
-    "",
-    "# THE RUN",
-    "",
-    "Return ONE JSON object and nothing else — no prose before or after, no code fence.",
-    "It must satisfy this schema:",
-    "",
-    JSON.stringify(EDIT_PLAN_SCHEMA, null, 2),
-    "",
-    "## NOTEBOOK",
-    notebookJson,
-    "",
-    "## CONCLUSIONS (reasoned, not researched — beside the notebook, never in it)",
-    "A conclusion has no source of its own: it is synthesis over the cards in its",
-    "`restsOn` plus an analogy, and the creator opts each one IN. `inScope: false`",
-    "means they have not, so rule 4 binds it exactly as it binds any descoped card —",
-    "it may not be given a beat, and a note on it can only be refused, by name.",
-    JSON.stringify(conclusions),
-    // Named, never hidden — the same shape and the same rule as RENDERS NOT SENT
-    // below. The engine has to know this material exists so it does not reason
-    // as though the notebook synthesised nothing, and it has to know it did not
-    // read it so it cannot act on a claim it only saw the name of.
-    ...(held.length
-      ? [
-          "",
-          "## CONCLUSIONS NOT SENT",
-          "Each of these is out of scope, unnamed by any note, and cited nowhere in what you",
-          "were given — so no edit you may emit can rest on one, and the text is withheld.",
-          "They exist and you have not read them: the notebook DID synthesise, and a summary",
-          "saying otherwise is wrong. Refuse any note asking for one, by name. Never write",
-          "the idea yourself instead — uncited, that breaks rule 1. Emit NO `cards` entry",
-          "naming one; a plan that does is rejected wholesale.",
-          JSON.stringify(held),
-        ]
-      : []),
-    "",
-    "## CURRENT RENDERS",
-    sentJson,
-    ...(notSent.length
-      ? [
-          "",
-          "## RENDERS NOT SENT",
-          "No beat in these rests on a card the notes name, so their beat chains are not",
-          "included in this run. You cannot edit what you cannot see: emit NO edit whose",
-          "`renderId` is one of these — a plan that names one is rejected wholesale.",
-          JSON.stringify(notSent),
-        ]
-      : []),
-    "",
-    "## SCOPE (cards the creator has taken out)",
-    JSON.stringify(body.scope),
-    "",
-    "## NOTES",
-    JSON.stringify(body.notes, null, 2),
-  ].join("\n");
-
+  //
+  // BUILT INSIDE THE TRY. `systemPrompt()` reads a file from disk, and this
+  // await used to sit ABOVE the try -- so a missing
+  // `pipeline/RECALIBRATE-PROMPT.md` threw straight out of the handler: Next
+  // returned a bare 500 with no body, the client's
+  // `res.json().catch(() => ({ detail: "" }))` fell back to "The model could
+  // not be reached", and a simulated candidate was staged under a reason naming
+  // the wrong system entirely. Every throw on this path now has a door.
   try {
+    const prompt = [
+      await systemPrompt(),
+      "",
+      "---",
+      "",
+      "# THE RUN",
+      "",
+      "Return ONE JSON object and nothing else — no prose before or after, no code fence.",
+      "It must satisfy this schema:",
+      "",
+      JSON.stringify(EDIT_PLAN_SCHEMA, null, 2),
+      "",
+      "## NOTEBOOK",
+      notebookJson,
+      "",
+      "## CONCLUSIONS (reasoned, not researched — beside the notebook, never in it)",
+      "A conclusion has no source of its own: it is synthesis over the cards in its",
+      "`restsOn` plus an analogy, and the creator opts each one IN. `inScope: false`",
+      "means they have not, so rule 4 binds it exactly as it binds any descoped card —",
+      "it may not be given a beat, and a note on it can only be refused, by name.",
+      JSON.stringify(conclusions),
+      // Named, never hidden — the same shape and the same rule as RENDERS NOT SENT
+      // below. The engine has to know this material exists so it does not reason
+      // as though the notebook synthesised nothing, and it has to know it did not
+      // read it so it cannot act on a claim it only saw the name of.
+      ...(held.length
+        ? [
+            "",
+            "## CONCLUSIONS NOT SENT",
+            "Each of these is out of scope, unnamed by any note, and cited nowhere in what you",
+            "were given — so no edit you may emit can rest on one, and the text is withheld.",
+            "They exist and you have not read them: the notebook DID synthesise, and a summary",
+            "saying otherwise is wrong. Refuse any note asking for one, by name. Never write",
+            "the idea yourself instead — uncited, that breaks rule 1. Emit NO `cards` entry",
+            "naming one; a plan that does is rejected wholesale.",
+            JSON.stringify(held),
+          ]
+        : []),
+      "",
+      "## CURRENT RENDERS",
+      sentJson,
+      ...(notSent.length
+        ? [
+            "",
+            "## RENDERS NOT SENT",
+            "No beat in these rests on a card the notes name, so their beat chains are not",
+            "included in this run. You cannot edit what you cannot see: emit NO edit whose",
+            "`renderId` is one of these — a plan that names one is rejected wholesale.",
+            JSON.stringify(notSent),
+          ]
+        : []),
+      "",
+      "## SCOPE (cards the creator has taken out)",
+      JSON.stringify(body.scope),
+      "",
+      "## NOTES",
+      JSON.stringify(body.notes, null, 2),
+    ].join("\n");
+
     const run = await runClaude(prompt);
     const plan = parseEditPlan(run.text);
 
@@ -407,6 +429,16 @@ export async function POST(req: Request) {
       },
     });
   } catch (e) {
+    // Before anything ran. Distinguished from every failure below because the
+    // engine was never reached: this is a broken install, not a broken turn, and
+    // pointing the creator at the model would send them looking in the one place
+    // the fault is not.
+    if (e instanceof PromptUnavailable)
+      return Response.json(
+        { detail: `${e.message} The engine was never started, so nothing was changed.` },
+        { status: 500 },
+      );
+
     if (e instanceof PlanError)
       // The engine ran and returned something unusable. Say which, because the
       // fix is a prompt change, not a retry.
