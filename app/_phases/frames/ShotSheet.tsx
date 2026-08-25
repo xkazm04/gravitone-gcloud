@@ -177,8 +177,11 @@ export default function ShotSheet({
           <span>proposed prompt (action block)</span>
           <span className="text-right">len</span>
         </div>
+        {/* Keyed by the group's FIRST SHOT, not by `beatAt`: a timecode is a
+            position and positions repeat, so two beats at the same second used
+            to hand React one key twice. A shot id is unique by construction. */}
         {groups.map((g) => (
-          <div key={g.beatAt}>
+          <div key={g.shots[0].id}>
             <div className="flex items-baseline gap-3 border-b border-white/5 bg-white/[0.015] px-3 py-1.5">
               <span className="font-jetbrains text-[11px] text-white/40">{g.beatAt}</span>
               <span className="truncate text-[12px] text-white/60">{g.beatLabel}</span>

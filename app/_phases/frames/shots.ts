@@ -560,13 +560,33 @@ const BASIS_OF: Readonly<Record<TrailerRole, string>> = {
   tail: "[A] title/end card is one held card",
 };
 
-/** Shots grouped by their parent beat, in cut order. What a read-only surface renders. */
+/**
+ * Shots grouped by their parent BEAT, in cut order. What a read-only surface
+ * renders.
+ *
+ * The group boundary is `ordinal === 1` — a new beat's first shot — and NOT a
+ * change of `beatAt`. This file says two paragraphs up that `beatAt` "is a
+ * position and positions repeat", and grouping on it made that statement false
+ * in the one place a reader would notice: two distinct beats sharing a
+ * timecode merged into a single group, the second beat's label and `basis`
+ * vanished, and a surface keying rows by `beatAt` handed React the same key
+ * twice. `beatId` is the identity where there is one, so it breaks a group too;
+ * `ordinal` covers the explainer beats that carry no id.
+ */
 export function shotsByBeat(shots: readonly Shot[]): { beatAt: string; beatLabel: string; shots: Shot[] }[] {
   const out: { beatAt: string; beatLabel: string; shots: Shot[] }[] = [];
+  let previous: Shot | undefined;
   for (const s of shots) {
     const last = out[out.length - 1];
-    if (last && last.beatAt === s.beatAt) last.shots.push(s);
+    const sameBeat =
+      last !== undefined &&
+      previous !== undefined &&
+      s.ordinal !== 1 &&
+      s.beatAt === previous.beatAt &&
+      s.beatId === previous.beatId;
+    if (sameBeat) last.shots.push(s);
     else out.push({ beatAt: s.beatAt, beatLabel: s.beatLabel, shots: [s] });
+    previous = s;
   }
   return out;
 }

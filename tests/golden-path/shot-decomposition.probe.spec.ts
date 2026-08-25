@@ -21,6 +21,7 @@ import {
   beatSeconds,
   isTrailerFormat,
   shotCountFor,
+  shotsByBeat,
   shotsFromBeats,
   shotsFromRender,
   unplaceableBeats,
@@ -378,6 +379,28 @@ test("an unplaceable beat in the MIDDLE does not hand its predecessor the rest o
   expect(shots.some((s) => s.beatAt === "soon")).toBe(false);
   expect(shots.filter((s) => s.beatAt === "0:30")).toHaveLength(1);
   console.log(`[shots] mid-chain unplaceable: cold open ${open.length} shot(s) at ${open[0].holdS}s`);
+});
+
+test("two beats at the same timecode stay two groups — a position is not an identity", () => {
+  // shots.ts says it in its own words: `beatAt` "is a position and positions
+  // repeat". Grouping on it merged these two beats into one row block, dropped
+  // the second's label and basis, and gave a surface keyed by `beatAt` the same
+  // React key twice.
+  const chain: ShotSourceBeat[] = [
+    { id: "b1", at: "0:12", kind: "reset", label: "the stop", text: "t" },
+    { id: "b2", at: "0:12", kind: "reset", label: "a different beat, same second", text: "t" },
+    { id: "b3", at: "0:20", kind: "peak", label: "climax", text: "t" },
+  ];
+  const groups = shotsByBeat(shotsFromBeats(chain, 30));
+  expect(groups.map((g) => g.beatLabel)).toEqual([
+    "the stop",
+    "a different beat, same second",
+    "climax",
+  ]);
+  // What a surface keys rows by has to be unique across the whole list.
+  const keys = groups.map((g) => g.shots[0].id);
+  expect(new Set(keys).size).toBe(keys.length);
+  console.log(`[shots] same-timecode beats -> ${groups.length} groups, keys ${keys.join(",")}`);
 });
 
 test("every kind the beat lane can emit resolves to a role — no key is dead", () => {
