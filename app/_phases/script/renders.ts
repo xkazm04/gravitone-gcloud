@@ -7,6 +7,7 @@ import type { ScriptRender } from "./types";
 
 export const RENDERS: ScriptRender[] = [
   {
+    form: "explainer",
     id: "reversal-chain",
     engine: "reversal-chain",
     engineLabel: "Reversal Chain",
@@ -65,6 +66,7 @@ export const RENDERS: ScriptRender[] = [
   },
 
   {
+    form: "explainer",
     id: "adjudication",
     engine: "adjudication",
     engineLabel: "Adjudication",
@@ -111,6 +113,7 @@ export const RENDERS: ScriptRender[] = [
   },
 
   {
+    form: "explainer",
     id: "derived-short",
     engine: "paradox-teaser",
     engineLabel: "Paradox Teaser",

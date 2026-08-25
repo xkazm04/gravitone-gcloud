@@ -44,6 +44,13 @@ export interface CutFact {
 }
 
 export interface ScriptRender {
+  /** THE FORM DISCRIMINANT. An explainer pays every debt it opens; a trailer's
+   *  whole product is a debt another artifact pays. They are different objects
+   *  with disjoint beat vocabularies, and a checker written for one must not be
+   *  able to report `pass` over the other — so the tag is required on both sides
+   *  and `NarrativeCut` below narrows on it. The trailer half is
+   *  `./trailer/types.ts` → `TrailerCut`. */
+  form: "explainer";
   id: string;
   engine: string;
   engineLabel: string;
@@ -73,5 +80,9 @@ export interface ScriptRender {
   /** null when the corpus cannot measure it (e.g. ASR without punctuation). */
   causalDensityPct: number | null;
 }
+
+/** A render is one form or the other. Written here rather than in the trailer
+ *  file so both halves of the union are reachable from the step's own nouns. */
+export type NarrativeCut = ScriptRender | import("./trailer/types").TrailerCut;
 
 export type { Connector };
