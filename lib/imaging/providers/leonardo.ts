@@ -20,6 +20,7 @@
 import { ImagingError } from "../errors";
 import { keyFor } from "../env";
 import { fetchImageBase64, requestJson } from "../http";
+import { logCleanupFailure } from "../log";
 import { priceCall } from "../pricing";
 import {
   ASPECT_PX,
@@ -238,7 +239,10 @@ async function deleteGeneration(
     });
     return "deleted";
   } catch (e) {
-    console.warn(`[imaging] Leonardo cleanup failed for generation ${id}:`, e);
+    // Through log.ts, not straight to the console. `console.warn(msg, e)` prints
+    // the whole ImagingError — `detail` included, which is up to 600 characters
+    // of raw vendor body and can echo the user's own prompt back into the log.
+    logCleanupFailure("leonardo", id, e);
     return "failed";
   }
 }

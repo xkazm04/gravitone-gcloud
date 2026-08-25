@@ -132,6 +132,28 @@ export function logCall(l: CallLog): void {
   else console.log(line);
 }
 
+/**
+ * A remote artifact we could not tidy up. One scrubbed line, and never the
+ * exception object.
+ *
+ * It exists because the Leonardo adapter's cleanup path was the one place in
+ * this engine that logged straight to the console: `console.warn(msg, e)`
+ * hands Node the whole ImagingError, and Node prints its own fields — including
+ * `detail`, which http.ts fills with up to 600 characters of raw vendor
+ * response body. That is exactly the object this module's header says may never
+ * reach a log, and api.ts:129 already records the same mistake being removed
+ * from the catch-all. This is the second door.
+ *
+ * The remote id is the point of the line — it is what lets a failed deletion be
+ * chased by hand — so it is kept, beside the message and nothing else.
+ */
+export function logCleanupFailure(provider: ProviderId, remoteId: string, e: unknown): void {
+  const raw = e instanceof Error ? e.message : String(e);
+  console.warn(
+    `[imaging] cleanup-failed provider=${provider} id=${remoteId} msg="${oneLine(scrub(raw))}"`,
+  );
+}
+
 /** The catch-all: something that was not an ImagingError at all. Its stack is
  *  the point, so it gets more room — scrubbed, and still one line. */
 export function logUnexpected(e: unknown): void {
