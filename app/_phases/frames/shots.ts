@@ -223,7 +223,17 @@ export interface Shot {
   /** The act/movement's id, when the beat layer declared one. Opaque here. */
   movementId?: string;
   role: TrailerRole;
-  /** True when the role came from `ROLE_HINTS` or was absent entirely — the review says which. */
+  /**
+   * True when the BEAT LAYER declared this role, false when it came from
+   * `ROLE_HINTS` or from nowhere at all.
+   *
+   * The doc on this field said exactly the opposite until it was corrected —
+   * "true when the role came from ROLE_HINTS or was absent entirely" — while
+   * `roleOf` has always set it from `Boolean(b.role)`. Nothing broke, because
+   * the one consumer (`beat-roles-were-declared`, shotReview.ts) was written
+   * against the code; but a reader trusting the comment would have inverted
+   * that check and reported every declared beat as unmeasured.
+   */
   roleDeclared: boolean;
   /**
    * How long this shot holds, in seconds.
