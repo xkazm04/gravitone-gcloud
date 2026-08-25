@@ -15,7 +15,7 @@
 // furniture. Chrome colour is a shared vocabulary, and two files spelling the
 // same grey differently is drift.
 //
-// Three things sit outside that rule, and always did; the rule simply never
+// Four things sit outside that rule, and always did; the rule simply never
 // said so, which made it read as violated when it was not:
 //
 //  1. TAILWIND UTILITY CLASSES — `text-cyan-300`, `bg-white/5`,
@@ -32,13 +32,25 @@
 //  3. PROSE. A comment that records a measurement ("#67e8f9 on #080a10 is
 //     ~13.7:1") has to name the values it measured, or the measurement cannot
 //     be rechecked.
+//  4. app/global-error.tsx — SEVEN literals, and they are right. It is the App
+//     Router boundary that replaces the root layout, so it brings its own
+//     <html>/<body> and <GravitoneTokens> never renders: a `var(--gt-ink)`
+//     there resolves to nothing, on the one screen that exists because the
+//     shell already failed. It is the single place in the app that must NOT
+//     read this file. The cost is real and worth stating — its `#67e8f9`
+//     button is a hand-maintained copy of ACCENT.cyan, so changing the accent
+//     here means changing it there too, and nothing will tell you.
 //
-// Everything that actually draws chrome obeys, and as of 2026-08-14 the chrome
-// is clean: outside this file, the only colour literals left in app/ and
-// components/ are the three in globals.css prose that record the focus ring's
-// contrast measurement, plus the style-preset data. The last five to go were
-// box-shadows — four hand-typed float shadows and the Button glow — which is
-// why two complete shadows are declared below alongside the colours.
+// Everything that actually draws chrome obeys. The inventory above is meant to
+// be RECHECKABLE, so it is worth saying how: grep app/ and components/ for hex
+// and rgb() literals, subtract this file and the four classes above, and the
+// remainder should be empty. It was NOT, from 2026-08-14 until this line was
+// written — the list said "three things" and named globals.css prose plus the
+// preset data, while global-error.tsx had seven, which made the rule read as
+// broken by a file that was obeying a different one. The last five literals to
+// leave the chrome were box-shadows — four hand-typed float shadows and the
+// Button glow — which is why two complete shadows are declared below alongside
+// the colours.
 
 /**
  * The one curve. Every entrance in the app eases on this and nothing else.
