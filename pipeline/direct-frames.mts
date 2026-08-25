@@ -36,6 +36,7 @@ const { framesFromRender, subjectFor } = await import("../app/_phases/frames/fra
 const { parseSceneSpecs, SCENE_SCHEMA } = await import("../app/_phases/frames/sceneSpec");
 const { PRESETS } = await import("../app/library/presets");
 const { compilePrompt, NEGATIVE_PROMPT } = await import("../lib/stylePrompt");
+const { compileFormatBrief } = await import("../lib/formatBrief");
 const { generate, recognize } = await import("../lib/imaging/router");
 const { ImagingError } = await import("../lib/imaging/errors");
 
@@ -66,6 +67,14 @@ const prompt = [
   "Return ONE JSON object and nothing else — no prose before or after, no code fence.",
   "It must satisfy this schema:",
   JSON.stringify(SCENE_SCHEMA, null, 2),
+  "",
+  // The probe has no project record, so it states the format the RENDER declares
+  // (`ScriptRender.template`/`durationS`). That is a different authority from the
+  // app's — /api/frames is given the project's — and it is the honest one here:
+  // this arm directs a fixture script, and the fixture is what says which format
+  // it was written as. Left out entirely, the block would read "NOT STATED" and
+  // the probe would be measuring a brief the app never sends.
+  compileFormatBrief(render.template, render.durationS),
   "",
   `## THE SCRIPT — ${render.title}`,
   JSON.stringify(
