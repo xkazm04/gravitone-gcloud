@@ -282,5 +282,18 @@ body { margin: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {
+  /* `scroll-behavior` is NOT an animation and NOT a transition, so the blanket
+     rule below never reached it: `html { scroll-behavior: smooth }` at the top
+     of this file kept animating every programmatic jump for a user who asked
+     for no motion. It is a live path, not a hypothetical - the notebook's table
+     of contents calls `scrollIntoView({ block: "start" })` with no `behavior`
+     of its own (app/_phases/_shared/notebook/NotebookBody.tsx) and therefore
+     inherits this property. WCAG 2.3.3.
+
+     A `behavior: "smooth"` passed EXPLICITLY in JS still wins over this - CSS
+     cannot reach an argument. One site does that today
+     (app/_phases/frames/alternatives/VariantContactSheet.tsx) and owes itself a
+     matchMedia guard. */
+  html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
