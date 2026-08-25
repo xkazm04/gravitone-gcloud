@@ -122,3 +122,34 @@ test("every finding cites the doctrine it is read from", () => {
   const uncited = r.findings.filter((f) => !f.cites);
   expect(uncited).toHaveLength(0);
 });
+
+// 5. A cut the checker never read earns NO pass at all.
+//
+// The regression this pins: `checkLadder`'s long-cut branch keyed its verdict on
+// `droppedParts` alone and reported `pass — "the full spine"`. It therefore said
+// `pass` about the spine of an EMPTY cut, and about a one-beat cut whose own
+// report, three rows above, found no escalation, no climax, no peak, no reset and
+// no title. That is the one thing the file's header forbids, so it gets a probe
+// rather than a comment.
+test("a cut with nothing in it earns no pass, and a spineless long cut is never told its spine is full", () => {
+  const empty: TrailerCut = { ...minimal(), movements: [], beats: [] };
+  const re = runStructureCheck(empty);
+  console.log(`[trailer] empty -> passes=${re.passes}, malformed=${String(re.malformed)}`);
+  expect(re.passes).toBe(0);
+  // And the ladder does not stay silent about it either: it says it examined nothing.
+  expect(rows(re, "ladder", "not-engaged").length).toBeGreaterThan(0);
+
+  const spineless: TrailerCut = {
+    ...minimal(),
+    movements: [{ id: "m1", role: "introduction", ordinal: 0, label: "intro" }],
+    beats: [
+      { id: "b1", movement: "m1", at: "0:00", kind: "stakes", connector: null, label: "s", text: "x" },
+    ],
+  };
+  const rs = runStructureCheck(spineless);
+  const ladderPass = rows(rs, "ladder", "pass");
+  console.log(`[trailer] spineless -> spine violations=${rows(rs, "spine", "violation").length}, ladder pass detail="${ladderPass[0]?.detail ?? ""}"`);
+  expect(rows(rs, "spine", "violation").length).toBeGreaterThan(0);
+  // The ladder may still pass on the DECLARATION — it may not claim the spine.
+  for (const f of ladderPass) expect(f.detail).not.toContain("the full spine");
+});
