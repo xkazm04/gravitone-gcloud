@@ -203,12 +203,28 @@ export function checkGraph(cut: TrailerCut): StructureFinding[] {
     }
   }
 
-  if (!out.length && cut.beats.length && cut.movements.length) {
-    out.push({
-      rule: "graph", subject: "chain", verdict: "pass",
-      detail: `${cut.beats.length} beats over ${cut.movements.length} movements: every id distinct, every reference resolves, every movement populated.`,
-      cites: CITE.graph,
-    });
+  // ALWAYS a row, including for a cut with nothing in it. The old guard was
+  // `!out.length && cut.beats.length && cut.movements.length`, so an empty cut
+  // produced no graph finding AT ALL — and a rule that is absent from the report
+  // is indistinguishable from a rule that ran and found nothing. The graph rule
+  // is the one that owns "is there a chain here", so silence is the one answer it
+  // may not give. It is `not-engaged` rather than a violation because an empty
+  // cut has no broken edges, it has no edges; the missing parts are already
+  // reported, as violations, by the spine.
+  if (!out.length) {
+    out.push(
+      cut.beats.length && cut.movements.length
+        ? {
+            rule: "graph", subject: "chain", verdict: "pass",
+            detail: `${cut.beats.length} beats over ${cut.movements.length} movements: every id distinct, every reference resolves, every movement populated.`,
+            cites: CITE.graph,
+          }
+        : {
+            rule: "graph", subject: "chain", verdict: "not-engaged",
+            detail: `The cut declares ${cut.movements.length} movement(s) and ${cut.beats.length} beat(s), so there are no references to resolve. This check examined nothing and does not count as enforcement — read the spine rows for what is actually missing.`,
+            cites: CITE.graph,
+          },
+    );
   }
   return out;
 }
