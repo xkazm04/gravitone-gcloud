@@ -79,6 +79,18 @@ first is disposable and gitignored; the second is the asset, and it is versioned
 | `mid-educational-video` (3–6 min) | `01-script` | n=3 · engines A/D/E · economy · tech · politics |
 | `short-form-clip` (≤60s) | `01-script` | n=3 · engines B/F/G · **nothing measured below 40s** |
 | `short-educational-video` | `02-frames` | **n=1** · style-lock method · nothing MEASURED · no `params.json` yet, on purpose |
+| `teaser` (≤60s) | `01-script` | **n=0** · doctrine only — the drop order; nothing measured here |
+| `trailer` (90–150s) | `01-script` | **n=0** · doctrine only — the full spine; nothing measured here |
+| `cinematic` (60–120s) | `01-script` | **n=0** · doctrine only, and the thinnest — one `.vault/` dossier, one claim at n=1 |
 | all templates | 03-motion · 04-score · 05-cut | not started |
+
+**The three promotional templates are a different KIND of entry and the table should not hide it.**
+The three educational templates rest on transcripts read in full in this repo and a `metrics.py`
+that produced their numbers. These three rest on the AI registry's `trailer-structure` subject and
+a `.vault/` research dossier — **doctrine written elsewhere, quoted here, measured nowhere in this
+repo.** They ship no `params.json` for the same reason `02-frames` does not, and each one's
+`OPEN-QUESTIONS.md` records what a real one would need. Their contract also inverts the library's
+default: a promotional cut succeeds by opening a debt it does not pay, so the rules in
+`CRAFT-BASELINE.md` about closing what you open read backwards for all three.
 
 **10 sources across 6 channels**, each read in full, as of 2026-08-11 (3 research runs).

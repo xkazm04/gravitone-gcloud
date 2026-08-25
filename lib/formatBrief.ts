@@ -114,6 +114,123 @@ export const FORMAT_BRIEFS: Record<TemplateId, FormatBrief> = {
         "check.",
     ],
   },
+
+  // ── THE PROMOTIONAL FORMATS, AND WHY THEY READ BACKWARDS ──────────────────
+  //
+  // The three briefs above direct pieces that PAY every debt they open. These
+  // three direct pieces whose product IS the unpaid debt: a promotional cut
+  // succeeds by opening a gap another artifact closes. Almost every rule above
+  // therefore inverts, and each brief states its inversion rather than assuming
+  // it — a director handed "one idea, answered well" for a teaser will compose
+  // the plate that resolves the thing the piece exists to withhold.
+  //
+  // The doctrine behind them is the AI registry's `trailer-structure` subject
+  // (golden path + six techniques), which the knowledge/templates/<id>/ docs
+  // cite line by line. THE CORPUS IN THIS REPO IS n=0 FOR ALL THREE: nothing
+  // has been torn down, timed or counted here, so every figure below is either
+  // a norm stated by a source or a measurement made somewhere else, and each
+  // one says which. That is what the labels are carrying — see the header.
+
+  teaser: {
+    name: "a teaser",
+    what:
+      "The short promotional rung: the premise and one set-piece, deliberately not the story. Its " +
+      "product is a debt another artifact pays. (OBSERVED · the ≤60s band is stated by sources and " +
+      "counted by nobody; corpus n=0 · knowledge/templates/teaser/TEMPLATE.md)",
+    direction: [
+      "**Withholding is the product here, and that inverts the rule the other formats obey.** A plate " +
+        "that resolves what the piece is about has spent the artifact it exists to sell. The craft " +
+        "default is hold the turn, hold the resolution, IMPLY the reveal — a withheld thing kept " +
+        "partly seen, in shadow, present but not resolved (OBSERVED · registry " +
+        "`trailer-structure/techniques/withholding-budget`).",
+      "**Two parts, not four — and the missing parts were removed, not shortened.** At this length " +
+        "the shape is a context section and one set-piece; exposition and the setup act go first, " +
+        "then dialogue, then the escalation's middle rungs (OBSERVED · registry `length-ladder`, its " +
+        "drop order). So do not compose a scaled-down version of a long cut's picture plan. There " +
+        "are two things to direct, and the second one is the piece.",
+      "**Open on the first frame, visually.** Below the long cut every rung opens immediately — the " +
+        "patience that makes a slow open viable exists only for a captive audience — and the opening " +
+        "shot should need no context and carry the grab in the picture rather than the audio, " +
+        "because autoplay-muted viewing makes an audio-first hook a liability (OBSERVED · registry " +
+        "`length-ladder`; vault C2, a working trailer editor quoted).",
+      "**Do not compose a valley before the peak.** At around thirty seconds there is no dynamic " +
+        "range to reset and the gap costs a tenth of the runtime, so the standard move keeps the " +
+        "cue's opening and its climax and connects them (OBSERVED · registry `dynamic-reset`, its " +
+        "own when-not-to-use). A held quiet plate placed where a reset would go reads as a hole.",
+      "**Nothing here was measured in this repo, and nothing about frame density anywhere.** The " +
+        "corpus is n=0 — no teardown, no timing, no shot-length curve — and the step ships no " +
+        "`params.json` on purpose. Compose conservatively and say in `rationale` where a choice " +
+        "turned on a length nobody has checked.",
+    ],
+  },
+
+  trailer: {
+    name: "a trailer",
+    what:
+      "The full spine — cold open, introduction, escalation, climax, optional button — and the only " +
+      "promotional rung with room to establish, dip and build. (OBSERVED · the 90–150s band is " +
+      "stated by sources, the 2:30 ceiling is an exhibitor rule, corpus n=0 · " +
+      "knowledge/templates/trailer/TEMPLATE.md)",
+    direction: [
+      "**Open strong, then FALL BACK.** The shape is almost the opposite of a ramp: arrest attention, " +
+        "drop to a quiet setup, and build from there to a peak (OBSERVED · registry " +
+        "`trailer-structure`). The picture is where a missing dip shows first — if every plate is " +
+        "your loudest, there is no peak left to arrive at, and the cut is a highlight reel wearing " +
+        "the spine's clothes.",
+      "**Each rung closes, and each raises exactly ONE variable** — scale, threat, speed, intimacy, " +
+        "cost. A rung that raises three at once has nothing left for the rung after it, and two " +
+        "rungs raising the same variable are one rung with extra runtime (OBSERVED · registry " +
+        "`escalation-without-mechanism`). Give consecutive rungs visibly different registers; a " +
+        "montage that varies content but not magnitude reads as one beat repeated.",
+      "**The beat before the peak should FALL, and it is the one place the structure is externally " +
+        "visible.** Shot length falls across the acts, and the reset shows up as a spike in shot " +
+        "length immediately before the peak (MEASURED · n=130 releases over sixty years, in the " +
+        "published analysis the registry cites — not measured here). Put ONE held, quiet thing in " +
+        "that beat: a reset carrying two ideas carries neither.",
+      "**The climax is not required to be the work's climax, and a button must be smaller than it.** " +
+        "A cut built to end on the third act's turn has spent the artifact it was selling, and a " +
+        "button that outperforms the peak retroactively re-reads the peak as its setup (OBSERVED · " +
+        "registry `trailer-structure`).",
+      "**Two true plates placed adjacently assert a relationship neither contains.** A reaction cut " +
+        "against a reveal says the character saw it; a question cut against an unrelated answer says " +
+        "the answer belongs to it. Neither is false at the shot level and both are claims at the " +
+        "sequence level (OBSERVED · registry `promise-ledger`). Where your ordering makes a claim the " +
+        "beats do not, say so in `rationale` rather than letting the edit make it silently.",
+    ],
+  },
+
+  cinematic: {
+    name: "a cinematic",
+    what:
+      "A promotional cut made when the real footage does not exist yet — its job is to deliver the " +
+      "imagery the work cannot yet show. A production STAGE, not a length. (OBSERVED · its duration " +
+      "band overlaps the trailer's on purpose, corpus n=0 · knowledge/templates/cinematic/TEMPLATE.md)",
+    direction: [
+      "**This format is defined by what it is made FROM, not by how long it runs.** A cinematic " +
+        "exists to present impressive imagery when the gameplay or footage is not ready (OBSERVED · " +
+        "vault C7, a working game-trailer editor quoted). So the picture is not standing in for " +
+        "something better — it IS the deliverable, and it carries a burden of finish the other " +
+        "formats can borrow their way out of.",
+      "**The curve is drawn before the shots.** Crescendo, then an interruption or slow-motion " +
+        "plunge, then a rebuild, then the climax — with plates placed against that graph, because " +
+        "pacing is locked on it before any expensive work starts (OBSERVED · vault C8, a first-party " +
+        "studio post). Name each plate's position on the curve in `rationale`; a plate with no " +
+        "position on it is decoration.",
+      "**It may legitimately need no words at all.** A world-first announce can carry no dialogue, no " +
+        "voice-over and no on-screen text until the title, so it travels across languages and the " +
+        "imagery stays primary (OBSERVED · vault C29, ONE first-party case, graded medium confidence " +
+        "by the vault itself). If the beats carry no lines, that is a shape, not a gap to fill with " +
+        "type.",
+      "**The format's own counter-evidence, and it points straight at the picture.** Audiences " +
+        "increasingly distrust a pure-cinematic reveal precisely because it is used when the real " +
+        "thing is not ready (OBSERVED · vault counter-evidence, same source as above). A plate that " +
+        "promises a fidelity the finished work will not have is the failure that survives release: " +
+        "it converts and then loses.",
+      "**Nothing about frame density, plate count or finish has been measured for this format.** The " +
+        "corpus is n=0 and the step ships no `params.json`, on purpose. There is no plates-per-minute " +
+        "target to hit, so do not pace toward one.",
+    ],
+  },
 };
 
 /** The table as a plain lookup, so an id off the wire can be tested against it
