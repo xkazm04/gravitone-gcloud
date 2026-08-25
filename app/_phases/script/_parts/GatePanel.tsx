@@ -90,9 +90,16 @@ export default function GatePanel({
           const m = MARK[f.verdict];
           return (
             <li key={`${f.rule}-${f.subject}-${i}`} className="text-[12px] leading-snug">
-              <span className={`font-jetbrains mr-1.5 text-[10px] tracking-[0.1em] ${m.cls}`}>
+              {/* The verdict was a bare glyph in a colour. `MARK.label` has
+                  carried the word for each verdict since this file was written
+                  and nothing ever rendered it — so a screen reader got "✓" or
+                  nothing at all, and the amber that makes `unmeasured` louder
+                  than a violation (the whole design rule in the header) does not
+                  reach anyone reading without colour. */}
+              <span aria-hidden className={`font-jetbrains mr-1.5 text-[10px] tracking-[0.1em] ${m.cls}`}>
                 {m.glyph}
               </span>
+              <span className="sr-only">{m.label}: </span>
               <span className="font-jetbrains text-[10px] tracking-[0.1em] text-white/30">
                 {f.rule}/{f.subject}
                 {f.at && ` @${f.at}`}

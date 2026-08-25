@@ -50,11 +50,17 @@ export function BandMeter({
   );
 }
 
-const CHECK: Record<CheckState, { mark: string; cls: string }> = {
-  pass: { mark: "✓", cls: "text-emerald-300" },
-  declared: { mark: "!", cls: "text-amber-300" },
-  fail: { mark: "✕", cls: "text-rose-300" },
-  unmeasured: { mark: "—", cls: "text-white/35" },
+/** `label` is the state in words, and it is not decoration: the glyph and the
+ *  colour are the ONLY thing distinguishing a passed craft check from a failed
+ *  one, so without it a reader who does not see colour is handed a list of
+ *  sentences with no verdicts attached — and `declared`, the state this app
+ *  invented precisely so a deviation could not hide, is the one that vanishes
+ *  most completely (a bare "!"). */
+const CHECK: Record<CheckState, { mark: string; cls: string; label: string }> = {
+  pass: { mark: "✓", cls: "text-emerald-300", label: "pass" },
+  declared: { mark: "!", cls: "text-amber-300", label: "declared deviation" },
+  fail: { mark: "✕", cls: "text-rose-300", label: "fail" },
+  unmeasured: { mark: "—", cls: "text-white/35", label: "not measured" },
 };
 
 export function CheckList({ rows }: { rows: CheckRow[] }) {
@@ -64,7 +70,10 @@ export function CheckList({ rows }: { rows: CheckRow[] }) {
         const c = CHECK[r.state];
         return (
           <li key={r.label} className="flex gap-2.5 text-[13px] leading-snug">
-            <span className={`font-jetbrains mt-px w-3 shrink-0 text-center ${c.cls}`}>{c.mark}</span>
+            <span aria-hidden className={`font-jetbrains mt-px w-3 shrink-0 text-center ${c.cls}`}>
+              {c.mark}
+            </span>
+            <span className="sr-only">{c.label}: </span>
             <span>
               <span className="text-slate-300">{r.label}</span>{" "}
               <span className="text-white/40">— {r.detail}</span>

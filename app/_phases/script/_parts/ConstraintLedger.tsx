@@ -4,11 +4,14 @@
 
 import { ledgerFor, type EffectiveState } from "../constraints";
 
-const MARK: Record<EffectiveState, { glyph: string; cls: string }> = {
-  "at-risk": { glyph: "!", cls: "text-amber-300" },
-  honoured: { glyph: "✓", cls: "text-emerald-300" },
-  superseded: { glyph: "~", cls: "text-cyan-300" },
-  "not-applicable": { glyph: "—", cls: "text-white/25" },
+/** The word beside the glyph, because the glyph and its colour are otherwise the
+ *  only thing separating "honoured" from "at risk" — and `~` for superseded is
+ *  not a symbol anyone can be expected to read. */
+const MARK: Record<EffectiveState, { glyph: string; cls: string; label: string }> = {
+  "at-risk": { glyph: "!", cls: "text-amber-300", label: "at risk" },
+  honoured: { glyph: "✓", cls: "text-emerald-300", label: "honoured" },
+  superseded: { glyph: "~", cls: "text-cyan-300", label: "superseded" },
+  "not-applicable": { glyph: "—", cls: "text-white/25", label: "not applicable" },
 };
 
 /** `stale` — the chain on screen is not the one these rows were typed about.
@@ -50,9 +53,10 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
           const m = MARK[r.effective];
           return (
             <li key={r.unknownId} className="text-[12px] leading-snug">
-              <span className={`font-jetbrains mr-1.5 text-[10px] tracking-[0.1em] ${m.cls}`}>
+              <span aria-hidden className={`font-jetbrains mr-1.5 text-[10px] tracking-[0.1em] ${m.cls}`}>
                 {m.glyph}
               </span>
+              <span className="sr-only">{m.label}: </span>
               <span className="text-white/45">{r.unknown.impact}</span>
               <span className="block pl-4 text-white/35">{r.how}</span>
               {r.effective === "superseded" && (
