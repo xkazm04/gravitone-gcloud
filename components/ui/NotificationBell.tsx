@@ -191,7 +191,16 @@ export default function NotificationBell() {
           role="group"
           aria-label="Notifications"
           tabIndex={-1}
-          className="gt-float absolute right-0 z-50 mt-2 w-[22rem] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl focus-visible:outline-2 focus-visible:outline-offset-2"
+          // WIDTH IS CAPPED BY THE VIEWPORT, not fixed at 22rem. The tray hangs
+          // right-0 off a bell that sits at the right edge of StudioFrame's
+          // `px-6` rail, so a flat 352px panel starts at `viewport - 376px`: it
+          // overhangs the left edge below 376px and StudioFrame's shell is
+          // `overflow-hidden`, so the overhang is CUT, not scrollable. At 360px
+          // (the common Android width) that clipped 16px off the notifications;
+          // at 320px, 56px. Modal.tsx already treats a phone as a real target
+          // (it becomes a bottom sheet under `sm:`) — this is the same app owing
+          // the same viewport the same answer.
+          className="gt-float absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <div className="flex items-center justify-between px-1 pb-2">
             <p className="font-jetbrains text-[10px] tracking-[0.16em] text-white/45 uppercase">
