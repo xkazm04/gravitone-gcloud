@@ -24,7 +24,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (!authResolved || !user) {
     return (
-      <div className="font-jetbrains grid min-h-screen place-items-center bg-[var(--gt-ink)] text-[12px] tracking-[0.18em] text-white/40 uppercase">
+      <div className="font-jetbrains grid min-h-screen place-items-center bg-[var(--gt-ink)] text-[12px] tracking-[0.18em] text-white/55 uppercase">
         {authResolved ? "redirecting…" : "checking session…"}
       </div>
     );

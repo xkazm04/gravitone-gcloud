@@ -56,7 +56,7 @@ export default function UserMenu() {
   }, [open]);
 
   if (!ready) {
-    return <span className="font-jetbrains text-[11px] text-white/40">auth off</span>;
+    return <span className="font-jetbrains text-[11px] text-white/55">auth off</span>;
   }
   if (loading) {
     return <span className="font-jetbrains text-[11px] text-white/50">…</span>;

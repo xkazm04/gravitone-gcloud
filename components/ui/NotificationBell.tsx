@@ -211,7 +211,7 @@ export default function NotificationBell() {
                 type="button"
                 data-testid="bell-mark-all"
                 onClick={markAllRead}
-                className="font-jetbrains text-[10px] text-white/40 transition hover:text-white/75"
+                className="font-jetbrains text-[10px] text-white/55 transition hover:text-white/85"
               >
                 mark all read
               </button>
@@ -232,7 +232,7 @@ export default function NotificationBell() {
                 <button
                   type="button"
                   onClick={clearStorageTrouble}
-                  className="font-jetbrains shrink-0 text-[10px] text-white/30 transition hover:text-white/70"
+                  className="font-jetbrains shrink-0 text-[10px] text-white/55 transition hover:text-white/85"
                 >
                   dismiss
                 </button>
@@ -244,7 +244,7 @@ export default function NotificationBell() {
                   is the difference between "a notebook did not save" and "a
                   theme sheet did not save", and the raw message is the only
                   thing that survives from studioDb's own classification. */}
-              <p className="font-jetbrains mt-1 truncate text-[10px] text-white/35">
+              <p className="font-jetbrains mt-1 truncate text-[10px] text-white/50">
                 {trouble.phase} · {trouble.message}
               </p>
             </div>
@@ -262,7 +262,7 @@ export default function NotificationBell() {
                     <span className="font-jetbrains text-[10px] tracking-[0.12em] text-cyan-200 uppercase">
                       {j.kind} running
                     </span>
-                    <span className="font-jetbrains text-[10px] text-white/35">{elapsed(j)}</span>
+                    <span className="font-jetbrains text-[10px] text-white/50">{elapsed(j)}</span>
                   </div>
                   <p className="mt-1 truncate text-[12px] text-slate-300">{j.label}</p>
                   {/* A DRIVEN job has no progress fraction — nobody knows how far
@@ -309,7 +309,7 @@ export default function NotificationBell() {
           )}
 
           {count === 0 ? (
-            <p className="px-1 py-3 text-[12px] text-white/35">
+            <p className="px-1 py-3 text-[12px] text-white/50">
               {trouble
                 ? "No run has reported anything — the failure above is the storage layer itself."
                 : running.length
@@ -341,7 +341,7 @@ export default function NotificationBell() {
                     <button
                       type="button"
                       onClick={() => markRead(e.id)}
-                      className="font-jetbrains shrink-0 text-[10px] text-white/30 transition hover:text-white/70"
+                      className="font-jetbrains shrink-0 text-[10px] text-white/55 transition hover:text-white/85"
                     >
                       dismiss
                     </button>
@@ -351,7 +351,7 @@ export default function NotificationBell() {
                       ternaries used to sit in front of this — both branches
                       `""`, on a live component — so all they ever did was cost
                       a reader the time to work out that they did nothing. */}
-                  <p className="font-jetbrains mt-1 truncate text-[10px] text-white/30">
+                  <p className="font-jetbrains mt-1 truncate text-[10px] text-white/50">
                     {`“${eventLabel(e.jobId, jobs)}”`}
                   </p>
                 </li>

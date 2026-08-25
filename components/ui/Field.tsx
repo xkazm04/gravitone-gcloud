@@ -14,9 +14,13 @@
 
 import { useId } from "react";
 
+// The placeholder was `text-white/25`: ~2.2:1 against this control's own
+// background, which is not readable text, it is a hint you have to already know.
+// `/45` measures 4.5:1 there and still reads as clearly un-entered beside the
+// full-strength `text-white` a real value renders in.
 const CONTROL =
   "w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-base text-white " +
-  "placeholder:text-white/25 transition hover:border-white/20 focus:border-cyan-400/40 " +
+  "placeholder:text-white/45 transition hover:border-white/20 focus:border-cyan-400/40 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2";
 
 const LABEL_TEXT =
@@ -114,7 +118,10 @@ export function NumberInput({
       />
       <span
         id={unitId}
-        className="font-jetbrains pointer-events-none absolute inset-y-0 right-3.5 grid place-items-center text-sm text-white/35"
+        // Not `/35` (3.2:1). This span IS the disambiguation the component
+        // exists for, so it is the last text in the app that should be hard to
+        // read; `/50` measures 5.2:1 here.
+        className="font-jetbrains pointer-events-none absolute inset-y-0 right-3.5 grid place-items-center text-sm text-white/50"
       >
         {unit}
       </span>
