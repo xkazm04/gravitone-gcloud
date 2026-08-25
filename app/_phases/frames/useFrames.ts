@@ -43,6 +43,9 @@ import { applySceneSpecs, reviewSceneSpecs, SceneSpecError, SCENE_SCHEMA } from 
 
 const PHASE = "frames";
 
+/** What one `generatePlate` call ended as. See the doc on `generatePlate`. */
+export type PlateOutcome = "ready" | "refused" | "failed";
+
 interface FramesStepData {
   frames: Frame[];
   /** Which script render the frames were derived from. A different render is a
@@ -182,10 +185,19 @@ export function useFrames(projectId: string) {
 
   /* ── plates ─────────────────────────────────────────────────────────────── */
 
+  /**
+   * How one plate call ended, for a caller running SEVERAL of them.
+   *
+   * The distinction is the whole point and it is not cosmetic: `refused` is a
+   * fact about THIS subject — the vendor looked at it and declined — and the
+   * next frame is a different subject that may well be fine. `failed` is a fact
+   * about the RUN: no quota, no network, no key. A batch that cannot tell them
+   * apart keeps firing the whole cut into a wall it already hit once.
+   */
   const generatePlate = useCallback(
-    async (id: string) => {
+    async (id: string): Promise<PlateOutcome> => {
       const frame = frames.find((f) => f.id === id);
-      if (!frame) return;
+      if (!frame) return "failed";
       const subject = frame.plate.subject?.trim() || subjectFor(frame);
 
       setBusy((b) => new Set(b).add(id));
@@ -210,6 +222,7 @@ export function useFrames(projectId: string) {
             subject,
           },
         }));
+        return img ? "ready" : "refused";
       } catch (e) {
         const refused = e instanceof ImagingRequestError && e.code === "refused";
         patch(id, (f) => ({
@@ -217,6 +230,7 @@ export function useFrames(projectId: string) {
           plate: { ...f.plate, state: refused ? "refused" : "empty", subject, note: e instanceof Error ? e.message : undefined },
         }));
         setError(e instanceof Error ? e.message : "The plate could not be generated.");
+        return refused ? "refused" : "failed";
       } finally {
         setBusy((b) => {
           const n = new Set(b);

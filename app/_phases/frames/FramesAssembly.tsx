@@ -28,6 +28,9 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
   const { frames, render, busy, generatePlate, setSubject, plateCost, totalCost, direction } = ctl;
   const [openId, setOpenId] = useState<string | null>(null);
   const [runningAll, setRunningAll] = useState(false);
+  /** How many plates were still missing when a batch stopped itself. Null when
+   *  no batch has stopped early — absence, not zero. */
+  const [stoppedWith, setStoppedWith] = useState<number | null>(null);
   // One selection, shared by the canvas and the panel. Held here rather than in
   // either of them so they cannot disagree about what is selected.
   const [selected, setSelected] = useState<LayerRef>(null);
@@ -35,11 +38,30 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
   const missing = frames.filter((f) => !isComposed(f));
 
   /** Serial, not parallel: the vendor's rate ceiling is unpublished and a
-   *  sixteen-wide burst is exactly how you find it. */
+   *  sixteen-wide burst is exactly how you find it.
+   *
+   *  AND IT STOPS ON A SYSTEMIC FAILURE. `generatePlate` swallows its own error
+   *  so one bad plate cannot take the row down, which used to mean this loop
+   *  could not tell "the vendor declined this subject" from "there is no quota
+   *  left" — so a dead key or a dropped connection fired all sixteen calls into
+   *  the same wall, one per frame, and the user was shown only the last one's
+   *  message. A refusal is about one subject and the loop continues; a failure
+   *  is about the run and the loop ends, saying how much it did not attempt. */
   const renderMissing = async () => {
     setRunningAll(true);
-    for (const f of frames) if (!isComposed(f)) await generatePlate(f.id);
-    setRunningAll(false);
+    setStoppedWith(null);
+    try {
+      const queue = frames.filter((f) => !isComposed(f));
+      for (let i = 0; i < queue.length; i++) {
+        const outcome = await generatePlate(queue[i].id);
+        if (outcome === "failed") {
+          setStoppedWith(queue.length - i);
+          break;
+        }
+      }
+    } finally {
+      setRunningAll(false);
+    }
   };
 
   return (
@@ -103,6 +125,16 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
         </button>
         </div>
       </div>
+
+      {/* A batch that stopped itself says so. Silence here would read as "that
+          is all the plates there were", which is the opposite of what happened —
+          the reason is in the error line above and the work is still owed. */}
+      {stoppedWith !== null && (
+        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-[13px] leading-snug text-amber-100/90">
+          The batch stopped after a failure that was about the run rather than one plate — {stoppedWith} plate
+          {stoppedWith === 1 ? " was" : "s were"} not attempted. Fix the reason above, then run it again.
+        </p>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-white/8">
         <div className="font-jetbrains grid grid-cols-[52px_1fr_206px_120px_86px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-[10px] tracking-[0.14em] text-white/35 uppercase">
