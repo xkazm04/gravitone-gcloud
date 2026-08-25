@@ -153,6 +153,7 @@ export default function Modal({
             {subtitle && <div className="mt-1 text-sm text-slate-400">{subtitle}</div>}
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close"
             className="shrink-0 rounded-lg border border-white/10 p-2 text-white/60 transition hover:border-white/25 hover:text-white"

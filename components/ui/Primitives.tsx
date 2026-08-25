@@ -56,8 +56,15 @@ export function Button({ variant = "primary", className = "", children, ...rest 
     variant === "primary"
       ? "gt-glow bg-gradient-to-r from-cyan-300 to-cyan-200 text-slate-950 hover:brightness-110"
       : "font-jetbrains border border-white/15 text-white/85 hover:bg-white/5";
+  // `type="button"` FIRST, so it is a default a caller can still override with
+  // `type="submit"` through `...rest`. A <button> with no type is a SUBMIT
+  // button, which makes the shared CTA of this design system a form-submitter
+  // by accident the first time one is placed inside a <form>. The repo already
+  // shows the reflex this belongs to: the one form it has (ProjectDialog) hand-
+  // writes type="button" on its raw style pills. A primitive should carry that,
+  // not each call site.
   return (
-    <button className={`${base} ${styles} ${className}`} {...rest}>
+    <button type="button" className={`${base} ${styles} ${className}`} {...rest}>
       {children}
     </button>
   );

@@ -74,6 +74,7 @@ export default function UserMenu() {
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
         // NOT aria-haspopup. `aria-haspopup="true"` is the spec synonym for
@@ -116,6 +117,7 @@ export default function UserMenu() {
           </div>
           <div className="my-1 h-px bg-white/8" />
           <button
+            type="button"
             ref={firstItemRef}
             onClick={() => void signOut()}
             className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm text-white/80 transition hover:bg-white/5"

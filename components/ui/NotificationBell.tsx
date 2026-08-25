@@ -148,6 +148,7 @@ export default function NotificationBell() {
   return (
     <div ref={ref} className="relative">
       <button
+        type="button"
         ref={triggerRef}
         data-testid="bell"
         onClick={() => setOpen((v) => !v)}
@@ -198,6 +199,7 @@ export default function NotificationBell() {
             </p>
             {count > 0 && (
               <button
+                type="button"
                 data-testid="bell-mark-all"
                 onClick={markAllRead}
                 className="font-jetbrains text-[10px] text-white/40 transition hover:text-white/75"
@@ -219,6 +221,7 @@ export default function NotificationBell() {
                   storage {trouble.op} failed
                 </p>
                 <button
+                  type="button"
                   onClick={clearStorageTrouble}
                   className="font-jetbrains shrink-0 text-[10px] text-white/30 transition hover:text-white/70"
                 >
@@ -327,6 +330,7 @@ export default function NotificationBell() {
                       {e.title}
                     </p>
                     <button
+                      type="button"
                       onClick={() => markRead(e.id)}
                       className="font-jetbrains shrink-0 text-[10px] text-white/30 transition hover:text-white/70"
                     >
