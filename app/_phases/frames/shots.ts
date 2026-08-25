@@ -487,11 +487,26 @@ export function shotsFromBeats(beats: readonly ShotSourceBeat[], totalS: number)
     // time. `unplaceableBeats` is how a surface says so — the alternative,
     // folding an unparseable timecode to 0, is the defect this refuses.
     if (startS === null) return;
-    const nextS = beats[i + 1] ? beatSeconds(beats[i + 1]) : totalS;
+    // The NEXT BOUNDARY is the next beat whose position PARSES, not simply the
+    // next beat. An unplaceable beat is not a boundary — it derives no shots of
+    // its own and nobody knows when it happens — so treating it as one used to
+    // end this beat at `null`, fall through to `totalS`, and hand this one beat
+    // the whole remainder of the cut EVEN WHEN A LATER BEAT WAS PERFECTLY
+    // PLACEABLE. On a `peak` that is `beatS / 1.5` shots: one unparseable
+    // timecode in the middle of a chain silently multiplied its predecessor's
+    // shot count. Only when nothing placeable follows does the beat run to the
+    // end of the cut, which is the honest read of "nothing is known to follow".
+    let nextS: number | null = null;
+    for (let j = i + 1; j < beats.length; j++) {
+      const s = beatSeconds(beats[j]);
+      if (s !== null) {
+        nextS = s;
+        break;
+      }
+    }
     // The beat's own span, from the script's own clock — the same derivation
     // `durationOf` runs over frames, and the only number in this file that is
-    // not a rule. A next beat that does not parse leaves this one running to the
-    // end of the cut, which is the honest read of "nothing is known to follow".
+    // not a rule.
     const beatS = Math.max(1, (nextS ?? totalS) - startS);
 
     const { role, declared } = roleOf(b);

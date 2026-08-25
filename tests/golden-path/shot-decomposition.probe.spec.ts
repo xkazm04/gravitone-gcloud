@@ -357,6 +357,29 @@ test("an unparseable position yields NO shots — it is never folded to zero", (
   expect(shots.every((s) => s.beatAt === "0:00")).toBe(true);
 });
 
+test("an unplaceable beat in the MIDDLE does not hand its predecessor the rest of the cut", () => {
+  // The boundary is the next beat that PARSES. Before this was fixed the
+  // derivation looked only at `beats[i + 1]`, got null, fell through to the
+  // cut's total length, and gave the cold open the whole 40 s — 4 setup shots
+  // instead of 3 — even though a placeable beat sat at 0:30. On a `peak` the
+  // same fall-through multiplies the count by `beatS / 1.5`.
+  const chain: ShotSourceBeat[] = [
+    { at: "0:00", kind: "cold-open", label: "open", text: "t" },
+    { at: "soon", kind: "rung", label: "unplaceable", text: "t" },
+    { at: "0:30", kind: "reset", label: "the stop", text: "t" },
+  ];
+  const shots = shotsFromBeats(chain, 40);
+  const open = shots.filter((s) => s.beatAt === "0:00");
+  // 0:00 → 0:30 is 30 s, and a setup wide runs to 13 s: ceil(30 / 13) = 3.
+  expect(open).toHaveLength(3);
+  expect(open.every((s) => s.holdS === 10)).toBe(true);
+  // The unplaceable beat still derives nothing at all, and the beat after it is
+  // untouched.
+  expect(shots.some((s) => s.beatAt === "soon")).toBe(false);
+  expect(shots.filter((s) => s.beatAt === "0:30")).toHaveLength(1);
+  console.log(`[shots] mid-chain unplaceable: cold open ${open.length} shot(s) at ${open[0].holdS}s`);
+});
+
 test("every kind the beat lane can emit resolves to a role — no key is dead", () => {
   // TrailerBeatKind, as declared on `trailer/story-model`. If that union grows,
   // this list and ROLE_HINTS are the one line each that reconciles it.
