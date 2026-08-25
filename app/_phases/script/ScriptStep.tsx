@@ -184,53 +184,57 @@ export default function ScriptAssayBench({ projectId }: { projectId: string }) {
             </div>
           )}
 
-          {tab === "candidates" && (
-            <StickyNotebook api={versions} gate={gate}>
-              <>
-                <BaselineOnlyNote
-                  api={versions}
-                  what="The beat chains below are the baseline."
-                  showing={reading}
-                  gate={reading ? gate : undefined}
-                />
-                <div className="grid gap-3 lg:grid-cols-3">
-                  {RENDERS.map((r) => (
-                    <HypothesisColumn
-                      key={r.id}
-                      render={r}
-                      beats={chains[r.id]}
-                      chainLabel={reading?.beats ? reading.label : undefined}
-                      adopted={adopted === r.id}
-                      onAdopt={() => setAdopted(adopted === r.id ? null : r.id)}
-                      expanded={expanded === r.id}
-                      onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
-                    />
-                  ))}
-                </div>
-              </>
-            </StickyNotebook>
-          )}
+          {/* ONE PAD ACROSS ALL FOUR TABS.
+              It used to be mounted inside each tab's own branch, so switching
+              tab unmounted the provider and took its state with it: the composer
+              you had open on a track closed, and a pad you had collapsed sprang
+              back open — every time you crossed from Coverage to the Spend bar
+              to check what a note did. The pad is a fixed corner surface that
+              belongs to the STEP, not to whichever grid happens to be under it,
+              so it is mounted once and the tabs swap inside it. */}
+          <StickyNotebook api={versions} gate={gate}>
+            <>
+              {tab === "candidates" && (
+                <>
+                  <BaselineOnlyNote
+                    api={versions}
+                    what="The beat chains below are the baseline."
+                    showing={reading}
+                    gate={reading ? gate : undefined}
+                  />
+                  <div className="grid gap-3 lg:grid-cols-3">
+                    {RENDERS.map((r) => (
+                      <HypothesisColumn
+                        key={r.id}
+                        render={r}
+                        beats={chains[r.id]}
+                        chainLabel={reading?.beats ? reading.label : undefined}
+                        adopted={adopted === r.id}
+                        onAdopt={() => setAdopted(adopted === r.id ? null : r.id)}
+                        expanded={expanded === r.id}
+                        onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
 
-          {tab === "coverage" && (
-            <StickyNotebook api={versions} gate={gate}>
-              <MatrixCoverage api={scope} version={shown} baseline={versions.baseline} comparing={comparing} />
-            </StickyNotebook>
-          )}
+              {tab === "coverage" && (
+                <MatrixCoverage api={scope} version={shown} baseline={versions.baseline} comparing={comparing} />
+              )}
 
-          {tab === "spend" && (
-            <StickyNotebook api={versions} gate={gate}>
-              <MatrixSpend api={scope} version={shown} baseline={versions.baseline} comparing={comparing} />
-            </StickyNotebook>
-          )}
+              {tab === "spend" && (
+                <MatrixSpend api={scope} version={shown} baseline={versions.baseline} comparing={comparing} />
+              )}
 
-          {tab === "tracks" && (
-            <StickyNotebook api={versions} gate={gate}>
-              <>
-                <BaselineOnlyNote api={versions} what="Running order is shown for the baseline." />
-                <MatrixTracks api={scope} version={versions.baseline} />
-              </>
-            </StickyNotebook>
-          )}
+              {tab === "tracks" && (
+                <>
+                  <BaselineOnlyNote api={versions} what="Running order is shown for the baseline." />
+                  <MatrixTracks api={scope} version={versions.baseline} />
+                </>
+              )}
+            </>
+          </StickyNotebook>
         </div>
       )}
 
