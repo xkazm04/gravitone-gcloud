@@ -87,8 +87,17 @@ export default function Modal({
       // Focus trap: Tab must not walk out of the dialog into the page behind
       // it, which is the difference between a modal and a decorative overlay.
       if (e.key !== "Tab" || !panelRef.current) return;
+      // The disabled guard has to cover every control type, not just buttons.
+      // This selector read `button:not([disabled]),input,select,textarea`, so a
+      // disabled input — or an `input[type="hidden"]`, which matches `input` and
+      // can never take focus — could be picked as `first` or `last`. Then
+      // `first.focus()` is a silent no-op and the wrap does not happen: Tab walks
+      // out of the dialog into the page behind it, which is precisely the
+      // difference this block exists to enforce. The sr-only radios <Segmented>
+      // renders are still matched — they are clipped, not disabled or hidden.
       const items = panelRef.current.querySelectorAll<HTMLElement>(
-        'a[href],button:not([disabled]),input,select,textarea,[tabindex]:not([tabindex="-1"])',
+        'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),' +
+          'select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
       );
       if (items.length === 0) return;
       const first = items[0];
