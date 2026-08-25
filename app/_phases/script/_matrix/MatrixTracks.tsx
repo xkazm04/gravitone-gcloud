@@ -36,11 +36,29 @@ import { coverageIn, usageIn, type Version } from "../versions";
 import { NoteHandle } from "../_notes/NotesContext";
 import { MatrixFootnotes, RENDERS, ScopePip, secs } from "./shared";
 
-const toS = (m: string) => { const [a, b] = m.split(":").map(Number); return a * 60 + b; };
+/** A beat mark as seconds, or null when the mark is not a position.
+ *
+ *  Not every `Usage.beats` entry is a timecode. The simulated transform brings a
+ *  card in with the sentinel mark `"new"` (recalibrate.ts): it has been given
+ *  seconds, but no beat has been written for it, so it has no place in a running
+ *  order. The old parser read that as `NaN`, and NaN is FALSY — so a sentinel row
+ *  fell through to the id tiebreak while real rows compared by time, which is not
+ *  a total order and leaves the column's sequence dependent on the input order.
+ *  It also drew the word "new" in the slot where a timecode goes. Refusing the
+ *  mark answers both: unplaced cards sort to the end of the track and say so. */
+const toS = (m: string | undefined): number | null => {
+  if (!m) return null;
+  const [a, b] = m.split(":");
+  if (!/^\d+$/.test(a ?? "") || !/^\d+$/.test(b ?? "")) return null;
+  return Number(a) * 60 + Number(b);
+};
+
+/** Sorts after every real position, without pretending to be one. */
+const placeOf = (marks: string[]) => toS(marks[0]) ?? Number.MAX_SAFE_INTEGER;
 
 export default function MatrixTracks({ api, version }: { api: ScopeApi; version: Version }) {
   const [focus, setFocus] = useState<string | null>(null);
-    const ids = api.cards.map((c) => c.id);
+  const ids = api.cards.map((c) => c.id);
 
   const unused = api.cards.filter((c) => RENDERS.every((r) => usageIn(version, r.id, c.id).kind === "unused"));
 
@@ -58,7 +76,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
           const used = api.cards
             .map((c) => ({ card: c, u: usageIn(version, r.id, c.id) }))
             .filter((x) => x.u.kind === "spoken")
-            .sort((a, b) => toS(a.u.beats[0]) - toS(b.u.beats[0]) || a.card.id.localeCompare(b.card.id));
+            .sort((a, b) => placeOf(a.u.beats) - placeOf(b.u.beats) || a.card.id.localeCompare(b.card.id));
           const cut = api.cards.filter((c) => usageIn(version, r.id, c.id).kind === "cut");
 
           return (
@@ -80,6 +98,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
                 {used.map(({ card, u }) => {
                   const lit = focus === card.id;
                   const descoped = stateOf(api.scope, card.id).descoped;
+                  const placed = toS(u.beats[0]) !== null;
                   return (
                     <li
                       key={card.id}
@@ -98,8 +117,15 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
                       <span className="min-w-0 flex-1">
                         <span className="flex items-baseline justify-between gap-1.5">
                           <NoteHandle cardId={card.id} />
-                          <span className="font-jetbrains shrink-0 text-[10px] text-cyan-200/80">
-                            {u.beats[0]} · {secs(u.seconds)}
+                          <span
+                            className={`font-jetbrains shrink-0 text-[10px] ${placed ? "text-cyan-200/80" : "text-amber-200/80"}`}
+                            title={
+                              placed
+                                ? undefined
+                                : "This recalibration gave the card screen time but no beat states it yet, so it has no position in the running order."
+                            }
+                          >
+                            {placed ? u.beats[0] : "not placed"} · {secs(u.seconds)}
                           </span>
                         </span>
                         <span className="mt-0.5 block truncate text-[11px] leading-snug text-slate-300" title={card.title}>
