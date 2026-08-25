@@ -18,6 +18,43 @@ import type { Frame, FrameElement, FrameText, LayerRef } from "./frames";
  *  percent land where the eye expects rather than being squashed. */
 const VB_H = 56;
 
+/**
+ * Wire one drag's move/end listeners so they come down TOGETHER.
+ *
+ * `pointercancel` is the half that was missing at both call sites, and it is
+ * not a rare event: the browser fires it when a touch turns into a scroll, when
+ * the pointer leaves the window while captured, and on any device disconnect.
+ * With only `pointerup` in the teardown those drags never ended — the move
+ * listener stayed on the element and the layer resumed following the pointer
+ * the next time it passed over, with no button held.
+ *
+ * `releasePointerCapture` throws `NotFoundError` for a pointer the browser has
+ * already forgotten, which is exactly the state a cancelled drag leaves behind,
+ * so the release is guarded. Nothing else in the teardown may be skipped by it.
+ */
+function bindDrag(el: Element, pointerId: number, move: (ev: PointerEvent) => void): void {
+  const end = () => {
+    try {
+      el.releasePointerCapture(pointerId);
+    } catch {
+      // The pointer is already gone — there is nothing to release, and the
+      // listeners below still have to come off.
+    }
+    el.removeEventListener("pointermove", move as EventListener);
+    el.removeEventListener("pointerup", end as EventListener);
+    el.removeEventListener("pointercancel", end as EventListener);
+  };
+  try {
+    el.setPointerCapture(pointerId);
+  } catch {
+    // Capture is an optimisation for tracking outside the element's box; a
+    // drag without it still works, and refusing to start one would be worse.
+  }
+  el.addEventListener("pointermove", move as EventListener);
+  el.addEventListener("pointerup", end as EventListener);
+  el.addEventListener("pointercancel", end as EventListener);
+}
+
 export interface CanvasEdit {
   selected: LayerRef;
   onSelect: (ref: LayerRef) => void;
@@ -59,8 +96,7 @@ export function FrameCanvas({
       const offY = start.y - originY;
 
       const el = e.currentTarget as Element;
-      el.setPointerCapture(e.pointerId);
-      const move = (ev: PointerEvent) => {
+      bindDrag(el, e.pointerId, (ev) => {
         const r = box.current?.getBoundingClientRect();
         if (!r) return;
         edit.onMove(
@@ -68,14 +104,7 @@ export function FrameCanvas({
           ((ev.clientX - r.left) / r.width) * 100 - offX,
           ((ev.clientY - r.top) / r.height) * 100 - offY,
         );
-      };
-      const up = () => {
-        el.releasePointerCapture(e.pointerId);
-        el.removeEventListener("pointermove", move as EventListener);
-        el.removeEventListener("pointerup", up as EventListener);
-      };
-      el.addEventListener("pointermove", move as EventListener);
-      el.addEventListener("pointerup", up as EventListener);
+      });
     },
     [edit, pctOf],
   );
@@ -182,19 +211,11 @@ export function ResizeHandle({
     e.preventDefault();
     e.stopPropagation();
     const target = e.currentTarget as Element;
-    target.setPointerCapture(e.pointerId);
-    const move = (ev: PointerEvent) => {
+    bindDrag(target, e.pointerId, (ev) => {
       const r = box.current?.getBoundingClientRect();
       if (!r) return;
       onResize(elId, ((ev.clientX - r.left) / r.width) * 100 - el.x, ((ev.clientY - r.top) / r.height) * 100 - el.y);
-    };
-    const up = () => {
-      target.releasePointerCapture(e.pointerId);
-      target.removeEventListener("pointermove", move as EventListener);
-      target.removeEventListener("pointerup", up as EventListener);
-    };
-    target.addEventListener("pointermove", move as EventListener);
-    target.addEventListener("pointerup", up as EventListener);
+    });
   };
 
   // A role="slider" that only listens for the pointer is an announced-but-inert
