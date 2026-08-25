@@ -18,7 +18,7 @@
 import { useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
-import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef } from "./frames";
+import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef, type PlateState } from "./frames";
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
 import LayerPanel from "./LayerPanel";
@@ -182,7 +182,11 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
   );
 }
 
-const PLATE_WORD: Record<string, { word: string; cls: string }> = {
+/** Keyed by `PlateState` rather than by `string`, so a sixth plate state is a
+ *  compile error here and not a `undefined.cls` at render time. Its two
+ *  siblings on the shot sheet (`VERDICT_STYLE`, `PACE_STYLE`) are keyed by
+ *  their unions already; this was the one map that was not. */
+const PLATE_WORD: Record<PlateState, { word: string; cls: string }> = {
   ready: { word: "rendered", cls: "text-cyan-300" },
   generating: { word: "rendering", cls: "text-cyan-300/60" },
   refused: { word: "refused", cls: "text-rose-300" },
