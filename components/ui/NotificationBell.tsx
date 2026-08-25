@@ -17,7 +17,7 @@
 // StudioFrame — was not listening. A creator editing for an hour against a full
 // quota found out by closing the tab.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { Bell } from "lucide-react";
 
 import {
@@ -64,6 +64,7 @@ export default function NotificationBell() {
   const trouble = useStorageTrouble();
   const announce = useAnnounce();
   const [open, setOpen] = useState(false);
+  const panelId = useId();
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -153,8 +154,12 @@ export default function NotificationBell() {
         aria-label={
           badge ? `${badge} unread notification${badge === 1 ? "" : "s"}` : "Notifications"
         }
-        aria-haspopup="true"
+        // NOT aria-haspopup: `"true"` is the spec synonym for `"menu"`, and
+        // the tray is a role="group" disclosure by the deliberate choice
+        // recorded in the open effect above. Announcing a menu re-promises the
+        // arrow-key contract that was dropped on purpose.
         aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
         className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/60 transition hover:border-white/25 hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
         <Bell className="h-4 w-4" />
@@ -180,6 +185,7 @@ export default function NotificationBell() {
       {open && (
         <div
           ref={panelRef}
+          id={panelId}
           data-testid="bell-panel"
           role="group"
           aria-label="Notifications"

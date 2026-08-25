@@ -18,13 +18,14 @@
 // already implements: Tab walks it, Enter fires, Escape closes and returns
 // focus to the trigger, aria-expanded says which state it is in.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
 import { Button } from "./Primitives";
 
 export default function UserMenu() {
   const { user, profile, loading, ready, signIn, signOut } = useAuth();
   const [open, setOpen] = useState(false);
+  const panelId = useId();
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const firstItemRef = useRef<HTMLButtonElement>(null);
@@ -75,8 +76,14 @@ export default function UserMenu() {
       <button
         ref={triggerRef}
         onClick={() => setOpen((o) => !o)}
-        aria-haspopup="true"
+        // NOT aria-haspopup. `aria-haspopup="true"` is the spec synonym for
+        // `"menu"`, so this control announced "has menu" — re-making, to a
+        // screen reader, the exact promise the header comment above says was
+        // withdrawn from the markup: a menu owes arrow-key navigation and this
+        // panel has one button in it. Disclosure is the honest pattern and it
+        // needs only the two attributes below.
         aria-expanded={open}
+        aria-controls={open ? panelId : undefined}
         className="flex cursor-pointer items-center gap-2 rounded-full border border-white/12 py-1 pr-3 pl-1 transition hover:border-white/25"
       >
         {profile?.photoURL ? (
@@ -99,6 +106,7 @@ export default function UserMenu() {
 
       {open && (
         <div
+          id={panelId}
           style={{ "--gt-rise-y": "-6px", "--gt-rise-dur": "160ms" } as React.CSSProperties}
           className="gt-rise glass-panel absolute top-full right-0 z-50 mt-2 w-60 rounded-xl p-2"
         >
