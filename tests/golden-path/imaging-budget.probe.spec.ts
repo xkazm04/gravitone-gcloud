@@ -322,6 +322,10 @@ test("failure booking: which kinds cost money, and which never reached a vendor"
   expect(billedOnFailure(mk("rate-limited", true))).toBe(false);
   expect(billedOnFailure(mk("no-key", true))).toBe(false);
   expect(billedOnFailure(mk("unsupported", false))).toBe(false);
+  // Checked by an adapter before dispatch — Leonardo's prompt ceiling, Qwen's
+  // inline-image ceiling. These used to be `bad-response`, which the table above
+  // books as billed because the vendor answered. Nothing answered.
+  expect(billedOnFailure(mk("invalid-request", false))).toBe(false);
   expect(billedOnFailure(mk("no-alternative", false))).toBe(false);
   expect(billedOnFailure(mk("over-budget", false))).toBe(false);
 });

@@ -17,7 +17,7 @@
 // reported in provenance, never raised: by then we already hold the pixels,
 // and failing the call would trade the user's image for their tidiness.
 
-import { ImagingError } from "../errors";
+import { ImagingError, invalidRequest } from "../errors";
 import { keyFor } from "../env";
 import { fetchImageBase64, requestJson } from "../http";
 import { logCleanupFailure } from "../log";
@@ -60,18 +60,42 @@ interface StartResponse {
   };
 }
 
+/** The units this adapter can convert, and the multiplier to USD for each.
+ *  An absent unit means credits — that is what the legacy `apiCreditCost` field
+ *  is, and it is the only field that arrives without one. */
+const USD_PER_UNIT: Record<string, number> = {
+  CREDITS: USD_PER_CREDIT,
+  CREDIT: USD_PER_CREDIT,
+  DOLLARS: 1,
+  USD: 1,
+};
+
 /**
  * Leonardo's money fields are a moving target: `apiCreditCost` is being
  * superseded by `cost: {amount, unit}`, the webhook spells it `apiDollarCost`,
  * and the amounts arrive as STRINGS in at least two of the three. So coerce
  * everything, and read the unit rather than assuming credits — treating
- * dollars as credits would under-report the bill by ~400x.
+ * dollars as credits would under-report the bill by ~390x.
+ *
+ * WHICH IS WHY AN UNKNOWN UNIT IS UNPRICED RATHER THAN ASSUMED. The previous
+ * shape was `unit === "DOLLARS" ? amount : amount * USD_PER_CREDIT`, and its
+ * else-branch is the very mistake the paragraph above warns about: a field this
+ * volatile arriving as "USD", or as a spelling nobody has seen yet, was
+ * silently read as credits and divided by 389. Returning `undefined` instead
+ * hands the call to `priceCall`, which falls back to the declared per-image
+ * rate in pricing.ts — a figure with a source and a date on it, and the right
+ * order of magnitude.
+ *
+ * A zero or negative amount is treated the same way, for the reason log.ts
+ * states about the same number: a missing figure is never a zero. Coercion
+ * turns an empty string into 0, and a 0 here would reach the client as a
+ * `vendor-reported` receipt saying the render was free.
  */
 function costUsdFrom(job: StartResponse["sdGenerationJob"]): number | undefined {
   const amount = Number(job?.cost?.amount ?? job?.apiCreditCost);
-  if (!Number.isFinite(amount)) return undefined;
-  const unit = String(job?.cost?.unit ?? "CREDITS").toUpperCase();
-  return unit === "DOLLARS" ? amount : amount * USD_PER_CREDIT;
+  if (!Number.isFinite(amount) || amount <= 0) return undefined;
+  const perUnit = USD_PER_UNIT[String(job?.cost?.unit ?? "CREDITS").toUpperCase()];
+  return perUnit === undefined ? undefined : amount * perUnit;
 }
 
 interface PollResponse {
@@ -100,11 +124,14 @@ export function leonardoProvider(): ImagingProvider {
       const { w, h } = ASPECT_PX[req.aspect];
       const count = Math.min(Math.max(req.count ?? 1, 1), 8);
 
+      // Checked here, before dispatch — so `invalid-request`, not
+      // `bad-response`. The kinds differ in money as well as in status: the
+      // router books a `bad-response` as billed (the vendor answered), and this
+      // request never left the process.
       if (req.prompt.length > MAX_PROMPT_CHARS)
-        throw new ImagingError(
-          `The prompt is ${req.prompt.length} characters; Leonardo accepts ${MAX_PROMPT_CHARS}. Shorten the style block or move detail into the negative prompt.`,
-          "bad-response",
+        throw invalidRequest(
           "leonardo",
+          `The prompt is ${req.prompt.length} characters; Leonardo accepts ${MAX_PROMPT_CHARS}. Shorten the style block or move detail into the negative prompt.`,
         );
 
       const start = await requestJson<StartResponse>("leonardo", `${BASE}/generations`, {

@@ -17,7 +17,7 @@
 //      sound: the SKUs bill against separate quotas, so a 429 on one is not a
 //      429 on the next.
 
-import { ImagingError } from "../errors";
+import { ImagingError, invalidRequest } from "../errors";
 import { keyFor } from "../env";
 import { requestJson } from "../http";
 import { parseAgainstSchema, schemaInstruction } from "../json";
@@ -50,11 +50,13 @@ export function qwenProvider(): ImagingProvider {
       const key = keyFor("qwen");
 
       const bytes = Math.ceil((req.image.base64.length * 3) / 4);
+      // Checked here, before dispatch — so `invalid-request`, not
+      // `bad-response`. The router books a `bad-response` as billed on the
+      // grounds that the vendor answered; this image never left the process.
       if (bytes > MAX_INLINE_BYTES)
-        throw new ImagingError(
-          `The image is ${(bytes / 1024 / 1024).toFixed(1)} MB; Qwen accepts at most 10 MB inline.`,
-          "bad-response",
+        throw invalidRequest(
           "qwen",
+          `The image is ${(bytes / 1024 / 1024).toFixed(1)} MB; Qwen accepts at most 10 MB inline.`,
         );
 
       // Image part first, then the instruction — the order the vendor's own

@@ -17,6 +17,17 @@ export type ImagingErrorKind =
   | "no-key"
   /** This provider does not implement this capability. A routing bug. */
   | "unsupported"
+  /** The request cannot be sent to this vendor as written — a ceiling the
+   *  adapter checks BEFORE dispatch, such as Leonardo's 1500-character prompt
+   *  limit or Qwen's 10 MB inline-image limit.
+   *
+   *  It earns its place next to `bad-response`, which is what these two checks
+   *  used to raise, and the difference is money: `bad-response` means the vendor
+   *  answered, so the router books it as billed (see billedOnFailure). Nothing
+   *  is dispatched here, nothing is billed, and the caller is told a 400 — their
+   *  own input, fixable by them — rather than a 502 that says the vendor
+   *  misbehaved and invites a retry that will fail identically forever. */
+  | "invalid-request"
   /** The vendor's safety layer declined. Re-route, never retry. */
   | "refused"
   /** The caller ruled out the only vendor that could have served this. Not a
@@ -109,6 +120,16 @@ export const unsupported = (provider: ProviderId, cap: Capability) =>
   new ImagingError(`The ${provider} adapter does not implement ${cap}.`, "unsupported", provider);
 
 /**
+ * A vendor-side limit this adapter checked itself, before dispatch.
+ *
+ * The message is the adapter's own sentence — it names the limit and what to do
+ * about it — and it is the caller's to act on, so it travels at 400 and never
+ * reaches the spend meter.
+ */
+export const invalidRequest = (provider: ProviderId, message: string) =>
+  new ImagingError(message, "invalid-request", provider);
+
+/**
  * A request asked to avoid the only vendor planned for the capability.
  *
  * This is the honest end of `avoid`, and it is the common case rather than the
@@ -142,6 +163,8 @@ export function statusFor(kind: ImagingErrorKind): number {
       return 503; // the server is not configured; the request was fine
     case "unsupported":
       return 501;
+    case "invalid-request":
+      return 400; // the caller's input exceeds a limit this adapter enforces
     case "refused":
       return 422; // understood, and declined — not a client format error
     case "no-alternative":

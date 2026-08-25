@@ -166,7 +166,9 @@ interface Constraint {
  *                  vendor answered and a host that could not be reached at all.
  *                  Only http.ts knows which, and it says so on the error.
  *
- *   rate-limited   NOT billed. A 429 is the door refusing before anything ran.
+ *   rate-limited    NOT billed. A 429 is the door refusing before anything ran.
+ *   invalid-request NOT billed. An adapter checked one of the vendor's own
+ *                   limits and refused to dispatch. Nothing left the process.
  *   no-key         NOT billed. Rejected at authentication, or never attempted.
  *   unsupported    NOT billed. A routing-table fact; no call is made.
  *   no-alternative NOT billed. The chain emptied before a vendor was chosen.
@@ -189,6 +191,7 @@ export function billedOnFailure(err: ImagingError): boolean {
     case "failed":
       return err.dispatched;
     case "rate-limited":
+    case "invalid-request":
     case "no-key":
     case "unsupported":
     case "no-alternative":
