@@ -67,8 +67,17 @@ export default function Modal({
 
   useEffect(() => setMounted(true), []);
 
+  // `mounted` is in the condition AND the deps, and both halves are load-bearing.
+  // This component returns null until `mounted` flips, so on a first render with
+  // `open` already true the effect used to run against a panel that did not
+  // exist: `panelRef.current?.focus()` silently no-opped, `open` never changed,
+  // and the effect never ran again — so a Modal MOUNTED open never received
+  // focus, against this file's own contract four comment-lines above ("focus
+  // moves into the dialog on open"). It also locked the page scroll for a dialog
+  // that was not on screen yet. Every consumer today mounts closed and toggles,
+  // which is why nothing has hit it; the contract should not depend on that.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !mounted) return;
     openerRef.current = document.activeElement;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
@@ -118,7 +127,7 @@ export default function Modal({
       document.body.style.paddingRight = prev.pad;
       (openerRef.current as HTMLElement | null)?.focus?.();
     };
-  }, [open]);
+  }, [open, mounted]);
 
   if (!mounted || !open) return null;
 
