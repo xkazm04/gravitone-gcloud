@@ -62,16 +62,27 @@ export const ACCENT = {
 /** Page ink — the studio background. */
 export const INK = "#080a10";
 
-// canonical surface + text classes
+/**
+ * The canonical glass surface, as a class list. The one export of this file
+ * that components read directly (Primitives.tsx); `.glass-panel` in globals.css
+ * is the same surface drawn off the `--gt-*` vars for the callers that want a
+ * class rather than an import.
+ *
+ * `HAIRLINE` and `TEXT` used to sit beside it. Both were exported and NEITHER
+ * had a reader: the only two imports of this file anywhere are `tokensCss`
+ * (GravitoneTokens.tsx) and `SURFACE` (Primitives.tsx), and `HAIRLINE` /
+ * `TEXT.hero|body|label|meta` appeared in no other file in the repo. They go
+ * for the same stated reason `--gt-chart-*` and `--gt-hue` went — EVERY TOKEN
+ * HERE HAS A READER — and the drift they were meant to prevent had already
+ * happened around them: `HAIRLINE` was a third spelling of the hairline that
+ * `SURFACE` inlines and `--gt-hairline` publishes, and `TEXT.meta` named a
+ * text colour that 43 places in app/ spell by hand without ever importing it.
+ *
+ * Reviving one is a commit that brings back the constant AND converts the call
+ * sites that should read it; `git log` this file for the values.
+ */
 export const SURFACE =
   "border border-white/8 bg-gradient-to-b from-white/[0.05] to-white/[0.015] backdrop-blur-[14px]";
-export const HAIRLINE = "border-white/8";
-export const TEXT = {
-  hero: "font-instrument text-white",
-  body: "font-hanken text-slate-300",
-  label: "font-jetbrains uppercase tracking-[0.18em] text-cyan-300",
-  meta: "font-jetbrains text-white/45",
-} as const;
 
 /**
  * Design tokens as CSS custom properties. Emitted verbatim by
