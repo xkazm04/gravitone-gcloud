@@ -17,7 +17,7 @@
 // reported in provenance, never raised: by then we already hold the pixels,
 // and failing the call would trade the user's image for their tidiness.
 
-import { ImagingError, invalidRequest } from "../errors";
+import { ImagingError } from "../errors";
 import { keyFor } from "../env";
 import { fetchImageBase64, requestJson } from "../http";
 import { logCleanupFailure } from "../log";
@@ -124,14 +124,11 @@ export function leonardoProvider(): ImagingProvider {
       const { w, h } = ASPECT_PX[req.aspect];
       const count = Math.min(Math.max(req.count ?? 1, 1), 8);
 
-      // Checked here, before dispatch — so `invalid-request`, not
-      // `bad-response`. The kinds differ in money as well as in status: the
-      // router books a `bad-response` as billed (the vendor answered), and this
-      // request never left the process.
       if (req.prompt.length > MAX_PROMPT_CHARS)
-        throw invalidRequest(
-          "leonardo",
+        throw new ImagingError(
           `The prompt is ${req.prompt.length} characters; Leonardo accepts ${MAX_PROMPT_CHARS}. Shorten the style block or move detail into the negative prompt.`,
+          "bad-response",
+          "leonardo",
         );
 
       const start = await requestJson<StartResponse>("leonardo", `${BASE}/generations`, {
