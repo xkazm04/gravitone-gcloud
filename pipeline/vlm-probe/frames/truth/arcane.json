@@ -1,0 +1,14 @@
+{
+  "_source": "Frame cut from a stylised 3D-animated series, supplied by the operator 2026-08-25. Third-party content held locally for model evaluation only — the file is gitignored and never redistributed.",
+  "_why_thin": "Unlike duel-keyframe, we did not author this frame, so there is no generating prompt to check against. Only fields a careful human would not argue about are graded. Everything else is deliberately left to the agreement table and the --show-disagreements list, where a person adjudicates. A truth column padded with contestable calls stops measuring truth.",
+  "_ungraded": {
+    "shot_size": "Both figures read close to full-body inside a large environment; 'wide' and 'full' are both defensible. Left to the ordinal near-miss logic instead of asserted.",
+    "camera_angle": "Reads low, but the two subjects sit at very different heights and neither eyeline anchors it cleanly. This is the single most interesting field to have a human settle.",
+    "texture": "The house style is painted-texture 3D. 'painterly', '3d-rendered' and 'cel-animated' are each partly right — a genuine vocabulary stress test, and exactly the kind of split worth reading rather than scoring.",
+    "genre_register": "Stylised animated action; the schema's contracts are written for live action. Expect models to scatter here."
+  },
+
+  "depth_of_field": "deep",
+  "lighting_key": "low-key",
+  "contrast": "high"
+}

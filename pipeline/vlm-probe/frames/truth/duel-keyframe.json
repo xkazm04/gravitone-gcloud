@@ -1,0 +1,15 @@
+{
+  "_source": "Generated locally (Flux 2 dev, seed 20260824) for the ai-registry cinematic-language trials, 2026-08-24. We wrote the generating prompt, so the intent is known — but only fields that are ALSO unambiguous in the rendered image are graded here. A prompt is a request, not a label.",
+  "_ungraded": {
+    "texture": "Prompt asked for fine film grain and live-action texture; the render is closer to clean digital. Genuinely contestable, so it is left to the agreement table rather than scored as truth.",
+    "lens_impression": "Mild perspective, no decisive edge cue. Contestable.",
+    "lighting_direction": "Both key sources are emissive props inside the frame lighting the figures from front and side at once. 'mixed' is defensible but so are others.",
+    "genre_register": "Reads across action-precision and sci-fi. No single defensible answer."
+  },
+
+  "shot_size": "wide",
+  "camera_angle": "eye-level",
+  "depth_of_field": "deep",
+  "lighting_key": "low-key",
+  "contrast": "high"
+}

@@ -88,6 +88,17 @@ pipeline/runs/*/captures/
 # Playwright golden-path probe artifacts
 /test-results/
 
+# VLM frame-annotation probe (pipeline/vlm-probe). Two kinds of unversionable:
+# the frames are third-party film content held locally for evaluation only, and
+# the result rows are regenerable evidence. The FINDING gets committed — to the
+# ai-registry, as knowledge — not the rows behind it.
+/vlm-probe-out/
+__pycache__/
+*.pyc
+/pipeline/vlm-probe/frames/*
+!/pipeline/vlm-probe/frames/truth/
+!/pipeline/vlm-probe/frames/truth/*.json
+
 # BEGIN ai-registry linked skills (managed by ai-registry/scripts/link-registry.mjs)
 # Links are machine state; the declarations live in .ai/manifest.yaml (`skills:` and `knowledge.domains`).
 /.claude/skills/architect
