@@ -37,6 +37,7 @@ Three structural reasons, not tuning problems:
 | 2. **Function** | shot | what job is this shot doing | new |
 | 3. **Sequence** | shot in context | what does it cut from/to, at what rhythm | new, cheap |
 | 4. **Narration** | timestamp span | what is said over it | new, cheap |
+| 5. **Extraction** | the corpus | what RULE does this support | new, cheapest |
 
 **Layer 1 → shot-level.** Group frames by the shot boundaries scene detection
 already gives us, sample 2–3 frames per shot (head/middle/tail) instead of one.
@@ -61,6 +62,36 @@ de-overlapping VTT parser already in this repo
 (`knowledge/templates/*/steps/01-script/corpus/parse_vtt.py` — YouTube's
 rolling captions repeat the previous tail, and that parser already handles it).
 Align cues to shots by timestamp.
+
+## Layer 5 — extraction. The step that was missing
+
+Layers 1–4 all *capture*. Nothing in them turns captured data into a rule a
+person can act on, which is why an operator looking at the pipeline's output
+sees generation prompts and measurement tables rather than anything about
+filmmaking. Capture is not knowledge.
+
+Extraction is mostly plain aggregation over the joined layers, not a model
+call. Run against this repo's existing corpus it already returns usable rules:
+
+- **Shot length is bimodal, not fast.** 198 shots: median 1.04 s, but 47 under
+  0.5 s *and* 30 over 4 s. Reporting the median alone destroys the finding —
+  the grammar is long holds punctuated by bursts.
+- **Tightness is inversely proportional to screen time.** Extreme close-ups
+  hold a median of **0.33 s** against 1.06 s for ordinary close-ups. The
+  tightest shots are percussion, not dwelling — so generating a beautiful
+  extreme close-up and holding it is a grammar error no frame-level quality
+  score can detect.
+
+Both came from timestamps and craft labels already on disk, with no new
+capture and no reasoning model. That is the point: the cheapest layer was the
+missing one.
+
+What extraction must respect: report **distribution shape, not just central
+tendency** (the bimodality is the whole lesson); state **n per bucket**,
+because a craft/duration table looks authoritative while resting on eight
+samples; and keep rules **falsifiable** — "extreme close-ups run under half a
+second in fast-cut action" can be checked against the next source, where "the
+editing is kinetic" cannot.
 
 ## The insight that makes this affordable: two source classes, two label kinds
 
@@ -117,13 +148,16 @@ does not survive this representation, and we should find out cheaply.
 
 ## Build order
 
-1. **Shot-level regrouping** of the existing 36-frame corpus — no new capture,
-   uses timestamps already stored. Recovers movement. Small.
-2. **Layer 3** from the same timestamps. Nearly free.
-3. **Essay ingestion** — download, scene-detect, transcript-align. Reuses
+1. **Layer 5 first, against what already exists.** It needs no new capture and
+   it is the only layer that produces something a person can read. Doing it
+   last is how a corpus pipeline runs for months without stating a single rule.
+2. **Shot-level regrouping** of the existing corpus — timestamps already
+   stored. Recovers camera movement. Small.
+3. **Layer 3** from the same timestamps. Nearly free.
+4. **Essay ingestion** — download, scene-detect, transcript-align. Reuses
    `ingest.py` plus the existing VTT parser.
-4. **Layer 2 function pass**, blind to craft.
-5. **Prescription lane** against the frequency baseline.
+5. **Layer 2 function pass**, blind to craft.
+6. **Prescription lane** against the frequency baseline.
 
 ## Open questions
 
