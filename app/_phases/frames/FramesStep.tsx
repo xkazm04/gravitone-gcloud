@@ -17,11 +17,16 @@ import { useState } from "react";
 
 import AlternativesView from "./alternatives/AlternativesView";
 import FramesAssembly from "./FramesAssembly";
+import ShotSheet from "./ShotSheet";
 import { useFrames } from "./useFrames";
 
 const VIEWS = [
   { id: "assembly", name: "assembly", sub: "the cut as a production ledger" },
   { id: "alternatives", name: "alternatives", sub: "keep, compare and choose plates per scene" },
+  // READ-ONLY. A promotional cut's beat is one to many shots; this shows the
+  // decomposition and its review. It edits nothing and generates nothing — see
+  // the header of ./ShotSheet.
+  { id: "shots", name: "shots", sub: "one beat, one to many shots — derived, read-only" },
 ] as const;
 
 export default function FramesStep({ projectId }: { projectId: string }) {
@@ -83,7 +88,11 @@ export default function FramesStep({ projectId }: { projectId: string }) {
         </p>
       )}
 
-      {view === "assembly" ? <FramesAssembly ctl={ctl} /> : <AlternativesView ctl={ctl} projectId={projectId} />}
+      {view === "assembly" && <FramesAssembly ctl={ctl} />}
+      {view === "alternatives" && <AlternativesView ctl={ctl} projectId={projectId} />}
+      {/* The render satisfies `ShotSourceRender` structurally — the shot layer
+          never imports the script step's beat enum. See ./shots. */}
+      {view === "shots" && <ShotSheet render={ctl.render} />}
     </div>
   );
 }
