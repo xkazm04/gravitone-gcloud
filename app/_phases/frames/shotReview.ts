@@ -43,12 +43,19 @@
 // the second question is an audience survey, and this file is not one.
 
 import {
+  NO_TEXT_CLAUSE,
+  PROMPT_CHAR_LIMIT,
+  compileStyleBlock,
+  type ShotPrompt,
+} from "./shotPrompt";
+import {
   PACE_BAND,
   TAIL_BAND,
   sizeSteps,
   type Shot,
   type TrailerRole,
 } from "./shots";
+import type { StyleBlock } from "@/lib/themes";
 
 /* ── The report ───────────────────────────────────────────────────────────── */
 
@@ -127,7 +134,16 @@ function finalise(c: ShotCheck): ShotCheck {
  * comparing the derivation to itself, which is the shape of every gate that
  * passes while checking nothing.
  */
-export function reviewShotList(shots: readonly Shot[]): ShotListReport {
+export function reviewShotList(
+  shots: readonly Shot[],
+  /** The proposed prompts, when there are any. Absent means the four prompt
+   *  checks report `not-engaged` — a review of prompts nobody built is not a
+   *  review that found them fine. */
+  prompts?: readonly ShotPrompt[],
+  /** The project's locked style block, needed to check that each prompt
+   *  restates it in full. Absent for the same reason and with the same effect. */
+  block?: StyleBlock,
+): ShotListReport {
   const checks: ShotCheck[] = [];
   const beats = new Set(shots.map((s) => s.beatAt)).size;
 
@@ -386,6 +402,100 @@ export function reviewShotList(shots: readonly Shot[]): ShotListReport {
     );
   }
 
+  /* ── the prompt half ─────────────────────────────────────────────────────
+     Four checks, and every one of them is mechanical. NONE of them is about
+     whether a prompt is GOOD: measuring that needs a generation and a grader,
+     which is a separate session on different hardware, and a check that implied
+     otherwise would be manufacturing the evidence. `NOT_CHECKED` names the gap
+     rather than leaving a green prompt column to imply it was closed. */
+
+  /* 10 — a prompt exists for every shot, and its subject came from somewhere. */
+  {
+    const p = prompts ?? [];
+    const empty = p.filter((x) => !x.action.trim());
+    const noSubject = p.filter((x) => x.subjectMissing);
+    checks.push(
+      finalise({
+        rule: "prompt-proposed-per-shot",
+        tests: "every shot carries a proposed prompt whose subject came from a recipe or an art director",
+        examined: p.length,
+        verdict: empty.length ? "violation" : noSubject.length ? "unmeasured" : "pass",
+        shots: [...empty, ...noSubject].map((x) => x.shotId),
+        detail: empty.length
+          ? `${empty.length} shot(s) produced an empty action block`
+          : noSubject.length
+            ? `${noSubject.length} shot(s) have no subject at all — their role never resolved, so no recipe applies and nobody wrote one`
+            : `${p.length} prompt(s) proposed, ${p.filter((x) => x.authoredSubject).length} with an authored subject`,
+      }),
+    );
+  }
+
+  /* 11 — the style block is restated IN FULL, in every prompt.
+     Registry law `style-is-restated-not-remembered`: "Reference images alone
+     measurably drift within a single batch; there is no short form, and no call
+     may opt out of the style half of its prompt." `VISUAL-STYLE.md` § 2 names
+     the failure it prevents (OBSERVED · n=1 · [00:09:38]): "I tried to also
+     leave the style block here and it was actually not working because it
+     transformed style mid video."
+
+     Compared against `compileStyleBlock`'s OWN output, not a copy of its
+     wording — a copy is what the defect would look like. */
+  {
+    const engaged = Boolean(prompts && block);
+    const expected = block ? compileStyleBlock(block) : "";
+    const missing = engaged ? (prompts ?? []).filter((x) => !x.text.includes(expected)) : [];
+    checks.push(
+      finalise({
+        rule: "prompt-restates-the-style-block",
+        tests: "every prompt restates the project's style block in full, not by reference",
+        examined: engaged ? (prompts ?? []).length : 0,
+        verdict: missing.length ? "violation" : "pass",
+        shots: missing.map((x) => x.shotId),
+        detail: engaged
+          ? `${missing.length} of ${(prompts ?? []).length} prompt(s) omit or abbreviate the style block`
+          : "no prompts, or no locked style block, to compare",
+      }),
+    );
+  }
+
+  /* 12 — the no-text clause survives.
+     `stylePrompt.ts` welds it on ("a plate that contains letters is not a nicer
+     plate, it is an unusable one"), and in a trailer it carries more weight
+     than in an explainer: the title, the date and the location caption are the
+     ONLY checkable things a trailer frame holds, so they stay in the vector
+     layer and the model is told, every time, to draw none of them. */
+  {
+    const p = prompts ?? [];
+    const missing = p.filter((x) => !x.text.includes(NO_TEXT_CLAUSE));
+    checks.push(
+      finalise({
+        rule: "prompt-forbids-glyphs",
+        tests: "every prompt carries the no-text clause — cards and captions are the vector layer's, never the model's",
+        examined: p.length,
+        verdict: missing.length ? "violation" : "pass",
+        shots: missing.map((x) => x.shotId),
+        detail: `${missing.length} of ${p.length} prompt(s) without the clause`,
+      }),
+    );
+  }
+
+  /* 13 — the vendor ceiling, checked before the call rather than as a 400. */
+  {
+    const p = prompts ?? [];
+    const over = p.filter((x) => x.chars > PROMPT_CHAR_LIMIT);
+    const longest = p.reduce((a, x) => Math.max(a, x.chars), 0);
+    checks.push(
+      finalise({
+        rule: "prompt-within-the-vendor-ceiling",
+        tests: `every prompt fits the ${PROMPT_CHAR_LIMIT}-character limit`,
+        examined: p.length,
+        verdict: over.length ? "violation" : "pass",
+        shots: over.map((x) => x.shotId),
+        detail: `longest prompt ${longest} of ${PROMPT_CHAR_LIMIT} characters`,
+      }),
+    );
+  }
+
   return {
     shots: shots.length,
     beats,
@@ -414,6 +524,10 @@ export const NOT_CHECKED: readonly string[] = [
   "whether adjacent beats link with but/therefore rather than 'and then'. That is the beat chain's property and the script step already owns it.",
   // [R] promise-ledger / withholding-budget.
   "what the cut promises against what the work can pay, and what it spends by showing.",
+  // The prompt half, and the one an unlabelled green column would most easily
+  // be read as covering.
+  "whether a proposed prompt is GOOD. Its existence, its style block, its no-text clause and its length are checked; its wording is not. Measuring that needs a generation and a grader — a separate session, on different hardware, with open-source models — and scoring it from here would be inventing the result.",
+  "whether the role×size subject recipes are the right ones. They are lifted from the atlas's numbered recipes, whose own generation-risk ratings are that lane's INFERRED and not a measured keep-rate per recipe.",
   // The ceiling, [R] trailer-structure § "What is measurable, and what is not".
   "whether the cut WORKS. A structural checker can establish that a cut is malformed; it cannot. The instrument practitioners use for that is an audience survey.",
 ];

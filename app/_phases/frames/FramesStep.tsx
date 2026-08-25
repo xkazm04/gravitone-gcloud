@@ -92,7 +92,9 @@ export default function FramesStep({ projectId }: { projectId: string }) {
       {view === "alternatives" && <AlternativesView ctl={ctl} projectId={projectId} />}
       {/* The render satisfies `ShotSourceRender` structurally — the shot layer
           never imports the script step's beat enum. See ./shots. */}
-      {view === "shots" && <ShotSheet render={ctl.render} />}
+      {view === "shots" && (
+        <ShotSheet render={ctl.render} block={ctl.block} hasLockedStyle={ctl.hasLockedStyle} />
+      )}
     </div>
   );
 }

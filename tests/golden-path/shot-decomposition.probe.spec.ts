@@ -25,8 +25,11 @@ import {
   type ShotSourceBeat,
   type TrailerRole,
 } from "@/app/_phases/frames/shots";
+import { actionFor, promptsForShots } from "@/app/_phases/frames/shotPrompt";
 import { framesFromRender } from "@/app/_phases/frames/frames";
 import { RENDERS } from "@/app/_phases/script/renders";
+import { compileStyleBlock, NO_TEXT_CLAUSE, PROMPT_CHAR_LIMIT } from "@/lib/stylePrompt";
+import type { StyleBlock } from "@/lib/themes";
 
 const beat = (at: string, role: TrailerRole | undefined, label: string): ShotSourceBeat => ({
   at,
@@ -48,6 +51,18 @@ const TEASER: ShotSourceBeat[] = [
 const TEASER_TOTAL_S = 45;
 
 const of = (shots: Shot[], role: TrailerRole) => shots.filter((s) => s.role === role);
+
+/** A style block shaped like the ones `lib/themes` ships — three colours, one per role. */
+const BLOCK: StyleBlock = {
+  technique: "Flat vector illustration with hard edges",
+  subject: "Simple geometric forms with no rendering detail",
+  palette: [
+    { name: "navy", hex: "#0B1B2B", role: "ground" },
+    { name: "cream", hex: "#F2EAD8", role: "objects" },
+    { name: "cyan", hex: "#38D6E0", role: "accent" },
+  ],
+  finish: "Matte, no gradients and no glow",
+};
 
 /* ── 1. the existing format is untouched ─────────────────────────────────── */
 
@@ -219,4 +234,101 @@ test("the named gaps are on the report, not left to the reader's imagination", (
   // The raised variable is a beat-layer field; this layer must SAY it cannot
   // see it rather than let a green structural report imply the cut escalates.
   expect(report.notChecked.some((n) => /raised variable/i.test(n))).toBe(true);
+});
+
+/* ── 4. the prompt half — proposed, never called, never scored ───────────── */
+
+test("every shot proposes a prompt, and the style block is restated in full in each", () => {
+  const shots = shotsFromBeats(TEASER, TEASER_TOTAL_S);
+  const prompts = promptsForShots(shots, BLOCK);
+  expect(prompts).toHaveLength(shots.length);
+
+  // `style-is-restated-not-remembered`: "there is no short form, and no call may
+  // opt out of the style half of its prompt." Compared against the compiler's
+  // OWN output rather than a copy of its wording.
+  const style = compileStyleBlock(BLOCK);
+  expect(prompts.every((p) => p.text.includes(style))).toBe(true);
+  // The style half goes FIRST — CLIP-conditioned models see roughly the first
+  // 77 tokens, which is `compilePrompt`'s stated reason for the order.
+  expect(prompts.every((p) => p.text.indexOf(style) === 0)).toBe(true);
+  // Cards and captions are the vector layer's, never the model's.
+  expect(prompts.every((p) => p.text.includes(NO_TEXT_CLAUSE))).toBe(true);
+  expect(prompts.every((p) => p.chars <= PROMPT_CHAR_LIMIT)).toBe(true);
+
+  console.log(`[shots] ${prompts.length} prompts, longest ${Math.max(...prompts.map((p) => p.chars))}c`);
+  console.log(`[shots] sample action: ${prompts[0].action}`);
+});
+
+test("the action block is built from the shot, never from the beat's sentence", () => {
+  // `subjectFor` (frames.ts:280-286) refuses the literal words because the trial
+  // grid measured them leaking text on 6 of 6 styles. The same refusal, one
+  // layer down: the beat's copy must appear nowhere in the prompt.
+  const shots = shotsFromBeats(TEASER, TEASER_TOTAL_S);
+  const prompts = promptsForShots(shots, BLOCK);
+  for (const b of TEASER) {
+    expect(prompts.some((p) => p.text.includes(b.text))).toBe(false);
+    expect(prompts.some((p) => p.text.includes(b.label))).toBe(false);
+  }
+});
+
+test("an authored subject overrides the recipe; an unresolved role admits it has none", () => {
+  const [base] = shotsFromBeats(TEASER, TEASER_TOTAL_S);
+  const authored = promptsForShots([{ ...base, subject: "A cracked bell half-buried in ash." }], BLOCK)[0];
+  expect(authored.authoredSubject).toBe(true);
+  expect(authored.action).toContain("A cracked bell half-buried in ash.");
+
+  // A beat whose role never resolved has no size, so no recipe applies — and
+  // the prompt says so rather than inventing a subject to fill the hole.
+  const [orphan] = shotsFromBeats([beat("0:00", undefined, "unclassified")], 20);
+  const p = promptsForShots([orphan], BLOCK)[0];
+  expect(p.subjectMissing).toBe(true);
+  expect(p.authoredSubject).toBe(false);
+});
+
+test("no move is invented — the action block mentions one only when a shot carries one", () => {
+  const [base] = shotsFromBeats(TEASER, TEASER_TOTAL_S);
+  expect(actionFor(base)).not.toContain("first frame of a shot that");
+  expect(actionFor({ ...base, motion: "pushes slowly toward the light" })).toContain(
+    "first frame of a shot that pushes slowly toward the light",
+  );
+});
+
+test("the prompt checks are not-engaged when there are no prompts, and never score quality", () => {
+  const shots = shotsFromBeats(TEASER, TEASER_TOTAL_S);
+  const promptRules = [
+    "prompt-proposed-per-shot",
+    "prompt-restates-the-style-block",
+    "prompt-forbids-glyphs",
+    "prompt-within-the-vendor-ceiling",
+  ];
+
+  // No prompts supplied: four not-engaged, and not one pass.
+  const bare = reviewShotList(shots);
+  for (const r of promptRules) {
+    const c = bare.checks.find((x) => x.rule === r);
+    expect(c?.verdict, `${r} must not pass over nothing`).toBe("not-engaged");
+  }
+
+  // Supplied: they engage and clear.
+  const full = reviewShotList(shots, promptsForShots(shots, BLOCK), BLOCK);
+  for (const r of promptRules) {
+    const c = full.checks.find((x) => x.rule === r);
+    expect(c?.verdict, r).toBe("pass");
+    expect(c?.examined, r).toBeGreaterThan(0);
+  }
+
+  // And the style check CAN fail: strip the style half and it is caught.
+  const tampered = promptsForShots(shots, BLOCK).map((p) => ({
+    ...p,
+    text: p.text.replace(compileStyleBlock(BLOCK), "(the style, as before)"),
+  }));
+  const c = reviewShotList(shots, tampered, BLOCK).checks.find(
+    (x) => x.rule === "prompt-restates-the-style-block",
+  );
+  expect(c?.verdict).toBe("violation");
+  console.log(`[shots] abbreviated style block -> ${c?.rule}=${c?.verdict}: ${c?.detail}`);
+
+  // No check anywhere claims to have graded a prompt, and the gap is named.
+  expect(full.checks.some((x) => /quality|good|score/i.test(x.rule))).toBe(false);
+  expect(full.notChecked.some((n) => /is GOOD/.test(n))).toBe(true);
 });

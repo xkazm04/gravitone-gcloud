@@ -219,6 +219,16 @@ export interface Shot {
    * `FrameClip.motion`. Seeded empty on purpose; see the header.
    */
   motion: string;
+  /**
+   * WHAT IS IN FRAME, when an art director has said. Absent by default and
+   * never invented: the same field `Plate.subject` and `SceneSpec.subject`
+   * already are, at the layer above.
+   *
+   * A prompt does not go without one — `shotPrompt.ts` falls back to the
+   * role×size recipe lifted from [A] § 2, which is a cited staging default
+   * rather than a guess. This field is how someone overrides it.
+   */
+  subject?: string;
   /** True while every non-null field above came from a rule rather than a person. */
   seeded: boolean;
   /** The one line naming the rule this shot's seed came from. */
@@ -442,7 +452,10 @@ export function shotsFromBeats(beats: readonly ShotSourceBeat[], totalS: number)
         angle: null,
         direction: directionFor(role),
         placement: placementFor(holdS),
-        // Art direction. Empty, for the reason `frames.ts:266-268` gives.
+        // Art direction. Empty, for the reason `frames.ts:266-268` gives — and
+        // `subject` is left off entirely rather than set to "", so that
+        // "nobody has written one" is absence rather than an empty string
+        // somebody might read as a decision.
         motion: "",
         seeded: true,
         basis: role
