@@ -100,7 +100,7 @@ test("a known format compiles into a block naming the format AND the runtime", (
   for (const d of FORMAT_BRIEFS["mid-educational-video"].direction) expect(out).toContain(d);
 });
 
-test("all three catalogue formats compile to DIFFERENT direction", () => {
+test("every catalogue format compiles to DIFFERENT direction", () => {
   const blocks = TEMPLATES.map((t) => compileFormatBrief(t.id, t.defaultS));
   expect(new Set(blocks).size).toBe(TEMPLATES.length);
   for (const [i, t] of TEMPLATES.entries()) {
@@ -111,7 +111,27 @@ test("all three catalogue formats compile to DIFFERENT direction", () => {
 
 test("an UNKNOWN format is NOT filled in with a default", () => {
   // "explainer" is what tests/golden-path/_helpers.ts already stores.
-  for (const bad of ["explainer", "trailer", "", "short-form", 7, null, undefined, {}]) {
+  //
+  // `"trailer"` USED TO BE IN THIS LIST and no longer can be: it is a real
+  // `TemplateId` since the promotional formats landed. That is worth recording
+  // rather than quietly deleting, because it is the exact hazard this probe
+  // exists for — an id that is invalid today can become valid tomorrow, and a
+  // fixture asserting its invalidity would then be asserting the opposite of
+  // the truth while still passing for the wrong reason. The replacements are
+  // near-misses on the three new ids, chosen so this list keeps testing the
+  // boundary rather than testing ids nobody would ever send.
+  for (const bad of [
+    "explainer",
+    "teasers",
+    "trailers",
+    "cinematic-trailer",
+    "",
+    "short-form",
+    7,
+    null,
+    undefined,
+    {},
+  ]) {
     const out = compileFormatBrief(bad, 30);
     expect(out).toContain("## THE FORMAT — NOT STATED");
     for (const id of Object.keys(FORMAT_BRIEFS) as TemplateId[])

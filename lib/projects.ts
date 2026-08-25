@@ -131,10 +131,79 @@ export const TEMPLATES = [
     range: [180, 360] as const,
     note: "3–6 min — the shortest length that holds a full argument",
   },
+
+  // ── The promotional formats ───────────────────────────────────────────────
+  //
+  // THREE IDS, NOT ONE, AND THEY ARE APPENDED RATHER THAN INSERTED.
+  //
+  // The three above are self-sufficient pieces: each answers the question it
+  // raises, and a withheld answer in one of them reads as not having one. A
+  // promotional cut inverts that — its product is an UNPAID DEBT, and it
+  // succeeds by opening a gap another artifact closes. That is a different
+  // contract, not a different length, which is why these are not a `range` on
+  // an existing entry.
+  //
+  // And it is three contracts, not one. The craft library's own source
+  // separates them (`.vault/Research/2026-08-23-trailer-cinematic-grammar.md`
+  // C7, "Teaser vs trailer vs cinematic are different contracts"), and the
+  // registry's length-ladder gives the mechanism: shortening a promotional cut
+  // REMOVES whole parts in a known order rather than scaling every part, so the
+  // rungs "are not versions of each other". A single `trailer` id with a wide
+  // range would encode exactly the uniform-trimming model that technique exists
+  // to prevent.
+  //
+  // APPENDED, because `templateOf`'s fallback is POSITIONAL (`TEMPLATES[1]`).
+  // Inserting anything ahead of `short-educational-video` silently re-points
+  // every unrecognised id at a different format.
+  //
+  // Every figure below is sourced in `knowledge/templates/<id>/TEMPLATE.md`,
+  // and none of it was measured in this repo — the corpus for all three is
+  // n=0. The `note` is the one line the create dialog shows.
+  {
+    id: "teaser",
+    label: "Teaser",
+    /** ~1 min, one hook. C7 · S30. Nothing below 60s is measured anywhere the
+     *  library can reach — see the template's evidence gap. */
+    defaultS: 60,
+    range: [15, 60] as const,
+    note: "≤60s, one hook — imagery and tone, light on story",
+  },
+  {
+    id: "trailer",
+    label: "Trailer",
+    /** 90–150s (C7); the registry's measured centre of gravity sits just above
+     *  two minutes, which is why the default is 120 rather than the midpoint. */
+    defaultS: 120,
+    range: [90, 150] as const,
+    note: "90–150s — the full spine, and it may spell out plot",
+  },
+  {
+    id: "cinematic",
+    label: "Cinematic",
+    /** NOT distinguished by length — see the template. The band is the vault's
+     *  own beat sheet ("90–120 s cinematic trailer; scale durations
+     *  proportionally for 60 s"), and it overlaps `trailer` on purpose. */
+    defaultS: 120,
+    range: [60, 120] as const,
+    note: "imagery when the footage does not exist yet — a stage, not a length",
+  },
 ] as const;
 
 export type TemplateId = (typeof TEMPLATES)[number]["id"];
 
+/** The catalogue entry for an id, with a fallback for one that is not in it.
+ *
+ *  THE FALLBACK IS POSITIONAL AND THAT IS LOAD-BEARING. `TEMPLATES[1]` is
+ *  `short-educational-video` — the middle of the three self-sufficient formats,
+ *  which is the right answer for a dropdown that must render something. It is
+ *  only correct while the self-sufficient formats stay first, so the six
+ *  promotional/educational entries are APPENDED and never inserted ahead of it;
+ *  an insert at the front would silently re-point every unrecognised id at a
+ *  different format, and nothing would fail.
+ *
+ *  It is also right ONLY for a dropdown. `formatBriefFor` in lib/formatBrief.ts
+ *  deliberately refuses to fall back, because a default in a prompt is a format
+ *  the user never chose, stated to a model as fact. */
 export function templateOf(id: TemplateId) {
   return TEMPLATES.find((t) => t.id === id) ?? TEMPLATES[1];
 }
