@@ -1,0 +1,69 @@
+{
+  "_purpose": "The comparison set. Each entry is nominated as a best-in-category example, and the corpus exists to test WHY that claim holds -- broken down into craft dimensions rather than asserted. Categories are deliberately spread: a rule that appears in all five is craft, a rule that appears in one is convention. With a single source you cannot tell those apart, which is the whole reason for a set.",
+  "_claim_status": "`canonical_claim` is the OPERATOR'S nomination, not a measured fact. It is recorded so the analysis can agree or disagree with it -- a clip whose measured craft does not distinguish it from the others is a finding, not a failure of the pipeline.",
+
+  "sources": [
+    {
+      "slug": "arcane-fights",
+      "id": "tHfiXfk8Cgo",
+      "url": "https://www.youtube.com/watch?v=tHfiXfk8Cgo",
+      "category": "stylised-3d-animation",
+      "medium": "animation",
+      "canonical_claim": "reference for painted-texture 3D animation and kinetic fight staging",
+      "duration_s": 436,
+      "status": "ingested"
+    },
+    {
+      "slug": "wow-shadowlands",
+      "id": "s4gBChg6AII",
+      "url": "https://www.youtube.com/watch?v=s4gBChg6AII",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "canonical_claim": "high-water mark for pre-rendered game cinematics",
+      "duration_s": 323,
+      "status": "pending"
+    },
+    {
+      "slug": "transformers-freeway",
+      "id": "ET9SHYzMz_4",
+      "url": "https://www.youtube.com/watch?v=ET9SHYzMz_4",
+      "category": "blockbuster-action",
+      "medium": "live-action-vfx",
+      "canonical_claim": "reference for large-scale practical/VFX action staging",
+      "duration_s": 232,
+      "status": "pending"
+    },
+    {
+      "slug": "sw-duel-of-fates",
+      "id": "3a4uT-4efPI",
+      "url": "https://www.youtube.com/watch?v=3a4uT-4efPI",
+      "category": "choreographed-duel",
+      "medium": "live-action",
+      "canonical_claim": "reference for legible sustained fight choreography",
+      "duration_s": 240,
+      "status": "pending"
+    },
+    {
+      "slug": "matrix-bullets",
+      "id": "ODmhPsgqGgQ",
+      "url": "https://www.youtube.com/watch?v=ODmhPsgqGgQ",
+      "category": "sci-fi-set-piece",
+      "medium": "live-action-vfx",
+      "canonical_claim": "reference for a single technique-defining set piece",
+      "duration_s": 41,
+      "note": "Much shorter than the others and only 720p. Treat its per-source statistics as thin -- it is one set piece, not a reel.",
+      "status": "pending"
+    },
+    {
+      "slug": "lotr-scene",
+      "id": "rCZ3SN65kIs",
+      "url": "https://www.youtube.com/watch?v=rCZ3SN65kIs",
+      "category": "epic-fantasy",
+      "medium": "live-action",
+      "canonical_claim": "reference for scale, landscape and dramatic staging",
+      "duration_s": 273,
+      "note": "Delivered at 1920x792 -- already letterboxed to scope, so no bar-cropping is needed.",
+      "status": "pending"
+    }
+  ]
+}
