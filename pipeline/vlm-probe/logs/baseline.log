@@ -1,0 +1,10 @@
+  guard: recycling ComfyUI (headroom dropped mid-lane) -- RAM 0.0 free, commit 137/164 GB
+  guard: back up -- RAM 43.5 free, commit 57/120 GB
+  01-wide: 116s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\baseline\01-wide.png
+  02-medium: 128s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\baseline\02-medium.png
+  guard: recycling ComfyUI (headroom dropped mid-lane) -- RAM 9.0 free, commit 150/161 GB
+  guard: back up -- RAM 41.6 free, commit 61/120 GB
+  03-close: 134s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\baseline\03-close.png
+
+  lane written to C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\baseline
+  now score it:  python identity.py --set shots/baseline

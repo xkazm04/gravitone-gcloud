@@ -20,6 +20,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useAuth } from "@/lib/useAuth";
+import { LOCAL_MODE } from "@/lib/localMode";
 import { Button } from "./Primitives";
 
 export default function UserMenu() {
@@ -113,17 +114,30 @@ export default function UserMenu() {
         >
           <div className="px-3 py-2">
             <div className="truncate text-sm text-white">{profile?.displayName}</div>
-            <div className="font-jetbrains truncate text-[11px] text-white/55">{user.email}</div>
+            <div className="font-jetbrains truncate text-[11px] text-white/55">
+              {LOCAL_MODE ? "this machine, this browser profile" : user.email}
+            </div>
           </div>
           <div className="my-1 h-px bg-white/8" />
-          <button
-            type="button"
-            ref={firstItemRef}
-            onClick={() => void signOut()}
-            className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm text-white/80 transition hover:bg-white/5"
-          >
-            Sign out
-          </button>
+          {LOCAL_MODE ? (
+            // No sign-out in local mode: there is no session to end, and the
+            // eviction a real sign-out runs would wipe the only copy of the
+            // shelf. Leaving local mode is an env change, and the menu says so
+            // instead of offering a button that must lie or destroy.
+            <p className="font-jetbrains px-3 py-2 text-[11px] leading-snug text-white/45">
+              Local studio — work lives in this browser&apos;s storage. Unset NEXT_PUBLIC_LOCAL_MODE to
+              run against Google sign-in.
+            </p>
+          ) : (
+            <button
+              type="button"
+              ref={firstItemRef}
+              onClick={() => void signOut()}
+              className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm text-white/80 transition hover:bg-white/5"
+            >
+              Sign out
+            </button>
+          )}
         </div>
       )}
     </div>

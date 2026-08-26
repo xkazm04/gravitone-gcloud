@@ -28,6 +28,15 @@ service account, no server). Every gated route fails CLOSED: no config means
 nobody gets in, not everybody — and a config missing *any* of the three
 variables counts as no config (`firebaseReady`, `lib/firebase.ts`).
 
+**…except in local mode.** `NEXT_PUBLIC_LOCAL_MODE=1` runs the studio as a
+fixed local owner with no Firebase at all (`lib/localMode.ts`) — the
+self-hosted single-user posture this paragraph always implied, now a flag
+instead of a fork. Nothing about the data changes, because nothing about the
+data ever involved Firebase: it lives in the browser's IndexedDB either way.
+Local mode wears a quiet "local" badge, has no sign-out (there is no session
+to end, and the eviction one would trigger is the opposite of what a local
+owner wants), and does not relax the money-route access gate.
+
 **Sessions do not expire.** A 12-hour client-side ceiling existed until
 2026-08-12 and was removed at the owner's instruction, so this is the policy
 rather than an omission: `browserLocalPersistence` holds the refresh token
@@ -47,7 +56,7 @@ by the user and persisted to the browser's IndexedDB (`lib/studioDb.ts`,
 (`app/_phases/_shared/stepStore.ts`). Below that seam, `app/_studio/*.ts` still
 holds fixture data (scenes, runs, assets, score cues).
 
-**Two paths now call out of this app, and both cost real money.** This sentence
+**Three paths now call out of this app, and all cost real money.** This sentence
 used to read "no model, backend or third-party service is called anywhere in
 this app". That was true when it was written and is not true now:
 
@@ -60,6 +69,13 @@ this app". That was true when it was written and is not true now:
   chokepoint (`lib/imaging/router.ts`), each behind its own key
   (`lib/imaging/env.ts`) and billed per call (`lib/imaging/pricing.ts`). A plate
   is generated for money; a fully composed sixteen-frame cut is sixteen of them.
+- **A music vendor** — ElevenLabs, reached only through `/api/music/generate`
+  (`lib/music/`), behind `ELEVENLABS_API_KEY`. The Score phase's cues render
+  through it: the cue row (title, intent, bpm, exact duration) is translated
+  server-side into a section plan, so the browser never speaks the vendor's
+  wire format and the briefing doctrine lives in one file (`lib/music/plan.ts`).
+  Spend is gated by the same access gate as imaging but not yet by the budget
+  ledger — the rate limit is the only ceiling, stated in the route.
 
 Everything else still follows the original plan: prototype the flow at the UI
 layer first, and only then decide what the backend and the providers have to be.

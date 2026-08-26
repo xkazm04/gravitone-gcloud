@@ -34,6 +34,7 @@ import {
 // unlikely.
 import { authClient, firebaseReady, googleProvider } from "./firebase";
 import { DEV_AUTH, DEV_USER } from "./devAuth";
+import { LOCAL_MODE, LOCAL_USER } from "./localMode";
 // The eviction OWNER. It imports every user-scoped store; nothing it clears
 // imports it, and this context does not own the list — see lib/identityEviction.ts
 // for the enumerated triggers and the one deliberate exclusion.
@@ -88,6 +89,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const heldUid = useRef<string | null>(null);
 
   useEffect(() => {
+    // LOCAL MODE — the self-hosted single-user posture (lib/localMode.ts).
+    // Resolves immediately as the stable local owner; no Firebase involved,
+    // in any build. Checked FIRST so a checkout that sets both flags runs as
+    // the mode a real person opted into, not as the automation fixture.
+    if (LOCAL_MODE) {
+      heldUid.current = LOCAL_USER.uid;
+      setUser(LOCAL_USER);
+      setLoading(false);
+      setAuthResolved(true);
+      return;
+    }
     // DEV BYPASS — non-production builds only, and only with the flag set.
     // Resolves immediately as a fixed fake account so the gated surface can be
     // driven. See lib/devAuth.ts for why this cannot reach production.
@@ -136,8 +148,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const signIn = useCallback(async () => {
     setError(null);
+    // Local mode has no door to knock on — the owner is already in, and the
+    // landing renders the way-through link rather than this handler. Guarded
+    // anyway so a stray call cannot surface a misleading config complaint.
+    if (LOCAL_MODE) return;
     if (!firebaseReady) {
-      setError("Firebase is not configured — see .env.example");
+      setError("Firebase is not configured — see .env.example. For a machine-local run with no Google account, set NEXT_PUBLIC_LOCAL_MODE=1.");
       return;
     }
     const auth = authClient();
@@ -161,6 +177,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // In local mode "sign out" would be a lie twice over: there is no session
+    // to end, and the eviction that follows a real sign-out would wipe the
+    // local shelf — the only copy of the owner's work. The menu's sign-out is
+    // therefore a no-op here; leaving local mode is an env change, not a click.
+    if (LOCAL_MODE) return;
     // Unreachable without a config — a signed-in user implies a live client —
     // but the guard is stated rather than assumed, because the accessor throws
     // and a sign-out button is the last place anyone wants a stack trace.
