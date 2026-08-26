@@ -8,13 +8,44 @@
 
 import { useState } from "react";
 
-import { CUES } from "../../_studio/score";
+import { CUES, MUSIC_STYLE_BLOCK } from "../../_studio/score";
 import { PROJECT, SCENES } from "../../_studio/scenes";
 import { CueStatusWord, TimeRuler, spanStyle } from "../../_studio/projectParts";
+import { MusicRequestError, audioUrl, generateCueAudio } from "@/lib/musicClient";
+
+/** One cue's live take, in this session. Not yet persisted — a generated
+ *  take lives as long as the tab; IndexedDB is the next seam. */
+type Take =
+  | { state: "working" }
+  | { state: "done"; url: string }
+  | { state: "refused"; msg: string }
+  | { state: "error"; msg: string };
 
 export default function ScoreSpotting() {
   const [focus, setFocus] = useState(CUES[1].id); // open on the refused cue
+  const [takes, setTakes] = useState<Record<string, Take>>({});
   const cue = CUES.find((c) => c.id === focus)!;
+  const take = takes[cue.id];
+
+  async function renderCue() {
+    setTakes((t) => ({ ...t, [cue.id]: { state: "working" } }));
+    try {
+      const out = await generateCueAudio({
+        title: cue.title,
+        intent: cue.note,
+        bpm: cue.bpm,
+        durS: cue.durS,
+        styleBlock: MUSIC_STYLE_BLOCK,
+      });
+      setTakes((t) => ({ ...t, [cue.id]: { state: "done", url: audioUrl(out) } }));
+    } catch (e) {
+      // A refusal is a spotting outcome, not an error — the region reverts to
+      // refused-silence and the surface says so, in its own color.
+      const refused = e instanceof MusicRequestError && e.code === "refused";
+      const msg = e instanceof Error ? e.message : "The music call failed.";
+      setTakes((t) => ({ ...t, [cue.id]: refused ? { state: "refused", msg } : { state: "error", msg } }));
+    }
+  }
 
   let cursor = 0;
   const sceneCells = SCENES.map((s) => {
@@ -110,16 +141,36 @@ export default function ScoreSpotting() {
         <p className={`mt-1.5 text-sm leading-snug ${cue.status === "failed" ? "text-rose-200/90" : "text-slate-400"}`}>
           {cue.note}
         </p>
-        {/* A "retry cue" button used to sit here, styled as the primary CTA and
-            carrying no `onClick` at all. There is no music engine in this app —
-            no route under app/api generates audio, and every cue on this
-            surface is fixture data — so it could not be wired, only removed.
-            What a refused cue needs said is what the model did and what that
-            costs the cut, and the sentence above already says the first. */}
-        {cue.status === "failed" && (
+        {/* The music engine is real now — /api/music/generate renders a cue's
+            brief (title, intent, bpm, exact duration, the project's standing
+            style block) through lib/music. The button that once sat here dead
+            is back because it can finally do what it says. */}
+        <div className="mt-3 flex items-center gap-3">
+          <button
+            onClick={renderCue}
+            disabled={take?.state === "working"}
+            className="rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] px-3 py-1.5 text-[11px] font-medium text-cyan-200/90 transition hover:bg-cyan-400/[0.14] disabled:cursor-wait disabled:opacity-50"
+          >
+            {take?.state === "working"
+              ? "rendering…"
+              : take?.state === "done"
+                ? "render another take"
+                : cue.status === "failed"
+                  ? "re-ask the model"
+                  : "render this cue"}
+          </button>
+          <span className="font-jetbrains text-[10px] text-white/35">
+            {cue.durS}s · {cue.bpm} bpm · plan-briefed, exact duration
+          </span>
+        </div>
+        {take?.state === "done" && <audio controls src={take.url} className="mt-3 h-9 w-full" />}
+        {(take?.state === "refused" || take?.state === "error") && (
+          <p className="font-jetbrains mt-3 text-[11px] leading-snug text-rose-200/70">{take.msg}</p>
+        )}
+        {cue.status === "failed" && take?.state !== "done" && (
           <p className="font-jetbrains mt-3 text-[11px] leading-snug text-rose-200/60">
-            {cue.durS}s of the {PROJECT.totalS}s clock plays silent. Re-asking the model is a seam
-            this app has not built — nothing here generates music yet.
+            {cue.durS}s of the {PROJECT.totalS}s clock plays silent until a take lands. A refusal keeps
+            it silent on purpose — refused-silence is a state this cut renders, not an error it hides.
           </p>
         )}
       </div>

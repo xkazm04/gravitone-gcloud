@@ -3,6 +3,16 @@
 
 import type { Cue, TimelineClip, TrackId } from "./projectTypes";
 
+// Glass Harbor's standing music identity — the style block restated on every
+// cue call (consistency is carried, never remembered; the same rule the
+// imaging style block runs on). Per-cue direction rides in the cue's note.
+export const MUSIC_STYLE_BLOCK = [
+  "dark orchestral",
+  "modern trailer production",
+  "low strings and brass",
+  "restrained percussion",
+];
+
 export const CUES: Cue[] = [
   {
     id: "cue-1",
