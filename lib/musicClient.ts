@@ -4,7 +4,7 @@
 // sends spotting rows and receives audio.
 
 import { accessHeader } from "./imagingClient";
-import type { MusicResult } from "./music/types";
+import type { DetailedMusicResult, MusicAudio, MusicResult, SfxResult, WirePlan } from "./music/types";
 
 export class MusicRequestError extends Error {
   readonly code: string;
@@ -27,12 +27,29 @@ export interface CueRequest {
 }
 
 export async function generateCueAudio(cue: CueRequest): Promise<MusicResult> {
+  return post<MusicResult>("/api/music/generate", cue);
+}
+
+/** A playable object URL from a result. Caller revokes when done. */
+export function audioUrl(r: MusicResult): string {
+  return blobUrl(r.audio);
+}
+
+/** A playable object URL from raw audio. Caller revokes when done. */
+export function blobUrl(audio: MusicAudio): string {
+  const bytes = Uint8Array.from(atob(audio.b64), (c) => c.charCodeAt(0));
+  return URL.createObjectURL(new Blob([bytes], { type: audio.mime }));
+}
+
+// ── Playground surface ──────────────────────────────────────────────────────
+
+async function post<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
   try {
-    res = await fetch("/api/music/generate", {
+    res = await fetch(path, {
       method: "POST",
       headers: { "content-type": "application/json", ...accessHeader() },
-      body: JSON.stringify(cue),
+      body: JSON.stringify(body),
     });
   } catch {
     throw new MusicRequestError("The studio could not be reached.", "offline", 0);
@@ -43,11 +60,23 @@ export async function generateCueAudio(cue: CueRequest): Promise<MusicResult> {
     const code = typeof json.code === "string" ? json.code : "failed";
     throw new MusicRequestError(detail, code, res.status);
   }
-  return json as MusicResult;
+  return json as T;
 }
 
-/** A playable object URL from a result. Caller revokes when done. */
-export function audioUrl(r: MusicResult): string {
-  const bytes = Uint8Array.from(atob(r.audio.b64), (c) => c.charCodeAt(0));
-  return URL.createObjectURL(new Blob([bytes], { type: r.audio.mime }));
-}
+export const draftPlan = (body: {
+  prompt: string;
+  lengthMs?: number;
+  style?: string;
+  negativeStyle?: string;
+  sourcePlan?: WirePlan;
+}) => post<{ plan: WirePlan }>("/api/music/plan", body);
+
+export const composeRaw = (body: { prompt?: string; plan?: WirePlan; lengthMs?: number }) =>
+  post<DetailedMusicResult>("/api/music/compose", body);
+
+export const generateSfx = (body: {
+  text: string;
+  durationSeconds?: number;
+  promptInfluence?: number;
+  loop?: boolean;
+}) => post<SfxResult>("/api/music/sfx", body);

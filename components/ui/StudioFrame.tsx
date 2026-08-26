@@ -17,6 +17,11 @@ import { DEV_AUTH } from "@/lib/devAuth";
 export const MODULES = [
   { label: "Projects", href: "/projects" },
   { label: "Library", href: "/library" },
+  // Temporary by design: a bench for exercising the music vendor's latest
+  // feature surface (plan drafting, section editing, SFX) before any of it is
+  // promoted into the studio's own steps. Remove when the Score phase has
+  // absorbed what the bench was built to learn.
+  { label: "Playground", href: "/playground" },
 ];
 
 /** Obsidian app shell: aurora atmosphere + top nav + the account control.

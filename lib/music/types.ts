@@ -75,3 +75,57 @@ export interface MusicResult {
   audio: MusicAudio;
   provenance: MusicProvenance;
 }
+
+// ── Wire-level plan types (playground / advanced callers) ───────────────────
+//
+// The vendor's music_v2 composition-plan grammar, verbatim (docs resolved
+// 2026-08-26). The Score route deliberately does NOT accept these — its
+// callers speak CueBrief and the doctrine translates — but the playground's
+// whole job is to exercise the raw feature surface, section editing included,
+// so it speaks chunks directly.
+
+/** A section to GENERATE. `conditioning_ref` optionally binds it to a range
+ *  of an already-stored song, at `condition_strength` — "regenerate this
+ *  section under the original's influence", the middle ground between keeping
+ *  it verbatim and starting free. */
+export interface WireGenerationChunk {
+  text: string;
+  duration_ms: number;
+  positive_styles: string[];
+  negative_styles: string[];
+  context_adherence?: ContextAdherence;
+  conditioning_ref?: { song_id: string; range: { start_ms: number; end_ms: number } };
+  condition_strength?: ContextAdherence;
+}
+
+/** A section KEPT verbatim by reference to a stored song — the seam
+ *  discipline's "kept material is referenced, never re-rendered" as an API
+ *  primitive. Requires the source render to have been stored for inpainting. */
+export interface WireAudioRefChunk {
+  song_id: string;
+  range: { start_ms: number; end_ms: number };
+}
+
+export type WireChunk = WireGenerationChunk | WireAudioRefChunk;
+
+export interface WirePlan {
+  chunks: WireChunk[];
+}
+
+/** A detailed compose result: audio plus everything the vendor knows about
+ *  what it made — and, when stored for inpainting, the song id that later
+ *  section edits reference. */
+export interface DetailedMusicResult {
+  audio: MusicAudio;
+  songId: string | null;
+  /** The vendor's own composition plan for what was rendered — the ground
+   *  truth section list (with durations) that a section edit ranges against. */
+  plan: WirePlan | null;
+  /** Title/description/genres etc., as returned; shape is vendor-owned. */
+  meta: Record<string, unknown> | null;
+}
+
+export interface SfxResult {
+  audio: MusicAudio;
+  requestedSeconds: number | null;
+}
