@@ -29,6 +29,7 @@ export default function AlternativesView({
     projectId,
     frames: ctl.frames,
     block: ctl.block,
+    references: ctl.references,
     onAdopt: (frameId: string, plate: Plate) =>
       ctl.setFrames((fs) => fs.map((f) => (f.id === frameId ? { ...f, plate } : f))),
   });
