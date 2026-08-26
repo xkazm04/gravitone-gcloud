@@ -1,7 +1,6 @@
 {
   "_purpose": "The comparison set. Each entry is nominated as a best-in-category example, and the corpus exists to test WHY that claim holds -- broken down into craft dimensions rather than asserted. Categories are deliberately spread: a rule that appears in all five is craft, a rule that appears in one is convention. With a single source you cannot tell those apart, which is the whole reason for a set.",
   "_claim_status": "`canonical_claim` is the OPERATOR'S nomination, not a measured fact. It is recorded so the analysis can agree or disagree with it -- a clip whose measured craft does not distinguish it from the others is a finding, not a failure of the pipeline.",
-
   "sources": [
     {
       "slug": "arcane-fights",
@@ -11,7 +10,8 @@
       "medium": "animation",
       "canonical_claim": "reference for painted-texture 3D animation and kinetic fight staging",
       "duration_s": 436,
-      "status": "ingested"
+      "status": "ingested",
+      "form": "scene-compilation"
     },
     {
       "slug": "wow-shadowlands",
@@ -21,7 +21,8 @@
       "medium": "cg",
       "canonical_claim": "high-water mark for pre-rendered game cinematics",
       "duration_s": 323,
-      "status": "pending"
+      "status": "pending",
+      "form": "long-cinematic"
     },
     {
       "slug": "transformers-freeway",
@@ -31,7 +32,8 @@
       "medium": "live-action-vfx",
       "canonical_claim": "reference for large-scale practical/VFX action staging",
       "duration_s": 232,
-      "status": "pending"
+      "status": "pending",
+      "form": "scene"
     },
     {
       "slug": "sw-duel-of-fates",
@@ -41,7 +43,8 @@
       "medium": "live-action",
       "canonical_claim": "reference for legible sustained fight choreography",
       "duration_s": 240,
-      "status": "pending"
+      "status": "pending",
+      "form": "scene"
     },
     {
       "slug": "matrix-bullets",
@@ -52,7 +55,8 @@
       "canonical_claim": "reference for a single technique-defining set piece",
       "duration_s": 41,
       "note": "Much shorter than the others and only 720p. Treat its per-source statistics as thin -- it is one set piece, not a reel.",
-      "status": "pending"
+      "status": "pending",
+      "form": "scene"
     },
     {
       "slug": "lotr-scene",
@@ -63,7 +67,101 @@
       "canonical_claim": "reference for scale, landscape and dramatic staging",
       "duration_s": 273,
       "note": "Delivered at 1920x792 -- already letterboxed to scope, so no bar-cropping is needed.",
+      "status": "pending",
+      "form": "scene"
+    },
+    {
+      "slug": "swtor-sacrifice",
+      "id": "2bmsNa9GOR0",
+      "url": "https://www.youtube.com/watch?v=2bmsNa9GOR0",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "form": "long-cinematic",
+      "canonical_claim": "operator-nominated high-quality game trailer/cinematic",
+      "duration_s": 253,
+      "status": "pending"
+    },
+    {
+      "slug": "swtor-deceived",
+      "id": "YdgmH9Vv2-I",
+      "url": "https://www.youtube.com/watch?v=YdgmH9Vv2-I",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "form": "long-cinematic",
+      "canonical_claim": "operator-nominated high-quality game trailer/cinematic",
+      "duration_s": 234,
+      "status": "pending"
+    },
+    {
+      "slug": "sc2-legacy-void",
+      "id": "M_XwzBMTJaM",
+      "url": "https://www.youtube.com/watch?v=M_XwzBMTJaM",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "form": "long-cinematic",
+      "canonical_claim": "operator-nominated high-quality game trailer/cinematic",
+      "duration_s": 198,
+      "status": "pending"
+    },
+    {
+      "slug": "wow-battle-azeroth",
+      "id": "jSJr3dXZfcg",
+      "url": "https://www.youtube.com/watch?v=jSJr3dXZfcg",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "form": "long-cinematic",
+      "canonical_claim": "operator-nominated high-quality game trailer/cinematic",
+      "duration_s": 270,
+      "status": "pending"
+    },
+    {
+      "slug": "spiderman2-be-greater",
+      "id": "nq1M_Wc4FIc",
+      "url": "https://www.youtube.com/watch?v=nq1M_Wc4FIc",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "form": "short-trailer",
+      "canonical_claim": "operator-nominated high-quality game trailer/cinematic",
+      "duration_s": 67,
+      "status": "pending"
+    },
+    {
+      "slug": "wukong-preorder",
+      "id": "u83VdXAVq08",
+      "url": "https://www.youtube.com/watch?v=u83VdXAVq08",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "form": "short-trailer",
+      "canonical_claim": "operator-nominated high-quality game trailer/cinematic",
+      "duration_s": 83,
+      "status": "pending"
+    },
+    {
+      "slug": "mk11-announce",
+      "id": "UoTams2yc0s",
+      "url": "https://www.youtube.com/watch?v=UoTams2yc0s",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "form": "short-trailer",
+      "canonical_claim": "operator-nominated high-quality game trailer/cinematic",
+      "duration_s": 149,
+      "status": "pending"
+    },
+    {
+      "slug": "ac3-e3",
+      "id": "-pUhraVG7Ow",
+      "url": "https://www.youtube.com/watch?v=-pUhraVG7Ow",
+      "category": "game-cinematic",
+      "medium": "cg",
+      "form": "short-trailer",
+      "canonical_claim": "operator-nominated high-quality game trailer/cinematic",
+      "duration_s": 189,
       "status": "pending"
     }
-  ]
+  ],
+  "_form_note": "`form` separates artifacts that must not be pooled. A 67s cut-down and a 270s narrative short are different products with different beat structures, and averaging them would invent a shape neither has. The six original sources are mostly SCENES, not trailers -- only the game cinematics are the target form.",
+  "_blocked": {
+    "c0i88t0Kacs": "age-gated, needs browser cookies",
+    "wsf78BS9VE0": "age-gated, needs browser cookies"
+  }
 }
