@@ -28,6 +28,15 @@ service account, no server). Every gated route fails CLOSED: no config means
 nobody gets in, not everybody — and a config missing *any* of the three
 variables counts as no config (`firebaseReady`, `lib/firebase.ts`).
 
+**…except in local mode.** `NEXT_PUBLIC_LOCAL_MODE=1` runs the studio as a
+fixed local owner with no Firebase at all (`lib/localMode.ts`) — the
+self-hosted single-user posture this paragraph always implied, now a flag
+instead of a fork. Nothing about the data changes, because nothing about the
+data ever involved Firebase: it lives in the browser's IndexedDB either way.
+Local mode wears a quiet "local" badge, has no sign-out (there is no session
+to end, and the eviction one would trigger is the opposite of what a local
+owner wants), and does not relax the money-route access gate.
+
 **Sessions do not expire.** A 12-hour client-side ceiling existed until
 2026-08-12 and was removed at the owner's instruction, so this is the policy
 rather than an omission: `browserLocalPersistence` holds the refresh token

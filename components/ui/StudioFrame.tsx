@@ -5,6 +5,7 @@ import { Wordmark } from "./Primitives";
 import UserMenu from "./UserMenu";
 import NotificationBell from "./NotificationBell";
 import { DEV_AUTH } from "@/lib/devAuth";
+import { LOCAL_MODE } from "@/lib/localMode";
 
 // The module list for this app. Projects is the shelf; the studio is opened
 // from a row on it and therefore has no context-free link of its own — /studio
@@ -53,6 +54,14 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
             <Link href="/projects" aria-label="Projects">
               <Wordmark />
             </Link>
+            {LOCAL_MODE && (
+              // A mode, not a warning — quiet on purpose, unlike the amber
+              // dev-auth banner. It answers "where is my work?" at a glance:
+              // here, in this browser, nowhere else.
+              <span className="font-jetbrains rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[10px] tracking-[0.14em] text-white/50 uppercase">
+                local
+              </span>
+            )}
             <div className="font-jetbrains hidden items-center gap-7 text-[13px] text-white/70 md:flex">
               {MODULES.map((m) => (
                 <Link key={m.href} href={m.href} className="transition hover:text-white">
