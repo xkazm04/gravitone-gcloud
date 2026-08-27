@@ -32,6 +32,8 @@ import { useSyncExternalStore } from "react";
 
 import { STEPS_STORE, openDb, runTx } from "@/lib/studioDb";
 
+import type { TrailerCut, WithholdingBudget } from "../script/trailer/types";
+
 export interface ResearchStepData {
   topic: string;
   researched: boolean;
@@ -65,6 +67,20 @@ export interface BeatPicksStepData {
   mode: "facts" | "beats";
   picks: Record<string, string | null>;
   confirmed: Record<string, string> | null;
+  savedAt?: number;
+}
+
+/** The trailer half of the Script step, under phase key `"script-trailer"`.
+ *
+ *  The cut is composed ONCE from the confirmed spine in `research-beats` and
+ *  is then the creator's own: every edit here (a rewritten beat, a connector,
+ *  a payer, a raised variable) lands on this record and never back on the
+ *  picks. The budget travels with the cut because it is the campaign's object
+ *  and the withholding rule reads them together — a budget stored elsewhere
+ *  would let the two drift apart between saves. */
+export interface TrailerCutStepData {
+  cut: TrailerCut;
+  budget: WithholdingBudget;
   savedAt?: number;
 }
 

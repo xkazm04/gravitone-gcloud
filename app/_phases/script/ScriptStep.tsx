@@ -32,10 +32,11 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
+import { getProject, type Discipline } from "@/lib/projects";
 
 import { CONCLUSIONS } from "../_shared/notebook/conclusions";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
-import { loadStep } from "../_shared/stepStore";
+import { loadStep, type BeatPicksStepData } from "../_shared/stepStore";
 import Notice from "../_shared/ui/Notice";
 import { useScope } from "../research/useScope";
 
@@ -50,6 +51,7 @@ import VersionBar from "./_matrix/VersionBar";
 import StickyNotebook from "./_notes/StickyNotebook";
 import { RENDERS, RENDER_BY_ID } from "./renders";
 import BaselineOnlyNote from "./_parts/BaselineOnlyNote";
+import TrailerScript from "./trailer/TrailerScript";
 import { useVersions } from "./useVersions";
 
 type Tab = "candidates" | "coverage" | "spend" | "tracks";
@@ -72,7 +74,57 @@ const TABS: { key: Tab; label: string; sub: string }[] = [
   { key: "tracks", label: "Tracks", sub: "running order — the bridge to Frames" },
 ];
 
-export default function ScriptAssayBench({ projectId }: { projectId: string }) {
+/** WHICH HALF OF THE STEP THIS PROJECT GETS.
+ *
+ *  The project record and the beat-picks record are read the way ResearchStep
+ *  reads them (`getProject` in an effect, keyed to the id) — no second data
+ *  layer. A trailer project, or a free project that chose beats over facts,
+ *  opens on the trailer half and nothing of the explainer path mounts: its
+ *  hooks read a notebook this project does not have. `null` = not read yet. */
+type Route =
+  | { id: string; kind: "explainer" }
+  | { id: string; kind: "trailer"; discipline: Discipline; title: string }
+  | { id: string; kind: "missing" };
+
+export default function ScriptStep({ projectId }: { projectId: string }) {
+  const [route, setRoute] = useState<Route | null>(null);
+  const current = route?.id === projectId ? route : null;
+
+  useEffect(() => {
+    let alive = true;
+    void Promise.all([
+      getProject(projectId),
+      loadStep<BeatPicksStepData>(projectId, "research-beats"),
+    ]).then(([p, picks]) => {
+      if (!alive) return;
+      if (!p) return setRoute({ id: projectId, kind: "missing" });
+      const discipline = p.discipline ?? "educational";
+      const trailer =
+        discipline === "trailer" || (discipline === "free" && picks?.mode === "beats");
+      setRoute(
+        trailer
+          ? { id: projectId, kind: "trailer", discipline, title: p.title }
+          : { id: projectId, kind: "explainer" },
+      );
+    });
+    return () => { alive = false; };
+  }, [projectId]);
+
+  if (current === null)
+    return <p className="font-jetbrains text-[12px] text-white/35">opening the project…</p>;
+  if (current.kind === "missing")
+    return (
+      <p className="font-jetbrains text-[12px] text-amber-200/85" data-testid="script-no-project">
+        no project record for {projectId} — nothing to write against
+      </p>
+    );
+  if (current.kind === "trailer")
+    return <TrailerScript projectId={projectId} discipline={current.discipline} title={current.title} />;
+  return <ExplainerScript projectId={projectId} />;
+}
+
+/** The explainer half, exactly as it was — every tab and testid intact. */
+function ExplainerScript({ projectId }: { projectId: string }) {
   const [tab, setTab] = useState<Tab>("candidates");
   const [showing, setShowing] = useState<"baseline" | "candidate">("candidate");
   const [researched, setResearched] = useState<boolean | null>(null);
