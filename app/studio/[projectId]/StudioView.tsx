@@ -191,7 +191,11 @@ export default function StudioView({ projectId }: { projectId: string }) {
 
   return (
     <StudioFrame>
-      <main className="pb-16">
+      {/* tabIndex={-1}: the landmark a closing dialog hands focus to when the
+          control it was opened from did not survive it — a restore onto a
+          detached node is silent, and focus falls to <body>. See
+          components/ui/Modal.tsx#restoreFocus. */}
+      <main tabIndex={-1} className="pb-16">
         <header className="pt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">

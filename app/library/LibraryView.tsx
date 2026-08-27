@@ -37,7 +37,11 @@ export default function LibraryView() {
 
   return (
     <StudioFrame>
-      <main className="pb-16">
+      {/* tabIndex={-1}: the landmark a closing dialog hands focus to when the
+          control it was opened from did not survive it — a restore onto a
+          detached node is silent, and focus falls to <body>. See
+          components/ui/Modal.tsx#restoreFocus. */}
+      <main tabIndex={-1} className="pb-16">
         <header className="pt-6">
           <Eyebrow>library</Eyebrow>
           <h1 className="font-instrument mt-3 text-4xl text-white">Library</h1>

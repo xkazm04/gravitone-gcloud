@@ -289,4 +289,75 @@ test.describe("the assembled studio", () => {
 
     expect(errors, "page errors during the library journey").toEqual([]);
   });
+
+  // ── A DIALOG WHOSE OPENER DID NOT SURVIVE IT ─────────────────────────────
+  //
+  // The journey above is the same rule from the other side: there, the focused
+  // node was removed with nothing over it; here a modal is on top, and the
+  // control it was opened FROM is what disappears underneath. Modal.tsx restored
+  // focus to that control unconditionally, and focusing a detached node is a
+  // silent no-op — so the dialog closed onto <body>, which ContextMenu.tsx calls
+  // stranding "a keyboard user at the top of the document".
+  //
+  // This rung, not the probes: tests/golden-path/ runs in Node with no DOM, so
+  // there is no document.activeElement there to be wrong.
+  //
+  // The Research step's Clear is the flow where the ordering is not a race.
+  // `doClear` (ResearchStep.tsx) resets the run and closes the dialog in ONE
+  // commit, so `ready` goes false and the Clear button unmounts at the same
+  // moment the modal does — the opener is provably gone before focus is handed
+  // back. /projects' per-row Delete is the same defect, but its removal lands
+  // after an IndexedDB round trip and would make the assertion a coin toss.
+  test("closing a dialog whose opener was removed moves focus on, never to the document body", async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await freshShelf(page);
+
+    await page.getByTestId(`cell-${PROJECT}-research`).click();
+    await page.waitForURL(/\/studio\//);
+
+    // The product's own way to land the finished notebook without walking the
+    // run (see the hard-reload journey above). A notebook is what puts Clear on
+    // the surface at all, so it is also what makes this journey possible.
+    await page.getByTestId("load-saved-run").click();
+    await expect(page.getByTestId("load-saved-note")).toBeVisible();
+
+    // BY KEYBOARD, because the claim is about a keyboard user: the opener is
+    // focused and activated with Enter, which is what makes where focus lands
+    // afterwards the whole of the user's position on the page.
+    const clear = page.getByTestId("clear-research");
+    await clear.focus();
+    await expect(clear).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    const dialog = page.getByRole("dialog", { name: /clear this research/i });
+    await expect(dialog).toBeVisible();
+
+    await page.getByTestId("confirm-clear").click();
+
+    // Both halves of the premise, asserted rather than assumed: the dialog is
+    // gone AND its opener went with it. A journey that stopped at the first
+    // would also pass against a Clear button that never unmounted, which is not
+    // the situation this test exists for.
+    await expect(dialog).toHaveCount(0);
+    await expect(clear).toHaveCount(0);
+
+    // Polled, not read once: the restore runs in React's passive-effect flush,
+    // which lands a tick after the commit the expectations above observed.
+    await expect
+      .poll(async () => page.evaluate(() => document.activeElement?.tagName ?? null), {
+        message: "focus was stranded on the document body after the dialog closed",
+      })
+      .not.toBe("BODY");
+
+    // THE FINDING IS THE BODY (same reasoning as the journey above), but the
+    // positive is named too — "not BODY" would also be satisfied by focus stuck
+    // inside a dialog that failed to unmount, and <main> is the anchor the fix
+    // actually chose.
+    const landedOn = await page.evaluate(() => document.activeElement?.tagName ?? null);
+    expect(landedOn, "focus landed on the surface's own <main> landmark").toBe("MAIN");
+
+    expect(errors, "page errors during the clear-research journey").toEqual([]);
+  });
 });
