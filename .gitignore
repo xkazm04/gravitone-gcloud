@@ -119,3 +119,12 @@ __pycache__/
 /.claude/rules/ai-registry-software-engineering.md
 /.claude/rules/ai-registry-media-generation.md
 # END ai-registry linked skills
+
+# Foundry runs (pipeline/foundry/forge.py) — generated candidates, their
+# sidecars and the cropped third-party reference frames. Regenerable from a
+# plan file. The verdicts and the style catalogue ARE versioned
+# (pipeline/foundry/{ledger,styles}.json): those are the finding.
+/foundry-out/
+
+# forge logs (pipeline/foundry/forge.py > logs/)
+/pipeline/foundry/logs/

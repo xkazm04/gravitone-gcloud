@@ -1,0 +1,18 @@
+{
+  "lane": "chain",
+  "seed": 770425,
+  "steps": 4,
+  "lora": true,
+  "width": 832,
+  "height": 480,
+  "length": 73,
+  "fps": 24,
+  "hero": "C:\\Users\\kazda\\kiro\\gravitone-gcloud\\pipeline\\vlm-probe\\shots\\reference\\00-hero.png",
+  "character": "a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt",
+  "location": "a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow",
+  "beats": {
+    "01-turn": "Medium shot. She stands still and turns her head slowly toward the shaft of light, chin lifting. The camera holds. Dust drifts through the beam. The subject is a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt. The setting is a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow. Photographic, 35mm cinema, natural skin texture, no text, no watermark.",
+    "02-walk": "Hard cut to a low wide shot from the far end of the hangar. She walks toward camera through the shaft of light, small in frame, boots on concrete. The subject is a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt. The setting is a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow. Photographic, 35mm cinema, natural skin texture, no text, no watermark.",
+    "03-look": "Hard cut to a tight low-angle close-up from her left. She looks up, eyes narrowing, the blown-out roof light behind her head. The subject is a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt. The setting is a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow. Photographic, 35mm cinema, natural skin texture, no text, no watermark."
+  }
+}

@@ -1,0 +1,13 @@
+  hero still (the thing every shot will reference)
+    -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference\00-hero.png
+  referencing 1 copy/copies of the hero still
+  01-wide: 180s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference\01-wide.png
+  guard: recycling ComfyUI (headroom dropped mid-lane) -- RAM 14.7 free, commit 155/169 GB
+  guard: back up -- RAM 37.8 free, commit 67/120 GB
+  02-medium: 168s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference\02-medium.png
+  guard: recycling ComfyUI (headroom dropped mid-lane) -- RAM 9.6 free, commit 150/172 GB
+  guard: back up -- RAM 43.5 free, commit 62/120 GB
+  03-close: 150s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference\03-close.png
+
+  lane written to C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference
+  now score it:  python identity.py --set shots/reference

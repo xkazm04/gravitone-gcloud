@@ -1,0 +1,850 @@
+{
+  "_purpose": "The art-style catalogue the foundry forges against. Each style is TWO halves: `observables` are the measurable half (the style.py vocabulary a vision model can read back off any image, so adherence is a comparison of enums rather than an opinion) and `recipe` is the generator-facing half (what to tell an image model, concrete visual instructions, no proper nouns). A style enters as `candidate`; it becomes `proven` only through the cull, when a human keeps its renders across more than one craft problem. `evidence` is appended by /foundry commits and is the durable index the knowledge write-up reads.",
+  "_origin_kinds": {
+    "readback": "acquired from a best-in-class source by style.py multi-frame readback (style-onboarding-from-sample), then edited by hand -- the source frames never become references",
+    "authored": "written from the attribute grammar directly"
+  },
+  "styles": [
+    {
+      "id": "painted-3d",
+      "name": "Painted 3D",
+      "family": "animation",
+      "status": "proven",
+      "origin": {
+        "kind": "readback",
+        "source": "arcane-fights",
+        "models": [
+          "qwen3.8:27b",
+          "gemini-3.7-flash"
+        ]
+      },
+      "observables": {
+        "render_mode": "painterly",
+        "detail_density": "moderate",
+        "surface_realism": "plausible",
+        "atmospherics": "heavy-haze",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "crushed",
+        "edge_treatment": "soft"
+      },
+      "recipe": "Stylised 3D characters with hand-painted matte textures and visible brush strokes on every surface. Heavy atmospheric haze softening the background. Blacks crushed to near-total darkness so only lit forms and a few saturated neon accents (electric blue, hot pink) read. One hard directional key with sharp planar highlights on faces. Clean graphic surfaces, no fine noisy texture, painted motion smears where anything moves.",
+      "negative": "photograph, photoreal skin, film grain, flat cel shading, text, watermark",
+      "evidence": [
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "arcane-standoff",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "arcane-standoff",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    },
+    {
+      "id": "cold-photoreal-cg",
+      "name": "Cold Photoreal CG",
+      "family": "cinematic",
+      "status": "proven",
+      "origin": {
+        "kind": "readback",
+        "source": "wow-shadowlands",
+        "models": [
+          "qwen3.8:27b",
+          "gemini-3.7-flash"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "palette_strategy": "duotone",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp"
+      },
+      "recipe": "High-end pre-rendered cinematic 3D, physically convincing materials. A desaturated icy blue and dark steel duotone, dense cold mist hanging in the air, intricate gothic armour with micro-frost surface wear and scratches. Directional specular highlights, deep neutral blacks that still hold detail, subtle glowing blue emissive accents. Crisp edges, shallow cinematic focus, anamorphic widescreen framing.",
+      "negative": "painting, brush strokes, cel shading, cartoon, text, watermark",
+      "evidence": [
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "arcane-standoff",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "arcane-standoff",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    },
+    {
+      "id": "cel-anime",
+      "name": "Cel Anime",
+      "family": "animation",
+      "status": "proven",
+      "origin": {
+        "kind": "authored"
+      },
+      "observables": {
+        "render_mode": "cel-shaded",
+        "detail_density": "moderate",
+        "surface_realism": "simplified",
+        "atmospherics": "light-haze",
+        "palette_strategy": "saturated-vivid",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp"
+      },
+      "recipe": "2D cel animation still. Flat colour fills with exactly two tones per surface -- a base and one hard-edged shadow -- and crisp dark ink outlines of even weight. Saturated, vivid colours. Painted background with soft gradients behind sharply drawn characters. No gradients on the figures, no photographic texture, no rendered volume; a hand-drawn theatrical anime key frame.",
+      "negative": "3D render, photoreal, brush strokes, film grain, text, watermark",
+      "evidence": [
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "arcane-standoff",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "arcane-standoff",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    },
+    {
+      "id": "ink-graphic-novel",
+      "name": "Ink Graphic Novel",
+      "family": "graphic",
+      "status": "proven",
+      "origin": {
+        "kind": "authored"
+      },
+      "observables": {
+        "render_mode": "graphic-abstract",
+        "detail_density": "sparse",
+        "surface_realism": "flat",
+        "atmospherics": "none",
+        "palette_strategy": "monochrome",
+        "black_handling": "crushed",
+        "edge_treatment": "crisp"
+      },
+      "recipe": "High-contrast black ink graphic novel panel. Solid pooled blacks and stark white paper with almost no mid-tones, forms carved out of shadow by the light alone. A single spot colour -- cold blue -- used on one element only. Halftone dot texture in the mid-greys, rough brush-ink edges, heavy chiaroscuro. Flat, printed, no rendered volume, no photographic detail.",
+      "negative": "photoreal, 3D render, full colour, soft gradients, text, watermark, speech bubbles, panel borders",
+      "evidence": [
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    },
+    {
+      "id": "oil-concept-art",
+      "name": "Oil Concept Art",
+      "family": "painterly",
+      "status": "candidate",
+      "origin": {
+        "kind": "authored"
+      },
+      "observables": {
+        "render_mode": "painterly",
+        "detail_density": "moderate",
+        "surface_realism": "plausible",
+        "atmospherics": "heavy-haze",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "lifted-milky",
+        "edge_treatment": "soft"
+      },
+      "recipe": "Loose digital oil concept painting. Broad visible brushwork, edges lost and found -- detail concentrated on the focal figure and dissolving into suggested shapes elsewhere. Warm-against-cool colour split: a cold blue-grey world with one warm amber light on the subject. Lifted milky blacks, thick atmospheric haze layering the distance, matte painted surfaces with no photographic sharpness anywhere.",
+      "negative": "photograph, 3D render, cel shading, crisp digital edges, text, watermark",
+      "evidence": [
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-dry-run",
+          "scene": "wow-archer",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-26T18:21:52.962Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    },
+    {
+      "id": "epic-film-naturalistic",
+      "name": "Epic Film Naturalistic",
+      "family": "cinematic",
+      "status": "candidate",
+      "origin": {
+        "kind": "readback",
+        "source": "lotr-scene",
+        "models": [
+          "gemini-3.7-flash"
+        ],
+        "signature": "Warm sepia-graded 35mm epic cinematography, weathered beaten metal textures, desaturated earth tones, dynamic battle motion blur, and hazy pale skies.",
+        "edited": true
+      },
+      "observables": {
+        "render_mode": "photographic",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "palette_strategy": "desaturated-naturalistic",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "soft"
+      },
+      "recipe": "35mm film still, cinematic anamorphic framing. Desaturated earthy palette with a warm sepia-olive tint, natural overcast daylight and a light haze layering the distance. Physically convincing weathered surfaces, fine film grain, soft edges, shallow depth of field with realistic motion blur. Deep neutral blacks that still hold detail.",
+      "negative": "text, watermark, logo, caption, border",
+      "evidence": [
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    },
+    {
+      "id": "green-tint-noir",
+      "name": "Green-Tint Noir",
+      "family": "cinematic",
+      "status": "candidate",
+      "origin": {
+        "kind": "readback",
+        "source": "matrix-bullets",
+        "models": [
+          "gemini-3.7-flash"
+        ],
+        "signature": "Heavy green-tinted color grading, desaturated urban architecture, deep black wardrobe contrast, and stroboscopic multi-exposure motion ghosting.",
+        "edited": true
+      },
+      "observables": {
+        "render_mode": "photographic",
+        "detail_density": "moderate",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "palette_strategy": "duotone",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp"
+      },
+      "recipe": "Cinematic 35mm film still with a heavy green-cyan tint across the midtones and the sky. High-contrast deep blacks, diffuse overcast lighting, clean hard-surfaced architecture and glass reflections. Crisp edges, physically convincing materials, stroboscopic multi-image afterimage trails on any fast motion.",
+      "negative": "text, watermark, logo, caption, border",
+      "evidence": [
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    },
+    {
+      "id": "teal-orange-blockbuster",
+      "name": "Teal-Orange Blockbuster",
+      "family": "cinematic",
+      "status": "candidate",
+      "origin": {
+        "kind": "readback",
+        "source": "transformers-freeway",
+        "models": [
+          "gemini-3.7-flash"
+        ],
+        "signature": "High-contrast teal-and-amber cinematic grade, complex faceted metallic surfaces, crushed blacks, and dynamic shutter motion blur in bright sunlight.",
+        "edited": true
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "palette_strategy": "complementary-split",
+        "black_handling": "crushed",
+        "edge_treatment": "crisp"
+      },
+      "recipe": "Cinematic 35mm anamorphic still in harsh daylight with an aggressive teal-and-orange grade. Crushed blacks, dense hyper-detailed surfaces, glossy paint and sharp specular highlights, light haze and smoke, prominent directional motion blur, lens flare on the brightest highlights.",
+      "negative": "text, watermark, logo, caption, border",
+      "evidence": [
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "keep",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    },
+    {
+      "id": "crimson-barrier-scifi",
+      "name": "Crimson Barrier Sci-Fi",
+      "family": "cinematic",
+      "status": "candidate",
+      "origin": {
+        "kind": "readback",
+        "source": "sw-duel-of-fates",
+        "models": [
+          "gemini-3.7-flash"
+        ],
+        "signature": "High-contrast 35mm anamorphic cinematography featuring sleek slate-blue industrial architecture contrasted by intense, blooming crimson energy walls and directional lighting.",
+        "edited": true
+      },
+      "observables": {
+        "render_mode": "photographic",
+        "detail_density": "moderate",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "bloom-heavy"
+      },
+      "recipe": "Cinematic 35mm film still, high contrast. Sleek slate-grey and steel-blue surfaces lit by a single glowing crimson light source that casts intense luminous bloom and a warm-cool split across everything. Deep neutral blacks, tactile fabric and metal, bloom-heavy edges, natural shutter motion blur.",
+      "negative": "text, watermark, logo, caption, border",
+      "evidence": [
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "lotr-cavalry",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "sw-doorway",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "matrix-rooftop",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "text",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        },
+        {
+          "run": "2026-08-26-sweep-01",
+          "scene": "wow-helm",
+          "mechanism": "ref-early",
+          "verdict": "reject",
+          "at": "2026-08-27T07:13:28.768Z"
+        }
+      ]
+    }
+  ]
+}

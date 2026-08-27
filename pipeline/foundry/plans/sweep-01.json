@@ -1,0 +1,48 @@
+{
+  "id": "sweep-01",
+  "_purpose": "First real sweep: five scenes chosen as five DIFFERENT craft problems (the trial-matrix rule -- no style may pass the set by being good at one thing) crossed with the whole catalogue, nine styles, both mechanisms. 90 candidates, roughly four hours on the 4090. The dry run's archer scene is deliberately not repeated: a style's characteristic failure only shows on a problem it has not met.",
+  "scenes": [
+    {
+      "id": "lotr-cavalry",
+      "frame": "lotr-scene-008.jpg",
+      "note": "establishing extreme wide -- a cavalry line receding on a diagonal, low angle, overcast naturalistic light; probes scale and crowd"
+    },
+    {
+      "id": "sw-doorway",
+      "frame": "sw-duel-of-fates-016.jpg",
+      "note": "symmetrical wide two-shot -- two figures framed in a doorway against a red light wall; probes frame-within-frame and a hard coloured key"
+    },
+    {
+      "id": "matrix-rooftop",
+      "frame": "matrix-bullets-005.jpg",
+      "note": "low-angle full hero shot -- one figure, legs braced, centred against glass towers; probes a single-figure stance and a tinted grade"
+    },
+    {
+      "id": "wow-helm",
+      "frame": "wow-shadowlands-010.jpg",
+      "note": "close-up portrait -- armoured helm with glowing eyes, shallow focus, a gauntlet reaching in from the right; probes face-scale detail"
+    },
+    {
+      "id": "arcane-standoff",
+      "frame": "arcane-fights-012.jpg",
+      "note": "two-figure standoff across empty space -- rule of thirds, graphic negative space, minimal detail; probes restraint and posture"
+    }
+  ],
+  "styles": [
+    "painted-3d",
+    "cold-photoreal-cg",
+    "cel-anime",
+    "ink-graphic-novel",
+    "oil-concept-art",
+    "epic-film-naturalistic",
+    "green-tint-noir",
+    "teal-orange-blockbuster",
+    "crimson-barrier-scifi"
+  ],
+  "mechanisms": [
+    { "id": "text", "reference": false, "label": "words only" },
+    { "id": "ref-early", "reference": true, "window": 0.35, "label": "source frame conditions the first 35% of the denoise" }
+  ],
+  "seeds": [20260826],
+  "steps": 20
+}

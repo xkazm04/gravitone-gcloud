@@ -1,0 +1,6 @@
+  01-wide: 178s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\baseline\01-wide.png
+  02-medium: 198s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\baseline\02-medium.png
+  03-close: 211s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\baseline\03-close.png
+
+  lane written to C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\baseline
+  now score it:  python identity.py --set shots/baseline

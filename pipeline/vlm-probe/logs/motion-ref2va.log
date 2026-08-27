@@ -1,0 +1,19 @@
+  guard: recycling ComfyUI (switching from Flux 2 to H3) -- RAM 18.1 free, commit 105/181 GB
+  guard: back up -- RAM 48.6 free, commit 32/181 GB
+  hero reference staged as ref_00-hero.png
+  01-turn: 1243s -> 3 frames + video
+  guard: recycling ComfyUI (fresh engine for 02-walk) -- RAM 12.8 free, commit 103/181 GB
+  guard: back up -- RAM 45.3 free, commit 32/181 GB
+  02-walk: 1642s -> 3 frames + video
+  guard: recycling ComfyUI (fresh engine for 03-look) -- RAM 18.0 free, commit 109/181 GB
+  guard: back up -- RAM 44.5 free, commit 35/181 GB
+Traceback (most recent call last):
+  File "C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\motion.py", line 260, in <module>
+    main()
+  File "C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\motion.py", line 254, in main
+    run(args.lane, args.width, args.height, args.length,
+  File "C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\motion.py", line 224, in run
+    generate(wf, timeout=2400)
+  File "C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\consistency.py", line 201, in generate
+    raise TimeoutError(f"comfyui did not finish {pid} in {timeout}s -- read its stderr")
+TimeoutError: comfyui did not finish cd9d4e9c-9e3d-49fe-996c-df92ab89c19a in 2400s -- read its stderr

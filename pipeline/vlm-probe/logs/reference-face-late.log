@@ -1,0 +1,11 @@
+  hero still reused from the first reference lane
+    face-only reference -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference-face-late\00b-hero-face.png
+  referencing 1 copy/copies of the hero still
+  guard: recycling ComfyUI (headroom dropped mid-lane) -- RAM 9.1 free, commit 153/164 GB
+  guard: back up -- RAM 36.6 free, commit 68/120 GB
+  01-wide: 143s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference-face-late\01-wide.png
+  02-medium: 189s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference-face-late\02-medium.png
+  03-close: 141s -> C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference-face-late\03-close.png
+
+  lane written to C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\shots\reference-face-late
+  now score it:  python identity.py --set shots/reference

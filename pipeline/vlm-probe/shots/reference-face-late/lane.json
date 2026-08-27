@@ -1,0 +1,17 @@
+{
+  "lane": "reference",
+  "seed": 770425,
+  "steps": 20,
+  "references": [
+    "ref_00b-hero-face.png"
+  ],
+  "ref_crop": "face",
+  "reference_joins_at": 0.45,
+  "character": "a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt",
+  "location": "a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow",
+  "shots": {
+    "01-wide": "Extreme wide shot from the far end of the hangar, the figure small and off-centre in the lower third of the frame, dwarfed by the roof structure, seen from behind a foreground crate. Low camera near the floor. Deep focus. The subject is a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt. The setting is a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow. Photographic, 35mm cinema still, natural skin texture, no text, no watermark, no border.",
+    "02-medium": "Medium shot from her right side, profile to three-quarter, cut at the waist, the rusted wall close behind her and the light shaft out of frame. Camera slightly above eye level looking down. The subject is a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt. The setting is a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow. Photographic, 35mm cinema still, natural skin texture, no text, no watermark, no border.",
+    "03-close": "Tight close-up from her left, low angle looking up at her face against the torn roof and open sky, the shaft of light blown out behind her head. Shallow focus. The subject is a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt. The setting is a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow. Photographic, 35mm cinema still, natural skin texture, no text, no watermark, no border."
+  }
+}

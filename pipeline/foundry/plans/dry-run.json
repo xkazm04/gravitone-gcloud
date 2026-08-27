@@ -1,0 +1,18 @@
+{
+  "id": "dry-run",
+  "_purpose": "One scene, five styles, two mechanisms, one seed: ten candidates. Enough to test both phases end to end before a run that takes the evening. The scene is a game-cinematic beat with clear staging -- a full shot, low angle, one standing figure over a fallen one, an ice spire behind -- so every craft field has something to survive.",
+  "scenes": [
+    {
+      "id": "wow-archer",
+      "frame": "wow-shadowlands-002.jpg",
+      "note": "full shot, low angle, standing archer over a fallen armoured figure, ice spire and haze behind"
+    }
+  ],
+  "styles": ["painted-3d", "cold-photoreal-cg", "cel-anime", "ink-graphic-novel", "oil-concept-art"],
+  "mechanisms": [
+    { "id": "text", "reference": false, "label": "words only" },
+    { "id": "ref-early", "reference": true, "window": 0.35, "label": "source frame conditions the first 35% of the denoise" }
+  ],
+  "seeds": [20260826],
+  "steps": 20
+}

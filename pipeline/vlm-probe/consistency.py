@@ -115,7 +115,7 @@ def prompt_for(shot_clause):
     return f"{shot_clause} The subject is {CHARACTER}. The setting is {LOCATION}. {NEGATIVE_STYLE}"
 
 
-def flux_workflow(prompt, seed, refs=(), width=1280, height=720, steps=20, prefix="shot"):
+def flux_workflow(prompt, seed, refs=(), width=1280, height=720, steps=20, prefix="shot", late=0.0):
     """Flux 2 text-to-image, optionally conditioned on reference stills.
 
     Each reference is VAE-encoded and chained through its own `ReferenceLatent`,
@@ -147,6 +147,20 @@ def flux_workflow(prompt, seed, refs=(), width=1280, height=720, steps=20, prefi
         w[ref] = {"class_type": "ReferenceLatent",
                   "inputs": {"conditioning": cond, "latent": [enc, 0]}}
         cond = [ref, 0]
+    if refs and late:
+        # The reference at full strength does not condition the shot, it
+        # replaces it -- measured: two shots came back as the hero image with
+        # a look distance of 0.0002 and the camera direction ignored entirely.
+        # Composition is decided in the early denoising steps and identity in
+        # the later ones, so the text gets the frame to itself until `late`,
+        # and only then does the reference join to assert the face.
+        w["30"] = {"class_type": "ConditioningSetTimestepRange",
+                   "inputs": {"conditioning": ["4", 0], "start": 0.0, "end": late}}
+        w["31"] = {"class_type": "ConditioningSetTimestepRange",
+                   "inputs": {"conditioning": cond, "start": late, "end": 1.0}}
+        w["32"] = {"class_type": "ConditioningCombine",
+                   "inputs": {"conditioning_1": ["30", 0], "conditioning_2": ["31", 0]}}
+        cond = ["32", 0]
     w["5"] = {"class_type": "FluxGuidance", "inputs": {"conditioning": cond, "guidance": 4.0}}
     w["10"] = {"class_type": "BasicGuider", "inputs": {"model": ["1", 0], "conditioning": ["5", 0]}}
     w["11"] = {"class_type": "SamplerCustomAdvanced",
@@ -187,6 +201,30 @@ def generate(workflow, timeout=900):
     raise TimeoutError(f"comfyui did not finish {pid} in {timeout}s -- read its stderr")
 
 
+def face_reference(hero_path, out_path, margin=1.9, size=512):
+    """Crop the hero to the head alone, on a neutral field.
+
+    The full hero still carries a background, a body pose and a framing, and
+    the model copies all three. A head on grey carries identity and nothing
+    else worth copying, which is the whole point of a reference.
+    """
+    import identity
+    from PIL import Image
+    mt, _ = identity._load("face")
+    im = Image.open(hero_path).convert("RGB")
+    boxes, _ = mt.detect(im)
+    if boxes is None:
+        raise RuntimeError(f"no face in the hero still {hero_path} -- cannot build a face reference")
+    x1, y1, x2, y2 = boxes[0]
+    cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
+    half = max(x2 - x1, y2 - y1) * margin / 2
+    crop = im.crop((int(cx - half), int(cy - half), int(cx + half), int(cy + half)))
+    canvas = Image.new("RGB", (size, size), (118, 118, 118))
+    canvas.paste(crop.resize((size, size)))
+    canvas.save(out_path)
+    return out_path
+
+
 def stage_reference(path):
     """Put a still where LoadImage can see it, and return the name it wants."""
     COMFY_IN.mkdir(parents=True, exist_ok=True)
@@ -195,8 +233,8 @@ def stage_reference(path):
     return dest.name
 
 
-def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False):
-    out = SHOTS / (lane + ("-zoom" if zoom else ""))
+def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full", late=0.0, tag=""):
+    out = SHOTS / (lane + ("-zoom" if zoom else "") + tag)
     out.mkdir(parents=True, exist_ok=True)
     if not guard.start_comfy():
         raise RuntimeError("comfyui would not come up")
@@ -204,11 +242,19 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False):
     refs = []
     if lane == "reference":
         hero_path = out / "00-hero.png"
+        if not hero_path.exists() and (SHOTS / "reference" / "00-hero.png").exists():
+            # Reuse the hero across reference lanes: the variable under test is
+            # how the reference is applied, not which face it happens to show.
+            shutil.copyfile(SHOTS / "reference" / "00-hero.png", hero_path)
+            print("  hero still reused from the first reference lane")
         if not hero_path.exists():
             print("  hero still (the thing every shot will reference)")
             src = generate(flux_workflow(prompt_for(HERO), seed, prefix="hero", steps=steps))
             shutil.copyfile(src, hero_path)
             print(f"    -> {hero_path}")
+        if ref_crop == "face":
+            hero_path = face_reference(hero_path, out / "00b-hero-face.png")
+            print(f"    face-only reference -> {hero_path}")
         refs = [stage_reference(hero_path)] * max(1, ref_count)
         print(f"  referencing {len(refs)} copy/copies of the hero still")
 
@@ -221,12 +267,13 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False):
             guard.recycle_comfy("headroom dropped mid-lane")
         t = time.time()
         src = generate(flux_workflow(prompt_for(clause), seed, refs=refs,
-                                     steps=steps, prefix=f"{lane}-{name}"))
+                                     steps=steps, prefix=f"{lane}-{name}", late=late))
         shutil.copyfile(src, dest)
         print(f"  {name}: {time.time() - t:.0f}s -> {dest}")
 
     (out / "lane.json").write_text(json.dumps({
         "lane": lane, "seed": seed, "steps": steps, "references": refs,
+        "ref_crop": ref_crop, "reference_joins_at": late,
         "character": CHARACTER, "location": LOCATION,
         "shots": {n: prompt_for(c) for n, c in (ZOOM_SPEC if zoom else SHOTS_SPEC)},
     }, indent=2), encoding="utf-8")
@@ -240,8 +287,13 @@ def main():
     ap.add_argument("--steps", type=int, default=20)
     ap.add_argument("--seed", type=int, default=SEED)
     ap.add_argument("--zoom", action="store_true", help="the easy setups: focal length only")
+    ap.add_argument("--ref-crop", choices=["full", "face"], default="full")
+    ap.add_argument("--late", type=float, default=0.0,
+                    help="fraction of denoising the text gets alone before the reference joins")
+    ap.add_argument("--tag", default="", help="suffix for the output directory")
     args = ap.parse_args()
-    run_lane(args.lane, ref_count=args.refs, steps=args.steps, seed=args.seed, zoom=args.zoom)
+    run_lane(args.lane, ref_count=args.refs, steps=args.steps, seed=args.seed,
+             zoom=args.zoom, ref_crop=args.ref_crop, late=args.late, tag=args.tag)
 
 
 if __name__ == "__main__":

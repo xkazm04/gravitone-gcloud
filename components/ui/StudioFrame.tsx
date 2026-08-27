@@ -23,6 +23,11 @@ export const MODULES = [
   // promoted into the studio's own steps. Remove when the Score phase has
   // absorbed what the bench was built to learn.
   { label: "Playground", href: "/playground" },
+  // Upstream of the Library, and deliberately not a tab of it: the Library
+  // holds ratified things a project stands on, the foundry mass-produces
+  // candidates most of which are meant to be deleted. Runs on the local GPU
+  // for hours (pipeline/foundry), culled here by hand.
+  { label: "Foundry", href: "/foundry" },
 ];
 
 /** Obsidian app shell: aurora atmosphere + top nav + the account control.

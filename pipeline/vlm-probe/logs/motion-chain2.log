@@ -1,0 +1,13 @@
+  guard: recycling ComfyUI (switching from Flux 2 to H3) -- RAM 8.4 free, commit 79/181 GB
+  guard: back up -- RAM 48.9 free, commit 28/181 GB
+  hero reference staged as ref_00-hero.png
+  01-turn: already generated, skipping
+  guard: recycling ComfyUI (fresh engine for 02-walk) -- RAM 49.1 free, commit 28/181 GB
+  guard: back up -- RAM 49.0 free, commit 28/181 GB
+  02-walk: 1018s -> 3 frames + video
+  guard: recycling ComfyUI (fresh engine for 03-look) -- RAM 5.9 free, commit 102/181 GB
+  guard: back up -- RAM 48.9 free, commit 28/181 GB
+  03-look: 1114s -> 3 frames + video
+
+  lane written to C:\Users\kazda\kiro\gravitone-gcloud\pipeline\vlm-probe\clips\chain
+  now score it:  python identity.py --set clips/chain
