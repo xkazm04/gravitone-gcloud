@@ -128,3 +128,14 @@ __pycache__/
 
 # forge logs (pipeline/foundry/forge.py > logs/)
 /pipeline/foundry/logs/
+
+# vlm-probe generated plates and clips. The spike's stills and video are
+# regenerable output, not source: every lane keeps its lane.json (seed, the
+# verbatim character/location clauses, steps, and where the reference joins),
+# which is what makes the run reproducible. The pixels are ~43 MB and grow per
+# lane; CONSISTENCY-FINDINGS.md carries the numbers and the read.
+/pipeline/vlm-probe/shots/**/*.png
+/pipeline/vlm-probe/shots/**/*.jpg
+/pipeline/vlm-probe/clips/**/*.png
+/pipeline/vlm-probe/clips/**/*.jpg
+/pipeline/vlm-probe/clips/**/*.mp4
