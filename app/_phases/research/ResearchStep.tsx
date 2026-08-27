@@ -20,10 +20,19 @@
 // one. Now the engine steps the trace and the ending it lands on is what settles
 // the job. One clock, and the control tells the truth.
 
+//
+// THE DISCIPLINE BRANCH (2026-08-27). Everything above describes the
+// EDUCATIONAL surface, which is unchanged. A trailer has no notebook to run —
+// its research is picking beats per part of the spine — and a free project has
+// to say which of the two it wants. So the default export reads the project
+// once and branches; `EducationalResearch` below is the surface that used to
+// be the whole file, every testid intact.
+
 import { useEffect, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
 import { useJobs } from "@/lib/jobs";
+import { getProject, type Discipline } from "@/lib/projects";
 
 import NotebookBody from "../_shared/notebook/NotebookBody";
 import EvidenceLog from "../_shared/notebook/EvidenceLog";
@@ -36,10 +45,52 @@ import FollowUpQueue from "./_parts/FollowUpQueue";
 import TopicPanel from "./_parts/TopicPanel";
 import { ClearDialog, ConfirmScope } from "./_parts/ScopeGate";
 import { useScope } from "./useScope";
+import BeatVariantBoard from "./beats/BeatVariantBoard";
+import ModeChooser from "./beats/ModeChooser";
+import { useBeatPicks } from "./beats/useBeatPicks";
 
 type Tab = "topic" | "board";
 
 export default function ResearchStep({ projectId }: { projectId: string }) {
+  // The project record, read the way StudioView reads it (`getProject` in an
+  // effect) — no second data layer. `null` = not yet read; `undefined` = read
+  // and not there, which is drawn as its own sentence rather than as a board.
+  const [read, setRead] = useState<{ id: string; discipline: Discipline | undefined } | null>(null);
+  const beats = useBeatPicks(projectId);
+  // Keyed to the id rather than reset in the effect, so a project switch shows
+  // "opening" without a synchronous setState inside the effect.
+  const discipline = read?.id === projectId ? read.discipline : null;
+
+  useEffect(() => {
+    let alive = true;
+    void getProject(projectId).then((p) => {
+      if (alive) setRead({ id: projectId, discipline: p ? (p.discipline ?? "educational") : undefined });
+    });
+    return () => { alive = false; };
+  }, [projectId]);
+
+  if (discipline === null || !beats.hydrated)
+    return <p className="font-jetbrains text-[12px] text-white/35">opening the project…</p>;
+  if (discipline === undefined)
+    return (
+      <p className="font-jetbrains text-[12px] text-amber-200/85" data-testid="research-no-project">
+        no project record for {projectId} — nothing to research against
+      </p>
+    );
+
+  if (discipline === "educational") return <EducationalResearch projectId={projectId} />;
+  if (discipline === "trailer") return <BeatVariantBoard api={beats} discipline="trailer" />;
+
+  // free: the chooser until a mode is stored, then whichever board it named.
+  if (beats.mode === null) return <ModeChooser onChoose={beats.setMode} />;
+  return beats.mode === "beats" ? (
+    <BeatVariantBoard api={beats} discipline="free" />
+  ) : (
+    <EducationalResearch projectId={projectId} />
+  );
+}
+
+function EducationalResearch({ projectId }: { projectId: string }) {
   const [tab, setTab] = useState<Tab>("topic");
   const run = useResearchRun(projectId);
   const api = useScope(projectId);

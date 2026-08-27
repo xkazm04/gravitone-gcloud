@@ -49,6 +49,25 @@ export interface ScopeStepData {
   savedAt?: number;
 }
 
+/** The beat-variant picks of a trailer / free project's Research step, under
+ *  phase key `"research-beats"`.
+ *
+ *  A separate key from `research` and `research-scope` for the same cadence
+ *  reason ScopeStepData gives: the beat board writes on every tile click, the
+ *  research record is written by whichever surface owns `researched`, and one
+ *  record shared between them would have each save erase the other's field.
+ *
+ *  `picks` is slot id → chosen variant id, `null` for a slot the creator has
+ *  deliberately cleared (absent means never touched). `confirmed` is the frozen
+ *  spine — Script opens on THIS, never on the live picks. `mode` is the free
+ *  discipline's answer to "facts or beats"; trailer projects store `"beats"`. */
+export interface BeatPicksStepData {
+  mode: "facts" | "beats";
+  picks: Record<string, string | null>;
+  confirmed: Record<string, string> | null;
+  savedAt?: number;
+}
+
 /* ────────────────────────────── what went wrong ──────────────────────────── */
 
 /** WHY the storage operation failed. Five destinations that used to be one
