@@ -76,12 +76,26 @@ export default function PresetSelect({
         data-testid={`preset-open-${cardId}`}
         onClick={() => setOpen((v) => !v)}
         disabled={disabled}
+        // role="combobox", and it is load-bearing rather than decorative.
+        //
+        // `aria-activedescendant` is not a supported property of role=button —
+        // an assistive technology ignores it there — so the sentence below was
+        // describing something that did not happen: the arrow keys moved a
+        // highlight only a sighted user could see, which is the exact defect the
+        // attribute was added to fix. jsx-a11y/role-supports-aria-props had been
+        // saying so, as the one RISE standing in this repo's lint ratchet.
+        //
+        // The ARIA 1.2 combobox is the pattern this already is: a control that
+        // owns a popup listbox, KEEPS focus while it is open, and points at the
+        // active option from here. It supports aria-expanded, aria-controls,
+        // aria-haspopup and aria-activedescendant together, which is why the fix
+        // is the accessibility fix and not a way to quiet a warning.
+        role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={`preset-list-${cardId}`}
         // The trigger keeps focus while the list is open, so the active option is
-        // announced from here. Without it the arrow keys moved a highlight only a
-        // sighted user could see.
+        // announced from here — now that the role permits it.
         aria-activedescendant={open ? `preset-${cardId}-${PRESETS[active].kind}` : undefined}
         className="font-jetbrains flex w-full items-center justify-between gap-2 rounded-lg border border-amber-400/35 bg-amber-400/[0.06] px-2.5 py-1.5 text-[11px] text-amber-100 transition hover:border-amber-400/60 hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-40"
       >
