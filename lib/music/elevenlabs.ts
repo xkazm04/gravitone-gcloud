@@ -64,6 +64,38 @@ function toChunk(s: PlanSection) {
   };
 }
 
+/**
+ * A vendor's non-ok response, classified.
+ *
+ * ORDER IS THE DEFECT THIS FIXES. Both call sites used to compute
+ * `refusal = status === 451 || /moderat|policy|not allowed|prohibited/i.test(detail)`
+ * and throw on it BEFORE checking 429 / 401 / 403 — so a definite status was
+ * overruled by a fuzzy word match against the vendor's prose. "policy" is
+ * ordinary vocabulary in a rate-limit or auth body ("quota policy exceeded",
+ * "your API key policy does not allow this model"), and the two outcomes are
+ * opposites in this codebase: `refused` is a routing decision the Score surface
+ * renders as refused-silence and NEVER retries (see errors.ts), while
+ * `rate-limited` is precisely the one a caller should retry with backoff. A
+ * throttled request was therefore capable of being recorded as the model
+ * declining the brief, permanently, and a rejected key as the same.
+ *
+ * So: the codes the vendor states outright are read first, and the text
+ * heuristic is the LAST resort, reached only for a status that says nothing on
+ * its own. 451 stays a refusal by status - that is what the code means.
+ */
+function vendorFailure(status: number, detail: string, what: string): MusicError {
+  const tail = detail.slice(0, 300);
+  if (status === 429) return new MusicError("rate-limited", "Vendor rate limit; retry with backoff.");
+  if (status === 401 || status === 403)
+    return new MusicError("no-key", `The vendor rejected the key (${status}).`);
+  if (status === 451) return new MusicError("refused", `The model declined this ${what}: ${tail}`);
+  if (status >= 500) return new MusicError("failed", `Vendor answered ${status}: ${tail}`);
+  // Only now, and only for a 4xx that named no reason of its own.
+  if (/moderat|policy|not allowed|prohibited/i.test(detail))
+    return new MusicError("refused", `The model declined this ${what}: ${tail}`);
+  return new MusicError("bad-request", `Vendor answered ${status}: ${tail}`);
+}
+
 export async function composeMusic(plan: MusicPlan): Promise<MusicResult> {
   const key = keyOrThrow();
 
@@ -105,14 +137,7 @@ export async function composeMusic(plan: MusicPlan): Promise<MusicResult> {
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    // 400s that read as content policy are refusals — a routing outcome the
-    // Score surface renders as refused-silence, never a retry loop.
-    const refusal = res.status === 451 || /moderat|policy|not allowed|prohibited/i.test(detail);
-    if (refusal) throw new MusicError("refused", `The model declined this brief: ${detail.slice(0, 300)}`);
-    if (res.status === 429) throw new MusicError("rate-limited", "Vendor rate limit; retry with backoff.");
-    if (res.status === 401 || res.status === 403)
-      throw new MusicError("no-key", `The vendor rejected the key (${res.status}).`);
-    throw new MusicError(res.status >= 500 ? "failed" : "bad-request", `Vendor answered ${res.status}: ${detail.slice(0, 300)}`);
+    throw vendorFailure(res.status, detail, "brief");
   }
 
   const bytes = Buffer.from(await res.arrayBuffer());
@@ -164,15 +189,7 @@ async function vendorFetch(url: string, body: unknown): Promise<Response> {
   }
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
-    const refusal = res.status === 451 || /moderat|policy|not allowed|prohibited/i.test(detail);
-    if (refusal) throw new MusicError("refused", `The model declined this request: ${detail.slice(0, 300)}`);
-    if (res.status === 429) throw new MusicError("rate-limited", "Vendor rate limit; retry with backoff.");
-    if (res.status === 401 || res.status === 403)
-      throw new MusicError("no-key", `The vendor rejected the key (${res.status}).`);
-    throw new MusicError(
-      res.status >= 500 ? "failed" : "bad-request",
-      `Vendor answered ${res.status}: ${detail.slice(0, 300)}`,
-    );
+    throw vendorFailure(res.status, detail, "request");
   }
   return res;
 }
