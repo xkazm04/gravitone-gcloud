@@ -274,16 +274,21 @@ async function runImage(
   const key = keyFor("google");
   const n = Math.min(Math.max(count, 1), 8);
 
-  const calls = Array.from({ length: n }, (_, i) =>
+  // THE INTERACTIONS API HAS NO `seed`. Measured 2026-08-27, the first time a
+  // caller (lib/foundry/extract) ever passed one: every request answered
+  //   400 {"error":{"message":"Unknown parameter 'seed.'","code":"invalid_request"}}
+  // in ~100 ms. The parameter used to be spliced in here as `seed + i` on the
+  // reasoning that N candidates need N different seeds; the reasoning was
+  // sound and the field does not exist. So the request's seed is NOT honoured
+  // by this vendor, and that is said here rather than hidden: a caller that
+  // needs reproducible pixels from Google does not get them today, and a
+  // `seed` on a GenerateRequest is intent recorded for a vendor that can.
+  void seed;
+  const calls = Array.from({ length: n }, () =>
     requestJson<Interaction>("google", ENDPOINT, {
       method: "POST",
       headers: { "x-goog-api-key": key },
-      // seed + i, NOT the bare seed. N candidates are N separate calls here, so
-      // one seed across all of them would return the same picture n times — a
-      // filmstrip of identical frames, which is the opposite of what a caller
-      // asking for candidates wants. Offsetting keeps the run reproducible
-      // (same seed → same set) while keeping the candidates different.
-      body: seed === undefined ? body : { ...body, seed: seed + i },
+      body,
       timeoutMs: 180_000,
     }),
   );

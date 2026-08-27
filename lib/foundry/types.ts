@@ -67,16 +67,32 @@ export interface Evidence {
   at: string;
 }
 
+/** A file that shows what a style looks like, outside the forge's ledger.
+ *  `kind` names which output root the run lives under (see store.ts). */
+export interface Exemplar {
+  kind: "extract";
+  run: string;
+  /** Run-relative path. */
+  file: string;
+  /** What this exemplar is: a source the style was read from, a replica the
+   *  recipe produced, or a transfer onto a scene the sources never showed. */
+  role: "source" | "replica" | "transfer";
+}
+
 export interface StyleDef {
   id: string;
   name: string;
   family: string;
   status: "candidate" | "proven";
-  origin: { kind: "readback" | "authored"; source?: string; models?: string[] };
+  /** `extracted` — read off a gallery by the Extract module (lib/foundry/extract),
+   *  replicated and transferred, and kept by a human in the /foundry cull. */
+  origin: { kind: "readback" | "authored" | "extracted"; source?: string; models?: string[] };
   observables: Record<string, string>;
   recipe: string;
   negative: string;
   evidence: Evidence[];
+  /** Present on extracted styles: the images the human kept the style on. */
+  exemplars?: Exemplar[];
 }
 
 export interface Mechanism {

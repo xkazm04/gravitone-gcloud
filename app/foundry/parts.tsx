@@ -3,6 +3,7 @@
 // Small shared pieces of the /foundry surface: score chips, verdict stamps,
 // the status word for a run. Nothing here fetches.
 
+import type { ExtractStatus } from "@/lib/foundry/extract/types";
 import type { Candidate, RunStatus, Verdict } from "@/lib/foundry/types";
 
 export const STATUS_WORD: Record<RunStatus, string> = {
@@ -16,6 +17,19 @@ export const STATUS_WORD: Record<RunStatus, string> = {
 };
 
 export const LIVE: RunStatus[] = ["created", "annotating", "generating", "grading"];
+
+export const EXTRACT_STATUS_WORD: Record<ExtractStatus, string> = {
+  created: "ready to start",
+  reading: "reading sources",
+  grouping: "grouping into styles",
+  replicating: "replicating",
+  transferring: "transferring",
+  done: "ready to cull",
+  failed: "failed",
+  committed: "committed",
+};
+
+export const EXTRACT_LIVE: ExtractStatus[] = ["created", "reading", "grouping", "replicating", "transferring"];
 
 export function pct(x: number | null | undefined): string {
   return typeof x === "number" ? `${Math.round(100 * x)}%` : "—";

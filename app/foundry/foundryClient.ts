@@ -45,9 +45,10 @@ export const commitRun = (id: string, undecidedAs: "reject" | "leave") =>
     body: JSON.stringify({ undecidedAs }),
   });
 
-/** URL of a run file, for an <img>. */
-export function fileUrl(run: string, rel: string): string {
+/** URL of a run file, for an <img>. `kind` picks the output root — the
+ *  forge's runs by default, the Extract module's with "extract". */
+export function fileUrl(run: string, rel: string, kind?: "extract"): string {
   const k = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET?.trim();
-  const q = new URLSearchParams({ run, path: rel, ...(k ? { k } : {}) });
+  const q = new URLSearchParams({ run, path: rel, ...(kind ? { kind } : {}), ...(k ? { k } : {}) });
   return `/api/foundry/file?${q.toString()}`;
 }

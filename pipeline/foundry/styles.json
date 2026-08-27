@@ -2,7 +2,8 @@
   "_purpose": "The art-style catalogue the foundry forges against. Each style is TWO halves: `observables` are the measurable half (the style.py vocabulary a vision model can read back off any image, so adherence is a comparison of enums rather than an opinion) and `recipe` is the generator-facing half (what to tell an image model, concrete visual instructions, no proper nouns). A style enters as `candidate`; it becomes `proven` only through the cull, when a human keeps its renders across more than one craft problem. `evidence` is appended by /foundry commits and is the durable index the knowledge write-up reads.",
   "_origin_kinds": {
     "readback": "acquired from a best-in-class source by style.py multi-frame readback (style-onboarding-from-sample), then edited by hand -- the source frames never become references",
-    "authored": "written from the attribute grammar directly"
+    "authored": "written from the attribute grammar directly",
+    "extracted": "Read off a gallery by the Extract tab / pipeline/foundry/extract.mts: sources read back one by one, grouped by look, the recipe replicated from words alone with self-critique rounds and transferred onto a neutral scene, then KEPT by a human. Arrives with `exemplars` (source / replica / transfer files under foundry-out/extract/<run>/) and `origin.source` = the extract run id. Candidate until the forge's cull proves it."
   },
   "styles": [
     {

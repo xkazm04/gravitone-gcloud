@@ -1,4 +1,6 @@
-// GET /api/foundry/file?run=<id>&path=<run-relative> — serve one run file.
+// GET /api/foundry/file?run=<id>&path=<run-relative>[&kind=extract] — serve one
+// run file. `kind` names the output root: the forge's runs (default) or the
+// Extract module's (foundry-out/extract/). Same path discipline on both.
 //
 // foundry-out/ sits outside public/ on purpose (third-party reference frames,
 // never to be published), so the page reaches images through this seam. An
@@ -10,6 +12,7 @@
 
 import { checkAccess } from "@/lib/apiAuth";
 import { FoundryError, fileStat } from "@/lib/foundry/store";
+import { extractFileStat } from "@/lib/foundry/extract/store";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -19,6 +22,7 @@ const MIME: Record<string, string> = {
   ".png": "image/png",
   ".jpg": "image/jpeg",
   ".jpeg": "image/jpeg",
+  ".webp": "image/webp",
   ".json": "application/json",
 };
 
@@ -31,7 +35,8 @@ export async function GET(req: Request) {
   const run = url.searchParams.get("run") ?? "";
   const rel = url.searchParams.get("path") ?? "";
   try {
-    const { abs } = await fileStat(run, rel);
+    const kind = url.searchParams.get("kind");
+    const { abs } = kind === "extract" ? await extractFileStat(run, rel) : await fileStat(run, rel);
     const bytes = await readFile(abs);
     return new Response(new Uint8Array(bytes), {
       headers: {

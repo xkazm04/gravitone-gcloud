@@ -35,6 +35,7 @@ import StudioFrame from "@/components/ui/StudioFrame";
 import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 
 import { CullGrid } from "./CullGrid";
+import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
 import { StylesShelf } from "./StylesShelf";
 import { commitRun, fetchRun, fetchRuns, saveVerdicts } from "./foundryClient";
@@ -42,6 +43,11 @@ import { LIVE, STATUS_WORD } from "./parts";
 
 const TABS = [
   { id: "cull", label: "Cull", blurb: "Read the grid, keep the good, commit. Rejected files are deleted; the verdicts are what stays." },
+  {
+    id: "extract",
+    label: "Extract",
+    blurb: "Drop a gallery. Its looks are read back, grouped into styles, replicated from words alone with self-critique, then transferred onto a scene the gallery never showed. Keep the styles that held; they join the catalogue.",
+  },
   { id: "styles", label: "Styles", blurb: "The catalogue the forge draws from, and the evidence each style has earned." },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
@@ -214,6 +220,8 @@ export default function FoundryView() {
         <section className="mt-6">
           {tab === "styles" ? (
             <StylesShelf />
+          ) : tab === "extract" ? (
+            <ExtractView />
           ) : (
             <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
               <aside>

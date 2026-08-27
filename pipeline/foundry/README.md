@@ -111,6 +111,61 @@ next run can falsify. It is evidence, not a claim — a rule reaches
 `ai-registry/knowledge/media-generation` only on a second sighting, through
 the normal gate.
 
+## Extracting styles — the Extract tab and `extract.mts`
+
+The inverse of the forge. The forge takes a style the catalogue already
+names and asks whether it survives on a scene; **extraction takes a GALLERY
+nobody has named** — screenshots, downloads, a folder of one artist's work —
+and asks what styles are in it, whether each can be written down as a recipe
+a generator obeys, and whether that recipe holds on a scene the gallery never
+showed. One logical layer, `lib/foundry/extract/`, serves both postures:
+
+```
+gallery ──read back each image──> observables + look + depiction     (vision: Gemini / Qwen)
+        ──partition + one reasoning turn──> styles: name, observables, recipe, negative   (claude-cli locally, Gemini hosted)
+        ──replicate from WORDS ONLY (recipe + depiction), critique, fix, regenerate──> replica rounds, scored
+        ──transfer the recipe onto a neutral scene──> transfer, scored
+        ──a human keeps or throws each ROW──> kept styles → styles.json as `candidate`, with exemplars
+```
+
+**Words cross over, never pixels.** A replica is generated from the recipe
+plus the source's `depiction` and never sees the source as a reference — a
+reference would let the generator copy the look off the pixels and prove
+nothing about the RECIPE, which is the thing being extracted.
+
+**The critique loop is measured, not trusted.** Each round is read back with
+the same observables, scored against the style's declared observables
+(render_mode counts double), and the critic proposes a rewritten recipe. The
+recipe IN FORCE is whichever round scored best; a fix that did not improve
+the score stays in `recipe_history` and is not adopted.
+
+**Grouping is deterministic first.** Sources that agree on render_mode and on
+most observables are partitioned together; the reasoning engine is asked to
+name and describe the groups and may merge or split them, but its answer is
+accepted only when every source lands in exactly one style. Otherwise the
+partition stands and the row says `grouped by partition`.
+
+**It runs as a step machine**, one bounded unit per call, because a hosted
+handler has a duration ceiling: the browser (`/foundry` → Extract) loops
+`/api/foundry/extract/<id>/step` until done, the CLI loops in-process. Same
+code, same order, same files under `foundry-out/extract/<id>/`; a run killed
+halfway resumes at its next unit.
+
+```bash
+# local: a folder in, a run on disk, a summary out. Needs GOOGLE_AI_API_KEY
+# (pixels + eyes); words go through the text ladder (claude-cli, then Gemini).
+npx tsx pipeline/foundry/extract.mts "C:/path/to/gallery" --slug my-gallery
+npx tsx pipeline/foundry/extract.mts "C:/path/to/gallery" --slug my-gallery --dry   # count + cost, no spend
+npx tsx pipeline/foundry/extract.mts --resume <run-id>                               # continue a paused run
+npx tsx pipeline/foundry/extract.mts --status <run-id>                               # the summary table
+npx tsx pipeline/foundry/extract.mts --commit <run-id> --keep a,b --reject c        # headless cull
+```
+
+Or `/train-style <folder>` in Claude Code, which runs the same driver and
+reads the results back with its own eyes before the cull. Cull in the app
+at `/foundry` → Extract: ↑↓ rows, K keep, X throw, U clear, then **Learn the
+kept styles**.
+
 ## Acquiring styles — `acquire.py`
 
 `python acquire.py --list` shows every source `../vlm-probe/style.py` has read

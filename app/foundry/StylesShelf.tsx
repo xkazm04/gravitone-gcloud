@@ -66,6 +66,28 @@ function StyleCard({ style, ledger }: { style: StyleDef; ledger: Catalogue["ledg
         </span>
       </header>
 
+      {/* An EXTRACTED style arrives with its own proof: the sources it was
+          read from, the best replica the recipe produced, and the transfer
+          onto a scene the sources never showed. Shown until the forge's
+          ledger has kept work of its own to show instead. */}
+      {kept.length === 0 && style.exemplars && style.exemplars.length > 0 && (
+        <div className="grid grid-cols-3 gap-1.5">
+          {style.exemplars.map((x) => (
+            <figure key={`${x.run}/${x.file}`} className="relative overflow-hidden rounded-md border border-white/10" title={`${x.role} · ${x.run}`}>
+              {/* eslint-disable-next-line @next/next/no-img-element -- local disk through the file seam */}
+              <img src={fileUrl(x.run, x.file, x.kind)} alt={`${style.name} ${x.role}`} loading="lazy" className="aspect-video w-full object-cover" />
+              <figcaption
+                className={`font-jetbrains absolute top-1 left-1 rounded px-1 py-0.5 text-[8px] font-semibold ${
+                  x.role === "transfer" ? "bg-cyan-300/90 text-slate-950" : x.role === "replica" ? "bg-white/80 text-slate-950" : "bg-black/60 text-white/80"
+                }`}
+              >
+                {x.role}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      )}
+
       {/* The proof wall: every render a human KEPT in this style, straight
           from the committed runs. This is what makes the tab a library
           rather than a list of recipes — the style is its kept work. */}
