@@ -32,27 +32,57 @@ export class CliError extends Error {
   }
 }
 
-/** Run one headless turn and return its text.
+/** Whether this platform needs the shell to resolve `claude` (a `.cmd` shim on
+ *  Windows, which Node cannot spawn directly). Exported so the probe drives the
+ *  same predicate the spawn does, rather than a copy of it. */
+export const USES_SHELL = process.platform === "win32";
+
+/**
+ * The argv handed to the CLI.
  *
- *  `--allowed-tools ""` and `--max-turns 1` are load-bearing: this is a pure
- *  reasoning call over JSON that is handed to it, and an engine that could read
- *  the filesystem or search the web could quietly source a figure the notebook
- *  does not contain — which is the one thing RECALIBRATE-PROMPT.md forbids
- *  absolutely. Take the tools away rather than asking it not to use them. */
+ * `--allowed-tools ""` and `--max-turns 1` are load-bearing: this is a pure
+ * reasoning call over JSON that is handed to it, and an engine that could read
+ * the filesystem or search the web could quietly source a figure the notebook
+ * does not contain — which is the one thing RECALIBRATE-PROMPT.md forbids
+ * absolutely. Take the tools away rather than asking it not to use them.
+ *
+ * ── THE EMPTY ARGUMENT IS QUOTED, AND ON WINDOWS IT HAS TO BE (2026-08-27) ──
+ *
+ * `spawn(..., { shell: true })` CONCATENATES argv into one command line without
+ * escaping it, so a zero-length argument leaves no trace at all. Measured, with
+ * this exact array against an argv echo:
+ *
+ *   shell:false -> [… "--allowed-tools", "",          "--max-turns", "1"]
+ *   shell:true  -> [… "--allowed-tools", "--max-turns", "1"]          ← both gone
+ *
+ * On Windows the CLI was therefore receiving `--allowed-tools` with `--max-turns`
+ * as its VALUE and a stray positional `1` — so BOTH load-bearing restrictions
+ * were silently absent on the only platform this app is developed on. The engine
+ * ran unrestricted and multi-turn while the comment above described a sandbox.
+ *
+ * Passing the two-character literal `""` survives cmd's parsing and arrives as a
+ * genuine empty string; off-shell it must stay a real empty string, because
+ * there the two characters would be a literal tool name. Hence the branch — and
+ * hence the probe, because the failure is invisible from inside this process.
+ */
+export function cliArgs(usesShell: boolean = USES_SHELL): string[] {
+  return [
+    "-p",
+    "--output-format", "json",
+    "--model", MODEL,
+    "--effort", "high",
+    "--allowed-tools", usesShell ? '""' : "",
+    "--max-turns", "1",
+  ];
+}
+
+/** Run one headless turn and return its text. */
 export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResult> {
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      "claude",
-      [
-        "-p",
-        "--output-format", "json",
-        "--model", MODEL,
-        "--effort", "high",
-        "--allowed-tools", "",
-        "--max-turns", "1",
-      ],
-      { stdio: ["pipe", "pipe", "pipe"], shell: process.platform === "win32" },
-    );
+    const child = spawn("claude", cliArgs(), {
+      stdio: ["pipe", "pipe", "pipe"],
+      shell: USES_SHELL,
+    });
 
     let out = "";
     let err = "";
