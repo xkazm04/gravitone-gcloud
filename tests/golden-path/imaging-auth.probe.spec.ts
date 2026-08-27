@@ -11,6 +11,9 @@
 //   · a valid secret passes the guard (the route then 4xx's on the bad body,
 //     never 401 — proving the guard let it through WITHOUT spending);
 //   · the rate limiter refuses past its capacity with 429.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { test, expect } from "@playwright/test";
 import {
   checkAccess,
@@ -65,6 +68,52 @@ test("guard: valid secret ok; missing and wrong are rejected", () => {
   expect(checkAccess(req("/x", { ip: "1.1.1.1", bearer: SECRET }))).toBe("ok");
   expect(checkAccess(req("/x", { ip: "1.1.1.1" }))).toBe("missing");
   expect(checkAccess(req("/x", { ip: "1.1.1.1", bearer: "nope" }))).toBe("wrong");
+});
+
+// ── The constant-time compare, and the one thing a behavioural test cannot see ──
+//
+// `secretsMatch` had its length check on the LEFT of an `&&`, so a presented
+// secret of the wrong length returned before `timingSafeEqual` ran — restoring
+// the exact timing oracle the zero-padding beside it was written to remove.
+//
+// BE HONEST ABOUT WHAT EACH HALF BUYS. The behavioural test below did NOT fail
+// against the old ordering and cannot: both orderings return the same verdict
+// for every input, and the defect is *how long the wrong answer takes*, which no
+// assertion over a return value can reach. It is still worth having — nothing
+// pinned the equal-length wrong-secret case at all, which is the only case the
+// compare itself decides — but the guard on the ACTUAL fix is the source-shape
+// test after it, in the idiom gate-vacuous-pass.probe.spec.ts already uses here.
+// Writing the behavioural one and calling it the guard would have been precisely
+// the coverage theater this suite exists to refuse.
+test("guard: a WRONG secret of the RIGHT length is rejected by the compare itself", () => {
+  const swap = (i: number) =>
+    SECRET.slice(0, i) + (SECRET[i] === "z" ? "y" : "z") + SECRET.slice(i + 1);
+  for (const bearer of [swap(0), swap(SECRET.length - 1), swap(Math.floor(SECRET.length / 2))]) {
+    expect(bearer.length).toBe(SECRET.length); // the case is only meaningful at equal length
+    expect(checkAccess(req("/x", { ip: "1.1.1.1", bearer }))).toBe("wrong");
+  }
+  // And a correct PREFIX is not a correct secret: the padded compare must not
+  // read a short presented value as equal to the leading bytes of the real one.
+  expect(checkAccess(req("/x", { ip: "1.1.1.1", bearer: SECRET.slice(0, -1) }))).toBe("wrong");
+});
+
+test("guard: the constant-time compare is not short-circuited by its own length check", () => {
+  // Reads the source, because the property is not observable from the outside.
+  // The rule: within secretsMatch, `timingSafeEqual(...)` must appear BEFORE any
+  // `.length ===` comparison, so the compare is unconditional and the length test
+  // is ANDed onto its result. Fails against the pre-2026-08-27 ordering.
+  const src = readFileSync(join(process.cwd(), "lib", "apiAuth.ts"), "utf8");
+  const body = /function secretsMatch\([\s\S]*?\n}/.exec(src)?.[0];
+  expect(body, "secretsMatch not found - this guard is pinned to that function").toBeTruthy();
+  // Comments explain the hazard and name the wrong shape, so they must not be
+  // what the guard reads: strip them, or this passes on prose alone.
+  const code = body!.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const cmp = code.indexOf("timingSafeEqual(");
+  const len = code.search(/\.length\s*===/);
+  console.log(`[auth] secretsMatch: timingSafeEqual@${cmp}, length-check@${len}`);
+  expect(cmp).toBeGreaterThan(-1);
+  expect(len).toBeGreaterThan(-1);
+  expect(cmp, "the length check precedes timingSafeEqual - the wrong-length branch returns early").toBeLessThan(len);
 });
 
 test("guard: FAILS CLOSED when no secret is configured", () => {
