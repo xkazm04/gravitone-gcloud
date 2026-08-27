@@ -108,3 +108,36 @@ test("a 400 that names moderation is a refusal — the heuristic's real job", as
 test("a 400 that names no reason stays a bad request, not a guessed refusal", async () => {
   expect(await kindFor(400, "composition_plan.chunks[0].duration_ms is required")).toBe("bad-request");
 });
+
+// ── The deadline spans the BODY, not just the headers ────────────────────────
+//
+// The timer used to be cleared in a `finally` on the fetch, which resolves when
+// the response HEAD arrives. The megabyte-scale audio download after it then ran
+// with no deadline: a vendor that answered 200 and stalled mid-stream produced no
+// timeout at all, just a handler sitting until the platform killed it.
+
+test("a vendor that answers 200 and then stalls mid-body is a timeout, not a hang", async () => {
+  // A response whose head is complete and whose body never ends, aborted by the
+  // adapter's own signal - the exact shape the old code could not see.
+  globalThis.fetch = ((_url: string, init?: RequestInit) => {
+    const signal = init?.signal;
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new Uint8Array(64)); // head + a first chunk, then nothing
+        signal?.addEventListener("abort", () => controller.error(signal.reason));
+      },
+    });
+    return Promise.resolve(new Response(body, { status: 200 }));
+  }) as unknown as typeof fetch;
+
+  const started = Date.now();
+  let kind: string | null = null;
+  try {
+    await composeMusic(PLAN, 400); // the real deadline, driven short
+  } catch (e) {
+    if (e instanceof MusicError) kind = e.kind;
+    else throw e;
+  }
+  console.log(`[music] stalled body -> ${kind} after ${Date.now() - started}ms`);
+  expect(kind, "a stalled body must surface as a timeout naming the vendor").toBe("timeout");
+});

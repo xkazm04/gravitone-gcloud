@@ -96,7 +96,12 @@ function vendorFailure(status: number, detail: string, what: string): MusicError
   return new MusicError("bad-request", `Vendor answered ${status}: ${tail}`);
 }
 
-export async function composeMusic(plan: MusicPlan): Promise<MusicResult> {
+export async function composeMusic(
+  plan: MusicPlan,
+  /** The deadline, injectable exactly as runClaude's is: a probe cannot wait
+   *  four minutes to prove the body read is covered by it. */
+  timeoutMs: number = TIMEOUT_MS,
+): Promise<MusicResult> {
   const key = keyOrThrow();
 
   const totalMs = plan.sections.reduce((n, s) => n + s.durationMs, 0);
@@ -115,7 +120,7 @@ export async function composeMusic(plan: MusicPlan): Promise<MusicResult> {
   };
 
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   let res: Response;
   try {
     res = await fetch(ENDPOINT, {
@@ -128,19 +133,38 @@ export async function composeMusic(plan: MusicPlan): Promise<MusicResult> {
     throw new MusicError(
       (e as Error).name === "AbortError" ? "timeout" : "failed",
       (e as Error).name === "AbortError"
-        ? `The vendor did not answer within ${TIMEOUT_MS / 1000}s.`
+        ? `The vendor did not answer within ${timeoutMs / 1000}s.`
         : `The vendor could not be reached: ${(e as Error).message}`,
+    );
+  }
+
+  // THE TIMER SPANS THE BODY, NOT JUST THE HEADERS. It used to be cleared in a
+  // `finally` on the fetch, which resolves when the RESPONSE HEAD arrives - so
+  // the megabyte-scale audio download below ran with no deadline of its own. A
+  // vendor that answered 200 and then stalled mid-stream was not a timeout here;
+  // it was a handler that sat until the platform's maxDuration killed it, with
+  // no error naming the vendor and nothing distinguishing it from a slow render.
+  // `signal` is already on the request, and an abort mid-body rejects the body
+  // read, so the deadline reaches it for free once the timer is left running.
+  let bytes: Buffer;
+  try {
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw vendorFailure(res.status, detail, "brief");
+    }
+    bytes = Buffer.from(await res.arrayBuffer());
+  } catch (e) {
+    if (e instanceof MusicError) throw e;
+    throw new MusicError(
+      (e as Error).name === "AbortError" ? "timeout" : "bad-response",
+      (e as Error).name === "AbortError"
+        ? `The vendor began answering but did not finish within ${timeoutMs / 1000}s.`
+        : `The vendor's response could not be read: ${(e as Error).message}`,
     );
   } finally {
     clearTimeout(timer);
   }
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw vendorFailure(res.status, detail, "brief");
-  }
-
-  const bytes = Buffer.from(await res.arrayBuffer());
   if (bytes.length < 1_000)
     throw new MusicError("bad-response", `The vendor returned ${bytes.length} bytes — not audio.`);
 
