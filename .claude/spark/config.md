@@ -26,8 +26,8 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 - `test:` `npm test` (Playwright golden-path probes; offline, no vendor billed). `npm run test:live`
   starts its own `next dev` on 3187 - never port 3000.
 - `builder:` `npm run typecheck`; a builder that changed a rendered surface must also drive it on a
-  dev server of its own (`next dev -p 31xx`) and report what it saw. Builders NEVER stage - only the
-  Director touches the index.
+  dev server of its own (`next dev -p 31xx`) and report what it saw. Builders NEVER stage and NEVER stash - only the
+  Director touches the index. Smoke via a prod build on 31xx (a second `next dev` is refused while :3000 is held).
 
 ## Rituals
 
@@ -53,7 +53,10 @@ One AskUserQuestion call of up to 4 questions per wave.
 
 ## Question taste
 
-(empty - built by the retro)
+- 2026-08-27: operator picks the fuller surface over the minimal seam when the types already exist (overrode "persist + minimal read" → full trailer Script; "no cue" → fixture cue). Offer the full option first when the vocabulary is already in the repo.
+- Decide by convention, do not ask: untagged records = visible everywhere (honest-absence law); verdict panels follow GatePanel.
 
 ## Skill improvement log
+
+- 2026-08-27 · Next 16 refuses a second `next dev` while :3000 is held — builders must smoke via `NEXT_PUBLIC_LOCAL_MODE=1 npm run build && npx next start -p 31xx`; say so in every builder brief. Builder briefs must forbid `git stash` explicitly (one ran it). Bridge auth = header `x-personas-local-token`.
 
