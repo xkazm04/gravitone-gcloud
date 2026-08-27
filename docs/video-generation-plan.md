@@ -135,6 +135,47 @@ authoring rule already protects this.
   foundry's keep/reject ledger is the natural cull surface for takes at
   volume.
 
+## Appendix: the assembly backend (added 2026-08-27, after the editing wave)
+
+The fourth intake wave (editing tooling) settled how the Cut step should
+meet professional editing, and a live probe on this machine settled what
+the local editor can do:
+
+**The cut is already source.** The app's frames, elements, texts and clip
+records are a declarative composition — exactly the `cut-compiled-from-
+source` shape the bundle now names. Two consequences adopted here:
+
+- **Machine edit passes read, they do not watch.** Overlay collisions,
+  elements outliving their material, cuts landing inside speech units are
+  interval arithmetic over the cut's own data plus the word-timed
+  transcript. A critique pass belongs in the Cut step as a checker over
+  records, long before any pixel renders.
+- **The word-timed transcript is the derivation spine.** Narration timings
+  drive caption windows, overlay entrances and cut placement; the
+  transcript is data the app already owns from the script step.
+
+**The professional-editor bridge.** DaVinci Resolve is installed on the dev
+machine (v20, free edition) and was probed headless:
+
+- `Resolve.exe -nogui` boots and runs; the vendor documents the full
+  scripting API as working in this mode.
+- The external Python API (`DaVinciResolveScript` via
+  `%PROGRAMDATA%\...\Developer\Scripting\Modules`) covers project,
+  timeline, media pool, **markers**, and render jobs.
+- One gate found: external connections return None until the one-time GUI
+  preference *System → General → External scripting using → Local* is set
+  (never set on this machine). `fuscript` hits the same gate. Flip it once
+  and the headless path opens; if the free edition still refuses, Studio
+  is the known-good tier.
+
+The bridge pattern, when built (post-P0): export the cut as an interchange
+document the editor imports (timeline built by script from the cut's
+records), and land machine suggestions as **colored markers with notes**
+that a human approves in the editor before a deterministic script applies
+them — proposals in the annotation channel, never silent edits. The Cut
+step stays the source of truth; the editor is a rendering and finishing
+surface.
+
 ## What this plan does not do
 
 No character cast system in the app (frames are argument-bearing plates,
