@@ -18,6 +18,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 
 import { Button } from "@/components/ui/Primitives";
+import { useAnnounce } from "@/lib/announcer";
 import { useAuth } from "@/lib/useAuth";
 import { useAssets } from "@/lib/useAssets";
 import { assetsUnder, buildTree, pathKey, type Asset, type FolderNode } from "@/lib/assets";
@@ -48,6 +49,8 @@ function foldersWithChildren(nodes: FolderNode[], into: string[] = []): string[]
 export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => void }) {
   const { user } = useAuth();
   const { assets, error, loading, remove } = useAssets(user?.uid ?? null);
+  const announce = useAnnounce();
+  const gridRef = useRef<HTMLDivElement>(null);
 
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -74,6 +77,35 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
       else next.add(key);
       return next;
     });
+
+  /**
+   * Remove a tile, and do the two things a removal from a FOCUSED element owes.
+   *
+   * ContextMenu.tsx states the rule this file was breaking: "a dismissed menu
+   * that leaves focus on <body> strands a keyboard user at the top of the
+   * document". It applies just as hard here and harder — the menu's opener still
+   * exists after it closes, whereas the tile a keyboard user just deleted does
+   * not, so React unmounts the focused node and focus falls to <body> with no
+   * way back into the grid. Same rule, two implementations, only one of which
+   * had it.
+   *
+   * So: focus the next tile (the previous one when the last was removed, the
+   * grid itself when the folder is now empty) and SAY what happened. The tile
+   * vanishing is the only feedback a sighted user needs and the only feedback a
+   * screen-reader user does not get.
+   */
+  const removeTile = (asset: Asset) => {
+    const grid = gridRef.current;
+    const tiles = grid ? [...grid.querySelectorAll<HTMLElement>("figure[tabindex]")] : [];
+    const i = tiles.findIndex((t) => t.dataset.assetId === asset.id);
+    // Resolve the successor BEFORE the removal: after it, the node is gone and
+    // its position in the list with it.
+    const next = i === -1 ? null : (tiles[i + 1] ?? tiles[i - 1] ?? null);
+    void remove(asset.id);
+    announce({ key: `asset-removed:${asset.id}`, text: `Removed ${asset.name} from the shelf.` });
+    // After the commit that unmounts the tile, not before it.
+    requestAnimationFrame(() => (next ?? grid)?.focus());
+  };
 
   if (loading)
     return (
@@ -112,20 +144,22 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
               action nothing on screen affords is the same small dishonesty as
               a button that does nothing. */}
           {shown.length > 0 && (
-            <p className="font-jetbrains text-[10px] text-white/25">right-click a tile to remove it</p>
+            <p className="font-jetbrains text-[10px] text-white/25">
+              right-click a tile, or focus one and press Delete, to remove it
+            </p>
           )}
         </div>
 
         {shown.length === 0 ? (
           <EmptyShelf hasAny={rows.length > 0} onOpenStyles={onOpenStyles} />
         ) : (
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
+          <div ref={gridRef} tabIndex={-1} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
             {shown.map((a) => (
               <Tile
                 key={a.id}
                 asset={a}
                 onMenu={(x, y) => setMenu({ x, y, asset: a })}
-                onDelete={() => void remove(a.id)}
+                onDelete={() => removeTile(a)}
               />
             ))}
           </div>
@@ -141,7 +175,11 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
             {
               label: "Remove from shelf",
               destructive: true,
-              onSelect: () => void remove(menu.asset.id),
+              // Through removeTile, not remove: ContextMenu restores focus to its
+              // opener only while that node is still in the document, and the
+              // opener here is the tile being deleted. Both removal paths owe
+              // the same focus move and the same announcement.
+              onSelect: () => removeTile(menu.asset),
             },
           ]}
         />
@@ -163,12 +201,24 @@ function Tile({
   return (
     <figure
       tabIndex={0}
+      data-asset-id={asset.id}
+      // A focus stop that removes something on a keypress has to say so, or the
+      // binding is discoverable only by pressing the key and finding out. The
+      // on-screen hint names it for sighted users; this is the same sentence for
+      // everyone else.
+      aria-label={`${asset.name}. Press Delete to remove from the shelf.`}
       onContextMenu={(e) => {
         e.preventDefault();
         onMenu(e.clientX, e.clientY);
       }}
       onKeyDown={(e) => {
-        if (e.key === "Delete" || e.key === "Backspace") {
+        // Delete ONLY. Backspace used to remove the tile too, and it is the
+        // wrong key for an irreversible act: it is the browser's back key by
+        // muscle memory and the correction key by reflex, so a stray press on a
+        // focused tile destroyed a shelf entry permanently - re-seeding is gated
+        // by a localStorage mark that survives deletion on purpose
+        // (useAssets.ts), so nothing brings a removed seed back.
+        if (e.key === "Delete") {
           e.preventDefault();
           onDelete();
         }

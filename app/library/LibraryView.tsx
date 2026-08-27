@@ -25,7 +25,7 @@ import LibraryAtelier from "./LibraryAtelier";
 
 const MODULES = [
   { id: "styles", label: "Styles", blurb: "Visual identities. A locked one is required before any project." },
-  { id: "assets", label: "Assets", blurb: "Reusable source material. Seeded from the trial grid — right-click a tile to remove it." },
+  { id: "assets", label: "Assets", blurb: "Reusable source material. Seeded from the trial grid — right-click a tile, or focus one and press Delete, to remove it." },
   { id: "animations", label: "Animations", blurb: "Reusable motion — entrance and ambient registers." },
 ] as const;
 

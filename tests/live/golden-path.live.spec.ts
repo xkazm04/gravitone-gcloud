@@ -238,4 +238,55 @@ test.describe("the assembled studio", () => {
 
     expect(errors, "page errors during the background run").toEqual([]);
   });
+  // ── FOCUS SURVIVES A DESTRUCTIVE KEYPRESS ────────────────────────────────
+  //
+  // Belongs on this rung and could not sit one below it: the claim is about
+  // where the browser's focus lands after React unmounts the focused node, and
+  // tests/golden-path/ runs in Node with no DOM and no focus at all.
+  //
+  // The rule is the repo's own, stated in app/library/ContextMenu.tsx: leaving
+  // focus on <body> "strands a keyboard user at the top of the document". The
+  // asset tile's Delete path broke it - the tile a keyboard user just removed IS
+  // the focused node, so focus fell to <body> with no way back into the grid.
+  test("removing a focused asset moves focus on, never to the document body", async ({ page }) => {
+    const errors = watchErrors(page);
+    await freshShelf(page);
+    await page.goto("/library", { waitUntil: "domcontentloaded" });
+    // /library opens on Styles; the tiles live in the Assets module. Reached the
+    // way a user reaches it, so the journey breaks if the tab does.
+    await page.getByRole("button", { name: "Assets", exact: true }).click();
+
+    // The shelf seeds from the trial index through the product's own path.
+    const tiles = page.locator("figure[data-asset-id]");
+    await expect(tiles.first()).toBeVisible({ timeout: 20_000 });
+    const before = await tiles.count();
+    expect(before, "the library needs at least two tiles for this claim").toBeGreaterThan(1);
+
+    const doomedId = await tiles.first().getAttribute("data-asset-id");
+    await tiles.first().focus();
+    await expect(tiles.first()).toBeFocused();
+
+    await page.keyboard.press("Delete");
+
+    await expect(tiles).toHaveCount(before - 1);
+    const landedOn = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      return { tag: el?.tagName ?? null, assetId: el?.dataset?.assetId ?? null };
+    });
+    // THE FINDING IS THE BODY. Naming it explicitly rather than asserting a
+    // positive only: a future regression lands here, and "focus is on BODY" is
+    // the sentence that explains itself.
+    expect(landedOn.tag, "focus was stranded on the document body").not.toBe("BODY");
+    expect(landedOn.assetId, "focus stayed on the tile that was removed").not.toBe(doomedId);
+
+    // Backspace is NOT a removal key - it is the browser's back key by muscle
+    // memory, and a shelf entry cannot be restored once removed.
+    const survivor = tiles.first();
+    await survivor.focus();
+    const after = await tiles.count();
+    await page.keyboard.press("Backspace");
+    await expect(tiles).toHaveCount(after);
+
+    expect(errors, "page errors during the library journey").toEqual([]);
+  });
 });
