@@ -40,6 +40,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
+import { guardRequest } from "@/lib/apiAuth";
 import { CliError, runClaude } from "@/lib/claudeCli";
 import { MODEL } from "@/lib/model";
 import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
@@ -277,6 +278,22 @@ function rendersInScope(ids: string[], notes: unknown[]): Set<string> {
 }
 
 export async function POST(req: Request) {
+  // LOCAL-COMPUTE ROUTE - auth + rate limit before anything is read or spawned.
+  //
+  // This was the only compute route in the app without it. app/api/frames does
+  // the same thing (spawns the same headless Claude process through
+  // lib/claudeCli) and has gated since the gate existed; the four music routes
+  // and the three imaging routes gate; app/api/imaging/pricing is deliberately
+  // public and audited as such. Nine routes, one omission, and it was this one -
+  // which runs for up to maxDuration = 800 seconds at Opus-at-high-effort on the
+  // operator's own subscription, for anyone who could reach the origin.
+  //
+  // Found from app-infrastructure while reading lib/apiAuth.ts, whose header
+  // names "app/api/frames" as the CLI-compute route it protects: the sentence
+  // was written before this route existed and nothing re-read it afterwards.
+  const denied = guardRequest(req);
+  if (denied) return denied;
+
   let body: { notebook?: unknown; renders?: unknown; scope?: unknown; notes?: unknown };
   try {
     body = await req.json();

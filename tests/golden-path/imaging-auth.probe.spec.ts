@@ -11,8 +11,8 @@
 //   · a valid secret passes the guard (the route then 4xx's on the bad body,
 //     never 401 — proving the guard let it through WITHOUT spending);
 //   · the rate limiter refuses past its capacity with 429.
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 import {
@@ -31,6 +31,11 @@ import { POST as generatePOST } from "@/app/api/imaging/generate/route";
 import { POST as editPOST } from "@/app/api/imaging/edit/route";
 import { POST as recognizePOST } from "@/app/api/imaging/recognize/route";
 import { POST as framesPOST } from "@/app/api/frames/route";
+import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
+import { POST as musicPlanPOST } from "@/app/api/music/plan/route";
+import { POST as musicComposePOST } from "@/app/api/music/compose/route";
+import { POST as musicGeneratePOST } from "@/app/api/music/generate/route";
+import { POST as musicSfxPOST } from "@/app/api/music/sfx/route";
 
 const SECRET = "probe-secret-value";
 
@@ -54,7 +59,78 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   ["edit", "/api/imaging/edit", editPOST],
   ["recognize", "/api/imaging/recognize", recognizePOST],
   ["frames", "/api/frames", framesPOST],
+  ["recalibrate", "/api/recalibrate", recalibratePOST],
+  ["music/plan", "/api/music/plan", musicPlanPOST],
+  ["music/compose", "/api/music/compose", musicComposePOST],
+  ["music/generate", "/api/music/generate", musicGeneratePOST],
+  ["music/sfx", "/api/music/sfx", musicSfxPOST],
 ];
+
+/**
+ * Routes that are PUBLIC on purpose, each with the reason it is.
+ *
+ * The list below the fold is derived from the filesystem; this is the only place
+ * a route may be excluded from it, and an entry here is a claim somebody has to
+ * defend in review rather than an omission nobody sees.
+ */
+const DELIBERATELY_PUBLIC: Record<string, string> = {
+  "app/api/imaging/pricing/route.ts":
+    "the price table, audited line by line in its own header: module constants only, no key, no environment, no key state, nothing per-request",
+};
+
+/**
+ * THE LIST ABOVE IS HAND-WRITTEN, SO SOMETHING HAS TO CHECK IT AGAINST REALITY.
+ *
+ * It carried four routes when it was written and the repo has ten. In between,
+ * four music routes arrived (gated, and untested here) and /api/recalibrate
+ * arrived UNGATED - spawning the same headless Claude process /api/frames does,
+ * for up to 800 seconds, to anyone who could reach the origin. This probe existed
+ * precisely to catch that and could not, because it enumerated the
+ * implementation's own list instead of the ground truth.
+ *
+ * That is coverage theater, and the fix is not to add the missing lines: it is to
+ * derive the population from the filesystem, so the next route added is covered
+ * by existing. A route may leave the set only through DELIBERATELY_PUBLIC, with a
+ * reason.
+ */
+test("every API route either gates or is deliberately public — derived, not listed", () => {
+  const apiDir = join(process.cwd(), "app", "api");
+  const found: string[] = [];
+  const walk = (dir: string) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, entry.name);
+      if (entry.isDirectory()) walk(full);
+      else if (entry.name === "route.ts") found.push(relative(process.cwd(), full).split("\\").join("/"));
+    }
+  };
+  walk(apiDir);
+
+  // A walk that finds nothing reports "all routes gate" in a voice
+  // indistinguishable from success. Prove it read the tree first.
+  expect(found.length, "the route walk found nothing - it is reading the wrong tree").toBeGreaterThanOrEqual(8);
+
+  const ungated: string[] = [];
+  for (const rel of found) {
+    if (DELIBERATELY_PUBLIC[rel]) continue;
+    const src = readFileSync(join(process.cwd(), rel), "utf8");
+    if (!/\bguardRequest\s*\(/.test(src)) ungated.push(rel);
+  }
+  console.log(`[auth] ${found.length} route(s) on disk, ${Object.keys(DELIBERATELY_PUBLIC).length} deliberately public, ${ungated.length} ungated`);
+  expect(ungated, "these routes spend money or compute and check nobody").toEqual([]);
+
+  // And the DRIVEN list must not fall behind the tree either, or the cases below
+  // stop covering routes that exist.
+  const driven = new Set(ROUTES.map(([, path]) => `app${path}/route.ts`));
+  const undriven = found.filter((f) => !DELIBERATELY_PUBLIC[f] && !driven.has(f));
+  expect(undriven, "a gated route no case below actually drives").toEqual([]);
+});
+
+// A stale exemption is its own defect: it reads as a considered decision and is
+// really a path that moved.
+test("every deliberately-public exemption still names a route that exists", () => {
+  for (const rel of Object.keys(DELIBERATELY_PUBLIC))
+    expect(existsSync(join(process.cwd(), rel)), `${rel} is exempted and does not exist`).toBe(true);
+});
 
 test.beforeEach(() => {
   __resetRateLimit();
