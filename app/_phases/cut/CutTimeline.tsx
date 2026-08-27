@@ -46,14 +46,41 @@ const TURN = (() => {
 
 const trackLabel = (id: TimelineClip["track"]) => TRACKS.find((t) => t.id === id)?.label ?? id;
 
+/** Offsets a clip carries: the dialled-in drift if there is one, else whatever
+ *  the cut itself records. Exported so the arithmetic below can be driven
+ *  directly - it is the kind that looks right and batches wrong. */
+export type Offsets = Record<string, number>;
+
+export function offsetFrom(o: Offsets, c: TimelineClip): number {
+  return o[c.id] ?? c.offsetMs ?? 0;
+}
+
+/**
+ * Apply one nudge, as a pure step over the PREVIOUS offsets.
+ *
+ * Written as a function taking `o` so it cannot accidentally close over a
+ * render-time value, which is exactly how the bug it replaces worked: the
+ * updater read the component's `offsets` binding instead of its own argument, so
+ * a batch of clicks all started from the same base and only the last survived.
+ * Composing it with itself must move the clip twice — that is the whole contract.
+ */
+export function nudgeOffsets(o: Offsets, c: TimelineClip, ms: number): Offsets {
+  return { ...o, [c.id]: offsetFrom(o, c) + ms };
+}
+
 export default function CutTimeline() {
   /** The drift the user has dialled in, per clip, over what the fixture holds.
    *  Seeded from `offsetMs` on read rather than copied on mount — a clip nobody
    *  has touched reports exactly what the cut says about it. */
   const [offsets, setOffsets] = useState<Record<string, number>>({});
-  const offsetOf = (c: TimelineClip) => offsets[c.id] ?? c.offsetMs ?? 0;
-  const nudge = (c: TimelineClip, ms: number) =>
-    setOffsets((o) => ({ ...o, [c.id]: offsetOf(c) + ms }));
+  const offsetOf = (c: TimelineClip) => offsetFrom(offsets, c);
+  // Reads the offset out of `o` — the updater's own current value — and never
+  // out of `offsets`, which is the value captured when this render ran.
+  // `offsetOf(c) + ms` inside the updater looked identical and was not: React
+  // batches the events a nudge control invites, so two quick clicks both
+  // computed from the same stale base and the second OVERWROTE the first.
+  // Pressing +50ms twice moved the clip 50ms. See nudgeOffsets.
+  const nudge = (c: TimelineClip, ms: number) => setOffsets((o) => nudgeOffsets(o, c, ms));
 
   /** Where a block is actually drawn — its mark plus whatever drift it carries.
    *  This is the whole point of wiring the bench: the number in it and the
