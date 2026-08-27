@@ -60,11 +60,21 @@ holds fixture data (scenes, runs, assets, score cues).
 used to read "no model, backend or third-party service is called anywhere in
 this app". That was true when it was written and is not true now:
 
-- **A local `claude` CLI process** (`lib/claudeCli.ts`), spawned server-side by
-  `/api/recalibrate` and `/api/frames`. It authenticates with the machine's
-  logged-in Claude subscription rather than an API key — there is no key to
-  hold or leak, and a recalibration is a minutes-long Opus 5 turn billed to
-  that subscription.
+- **A reasoning engine**, reached only through one chokepoint
+  (`lib/text/router.ts`) by `/api/recalibrate` and `/api/frames`. On a machine
+  with a Claude login that is a **local `claude` CLI process**
+  (`lib/claudeCli.ts`) authenticating with the logged-in subscription — no API
+  key to hold or leak, and a recalibration is a minutes-long Opus 5 turn billed
+  to that subscription. That is rung 1 of a fallback ladder and the app's
+  default posture. Rung 2 is a metered Gemini key, which exists because
+  `spawn("claude")` cannot happen on a managed platform — it is the only way
+  this app can run as a hosted service at all. There is deliberately **no
+  deterministic floor**: nothing here can write an edit plan without a model, so
+  the bottom of the ladder is an honest refusal naming every engine that was
+  tried and why each dropped out. **Which rung served travels with the answer**
+  (`engine.rung`, `engine.transport`) and onto the version a recalibration
+  stages, so a cloud answer never renders indistinguishably from a local one.
+  See `docs/llm-seam-plan.md`.
 - **Three image vendors** — Google, Leonardo and Qwen — reached only through one
   chokepoint (`lib/imaging/router.ts`), each behind its own key
   (`lib/imaging/env.ts`) and billed per call (`lib/imaging/pricing.ts`). A plate
@@ -79,6 +89,21 @@ this app". That was true when it was written and is not true now:
 
 Everything else still follows the original plan: prototype the flow at the UI
 layer first, and only then decide what the backend and the providers have to be.
+
+**Two postures, and one table that says which is which.** The studio is
+local-first: a `claude` seat, a local GPU rig (`pipeline/vlm-probe/`), desktop
+tooling, data in the browser. It can also run as a limited-scope hosted service
+on Google Cloud, where none of those exist. Most of the difference is absorbed
+by the routers and the caller never knows. Some of it cannot be —
+ElevenLabs' section-editing and SFX surfaces have no Google Cloud equivalent,
+and local GPU video needs a GPU — so `lib/capabilities.ts` declares what *this*
+deployment can actually do, and surfaces render those features as absent and
+explained rather than as buttons that fail after you have composed something.
+Every flag defaults to on, so an ordinary checkout needs no configuration.
+The flags are an honest surface, **not a security boundary**: hiding a control
+does not disable a route, and every money route stays gated by `lib/apiAuth.ts`
+and fails closed on its own. `docs/llm-seam-plan.md` has the full matrix of what
+ports, what does not, and why.
 
 ## Who owns what
 

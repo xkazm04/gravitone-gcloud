@@ -9,6 +9,7 @@
     "check:notebook": "npx tsx pipeline/check-notebook.mts",
     "check:manifest": "node pipeline/check-manifest.mjs",
     "check:bundle": "node pipeline/check-bundle.mjs",
+    "verify:text": "npx tsx pipeline/verify-text-engine.mts",
     "check:trailer-structure": "npx tsx pipeline/trailer-structure-regression.mts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",

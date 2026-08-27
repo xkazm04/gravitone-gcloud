@@ -73,6 +73,22 @@ const SERVER_ONLY_VARS = [
   "IMAGING_RATE_CAPACITY",
   "IMAGING_RATE_WINDOW_SEC",
   "IMAGING_RATE_KEY_CAP",
+  // ── the reasoning seam (lib/text/, 2026-08-27) ────────────────────────────
+  // Server-side posture and routing knobs. None is NEXT_PUBLIC_ and none may
+  // ever be: TEXT_ENV and LOCAL_BINARIES decide whether a process may spawn a
+  // binary, and GOOGLE_TEXT_* name the models a metered key bills against.
+  // GOOGLE_AI_API_KEY is already listed above and is shared by both seams.
+  //
+  // NOTE what is deliberately ABSENT from this list: every NEXT_PUBLIC_CAP_*
+  // flag in lib/capabilities.ts. Those are MEANT to be in the browser bundle —
+  // hiding a control is a client-side act — and the module's own header records
+  // why that is safe: they say what this deployment can do, not what any
+  // credential is, and they are not the security boundary. lib/apiAuth.ts is.
+  "TEXT_ENV",
+  "LOCAL_BINARIES",
+  "GOOGLE_TEXT_MODEL",
+  "GOOGLE_TEXT_MODEL_PLAN",
+  "GOOGLE_TEXT_BASE_URL",
 ];
 
 /** Strings that exist inside lib/imaging/ and nowhere a browser should reach.
@@ -82,6 +98,17 @@ const SERVER_MODULE_FINGERPRINTS = [
   "Imaging spend ceiling reached", // lib/imaging/budget.ts
   "Refused before any vendor was called", // lib/imaging/budget.ts
   "[api] rate ", // lib/apiAuth.ts rateNote()
+  // ── the reasoning seam (lib/text/, 2026-08-27) ────────────────────────────
+  // lib/text/ spawns processes and holds a metered key, so it is server-only for
+  // the same reasons lib/imaging/ is — and it is reached from route handlers
+  // that sit beside client components, which is exactly the shape that leaks.
+  // These four are distinctive enough that a coincidental match is not
+  // plausible, and each comes from a different file so that importing any one
+  // corner of the seam trips the gate.
+  "[text] ", // lib/text/log.ts formatTurn() — every turn's log line
+  "authenticates without an API key; keyFor()", // lib/text/env.ts
+  "No reasoning engine could serve this", // lib/text/router.ts, bottom of the ladder
+  "is a managed serverless platform, which has no local binary", // lib/deployment.ts
 ];
 
 /**

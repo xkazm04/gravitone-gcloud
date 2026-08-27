@@ -11,15 +11,33 @@
 // the movement was about. A template per slide type IS PowerPoint. The fix is
 // not a better table.
 //
-// Engine is the local Claude CLI, as with /api/recalibrate: it authenticates
-// with the machine's own subscription, so no API key lives in this app.
+// THE ENGINE IS WHICHEVER ONE THIS DEPLOYMENT HAS (`lib/text/router.ts`).
+//
+// It used to be the local Claude CLI, named here and imported directly. It still
+// IS the local CLI on a machine that has one — that is rung 1 of the ladder and
+// the app's default posture — but this handler no longer knows or cares. It
+// states the TURN (`scene-direction`) and the shape it needs back, and the
+// chokepoint decides which engine can serve it here: the operator's seat on a
+// laptop, a metered Gemini key on Cloud Run, an honest refusal naming every
+// candidate when neither is available.
+//
+// The reason that mattered enough to change a working route: `spawn("claude")`
+// cannot happen on a managed platform, so this handler — the centre of gravity
+// of Step 3 — was the single thing standing between this app and running as a
+// hosted service at all.
+//
+// WHICH ENGINE SERVED TRAVELS WITH THE ANSWER, in `engine` below, and always
+// did: this route already returned a receipt. What is new is that the receipt
+// can now say something other than "local-claude-code", and it is the router
+// that fills it in rather than a string literal here that could go stale.
 
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { CliError, runClaude } from "@/lib/claudeCli";
 import { guardRequest } from "@/lib/apiAuth";
 import { compileFormatBrief } from "@/lib/formatBrief";
+import { TextError, statusFor } from "@/lib/text/errors";
+import { reason } from "@/lib/text/router";
 
 export const runtime = "nodejs";
 /** Sixteen art-direction decisions over a whole script is minutes, not seconds. */
@@ -96,21 +114,42 @@ export async function POST(req: Request) {
   ].join("\n");
 
   try {
-    const run = await runClaude(prompt);
+    // The schema is NOT passed to the engine as `schema` here, deliberately.
+    // This route's contract with its caller is `raw` — useFrames.ts owns the
+    // parse, and it does more than schema-checking (it reconciles `beatAt`
+    // against the script it sent). Handing the router a schema would make it
+    // validate and populate `json` that nobody reads, and on the cloud rung it
+    // would additionally constrain decoding to a translated subset of a schema
+    // this handler received as opaque JSON from the client. The schema still
+    // travels — inside the prompt, above — which is where it always did.
+    const run = await reason({ prompt, turn: "scene-direction" });
     return Response.json({
       raw: run.text,
+      // The receipt now names the rung and the transport. A creator whose
+      // prompt crossed the network to a vendor is entitled to see that, and a
+      // cloud answer that rendered indistinguishably from a local one is the
+      // one thing the ladder may never do.
       engine: {
-        kind: "local-claude-code",
-        sessionId: run.sessionId,
-        costUsd: run.costUsd,
-        durationMs: run.durationMs,
+        kind: run.provenance.transport === "local-subprocess" ? "local-claude-code" : "cloud-api",
+        provider: run.provenance.provider,
+        model: run.provenance.model,
+        rung: run.provenance.rung,
+        sessionId: run.provenance.sessionId,
+        costUsd: run.provenance.costUsd,
+        costBasis: run.provenance.costBasis,
+        durationMs: run.provenance.durationMs,
+        reroutedFrom: run.provenance.reroutedFrom,
       },
     });
   } catch (e) {
-    if (e instanceof CliError) {
-      const status = e.kind === "not-installed" || e.kind === "not-logged-in" ? 503 : 504;
-      return Response.json({ detail: `${e.message} Nothing was changed.`, code: e.kind }, { status });
-    }
+    // One taxonomy, one status map (lib/text/errors.ts). This handler used to
+    // carry its own copy of the status decision, as did /api/recalibrate — two
+    // copies with no third place that owned them.
+    if (e instanceof TextError)
+      return Response.json(
+        { detail: `${e.message} Nothing was changed.`, code: e.kind },
+        { status: statusFor(e.kind) },
+      );
     console.error("[frames]", e);
     return Response.json({ detail: "The scene direction failed. Nothing was changed." }, { status: 502 });
   }
