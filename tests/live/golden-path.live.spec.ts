@@ -306,8 +306,8 @@ test.describe("the assembled studio", () => {
   // `doClear` (ResearchStep.tsx) resets the run and closes the dialog in ONE
   // commit, so `ready` goes false and the Clear button unmounts at the same
   // moment the modal does — the opener is provably gone before focus is handed
-  // back. /projects' per-row Delete is the same defect, but its removal lands
-  // after an IndexedDB round trip and would make the assertion a coin toss.
+  // back. /projects' per-row Delete was the same defect with a race on top; its
+  // ordering is now deterministic too and it has its own journey below.
   test("closing a dialog whose opener was removed moves focus on, never to the document body", async ({
     page,
   }) => {
@@ -359,5 +359,54 @@ test.describe("the assembled studio", () => {
     expect(landedOn, "focus landed on the surface's own <main> landmark").toBe("MAIN");
 
     expect(errors, "page errors during the clear-research journey").toEqual([]);
+  });
+  // The SECOND ordering, and the one that was still broken after the Modal fix.
+  //
+  // Deleting a project used to fire `remove()` and close the dialog in the same
+  // commit, while `useProjects.remove` awaits its IndexedDB transaction BEFORE
+  // `setProjects`. So the row was still mounted when the modal tore down: focus
+  // was restored onto a delete button that unmounted a tick later, and landed on
+  // <body>. Modal cannot see this — from inside the dialog the opener is
+  // genuinely still connected — so the fix is at the call site, and the claim is
+  // therefore about ORDER rather than about the dialog.
+  test("deleting a project hands focus to the landmark, not to the row that vanished", async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    const control = await freshShelf(page);
+    const before = (await control.snapshot()).projects.length;
+    expect(before, "the journey needs a seeded shelf to delete from").toBeGreaterThan(0);
+
+    // Addressed by its ACCESSIBLE NAME rather than a testid: the control already
+    // carries one, and a journey whose whole subject is a keyboard user should
+    // reach the button the way assistive technology reaches it. Driven by
+    // keyboard for the same reason.
+    // `exact`, because the seeded shelf carries both "Glass Harbor" and
+    // "Glass Harbor — trailer" and a substring match resolves to two buttons.
+    const opener = page.getByRole("button", { name: `Delete ${PROJECT_TITLE}`, exact: true });
+    await expect(opener).toBeVisible();
+    await opener.focus();
+    await expect(opener).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    const confirm = page.getByTestId("confirm-delete");
+    await expect(confirm).toBeEnabled({ timeout: 10_000 });
+    await confirm.click();
+
+    // BOTH halves of the premise, or the assertion below proves nothing: the
+    // dialog must be gone AND the opener must be gone. A journey that only
+    // checked focus would pass on a delete that silently did nothing.
+    await expect(confirm).toBeHidden();
+    await expect(opener, "the row survived the delete - the premise does not hold").toHaveCount(0);
+
+    await expect
+      .poll(async () => page.evaluate(() => document.activeElement?.tagName ?? null), {
+        message: "focus was stranded on the document body after the project was deleted",
+      })
+      .not.toBe("BODY");
+    const landedOn = await page.evaluate(() => document.activeElement?.tagName ?? null);
+    expect(landedOn, "focus landed on the shelf's own <main> landmark").toBe("MAIN");
+
+    expect(errors, "page errors during the delete journey").toEqual([]);
   });
 });

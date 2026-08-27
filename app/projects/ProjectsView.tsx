@@ -126,9 +126,30 @@ export default function ProjectsView() {
       <ConfirmDelete
         project={doomed}
         onClose={() => setDoomed(null)}
-        onConfirm={() => {
-          if (doomed) void remove(doomed.id);
-          setDoomed(null);
+        /**
+         * AWAIT THE REMOVAL, THEN CLOSE — because the ORDER decides where a
+         * keyboard user's focus lands, and this used to lose that race.
+         *
+         * `Modal#restoreFocus` hands focus back to the opener when it is still
+         * connected and to `<main>` when it is not. The opener here is the row's
+         * own delete button. `useProjects.remove` awaits the IndexedDB
+         * transaction BEFORE `setProjects`, so firing it and closing in the same
+         * commit left the row mounted at the moment the modal tore down: focus
+         * was restored onto a button that unmounted a tick later, and landed on
+         * `<body>`. Measured, after the Modal fix — which cannot see this,
+         * because from inside the dialog the opener is genuinely still there.
+         *
+         * Awaiting first makes the ordering true rather than lucky: by the time
+         * the dialog closes the row is gone, `isConnected` is false, and focus
+         * goes to the landmark. A failed delete keeps the row AND the dialog —
+         * `remove` returns null and reports through the error banner, and
+         * closing a confirmation over work that was not done is the same small
+         * lie as a button that does nothing.
+         */
+        onConfirm={async () => {
+          if (!doomed) return;
+          const took = await remove(doomed.id);
+          if (took) setDoomed(null);
         }}
       />
     </StudioFrame>
