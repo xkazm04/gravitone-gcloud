@@ -131,14 +131,30 @@ export type MovementRole =
    *  tail for the title and logos" — the duration is theirs and is NOT encoded. */
   | "tail";
 
-/** Spine order. The sequence, not the count, is what a checker can read. */
-export const SPINE_ORDER: readonly MovementRole[] = [
-  "cold-open",
-  "introduction",
-  "escalation",
-  "climax",
-  "tail",
-] as const;
+/**
+ * Where each role sits on the spine.
+ *
+ * A `Record<MovementRole, number>` rather than an array, and that is the whole
+ * point: `readonly MovementRole[]` type-checks every ENTRY and says nothing
+ * about whether every role is present. A sixth role added to the union above
+ * compiled cleanly with the list unchanged, and then `indexOf` returned -1 for
+ * it — which does not read as "unknown", it reads as "sorts before the cold
+ * open". A trailer's spine would have been silently reordered by a type the
+ * compiler was perfectly willing to check. A missing key here is a build error.
+ */
+export const SPINE_RANK: Record<MovementRole, number> = {
+  "cold-open": 0,
+  introduction: 1,
+  escalation: 2,
+  climax: 3,
+  tail: 4,
+};
+
+/** Spine order. The sequence, not the count, is what a checker can read.
+ *  Derived from the rank above so the two cannot disagree. */
+export const SPINE_ORDER: readonly MovementRole[] = (
+  Object.keys(SPINE_RANK) as MovementRole[]
+).sort((a, b) => SPINE_RANK[a] - SPINE_RANK[b]);
 
 /** The parts the spine treats as optional. Absence of anything else is a finding.
  *  "It is not mandatory — a work with an existing audience, or an opening image

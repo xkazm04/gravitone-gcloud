@@ -11,7 +11,7 @@
 import type { BeatSlot } from "../../research/beats/beats";
 
 import {
-  SPINE_ORDER,
+  SPINE_RANK,
   type Allowance,
   type Connector,
   type Cue,
@@ -30,8 +30,12 @@ import {
  *  movement (the fixture's reset part) keeps its place before the climax and
  *  a tail never drifts ahead of a cold open, whatever order the slots arrive in. */
 function spineSort(a: Movement, b: Movement): number {
-  const ra = SPINE_ORDER.indexOf(a.role);
-  const rb = SPINE_ORDER.indexOf(b.role);
+  // SPINE_RANK, not SPINE_ORDER.indexOf: a role the order list does not carry
+  // came back as -1, which sorts it AHEAD of the cold open rather than reading
+  // as unknown. The rank is a Record over the role union, so the compiler will
+  // not let a role go unranked in the first place. See types.ts.
+  const ra = SPINE_RANK[a.role];
+  const rb = SPINE_RANK[b.role];
   return ra !== rb ? ra - rb : a.ordinal - b.ordinal;
 }
 
