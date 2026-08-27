@@ -15,6 +15,7 @@
 // One subject across all six is the point — the grid then varies by style
 // alone, so the user is comparing the only thing they are actually choosing.
 
+import type { Discipline } from "@/lib/projects";
 import type { StyleBlock } from "@/lib/themes";
 
 export interface Preset {
@@ -25,6 +26,9 @@ export interface Preset {
   block: StyleBlock;
   /** Element vocabulary this style is known to carry well. */
   elements: string[];
+  /** Which kind of video this preset was written for. All six were written for
+   *  explainers; a theme made from a preset inherits this tag. */
+  discipline: Discipline;
 }
 
 /**
@@ -42,6 +46,7 @@ export const PRESETS: Preset[] = [
     id: "signal-ledger",
     name: "Signal Ledger",
     line: "Editorial flat vector. The default for argument-led explainers.",
+    discipline: "educational",
     elements: ["charts", "maps", "timelines", "captions"],
     block: {
       technique: "flat vector editorial illustration, hairline strokes of even weight",
@@ -58,6 +63,7 @@ export const PRESETS: Preset[] = [
     id: "newsprint-cutout",
     name: "Newsprint Cutout",
     line: "Collage with real photographic cutouts. Good when people are the subject.",
+    discipline: "educational",
     elements: ["icons", "captions", "charts"],
     block: {
       technique: "paper collage — grayscale photographic cutouts on flat colour fields",
@@ -74,6 +80,7 @@ export const PRESETS: Preset[] = [
     id: "blueprint",
     name: "Blueprint",
     line: "Technical drawing. Reads as engineering rather than opinion.",
+    discipline: "educational",
     elements: ["diagrams", "timelines", "maps"],
     block: {
       technique: "technical blueprint linework — thin white construction lines, no fills",
@@ -90,6 +97,7 @@ export const PRESETS: Preset[] = [
     id: "chalk-argument",
     name: "Chalk Argument",
     line: "Blackboard, drawn live. Best when the video is a line of reasoning.",
+    discipline: "educational",
     elements: ["diagrams", "timelines"],
     block: {
       technique: "blackboard chalk drawing, strokes keeping the order they were drawn in",
@@ -106,6 +114,7 @@ export const PRESETS: Preset[] = [
     id: "paper-relief",
     name: "Paper Relief",
     line: "Layered cut paper with real depth. Warm, tactile, slower-feeling.",
+    discipline: "educational",
     elements: ["icons", "maps", "captions"],
     block: {
       technique: "layered cut-paper relief, each element a separate stacked sheet",
@@ -122,6 +131,7 @@ export const PRESETS: Preset[] = [
     id: "data-neon",
     name: "Data Neon",
     line: "Dark instrument panel. Suits markets, telemetry and anything live.",
+    discipline: "educational",
     elements: ["charts", "timelines", "diagrams"],
     block: {
       technique: "dark dashboard vector — hairline grids and glowing plotted lines",

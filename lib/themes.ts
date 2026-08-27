@@ -17,6 +17,7 @@
 // and that skipping the approval step is the single reliable way to get forty
 // frames that do not match.
 
+import type { Discipline } from "./projects";
 import { getByIndex, getRecord, openDb, runTx, BY_UID, THEMES_STORE } from "./studioDb";
 
 /* ── The style block ──────────────────────────────────────────────────────── */
@@ -98,6 +99,11 @@ export interface Theme {
   origin: ThemeOrigin;
   /** Set when origin is "preset" — which one it started from. */
   presetId?: string;
+  /** The kind of video this style was made for. UNTAGGED MEANS EVERY
+   *  DISCIPLINE: a style from a brief, or one made before disciplines existed,
+   *  is offered to every project, and `styleFits` is the one place that rule is
+   *  read. A theme started from a preset inherits the preset's tag. */
+  discipline?: Discipline;
   block: StyleBlock;
   elements: string[];
   proofs: Proof[];
@@ -109,7 +115,19 @@ export interface Theme {
 export type ThemeDraft = Pick<Theme, "name" | "block" | "elements"> & {
   origin: ThemeOrigin;
   presetId?: string;
+  discipline?: Discipline;
 };
+
+/** Which disciplines a style list can be filtered by — the three, or none. */
+export type DisciplineFilter = Discipline | "all";
+
+/** THE one predicate for "may this style serve this discipline". The create
+ *  dialog, the atelier's style pills and the preset rail all filter with it,
+ *  because three copies of `!t.discipline || t.discipline === d` is how they
+ *  start disagreeing. Untagged fits everything; `"all"` matches everything. */
+export function styleFits(theme: { discipline?: Discipline }, discipline: DisciplineFilter): boolean {
+  return discipline === "all" || !theme.discipline || theme.discipline === discipline;
+}
 
 export function newTheme(uid: string, draft: ThemeDraft): Theme {
   const now = Date.now();
@@ -119,6 +137,7 @@ export function newTheme(uid: string, draft: ThemeDraft): Theme {
     name: draft.name.trim() || "Untitled style",
     origin: draft.origin,
     presetId: draft.presetId,
+    discipline: draft.discipline,
     block: draft.block,
     elements: draft.elements,
     proofs: [],

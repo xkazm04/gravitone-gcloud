@@ -21,9 +21,11 @@
 // whole shelf is jammed.
 
 import {
+  DISCIPLINE_LABEL,
   PHASES,
   PHASE_STATE_WORD,
   PHASE_TITLE,
+  disciplineOf,
   projectState,
   templateOf,
   type PhaseState,
@@ -128,7 +130,7 @@ export default function ProjectsMatrix({
             <div className="flex min-w-0 items-center gap-2">
               <span
                 className="truncate text-sm font-medium text-white"
-                title={`${p.title} — ${templateOf(p.template).label}`}
+                title={`${p.title} — ${DISCIPLINE_LABEL[p.discipline ?? disciplineOf(p.template)]} · ${templateOf(p.template).label}`}
               >
                 {p.title}
               </span>

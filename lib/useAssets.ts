@@ -26,6 +26,7 @@ import {
   type Asset,
 } from "./assets";
 import { listThemes, type Proof, type Theme } from "./themes";
+import { presetById } from "@/app/library/presets";
 
 const seededKey = (uid: string) => `gravitone.assets.seeded.${uid}`;
 
@@ -83,8 +84,12 @@ async function seedFromTrials(uid: string): Promise<Asset[]> {
       // a regenerated grid updates rows instead of duplicating them.
       id: `as-${e.provider ?? "leonardo"}-${e.styleId}-${e.trialId}`,
       uid,
-      // styles › presets › <preset>. The folder chain the shelf is browsed by.
-      path: ["styles", "presets", e.styleId],
+      // <discipline> › styles › presets › <preset>. The folder chain the shelf
+      // is browsed by; the root is the preset's discipline, or "shared" when
+      // the trial names a preset the catalogue no longer has. Rows seeded
+      // before the root existed keep `["styles", ...]`, and the tree shows
+      // both — that is what is on the shelf, not a display bug.
+      path: [presetById.get(e.styleId)?.discipline ?? "shared", "styles", "presets", e.styleId],
       name: e.trialLabel || e.trialId,
       src: e.file,
       kind: "image" as const,

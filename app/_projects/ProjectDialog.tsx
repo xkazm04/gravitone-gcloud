@@ -4,10 +4,12 @@
 // they type here is the headline /studio renders, which is why title is the
 // only required field and why the create button says where it goes.
 //
-// Three fields, no more. Template and target runtime come from the craft
-// library (knowledge/templates/*): picking a template sets the runtime it
-// measured, and the note under the pills is that template's own one-liner. A
-// project should be creatable in eight seconds.
+// Four choices, in the order they depend on each other: discipline (what kind
+// of video), template (which craft format inside it), style (a locked visual
+// identity that fits the discipline), runtime. Template and target runtime
+// come from the craft library (knowledge/templates/*): picking a template sets
+// the runtime it measured, and the note under the pills is that template's own
+// one-liner. A project should be creatable in eight seconds.
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -15,21 +17,27 @@ import Modal from "@/components/ui/Modal";
 import { Eyebrow, Button } from "@/components/ui/Primitives";
 import { Field, NumberInput, Segmented, TextArea, TextInput } from "@/components/ui/Field";
 import {
+  DISCIPLINES,
+  DISCIPLINE_LABEL,
+  DISCIPLINE_NOTE,
   PHASE_TITLE,
-  TEMPLATES,
+  disciplineOf,
   projectContents,
   templateOf,
+  templatesFor,
+  type Discipline,
   type PhaseKey,
   type Project,
   type ProjectContents,
   type ProjectDraft,
   type TemplateId,
 } from "@/lib/projects";
-import { lockedOnly, projectStyle, STYLE_MISS_WORD, type Theme } from "@/lib/themes";
+import { lockedOnly, projectStyle, STYLE_MISS_WORD, styleFits, type Theme } from "@/lib/themes";
 
 const blank = (): ProjectDraft => ({
   title: "",
   logline: "",
+  discipline: "educational",
   template: "short-educational-video",
   targetS: templateOf("short-educational-video").defaultS,
   themeId: undefined,
@@ -65,7 +73,14 @@ export default function ProjectDialog({
     if (!open) return;
     if (project) {
       const { title, logline, template, targetS, themeId } = project;
-      setDraft({ title, logline, template, targetS, themeId });
+      setDraft({
+        title,
+        logline,
+        discipline: project.discipline ?? disciplineOf(template),
+        template,
+        targetS,
+        themeId,
+      });
       setOwnDuration(true);
     } else {
       // Pre-select the most recently locked style. It is the one they almost
@@ -77,6 +92,14 @@ export default function ProjectDialog({
   }, [open, project, lockedThemes]);
 
   const tpl = templateOf(draft.template);
+  const discipline: Discipline = draft.discipline ?? disciplineOf(draft.template);
+  const templates = templatesFor(discipline);
+  // Only styles that fit the discipline are offered: the SAME predicate
+  // /library filters its wall with (lib/themes.ts#styleFits).
+  const fittingThemes = useMemo(
+    () => lockedThemes.filter((t) => styleFits(t, discipline)),
+    [lockedThemes, discipline],
+  );
   // The SAME resolver the studio renders with (lib/themes.ts) — so what this
   // dialog says a project's style is, and what its frames actually come back
   // in, cannot disagree.
@@ -91,6 +114,25 @@ export default function ProjectDialog({
       template,
       targetS: ownDuration ? d.targetS : templateOf(template).defaultS,
     }));
+
+  // Changing the discipline moves the template to the first of its own, so the
+  // record can never carry a template outside its discipline (on edit too).
+  // A chosen style that no longer fits is dropped on create; on edit the style
+  // is immutable and stays, whatever it is tagged.
+  const pickDiscipline = (next: Discipline) =>
+    setDraft((d) => {
+      const template = templatesFor(next)[0].id;
+      return {
+        ...d,
+        discipline: next,
+        template,
+        targetS: ownDuration ? d.targetS : templateOf(template).defaultS,
+        themeId:
+          project || !d.themeId || themes.some((t) => t.id === d.themeId && styleFits(t, next))
+            ? d.themeId
+            : undefined,
+      };
+    });
 
   const submit = () => {
     if (!valid) return;
@@ -158,9 +200,16 @@ export default function ProjectDialog({
         </Field>
 
         <Segmented
+          label="Discipline"
+          value={discipline}
+          options={DISCIPLINES.map((d) => ({ id: d, label: DISCIPLINE_LABEL[d], note: DISCIPLINE_NOTE[d] }))}
+          onChange={pickDiscipline}
+        />
+
+        <Segmented
           label="Template"
           value={draft.template}
-          options={TEMPLATES.map((t) => ({ id: t.id, label: t.label, note: t.note }))}
+          options={templates.map((t) => ({ id: t.id, label: t.label, note: t.note }))}
           onChange={pickTemplate}
         />
 
@@ -189,8 +238,14 @@ export default function ProjectDialog({
             label="Visual style"
             hint="A locked style from the library. Every frame this project renders is built on it."
           >
+            {!fittingThemes.length && (
+              <p className="font-hanken text-sm text-amber-200/90">
+                No locked style fits {DISCIPLINE_LABEL[discipline].toLowerCase()} yet. Lock one in the
+                library, or one from a brief, which fits every discipline.
+              </p>
+            )}
             <div className="flex flex-wrap gap-1.5">
-              {lockedThemes.map((t) => (
+              {fittingThemes.map((t) => (
                 <button
                   key={t.id}
                   type="button"
@@ -212,7 +267,13 @@ export default function ProjectDialog({
         <Field
           label="Target runtime"
           htmlFor="p-dur"
-          hint={`${tpl.label} was measured at ${tpl.range[0]}–${tpl.range[1]}s. Past that band the craft rules stop applying.`}
+          hint={
+            // Free form has no measured band — its `range` is only what the
+            // input accepts — so the hint must not call it a measurement.
+            discipline === "free"
+              ? "Nothing was measured for a free-form video. There is no craft band here; the studio only keeps time."
+              : `${tpl.label} was measured at ${tpl.range[0]}–${tpl.range[1]}s. Past that band the craft rules stop applying.`
+          }
         >
           <NumberInput
             id="p-dur"

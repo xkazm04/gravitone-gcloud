@@ -158,7 +158,7 @@ export function EmptyShelf({ onCreate }: { onCreate: () => void }) {
     <div className="rounded-2xl border border-dashed border-white/12 px-6 py-16 text-center">
       <p className="font-instrument text-2xl text-white/80">No projects yet.</p>
       <p className="font-hanken mx-auto mt-2 max-w-sm text-base text-slate-400">
-        A project is a name, a template and a target runtime. Everything else — scenes, frames, cues,
+        A project is a name, a discipline, a template and a target runtime. Everything else — scenes, frames, cues,
         the cut — is made inside the studio.
       </p>
       <button

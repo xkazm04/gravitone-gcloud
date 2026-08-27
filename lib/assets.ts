@@ -134,7 +134,11 @@ export function assetFromProof(uid: string, theme: Theme, proof: Proof): Asset {
   return {
     id: promotedId(theme.id, proof.id),
     uid,
-    path: ["styles", "proofs", styleFolder(theme)],
+    // <discipline> › styles › proofs › <style>. The root is the theme's
+    // discipline, or "shared" for an untagged style. Rows written before the
+    // root existed keep their old `["styles", ...]` path, so `buildTree` shows
+    // both roots side by side — which is what is actually on the shelf.
+    path: [theme.discipline ?? "shared", "styles", "proofs", styleFolder(theme)],
     name: proof.label || proof.id,
     src: proofPointer(theme.id, proof.id),
     kind: "image",

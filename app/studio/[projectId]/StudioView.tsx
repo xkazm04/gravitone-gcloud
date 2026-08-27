@@ -22,7 +22,16 @@ import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useAuth } from "@/lib/useAuth";
-import { PHASES, getProject, parkAt, templateOf, type PhaseKey, type Project } from "@/lib/projects";
+import {
+  DISCIPLINE_LABEL,
+  PHASES,
+  disciplineOf,
+  getProject,
+  parkAt,
+  templateOf,
+  type PhaseKey,
+  type Project,
+} from "@/lib/projects";
 
 import LibraryShelves from "../../_library/LibraryShelves";
 import { STEPS } from "./phases";
@@ -189,6 +198,7 @@ export default function StudioView({ projectId }: { projectId: string }) {
               <Eyebrow>studio</Eyebrow>
               {project && (
                 <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-[11px] tracking-[0.14em] text-white/55 uppercase">
+                  {DISCIPLINE_LABEL[project.discipline ?? disciplineOf(project.template)]} ·{" "}
                   {templateOf(project.template).label} · {project.targetS}s
                 </span>
               )}

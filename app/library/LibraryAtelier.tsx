@@ -14,12 +14,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import { Panel } from "@/components/ui/Primitives";
+import { Segmented } from "@/components/ui/Field";
 import { promotedFrom } from "@/lib/assets";
-import { listProjects } from "@/lib/projects";
+import { DISCIPLINES, DISCIPLINE_LABEL, listProjects } from "@/lib/projects";
 import { useAssets } from "@/lib/useAssets";
 import { useAuth } from "@/lib/useAuth";
 import { useThemes } from "@/lib/useThemes";
-import { statusOf, type Proof, type Theme } from "@/lib/themes";
+import { statusOf, styleFits, type DisciplineFilter, type Proof, type Theme } from "@/lib/themes";
 import type { GenerateResult } from "@/lib/imagingClient";
 
 import { ConfirmDeleteStyle, GateChip, PaletteDots, StyleSheet, type Dependents } from "./parts";
@@ -47,6 +48,10 @@ export default function LibraryAtelier() {
   );
 
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  /** Which kind of video the wall is being read for. "all" shows everything;
+   *  a discipline shows its own styles plus the untagged ones. The rail and
+   *  the pills filter with the same predicate. */
+  const [discipline, setDiscipline] = useState<DisciplineFilter>("all");
   const [busy, setBusy] = useState(false);
   /** The style the user has asked to delete, and how many projects it would
    *  cost. Counted on demand rather than held for every style — the answer is
@@ -62,7 +67,11 @@ export default function LibraryAtelier() {
   const shelved = useMemo(() => new Set((assets ?? []).map((a) => a.id)), [assets]);
 
   const rows = useMemo(() => themes ?? [], [themes]);
-  const selected = rows.find((t) => t.id === selectedId) ?? rows[0] ?? null;
+  const shown = useMemo(() => rows.filter((t) => styleFits(t, discipline)), [rows, discipline]);
+  // The selection is kept even when the filter hides its pill: the filter is
+  // for FINDING a style, and yanking the sheet out from under the user would
+  // make it a destructive control.
+  const selected = rows.find((t) => t.id === selectedId) ?? shown[0] ?? null;
   /** A locked style is finished: its sheet is the reference set, and nothing —
    *  a rename, a verdict, a new proof — may move under the projects built on it. */
   const isLocked = selected ? statusOf(selected) === "locked" : false;
@@ -78,6 +87,8 @@ export default function LibraryAtelier() {
       name: p.name,
       origin: "preset",
       presetId: p.id,
+      // A style started from a preset inherits the preset's discipline.
+      discipline: p.discipline,
       block: p.block,
       elements: p.elements,
     });
@@ -152,9 +163,19 @@ export default function LibraryAtelier() {
 
   return (
     <div className="grid gap-5 lg:grid-cols-[240px_1fr_300px]">
-      <PresetRail onPick={startFrom} onScratch={startBlank} busy={busy} />
+      <PresetRail onPick={startFrom} onScratch={startBlank} busy={busy} discipline={discipline} />
 
       <section className="space-y-4">
+        <Segmented
+          label="Discipline"
+          value={discipline}
+          options={[
+            { id: "all" as const, label: "All", note: "every style on the wall" },
+            ...DISCIPLINES.map((d) => ({ id: d, label: DISCIPLINE_LABEL[d] })),
+          ]}
+          onChange={setDiscipline}
+        />
+
         {error && (
           <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
             {error} — your styles live in this browser&rsquo;s storage, and it did not answer.
@@ -169,8 +190,14 @@ export default function LibraryAtelier() {
           <EmptyWall />
         ) : (
           <>
+            {!shown.length && (
+              <p className="font-hanken text-sm text-slate-400">
+                No style on the wall is tagged for this discipline. Untagged styles fit every
+                discipline, and a preset stamps its own.
+              </p>
+            )}
             <div className="flex flex-wrap gap-2">
-              {rows.map((t) => (
+              {shown.map((t) => (
                 <button
                   key={t.id}
                   onClick={() => setSelectedId(t.id)}
