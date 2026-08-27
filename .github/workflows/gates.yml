@@ -30,7 +30,7 @@
 #
 #   lint                 BLOCKING at error severity, RATCHETED at warning
 #                        severity. Input: this repo's sources plus a rule set
-#                        pinned by eslint-config-next@16.3.0 in the committed
+#                        pinned by eslint-config-next@16.3.3 in the committed
 #                        lock — deterministic. Error count is held at zero
 #                        outright. The warning population is pre-existing debt
 #                        (React-Compiler hook analyses over the studio's
@@ -148,6 +148,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
+    # `npm run verify` (package.json) mirrors this job's blocking steps after
+    # install, in the same order: typecheck, lint:ratchet, check:manifest, test,
+    # build, check:bundle. The pre-push hook runs it before any push to main.
+    # If a step is added, removed, or reordered here, change `verify` in the
+    # same commit — the two must not drift.
     steps:
       - uses: actions/checkout@v4
 

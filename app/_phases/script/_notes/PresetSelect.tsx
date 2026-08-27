@@ -76,6 +76,11 @@ export default function PresetSelect({
         data-testid={`preset-open-${cardId}`}
         onClick={() => setOpen((v) => !v)}
         disabled={disabled}
+        // A button that keeps focus while arrows move an active option in a
+        // popup listbox IS the APG select-only combobox — and `combobox` is the
+        // role that supports aria-activedescendant; the implicit `button` role
+        // does not, and screen readers ignore the attribute there.
+        role="combobox"
         aria-haspopup="listbox"
         aria-expanded={open}
         aria-controls={`preset-list-${cardId}`}

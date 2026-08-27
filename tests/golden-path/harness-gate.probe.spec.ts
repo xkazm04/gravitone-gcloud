@@ -54,7 +54,11 @@ const TRUTH_TABLE: Array<[Env, boolean, string]> = [
 
 test("the auth bypass is off in every environment but the one", () => {
   const src = read(DEV_AUTH_TS);
-  const m = src.match(/export const DEV_AUTH\s*=\s*([\s\S]*?);\n/);
+  // `\r?` — this repo is maintained from Windows (see gates.yml's install
+  // footgun), where core.autocrlf checks the tree out CRLF. The gate expression
+  // is the same bytes either way; a probe that can only read it on an LF
+  // checkout fails the local `npm run verify` while CI stays green.
+  const m = src.match(/export const DEV_AUTH\s*=\s*([\s\S]*?);\r?\n/);
   expect(
     m,
     `could not find the DEV_AUTH expression in ${DEV_AUTH_TS}. If it was renamed or ` +
