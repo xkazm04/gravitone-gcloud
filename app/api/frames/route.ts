@@ -32,6 +32,67 @@ async function systemPrompt(): Promise<string> {
   return cachedPrompt;
 }
 
+/**
+ * WHAT THIS RUN IS ALLOWED TO COST, IN INPUT.
+ *
+ * Everything below `body` is caller-supplied and goes down stdin into a Claude
+ * CLI run on the operator's own subscription. Until these bounds existed the
+ * route checked that `beats` was a non-empty array and `style` was truthy, and
+ * nothing else: a caller could send fifty megabytes of beats and buy a
+ * proportionally enormous run, once per rate-limit slot.
+ *
+ * The sibling compute route already does this. app/api/music/generate/route.ts
+ * caps every field it accepts - `asString(v, field, max)`, `asStrings(v, field,
+ * cap)` - because it spends a vendor balance. This one spends a subscription,
+ * which is not free either, and it had no cap at all. Same class of route, two
+ * implementations, one bound.
+ *
+ * The ceiling that actually matters is the ASSEMBLED prompt, because that is
+ * what is paid for; the per-array counts are there to fail early and to name
+ * which part was oversized, which a single byte count cannot.
+ */
+const MAX_BEATS = 400;
+const MAX_FACTS = 600;
+/** Roughly a quarter of a million tokens of input - far past any real script,
+ *  and far short of a bill nobody authorised. */
+const MAX_PROMPT_CHARS = 1_000_000;
+
+/** Serialised size of one caller-supplied field, or 0 when it is absent. */
+function jsonSize(v: unknown): number {
+  if (v === undefined || v === null) return 0;
+  try {
+    return JSON.stringify(v)?.length ?? 0;
+  } catch {
+    return Number.POSITIVE_INFINITY; // circular or unserialisable: refuse it
+  }
+}
+
+/**
+ * Why this run is too large, or `null` when it is not.
+ *
+ * A pure predicate rather than four inline returns, because the NEGATIVE case is
+ * otherwise unprobeable: asking the route "is a forty-beat script refused" means
+ * getting past the bounds and dispatching a real Claude run, and a probe that
+ * spends the operator's subscription to prove a limit is not a probe. The route
+ * and the guard now answer the same question and the guard can be asked alone.
+ */
+export function tooLarge(body: {
+  beats?: unknown;
+  facts?: unknown;
+  style?: unknown;
+  schema?: unknown;
+}): string | null {
+  const beats = Array.isArray(body.beats) ? body.beats : [];
+  if (beats.length > MAX_BEATS)
+    return `${beats.length} beats were sent; this route composes at most ${MAX_BEATS}. Nothing was dispatched.`;
+  if (Array.isArray(body.facts) && body.facts.length > MAX_FACTS)
+    return `${body.facts.length} facts were sent; this route carries at most ${MAX_FACTS}. Nothing was dispatched.`;
+  const declared = jsonSize(body.beats) + jsonSize(body.facts) + jsonSize(body.style) + jsonSize(body.schema);
+  if (declared > MAX_PROMPT_CHARS)
+    return `The run's material is ${Math.round(declared / 1000)}k characters; the ceiling is ${MAX_PROMPT_CHARS / 1000}k. Nothing was dispatched.`;
+  return null;
+}
+
 export async function POST(req: Request) {
   // Local-compute route (spends the machine's Claude subscription) — auth +
   // rate limit before anything is read or dispatched.
@@ -62,6 +123,11 @@ export async function POST(req: Request) {
     return Response.json({ detail: "No beats were sent, so there is nothing to art-direct." }, { status: 400 });
   if (!body.style)
     return Response.json({ detail: "No visual style was sent. A scene cannot be composed without one." }, { status: 400 });
+
+  // COUNTS FIRST, so an oversized run is refused before a megabyte of it is
+  // serialised into a prompt, and so the refusal can name which part was too big.
+  const oversized = tooLarge(body);
+  if (oversized) return Response.json({ detail: oversized, code: "too-large" }, { status: 413 });
 
   // Everything down stdin: the script and notebook together are far past any
   // platform's argv limit, and on Windows that limit truncates silently.
@@ -94,6 +160,18 @@ export async function POST(req: Request) {
     "## THE LOCKED VISUAL STYLE — compose within it, not against it",
     JSON.stringify(body.style, null, 2),
   ].join("\n");
+
+  // The ASSEMBLED size is the one that is billed, and it carries the system
+  // prompt and the format brief on top of what the caller sent. Checked here
+  // rather than only above, because the sum is what leaves the machine.
+  if (prompt.length > MAX_PROMPT_CHARS)
+    return Response.json(
+      {
+        detail: `The assembled run is ${Math.round(prompt.length / 1000)}k characters; the ceiling is ${MAX_PROMPT_CHARS / 1000}k. Nothing was dispatched.`,
+        code: "too-large",
+      },
+      { status: 413 },
+    );
 
   try {
     const run = await runClaude(prompt);
