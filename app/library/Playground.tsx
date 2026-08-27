@@ -157,6 +157,9 @@ export default function Playground({
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<GenerateResult | null>(null);
   const [kept, setKept] = useState(false);
+  /** In flight. Separate from `kept`, which means "the write finished": the gap
+   *  between the click and that is exactly the double-submit window. */
+  const [keeping, setKeeping] = useState(false);
   // On by default once proofs exist — style-locked is the intended behaviour.
   // The toggle exists so the difference can be SEEN, which is the only way to
   // know whether locking is doing anything.
@@ -349,13 +352,34 @@ export default function Playground({
             {onKeep && (
               <button
                 onClick={async () => {
-                  await onKeep(result, subject);
-                  setKept(true);
+                  // GUARD FIRST, THEN AWAIT. `setKept(true)` used to run after
+                  // the await, so the whole IndexedDB write was a window in
+                  // which `disabled={kept}` was still false — a second click
+                  // inside it called onKeep again, and because a proof's id is
+                  // minted from Date.now()+Math.random() the second write was a
+                  // NEW row rather than an overwrite: two identical proofs on
+                  // the sheet, each carrying its own copy of a megabyte-scale
+                  // base64 plate.
+                  //
+                  // This repo has measured this exact failure once already, in
+                  // useAssets.ts: "with random ids produced sixty assets instead
+                  // of thirty". There it was fixed by content-addressing the id
+                  // so a repeat write is an overwrite. A proof id cannot follow
+                  // without changing the scheme of rows already in the store, so
+                  // the guard is the fix here and the id stays as it is.
+                  if (kept || keeping) return;
+                  setKeeping(true);
+                  try {
+                    await onKeep(result, subject);
+                    setKept(true);
+                  } finally {
+                    setKeeping(false);
+                  }
                 }}
-                disabled={kept}
+                disabled={kept || keeping}
                 className="font-jetbrains rounded-lg border border-white/12 px-3 py-1.5 text-[11px] text-white/75 transition hover:bg-white/5 disabled:opacity-40"
               >
-                {kept ? "kept" : keepLabel}
+                {kept ? "kept" : keeping ? "keeping…" : keepLabel}
               </button>
             )}
           </div>
