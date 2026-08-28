@@ -9,17 +9,20 @@
     "check:notebook": "npx tsx pipeline/check-notebook.mts",
     "check:manifest": "node pipeline/check-manifest.mjs",
     "check:bundle": "node pipeline/check-bundle.mjs",
+    "verify:text": "npx tsx pipeline/verify-text-engine.mts",
     "check:trailer-structure": "npx tsx pipeline/trailer-structure-regression.mts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:ratchet": "node pipeline/lint-ratchet.mjs",
     "test": "playwright test",
-    "test:live": "playwright test -c playwright.live.config.ts"
+    "test:live": "playwright test -c playwright.live.config.ts",
+    "verify": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm test && npm run build && npm run check:bundle",
+    "prepare": "git config core.hooksPath .githooks || exit 0"
   },
   "dependencies": {
     "firebase": "^12.17.1",
     "lucide-react": "^1.31.0",
-    "next": "16.3.0",
+    "next": "16.3.3",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
@@ -30,7 +33,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9.39.5",
-    "eslint-config-next": "^16.3.0",
+    "eslint-config-next": "^16.3.3",
     "fake-indexeddb": "^6.2.5",
     "tailwindcss": "^4",
     "typescript": "^5"

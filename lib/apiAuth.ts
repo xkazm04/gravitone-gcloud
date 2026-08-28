@@ -407,6 +407,22 @@ export function guardRequest(req: Request): Response | null {
   if (!rl.allowed)
     return deny(429, "Too many requests. Slow down and retry.", "rate-limited", rl.retryAfterSec);
 
+  return guardAccessOnly(req);
+}
+
+/**
+ * Access check WITHOUT the rate bucket — for gated routes that spend nothing.
+ *
+ * The bucket exists to bound spend per origin on the money/compute routes. The
+ * foundry routes only read and write local disk, and their page legitimately
+ * bursts: a 4-second poll of a live run plus a debounced verdict autosave is
+ * ~20 requests a minute before a single image loads, which drained the
+ * 30/60s default and turned the Styles tab into a 429. Sharing one bucket
+ * between a polling surface and the money routes also means an open /foundry
+ * tab could starve a real generation call — the opposite of what the limiter
+ * is for. Access is still required; only the counting is skipped.
+ */
+export function guardAccessOnly(req: Request): Response | null {
   switch (checkAccess(req)) {
     case "ok":
       return null;

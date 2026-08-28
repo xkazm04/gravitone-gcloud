@@ -1,6 +1,12 @@
 # Spike brief — can we make 20 shots look like one world?
 
-**Status:** not started. Written to be handed to a dedicated session.
+**Status:** ANSWERED 2026-08-26 — see `CONSISTENCY-FINDINGS.md`. There is a
+route, in stills and in motion. Approaches 1, 2 and 3 were all run. For stills,
+3 clears the bar at the real-film floor using only what was already on disk. For
+motion, Ref2VA (now downloaded) holds identity across three hard cuts at 0.189 —
+tighter than one continuous take of real film — while last-frame chaining drifts
+to a different person by the third clip. Approach 4 (a trained LoRA) was not
+started and is not needed yet.
 **Owner question:** does automated trailer generation have a route, or does it
 produce a slideshow?
 

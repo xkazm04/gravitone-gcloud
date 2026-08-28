@@ -60,13 +60,17 @@ CRAFT_FIELDS = [
 ]
 
 
-def compose_prompt(a):
+def compose_prompt(a, style=None):
     """Turn an annotation back into a generation brief.
 
     Written as effect language rather than jargon: a generator responds to
     "shadows falling to true black" far more reliably than to "low-key", which
     is the same lesson the registry's cinematic-language subject records about
     numeric optics. The craft terms are translated; they are not quoted.
+
+    `style`, when given (even empty), REPLACES the source's own texture clause: the foundry
+    (pipeline/foundry) keeps the craft of a shot and swaps its rendering idiom,
+    so the annotation's texture is the one field that must not cross over.
     """
     key = a.get("lighting_key")
     light_clause = ("shadows filled in and soft, no true blacks anywhere, gentle falloff"
@@ -135,7 +139,7 @@ def compose_prompt(a):
         f"Light sources in frame: {', '.join(a.get('light_sources') or []) or 'unspecified'}.",
         f"Palette: {a.get('palette','')}.",
         f"{lens}. {dof}.",
-        f"Rendered with {tex}.",
+        style if style is not None else f"Rendered with {tex}.",
     ]
     return " ".join(p for p in parts if p and p.strip(" ."))
 

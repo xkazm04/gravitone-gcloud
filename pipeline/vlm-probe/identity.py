@@ -40,7 +40,10 @@ The anchors paid for themselves before a single frame was generated.
 WHERE THE RULER GOES BLIND, also measured, also worth knowing:
   - No face, no identity score. Maul's prosthetics and a back-to-camera Obi-Wan
     both return zero detections. A shot that cannot be scored is reported as
-    unscored, never quietly dropped.
+    unscored, never quietly dropped -- and a face too small to embed counts as
+    no face, see MIN_FACE_PX. Wide shots are routinely unscoreable for identity,
+    which is a fact about trailers, not a bug: a wide shot's identity is carried
+    by silhouette and costume, and the LOOK axis is what reads those.
   - Helmets, crowds and motion blur degrade it badly. On Pelennor Fields the
     same character across two shots reached 0.70 -- worse than the Duel set's
     *different-character* ceiling. The scale below holds for clean frames with
@@ -71,12 +74,18 @@ LOOK_MODEL = "facebook/dinov2-base"
 # location, each frame holding exactly one unambiguous face.
 ANCHORS = {
     "qui-gon@005": "sw-duel-of-fates-005.jpg",   # medium-close, warm key, facing left
+    "qui-gon@022": "sw-duel-of-fates-022.jpg",   # medium, red corridor -- 023's own shot
     "qui-gon@023": "sw-duel-of-fates-023.jpg",   # medium, red corridor, hands folded
     "qui-gon@024": "sw-duel-of-fates-024.jpg",   # close-up, red key, eyes down
     "obi-wan@028": "sw-duel-of-fates-028.jpg",   # medium, red corridor -- same robes
 }
 
 ANCHOR_PAIRS = [
+    # A tighter floor than "across a cut", and the one the motion lane needs:
+    # 022 and 023 are two moments of a SINGLE continuous shot. A clip whose own
+    # first and last frame sit further apart than this has drifted within itself,
+    # which is a failure no still can exhibit and no cut-level floor would catch.
+    ("within", "qui-gon@022", "qui-gon@023", "same actor, same continuous shot"),
     ("floor", "qui-gon@005", "qui-gon@024", "same actor, medium-close -> close-up, warm -> red"),
     ("floor", "qui-gon@005", "qui-gon@023", "same actor, medium-close -> medium"),
     ("floor", "qui-gon@023", "qui-gon@024", "same actor, medium -> close-up"),
@@ -141,16 +150,34 @@ def look_vec(path):
     return torch.nn.functional.normalize(out.last_hidden_state[0, 0], dim=0)
 
 
+# FaceNet embeds a 160x160 crop. A detected face far below that is upscaled
+# interpolation, and the embedding it produces is noise wearing the shape of an
+# identity -- confidently, with no error and a plausible-looking number.
+#
+# Measured 2026-08-26 on the motion lanes: every "reads as a different person"
+# verdict that involved a wide shot came from a face of 12x15, 15x19 or 21x28
+# px, while every frame with a real face was 125 px or larger. The gap between
+# the two populations is enormous, so this floor is not a tuned parameter --
+# nothing in this corpus sits anywhere near it. Without it, a wide shot is
+# scored as an identity failure when what actually happened is that the ruler
+# could not see. Refusing to answer is the honest output.
+MIN_FACE_PX = 80
+
+
 def face_vec(path):
     """(embedding, detector confidence) for the largest face, or (None, 0.0).
 
     None is a result, not an error: it means this shot cannot be scored for
-    identity, and the caller must say so rather than skip the row.
+    identity, and the caller must say so rather than skip the row. A face
+    smaller than MIN_FACE_PX counts as "cannot be scored" for the same reason.
     """
     mt, net = _load("face")
     im = Image.open(path).convert("RGB")
     boxes, probs = mt.detect(im)
     if boxes is None or len(boxes) == 0:
+        return None, 0.0
+    x1, y1, x2, y2 = boxes[0]
+    if min(x2 - x1, y2 - y1) < MIN_FACE_PX:
         return None, 0.0
     faces = mt(im)
     if faces is None:
@@ -203,6 +230,7 @@ def scale_from(rows):
         v = [r[key] for r in rows if r[0] == kind and r[key] is not None]
         return fn(v) if v else None
     return {
+        "id_within": agg("within", 3, max),
         "id_floor": agg("floor", 3, max),
         "id_ceil": agg("hard-ceil", 3, min),
         "look_floor": agg("floor", 4, max),
@@ -214,6 +242,8 @@ def verdict(idn, look, s):
         return "unscored (no face detected)"
     if s["id_ceil"] is not None and idn >= s["id_ceil"]:
         v = "READS AS A DIFFERENT PERSON"
+    elif s["id_within"] is not None and idn <= s["id_within"]:
+        v = "as tight as one continuous take"
     elif s["id_floor"] is not None and idn <= s["id_floor"]:
         v = "same person, as tight as real film"
     else:
@@ -248,7 +278,8 @@ def main():
         print(f"  {n:16} face conf {d['face_conf'] or 'NONE'}")
     rows = show(pair_rows(ANCHOR_PAIRS, A), "ANCHORS -- the scale, from real film")
     s = scale_from(rows)
-    print(f"\n  identity floor (same actor, real cut)      {s['id_floor']}")
+    print(f"\n  identity within-shot (one continuous take) {s['id_within']}")
+    print(f"  identity floor (same actor, real cut)      {s['id_floor']}")
     print(f"  identity ceiling (same robes, diff actor)  {s['id_ceil']}")
     gap = (s["id_ceil"] or 0) - (s["id_floor"] or 0)
     print(f"  separation                                 {gap:+.4f}"

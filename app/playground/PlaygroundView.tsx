@@ -21,6 +21,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
+import { ABSENCE_REASON, capabilities } from "@/lib/capabilities";
 import {
   MusicRequestError,
   blobUrl,
@@ -79,7 +80,29 @@ interface Render {
 
 // ── the page ────────────────────────────────────────────────────────────────
 
+/** A panel this deployment cannot serve, drawn as absent-and-explained rather
+ *  than hidden.
+ *
+ *  HIDDEN WOULD BE WORSE, and the choice is deliberate. The playground's whole
+ *  job is to exercise the vendor's feature surface, so a reader who knows the
+ *  bench has four panels and finds three needs to know whether the fourth was
+ *  removed, broke, or is unavailable here. Silence answers none of those. The
+ *  panel keeps its place and its title, loses its controls, and says why — which
+ *  is the same rule the imaging chokepoint follows when a vendor drops out of a
+ *  chain: no elimination is silent. */
+function Unavailable({ title, reason }: { title: string; reason: string }) {
+  return (
+    <section className={`${card} opacity-60`}>
+      <h2 className="font-instrument text-lg text-white/70">{title}</h2>
+      <p className="mt-2 text-sm text-slate-400">{reason}</p>
+    </section>
+  );
+}
+
 export default function PlaygroundView() {
+  // Read once per mount. These are build-time constants in the bundle, so this
+  // cannot change under the component and does not need to be state.
+  const caps = capabilities();
   const [renders, setRenders] = useState<Render[]>([]);
   /**
    * The id counter is a REF, not state, and that is the fix rather than a
@@ -148,14 +171,30 @@ export default function PlaygroundView() {
         </header>
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <QuickTake addRender={addRender} />
-          <SfxBench />
+          {/* QuickTake and PlanLab both render through /api/music/compose, so
+              they stand or fall with the section-edit capability rather than
+              with musicGenerate — which governs the Score phase's cue render,
+              a different route with a different portability story. */}
+          {caps.musicSectionEdit ? (
+            <QuickTake addRender={addRender} />
+          ) : (
+            <Unavailable title="Quick take" reason={ABSENCE_REASON.musicSectionEdit} />
+          )}
+          {caps.musicSfx ? <SfxBench /> : <Unavailable title="SFX bench" reason={ABSENCE_REASON.musicSfx} />}
         </div>
         <div className="mt-5">
-          <PlanLab addRender={addRender} />
+          {caps.musicSectionEdit ? (
+            <PlanLab addRender={addRender} />
+          ) : (
+            <Unavailable title="Plan lab" reason={ABSENCE_REASON.musicSectionEdit} />
+          )}
         </div>
         <div className="mt-5">
-          <SectionEdit renders={renders} addRender={addRender} />
+          {caps.musicSectionEdit ? (
+            <SectionEdit renders={renders} addRender={addRender} />
+          ) : (
+            <Unavailable title="Section edit" reason={ABSENCE_REASON.musicSectionEdit} />
+          )}
         </div>
       </div>
     </StudioFrame>

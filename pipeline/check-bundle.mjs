@@ -122,6 +122,17 @@ const SERVER_MODULE_FINGERPRINTS = [
   "Imaging spend ceiling reached", // lib/imaging/budget.ts
   "Refused before any vendor was called", // lib/imaging/budget.ts
   "[api] rate ", // lib/apiAuth.ts rateNote()
+  // ── the reasoning seam (lib/text/, 2026-08-27) ────────────────────────────
+  // lib/text/ spawns processes and holds a metered key, so it is server-only for
+  // the same reasons lib/imaging/ is — and it is reached from route handlers
+  // that sit beside client components, which is exactly the shape that leaks.
+  // These four are distinctive enough that a coincidental match is not
+  // plausible, and each comes from a different file so that importing any one
+  // corner of the seam trips the gate.
+  "[text] ", // lib/text/log.ts formatTurn() — every turn's log line
+  "authenticates without an API key; keyFor()", // lib/text/env.ts
+  "No reasoning engine could serve this", // lib/text/router.ts, bottom of the ladder
+  "is a managed serverless platform, which has no local binary", // lib/deployment.ts
 ];
 
 /**

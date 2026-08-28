@@ -34,11 +34,15 @@ export function useAlternatives({
   projectId,
   frames,
   block,
+  references,
   onAdopt,
 }: {
   projectId: string;
   frames: Frame[];
   block: StyleBlock;
+  /** The theme's approved proofs, same set the assembly path sends — an
+   *  alternative judged against the cut must be conditioned like the cut. */
+  references?: { base64: string; mime: string }[];
   onAdopt: (frameId: string, plate: Plate) => void;
 }): AltsCtl {
   const [byFrame, setByFrame] = useState<Record<string, SceneAlts>>({});
@@ -166,6 +170,7 @@ export function useAlternatives({
             negativePrompt: NEGATIVE_PROMPT,
             aspect: "16:9",
             count: 1,
+            references: references?.length ? references : undefined,
           });
           const img = res.images[0];
           if (!img) throw new ImagingRequestError("The engine returned no image.", "refused", 200);
@@ -194,7 +199,7 @@ export function useAlternatives({
         });
       }
     },
-    [frameOf, busy, block],
+    [frameOf, busy, block, references],
   );
 
   const remove = useCallback(

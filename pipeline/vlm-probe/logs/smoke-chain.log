@@ -1,0 +1,6 @@
+  guard: recycling ComfyUI (switching from Flux 2 to H3) -- RAM 46.5 free, commit 31/181 GB
+  guard: back up -- RAM 45.8 free, commit 30/181 GB
+  hero reference staged as ref_00-hero.png
+  01-turn: 346s -> 3 frames + video
+  guard: recycling ComfyUI (headroom dropped mid-lane) -- RAM 6.3 free, commit 101/181 GB
+  guard: back up -- RAM 49.1 free, commit 28/181 GB

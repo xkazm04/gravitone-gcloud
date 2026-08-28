@@ -119,3 +119,23 @@ __pycache__/
 /.claude/rules/ai-registry-software-engineering.md
 /.claude/rules/ai-registry-media-generation.md
 # END ai-registry linked skills
+
+# Foundry runs (pipeline/foundry/forge.py) — generated candidates, their
+# sidecars and the cropped third-party reference frames. Regenerable from a
+# plan file. The verdicts and the style catalogue ARE versioned
+# (pipeline/foundry/{ledger,styles}.json): those are the finding.
+/foundry-out/
+
+# forge logs (pipeline/foundry/forge.py > logs/)
+/pipeline/foundry/logs/
+
+# vlm-probe generated plates and clips. The spike's stills and video are
+# regenerable output, not source: every lane keeps its lane.json (seed, the
+# verbatim character/location clauses, steps, and where the reference joins),
+# which is what makes the run reproducible. The pixels are ~43 MB and grow per
+# lane; CONSISTENCY-FINDINGS.md carries the numbers and the read.
+/pipeline/vlm-probe/shots/**/*.png
+/pipeline/vlm-probe/shots/**/*.jpg
+/pipeline/vlm-probe/clips/**/*.png
+/pipeline/vlm-probe/clips/**/*.jpg
+/pipeline/vlm-probe/clips/**/*.mp4

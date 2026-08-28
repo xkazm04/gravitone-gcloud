@@ -1,16 +1,26 @@
 // POST /api/recalibrate — notes in, an EDIT PLAN out.
 //
-// The engine is a LOCAL CLAUDE CODE PROCESS, driven headlessly (`lib/claudeCli.ts`).
-// It authenticates with the machine's logged-in subscription, so there is no API
-// key anywhere in this app — not in the environment, not in a vault, not in a
-// browser bundle. That is the whole reason for this shape.
+// The engine is WHICHEVER ONE THIS DEPLOYMENT HAS, chosen at the chokepoint
+// (`lib/text/router.ts`). On a machine with a `claude` login that is a LOCAL
+// CLAUDE CODE PROCESS driven headlessly, authenticating with the logged-in
+// subscription — no API key in the environment, in a vault or in a bundle, which
+// is still the app's default posture and still the reason for this shape. On a
+// managed platform, where no binary and no interactive login can exist, it is a
+// metered cloud engine. The handler names the TURN, not the vendor.
 //
 // The seam is still a route handler rather than a fetch from the pad, for a
-// different reason than before: a browser cannot spawn a process either.
+// reason that now holds on both rungs: a browser cannot spawn a process, and it
+// must not hold a vendor key either.
 //
-// Two costs of the CLI engine over the SDK, both real, both paid deliberately:
-//   1. No `output_config.format`, so the plan's shape is a REQUEST, not a
-//      guarantee — `parseEditPlan` validates and rejects rather than trusting.
+// Two costs of the CLI engine over the SDK, both real, both paid deliberately —
+// AND THE FIRST ONE IS NOW RUNG-DEPENDENT, which is the clearest thing the
+// ladder bought:
+//   1. No `output_config.format`, so on the local rung the plan's shape is a
+//      REQUEST, not a guarantee — `parseEditPlan` validates and rejects rather
+//      than trusting. On the cloud rung Gemini constrains decoding to the schema
+//      and the guarantee is real; `engine.schemaEnforcement` says which happened,
+//      and `parseEditPlan` runs either way because a validator that only runs on
+//      the weaker rung is a validator nobody tests.
 //   2. No cross-call prompt caching, so each run re-reads the whole notebook.
 //      Runs are minutes either way; this is a cost line, not a latency one.
 //
@@ -41,8 +51,8 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { guardRequest } from "@/lib/apiAuth";
-import { CliError, runClaude } from "@/lib/claudeCli";
-import { MODEL } from "@/lib/model";
+import { TextError, statusFor } from "@/lib/text/errors";
+import { reason } from "@/lib/text/router";
 import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
 import { EDIT_PLAN_SCHEMA, PlanError, parseEditPlan } from "@/app/_phases/script/editPlan";
 import { ATTRIBUTION } from "@/app/_phases/script/impact";
@@ -400,7 +410,14 @@ export async function POST(req: Request) {
       JSON.stringify(body.notes, null, 2),
     ].join("\n");
 
-    const run = await runClaude(prompt);
+    // THE SCHEMA IS HANDED TO THE ENGINE, not only written into the prompt
+    // above. On the local rung nothing changes — the CLI cannot constrain its
+    // own output, so the router appends the same demand the prompt already makes
+    // and validates the answer on the way back. On the cloud rung it becomes
+    // real enforcement. Either way `parseEditPlan` below is unchanged and still
+    // authoritative: it checks more than a schema can (render ids against the
+    // table, op vocabulary), and this app does not have two validators.
+    const run = await reason({ prompt, turn: "edit-plan", schema: EDIT_PLAN_SCHEMA });
     const plan = parseEditPlan(run.text);
 
     // A plan may only name material that was sent. `parseEditPlan` checks the
@@ -437,12 +454,25 @@ export async function POST(req: Request) {
     return Response.json({
       plan,
       engine: {
-        kind: "local-claude-code",
-        model: MODEL,
-        sessionId: run.sessionId,
-        costUsd: run.costUsd,
-        durationMs: run.durationMs,
-        promptChars: prompt.length,
+        // `kind` keeps its existing two-value shape for the client that already
+        // reads it; everything below it is new and additive, so a staged version
+        // written before this change still renders.
+        kind: run.provenance.transport === "local-subprocess" ? "local-claude-code" : "cloud-api",
+        provider: run.provenance.provider,
+        model: run.provenance.model,
+        // THE RUNG TRAVELS ONTO THE VERSION. The client keeps this receipt on
+        // the version it stages, so "which engine wrote this plan, and was it
+        // the one I configured" survives with the work — which is the whole
+        // point of labelling the ladder rather than logging it.
+        rung: run.provenance.rung,
+        transport: run.provenance.transport,
+        schemaEnforcement: run.provenance.schemaEnforcement,
+        reroutedFrom: run.provenance.reroutedFrom,
+        sessionId: run.provenance.sessionId,
+        costUsd: run.provenance.costUsd,
+        costBasis: run.provenance.costBasis,
+        durationMs: run.provenance.durationMs,
+        promptChars: run.provenance.promptChars,
       },
     });
   } catch (e) {
@@ -464,10 +494,17 @@ export async function POST(req: Request) {
         { status: 502 },
       );
 
-    if (e instanceof CliError) {
-      const status = e.kind === "not-installed" || e.kind === "not-logged-in" ? 503 : 504;
-      return Response.json({ detail: `${e.message} Nothing was changed.`, code: e.kind }, { status });
-    }
+    // One taxonomy, one status map (lib/text/errors.ts). This used to be a
+    // hand-rolled ternary here and a second copy of it in /api/frames. The
+    // message a TextError carries at the bottom of the ladder names every engine
+    // that was tried and why each dropped out, so "the model could not be
+    // reached" — the sentence that sends an operator to check the one place the
+    // fault is not — is no longer something this route can say.
+    if (e instanceof TextError)
+      return Response.json(
+        { detail: `${e.message} Nothing was changed.`, code: e.kind },
+        { status: statusFor(e.kind) },
+      );
 
     console.error("[recalibrate]", e);
     return Response.json({ detail: "The recalibration failed. Nothing was changed." }, { status: 502 });

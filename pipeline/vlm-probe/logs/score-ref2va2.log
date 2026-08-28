@@ -1,0 +1,115 @@
+Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.52, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
+Some weights of the model checkpoint at facebook/detr-resnet-50 were not used when initializing DetrForObjectDetection: ['model.backbone.conv_encoder.model.layer1.0.downsample.1.num_batches_tracked', 'model.backbone.conv_encoder.model.layer2.0.downsample.1.num_batches_tracked', 'model.backbone.conv_encoder.model.layer3.0.downsample.1.num_batches_tracked', 'model.backbone.conv_encoder.model.layer4.0.downsample.1.num_batches_tracked']
+- This IS expected if you are initializing DetrForObjectDetection from the checkpoint of a model trained on another task or with another architecture (e.g. initializing a BertForSequenceClassification model from a BertForPreTraining model).
+- This IS NOT expected if you are initializing DetrForObjectDetection from the checkpoint of a model that you expect to be exactly identical (initializing a BertForSequenceClassification model from a BertForSequenceClassification model).
+  qui-gon@005      face conf 1.0
+  qui-gon@022      face conf 0.997
+  qui-gon@023      face conf 1.0
+  qui-gon@024      face conf 1.0
+  obi-wan@028      face conf 1.0
+
+ANCHORS -- the scale, from real film
+------------------------------------
+   identity    look  kind       pair
+     0.1880  0.1181  within     qui-gon@022 / qui-gon@023   same actor, same continuous shot
+     0.3644  0.5251  floor      qui-gon@005 / qui-gon@024   same actor, medium-close -> close-up, warm -> red
+     0.3535  0.4994  floor      qui-gon@005 / qui-gon@023   same actor, medium-close -> medium
+     0.2810  0.5923  floor      qui-gon@023 / qui-gon@024   same actor, medium -> close-up
+     0.7327  0.2780  hard-ceil  qui-gon@023 / obi-wan@028   different actor, same robes, same corridor, same light
+     0.6246  0.7490  hard-ceil  qui-gon@024 / obi-wan@028   different actor, same robes, different framing
+
+  identity within-shot (one continuous take) 0.188
+  identity floor (same actor, real cut)      0.3644
+  identity ceiling (same robes, diff actor)  0.6246
+  separation                                 +0.2602
+  look floor (same scene across a real cut)  0.5923
+
+  01-turn_a-first          face conf 1.0
+  01-turn_b-mid            face conf 1.0
+  01-turn_c-last           face conf NONE
+  02-walk_a-first          face conf 1.0
+  02-walk_b-mid            face conf NONE
+  02-walk_c-last           face conf NONE
+  03-look_a-first          face conf 1.0
+  03-look_b-mid            face conf 1.0
+  03-look_c-last           face conf 1.0
+
+LANE -- ref2va
+--------------
+   identity    look  kind       pair
+     0.1498  0.1469  test       01-turn_a-first / 01-turn_b-mid
+     no face  0.4400  test       01-turn_a-first / 01-turn_c-last
+     0.0441  0.0206  test       01-turn_a-first / 02-walk_a-first
+     no face  0.8499  test       01-turn_a-first / 02-walk_b-mid
+     no face  0.8564  test       01-turn_a-first / 02-walk_c-last
+     0.0445  0.0170  test       01-turn_a-first / 03-look_a-first
+     0.1270  0.2290  test       01-turn_a-first / 03-look_b-mid
+     0.1621  0.3771  test       01-turn_a-first / 03-look_c-last
+     no face  0.3342  test       01-turn_b-mid / 01-turn_c-last
+     0.1348  0.1445  test       01-turn_b-mid / 02-walk_a-first
+     no face  0.8353  test       01-turn_b-mid / 02-walk_b-mid
+     no face  0.8078  test       01-turn_b-mid / 02-walk_c-last
+     0.1575  0.1469  test       01-turn_b-mid / 03-look_a-first
+     0.1098  0.2347  test       01-turn_b-mid / 03-look_b-mid
+     0.1887  0.3869  test       01-turn_b-mid / 03-look_c-last
+     no face  0.4277  test       01-turn_c-last / 02-walk_a-first
+     no face  0.9173  test       01-turn_c-last / 02-walk_b-mid
+     no face  0.8715  test       01-turn_c-last / 02-walk_c-last
+     no face  0.4413  test       01-turn_c-last / 03-look_a-first
+     no face  0.3270  test       01-turn_c-last / 03-look_b-mid
+     no face  0.3159  test       01-turn_c-last / 03-look_c-last
+     no face  0.8573  test       02-walk_a-first / 02-walk_b-mid
+     no face  0.8490  test       02-walk_a-first / 02-walk_c-last
+     0.0356  0.0205  test       02-walk_a-first / 03-look_a-first
+     0.1095  0.2292  test       02-walk_a-first / 03-look_b-mid
+     0.1707  0.4006  test       02-walk_a-first / 03-look_c-last
+     no face  0.1864  test       02-walk_b-mid / 02-walk_c-last
+     no face  0.8709  test       02-walk_b-mid / 03-look_a-first
+     no face  0.9319  test       02-walk_b-mid / 03-look_b-mid
+     no face  0.9266  test       02-walk_b-mid / 03-look_c-last
+     no face  0.8827  test       02-walk_c-last / 03-look_a-first
+     no face  0.9526  test       02-walk_c-last / 03-look_b-mid
+     no face  0.9446  test       02-walk_c-last / 03-look_c-last
+     0.0976  0.1908  test       03-look_a-first / 03-look_b-mid
+     0.1365  0.3622  test       03-look_a-first / 03-look_c-last
+     0.0943  0.1728  test       03-look_b-mid / 03-look_c-last
+
+  01-turn_a-first / 01-turn_b-mid: as tight as one continuous take; world holds
+  01-turn_a-first / 01-turn_c-last: unscored (no face detected)
+  01-turn_a-first / 02-walk_a-first: as tight as one continuous take; world holds
+  01-turn_a-first / 02-walk_b-mid: unscored (no face detected)
+  01-turn_a-first / 02-walk_c-last: unscored (no face detected)
+  01-turn_a-first / 03-look_a-first: as tight as one continuous take; world holds
+  01-turn_a-first / 03-look_b-mid: as tight as one continuous take; world holds
+  01-turn_a-first / 03-look_c-last: as tight as one continuous take; world holds
+  01-turn_b-mid / 01-turn_c-last: unscored (no face detected)
+  01-turn_b-mid / 02-walk_a-first: as tight as one continuous take; world holds
+  01-turn_b-mid / 02-walk_b-mid: unscored (no face detected)
+  01-turn_b-mid / 02-walk_c-last: unscored (no face detected)
+  01-turn_b-mid / 03-look_a-first: as tight as one continuous take; world holds
+  01-turn_b-mid / 03-look_b-mid: as tight as one continuous take; world holds
+  01-turn_b-mid / 03-look_c-last: same person, as tight as real film; world holds
+  01-turn_c-last / 02-walk_a-first: unscored (no face detected)
+  01-turn_c-last / 02-walk_b-mid: unscored (no face detected)
+  01-turn_c-last / 02-walk_c-last: unscored (no face detected)
+  01-turn_c-last / 03-look_a-first: unscored (no face detected)
+  01-turn_c-last / 03-look_b-mid: unscored (no face detected)
+  01-turn_c-last / 03-look_c-last: unscored (no face detected)
+  02-walk_a-first / 02-walk_b-mid: unscored (no face detected)
+  02-walk_a-first / 02-walk_c-last: unscored (no face detected)
+  02-walk_a-first / 03-look_a-first: as tight as one continuous take; world holds
+  02-walk_a-first / 03-look_b-mid: as tight as one continuous take; world holds
+  02-walk_a-first / 03-look_c-last: as tight as one continuous take; world holds
+  02-walk_b-mid / 02-walk_c-last: unscored (no face detected)
+  02-walk_b-mid / 03-look_a-first: unscored (no face detected)
+  02-walk_b-mid / 03-look_b-mid: unscored (no face detected)
+  02-walk_b-mid / 03-look_c-last: unscored (no face detected)
+  02-walk_c-last / 03-look_a-first: unscored (no face detected)
+  02-walk_c-last / 03-look_b-mid: unscored (no face detected)
+  02-walk_c-last / 03-look_c-last: unscored (no face detected)
+  03-look_a-first / 03-look_b-mid: as tight as one continuous take; world holds
+  03-look_a-first / 03-look_c-last: as tight as one continuous take; world holds
+  03-look_b-mid / 03-look_c-last: as tight as one continuous take; world holds
+
+  worst identity pair 0.1887   -> same person, as tight as real film; world drifts
+  21 of 36 pairs unscored -- no face detected

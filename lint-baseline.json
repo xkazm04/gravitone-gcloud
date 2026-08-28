@@ -6,7 +6,7 @@
     "PREDICATE (what was counted, over which population, matched how):",
     "  ESLint warning-severity findings, grouped by rule id, produced by the flat",
     "  config in eslint.config.mjs over the whole repository minus that config's",
-    "  `ignores` block, using the rule set pinned by eslint-config-next@16.3.0.",
+    "  `ignores` block, using the rule set pinned by eslint-config-next@16.3.3.",
     "  Error-severity findings are NOT in this file: the ratchet holds them at zero",
     "  unconditionally.",
     "",
@@ -24,7 +24,7 @@
     "    downgrade in eslint.config.mjs, so the rule stands at plain blocking",
     "    severity."
   ],
-  "measuredAt": "2026-08-24",
+  "measuredAt": "2026-08-27",
   "filesFloor": 150,
   "warnings": {
     "react-hooks/set-state-in-effect": 14,

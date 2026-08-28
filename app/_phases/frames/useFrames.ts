@@ -19,7 +19,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { accessHeader, generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
 import { getProject, reportPhase, type PhaseState, type Project } from "@/lib/projects";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
-import { projectStyle, STYLE_MISS_WORD, type StyleBlock } from "@/lib/themes";
+import { projectStyle, STYLE_MISS_WORD, styleRefs, type StyleBlock } from "@/lib/themes";
 import { useThemes } from "@/lib/useThemes";
 import { useAuth } from "@/lib/useAuth";
 
@@ -97,6 +97,14 @@ export function useFrames(projectId: string) {
    *  project whose style is perfectly fine looks exactly like one whose style
    *  was deleted. It is folded into `loaded` below rather than flashed. */
   const styleReady = projectRead && themes !== null;
+  /** The image half of the style contract. Text without references holds the
+   *  nameable attributes and loses everything language cannot pin down — the
+   *  playground's own control-arm run measured conditioning at 67% palette
+   *  retention vs 33% for the block alone (docs/imaging.md). The production
+   *  path was the one caller still generating text-only against a theme whose
+   *  approved sheet existed for exactly this. Empty for a fallback preset,
+   *  which has no sheet — the block alone is then the honest floor. */
+  const references = useMemo(() => styleRefs(chosen.theme), [chosen.theme]);
 
   const render = RENDERS[0];
   const [frames, setFrames] = useState<Frame[]>([]);
@@ -210,6 +218,7 @@ export function useFrames(projectId: string) {
           negativePrompt: NEGATIVE_PROMPT,
           aspect: "16:9",
           count: 1,
+          references: references.length ? references : undefined,
         });
         const img = res.images[0];
         patch(id, (f) => ({
@@ -239,7 +248,7 @@ export function useFrames(projectId: string) {
         });
       }
     },
-    [frames, block, patch],
+    [frames, block, references, patch],
   );
 
   /* ── layers ─────────────────────────────────────────────────────────────── */
@@ -566,6 +575,7 @@ export function useFrames(projectId: string) {
     busy,
     error,
     block,
+    references,
     styleName,
     /** Whether the plates are in the project's OWN style. False means the
      *  label above is a fallback, and the surface colours it as a warning. */

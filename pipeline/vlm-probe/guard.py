@@ -195,6 +195,46 @@ def commit():
     return used_kb / 1048576, limit_kb / 1048576
 
 
+# Disk is not an independent resource on this box -- it is where commit charge
+# goes. Measured 2026-08-26: across six Flux 2 lanes the system pagefile grew to
+# 136 GB (peak usage 107 GB) and free disk fell from 262 GB to 100 GB. Nothing
+# downloaded it; Windows grew pagefile.sys in real time to absorb the commit the
+# generation stack demanded, which is exactly why commit exhaustion was survived
+# rather than fatal.
+#
+# The failure mode this creates is circular and silent: a full disk means the
+# pagefile cannot grow, which means commit hits its limit, which is the
+# `HostBuffer.read_file_slice failed` hang the rest of this module exists to
+# prevent. So disk headroom is a generation resource and is checked as one.
+#
+# Do NOT "fix" a large pagefile by capping it. It is load-bearing.
+DISK_FLOOR_GB = 40.0
+
+
+def disk_free():
+    """(free_gb, total_gb) on the system drive."""
+    r = subprocess.run(
+        ["powershell", "-NoProfile", "-Command",
+         "$d=Get-PSDrive C; '{0} {1}' -f $d.Free,($d.Free+$d.Used)"],
+        capture_output=True, text=True)
+    free_b, total_b = (float(x) for x in r.stdout.strip().split())
+    return free_b / 1073741824, total_b / 1073741824
+
+
+def pagefile():
+    """(allocated_gb, peak_used_gb) -- how much disk commit has already eaten."""
+    r = subprocess.run(
+        ["powershell", "-NoProfile", "-Command",
+         "$p=Get-CimInstance Win32_PageFileUsage | Select-Object -First 1; "
+         "'{0} {1}' -f $p.AllocatedBaseSize,$p.PeakUsage"],
+        capture_output=True, text=True)
+    try:
+        alloc_mb, peak_mb = (float(x) for x in r.stdout.strip().split())
+    except ValueError:
+        return 0.0, 0.0
+    return alloc_mb / 1024, peak_mb / 1024
+
+
 def stop_comfy(wait=30):
     """Kill ComfyUI outright and wait for the memory to come back.
 
@@ -218,8 +258,52 @@ def stop_comfy(wait=30):
     return False
 
 
-def recycle_comfy(reason=""):
-    """Hard-restart ComfyUI to reclaim what a long batch has accumulated."""
+MY_PREFIXES = ("baseline", "reference", "hero", "chain-", "ref2va-", "shot")
+
+
+def foreign_job():
+    """A running ComfyUI job that this pipeline did not submit, or None.
+
+    **This box is not ours alone.** Discovered 2026-08-26 the expensive way: a
+    second workload (`forge.py plans/sweep-01.json`, writing `foundry-*`) was
+    driving the same ComfyUI for the whole session, and `recycle_comfy()` does
+    `Stop-Process -Force`. Every recycle -- nine across the stills lanes, one
+    before each motion clip -- would have killed whatever that pipeline had in
+    flight, silently, from its point of view for no reason at all.
+
+    ComfyUI is a shared singleton with no notion of tenancy, so the only
+    available courtesy is to look before killing. Identify jobs by the
+    filename_prefix they will write: ours start with MY_PREFIXES.
+    """
+    try:
+        q = _get(f"{COMFY}/queue", timeout=10)
+    except Exception:
+        return None
+    for item in q.get("queue_running", []):
+        wf = item[2] if len(item) > 2 else {}
+        if not isinstance(wf, dict):
+            continue
+        for node in wf.values():
+            if not isinstance(node, dict):
+                continue
+            pre = (node.get("inputs") or {}).get("filename_prefix")
+            if isinstance(pre, str) and not pre.startswith(MY_PREFIXES):
+                return pre
+    return None
+
+
+def recycle_comfy(reason="", force=False):
+    """Hard-restart ComfyUI to reclaim what a long batch has accumulated.
+
+    Refuses while someone else's job is running, because the restart would
+    destroy it. Pass force=True only when you know the other job is expendable.
+    """
+    other = foreign_job()
+    if other and not force:
+        raise RuntimeError(
+            f"refusing to recycle ComfyUI: another pipeline's job is running "
+            f"({other!r}). A recycle is Stop-Process -Force and would kill it. "
+            f"Wait for it, or pass force=True if it is expendable.")
     used, limit = commit()
     rf, _ = ram()
     print(f"  guard: recycling ComfyUI{' (' + reason + ')' if reason else ''} "
@@ -233,12 +317,54 @@ def recycle_comfy(reason=""):
     return ok
 
 
-def headroom_ok(ram_floor=None, commit_frac=0.90):
-    """Is it safe to keep going? False means recycle before the next load."""
+def headroom_ok(ram_floor=None, commit_frac=0.90, disk_floor=None):
+    """Is it safe to keep going? False means recycle before the next load.
+
+    Recycling reclaims RAM and commit. It does NOT reclaim disk -- a pagefile
+    that has grown stays grown -- so `disk_ok()` is reported separately by
+    callers that need to stop rather than restart.
+    """
     ram_floor = RAM_FLOOR_GB if ram_floor is None else ram_floor
     rf, _ = ram()
     used, limit = commit()
     return rf >= ram_floor and (used / limit) < commit_frac
+
+
+# VRAM is the constraint host-memory checks cannot see, and it is the one that
+# binds for video. Measured 2026-08-26 on the H3 chain lane at 832x480x73: clip
+# 1 succeeded, clip 2 died with "Allocation on device 0 would exceed allowed
+# memory -- currently allocated 20.23 GiB" while RAM and commit both looked
+# healthy. A finished clip does not give its VRAM back, so a lane that runs
+# several must start each one on an engine that has.
+VRAM_FLOOR_GB = 8.0
+
+
+def vram_ok(floor=None):
+    """Is there room on the card for another clip? False means recycle."""
+    floor = VRAM_FLOOR_GB if floor is None else floor
+    vf, _ = vram()
+    return vf >= floor
+
+
+def disk_ok(floor=None):
+    """Is there room left for the pagefile to grow into? Recycling will not help."""
+    floor = DISK_FLOOR_GB if floor is None else floor
+    free, _ = disk_free()
+    return free >= floor
+
+
+def require_disk(floor=None):
+    """Refuse to start a heavy load that could wedge the box by filling the disk."""
+    floor = DISK_FLOOR_GB if floor is None else floor
+    free, total = disk_free()
+    alloc, peak = pagefile()
+    if free < floor:
+        raise RuntimeError(
+            f"only {free:.1f} GB free of {total:.0f} on C: (floor {floor:.0f}). "
+            f"pagefile is {alloc:.0f} GB allocated, {peak:.0f} GB peak. A full disk "
+            f"stops the pagefile growing, which turns commit pressure back into a "
+            f"silent hang. Free space before running this stage.")
+    return free
 
 
 def status():
@@ -247,6 +373,9 @@ def status():
     res = ollama_resident()
     print(f"VRAM  {vf:5.1f} free / {vt:.0f} GB   ({100 * (1 - vf / vt):.0f}% used)")
     print(f"RAM   {rf:5.1f} free / {rt:.0f} GB   ({100 * (1 - rf / rt):.0f}% used)")
+    df, dt = disk_free()
+    alloc, peak = pagefile()
+    print(f"DISK  {df:5.1f} free / {dt:.0f} GB   (pagefile {alloc:.0f} GB alloc, {peak:.0f} GB peak)")
     print(f"ollama resident: {res or 'nothing'}")
     print(f"comfyui: {'running' if comfy_up() else 'not running'}")
     return vf, rf

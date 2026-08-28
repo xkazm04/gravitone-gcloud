@@ -158,6 +158,30 @@ export function statusOf(t: Theme): ThemeStatus {
 
 export const approvedProofs = (t: Theme): Proof[] => t.proofs.filter((p) => p.state === "approved");
 
+/** How many approved proofs to SEND as style references per call.
+ *
+ *  The window (PROOF_CAP) is the model's number; this one is ours, and they are
+ *  different on purpose. Each reference is a ~250KB base64 payload on every
+ *  single generation, and its value saturates fast — four is where the style is
+ *  unambiguous and the request is still quick. Declared once, here, beside the
+ *  window, so the two numbers cannot be conflated and no surface grows its own
+ *  drifting copy. */
+export const SEND_REFS = 4;
+
+/** The references a generation call should carry for a theme: the newest
+ *  approved proofs first (the most recent approval is the best statement of
+ *  where the style landed), capped at SEND_REFS. Returns [] for a theme with
+ *  nothing approved — callers turn that into "no references", never into a
+ *  pending or rejected proof going up the wire. */
+export function styleRefs(t: Theme | null | undefined): { base64: string; mime: string }[] {
+  if (!t) return [];
+  return approvedProofs(t)
+    .slice()
+    .sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id))
+    .slice(0, SEND_REFS)
+    .map((p) => ({ base64: p.base64, mime: p.mime }));
+}
+
 /** Whether the sheet already holds the model's whole reference window. The one
  *  thing that makes room is rejecting an approved proof — which is exactly what
  *  the surface tells the user to do, and now the only thing it needs to be. */

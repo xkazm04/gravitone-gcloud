@@ -1,0 +1,3 @@
+# The pre-push hook is POSIX sh run by git's sh.exe on Windows — a CRLF
+# checkout breaks it at the shebang. Pin LF regardless of core.autocrlf.
+.githooks/* text eol=lf

@@ -148,10 +148,27 @@ export function overrideLineOf(v: Version): string | null {
  *  not told what it cost. Those are different facts and the surfaces say so
  *  differently. */
 export interface EngineRun {
-  /** Which engine. "local-claude-code" today; the field exists so a second one
-   *  cannot arrive silently. */
+  /** Which engine. "local-claude-code" or "cloud-api" — and the field existed,
+   *  with this exact comment, so that the second one could not arrive silently.
+   *  It has now arrived (lib/text/router.ts), and the three fields below are
+   *  what keep it from being silent. */
   kind: string;
   model?: string;
+  /** WHICH ENGINE ACTUALLY SERVED, and at which rung of the fallback ladder.
+   *
+   *  These are not decoration and they are not diagnostics. A version staged
+   *  from a metered cloud engine and one written by the operator's own local
+   *  seat cost different money, sent the creator's unpublished notebook to
+   *  different places, and are different findings about the same manuscript.
+   *  The ladder's cardinal sin is a lower rung rendering indistinguishably from
+   *  the preferred one, so the label travels onto the version and out to the
+   *  receipt line rather than living only in a server log that rotates.
+   *
+   *  Optional, like every other field here, because a version staged before this
+   *  existed has none — and absence reads as "not recorded", never as "local". */
+  provider?: string;
+  transport?: string;
+  rung?: string;
   /** The CLI session, for anyone reading the run back out of `~/.claude`. */
   sessionId?: string;
   costUsd?: number;
@@ -173,6 +190,9 @@ export function engineRunOf(raw: unknown): EngineRun | undefined {
   return {
     kind: r.kind,
     model: str(r.model),
+    provider: str(r.provider),
+    transport: str(r.transport),
+    rung: str(r.rung),
     sessionId: str(r.sessionId),
     costUsd: num(r.costUsd),
     durationMs: num(r.durationMs),
@@ -206,6 +226,23 @@ export function receiptOf(v: Version): string | null {
     r.durationMs === undefined ? "duration not reported" : secs(r.durationMs),
     r.promptChars === undefined ? null : `${Math.round(r.promptChars / 1000)}k prompt chars`,
     r.model ?? null,
+    // WHERE IT RAN, on the receipt, and only when there is something to say.
+    //
+    // `transport` is absent on versions staged before the engine could be
+    // anything but local, and inventing "local" for them would assert a fact
+    // nobody recorded — so absence stays absence, exactly as an unreported cost
+    // does two lines up.
+    //
+    // A cloud turn is always labelled. A local turn is labelled ONLY when it
+    // arrived at rung 2 or lower, because on a local-first install "the engine
+    // you configured answered" is the unremarkable case and stamping every
+    // receipt with it would train the reader to stop seeing the word — which is
+    // exactly how the interesting case gets missed.
+    r.transport === "cloud-api"
+      ? `via ${r.provider ?? "a cloud engine"}${r.rung === "alternate" ? " (fallback)" : ""}`
+      : r.rung === "alternate"
+        ? `via ${r.provider ?? "a fallback engine"} (fallback)`
+        : null,
   ]
     .filter(Boolean)
     .join(" · ");

@@ -1,6 +1,6 @@
 # Adopted skills
 
-Nine skills. Eight adopted on 2026-08-11 from `dolla/personas/.claude/skills/` and adapted to this repo:
+Ten skills. Eight adopted on 2026-08-11 from `dolla/personas/.claude/skills/` and adapted to this repo:
 a UI-first Next.js 16 prototype of a content-production studio, running entirely on mocked fixtures
 in `app/_studio/`, with no backend, no tests and no deploy target yet.
 
@@ -14,6 +14,7 @@ in `app/_studio/`, with no backend, no tests and no deploy target yet.
 | `ship-loop` | Long-horizon ship-readiness loop: 8-dimension scorecard, user-gated milestones, verification gate. |
 | `leonardo` | Image generation for product-surface assets and fixture stills. |
 | `motionize` | Traced, motion-animated SVG glyphs for states that deserve explaining. |
+| `train-style` | Written here 2026-08-27, not adopted. Drives `lib/foundry/extract/` from a folder on disk: read back → group → replicate from words with self-critique → transfer → Claude reads the results with its own eyes → cull in `/foundry` → Extract (or headless `--commit`). Same engine the hosted Extract tab drives; the CLI is `pipeline/foundry/extract.mts`. Needs `GOOGLE_AI_API_KEY`; spends against the imaging budget window. |
 | `gauntlet` | Adopted 2026-08-12 from `dolla/kp/.claude/skills/uat` (v1.5). Battle-tests the **research methodic**, not the UI: 20 Creators across Geopolitics / Tech / Fraud / Entertainment run their own topics through `RESEARCH-PROMPT.md` → notebook → board → engine, every finding names the artifact it indicts, and a Fable judge rules on which domains need their own **lens** versus different content in the same mechanism. Overlay in `gauntlet/`. |
 
 ## The three facts every one of them was taught

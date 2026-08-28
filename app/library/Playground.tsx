@@ -19,19 +19,11 @@ import { Loader2, Sparkles } from "lucide-react";
 
 import { imgSrc, generateImage, ImagingRequestError, type GenerateResult } from "@/lib/imagingClient";
 import { compilePrompt, NEGATIVE_PROMPT, PROMPT_CHAR_LIMIT } from "@/lib/stylePrompt";
-import type { StyleBlock } from "@/lib/themes";
+import { SEND_REFS, type StyleBlock } from "@/lib/themes";
 
 import { TRIALS } from "./trials";
 
 const DEFAULT_SUBJECT = TRIALS[0].subject;
-
-/** How many approved proofs to send as style references.
- *
- *  The model accepts 14, but each is a ~250KB base64 payload and they go up the
- *  wire on every trial. Four is where the style is unambiguous and the request
- *  is still quick — past that you are paying seconds for agreement you already
- *  had. */
-const MAX_REFS = 4;
 
 /** One candidate per trial. Declared once so the price shown before the click
  *  and the count sent to the vendor cannot drift apart. */
@@ -194,7 +186,7 @@ export default function Playground({
   }, [usdPerImage]);
 
   const estimate = priceLabel(price);
-  const refs = references.slice(0, MAX_REFS);
+  const refs = references.slice(0, SEND_REFS);
   const conditioned = useRefs && refs.length > 0;
 
   const prompt = compilePrompt(block, subject);

@@ -1,0 +1,52 @@
+#!/bin/sh
+# Pre-push gate for main (see docs/DEPLOYMENT.md).
+#
+# This repo deploys nowhere — CI is verification only — so a red main is not a
+# broken site, it is a broken CONTRACT: the next reader of the tree cannot tell
+# their own mistake from the standing one. This hook runs `npm run verify` (the
+# exact blocking set of the `gates` CI job, see .github/workflows/gates.yml)
+# before any push that updates refs/heads/main. Other branches push freely;
+# CI covers them.
+#
+# Wired via `git config core.hooksPath .githooks` (the `prepare` script does it
+# on every install). Zero dependencies — POSIX sh and npm only.
+#
+# Escape hatch (emergencies only, record why in the commit message or in
+# docs/DEPLOYMENT.md's skip log):
+#   GRAVITONE_SKIP_GATE=1 git push ...
+
+# git feeds one line per ref being pushed on stdin:
+#   <local ref> SP <local sha> SP <remote ref> SP <remote sha> LF
+targets_main=0
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main) targets_main=1 ;;
+  esac
+done
+
+[ "$targets_main" = "1" ] || exit 0
+
+if [ "$GRAVITONE_SKIP_GATE" = "1" ]; then
+  echo "==================================================================" >&2
+  echo "pre-push: GRAVITONE_SKIP_GATE=1 — SKIPPING THE FULL GATE ON MAIN:" >&2
+  echo "  typecheck, lint:ratchet, check:manifest, test, build, check:bundle" >&2
+  echo "  (npm run verify) will NOT run before this push." >&2
+  echo "Record the reason in the commit message or in docs/DEPLOYMENT.md's" >&2
+  echo "skip log. CI will still render the real verdict — watch it." >&2
+  echo "==================================================================" >&2
+  exit 0
+fi
+
+echo "pre-push: push targets main — running the full gate (npm run verify)..." >&2
+
+npm run verify || {
+  echo "" >&2
+  echo "pre-push: verify FAILED — push to main blocked." >&2
+  echo "  The gate is the same blocking set CI runs (see docs/DEPLOYMENT.md)." >&2
+  echo "  Fix the failure, or in a genuine emergency:" >&2
+  echo "    GRAVITONE_SKIP_GATE=1 git push  (and record why)" >&2
+  exit 1
+}
+
+echo "pre-push: gate green — pushing." >&2
+exit 0
