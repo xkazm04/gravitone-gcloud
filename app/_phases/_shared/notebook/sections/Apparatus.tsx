@@ -95,6 +95,24 @@ export default function ApparatusSections() {
         })}
       </section>
 
+      {/* ALSO POPULATED AND ALSO DRAWN BY NOTHING until now. The questions the
+          run considered are how a reader tells which video this notebook was
+          aimed at — and the modal that promises to summarise nothing away was
+          dropping all five. */}
+      {n.candidateQuestions.length > 0 && (
+        <section className="space-y-2">
+          <H id="questions">candidate questions — what this run was aimed at</H>
+          <ul className="space-y-1.5">
+            {n.candidateQuestions.map((q) => (
+              <li key={q} className="flex gap-2 text-[13px] leading-relaxed text-slate-300">
+                <span aria-hidden className="text-white/25">—</span>
+                <span>{q}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="space-y-2">
         <H id="fit">engine fit — reported, never chosen here</H>
         {n.engineFit.map((e) => (

@@ -81,6 +81,60 @@ export default function ArgumentSections() {
         <p className="text-[13px] leading-relaxed text-white/50">{n.steelMan.whyInclude}</p>
         <p className="font-jetbrains text-[11px] text-white/30">evidence: {n.steelMan.evidence.join(", ")}</p>
       </section>
+
+      {/* THE POSITIONS THIS MODAL USED TO SWALLOW. NotebookBody promises
+          "Nothing here is summarised away: this is the artifact, and a notebook
+          you cannot read in full is a notebook you cannot check" — and
+          `counterPositions` was populated and drawn by nothing at all. The
+          first entry here is the four-year-cycle reading, which types.ts calls
+          the strongest counter in run 1 and notes "disproves the notebook's own
+          tension: high". It was invisible.
+
+          Beside the steel-man rather than inside it, because they are not the
+          same object: `steelMan` is singular and is the best case against the
+          verdict; this array holds the positions of identified holders, which
+          may be several and may each need attributing. `string` is the legacy
+          form the run-1 fixture carries — the typed CounterPosition form
+          renders its holder. */}
+      {n.counterPositions.length > 0 && (
+        <section className="space-y-2">
+          <H id="counters">counter-positions — held against the verdict</H>
+          <ul className="space-y-2">
+            {n.counterPositions.map((c, i) =>
+              typeof c === "string" ? (
+                <li key={`legacy-${i}`} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                  <p className="text-sm leading-relaxed text-slate-300">{c}</p>
+                  {/* The legacy form names no holder and cites no fact, so it
+                      cannot downgrade a tension. Saying so is the finding — see
+                      CounterPosition in types.ts. */}
+                  <p className="font-jetbrains mt-1.5 text-[11px] text-white/30">
+                    no holder named, no evidence cited — this position cannot bear on the tension
+                    until it has both
+                  </p>
+                </li>
+              ) : (
+                <li key={`${c.holder}-${i}`} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                  <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/35 uppercase">
+                    {c.holder}
+                    {c.locator ? ` · ${c.locator}` : ""}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-300">{c.position}</p>
+                  {c.statementVerbatim && (
+                    <p className="mt-1.5 border-l-2 border-white/10 pl-3 text-[13px] leading-relaxed text-slate-300">
+                      “{c.statementVerbatim}”
+                    </p>
+                  )}
+                  {c.evidence.length > 0 && (
+                    <p className="font-jetbrains mt-1.5 text-[11px] text-white/30">
+                      evidence: {c.evidence.join(", ")}
+                    </p>
+                  )}
+                </li>
+              ),
+            )}
+          </ul>
+        </section>
+      )}
     </>
   );
 }
