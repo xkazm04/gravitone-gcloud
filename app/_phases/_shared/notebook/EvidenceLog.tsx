@@ -85,10 +85,20 @@ export default function EvidenceLog() {
             </li>
           ))}
         </ul>
-        <p className="font-jetbrains pt-1 text-[11px] leading-relaxed text-amber-200/70">
-          {NOTEBOOK_COUNTS.gaps} declared gap{NOTEBOOK_COUNTS.gaps === 1 ? "" : "s"} — this run did not
-          reach primary on-chain data. See the notebook.
-        </p>
+        {/* The gap is READ, not retyped. The count beside it was already
+            computed, and the sentence describing it was a literal about run 1
+            ("this run did not reach primary on-chain data") — so any other
+            notebook would have made the two halves of one sentence disagree.
+            Same scar ResearchTriageBoard.tsx carries a comment about: its
+            column count "said six against seven for as long as it was a
+            literal". One gap is quoted because this is the summary line; the
+            notebook's own gaps section lists them all. */}
+        {NOTEBOOK_COUNTS.gaps > 0 && (
+          <p className="font-jetbrains pt-1 text-[11px] leading-relaxed text-amber-200/70">
+            {NOTEBOOK_COUNTS.gaps} declared gap{NOTEBOOK_COUNTS.gaps === 1 ? "" : "s"} — {n.researchGaps[0]}
+            {NOTEBOOK_COUNTS.gaps > 1 ? " See the notebook for the rest." : " See the notebook."}
+          </p>
+        )}
       </section>
     </div>
   );
