@@ -165,6 +165,48 @@ export interface EnergyPoint {
 }
 
 /**
+ * DRAWING COORDINATES. NOT CRAFT VALUES, NOT MEASUREMENTS, NOT SOURCED.
+ *
+ * These seven numbers used to sit unnamed and uncited inside `energyPoints`,
+ * which is the shape a laundered constant takes: a reader who found `0.45` in a
+ * craft file had no way to tell it from a figure somebody counted. They are
+ * heights on a 0..1 axis, chosen so the doctrine's SHAPE is legible — open at
+ * mid, fall back for the setup, step up per escalation movement, dip hard at the
+ * reset, arrive at the top, fall away in the tail. Any other set of numbers with
+ * the same ordering would draw the same argument.
+ *
+ * They are deliberately NOT in
+ * `knowledge/templates/trailer/steps/01-script/params.json` — that file records
+ * the refusal under `not_encoded.energyCurveShape` — because a number in the
+ * craft library is read as craft, and these carry no evidence of any kind. If
+ * this curve ever plots a measured quantity, the quantity needs a source, these
+ * become that source's units, and the refusal entry needs deleting.
+ */
+const PRESENTATION = {
+  /** The reset dips BELOW the introduction: "a peak is perceived against the
+   *  level it rose from", so the dip must be visibly the floor. */
+  reset: 0.18,
+  /** The cold open opens strong but not at the top — the shape is "open strong,
+   *  then fall back", not a ramp. */
+  coldOpen: 0.5,
+  /** The introduction is the quiet setup the escalation climbs out of. */
+  introduction: 0.3,
+  /** Escalation movements are spread over `[base, base + span)`, one step per
+   *  movement, so N rungs read as N steps rather than as one slope. */
+  escalationBase: 0.4,
+  escalationSpan: 0.45,
+  /** The tail falls away under the title and end cards. */
+  tail: 0.35,
+  /** The climax is the top of the axis by construction. Whether the cut's peak
+   *  is ACTUALLY the largest moment is `checkMagnitude`'s question, and it is
+   *  unmeasured without a shot-layer resolver. */
+  climax: 1,
+  /** Anything the role map cannot place. Mid, so an unplaced beat neither
+   *  invents a peak nor invents a dip. */
+  unplaced: 0.5,
+} as const;
+
+/**
  * THE ENERGY CURVE IS A SHAPE DERIVED FROM STRUCTURE, NOT A MEASUREMENT.
  *
  * Nothing in this repo measures loudness, cut rate or magnitude — `checkMagnitude`
@@ -175,7 +217,8 @@ export interface EnergyPoint {
  * the introduction, the climax at the peak, and a tail falling away. It exists
  * so the author can see whether the dip is THERE as a shape (PATTERNS.md § 9.6),
  * not whether it is loud enough — a curve that read as a measurement would be
- * the green-verdict lie in a picture.
+ * the green-verdict lie in a picture. The heights are `PRESENTATION` above, and
+ * that block says in its own words that they are drawing coordinates.
  */
 export function energyPoints(cut: TrailerCut): EnergyPoint[] {
   const roleOf = new Map<string, MovementRole>(cut.movements.map((m) => [m.id, m.role]));
@@ -188,15 +231,17 @@ export function energyPoints(cut: TrailerCut): EnergyPoint[] {
   return cut.beats.map((b, i) => {
     const role = roleOf.get(b.movement);
     let y: number;
-    if (b.kind === "reset") y = 0.18;
-    else if (role === "cold-open") y = 0.5;
-    else if (role === "introduction") y = 0.3;
+    if (b.kind === "reset") y = PRESENTATION.reset;
+    else if (role === "cold-open") y = PRESENTATION.coldOpen;
+    else if (role === "introduction") y = PRESENTATION.introduction;
     else if (role === "escalation") {
       const k = escalations.indexOf(b.movement);
-      y = 0.4 + (0.45 * (Math.max(k, 0) + 1)) / (steps + 1);
-    } else if (role === "climax") y = 1;
-    else if (role === "tail") y = 0.35;
-    else y = 0.5;
+      y =
+        PRESENTATION.escalationBase +
+        (PRESENTATION.escalationSpan * (Math.max(k, 0) + 1)) / (steps + 1);
+    } else if (role === "climax") y = PRESENTATION.climax;
+    else if (role === "tail") y = PRESENTATION.tail;
+    else y = PRESENTATION.unplaced;
     return {
       beatId: b.id,
       x: n <= 1 ? 0.5 : i / (n - 1),
