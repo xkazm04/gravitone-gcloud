@@ -1,0 +1,529 @@
+{
+  "$comment": "Machine-readable half of PATTERNS.md for the Score step. Shaped so `lib/music/plan.ts` (cueToPlan) and the Score surface can consume it: defaults, closed sets, ranges and verdict vocabularies — not prose. NOTHING HERE IS A TEMPO, A CUE LENGTH OR A DUCK DEPTH. Read `evidence_contract` and then `todays_invented_constants` before using a single value.",
+  "version": 1,
+  "template": "trailer",
+  "step": "03-score",
+  "updated": "2026-08-29",
+  "sample_size": 0,
+  "local_measurement_n": 3,
+  "confidence": "n=0 cues torn down. Every craft value here is doctrine from two `status: forged` registry subjects, quoted with its path. ONE claim is MEASURED and it measures this repo's own demo fixture, not the craft: corpus/bar-math.mjs, n=3 cues / 5 sections.",
+
+  "evidence_contract": {
+    "$comment": "knowledge/README.md § The evidence contract, applied to a params file. Identical envelope to ../01-script/params.json so a consumer learns it once.",
+    "envelope": "Every parameter is an object: { value, evidence, n, doctrine_only, source, quote, consumed_by }.",
+    "labels": {
+      "MEASURED": "Counted. Requires the number, the script, and the sample size. Exactly ONE block here carries it: `tempo.measuredAgainstThisRepo`.",
+      "OBSERVED": "Read off a specific source. Requires the source path and the quoted line.",
+      "INFERRED": "Our reasoning across sources, with the observations it rests on stated.",
+      "ASSUMED": "Not written here. An assumed value goes in `not_encoded` with what would settle it."
+    },
+    "doctrine_only": "true means: stated by an external practitioner document, quoted faithfully, never checked against anything this studio has made.",
+    "vendor_fact": "true means: a limit or capability of a specific vendor at a specific date, NOT craft. It expires. Never present one to a creator as a rule about music.",
+    "circularity_warning": "The registry contains `media-generation/audio-generation/music-prompt-composition/applications/node--duration-and-tempo-locking.md`, which DESCRIBES THIS REPOSITORY BY NAME. Where it reports what lib/music/ does, it is not a source for whether lib/music/ is right — a repo's own behaviour written into a registry and read back as doctrine is laundering with an extra hop. It is cited here only for what it actually measured (one live render) and for vendor facts."
+  },
+
+  "registry": {
+    "root": "ai-registry: knowledge/media-generation/audio-generation",
+    "subjects": ["music-prompt-composition", "generated-music-acceptance", "sound-effect-generation"],
+    "$comment": "Paths below are relative to `root`. The narrative-craft side of the score question — what a usable trailer cue's SHAPE is — lives in media-generation/narrative-craft/trailer-structure/techniques/cue-first-assembly.md and is quoted in ../01-script/PATTERNS.md §6, not restated here."
+  },
+
+  "brief": {
+    "$comment": "How a cue is briefed. Consumed by lib/music/plan.ts cueToPlan.",
+    "unitIsTheSection": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/section-plan-as-the-brief.md",
+      "quote": "The unit of a music brief is the section, and the brief itself is an ordered plan of them: each section carries a label (its structural role …), a duration, its own style directives stated in both directions, and its content",
+      "consumed_by": "lib/music/plan.ts cueToPlan → MusicPlan.sections"
+    },
+    "openingSectionIsTheAnchor": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/music-prompt-composition.md § The opening section is the anchor, and it is load-bearing",
+      "quote": "its style directives set the genre, tempo world, and tonal palette that later sections inherit and vary. Write it with double care, and treat any later note against it as what it is: a global restyle, not a local edit.",
+      "consumed_by": "the Score surface — a note on section 1 is a different operation from a note on section 3, and should be presented as one"
+    },
+    "laterSectionsStateDeltas": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/section-plan-as-the-brief.md § Writing the plan",
+      "quote": "later sections inherit that frame and their directives should state deltas — lift, thin, halve the feel, add a choir — not restate the identity.",
+      "note": "This is the rule `APPROACH_STYLES = ['rising energy']` half-implements: the delta is real, but the doctrine does not say the delta is a RISE. See not_encoded.approachStyles.",
+      "consumed_by": "lib/music/plan.ts — the per-section styles beyond the style block"
+    },
+    "restateStyleInFullPerSection": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/sonic-style-vocabulary.md § Identity is restated, not remembered",
+      "quote": "there is no short form, no call may opt out, and per-cue direction (this cue lifts, this one thins to a pulse) rides beside the block, never replaces it. A production whose cues were each described fresh has as many musical identities as cues.",
+      "consumed_by": "lib/music/plan.ts cueToPlan — `style` is spread into every section"
+    },
+    "markInstrumentalExplicitly": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/section-plan-as-the-brief.md § Writing the plan",
+      "quote": "An empty lyric field is ambiguous to a model that can sing; an explicit instrumental marking is not. The most expensive missing word in an underscore brief is that one.",
+      "consumed_by": "lib/music/plan.ts — the literal 'instrumental' in the style list; lib/music/types.ts PlanSection.lyrics documents the same rule"
+    },
+    "durationsAreDecisionsNotSuggestions": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/section-plan-as-the-brief.md § Writing the plan",
+      "quote": "A section plan with real durations is executable against picture; 'auto' duration is for standalone pieces where the clock is free.",
+      "note": "A trailer cue's clock is never free. `auto` is not a legal option on this template.",
+      "consumed_by": "lib/music/plan.ts — durations derived from CuePicture, never authored"
+    },
+    "structureServesTheClock": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § The bar math",
+      "quote": "A 38-second cue is not a song compressed; it is one or two sections doing one job. Brief the section plan from the duration (one build section of 26 seconds, one release of 12), never write the plan first and hope it sums.",
+      "note": "The parenthesised 26/12 is the source's own WORKED EXAMPLE, n=1, not a ratio rule. It is the nearest thing in the registry to the 2:1 split this repo used to hardcode, and it is not enough to establish one. See not_encoded.buildReleaseRatio.",
+      "consumed_by": "lib/music/plan.ts — sections are derived from the picture's spans"
+    }
+  },
+
+  "style": {
+    "axes": {
+      "value": ["genre-and-era", "mood-and-energy", "instrumentation", "production-character", "motion"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/sonic-style-vocabulary.md § The axes",
+      "quote": "One directive per axis beats five synonyms on one axis. 'Epic epic epic' is one layer shouted; 'slow-building orchestral, low brass and taiko, restrained until the final third, modern trailer production' is four layers stated once each",
+      "note": "A style block missing an axis has LEFT THAT AXIS TO THE MODEL. This repo's MUSIC_STYLE_BLOCK covers four of the five and leaves `motion` (tempo feel, rhythmic posture) unstated — INFERRED, n=1, PATTERNS.md §3.",
+      "consumed_by": "the Score surface's style-block editor — five named slots, not a free list"
+    },
+    "statedInBothDirections": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/sonic-style-vocabulary.md § The exclude list is the fence you cannot see past",
+      "quote": "The include list steers; the exclude list fences — and it is the only control on the side of the space you did not think to describe.",
+      "consumed_by": "lib/music/types.ts PlanSection.positiveStyles / negativeStyles"
+    },
+    "standingExcludes": {
+      "value": ["vocals", "fade-out ending"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/sonic-style-vocabulary.md § The exclude list is the fence you cannot see past",
+      "quote": "Standing excludes worth writing by default: vocals, for any underscore brief (and say 'instrumental' positively too — redundancy is cheap, a singer is not); fade-out endings, for anything that must cut to picture;",
+      "note": "SOURCED, contrary to the INVENTED label lib/music/plan.ts currently carries on STANDING_EXCLUDES. That constant also lists 'singing', which is a redundant restatement of 'vocals' rather than a third rule — harmless, and not doctrine.",
+      "consumed_by": "lib/music/plan.ts STANDING_EXCLUDES"
+    },
+    "perProjectExcludes": {
+      "value": "the genre's own clichés when they would collide with the picture",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/sonic-style-vocabulary.md § The exclude list is the fence you cannot see past",
+      "quote": "the genre's own clichés when they would collide with the picture (the four-chord loop, the drop, the gospel choir on the final chorus).",
+      "note": "The third standing exclude, and the one this repo does not have. It is per-project by nature — the cliché of dark orchestral is not the cliché of synth-pop — so it belongs beside the style block as an authored field, NOT as a constant in plan.ts.",
+      "consumed_by": "nothing yet — CueBrief.avoid is the seam it would arrive through"
+    },
+    "addAxesBeforeAdjectives": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/sonic-style-vocabulary.md § Decision rules",
+      "quote": "When a result is generic, add axes before adding adjectives — the miss usually means an axis was left to the model, not that an axis was understated.",
+      "consumed_by": "the Score surface — the remedy offered when a take reads generic"
+    }
+  },
+
+  "tempo": {
+    "barLengthFormula": {
+      "value": "240 / bpm",
+      "unit": "seconds per 4/4 bar",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § The bar math",
+      "quote": "At tempo B (beats per minute) in four-beat bars, a bar lasts 240 / B seconds; a downbeat is available every bar, a phrase accent typically every four or eight bars.",
+      "consumed_by": "lib/music/plan.ts barsFit"
+    },
+    "tempoIsChosenFromThePicture": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § The bar math",
+      "quote": "To land an accent on a picture event at T seconds after the cue's entry, choose B so that T divides into whole bars … the choice among them is a style decision, and the brief states both the tempo and what it was chosen to hit, so a retimed picture can re-derive rather than guess.",
+      "note": "THIS IS THE REPLACEMENT FOR A DEFAULT BPM. There is no craft default tempo and there should not be one; there is a derivation. See not_encoded.defaultBpm.",
+      "consumed_by": "the Score surface's tempo field — it should offer the candidate tempos, not a number"
+    },
+    "lockOneEdgeFloatTheOther": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § The bar math",
+      "quote": "Both edges locked plus a fixed tempo over-determines the cue … entries are placed, exits are shaped, and tails get explicit permission to ring past picture or an explicit hard out.",
+      "note": "app/_studio/score.ts's cue-3 note ('Tail rings 1.5s past picture — intended') is this rule already being followed by hand.",
+      "consumed_by": null
+    },
+    "wrongLengthIsAFailedTake": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § Decision rules",
+      "quote": "When the delivered cue misses its length, treat it as a failed take, not material to time-stretch — stretching audio to fit is a repair with an audible cost, and the brief had the number all along.",
+      "consumed_by": "the acceptance gate — a duration miss is a fail, not a trim"
+    },
+    "measuredAgainstThisRepo": {
+      "value": {
+        "cuesLandingOnABarLine": 0,
+        "cuesTotal": 3,
+        "sectionsLandingOnABarLine": 0,
+        "sectionsTotal": 5,
+        "lastSectionTemposThatWouldLand": { "cue-1": [68, 69, 103, 137], "cue-2": [68, 69, 103, 137], "cue-3": [96, 144] }
+      },
+      "evidence": "MEASURED",
+      "n": "3 cues / 5 sections — the whole population of demo cues in this repo",
+      "doctrine_only": false,
+      "script": "knowledge/templates/trailer/steps/03-score/corpus/bar-math.mjs",
+      "inputs": "app/_studio/scenes.ts (scene targetS) + app/_studio/score.ts (SPOTS bpm, sceneIds), copied 2026-08-29; tolerance is barsFit's own 0.02 bars",
+      "note": "A MEASUREMENT OF THIS FIXTURE, NOT OF TRAILER SCORING. It says the declared tempos do not satisfy the rule the code beside them implements: cueToPlan gates 'hard ending on the beat' on barsFit, so the demo never asks for the ending it was designed to ask for. It also found that for cue-1 and cue-2 NO integer tempo in 60..160 lands both sections plus the whole cue — a 6s and a 7s span share no bar length there — which is a finding about per-scene section boundaries, not about tempo. See not_encoded.perSceneSectionsAndBarMath.",
+      "consumed_by": "nothing — it is a finding, not a parameter. The Score surface should compute the same thing live from barsFit rather than store this."
+    }
+  },
+
+  "mix": {
+    "duckIsNotABriefLine": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § Ducking is a mix rule, not a brief line",
+      "quote": "Do not ask the generator to 'get quieter when someone talks'; it cannot hear the narrator, and the request spends style budget on a mix problem.",
+      "consumed_by": "lib/music/plan.ts — a duck must never enter the style or direction lists"
+    },
+    "briefTheNarratedRegionThinner": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § Ducking is a mix rule, not a brief line",
+      "quote": "A cue that will sit under narration is briefed thinner (sparser instrumentation, restrained motion in the narrated region — style-level decisions this subject owns)",
+      "note": "The brief-side move that IS available, on the instrumentation and motion axes. The mix-side move is not available at all: this repo has no mixing layer.",
+      "consumed_by": "the Score surface — the per-section style delta for a narrated span"
+    }
+  },
+
+  "acceptance": {
+    "gates": {
+      "value": ["brief-conformance", "technical", "rights-and-provenance"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/generated-music-acceptance.md",
+      "quote": "it runs on three gates that do not substitute for one another … A track can pass any two and fail the third, and each failure has a different remedy",
+      "consumed_by": "the Score surface's accept flow — three rows, never one"
+    },
+    "verdicts": {
+      "value": ["pass", "fail", "unmeasured"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/brief-conformance-listen.md § The checklist is derived from the brief, mechanically",
+      "quote": "Each item gets a verdict from the three-state vocabulary: pass, fail, or unmeasured — the item the listen could not resolve … is recorded as unmeasured, never rounded to pass. The verdict sheet, not the listener's overall impression, is the acceptance artifact.",
+      "note": "The same vocabulary app/_phases/script/gate.ts and the trailer structural checker already run on, arrived at independently by a different subject. That agreement is worth keeping visible.",
+      "consumed_by": "the Score surface's acceptance sheet"
+    },
+    "deterministicPassGatesTheListen": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/structure-verification-against-plan.md § The two-instrument discipline",
+      "quote": "Run the deterministic pass first, and let it gate the listen: a file that failed on duration or structure does not need twenty minutes of anyone's ears … the ear, arriving first, likes the take, and the liking negotiates with the numbers ('13 seconds over, but it breathes…')",
+      "consumed_by": "the Score surface — ORDER of the accept flow, not a preference"
+    },
+    "measuredProperties": {
+      "value": ["total-duration-s", "section-boundary-offsets", "tempo-at-the-accent", "ending-shape", "integrated-loudness-lufs", "true-peak-dbtp", "loudness-range-lra"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/structure-verification-against-plan.md § What the plan makes checkable + techniques/loudness-and-peak-acceptance.md § The three numbers",
+      "quote": "what could be checked against the plan is checked deterministically; the ear is reserved for what only an ear can judge",
+      "note": "NONE OF THESE IS MEASURED IN THIS REPO TODAY. `grep -rniE 'lufs|dbtp|loudness' app lib components` matches three comments saying so and no instrument. Listing them here is a specification, not a claim.",
+      "consumed_by": "nothing yet — s2 in OPEN-QUESTIONS.md is the seam"
+    },
+    "listenedProperties": {
+      "value": ["sections-present-and-in-order", "named-inclusions-audible", "named-exclusions-absent", "instrumental-as-briefed", "mood-and-energy-per-section", "ending-has-the-briefed-shape"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/brief-conformance-listen.md",
+      "quote": "instrumentation: named inclusions audible, named exclusions absent (the exclude list is checked item by item — absence does not announce itself)",
+      "note": "The checklist is derived MECHANICALLY from the brief, one item per commitment the brief made — which is only possible because the brief is a plan. Properties the brief committed to NUMBERS are not listened for at all.",
+      "consumed_by": "the Score surface's conformance sheet"
+    },
+    "listeningConditions": {
+      "value": {
+        "firstListenAt": "delivery volume, in the delivery context",
+        "translationPasses": 1,
+        "translationDevice": "deliberately bad speakers — a phone, a laptop",
+        "maxListensPerItemBeforeVerdict": 2
+      },
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/brief-conformance-listen.md § Listening conditions are part of the method",
+      "quote": "Limit repeats before the verdict. The ear normalizes defects with exposure; by the fifth listen a smeared transient is 'the sound of the track'. Verdict on the sheet within two listens per item, then stop.",
+      "note": "The '2' and the '1' are the source's own, stated without hedge, which is why they are values here and the loudness target is not.",
+      "consumed_by": "the Score surface's acceptance sheet — copy shown to the listener"
+    },
+    "truePeakCeilingDbtp": {
+      "value": -1,
+      "unit": "dBTP",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/loudness-and-peak-acceptance.md § The three numbers, and what each governs",
+      "quote": "keep true peak at or under −1 dBTP, and allow more headroom (−2 dBTP) when the destination will transcode to lossy formats, which reconstruct peaks hotter than the source stored them.",
+      "consumed_by": "nothing yet — no instrument measures it. It is the one loudness-family number this template can state."
+    },
+    "truePeakCeilingLossyDbtp": {
+      "value": -2,
+      "unit": "dBTP",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/loudness-and-peak-acceptance.md § The three numbers, and what each governs",
+      "quote": "allow more headroom (−2 dBTP) when the destination will transcode to lossy formats",
+      "note": "APPLIES HERE. The vendor returns MP3 (128–192 kbps on standard tiers), so this repo's delivery path is lossy by construction.",
+      "consumed_by": null
+    },
+    "integratedLoudnessTargets": {
+      "value": { "streaming": -14, "broadcast": [-23, -24], "theatrical-and-trailer": null },
+      "unit": "LUFS",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/loudness-and-peak-acceptance.md § The three numbers, and what each governs",
+      "quote": "streaming platforms normalize to the neighbourhood of −14 LUFS; broadcast delivery specs sit near −23/−24 LUFS depending on region; theatrical and trailer chains run their own, louder regimes with their own compliance measures.",
+      "note": "READ THE NULL. The one destination this template is named after is the one the source explicitly declines to number. It is `null` rather than a guess, and OPEN-QUESTIONS.md s1 is the blocking gap. The target is a property of the DESTINATION, never of the track — 'the acceptance question is at the target for where this ships, never loud enough'.",
+      "consumed_by": "the Score surface — and it must render the trailer row as unmeasured, never as green"
+    },
+    "everyNumberCarriesItsBasis": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/loudness-and-peak-acceptance.md",
+      "quote": "Every number is recorded with its basis — integrated versus short-term, measured over what span, against which destination target — because '−14' with no basis is a different kind of unmeasured.",
+      "consumed_by": "the acceptance record"
+    }
+  },
+
+  "defects": {
+    "$comment": "The taxonomy exists to ROUTE a remedy and to price the production. A verdict of 'failed' with no class has done half its job.",
+    "classes": {
+      "value": [
+        { "id": "smeared-transients", "cause": "model limitation, dense arrangement briefed", "remedy": "re-render", "postRepairable": false },
+        { "id": "vocal-garble", "cause": "lyric density at tempo, rare words", "remedy": "section-re-render", "postRepairable": false },
+        { "id": "section-bleed", "cause": "weak section separation in the plan", "remedy": "section-re-render", "postRepairable": false },
+        { "id": "tempo-instability", "cause": "long takes, rubato-adjacent styles", "remedy": "condemn-if-picture-locked", "postRepairable": false },
+        { "id": "broken-ending", "cause": "ending shape left unstated", "remedy": "section-re-render", "postRepairable": false },
+        { "id": "loop-seam", "cause": "loop intent not declared", "remedy": "re-render", "postRepairable": true },
+        { "id": "spectral-hole", "cause": "model tendency per style", "remedy": "repair", "postRepairable": true },
+        { "id": "phase-width-artifacts", "cause": "model tendency", "remedy": "re-render", "postRepairable": false },
+        { "id": "confident-hallucination", "cause": "underspecified brief, empty exclude list", "remedy": "re-render", "postRepairable": false }
+      ],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/generated-audio-defect-taxonomy.md § The classes",
+      "quote": "the name does two jobs: it routes the remedy — repair, section re-render, or condemn — and it accumulates into the production's real economics",
+      "note": "`tempo-instability` says condemn-if-picture-locked because the source does: 'condemn if picture-locked accents depend on the grid'. EVERY cue this studio makes is picture-locked, so for this template that class condemns.",
+      "consumed_by": "the Score surface's fail path — the class is chosen before a re-roll is offered"
+    },
+    "remedies": {
+      "value": ["repair", "section-re-render", "re-render", "condemn"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/generated-audio-defect-taxonomy.md § Routing: repair, re-render, condemn",
+      "quote": "post-repairing a structural defect buys an audible scar and the defect back next take, while re-rolling a whole piece for an EQ-shaped problem voids review capital a filter would have preserved.",
+      "consumed_by": "the Score surface"
+    },
+    "recurrenceRule": {
+      "value": 2,
+      "unit": "consecutive takes from the same brief",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/techniques/generated-audio-defect-taxonomy.md § The recurrence rule",
+      "quote": "A defect class that appears in consecutive takes from the same brief has stopped being generation noise and become a property of the brief–model pair. Stop re-rolling: the same request will keep buying the same defect.",
+      "note": "Requires a record across takes. This repo keeps none — takes live as object URLs and die with the tab. OPEN-QUESTIONS.md s6.",
+      "consumed_by": "nothing yet"
+    }
+  },
+
+  "rights": {
+    "recordedAtGenerationTime": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/generated-music-acceptance.md § Rights are an acceptance property, not a legal afterthought",
+      "quote": "the facts it needs exist at generation time and evaporate afterwards … reconstructing them at delivery — weeks later, terms changed, plan upgraded since — ranges from expensive to impossible, and a vendor's commercial grant is routinely non-retroactive across plan changes. An asset without a record is not cleared, however it sounds.",
+      "consumed_by": "nothing yet"
+    },
+    "facts": {
+      "value": ["generating-account", "plan-tier", "terms-version", "referenced-material", "vendor", "model-id", "generated-at"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "generated-music-acceptance/generated-music-acceptance.md",
+      "quote": "which account generated it, on which plan tier, under which terms, referencing what material. None of those facts are in the file.",
+      "note": "lib/music/types.ts MusicProvenance today carries vendor, modelId, requestedMs, plan and generatedAt — real provenance, and NOT YET a rights record: the account, the plan tier, the terms version and the referenced material are exactly the four that evaporate. OPEN-QUESTIONS.md s7.",
+      "consumed_by": "lib/music/types.ts MusicProvenance — the fields it would need to grow"
+    }
+  },
+
+  "vendor_windows": {
+    "$comment": "NOT CRAFT. A dated snapshot of one vendor's limits, kept here only so a plan is not briefed outside them. Never show one of these to a creator as a rule about music.",
+    "vendor": "elevenlabs music v2",
+    "vendor_fact": true,
+    "resolved_on": "2026-08-26",
+    "refresh_by": "2026-11-26",
+    "source": "music-prompt-composition/applications/process--section-plan-as-the-brief.md",
+    "value": {
+      "maxSections": 30,
+      "sectionMs": { "min": 3000, "max": 120000 },
+      "totalS": { "min": 3, "max": 600 },
+      "maxStylesPerSection": 50,
+      "contextAdherence": ["low", "medium", "high"],
+      "outputFormat": "MP3 44.1kHz 128–192kbps on standard tiers"
+    },
+    "quote": "an ordered list of up to 30 chunks; total song length 3 seconds to 10 minutes; per chunk: text …, duration_ms (3,000 to 120,000 ms), positive_styles and negative_styles (max 50 each), and context_adherence (low / medium / high)",
+    "consumed_by": "lib/music/plan.ts MIN_SECTION_S / MAX_SECTION_S / MAX_SECTIONS, and lib/music/elevenlabs.ts's pre-spend assertion"
+  },
+
+  "todays_invented_constants": {
+    "$comment": "THE ACCOUNTING. Named, with what this document can and cannot do about each. PATTERNS.md §8 is the same table in prose, with the reasoning. `cannot-replace` is a legitimate outcome and is the honest one for the number a creator actually sees.",
+    "value": [
+      {
+        "constant": "STANDING_EXCLUDES",
+        "where": "lib/music/plan.ts",
+        "verdict": "sourced",
+        "by": "style.standingExcludes",
+        "note": "labelled INVENTED in the file and it is not; two of its three items are quoted doctrine. Incomplete: the per-project third exclude is missing (style.perProjectExcludes)."
+      },
+      {
+        "constant": "MUSIC_STYLE_BLOCK",
+        "where": "app/_studio/score.ts",
+        "verdict": "partly-sourced",
+        "by": "style.axes",
+        "note": "the SHAPE is doctrine; the WORDS are this production's identity and are nobody's to source. The motion axis is missing."
+      },
+      {
+        "constant": "bpm: 84 / 112",
+        "where": "app/_studio/score.ts",
+        "verdict": "cannot-replace",
+        "by": "tempo.tempoIsChosenFromThePicture",
+        "note": "no source gives a trailer tempo and none should — tempo is derived from the picture by bar math. tempo.measuredAgainstThisRepo shows these three do not fit theirs and names the tempos that would. This file supplies the METHOD, not the number."
+      },
+      {
+        "constant": "CLOSING_STYLES",
+        "where": "lib/music/plan.ts",
+        "verdict": "partly-sourced",
+        "by": "style.standingExcludes + defects.classes[broken-ending]",
+        "note": "that a picture-locked cue needs a STATED ending shape is doctrine twice over. WHICH WORDS buy it from a given model is unsourced and unmeasured."
+      },
+      {
+        "constant": "APPROACH_STYLES",
+        "where": "lib/music/plan.ts",
+        "verdict": "cannot-replace",
+        "by": "brief.laterSectionsStateDeltas",
+        "note": "the doctrine says later sections state a DELTA; it does not say the delta is a rise. See not_encoded.approachStyles."
+      },
+      {
+        "constant": "adherence: \"high\" on every section",
+        "where": "lib/music/plan.ts",
+        "verdict": "partly-sourced",
+        "by": "vendor_windows.contextAdherence",
+        "note": "the enum and the posture are documented; whether every section of a picture-locked cue wants `high` is unmeasured."
+      },
+      {
+        "constant": "MIN_TWO_SECTION_S = 20, and the 2:1 build→release split",
+        "where": "lib/music/plan.ts — REMOVED 2026-08-29, in the same wave as this document",
+        "verdict": "gone-before-this-landed",
+        "by": null,
+        "note": "recorded because a reader will find them in the history. Neither had a source; the only place either appears in the registry is the application note DESCRIBING THIS REPO. See not_encoded.buildReleaseRatio."
+      },
+      {
+        "constant": "durS: 13 on a cue; the −6dB duck",
+        "where": "app/_studio/score.ts — REMOVED 2026-08-29",
+        "verdict": "gone-before-this-landed",
+        "by": "mix.duckIsNotABriefLine",
+        "note": "duration is now derived from the picture. The duck depth was never this document's to supply — the duck is a mix-layer fact and there is no mix layer."
+      }
+    ]
+  },
+
+  "not_encoded": {
+    "$comment": "Rules and numbers this file refuses, each with what would settle it. A consumer that wants one of these has found an open question, not a missing field.",
+    "defaultBpm": {
+      "reason": "There is no craft default tempo for a trailer cue and there should not be one. The doctrine gives a DERIVATION (choose B so the picture's accents land on bar lines), not a number, and a default would be a guess wearing a params file's authority.",
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § The bar math",
+      "settled_by": "nothing — the question is malformed. What is missing is a surface that computes candidates. OPEN-QUESTIONS.md s2."
+    },
+    "trailerLoudnessTarget": {
+      "reason": "The source numbers streaming (−14 LUFS) and broadcast (−23/−24) and explicitly declines to number the theatrical and trailer chains, saying only that they run 'their own, louder regimes with their own compliance measures'. A number invented here would be the most dangerous kind: plausible, four significant figures, and load-bearing on a delivery gate.",
+      "source": "generated-music-acceptance/techniques/loudness-and-peak-acceptance.md § The three numbers",
+      "settled_by": "the destination's own published spec, whatever the destination turns out to be. Until then the row is `unmeasured`, never green. OPEN-QUESTIONS.md s1 — blocking."
+    },
+    "duckDepthDb": {
+      "reason": "Not a knowledge gap. The duck is automation at the mix, the mix belongs to the assembly craft, and THIS REPO HAS NO MIXING LAYER — `grep -rniE 'lufs|dbtp|loudness' app lib components` matches three comments and no instrument. A number here would specify a feature that does not exist.",
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § Ducking is a mix rule, not a brief line",
+      "settled_by": "building a mix layer, or continuing to declare the duck not-performed. OPEN-QUESTIONS.md s4."
+    },
+    "buildReleaseRatio": {
+      "reason": "The nearest thing to a source is one worked example — a 38s cue briefed as 26s build + 12s release — which is n=1 and is an illustration, not a ratio rule. The 2:1 constant this repo shipped until 2026-08-29 was not derived from it; the only registry text stating 2:1 is the application note describing this repo, which cannot corroborate it.",
+      "source": "music-prompt-composition/techniques/duration-and-tempo-locking.md § The bar math",
+      "settled_by": "cue teardowns with movement timings. Nothing in this library has one."
+    },
+    "approachStyles": {
+      "reason": "'Rising energy' on every non-final section asserts a shape the doctrine does not state. A trailer cue's exposition section is described elsewhere as where a rhythmic device ENTERS and establishes pace — not as a rise — and the escalation's own doctrine warns that uniform magnitude reads as one long beat repeated.",
+      "source": "music-prompt-composition/techniques/section-plan-as-the-brief.md § Writing the plan · narrative-craft/trailer-structure/techniques/cue-first-assembly.md § What a usable cue has",
+      "settled_by": "OPEN-QUESTIONS.md s5 — whether the cue's six-part shape can be expressed as a per-scene section plan at all."
+    },
+    "perSceneSectionsAndBarMath": {
+      "reason": "MEASURED here: one section per scene makes whole-bar sections unreachable whenever adjacent scenes have coprime lengths (6s and 7s share no bar length at any integer tempo 60..160). The registry's remedy — 'the caller then adjusts bpm, not the picture' — does not apply, because no bpm fixes it. Whether the section boundaries should therefore be musical rather than per-scene is a design decision no source in the registry makes.",
+      "source": "corpus/bar-math.mjs · music-prompt-composition/techniques/duration-and-tempo-locking.md",
+      "settled_by": "a decision, not research. OPEN-QUESTIONS.md s3."
+    },
+    "whatATrailerCueIS": {
+      "reason": "Both audio subjects are about briefing and accepting GENERATED MUSIC. Neither says what a trailer cue is. The nearest description — mood opening, exposition, response, build, peak, short tail — lives in the narrative-craft bundle's cue-first-assembly and is quoted in ../01-script/PATTERNS.md §6. Restating it here as score params would be this file claiming a subject it does not have.",
+      "source": "narrative-craft/trailer-structure/techniques/cue-first-assembly.md § What a usable cue has",
+      "settled_by": "a source teardown of an actual trailer cue. n=0. OPEN-QUESTIONS.md s5, s8."
+    },
+    "effectsGrammar": {
+      "reason": "Risers, hits, whooshes, drones, cutoffs and booms are a real, forged registry vocabulary and they are SOUND EFFECTS, not score. Folding them into this step's params would merge two subjects the registry deliberately separates.",
+      "source": "sound-effect-generation/techniques/trailer-punctuation-grammar.md",
+      "settled_by": "its own step, when this studio has an effects pass. The technique is ready and waiting."
+    }
+  }
+}

@@ -79,8 +79,15 @@ Two consequences worth holding:
 
 | # | Step | Studio phase | Knowledge |
 |---|---|---|---|
-| 01 | **Script** | Script | [`steps/01-script/`](steps/01-script/) — **n=0**, doctrine only |
-| 02–05 | Frames · Motion · Score · Cut | — | not started |
+| 01 | **Script** | Script | [`steps/01-script/`](steps/01-script/) — **n=0**, doctrine only. Now carries a [`params.json`](steps/01-script/params.json) the structural checker reads rather than restates |
+| 02 | Frames | Frames | not started |
+| 03 | **Score** | Score | [`steps/03-score/`](steps/03-score/) — **n=0** for the craft; **one measurement, n=3**, of this repo's own demo cues |
+| 04 | Cut | Cut | not started |
+
+The numbering skips no step: `motion` was retired into Frames (`lib/projects.ts` →
+`RETIRED_PHASES`), so the studio's steps are `research → script → frames → score → cut` and Score is
+the third with a knowledge directory. `knowledge/README.md`'s contents table still says
+`03-motion · 04-score · 05-cut`, from before that merge.
 
 ## What makes this template hard
 
