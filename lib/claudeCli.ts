@@ -246,6 +246,30 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
       void err;
     });
 
+    // THE PROMPT WRITE IS A DOOR OUT OF THIS PROCESS, AND IT HAD NO HANDLER.
+    //
+    // `child.stdin` is a stream, so its failures arrive as an 'error' EVENT. They
+    // do not throw at the call site below, and they do not reach `child.on
+    // ("error")` — that one reports the SPAWN, not the pipe. An 'error' event with
+    // no listener is re-raised by Node as an uncaughtException, which in a route
+    // handler is the SERVER going down, not this promise rejecting.
+    //
+    // Measured 2026-08-29 on Windows, with this exact shape and a binary that is
+    // not on PATH: `shell: true` starts cmd, cmd exits immediately because
+    // `claude` does not resolve, and the write lands on a closed pipe —
+    // `Error: write EOF`, uncaught, process gone. So on the only platform this app
+    // is developed on, a machine without the CLI could never reach the
+    // `not-installed` branch above, and lib/text/router.ts could never descend to
+    // its metered rung: nothing survived long enough to classify anything.
+    //
+    // The child is gone by definition when this fires, so the verdict stays with
+    // `close`/`error` above, which have the exit code and the stderr to classify
+    // from. This listener's whole job is to keep the failure inside the promise.
+    child.stdin.on("error", () => {
+      // Deliberately silent: the pipe closing IS the child ending, and the
+      // handlers above say what that means.
+    });
+
     child.stdin.write(prompt);
     child.stdin.end();
   });
