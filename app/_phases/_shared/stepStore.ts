@@ -84,6 +84,27 @@ export interface TrailerCutStepData {
   savedAt?: number;
 }
 
+/** The drift the creator has dialled into the Cut's sync bench, clip id → offset
+ *  in milliseconds.
+ *
+ *  Small on purpose, and that is what makes it storable. The Cut and Score steps
+ *  were the two of five phases that persisted nothing, and they are not the same
+ *  problem: this is a handful of integers, while a Score take is an object URL
+ *  over megabytes of decoded audio that no `blob:` string survives a reload to
+ *  reach. So the offsets land here now and the audio question stays open — see
+ *  .vault/Architect/decisions/2026-08-29-score-take-persistence.md.
+ *
+ *  ABSENT IS NOT ZERO. A clip nobody has touched must report what the cut itself
+ *  says about it (`TimelineClip.offsetMs`), not a dialled-in zero — `offsetFrom`
+ *  in the Cut step reads the record that way, and storing a zero for every clip
+ *  on first load would erase the distinction between "at its mark" and "brought
+ *  back to its mark", which the surface colours differently. Only clips the
+ *  creator has actually nudged appear in this map. */
+export interface CutStepData {
+  offsets: Record<string, number>;
+  savedAt?: number;
+}
+
 /* ────────────────────────────── what went wrong ──────────────────────────── */
 
 /** WHY the storage operation failed. Five destinations that used to be one
