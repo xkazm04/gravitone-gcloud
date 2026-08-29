@@ -18,7 +18,15 @@
 
 import type { Provenance } from "@/app/_studio/types";
 
-import { getByIndex, getRecord, openDb, runTx, ASSETS_STORE, BY_UID } from "./studioDb";
+import {
+  getByIndex,
+  getRecord,
+  openDb,
+  runTx,
+  ASSETS_STORE,
+  BY_UID,
+  UPLOADS_STORE,
+} from "./studioDb";
 import type { Proof, StyleBlock, Theme } from "./themes";
 
 export type AssetKind = "image";
@@ -188,6 +196,133 @@ export function hydrateProofSrcs(assets: Asset[], themes: Theme[]): Asset[] {
   });
 }
 
+/* ── Uploads ──────────────────────────────────────────────────────────────── */
+//
+// THE ONE CASE WHERE THIS SHELF OWNS BYTES.
+//
+// Everything above is a pointer at bytes that exist anyway — a file on disk, a
+// proof inside a theme. An uploaded reference has no such home: the user handed
+// us the only copy, so somebody has to keep it.
+//
+// The doctrine bends in shape, not in principle. The bytes go to their own
+// store (studioDb#UPLOADS_STORE) and the asset keeps a `upload:<id>` pointer,
+// exactly as a promoted proof keeps `proof:<themeId>/<proofId>`. `listAssets`
+// reads and sorts every row to build the folder tree, so putting a picture in
+// that row would drag it through IndexedDB every time the rail is drawn. Here
+// it is read only for what is actually on screen, and one paragraph of this
+// file is the only place that knows the difference.
+
+const UPLOAD_SCHEME = "upload:";
+
+export const uploadPointer = (uploadId: string) => `${UPLOAD_SCHEME}${uploadId}`;
+
+/** The upload id inside a pointer, or null for any other kind of `src`. */
+export function readUploadPointer(src: string): string | null {
+  if (!src.startsWith(UPLOAD_SCHEME)) return null;
+  return src.slice(UPLOAD_SCHEME.length) || null;
+}
+
+/** What an upload is stored as. The Blob itself, not base64 — IndexedDB stores
+ *  binary natively, and encoding would cost a third more space to hold the same
+ *  picture less usefully. */
+export interface UploadRecord {
+  id: string;
+  blob: Blob;
+  mime: string;
+  bytes: number;
+}
+
+/** A shelf entry for a file the user handed us, plus the byte record that goes
+ *  with it. Pure — the caller writes both, in one transaction. */
+export function assetFromUpload(
+  uid: string,
+  file: File,
+  path: string[],
+): { asset: Asset; upload: UploadRecord } {
+  const id = `up-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  return {
+    asset: {
+      id: `as-${id}`,
+      uid,
+      path,
+      // The filename minus its extension. It is what the user called the file,
+      // which is a better name than anything this code could invent, and the
+      // extension is already said by the mime.
+      name: file.name.replace(/\.[^.]+$/, "") || file.name,
+      src: uploadPointer(id),
+      kind: "image",
+      meta: { upload: true, uploadId: id, mime: file.type, bytes: file.size, fileName: file.name },
+      createdAt: Date.now(),
+    },
+    upload: { id, blob: file, mime: file.type, bytes: file.size },
+  };
+}
+
+/** Write the rows and their bytes together. ONE transaction over both stores,
+ *  so an upload cannot commit as a shelf entry pointing at bytes that were
+ *  never written — which would draw as a broken tile with no way to explain
+ *  itself. */
+export async function putUploads(pairs: { asset: Asset; upload: UploadRecord }[]): Promise<void> {
+  if (!pairs.length) return;
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    await runTx(db, [ASSETS_STORE, UPLOADS_STORE], "readwrite", (assets, tx) => {
+      const uploads = tx.objectStore(UPLOADS_STORE);
+      for (const p of pairs) {
+        assets.put(p.asset);
+        uploads.put(p.upload);
+      }
+    });
+  } finally {
+    db?.close();
+  }
+}
+
+/** The bytes behind a set of upload ids. Missing ids are simply absent from the
+ *  map — the caller renders that as a row whose source is gone, the same way a
+ *  dangling proof pointer is handled. */
+export async function getUploadBlobs(ids: string[]): Promise<Map<string, Blob>> {
+  const out = new Map<string, Blob>();
+  if (!ids.length) return out;
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    for (const id of ids) {
+      const rec = await getRecord<UploadRecord>(db, UPLOADS_STORE, id);
+      if (rec?.blob) out.set(id, rec.blob);
+    }
+    return out;
+  } finally {
+    db?.close();
+  }
+}
+
+/**
+ * Swap `upload:` pointers for URLs the CALLER has minted.
+ *
+ * The minting is deliberately not done here. An object URL is owned by whoever
+ * created it and leaks until revoked — the rule this repo already wrote down
+ * once (app/playground/PlaygroundView.tsx, "the blob urls this page owns") — and
+ * a pure function that quietly allocated them would put the allocation
+ * somewhere no component could see to release.
+ */
+export function hydrateUploadSrcs(assets: Asset[], urls: Map<string, string>): Asset[] {
+  return assets.map((a) => {
+    const id = readUploadPointer(a.src);
+    if (!id) return a;
+    const url = urls.get(id);
+    return url
+      ? { ...a, src: url }
+      : {
+          ...a,
+          src: NO_BYTES,
+          name: `${a.name} — file missing`,
+          meta: { ...(a.meta ?? {}), unresolved: true },
+        };
+  });
+}
+
 /* ── The derived tree ─────────────────────────────────────────────────────── */
 
 export interface FolderNode {
@@ -267,11 +402,28 @@ export async function putAssets(rows: Asset[]): Promise<void> {
   }
 }
 
+/**
+ * Remove a shelf entry — AND the bytes it owns, when it owns any.
+ *
+ * A promoted proof points into a theme and a seeded plate points at a file on
+ * disk, so removing either has always been just the row. An upload is the one
+ * kind whose bytes exist only because this row does: deleting the row alone
+ * would leave a multi-megabyte blob in a store nothing indexes and nothing can
+ * ever name again, and the shelf would look emptied while the quota stayed
+ * spent.
+ *
+ * Both stores in ONE transaction, so a row can never survive its own bytes.
+ */
 export async function deleteAsset(id: string): Promise<void> {
   let db: IDBDatabase | null = null;
   try {
     db = await openDb();
-    await runTx(db, ASSETS_STORE, "readwrite", (store) => store.delete(id));
+    const row = await getRecord<Asset>(db, ASSETS_STORE, id);
+    const uploadId = row ? readUploadPointer(row.src) : null;
+    await runTx(db, [ASSETS_STORE, UPLOADS_STORE], "readwrite", (assets, tx) => {
+      assets.delete(id);
+      if (uploadId) tx.objectStore(UPLOADS_STORE).delete(uploadId);
+    });
   } finally {
     db?.close();
   }
