@@ -70,6 +70,18 @@ export function woundsOf(cards: Card[], scope: Scope): Wound[] {
   return out;
 }
 
+/** WHERE THE BOARD HAS MOVED SINCE IT WAS FROZEN — the card ids whose
+ *  kept-or-cut differs between two scopes, in card order.
+ *
+ *  Only `descoped` is compared. `liked` is training data for the tone profile
+ *  and changes nothing downstream by design (see the header of this file), and
+ *  `deepen` routes to the NEXT run rather than into this script. Diffing them
+ *  would report movement that costs the script nothing, and a divergence
+ *  warning that fires on a harmless click is one nobody reads. */
+export function scopeDiffs(cards: Card[], a: Scope, b: Scope): string[] {
+  return cards.filter((c) => stateOf(a, c.id).descoped !== stateOf(b, c.id).descoped).map((c) => c.id);
+}
+
 /** Rollup for the header and for the Script step's gate.
  *
  *  CUT AND NEVER-TAKEN ARE COUNTED SEPARATELY, and the split is not cosmetic.

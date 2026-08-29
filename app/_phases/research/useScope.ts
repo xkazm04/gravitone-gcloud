@@ -3,13 +3,31 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { loadStep, saveStep, type ScopeStepData } from "../_shared/stepStore";
-import { buildCards, scopeSummary, stateOf, type Card, type Scope } from "./scope";
+import { buildCards, scopeDiffs, scopeSummary, stateOf, type Card, type Scope } from "./scope";
 
 const PHASE = "research-scope";
 
-/** Scope state for a project. Confirming freezes it — the Script step reads a
- *  confirmed scope, never a live one, so a script cannot quietly change under a
- *  decision made after it was written.
+/** Scope state for a project.
+ *
+ *  WHAT CONFIRMING ACTUALLY DOES, corrected. This comment used to say the
+ *  Script step reads the confirmed scope and never a live one. It does not, and
+ *  it never did: `ScriptStep` calls this hook and every consumer of it —
+ *  `_matrix/{MatrixCoverage,MatrixSpend,MatrixTracks,shared}` — reads
+ *  `stateOf(api.scope, …)`. Nothing outside this directory has ever read
+ *  `confirmed`.
+ *
+ *  And the promise cannot simply be honoured where it stands, because Step 2 is
+ *  not a reader. `_matrix/shared.tsx`'s ScopePip DESCOPES FROM THE MATRIX, into
+ *  this same record, on purpose ("this is not a Step 2 shadow copy"). Pointing
+ *  the matrix at a frozen snapshot would leave that control clicking against a
+ *  document nothing on screen renders — a worse failure than the one it fixes,
+ *  and an invented mechanism on top of a false claim.
+ *
+ *  So the claim is cut and `confirmed` is given the job it can actually do: it
+ *  is a CHECKPOINT. It records what the board said when the creator declared it
+ *  settled, and `diverged` reports every card that has moved since — which was
+ *  invisible before, on both steps. The same treatment `followup.ts` gives an
+ *  effect it cannot apply, for the same reason.
  *
  *  PERSISTED, and shared by both steps. It used to be per-mount React state,
  *  which meant Step 2 mounting its own copy would have shown an empty scope
@@ -57,9 +75,17 @@ export function useScope(projectId: string) {
 
   const summary = useMemo(() => scopeSummary(cards, scope), [cards, scope]);
 
+  /** Cards whose kept-or-cut has moved since the scope was confirmed. Empty
+   *  when nothing is confirmed — there is no checkpoint to have drifted from. */
+  const diverged = useMemo(
+    () => (confirmed ? scopeDiffs(cards, scope, confirmed) : []),
+    [cards, scope, confirmed],
+  );
+
   return {
     cards,
     scope,
+    diverged,
     hydrated,
     patch,
     toggle,
