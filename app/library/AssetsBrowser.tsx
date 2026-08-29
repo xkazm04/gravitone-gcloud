@@ -37,6 +37,12 @@ import MoveDialog from "./MoveDialog";
  *  second gallery rather than a sideways look at one. */
 const SIBLING_CAP = 24;
 
+/** Where an upload lands when the user is looking at "All assets" rather than a
+ *  folder. Under the `shared` root beside the disciplines, because a file the
+ *  user handed us is not educational or a trailer until they say so — and they
+ *  can say so by dragging it somewhere else. */
+const DEFAULT_UPLOAD_PATH = ["shared", "uploads"];
+
 /**
  * Which folders open on arrival: every one that CONTAINS folders.
  *
@@ -64,7 +70,9 @@ export default function AssetsBrowser({
   onOpenStyles?: (themeId?: string) => void;
 }) {
   const { user } = useAuth();
-  const { assets, error, loading, remove, move, rename, renameFolder } = useAssets(user?.uid ?? null);
+  const { assets, error, loading, remove, move, rename, renameFolder, addUploads } = useAssets(
+    user?.uid ?? null,
+  );
   /** Only to WRITE a forked style. The atelier owns reading and working them;
    *  this shelf needs `create` and nothing else. */
   const { create: createTheme } = useThemes(user?.uid ?? null);
@@ -105,6 +113,13 @@ export default function AssetsBrowser({
    *  when the drag does — including the drag abandoned over the gallery, whose
    *  `dragend` the rail never sees. */
   const [dropOver, setDropOver] = useState<string | null>(null);
+  /** A file drag from OUTSIDE the page is hovering the gallery. Distinct from
+   *  `dragging`, which is a tile of ours in flight — the two must never light
+   *  up at once, or the shelf offers to both refile and import one gesture. */
+  const [fileOver, setFileOver] = useState(false);
+  /** What an upload refused to take, named. Cleared by the next attempt. */
+  const [uploadNote, setUploadNote] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
   /** Every drag ends here, dropped or abandoned. */
   const endDrag = () => {
@@ -348,6 +363,35 @@ export default function AssetsBrowser({
     onOpenStyles?.(made.id);
   };
 
+  /** Where an upload goes: the folder being looked at, or the shared default
+   *  when the view is "all assets" and there is no folder to mean. */
+  const uploadPath = selected.length ? selected : DEFAULT_UPLOAD_PATH;
+
+  /**
+   * Take files from the picker or from a drop.
+   *
+   * The rejected list is rendered rather than counted. "3 files were not added"
+   * is not something a user can act on; the names and the reason are, and
+   * dropping a folder where some entries are PDFs is the ordinary case rather
+   * than the exceptional one.
+   */
+  const takeFiles = async (files: FileList | File[] | null) => {
+    const list = files ? Array.from(files) : [];
+    if (!list.length) return;
+    const { added, rejected } = await addUploads(list, uploadPath);
+    setUploadNote(rejected.length ? `Not added — ${rejected.join(" · ")}` : null);
+    if (added)
+      announce({
+        key: `assets-added:${Date.now()}`,
+        text: `Added ${added} ${added === 1 ? "reference" : "references"} to ${uploadPath.join(" › ")}.`,
+      });
+  };
+
+  /** True only for a drag carrying FILES from outside the page — a tile of ours
+   *  in flight is a refile, and the gallery must not offer to import it. */
+  const isFileDrag = (e: React.DragEvent) =>
+    !dragging && Array.from(e.dataTransfer.types).includes("Files");
+
   /** Walk the folder currently on screen. Wraps, because a gallery is a ring —
    *  and the alternative is an arrow key that silently does nothing at the ends
    *  with no edge on screen to explain why. */
@@ -390,7 +434,31 @@ export default function AssetsBrowser({
         />
       </aside>
 
-      <section>
+      <section
+        onDragOver={(e) => {
+          if (!isFileDrag(e)) return;
+          // Both halves matter: without preventDefault the drop never fires,
+          // and the browser's default for a dropped image is to NAVIGATE to it,
+          // throwing the user out of the app and losing nothing gracefully.
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "copy";
+          if (!fileOver) setFileOver(true);
+        }}
+        onDragLeave={(e) => {
+          // Only when the pointer has actually left the section, not on the way
+          // between two tiles inside it.
+          if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFileOver(false);
+        }}
+        onDrop={(e) => {
+          if (!isFileDrag(e)) return;
+          e.preventDefault();
+          setFileOver(false);
+          void takeFiles(e.dataTransfer.files);
+        }}
+        className={
+          fileOver ? "rounded-2xl outline-2 outline-offset-4 outline-dashed outline-cyan-400/60" : ""
+        }
+      >
         {error && (
           <p className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
             {error} — your shelf lives in this browser&rsquo;s storage, and it did not answer.
@@ -405,13 +473,45 @@ export default function AssetsBrowser({
           {/* Only where there is a tile to right-click. An instruction for an
               action nothing on screen affords is the same small dishonesty as
               a button that does nothing. */}
-          {shown.length > 0 && (
-            <p className="font-jetbrains text-[10px] text-white/25">
-              click to open · drag onto a folder to refile · ctrl-click or X to select ·
-              right-click, or Delete on a focused tile, to remove
-            </p>
-          )}
+          <div className="flex items-center gap-3">
+            {shown.length > 0 && (
+              <p className="font-jetbrains text-[10px] text-white/25">
+                click to open · drag onto a folder to refile · ctrl-click or X to select ·
+                right-click, or Delete on a focused tile, to remove
+              </p>
+            )}
+            {/* A real control beside the drop zone. Dropping is the fast way and
+                needs a mouse; this is the one a keyboard reaches, and it is the
+                only way to discover the shelf takes files at all. */}
+            <button
+              type="button"
+              onClick={() => fileInput.current?.click()}
+              className="font-jetbrains shrink-0 cursor-pointer rounded-full border border-white/15 px-3.5 py-1.5 text-[12px] text-white/80 transition hover:bg-white/5"
+            >
+              Add reference…
+            </button>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={(e) => {
+                void takeFiles(e.target.files);
+                // Cleared so choosing the SAME file twice fires change twice —
+                // otherwise a user who removed a plate and re-added it would
+                // press the button and watch nothing happen.
+                e.target.value = "";
+              }}
+            />
+          </div>
         </div>
+
+        {uploadNote && (
+          <p className="mb-3 rounded-xl border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-[12px] text-amber-200/90">
+            {uploadNote}
+          </p>
+        )}
 
         {chosen.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] px-3 py-2">
@@ -711,8 +811,8 @@ function EmptyShelf({ hasAny, onOpenStyles }: { hasAny: boolean; onOpenStyles?: 
       </p>
       <p className="font-hanken mx-auto mt-2 max-w-sm text-sm leading-snug text-slate-400">
         {hasAny
-          ? "Pick another category on the left."
-          : "Assets are the images a project can reach for again. The shelf fills from Styles: render trials on a style, approve the ones that hold, and keep them here — they file themselves under the style that made them."}
+          ? "Pick another category on the left, or drop a file here to add one."
+          : "Assets are the images a project can reach for again. The shelf fills two ways: render trials on a style and keep the ones that hold — they file themselves under the style that made them — or drop your own reference here."}
       </p>
       {!hasAny && onOpenStyles && (
         <Button variant="ghost" onClick={onOpenStyles} className="mt-5">
