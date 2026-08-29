@@ -280,7 +280,31 @@ export function __resetSaveSlots(): void {
 }
 
 /** The steps store is created lazily rather than in the projects upgrade path,
- *  so an existing browser DB does not need a version bump to gain it. */
+ *  so an existing browser DB does not need a version bump to gain it.
+ *
+ *  THE CONNECTION IS OWNED HERE, and it used to leak. `openDb()` is not cached —
+ *  it calls `indexedDB.open` fresh every time — so every caller owns the handle
+ *  it gets back and has to close it. The thirteen other call sites in the data
+ *  layer do: `lib/projects.ts` (6), `lib/themes.ts` (4) and `lib/assets.ts` (3)
+ *  all wrap the work in `try { db = await openDb(); … } finally { db?.close(); }`.
+ *  This was the fourteenth, and the only one that did not — while being by a wide
+ *  margin the most frequently called of the fourteen, because every caller above
+ *  it fires `void saveStep(...)` on a keystroke.
+ *
+ *  The cost was not abstract. The latest-wins ticket below abandons a write only
+ *  when a later save for the same key is ISSUED before the earlier one reaches
+ *  its `put`; typing at ~150-250ms a character never overlaps a ~1-5ms warm
+ *  transaction, so every keystroke's write lands and every keystroke's connection
+ *  stayed open for the life of the tab. Each one keeps a live `onversionchange`
+ *  handler (lib/studioDb.ts), so a DB_VERSION bump fired one close-race per
+ *  keystroke instead of one per tab — the shape of the two-tab upgrade hang that
+ *  `e242b89` fixed from the other side, and a plausible source of the `blocked`
+ *  failure kind this file exists to report.
+ *
+ *  The close is in a `finally` and runs after `fn(db)` has settled, never before:
+ *  the transaction is live until then, and closing under it would abort the work
+ *  rather than release it. Closing does not change an outcome — a successful
+ *  write whose connection could not be closed is still a successful write. */
 async function withStore<T>(
   op: "read" | "write",
   projectId: string,
@@ -292,13 +316,16 @@ async function withStore<T>(
 
   if (typeof indexedDB === "undefined")
     return trouble("unavailable", "IndexedDB unavailable — nothing written in this session will survive it.");
+  let db: IDBDatabase | undefined;
   try {
-    const db = await openDb();
+    db = await openDb();
     if (!db.objectStoreNames.contains(STEPS_STORE))
       return trouble("missing-store", `The "${STEPS_STORE}" store is not in this database.`);
     return { ok: true, value: await fn(db) };
   } catch (e) {
     return trouble(classify(e), e instanceof Error ? e.message : String(e));
+  } finally {
+    db?.close();
   }
 }
 
