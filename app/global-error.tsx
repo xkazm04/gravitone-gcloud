@@ -10,8 +10,22 @@
 // GravitoneTokens may be the thing that failed, so the styling here is inline and
 // self-contained rather than reading a --gt-* variable that might never have been
 // emitted.
+//
+// ── IT CANNOT USE THE ANNOUNCER, SO IT CARRIES ITS OWN ALERT ────────────────
+//
+// app/error.tsx announces through lib/announcer.tsx, whose provider sits above
+// it in the shell. This boundary REPLACES that shell, so there is no provider
+// above it and no live region anywhere in the document — reaching for
+// `useAnnounce()` here would return the silent no-op fallback and look correct
+// in review. The dependency-free equivalent is `role="alert"` on the card:
+// an alert inserted into the document is announced on insertion, which is what
+// mounting this boundary does, and it needs nothing but the platform.
+//
+// Focus is handed over for the same reason as next door: the tree that held it
+// is gone, so without this the user is on <body> in a document whose content
+// was replaced.
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 export default function GlobalError({
   error,
@@ -20,8 +34,11 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const card = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     console.error("The app shell failed to render.", error);
+    card.current?.focus();
   }, [error]);
 
   return (
@@ -38,7 +55,12 @@ export default function GlobalError({
           padding: "1.5rem",
         }}
       >
-        <div style={{ maxWidth: "28rem", textAlign: "center" }}>
+        <div
+          ref={card}
+          role="alert"
+          tabIndex={-1}
+          style={{ maxWidth: "28rem", textAlign: "center", outline: "none" }}
+        >
           <p
             style={{
               fontSize: "10px",
