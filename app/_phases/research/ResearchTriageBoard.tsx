@@ -107,10 +107,29 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
         })}
       </div>
 
-      <div
-        aria-live="polite"
-        className={`grid gap-4 ${focus ? "" : "lg:grid-cols-2 xl:grid-cols-3"}`}
-      >
+      {/* WHAT CHANGED, RATHER THAN EVERYTHING THERE IS. `aria-live="polite"`
+          used to sit on the grid below, which put all 31 cards — every claim,
+          confidence, source and wound warning on the board — inside one live
+          region. Toggling a single card's scope mutates that region, so a
+          screen reader re-announced the whole board for a click whose result
+          the card's own control already states: the overlay button carries
+          `aria-pressed` and an aria-label that names the action and the claim.
+          A live region that fires on every sweep of a column is one a reader
+          turns off, and then the announcement that IS worth having goes with
+          it.
+
+          Filtering is that announcement. It replaces the grid's contents while
+          focus stays on the chip, so nothing else would say what happened — and
+          it is a count, not a recital. */}
+      <p aria-live="polite" className="sr-only">
+        {focus === null
+          ? `Showing all ${columns.length} columns.`
+          : shown.length === 0
+            ? "That column is no longer on the board."
+            : `Showing ${shown[0].label} only — ${countOf(shown[0]).total} card(s).`}
+      </p>
+
+      <div className={`grid gap-4 ${focus ? "" : "lg:grid-cols-2 xl:grid-cols-3"}`}>
         {shown.map((d) => {
           const cards = api.cards.filter((c) => c.dimension === d.id);
           const n = countOf(d);
