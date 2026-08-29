@@ -93,6 +93,7 @@ export type StructureRule =
   | "promise"
   | "ladder"
   | "withholding"
+  | "concealment"
   | "efficacy";
 
 export interface StructureFinding {
@@ -121,6 +122,7 @@ const CITE = {
   ladder: `${REG}/techniques/length-ladder.md`,
   promise: `${REG}/techniques/promise-ledger.md`,
   budget: `${REG}/techniques/withholding-budget.md`,
+  concealment: `${REG}/techniques/concealment-and-its-tells.md`,
   causality: "registry: media-generation/_laws.md#causality-over-sequence",
   unmeasured: "registry: media-generation/_laws.md#unmeasured-is-not-pass",
   graph: "this repo: pipeline/check-notebook.mts — a reference to nothing is a broken edge",
@@ -187,6 +189,7 @@ const ALL_RULES = [
   "promise",
   "ladder",
   "withholding",
+  "concealment",
   "efficacy",
 ] as const satisfies readonly StructureRule[];
 
@@ -1200,6 +1203,43 @@ export interface StructureOptions {
  *  a green structural verdict stand in for an unmeasured one." It is emitted on
  *  every report, including a perfect one, and it counts in `unmeasured` — so a
  *  cut can never score `enforced: 100`, which is correct. */
+/** THE SEVENTH TECHNIQUE, WHICH HAD NO ROW AT ALL.
+ *
+ *  `trailer-structure` forges seven techniques and this file implements six of
+ *  them — cue-first-assembly, escalation-without-mechanism, dynamic-reset,
+ *  length-ladder, promise-ledger and withholding-budget each have a rule. The
+ *  seventh, concealment-and-its-tells, had nothing: not a rule, not a citation,
+ *  not a mention. A report listing eleven rules against a subject with seven
+ *  techniques reads as complete coverage, and the one technique missing is the
+ *  one about hiding things.
+ *
+ *  IT IS UNMEASURED RATHER THAN CHECKED, and that is the finding, not a
+ *  shortcut. The technique's own tell is "a fast cut hiding something is
+ *  aesthetically identical to a fast cut as style — the audience cannot
+ *  distinguish them". A rule that cannot distinguish them either would have to
+ *  invent a duration threshold the doctrine deliberately does not state, and
+ *  this file's whole thesis about params.json is that a hedge moved into JSON is
+ *  still a hedge: "Moving a hedge into JSON does not measure it; it only hides
+ *  the hedge behind a field name."
+ *
+ *  So it reports itself the way `efficacyRow` does, under
+ *  `unmeasured-is-not-pass`: the doctrine governs, the checker cannot test it,
+ *  and the row says so rather than the report implying by silence that nothing
+ *  governs here. The one part a tool COULD eventually take — the honesty limit,
+ *  that a cut for an experiential work must still convey how the work feels to
+ *  use — needs a signal about the work that no TrailerCut carries today. That
+ *  is the missing instrument, named here rather than left to be rediscovered. */
+function concealmentRow(): StructureFinding {
+  return {
+    rule: "concealment",
+    subject: "is this cut hiding the work",
+    verdict: "unmeasured",
+    detail:
+      "Not decidable from structure. The doctrine's own tell is that a fast cut hiding something is aesthetically identical to a fast cut as style, so no duration or density threshold separates them — and inventing one here would encode a hedge the technique deliberately leaves open. Two of the three modes ARE reachable elsewhere: misleading arrangement is a row the promise ledger must carry (rule `promise`), and what a cut may withhold is priced by rule `withholding`. What neither reaches is the honesty limit — that a cut must still convey how the work feels to use — which needs a signal about the work that no TrailerCut carries.",
+    cites: CITE.concealment,
+  };
+}
+
 function efficacyRow(): StructureFinding {
   return {
     rule: "efficacy",
@@ -1223,6 +1263,7 @@ export function runStructureCheck(cut: TrailerCut, opts: StructureOptions = {}):
     ...checkPromises(cut),
     ...checkLadder(cut),
     ...checkWithholding(cut, opts.budget),
+    concealmentRow(),
     efficacyRow(),
   ];
 
