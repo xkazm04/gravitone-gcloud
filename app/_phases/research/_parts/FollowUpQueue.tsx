@@ -87,9 +87,23 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
       );
     });
 
+  // A DISPATCHED DEEPEN KEEPS ITS ROW after the card is un-flagged. Un-marking
+  // `deepen` is the natural gesture once the answer is in — the question is
+  // settled — and it used to take the answer off the screen with it, because
+  // the only route a deepen row had into the list was the card's live flag.
+  // The record was never lost (it is still in `asked`, and re-flagging the card
+  // brought it back), but nothing said so, on the one surface whose job is
+  // reporting what the research came back with. Only DISPATCHED rows are kept:
+  // a still-queued deepen that the creator un-flagged is a request withdrawn
+  // before it ran, and that one should disappear.
+  const liveDeepenIds = new Set(deepened.map((d) => d.cardId));
+  const dispatchedDeepens = asked.filter(
+    (a) => a.kind === "deepen-card" && a.status !== "queued" && a.cardId && !liveDeepenIds.has(a.cardId),
+  );
+
   // Every entry here is already the live record — `deepened` resolves to the
   // stored request the moment one exists, and questions come straight off it.
-  const all = [...deepened, ...asked.filter((a) => a.kind === "question")];
+  const all = [...deepened, ...dispatchedDeepens, ...asked.filter((a) => a.kind === "question")];
   const pending = all.filter((r) => r.status === "queued");
   const returned = all.filter((r) => r.status === "returned");
 
