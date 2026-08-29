@@ -12,7 +12,7 @@
 // red suites.
 import { test, expect } from "@playwright/test";
 
-import { BREAKER_LIMIT, hasFailures, newManifest, next, pruneFailures, runToEnd, step, type EngineIO } from "@/lib/foundry/extract/engine";
+import { doneUnits, totalUnits, BREAKER_LIMIT, hasFailures, newManifest, next, pruneFailures, runToEnd, step, type EngineIO } from "@/lib/foundry/extract/engine";
 import { CRITIQUE_SCHEMA, partition, styleScore, usableFix, validateSynthesis } from "@/lib/foundry/extract/vocabulary";
 import type { ExtractManifest, ExtractSource, Observables, Readback } from "@/lib/foundry/extract/types";
 
@@ -259,4 +259,44 @@ test("engine: three consecutive vendor failures trip the breaker — the run sto
   expect(hasFailures(m)).toBe(false);
   expect(m.styles.every((s) => s.transfers.length === 1 && s.transfers[0].file)).toBe(true);
   expect(m.styles[0].replicas.every((r) => r.rounds.length >= 1 && r.rounds[0].n === 1)).toBe(true);
+});
+
+test("progress: the strip can actually reach its total — replicas are counted at the real number, not at the ceiling", async () => {
+  // `options.replicas` is a CEILING on how many members a style replicates. The
+  // fixture's second style has ONE member, so it takes one replica however high
+  // the ceiling is — and charging the strip for the ceiling made `done`
+  // unreachable. Measured before the fix: the last real unit left the run at
+  // 12 of 15, and `finish` then set them equal, so the longest stage of the run
+  // read as a stall followed by a jump.
+  const m = manifest();
+  const io = fakeIO(m, { roundScore: () => ({ ...painterly, edge_treatment: "crisp", atmospherics: "none" }) }, []);
+
+  let performed = 0;
+  let lastDone = 0;
+  let lastTotal = 0;
+  for (;;) {
+    const r = await step(m, io);
+    if (r.unit === null || r.unit === "finish") break;
+    performed++;
+    lastDone = doneUnits(m);
+    lastTotal = totalUnits(m);
+    // The strip must never claim more work is done than the run will take.
+    expect(lastDone).toBeLessThanOrEqual(lastTotal);
+  }
+  console.log(`[foundry] ${performed} unit(s) performed; strip stood at ${lastDone}/${lastTotal} before finish`);
+
+  // `doneUnits` was always right: it equals what the engine actually did.
+  expect(lastDone).toBe(performed);
+  // And the only unit left uncounted at that moment is `finish` itself, so the
+  // strip arrives at its total instead of jumping to it.
+  expect(lastTotal - lastDone).toBe(1);
+  expect(m.status).toBe("done");
+  expect(m.progress.done).toBe(m.progress.total);
+});
+
+test("progress: before grouping the ceiling is still the estimate, because there are no members to count yet", () => {
+  const m = manifest();
+  expect(m.styles.length).toBe(0);
+  // 3 reads + group + (2 replicas x 2 rounds + 1 transfer) + finish
+  expect(totalUnits(m)).toBe(3 + 1 + (2 * 2 + 1) + 1);
 });
