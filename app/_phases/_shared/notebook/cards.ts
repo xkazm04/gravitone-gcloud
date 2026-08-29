@@ -240,9 +240,23 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
  *  module instantiation: a broken edge announces itself the moment the notebook
  *  is imported, rather than waiting for somebody to remember a script. Not in
  *  production, and not in Node — there `pipeline/check-notebook.mts` owns the
- *  report and this would only prefix it with noise. This repo has no test suite
- *  and declined to add one (pipeline/integration-imaging.mts:8), so a module
- *  assertion and a script is the whole apparatus, on purpose. */
+ *  report and this would only prefix it with noise.
+ *
+ *  IT IS NO LONGER THE WHOLE APPARATUS, and this comment used to say it was:
+ *  "This repo has no test suite and declined to add one, so a module assertion
+ *  and a script is the whole apparatus, on purpose." That was true when it was
+ *  written. The repo now runs @playwright/test over `tests/golden-path/`, and
+ *  `npm test` is inside `npm run verify` — so the justification for leaving the
+ *  graph on a console line had expired without the comment noticing.
+ *
+ *  What each layer is FOR, now that there are three:
+ *    · this console line — the fastest feedback there is, while you edit
+ *    · `check:notebook` — the terminal report, and in the gate since a7be959
+ *    · `tests/golden-path/notebook-graph.probe.spec.ts` — the layer neither of
+ *      the other two has: it drives `notebookIssues` against DELIBERATELY BROKEN
+ *      notebooks, so a checker that quietly stopped detecting anything is itself
+ *      detected. A green check over a checker that cannot fail is the failure
+ *      mode a clean fixture hides best. */
 if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
   const found = notebookIssues();
   if (found.length)
