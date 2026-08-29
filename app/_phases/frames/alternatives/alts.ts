@@ -19,6 +19,22 @@ export interface SceneAlt {
   id: string;
   plate: Plate;
   createdAt: number;
+  /** THE SEED, and it is not an alternative anybody bought here.
+   *
+   *  When a composed frame is first seen, its existing plate is kept as
+   *  alternative #1 so the scene does not start empty. That plate was generated
+   *  in the ASSEMBLY view and its cost is already reported there, by
+   *  `useFrames`'s `plateCost`. `altCost` says it counts what the alternatives
+   *  cost "beyond the plates already counted" and the header renders it as
+   *  "$X on alternatives" — both false for this row, which is why it is marked
+   *  rather than inferred.
+   *
+   *  Absent on a record written before this field existed. Those keep counting
+   *  their seed: nothing distinguishes it after the fact, because a scene whose
+   *  frame had no plate seeds nothing and its first alternative is a real
+   *  purchase. Stated rather than guessed at — a heuristic here would
+   *  under-report money, which is the worse direction to be wrong in. */
+  seeded?: boolean;
 }
 
 export interface SceneAlts {

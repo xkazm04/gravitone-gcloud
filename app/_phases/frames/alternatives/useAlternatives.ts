@@ -78,7 +78,10 @@ export function useAlternatives({
         if (f.plate.state !== "ready") continue;
         next[f.id] = {
           activeId: null,
-          alts: [{ id: altId(f.id), plate: { ...f.plate }, createdAt: Date.now() }],
+          // `seeded` because this plate was bought in the assembly view, not
+          // here — see the field's own note in ./alts. Everything else about it
+          // is a normal alternative: selectable, removable, and the incumbent.
+          alts: [{ id: altId(f.id), plate: { ...f.plate }, createdAt: Date.now(), seeded: true }],
         };
         next[f.id].activeId = next[f.id].alts[0].id;
         changed = true;
@@ -222,11 +225,29 @@ export function useAlternatives({
     [onAdopt],
   );
 
+  /** What the alternatives cost, BEYOND the plates already counted.
+   *
+   *  The seed is excluded, and it used to be the whole bug: a composed frame's
+   *  existing plate is kept as alternative #1 carrying its `costUsd`, so opening
+   *  this view on a finished sixteen-frame cut and generating nothing reported
+   *  the entire cost of the cut as "$X on alternatives" — money spent in the
+   *  assembly view, where `useFrames`'s `plateCost` already reports it. After a
+   *  selection it got worse rather than better: `onAdopt` moves the frame's
+   *  plate to the chosen alternative, so `plateCost` follows the new picture
+   *  while this figure still carried the old one, and the same dollars were in
+   *  neither place correctly.
+   *
+   *  A record written before `seeded` existed keeps counting its seed. See the
+   *  field's note for why that is stated rather than heuristically repaired. */
   const altCost = useMemo(
     () =>
       Object.entries(byFrame)
         .filter(([k]) => !isSynthetic(k))
-        .reduce((s, [, v]) => s + v.alts.reduce((a, alt) => a + (alt.plate.costUsd ?? 0), 0), 0),
+        .reduce(
+          (s, [, v]) =>
+            s + v.alts.reduce((a, alt) => a + (alt.seeded ? 0 : (alt.plate.costUsd ?? 0)), 0),
+          0,
+        ),
     [byFrame],
   );
 
