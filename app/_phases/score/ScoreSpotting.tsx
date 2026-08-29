@@ -8,18 +8,57 @@
 
 import { useState } from "react";
 
-import { CUES, MUSIC_STYLE_BLOCK } from "../../_studio/score";
+import { CUES, MUSIC_STYLE_BLOCK, type SpottingCue } from "../../_studio/score";
 import { PROJECT, SCENES } from "../../_studio/scenes";
 import { CueStatusWord, TimeRuler, spanStyle } from "../../_studio/projectParts";
 import { MusicRequestError, audioUrl, generateCueAudio } from "@/lib/musicClient";
+import type { MusicProvenance } from "@/lib/music/types";
 
 /** One cue's live take, in this session. Not yet persisted — a generated
- *  take lives as long as the tab; IndexedDB is the next seam. */
-type Take =
+ *  take lives as long as the tab; IndexedDB is the next seam.
+ *
+ *  `provenance` rides on the done state because it is the ONLY thing on this
+ *  surface entitled to name a vendor or a model. It comes back from the engine
+ *  with the take (lib/music/types.ts MusicProvenance) and says who served,
+ *  with which model id, for how many milliseconds, at what time. Before this it
+ *  was returned, passed through musicClient, and read by nobody — while the
+ *  surface printed a hand-typed `lyria-3` beside a button wired to ElevenLabs. */
+export type Take =
   | { state: "working" }
-  | { state: "done"; url: string }
+  | { state: "done"; url: string; provenance: MusicProvenance }
   | { state: "refused"; msg: string }
   | { state: "error"; msg: string };
+
+/**
+ * WHAT MAY BE CLAIMED ABOUT THE ENGINE for one cue — three states kept
+ * deliberately apart rather than collapsed into one blank:
+ *
+ *   · a take in hand → the take's own `MusicProvenance` speaks, and it is the
+ *     only thing on this surface entitled to name a vendor or a model id;
+ *   · a cue the project fixture calls rendered, with no take here → the record
+ *     is ABSENT and says so, because "we have no provenance" and "it was made
+ *     by X" are different sentences;
+ *   · a cue never rendered → NOTHING is claimed. Not a default, not a dash
+ *     standing in for one. Absence reads as absence.
+ *
+ * Exported because it is the whole decision this direction is about, and a
+ * decision inside JSX is a decision nothing can test.
+ */
+export function engineCredit(cue: SpottingCue, take: Take | undefined): { text: string; why: string } {
+  if (take?.state === "done")
+    return {
+      text: `${take.provenance.vendor} · ${take.provenance.modelId} · ${Math.round(take.provenance.requestedMs / 1000)}s asked`,
+      why: `Read from the take's provenance, returned by the render at ${take.provenance.generatedAt}.`,
+    };
+  if (cue.status === "rendered")
+    return {
+      text: "model not recorded",
+      why:
+        "This cue is marked rendered by the project fixture, but no take from this engine is in hand, " +
+        "so no provenance exists to name a vendor or a model. Render it to get one.",
+    };
+  return { text: "", why: "" };
+}
 
 export default function ScoreSpotting() {
   const [focus, setFocus] = useState(CUES[1].id); // open on the refused cue
@@ -37,7 +76,10 @@ export default function ScoreSpotting() {
         durS: cue.durS,
         styleBlock: MUSIC_STYLE_BLOCK,
       });
-      setTakes((t) => ({ ...t, [cue.id]: { state: "done", url: audioUrl(out) } }));
+      setTakes((t) => ({
+        ...t,
+        [cue.id]: { state: "done", url: audioUrl(out), provenance: out.provenance },
+      }));
     } catch (e) {
       // A refusal is a spotting outcome, not an error — the region reverts to
       // refused-silence and the surface says so, in its own color.
@@ -53,6 +95,8 @@ export default function ScoreSpotting() {
     cursor += s.targetS;
     return { s, startS };
   });
+
+  const credit = engineCredit(cue, take);
 
   const scoredS = CUES.filter((c) => c.status === "rendered").reduce((n, c) => n + c.durS, 0);
   const refusedS = CUES.filter((c) => c.status === "failed").reduce((n, c) => n + c.durS, 0);
@@ -134,13 +178,43 @@ export default function ScoreSpotting() {
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <h3 className="text-sm font-medium text-white">{cue.title}</h3>
           <span className="font-jetbrains text-[11px] text-white/40">
-            {cue.startS}s → {cue.startS + cue.durS}s · {cue.bpm} bpm · {cue.model}
+            {cue.startS}s → {cue.startS + cue.durS}s · {cue.bpm} bpm
           </span>
           <CueStatusWord status={cue.status} />
+          {/* THE ENGINE THAT ANSWERED, OR NOTHING. A model id is a property of
+              a take, so it is printed only when a take exists to own it — and
+              then it is read off the provenance the engine returned, never off
+              the cue. A cue with no take in hand says the record is absent
+              rather than falling back to a default, because a default here is
+              indistinguishable from a fact and this exact spot printed a
+              fictional vendor for months. */}
+          {credit.text && (
+            <span className="font-jetbrains text-[11px] text-white/30" title={credit.why}>
+              {credit.text}
+            </span>
+          )}
+          {cue.status === "failed" && cue.failure && (
+            <span
+              className="font-jetbrains rounded border border-rose-400/25 px-1.5 py-0.5 text-[10px] text-rose-300/80"
+              title="The engine's own outcome vocabulary (MusicErrorKind, lib/music/errors.ts) — a state the adapter really returns, not a description of one."
+            >
+              kind={cue.failure}
+            </span>
+          )}
         </div>
         <p className={`mt-1.5 text-sm leading-snug ${cue.status === "failed" ? "text-rose-200/90" : "text-slate-400"}`}>
           {cue.note}
         </p>
+        {/* A SPECIFIED BEHAVIOUR THIS BUILD DOES NOT HAVE, said out loud. The
+            dashed border and the words carry the whole meaning: the studio
+            intends this, the studio does not do it, and nothing on the timeline
+            above should be read as if it did. */}
+        {cue.declaredNotPerformed && (
+          <p className="font-jetbrains mt-2 inline-flex items-center gap-2 rounded border border-dashed border-amber-300/30 px-2 py-1 text-[10px] text-amber-200/70">
+            <span className="uppercase tracking-[0.14em] text-amber-300/60">not performed</span>
+            {cue.declaredNotPerformed} — declared intent; there is no mixing stage in this build.
+          </p>
+        )}
         {/* The music engine is real now — /api/music/generate renders a cue's
             brief (title, intent, bpm, exact duration, the project's standing
             style block) through lib/music. The button that once sat here dead
