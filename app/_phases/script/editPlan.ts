@@ -200,21 +200,50 @@ export function applyEdits(
  *  delta between two differently-computed numbers is not a delta. Crediting the
  *  full duration to every card a beat rests on is what made `budgetOf` sum to a
  *  multiple of the runtime and report a candidate as hundreds of seconds over
- *  budget while the engine's own summary said ten. */
+ *  budget while the engine's own summary said ten.
+ *
+ *  THE CUT RECORDS ARE SEEDED, and their absence was a real divergence between
+ *  the two engines. `recalibrate()` copies `base.impact` before it applies
+ *  anything, so the `kind: "cut"` rows impact.ts builds from each render's
+ *  `cutFacts` survive a simulated pass. This function started from `{}` and only
+ *  ever wrote `spoken`, so a MODEL pass silently turned every deliberate
+ *  exclusion into `unused`. Three things went with them:
+ *    · the ✕ and its `why` in the matrix — a fact the render excluded on the
+ *      record became indistinguishable from one nobody had considered
+ *    · MatrixFootnotes' "in no render" count, quietly inflated
+ *    · GUARD 4. `unsupportedIn` builds its `gone` set partly from
+ *      `RENDERS.every(… === "cut")`, and nothing was ever `cut` here — so a card
+ *      every render had cut was not counted as gone, and stranded turns went
+ *      unreported on precisely the path where a model had just rewritten the
+ *      script. recalibrate.ts calls GUARD 4 "literally the same function on both
+ *      paths"; the function was, its input was not.
+ *
+ *  SPOKEN WINS OVER A SEEDED CUT HERE, which is the opposite of impact.ts, and
+ *  the asymmetry is the point. There, the attribution table and `cutFacts` are
+ *  two hand-authored claims about the SAME script, so a clash means the table is
+ *  wrong and the cut wins loudly. Here the plan is NEWER than `cutFacts`: an
+ *  edit that gives a previously-cut fact a line is the model deliberately
+ *  reinstating it, and letting a stale declaration erase that would discard the
+ *  work and lie about the script. */
 export function impactFrom(applied: Record<string, AppliedRender>): Record<string, Record<string, Usage>> {
   const out: Record<string, Record<string, Usage>> = {};
   for (const r of RENDERS) {
     const a = applied[r.id];
     const map: Record<string, Usage> = {};
+    for (const c of r.cutFacts) map[c.factId] = { kind: "cut", seconds: 0, beats: [], why: c.why };
     if (a) {
       for (const [mark, cards] of Object.entries(a.attribution)) {
         const shares = splitAcross(a.seconds[mark] ?? 0, cards.length);
         cards.forEach((id, i) => {
+          // Only accumulate onto a previous SPOKEN row — a seeded cut carries
+          // no seconds and no beats, and adding to it would start the tally at
+          // a row that means "not in this render".
           const prev = map[id];
+          const spoken = prev?.kind === "spoken" ? prev : undefined;
           map[id] = {
             kind: "spoken",
-            seconds: (prev?.seconds ?? 0) + shares[i],
-            beats: [...(prev?.beats ?? []), mark],
+            seconds: (spoken?.seconds ?? 0) + shares[i],
+            beats: [...(spoken?.beats ?? []), mark],
           };
         });
       }
