@@ -97,6 +97,37 @@ test("styleScore: render_mode and medium count double; a null readback is unmeas
   expect(usableFix({ ...rb(painterly), critique: "", recipe_fix: "The Recipe" }, "the recipe")).toBeNull(); // same words again
 });
 
+test("styleScore: a word OUTSIDE the vocabulary is unmeasured too — not a miss", () => {
+  // The enum in READBACK_SCHEMA is a request, not a guarantee: the local engine
+  // reports `enforcesSchema: false`, so a vision model may answer beside the
+  // closed set. Scoring that as a miss is the same collapse a null readback is
+  // already protected from — the field was not measured, and "unknown" is not
+  // "wrong".
+  const drifted = rb({ ...painterly, surface_realism: "semi-realistic" }); // not in ENUMS.surface_realism
+  const scored = styleScore(painterly, drifted);
+  console.log(`[foundry] off-vocabulary surface_realism -> score ${scored.score}, ${Object.keys(scored.per_field).length} field(s) measured`);
+  // Every other field agrees, so what is left is a clean 9/9 rather than 9/10.
+  expect(scored.score).toBe(1);
+  // ...and the field that could not be read is ABSENT rather than recorded as a
+  // zero, which is what stops a critique round chasing it.
+  expect(scored.per_field.surface_realism).toBeUndefined();
+  expect(Object.keys(scored.per_field).length).toBe(7);
+
+  // A real disagreement is still a miss — the rule must not launder those.
+  expect(styleScore(painterly, rb({ ...painterly, surface_realism: "flat" })).score).toBe(0.9);
+  expect(styleScore(painterly, rb({ ...painterly, surface_realism: "flat" })).per_field.surface_realism).toBe(0);
+
+  // A readback that drifted on EVERY field measures nothing, which is the
+  // terminal answer the caller already knows how to read.
+  const allDrifted = Object.fromEntries(Object.keys(painterly).map((f) => [f, "not-a-word"])) as typeof painterly;
+  expect(styleScore(painterly, rb(allDrifted)).score).toBeNull();
+
+  // The number decides things, which is why the collapse mattered: at the
+  // default target of 0.85 the drifted readback settles the replica loop, and
+  // scored as a miss it did not.
+  expect(scored.score! >= 0.85).toBe(true);
+});
+
 /* ── the state machine ────────────────────────────────────────────────────── */
 
 interface Script {
