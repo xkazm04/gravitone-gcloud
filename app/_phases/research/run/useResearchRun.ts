@@ -51,6 +51,18 @@ const STOP_AT: Record<RunOutcome, number> = {
 interface Run {
   state: RunState;
   outcome: RunOutcome;
+  /** THE JOB THIS RUN IS REPORTING TO, held where the clock is.
+   *
+   *  It used to be React state in ResearchStep, and that is one lifetime too
+   *  short. The run outlives the mount on purpose — leave the step, come back,
+   *  the same trace is still arriving — but the component's `jobId` did not
+   *  come back with it, so Abort after a return called `run.stop()` (which
+   *  fires no ending, by design: the caller owns the job) and then found
+   *  nothing to cancel. The job sat `running` in the bell for ever, until a
+   *  reload rewrote it as `interrupted`.
+   *
+   *  Cleared by `finish`: a landed run has no live job. */
+  jobId?: string;
 }
 
 /** What a landing tells whoever started it. Captured at start time and called
@@ -91,7 +103,7 @@ function finish(key: string, state: RunState, notify = true) {
   const t = timers.get(key);
   if (t) clearTimeout(t);
   timers.delete(key);
-  write(key, { ...read(key), state });
+  write(key, { ...read(key), state, jobId: undefined });
   const end = endings.get(key);
   endings.delete(key);
   if (notify) end?.(state);
@@ -153,12 +165,13 @@ export function useResearchRun(projectId: string) {
    *
    *  The ending is frozen at click time along with the outcome: the picker
    *  chooses where a run stops, and a live run's ending is not something that
-   *  changes underneath it. */
-  const start = useCallback((onEnd: Ending) => {
+   *  changes underneath it. `jobId` is frozen with them, and for the same
+   *  reason — it has to still be here when the step is not. */
+  const start = useCallback((jobId: string, onEnd: Ending) => {
     const cur = read(projectId);
     if (cur.state.status === "running") return false;
     endings.set(projectId, onEnd);
-    write(projectId, { ...cur, state: { status: "running", done: 0, elapsedMs: 0 } });
+    write(projectId, { ...cur, jobId, state: { status: "running", done: 0, elapsedMs: 0 } });
     advance(projectId);
     return true;
   }, [projectId]);
@@ -212,6 +225,9 @@ export function useResearchRun(projectId: string) {
   return {
     state: run.state,
     outcome: run.outcome,
+    /** The job a LIVE run is reporting to, for the caller that has to cancel
+     *  it. Survives leaving the step, which is the whole point. */
+    jobId: run.jobId,
     setOutcome,
     start,
     stop,

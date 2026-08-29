@@ -139,7 +139,6 @@ function EducationalResearch({ projectId }: { projectId: string }) {
   const [artifact, setArtifact] = useState<"notebook" | "evidence" | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   const [topic, setTopic] = useState("");
-  const [jobId, setJobId] = useState<string | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
   const ready = run.state.status === "done";
@@ -185,7 +184,7 @@ function EducationalResearch({ projectId }: { projectId: string }) {
     // `JobsProvider` is mounted above the router, so a run that lands while the
     // step is unmounted still closes its job.
     const settle = jobs.settle;
-    const started = run.start((final) => {
+    const started = run.start(j.id, (final) => {
       if (final.status === "done") {
         settle(j.id, "done", "A notebook is ready for review.");
       } else if (final.status === "no-tension") {
@@ -198,20 +197,23 @@ function EducationalResearch({ projectId }: { projectId: string }) {
     });
 
     // A run was already live here. Don't leave a job open that nothing settles.
-    if (!started) {
-      jobs.cancel(j.id);
-      return;
-    }
-    setJobId(j.id);
+    if (!started) jobs.cancel(j.id);
   };
 
   /** Pull the process. The engine stops WITHOUT firing its ending — this handler
    *  owns the job from here, and `cancel` is the one job exit that fires no bell
-   *  event, because you already know you stopped it. */
+   *  event, because you already know you stopped it.
+   *
+   *  The id comes off the RUN, not off this component. It used to be local
+   *  state, which is a shorter lifetime than the thing it identifies: the run
+   *  survives leaving the step and the id did not, so aborting after coming
+   *  back stopped the engine and cancelled nothing, stranding the job as
+   *  `running` in the bell until a reload called it interrupted. Read before
+   *  `stop`, which clears it. */
   const abortResearch = () => {
+    const live = run.jobId;
     run.stop();
-    if (jobId) jobs.cancel(jobId);
-    setJobId(null);
+    if (live) jobs.cancel(live);
   };
 
   const doClear = () => {
