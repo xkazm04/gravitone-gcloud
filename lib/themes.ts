@@ -78,7 +78,11 @@ export const PROOF_CAP = 14;
 /* ── The record ───────────────────────────────────────────────────────────── */
 
 export type ThemeStatus = "draft" | "proofing" | "locked";
-export type ThemeOrigin = "scratch" | "preset" | "screenshot";
+/** Where a style's four slots came from. `plate` is a style forked off a plate
+ *  already on the shelf — the block is the one that rendered it, copied at
+ *  promotion time, so the fork starts from what a picture the user has SEEN was
+ *  actually made from rather than from a description of it. */
+export type ThemeOrigin = "scratch" | "preset" | "screenshot" | "plate";
 
 export const STATUS_WORD: Record<ThemeStatus, string> = {
   draft: "still words",
@@ -90,6 +94,7 @@ export const ORIGIN_WORD: Record<ThemeOrigin, string> = {
   scratch: "from a brief",
   preset: "from a preset",
   screenshot: "from a screenshot",
+  plate: "from a plate",
 };
 
 export interface Theme {

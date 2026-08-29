@@ -19,9 +19,13 @@ import Image from "next/image";
 
 import { Button } from "@/components/ui/Primitives";
 import { useAnnounce } from "@/lib/announcer";
+import { DISCIPLINES, type Discipline } from "@/lib/projects";
 import { useAuth } from "@/lib/useAuth";
 import { useAssets } from "@/lib/useAssets";
+import { useThemes } from "@/lib/useThemes";
 import { assetsUnder, buildTree, pathKey, type Asset, type FolderNode } from "@/lib/assets";
+
+import { readAssetFacts } from "./assetMeta";
 
 import AssetLightbox from "./AssetLightbox";
 import ContextMenu from "./ContextMenu";
@@ -48,9 +52,17 @@ function foldersWithChildren(nodes: FolderNode[], into: string[] = []): string[]
   return into;
 }
 
-export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => void }) {
+export default function AssetsBrowser({
+  onOpenStyles,
+}: {
+  /** Switch the library to Styles, optionally landing on one. */
+  onOpenStyles?: (themeId?: string) => void;
+}) {
   const { user } = useAuth();
   const { assets, error, loading, remove, move, rename, renameFolder } = useAssets(user?.uid ?? null);
+  /** Only to WRITE a forked style. The atelier owns reading and working them;
+   *  this shelf needs `create` and nothing else. */
+  const { create: createTheme } = useThemes(user?.uid ?? null);
   const announce = useAnnounce();
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -275,6 +287,41 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
     });
   };
 
+  /**
+   * Fork a style off a plate.
+   *
+   * The block on a promoted plate is a COPY, taken at promotion time precisely
+   * so it still describes what those pixels were made from after the style has
+   * moved on (lib/assets.ts#assetFromProof). That is what makes this honest: the
+   * fork starts from a recipe the user has already seen the output of, rather
+   * than from a description they have to imagine.
+   *
+   * It starts as a draft with an empty proof sheet. Copying the source style's
+   * proofs would be claiming this style has rendered things it has not.
+   */
+  const startStyleFrom = async (asset: Asset) => {
+    const facts = readAssetFacts(asset);
+    if (!facts.block) return;
+    const root = asset.path[0];
+    const made = await createTheme({
+      name: facts.styleName ? `${facts.styleName} — from a plate` : asset.name,
+      origin: "plate",
+      // The shelf files a promoted plate under its style's discipline, so the
+      // fork inherits it from where the plate actually sits. "shared" is not a
+      // discipline and stays absent rather than being guessed at.
+      discipline: DISCIPLINES.includes(root as Discipline) ? (root as Discipline) : undefined,
+      block: facts.block,
+      elements: [],
+    });
+    if (!made) return;
+    setOpenId(null);
+    announce({
+      key: `style-from-plate:${asset.id}`,
+      text: `Started ${made.name} from ${asset.name}. Opening Styles.`,
+    });
+    onOpenStyles?.(made.id);
+  };
+
   /** Walk the folder currently on screen. Wraps, because a gallery is a ring —
    *  and the alternative is an arrow key that silently does nothing at the ends
    *  with no edge on screen to explain why. */
@@ -403,6 +450,9 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
           onClose={() => setOpenId(null)}
           onStep={step}
           onRemove={() => removeFromViewer(openAsset)}
+          onStartStyle={
+            readAssetFacts(openAsset).block ? () => void startStyleFrom(openAsset) : undefined
+          }
           onRename={(name) => {
             void rename(openAsset.id, name).then((ok) => {
               if (ok)

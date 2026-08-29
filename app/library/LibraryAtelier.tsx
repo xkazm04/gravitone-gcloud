@@ -41,13 +41,21 @@ const BLANK = {
   finish: "matte, generous empty space",
 };
 
-export default function LibraryAtelier() {
+export default function LibraryAtelier({
+  initialSelectedId = null,
+}: {
+  /** A style to open on arrival — set when the Assets tab forked one off a
+   *  plate and switched here. An INITIAL value, not a controlled prop: this
+   *  component is unmounted while the other module is showing, so the handoff
+   *  lands on mount and the user's own clicks own the selection from then on. */
+  initialSelectedId?: string | null;
+} = {}) {
   const { user } = useAuth();
   const { themes, error, loading, create, update, addProof, judgeProof, lock, remove } = useThemes(
     user?.uid ?? null,
   );
 
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   /** Which kind of video the wall is being read for. "all" shows everything;
    *  a discipline shows its own styles plus the untagged ones. The rail and
    *  the pills filter with the same predicate. */

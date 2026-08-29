@@ -30,6 +30,7 @@ export default function AssetLightbox({
   onStep,
   onRemove,
   onRename,
+  onStartStyle,
 }: {
   asset: Asset;
   /** 1-based position within the folder currently on screen. */
@@ -39,6 +40,10 @@ export default function AssetLightbox({
   onStep: (delta: 1 | -1) => void;
   onRemove: () => void;
   onRename: (name: string) => void;
+  /** Offered only for a plate that carries the block it was rendered from —
+   *  absent for a trial-grid plate, whose index records what was rendered but
+   *  not the four slots it came from. */
+  onStartStyle?: () => void;
 }) {
   // Modal owns Escape and the focus trap; only the walk is ours. Bound on
   // `window` rather than the panel, because the panel holds focus and the arrow
@@ -83,16 +88,27 @@ export default function AssetLightbox({
           <div className="font-jetbrains text-[11px] text-white/45">
             {total > 1 ? "← → step · " : ""}Esc close · {index} of {total}
           </div>
-          {/* The same act the tile affords, offered where the user is actually
-              looking at the plate. It closes the viewer: the row it was
-              describing does not exist afterwards. */}
-          <button
-            type="button"
-            onClick={onRemove}
-            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-4 py-1.5 text-[12px] text-rose-200 transition hover:bg-rose-400/20"
-          >
-            Remove from shelf
-          </button>
+          <div className="flex items-center gap-2">
+            {onStartStyle && (
+              <button
+                type="button"
+                onClick={onStartStyle}
+                className="font-jetbrains cursor-pointer rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-1.5 text-[12px] text-cyan-100 transition hover:bg-cyan-400/20"
+              >
+                Start a style from this
+              </button>
+            )}
+            {/* The same act the tile affords, offered where the user is
+                actually looking at the plate. It closes the viewer: the row it
+                was describing does not exist afterwards. */}
+            <button
+              type="button"
+              onClick={onRemove}
+              className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-4 py-1.5 text-[12px] text-rose-200 transition hover:bg-rose-400/20"
+            >
+              Remove from shelf
+            </button>
+          </div>
         </div>
       }
     >
