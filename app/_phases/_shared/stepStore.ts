@@ -382,6 +382,48 @@ export async function loadStep<T = ResearchStepData>(
 /** Never rejects: an ignored `void saveStep(...)` must not become an unhandled
  *  rejection, and a save on every keystroke is a caller with nowhere to put a
  *  catch. The outcome is returned AND pushed to the trouble channel. */
+/** The shape version stamped on every record this build writes.
+ *
+ *  WHAT THE DATABASE VERSION DOES NOT COVER. `DB_VERSION` in lib/studioDb.ts
+ *  versions the database — which stores exist, which indexes they carry — and its
+ *  upgrade path has never rewritten a record. The records INSIDE the stores had
+ *  no version of any kind, so a blob written by any earlier build was
+ *  indistinguishable from a current one and nothing could have noticed. The
+ *  compensation for that is already spread through the tree: three readers
+ *  optional-chain through fields their own interface declares REQUIRED, and
+ *  frames/frames.ts says it plainly — "there is no migration seam to hang this
+ *  off".
+ *
+ *  THE POLICY, in full at
+ *  .vault/Architect/decisions/2026-08-29-persisted-payload-versioning.md:
+ *
+ *   1. ABSENT MEANS v1, permanently. A record with no `v` is version 1, and v1 is
+ *      the shape as of 2026-08-29 WITH EVERY FIELD OPTIONAL — the only honest
+ *      description, since records predating a field genuinely lack it. This is
+ *      what guarantees no stored work is ever stranded: the absent case has a
+ *      meaning rather than being an error deferred to whoever hits it.
+ *   2. New writes carry `v` — this constant, stamped below. Additive, and safe
+ *      against every existing reader, which destructures what it knows.
+ *   3. A record from the FUTURE is refused, never downgraded. The dangerous
+ *      direction is new data meeting OLD code, which is real here: `e242b89`
+ *      documents two tabs on different builds sharing one database. Applying v2
+ *      assumptions to a v3 payload and then SAVING the result destroys work,
+ *      where refusing merely fails to show it.
+ *   4. Migrations are pure vN→vN+1 functions applied at the read seam, and each
+ *      one ships in the same commit as the shape change that needs it.
+ *
+ *  Rules 3 and 4 are NOT built yet, deliberately: there is one version in
+ *  existence, so the chain would hold zero functions and the refusal branch would
+ *  be unreachable — untestable machinery whose first real use would also be its
+ *  first execution. The stamp ships alone because it is the irreversible half. A
+ *  v2 reader can only tell v1 from v2 if v1 records were being marked BEFORE v2
+ *  existed, so every day without it is another day of records identifiable only
+ *  by guessing.
+ *
+ *  Nothing reads this yet. That is intended, and it is not dead weight — deleting
+ *  it as unused would silently restore the ambiguity it exists to end. */
+export const SCHEMA_VERSION = 1;
+
 export async function saveStep<T>(
   projectId: string,
   phase: string,
@@ -403,7 +445,12 @@ export async function saveStep<T>(
       // be issued between them.
       if (!slot.stillNewest()) return;
       wrote = true;
-      store.put({ id: key(projectId, phase), projectId, phase, data: { ...data, savedAt: Date.now() } });
+      store.put({
+        id: key(projectId, phase),
+        projectId,
+        phase,
+        data: { ...data, savedAt: Date.now(), v: SCHEMA_VERSION },
+      });
     }),
   );
   if (!r.ok) return r;

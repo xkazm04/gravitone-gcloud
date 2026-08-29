@@ -44,6 +44,7 @@ import {
   lastStorageTrouble,
   onStorageTrouble,
   readStep,
+  SCHEMA_VERSION,
   saveStep,
   __resetSaveSlots,
 } from "@/app/_phases/_shared/stepStore";
@@ -376,4 +377,25 @@ test("honesty: a read that FAILS is distinguishable from a key that was never wr
   // to mark a surface hydrated when the read failed.
   const readable = await readStep("p-honesty", "research");
   expect(readable.ok, "the engine is restored for the rest of the file").toBe(true);
+});
+
+// EVERY RECORD THIS BUILD WRITES CAN SAY WHAT SHAPE IT IS.
+//
+// The stamp is inert — nothing branches on `v` yet, by design, because there is
+// only one version in existence. That is exactly why it needs a test: an inert
+// field with no reader is the kind of thing a later tidy-up deletes, and deleting
+// it silently restores the ambiguity it exists to end. Records written before the
+// stamp carry no `v` and are v1 by policy
+// (.vault/Architect/decisions/2026-08-29-persisted-payload-versioning.md).
+test("versioning: a written record carries its schema version, alongside savedAt", async () => {
+  await saveStep("p-ver", "research", { topic: "versioned", researched: false });
+
+  const out = await readStep<{ topic: string; savedAt: number; v: number }>("p-ver", "research");
+  expect(out.ok).toBe(true);
+  if (!out.ok) return;
+
+  expect(out.data?.topic, "the payload still round-trips").toBe("versioned");
+  expect(out.data?.savedAt, "savedAt is still stamped").toBeGreaterThan(0);
+  expect(out.data?.v, "the record names its schema version").toBe(SCHEMA_VERSION);
+  console.log(`[dal] written record: v=${out.data?.v}, savedAt=${out.data?.savedAt}`);
 });
