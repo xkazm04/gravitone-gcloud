@@ -314,12 +314,26 @@ export async function getAsset(id: string): Promise<Asset | undefined> {
  * moving the rest.
  */
 export async function moveAssets(ids: string[], path: string[]): Promise<void> {
-  if (!ids.length) return;
+  return refileAssets(ids.map((id) => ({ id, path })));
+}
+
+/**
+ * Give each named row its own new path, in one transaction.
+ *
+ * The primitive under both refiling acts, because a folder RENAME cannot be
+ * expressed as "these ids, that path": every asset below the renamed folder
+ * keeps its own tail, so each row needs a different destination. One shared
+ * transaction is what makes a rename all-or-nothing — a half-committed rename
+ * leaves the tree with the folder under both names and the plates split between
+ * them.
+ */
+export async function refileAssets(entries: { id: string; path: string[] }[]): Promise<void> {
+  if (!entries.length) return;
   let db: IDBDatabase | null = null;
   try {
     db = await openDb();
     await runTx(db, ASSETS_STORE, "readwrite", (store) => {
-      for (const id of ids) {
+      for (const { id, path } of entries) {
         const req = store.get(id);
         // Issued from the read's own success handler, which is what keeps the
         // transaction alive across the round trip — the same idiom
@@ -333,4 +347,49 @@ export async function moveAssets(ids: string[], path: string[]): Promise<void> {
   } finally {
     db?.close();
   }
+}
+
+/** Rename one row. The NAME only — same read-modify-write discipline as a
+ *  refile, so a hydrated `src` cannot be written back over the pointer. */
+export async function renameAsset(id: string, name: string): Promise<void> {
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    await runTx(db, ASSETS_STORE, "readwrite", (store) => {
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const row = req.result as Asset | undefined;
+        if (row) store.put({ ...row, name });
+      };
+    });
+  } finally {
+    db?.close();
+  }
+}
+
+/**
+ * The refile a folder rename amounts to: every asset at or below `path` keeps
+ * its own tail and swaps the one segment being renamed.
+ *
+ * Pure, and returns entries rather than performing them, so the caller can see
+ * the blast radius — how many plates a rename touches — before committing to
+ * it. Renaming onto a name a sibling already has MERGES the two folders, which
+ * is not a bug to guard against down here: folders exist only because assets
+ * claim them, so two folders with one name are one folder. The surface warns;
+ * the store just does what it is told.
+ */
+export function folderRenameEntries(
+  assets: Asset[],
+  path: string[],
+  name: string,
+): { id: string; path: string[] }[] {
+  if (!path.length) return [];
+  const depth = path.length - 1;
+  const prefix = pathKey(path);
+  return assets
+    .filter((a) => {
+      const k = pathKey(a.path);
+      return k === prefix || k.startsWith(`${prefix}/`);
+    })
+    .map((a) => ({ id: a.id, path: a.path.map((seg, i) => (i === depth ? name : seg)) }));
 }

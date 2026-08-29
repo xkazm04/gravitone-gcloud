@@ -13,7 +13,7 @@
 // bindings. Escape, the focus trap and the restore-to-opener belong to Modal, so
 // this file owns only the stepping.
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 
 import Modal from "@/components/ui/Modal";
@@ -29,6 +29,7 @@ export default function AssetLightbox({
   onClose,
   onStep,
   onRemove,
+  onRename,
 }: {
   asset: Asset;
   /** 1-based position within the folder currently on screen. */
@@ -37,12 +38,18 @@ export default function AssetLightbox({
   onClose: () => void;
   onStep: (delta: 1 | -1) => void;
   onRemove: () => void;
+  onRename: (name: string) => void;
 }) {
   // Modal owns Escape and the focus trap; only the walk is ours. Bound on
   // `window` rather than the panel, because the panel holds focus and the arrow
   // keys should work wherever inside it the user has tabbed to.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      // Not while the user is typing. The name field lives in this dialog, and
+      // a left arrow meant to move the caret would otherwise step to the next
+      // plate — remounting the field and abandoning the edit mid-word.
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
       if (e.key === "ArrowRight") {
         e.preventDefault();
         onStep(1);
@@ -125,6 +132,10 @@ export default function AssetLightbox({
         </figure>
 
         <div className="min-w-0 space-y-5">
+          <Section label="name">
+            <NameEditor key={asset.id} initial={asset.name} onCommit={onRename} />
+          </Section>
+
           <Facts
             rows={[
               ["filed under", asset.path.at(-1)],
@@ -195,6 +206,53 @@ function Facts({ rows }: { rows: [string, string | null | undefined][] }) {
         </div>
       ))}
     </dl>
+  );
+}
+
+/**
+ * The plate's name, editable in place.
+ *
+ * Keyed on the asset id by its caller, so stepping to the next plate with the
+ * arrow keys REMOUNTS this — otherwise the field would hold the previous
+ * plate's text while the picture beside it had already changed, and the next
+ * blur would rename the wrong row.
+ *
+ * Commits on Enter and on blur, and reverts on Escape. A name is only sent up
+ * when it actually differs: a user who tabs through the field should not
+ * generate a write and an announcement for having looked at it.
+ */
+function NameEditor({ initial, onCommit }: { initial: string; onCommit: (name: string) => void }) {
+  const [value, setValue] = useState(initial);
+
+  const commit = () => {
+    const next = value.trim();
+    if (!next) {
+      setValue(initial); // the hook refuses an empty name; the field agrees rather than arguing
+      return;
+    }
+    if (next !== initial) onCommit(next);
+  };
+
+  return (
+    <input
+      value={value}
+      aria-label="Plate name"
+      onChange={(e) => setValue(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+          e.currentTarget.blur();
+        } else if (e.key === "Escape") {
+          // Stopped here, or Modal reads it as "close the dialog" and the user
+          // loses the whole viewer for abandoning one edit.
+          e.stopPropagation();
+          setValue(initial);
+        }
+      }}
+      className="font-hanken w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] text-white/90 outline-none transition focus:border-cyan-400/40"
+    />
   );
 }
 

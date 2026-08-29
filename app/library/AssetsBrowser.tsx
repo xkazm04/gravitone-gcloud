@@ -50,7 +50,7 @@ function foldersWithChildren(nodes: FolderNode[], into: string[] = []): string[]
 
 export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => void }) {
   const { user } = useAuth();
-  const { assets, error, loading, remove, move } = useAssets(user?.uid ?? null);
+  const { assets, error, loading, remove, move, rename, renameFolder } = useAssets(user?.uid ?? null);
   const announce = useAnnounce();
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -252,6 +252,29 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
     requestAnimationFrame(() => gridRef.current?.focus());
   };
 
+  /**
+   * Rename a folder, which for a derived tree means refiling everything under
+   * it. The announcement carries the COUNT, because that is the part a user
+   * cannot see: the rail shows one row changing while up to thirty stored rows
+   * were rewritten, and a rename that silently touched a subtree should say so.
+   */
+  const refolder = async (path: string[], name: string) => {
+    const was = path[path.length - 1];
+    const n = await renameFolder(path, name);
+    if (!n) return;
+    // The selection is addressed BY PATH, so a rename of the folder being
+    // viewed would leave `selected` pointing at a name that no longer exists
+    // and empty the gallery. Follow the rename instead.
+    const renamed = path.map((seg, i) => (i === path.length - 1 ? name.trim() : seg));
+    if (pathKey(selected).startsWith(pathKey(path))) {
+      setSelected([...renamed, ...selected.slice(path.length)]);
+    }
+    announce({
+      key: `folder-renamed:${pathKey(path)}:${name}`,
+      text: `Renamed ${was} to ${name.trim()} — ${n} ${n === 1 ? "plate" : "plates"} refiled.`,
+    });
+  };
+
   /** Walk the folder currently on screen. Wraps, because a gallery is a ring —
    *  and the alternative is an arrow key that silently does nothing at the ends
    *  with no edge on screen to explain why. */
@@ -281,6 +304,7 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
           dragActive={Boolean(dragging)}
           over={dropOver}
           onOver={setDropOver}
+          onRenameFolder={(path, name) => void refolder(path, name)}
           onDropAsset={(path) => {
             const asset = dragging;
             endDrag();
@@ -379,6 +403,15 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
           onClose={() => setOpenId(null)}
           onStep={step}
           onRemove={() => removeFromViewer(openAsset)}
+          onRename={(name) => {
+            void rename(openAsset.id, name).then((ok) => {
+              if (ok)
+                announce({
+                  key: `asset-renamed:${openAsset.id}:${name}`,
+                  text: `Renamed to ${name.trim()}.`,
+                });
+            });
+          }}
         />
       )}
 

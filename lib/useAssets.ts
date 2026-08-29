@@ -18,10 +18,13 @@ import { useCallback, useEffect, useState } from "react";
 import {
   assetFromProof,
   deleteAsset as dbDelete,
+  folderRenameEntries,
   getAsset,
   hydrateProofSrcs,
   listAssets,
   moveAssets,
+  refileAssets,
+  renameAsset,
   promotedFrom,
   putAssets,
   readProofPointer,
@@ -187,7 +190,11 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
         // the plate back out of the folder the user moved it to, silently and
         // on an action that reads as a no-op.
         const prior = await getAsset(fresh.id);
-        const asset = prior ? { ...fresh, path: prior.path } : fresh;
+        // The NAME is preserved for the same reason as the path: both are the
+        // user's edits to a shelf entry, and `assetFromProof` recomputes both
+        // from the theme. A plate they renamed reverting to the proof's own
+        // label the next time the sheet is opened is the same silent undo.
+        const asset = prior ? { ...fresh, path: prior.path, name: prior.name } : fresh;
         await putAssets([asset]);
         // The stored row holds the pointer; the list holds what a gallery can
         // draw. Same record, dereferenced — see assets.ts.
@@ -230,6 +237,55 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
     }
   }, []);
 
+  /**
+   * Rename one plate. An empty name is refused rather than stored: the shelf
+   * reads `name` for the tile caption, the drawer heading and the removal
+   * announcement, and a blank one would make a plate that cannot be referred
+   * to by any of the three.
+   */
+  const rename = useCallback(async (id: string, raw: string): Promise<boolean> => {
+    const name = raw.trim();
+    if (!name) return false;
+    try {
+      await renameAsset(id, name);
+      setAssets((as) => (as ?? []).map((a) => (a.id === id ? { ...a, name } : a)));
+      setError(null);
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "could not rename it");
+      return false;
+    }
+  }, []);
+
+  /**
+   * Rename a folder — which, for a tree derived from paths, is a refile of
+   * everything at or below it.
+   *
+   * Returns how many plates moved so the caller can say so. The entries are
+   * computed from LOCAL state because that is what the user is looking at and
+   * what the count they are about to be told refers to; the writes themselves
+   * still go row by row through the store.
+   */
+  const renameFolder = useCallback(
+    async (path: string[], raw: string): Promise<number> => {
+      const name = raw.trim();
+      if (!name || !path.length || name === path[path.length - 1]) return 0;
+      const entries = folderRenameEntries(assets ?? [], path, name);
+      if (!entries.length) return 0;
+      try {
+        await refileAssets(entries);
+        const byId = new Map(entries.map((e) => [e.id, e.path]));
+        setAssets((as) => (as ?? []).map((a) => (byId.has(a.id) ? { ...a, path: byId.get(a.id)! } : a)));
+        setError(null);
+        return entries.length;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "could not rename the folder");
+        return 0;
+      }
+    },
+    [assets],
+  );
+
   /** Drop every shelf entry promoted out of one theme — what deleting that
    *  theme has to do, since a promoted asset POINTS at bytes inside it and
    *  would otherwise be left pointing at nothing. */
@@ -251,5 +307,16 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
     [uid],
   );
 
-  return { assets, error, loading: assets === null, reload, remove, move, promote, removeFromTheme };
+  return {
+    assets,
+    error,
+    loading: assets === null,
+    reload,
+    remove,
+    move,
+    rename,
+    renameFolder,
+    promote,
+    removeFromTheme,
+  };
 }
