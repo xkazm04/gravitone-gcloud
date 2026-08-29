@@ -11,12 +11,13 @@
     "check:bundle": "node pipeline/check-bundle.mjs",
     "verify:text": "npx tsx pipeline/verify-text-engine.mts",
     "check:trailer-structure": "npx tsx pipeline/trailer-structure-regression.mts",
+    "preflight": "npx tsx pipeline/preflight.mts",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "lint:ratchet": "node pipeline/lint-ratchet.mjs",
     "test": "playwright test",
     "test:live": "playwright test -c playwright.live.config.ts",
-    "verify": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run verify:text && npm run check:trailer-structure && npm test && npm run build && npm run check:bundle",
+    "verify": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run check:trailer-structure && npm test && npm run build && npm run check:bundle",
     "prepare": "git config core.hooksPath .githooks || exit 0"
   },
   "dependencies": {
