@@ -55,7 +55,8 @@ export default function MoveDialog({
   count: number;
   /** What to call them in the heading. */
   subject: string;
-  /** Where they sit now, so the dialog can refuse to "move" them there. */
+  /** Where they sit now, so the dialog can refuse to "move" them there. Empty
+   *  when a batch spans folders — there is then no single origin to refuse. */
   from: string[];
   tree: FolderNode[];
   onClose: () => void;
@@ -83,7 +84,11 @@ export default function MoveDialog({
       }
       subtitle={
         <span className="font-hanken">
-          Currently in <span className="text-white/80">{from.join(" › ") || "no folder"}</span>.
+          Currently in{" "}
+          <span className="text-white/80">
+            {from.join(" › ") || (count > 1 ? "several folders" : "no folder")}
+          </span>
+          .
         </span>
       }
       className="max-w-lg"

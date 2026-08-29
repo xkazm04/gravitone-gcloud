@@ -64,10 +64,20 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
   // An id that is no longer in `shown` resolves to null below, which closes the
   // viewer: the one place it can be wrong is the one that self-corrects.
   const [openId, setOpenId] = useState<string | null>(null);
-  /** The plate the move dialog is refiling. Held whole rather than by id: the
-   *  dialog names it and reports where it came from, and it stays open across
-   *  the move that changes both. */
-  const [moving, setMoving] = useState<Asset | null>(null);
+  /** The plates the move dialog is refiling. Held whole rather than by id: the
+   *  dialog names them and reports where they came from, and it stays open
+   *  across the move that changes both. */
+  const [moving, setMoving] = useState<Asset[] | null>(null);
+  /**
+   * The multi-selection, and the tile a shift-range measures from.
+   *
+   * Scoped to the folder on screen and cleared when that changes. A selection
+   * that survived navigation would let "Remove" delete plates the user cannot
+   * see, which is the one thing a bulk destructive control must never be able
+   * to do.
+   */
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [anchor, setAnchor] = useState<string | null>(null);
   /** The plate under the pointer during a drag. Kept in React state rather than
    *  read back off the DataTransfer, because `getData` is deliberately blocked
    *  during dragover — a drop target is not allowed to inspect the payload
@@ -91,6 +101,50 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
 
   const openIndex = openId ? shown.findIndex((a) => a.id === openId) : -1;
   const openAsset = openIndex === -1 ? null : shown[openIndex];
+  /** The selection intersected with what is actually on screen — the only form
+   *  any action is allowed to read, so a row removed underneath cannot linger
+   *  in a count or a delete. */
+  const chosen = useMemo(() => shown.filter((a) => picked.has(a.id)), [shown, picked]);
+
+  const clearPicks = () => {
+    setPicked(new Set());
+    setAnchor(null);
+  };
+
+  /** Selecting a folder is navigation, and navigation drops the selection. */
+  const selectFolder = (path: string[]) => {
+    setSelected(path);
+    clearPicks();
+  };
+
+  const togglePick = (id: string) => {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+    setAnchor(id);
+  };
+
+  /** Shift-click: everything between the last tile touched and this one. Adds
+   *  to the selection rather than replacing it, which is what makes two ranges
+   *  in different parts of a long folder possible. */
+  const pickRange = (id: string) => {
+    const to = shown.findIndex((a) => a.id === id);
+    const from = anchor ? shown.findIndex((a) => a.id === anchor) : -1;
+    if (to === -1) return;
+    if (from === -1) {
+      togglePick(id);
+      return;
+    }
+    const [lo, hi] = from <= to ? [from, to] : [to, from];
+    setPicked((prev) => {
+      const next = new Set(prev);
+      for (let i = lo; i <= hi; i++) next.add(shown[i].id);
+      return next;
+    });
+  };
 
   // Once, when the shelf first has a shape. The tree is empty on the first
   // render — assets load async — and re-seeding on every rebuild would reopen
@@ -175,6 +229,29 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
     });
   };
 
+  /**
+   * Remove every selected plate.
+   *
+   * One announcement for the lot, not one per row: the announcer keys off
+   * transitions and a burst of thirty would be shed by its own queue bound
+   * (lib/announcer.tsx), so the user would hear an arbitrary tail of what
+   * happened instead of the fact that it happened.
+   */
+  const removeChosen = async () => {
+    const doomed = chosen;
+    if (!doomed.length) return;
+    clearPicks();
+    for (const a of doomed) await remove(a.id);
+    announce({
+      key: `assets-removed:${doomed.map((a) => a.id).join(",")}`,
+      text:
+        doomed.length === 1
+          ? `Removed ${doomed[0].name} from the shelf.`
+          : `Removed ${doomed.length} plates from the shelf.`,
+    });
+    requestAnimationFrame(() => gridRef.current?.focus());
+  };
+
   /** Walk the folder currently on screen. Wraps, because a gallery is a ring —
    *  and the alternative is an arrow key that silently does nothing at the ends
    *  with no edge on screen to explain why. */
@@ -198,7 +275,7 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
           nodes={tree}
           selected={selected}
           expanded={expanded}
-          onSelect={setSelected}
+          onSelect={selectFolder}
           onToggle={toggle}
           total={rows.length}
           dragActive={Boolean(dragging)}
@@ -233,11 +310,42 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
               a button that does nothing. */}
           {shown.length > 0 && (
             <p className="font-jetbrains text-[10px] text-white/25">
-              click to open · drag onto a folder to refile · right-click, or Delete on a focused
-              tile, to remove
+              click to open · drag onto a folder to refile · ctrl-click or X to select ·
+              right-click, or Delete on a focused tile, to remove
             </p>
           )}
         </div>
+
+        {chosen.length > 0 && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] px-3 py-2">
+            <p className="font-jetbrains text-[12px] text-cyan-100">
+              {chosen.length} selected
+            </p>
+            <div className="ml-auto flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setMoving(chosen)}
+                className="font-jetbrains cursor-pointer rounded-full border border-white/15 px-3.5 py-1.5 text-[12px] text-white/80 transition hover:bg-white/5"
+              >
+                Move to folder…
+              </button>
+              <button
+                type="button"
+                onClick={() => void removeChosen()}
+                className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-3.5 py-1.5 text-[12px] text-rose-200 transition hover:bg-rose-400/20"
+              >
+                Remove
+              </button>
+              <button
+                type="button"
+                onClick={clearPicks}
+                className="font-jetbrains cursor-pointer rounded-full px-3 py-1.5 text-[12px] text-white/45 transition hover:text-white/80"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        )}
 
         {shown.length === 0 ? (
           <EmptyShelf hasAny={rows.length > 0} onOpenStyles={onOpenStyles} />
@@ -247,7 +355,12 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
               <Tile
                 key={a.id}
                 asset={a}
-                onOpen={() => setOpenId(a.id)}
+                selected={picked.has(a.id)}
+                onActivate={(mod) => {
+                  if (mod === "toggle") togglePick(a.id);
+                  else if (mod === "range") pickRange(a.id);
+                  else setOpenId(a.id);
+                }}
                 onMenu={(x, y) => setMenu({ x, y, asset: a })}
                 onDelete={() => removeTile(a)}
                 onDragStart={() => setDragging(a)}
@@ -269,16 +382,25 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
         />
       )}
 
-      {moving && (
+      {moving && moving.length > 0 && (
         <MoveDialog
-          count={1}
-          subject={moving.name}
-          from={moving.path}
+          count={moving.length}
+          subject={moving[0].name}
+          // A common origin only when they genuinely share one. For a selection
+          // spanning folders there is no "here" to refuse to move to, and
+          // claiming one would disable the destination the user actually wants.
+          from={commonPath(moving)}
           tree={tree}
           onClose={() => setMoving(null)}
           onMove={(path) => {
+            const batch = moving;
             setMoving(null);
-            void refile([moving.id], path, moving.name);
+            clearPicks();
+            void refile(
+              batch.map((a) => a.id),
+              path,
+              batch.length === 1 ? batch[0].name : `${batch.length} plates`,
+            );
           }}
         />
       )}
@@ -293,7 +415,16 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
             // the safe act goes first: ContextMenu focuses its FIRST item on
             // open, so putting the removal there would put a keyboard user one
             // Enter away from deleting the plate they right-clicked.
-            { label: "Move to folder…", onSelect: () => setMoving(menu.asset) },
+            {
+              label:
+                picked.has(menu.asset.id) && chosen.length > 1
+                  ? `Move ${chosen.length} to folder…`
+                  : "Move to folder…",
+              // Right-clicking INSIDE a selection acts on the selection;
+              // right-clicking outside one acts on the tile under the pointer,
+              // which is what every file manager does and what the user means.
+              onSelect: () => setMoving(picked.has(menu.asset.id) ? chosen : [menu.asset]),
+            },
             {
               label: "Remove from shelf",
               destructive: true,
@@ -310,16 +441,31 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
   );
 }
 
+/** The folder every one of them sits in, or none. Used to decide what "already
+ *  here" means for a batch: a selection spanning folders has no single origin,
+ *  and pretending otherwise disables a legitimate destination. */
+function commonPath(assets: Asset[]): string[] {
+  if (!assets.length) return [];
+  const first = pathKey(assets[0].path);
+  return assets.every((a) => pathKey(a.path) === first) ? assets[0].path : [];
+}
+
+/** What a press on a tile meant. The tile reports the gesture; the shelf owns
+ *  what each one does, because only it knows the selection. */
+type Activation = "open" | "toggle" | "range";
+
 function Tile({
   asset,
-  onOpen,
+  selected,
+  onActivate,
   onMenu,
   onDelete,
   onDragStart,
   onDragEnd,
 }: {
   asset: Asset;
-  onOpen: () => void;
+  selected: boolean;
+  onActivate: (mod: Activation) => void;
   onMenu: (x: number, y: number) => void;
   onDelete: () => void;
   onDragStart: () => void;
@@ -341,7 +487,7 @@ function Tile({
       // so, or both bindings are discoverable only by pressing them and finding
       // out. The on-screen hint names them for sighted users; this is the same
       // sentence for everyone else.
-      aria-label={`${asset.name}. Press Enter to open it, Delete to remove it from the shelf.`}
+      aria-label={`${asset.name}.${selected ? " Selected." : ""} Press Enter to open it, X to select it, Delete to remove it from the shelf.`}
       draggable
       onDragStart={(e) => {
         // A text payload so the drag is legible to anything outside this rail;
@@ -352,7 +498,10 @@ function Tile({
         onDragStart();
       }}
       onDragEnd={onDragEnd}
-      onClick={onOpen}
+      // Modifier-click selects, plain click opens. The gesture is reported and
+      // not interpreted here: whether a range is even possible depends on the
+      // selection, which lives one level up.
+      onClick={(e) => onActivate(e.ctrlKey || e.metaKey ? "toggle" : e.shiftKey ? "range" : "open")}
       onContextMenu={(e) => {
         e.preventDefault();
         onMenu(e.clientX, e.clientY);
@@ -374,10 +523,22 @@ function Tile({
         // the dialog is two things happening for one keypress.
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
-          onOpen();
+          onActivate("open");
+        }
+        // Ctrl-click has no keyboard equivalent, so selecting gets a key of its
+        // own — the single-letter grammar the foundry lightbox already uses. A
+        // selection reachable only by mouse would make every bulk action on
+        // this shelf mouse-only.
+        if (e.key === "x" || e.key === "X") {
+          e.preventDefault();
+          onActivate(e.shiftKey ? "range" : "toggle");
         }
       }}
-      className="group cursor-pointer overflow-hidden rounded-xl border border-white/8 transition hover:border-cyan-400/35 focus:border-cyan-400/50"
+      className={`group cursor-pointer overflow-hidden rounded-xl border transition ${
+        selected
+          ? "border-cyan-400/70 ring-1 ring-cyan-300/40"
+          : "border-white/8 hover:border-cyan-400/35 focus:border-cyan-400/50"
+      }`}
     >
       <span className="relative block aspect-video w-full bg-white/[0.03]">
         {/* draggable={false} so the FIGURE is what gets dragged. An <img> is
