@@ -46,31 +46,64 @@ operator's, and a delta scan over a map that was already right can only churn it
 
 So the trigger is a MEASUREMENT, and it is free:
 
-```bash
-python -c "
-import json,glob,os
-d=json.load(open('context-map.json',encoding='utf-8'))
-mapped={p for c in d['contexts'] for p in c['file_paths']}
-src={p.replace(chr(92),'/') for pat in ('app/**/*.ts*','app/**/*.css','components/**/*.ts*','lib/**/*.ts*') for p in glob.glob(pat,recursive=True)}
-stale=[p for p in mapped if not os.path.exists(p)]
-print('unmapped:', sorted(src-mapped))
-print('stale   :', sorted(stale))"
+Save it as `map-gate.py` or paste it; it needs no arguments and touches nothing.
+
+```python
+import json, os, subprocess, collections
+CODE = {".ts", ".tsx", ".mjs", ".mts", ".py", ".css"}
+d = json.load(open("context-map.json", encoding="utf-8"))
+mapped = {p for c in d["contexts"] for p in c["file_paths"]}
+# WHAT THE GATE LOOKS AT IS DERIVED FROM THE MAP, never listed here: the
+# directories the map declares paths under, and `git ls-files` for what is
+# source (git already knows; a glob has to be told, and was told wrong three
+# times). A new directory entering the map widens this by itself.
+dirs = {p.split("/")[0] for p in mapped if "/" in p}
+tracked = subprocess.run(["git", "ls-files"], capture_output=True, text=True).stdout.split()
+src = [p for p in tracked if p.split("/")[0] in dirs and os.path.splitext(p)[1] in CODE]
+per = collections.defaultdict(lambda: [0, 0])
+for p in src:
+    per[p.split("/")[0]][1] += 1
+    per[p.split("/")[0]][0] += p in mapped
+# TWO BANDS, and the threshold is a measurement rather than a preference: a
+# directory the map covers comprehensively is one where an unmapped file is
+# DRIFT; one it covers selectively is one where an unmapped file is a choice
+# nobody has made. Measured 2026-08-29 the two populations are 96.9%+ and
+# 45.5%-, so anything in between would be a new situation worth looking at.
+deep = {k for k, (m, t) in per.items() if m / t >= 0.9}
+drift = sorted(p for p in src if p not in mapped and p.split("/")[0] in deep)
+loose = sorted(p for p in src if p not in mapped and p.split("/")[0] not in deep)
+stale = sorted(p for p in mapped if not os.path.exists(p))
+for k in sorted(per):
+    m, t = per[k]
+    print(f"  {k:12s} {m:4d}/{t:<4d} {m/t*100:5.1f}%{'  (comprehensive)' if k in deep else '  (selective)'}")
+print("DRIFT (scan)   :", drift or "none")
+print("stale (scan)   :", stale or "none")
+print("selective      :", f"{len(loose)} unmapped under {sorted(set(p.split('/')[0] for p in loose))} — a choice, not drift")
 ```
 
-- **Both lists empty → DO NOT SCAN.** Say so in your report: `map: current (N contexts, 0 unmapped)`.
-  A new file inside a directory an existing context already owns needs no scan — the map tracks file
-  OWNERSHIP, and a delta pass over it changes nothing but the timestamps. This is the common case.
-- **`unmapped` non-empty, and the paths sit under directories existing contexts already own** →
-  a **delta** scan. This is the ordinary refresh.
-- **`unmapped` non-empty under a NEW directory with ~8+ source files** → a **subtree** scan of that
+- **DRIFT and stale both empty → DO NOT SCAN.** Say so in your report: `map: current (N contexts,
+  0 drift)`. A new file inside a directory an existing context already owns needs no scan — the map
+  tracks file OWNERSHIP, and a delta pass over it changes nothing but the timestamps. This is the
+  common case, and the `selective` line is not a reason to scan.
+- **DRIFT non-empty** → a **delta** scan. A file the map does not have, in a directory the map
+  otherwise covers completely, is the map falling behind. This is the ordinary refresh.
+- **DRIFT non-empty under a NEW directory with ~8+ source files** → a **subtree** scan of that
   directory (see the granularity rule at the bottom — a subtree scan of a thin directory will merge,
   not split, and may duplicate).
 - **`stale` non-empty** → a delta scan; files the map still claims are gone.
+- **The `selective` count is a standing fact, not a trigger.** `pipeline/` and `tests/` are mapped
+  in part on purpose — the map holds the probe lane's named seams and the pipeline's entry points,
+  not every script beside them. Report the number so it stays visible; whether those files should be
+  mapped is the operator's call and a scan will not make it for them.
 
-`lib/**` is in that glob deliberately. It used not to be, and the verification below inherited the
-same blind spot, so `lib/devAuth.ts` — the test-automation bypass that `lib/localMode.ts` spends a
-paragraph distinguishing itself from — sat unmapped and unnoticed since the map was created. A glob
-that does not cover a directory reports it as perfectly mapped.
+THERE IS NO GLOB LIST ANY MORE, and that is the point. The first version of this gate globbed
+`app/**` and `components/**`; widening it to `lib/**` immediately found `lib/devAuth.ts` — the
+test-automation bypass `lib/localMode.ts` spends a paragraph distinguishing itself from — unmapped
+since the map was created. Three later rounds found the same hole three more times: `pipeline/**`,
+then `tests/**`, then `knowledge/**`. A glob that does not cover a directory reports it as perfectly
+mapped, and a hand-written list of directories is a second copy of the map that drifts from it. So
+the gate reads the map for its directories and `git ls-files` for its files, and cannot be wrong
+about a directory again.
 
 ### Then check whether somebody already did it
 
@@ -159,16 +192,20 @@ can do this. So after any scan:
 
 ```bash
 python -c "
-import json,glob,os
+import json,os
 d=json.load(open('context-map.json',encoding='utf-8'))
 names=[c['name'] for c in d['contexts']]
 print('duplicates:', {n for n in names if names.count(n)>1})
 print('ungrouped :', [c['name'] for c in d['contexts'] if not c['group']])
-print('stale     :', [(c['name'],p) for c in d['contexts'] for p in c['file_paths'] if not os.path.exists(p)])
-mapped={p for c in d['contexts'] for p in c['file_paths']}
-src={p.replace(chr(92),'/') for pat in ('app/**/*.ts*','app/**/*.css','components/**/*.ts*','lib/**/*.ts*') for p in glob.glob(pat,recursive=True)}
-print('unmapped  :', sorted(src-mapped))"
+print('stale     :', [(c['name'],p) for c in d['contexts'] for p in c['file_paths'] if not os.path.exists(p)])"
 ```
+
+Then run **the gate from the top of this section again** for the coverage half. It is not repeated
+here on purpose: it used to be, with its own copy of the glob, and when that glob was widened this
+copy was not — so the post-scan check inherited the blind spot the trigger had just lost. Two copies
+of a rule are two rules. What a scan should move is the per-directory percentages and `DRIFT`; if a
+scan leaves `DRIFT` non-empty, it did not map what it was run for and that is a finding, not a
+verdict to accept.
 
 Repairing what you find:
 
