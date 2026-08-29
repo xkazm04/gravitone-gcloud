@@ -18,8 +18,10 @@ import { useCallback, useEffect, useState } from "react";
 import {
   assetFromProof,
   deleteAsset as dbDelete,
+  getAsset,
   hydrateProofSrcs,
   listAssets,
+  moveAssets,
   promotedFrom,
   putAssets,
   readProofPointer,
@@ -177,7 +179,15 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
     async (theme: Theme, proof: Proof): Promise<Asset | null> => {
       if (!uid) return null;
       try {
-        const asset = assetFromProof(uid, theme, proof);
+        const fresh = assetFromProof(uid, theme, proof);
+        // A plate the user has since REFILED keeps where they put it. The id is
+        // content-addressed, so a second promotion is an overwrite of the same
+        // row (assets.ts#promotedId) — and `assetFromProof` recomputes the path
+        // from the theme, so without this every reopened proof sheet would drag
+        // the plate back out of the folder the user moved it to, silently and
+        // on an action that reads as a no-op.
+        const prior = await getAsset(fresh.id);
+        const asset = prior ? { ...fresh, path: prior.path } : fresh;
         await putAssets([asset]);
         // The stored row holds the pointer; the list holds what a gallery can
         // draw. Same record, dereferenced — see assets.ts.
@@ -196,6 +206,29 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
     },
     [uid],
   );
+
+  /**
+   * Refile rows under a new folder chain.
+   *
+   * Returns how many rows the store accepted, so a caller can say "moved 3
+   * plates to presets" rather than announcing a number it assumed. Local state
+   * is patched rather than reloaded: a reload would re-hydrate every promoted
+   * proof on the shelf — re-reading the themes and rebuilding megabytes of
+   * base64 — to reflect a change to one array of strings.
+   */
+  const move = useCallback(async (ids: string[], path: string[]): Promise<number> => {
+    if (!ids.length) return 0;
+    try {
+      await moveAssets(ids, path);
+      const moving = new Set(ids);
+      setAssets((as) => (as ?? []).map((a) => (moving.has(a.id) ? { ...a, path } : a)));
+      setError(null);
+      return ids.length;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "could not refile it");
+      return 0;
+    }
+  }, []);
 
   /** Drop every shelf entry promoted out of one theme — what deleting that
    *  theme has to do, since a promoted asset POINTS at bytes inside it and
@@ -218,5 +251,5 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
     [uid],
   );
 
-  return { assets, error, loading: assets === null, reload, remove, promote, removeFromTheme };
+  return { assets, error, loading: assets === null, reload, remove, move, promote, removeFromTheme };
 }

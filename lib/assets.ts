@@ -18,7 +18,7 @@
 
 import type { Provenance } from "@/app/_studio/types";
 
-import { getByIndex, openDb, runTx, ASSETS_STORE, BY_UID } from "./studioDb";
+import { getByIndex, getRecord, openDb, runTx, ASSETS_STORE, BY_UID } from "./studioDb";
 import type { Proof, StyleBlock, Theme } from "./themes";
 
 export type AssetKind = "image";
@@ -272,6 +272,64 @@ export async function deleteAsset(id: string): Promise<void> {
   try {
     db = await openDb();
     await runTx(db, ASSETS_STORE, "readwrite", (store) => store.delete(id));
+  } finally {
+    db?.close();
+  }
+}
+
+/** Read one stored row. The STORED one — `src` is whatever was written, so a
+ *  promoted proof comes back as a pointer, not as the bytes a gallery is
+ *  currently holding for it. */
+export async function getAsset(id: string): Promise<Asset | undefined> {
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    return await getRecord<Asset>(db, ASSETS_STORE, id);
+  } finally {
+    db?.close();
+  }
+}
+
+/**
+ * Refile rows under a new folder chain.
+ *
+ * The whole point of the tree is that folders are DERIVED from the paths assets
+ * claim (top of this file), which made the shelf file itself once and then
+ * freeze: nothing could change a `path`, so nothing could change the tree. This
+ * is the other half of that design — moving into a path is also how a folder
+ * comes into existence, since an empty one cannot be made and does not need to
+ * be.
+ *
+ * Read-modify-write INSIDE one transaction, which is load-bearing rather than
+ * ceremony. The rows a gallery holds have been through `hydrateProofSrcs`, so
+ * their `src` is megabytes of base64 where the stored row holds a `proof:`
+ * pointer; writing a caller-supplied row back would inflate the store by the
+ * size of every picture it has ever displayed, and would do it silently. The
+ * only thing that crosses this boundary is the path. One transaction also means
+ * a multi-row move cannot half-commit and scatter a selection across two
+ * folders.
+ *
+ * A missing id is skipped rather than thrown on: the shelf can be refiled from
+ * one tab while another deletes, and losing a row is not a reason to abandon
+ * moving the rest.
+ */
+export async function moveAssets(ids: string[], path: string[]): Promise<void> {
+  if (!ids.length) return;
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    await runTx(db, ASSETS_STORE, "readwrite", (store) => {
+      for (const id of ids) {
+        const req = store.get(id);
+        // Issued from the read's own success handler, which is what keeps the
+        // transaction alive across the round trip — the same idiom
+        // studioDb#deleteByIndex documents.
+        req.onsuccess = () => {
+          const row = req.result as Asset | undefined;
+          if (row) store.put({ ...row, path });
+        };
+      }
+    });
   } finally {
     db?.close();
   }
