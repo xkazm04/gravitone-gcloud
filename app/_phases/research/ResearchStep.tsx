@@ -45,6 +45,7 @@ import FollowUpQueue from "./_parts/FollowUpQueue";
 import TopicPanel from "./_parts/TopicPanel";
 import { ClearDialog, ConfirmScope } from "./_parts/ScopeGate";
 import { useScope } from "./useScope";
+import { resetFollowUps } from "./useFollowUps";
 import BeatVariantBoard from "./beats/BeatVariantBoard";
 import ModeChooser, { ModeSwitch } from "./beats/ModeChooser";
 import { useBeatPicks } from "./beats/useBeatPicks";
@@ -216,9 +217,15 @@ function EducationalResearch({ projectId }: { projectId: string }) {
     if (live) jobs.cancel(live);
   };
 
+  // Everything the ClearDialog says is discarded, discarded. The follow-up
+  // record is the third document this step owns — it lives above React so that
+  // navigation cannot lose it (useFollowUps.ts), which also means nothing here
+  // ended it, and a returned deepen from the cleared run came back under the
+  // next run's board.
   const doClear = () => {
     run.reset();
     api.reset();
+    resetFollowUps(projectId);
     setConfirmClear(false);
     setTab("topic");
   };

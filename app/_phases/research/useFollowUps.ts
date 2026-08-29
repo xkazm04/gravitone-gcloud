@@ -49,6 +49,32 @@ function subscribe(key: string, f: () => void) {
   return () => void set!.delete(f);
 }
 
+/** Drop a project's follow-up record entirely.
+ *
+ *  CLEARING THE RESEARCH HAS TO REACH THIS FILE, and it did not. `doClear`
+ *  (ResearchStep.tsx) resets the run and the scope, and the dialog tells the
+ *  creator that clearing "discards all of it" — the notebook, and every
+ *  scoping decision on the board. The queue is research too, and it survived,
+ *  for the same reason it survives navigation: the record lives above React on
+ *  purpose, so nothing local to a mount can end it.
+ *
+ *  What that cost is not abstract. A deepen that has been DISPATCHED keeps its
+ *  row after its card's flag is gone (`dispatchedDeepens` in FollowUpQueue —
+ *  un-flagging a card is the natural gesture once the answer is in, and the
+ *  answer must not vanish with it). `api.reset()` clears every flag, so after
+ *  a Clear every returned deepen is exactly that case: a row with no live
+ *  card behind it. The board is locked until a notebook exists again, so
+ *  nobody sees it at once — and then the NEXT run's board opens carrying the
+ *  discarded run's answers, presented as this notebook's follow-up research.
+ *
+ *  Deletes rather than writing `[]`, so `read` falls back to the shared `NONE`
+ *  and the snapshot stays reference-stable for `useSyncExternalStore`. */
+export function resetFollowUps(projectId: string) {
+  if (!records.has(projectId)) return;
+  records.delete(projectId);
+  subs.get(projectId)?.forEach((f) => f());
+}
+
 /** The project's follow-up requests, and the updater that moves them. Shaped
  *  like `useState`'s functional form so the call sites read the same as before. */
 export function useFollowUps(projectId: string) {
