@@ -2,8 +2,15 @@
 //
 // Base: `eslint-config-next/core-web-vitals` (the Next.js recommended set plus the
 // Core Web Vitals rules) and `eslint-config-next/typescript`. Both are peers of the
-// pinned `next@16.3.0`, so the rule content moves only when a dependency in this
-// repo moves — the input is deterministic given the tree.
+// `next` version this repo resolves, so the rule content moves only when a
+// dependency in this repo moves — the input is deterministic given the tree.
+//
+// THE VERSION IS NOT RESTATED HERE, and that is the point. It used to say
+// `next@16.3.0`; package.json now asks for 16.3.3 and `eslint-config-next` is a
+// caret RANGE, so a number written into a comment was wrong within one bump and
+// disagreed with .github/workflows/gates.yml, which had been updated. The
+// authority is package-lock.json — it is what `npm ci` installs, and it is what
+// makes "deterministic given the commit" true. Read the version there.
 //
 // Everything below the base is a deliberate, commented decision. Two kinds appear:
 //   (a) rules turned ON because this codebase already holds the convention by hand
@@ -113,8 +120,9 @@ const config = [
     //
     // `eslint-plugin-react-hooks@7` ships the React Compiler's own analyses at
     // BLOCKING severity. Their input is fully deterministic given this tree — the
-    // rule set is pinned to `eslint-config-next@16.3.0`, so the same commit
-    // re-linted next month gives the same verdict. What fails is the *current
+    // rule set is pinned by `eslint-config-next` at the version package-lock.json
+    // resolves, so the same commit re-linted next month gives the same verdict.
+    // What fails is the *current
     // state of the tree*, not the check. Per the registry's
     // `quality-gates/blocking-by-input-determinism`, that is the debt-shaped kind
     // of advisory: it carries an expiry by construction, and it is NOT permitted

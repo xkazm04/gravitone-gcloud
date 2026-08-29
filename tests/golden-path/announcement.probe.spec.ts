@@ -232,3 +232,58 @@ test("copy: every storage failure has a self-contained spoken form", () => {
   // spoken channel is a taxonomy the assistive user does not have.
   expect(new Set(KINDS.map((k) => troubleAnnouncement(k, "script"))).size).toBe(5);
 });
+
+/* ── The error boundaries: a screen that failed to render must SAY so ───────── */
+
+/** Source with comments removed.
+ *
+ *  Load-bearing, and the reason this helper exists rather than a bare `include`:
+ *  every file in this repo explains its rule in prose directly above the code
+ *  that implements it, so a matcher run over raw text is satisfied by a file
+ *  that TALKS about announcing and does not announce. Both assertions below were
+ *  watched failing against the pre-fix files with this stripping in place. */
+const stripComments = (s: string) =>
+  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[^\n]*?\/\/.*$/gm, "");
+
+test("boundaries: the route boundary announces, and takes the focus its dead subtree dropped", () => {
+  // Two silences, both invisible in review. React unmounts the subtree that
+  // threw, so focus falls to <body>; and the replacement card is ordinary text,
+  // so a reader mid-sentence elsewhere never learns the screen is gone.
+  const src = stripComments(
+    readFileSync(resolve(__dirname, "../../app/error.tsx"), "utf8"),
+  );
+  expect(src, "the route boundary does not reach the announcement channel").toMatch(
+    /useAnnounce\s*\(\s*\)/,
+  );
+  // Assertive: a screen that no longer exists blocks what the user is doing RIGHT
+  // NOW, which is the one case politenessFor() reserves interruption for.
+  expect(src, "the boundary announces politely — this is the blocking case").toMatch(
+    /assertive:\s*true/,
+  );
+  // Keyed on the ERROR, never on the render: the same failure re-rendering must
+  // not speak twice, and a different failure must not be swallowed by the first
+  // one's key.
+  expect(src).toMatch(/key:\s*`boundary:\$\{error\.digest\s*\?\?\s*error\.message\}`/);
+  expect(src, "focus is not handed to the card that replaced the dead tree").toMatch(
+    /tabIndex=\{-1\}/,
+  );
+});
+
+test("boundaries: the ROOT boundary carries its own alert — the provider is not above it", () => {
+  // global-error.tsx REPLACES the root layout, so AnnouncerProvider is not in the
+  // document and there is no live region to write into. `useAnnounce()` would
+  // return its silent no-op fallback and look correct in review. The
+  // dependency-free equivalent is an alert role, announced on insertion — which
+  // is exactly what mounting this boundary does.
+  const src = stripComments(
+    readFileSync(resolve(__dirname, "../../app/global-error.tsx"), "utf8"),
+  );
+  expect(src, "the root boundary is silent to assistive technology").toMatch(/role="alert"/);
+  expect(src, "focus stays on <body> in a document whose content was replaced").toMatch(
+    /tabIndex=\{-1\}/,
+  );
+  expect(
+    src.includes("useAnnounce"),
+    "the root boundary reaches for a provider that cannot be above it",
+  ).toBe(false);
+});

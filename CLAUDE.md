@@ -5,7 +5,7 @@
 <!-- personas:context-map:start -->
 ## Project Context Map
 
-This project is organized into **13 contexts** across **7 groups**. The full machine-readable map lives in `context-map.json` at the project root — read it at task start to scope your edits to the relevant context's files.
+This project is organized into **18 contexts** across **7 groups**. The full machine-readable map lives in `context-map.json` at the project root — read it at task start to scope your edits to the relevant context's files.
 
 Taxonomy: each context has a `category` (ui · api · lib · data · test · config); each group has a `domain` (feature · infrastructure · shared · integration · data).
 
