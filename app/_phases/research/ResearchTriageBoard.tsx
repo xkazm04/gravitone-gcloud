@@ -69,10 +69,15 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
         <ScopeBar api={api} />
       </header>
 
-      {/* column filter — the board's one navigation affordance */}
-      <div className="font-jetbrains flex flex-wrap gap-1.5 text-[10px]">
+      {/* Column filter — the board's one navigation affordance. These are
+          TOGGLES, so they carry `aria-pressed`: their only pressed signal is a
+          cyan border, and every other toggle in this step already says it out
+          loud (CardTile, beats/VariantTile). */}
+      <div className="font-jetbrains flex flex-wrap gap-1.5 text-[10px]" role="group" aria-label="Filter columns">
         <button
+          type="button"
           onClick={() => setFocus(null)}
+          aria-pressed={focus === null}
           className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
             focus === null ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/40 hover:text-white/70"
           }`}
@@ -85,7 +90,9 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
           return (
             <button
               key={d.id}
+              type="button"
               onClick={() => setFocus(focus === d.id ? null : d.id)}
+              aria-pressed={focus === d.id}
               className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
                 focus === d.id
                   ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
@@ -100,7 +107,10 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
         })}
       </div>
 
-      <div className={`grid gap-4 ${focus ? "" : "lg:grid-cols-2 xl:grid-cols-3"}`}>
+      <div
+        aria-live="polite"
+        className={`grid gap-4 ${focus ? "" : "lg:grid-cols-2 xl:grid-cols-3"}`}
+      >
         {shown.map((d) => {
           const cards = api.cards.filter((c) => c.dimension === d.id);
           const n = countOf(d);
