@@ -149,8 +149,9 @@ jobs:
     timeout-minutes: 20
 
     # `npm run verify` (package.json) mirrors this job's blocking steps after
-    # install, in the same order: typecheck, lint:ratchet, check:manifest, test,
-    # build, check:bundle. The pre-push hook runs it before any push to main.
+    # install, in the same order: typecheck, lint:ratchet, check:manifest,
+    # check:notebook, check:trailer-structure, test, build, check:bundle. The
+    # pre-push hook runs it before any push to main.
     # If a step is added, removed, or reordered here, change `verify` in the
     # same commit — the two must not drift.
     steps:
@@ -197,6 +198,22 @@ jobs:
       # Changes the answer: nothing; this stays blocking.
       - name: manifest
         run: npm run check:manifest
+
+      # BLOCKING, and new to the ladder on 2026-08-29 — both of these already
+      # existed, were already wired to npm scripts, were already free (offline,
+      # deterministic, sub-second) and were guarded by NOTHING: neither `verify`
+      # nor this workflow ran them, so the invariants they hold were checked only
+      # when somebody remembered to type the command.
+      #
+      # They sit here, after the manifest and before the probes, because they are
+      # the same shape as the checks above — cheap, deterministic, and answering
+      # a question about committed content rather than about built output. A gate
+      # that costs a second belongs in front of the one that costs a minute.
+      - name: notebook graph
+        run: npm run check:notebook
+
+      - name: trailer structure
+        run: npm run check:trailer-structure
 
       # BLOCKING. Node-context probes. Not skipped when earlier steps are
       # green-but-uninteresting: this is the rung that refuses.

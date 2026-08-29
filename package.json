@@ -16,7 +16,7 @@
     "lint:ratchet": "node pipeline/lint-ratchet.mjs",
     "test": "playwright test",
     "test:live": "playwright test -c playwright.live.config.ts",
-    "verify": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm test && npm run build && npm run check:bundle",
+    "verify": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run check:trailer-structure && npm test && npm run build && npm run check:bundle",
     "prepare": "git config core.hooksPath .githooks || exit 0"
   },
   "dependencies": {
