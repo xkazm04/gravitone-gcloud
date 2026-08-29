@@ -149,7 +149,7 @@ export function untaggedIds(nb: Notebook = NOTEBOOK): string[] {
  *      indistinguishable, and the safety graph answers with confidence.
  *    · `FACT_BY_ID` / `UNKNOWN_BY_ID` are `Object.fromEntries`, so a reused id
  *      overwrites the earlier row. The loser does not error; it vanishes. */
-export type GraphIssueKind = "duplicate-id" | "dangling-ref" | "untagged" | "stale-tag";
+export type GraphIssueKind = "duplicate-id" | "dangling-ref" | "untagged" | "stale-tag" | "unlinked-conversion";
 
 /** Both ends of the broken edge, always. `from` holds the reference, `ref` is
  *  what it points at — an unresolvable id, or the one spent twice. */
@@ -224,6 +224,24 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
   for (const c of CONCLUSIONS) edge(c.id, "licensedBy", [c.licensedBy], factIds, "fact");
   nb.scaleConversions.forEach((s, i) => edge(`scaleConversions[${i}]`, "for", [s.for], factIds, "fact"));
   nb.analogyCandidates.forEach((a, i) => edge(`analogyCandidates[${i}]`, "for", [a.for], cardIds, "card"));
+  // AN ABSENT LINK IS NOT A HEALTHY ONE, and the pass above cannot tell them
+  // apart: edge() skips a null ref, so a conversion with no `for` is waved
+  // through with the same silence woundsOf() gives a dangling dependsOn. The
+  // type already states the rule — "required for new notebooks. A conversion
+  // with no `for` is uncheckable by construction" (types.ts) — and nothing
+  // read it, so all six shipped conversions were unlinked under a green gate.
+  // A felt version is a DERIVED claim: without the fact id nothing can check it
+  // against the claim it restates, and nothing can cap it at that fact's grade.
+  nb.scaleConversions.forEach((s, i) => {
+    if (!s.for)
+      add(
+        "unlinked-conversion",
+        `scaleConversions[${i}]`,
+        s.raw,
+        `is a felt version of a number that names no fact. The conversion is a derived claim; with no \`for\` nothing can check the felt form against the claim it restates, and nothing can cap it at that fact's confidence.`,
+      );
+  });
+
   edge("currency", "expiresFirst", nb.currency.expiresFirst, cardIds, "card");
   edge("currency", "durable", nb.currency.durable, cardIds, "card");
 
