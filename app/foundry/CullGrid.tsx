@@ -20,6 +20,33 @@ import type { Candidate, RunManifest, Verdict, Verdicts } from "@/lib/foundry/ty
 import { fileUrl } from "./foundryClient";
 import { ScoreChip, VERDICT_RING, VerdictStamp, VetoChip } from "./parts";
 
+/** Elements the browser ACTIVATES on Enter.
+ *
+ *  The grid's keys are bound on `window`, which is right for arrows and for
+ *  K/X/U: a cull is hundreds of decisions and the hand should not have to keep
+ *  the browser's focus anywhere in particular. Enter is the exception, because
+ *  it is the only one of them that the focused element already owns.
+ *
+ *  Nothing in this grid is focusable — a tile is a `<div onClick>` — so the
+ *  browser's focus is always on something ELSE while a candidate is "focused"
+ *  in app state, and `focused` becomes non-null on the first tile click anyone
+ *  makes. Enter then reached this handler, which called `preventDefault()`, and
+ *  a `<button>`'s Enter activation is precisely what that suppresses: after one
+ *  click on one tile, Enter stopped working on the row K/X buttons, the run
+ *  list, the tab strip and Commit, and opened the lightbox instead. Space still
+ *  worked, which is the kind of half-working that takes a while to report.
+ *
+ *  Checked by tag and by role rather than with `closest`, because Enter is
+ *  delivered to the focused element itself. */
+const ENTER_ACTIVATES = new Set(["BUTTON", "A", "SUMMARY", "SELECT", "TEXTAREA", "INPUT"]);
+
+export function activatesOnEnter(t: { tagName?: string; getAttribute?: (n: string) => string | null } | null): boolean {
+  if (!t) return false;
+  if (ENTER_ACTIVATES.has(t.tagName ?? "")) return true;
+  const role = t.getAttribute?.("role") ?? null;
+  return role === "button" || role === "link" || role === "menuitem" || role === "tab";
+}
+
 const CRAFT_SUMMARY = ["shot_size", "camera_angle", "composition", "lighting_key", "lighting_direction", "depth_of_field"];
 
 export function CullGrid({
@@ -89,6 +116,10 @@ export function CullGrid({
           if (focused && !readOnly) onVerdict(focused, null);
           break;
         case "Enter":
+          // Enter belongs to the focused element when that element activates on
+          // it — see `activatesOnEnter`. Taking it here suppressed every button
+          // on the page.
+          if (activatesOnEnter(t)) return;
           if (focused) {
             e.preventDefault();
             onOpen(focused);
