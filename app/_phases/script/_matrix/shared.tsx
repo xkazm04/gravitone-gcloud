@@ -86,8 +86,8 @@ export function MatrixFootnotes({ cards, version }: { cards: Card[]; version: Ve
         {conclusions > 0 && (
           <>
             {" "}— including all {conclusions} conclusions, which were reasoned{" "}
-            <span className="text-white/60">after</span> these three scripts were written. That is a
-            gap in the scripts, not in the research.
+            <span className="text-white/60">after</span> these {RENDERS.length} scripts were written.
+            That is a gap in the scripts, not in the research.
           </>
         )}
       </p>
