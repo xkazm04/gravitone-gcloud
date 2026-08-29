@@ -99,11 +99,27 @@ export default function FoundryView() {
   const loadDetail = useCallback(
     (id: string, keepVerdicts: boolean) => {
       const ticket = ++detailTicket.current;
-      fetchRun(id).then((d) => {
-        if (ticket !== detailTicket.current) return;
-        setDetail(d);
-        if (!keepVerdicts) adoptVerdicts(d.verdicts);
-      });
+      // AND A REJECTION PATH, because in this app an unhandled one is not
+      // silence -- it is a WRONG MESSAGE. GlobalErrorBridge listens on
+      // `unhandledrejection` and reports what it catches as
+      // `reportStorageTrouble("write", ...)`, so a failed READ of a run surfaces
+      // in the bell as the user's work failing to SAVE, and NotificationBell
+      // announces that one assertively (it is the app's only assertive case).
+      // On a 4s poll, a foundry that cannot be reached tells a screen-reader
+      // user their studio is not saving. `loadRuns` in this same file has
+      // always had its handler; this one did not.
+      fetchRun(id).then(
+        (d) => {
+          if (ticket !== detailTicket.current) return;
+          setDetail(d);
+          if (!keepVerdicts) adoptVerdicts(d.verdicts);
+          setRunsError(null);
+        },
+        (e) => {
+          if (ticket !== detailTicket.current) return;
+          setRunsError(e instanceof Error ? e.message : "could not load that run");
+        },
+      );
     },
     [adoptVerdicts],
   );
