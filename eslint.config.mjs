@@ -24,6 +24,22 @@ const config = [
     // them would grade code this repo does not author.
     ignores: [
       "node_modules/**",
+      // AGENT TOOLING, AND — THE REASON THIS ENTRY EXISTS — AGENT WORKTREES.
+      //
+      // `.claude/worktrees/<name>/` holds a git worktree: a SECOND FULL CHECKOUT
+      // of this repository, `lib/` and `app/` and all. ESLint walks by path, not
+      // by git index, so with this line absent it graded both copies and every
+      // warning bucket came out at exactly twice its real size — measured
+      // 2026-08-29: 608 files walked, 309 of them under `.claude/`, and
+      // set-state-in-effect 14 -> 28, refs 3 -> 6, immutability 1 -> 2,
+      // exhaustive-deps 1 -> 2, each the true number doubled.
+      //
+      // The ratchet did its job and went red. What it could NOT say is that the
+      // rise was a second copy of the same debt rather than new debt, so the
+      // gate read as "you added fourteen hook violations" and pointed at a
+      // refactor nobody needed to do. A tree that is not this checkout is not
+      // this checkout's debt.
+      ".claude/**",
       ".next/**",
       ".next-*/**",
       "out/**",
