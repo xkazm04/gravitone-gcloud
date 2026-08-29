@@ -38,16 +38,22 @@ export function useScope(projectId: string) {
   const cards = useMemo(() => buildCards(), []);
   const [scope, setScope] = useState<Scope>({});
   const [confirmed, setConfirmed] = useState<Scope | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  // Keyed to the project rather than a boolean reset in the effect — the reset
+  // was a synchronous setState inside an effect body (the area's only lint
+  // finding), and "hydrated for THIS id" covers a project switch better than
+  // the flag did: the flag was still true for one commit after the id changed,
+  // which is the window the save effect below runs in. Same shape as
+  // beats/useBeatPicks.ts, which chose it first and wrote down why.
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
+  const hydrated = hydratedFor === projectId;
 
   useEffect(() => {
     let alive = true;
-    setHydrated(false);
     void loadStep<ScopeStepData>(projectId, PHASE).then((saved) => {
       if (!alive) return;
       setScope(saved?.scope ?? {});
       setConfirmed(saved?.confirmed ?? null);
-      setHydrated(true);
+      setHydratedFor(projectId);
     });
     return () => { alive = false; };
   }, [projectId]);
