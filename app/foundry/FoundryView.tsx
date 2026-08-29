@@ -33,6 +33,7 @@ import Modal from "@/components/ui/Modal";
 import { Button, Eyebrow } from "@/components/ui/Primitives";
 import StudioFrame from "@/components/ui/StudioFrame";
 import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
+import { usePolling } from "@/lib/usePolling";
 
 import { CullGrid } from "./CullGrid";
 import { ExtractView } from "./ExtractView";
@@ -76,9 +77,30 @@ export default function FoundryView() {
     setVerdicts(v);
   }, []);
 
+  /** The newest detail request. A response holding an older ticket is dropped.
+   *
+   *  THIS USED TO WRITE ONE RUN'S HUMAN VERDICTS ONTO ANOTHER RUN. `loadDetail`
+   *  awaited `fetchRun(id)` and applied the result with no check that `id` was
+   *  still the selected run. Two paths reach it — `selectRun`, and the 4s poll —
+   *  so: click run A, click run B before A's fetch lands, and A's response calls
+   *  `adoptVerdicts(A.verdicts)` while `selected` is B. The next verdict edit then
+   *  autosaves that map to B (`setVerdict` reads `verdictsRef.current`), and B's
+   *  manifest now carries judgements a human made about A. Silent, and the poll
+   *  makes the window recur every four seconds rather than once.
+   *
+   *  A monotonic ticket rather than an `id === selected` comparison, because the
+   *  poll re-requests the SAME id: two in-flight loads for one run must still
+   *  resolve latest-wins, and comparing ids cannot express that. Same shape as
+   *  `claimSaveSlot` in app/_phases/_shared/stepStore.ts, for the same reason —
+   *  arrival order is not issue order. The ticket is taken at CALL time and
+   *  checked before anything is applied. */
+  const detailTicket = useRef(0);
+
   const loadDetail = useCallback(
     (id: string, keepVerdicts: boolean) => {
+      const ticket = ++detailTicket.current;
       fetchRun(id).then((d) => {
+        if (ticket !== detailTicket.current) return;
         setDetail(d);
         if (!keepVerdicts) adoptVerdicts(d.verdicts);
       });
@@ -119,15 +141,20 @@ export default function FoundryView() {
 
   // A live run rewrites its manifest after every candidate; poll it — but
   // keep the local verdicts, which are the human's and never the forge's.
+  //
+  // Through `usePolling`, which pauses while the tab is hidden. This ran every
+  // four seconds against a backgrounded tab before, for a run nobody could see —
+  // half the load lib/apiAuth.ts sizes its limiter against.
   const live = detail ? LIVE.includes(detail.run.status) : false;
-  useEffect(() => {
-    if (!selected || !live) return;
-    const t = window.setInterval(() => {
+  usePolling(
+    () => {
+      if (!selected) return;
       loadDetail(selected, true);
       loadRuns();
-    }, 4000);
-    return () => window.clearInterval(t);
-  }, [selected, live, loadDetail, loadRuns]);
+    },
+    4000,
+    Boolean(selected) && live,
+  );
 
   const readOnly = detail?.run.status === "committed";
 
