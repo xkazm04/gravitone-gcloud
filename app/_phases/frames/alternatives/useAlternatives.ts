@@ -205,24 +205,46 @@ export function useAlternatives({
     [frameOf, busy, block, references],
   );
 
+  /** Deleting the active alternative promotes the newest survivor — a cut that
+   *  silently keeps using a deleted picture would be lying.
+   *
+   *  THE ADOPTION HAPPENS OUTSIDE THE UPDATER, the way `select` above already
+   *  does it. It used to sit inside the `setByFrame` callback, which made it a
+   *  write to ANOTHER hook's state (`onAdopt` is `ctl.setFrames`) performed
+   *  during React's update phase. A state updater must be pure: React invokes it
+   *  twice under StrictMode, and `useVersions.ts` carries that exact warning
+   *  about its own note counter — "a state updater is invoked twice under
+   *  StrictMode, and a counter incremented in one would skip". This particular
+   *  write happens to be idempotent, so nothing visibly broke, which is the only
+   *  reason it survived. */
   const remove = useCallback(
     (frameId: string, id: string) => {
+      const scene = byFrame[frameId];
+      if (!scene) return;
+      const alts = scene.alts.filter((a) => a.id !== id);
+      const activeId =
+        scene.activeId === id ? (alts.length ? alts[alts.length - 1].id : null) : scene.activeId;
+
       setByFrame((prev) => {
-        const scene = prev[frameId];
-        if (!scene) return prev;
-        const alts = scene.alts.filter((a) => a.id !== id);
-        // Deleting the active alternative promotes the newest survivor — a cut
-        // that silently keeps using a deleted picture would be lying.
-        const activeId =
-          scene.activeId === id ? (alts.length ? alts[alts.length - 1].id : null) : scene.activeId;
-        if (scene.activeId === id && activeId && !isSynthetic(frameId)) {
-          const next = alts.find((a) => a.id === activeId);
-          if (next) onAdopt(frameId, { ...next.plate });
-        }
-        return { ...prev, [frameId]: { activeId, alts } };
+        // Re-read inside the updater so the write is against the CURRENT store,
+        // not the render's snapshot; the promotion above only decides WHICH id.
+        const cur = prev[frameId];
+        if (!cur) return prev;
+        return {
+          ...prev,
+          [frameId]: {
+            activeId,
+            alts: cur.alts.filter((a) => a.id !== id),
+          },
+        };
       });
+
+      if (scene.activeId === id && activeId && !isSynthetic(frameId)) {
+        const next = alts.find((a) => a.id === activeId);
+        if (next) onAdopt(frameId, { ...next.plate });
+      }
     },
-    [onAdopt],
+    [byFrame, onAdopt],
   );
 
   /** What the alternatives cost, BEYOND the plates already counted.
