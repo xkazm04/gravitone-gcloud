@@ -22,8 +22,18 @@ import { test, expect } from "@playwright/test";
 /** Callers that allocate an object URL and do not yet release it, each with the
  *  reason it is still here. An entry is a claim somebody defends in review. */
 const KNOWN_LEAKS: Record<string, string> = {
-  "app/_phases/score/ScoreSpotting.tsx":
-    "one url per cue take, held for the tab; the file's own comment says a take 'lives as long as the tab' and IndexedDB is the next seam, so the fix belongs with that change rather than ahead of it",
+  // ScoreSpotting was the last entry here. Its exemption reasoned that the fix
+  // "belongs with" the IndexedDB persistence change rather than ahead of it —
+  // and that turned out to couple a leak that costs megabytes a click to a
+  // product decision about writing audio bytes to disk that nobody had made.
+  // The two are separable: releasing a url you minted is ownership, persisting
+  // the audio is a feature. Released 2026-08-29; persistence is still open, in
+  // .vault/Architect/decisions/2026-08-29-score-take-persistence.md.
+  //
+  // The map is empty, and that is the state the ratchet is meant to reach. It
+  // stays here rather than being deleted with the filter below: a NEW caller
+  // that mints and never releases must still fail, and an empty exemption map
+  // is what makes that failure unambiguous.
 };
 
 /** Source with comments removed, so prose about the rule cannot satisfy it. */
