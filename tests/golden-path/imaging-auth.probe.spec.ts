@@ -15,6 +15,8 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
+
+import { keepEnv } from "./_helpers";
 import {
   checkAccess,
   guardRequest,
@@ -211,6 +213,8 @@ test("every deliberately-public exemption still names a route that exists", () =
   for (const rel of Object.keys(DELIBERATELY_PUBLIC))
     expect(existsSync(join(process.cwd(), rel)), `${rel} is exempted and does not exist`).toBe(true);
 });
+
+keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", RATE_CAPACITY_VAR, RATE_WINDOW_SEC_VAR, RATE_KEY_CAP_VAR]);
 
 test.beforeEach(() => {
   __resetRateLimit();

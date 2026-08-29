@@ -15,10 +15,14 @@
 // still paid for the run would be worse than no check.
 import { test, expect } from "@playwright/test";
 
+import { keepEnv } from "./_helpers";
+
 import { POST, tooLarge } from "@/app/api/frames/route";
 import { __resetRateLimit, ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 
 const SECRET = "probe-secret-value";
+
+keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH"]);
 
 test.beforeEach(() => {
   __resetRateLimit();
