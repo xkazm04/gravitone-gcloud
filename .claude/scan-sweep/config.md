@@ -45,6 +45,17 @@ before matching, the population walked off the filesystem rather than listed, an
   and did not map them. Per CLAUDE.md that is "a finding, not a verdict to accept" —
   so do NOT spend another delta scan on them reflexively; report them and let the operator
   decide. New files landing under `tests/` are SELECTIVE (43.5% mapped) and are not drift.
+- **2026-08-29 — `.ai/registry-map.json`'s deviation verdicts go stale, and six
+  skills read them as truth.** Of five conform deviations checked across this
+  loop, TWO had already been fixed and the map still called them deviations:
+  `evidence-bound-visuals` said sceneSpec.ts "never reads the fact's grade" (the
+  grade cap is implemented, wired at useFrames.ts:591 and probed by
+  scene-grade-cap), and `review-iteration-loops` said no connector is re-checked
+  at an edit's seams (applyEdits returns chainBreaks, probed in five cases).
+  Read a deviation as a HYPOTHESIS to re-verify against current code, never as a
+  finding to act on — and re-run `/conform` for a context before trusting its
+  verdicts. The map also caps `paths` at 12 per context, so 13 of 18 contexts
+  were evaluated against at most half their files.
 - **2026-08-29 — 12 of 18 contexts still carry a NULL group**, including `research-step`.
   These are rows written before the 2026-08-29 ingest fix and they stay NULL until a scan
   re-emits the context, which never happens for a context that has not changed. Assigning
