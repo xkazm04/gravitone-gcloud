@@ -64,7 +64,15 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
   const [accepted, setAccepted] = useState<Version[]>([]);
   const [candidate, setCandidate] = useState<Version | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  // Keyed to the project rather than a boolean reset in the effect. The reset
+  // was a synchronous setState inside an effect body — the area's own ratcheted
+  // lint finding — and "hydrated for THIS id" is also the stronger guard: the
+  // flag stayed true for one commit after `projectId` changed, which is the
+  // commit the save effect below runs in. Third hook in this family to take the
+  // shape; research/useScope.ts and research/beats/useBeatPicks.ts hold the
+  // other two, and useBeatPicks wrote down why first.
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
+  const hydrated = hydratedFor === projectId;
   const [lostCandidate, setLostCandidate] = useState<LostCandidate | null>(null);
   /** The in-flight call, so a genuinely superseded run stops burning a model
    *  turn instead of being dropped on the floor client-side. */
@@ -83,7 +91,6 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
 
   useEffect(() => {
     let alive = true;
-    setHydrated(false);
     void loadStep<Stored>(projectId, PHASE).then((s) => {
       if (!alive) return;
       const loaded = s?.notes ?? [];
@@ -92,7 +99,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       setAccepted(s?.accepted ?? []);
       setCandidate(null);
       setLostCandidate(s?.staged ?? null);
-      setHydrated(true);
+      setHydratedFor(projectId);
     });
     return () => { alive = false; };
   }, [projectId]);

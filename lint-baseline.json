@@ -27,7 +27,7 @@
   "measuredAt": "2026-08-29",
   "filesFloor": 150,
   "warnings": {
-    "react-hooks/set-state-in-effect": 11,
+    "react-hooks/set-state-in-effect": 10,
     "react-hooks/immutability": 0,
     "react-hooks/exhaustive-deps": 1,
     "react-hooks/refs": 3
