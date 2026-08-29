@@ -36,6 +36,8 @@ import { POST as musicPlanPOST } from "@/app/api/music/plan/route";
 import { POST as musicComposePOST } from "@/app/api/music/compose/route";
 import { POST as musicGeneratePOST } from "@/app/api/music/generate/route";
 import { POST as musicSfxPOST } from "@/app/api/music/sfx/route";
+import { POST as foundryExtractPOST } from "@/app/api/foundry/extract/route";
+import { POST as foundryStepPOST } from "@/app/api/foundry/extract/[id]/step/route";
 
 const SECRET = "probe-secret-value";
 
@@ -64,6 +66,16 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   ["music/compose", "/api/music/compose", musicComposePOST],
   ["music/generate", "/api/music/generate", musicGeneratePOST],
   ["music/sfx", "/api/music/sfx", musicSfxPOST],
+  ["foundry/extract", "/api/foundry/extract", foundryExtractPOST],
+  // A dynamic segment: the handler takes the route context as its second
+  // argument, so it is adapted to the one-argument shape the cases below drive.
+  // The id names no run on disk, which is what keeps the authenticated case a
+  // 404 from the store rather than a real stepping run that would spend.
+  [
+    "foundry/extract/step",
+    "/api/foundry/extract/[id]/step",
+    (r: Request) => foundryStepPOST(r, { params: Promise.resolve({ id: "no-such-run" }) }),
+  ],
 ];
 
 /**
@@ -77,6 +89,61 @@ const DELIBERATELY_PUBLIC: Record<string, string> = {
   "app/api/imaging/pricing/route.ts":
     "the price table, audited line by line in its own header: module constants only, no key, no environment, no key state, nothing per-request",
 };
+
+/**
+ * THE DOORS A ROUTE MAY GATE THROUGH — all of them, because there are three.
+ *
+ * This check used to look for `guardRequest(` alone. lib/apiAuth.ts has grown two
+ * more doors since, and both are in use on committed routes:
+ *
+ *   · `guardAccessOnly` — access required, rate bucket skipped. The foundry
+ *     routes read and write local disk and their page legitimately bursts
+ *     (a 4s poll plus a debounced autosave), so sharing the money bucket turned
+ *     the Styles tab into a 429 and let an open tab starve a real generation.
+ *   · `checkAccess` — the raw verdict, for the one route that cannot use either
+ *     wrapper: /api/foundry/file serves images to an <img>, which cannot carry an
+ *     Authorization header, so it accepts the same secret as `k=` and calls the
+ *     check itself.
+ *
+ * Nine committed, genuinely-gated routes therefore read as UNGATED and this
+ * blocking gate has been red on main — which is the worse failure of the two it
+ * can have. A gate that is red for a false reason stops refusing anything: the
+ * next actually-ungated route lands inside a failure everyone has learned to
+ * step over.
+ *
+ * Each door is asserted to EXIST in lib/apiAuth.ts by the test below, so a
+ * renamed door reddens this probe instead of silently matching nothing — the
+ * failure mode a matcher list has, and the reason the route population itself is
+ * derived from the filesystem rather than listed.
+ */
+const GATE_DOORS = [
+  { name: "guardRequest", matcher: /\bguardRequest\s*\(/ },
+  { name: "guardAccessOnly", matcher: /\bguardAccessOnly\s*\(/ },
+  { name: "checkAccess", matcher: /\bcheckAccess\s*\(/ },
+] as const;
+
+/** The door that marks a route as spending a vendor balance or local compute.
+ *  What must be DRIVEN below is read off this rather than off a second list. */
+const MONEY_DOOR = GATE_DOORS[0];
+
+/** Source with `//` and block comments removed.
+ *
+ *  The files in this repo explain the rule in prose directly above the code that
+ *  implements it, so a matcher run over raw text is satisfied by a route that
+ *  TALKS about its guard and does not call one. Strip first, then match. */
+function code(src: string): string {
+  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+}
+
+test("the gate doors this probe looks for all still exist in lib/apiAuth.ts", () => {
+  const src = code(readFileSync(join(process.cwd(), "lib", "apiAuth.ts"), "utf8"));
+  for (const door of GATE_DOORS)
+    expect(
+      new RegExp(`export function ${door.name}\\s*\\(`).test(src),
+      `${door.name} is no longer exported from lib/apiAuth.ts — the route matcher below is looking for a door that moved, and would report a gated route as ungated`,
+    ).toBe(true);
+  console.log(`[auth] ${GATE_DOORS.length} gate door(s) verified in lib/apiAuth.ts: ${GATE_DOORS.map((d) => d.name).join(", ")}`);
+});
 
 /**
  * THE LIST ABOVE IS HAND-WRITTEN, SO SOMETHING HAS TO CHECK IT AGAINST REALITY.
@@ -112,17 +179,28 @@ test("every API route either gates or is deliberately public — derived, not li
   const ungated: string[] = [];
   for (const rel of found) {
     if (DELIBERATELY_PUBLIC[rel]) continue;
-    const src = readFileSync(join(process.cwd(), rel), "utf8");
-    if (!/\bguardRequest\s*\(/.test(src)) ungated.push(rel);
+    const src = code(readFileSync(join(process.cwd(), rel), "utf8"));
+    if (!GATE_DOORS.some((d) => d.matcher.test(src))) ungated.push(rel);
   }
   console.log(`[auth] ${found.length} route(s) on disk, ${Object.keys(DELIBERATELY_PUBLIC).length} deliberately public, ${ungated.length} ungated`);
   expect(ungated, "these routes spend money or compute and check nobody").toEqual([]);
 
   // And the DRIVEN list must not fall behind the tree either, or the cases below
   // stop covering routes that exist.
+  //
+  // SCOPED TO THE MONEY DOOR, AND DERIVED. The cases below drive a route with a
+  // real Request and assert 401-without-spending; what they are protecting is the
+  // vendor balance and the local compute. `guardRequest` is exactly the door that
+  // marks a route as spending one of those, so the obligation to be driven is
+  // read off the route's own choice of door rather than off a second hand list.
+  // A new money route is therefore covered by existing, which is the property
+  // this whole test was rewritten for.
+  const spends = found.filter(
+    (f) => !DELIBERATELY_PUBLIC[f] && MONEY_DOOR.matcher.test(code(readFileSync(join(process.cwd(), f), "utf8"))),
+  );
   const driven = new Set(ROUTES.map(([, path]) => `app${path}/route.ts`));
-  const undriven = found.filter((f) => !DELIBERATELY_PUBLIC[f] && !driven.has(f));
-  expect(undriven, "a gated route no case below actually drives").toEqual([]);
+  const undriven = spends.filter((f) => !driven.has(f));
+  expect(undriven, "a money/compute route no case below actually drives").toEqual([]);
 });
 
 // A stale exemption is its own defect: it reads as a considered decision and is
