@@ -48,6 +48,24 @@
 #                        tree can move the verdict.
 #                        Changes the answer: nothing; this stays blocking.
 #
+#   notebook             BLOCKING.  Input: the notebook graph under
+#                        app/_phases/_shared/notebook/ — this repo's own sources
+#                        and nothing else. `pipeline/check-notebook.mts` resolves
+#                        the string ids the graph is held together by and exits
+#                        non-zero on an id spent twice, a reference to nothing, or
+#                        an untagged card. No network: grep the script for fetch,
+#                        http, or a key name and it has none.
+#                        Changes the answer: nothing; this stays blocking.
+#
+#   trailer structure    BLOCKING.  Input: knowledge/templates/** and the trailer
+#                        structure module, both committed here.
+#                        `pipeline/trailer-structure-regression.mts` walks 22
+#                        cases, 6 invariants and 5 seam checks over them and exits
+#                        non-zero on a disagreement. No network, same as above.
+#                        Changes the answer: if a case is ever grounded in a live
+#                        corpus rather than a committed one, that case moves to an
+#                        advisory job on a schedule; it may not stay in here.
+#
 #   probes               BLOCKING.  Input: the repo's own modules. The suite is
 #                        Node-context with no browser and no webServer, and
 #                        `sealNetwork()` in the imaging probes proves no call
