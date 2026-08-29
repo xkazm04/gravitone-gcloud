@@ -88,6 +88,8 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
 const DELIBERATELY_PUBLIC: Record<string, string> = {
   "app/api/imaging/pricing/route.ts":
     "the price table, audited line by line in its own header: module constants only, no key, no environment, no key state, nothing per-request",
+  "app/api/music/pricing/route.ts":
+    "the music price table, same shape and same audit as its imaging twin. Verified on admission rather than asserted: lib/music/pricing.ts has ZERO imports, reads no process.env, never calls isMusicConfigured() and never touches lib/music/budget.ts, so the response is byte-identical on a box with a key and a box without one — a caller cannot learn whether this deployment can reach ElevenLabs, nor what ceiling an operator set. priceTable() projects named fields rather than spreading a row, which is the second of the two ways the route's own header says this audit could quietly stop being true",
 };
 
 /**
