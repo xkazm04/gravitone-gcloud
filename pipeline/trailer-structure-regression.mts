@@ -37,6 +37,17 @@ import {
   type TrailerCut,
   type WithholdingBudget,
 } from "../app/_phases/script/trailer/types";
+// THE DOWNSTREAM LANE. Imported here and not only in the Playwright probes,
+// because this control is what `npm run check:trailer-structure` runs and the
+// seam it guards is the one this whole file's subject matter dies at: a cut that
+// passes every check below and then reaches nothing is a cut nobody can shoot.
+// `shots.ts` imports only the beat layer, so it is reachable from a bare `tsx`
+// process — nothing here pulls in a `@/` alias or a React module.
+import {
+  isTrailerFormat,
+  shotsFromBeats,
+  shotsFromRender,
+} from "../app/_phases/frames/shots";
 
 /* ───────────────────────────── the baseline cut ─────────────────────────────
    A well-formed wide-release long cut. Deliberately abstract: it is a SHAPE under
@@ -399,9 +410,67 @@ if (atSeconds("nope") !== null || atSeconds("1:02") !== 62 || atSeconds("1:00:00
   console.log("OK    seam           · atSeconds() parses m:ss and h:mm:ss and returns null rather than guessing");
 }
 
+/* ── AND THE SEAM ONE STEP FURTHER DOWN: does the cut reach the shot lane ─────
+ *
+ * The projection above proves the beats fit the shot lane's SHAPE. It proved
+ * that for months while nothing in the product ever handed the lane a beat:
+ * Step 3 resolved every project to the explainer fixture, `shotsFromRender`
+ * answered [] for it exactly as designed, and a shape-only check stayed green
+ * over a lane with no traffic. These four lines are the traffic. */
+
+const laneBeats = baseline().beats.map(toShotLaneBeat);
+const laneTotalS = 120;
+
+const decomposed = shotsFromBeats(laneBeats, laneTotalS);
+if (decomposed.length <= laneBeats.length) {
+  bad++;
+  console.log(
+    `FAIL  seam           · ${laneBeats.length} beats decomposed into ${decomposed.length} shot(s) — a trailer beat is one to MANY`,
+  );
+} else {
+  console.log(`OK    seam           · ${laneBeats.length} beats decompose into ${decomposed.length} shots`);
+}
+
+// A cut declaring a promotional template must reach the decomposition, and one
+// declaring an explainer template must not. Both directions, because the second
+// is the guarantee `shotsFromRender` was written to give and it is the one a
+// well-meaning widening of `TRAILER_TEMPLATES` would silently take away.
+const asTrailer = shotsFromRender({ template: "trailer", durationS: laneTotalS, beats: laneBeats });
+const asExplainer = shotsFromRender({
+  template: "mid-educational-video",
+  durationS: laneTotalS,
+  beats: laneBeats,
+});
+if (asTrailer.length === 0 || asExplainer.length !== 0) {
+  bad++;
+  console.log(
+    `FAIL  seam           · shotsFromRender: trailer -> ${asTrailer.length} shots, explainer -> ${asExplainer.length} (want >0 and 0)`,
+  );
+} else {
+  console.log(
+    `OK    seam           · shotsFromRender routes by template: trailer -> ${asTrailer.length} shots, explainer -> 0`,
+  );
+}
+
+// The allow-list must still cover what the product can create. `cinematic` was
+// missing from it, so a project on that template read as an explainer at this
+// layer — a composed spine that decomposed into nothing, indistinguishable from
+// a spine nobody had written. The ids are repeated here rather than imported
+// from lib/projects, which pulls a `@/` alias this process cannot resolve.
+const PROMOTIONAL_TEMPLATE_IDS = ["teaser", "trailer", "cinematic"];
+const unroutable = PROMOTIONAL_TEMPLATE_IDS.filter((id) => !isTrailerFormat(id));
+if (unroutable.length) {
+  bad++;
+  console.log(`FAIL  seam           · promotional template(s) the shot lane refuses: ${unroutable.join(", ")}`);
+} else {
+  console.log(
+    `OK    seam           · every promotional template reads as one (${PROMOTIONAL_TEMPLATE_IDS.join(", ")})`,
+  );
+}
+
 console.log(
   bad
     ? `\n${bad} REGRESSION FAILURE(S)`
-    : `\nall ${CASES.length} cases and 6 invariants behave correctly`,
+    : `\nall ${CASES.length} cases, 6 invariants and 5 seam checks behave correctly`,
 );
 process.exit(bad ? 1 : 0);
