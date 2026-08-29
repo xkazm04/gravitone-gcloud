@@ -28,7 +28,7 @@
   "filesFloor": 150,
   "warnings": {
     "react-hooks/set-state-in-effect": 13,
-    "react-hooks/immutability": 1,
+    "react-hooks/immutability": 0,
     "react-hooks/exhaustive-deps": 1,
     "react-hooks/refs": 3
   }
