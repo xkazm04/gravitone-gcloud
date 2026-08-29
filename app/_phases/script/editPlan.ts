@@ -11,7 +11,7 @@
 // that no longer matched its own numbers.
 
 import type { Beat, Connector, ScriptRender } from "./types";
-import { RENDERS } from "./renders";
+import { RENDERS, RENDER_BY_ID } from "./renders";
 import { splitAcross, type Usage } from "./impact";
 
 export type EditOp = "retime" | "rewrite" | "cut" | "insert";
@@ -254,6 +254,10 @@ export function parseEditPlan(raw: string): EditPlan {
 
   const renderIds = new Set(RENDERS.map((r) => r.id));
   const ops = new Set<EditOp>(["retime", "rewrite", "cut", "insert"]);
+  /** The marks an edit may name, per render. `applyEdits` resolves against the
+   *  ORIGINAL beats — marks are only re-laid once every edit has landed — so
+   *  the fixture's own chain is the right universe to check against. */
+  const marksOf = (renderId: string) => new Set(RENDER_BY_ID[renderId].beats.map((b) => b.at));
 
   const edits: Edit[] = o.edits.map((raw, i) => {
     const e = raw as Record<string, unknown>;
@@ -274,6 +278,33 @@ export function parseEditPlan(raw: string): EditPlan {
       throw new PlanError(`${where} is a ${op} with no \`cards\` — a beat must declare the notebook ids it rests on.`);
     if (typeof e.why !== "string" || !e.why.trim())
       throw new PlanError(`${where} has no \`why\`.`);
+
+    // A MARK THAT NAMES NO BEAT FAILS THE PLAN, because the alternative is that
+    // it fails silently. `applyEdits` resolves marks with `findIndex`, and -1
+    // has three meanings there and a voice for none of them: a `cut`, `rewrite`
+    // or `retime` simply does not happen, and an `insert` lands at the END of
+    // the render instead of where it was asked for — a beat relocated to the
+    // close of the script with nothing anywhere saying so. Nothing counts them
+    // either: refusals, conflicts and unsupported each have a channel on the
+    // pad, and "3 of your 7 edits named beats that do not exist" has none.
+    //
+    // This is the rule this function already states about itself — "Rejects
+    // rather than repairs … quietly patching it produces edits nobody
+    // specified, the failure mode that is hardest to notice afterwards, because
+    // the result still looks like a plan." It checked that a mark was a STRING
+    // and never that it resolved, which is that same gap one type down.
+    //
+    // LAST of the per-edit checks, deliberately. A plan missing `cards` or
+    // `why` AND carrying a bad mark should still be reported as the missing
+    // field: those are the model misunderstanding the contract, this is it
+    // misreading the script, and the first is the more useful thing to say.
+    const marks = marksOf(e.renderId);
+    const named = op === "insert" ? (e.afterBeatAt as string) : (e.beatAt as string);
+    if (!marks.has(named))
+      throw new PlanError(
+        `${where} is a ${op} on ${e.renderId} at "${named}", which names no beat in that render. Its beats are ${[...marks].join(", ")}.`,
+      );
+
     return e as unknown as Edit;
   });
 

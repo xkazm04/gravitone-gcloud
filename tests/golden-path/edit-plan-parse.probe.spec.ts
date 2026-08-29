@@ -11,7 +11,14 @@ import { extractJsonObject, parseAgainstSchema } from "@/lib/imaging/json";
 import { ImagingError } from "@/lib/imaging/errors";
 
 const RID = "reversal-chain"; // a real RENDERS id
-const okEdit = { renderId: RID, op: "retime", beatAt: "0:04", seconds: 6, why: "tighten the turn" };
+// A REAL BEAT MARK, and it was "0:04", which is not one. The parser now checks
+// that a mark resolves — an unresolvable one used to reach `applyEdits`, where
+// a cut/rewrite/retime silently did nothing and an insert silently landed at
+// the end of the render. These fixtures were careful to use a real render id
+// and invented the mark beside it, so every case here that expects a SUCCESSFUL
+// parse was passing on a plan the app could not actually have applied.
+const AT = "0:00"; // reversal-chain's opening beat
+const okEdit = { renderId: RID, op: "retime", beatAt: AT, seconds: 6, why: "tighten the turn" };
 const okPlan = () => ({ edits: [okEdit], refusals: [], unchanged: [], summary: "one retime" });
 
 test("Lane2b/editPlan: a valid plan parses", () => {
@@ -31,7 +38,7 @@ test("Lane2b/editPlan: prose / non-JSON is REJECTED (not coerced)", () => {
 });
 
 test("Lane2b/editPlan: an UNKNOWN op is REJECTED", () => {
-  const bad = { ...okPlan(), edits: [{ renderId: RID, op: "delete", beatAt: "0:04", why: "x" }] };
+  const bad = { ...okPlan(), edits: [{ renderId: RID, op: "delete", beatAt: AT, why: "x" }] };
   let msg = "";
   try { parseEditPlan(JSON.stringify(bad)); } catch (e) { msg = (e as Error).message; }
   console.log(`[Lane2b] unknown-op rejection: ${msg}`);
@@ -39,12 +46,12 @@ test("Lane2b/editPlan: an UNKNOWN op is REJECTED", () => {
 });
 
 test("Lane2b/editPlan: a renderId that does not exist is REJECTED", () => {
-  const bad = { ...okPlan(), edits: [{ renderId: "made-up-render", op: "retime", beatAt: "0:04", why: "x" }] };
+  const bad = { ...okPlan(), edits: [{ renderId: "made-up-render", op: "retime", beatAt: AT, why: "x" }] };
   expect(() => parseEditPlan(JSON.stringify(bad))).toThrow(/does not exist/i);
 });
 
 test("Lane2b/editPlan: rewrite/insert WITHOUT cards is REJECTED (matrix would otherwise lie)", () => {
-  const bad = { ...okPlan(), edits: [{ renderId: RID, op: "rewrite", beatAt: "0:04", text: "new line", why: "x" }] };
+  const bad = { ...okPlan(), edits: [{ renderId: RID, op: "rewrite", beatAt: AT, text: "new line", why: "x" }] };
   let msg = "";
   try { parseEditPlan(JSON.stringify(bad)); } catch (e) { msg = (e as Error).message; }
   console.log(`[Lane2b] missing-cards rejection: ${msg}`);
@@ -52,7 +59,7 @@ test("Lane2b/editPlan: rewrite/insert WITHOUT cards is REJECTED (matrix would ot
 });
 
 test("Lane2b/editPlan: a missing `why` is REJECTED", () => {
-  const bad = { ...okPlan(), edits: [{ renderId: RID, op: "cut", beatAt: "0:04" }] };
+  const bad = { ...okPlan(), edits: [{ renderId: RID, op: "cut", beatAt: AT }] };
   expect(() => parseEditPlan(JSON.stringify(bad))).toThrow(/why/i);
 });
 
@@ -68,7 +75,7 @@ test("Lane2b/editPlan: missing `edits` array / missing `summary` are REJECTED", 
 test("Lane2b/editPlan: BOUNDARY — unknown extra property is NOT rejected (schema says it should be)", () => {
   const withExtra = {
     ...okPlan(),
-    edits: [{ renderId: RID, op: "retime", beatAt: "0:04", seconds: 6, why: "x", bogusField: "smuggled" }],
+    edits: [{ renderId: RID, op: "retime", beatAt: AT, seconds: 6, why: "x", bogusField: "smuggled" }],
   };
   let parsed: ReturnType<typeof parseEditPlan> | null = null;
   let threw = false;
@@ -100,4 +107,29 @@ test("Lane2b/imaging: parseAgainstSchema rejects prose and missing required fiel
   // valid passes and returns the parsed object
   const ok = parseAgainstSchema("google", 'prefix {"caption":"a cat","objects":[]} suffix', schema) as Record<string, unknown>;
   expect(ok.caption).toBe("a cat");
+});
+
+test("Lane2b/editPlan: a beatAt that names no beat is REJECTED (it used to fail silently)", () => {
+  const bad = { ...okPlan(), edits: [{ renderId: RID, op: "cut", beatAt: "9:99", why: "x" }] };
+  let msg = "";
+  try { parseEditPlan(JSON.stringify(bad)); } catch (e) { msg = (e as Error).message; }
+  console.log(`[Lane2b] unresolvable-mark rejection: ${msg}`);
+  expect(msg).toMatch(/names no beat/i);
+});
+
+test("Lane2b/editPlan: an insert's afterBeatAt is checked too — the silent RELOCATION case", () => {
+  // The worst of the three: applyEdits appends to the end of the render when
+  // afterBeatAt does not resolve, so the beat ships at the close of the script.
+  const bad = {
+    ...okPlan(),
+    edits: [{ renderId: RID, op: "insert", afterBeatAt: "9:99", text: "x", cards: ["f-ath"], why: "x" }],
+  };
+  expect(() => parseEditPlan(JSON.stringify(bad))).toThrow(/names no beat/i);
+});
+
+test("Lane2b/editPlan: a missing required field still wins over a bad mark", () => {
+  // Ordering is a stated property: the model misunderstanding the CONTRACT is
+  // more useful to report than it misreading the script.
+  const bad = { ...okPlan(), edits: [{ renderId: RID, op: "cut", beatAt: "9:99" }] };
+  expect(() => parseEditPlan(JSON.stringify(bad))).toThrow(/why/i);
 });
