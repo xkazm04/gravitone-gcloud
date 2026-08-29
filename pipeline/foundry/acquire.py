@@ -28,7 +28,9 @@ the local model tends to describe mood rather than surface).
 
 import argparse
 import json
+import os
 import sys
+import time
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -39,6 +41,43 @@ OBSERVABLE_FIELDS = ["render_mode", "detail_density", "surface_realism", "atmosp
                      "palette_strategy", "black_handling", "edge_treatment"]
 
 DEFAULT_NEGATIVE = "text, watermark, logo, caption, border"
+
+
+def save_catalogue(cat):
+    """Write the catalogue ATOMICALLY, the way forge.py writes a run manifest.
+
+    styles.json is polled, not just read: the /foundry page fetches it through
+    GET /api/foundry/styles on every load and on its own interval, and forge.py
+    reads it at the top of every run. A plain write_text on a 30 KB file is not
+    one operation -- a reader that lands mid-write gets a truncated document,
+    and on the page side that is a JSON.parse throw in a route handler with no
+    catch around it, so the whole catalogue surface answers 500.
+
+    forge.py's `save()` has carried the fix and the reason since it was written
+    ("Atomic: the page polls this file while the forge writes it"). This is the
+    same file, the same repo, the same hazard, on the one path that ADDS to the
+    thing being polled. Write beside it, then rename: os.replace is atomic, so
+    a reader sees the old catalogue or the new one and never half of either.
+    """
+    tmp = STYLES.with_suffix(".json.tmp")
+    tmp.write_text(json.dumps(cat, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    # AND THE REPLACE IS RETRIED, because on Windows it is not unconditional:
+    # os.replace raises PermissionError while ANY other handle to the
+    # destination is open, and a polled file has one open a great deal of the
+    # time. Measured here on the real 30 KB catalogue with a reader in a tight
+    # loop: the bare replace lost 32 of 40 writes. Torn reads had gone to zero
+    # and the write had become the thing that failed -- a different defect, not
+    # a fix. The window is microseconds wide, so a few short retries close it;
+    # what must never happen is swallowing the failure, so the last attempt
+    # raises and the caller hears about it.
+    for attempt in range(20):
+        try:
+            os.replace(tmp, STYLES)
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.01)
 
 
 def readbacks():
@@ -97,7 +136,7 @@ def main():
         "evidence": [],
     }
     cat["styles"].append(entry)
-    STYLES.write_text(json.dumps(cat, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    save_catalogue(cat)
     print(f"acquired {args.id} from {args.source} ({args.model}) as candidate")
     print(f"  observables: {entry['observables']}")
     print(f"  recipe: {entry['recipe']}")

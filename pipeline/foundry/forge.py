@@ -82,10 +82,29 @@ def now():
 
 
 def save(run_dir, manifest):
-    """Atomic: the page polls this file while the forge writes it."""
+    """Atomic: the page polls this file while the forge writes it.
+
+    AND THE REPLACE IS RETRIED, because on Windows it is not unconditional.
+    os.replace raises PermissionError while any other handle to the destination
+    is open, and "the page polls this file" is a description of a handle being
+    open a great deal of the time. This function is called after every
+    candidate, from inside main()'s try -- so one unlucky poll would abort the
+    run, mark the manifest failed and throw away an evening of GPU, for a
+    conflict that resolves in microseconds.
+
+    Measured on the sibling path (acquire.py's 30 KB catalogue, a reader in a
+    tight loop): a bare replace lost 32 of 40 writes; with this retry, 0 of 40.
+    """
     tmp = run_dir / "run.json.tmp"
     tmp.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
-    os.replace(tmp, run_dir / "run.json")
+    for attempt in range(20):
+        try:
+            os.replace(tmp, run_dir / "run.json")
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.01)
 
 
 def log(manifest, run_dir, msg):
