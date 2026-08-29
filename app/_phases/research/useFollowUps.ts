@@ -18,8 +18,17 @@
 //
 // One record per project — two projects' follow-ups are independent, exactly as
 // two projects' runs are. Session-lived, like the run: nothing here is written
-// to disk, and a reload starts clean, which is what `lib/jobs` already tells the
-// user happened.
+// to disk, and a reload starts clean.
+//
+// THAT LAST SENTENCE USED TO END "…which is what `lib/jobs` already tells the
+// user happened", and it was wrong in the only case anybody meets. `lib/jobs`
+// writes `interrupted` over a job that was still RUNNING when the page went
+// away. A follow-up that RETURNED settled itself `done` in the same tick it
+// wrote its results — so it is never corrected, and the job record is persisted
+// while the results are not. After a reload the bell carries "done · Results are
+// staged against the notebook" and the queue it points at is empty, with nothing
+// anywhere accounting for the difference. FollowUpQueue now says so when the two
+// disagree; this comment no longer claims somebody else was already saying it.
 
 import { useCallback, useSyncExternalStore } from "react";
 
