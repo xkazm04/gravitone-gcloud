@@ -89,6 +89,41 @@ def craft_score(source_annotation, candidate_annotation):
     return round(sum(per.values()) / len(per), 3), per
 
 
+def allowed_values(field):
+    """The closed vocabulary a graded field may hold, from the one place that
+    defines it (../vlm-probe/style.py). Empty when the field is not enumerated."""
+    spec = style_mod.FIELDS.get(field) or {}
+    return spec.get("enum") or []
+
+
+def unscoreable(observables):
+    """Which of a style's declared observables `style_score` can never credit.
+
+    THE TARGET IS HAND-WRITTEN, and that is the whole reason this exists.
+    acquire.py lands a style as a hypothesis and prints "edit the recipe in
+    styles.json before forging"; hand-editing is the designed workflow, so a
+    value typed one character wrong is the designed failure. `style_score`
+    compares enum-for-enum with `==`, so an off-vocabulary target scores 0.0
+    against every candidate forever -- not "unmeasured", which is what an
+    absent field gets, but WRONG, which is indistinguishable from a style the
+    generator genuinely failed to hit. A whole evening of GPU then produces a
+    ledger row that says the style does not work.
+
+    Returns {field: value} for what is off-vocabulary, and the empty dict when
+    the style is scoreable. A field that is ABSENT is not an error: style_score
+    skips it deliberately and the grade is honestly partial.
+    """
+    bad = {}
+    for f in STYLE_ENUMS:
+        want = observables.get(f)
+        if want is None:
+            continue
+        allowed = allowed_values(f)
+        if allowed and want not in allowed:
+            bad[f] = want
+    return bad
+
+
 def style_score(observables, readback):
     """Fraction of the style's declared observables the candidate reads back as."""
     per = {}
