@@ -25,7 +25,7 @@ import type { StyleBlock } from "@/lib/themes";
 
 import { loadStep, saveStep } from "../../_shared/stepStore";
 import { subjectFor, type Frame, type Plate } from "../frames";
-import { altId, isSynthetic, SYNTH_MARK, type AltsColumn, type AltsCtl, type AltsStepData, type SceneAlts } from "./alts";
+import { altId, canRemoveAlt, isSynthetic, SYNTH_MARK, type AltsColumn, type AltsCtl, type AltsStepData, type SceneAlts } from "./alts";
 
 const PHASE = "frames-alts";
 const STRESS_FACTOR = 7;
@@ -221,6 +221,27 @@ export function useAlternatives({
     (frameId: string, id: string) => {
       const scene = byFrame[frameId];
       if (!scene) return;
+
+      // THE LAST ONE IS NOT DISCARDABLE, and the promotion above is exactly why.
+      //
+      // Deleting the active alternative promotes a survivor and adopts it, so
+      // the frame and this view keep agreeing. With one alternative there is no
+      // survivor: `activeId` goes null, the `activeId &&` guard below skips the
+      // adoption, and `onAdopt` is never called — so useFrames keeps the plate
+      // that was just discarded. The column then reads "no alternatives kept"
+      // while the assembly ledger, the canvas and the export all still render
+      // that exact picture. That is the precise failure this function's own
+      // docstring calls lying, reached by the one path that skips the fix.
+      //
+      // Refused rather than propagated. The other way to make the two agree is
+      // to clear the frame's plate — but the seed came from the ASSEMBLY view
+      // and was paid for there, so a control labelled "discard this
+      // alternative" would be silently emptying a composed frame. Refusing
+      // costs the user one click and nothing else.
+      //
+      // Synthetic columns are exempt: a clone has no frame to disagree with.
+      if (!canRemoveAlt(frameId, scene.alts.length)) return;
+
       const alts = scene.alts.filter((a) => a.id !== id);
       const activeId =
         scene.activeId === id ? (alts.length ? alts[alts.length - 1].id : null) : scene.activeId;

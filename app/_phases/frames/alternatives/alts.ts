@@ -78,5 +78,20 @@ export interface AltsCtl {
 
 export const altId = (frameId: string) => `alt-${frameId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
 
+/** MAY THIS ALTERNATIVE BE DISCARDED?
+ *
+ *  One rule, one home. It was briefly two — a `<= 1` in the hook's `remove` and
+ *  a `> 1` in the contact sheet's card — which is two copies of one invariant
+ *  that must agree, and the shape that produced the defect it guards against in
+ *  the first place.
+ *
+ *  The rule: the LAST kept alternative of a real scene stays. Deleting the
+ *  active one promotes a survivor and adopts it, so the frame and the view keep
+ *  agreeing; with one alternative there is no survivor, nothing is adopted, and
+ *  useFrames goes on rendering the picture this view now reports as gone.
+ *  Synthetic columns are exempt — a clone has no frame to disagree with. */
+export const canRemoveAlt = (frameId: string, keptCount: number): boolean =>
+  isSynthetic(frameId) || keptCount > 1;
+
 export const SYNTH_MARK = "~s";
 export const isSynthetic = (frameId: string) => frameId.includes(SYNTH_MARK);

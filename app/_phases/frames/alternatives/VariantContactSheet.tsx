@@ -17,7 +17,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
-import type { AltsColumn, AltsCtl, SceneAlt } from "./alts";
+import { canRemoveAlt, type AltsColumn, type AltsCtl, type SceneAlt } from "./alts";
 import type { Frame } from "../frames";
 import { FrameCanvas, KindChip } from "../parts";
 
@@ -215,6 +215,11 @@ function SheetColumn({
             active={col.activeId === alt.id}
             onSelect={() => onSelect(alt.id)}
             onRemove={() => onRemove(alt.id)}
+            // The only kept picture cannot be discarded: the cut would go on
+            // using it while this column reported none. `useAlternatives.remove`
+            // refuses it — this is the same rule drawn, so the control explains
+            // itself instead of doing nothing when pressed.
+            removable={canRemoveAlt(col.frame.id, col.alts.length)}
           />
         ))}
 
@@ -245,12 +250,14 @@ function AltCard({
   active,
   onSelect,
   onRemove,
+  removable,
 }: {
   frame: Frame;
   alt: SceneAlt;
   active: boolean;
   onSelect: () => void;
   onRemove: () => void;
+  removable: boolean;
 }) {
   return (
     <div className="group relative">
@@ -275,8 +282,14 @@ function AltCard({
           so the control hides until the card is under the pointer. */}
       <button
         onClick={onRemove}
-        aria-label="Discard this alternative"
-        className="absolute top-1.5 right-1.5 rounded p-1 text-white/40 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 hover:text-rose-300 focus-visible:opacity-100"
+        disabled={!removable}
+        aria-label={removable ? "Discard this alternative" : "The only kept alternative cannot be discarded"}
+        title={
+          removable
+            ? undefined
+            : "This is the only picture kept for the scene, and the cut is using it. Generate another alternative first."
+        }
+        className="absolute top-1.5 right-1.5 rounded p-1 text-white/40 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 hover:text-rose-300 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:text-white/15 disabled:hover:text-white/15"
       >
         <Trash2 className="h-3 w-3" aria-hidden />
       </button>
