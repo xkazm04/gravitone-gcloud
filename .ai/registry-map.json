@@ -306,7 +306,10 @@
             "scene"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:19-80 the script-to-frames contract carries no visual function and no motif thread, so the metaphor budget, the image-led derivation and the establish-before-change check have nothing to read; the beat-kind shape table at app/_phases/frames/frames.ts:238-249 remains the live fallback.",
+          "evaluatedAt": "2026-08-29",
+          "evaluatedAgainst": "sha256:c3469ac0f2304796"
         },
         {
           "subject": "video-assembly",
@@ -318,7 +321,10 @@
             "plate"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:221-232 — the ledger's holds, counts and states are all reductions over one clock (the beats), gaps and unknowns are drawn rather than defaulted, and the four techniques whose preconditions this step meets are all realized.",
+          "evaluatedAt": "2026-08-29",
+          "evaluatedAgainst": "sha256:c3469ac0f2304796"
         },
         {
           "subject": "evidence-bound-visuals",
@@ -330,7 +336,10 @@
             "scene"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:165 resolves a figure's fact id and never reads the fact's grade, so a low-confidence row draws with the same authority as a high-confidence one; and no element (arrow, loop) binds to a fact at all.",
+          "evaluatedAt": "2026-08-29",
+          "evaluatedAgainst": "sha256:c3469ac0f2304796"
         },
         {
           "subject": "image-prompt-composition",
@@ -388,7 +397,10 @@
             "image"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "lib/imaging/providers/google.ts:188-192 — the edit path attaches the subject image and up to 13 style references with no role declaration at all, and lib/imaging/providers/leonardo.ts:141 ships one dialect's prompt verbatim to a different model class on re-route; 8 of 11 techniques have no subject in this layer because the compiler is lib/stylePrompt.ts.",
+          "evaluatedAt": "2026-08-29",
+          "evaluatedAgainst": "sha256:c3469ac0f2304796"
         },
         {
           "subject": "generative-provider-routing",
@@ -428,7 +440,10 @@
             "spotting"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_studio/score.ts:224-235 — TIMELINE's startS/durS are typed constants that duplicate the scene and cue clocks the same file derives at :147-216, so the Cut and Score surfaces are two time authorities that agree by coincidence.",
+          "evaluatedAt": "2026-08-29",
+          "evaluatedAgainst": "sha256:c3469ac0f2304796"
         },
         {
           "subject": "production-pipeline-phasing",
@@ -474,7 +489,10 @@
             "follow"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/research/_parts/CardActions.tsx:35-46 — the follow-up effect vocabulary and terminal `unanswered` are exemplary (followup.ts:18-48), but a claim the notebook already flags as load-bearing at low confidence is never auto-queued, and a `kills` effect has no propagation path (followup.ts:197-246), so a dead fact stays reachable by every later render.",
+          "evaluatedAt": "2026-08-29",
+          "evaluatedAgainst": "sha256:c3469ac0f2304796"
         },
         {
           "subject": "content-research-grounding",
@@ -486,7 +504,10 @@
             "mechanisms"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/_shared/notebook/cards.ts:62 carries the deprecated comma-joined `source` string onto every triage card and drops `sources[]`, so CardTile.tsx:137-141 shows no evidence-class chip - the consumer pipeline/NOTEBOOK-SCHEMA.md:18 explicitly routes `evidence_class` to - and cutting decisions are made without the quality signal that should inform them.",
+          "evaluatedAt": "2026-08-29",
+          "evaluatedAgainst": "sha256:c3469ac0f2304796"
         },
         {
           "subject": "production-pipeline-phasing",
@@ -544,7 +565,10 @@
             "edit"
           ],
           "confidence": "strong",
-          "state": "unknown"
+          "state": "deviation",
+          "evidence": "app/_phases/script/ScriptStep.tsx:160-171 — the loop is otherwise exemplary (typed notes, shared refusal guards, share-split ledger, re-gate over the chain on screen), but the post-apply gate is lexical only, so no causal connector is re-checked at the seams a cut or insert creates, and the plan's `unchanged` list is parsed and discarded.",
+          "evaluatedAt": "2026-08-29",
+          "evaluatedAgainst": "sha256:c3469ac0f2304796"
         },
         {
           "subject": "short-form-narrative-structure",

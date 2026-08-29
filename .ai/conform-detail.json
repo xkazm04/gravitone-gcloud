@@ -1,0 +1,419 @@
+{
+  "schema": "conform-detail/1",
+  "pairs": {
+    "6bdc9182-5119-4439-86a4-14dcbaa274fd/video-assembly": {
+      "context": "frames-step",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evaluatedAt": "2026-08-29",
+      "worker": "g-1",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:153 draws every row's hold from durationOf() over the beat clock, FramesAssembly.tsx:78/101-106 compute composed/unsourced/authored counts by reduction (useFrames.ts:492-504), and FramesAssembly.tsx:272-274 renders an unplaceable beat's hold as a dash rather than a number — the technique's table form of the surface, with no typed caption on it."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:189-194 gives 'refused' its own drawn state keyed off PlateState; useFrames.ts:196-249 keeps refused (this subject) apart from failed (this run) and FramesAssembly.tsx:132-137 states how many plates a stopped batch did not attempt; FramesAssembly.tsx:412-416 and LayerPanel.tsx:106-108 state the unbuilt render seam instead of offering a dead control; FramesStep.tsx:49-68 refuses to draw a ledger over an unreadable step."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:209-232 — one parser (secondsOf delegating to atSeconds, with the three silent-number failures it replaced recorded at :189-208) and durationOf folding over the current material, skipping unplaceable beats and returning null so absence draws a dash rather than a zero."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:125-149 types the cut's overlay layer as declarative data, and sceneSpec.ts:262-281 folds a direction pass in by naming properties — the plate is explicitly not cleared and the clip status is carried through, so everything unnamed is provably untouched; app/api/frames/route.ts:204-221 has the machine assistant emit composition changes, never pixels."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: this context holds no music lane and no cue list — spotting lives in app/_phases/score, and nothing under app/_phases/frames requests or places audio."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no clip in this context is placed against an audio mark. app/_phases/frames/frames.ts:99-106 FrameClip carries status and motion only — there is no offset to measure or correct."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no generative video model is reachable. app/_phases/frames/frames.ts:79-98 states the imaging client returns stills only and FrameClip.status can hold only 'not-started'; app/_phases/frames/shots.ts:62-69 records that no shot can reach an image provider at all. (The still-plate path does carry the sourcing doctrine anyway — model, cost and subject travel with the accepted plate at frames.ts:66-75.)"
+        },
+        {
+          "technique": "motion-plate-library",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no motion is rendered anywhere (frames.ts:79-98), so there is no plate to normalize, bank, or bind appearance onto at use time."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: there is no multi-shot generation call to condition. app/_phases/frames/useFrames.ts:216-222 issues one image request per frame with count: 1; no panel grid is built or attached."
+        }
+      ]
+    },
+    "6bdc9182-5119-4439-86a4-14dcbaa274fd/evidence-bound-visuals": {
+      "context": "frames-step",
+      "subject": "evidence-bound-visuals",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-08-29",
+      "worker": "g-1",
+      "techniques": [
+        {
+          "technique": "figure-must-cite-a-fact",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:50-62 types the text layer by role and binds by identifier; sceneSpec.ts:163-166 enforces both rejecting checks (no factId on a figure, and a factId absent from this notebook); sceneSpec.ts:200-244 collects per beat rather than failing the batch; pipeline/FRAMES-SCENE-PROMPT.md:92-93 carries the prompt-side instruction behind the validator. Residual, not a violation of the rule as written: a human-added figure (useFrames.ts:286-296) reaches the canvas unbound and is marked (parts.tsx:323-327) and counted (useFrames.ts:498-501) rather than rejected — there is no published surface for it to reach."
+        },
+        {
+          "technique": "precision-limit-propagation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:157-174 — the validator resolves the fact id and stops; the fact's grade never travels into the render. Fact carries confidence and confidenceNote (app/_phases/_shared/notebook/types.ts:86-90) and no rendering-constraint field at all, and useFrames.ts:422 ships confidence into the direction prompt while pipeline/FRAMES-SCENE-PROMPT.md never mentions it. Consequence: f-midtier-distribute (confidence 'low', its own note saying the window is unresolved and the original comparison arithmetically false) can be drawn as an exact figure over an accent bar, visually identical to a 'high' fact — certainty laundering with the citation intact."
+        },
+        {
+          "technique": "causal-arrow-discipline",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:35-48 — FrameElement has no fact binding, so the strongest claim in the vocabulary is the one mark on the frame nothing has to source; frames.ts:294-295 then seeds an accent arrow on every 'turn' beat and a loop (a compound causal claim, every leg asserting causation) on every 'movement' beat, from the beat's rhetorical kind alone. sceneSpec.ts:141-155 validates an element's kind and box and never asks what grades the relation. Consequence: the notebook already holds graded causal chains (ChainStep.evidence, app/_phases/_shared/notebook/types.ts:170-176) and the frame layer cannot consult them, so a correlation beat gets the arrowhead a mechanism beat earns."
+        },
+        {
+          "technique": "epistemic-draw-routing",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/useFrames.ts:224-233 — a returned plate goes straight to state 'ready' with no check for rendered text. Two of the technique's three enforcement points are welded in (the prompt compiler always appends NO_TEXT_CLAUSE, lib/stylePrompt.ts:42-43 and :61-63; subject language is shapes-not-nouns, frames.ts:319-338, and sceneSpec.ts:126-127 rejects a subject that asks for glyphs) — the missing one is the guarantee. The repo's own measurement says text leaked on 6 of 6 styles when named objects were requested (frames.ts:322-324), and a hasText grade exists elsewhere (app/library/AssetsBrowser.tsx:200), so a lettered plate composites unaudited on the production path."
+        },
+        {
+          "technique": "generous-strawman-rendering",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:238-249 and :294-298 — the script's structure names the to-be-reversed beats ('steelman', and whatever the 'turn' turns over), and nothing pairs a setup frame with its turn frame or withholds conclusion-grade marks from the setup; pipeline/FRAMES-SCENE-PROMPT.md:97-106 directs the arc and says nothing about it. Consequence: a setup frame can be directed with the full authority kit and, travelling alone as a thumbnail or a pause, reads as the piece's verdict on a position the piece refutes."
+        },
+        {
+          "technique": "performer-claims-need-a-person",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no synthetic performer is cast anywhere in this context. Plates are non-figurative shape compositions by construction (app/_phases/frames/frames.ts:325-338) and lib/stylePrompt.ts:48-51 excludes photorealism and photographs; no line in the model is delivered by a depicted person."
+        },
+        {
+          "technique": "screenshots-claim-a-record",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: nothing here generates an interface or platform screenshot. The plate prompt forbids text, labels, logos and watermarks unconditionally (lib/stylePrompt.ts:42-43, :48-51), which structurally excludes the chrome that makes a rendered interface assert a record."
+        },
+        {
+          "technique": "slots-claim-their-subjects",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no position in this context denotes a real named subject with a generated occupant. The one generated element is the plate, and subjectFor (app/_phases/frames/frames.ts:319-338) routes it off the beat's rhetorical role rather than its sentence, precisely so the picture carries shape and not named entities (FRAMES-SCENE-PROMPT.md:25-31) — the technique's own 'break the denotation' remedy, applied at the architecture rather than per asset. Every denoting position (figure, label) is code-drawn and fact-bound."
+        }
+      ],
+      "registryProposal": "figure-must-cite-a-fact is written entirely against a generator that forgets; this repo's second author is a human typing into a bound field (useFrames.ts:286-296), where a rejecting validator has nothing to reject and the honest instrument is a standing count that gates a step's reported state (useFrames.ts:533-541). The technique could name that second path and say the gate for it is a measured, surfaced count rather than a throw — currently the repo looks non-conformant on a path the technique never considered."
+    },
+    "4322a53f-e895-4eef-b2e2-d599beb9e88b/video-assembly": {
+      "context": "production-phases",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-08-29",
+      "worker": "g-1",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "deviation",
+          "evidence": "app/_studio/score.ts:224-235 — every TIMELINE block's startS/durS is hand-typed (t-v1 0/6, t-v2 6/7, t-v3 13/6 … t-m2 13/13) and reproduces exactly what sceneClock() (score.ts:147-154) and cuesFrom() (score.ts:189-216) already derive from SCENES in the same module; app/_studio/scenes.ts:15 types PROJECT.totalS as 31 rather than summing SCENES' targetS, and every percentage on both surfaces divides by it (app/_studio/projectParts.tsx:37-40, :43-58). Consequence: lengthen one scene and the Score surface's picture lane and cue spans move while the Cut's blocks, its ruler and its coverage arithmetic do not — the same scene sits in two places, and the file header at score.ts:98-105 celebrates removing exactly this defect from SPOTS one screen above where it survives."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "deviation",
+          "evidence": "app/_phases/cut/CutTimeline.tsx:75 — the dialled-in correction lives in component useState and is never written back to TimelineClip.offsetMs (app/_studio/projectTypes.ts:57-59), which the technique names outright: a correction that lives only in a control's local state is un-reviewable and un-shippable. CutTimeline.tsx:232-235 states the seam honestly, so the consequence is bounded — the cut loses every sync decision on reload. Second gap on the same technique: only one offset per clip is expressible, so head-and-tail diagnosis is impossible and every sync error is silently treated as a constant offset. The rest of the protocol is realized — seeded from the stored value (:54-56), the picture moves with the number (:88, :145), snap-to-mark returns exactly zero (:219-226), and status is re-derived from the current offset (:91-92)."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_phases/cut/CutTimeline.tsx:152/164/176 draws missing blocks in place, dashed and captioned, with a legend naming the state; app/_phases/score/ScoreSpotting.tsx:279-284 prices the refusal on the clock and :67-69 opens the surface on it; the coverage line at :108-110 keeps scored / refused / unspotted apart as three reductions; and the no-phantom rule holds in four places — no playback copy (CutTimeline.tsx:257-260), the sync bench's own bound (:232-235), the unbuilt duck demoted to declaredNotPerformed (app/_studio/score.ts:41-52, rendered NOT PERFORMED at ScoreSpotting.tsx:242-247), and engineCredit refusing to name a vendor without a take's provenance (ScoreSpotting.tsx:47-61)."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/cut/CutTimeline.tsx:38-45 — the act-two mark names its semantic source (the scene whose mood matches /turn/i), folds the durations before it, and returns null so a fixture with no turn draws no mark rather than a mark at zero; the field is annotated load-bearing where it lives (app/_studio/projectTypes.ts:27-29, app/_studio/scenes.ts:49). Residual: two matching scenes would silently take the first, which the technique's decision rules say to surface as a material defect."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts:106-138 is a cue list where every cue carries a purpose sentence and an authored edge decision ('Tail rings 1.5s past picture — intended', :136); spans are derived from the picture rather than typed (:189-216), a refusal is a spotting outcome that reverts the region to labelled silence (ScoreSpotting.tsx:92-98, :279-284), the three states are summed as a design review (:108-110), and the music style block is restated on every call (score.ts:88-96). The one rule with no implementation — music ducking under the voice lane — is declared rather than claimed (score.ts:115), since this build has no mixing stage."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts and app/_studio/scenes.ts hold the cut as a declarative composition and both surfaces are renders of it — there is no pixel-first edit to retrofit reproducibility onto. No compile seam exists because nothing renders video, which the surfaces state (CutTimeline.tsx:257-260) rather than imply."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no generative video model produces the picture track. The video clips are fixture rows (app/_studio/score.ts:225-229) with no generation seam; the only generator this context reaches is the music engine (ScoreSpotting.tsx:78-87)."
+        },
+        {
+          "technique": "motion-plate-library",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: nothing in this context generates or restyles motion, so there is no plate to author appearance-free, bank by motion class, or bind at use time."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: there is no multi-shot generation to condition — SCENES carries pre-authored frame candidates as gradient tones (app/_studio/scenes.ts:25-30) and no image or video call is made from this context."
+        }
+      ],
+      "registryProposal": "music-spotting-against-picture step 2 says to mark cue in/out as times on the master clock and explicitly not as scene references; derived-turn-markers, in the same subject, says a typed time is an impression wearing a number. This repo resolves the conflict in the second technique's favour — cues are spotted as scene ids and their spans derived (app/_studio/score.ts:98-105, :189-216) — which buys automatic re-derivation on retime at the cost of mid-scene entries and exits. The spotting technique's rule reads as if a typed timecode were the only way to address the clock; it could instead say the cue's address must be a derivation over the picture, of which an absolute time against a structural mark is one form."
+    },
+    "fab029ff-06dc-49e8-b694-c43d79e707f5/review-iteration-loops": {
+      "context": "research-step",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-08-29",
+      "worker": "g-2",
+      "techniques": [
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchStep.tsx:133-135 — these paths are the educational triage surface, where the notebook arrives from a run and the reviewer reacts with typed scope decisions; the divergence precondition (a reviewer who cannot say what they want, choosing among rendered candidates) does not hold, and the beat-variant slate lives at app/_phases/research/beats/, outside this context's paths."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/ScopeGate.tsx:93-97 — this context produces and scopes evidence rather than revising a reviewed artifact; the revision engine is the Script step (app/_phases/script/editPlan.ts), and the clear dialog correctly frames a re-run as a fresh draft rather than a revision."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/CardTile.tsx:191-247 — the medium is discrete notebook cards; the technique's own boundary excludes discrete media, and nothing here regenerates a region of a continuous artifact."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/CardActions.tsx:17-47 — this surface collects scope and routing signals (descope / like / deepen), not weight or order notes, and there are no edit operations here for a note kind to map onto; the taxonomy lives in app/_phases/script/versions.ts:40-47."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/_parts/ScopeBar.tsx:47-55 refuses to confirm a scope in the required card's own words and ScopeGate.tsx:63 disables the button before anything moves; FollowUpQueue.tsx:249-257 makes `unanswered` terminal with the real limit stated, and followup.ts:197-246 gives every effect an explicit standing instead of a silence."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/_parts/CardTile.tsx:165-172 renders required cards as `locked in scope` with no toggle; ScopeBar.tsx:16-17 keeps `descoped` and `not taken` as separate facts (opt-in silence is a refusal, not an omission); ScopeGate.tsx:36-38 reports drift because Script reads the live board, not the checkpoint."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchTriageBoard.tsx:46-52 counts cards, not seconds; there is no beat-to-duration ledger in this context — the share arithmetic lives in app/_phases/script/impact.ts and the matrix."
+        },
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "deviation",
+          "evidence": "app/_phases/research/_parts/CardActions.tsx:35-46 — `deepen` is only ever set by a human click, so a claim already flagged load-bearing at low confidence (CardTile.tsx:144-147, with its reason pre-written at followup.ts:255-257) is never auto-queued and the standing danger flag waits on someone noticing it."
+        }
+      ]
+    },
+    "99a9ac98-40f7-4f99-bac6-2888372c9de6/review-iteration-loops": {
+      "context": "script-step",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-08-29",
+      "worker": "g-2",
+      "techniques": [
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/ScriptStep.tsx:263-277 shows three candidates side by side, each anchored to a named craft template carrying its own declared direction and weakness (app/_phases/script/renders.ts:9-27), and the pick terminates the phase (_parts/HypothesisColumn.tsx:173); notes then route to a recalibration that emits edits, never a re-run of the slate."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "deviation",
+          "evidence": "app/_phases/script/ScriptStep.tsx:160-171 re-gates after apply with `gateChains`, a lexical evidence/hedge gate, so no structural invariant is re-checked at a seam: editPlan.ts:146-148 splices a cut beat out and leaves its successor's BUT/THEREFORE connector written for a predecessor that no longer exists, and nothing reports the broken chain."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/script/_matrix/MatrixTracks.tsx:97-138 — the artifact is a chain of discrete text beats; the technique's own boundary excludes discrete media, which have no acoustic or visual joint for a seam to fail at."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/_notes/PresetSelect.tsx:16-18 offers exactly the closed vocabulary defined at versions.ts:40-47 (more-focus / less-focus / descope / move-earlier / move-later plus a custom hatch), each hint naming its minimal operation; _notes/NoteComposer.tsx:80-81 and _notes/RecalibrateControl.tsx:196-198 say per note which ones move nothing rather than implying they moved a bar."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "deviation",
+          "evidence": "app/_phases/script/_notes/DeclinedList.tsx:24 records four declined kinds and no `considered and unchanged` list, while editPlan.ts:283 parses the plan's `unchanged` array and drops it — so a render the engine deliberately left alone is indistinguishable from one it forgot."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/_matrix/shared.tsx:44-73 writes the same scope record the triage board reads (no second door), and recalibrate.ts:80-108 refuses a note that would descope required material or re-weight a descoped card — routing it back in the triage board's own wording — with the refusals rendered at _notes/DeclinedList.tsx:42-50 and the conflict's winner named at recalibrate.ts:126-133."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/_matrix/shared.tsx:101-105 states the sum-to-runtime invariant that impact.ts::splitAcross enforces; _matrix/MatrixSpend.tsx:81-84 shows attributed seconds against the runtime with any overrun named, and shared.tsx:38-42 / 94-99 keeps spoken / cut / unused distinct and reports cut records naming a fact the notebook no longer has."
+        },
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/script/_matrix/shared.tsx:94-99 is the receiving end of a kill, not an interrogation channel; this context has no follow-up queue — evidence doubts route back to the Research step, and the technique forbids routing rendering complaints through it."
+        }
+      ],
+      "registryProposal": "Upward lesson rather than a defect: refusal-as-valid-outcome's refuse-before-apply ordering has no account of a guard that knows its own band is narrower than the rule it enforces. This repo's answer (app/_phases/script/_notes/RecalibrateControl.tsx:13-17,126-136) is that a blocking verdict does not disable the accept button — it makes the click a two-step deliberate act and stamps a permanent override receipt on the version, visible wherever that version is named (_matrix/VersionBar.tsx:33-44). That keeps the guard from becoming the expensive choice without letting the violation go unrecorded, and is worth a technique paragraph or an application with this file:line."
+    },
+    "9c62ab0b-7ff9-49ba-a123-0e4eff5b2a0d/image-prompt-composition": {
+      "context": "imaging-providers",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-08-29",
+      "worker": "g-2",
+      "techniques": [
+        {
+          "technique": "two-block-style-and-action",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:76-85 — GenerateRequest carries one opaque prompt string; this context is the vendor transport layer and composes no prompt, so the style/action split has no subject here (it is compiled at lib/stylePrompt.ts:30-65)."
+        },
+        {
+          "technique": "style-first-token-ordering",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/google.ts:342-351 — buildPrompt appends the reference-labelling and exclusion clauses after the caller's prompt rather than prepending them, so the style block the compiler put first stays first and the constraint clause stays last."
+        },
+        {
+          "technique": "assigned-colour-roles",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/providers/google.ts:342-351 passes the palette through untouched; role assignment is a property of the style block compiled at lib/stylePrompt.ts:23-38, and nothing in this layer reads, rewrites or grades colour."
+        },
+        {
+          "technique": "shape-language-over-nouns",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:77 — the subject description arrives already written; this layer never authors or translates a noun, so there is nothing here that could invite or avoid a text magnet."
+        },
+        {
+          "technique": "negative-prompting",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/leonardo.ts:142 sends the exclusions as `negative_prompt`, while lib/imaging/providers/google.ts:350 folds the same string into a positive exclusion clause because Google exposes no negative channel — one vendor-neutral contract, two deliveries, exactly the per-vendor adapter the technique asks for."
+        },
+        {
+          "technique": "prompt-budget-limits",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/leonardo.ts:45-49,131-135 records the vendor's hard ceiling and enforces it before dispatch as `invalid-request` with a message naming what to shorten, and the fleet minimum is the same 1500 in the compiler (lib/stylePrompt.ts:67) — two copies of one constant is a drift risk, not a missing budget."
+        },
+        {
+          "technique": "prompt-dialect-matching",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/leonardo.ts:141 ships `req.prompt` verbatim to a caption-class diffusion model while providers/google.ts:158 ships the same string to an instruction-following multimodal model; the adapters differ only in negative delivery, so the re-route at router.ts:73 crosses a dialect boundary unrendered — and the 60-cell trial that demoted Leonardo (router.ts:60-72) compared one dialect's prompt across both classes."
+        },
+        {
+          "technique": "medium-vocabulary-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:77 — the medium vocabulary is authored in the style block (lib/themes.ts, lib/stylePrompt.ts:30-38); this layer neither writes nor audits medium terms."
+        },
+        {
+          "technique": "verbatim-text-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/providers/google.ts:342-351 — this pipeline is the composited-plate architecture: the no-text clause is welded into the compiler (lib/stylePrompt.ts:43) and every checkable glyph is drawn by the vector layer, so the technique's precondition (the model, not a compositor, sets the text) does not hold."
+        },
+        {
+          "technique": "identity-split-from-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:82-84 — `references` carries approved style plates only; there is no recurring-subject identity block in this layer and no subject conditioning for the split to sit under."
+        },
+        {
+          "technique": "reference-role-map",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/google.ts:188-192 — the edit path attaches the subject image plus up to 13 style references with no role declaration at all (the generate path's labelling clause at google.ts:344-349 is never applied there, and even on generate the label trails the prompt instead of leading it), so heterogeneous attachments arrive ambiguous about each other."
+        }
+      ],
+      "registryProposal": "Not a defect in the standard — a mapping question. image-prompt-composition governs the prompt COMPILER, and in this repo that is lib/stylePrompt.ts (self-described as 'the one compiler', with restatement, assigned colour roles and the welded no-text clause), lib/themes.ts and app/_phases/frames/shotPrompt.ts — not lib/imaging/*. Eight of eleven techniques have no subject in the mapped paths, and the match looks like vocabulary overlap (prompt / negativePrompt / imaging) rather than the subject's precondition. Suggest re-pointing this subject at the compiler context and keeping only negative-prompting, prompt-budget-limits, prompt-dialect-matching and reference-role-map against the provider layer, since those four are genuinely per-vendor adapter concerns."
+    },
+    "6bdc9182-5119-4439-86a4-14dcbaa274fd/frame-direction": {
+      "context": "frames-step",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-08-29",
+      "worker": "g-3",
+      "techniques": [
+        {
+          "technique": "visual-function-vocabulary",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:19-29 (and SCENE_SCHEMA :32-80) carries beatAt/subject/motion/rationale/elements/texts and no `function`; the beat carries only a rhetorical `kind` (app/_phases/script/types.ts:9-19). The seven-function vocabulary exists solely in pipeline/DIRECTOR-DIMENSION.md, whose own header at :3 states 'Nothing here is implemented.' Consequence: the metaphor-visual cap, the image-led/narration-led ratio and the confidence cap are uncomputable over a cut, and the category lookup PROBLEM_OF -> subjectFor (app/_phases/frames/frames.ts:238-249, :325-339) is still the seeded and fallback subject at app/_phases/frames/useFrames.ts:209 - attractor #1 of the golden path, live."
+        },
+        {
+          "technique": "one-function-per-visual",
+          "verdict": "deviation",
+          "evidence": "pipeline/FRAMES-SCENE-PROMPT.md:59 softens the rule to 'Prefer one idea per frame' and nothing enforces it (the validator's checks are enumerated at app/_phases/frames/sceneSpec.ts:120-177 and count no functions, because there is no function field). app/_phases/frames/sceneSpec.ts:232 refuses a second scene for a beat, so the technique's prescribed remedy - more stills under the same narration - is closed on this path; the one-beat-to-many-shots surface is read-only (app/_phases/frames/FramesStep.tsx:26-29). Consequence: a beat doing two jobs ships as one cluttered frame and nothing on the surface can detect it. The frame-local corollaries that ARE realized: one move per frame (prompt :74) and 'an element states what it asserts' as a required label (sceneSpec.ts:148, prompt :88-90, :146)."
+        },
+        {
+          "technique": "plate-elements-text-split",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:5-15 states the epistemic split verbatim and :33-62 types the three layers; app/_phases/frames/sceneSpec.ts:126-127 rejects a subject asking for glyphs, :163-164 rejects an uncited figure and :165-166 a factId absent from the notebook; app/_phases/frames/frames.ts:338 reserves the lower third; app/_phases/frames/useFrames.ts:217 compiles the subject inside the locked style block; uncited figures are surfaced at app/_phases/frames/parts.tsx:321-323, LayerPanel.tsx:174 and FramesAssembly.tsx:99-102. The precision-limit rule is satisfied by construction: FrameElement (frames.ts:35-48) has no ticks or numeric axis to over-claim with, and every quantity must travel as a cited figure text."
+        },
+        {
+          "technique": "motion-intent-authoring",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:79-106 authors the move at composition time with no renderer, no duration field and the honesty note that status can only be 'not-started'; app/_phases/frames/sceneSpec.ts:134-139 enforces a picturable length, no text in the move, and rejects a motion that restates its subject; pipeline/FRAMES-SCENE-PROMPT.md:62-84 carries all four rules including near-stillness written as such; app/_phases/frames/frames.ts:309-312 seeds motion EMPTY rather than guessing from the beat kind; the surface says 'authored - not rendered' (FramesAssembly.tsx:404-414). Narrowness worth noting, not a failure: the restatement check is exact case-insensitive equality (sceneSpec.ts:138), so a subject with a verb bolted on passes."
+        },
+        {
+          "technique": "motif-establish-vary-payoff",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:19-29 and :32-80 define no named thread and no lifecycle operation, so 'change' and 'reprise' have no prerequisite 'establish' to check - the structural invariant per-beat-rejection itself lists as enforceable. Motifs survive only as prose inside `rationale`, sliced to 200 chars (sceneSpec.ts:176), and direction is re-attached to beats by timestamp (applySceneSpecs, sceneSpec.ts:262-266), which is the position-keyed rot the technique warns against when a re-render reorders beats. The intent is explicit and unserved: app/_phases/frames/useFrames.ts:382-390 justifies the whole-cut pass by the engine's ability to 'carry a motif from the hook into the turn', and pipeline/FRAMES-SCENE-PROMPT.md:101-106 asks for it in prose. Consequence: a partial apply can admit a change whose establish was rejected, and no re-render can prove a reprise refers to something the viewer has seen."
+        },
+        {
+          "technique": "per-beat-rejection",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:101-113 returns applied/rejected/missing with the disjointness argument written out; :115-119 reports the FIRST defect per beat, phrased for the beat's own row; :200-245 collects findings while still hard-failing what invalidates the whole response (:207-215); :141-176 splits clamp-what-is-safe from reject-what-changes-meaning; :129-133 documents the deliberate non-checks. app/_phases/frames/sceneSpec.ts:262-266 leaves a rejected beat with what it had, and app/_phases/frames/useFrames.ts:451-474 routes reasons to rows, counts rejected and missing separately, and names invented timestamps; FramesAssembly.tsx:281-286 draws 'This beat kept what it had.' The economics are told to the generator at pipeline/FRAMES-SCENE-PROMPT.md:161-164."
+        }
+      ]
+    },
+    "fab029ff-06dc-49e8-b694-c43d79e707f5/content-research-grounding": {
+      "context": "research-step",
+      "subject": "content-research-grounding",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evaluatedAt": "2026-08-29",
+      "worker": "g-3",
+      "techniques": [
+        {
+          "technique": "tension-finding-taxonomy",
+          "verdict": "deviation",
+          "evidence": "Strongly realized: the null is a first-class SUCCESSFUL ending (app/_phases/research/ResearchStep.tsx:190-193 settles the job `done`, not `failed`; TopicPanel.tsx:118-126; run/trace.ts:50-62), the triple is typed and rendered (app/_phases/_shared/notebook/types.ts:440-445; sections/Argument.tsx:19-28), the five shapes drive the run (run/trace.ts:30-31). Missing: the baseline. The repo's own brief mandates the baseline row (pipeline/RESEARCH-PROMPT.md:31, :36, :72-81) but the shipped review columns are seven with a counter-case and no baseline (app/_phases/_shared/notebook/dimensions.ts:76-108, drawn by ResearchTriageBoard.tsx:39), the spine trace runs six searches with none (app/_phases/research/run/trace.ts:24-29), and `strength` is a free string (types.ts:444; notebook.ts:31) that no surviving counter-case can step down one grade. Consequence: 'strength: high' is asserted with no distribution behind it and no column a reviewer could look for one in."
+        },
+        {
+          "technique": "prior-declaration-and-steel-man",
+          "verdict": "deviation",
+          "evidence": "The steel-man half is realized: provenance found/found-adjacent/constructed with its origin story (app/_phases/_shared/notebook/types.ts:227-249), and the counter-case is a mandatory search whose column can never be legitimately empty - an unfound counter-case is recorded as a fact about the search (dimensions.ts:98-100; run/trace.ts:29). The prior half does not exist: pipeline/RESEARCH-PROMPT.md:20-24 and its checklist at :165 require `prior` written before the first search and a discovery-or-mirror call, and the Notebook contract has no such field (app/_phases/_shared/notebook/types.ts:431-445) and no section renders one (NotebookBody.tsx:17-28). Consequence: this is the technique's own dead-lesson shape - a mandate with no field and no consumer - so no reviewer can tell a discovery from a mirror."
+        },
+        {
+          "technique": "pre-linked-causal-mechanisms",
+          "verdict": "deviation",
+          "evidence": "The vocabulary is modelled exactly, TRANSFER included, with the fake-THEREFORE anti-shape named (app/_phases/_shared/notebook/types.ts:149-164), per-link evidence typed (ChainStep, :166-177), the script layer held at zero AND THEN (:140-147) and the defect drawn as a chip (Chips.tsx:11-28). But the shipped asset is on the legacy prose form: app/_phases/_shared/notebook/notebook.ts:40-47 carries connectors inside the sentences and link 5 (:45) is a bare 'AND sellers at the same price level absorb what does arrive' - the untyped connector the TRANSFER extension was added for - with no `steps[]`, therefore no per-link evidence, and pipeline/check-notebook.mts gates no connector at all. Consequence: a chain can be well-sourced in aggregate while its load-bearing link is supported by nothing, and nothing can count the joints because they are prose."
+        },
+        {
+          "technique": "scale-conversion-of-numbers",
+          "verdict": "deviation",
+          "evidence": "The recompute discipline is realized as a surface, on the technique's own canonical scar: app/_phases/research/followup.ts:100-128 refuses to edit the transcript that called 77,800 'slightly more than' ~270,000 across different windows, and revisionsOf (:143-161) renders the corrected row, its arithmetic and its downgraded confidence beside the verbatim claim. The bookkeeping fields exist (unit/period/denominator, types.ts:97-102). The break: all six shipped conversions omit `for` (app/_phases/_shared/notebook/notebook.ts:98-105), the fact link the type itself calls uncheckable-by-construction when absent (types.ts:372-375). Consequence: a felt form polished from a low-confidence figure launders it, and no gate can follow the link back to the grade that should cap it."
+        },
+        {
+          "technique": "unknowns-as-constraints",
+          "verdict": "conformant",
+          "evidence": "app/_phases/_shared/notebook/unknowns.ts:1-63 writes each unknown as a prohibition with an impact, scopes it with `about` (:24-31) against the global-hedge failure, and keeps resolved unknowns flagged rather than deleted (:4-7, u-cohorts :40-41, u-liquidity-vendor :54-55) with the index-shift incident named as the reason. Rows are keyed by stable id through UNKNOWN_BY_ID (app/_phases/research/followup.ts:227) and a reference to an unknown the notebook does not carry is REPORTED, never dropped (followup.ts:228-233). Per-render scoring with at-risk/superseded lives one step downstream and is pointed at from unknowns.ts:17-20. The must-say half is typed and honestly declared unpopulated (types.ts:455-459)."
+        },
+        {
+          "technique": "evidence-grading-ladder",
+          "verdict": "deviation",
+          "evidence": "Both ladders are modelled well - class including `protected`, interested-is-not-low-confidence, plural FactSource with locator, fact kind, three dates, unit/period/denominator, load-bearing and confidenceNote (app/_phases/_shared/notebook/types.ts:12-138) - and the dangerous combination is flagged at triage (CardTile.tsx:62, :143-147) and in the evidence log (ResearchStep.tsx:297-302). The break is at the surface the ladder names: app/_phases/_shared/notebook/cards.ts:62 carries the @deprecated comma-joined `f.source` (types.ts:82-83) and drops `sources[]`, so app/_phases/research/_parts/CardTile.tsx:137-141 prints a source-shaped blob plus a confidence chip and no evidence-class chip - while pipeline/NOTEBOOK-SCHEMA.md:18 routes `facts[].sources[].evidence_class` to exactly 'the provenance chip at card triage'. Follow-ups reopen the same anti-shape: Effect 'adds-fact' types `source: string` (app/_phases/research/followup.ts:23) and a shipped row semicolon-joins two publications (:63). Consequence: a reviewer cuts an aggregator-sourced fact and a primary-record fact on identical information."
+        },
+        {
+          "technique": "provenance-signal-asymmetry",
+          "verdict": "deviation",
+          "evidence": "The durable guards the technique prefers are realized - a `primary` rung on the class ladder, three dates, and a locator that makes a claim checkable (app/_phases/_shared/notebook/types.ts:27-33, :62-69, :89-96) - but no machine-provenance state exists anywhere in the contract, and there is no field in which 'not checked' can be recorded distinctly from 'not detected'. The exposure is real rather than theoretical: follow-ups admit new facts sourced to open-web aggregator pages (app/_phases/research/followup.ts:82, :85, :90-94) through an Effect type that carries only a source string (:23). Consequence: a source whose origin was never questioned is indistinguishable at triage from one that was, which is the merge the three-state vocabulary exists to prevent. Lower consequence than the ladder deviation above, and it would be fixed in the same field."
+        }
+      ]
+    }
+  }
+}
