@@ -18,6 +18,7 @@
 
 import FactRow from "./FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "./notebook";
+import { CurrencyBody, SourcesBody } from "./sections/Shared";
 
 export default function EvidenceLog() {
   const n = NOTEBOOK;
@@ -69,22 +70,15 @@ export default function EvidenceLog() {
 
       <section className="space-y-1.5">
         <Head>how long this stays true</Head>
-        <p className="text-sm leading-relaxed text-slate-300">{n.currency.why}</p>
-        <p className="font-jetbrains text-[11px] text-white/40">
-          expires first: {n.currency.expiresFirst.join(", ")} · durable: {n.currency.durable.join(", ")}
-        </p>
-        <p className="text-[13px] text-cyan-200/80">{n.currency.advice}</p>
+        {/* No half-life here — the stat tile at the top of this page already
+            gives it, and printing it twice is how a number starts disagreeing
+            with itself. */}
+        <CurrencyBody />
       </section>
 
       <section className="space-y-1.5">
         <Head>sources · {NOTEBOOK_COUNTS.sources}</Head>
-        <ul className="space-y-1">
-          {n.sources.map((s) => (
-            <li key={s} className="font-jetbrains text-[11px] leading-relaxed text-white/45">
-              {s}
-            </li>
-          ))}
-        </ul>
+        <SourcesBody />
         {/* The gap is READ, not retyped. The count beside it was already
             computed, and the sentence describing it was a literal about run 1
             ("this run did not reach primary on-chain data") — so any other

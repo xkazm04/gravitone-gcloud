@@ -7,6 +7,7 @@
 import FactRow from "../FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../notebook";
 import { H } from "./H";
+import { CurrencyBody, SourcesBody } from "./Shared";
 
 export default function ApparatusSections() {
   const n = NOTEBOOK;
@@ -116,24 +117,13 @@ export default function ApparatusSections() {
 
       <section className="space-y-1.5">
         <H id="currency">currency — how long is this true for</H>
-        <p className="text-sm text-slate-300">
-          half-life <span className="text-amber-200">{n.currency.halfLife}</span> — {n.currency.why}
-        </p>
-        <p className="font-jetbrains text-[11px] text-white/40">
-          expires first: {n.currency.expiresFirst.join(", ")} · durable: {n.currency.durable.join(", ")}
-        </p>
-        <p className="text-[13px] text-cyan-200/80">{n.currency.advice}</p>
+        {/* Inlined here: this artifact has no stat tile to carry it. */}
+        <CurrencyBody withHalfLife />
       </section>
 
       <section className="space-y-1.5">
         <H id="sources">sources</H>
-        <ul className="space-y-1">
-          {n.sources.map((s) => (
-            <li key={s} className="font-jetbrains text-[11px] leading-relaxed text-white/45">
-              {s}
-            </li>
-          ))}
-        </ul>
+        <SourcesBody />
       </section>
 
       <section className="space-y-1.5">
