@@ -10,7 +10,11 @@ export function ScopeBar({ api }: { api: ScopeApi }) {
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
       <Stat label="in scope" value={`${s.kept}/${s.total}`} />
+      {/* Cut and never-taken are two different facts about the board and only
+          one of them is a decision. Folding them together lit this stat amber
+          on arrival, because the conclusions start out of scope by design. */}
       <Stat label="descoped" value={s.descoped} tone={s.descoped ? "warn" : undefined} />
+      {s.notTaken > 0 && <Stat label="not taken" value={s.notTaken} />}
       <Stat label="liked" value={s.liked} tone={s.liked ? "good" : undefined} />
       <Stat label="deepen" value={s.deepen} tone={s.deepen ? "info" : undefined} />
       <Stat
@@ -52,7 +56,10 @@ export function Consequences({ api }: { api: ScopeApi }) {
   if (!s.wounds.length && !s.descoped) {
     return (
       <p className="font-jetbrains text-[11px] text-white/35">
-        Nothing descoped. The script will be written against the full notebook.
+        Nothing descoped. The script will be written against the full notebook
+        {s.notTaken > 0
+          ? `, minus the ${s.notTaken} conclusion${s.notTaken === 1 ? "" : "s"} you have not taken.`
+          : "."}
       </p>
     );
   }
