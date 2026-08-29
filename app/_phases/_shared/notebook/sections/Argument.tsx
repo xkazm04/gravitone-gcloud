@@ -4,7 +4,7 @@
 // mechanisms that explain it, the turns those mechanisms buy, and the strongest
 // case against the whole thing.
 
-import { ConnectorChip } from "../Chips";
+import { ChainConnectorChip, ConnectorChip } from "../Chips";
 import { NOTEBOOK } from "../notebook";
 import { H, chainLink } from "./H";
 
@@ -37,16 +37,42 @@ export default function ArgumentSections() {
               {m.id} · explains: {m.explains}
               {m.needsAnalogy ? " · needs an analogy" : ""}
             </p>
+            {/* `steps` WINS WHERE BOTH ARE PRESENT — the rule types.ts states
+                and nothing implemented. `chain: string[]` is the legacy form,
+                with the connector inlined in the prose and parsed back out at
+                render time by chainLink(); `steps: ChainStep[]` is the target
+                and the only form that can carry per-step evidence. Until now
+                this mapped `m.chain` unconditionally, so the typed form had no
+                renderer at all and the documented precedence was a comment. */}
             <ol className="mt-2.5 space-y-1.5">
-              {m.chain.map((step, i) => {
-                const { connector, text } = chainLink(step);
-                return (
-                  <li key={i} className="flex flex-wrap items-baseline gap-2 text-[13px] leading-relaxed">
-                    <ConnectorChip connector={connector} />
-                    <span className="text-slate-300">{text}</span>
-                  </li>
-                );
-              })}
+              {m.steps?.length
+                ? m.steps.map((step, i) => (
+                    <li key={i} className="flex flex-wrap items-baseline gap-2 text-[13px] leading-relaxed">
+                      <ChainConnectorChip connector={step.connector} />
+                      <span className="text-slate-300">{step.text}</span>
+                      {step.evidence?.length ? (
+                        <span className="font-jetbrains text-[10px] text-white/30">
+                          {step.evidence.join(", ")}
+                        </span>
+                      ) : (
+                        /* The point of the typed form is that a step can be cut
+                           out from underneath. One that cites nothing cannot be,
+                           and says so rather than looking supported. */
+                        <span className="font-jetbrains text-[10px] text-amber-200/60">
+                          no evidence on this step
+                        </span>
+                      )}
+                    </li>
+                  ))
+                : m.chain.map((step, i) => {
+                    const { connector, text } = chainLink(step);
+                    return (
+                      <li key={i} className="flex flex-wrap items-baseline gap-2 text-[13px] leading-relaxed">
+                        <ConnectorChip connector={connector} />
+                        <span className="text-slate-300">{text}</span>
+                      </li>
+                    );
+                  })}
             </ol>
             {m.note && <p className="mt-2 text-[13px] text-cyan-200/80 italic">{m.note}</p>}
           </div>
