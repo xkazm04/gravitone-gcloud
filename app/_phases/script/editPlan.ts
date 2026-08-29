@@ -108,8 +108,23 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, 
  *  once, here, where the number enters. */
 const holds = (s: number) => Math.max(1, Math.round(s));
 
+/** A beat whose connector argues from a predecessor the plan removed or
+ *  displaced. Structural, not lexical: the gate that runs after apply is
+ *  `gateChains`, which reads evidence and hedge words, so a chain broken at a
+ *  seam passes it — the successor's BUT is still a BUT, it just no longer has
+ *  anything to be BUT of. */
+export interface ChainBreak {
+  /** The beat's mark in the APPLIED render — where the reviewer will look. */
+  at: string;
+  connector: Connector;
+  /** Written for the person deciding whether to accept the plan. */
+  why: string;
+}
+
 export interface AppliedRender {
   beats: Beat[];
+  /** Re-checked at the seam, every apply. Empty is the normal answer. */
+  chainBreaks: ChainBreak[];
   /** beat mark → card ids, carried by the beats themselves. */
   attribution: Record<string, string[]>;
   /** Seconds each beat holds, after the edits. */
@@ -130,13 +145,18 @@ export function applyEdits(
   const mine = edits.filter((e) => e.renderId === render.id);
 
   // Start from the current beats, each with its duration and cards.
-  type Row = { beat: Beat; seconds: number; cards: string[] };
+  // `wasAfter` is the beat this one's connector was WRITTEN FOR: the mark that
+  // stood in front of it in the base render, or null for the opener. An
+  // inserted beat carries `undefined` — its connector was authored for the
+  // position the plan put it in, so it has no displaced predecessor to lose.
+  type Row = { beat: Beat; seconds: number; cards: string[]; wasAfter?: string | null };
   const rows: Row[] = render.beats.map((b, i) => {
     const next = i + 1 < render.beats.length ? toS(render.beats[i + 1].at) : render.durationS;
     return {
       beat: { ...b },
       seconds: Math.max(0, next - toS(b.at)),
       cards: baseAttribution[b.at] ?? [],
+      wasAfter: i === 0 ? null : render.beats[i - 1].at,
     };
   });
 
@@ -183,6 +203,7 @@ export function applyEdits(
   const beats: Beat[] = [];
   const attribution: Record<string, string[]> = {};
   const seconds: Record<string, number> = {};
+  const chainBreaks: ChainBreak[] = [];
   for (const r of rows) {
     const mark = mmss(clock);
     beats.push({ ...r.beat, at: mark });
@@ -190,7 +211,36 @@ export function applyEdits(
     seconds[mark] = r.seconds;
     clock += r.seconds;
   }
-  return { beats, attribution, seconds };
+
+  // THE STRUCTURAL INVARIANT, RE-CHECKED AT THE SEAM THE PLAN TOUCHED.
+  //
+  // `cut` splices a row out and every survivor keeps the connector it was
+  // written with — so the beat after a cut argues BUT or THEREFORE from a beat
+  // that is no longer in front of it, and the argument now runs against
+  // whatever landed there. Nothing downstream can see this: `gateChains` is
+  // lexical, and both beats are individually well-formed. It is only visible
+  // HERE, where what changed is still known.
+  //
+  // Reported, never repaired. Rewriting a connector to fit its new neighbour is
+  // an edit nobody asked for, made by the code least qualified to judge the
+  // argument — the answer is to fix the chain or refuse the note.
+  rows.forEach((r, i) => {
+    const c = r.beat.connector;
+    if (c !== "BUT" && c !== "THEREFORE") return;
+    if (r.wasAfter === undefined) return; // inserted: authored for this position
+    const nowAfter = i === 0 ? null : (rows[i - 1].beat.at ?? null);
+    if (nowAfter === r.wasAfter) return;
+    chainBreaks.push({
+      at: beats[i].at,
+      connector: c,
+      why:
+        nowAfter === null
+          ? `opens the render carrying "${c}", which argues from ${r.wasAfter} — the beat it answered is gone.`
+          : `carries "${c}" written for ${r.wasAfter ?? "the opening"}, and now follows ${nowAfter}. The connector asserts a relation to a beat that is no longer in front of it.`,
+    });
+  });
+
+  return { beats, attribution, seconds, chainBreaks };
 }
 
 /** Turn applied renders into the `impact` map the matrix reads.
