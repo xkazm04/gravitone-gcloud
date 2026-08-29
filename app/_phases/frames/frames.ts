@@ -25,8 +25,11 @@
 
 import type { ClipStatus } from "@/app/_studio/projectTypes";
 
+import { templateOf, type Discipline, type TemplateId } from "@/lib/projects";
+
 import type { Beat, BeatKind, ScriptRender } from "../script/types";
-import { atSeconds } from "../script/trailer/types";
+import { atSeconds, toShotLaneBeat, type TrailerCut } from "../script/trailer/types";
+import type { ShotSourceBeat, ShotSourceRender } from "./shots";
 
 /* ── Layers ───────────────────────────────────────────────────────────────── */
 
@@ -229,6 +232,170 @@ export function durationOf(frames: Frame[], i: number, totalS: number): number |
     }
   }
   return Math.max(1, (nextS ?? totalS) - startS);
+}
+
+/* ── WHICH CUT THIS STEP IS WORKING ON ──────────────────────────────
+ *
+ * Frames used to answer this with one line: `const render = RENDERS[0]`. That is
+ * the explainer's FIXTURE - `template: "mid-educational-video"`, sixteen beats
+ * about Bitcoin - and every project got it, whatever its own record said. A
+ * creator could pick the trailer discipline, compose a spine in Step 1, watch
+ * Step 2's structure checker go green, open Step 3 and be shown somebody else's
+ * argument. The shot lane (`./shots`) was built, regression-covered and
+ * unreachable from real project data, because `shotsFromRender` returns `[]` for
+ * anything that is not a promotional template and the fixture never was one.
+ *
+ * The record is the authority on WHICH LANE. What it is not yet the authority on
+ * is which explainer FIXTURE an explainer project gets - see `explainerRender`.
+ */
+
+/** Where the beat chain this step is decomposing came from. Named on the object
+ *  rather than inferred, because two of the three cases are absences and a
+ *  surface that cannot tell them apart draws the wrong one. */
+export type CutOrigin =
+  /** The explainer's static candidate render. */
+  | "explainer-fixture"
+  /** THIS project's own composed trailer spine, read from the `script-trailer` step. */
+  | "trailer-cut"
+  /** A trailer project whose spine nobody has composed yet. Zero beats, and the
+   *  zero means "nothing has been written", not "nothing was found". */
+  | "no-spine";
+
+/**
+ * The chain Frames reads, whichever discipline produced it.
+ *
+ * Widened from `ScriptRender` rather than replacing it: `ScriptRender` satisfies
+ * every member below structurally, so the explainer path hands its fixture
+ * through untouched, and `ShotSourceRender` - what the shot lane consumes - is a
+ * subset of it, which is the whole seam this type closes.
+ */
+export interface FramesRender extends ShotSourceRender {
+  id: string;
+  title: string;
+  /** What produced this chain, in the words the step header says out loud. */
+  engineLabel: string;
+  origin: CutOrigin;
+  beats: readonly ShotSourceBeat[];
+}
+
+export type FramesLane = "explainer" | "trailer";
+
+/**
+ * WHICH HALF OF THE STEP THIS PROJECT GETS - the same rule ScriptStep routes on
+ * (`../script/ScriptStep.tsx`), written once so the two steps cannot answer the
+ * same question differently. A trailer project, or a `free` project whose Step 1
+ * chose beats over facts, is on the trailer lane.
+ */
+export function framesLane(
+  discipline: Discipline | undefined,
+  picksMode: string | undefined,
+): FramesLane {
+  const d = discipline ?? "educational";
+  return d === "trailer" || (d === "free" && picksMode === "beats") ? "trailer" : "explainer";
+}
+
+/**
+ * The explainer's chain - the fixture, carried through verbatim.
+ *
+ * AND THE FIXTURE IS STILL CHOSEN BY POSITION, WHICH IS DELIBERATE AND WORTH
+ * SAYING OUT LOUD. `RENDERS` is a fixture list, not a per-project record:
+ * nothing in this app stores WHICH candidate script a project accepted, so there
+ * is nothing in the record to resolve against yet. Picking by `project.template`
+ * instead would re-cut two of the five seeded explainer projects -
+ * `short-form-clip` matches `derived-short`, which is six beats rather than
+ * sixteen - and an explainer's frame count changing is the one thing this slice
+ * must not do. The lane comes from the record; the fixture waits for a record to
+ * come from.
+ *
+ * `template` here is the FIXTURE's, not the project's, and that is deliberate
+ * too: the question the shot lane asks is "is this CHAIN a promotional cut", and
+ * the chain is the explainer fixture. Reporting the project's template would let
+ * a hand-edited record point an explainer chain at `shotsFromBeats`.
+ */
+export function explainerRender(fixture: ScriptRender): FramesRender {
+  return {
+    id: fixture.id,
+    title: fixture.title,
+    engineLabel: fixture.engineLabel,
+    template: fixture.template,
+    durationS: fixture.durationS,
+    beats: fixture.beats,
+    origin: "explainer-fixture",
+  };
+}
+
+/**
+ * A composed trailer spine, projected into the shape the shot lane reads.
+ *
+ * `toShotLaneBeat` is the beat layer's own projection and the only edge used -
+ * this file never reaches into a `TrailerBeat` field by field, so widening the
+ * trailer vocabulary cannot break it.
+ *
+ * `durationS` is the PROJECT'S target runtime, because that is the clock the
+ * beats were placed against: the shot layer divides a beat's span by its shot
+ * count, and a wrong total silently stretches the last beat to the end of a cut
+ * that is not this one.
+ */
+export function trailerRender(
+  cut: TrailerCut,
+  opts: { template: string; durationS: number },
+): FramesRender {
+  const beats = cut.beats.map(toShotLaneBeat);
+  return {
+    // The cut's own id, so a stored frame list derived from a DIFFERENT chain
+    // reads as stale exactly the way `renderId` already makes it read as stale.
+    id: cut.id,
+    title: cut.title,
+    // Points at the view that actually carries this chain. Frames derives no
+    // FRAMES from a trailer beat - a trailer beat is one to many SHOTS, and what
+    // Frames renders from a shot is the next slice, not this one.
+    engineLabel: `${templateOf(opts.template as TemplateId).label} · ${beats.length} beats — see the shots view`,
+    template: opts.template,
+    durationS: opts.durationS,
+    beats,
+    origin: "trailer-cut",
+  };
+}
+
+/**
+ * A trailer project with nothing composed. ABSENCE, CARRIED - not an empty
+ * explainer, and not an empty grid.
+ *
+ * It is a real, reachable state and it is the state a new trailer project is in:
+ * `useTrailerCut` writes the `script-trailer` step only once a spine has been
+ * composed from confirmed picks, and Frames does not compose one. A downstream
+ * step that seeded the upstream step's record would be inventing the artifact it
+ * is supposed to be reading.
+ */
+export function absentTrailerRender(opts: {
+  title: string;
+  template: string;
+  durationS: number;
+}): FramesRender {
+  return {
+    id: `no-spine-${opts.template}`,
+    title: opts.title,
+    engineLabel: "no spine composed yet — Step 2 composes it",
+    template: opts.template,
+    durationS: opts.durationS,
+    beats: [],
+    origin: "no-spine",
+  };
+}
+
+/**
+ * The frames a chain derives.
+ *
+ * ONE BRANCH, and it is the byte-identical guarantee stated as code: only the
+ * explainer fixture derives frames, and it derives them through the same
+ * `framesFromRender` it always did, from the same object. A trailer chain
+ * derives NONE - deliberately, because a `Frame` owns a `plate` and a plate is
+ * what gets generated, so deriving frames from trailer beats would be building
+ * the trailer's plate generation by accident. This slice gets the beats to the
+ * shot lane; what Frames renders from them is the next one.
+ */
+export function framesFor(source: FramesRender, fixture: ScriptRender): Frame[] {
+  return source.origin === "explainer-fixture" ? framesFromRender(fixture) : [];
 }
 
 /* ── Derivation ───────────────────────────────────────────────────────────── */

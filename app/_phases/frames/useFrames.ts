@@ -24,24 +24,70 @@ import { useThemes } from "@/lib/useThemes";
 import { useAuth } from "@/lib/useAuth";
 
 import { PRESETS } from "@/app/library/presets";
-import { readStep, reportStorageTrouble, saveStep, type StorageTrouble } from "../_shared/stepStore";
+import {
+  readStep,
+  reportStorageTrouble,
+  saveStep,
+  type BeatPicksStepData,
+  type StorageTrouble,
+  type TrailerCutStepData,
+} from "../_shared/stepStore";
 import { FACTS } from "../_shared/notebook/facts";
 import { RENDERS } from "../script/renders";
 import {
+  absentTrailerRender,
   authoredClipCount,
   composedCount,
   emptyClip,
-  framesFromRender,
+  explainerRender,
+  framesFor,
+  framesLane,
   subjectFor,
+  trailerRender,
   withClips,
   type DirectionSpend,
   type Frame,
   type FrameElement,
+  type FramesRender,
   type FrameText,
 } from "./frames";
 import { applySceneSpecs, reviewSceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
 
 const PHASE = "frames";
+/** Step 1's record — read here for ONE field, `mode`, and only for a `free`
+ *  project, which is the single case the project record alone cannot route. */
+const PICKS_PHASE = "research-beats";
+/** Step 2's trailer half. This step READS it and never writes it: a downstream
+ *  step that seeded the upstream step's record would be inventing the artifact
+ *  it exists to read. */
+const TRAILER_PHASE = "script-trailer";
+
+/** The explainer's candidate chain. Still positional, still `RENDERS[0]`, and
+ *  the reason is written on `explainerRender` in ./frames — nothing in this app
+ *  records WHICH candidate script a project accepted, so there is nothing in the
+ *  record to resolve against yet. What the record now decides is the LANE. */
+const FIXTURE = RENDERS[0];
+
+/**
+ * What `render` reads as before the project record has been read.
+ *
+ * It is never drawn. `loaded` is false until the chain resolves and FramesStep
+ * renders nothing above that gate; this exists so `render` can be a non-null
+ * `FramesRender` for the two surfaces that read `.title` off it, rather than a
+ * nullable field every caller has to guard for a value with a one-render
+ * lifetime. It carries ZERO beats and names itself, so in the event it ever does
+ * reach a surface, the surface says "nothing here yet" instead of drawing
+ * somebody else's cut — which is the exact failure this whole change is about.
+ */
+const UNRESOLVED: FramesRender = {
+  id: "unresolved",
+  title: "",
+  engineLabel: "reading the project record…",
+  template: "",
+  durationS: 0,
+  beats: [],
+  origin: "no-spine",
+};
 
 /** What one `generatePlate` call ended as. See the doc on `generatePlate`. */
 export type PlateOutcome = "ready" | "refused" | "failed";
@@ -70,19 +116,6 @@ export function useFrames(projectId: string) {
   // now the ONE resolver; this hook only decides what to draw when it misses.
   const [project, setProject] = useState<Project | null>(null);
   const [projectRead, setProjectRead] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    void getProject(projectId)
-      .catch(() => undefined)
-      .then((p) => {
-        if (!alive) return;
-        setProject(p ?? null);
-        setProjectRead(true);
-      });
-    return () => {
-      alive = false;
-    };
-  }, [projectId]);
 
   const chosen = projectStyle(themes ?? [], project?.themeId);
   const fallback = PRESETS[0];
@@ -106,7 +139,20 @@ export function useFrames(projectId: string) {
    *  which has no sheet — the block alone is then the honest floor. */
   const references = useMemo(() => styleRefs(chosen.theme), [chosen.theme]);
 
-  const render = RENDERS[0];
+  /* ── the CHAIN this project is working on ────────────────────────────────
+   *
+   * This was `const render = RENDERS[0]` — the explainer fixture, for every
+   * project, whatever its record said. See the header of ./frames for what that
+   * cost. The record decides the lane; a trailer project's chain is read from
+   * the spine Step 2 composed, and a trailer project that has not composed one
+   * gets an absence that says so rather than a stranger's argument.
+   *
+   * `null` means NOT RESOLVED YET, and nothing downstream may derive, save or
+   * report while it holds — the effects below are all gated on it.
+   */
+  const [source, setSource] = useState<FramesRender | null>(null);
+  const render = source ?? UNRESOLVED;
+
   const [frames, setFrames] = useState<Frame[]>([]);
   const [stepLoaded, setStepLoaded] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
@@ -127,7 +173,75 @@ export function useFrames(projectId: string) {
    *  the debounced save below then wrote them to the key 600ms later, which is
    *  the whole cut destroyed by a transient quota error nobody saw. */
   const [loadTrouble, setLoadTrouble] = useState<StorageTrouble | null>(null);
+
+  /* THE RECORD READ, AND WHAT IT DECIDES.
+   *
+   * One effect rather than two, because the second read DEPENDS on the first:
+   * which step store holds this project's chain is a fact about its discipline.
+   * `readStep` throughout, not `loadStep` — for the same reason the frames read
+   * below uses it. A failed read of the trailer step and a project that never
+   * composed a spine flatten to the same `undefined` under `loadStep`, and they
+   * mean opposite things: one is "nothing was written", the other is "a composed
+   * spine is on disk and out of reach". Drawing the first over the second is how
+   * a step tells a creator their work is gone. */
   useEffect(() => {
+    let alive = true;
+    setSource(null);
+    void (async () => {
+      const p = await getProject(projectId).catch(() => undefined);
+      if (!alive) return;
+      setProject(p ?? null);
+      setProjectRead(true);
+
+      // The picks record is read ONLY for a `free` project, which is the one
+      // case the project record cannot route on its own — the same rule
+      // ScriptStep applies, held in ./frames#framesLane so the two steps cannot
+      // disagree about which half of the app a project is in.
+      let mode: string | undefined;
+      if ((p?.discipline ?? "educational") === "free") {
+        const picks = await readStep<BeatPicksStepData>(projectId, PICKS_PHASE);
+        if (!alive) return;
+        if (!picks.ok) {
+          setLoadTrouble(picks.trouble);
+          setStepLoaded(true);
+          return;
+        }
+        mode = picks.data?.mode;
+      }
+
+      if (framesLane(p?.discipline, mode) === "explainer") {
+        setSource(explainerRender(FIXTURE));
+        return;
+      }
+
+      const saved = await readStep<TrailerCutStepData>(projectId, TRAILER_PHASE);
+      if (!alive) return;
+      if (!saved.ok) {
+        setLoadTrouble(saved.trouble);
+        setStepLoaded(true);
+        return;
+      }
+      const cut = saved.data?.cut;
+      // A cut with no beats is not a cut. It is the same absence as no record at
+      // all and it is drawn the same way — an empty shot table would read as
+      // "this spine decomposed into nothing", which is the opposite of true.
+      setSource(
+        cut && cut.beats.length > 0
+          ? trailerRender(cut, { template: p?.template ?? "trailer", durationS: p?.targetS ?? 0 })
+          : absentTrailerRender({
+              title: p?.title ?? "this project",
+              template: p?.template ?? "trailer",
+              durationS: p?.targetS ?? 0,
+            }),
+      );
+    })();
+    return () => {
+      alive = false;
+    };
+  }, [projectId]);
+
+  useEffect(() => {
+    if (!source) return;
     let alive = true;
     void (async () => {
       const read = await readStep<FramesStepData>(projectId, PHASE);
@@ -142,13 +256,16 @@ export function useFrames(projectId: string) {
       }
       const stored = read.data;
       // A stored cut derived from a DIFFERENT render is not this cut. Re-derive
-      // rather than showing frames whose beats no longer exist.
-      const sameCut = Boolean(stored?.frames?.length && stored.renderId === render.id);
+      // rather than showing frames whose beats no longer exist. This is also
+      // what retires the explainer frames a TRAILER project accumulated while
+      // this step handed every project `RENDERS[0]`: the chain id changed, so
+      // they read as stale, which is exactly what they are.
+      const sameCut = Boolean(stored?.frames?.length && stored.renderId === source.id);
       setFrames(
         sameCut && stored
           ? // A cut stored before Frames inherited the clip has no clip on it.
             withClips(stored.frames)
-          : framesFromRender(render),
+          : framesFor(source, FIXTURE),
       );
       // The spend belongs to the cut it directed. A different render throws the
       // frames away, and carrying its bill onto the new ones would be the same
@@ -159,7 +276,7 @@ export function useFrames(projectId: string) {
     return () => {
       alive = false;
     };
-  }, [projectId, render]);
+  }, [projectId, source]);
 
   /* ── save ───────────────────────────────────────────────────────────────── */
   // Debounced, and never before the first load has landed — writing an empty
@@ -169,7 +286,7 @@ export function useFrames(projectId: string) {
     // Gated on the STEP's own load, not on the style: the frames are what is
     // being written, and waiting on a theme read to save them would be a new
     // way to lose a cut.
-    if (!stepLoaded) return;
+    if (!stepLoaded || !source) return;
     // AND never after a failed read. `frames` is then whatever this hook has in
     // memory — nothing — and writing that to the key would replace a stored cut
     // we could not read with one we invented.
@@ -178,14 +295,14 @@ export function useFrames(projectId: string) {
     timer.current = setTimeout(() => {
       void saveStep<FramesStepData>(projectId, PHASE, {
         frames,
-        renderId: render.id,
+        renderId: source.id,
         ...(direction ? { direction } : {}),
       });
     }, 600);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [frames, direction, stepLoaded, loadTrouble, projectId, render.id]);
+  }, [frames, direction, stepLoaded, loadTrouble, projectId, source]);
 
   const patch = useCallback((id: string, fn: (f: Frame) => Frame) => {
     setFrames((fs) => fs.map((f) => (f.id === id ? fn(f) : f)));
@@ -365,7 +482,11 @@ export function useFrames(projectId: string) {
     [patch],
   );
 
-  const reset = useCallback(() => setFrames(framesFromRender(render)), [render]);
+  const reset = useCallback(() => {
+    // Nothing to reset to until the chain is known — and re-deriving against
+    // `UNRESOLVED` would empty the ledger over a cut that is merely still loading.
+    if (source) setFrames(framesFor(source, FIXTURE));
+  }, [source]);
 
   /* ── authoring ──────────────────────────────────────────────────────────── */
 
@@ -389,6 +510,23 @@ export function useFrames(projectId: string) {
    * just more expensively.
    */
   const direct = useCallback(async () => {
+    // A PASS WITH NO BEATS IN IT IS A PAID CALL WITH NOTHING TO SAY.
+    //
+    // `/api/frames` is the most expensive call in this step and it is billed on
+    // the request, not on the usefulness of the answer. Before the chain was
+    // resolved from the record every project had sixteen fixture beats and this
+    // could not happen; a trailer project now has none — its beats decompose
+    // into SHOTS, which this pass does not write — and an empty `beats: []` would
+    // have gone to the engine at full price. Refused, with the reason, rather
+    // than disabled somewhere the user cannot see why.
+    if (frames.length === 0) {
+      setNotice(
+        render.origin === "explainer-fixture"
+          ? "There are no frames to direct."
+          : "A trailer's beats decompose into SHOTS, not frames — there is nothing on this ledger for a direction pass to write to, and the pass is billed whether or not it has beats. The shots view carries this cut.",
+      );
+      return;
+    }
     setDirecting(true);
     setError(null);
     setNotice(null);
@@ -483,7 +621,7 @@ export function useFrames(projectId: string) {
     } finally {
       setDirecting(false);
     }
-  }, [frames, block, render.title, project?.template, project?.targetS]);
+  }, [frames, block, render.title, render.origin, project?.template, project?.targetS]);
 
   /** What the plates cost. Kept apart from the direction pass rather than
    *  merged: one is many small charges the user makes one at a time, the other
@@ -570,8 +708,12 @@ export function useFrames(projectId: string) {
      *  draw a ledger over it: an empty cut and an unreadable one look identical
      *  and mean opposite things. */
     loadTrouble,
-    // The step does not draw until the style is known — see `styleReady`.
-    loaded: stepLoaded && styleReady,
+    // The step does not draw until the style is known — see `styleReady` — nor
+    // until the CHAIN is known, which is the new one: drawing before `source`
+    // lands is drawing a ledger for a cut nobody has identified yet. A read that
+    // FAILED is drawable, because the branch above it is the whole point of the
+    // trouble message.
+    loaded: Boolean(loadTrouble) || (stepLoaded && styleReady && source !== null),
     busy,
     error,
     block,
