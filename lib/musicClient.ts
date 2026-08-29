@@ -4,7 +4,14 @@
 // sends spotting rows and receives audio.
 
 import { accessHeader } from "./imagingClient";
-import type { DetailedMusicResult, MusicAudio, MusicResult, SfxResult, WirePlan } from "./music/types";
+import type {
+  CuePicture,
+  DetailedMusicResult,
+  MusicAudio,
+  MusicResult,
+  SfxResult,
+  WirePlan,
+} from "./music/types";
 
 export class MusicRequestError extends Error {
   readonly code: string;
@@ -17,13 +24,23 @@ export class MusicRequestError extends Error {
   }
 }
 
+/**
+ * What the browser sends for one cue.
+ *
+ * `durS` used to be here and is deliberately gone: the seconds of music bought
+ * are now DERIVED server-side from `picture`, so a client cannot ask for a
+ * length that disagrees with the film it claims to be scoring. What travels is
+ * the spotting decision (which scenes) and the musical one (tempo, intent) —
+ * never a duration on its own.
+ */
 export interface CueRequest {
   title: string;
   intent: string;
   bpm: number;
-  durS: number;
   styleBlock: string[];
   avoid?: string[];
+  /** The scenes this cue plays under, from the project's own scene record. */
+  picture: CuePicture;
 }
 
 export async function generateCueAudio(cue: CueRequest): Promise<MusicResult> {

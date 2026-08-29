@@ -8,8 +8,8 @@
 
 import { useState } from "react";
 
-import { CUES, MUSIC_STYLE_BLOCK, type SpottingCue } from "../../_studio/score";
-import { PROJECT, SCENES } from "../../_studio/scenes";
+import { CUES, MUSIC_STYLE_BLOCK, UNSPOTTABLE, sceneClock, type SpottingCue } from "../../_studio/score";
+import { PROJECT } from "../../_studio/scenes";
 import { CueStatusWord, TimeRuler, spanStyle } from "../../_studio/projectParts";
 import { MusicRequestError, audioUrl, generateCueAudio } from "@/lib/musicClient";
 import type { MusicProvenance } from "@/lib/music/types";
@@ -61,20 +61,29 @@ export function engineCredit(cue: SpottingCue, take: Take | undefined): { text: 
 }
 
 export default function ScoreSpotting() {
-  const [focus, setFocus] = useState(CUES[1].id); // open on the refused cue
+  // Open on the refused cue when there is one — and survive a project with no
+  // cues at all, which is now a state this surface can genuinely be in: cues
+  // are derived from the picture, so a film with no scenes has none.
+  const [focus, setFocus] = useState(
+    CUES.find((c) => c.status === "failed")?.id ?? CUES[0]?.id ?? "",
+  );
   const [takes, setTakes] = useState<Record<string, Take>>({});
-  const cue = CUES.find((c) => c.id === focus)!;
-  const take = takes[cue.id];
+  const cue = CUES.find((c) => c.id === focus) ?? CUES[0];
+  const take = cue ? takes[cue.id] : undefined;
 
   async function renderCue() {
+    if (!cue) return;
     setTakes((t) => ({ ...t, [cue.id]: { state: "working" } }));
     try {
       const out = await generateCueAudio({
         title: cue.title,
         intent: cue.note,
         bpm: cue.bpm,
-        durS: cue.durS,
         styleBlock: MUSIC_STYLE_BLOCK,
+        // THE FILM ITSELF. No `durS`: the seconds of music bought are derived
+        // server-side from these scenes, so the length requested cannot drift
+        // from the length of picture it plays under.
+        picture: cue.picture,
       });
       setTakes((t) => ({
         ...t,
@@ -89,14 +98,12 @@ export default function ScoreSpotting() {
     }
   }
 
-  let cursor = 0;
-  const sceneCells = SCENES.map((s) => {
-    const startS = cursor;
-    cursor += s.targetS;
-    return { s, startS };
-  });
+  // The clock is derived ONCE, in the fixture module, and the cue spans are
+  // derived from the same walk — the picture lane and the music lane can no
+  // longer disagree about where a scene starts.
+  const sceneCells = sceneClock();
 
-  const credit = engineCredit(cue, take);
+  const credit = cue ? engineCredit(cue, take) : { text: "", why: "" };
 
   const scoredS = CUES.filter((c) => c.status === "rendered").reduce((n, c) => n + c.durS, 0);
   const refusedS = CUES.filter((c) => c.status === "failed").reduce((n, c) => n + c.durS, 0);
@@ -118,14 +125,14 @@ export default function ScoreSpotting() {
             picture
           </span>
           <div className="relative h-9 flex-1">
-            {sceneCells.map(({ s, startS }) => (
+            {sceneCells.map(({ scene, startS }) => (
               <div
-                key={s.id}
-                style={spanStyle(startS, s.targetS)}
+                key={scene.id}
+                style={spanStyle(startS, scene.targetS)}
                 className="absolute inset-y-0 rounded-md border border-white/10 bg-white/[0.04] px-2"
-                title={s.slug}
+                title={scene.slug}
               >
-                <span className="font-jetbrains text-[10px] leading-9 text-white/50">sc {s.index}</span>
+                <span className="font-jetbrains text-[10px] leading-9 text-white/50">sc {scene.index}</span>
               </div>
             ))}
           </div>
@@ -168,8 +175,31 @@ export default function ScoreSpotting() {
           {" · "}
           {silentS}s unspotted — spans to scale on the {PROJECT.totalS}s clock
         </p>
+        {/* SPOTS THAT COULD NOT BECOME CUES, said rather than swallowed. A cue's
+            span IS the film it covers, so a spot whose scenes this project does
+            not have has no span to draw — and is not quietly given a default
+            one. On a project with no scenes at all this is every spot, and the
+            timeline above is honestly empty. */}
+        {UNSPOTTABLE.length > 0 && (
+          <p className="font-jetbrains mt-2 text-[11px] leading-snug text-amber-200/70">
+            {UNSPOTTABLE.length} spot{UNSPOTTABLE.length > 1 ? "s" : ""} could not be placed:{" "}
+            {UNSPOTTABLE.map((u) => `"${u.spot.title}" ${u.why}`).join("; ")}.
+          </p>
+        )}
       </div>
 
+      {!cue ? (
+        /* NO PICTURE, NO CUES. Not an error and not an empty box with a
+           disabled button: there is nothing to spot, and the surface says which
+           step supplies what is missing. */
+        <div className="mt-4 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+          <p className="text-sm leading-snug text-slate-400">
+            Nothing to spot. Cues are spans of film, and this project has no scenes for them to sit
+            on — so there is no cue to brief, no duration to buy and nothing to draw on the clock.
+            Spot music after the picture exists.
+          </p>
+        </div>
+      ) : (
       <div
         className={`mt-4 rounded-2xl border p-4 ${
           cue.status === "failed" ? "border-rose-400/25 bg-rose-400/[0.03]" : "border-white/8 bg-white/[0.02]"
@@ -216,9 +246,10 @@ export default function ScoreSpotting() {
           </p>
         )}
         {/* The music engine is real now — /api/music/generate renders a cue's
-            brief (title, intent, bpm, exact duration, the project's standing
-            style block) through lib/music. The button that once sat here dead
-            is back because it can finally do what it says. */}
+            brief through lib/music: title, intent, bpm, the project's standing
+            style block, AND the scenes this cue plays under. The duration is
+            not sent; it is derived from those scenes server-side, so the
+            seconds of music bought are the seconds of film covered. */}
         <div className="mt-3 flex items-center gap-3">
           <button
             onClick={renderCue}
@@ -233,8 +264,12 @@ export default function ScoreSpotting() {
                   ? "re-ask the model"
                   : "render this cue"}
           </button>
-          <span className="font-jetbrains text-[10px] text-white/35">
-            {cue.durS}s · {cue.bpm} bpm · plan-briefed, exact duration
+          <span
+            className="font-jetbrains text-[10px] text-white/35"
+            title={cue.picture.scenes.map((sc) => `sc ${sc.index} ${sc.slug} — ${sc.mood}`).join("\n")}
+          >
+            {cue.durS}s · {cue.bpm} bpm · briefed from sc{" "}
+            {cue.picture.scenes.map((sc) => sc.index).join(", ")} — duration derived from picture
           </span>
         </div>
         {take?.state === "done" && <audio controls src={take.url} className="mt-3 h-9 w-full" />}
@@ -248,6 +283,7 @@ export default function ScoreSpotting() {
           </p>
         )}
       </div>
+      )}
     </div>
   );
 }
