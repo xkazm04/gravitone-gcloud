@@ -26,6 +26,7 @@ import { assetsUnder, buildTree, pathKey, type Asset, type FolderNode } from "@/
 import AssetLightbox from "./AssetLightbox";
 import ContextMenu from "./ContextMenu";
 import FolderTree from "./FolderTree";
+import MoveDialog from "./MoveDialog";
 
 /**
  * Which folders open on arrival: every one that CONTAINS folders.
@@ -49,7 +50,7 @@ function foldersWithChildren(nodes: FolderNode[], into: string[] = []): string[]
 
 export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => void }) {
   const { user } = useAuth();
-  const { assets, error, loading, remove } = useAssets(user?.uid ?? null);
+  const { assets, error, loading, remove, move } = useAssets(user?.uid ?? null);
   const announce = useAnnounce();
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -63,6 +64,10 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
   // An id that is no longer in `shown` resolves to null below, which closes the
   // viewer: the one place it can be wrong is the one that self-corrects.
   const [openId, setOpenId] = useState<string | null>(null);
+  /** The plate the move dialog is refiling. Held whole rather than by id: the
+   *  dialog names it and reports where it came from, and it stays open across
+   *  the move that changes both. */
+  const [moving, setMoving] = useState<Asset | null>(null);
 
   const rows = useMemo(() => assets ?? [], [assets]);
   const tree = useMemo(() => buildTree(rows), [rows]);
@@ -134,6 +139,24 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
     void remove(asset.id);
     announce({ key: `asset-removed:${asset.id}`, text: `Removed ${asset.name} from the shelf.` });
     requestAnimationFrame(() => gridRef.current?.focus());
+  };
+
+  /**
+   * Refile plates, and say where they went.
+   *
+   * The announcement is not decoration here the way it is beside a removal: the
+   * only visible consequence of a move is that a tile leaves the folder on
+   * screen, which from the shelf's own point of view is indistinguishable from
+   * a deletion. Naming the destination is the difference between "it moved" and
+   * "it is gone".
+   */
+  const refile = async (ids: string[], path: string[], label: string) => {
+    const n = await move(ids, path);
+    if (!n) return;
+    announce({
+      key: `assets-moved:${ids.join(",")}:${pathKey(path)}`,
+      text: `Moved ${label} to ${path.join(" › ")}.`,
+    });
   };
 
   /** Walk the folder currently on screen. Wraps, because a gallery is a ring —
@@ -215,12 +238,31 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
         />
       )}
 
+      {moving && (
+        <MoveDialog
+          count={1}
+          subject={moving.name}
+          from={moving.path}
+          tree={tree}
+          onClose={() => setMoving(null)}
+          onMove={(path) => {
+            setMoving(null);
+            void refile([moving.id], path, moving.name);
+          }}
+        />
+      )}
+
       {menu && (
         <ContextMenu
           x={menu.x}
           y={menu.y}
           onClose={() => setMenu(null)}
           items={[
+            // Above the destructive one, and not only for the usual reason that
+            // the safe act goes first: ContextMenu focuses its FIRST item on
+            // open, so putting the removal there would put a keyboard user one
+            // Enter away from deleting the plate they right-clicked.
+            { label: "Move to folder…", onSelect: () => setMoving(menu.asset) },
             {
               label: "Remove from shelf",
               destructive: true,
