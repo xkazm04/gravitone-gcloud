@@ -46,7 +46,7 @@ import TopicPanel from "./_parts/TopicPanel";
 import { ClearDialog, ConfirmScope } from "./_parts/ScopeGate";
 import { useScope } from "./useScope";
 import BeatVariantBoard from "./beats/BeatVariantBoard";
-import ModeChooser from "./beats/ModeChooser";
+import ModeChooser, { ModeSwitch } from "./beats/ModeChooser";
 import { useBeatPicks } from "./beats/useBeatPicks";
 
 type Tab = "topic" | "board";
@@ -106,12 +106,27 @@ function BeatsResearch({
 
   if (discipline === "trailer") return <BeatVariantBoard api={beats} discipline="trailer" />;
 
-  // free: the chooser until a mode is stored, then whichever board it named.
+  // free: the chooser until a mode is stored, then whichever board it named —
+  // with the way back drawn above it, because the chooser itself is gone by
+  // then and its answer used to be permanent.
   if (beats.mode === null) return <ModeChooser onChoose={beats.setMode} />;
-  return beats.mode === "beats" ? (
-    <BeatVariantBoard api={beats} discipline="free" />
-  ) : (
-    <EducationalResearch projectId={projectId} />
+  return (
+    <div className="space-y-4">
+      <ModeSwitch
+        mode={beats.mode}
+        onSwitch={beats.setMode}
+        locked={
+          beats.confirmed
+            ? "reopen the composed spine first — composing it marked this project researched, and Script reads that"
+            : undefined
+        }
+      />
+      {beats.mode === "beats" ? (
+        <BeatVariantBoard api={beats} discipline="free" />
+      ) : (
+        <EducationalResearch projectId={projectId} />
+      )}
+    </div>
   );
 }
 
