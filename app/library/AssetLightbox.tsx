@@ -30,6 +30,8 @@ export default function AssetLightbox({
   onStep,
   onRemove,
   onRename,
+  siblings,
+  onPickSibling,
   onStartStyle,
 }: {
   asset: Asset;
@@ -40,6 +42,9 @@ export default function AssetLightbox({
   onStep: (delta: 1 | -1) => void;
   onRemove: () => void;
   onRename: (name: string) => void;
+  /** Other plates from the same style, wherever they are filed. */
+  siblings: Asset[];
+  onPickSibling: (asset: Asset) => void;
   /** Offered only for a plate that carries the block it was rendered from —
    *  absent for a trial-grid plate, whose index records what was rendered but
    *  not the four slots it came from. */
@@ -171,6 +176,40 @@ export default function AssetLightbox({
               {facts.beat && (
                 <p className="font-jetbrains mt-1.5 text-[11px] text-white/40">beat · {facts.beat}</p>
               )}
+            </Section>
+          )}
+
+          {siblings.length > 0 && (
+            <Section
+              label={
+                facts.styleName ? `others from ${facts.styleName}` : "others from this style"
+              }
+            >
+              {/* A style is scattered across folders by design — the seed files
+                  trials under presets and promotions under proofs — so this
+                  walks the STYLE, which the arrow keys deliberately do not.
+                  They stay bound to the folder on screen; this is the other
+                  axis, and it is the one the rail cannot express. */}
+              <div className="scroll-x -mx-1 flex gap-2 px-1 pb-1">
+                {siblings.map((s) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => onPickSibling(s)}
+                    title={s.name}
+                    className="group relative aspect-video w-24 shrink-0 overflow-hidden rounded-lg border border-white/10 transition hover:border-cyan-400/50"
+                  >
+                    <Image
+                      src={s.src}
+                      alt={s.name}
+                      fill
+                      draggable={false}
+                      sizes="96px"
+                      className="object-cover"
+                    />
+                  </button>
+                ))}
+              </div>
             </Section>
           )}
 

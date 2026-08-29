@@ -27,6 +27,17 @@ export interface AssetFacts {
   /** The origin as a sentence, because "promoted" is our word, not the user's. */
   originLine: string;
   styleName?: string;
+  /**
+   * Identity of the style a plate came from, comparable ACROSS rows — what
+   * "another plate from this style" is answered with.
+   *
+   * Namespaced by origin rather than compared loosely: a promoted plate knows
+   * its theme's id, a trial plate only knows a name, and letting a name match
+   * an id would group two unrelated things the first time someone called a
+   * style after a preset. Two plates match here only if they came from the same
+   * kind of source AND the same one.
+   */
+  styleKey?: string;
   provider?: string;
   model?: string;
   costUsd?: number;
@@ -76,6 +87,7 @@ export function readAssetFacts(asset: Asset): AssetFacts {
         ? `Approved on the proof sheet for ${p.styleName}, and kept.`
         : "Approved on a style's proof sheet, and kept.",
       styleName: p.styleName,
+      styleKey: `theme:${p.themeId}`,
       provider: p.provider,
       // The model lives on the provenance for a promoted plate — the same
       // record the studio's lineage UI walks — not beside it.
@@ -99,6 +111,11 @@ export function readAssetFacts(asset: Asset): AssetFacts {
         ? `Rendered on the trial grid for ${styleName}.`
         : "Rendered on the trial grid.",
       styleName,
+      // A trial plate has no theme record behind it — the grid is a file on
+      // disk, not a style the user owns — so the name is the only identity
+      // there is. Absent when even that is missing, rather than grouping every
+      // unnamed plate into one imaginary style.
+      styleKey: styleName ? `trial:${styleName}` : undefined,
       provider: str(meta.provider),
       model: str(meta.model),
       costUsd: num(meta.costUsd),

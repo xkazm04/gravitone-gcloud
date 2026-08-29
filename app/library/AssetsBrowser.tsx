@@ -32,6 +32,11 @@ import ContextMenu from "./ContextMenu";
 import FolderTree from "./FolderTree";
 import MoveDialog from "./MoveDialog";
 
+/** How many same-style plates the viewer offers at a glance. A style with a
+ *  full proof sheet plus a trial run runs to dozens, and a strip that long is a
+ *  second gallery rather than a sideways look at one. */
+const SIBLING_CAP = 24;
+
 /**
  * Which folders open on arrival: every one that CONTAINS folders.
  *
@@ -117,6 +122,27 @@ export default function AssetsBrowser({
    *  any action is allowed to read, so a row removed underneath cannot linger
    *  in a count or a delete. */
   const chosen = useMemo(() => shown.filter((a) => picked.has(a.id)), [shown, picked]);
+
+  /**
+   * Other plates from the open plate's style, drawn from the WHOLE shelf rather
+   * than the folder on screen.
+   *
+   * That crossing is the point. The seed files a style's trials under
+   * `presets/<style>` and its promoted proofs under `proofs/<style>`, so a
+   * style is scattered across the tree by construction and no folder click can
+   * gather it. The arrow keys stay bound to the folder; this is the other axis.
+   *
+   * Capped, because a style with a full sheet plus a trial run is dozens of
+   * plates and this is a glance, not a second gallery.
+   */
+  const siblings = useMemo(() => {
+    if (!openAsset) return [];
+    const key = readAssetFacts(openAsset).styleKey;
+    if (!key) return [];
+    return rows
+      .filter((a) => a.id !== openAsset.id && readAssetFacts(a).styleKey === key)
+      .slice(0, SIBLING_CAP);
+  }, [openAsset, rows]);
 
   const clearPicks = () => {
     setPicked(new Set());
@@ -450,6 +476,17 @@ export default function AssetsBrowser({
           onClose={() => setOpenId(null)}
           onStep={step}
           onRemove={() => removeFromViewer(openAsset)}
+          siblings={siblings}
+          // Jumping to a sibling takes its FOLDER with it. The viewer addresses
+          // plates through `shown`, so landing on one filed elsewhere would put
+          // it outside that list and close the dialog; following the plate into
+          // its folder keeps the rail, the count and the arrow keys all
+          // describing the same thing the user is looking at.
+          onPickSibling={(s) => {
+            setSelected(s.path);
+            clearPicks();
+            setOpenId(s.id);
+          }}
           onStartStyle={
             readAssetFacts(openAsset).block ? () => void startStyleFrom(openAsset) : undefined
           }
