@@ -586,7 +586,14 @@ export function useFrames(projectId: string) {
         lastAt: Date.now(),
       }));
 
-      const report = reviewSceneSpecs(String(json.raw ?? ""), frames, new Set(FACTS.map((f) => f.id)));
+      // The grade travels with the ids. Passing only the id set proved a
+      // citation resolved and let a `low` fact be drawn as an exact figure.
+      const report = reviewSceneSpecs(
+        String(json.raw ?? ""),
+        frames,
+        new Set(FACTS.map((f) => f.id)),
+        new Map(FACTS.map((f) => [f.id, f.confidence])),
+      );
       // Apply what survived. Rejected and unmentioned beats keep exactly what
       // they had — applySceneSpecs only touches frames it has a spec for.
       setFrames((fs) => applySceneSpecs(fs, report.specs));
