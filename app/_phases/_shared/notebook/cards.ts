@@ -62,10 +62,29 @@ export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
       confidence: f.confidence, source: f.source, asOf: f.asOf, dependsOn: [],
     });
   }
+  // A MECHANISM'S SUPPORT IS A CARD EDGE, and it was a hardcoded `[]`.
+  //
+  // types.ts explains the wound graph's blindness to the card class carrying
+  // the thesis as a DATA problem: "run 1's `m-institutionalisation` is annotated
+  // 'This is the video. Everything else is evidence for it.' and cites nothing,
+  // so cutting every fact under it wounded nothing." True, and only half of it.
+  // The other half is here: `dependsOn: []` meant that even once a run DID
+  // author `Mechanism.evidence` or `steps[].evidence`, `buildCards` threw it
+  // away before `woundsOf` could ever see it. The reasoned layer was traceable
+  // and the researched layer was not, and fixing the fixture alone would not
+  // have changed that.
+  //
+  // Deduped: a fact may support the mechanism as a whole AND one of its steps,
+  // and counting it twice would make one descope report two missing ids.
+  //
+  // No mechanism in the shipped fixture cites anything, so this wounds nothing
+  // TODAY. It is the difference between a graph that cannot read the edge and
+  // one that has no edge to read.
   for (const m of nb.mechanisms) {
     cards.push({
       id: m.id, kind: "mechanism", dimension: CARD_DIMENSION[m.id] ?? UNTAGGED_DIMENSION_ID,
-      title: m.name, detail: m.explains, dependsOn: [],
+      title: m.name, detail: m.explains,
+      dependsOn: [...new Set([...(m.evidence ?? []), ...(m.steps ?? []).flatMap((s) => s.evidence ?? [])])],
     });
   }
   for (const r of nb.reversals) {
@@ -184,7 +203,12 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
 
   // The edge woundsOf() actually reads.
   for (const c of cards) edge(c.id, "dependsOn", c.dependsOn, cardIds, "card");
-  // And the edges that never become card edges, so nothing else reaches them.
+  // And the same edges at their own, tighter universe. A mechanism's evidence
+  // is now also a card edge (see buildCards), so the pass above would catch a
+  // reference to nothing — but only "no such CARD". These must name a FACT, and
+  // a mechanism citing a reversal id is a real mis-wiring that the card pass
+  // would wave through. The rest of these edges become no card edge at all, so
+  // this is the only place anything reaches them.
   for (const f of nb.facts) {
     edge(f.id, "contests", f.contests, factIds, "fact");
     edge(f.id, "qualifies", f.qualifies, factIds, "fact");
