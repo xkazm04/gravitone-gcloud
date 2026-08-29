@@ -84,22 +84,48 @@ export default function GlobalError({
               ref · {error.digest}
             </p>
           )}
-          <button
-            onClick={() => reset()}
-            style={{
-              marginTop: "1.5rem",
-              borderRadius: "9999px",
-              padding: "0.75rem 1.5rem",
-              fontSize: "0.875rem",
-              fontWeight: 600,
-              color: "#020617",
-              background: "linear-gradient(to right, #67e8f9, #a5f3fc)",
-              border: "none",
-              cursor: "pointer",
-            }}
-          >
-            Reload
-          </button>
+          {/* TWO WAYS OUT, AND THE LABELS ARE THE ACTIONS.
+              This was one button that said "Reload" and called `reset()`, under
+              copy that says "Reload to start the app again". `reset()` does not
+              reload: it re-renders the tree that just threw. This is the ROOT
+              boundary, so what threw is the layout or a provider it mounts —
+              deterministic on a fresh render more often than not — and the one
+              affordance offered was a button that visibly did nothing, twice,
+              while naming the recovery it was not performing. app/error.tsx, one
+              file over, already offers both and labels each correctly; this is
+              that decision applied to the boundary that needs it more. */}
+          <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem", justifyContent: "center" }}>
+            <button
+              onClick={() => window.location.reload()}
+              style={{
+                borderRadius: "9999px",
+                padding: "0.75rem 1.5rem",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                color: "#020617",
+                background: "linear-gradient(to right, #67e8f9, #a5f3fc)",
+                border: "none",
+                cursor: "pointer",
+              }}
+            >
+              Reload
+            </button>
+            <button
+              onClick={() => reset()}
+              style={{
+                borderRadius: "9999px",
+                padding: "0.75rem 1.5rem",
+                fontSize: "0.875rem",
+                fontWeight: 600,
+                color: "rgba(229,231,235,0.75)",
+                background: "transparent",
+                border: "1px solid rgba(229,231,235,0.18)",
+                cursor: "pointer",
+              }}
+            >
+              Try again
+            </button>
+          </div>
         </div>
       </body>
     </html>
