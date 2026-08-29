@@ -68,6 +68,22 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
    *  dialog names it and reports where it came from, and it stays open across
    *  the move that changes both. */
   const [moving, setMoving] = useState<Asset | null>(null);
+  /** The plate under the pointer during a drag. Kept in React state rather than
+   *  read back off the DataTransfer, because `getData` is deliberately blocked
+   *  during dragover — a drop target is not allowed to inspect the payload
+   *  before the drop — and the rail needs to know a plate is in flight in order
+   *  to offer itself at all. */
+  const [dragging, setDragging] = useState<Asset | null>(null);
+  /** The folder row under the pointer, owned here beside `dragging` so both end
+   *  when the drag does — including the drag abandoned over the gallery, whose
+   *  `dragend` the rail never sees. */
+  const [dropOver, setDropOver] = useState<string | null>(null);
+
+  /** Every drag ends here, dropped or abandoned. */
+  const endDrag = () => {
+    setDragging(null);
+    setDropOver(null);
+  };
 
   const rows = useMemo(() => assets ?? [], [assets]);
   const tree = useMemo(() => buildTree(rows), [rows]);
@@ -185,6 +201,18 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
           onSelect={setSelected}
           onToggle={toggle}
           total={rows.length}
+          dragActive={Boolean(dragging)}
+          over={dropOver}
+          onOver={setDropOver}
+          onDropAsset={(path) => {
+            const asset = dragging;
+            endDrag();
+            // Dropping a plate where it already lives is a gesture the user can
+            // make by accident on the folder they are looking at, and it should
+            // cost nothing and announce nothing.
+            if (!asset || pathKey(asset.path) === pathKey(path)) return;
+            void refile([asset.id], path, asset.name);
+          }}
         />
       </aside>
 
@@ -205,7 +233,8 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
               a button that does nothing. */}
           {shown.length > 0 && (
             <p className="font-jetbrains text-[10px] text-white/25">
-              click a tile to open it · right-click, or press Delete on a focused one, to remove
+              click to open · drag onto a folder to refile · right-click, or Delete on a focused
+              tile, to remove
             </p>
           )}
         </div>
@@ -221,6 +250,8 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
                 onOpen={() => setOpenId(a.id)}
                 onMenu={(x, y) => setMenu({ x, y, asset: a })}
                 onDelete={() => removeTile(a)}
+                onDragStart={() => setDragging(a)}
+                onDragEnd={endDrag}
               />
             ))}
           </div>
@@ -284,11 +315,15 @@ function Tile({
   onOpen,
   onMenu,
   onDelete,
+  onDragStart,
+  onDragEnd,
 }: {
   asset: Asset;
   onOpen: () => void;
   onMenu: (x: number, y: number) => void;
   onDelete: () => void;
+  onDragStart: () => void;
+  onDragEnd: () => void;
 }) {
   const meta = (asset.meta ?? {}) as { styleName?: string; problem?: string; grade?: { hasText?: boolean } };
   return (
@@ -307,6 +342,16 @@ function Tile({
       // out. The on-screen hint names them for sighted users; this is the same
       // sentence for everyone else.
       aria-label={`${asset.name}. Press Enter to open it, Delete to remove it from the shelf.`}
+      draggable
+      onDragStart={(e) => {
+        // A text payload so the drag is legible to anything outside this rail;
+        // the rail itself works off React state, since a drop target may not
+        // read the DataTransfer before the drop.
+        e.dataTransfer.setData("text/plain", asset.id);
+        e.dataTransfer.effectAllowed = "move";
+        onDragStart();
+      }}
+      onDragEnd={onDragEnd}
       onClick={onOpen}
       onContextMenu={(e) => {
         e.preventDefault();
@@ -335,7 +380,18 @@ function Tile({
       className="group cursor-pointer overflow-hidden rounded-xl border border-white/8 transition hover:border-cyan-400/35 focus:border-cyan-400/50"
     >
       <span className="relative block aspect-video w-full bg-white/[0.03]">
-        <Image src={asset.src} alt={asset.name} fill sizes="(min-width:1280px) 22vw, 45vw" className="object-cover" />
+        {/* draggable={false} so the FIGURE is what gets dragged. An <img> is
+            natively draggable, and left alone it wins the gesture and hands the
+            drop target an image URL instead of letting the tile above it
+            declare an asset id. */}
+        <Image
+          src={asset.src}
+          alt={asset.name}
+          fill
+          draggable={false}
+          sizes="(min-width:1280px) 22vw, 45vw"
+          className="object-cover"
+        />
         {/* Text leakage is the one defect that makes a plate unusable, so the
             shelf says so on the tile rather than burying it in a detail view. */}
         {meta.grade?.hasText && (
