@@ -45,6 +45,16 @@ import type {
 
 const MASK = "[redacted]";
 
+/** Credential-shaped variables the SPAWN DOOR strips from a child process
+ *  (lib/claudeCli.ts's METERED_AUTH_VARS). Anything this process is careful not
+ *  to hand a subprocess is something it must not print either. */
+const METERED_AUTH_ENV = [
+  "ANTHROPIC_API_KEY",
+  "ANTHROPIC_AUTH_TOKEN",
+  "ANTHROPIC_BASE_URL",
+  "ANTHROPIC_CUSTOM_HEADERS",
+] as const;
+
 /** Credentials this process actually holds, so a leak of one is caught by VALUE
  *  rather than by guessing which field it travelled in. `claude-cli`'s row is
  *  `null` — it holds no key — so this list is short by design and will stay
@@ -62,7 +72,23 @@ function liveSecrets(): string[] {
   // ANTHROPIC_API_KEY present for an unrelated reason is exactly the value
   // lib/claudeCli.ts strips from the child, and if it ever surfaces in a message
   // it must not survive to the log.
-  for (const extra of ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"]) {
+  //
+  // THE LIST HAS TO MATCH THE SPAWN DOOR'S, AND IT DID NOT. This read
+  // ["ANTHROPIC_API_KEY", "ANTHROPIC_AUTH_TOKEN"] while lib/claudeCli.ts's
+  // METERED_AUTH_VARS strips four — the two above plus ANTHROPIC_BASE_URL and
+  // ANTHROPIC_CUSTOM_HEADERS. The comment directly above claimed these were
+  // "exactly the value lib/claudeCli.ts strips", and it was half right. Custom
+  // headers are the one that matters: they are stripped from the child
+  // PRECISELY because they can carry an authorization header, so a value this
+  // process treats as credential-bearing at the spawn door was not
+  // credential-bearing at the log door.
+  //
+  // Kept as a literal here rather than imported, because lib/claudeCli.ts is the
+  // transport and this is the log — the coupling is real but the dependency
+  // would be the wrong way round. tests/golden-path/text-log-line.probe.spec.ts
+  // holds the two lists against each other instead, the way harness-gate holds a
+  // build-time gate it cannot execute.
+  for (const extra of METERED_AUTH_ENV) {
     const s = process.env[extra]?.trim();
     if (s && s.length >= 8) out.push(s);
   }
