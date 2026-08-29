@@ -16,12 +16,13 @@
 // in front of unmeasured work is the same defect the script step had; the driven
 // job exists so nobody has to invent a third lifecycle to avoid it.
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/Primitives";
 import { useJobs } from "@/lib/jobs";
 import { resultFor, suggestedReason, type FollowUpRequest } from "../followup";
 import { stateOf } from "../scope";
+import { useFollowUps } from "../useFollowUps";
 import type { ScopeApi } from "../useScope";
 import FollowUpResult, { VERDICT_TONE } from "./FollowUpResult";
 
@@ -47,28 +48,24 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
   // Stable across renders (useCallback with no deps in the provider) — safe to
   // capture in an effect that must not re-run when some other job ticks.
   const settle = jobs.settle;
-  const [asked, setAsked] = useState<FollowUpRequest[]>([]);
+  // The record lives above React (see ../useFollowUps). What is left here is
+  // the DRAFT — a half-typed question is worth nothing to anyone but the mount
+  // that is showing the field.
+  const [asked, setAsked] = useFollowUps(projectId);
   const [q, setQ] = useState("");
-  const inFlight = useRef<{ jobId: string; timer: ReturnType<typeof setTimeout> } | null>(null);
   // A result reports where each of its effects stands against the notebook ON
   // SCREEN, so it is handed the live card set rather than reasoning off the
   // transcript it was written from.
   const cardIds = useMemo(() => new Set(api.cards.map((c) => c.id)), [api.cards]);
 
-  // Closing the queue ends the run. The results land in this component's state,
-  // so once it is gone there is nothing left to receive them — `interrupted` is
-  // the same word a reload mid-run already uses, and settling releases the
-  // one-at-a-time slot instead of locking the project out until a refresh.
-  useEffect(
-    () => () => {
-      const f = inFlight.current;
-      if (!f) return;
-      inFlight.current = null;
-      clearTimeout(f.timer);
-      settle(f.jobId, "interrupted", "The follow-up queue was closed while this was running. The prototype cannot reattach to it.");
-    },
-    [settle],
-  );
+  // THE UNMOUNT NO LONGER KILLS THE DISPATCH. There used to be a cleanup here
+  // that cleared the timer and settled the job `interrupted`, on the reasoning
+  // that the results land in this component's state and a departed component
+  // cannot receive them. That reasoning was correct and the premise is now
+  // false: the record is a module store, `settle` is stable and its provider is
+  // mounted above the router, so the timeout lands wherever the user has gone.
+  // Navigating off the Board tab is not "closing the queue" — it is the thing
+  // the header explicitly says you may do.
 
   // Cards the creator marked `deepen`, with the reason the system can infer.
   const deepened: FollowUpRequest[] = api.cards
@@ -141,8 +138,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
       return next;
     });
 
-    const timer = setTimeout(() => {
-      inFlight.current = null;
+    setTimeout(() => {
       setAsked((prev) =>
         prev.map((r) => {
           if (r.status !== "running") return r;
@@ -160,7 +156,6 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
           : `${answered} of ${dispatched.length} came back. The rest have no transcribed answer in this prototype.`,
       );
     }, DISPATCH_MS);
-    inFlight.current = { jobId: job.id, timer };
   };
 
   return (
