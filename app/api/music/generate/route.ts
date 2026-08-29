@@ -14,10 +14,23 @@
 // caller with no picture cannot buy anything at all.
 //
 // Money route — auth + rate limit before anything is read or spent
-// (lib/apiAuth.ts). NOT yet under lib/imaging/budget.ts's spend ceiling: that
-// ledger prices per-image USD and a music credit is a different unit. Until a
-// music line exists in the budget, the ceiling on this route is the rate
-// limit alone — stated here so nobody mistakes absence for coverage.
+// (lib/apiAuth.ts), AND, since 2026-08-29, a real spend ceiling.
+//
+// This comment used to read: "NOT yet under lib/imaging/budget.ts's spend
+// ceiling: that ledger prices per-image USD and a music credit is a different
+// unit … the ceiling on this route is the rate limit alone — stated here so
+// nobody mistakes absence for coverage." The absence has been closed rather
+// than restated, and the unit problem answered instead of avoided:
+//
+//   · lib/music/pricing.ts models the cost as a three-link chain — SECONDS OF
+//     AUDIO (exact) x CREDITS PER SECOND (undeclared) x USD PER CREDIT
+//     (undeclared) — and quotes the link it reaches. No dollar figure is
+//     invented to make the arithmetic close.
+//   · lib/music/budget.ts meters the link that IS exact: the ceiling is
+//     denominated in SECONDS OF AUDIO PER ROLLING WINDOW, refuses with
+//     `over-budget` (402) BEFORE the vendor is called, and counts its refusals.
+//   · lib/music/log.ts writes one greppable line per call, and lib/music/
+//     elevenlabs.ts's `metered` is the chokepoint all three run through.
 
 import { guardRequest } from "@/lib/apiAuth";
 import { MusicError, statusFor } from "@/lib/music/errors";

@@ -4,6 +4,10 @@
 // sends spotting rows and receives audio.
 
 import { accessHeader } from "./imagingClient";
+// TYPE-ONLY, therefore erased: nothing from lib/music/ reaches the browser
+// bundle. `MusicQuote` is the shape GET /api/music/pricing returns, and naming
+// it here is what stops this file inventing a second one.
+import type { MusicQuote } from "./music/pricing";
 import type {
   CuePicture,
   DetailedMusicResult,
@@ -97,3 +101,83 @@ export const generateSfx = (body: {
   promptInfluence?: number;
   loop?: boolean;
 }) => post<SfxResult>("/api/music/sfx", body);
+
+// ── THE PRICE, BEFORE THE CLICK ─────────────────────────────────────────────
+//
+// Music is the only engine in this product that spends on a single click from a
+// product surface, and until now the Score step showed the user nothing about
+// it — not before, not after. These two helpers are the browser half of that
+// fix, kept here rather than in the surface for the same reason
+// app/library/Playground.tsx asks /api/imaging/pricing: the figure must come
+// from the same declaration the server bills against, never from a copy in a
+// component.
+
+/** Asked once per page load and shared. The table is a module constant on the
+ *  server, so a second fetch could only ever return the same bytes. */
+let pricePromise: Promise<MusicQuote> | null = null;
+
+export function perSecondPrice(): Promise<MusicQuote> {
+  pricePromise ??= (async () => {
+    const res = await fetch("/api/music/pricing");
+    if (!res.ok) throw new Error(`music pricing answered ${res.status}`);
+    const doc = (await res.json()) as { perSecond?: MusicQuote };
+    const q = doc.perSecond;
+    if (!q || typeof q.note !== "string" || typeof q.basis !== "string")
+      throw new Error("music pricing returned a body we cannot read");
+    return q;
+  })().catch((e: unknown) => {
+    // One blip must not poison the rest of the session: drop the memo so the
+    // next mount asks again.
+    pricePromise = null;
+    throw e;
+  });
+  return pricePromise;
+}
+
+/**
+ * WHAT A SURFACE MAY SAY ABOUT THE COST OF `seconds` OF MUSIC.
+ *
+ * Five states, kept apart rather than collapsed into one blank, and NONE of
+ * them renders as $0.00:
+ *
+ *   · still asking;
+ *   · asked, and the route did not answer;
+ *   · the operation is declared FREE (a fact with a source in
+ *     lib/music/pricing.ts — the plan endpoint);
+ *   · a rate is declared, so there is a figure, in whichever unit the chain
+ *     reached: dollars if both links exist, otherwise CREDITS, which are their
+ *     own unit and are not silently converted;
+ *   · no rate is declared — the honest case today. The SECONDS are still exact
+ *     and are shown, because "13 seconds of audio at an undeclared rate" is
+ *     strictly more than the user knew before, and a dollar sign here would be
+ *     a number nobody has earned.
+ *
+ * Pure and exported so a probe can drive every branch.
+ */
+export function costLabel(
+  price: MusicQuote | "unknown" | null,
+  seconds: number,
+): { text: string; title: string } {
+  if (price === null)
+    return { text: "checking the price…", title: "Asking /api/music/pricing what a render costs." };
+  if (price === "unknown")
+    return {
+      text: `${seconds}s of audio · price unknown`,
+      title:
+        "The price table could not be reached, so this render's cost is not known in advance. " +
+        "The seconds are still exact — they are the length of picture this cue covers.",
+    };
+  if (price.basis === "free") return { text: "free", title: price.note };
+  if (typeof price.usd === "number")
+    return { text: `est. $${(price.usd * seconds).toFixed(3)}`, title: price.note };
+  if (typeof price.credits === "number")
+    return {
+      text: `est. ${(price.credits * seconds).toFixed(1)} credits`,
+      title: `${price.note} Credits are the vendor's unit; no USD conversion is declared in this repo.`,
+    };
+  // UNPRICED. Never "$0.00", never a blank.
+  return {
+    text: `${seconds}s of audio · unpriced`,
+    title: price.note,
+  };
+}

@@ -11,6 +11,12 @@
 export type MusicErrorKind =
   | "no-key"
   | "refused"
+  /** The spend ceiling (lib/music/budget.ts) refused this render BEFORE the
+   *  vendor was called, so nothing was billed. Distinct from every kind below
+   *  it: the vendor was never asked, and the answer will be different once the
+   *  rolling window rolls over. HTTP 402 — the same status imaging's
+   *  `over-budget` uses, for the same reason. */
+  | "over-budget"
   | "rate-limited"
   | "timeout"
   | "bad-response"
@@ -34,6 +40,8 @@ export function statusFor(kind: MusicErrorKind): number {
       return 400;
     case "refused":
       return 422;
+    case "over-budget":
+      return 402;
     case "rate-limited":
       return 429;
     case "timeout":

@@ -6,12 +6,19 @@
 // Cut's timeline, and the coverage line states what is scored, refused and
 // silent — computed from the cues, never retyped.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { CUES, MUSIC_STYLE_BLOCK, UNSPOTTABLE, sceneClock, type SpottingCue } from "../../_studio/score";
 import { PROJECT } from "../../_studio/scenes";
 import { CueStatusWord, TimeRuler, spanStyle } from "../../_studio/projectParts";
-import { MusicRequestError, audioUrl, generateCueAudio } from "@/lib/musicClient";
+import {
+  MusicRequestError,
+  audioUrl,
+  costLabel,
+  generateCueAudio,
+  perSecondPrice,
+} from "@/lib/musicClient";
+import type { MusicQuote } from "@/lib/music/pricing";
 import type { MusicProvenance } from "@/lib/music/types";
 
 /** One cue's live take, in this session. Not yet persisted — a generated
@@ -68,6 +75,20 @@ export default function ScoreSpotting() {
     CUES.find((c) => c.status === "failed")?.id ?? CUES[0]?.id ?? "",
   );
   const [takes, setTakes] = useState<Record<string, Take>>({});
+  // THE PRICE, BEFORE THE CLICK. `null` = still asking, `"unknown"` = the route
+  // did not answer. Neither is allowed to render as a number.
+  const [price, setPrice] = useState<MusicQuote | "unknown" | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    perSecondPrice()
+      .then((q) => live && setPrice(q))
+      .catch(() => live && setPrice("unknown"));
+    return () => {
+      live = false;
+    };
+  }, []);
+
   const cue = CUES.find((c) => c.id === focus) ?? CUES[0];
   const take = cue ? takes[cue.id] : undefined;
 
@@ -104,6 +125,12 @@ export default function ScoreSpotting() {
   const sceneCells = sceneClock();
 
   const credit = cue ? engineCredit(cue, take) : { text: "", why: "" };
+  // Before the click: what this cue's own length costs. After a take: what the
+  // take ACTUALLY asked for, read off its provenance — whatever came back wins
+  // over the estimate shown beforehand.
+  const estimate = costLabel(price, cue?.durS ?? 0);
+  const settled =
+    take?.state === "done" ? costLabel(price, Math.round(take.provenance.requestedMs / 1000)) : null;
 
   const scoredS = CUES.filter((c) => c.status === "rendered").reduce((n, c) => n + c.durS, 0);
   const refusedS = CUES.filter((c) => c.status === "failed").reduce((n, c) => n + c.durS, 0);
@@ -268,11 +295,34 @@ export default function ScoreSpotting() {
             className="font-jetbrains text-[10px] text-white/35"
             title={cue.picture.scenes.map((sc) => `sc ${sc.index} ${sc.slug} — ${sc.mood}`).join("\n")}
           >
-            {cue.durS}s · {cue.bpm} bpm · briefed from sc{" "}
-            {cue.picture.scenes.map((sc) => sc.index).join(", ")} — duration derived from picture
+            {cue.bpm} bpm · briefed from sc {cue.picture.scenes.map((sc) => sc.index).join(", ")} —
+            duration derived from picture
+          </span>
+          {/* WHAT THE CLICK COSTS, BESIDE THE BUTTON THAT SPENDS IT — not a
+              dialog, which would kill the one thing a spotting session is for.
+              Today it reads "13s of audio · unpriced", because ElevenLabs bills
+              in credits and nobody in this repo has measured the rate
+              (lib/music/pricing.ts). That is the honest sentence; $0.00 would
+              not be. The figure comes from /api/music/pricing, the same
+              declaration the server meters against. */}
+          <span
+            className={`font-jetbrains text-[10px] ${price === "unknown" ? "text-amber-300/70" : "text-white/35"}`}
+            title={estimate.title}
+          >
+            {estimate.text}
           </span>
         </div>
-        {take?.state === "done" && <audio controls src={take.url} className="mt-3 h-9 w-full" />}
+        {take?.state === "done" && (
+          <>
+            <audio controls src={take.url} className="mt-3 h-9 w-full" />
+            {/* THE RECEIPT. Same vocabulary as the estimate above it, so a user
+                can compare them without translating — and the same refusal to
+                print a dollar figure nobody measured. */}
+            <p className="font-jetbrains mt-1.5 text-[10px] text-white/35" title={settled?.title}>
+              rendered · {settled?.text}
+            </p>
+          </>
+        )}
         {(take?.state === "refused" || take?.state === "error") && (
           <p className="font-jetbrains mt-3 text-[11px] leading-snug text-rose-200/70">{take.msg}</p>
         )}

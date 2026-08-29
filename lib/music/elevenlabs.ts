@@ -13,7 +13,10 @@
 // The key is read lazily per call, like lib/imaging/env.ts: a route handler
 // that booted before .env.local was filled must not hold a stale absence.
 
+import { assertWithinMusicBudget, recordMusicSpend } from "./budget";
 import { MusicError } from "./errors";
+import { logCall } from "./log";
+import { priceCall, type MusicOp } from "./pricing";
 import type {
   DetailedMusicResult,
   MusicPlan,
@@ -28,6 +31,10 @@ const PLAN_ENDPOINT = "https://api.elevenlabs.io/v1/music/plan";
 const DETAILED_ENDPOINT = "https://api.elevenlabs.io/v1/music/detailed";
 const SFX_ENDPOINT = "https://api.elevenlabs.io/v1/sound-generation";
 const MODEL_ID = "music_v2";
+/** The text-to-SFX model. Named rather than inlined because pricing.ts, the
+ *  ledger and the log all key on it — a model id typed twice is a row that
+ *  eventually prices the wrong call. */
+const SFX_MODEL_ID = "eleven_text_to_sound_v2";
 const OUTPUT_FORMAT = "mp3_44100_128";
 /** Music generation is slow; give the vendor room but not forever. */
 const TIMEOUT_MS = 240_000;
@@ -47,6 +54,75 @@ function keyOrThrow(): string {
 export function isMusicConfigured(): boolean {
   const v = process.env[MUSIC_KEY_VAR];
   return Boolean(v && v.trim());
+}
+
+/* ── THE CHOKEPOINT ─────────────────────────────────────────────────────────
+ *
+ * Every vendor call in this engine goes through `metered`, and this file is the
+ * only file that calls the vendor — so there is nowhere to forget it. lib/imaging
+ * puts the same gate in its router; music has no router, so the adapter IS the
+ * chokepoint, and it is stated here rather than left to be noticed.
+ *
+ * Three things happen around each call, in this order:
+ *
+ *   1. THE CEILING REFUSES BEFORE THE VENDOR IS TOUCHED. `assertWithinMusicBudget`
+ *      throws `over-budget` (HTTP 402) with nothing billed. Refusing rather than
+ *      billing is the entire distinction — a meter you can read but not enforce
+ *      is a dashboard.
+ *   2. THE CALL IS BOOKED against the rolling window on settle.
+ *   3. ONE GREPPABLE LINE is written, whatever happened.
+ */
+
+/**
+ * WHICH FAILURES THE VENDOR STILL BILLS FOR.
+ *
+ * A refusal, a rate-limit, a rejected key or a request this adapter never sent
+ * consumed no renderer time and cost nothing — booking them would let a 401
+ * loop eat a ceiling it never spent. But a `timeout` mid-body or a
+ * `bad-response` means the render RAN and the vendor will charge for it; those
+ * are exactly the calls whose absence made imaging's meter under-read during an
+ * incident, which is the worst shape a meter can have.
+ *
+ * Exported so the budget probe asserts on the real set rather than a copy.
+ */
+export const BILLED_ON_FAILURE: ReadonlySet<string> = new Set(["timeout", "bad-response"]);
+
+async function metered<T>(
+  op: MusicOp,
+  /** Seconds of audio requested — the metered quantity. See lib/music/budget.ts
+   *  for why this engine's ceiling is denominated in seconds and not dollars. */
+  seconds: number,
+  model: string,
+  run: () => Promise<T>,
+): Promise<T> {
+  // OUTSIDE the try on purpose: a budget refusal is not a call, so it must not
+  // be booked or logged as one. budget.ts writes its own `[music] budget
+  // refused ...` line, which is where a refusal belongs.
+  assertWithinMusicBudget(seconds);
+
+  const started = Date.now();
+  try {
+    const out = await run();
+    if (seconds > 0) recordMusicSpend({ seconds, op, model, outcome: "served" });
+    const quote = priceCall({ op, model, seconds });
+    logCall({
+      op,
+      ms: Date.now() - started,
+      seconds,
+      model,
+      basis: quote.basis,
+      credits: quote.credits,
+      usd: quote.usd,
+    });
+    return out;
+  } catch (e) {
+    const err =
+      e instanceof MusicError ? e : new MusicError("failed", `The ${op} call failed unexpectedly.`);
+    if (seconds > 0 && BILLED_ON_FAILURE.has(err.kind))
+      recordMusicSpend({ seconds, op, model, outcome: "failed" });
+    logCall({ op, ms: Date.now() - started, seconds, kind: err.kind, message: err.message });
+    throw err;
+  }
 }
 
 /** One section → one wire chunk. The section name rides in square brackets,
@@ -102,8 +178,10 @@ export async function composeMusic(
    *  four minutes to prove the body read is covered by it. */
   timeoutMs: number = TIMEOUT_MS,
 ): Promise<MusicResult> {
-  const key = keyOrThrow();
-
+  // PRE-FLIGHT FIRST, OUTSIDE THE METER. A plan this adapter refuses to send is
+  // not a vendor call: it must not consume the ceiling and it must not write a
+  // call line. The meter measures what we ASK THE VENDOR FOR, and this asks
+  // nothing.
   const totalMs = plan.sections.reduce((n, s) => n + s.durationMs, 0);
   if (plan.sections.length === 0 || plan.sections.length > 30)
     throw new MusicError("bad-request", `A plan carries 1..30 sections; this one has ${plan.sections.length}.`);
@@ -112,6 +190,12 @@ export async function composeMusic(
   for (const s of plan.sections)
     if (s.durationMs < 3_000 || s.durationMs > 120_000)
       throw new MusicError("bad-request", `Section "${s.name}" is ${s.durationMs}ms; sections run 3s..120s.`);
+
+  return metered("generate", totalMs / 1000, MODEL_ID, () => composeCall(plan, totalMs, timeoutMs));
+}
+
+async function composeCall(plan: MusicPlan, totalMs: number, timeoutMs: number): Promise<MusicResult> {
+  const key = keyOrThrow();
 
   const body = {
     model_id: MODEL_ID,
@@ -227,6 +311,19 @@ export async function draftPlan(req: {
   negativeStyle?: string;
   sourcePlan?: WirePlan;
 }): Promise<WirePlan> {
+  // Metered at ZERO seconds, not skipped: the ceiling must never refuse a free
+  // call, and the trace must still carry a line for it. `cost=free` on that
+  // line is a DECLARED fact with a source (pricing.ts), not an absent number.
+  return metered("plan", 0, MODEL_ID, () => draftPlanCall(req));
+}
+
+async function draftPlanCall(req: {
+  prompt: string;
+  lengthMs?: number;
+  style?: string;
+  negativeStyle?: string;
+  sourcePlan?: WirePlan;
+}): Promise<WirePlan> {
   const res = await vendorFetch(PLAN_ENDPOINT, {
     prompt: req.prompt,
     model_id: MODEL_ID,
@@ -279,6 +376,38 @@ export async function composeDetailed(req: {
 }): Promise<DetailedMusicResult> {
   if (!req.prompt === !req.plan)
     throw new MusicError("bad-request", "Send exactly one of prompt / plan.");
+  return metered("compose", requestedSeconds(req), MODEL_ID, () => composeDetailedCall(req));
+}
+
+/**
+ * How much audio a raw compose asks for — the number the ceiling meters.
+ *
+ * A wire plan states it exactly (generation chunks carry `duration_ms`, kept
+ * chunks a range). A prompt with `lengthMs` states it. A prompt with NEITHER
+ * lets the vendor choose, and this adapter cannot know what it chose — so it is
+ * metered at the vendor's CEILING (10 minutes), which errs high. Erring high is
+ * the right direction for a money guard, and it is also why
+ * app/api/music/compose/route.ts now requires a length for prompt-only calls:
+ * better a stated number than a worst case standing in for one.
+ */
+export function requestedSeconds(req: { prompt?: string; plan?: WirePlan; lengthMs?: number }): number {
+  if (req.plan)
+    return (
+      req.plan.chunks.reduce((n, c) => {
+        if ("duration_ms" in c) return n + c.duration_ms;
+        return n + Math.max(c.range.end_ms - c.range.start_ms, 0);
+      }, 0) / 1000
+    );
+  if (typeof req.lengthMs === "number" && req.lengthMs > 0) return req.lengthMs / 1000;
+  return 600;
+}
+
+async function composeDetailedCall(req: {
+  prompt?: string;
+  plan?: WirePlan;
+  lengthMs?: number;
+  storeForInpainting?: boolean;
+}): Promise<DetailedMusicResult> {
   const res = await vendorFetch(DETAILED_ENDPOINT, {
     model_id: MODEL_ID,
     output_format: OUTPUT_FORMAT,
@@ -342,9 +471,20 @@ export async function generateSfx(req: {
     throw new MusicError("bad-request", "SFX duration runs 0.5..30 seconds.");
   if (req.promptInfluence !== undefined && (req.promptInfluence < 0 || req.promptInfluence > 1))
     throw new MusicError("bad-request", "prompt_influence runs 0..1.");
+  // An unstated duration lets the vendor pick, so it is metered at the
+  // endpoint's 30s ceiling — erring high, the right direction for a guard.
+  return metered("sfx", req.durationSeconds ?? 30, SFX_MODEL_ID, () => generateSfxCall(req));
+}
+
+async function generateSfxCall(req: {
+  text: string;
+  durationSeconds?: number;
+  promptInfluence?: number;
+  loop?: boolean;
+}): Promise<SfxResult> {
   const res = await vendorFetch(SFX_ENDPOINT, {
     text: req.text,
-    model_id: "eleven_text_to_sound_v2",
+    model_id: SFX_MODEL_ID,
     ...(req.durationSeconds !== undefined ? { duration_seconds: req.durationSeconds } : {}),
     ...(req.promptInfluence !== undefined ? { prompt_influence: req.promptInfluence } : {}),
     ...(req.loop !== undefined ? { loop: req.loop } : {}),
