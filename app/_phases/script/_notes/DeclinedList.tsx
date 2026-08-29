@@ -14,6 +14,8 @@
 //   · refusals      — a GUARD blocked it here (required material, scope)
 //   · conflicts     — two notes on one track that could not both hold
 //   · unsupported   — a turn left arguing from less, or from nothing
+//   · chainBreaks   — the edit landed and broke a seam: a connector now argues
+//                     from a beat that is no longer in front of it
 //
 // Merging them would lose the thing that matters most to someone deciding what
 // to do next: whether the request was refused, overruled, or merely survived.
@@ -21,8 +23,9 @@
 import type { Version } from "../versions";
 
 export default function DeclinedList({ version }: { version: Version }) {
-  const { modelRefusals = [], refusals, conflicts, unsupported } = version;
-  const total = modelRefusals.length + refusals.length + conflicts.length + unsupported.length;
+  const { modelRefusals = [], refusals, conflicts, unsupported, chainBreaks = [] } = version;
+  const total =
+    modelRefusals.length + refusals.length + conflicts.length + unsupported.length + chainBreaks.length;
   if (total === 0) return null;
 
   return (
@@ -71,11 +74,37 @@ export default function DeclinedList({ version }: { version: Version }) {
           {u.lost.join(", ")}
         </p>
       ))}
+
+      {/* THE FIFTH KIND, and it is not a refusal — it is the opposite. The
+          other four are things the version would NOT do; a chain break is
+          something it DID that damaged a seam. It sits here because this is the
+          panel a reviewer reads before accepting, and because nothing else can
+          see it: the gate re-run after apply is lexical, so both beats read as
+          well-formed while the argument between them is broken.
+
+          Reported, never repaired — rewriting a connector to fit its new
+          neighbour is an edit nobody asked for, made by the code least
+          qualified to judge the argument. */}
+      {chainBreaks.map((b, i) => (
+        <p
+          key={`c-${b.renderId}-${b.at}-${i}`}
+          data-testid="chain-break"
+          className="font-jetbrains mt-1.5 text-[11px] leading-snug text-rose-200"
+        >
+          seam · {b.renderId} {b.at} — {b.why}
+        </p>
+      ))}
     </>
   );
 }
 
 /** How many things a version declined — for a heading that has to earn its space. */
 export function declinedCount(v: Version): number {
-  return (v.modelRefusals?.length ?? 0) + v.refusals.length + v.conflicts.length + v.unsupported.length;
+  return (
+    (v.modelRefusals?.length ?? 0) +
+    v.refusals.length +
+    v.conflicts.length +
+    v.unsupported.length +
+    (v.chainBreaks?.length ?? 0)
+  );
 }

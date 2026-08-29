@@ -25,6 +25,7 @@
 // the recalibration reports an overrun rather than quietly rescaling everyone's
 // seconds to fit. A plan that does not fit is a finding, not a rounding error.
 
+import type { ChainBreak } from "./editPlan";
 import type { GateRollup } from "./gate";
 import { IMPACT, type Usage } from "./impact";
 import { RENDERS } from "./renders";
@@ -91,6 +92,18 @@ export interface Version {
   /** The model's own account of what it did and would not do. */
   summary?: string;
   modelRefusals?: { note: string; why: string }[];
+  /** SEAMS AN EDIT BROKE. `applyEdits` has computed these since the chain-seam
+   *  work landed — a cut splices a beat out and its successor keeps arguing BUT
+   *  or THEREFORE from a beat that is no longer in front of it — and until now
+   *  the list was dropped on the floor when the version was built. The gate
+   *  re-run after apply is lexical, so both beats read as well-formed and the
+   *  broken argument between them passes; the break is visible only where what
+   *  CHANGED is still known, which is inside the apply. Carried here so it
+   *  survives to the person deciding whether to accept.
+   *
+   *  Absent on a simulated version, which re-weights without moving beats, and
+   *  on every version written before this field existed. */
+  chainBreaks?: (ChainBreak & { renderId: string })[];
   /** WHAT THE TURN ACTUALLY COST. Absent on a simulated version — see EngineRun. */
   engineRun?: EngineRun;
   /** Set only where this version was made the baseline over a BLOCKING gate
