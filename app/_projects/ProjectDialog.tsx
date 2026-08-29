@@ -60,7 +60,9 @@ export default function ProjectDialog({
    *  list is missing for a reason the user is owed. */
   themes: Theme[];
   onClose: () => void;
-  onSubmit: (draft: ProjectDraft) => void;
+  /** Resolves once the write has landed. The dialog stays open until it does,
+   *  so a failed save keeps the draft the user typed — see `submit` below. */
+  onSubmit: (draft: ProjectDraft) => void | Promise<unknown>;
 }) {
   const [draft, setDraft] = useState<ProjectDraft>(blank);
   // Whether the user has taken ownership of the runtime. Until they do,
@@ -134,9 +136,34 @@ export default function ProjectDialog({
       };
     });
 
-  const submit = () => {
-    if (!valid) return;
-    onSubmit(draft);
+  /** AWAIT THE WRITE, and hold the dialog open while it runs.
+   *
+   *  This used to be fire-and-forget, and the caller closed the dialog in the
+   *  line before it. `ConfirmDelete`, twenty lines away in the same view,
+   *  already argues the case at length: "closing a confirmation over work that
+   *  was not done is the same small lie as a button that does nothing." Both
+   *  writers report failure the same way — `create` and `update` resolve to
+   *  null and raise the shelf's error banner — and only the delete flow read
+   *  the answer. A quota or blocked-tab failure closed this dialog, discarded
+   *  everything the user had typed, and left a banner explaining a loss that
+   *  had already happened.
+   *
+   *  Holding it open needs the busy flag: the await opens a window the
+   *  close-first version did not have, and without it a slow write takes two
+   *  presses and makes two projects. */
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    try {
+      await onSubmit(draft);
+    } finally {
+      // The caller closes on success; on failure this dialog is still mounted
+      // and must be usable again. Setting it either way is safe — an unmounted
+      // component's setState is a no-op in React 19, not a warning.
+      setBusy(false);
+    }
   };
 
   return (
@@ -152,15 +179,15 @@ export default function ProjectDialog({
             {project ? "saved to this browser" : "opens in the studio"}
           </span>
           <div className="flex gap-2">
-            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose}>
+            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose} disabled={busy}>
               Cancel
             </Button>
             <Button
               className="cursor-pointer px-5 py-2"
-              disabled={!valid}
-              onClick={submit}
+              disabled={!valid || busy}
+              onClick={() => void submit()}
             >
-              {project ? "Save" : "Create & open"}
+              {busy ? "Saving…" : project ? "Save" : "Create & open"}
             </Button>
           </div>
         </div>
@@ -170,7 +197,7 @@ export default function ProjectDialog({
         className="grid gap-5"
         onSubmit={(e) => {
           e.preventDefault();
-          submit();
+          void submit();
         }}
       >
         <Field label="Project name" htmlFor="p-title">

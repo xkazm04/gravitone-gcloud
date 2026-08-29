@@ -46,15 +46,30 @@ export default function ProjectsView() {
   // Create walks straight into the studio — a project with no work in it has
   // nothing to show on this page, and the name the user just typed is the
   // headline waiting for them one route over.
+  // CLOSE ON SUCCESS, the way ConfirmDelete below already does — and for the
+  // reason stated there: "closing a confirmation over work that was not done is
+  // the same small lie as a button that does nothing."
+  //
+  // This closed FIRST and then wrote. Both writers resolve to null on failure
+  // and raise the error banner above, so the answer was available and only the
+  // delete flow read it; a quota or blocked-tab failure closed the dialog,
+  // discarded the draft the user had typed, and left a banner explaining a loss
+  // that had already happened. On a repo whose step store calls quota "a real
+  // destination and not a theoretical one", that is the reachable case.
+  //
+  // The dialog holds itself open and disables its own control while this
+  // resolves, so awaiting does not buy a double-submit.
   const submit = async (draft: ProjectDraft) => {
     const editing = dialog.project;
-    setDialog({ open: false, project: null });
     if (editing) {
-      await update(editing.id, draft);
+      const saved = await update(editing.id, draft);
+      if (saved) setDialog({ open: false, project: null });
       return;
     }
     const made = await create(draft);
-    if (made) router.push(`/studio/${made.id}`);
+    if (!made) return;
+    setDialog({ open: false, project: null });
+    router.push(`/studio/${made.id}`);
   };
 
   return (
