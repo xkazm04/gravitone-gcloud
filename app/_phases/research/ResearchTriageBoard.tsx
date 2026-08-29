@@ -165,10 +165,25 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
                 </p>
               )}
 
+              {/* AN EMPTY COLUMN IS TWO DIFFERENT FACTS and this surface cannot
+                  tell which. `emptyByOmission` is "the run did not look here";
+                  `notApplicable` is "there is nothing here to look at", which
+                  is a finding rather than a failure. Both strings are required
+                  on every column precisely so the reviewer can decide — and
+                  until now only the first was ever drawn, so a legitimately
+                  empty column rendered an accusation, which is how a reviewer
+                  learns to ignore the accusation. The board states the alarm
+                  and then names the innocent reading rather than picking one it
+                  has no way to know. */}
               {empty ? (
-                <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
-                  the run produced nothing here — {emptyMeansOf(d)}
-                </p>
+                <>
+                  <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
+                    the run produced nothing here — {emptyMeansOf(d)}
+                  </p>
+                  <p className="font-jetbrains mt-1.5 text-[11px] leading-relaxed text-white/40">
+                    unless that is correct for this topic: {d.notApplicable}
+                  </p>
+                </>
               ) : (
                 <>
                   {noneKept && !orphan && (

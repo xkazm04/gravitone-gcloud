@@ -54,14 +54,20 @@ export interface Dimension {
   /** What an honestly empty column means here. If the answer is "this can never
    *  legitimately be empty", say that — it is a real answer (see counter-case). */
   notApplicable: string;
-  /** @deprecated Use `emptyByOmission` / `notApplicable`. Kept so the board UI
-   *  and the control fixture compile unchanged while consumers migrate; new
-   *  columns may omit it. Read it through `emptyMeansOf()`. */
+  /** @deprecated Use `emptyByOmission` / `notApplicable`. Kept for a column
+   *  that carries only the old field; the seven incumbents no longer set it.
+   *  Read it through `emptyMeansOf()`. */
   emptyMeans?: string;
 }
 
 /** The deprecated single string, resolved. For consumers not yet migrated —
- *  they get the omission reading, which is what the old field always was. */
+ *  they get the omission reading, which is what the old field always was.
+ *
+ *  THE SPLIT WAS UNREACHABLE UNTIL THE INCUMBENTS STOPPED SETTING `emptyMeans`.
+ *  All seven carried it, six of them byte-identical to their own
+ *  `emptyByOmission`, and this function prefers it — so every consumer got the
+ *  undifferentiated string and `notApplicable` had no reader anywhere in the
+ *  repo. The design above was fully built into the type and fully dead. */
 export function emptyMeansOf(d: Dimension): string {
   return d.emptyMeans ?? d.emptyByOmission;
 }
@@ -69,11 +75,9 @@ export function emptyMeansOf(d: Dimension): string {
 /** The market/economics columns — the worked instance, and the default set. */
 export const MARKET_DIMENSIONS: Dimension[] = [
   { id: "the-number", label: "The number", purpose: "What the price actually did, and over what window.",
-    emptyMeans: "No measured baseline — every claim downstream is unanchored.",
     emptyByOmission: "No measured baseline — every claim downstream is unanchored.",
     notApplicable: "This topic has no headline quantity. Rare here, and if it is true the tension has to be carried by a mechanism instead — say which." },
   { id: "flows", label: "Flows & plumbing", purpose: "Who is buying and selling, through what mechanism, and whether it behaves as assumed.",
-    emptyMeans: "The demand story is unexamined.",
     emptyByOmission: "The demand story is unexamined.",
     notApplicable: "Nothing moves through a mechanism here — the subject is not a market. Check that against the tension before believing it." },
   { id: "actors", label: "Structural actors", purpose: "Entities large enough to move this, and what governs their behaviour.",
@@ -83,23 +87,18 @@ export const MARKET_DIMENSIONS: Dimension[] = [
     // is named" is not a gap, it is the job — it is what you have instead of a
     // legal budget, and it is the difference between analysis and a trial. The
     // omission reading now asks about the SEARCH, not about the naming.
-    emptyMeans: "No actor was looked for — nobody asked who is large enough to move this.",
     emptyByOmission: "No actor was looked for — nobody asked who is large enough to move this, or what governs them.",
     notApplicable: "The search ran and named nobody: the behaviour is structural, or naming is not available, or the reviewer is deliberately not naming. That is a finding — see the boundary card class in conclusions.ts — not a hole." },
   { id: "macro", label: "Macro", purpose: "Rates, currency, liquidity, correlation with other assets.",
-    emptyMeans: "The asset is being explained in isolation from the market it trades in.",
     emptyByOmission: "The asset is being explained in isolation from the market it trades in.",
     notApplicable: "The subject is genuinely insulated from the wider cycle. State why — it is a claim, and a strong one." },
   { id: "politics", label: "Politics & regulation", purpose: "What changed, and whether it was actually implemented.",
-    emptyMeans: "Policy is being assumed to work, or assumed not to.",
     emptyByOmission: "Policy is being assumed to work, or assumed not to.",
     notApplicable: "Nothing here is governed or was proposed to be. Uncommon — absence of rules is usually itself the policy." },
   { id: "counter-case", label: "The counter-case", purpose: "The strongest argument that nothing unusual is happening.",
-    emptyMeans: "DANGEROUS — without this the script can only produce a polemic (RESEARCH-PROMPT §Phase 6).",
     emptyByOmission: "DANGEROUS — without this the script can only produce a polemic (RESEARCH-PROMPT §Phase 6).",
     notApplicable: "There is no legitimately-empty reading of this column. If no counter-case exists, the finding is that nobody found one — which is a fact about the search, and it goes here." },
   { id: "conclusions", label: "Conclusions", purpose: "What the dimensions add up to. Reasoned, not researched — no direct sources, so every one is OFF until you let it in.",
-    emptyMeans: "Nothing synthesised. The script will report findings without saying what they mean.",
     emptyByOmission: "Nothing synthesised. The script will report findings without saying what they mean.",
     notApplicable: "Never. A run that synthesised nothing has not finished; empty-because-you-gated-them-out is scope, not this." },
 ];
