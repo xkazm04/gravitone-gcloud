@@ -73,3 +73,16 @@ test("notebook-graph: mechanism evidence is a card edge, so it can wound", () =>
   const issues = notebookIssues(nb).filter((i) => i.ref === "f-no-such-fact");
   expect(issues.some((i) => i.from === `${nb.mechanisms[0].id}.dependsOn`)).toBe(true);
 });
+
+test("notebook-graph: a scale conversion with no `for` is caught — the ABSENT link", () => {
+  const nb = clone();
+  // The blindness this case exists for: edge() skips a null ref, so a
+  // conversion that names no fact used to be indistinguishable from a linked
+  // one, exactly as a dangling dependsOn is indistinguishable from a healthy
+  // one. A felt version of a number is a derived claim; unlinked, nothing can
+  // check it against the claim it restates or cap it at that fact's grade.
+  nb.scaleConversions = [{ raw: "$1bn", felt: "a thousand million" }, ...nb.scaleConversions.slice(1)];
+
+  const unlinked = notebookIssues(nb).filter((i) => i.kind === "unlinked-conversion");
+  expect(unlinked.some((i) => i.ref === "$1bn")).toBe(true);
+});

@@ -95,13 +95,20 @@ export const NOTEBOOK: Notebook = {
       "Without it the script is a bear case wearing an explainer's clothes. The honest position is 'the model changed', not 'it is going to zero'.",
   },
 
+  // Every conversion names the fact it converts. They were authored unlinked
+  // and the graph check could not see it (cards.ts::notebookIssues), so the
+  // felt forms sat beside the notebook rather than inside it. Linking them is
+  // what makes the felt version checkable against the claim it restates — and
+  // the first thing it exposes is scaleConversions[4]: f-correlation records
+  // the 0.70–0.80 band "in risk-on conditions", and the felt line drops the
+  // qualifier. The link does not fix that; it makes it a finding.
   scaleConversions: [
-    { raw: "$126,198 → ~$62,000", felt: "half the value, in ten months, while every piece of good news it ever wanted arrived" },
-    { raw: "3.67 million BTC distributed", felt: "more coins sold into strength than in any previous cycle — the people who held longest sold most" },
-    { raw: "mNAV 3.89x → below 1.0", felt: "the market went from paying $3.89 for every dollar of bitcoin the company held, to under a dollar" },
-    { raw: "32 BTC sold", felt: "about $2 million — for a company holding billions. The number is meaningless; the sentence 'Strategy sold bitcoin' is not." },
-    { raw: "0.70–0.80 correlation with Nasdaq", felt: "on most days, bitcoin is a tech stock with extra steps" },
-    { raw: "10-year yield ~4.5%", felt: "when a government bond pays you to do nothing, an asset that yields nothing has to argue harder" },
+    { for: "f-drawdown", raw: "$126,198 → ~$62,000", felt: "half the value, in ten months, while every piece of good news it ever wanted arrived" },
+    { for: "f-lth-distribution", raw: "3.67 million BTC distributed", felt: "more coins sold into strength than in any previous cycle — the people who held longest sold most" },
+    { for: "f-mnav", raw: "mNAV 3.89x → below 1.0", felt: "the market went from paying $3.89 for every dollar of bitcoin the company held, to under a dollar" },
+    { for: "f-mstr-sold", raw: "32 BTC sold", felt: "about $2 million — for a company holding billions. The number is meaningless; the sentence 'Strategy sold bitcoin' is not." },
+    { for: "f-correlation", raw: "0.70–0.80 correlation with Nasdaq", felt: "on most days, bitcoin is a tech stock with extra steps" },
+    { for: "f-yields", raw: "10-year yield ~4.5%", felt: "when a government bond pays you to do nothing, an asset that yields nothing has to argue harder" },
   ],
 
   analogyCandidates: [
