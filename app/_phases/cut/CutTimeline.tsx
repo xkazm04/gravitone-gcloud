@@ -29,6 +29,7 @@ import { TIMELINE, TRACKS } from "../../_studio/score";
 import { PROJECT, SCENES } from "../../_studio/scenes";
 import type { TimelineClip } from "../../_studio/projectTypes";
 import { loadStep, saveStep, type CutStepData } from "../_shared/stepStore";
+import { useLoadFor } from "../_shared/useLoadFor";
 import { TimeRuler, spanStyle } from "../../_studio/projectParts";
 
 /** Where the act-two turn lands, and it is a real boundary rather than a number
@@ -87,26 +88,18 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
    *  it in `studio/[projectId]/phases.tsx`, because a step with no project is a
    *  step with nowhere to save.
    *
-   *  Hydration is keyed to the project rather than gated on a boolean reset in
-   *  the effect, for the reason `research/useScope.ts` wrote down when it chose
-   *  the same shape: a flag stays true for one commit after the id changes, and
-   *  that commit is the window the save effect runs in — it would write project
-   *  A's offsets onto project B. `hydratedFor === projectId` cannot do that. */
+   *  Hydration goes through `_shared/useLoadFor`, which keys it to the project
+   *  rather than a boolean: a flag stays true for one commit after the id
+   *  changes, and that commit is the window the save effect below runs in — it
+   *  would write project A's offsets onto project B. The argument used to be
+   *  restated at each of the sites that needed it; it lives in one file now. */
   const [offsets, setOffsets] = useState<Record<string, number>>({});
-  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
-  const hydrated = hydratedFor === projectId;
 
-  useEffect(() => {
-    let alive = true;
-    void loadStep<CutStepData>(projectId, PHASE).then((saved) => {
-      if (!alive) return;
-      setOffsets(saved?.offsets ?? {});
-      setHydratedFor(projectId);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [projectId]);
+  const hydrated = useLoadFor(
+    projectId,
+    (id) => loadStep<CutStepData>(id, PHASE),
+    (saved) => setOffsets(saved?.offsets ?? {}),
+  );
 
   useEffect(() => {
     // Never before hydration: the empty initial state is not an empty cut, and
