@@ -41,7 +41,10 @@ import {
 } from "@/lib/studioDb";
 import {
   loadStep,
+  lastStorageTrouble,
+  onStorageTrouble,
   readStep,
+  SCHEMA_VERSION,
   saveStep,
   __resetSaveSlots,
 } from "@/app/_phases/_shared/stepStore";
@@ -316,4 +319,83 @@ test("eviction: no orphans — nothing survives that nothing can reach", async (
   });
   console.log(`[dal] after eviction: ${allSteps.length} step(s), ${remainingProjects.size} project(s)`);
   for (const s of allSteps) expect(remainingProjects.has(s.projectId)).toBe(true);
+});
+
+// A READ THAT FAILS IS NOT A KEY THAT WAS NEVER WRITTEN.
+//
+// Measured gap, 2026-08-29: this file drove the store hard and never once made an
+// operation FAIL. Every assertion above rests on the happy path plus synthesised
+// error STRINGS — so the branch that matters most, the one where the disk says no,
+// was the branch nothing exercised.
+//
+// It matters because the two outcomes are indistinguishable through `loadStep`,
+// which returns the seeded default for both, and the surfaces above it then mark
+// themselves hydrated and let their save effect fire. That is the sequence
+// `frames/useFrames.ts` describes as a whole cut destroyed by a transient quota
+// error nobody saw: read fails, surface reads empty, surface saves empty, the
+// record that was on disk a moment ago is gone.
+//
+// The failure is injected at the ENGINE, not at our own wrapper: `indexedDB.open`
+// is replaced with one that returns a request which errors. That exercises the
+// real `openDb` rejection path and the real `classify()` on the way out, rather
+// than asserting that a stub we wrote returns what we told it to.
+test("honesty: a read that FAILS is distinguishable from a key that was never written", async () => {
+  const realOpen = indexedDB.open.bind(indexedDB);
+
+  // Baseline on the same key, through the real engine: absent, and reported ok.
+  const absent = await readStep("p-honesty", "research");
+  expect(absent.ok, "an absent key is a successful read of nothing").toBe(true);
+
+  const troubles: string[] = [];
+  const stop = onStorageTrouble(() => {
+    const t = lastStorageTrouble();
+    if (t) troubles.push(t.kind);
+  });
+
+  // @ts-expect-error — deliberately replacing the engine entrypoint for one call.
+  indexedDB.open = () => {
+    const req: Record<string, unknown> = { error: new Error("read failed — the engine refused"), result: undefined };
+    queueMicrotask(() => (req.onerror as (() => void) | undefined)?.());
+    return req;
+  };
+
+  let failed: Awaited<ReturnType<typeof readStep>>;
+  try {
+    failed = await readStep("p-honesty", "research");
+  } finally {
+    indexedDB.open = realOpen;
+    stop();
+  }
+
+  expect(failed.ok, "a failed read must NOT report success").toBe(false);
+  expect(troubles.length, "a failed read must reach the trouble channel").toBeGreaterThan(0);
+  console.log(`[dal] failed read -> ok=${failed.ok}, trouble kinds: ${troubles.join(",")}`);
+
+  // And the collapse `loadStep` performs, stated as a fact rather than implied:
+  // it cannot tell the caller which of the two happened. This is why
+  // `_shared/useLoadFor.ts`'s `useStepFor` reads through `readStep` and refuses
+  // to mark a surface hydrated when the read failed.
+  const readable = await readStep("p-honesty", "research");
+  expect(readable.ok, "the engine is restored for the rest of the file").toBe(true);
+});
+
+// EVERY RECORD THIS BUILD WRITES CAN SAY WHAT SHAPE IT IS.
+//
+// The stamp is inert — nothing branches on `v` yet, by design, because there is
+// only one version in existence. That is exactly why it needs a test: an inert
+// field with no reader is the kind of thing a later tidy-up deletes, and deleting
+// it silently restores the ambiguity it exists to end. Records written before the
+// stamp carry no `v` and are v1 by policy
+// (.vault/Architect/decisions/2026-08-29-persisted-payload-versioning.md).
+test("versioning: a written record carries its schema version, alongside savedAt", async () => {
+  await saveStep("p-ver", "research", { topic: "versioned", researched: false });
+
+  const out = await readStep<{ topic: string; savedAt: number; v: number }>("p-ver", "research");
+  expect(out.ok).toBe(true);
+  if (!out.ok) return;
+
+  expect(out.data?.topic, "the payload still round-trips").toBe("versioned");
+  expect(out.data?.savedAt, "savedAt is still stamped").toBeGreaterThan(0);
+  expect(out.data?.v, "the record names its schema version").toBe(SCHEMA_VERSION);
+  console.log(`[dal] written record: v=${out.data?.v}, savedAt=${out.data?.savedAt}`);
 });

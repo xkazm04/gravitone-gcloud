@@ -6,7 +6,7 @@
 // Cut's timeline, and the coverage line states what is scored, refused and
 // silent — computed from the cues, never retyped.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { CUES, MUSIC_STYLE_BLOCK, UNSPOTTABLE, sceneClock, type SpottingCue } from "../../_studio/score";
 import { PROJECT } from "../../_studio/scenes";
@@ -21,8 +21,14 @@ import {
 import type { MusicQuote } from "@/lib/music/pricing";
 import type { MusicProvenance } from "@/lib/music/types";
 
-/** One cue's live take, in this session. Not yet persisted — a generated
- *  take lives as long as the tab; IndexedDB is the next seam.
+/** One cue's live take, in this session.
+ *
+ *  NOT PERSISTED, and that is a decision rather than a gap: what this holds is an
+ *  object URL over decoded audio, and a stored `blob:` URL is dead on the next
+ *  load. Persisting a take means writing the BYTES — several megabytes a cue —
+ *  into the same IndexedDB whose step store names quota exhaustion as a real
+ *  destination. That call is not made here; see the ADR in
+ *  .vault/Architect/decisions/2026-08-29-score-take-persistence.md.
  *
  *  `provenance` rides on the done state because it is the ONLY thing on this
  *  surface entitled to name a vendor or a model. It comes back from the engine
@@ -92,6 +98,35 @@ export default function ScoreSpotting() {
   const cue = CUES.find((c) => c.id === focus) ?? CUES[0];
   const take = cue ? takes[cue.id] : undefined;
 
+  /** THE URLS THIS SURFACE OWNS, RELEASED WHEN IT GOES, keyed by the cue whose
+   *  take they carry.
+   *
+   *  `blobUrl`'s docstring says "Caller revokes when done", and `f964607` made
+   *  the playground bench the first caller in this repository that did. It did
+   *  not reach here — the production step calling the same helper — so every
+   *  rendered cue left a multi-megabyte decoded blob alive for the life of the
+   *  tab, and re-rendering a cue dropped the previous url on the floor with no
+   *  reference left to release it.
+   *
+   *  Keyed rather than a list so a REPLACE releases the take it replaces; the
+   *  unmount sweep then has one url per cue to clear, not one per click.
+   *  Written only from the event handler and the cleanup, never synced during
+   *  render — react-hooks/refs objects to that, and objects correctly. */
+  const owned = useRef<Record<string, string>>({});
+  /** Whether this surface is still mounted, for the await below. A take that
+   *  lands after the step is gone must not mint a url nobody can revoke, and
+   *  must not setState on a component that no longer exists. */
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+      for (const url of Object.values(owned.current)) URL.revokeObjectURL(url);
+      owned.current = {};
+    };
+  }, []);
+
   async function renderCue() {
     if (!cue) return;
     setTakes((t) => ({ ...t, [cue.id]: { state: "working" } }));
@@ -106,11 +141,19 @@ export default function ScoreSpotting() {
         // from the length of picture it plays under.
         picture: cue.picture,
       });
+      // Minting AFTER the mounted check, not before it: a url created for a
+      // surface that has gone has no owner left to release it.
+      if (!mounted.current) return;
+      const url = audioUrl(out);
+      const replaced = owned.current[cue.id];
+      if (replaced) URL.revokeObjectURL(replaced);
+      owned.current[cue.id] = url;
       setTakes((t) => ({
         ...t,
-        [cue.id]: { state: "done", url: audioUrl(out), provenance: out.provenance },
+        [cue.id]: { state: "done", url, provenance: out.provenance },
       }));
     } catch (e) {
+      if (!mounted.current) return;
       // A refusal is a spotting outcome, not an error — the region reverts to
       // refused-silence and the surface says so, in its own color.
       const refused = e instanceof MusicRequestError && e.code === "refused";

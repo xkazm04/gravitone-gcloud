@@ -23,11 +23,13 @@
 // with a real value in the fixture — was never read by anything. It reads and
 // writes it now, and the block moves on the ruler above.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { TIMELINE, TRACKS } from "../../_studio/score";
 import { PROJECT, SCENES } from "../../_studio/scenes";
 import type { TimelineClip } from "../../_studio/projectTypes";
+import { saveStep, type CutStepData } from "../_shared/stepStore";
+import { useStepFor } from "../_shared/useLoadFor";
 import { TimeRuler, spanStyle } from "../../_studio/projectParts";
 
 /** Where the act-two turn lands, and it is a real boundary rather than a number
@@ -68,11 +70,42 @@ export function nudgeOffsets(o: Offsets, c: TimelineClip, ms: number): Offsets {
   return { ...o, [c.id]: offsetFrom(o, c) + ms };
 }
 
-export default function CutTimeline() {
+/** This step's own key in the step store. Its own record rather than a field
+ *  on another phase's: the Cut is written by a different surface on a different
+ *  cadence, and sharing a record would have each save erase the other's field —
+ *  the reason `research-scope` and `research-beats` are separate keys too. */
+const PHASE = "cut";
+
+export default function CutTimeline({ projectId }: { projectId: string }) {
   /** The drift the user has dialled in, per clip, over what the fixture holds.
    *  Seeded from `offsetMs` on read rather than copied on mount — a clip nobody
-   *  has touched reports exactly what the cut says about it. */
+   *  has touched reports exactly what the cut says about it.
+   *
+   *  PERSISTED, and it used to vanish on navigation. This step and Score were the
+   *  two of five phases that stored nothing, so a sync pass — the one interactive
+   *  decision this surface offers — survived exactly as long as the step stayed
+   *  mounted. The step now takes the project it belongs to, like the three above
+   *  it in `studio/[projectId]/phases.tsx`, because a step with no project is a
+   *  step with nowhere to save.
+   *
+   *  Hydration goes through `_shared/useLoadFor`, which keys it to the project
+   *  rather than a boolean: a flag stays true for one commit after the id
+   *  changes, and that commit is the window the save effect below runs in — it
+   *  would write project A's offsets onto project B. The argument used to be
+   *  restated at each of the sites that needed it; it lives in one file now. */
   const [offsets, setOffsets] = useState<Record<string, number>>({});
+
+  const hydrated = useStepFor<CutStepData>(projectId, PHASE, (saved) =>
+    setOffsets(saved?.offsets ?? {}),
+  );
+
+  useEffect(() => {
+    // Never before hydration: the empty initial state is not an empty cut, and
+    // saving it would erase the creator's sync pass with a blank one.
+    if (!hydrated) return;
+    void saveStep<CutStepData>(projectId, PHASE, { offsets });
+  }, [projectId, offsets, hydrated]);
+
   const offsetOf = (c: TimelineClip) => offsetFrom(offsets, c);
   // Reads the offset out of `o` — the updater's own current value — and never
   // out of `offsets`, which is the value captured when this render ran.

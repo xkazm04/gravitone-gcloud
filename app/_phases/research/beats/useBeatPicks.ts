@@ -9,6 +9,7 @@ import {
   type BeatPicksStepData,
   type ResearchStepData,
 } from "../../_shared/stepStore";
+import { useStepFor } from "../../_shared/useLoadFor";
 
 const PHASE = "research-beats";
 
@@ -28,26 +29,19 @@ const PHASE = "research-beats";
  *  write claims a slot through `claimSaveSlot` explicitly so a stale confirm
  *  cannot overtake a later reopen. */
 export function useBeatPicks(projectId: string) {
-  // Keyed to the project rather than a boolean reset in the effect — the
-  // reset would be a synchronous setState inside an effect, and a project
-  // switch is covered just as well by "hydrated for THIS id".
-  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
-  const hydrated = hydratedFor === projectId;
   const [mode, setModeState] = useState<BeatPicksStepData["mode"] | null>(null);
   const [picks, setPicks] = useState<Record<string, string | null>>({});
   const [confirmed, setConfirmed] = useState<Record<string, string> | null>(null);
 
-  useEffect(() => {
-    let alive = true;
-    void loadStep<BeatPicksStepData>(projectId, PHASE).then((saved) => {
-      if (!alive) return;
-      setModeState(saved?.mode ?? null);
-      setPicks(saved?.picks ?? {});
-      setConfirmed(saved?.confirmed ?? null);
-      setHydratedFor(projectId);
-    });
-    return () => { alive = false; };
-  }, [projectId]);
+  // Keyed to the project rather than a boolean reset in the effect — the
+  // reset would be a synchronous setState inside an effect, and a project
+  // switch is covered just as well by "hydrated for THIS id". This hook chose
+  // that shape first; _shared/useLoadFor.ts is now where it is kept.
+  const hydrated = useStepFor<BeatPicksStepData>(projectId, PHASE, (saved) => {
+    setModeState(saved?.mode ?? null);
+    setPicks(saved?.picks ?? {});
+    setConfirmed(saved?.confirmed ?? null);
+  });
 
   useEffect(() => {
     if (!hydrated || mode === null) return;
