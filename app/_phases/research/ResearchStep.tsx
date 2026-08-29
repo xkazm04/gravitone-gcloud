@@ -56,7 +56,6 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
   // effect) — no second data layer. `null` = not yet read; `undefined` = read
   // and not there, which is drawn as its own sentence rather than as a board.
   const [read, setRead] = useState<{ id: string; discipline: Discipline | undefined } | null>(null);
-  const beats = useBeatPicks(projectId);
   // Keyed to the id rather than reset in the effect, so a project switch shows
   // "opening" without a synchronous setState inside the effect.
   const discipline = read?.id === projectId ? read.discipline : null;
@@ -69,7 +68,7 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
     return () => { alive = false; };
   }, [projectId]);
 
-  if (discipline === null || !beats.hydrated)
+  if (discipline === null)
     return <p className="font-jetbrains text-[12px] text-white/35">opening the project…</p>;
   if (discipline === undefined)
     return (
@@ -78,7 +77,33 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
       </p>
     );
 
+  // THE BEATS HOOK LIVES BELOW THE BRANCH, not above it. It used to be called
+  // here, unconditionally, before the discipline was even known — so every
+  // EDUCATIONAL project (which is most of them, and the seeded Bitcoin one)
+  // waited on a `research-beats` read for a record it will never have, in
+  // series after `getProject`, and held the whole step behind "opening the
+  // project…" for it. Two round trips to show a notebook that needs one.
   if (discipline === "educational") return <EducationalResearch projectId={projectId} />;
+  return <BeatsResearch projectId={projectId} discipline={discipline} />;
+}
+
+/** The disciplines whose research is picking beats rather than finding facts.
+ *  Owns the picks record, so nothing else pays to read it. */
+function BeatsResearch({
+  projectId,
+  discipline,
+}: {
+  projectId: string;
+  discipline: Exclude<Discipline, "educational">;
+}) {
+  const beats = useBeatPicks(projectId);
+
+  // Held here as well as inside BeatVariantBoard, because the CHOOSER is the
+  // surface that must not flash: a free project with a stored mode would show
+  // "which kind of research is this?" for one frame before answering itself.
+  if (!beats.hydrated)
+    return <p className="font-jetbrains text-[12px] text-white/35">opening the project’s picks…</p>;
+
   if (discipline === "trailer") return <BeatVariantBoard api={beats} discipline="trailer" />;
 
   // free: the chooser until a mode is stored, then whichever board it named.
