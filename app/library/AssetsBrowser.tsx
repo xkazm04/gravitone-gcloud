@@ -23,6 +23,7 @@ import { useAuth } from "@/lib/useAuth";
 import { useAssets } from "@/lib/useAssets";
 import { assetsUnder, buildTree, pathKey, type Asset, type FolderNode } from "@/lib/assets";
 
+import AssetLightbox from "./AssetLightbox";
 import ContextMenu from "./ContextMenu";
 import FolderTree from "./FolderTree";
 
@@ -55,10 +56,20 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
   const [selected, setSelected] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ x: number; y: number; asset: Asset } | null>(null);
+  // The OPEN PLATE, held by id rather than by index. `shown` is recomputed from
+  // the store on every removal and every folder change, so an index would keep
+  // pointing at a position while the row under it changed identity — and would
+  // survive its own asset being deleted, addressing whatever slid into the gap.
+  // An id that is no longer in `shown` resolves to null below, which closes the
+  // viewer: the one place it can be wrong is the one that self-corrects.
+  const [openId, setOpenId] = useState<string | null>(null);
 
   const rows = useMemo(() => assets ?? [], [assets]);
   const tree = useMemo(() => buildTree(rows), [rows]);
   const shown = useMemo(() => assetsUnder(rows, selected), [rows, selected]);
+
+  const openIndex = openId ? shown.findIndex((a) => a.id === openId) : -1;
+  const openAsset = openIndex === -1 ? null : shown[openIndex];
 
   // Once, when the shelf first has a shape. The tree is empty on the first
   // render — assets load async — and re-seeding on every rebuild would reopen
@@ -107,6 +118,32 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
     requestAnimationFrame(() => (next ?? grid)?.focus());
   };
 
+  /**
+   * Remove the plate the viewer is showing.
+   *
+   * Not `removeTile`: that resolves a successor tile to focus, and the tiles it
+   * measures are behind an open dialog the user is not looking at. Closing
+   * first means Modal tears down and hands focus back to its opener — the tile
+   * being deleted, which is about to unmount — so the grid is focused after the
+   * paint instead. The rAF is what makes that ordering true rather than lucky:
+   * Modal restores focus synchronously during the unmount commit, and this runs
+   * after it.
+   */
+  const removeFromViewer = (asset: Asset) => {
+    setOpenId(null);
+    void remove(asset.id);
+    announce({ key: `asset-removed:${asset.id}`, text: `Removed ${asset.name} from the shelf.` });
+    requestAnimationFrame(() => gridRef.current?.focus());
+  };
+
+  /** Walk the folder currently on screen. Wraps, because a gallery is a ring —
+   *  and the alternative is an arrow key that silently does nothing at the ends
+   *  with no edge on screen to explain why. */
+  const step = (delta: 1 | -1) => {
+    if (openIndex === -1 || shown.length < 2) return;
+    setOpenId(shown[(openIndex + delta + shown.length) % shown.length].id);
+  };
+
   if (loading)
     return (
       <p className="font-jetbrains py-16 text-center text-[12px] tracking-[0.18em] text-white/30 uppercase">
@@ -145,7 +182,7 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
               a button that does nothing. */}
           {shown.length > 0 && (
             <p className="font-jetbrains text-[10px] text-white/25">
-              right-click a tile, or focus one and press Delete, to remove it
+              click a tile to open it · right-click, or press Delete on a focused one, to remove
             </p>
           )}
         </div>
@@ -158,6 +195,7 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
               <Tile
                 key={a.id}
                 asset={a}
+                onOpen={() => setOpenId(a.id)}
                 onMenu={(x, y) => setMenu({ x, y, asset: a })}
                 onDelete={() => removeTile(a)}
               />
@@ -165,6 +203,17 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
           </div>
         )}
       </section>
+
+      {openAsset && (
+        <AssetLightbox
+          asset={openAsset}
+          index={openIndex + 1}
+          total={shown.length}
+          onClose={() => setOpenId(null)}
+          onStep={step}
+          onRemove={() => removeFromViewer(openAsset)}
+        />
+      )}
 
       {menu && (
         <ContextMenu
@@ -190,23 +239,33 @@ export default function AssetsBrowser({ onOpenStyles }: { onOpenStyles?: () => v
 
 function Tile({
   asset,
+  onOpen,
   onMenu,
   onDelete,
 }: {
   asset: Asset;
+  onOpen: () => void;
   onMenu: (x: number, y: number) => void;
   onDelete: () => void;
 }) {
   const meta = (asset.meta ?? {}) as { styleName?: string; problem?: string; grade?: { hasText?: boolean } };
   return (
     <figure
+      // role="button" over the <figure>: the element is now primarily something
+      // you PRESS, and a focus stop that opens a dialog while announcing itself
+      // as a figure tells a screen-reader user the one thing that is not true
+      // about it. The tag stays a <figure> because removeTile finds its
+      // successor with `figure[tabindex]` and because the caption is a real
+      // figcaption — the role corrects the affordance, not the structure.
+      role="button"
       tabIndex={0}
       data-asset-id={asset.id}
-      // A focus stop that removes something on a keypress has to say so, or the
-      // binding is discoverable only by pressing the key and finding out. The
-      // on-screen hint names it for sighted users; this is the same sentence for
-      // everyone else.
-      aria-label={`${asset.name}. Press Delete to remove from the shelf.`}
+      // A focus stop that opens on one key and destroys on another has to say
+      // so, or both bindings are discoverable only by pressing them and finding
+      // out. The on-screen hint names them for sighted users; this is the same
+      // sentence for everyone else.
+      aria-label={`${asset.name}. Press Enter to open it, Delete to remove it from the shelf.`}
+      onClick={onOpen}
       onContextMenu={(e) => {
         e.preventDefault();
         onMenu(e.clientX, e.clientY);
@@ -222,8 +281,16 @@ function Tile({
           e.preventDefault();
           onDelete();
         }
+        // What role="button" now promises. Space is preventDefault-ed for the
+        // reason every hand-rolled button is: on a scrollable page it pages
+        // down, and a tile that opens AND scrolls the gallery out from under
+        // the dialog is two things happening for one keypress.
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onOpen();
+        }
       }}
-      className="group overflow-hidden rounded-xl border border-white/8 transition hover:border-cyan-400/35 focus:border-cyan-400/50"
+      className="group cursor-pointer overflow-hidden rounded-xl border border-white/8 transition hover:border-cyan-400/35 focus:border-cyan-400/50"
     >
       <span className="relative block aspect-video w-full bg-white/[0.03]">
         <Image src={asset.src} alt={asset.name} fill sizes="(min-width:1280px) 22vw, 45vw" className="object-cover" />
