@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { loadStep, saveStep, type ScopeStepData } from "../_shared/stepStore";
-import { useLoadFor } from "../_shared/useLoadFor";
+import { saveStep, type ScopeStepData } from "../_shared/stepStore";
+import { useStepFor } from "../_shared/useLoadFor";
 import { buildCards, scopeDiffs, scopeSummary, stateOf, type Card, type Scope } from "./scope";
 
 const PHASE = "research-scope";
@@ -46,14 +46,10 @@ export function useScope(projectId: string) {
   // the flag did: the flag was still true for one commit after the id changed,
   // which is the window the save effect below runs in. That argument now lives
   // in _shared/useLoadFor.ts, which is the only place it has to be made.
-  const hydrated = useLoadFor(
-    projectId,
-    (id) => loadStep<ScopeStepData>(id, PHASE),
-    (saved) => {
-      setScope(saved?.scope ?? {});
-      setConfirmed(saved?.confirmed ?? null);
-    },
-  );
+  const hydrated = useStepFor<ScopeStepData>(projectId, PHASE, (saved) => {
+    setScope(saved?.scope ?? {});
+    setConfirmed(saved?.confirmed ?? null);
+  });
 
   // Never before hydration — writing the initial {} over a stored record is the
   // exact bug that silently emptied the job store (see lib/jobs.tsx).

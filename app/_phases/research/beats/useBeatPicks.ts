@@ -9,7 +9,7 @@ import {
   type BeatPicksStepData,
   type ResearchStepData,
 } from "../../_shared/stepStore";
-import { useLoadFor } from "../../_shared/useLoadFor";
+import { useStepFor } from "../../_shared/useLoadFor";
 
 const PHASE = "research-beats";
 
@@ -37,15 +37,11 @@ export function useBeatPicks(projectId: string) {
   // reset would be a synchronous setState inside an effect, and a project
   // switch is covered just as well by "hydrated for THIS id". This hook chose
   // that shape first; _shared/useLoadFor.ts is now where it is kept.
-  const hydrated = useLoadFor(
-    projectId,
-    (id) => loadStep<BeatPicksStepData>(id, PHASE),
-    (saved) => {
-      setModeState(saved?.mode ?? null);
-      setPicks(saved?.picks ?? {});
-      setConfirmed(saved?.confirmed ?? null);
-    },
-  );
+  const hydrated = useStepFor<BeatPicksStepData>(projectId, PHASE, (saved) => {
+    setModeState(saved?.mode ?? null);
+    setPicks(saved?.picks ?? {});
+    setConfirmed(saved?.confirmed ?? null);
+  });
 
   useEffect(() => {
     if (!hydrated || mode === null) return;

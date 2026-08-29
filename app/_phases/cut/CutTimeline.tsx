@@ -28,8 +28,8 @@ import { useEffect, useState } from "react";
 import { TIMELINE, TRACKS } from "../../_studio/score";
 import { PROJECT, SCENES } from "../../_studio/scenes";
 import type { TimelineClip } from "../../_studio/projectTypes";
-import { loadStep, saveStep, type CutStepData } from "../_shared/stepStore";
-import { useLoadFor } from "../_shared/useLoadFor";
+import { saveStep, type CutStepData } from "../_shared/stepStore";
+import { useStepFor } from "../_shared/useLoadFor";
 import { TimeRuler, spanStyle } from "../../_studio/projectParts";
 
 /** Where the act-two turn lands, and it is a real boundary rather than a number
@@ -95,10 +95,8 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
    *  restated at each of the sites that needed it; it lives in one file now. */
   const [offsets, setOffsets] = useState<Record<string, number>>({});
 
-  const hydrated = useLoadFor(
-    projectId,
-    (id) => loadStep<CutStepData>(id, PHASE),
-    (saved) => setOffsets(saved?.offsets ?? {}),
+  const hydrated = useStepFor<CutStepData>(projectId, PHASE, (saved) =>
+    setOffsets(saved?.offsets ?? {}),
   );
 
   useEffect(() => {
