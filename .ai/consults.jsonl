@@ -1,2 +1,10 @@
 {"ts": "2026-08-30T13:23:50Z", "bundle": "media-generation", "subjects": ["visual-style-locking"], "techniques": ["rejections-as-negative-evidence"], "deviations": 0}
 {"ts": "2026-08-30T14:49:30Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["assigned-colour-roles"], "deviations": 0}
+{"ts": "2026-08-30T15:56:20Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["camera-position-semantics"], "deviations": 0}
+{"ts": "2026-08-30T16:17:26Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["lighting-as-dramatic-instrument"], "deviations": 0}
+{"ts": "2026-08-30T16:35:46Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["lens-effect-language"], "deviations": 0}
+{"ts": "2026-08-30T16:56:40Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["genre-visual-contracts"], "deviations": 0}
+{"ts": "2026-08-30T17:16:25Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["performance-direction"], "deviations": 0}
+{"ts": "2026-08-30T18:30:40Z", "bundle": "media-generation", "subjects": ["frame-direction"], "techniques": ["one-function-per-visual"], "deviations": 0}
+{"ts": "2026-08-30T18:53:54Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["reference-shows-only-invariants"], "deviations": 0}
+{"ts": "2026-08-30T19:31:34Z", "bundle": "media-generation", "subjects": ["visual-style-locking"], "techniques": ["style-onboarding-from-sample"], "deviations": 0}
