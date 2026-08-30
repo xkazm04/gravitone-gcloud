@@ -43,6 +43,9 @@ import { useScope } from "../research/useScope";
 import { gateChains } from "./gate";
 import type { Version } from "./versions";
 import BeatList from "./_parts/BeatList";
+import CandidatesDuel from "./candidates/CandidatesDuel";
+import { useAdoption } from "./candidates/useAdoption";
+import { useScriptFace } from "./candidates/useScriptFace";
 import HypothesisColumn from "./_parts/HypothesisColumn";
 import MatrixCoverage from "./_matrix/MatrixCoverage";
 import MatrixSpend from "./_matrix/MatrixSpend";
@@ -128,13 +131,32 @@ function ExplainerScript({ projectId }: { projectId: string }) {
   const [tab, setTab] = useState<Tab>("candidates");
   const [showing, setShowing] = useState<"baseline" | "candidate">("candidate");
   const [researched, setResearched] = useState<boolean | null>(null);
-  const [adopted, setAdopted] = useState<string | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
+
+  // ADOPTION IS A RECORD NOW, not a useState. It used to be per-mount local
+  // state that persisted nothing — "adopt this one" was forgotten on reload and
+  // never reached the Frames step, which hardcoded RENDERS[0] (frames.ts:300
+  // documented the missing record). Both faces of the Candidates tab read and
+  // write THIS hook, so the duel and the expert columns cannot disagree about
+  // what was adopted; Frames resolves the same record through
+  // candidates/adoption.ts.
+  const adoption = useAdoption(projectId);
 
   // The same scope record the triage board writes, and the project's own note
   // and version history.
   const scope = useScope(projectId);
   const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope });
+
+  // Guided duel or expert columns — the stored choice, else a computed default
+  // (guided only while nothing has been decided on this step; the inputs are
+  // the decisions themselves, see useScriptFace for why not record-existence).
+  const face = useScriptFace(projectId, {
+    hasVersionWork: versions.accepted.length > 0 || versions.notes.length > 0,
+    hasAdoption: adoption.everWritten,
+    // The default latches once BOTH inputs describe what is on disk — before
+    // that, "no decisions" is merely "not read yet".
+    settled: versions.hydrated && adoption.hydrated,
+  });
 
   useEffect(() => {
     let alive = true;
@@ -185,7 +207,10 @@ function ExplainerScript({ projectId }: { projectId: string }) {
   const weighing = tab === "coverage" || tab === "spend";
   const comparing = weighing && !!versions.candidate && showing === "candidate";
   const shown = comparing ? versions.candidate! : versions.baseline;
-  const ready = scope.hydrated && versions.hydrated;
+  // Adoption and face are in the gate for the same reason scope is: rendering
+  // the duel before its record lands would show "nothing adopted" over a
+  // decision that is on disk, and the face default reads the adoption record.
+  const ready = scope.hydrated && versions.hydrated && adoption.hydrated && face.hydrated;
 
   return (
     <div>
@@ -260,20 +285,48 @@ function ExplainerScript({ projectId }: { projectId: string }) {
                     showing={reading}
                     gate={reading ? gate : undefined}
                   />
-                  <div className="grid gap-3 lg:grid-cols-3">
-                    {RENDERS.map((r) => (
-                      <HypothesisColumn
-                        key={r.id}
-                        render={r}
-                        beats={chains[r.id]}
-                        chainLabel={reading?.beats ? reading.label : undefined}
-                        adopted={adopted === r.id}
-                        onAdopt={() => setAdopted(adopted === r.id ? null : r.id)}
-                        expanded={expanded === r.id}
-                        onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
-                      />
-                    ))}
+                  {/* THE FACE SWITCH — one control, both directions, discards
+                      nothing. It writes only the mode record; the chains, the
+                      gate, the adoption and the beats modal are shared by both
+                      faces, so switching is a change of lens, never of state. */}
+                  <div className="mb-3 flex justify-end">
+                    <button
+                      type="button"
+                      data-testid="script-face-switch"
+                      onClick={() => face.set(face.face === "guided" ? "expert" : "guided")}
+                      className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-[11px] text-white/50 transition hover:border-cyan-400/40 hover:text-cyan-200"
+                    >
+                      {face.face === "guided" ? "full controls" : "guided"}
+                    </button>
                   </div>
+                  {face.face === "guided" ? (
+                    <CandidatesDuel
+                      renders={RENDERS}
+                      chains={chains}
+                      chainLabel={reading?.beats ? reading.label : undefined}
+                      gate={gate}
+                      adoptedId={adoption.adoptedId}
+                      onAdopt={adoption.adopt}
+                      onReadBeats={setExpanded}
+                    />
+                  ) : (
+                    <div className="grid gap-3 lg:grid-cols-3">
+                      {RENDERS.map((r) => (
+                        <HypothesisColumn
+                          key={r.id}
+                          render={r}
+                          beats={chains[r.id]}
+                          chainLabel={reading?.beats ? reading.label : undefined}
+                          adopted={adoption.adoptedId === r.id}
+                          onAdopt={() =>
+                            adoption.adopt(adoption.adoptedId === r.id ? null : r.id)
+                          }
+                          expanded={expanded === r.id}
+                          onToggle={() => setExpanded(expanded === r.id ? null : r.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </>
               )}
 

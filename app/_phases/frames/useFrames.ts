@@ -29,11 +29,12 @@ import {
   reportStorageTrouble,
   saveStep,
   type BeatPicksStepData,
+  type ScriptAdoptionStepData,
   type StorageTrouble,
   type TrailerCutStepData,
 } from "../_shared/stepStore";
 import { FACTS } from "../_shared/notebook/facts";
-import { RENDERS } from "../script/renders";
+import { ADOPTION_PHASE, resolveExplainerRender } from "../script/candidates/adoption";
 import {
   absentTrailerRender,
   authoredClipCount,
@@ -62,11 +63,12 @@ const PICKS_PHASE = "research-beats";
  *  it exists to read. */
 const TRAILER_PHASE = "script-trailer";
 
-/** The explainer's candidate chain. Still positional, still `RENDERS[0]`, and
- *  the reason is written on `explainerRender` in ./frames — nothing in this app
- *  records WHICH candidate script a project accepted, so there is nothing in the
- *  record to resolve against yet. What the record now decides is the LANE. */
-const FIXTURE = RENDERS[0];
+/** Step 2's adoption record — WHICH candidate script this project adopted.
+ *  The record `frames.ts:300` names as missing exists now: the Candidates duel
+ *  writes it, and `resolveExplainerRender` (script/candidates/adoption.ts) is
+ *  the one resolution rule — absent, cleared (`""`) and unknown ids all fall
+ *  back to the positional default, so a project that never adopted keeps
+ *  exactly the behaviour it had. */
 
 /**
  * What `render` reads as before the project record has been read.
@@ -210,7 +212,19 @@ export function useFrames(projectId: string) {
       }
 
       if (framesLane(p?.discipline, mode) === "explainer") {
-        setSource(explainerRender(FIXTURE));
+        // The adoption read mirrors the picks read above: `readStep`, because a
+        // FAILED read and a never-written key mean opposite things here too.
+        // Resolving the fallback over a record that is on disk and out of reach
+        // would derive RENDERS[0] frames, flip the staleness key, and stand
+        // ready to overwrite a cut about a render the creator actually chose.
+        const adoption = await readStep<ScriptAdoptionStepData>(projectId, ADOPTION_PHASE);
+        if (!alive) return;
+        if (!adoption.ok) {
+          setLoadTrouble(adoption.trouble);
+          setStepLoaded(true);
+          return;
+        }
+        setSource(explainerRender(resolveExplainerRender(adoption.data?.renderId)));
         return;
       }
 
@@ -265,7 +279,12 @@ export function useFrames(projectId: string) {
         sameCut && stored
           ? // A cut stored before Frames inherited the clip has no clip on it.
             withClips(stored.frames)
-          : framesFor(source, FIXTURE),
+          : // The fixture is re-resolved from the source's OWN id: for an
+            // explainer, `source.id` is the adopted render's id, so the frames
+            // derive from the chain the adoption points at rather than the
+            // positional default. A trailer source derives no frames and the
+            // argument is unread on that branch.
+            framesFor(source, resolveExplainerRender(source.id)),
       );
       // The spend belongs to the cut it directed. A different render throws the
       // frames away, and carrying its bill onto the new ones would be the same
@@ -485,7 +504,7 @@ export function useFrames(projectId: string) {
   const reset = useCallback(() => {
     // Nothing to reset to until the chain is known — and re-deriving against
     // `UNRESOLVED` would empty the ledger over a cut that is merely still loading.
-    if (source) setFrames(framesFor(source, FIXTURE));
+    if (source) setFrames(framesFor(source, resolveExplainerRender(source.id)));
   }, [source]);
 
   /* ── authoring ──────────────────────────────────────────────────────────── */
