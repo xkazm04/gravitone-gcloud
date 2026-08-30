@@ -143,6 +143,14 @@ const config = [
     // PROMOTION TRIGGER (falsifiable): when a bucket below reaches 0 in
     // `lint-baseline.json`, delete its entry there AND its entry here, so the rule
     // stands at the plain blocking severity the preset gives it.
+    //
+    // SCOPED to the extensions the Next preset actually registers the
+    // react-hooks plugin for. Without the `files` key this object applies to
+    // EVERY file ESLint walks, and on a file no preset object covers (measured
+    // 2026-08-30: a stray `.cjs` loader) the rule reference resolves against an
+    // empty plugin table and the WHOLE `eslint .` run dies with "could not find
+    // plugin react-hooks" — one file type kills the gate for the entire tree.
+    files: ["**/*.{js,mjs,jsx,ts,tsx,mts}"],
     rules: {
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/immutability": "warn",
