@@ -27,7 +27,7 @@
 // longer take the false sentence away as a finding, and the run's own words are
 // still there to be read.
 
-import { revisionsOf, standingOf, type Effect, type FollowUpRequest } from "../followup";
+import { revisionsOf, standingOf, type Effect, type FollowUpRequest, type FollowUpResult as FollowUpResultData } from "../followup";
 
 const EFFECT_TONE: Record<Effect["kind"], { label: string; cls: string }> = {
   confirms: { label: "confirms", cls: "border-emerald-400/35 bg-emerald-400/[0.07] text-emerald-200" },
@@ -37,7 +37,15 @@ const EFFECT_TONE: Record<Effect["kind"], { label: string; cls: string }> = {
   "adds-fact": { label: "adds", cls: "border-white/15 bg-white/[0.05] text-white/70" },
 };
 
-export const VERDICT_TONE: Record<string, string> = {
+// Keyed to `FollowUpResult["verdict"]`, not `string`: a follow-up result
+// carries the notebook's judgement of itself, and that judgement is a closed
+// set on purpose (see the file header — a queue that can only add is a queue
+// that launders what it finds). A fifth verdict added to the union would
+// compile clean here and read as `undefined` at `VERDICT_TONE[r.result.verdict]`
+// in FollowUpQueue — a colour class silently dropped from a badge that exists
+// specifically to make bad news visible. Typing the key makes that addition
+// fail at this map instead of failing silently on screen.
+export const VERDICT_TONE: Record<FollowUpResultData["verdict"], string> = {
   strengthened: "text-emerald-300",
   weakened: "text-amber-200",
   resolved: "text-cyan-200",

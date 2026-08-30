@@ -6,7 +6,7 @@
 // judgement steps, and the searches are named with the domains
 // pipeline/RESEARCH-PROMPT.md § Phase 1 requires.
 
-import type { TracePhase, TraceStep } from "./types";
+import type { RunOutcome, TracePhase, TraceStep } from "./types";
 
 export const PHASE_LABEL: Record<TracePhase, string> = {
   spine: "1 · factual spine",
@@ -39,24 +39,43 @@ export const TRACE: TraceStep[] = [
 ];
 
 /** The three ways a run can end, as a driveable prototype control. Two are not
- *  a notebook, and only one of those two is a defect. */
-export const OUTCOMES = [
+ *  a notebook, and only one of those two is a defect.
+ *
+ *  This list used to be a bare untyped array literal. Its sibling `STOP_AT`
+ *  in `useResearchRun.ts` is `Record<RunOutcome, number>`, so a fourth ending
+ *  added to `RunOutcome` fails the build right there — but this array had
+ *  nothing tying its `key`s back to the same union, so the same addition
+ *  would compile here, the picker in `controls.tsx` would render the same
+ *  three pills it always has, and the new ending would simply never be
+ *  reachable from the UI. Held to the union the way `structure.ts` holds
+ *  `ALL_RULES` to `StructureRule`: the array `satisfies` the union's shape,
+ *  and `OUTCOMES_ARE_EXHAUSTIVE` fails to compile if a member goes missing. */
+const OUTCOMES_LIST = [
   {
-    key: "notebook" as const,
+    key: "notebook",
     label: "returns a notebook",
     hint: "the run that happened — 6 searches, 19 facts, 3 renders",
   },
   {
-    key: "no-tension" as const,
+    key: "no-tension",
     label: "finds no tension",
     hint: "a successful run with no video in it. The prompt requires it to stop and say so.",
   },
   {
-    key: "process-failed" as const,
+    key: "process-failed",
     label: "the local process dies",
     hint: "the CLI is a process on this machine — it can exit non-zero mid-phase",
   },
-];
+] as const satisfies readonly { key: RunOutcome; label: string; hint: string }[];
+
+export const OUTCOMES: readonly { key: RunOutcome; label: string; hint: string }[] = OUTCOMES_LIST;
+
+type Exhaustive<Union, Listed> = [Exclude<Union, Listed>] extends [never] ? true : never;
+
+export const OUTCOMES_ARE_EXHAUSTIVE: Exhaustive<
+  RunOutcome,
+  (typeof OUTCOMES_LIST)[number]["key"]
+> = true;
 
 export const NO_TENSION_REASON =
   "Six searches, no tension. What people believe about this topic and what the evidence shows are the same thing — there is no expectation to break. A topic with no tension is not a video yet, and writing one anyway produces a wiki timeline. Reporting this is the correct end of the run, not a failure of it.";

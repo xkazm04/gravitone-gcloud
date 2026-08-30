@@ -5,8 +5,17 @@
 // every tile here, so it gets the entire surface rather than a pill inside one.
 
 import type { BeatVariant } from "./beats";
+import type { RaisedVariable } from "../../script/trailer/types";
 
-const RAISED_TONE: Record<string, string> = {
+// Keyed to `RaisedVariable`, not `string`: the doctrine's list is closed
+// (scale · threat · speed · intimacy · cost — escalation-without-mechanism.md
+// § What a rung is made of), but nothing before this line enforced that this
+// map actually covers it. A sixth member added to the union would compile
+// clean and index this object as `undefined`, and `${undefined}` in a
+// template literal is the literal string "undefined" landing in a
+// `className` — invisible in the diff, visible only as unstyled chips on
+// screen. Typing the key stops the build at the map instead.
+const RAISED_TONE: Record<RaisedVariable, string> = {
   scale: "border-cyan-400/25 bg-cyan-400/[0.06] text-cyan-200/90",
   threat: "border-rose-400/35 bg-rose-400/[0.08] text-rose-200",
   speed: "border-amber-400/30 bg-amber-400/[0.06] text-amber-200",
