@@ -188,6 +188,9 @@ A notebook is done when:
       descope.**
 - [ ] render check: every factual assertion in a rendered script traces to a fact id, and every
       `unknowns[].impact` constraint was checked against the render mechanically, not hand-attested
+- [ ] every `claim` (facts, conclusions, the steel-man) is a headline — one declarative clause,
+      ≤ 90 characters — with the argument and qualifications in its paired long field
+      (NOTEBOOK-SCHEMA § `claim`). A claim that needs three sentences is two claims and a note.
 
 ## Cost note
 

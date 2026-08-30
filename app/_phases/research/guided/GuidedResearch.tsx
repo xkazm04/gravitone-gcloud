@@ -23,13 +23,9 @@
 import { useMemo, useState } from "react";
 
 import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
-import DeckCard, { type DeckCardSpec } from "@/components/ui/deck/DeckCard";
+import DeckCard from "@/components/ui/deck/DeckCard";
 import DeckStage from "@/components/ui/deck/DeckStage";
-import { DeckArtView } from "@/components/ui/deck/artVariants";
-import { useDeckReducedMotion } from "@/components/ui/deck/motionGuard";
-import { SURFACE } from "@/components/ui/tokens";
 import { Eyebrow } from "@/components/ui/Primitives";
-import { motion } from "motion/react";
 
 import type { GuidedModeStepData } from "../../_shared/stepStore";
 import { ConfirmScope } from "../_parts/ScopeGate";
@@ -61,77 +57,6 @@ export function FaceSwitch({ face, onSwitch }: { face: Face; onSwitch: (f: Face)
   );
 }
 
-/* ── the steel-man's card — dealt, never pickable ─────────────────────────── */
-
-// DeckCard always lays its whole-card pick target over the card, and its
-// `disabled` dims the card to half opacity — both wrong here: the steel-man is
-// not a switched-off choice, it is a card with no choice IN it. So this is the
-// deck's card frame with the target simply absent, stating what that absence
-// means. The entrance mirrors DeckCard's deal spring (same numbers) so the two
-// kinds of card land as one hand; reduced motion collapses it to opacity the
-// same way.
-function RequiredCard({
-  spec,
-  why,
-  dealDelay,
-}: {
-  spec: DeckCardSpec;
-  why?: string;
-  dealDelay: number;
-}) {
-  const reduced = useDeckReducedMotion();
-  return (
-    <motion.article
-      data-testid={`deck-card-${spec.id}`}
-      initial={reduced ? { opacity: 0 } : { opacity: 0, y: 26, scale: 0.9 }}
-      animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-      transition={
-        reduced
-          ? { duration: 0.2 }
-          : {
-              type: "spring",
-              stiffness: 240,
-              damping: 26,
-              mass: 0.9,
-              delay: dealDelay,
-              opacity: { duration: 0.35, delay: dealDelay },
-            }
-      }
-      className={`relative flex h-full flex-col overflow-hidden rounded-2xl ${SURFACE}`}
-    >
-      <div className="relative h-28 shrink-0 overflow-hidden sm:h-32">
-        <DeckArtView art={spec.art} title={spec.title} />
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[var(--gt-ink)]/60 to-transparent"
-        />
-      </div>
-      <div className="flex grow flex-col gap-2 p-4">
-        {spec.eyebrow && (
-          <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">
-            {spec.eyebrow}
-          </span>
-        )}
-        <h3 className="font-instrument text-xl leading-snug text-slate-100">{spec.title}</h3>
-        {spec.body && (
-          <p className="font-hanken line-clamp-4 text-[13px] leading-relaxed text-slate-400">
-            {spec.body}
-          </p>
-        )}
-        {/* ScopeChip's words for a required card, so the two faces agree. */}
-        <span className="font-jetbrains w-fit rounded-full border border-amber-400/30 bg-amber-400/[0.06] px-2 py-0.5 text-[10px] tracking-[0.1em] text-amber-200">
-          locked in scope — always travels
-        </span>
-        {why && (
-          <p className="font-jetbrains mt-auto pt-1 text-[10px] leading-relaxed text-white/35">
-            {why}
-          </p>
-        )}
-      </div>
-    </motion.article>
-  );
-}
-
 /* ── a stage of keep/cut cards over the live scope ────────────────────────── */
 
 /** Deals `cards` and writes every pick THROUGH the scope api — `toggle` is the
@@ -148,7 +73,24 @@ function ChoiceDeck({ cards, api }: { cards: Card[]; api: ScopeApi }) {
       onPick={() => undefined}
       renderCard={({ spec, dealDelay }) => {
         const card = byId.get(spec.id);
-        if (card?.required) return <RequiredCard spec={spec} why={card.requiredWhy} dealDelay={dealDelay} />;
+        if (card?.required) {
+          // The steel-man: a card with no choice IN it — DeckCard's own
+          // `pickable: false` face (no target, no lift), dealt with the hand.
+          // ScopeChip's words plus the reason it cannot leave.
+          return (
+            <DeckCard
+              spec={{
+                ...spec,
+                pickable: false,
+                chips: [{ label: "locked in scope — always travels", tone: "amber" }],
+                footnote: card.requiredWhy ?? spec.footnote,
+              }}
+              picked={false}
+              onPick={() => undefined}
+              dealDelay={dealDelay}
+            />
+          );
+        }
         const kept = !stateOf(api.scope, spec.id).descoped;
         return (
           <DeckCard

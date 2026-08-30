@@ -82,6 +82,7 @@ const CHIP = "font-jetbrains rounded border px-1.5 py-0.5 text-[10px] tracking-[
 
 function DuelCardBody({
   render: r,
+  chain,
   words,
   rewritten,
   chainLabel,
@@ -92,6 +93,8 @@ function DuelCardBody({
   onReadBeats,
 }: {
   render: ScriptRender;
+  /** The chain this card is ABOUT — the front's arc bullets read from it. */
+  chain: Beat[];
   words: number;
   rewritten: boolean;
   chainLabel?: string;
@@ -103,21 +106,42 @@ function DuelCardBody({
 }) {
   const reduced = useDeckReducedMotion();
 
+  // WHAT IS IN THIS CUT, on the front — the operator's rule (2026-08-30): the
+  // reader identifies a candidate from content bullets, not from a metadata
+  // spread hoped to add up. Three beats mark the arc — where it opens, where
+  // it turns (the middle of ITS OWN chain, so a recalibrated version shows its
+  // own shape), where it lands.
+  const arc: { word: string; beat: Beat }[] = chain.length
+    ? [
+        { word: "opens", beat: chain[0] },
+        ...(chain.length > 2 ? [{ word: "turns", beat: chain[Math.floor(chain.length / 2)] }] : []),
+        ...(chain.length > 1 ? [{ word: "lands", beat: chain[chain.length - 1] }] : []),
+      ]
+    : [];
+
   return (
     <div className="flex grow flex-col gap-2 p-4">
       <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">
         {r.engineLabel}
       </span>
       <h3 className="font-instrument text-xl leading-snug text-slate-100">{r.title}</h3>
-      <p className="font-hanken text-[13px] leading-relaxed text-slate-400 transition-colors duration-200 ease-linear group-hover:text-slate-200">
-        pleasure: {r.pleasure}. Reads like {r.feelsLike}.
-      </p>
+      {arc.length > 0 && (
+        <ul className="space-y-1">
+          {arc.map(({ word, beat }) => (
+            <li key={word} className="font-hanken flex gap-2 text-[12.5px] leading-snug">
+              <span className="font-jetbrains shrink-0 pt-px text-[10px] tracking-[0.1em] text-white/35 uppercase">
+                {word}
+              </span>
+              <span className="text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
+                {beat.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className={`${CHIP} border-cyan-400/30 bg-cyan-400/[0.06] text-cyan-200/90`}>
-          {r.bestFor}
-        </span>
         <span className={`${CHIP} border-white/12 bg-white/[0.04] text-white/60`}>
-          {mmss(r.durationS)} · {words} words
+          {chain.length} beats · {mmss(r.durationS)}
         </span>
       </div>
       <p className="font-jetbrains text-[11px] leading-relaxed text-amber-200/85">
@@ -140,6 +164,20 @@ function DuelCardBody({
           className="overflow-hidden"
         >
           <div className="space-y-2.5 border-t border-white/8 pt-3">
+            {/* The pitch and its fit moved here from the front (operator's
+                verdict): they are the render's self-description, and the
+                front's job is the CONTENT — the arc bullets above. */}
+            <p className="font-hanken text-[13px] leading-relaxed text-slate-400">
+              pleasure: {r.pleasure}. Reads like {r.feelsLike}.
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className={`${CHIP} border-cyan-400/30 bg-cyan-400/[0.06] text-cyan-200/90`}>
+                {r.bestFor}
+              </span>
+              <span className={`${CHIP} border-white/12 bg-white/[0.04] text-white/60`}>
+                {words} words
+              </span>
+            </div>
             {r.turns !== null && r.turnBand ? (
               <BandMeter
                 label="turns"
@@ -171,11 +209,13 @@ function DuelCardBody({
                 re-measured.
               </p>
             )}
+            {/* Counts, not a score, and IN the depth with the rest of the
+                measurements — the front no longer stacks a metadata spread.
+                Same data, same vocabulary, one gesture away. */}
+            <VerdictCounts report={report} checks={r.checks} />
           </div>
         </motion.div>
       )}
-
-      <VerdictCounts report={report} checks={r.checks} />
 
       {/* Actions sit ABOVE the whole-card pick target (z-20 over its z-10) —
           the deck's own rule for anything layered on a card. */}
@@ -257,6 +297,7 @@ export default function CandidatesDuel({
             <DeckCard spec={spec} picked={picked} onPick={onAdopt} dealDelay={dealDelay}>
               <DuelCardBody
                 render={r}
+                chain={chain}
                 words={words}
                 rewritten={rewritten}
                 chainLabel={chainLabel}
