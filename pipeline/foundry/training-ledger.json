@@ -1,0 +1,4 @@
+{
+  "_purpose": "One row per human-gated dojo improvement. Append-only, written by Dojo commits from the /foundry gate. Git-tracked because it is the cross-machine sync channel between the GPU machine's training loop and this checkout: the media stays in gitignored foundry-out/ and dies with the commit, while this file and training/thumbs/ travel. Rows with reflected:false are the next cycle's reflection work queue -- the loop edits the named prompt surface for each, then stamps the commit sha into `reflected` so the row is never worked twice.",
+  "rows": []
+}

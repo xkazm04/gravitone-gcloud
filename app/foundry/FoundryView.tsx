@@ -36,6 +36,7 @@ import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/l
 import { usePolling } from "@/lib/usePolling";
 
 import { CullGrid } from "./CullGrid";
+import { DojoView } from "./DojoView";
 import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
 import { StylesShelf } from "./StylesShelf";
@@ -50,6 +51,11 @@ const TABS = [
     blurb: "Drop a gallery. Its looks are read back, grouped into styles, replicated from words alone with self-critique, then transferred onto a scene the gallery never showed. Keep the styles that held; they join the catalogue.",
   },
   { id: "styles", label: "Styles", blurb: "The catalogue the forge draws from, and the evidence each style has earned." },
+  {
+    id: "dojo",
+    label: "Dojo",
+    blurb: "Gate the training loop's A/B cycles: read each claimed improvement's seed-matched pairs, approve what genuinely held, and commit — the media is culled, the verdicts are what the loop learns from.",
+  },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
@@ -265,6 +271,8 @@ export default function FoundryView() {
             <StylesShelf />
           ) : tab === "extract" ? (
             <ExtractView />
+          ) : tab === "dojo" ? (
+            <DojoView />
           ) : (
             <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
               <aside>
