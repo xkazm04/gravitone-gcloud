@@ -70,6 +70,35 @@ export interface BeatPicksStepData {
   savedAt?: number;
 }
 
+/** Which face of a step the creator works in — the guided card wizard or the
+ *  full expert surface — under phase keys `"research-mode"` and `"script-mode"`.
+ *
+ *  Its own record per step for the cadence reason above, and its own TYPE
+ *  because the mode must never ride along with a step's decisions: switching
+ *  faces discards nothing (the ModeChooser doctrine), so the record that says
+ *  "guided" cannot be the record that holds what was decided there. Absent
+ *  means never chosen — surfaces default to guided only while the step has no
+ *  prior decisions, and that default is computed, never stored. */
+export interface GuidedModeStepData {
+  mode: "guided" | "expert";
+  savedAt?: number;
+}
+
+/** WHICH candidate script this project adopted, under phase key
+ *  `"script-adopted"` — the record frames.ts:300 names as missing.
+ *
+ *  One field on purpose: adoption is a pointer into the render registry, not a
+ *  copy of the render. The Frames step resolves it against RENDER_BY_ID and
+ *  falls back to the positional default when the id is unknown or the record
+ *  absent — absence keeps today's behaviour, honestly. Separate from
+ *  `"script-versions"` because the duel writes on a card click and the version
+ *  ledger on accept, and one record shared between them would have each save
+ *  erase the other's field. */
+export interface ScriptAdoptionStepData {
+  renderId: string;
+  savedAt?: number;
+}
+
 /** The trailer half of the Script step, under phase key `"script-trailer"`.
  *
  *  The cut is composed ONCE from the confirmed spine in `research-beats` and
