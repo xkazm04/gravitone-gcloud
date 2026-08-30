@@ -46,8 +46,9 @@ export const commitRun = (id: string, undecidedAs: "reject" | "leave") =>
   });
 
 /** URL of a run file, for an <img>. `kind` picks the output root — the
- *  forge's runs by default, the Extract module's with "extract". */
-export function fileUrl(run: string, rel: string, kind?: "extract"): string {
+ *  forge's runs by default, the Extract module's with "extract", the Dojo's
+ *  cycles with "training". */
+export function fileUrl(run: string, rel: string, kind?: "extract" | "training"): string {
   const k = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET?.trim();
   const q = new URLSearchParams({ run, path: rel, ...(kind ? { kind } : {}), ...(k ? { k } : {}) });
   return `/api/foundry/file?${q.toString()}`;
