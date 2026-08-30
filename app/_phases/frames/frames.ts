@@ -297,15 +297,17 @@ export function framesLane(
 /**
  * The explainer's chain - the fixture, carried through verbatim.
  *
- * AND THE FIXTURE IS STILL CHOSEN BY POSITION, WHICH IS DELIBERATE AND WORTH
- * SAYING OUT LOUD. `RENDERS` is a fixture list, not a per-project record:
- * nothing in this app stores WHICH candidate script a project accepted, so there
- * is nothing in the record to resolve against yet. Picking by `project.template`
- * instead would re-cut two of the five seeded explainer projects -
- * `short-form-clip` matches `derived-short`, which is six beats rather than
- * sixteen - and an explainer's frame count changing is the one thing this slice
- * must not do. The lane comes from the record; the fixture waits for a record to
- * come from.
+ * WHICH FIXTURE ARRIVES HERE IS THE PROJECT'S OWN CHOICE NOW. The record this
+ * comment used to name as missing exists: `ScriptAdoptionStepData` under phase
+ * key `"script-adopted"`, written by the Candidates duel and resolved by the
+ * ONE rule in `app/_phases/script/candidates/adoption.ts`
+ * (`resolveExplainerRender` — absent, cleared and unknown all fall back to the
+ * positional default, `RENDERS[0]`, so a project that never adopted keeps the
+ * behaviour this slice always had). Picking by `project.template` instead
+ * would still be wrong for the same reason as before: `short-form-clip`
+ * matches `derived-short`, six beats rather than sixteen, and an explainer's
+ * frame count changing UNDER a project that decided nothing is the one thing
+ * this slice must not do.
  *
  * `template` here is the FIXTURE's, not the project's, and that is deliberate
  * too: the question the shot lane asks is "is this CHAIN a promotional cut", and
