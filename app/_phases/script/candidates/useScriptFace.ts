@@ -16,7 +16,7 @@
 // or an adoption record (cleared included — un-adopting is also a decision
 // made on this surface).
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 
 import { saveStep, type GuidedModeStepData } from "../../_shared/stepStore";
 import { useStepFor } from "../../_shared/useLoadFor";
@@ -44,13 +44,16 @@ export function useScriptFace(
    *  which surface they are standing on. Only the creator's own switch (or a
    *  reload, which re-latches against the new facts) changes the face. */
   const [latched, setLatched] = useState<{ for: string; face: ScriptFace } | null>(null);
-  useEffect(() => {
-    if (!prior.settled || latched?.for === projectId) return;
+  if (prior.settled && latched?.for !== projectId) {
+    // React's documented render-adjustment form (not an effect): the set runs
+    // during the same render that first sees `settled`, React restarts the
+    // render with the latch in place, and nothing was ever painted unlatched.
+    // The guard makes it fire once per project and never loop.
     setLatched({
       for: projectId,
       face: prior.hasVersionWork || prior.hasAdoption ? "expert" : "guided",
     });
-  }, [projectId, prior.settled, prior.hasVersionWork, prior.hasAdoption, latched]);
+  }
 
   /** The face on screen: the stored choice wins; absent one, the latched
    *  default (guided only while nothing had been decided here at open). The
