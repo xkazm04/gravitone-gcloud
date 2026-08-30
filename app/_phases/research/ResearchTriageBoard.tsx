@@ -69,10 +69,15 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
         <ScopeBar api={api} />
       </header>
 
-      {/* column filter — the board's one navigation affordance */}
-      <div className="font-jetbrains flex flex-wrap gap-1.5 text-[10px]">
+      {/* Column filter — the board's one navigation affordance. These are
+          TOGGLES, so they carry `aria-pressed`: their only pressed signal is a
+          cyan border, and every other toggle in this step already says it out
+          loud (CardTile, beats/VariantTile). */}
+      <div className="font-jetbrains flex flex-wrap gap-1.5 text-[10px]" role="group" aria-label="Filter columns">
         <button
+          type="button"
           onClick={() => setFocus(null)}
+          aria-pressed={focus === null}
           className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
             focus === null ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/40 hover:text-white/70"
           }`}
@@ -85,7 +90,9 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
           return (
             <button
               key={d.id}
+              type="button"
               onClick={() => setFocus(focus === d.id ? null : d.id)}
+              aria-pressed={focus === d.id}
               className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
                 focus === d.id
                   ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
@@ -99,6 +106,28 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
           );
         })}
       </div>
+
+      {/* WHAT CHANGED, RATHER THAN EVERYTHING THERE IS. `aria-live="polite"`
+          used to sit on the grid below, which put all 31 cards — every claim,
+          confidence, source and wound warning on the board — inside one live
+          region. Toggling a single card's scope mutates that region, so a
+          screen reader re-announced the whole board for a click whose result
+          the card's own control already states: the overlay button carries
+          `aria-pressed` and an aria-label that names the action and the claim.
+          A live region that fires on every sweep of a column is one a reader
+          turns off, and then the announcement that IS worth having goes with
+          it.
+
+          Filtering is that announcement. It replaces the grid's contents while
+          focus stays on the chip, so nothing else would say what happened — and
+          it is a count, not a recital. */}
+      <p aria-live="polite" className="sr-only">
+        {focus === null
+          ? `Showing all ${columns.length} columns.`
+          : shown.length === 0
+            ? "That column is no longer on the board."
+            : `Showing ${shown[0].label} only — ${countOf(shown[0]).total} card(s).`}
+      </p>
 
       <div className={`grid gap-4 ${focus ? "" : "lg:grid-cols-2 xl:grid-cols-3"}`}>
         {shown.map((d) => {
@@ -155,10 +184,25 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
                 </p>
               )}
 
+              {/* AN EMPTY COLUMN IS TWO DIFFERENT FACTS and this surface cannot
+                  tell which. `emptyByOmission` is "the run did not look here";
+                  `notApplicable` is "there is nothing here to look at", which
+                  is a finding rather than a failure. Both strings are required
+                  on every column precisely so the reviewer can decide — and
+                  until now only the first was ever drawn, so a legitimately
+                  empty column rendered an accusation, which is how a reviewer
+                  learns to ignore the accusation. The board states the alarm
+                  and then names the innocent reading rather than picking one it
+                  has no way to know. */}
               {empty ? (
-                <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
-                  the run produced nothing here — {emptyMeansOf(d)}
-                </p>
+                <>
+                  <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
+                    the run produced nothing here — {emptyMeansOf(d)}
+                  </p>
+                  <p className="font-jetbrains mt-1.5 text-[11px] leading-relaxed text-white/40">
+                    unless that is correct for this topic: {d.notApplicable}
+                  </p>
+                </>
               ) : (
                 <>
                   {noneKept && !orphan && (

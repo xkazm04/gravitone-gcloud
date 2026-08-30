@@ -70,9 +70,19 @@ function secretsMatch(a: string, b: string): boolean {
   // timingSafeEqual throws on unequal lengths; compare against a same-length
   // copy so the length difference itself is not a timing oracle, then AND the
   // real length check in.
+  //
+  // ORDER IS THE WHOLE POINT, and it used to be the other way round:
+  // `ab.length === bb.length && timingSafeEqual(...)`. `&&` short-circuits, so a
+  // presented secret of the wrong LENGTH returned before the constant-time
+  // compare ever ran — which is exactly the timing oracle the padding above was
+  // written to remove, restored by the operator that reads the two halves. The
+  // compare runs FIRST, unconditionally, and the length check is ANDed onto its
+  // result afterwards. Keep both operands eager: swapping in `&&` here, or
+  // hoisting the length test back to the left, silently reverts this.
   const padded = Buffer.alloc(ab.length);
   bb.copy(padded);
-  return ab.length === bb.length && timingSafeEqual(ab, padded);
+  const equal = timingSafeEqual(ab, padded);
+  return equal && ab.length === bb.length;
 }
 
 export type AccessVerdict = "ok" | "no-config" | "missing" | "wrong";

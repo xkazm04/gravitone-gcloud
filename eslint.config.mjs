@@ -2,8 +2,15 @@
 //
 // Base: `eslint-config-next/core-web-vitals` (the Next.js recommended set plus the
 // Core Web Vitals rules) and `eslint-config-next/typescript`. Both are peers of the
-// pinned `next@16.3.0`, so the rule content moves only when a dependency in this
-// repo moves — the input is deterministic given the tree.
+// `next` version this repo resolves, so the rule content moves only when a
+// dependency in this repo moves — the input is deterministic given the tree.
+//
+// THE VERSION IS NOT RESTATED HERE, and that is the point. It used to say
+// `next@16.3.0`; package.json now asks for 16.3.3 and `eslint-config-next` is a
+// caret RANGE, so a number written into a comment was wrong within one bump and
+// disagreed with .github/workflows/gates.yml, which had been updated. The
+// authority is package-lock.json — it is what `npm ci` installs, and it is what
+// makes "deterministic given the commit" true. Read the version there.
 //
 // Everything below the base is a deliberate, commented decision. Two kinds appear:
 //   (a) rules turned ON because this codebase already holds the convention by hand
@@ -24,6 +31,22 @@ const config = [
     // them would grade code this repo does not author.
     ignores: [
       "node_modules/**",
+      // AGENT TOOLING, AND — THE REASON THIS ENTRY EXISTS — AGENT WORKTREES.
+      //
+      // `.claude/worktrees/<name>/` holds a git worktree: a SECOND FULL CHECKOUT
+      // of this repository, `lib/` and `app/` and all. ESLint walks by path, not
+      // by git index, so with this line absent it graded both copies and every
+      // warning bucket came out at exactly twice its real size — measured
+      // 2026-08-29: 608 files walked, 309 of them under `.claude/`, and
+      // set-state-in-effect 14 -> 28, refs 3 -> 6, immutability 1 -> 2,
+      // exhaustive-deps 1 -> 2, each the true number doubled.
+      //
+      // The ratchet did its job and went red. What it could NOT say is that the
+      // rise was a second copy of the same debt rather than new debt, so the
+      // gate read as "you added fourteen hook violations" and pointed at a
+      // refactor nobody needed to do. A tree that is not this checkout is not
+      // this checkout's debt.
+      ".claude/**",
       ".next/**",
       ".next-*/**",
       "out/**",
@@ -97,8 +120,9 @@ const config = [
     //
     // `eslint-plugin-react-hooks@7` ships the React Compiler's own analyses at
     // BLOCKING severity. Their input is fully deterministic given this tree — the
-    // rule set is pinned to `eslint-config-next@16.3.0`, so the same commit
-    // re-linted next month gives the same verdict. What fails is the *current
+    // rule set is pinned by `eslint-config-next` at the version package-lock.json
+    // resolves, so the same commit re-linted next month gives the same verdict.
+    // What fails is the *current
     // state of the tree*, not the check. Per the registry's
     // `quality-gates/blocking-by-input-determinism`, that is the debt-shaped kind
     // of advisory: it carries an expiry by construction, and it is NOT permitted
@@ -119,6 +143,14 @@ const config = [
     // PROMOTION TRIGGER (falsifiable): when a bucket below reaches 0 in
     // `lint-baseline.json`, delete its entry there AND its entry here, so the rule
     // stands at the plain blocking severity the preset gives it.
+    //
+    // SCOPED to the extensions the Next preset actually registers the
+    // react-hooks plugin for. Without the `files` key this object applies to
+    // EVERY file ESLint walks, and on a file no preset object covers (measured
+    // 2026-08-30: a stray `.cjs` loader) the rule reference resolves against an
+    // empty plugin table and the WHOLE `eslint .` run dies with "could not find
+    // plugin react-hooks" — one file type kills the gate for the entire tree.
+    files: ["**/*.{js,mjs,jsx,ts,tsx,mts}"],
     rules: {
       "react-hooks/set-state-in-effect": "warn",
       "react-hooks/immutability": "warn",

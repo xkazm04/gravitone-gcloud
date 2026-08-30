@@ -22,7 +22,16 @@ import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useAuth } from "@/lib/useAuth";
-import { PHASES, getProject, parkAt, templateOf, type PhaseKey, type Project } from "@/lib/projects";
+import {
+  DISCIPLINE_LABEL,
+  PHASES,
+  disciplineOf,
+  getProject,
+  parkAt,
+  templateOf,
+  type PhaseKey,
+  type Project,
+} from "@/lib/projects";
 
 import LibraryShelves from "../../_library/LibraryShelves";
 import { STEPS } from "./phases";
@@ -182,13 +191,18 @@ export default function StudioView({ projectId }: { projectId: string }) {
 
   return (
     <StudioFrame>
-      <main className="pb-16">
+      {/* tabIndex={-1}: the landmark a closing dialog hands focus to when the
+          control it was opened from did not survive it — a restore onto a
+          detached node is silent, and focus falls to <body>. See
+          components/ui/Modal.tsx#restoreFocus. */}
+      <main tabIndex={-1} className="pb-16">
         <header className="pt-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex flex-wrap items-center gap-3">
               <Eyebrow>studio</Eyebrow>
               {project && (
                 <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-[11px] tracking-[0.14em] text-white/55 uppercase">
+                  {DISCIPLINE_LABEL[project.discipline ?? disciplineOf(project.template)]} ·{" "}
                   {templateOf(project.template).label} · {project.targetS}s
                 </span>
               )}

@@ -25,7 +25,7 @@ import type { StyleBlock } from "@/lib/themes";
 
 import { loadStep, saveStep } from "../../_shared/stepStore";
 import { subjectFor, type Frame, type Plate } from "../frames";
-import { altId, isSynthetic, SYNTH_MARK, type AltsColumn, type AltsCtl, type AltsStepData, type SceneAlts } from "./alts";
+import { altId, canRemoveAlt, isSynthetic, SYNTH_MARK, type AltsColumn, type AltsCtl, type AltsStepData, type SceneAlts } from "./alts";
 
 const PHASE = "frames-alts";
 const STRESS_FACTOR = 7;
@@ -78,7 +78,10 @@ export function useAlternatives({
         if (f.plate.state !== "ready") continue;
         next[f.id] = {
           activeId: null,
-          alts: [{ id: altId(f.id), plate: { ...f.plate }, createdAt: Date.now() }],
+          // `seeded` because this plate was bought in the assembly view, not
+          // here — see the field's own note in ./alts. Everything else about it
+          // is a normal alternative: selectable, removable, and the incumbent.
+          alts: [{ id: altId(f.id), plate: { ...f.plate }, createdAt: Date.now(), seeded: true }],
         };
         next[f.id].activeId = next[f.id].alts[0].id;
         changed = true;
@@ -202,31 +205,92 @@ export function useAlternatives({
     [frameOf, busy, block, references],
   );
 
+  /** Deleting the active alternative promotes the newest survivor — a cut that
+   *  silently keeps using a deleted picture would be lying.
+   *
+   *  THE ADOPTION HAPPENS OUTSIDE THE UPDATER, the way `select` above already
+   *  does it. It used to sit inside the `setByFrame` callback, which made it a
+   *  write to ANOTHER hook's state (`onAdopt` is `ctl.setFrames`) performed
+   *  during React's update phase. A state updater must be pure: React invokes it
+   *  twice under StrictMode, and `useVersions.ts` carries that exact warning
+   *  about its own note counter — "a state updater is invoked twice under
+   *  StrictMode, and a counter incremented in one would skip". This particular
+   *  write happens to be idempotent, so nothing visibly broke, which is the only
+   *  reason it survived. */
   const remove = useCallback(
     (frameId: string, id: string) => {
+      const scene = byFrame[frameId];
+      if (!scene) return;
+
+      // THE LAST ONE IS NOT DISCARDABLE, and the promotion above is exactly why.
+      //
+      // Deleting the active alternative promotes a survivor and adopts it, so
+      // the frame and this view keep agreeing. With one alternative there is no
+      // survivor: `activeId` goes null, the `activeId &&` guard below skips the
+      // adoption, and `onAdopt` is never called — so useFrames keeps the plate
+      // that was just discarded. The column then reads "no alternatives kept"
+      // while the assembly ledger, the canvas and the export all still render
+      // that exact picture. That is the precise failure this function's own
+      // docstring calls lying, reached by the one path that skips the fix.
+      //
+      // Refused rather than propagated. The other way to make the two agree is
+      // to clear the frame's plate — but the seed came from the ASSEMBLY view
+      // and was paid for there, so a control labelled "discard this
+      // alternative" would be silently emptying a composed frame. Refusing
+      // costs the user one click and nothing else.
+      //
+      // Synthetic columns are exempt: a clone has no frame to disagree with.
+      if (!canRemoveAlt(frameId, scene.alts.length)) return;
+
+      const alts = scene.alts.filter((a) => a.id !== id);
+      const activeId =
+        scene.activeId === id ? (alts.length ? alts[alts.length - 1].id : null) : scene.activeId;
+
       setByFrame((prev) => {
-        const scene = prev[frameId];
-        if (!scene) return prev;
-        const alts = scene.alts.filter((a) => a.id !== id);
-        // Deleting the active alternative promotes the newest survivor — a cut
-        // that silently keeps using a deleted picture would be lying.
-        const activeId =
-          scene.activeId === id ? (alts.length ? alts[alts.length - 1].id : null) : scene.activeId;
-        if (scene.activeId === id && activeId && !isSynthetic(frameId)) {
-          const next = alts.find((a) => a.id === activeId);
-          if (next) onAdopt(frameId, { ...next.plate });
-        }
-        return { ...prev, [frameId]: { activeId, alts } };
+        // Re-read inside the updater so the write is against the CURRENT store,
+        // not the render's snapshot; the promotion above only decides WHICH id.
+        const cur = prev[frameId];
+        if (!cur) return prev;
+        return {
+          ...prev,
+          [frameId]: {
+            activeId,
+            alts: cur.alts.filter((a) => a.id !== id),
+          },
+        };
       });
+
+      if (scene.activeId === id && activeId && !isSynthetic(frameId)) {
+        const next = alts.find((a) => a.id === activeId);
+        if (next) onAdopt(frameId, { ...next.plate });
+      }
     },
-    [onAdopt],
+    [byFrame, onAdopt],
   );
 
+  /** What the alternatives cost, BEYOND the plates already counted.
+   *
+   *  The seed is excluded, and it used to be the whole bug: a composed frame's
+   *  existing plate is kept as alternative #1 carrying its `costUsd`, so opening
+   *  this view on a finished sixteen-frame cut and generating nothing reported
+   *  the entire cost of the cut as "$X on alternatives" — money spent in the
+   *  assembly view, where `useFrames`'s `plateCost` already reports it. After a
+   *  selection it got worse rather than better: `onAdopt` moves the frame's
+   *  plate to the chosen alternative, so `plateCost` follows the new picture
+   *  while this figure still carried the old one, and the same dollars were in
+   *  neither place correctly.
+   *
+   *  A record written before `seeded` existed keeps counting its seed. See the
+   *  field's note for why that is stated rather than heuristically repaired. */
   const altCost = useMemo(
     () =>
       Object.entries(byFrame)
         .filter(([k]) => !isSynthetic(k))
-        .reduce((s, [, v]) => s + v.alts.reduce((a, alt) => a + (alt.plate.costUsd ?? 0), 0), 0),
+        .reduce(
+          (s, [, v]) =>
+            s + v.alts.reduce((a, alt) => a + (alt.seeded ? 0 : (alt.plate.costUsd ?? 0)), 0),
+          0,
+        ),
     [byFrame],
   );
 

@@ -7,6 +7,7 @@
 import FactRow from "../FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../notebook";
 import { H } from "./H";
+import { CurrencyBody, SourcesBody } from "./Shared";
 
 export default function ApparatusSections() {
   const n = NOTEBOOK;
@@ -94,6 +95,24 @@ export default function ApparatusSections() {
         })}
       </section>
 
+      {/* ALSO POPULATED AND ALSO DRAWN BY NOTHING until now. The questions the
+          run considered are how a reader tells which video this notebook was
+          aimed at — and the modal that promises to summarise nothing away was
+          dropping all five. */}
+      {n.candidateQuestions.length > 0 && (
+        <section className="space-y-2">
+          <H id="questions">candidate questions — what this run was aimed at</H>
+          <ul className="space-y-1.5">
+            {n.candidateQuestions.map((q) => (
+              <li key={q} className="flex gap-2 text-[13px] leading-relaxed text-slate-300">
+                <span aria-hidden className="text-white/25">—</span>
+                <span>{q}</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="space-y-2">
         <H id="fit">engine fit — reported, never chosen here</H>
         {n.engineFit.map((e) => (
@@ -116,24 +135,20 @@ export default function ApparatusSections() {
 
       <section className="space-y-1.5">
         <H id="currency">currency — how long is this true for</H>
-        <p className="text-sm text-slate-300">
-          half-life <span className="text-amber-200">{n.currency.halfLife}</span> — {n.currency.why}
-        </p>
-        <p className="font-jetbrains text-[11px] text-white/40">
-          expires first: {n.currency.expiresFirst.join(", ")} · durable: {n.currency.durable.join(", ")}
-        </p>
-        <p className="text-[13px] text-cyan-200/80">{n.currency.advice}</p>
+        {/* Inlined here: this artifact has no stat tile to carry it. */}
+        <CurrencyBody withHalfLife />
       </section>
 
       <section className="space-y-1.5">
-        <H id="sources">sources</H>
-        <ul className="space-y-1">
-          {n.sources.map((s) => (
-            <li key={s} className="font-jetbrains text-[11px] leading-relaxed text-white/45">
-              {s}
-            </li>
-          ))}
-        </ul>
+        {/* Bare "sources" reads as "every source this notebook has" — it is
+            the hand-written bibliography (NOTEBOOK.sources) only, a separate,
+            unrelated population from the distinct source strings the facts
+            above cite. Kept in step with the rail pill this heading is jumped
+            to from (SECTIONS in NotebookBody.tsx) and the Evidence Log's own
+            heading over the same body — see the comment on NOTEBOOK_COUNTS
+            in notebook.ts for the measurement. */}
+        <H id="sources">bibliography — the sources cited</H>
+        <SourcesBody />
       </section>
 
       <section className="space-y-1.5">

@@ -131,14 +131,30 @@ export type MovementRole =
    *  tail for the title and logos" — the duration is theirs and is NOT encoded. */
   | "tail";
 
-/** Spine order. The sequence, not the count, is what a checker can read. */
-export const SPINE_ORDER: readonly MovementRole[] = [
-  "cold-open",
-  "introduction",
-  "escalation",
-  "climax",
-  "tail",
-] as const;
+/**
+ * Where each role sits on the spine.
+ *
+ * A `Record<MovementRole, number>` rather than an array, and that is the whole
+ * point: `readonly MovementRole[]` type-checks every ENTRY and says nothing
+ * about whether every role is present. A sixth role added to the union above
+ * compiled cleanly with the list unchanged, and then `indexOf` returned -1 for
+ * it — which does not read as "unknown", it reads as "sorts before the cold
+ * open". A trailer's spine would have been silently reordered by a type the
+ * compiler was perfectly willing to check. A missing key here is a build error.
+ */
+export const SPINE_RANK: Record<MovementRole, number> = {
+  "cold-open": 0,
+  introduction: 1,
+  escalation: 2,
+  climax: 3,
+  tail: 4,
+};
+
+/** Spine order. The sequence, not the count, is what a checker can read.
+ *  Derived from the rank above so the two cannot disagree. */
+export const SPINE_ORDER: readonly MovementRole[] = (
+  Object.keys(SPINE_RANK) as MovementRole[]
+).sort((a, b) => SPINE_RANK[a] - SPINE_RANK[b]);
 
 /** The parts the spine treats as optional. Absence of anything else is a finding.
  *  "It is not mandatory — a work with an existing audience, or an opening image
@@ -388,18 +404,69 @@ export interface TrailerCut {
    plus the movement id. That projection is exported here rather than reproduced
    there, so the beat layer stays the one definition of a beat.
 
+   ONE DECLARATION, TWO ENDS — and this is the discharge of a merge-time TODO
+   that stood for months at `app/_phases/frames/shots.ts`. That file declared the
+   consumer's half of this seam a SECOND time, as `ShotSourceBeat`, and held the
+   two together with an `AssertAssignable` witness plus an instruction to "make
+   them one on merge". The branches merged; the unification did not happen —
+   because the TODO's premise, "field-by-field they already agree", was false.
+   The consumer is deliberately WIDER: that is what lets the explainer's
+   `ScriptRender.beats` satisfy it structurally, so an explainer decomposes into
+   no shots rather than failing to compile.
+
+   Both facts are true at once now. `ShotLaneSourceBeat` below is the ONE field
+   list, written at the consumer's width; `ShotLaneBeat` is that same list with
+   the three relaxations closed back up. The `extends` line is what proves the
+   producer still satisfies the consumer, checked by `tsc` on the declaration
+   itself rather than by a witness after the fact. The shot layer imports the
+   source shape and adds exactly one field of its own — `role` — because that
+   field is the shot layer's vocabulary and must not migrate here.
+
    Nothing below models a shot. */
 
-export interface ShotLaneBeat {
-  id: string;
-  movement: string;
+/**
+ * A beat AS THE SHOT LANE READS ONE — the widest shape that layer accepts.
+ *
+ * Three members are relaxed relative to what the beat layer emits, and each
+ * relaxation is a stated fact rather than a convenience:
+ *
+ *   · `id`, `movement`  the explainer's `Beat` has neither, and the shot layer
+ *                       must keep reading explainer beats in order to answer
+ *                       "no shots" about them. A shot derived from one carries
+ *                       `beatId: undefined`, which is why `Shot.beatAt` exists.
+ *   · `atS`             ABSENT means "nobody has parsed this; parse it".
+ *                       `null` means "it was parsed and it is not a timecode".
+ *                       Collapsing the two loses the second, which is the one a
+ *                       surface has to report.
+ *   · `kind: string`    the shot layer never enumerates beat kinds — it reads
+ *                       `kind` only through its own `ROLE_HINTS` table — so
+ *                       widening `TrailerBeatKind` must not break it.
+ */
+export interface ShotLaneSourceBeat {
+  id?: string;
+  movement?: string;
   at: string;
   /** Seconds, parsed from `at`. `null` when `at` is not a timecode — an
    *  unparseable position is reported, never defaulted to 0. */
-  atS: number | null;
-  kind: TrailerBeatKind;
+  atS?: number | null;
+  kind: string;
   label: string;
   text: string;
+}
+
+/**
+ * What the BEAT LAYER EMITS — the same fields, none of them relaxed.
+ *
+ * The `extends` IS the proof, and it replaces the witness the shot layer used to
+ * carry: every member below must be assignable to the member it narrows, so
+ * "everything the beat layer emits, the shot layer can read" is enforced by the
+ * declaration rather than by a type alias somebody could delete without noticing.
+ */
+export interface ShotLaneBeat extends ShotLaneSourceBeat {
+  id: string;
+  movement: string;
+  atS: number | null;
+  kind: TrailerBeatKind;
 }
 
 /** "m:ss" or "h:mm:ss" → seconds. Returns null rather than guessing. */

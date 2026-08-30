@@ -9,6 +9,8 @@
 // worse than a failed run — it silently produces sixteen frames that look
 // authored and are not.
 
+import type { Confidence } from "../_shared/notebook/types";
+
 import type { Frame, FrameElement, FrameText } from "./frames";
 
 export class SceneSpecError extends Error {}
@@ -112,12 +114,21 @@ export interface SceneSpecReport {
   missing: string[];
 }
 
+/** Fact id → the notebook's confidence grade for it. Optional so the
+ *  measurement harness can validate a spec with no notebook in hand; when it
+ *  is supplied the grade caps what the plate may assert. */
+export type FactGrades = ReadonlyMap<string, Confidence>;
+
 /** One scene, validated. Throws `SceneSpecError` describing the FIRST thing
  *  wrong with THIS beat — the caller catches it and moves to the next one.
  *
  *  Messages here are written to be read on the beat's own row, so they do not
  *  repeat the timestamp: the row already said it. */
-function parseScene(s: Record<string, unknown>, knownFactIds: Set<string>): Omit<SceneSpec, "beatAt"> {
+function parseScene(
+  s: Record<string, unknown>,
+  knownFactIds: Set<string>,
+  grades?: FactGrades,
+): Omit<SceneSpec, "beatAt"> {
   const subject = String(s.subject ?? "").trim();
   if (subject.length < 20) throw new SceneSpecError("The subject is too short to be a composition.");
   // The plate must not be asked for glyphs. A subject that says "labelled" or
@@ -164,6 +175,21 @@ function parseScene(s: Record<string, unknown>, knownFactIds: Set<string>): Omit
       throw new SceneSpecError("A figure cites no fact. Every number on screen must be traceable.");
     if (factId && !knownFactIds.has(factId))
       throw new SceneSpecError(`It cites "${factId}", which is not in this notebook.`);
+    // THE GRADE TRAVELS, OR THE CITATION LAUNDERS. Resolving the id proved the
+    // citation exists; it says nothing about what the citation PERMITS. A
+    // figure is the sharpest mark in the vocabulary — an exact value, on
+    // screen, with no hedging words available — and a fact the notebook graded
+    // `low` cannot support one. Drawn anyway it is indistinguishable from a
+    // `high` fact and carries a valid citation while doing it.
+    //
+    // Only `figure` is capped, and only at `low`. The other roles assert less;
+    // a medium-confidence figure is a real question this cannot answer, and
+    // guessing at it would reject good direction with total confidence — the
+    // reason there is no verb whitelist twenty lines up.
+    if (role === "figure" && factId && grades?.get(factId) === "low")
+      throw new SceneSpecError(
+        `It draws an exact figure from "${factId}", which the notebook grades low confidence. Draw the shape, the band or the disagreement — not the value. If the figure is right, re-grade the fact; do not out-draw the grade here.`,
+      );
     return {
       role: role as FrameText["role"],
       value: String(tx.value ?? "").slice(0, 90),
@@ -201,6 +227,7 @@ export function reviewSceneSpecs(
   raw: string,
   frames: Frame[],
   knownFactIds: Set<string>,
+  grades?: FactGrades,
 ): SceneSpecReport {
   const start = raw.indexOf("{");
   const end = raw.lastIndexOf("}");
@@ -230,7 +257,7 @@ export function reviewSceneSpecs(
     try {
       if (!byAt.has(beatAt)) throw new SceneSpecError(`"${beatAt}" is not a beat in this script.`);
       if (accepted.has(beatAt)) throw new SceneSpecError(`A second scene for ${beatAt} — the first one stands.`);
-      specs.push({ beatAt, ...parseScene(s, knownFactIds) });
+      specs.push({ beatAt, ...parseScene(s, knownFactIds, grades) });
       accepted.add(beatAt);
     } catch (e) {
       // Only OUR refusals are per-beat findings. A TypeError from this parser is
@@ -249,8 +276,13 @@ export function reviewSceneSpecs(
  *  Kept for `pipeline/direct-frames.mts`, the measurement harness, which wants
  *  the scenes and reports its own counts. Anything that has to TELL the user
  *  what happened wants `reviewSceneSpecs` — the findings are the point there. */
-export function parseSceneSpecs(raw: string, frames: Frame[], knownFactIds: Set<string>): SceneSpec[] {
-  return reviewSceneSpecs(raw, frames, knownFactIds).specs;
+export function parseSceneSpecs(
+  raw: string,
+  frames: Frame[],
+  knownFactIds: Set<string>,
+  grades?: FactGrades,
+): SceneSpec[] {
+  return reviewSceneSpecs(raw, frames, knownFactIds, grades).specs;
 }
 
 /** Fold authored specs into the frames, replacing the seeded layers.

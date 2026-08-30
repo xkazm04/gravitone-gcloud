@@ -19,6 +19,22 @@ export interface SceneAlt {
   id: string;
   plate: Plate;
   createdAt: number;
+  /** THE SEED, and it is not an alternative anybody bought here.
+   *
+   *  When a composed frame is first seen, its existing plate is kept as
+   *  alternative #1 so the scene does not start empty. That plate was generated
+   *  in the ASSEMBLY view and its cost is already reported there, by
+   *  `useFrames`'s `plateCost`. `altCost` says it counts what the alternatives
+   *  cost "beyond the plates already counted" and the header renders it as
+   *  "$X on alternatives" — both false for this row, which is why it is marked
+   *  rather than inferred.
+   *
+   *  Absent on a record written before this field existed. Those keep counting
+   *  their seed: nothing distinguishes it after the fact, because a scene whose
+   *  frame had no plate seeds nothing and its first alternative is a real
+   *  purchase. Stated rather than guessed at — a heuristic here would
+   *  under-report money, which is the worse direction to be wrong in. */
+  seeded?: boolean;
 }
 
 export interface SceneAlts {
@@ -61,6 +77,21 @@ export interface AltsCtl {
 }
 
 export const altId = (frameId: string) => `alt-${frameId}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+
+/** MAY THIS ALTERNATIVE BE DISCARDED?
+ *
+ *  One rule, one home. It was briefly two — a `<= 1` in the hook's `remove` and
+ *  a `> 1` in the contact sheet's card — which is two copies of one invariant
+ *  that must agree, and the shape that produced the defect it guards against in
+ *  the first place.
+ *
+ *  The rule: the LAST kept alternative of a real scene stays. Deleting the
+ *  active one promotes a survivor and adopts it, so the frame and the view keep
+ *  agreeing; with one alternative there is no survivor, nothing is adopted, and
+ *  useFrames goes on rendering the picture this view now reports as gone.
+ *  Synthetic columns are exempt — a clone has no frame to disagree with. */
+export const canRemoveAlt = (frameId: string, keptCount: number): boolean =>
+  isSynthetic(frameId) || keptCount > 1;
 
 export const SYNTH_MARK = "~s";
 export const isSynthetic = (frameId: string) => frameId.includes(SYNTH_MARK);

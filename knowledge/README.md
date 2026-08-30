@@ -80,16 +80,30 @@ first is disposable and gitignored; the second is the asset, and it is versioned
 | `short-form-clip` (≤60s) | `01-script` | n=3 · engines B/F/G · **nothing measured below 40s** |
 | `short-educational-video` | `02-frames` | **n=1** · style-lock method · nothing MEASURED · no `params.json` yet, on purpose |
 | `teaser` (≤60s) | `01-script` | **n=0** · doctrine only — the drop order; nothing measured here |
-| `trailer` (90–150s) | `01-script` | **n=0** · doctrine only — the full spine; nothing measured here |
+| `trailer` (90–150s) | `01-script` | **n=0** · doctrine only — the full spine; nothing measured here. **`params.json` since 2026-08-29**, every value labelled `doctrine_only`, every hedge in `not_encoded`; the structural checker reads it |
 | `cinematic` (60–120s) | `01-script` | **n=0** · doctrine only, and the thinnest — one `.vault/` dossier, one claim at n=1 |
-| all templates | 03-motion · 04-score · 05-cut | not started |
+| `trailer` | `03-score` | **n=0** for the craft · doctrine from two audio-generation subjects · **one MEASURED claim, n=3**, and it measures *this repo's own demo cues*, not the craft |
+| all templates | remaining score · cut steps | not started. (The table used to read `03-motion · 04-score · 05-cut`; Motion was retired into Frames — `lib/projects.ts` `RETIRED_PHASES` — so Score is step 03.) |
 
 **The three promotional templates are a different KIND of entry and the table should not hide it.**
 The three educational templates rest on transcripts read in full in this repo and a `metrics.py`
 that produced their numbers. These three rest on the AI registry's `trailer-structure` subject and
 a `.vault/` research dossier — **doctrine written elsewhere, quoted here, measured nowhere in this
-repo.** They ship no `params.json` for the same reason `02-frames` does not, and each one's
-`OPEN-QUESTIONS.md` records what a real one would need. Their contract also inverts the library's
+repo.** `teaser` and `cinematic` ship no `params.json` for the same reason `02-frames` does not, and
+each one's `OPEN-QUESTIONS.md` records what a real one would need.
+
+**`trailer` now ships two, and the reason is worth reading before copying the pattern.** Its rules
+were not only in a document — they were also TypeScript literals inside the checker that gates a
+creator's work, so the same rule existed twice with nothing holding the copies together and no
+citation on the copy the creator meets. The files exist to end that, and they answer the "half-real
+is read as wholly real" objection by **shape**: every value carries its own `evidence` label, `n`,
+`doctrine_only` flag, registry path and quoted line, and **every hedged quantity is refused into a
+`not_encoded` block** naming what would settle it. Nothing in either file is MEASURED except one
+block in `03-score` that measures *this repo's own fixture* and says so. The test to apply before
+adding a third: can every value carry its label, and is every number that cannot be labelled visibly
+refused rather than quietly defaulted? If not, the gap is still the better artifact.
+
+Their contract also inverts the library's
 default: a promotional cut succeeds by opening a debt it does not pay, so the rules in
 `CRAFT-BASELINE.md` about closing what you open read backwards for all three.
 

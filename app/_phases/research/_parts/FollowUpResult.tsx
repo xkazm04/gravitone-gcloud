@@ -27,7 +27,7 @@
 // longer take the false sentence away as a finding, and the run's own words are
 // still there to be read.
 
-import { revisionsOf, standingOf, type Effect, type FollowUpRequest } from "../followup";
+import { revisionsOf, standingOf, type Effect, type FollowUpRequest, type FollowUpResult as FollowUpResultData } from "../followup";
 
 const EFFECT_TONE: Record<Effect["kind"], { label: string; cls: string }> = {
   confirms: { label: "confirms", cls: "border-emerald-400/35 bg-emerald-400/[0.07] text-emerald-200" },
@@ -37,7 +37,15 @@ const EFFECT_TONE: Record<Effect["kind"], { label: string; cls: string }> = {
   "adds-fact": { label: "adds", cls: "border-white/15 bg-white/[0.05] text-white/70" },
 };
 
-export const VERDICT_TONE: Record<string, string> = {
+// Keyed to `FollowUpResult["verdict"]`, not `string`: a follow-up result
+// carries the notebook's judgement of itself, and that judgement is a closed
+// set on purpose (see the file header — a queue that can only add is a queue
+// that launders what it finds). A fifth verdict added to the union would
+// compile clean here and read as `undefined` at `VERDICT_TONE[r.result.verdict]`
+// in FollowUpQueue — a colour class silently dropped from a badge that exists
+// specifically to make bad news visible. Typing the key makes that addition
+// fail at this map instead of failing silently on screen.
+export const VERDICT_TONE: Record<FollowUpResultData["verdict"], string> = {
   strengthened: "text-emerald-300",
   weakened: "text-amber-200",
   resolved: "text-cyan-200",
@@ -160,6 +168,31 @@ export default function FollowUpResult({
         {landed > 0 &&
           ` ${landed} of ${result.effects.length} describe material this notebook already carries — these results were transcribed from a real terminal run, and that run's output is already in the fixture.`}
       </p>
+
+      {/* THE SOURCES, and not merely how many there are. The line above has
+          counted them since the day it was written and drew none of them, so a
+          result that came back with three URLs offered the reader the number
+          three — on the one surface whose entire subject is what the research
+          found and where it found it. A follow-up needs its provenance MORE
+          than the notebook does, not less: the notebook's sources are listed in
+          full (`SourcesBody`), and a follow-up is the only place a claim
+          arrives AFTER that log was written, with nothing else on screen
+          accounting for it.
+
+          Plain text, in the notebook's own style, rather than anchors. Nothing
+          in `app/_phases/` navigates out, and whether this prototype should is
+          a decision about the app — not one to make on the way past while
+          fixing a count. Copyable is the affordance the notebook's own sources
+          already give. */}
+      {result.sources.length > 0 && (
+        <ul data-testid="followup-sources" className="mt-1.5 space-y-1">
+          {result.sources.map((s) => (
+            <li key={s} className="font-jetbrains text-[10px] leading-relaxed break-all text-white/35">
+              {s}
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   );
 }

@@ -45,12 +45,31 @@
 // watch the cut "as a stranger … done from ignorance, and anyone who knows the
 // work cannot perform it". A checker is never ignorant of its input, so it audits
 // declared promises for a payer and reports the extraction itself as unmeasured.
+//
+// ─── where its numbers come from ────────────────────────────────────────────
+//
+// Not from here. The thresholds and closed sets this file tests against are read
+// from `knowledge/templates/trailer/steps/01-script/params.json`, where each one
+// carries its evidence label, the registry path it came from, and the quoted
+// line. Before that file existed the rules lived twice — as prose in the step's
+// `PATTERNS.md` and as literals in this file — and nothing held the two copies
+// together. The params file is the single copy; see the read block below, which
+// validates it and throws rather than running a rule it can no longer state.
+//
+// What stayed OUT of it matters as much: every hedged quantity the doctrine
+// gives ("below roughly ten seconds per rung", "two or three rungs", the n=130
+// shot-length curve measured on theatrical film trailers) is recorded in that
+// file's `not_encoded` block with the source that would settle it. A params file
+// is not a laundry: moving a hedge into JSON does not measure it.
+
+import PARAMS from "@/knowledge/templates/trailer/steps/01-script/params.json";
 
 import type { Verdict } from "../gate";
 import {
   DROP_ORDER,
   OPTIONAL_ROLES,
   SPINE_ORDER,
+  SPINE_RANK,
   type DroppablePart,
   type MovementRole,
   type RaisedVariable,
@@ -74,6 +93,7 @@ export type StructureRule =
   | "promise"
   | "ladder"
   | "withholding"
+  | "concealment"
   | "efficacy";
 
 export interface StructureFinding {
@@ -102,10 +122,137 @@ const CITE = {
   ladder: `${REG}/techniques/length-ladder.md`,
   promise: `${REG}/techniques/promise-ledger.md`,
   budget: `${REG}/techniques/withholding-budget.md`,
+  concealment: `${REG}/techniques/concealment-and-its-tells.md`,
   causality: "registry: media-generation/_laws.md#causality-over-sequence",
   unmeasured: "registry: media-generation/_laws.md#unmeasured-is-not-pass",
   graph: "this repo: pipeline/check-notebook.mts — a reference to nothing is a broken edge",
 } as const;
+
+/* ─────────────── the thresholds, READ from the knowledge layer ──────────────
+   Every number and closed set below used to be a TypeScript literal sitting a
+   few lines from the quote it came from. That is one copy of the rule in the
+   document and another in the checker, with nothing holding them together — and
+   `knowledge/templates/trailer/steps/01-script/OPEN-QUESTIONS.md` r2 named the
+   drift directly. They now live once, in that step's `params.json`, where each
+   value carries its evidence label, its registry path and the quoted line, and
+   this file READS them.
+
+   What did NOT move, and why it did not: the hedged quantities. "Below roughly
+   ten seconds per rung", "two or three rungs", the n=130 shot-length curve — all
+   of them are in the params file's `not_encoded` block with the source that
+   would settle them, exactly because a params file is not a laundry. Moving a
+   hedge into JSON does not measure it; it only hides the hedge behind a field
+   name. `checkMagnitude`'s "margin a viewer would notice" is the same refusal
+   with a resolver attached.
+
+   THE READ IS VALIDATED AND IT THROWS. A params file that names a role the type
+   union does not have, or a beat kind that does not exist, is a document and a
+   checker that have already drifted — and the one thing this file may never do
+   is keep running a rule it can no longer state correctly. It fails at import,
+   loudly, naming the file. `npm run check:trailer-structure` imports this module,
+   so the failure is caught by a gate rather than by a creator. */
+
+const PARAMS_PATH = "knowledge/templates/trailer/steps/01-script/params.json";
+
+/** Every `TrailerBeatKind`, as runtime data so the params file can be checked
+ *  against it. `KIND_LIST_IS_EXHAUSTIVE` is the compiler's proof that adding a
+ *  kind to the union without adding it here stops the build — the same device
+ *  `types.ts` uses for `VOCABULARIES_ARE_DISJOINT`, and for the same reason: a
+ *  list that silently falls behind its union validates nothing. */
+const ALL_BEAT_KINDS = [
+  "cold-open",
+  "stakes",
+  "rung",
+  "reset",
+  "peak",
+  "title",
+  "button",
+  "cta",
+] as const satisfies readonly TrailerBeatKind[];
+
+type Exhaustive<Union, Listed> = [Exclude<Union, Listed>] extends [never] ? true : never;
+
+export const KIND_LIST_IS_EXHAUSTIVE: Exhaustive<
+  TrailerBeatKind,
+  (typeof ALL_BEAT_KINDS)[number]
+> = true;
+
+const ALL_RULES = [
+  "graph",
+  "connector",
+  "spine",
+  "escalation",
+  "reset",
+  "cue",
+  "magnitude",
+  "cards",
+  "promise",
+  "ladder",
+  "withholding",
+  "concealment",
+  "efficacy",
+] as const satisfies readonly StructureRule[];
+
+export const RULE_LIST_IS_EXHAUSTIVE: Exhaustive<
+  StructureRule,
+  (typeof ALL_RULES)[number]
+> = true;
+
+function paramsFault(field: string, why: string): never {
+  throw new Error(
+    `${PARAMS_PATH} → ${field}: ${why}. The craft document and the checker have drifted; the checker refuses to run a rule it cannot state correctly.`,
+  );
+}
+
+/** Which beat kinds may sit in which movement — `params.spine.legalBeatKinds`.
+ *  `title` is legal everywhere: a title card names the work AND punctuates a
+ *  section boundary. The params file records that this table is INFERRED rather
+ *  than quoted — the doctrine says what each part is FOR and never enumerates
+ *  the legal kinds — and it is the only inferred value the checker consumes. */
+function readLegalKinds(): Record<MovementRole, TrailerBeatKind[]> {
+  const raw: Record<string, string[]> = PARAMS.spine.legalBeatKinds.value;
+  const known = new Set<string>(ALL_BEAT_KINDS);
+  const roles = Object.keys(SPINE_RANK) as MovementRole[];
+
+  for (const role of Object.keys(raw)) {
+    if (!(role in SPINE_RANK)) paramsFault("spine.legalBeatKinds", `names role "${role}", which is not a MovementRole`);
+  }
+
+  const out = {} as Record<MovementRole, TrailerBeatKind[]>;
+  for (const role of roles) {
+    const list = raw[role];
+    if (!Array.isArray(list) || list.length === 0) {
+      paramsFault("spine.legalBeatKinds", `role "${role}" has no legal kinds, so every beat in it would be reported illegal`);
+    }
+    for (const kind of list) {
+      if (!known.has(kind)) paramsFault("spine.legalBeatKinds", `role "${role}" allows "${kind}", which is not a TrailerBeatKind`);
+    }
+    out[role] = list as TrailerBeatKind[];
+  }
+  return out;
+}
+
+function readCount(field: string, value: number): number {
+  if (!Number.isInteger(value) || value < 0) paramsFault(field, `${JSON.stringify(value)} is not a whole count`);
+  return value;
+}
+
+const LEGAL_KINDS = readLegalKinds();
+
+/** "It raises exactly one variable." Stated unconditionally by the doctrine,
+ *  which is why it is a threshold and the rung floor is not. */
+const RAISES_PER_RUNG = readCount(
+  "escalation.raisedVariablesPerRung",
+  PARAMS.escalation.raisedVariablesPerRung.value,
+);
+
+/** One structural reset, and the doctrine's removal threshold at three. These
+ *  are two different numbers on purpose: "when there are three or more, remove
+ *  all but one" is not a ceiling of one, so exactly two is REPORTED rather than
+ *  failed. */
+const STRUCTURAL_RESETS = readCount("reset.structuralResets", PARAMS.reset.structuralResets.value);
+const RESETS_TOO_MANY = readCount("reset.tooManyAt", PARAMS.reset.tooManyAt.value);
+const HOLDS_PER_RESET = readCount("reset.holdsPerReset", PARAMS.reset.holdsPerReset.value);
 
 /* ───────────────────────────── shared readers ─────────────────────────────── */
 
@@ -133,18 +280,6 @@ function requiredRoles(cut: TrailerCut): MovementRole[] {
   if (dropped(cut, "cold-open")) optional.add("cold-open");
   return SPINE_ORDER.filter((r) => !optional.has(r));
 }
-
-/** Which beat kinds may sit in which movement. `title` is legal everywhere:
- *  a title card names the work AND punctuates a section boundary —
- *  .vault/Research/2026-08-23-trailer-cinematic-grammar.md C1 (OBSERVED, S1),
- *  "a title card punctuates this section, signalling transition to the climax". */
-const LEGAL_KINDS: Record<MovementRole, TrailerBeatKind[]> = {
-  "cold-open": ["cold-open", "title"],
-  introduction: ["stakes", "title"],
-  escalation: ["rung", "reset", "title"],
-  climax: ["reset", "peak", "title"],
-  tail: ["title", "button", "cta"],
-};
 
 /* ──────────────────── 1 · graph integrity (data, not craft) ────────────────
    Modelled on `pipeline/check-notebook.mts`: "a stale reference and a healthy one
@@ -413,7 +548,7 @@ export function checkEscalation(cut: TrailerCut): StructureFinding[] {
   let clean = 0;
   for (const b of rungs) {
     const raises = b.raises ?? [];
-    if (raises.length === 0) {
+    if (raises.length < RAISES_PER_RUNG) {
       out.push({
         rule: "escalation", subject: b.id, verdict: "violation",
         detail: `Rung "${b.label}" declares no raised variable. One of scale / threat / speed / intimacy / cost. A rung that declares none cannot be shown to raise anything, and the doctrine names exactly this as mechanically detectable.`,
@@ -421,7 +556,7 @@ export function checkEscalation(cut: TrailerCut): StructureFinding[] {
       });
       continue;
     }
-    if (raises.length > 1) {
+    if (raises.length > RAISES_PER_RUNG) {
       out.push({
         rule: "escalation", subject: b.id, verdict: "violation",
         detail: `Rung "${b.label}" raises ${raises.length} variables (${raises.join(", ")}). "It raises exactly one variable … A rung that raises three at once has nothing left for the rung after it."`,
@@ -482,13 +617,13 @@ export function checkReset(cut: TrailerCut): StructureFinding[] {
   const resets = kindsOf(cut, "reset");
   const peaks = kindsOf(cut, "peak");
 
-  if (resets.length === 0) {
+  if (resets.length < STRUCTURAL_RESETS) {
     out.push({
       rule: "reset", subject: "reset", verdict: "violation",
       detail: `No reset. "When the cut has no reset, it has no climax — regardless of how large the ending is." A peak is perceived against the level it rose from; a cut that never falls has no headroom left to peak into.`,
       cites: CITE.reset,
     });
-  } else if (resets.length >= 3) {
+  } else if (resets.length >= RESETS_TOO_MANY) {
     out.push({
       rule: "reset", subject: "reset", verdict: "violation",
       detail: `${resets.length} resets. "When there are three or more, remove all but one." Repetition converts the device from a reset into a rhythm — a stop used constantly resets nothing.`,
@@ -503,7 +638,7 @@ export function checkReset(cut: TrailerCut): StructureFinding[] {
       detail: `${peaks.length} beats are declared as the peak. The reset "sits immediately before whatever the cut's largest moment is", and with ${peaks.length === 0 ? "no peak" : "several peaks"} this checker cannot say which moment that is. Which peak is largest is a magnitude question — see the magnitude rule.`,
       cites: CITE.reset,
     });
-  } else if (resets.length >= 1) {
+  } else if (resets.length >= STRUCTURAL_RESETS) {
     const peakIdx = beats.indexOf(peaks[0]);
     const before = peakIdx > 0 ? beats[peakIdx - 1] : null;
     if (before && before.kind === "reset") {
@@ -523,7 +658,7 @@ export function checkReset(cut: TrailerCut): StructureFinding[] {
     // A second reset is PERMITTED — "A punchline reset and a pre-peak reset can
     // coexist if the first is brief and clearly smaller." Brevity is duration and
     // duration is the shot layer's. So: reported, never graded.
-    if (resets.length === 2) {
+    if (resets.length > STRUCTURAL_RESETS && resets.length < RESETS_TOO_MANY) {
       const extra = resets.find((r) => beats.indexOf(r) !== peakIdx - 1);
       out.push({
         rule: "reset", subject: extra ? extra.id : "second reset", verdict: "unmeasured",
@@ -543,7 +678,7 @@ export function checkReset(cut: TrailerCut): StructureFinding[] {
         detail: `Reset "${r.label}" does not declare what the silence holds. A line, an image, or nothing at all — the choice is what the reset means, and undeclared is not the same as empty.`,
         ...where(r), cites: CITE.reset,
       });
-    } else if (holds.length > 1) {
+    } else if (holds.length > HOLDS_PER_RESET) {
       out.push({
         rule: "reset", subject: r.id, verdict: "violation",
         detail: `Reset "${r.label}" holds ${holds.length} things (${holds.join(", ")}). "Fill the silence with one thing … A reset that holds two ideas has spent its whole value carrying neither."`,
@@ -1017,8 +1152,24 @@ export function checkWithholding(cut: TrailerCut, budget?: WithholdingBudget): S
 
 /** Rules whose findings NEVER contribute to `malformed`, each because its own
  *  doctrine says so. The promise ledger: "As a gate … A system that blocks on it
- *  will block on correct work; report the rows and let a human read them." */
-export const ADVISORY_RULES: readonly StructureRule[] = ["promise", "efficacy"] as const;
+ *  will block on correct work; report the rows and let a human read them."
+ *
+ *  Read from `params.checker.advisoryRules`, where that quote and its registry
+ *  path live — so a rule cannot be quietly promoted into a gate by editing this
+ *  file, and cannot be quietly demoted out of one by editing the document. */
+export const ADVISORY_RULES: readonly StructureRule[] = readAdvisoryRules();
+
+function readAdvisoryRules(): readonly StructureRule[] {
+  const known = new Set<string>(ALL_RULES);
+  const raw: string[] = PARAMS.checker.advisoryRules.value;
+  if (!Array.isArray(raw) || raw.length === 0) {
+    paramsFault("checker.advisoryRules", "is empty, which would make every advisory finding a blocking one");
+  }
+  for (const rule of raw) {
+    if (!known.has(rule)) paramsFault("checker.advisoryRules", `names "${rule}", which is not a StructureRule`);
+  }
+  return raw as StructureRule[];
+}
 
 export interface StructureReport {
   cutId: string;
@@ -1052,6 +1203,43 @@ export interface StructureOptions {
  *  a green structural verdict stand in for an unmeasured one." It is emitted on
  *  every report, including a perfect one, and it counts in `unmeasured` — so a
  *  cut can never score `enforced: 100`, which is correct. */
+/** THE SEVENTH TECHNIQUE, WHICH HAD NO ROW AT ALL.
+ *
+ *  `trailer-structure` forges seven techniques and this file implements six of
+ *  them — cue-first-assembly, escalation-without-mechanism, dynamic-reset,
+ *  length-ladder, promise-ledger and withholding-budget each have a rule. The
+ *  seventh, concealment-and-its-tells, had nothing: not a rule, not a citation,
+ *  not a mention. A report listing eleven rules against a subject with seven
+ *  techniques reads as complete coverage, and the one technique missing is the
+ *  one about hiding things.
+ *
+ *  IT IS UNMEASURED RATHER THAN CHECKED, and that is the finding, not a
+ *  shortcut. The technique's own tell is "a fast cut hiding something is
+ *  aesthetically identical to a fast cut as style — the audience cannot
+ *  distinguish them". A rule that cannot distinguish them either would have to
+ *  invent a duration threshold the doctrine deliberately does not state, and
+ *  this file's whole thesis about params.json is that a hedge moved into JSON is
+ *  still a hedge: "Moving a hedge into JSON does not measure it; it only hides
+ *  the hedge behind a field name."
+ *
+ *  So it reports itself the way `efficacyRow` does, under
+ *  `unmeasured-is-not-pass`: the doctrine governs, the checker cannot test it,
+ *  and the row says so rather than the report implying by silence that nothing
+ *  governs here. The one part a tool COULD eventually take — the honesty limit,
+ *  that a cut for an experiential work must still convey how the work feels to
+ *  use — needs a signal about the work that no TrailerCut carries today. That
+ *  is the missing instrument, named here rather than left to be rediscovered. */
+function concealmentRow(): StructureFinding {
+  return {
+    rule: "concealment",
+    subject: "is this cut hiding the work",
+    verdict: "unmeasured",
+    detail:
+      "Not decidable from structure. The doctrine's own tell is that a fast cut hiding something is aesthetically identical to a fast cut as style, so no duration or density threshold separates them — and inventing one here would encode a hedge the technique deliberately leaves open. Two of the three modes ARE reachable elsewhere: misleading arrangement is a row the promise ledger must carry (rule `promise`), and what a cut may withhold is priced by rule `withholding`. What neither reaches is the honesty limit — that a cut must still convey how the work feels to use — which needs a signal about the work that no TrailerCut carries.",
+    cites: CITE.concealment,
+  };
+}
+
 function efficacyRow(): StructureFinding {
   return {
     rule: "efficacy",
@@ -1075,6 +1263,7 @@ export function runStructureCheck(cut: TrailerCut, opts: StructureOptions = {}):
     ...checkPromises(cut),
     ...checkLadder(cut),
     ...checkWithholding(cut, opts.budget),
+    concealmentRow(),
     efficacyRow(),
   ];
 

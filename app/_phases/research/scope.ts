@@ -70,9 +70,35 @@ export function woundsOf(cards: Card[], scope: Scope): Wound[] {
   return out;
 }
 
-/** Rollup for the header and for the Script step's gate. */
+/** WHERE THE BOARD HAS MOVED SINCE IT WAS FROZEN — the card ids whose
+ *  kept-or-cut differs between two scopes, in card order.
+ *
+ *  Only `descoped` is compared. `liked` is training data for the tone profile
+ *  and changes nothing downstream by design (see the header of this file), and
+ *  `deepen` routes to the NEXT run rather than into this script. Diffing them
+ *  would report movement that costs the script nothing, and a divergence
+ *  warning that fires on a harmless click is one nobody reads. */
+export function scopeDiffs(cards: Card[], a: Scope, b: Scope): string[] {
+  return cards.filter((c) => stateOf(a, c.id).descoped !== stateOf(b, c.id).descoped).map((c) => c.id);
+}
+
+/** Rollup for the header and for the Script step's gate.
+ *
+ *  CUT AND NEVER-TAKEN ARE COUNTED SEPARATELY, and the split is not cosmetic.
+ *  `descoped` used to be `total - kept`, which folded in the seven conclusions
+ *  that read as out of scope BY DEFAULT (OPT_IN_DEFAULT) — so a board nobody
+ *  had touched opened with an amber "descoped 7" and a notice announcing that
+ *  seven cards were out of scope. Both were reports of decisions the creator
+ *  had not made. An alarm that is lit on arrival is an alarm nobody reads, on
+ *  the one surface whose entire subject is what you chose to cut.
+ *
+ *  The test is the card's own `optIn`, which is exactly the test CardTile's
+ *  ScopeChip already applies to word itself "not taken" rather than "descoped".
+ *  The two surfaces now cannot disagree. `kept` and the gate are unchanged:
+ *  neither kind goes to the Script step. */
 export function scopeSummary(cards: Card[], scope: Scope) {
   const kept = cards.filter((c) => !stateOf(scope, c.id).descoped);
+  const out = cards.filter((c) => stateOf(scope, c.id).descoped);
   const wounds = woundsOf(cards, scope);
   const requiredGone = cards.filter((c) => c.required && stateOf(scope, c.id).descoped);
   const byDim = DIMENSIONS.map((d) => ({
@@ -83,7 +109,12 @@ export function scopeSummary(cards: Card[], scope: Scope) {
   return {
     kept: kept.length,
     total: cards.length,
-    descoped: cards.length - kept.length,
+    /** Cards the creator CUT. Opt-ins are not here — see `notTaken`. */
+    descoped: out.filter((c) => !c.optIn).length,
+    /** Opt-in cards not taken into scope. The default state, not a decision. */
+    notTaken: out.filter((c) => c.optIn).length,
+    /** Everything the Script step will not see, however it got that way. */
+    outOfScope: out.length,
     liked: cards.filter((c) => stateOf(scope, c.id).liked).length,
     deepen: cards.filter((c) => stateOf(scope, c.id).deepen).length,
     wounds,

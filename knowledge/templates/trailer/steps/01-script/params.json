@@ -1,0 +1,362 @@
+{
+  "$comment": "Machine-readable half of PATTERNS.md. It exists so the rules that gate a creator's work cannot drift away from the document that states them: app/_phases/script/trailer/structure.ts READS the values marked `consumed_by`, rather than restating them as TypeScript constants. Nothing here is measured in this repo. Read `evidence_contract` before reading a single value.",
+  "version": 1,
+  "template": "trailer",
+  "step": "01-script",
+  "updated": "2026-08-29",
+  "sample_size": 0,
+  "confidence": "n=0. No trailer has been torn down, timed or counted in this repo. Every value below is doctrine written elsewhere and quoted here — the standard PATTERNS.md:9-10 sets, held to deliberately. A value with no `quote` and no `source` does not exist in this file.",
+
+  "evidence_contract": {
+    "$comment": "knowledge/README.md § The evidence contract, applied to a params file. The label travels WITH the value so a consumer cannot read the number without reading how strongly it is known.",
+    "envelope": "Every parameter is an object: { value, evidence, n, doctrine_only, source, quote, consumed_by }. `value` is the machine-readable part; everything else is why it may be believed.",
+    "labels": {
+      "MEASURED": "Counted from a corpus. Requires the number, the script that produced it, and the sample size. NOTHING IN THIS FILE CARRIES THIS LABEL.",
+      "OBSERVED": "Read off a specific source. Requires the source path and the quoted line.",
+      "INFERRED": "Our reasoning across sources. Requires the observations it rests on, stated.",
+      "ASSUMED": "Nobody has checked. Requires an entry in OPEN-QUESTIONS.md. NOTHING IN THIS FILE CARRIES THIS LABEL — an assumed value is not written here, it is written in `not_encoded`."
+    },
+    "doctrine_only": "true means: stated by an external practitioner document, quoted faithfully, and never checked against anything this studio has made. Every value in this file is doctrine_only. It is an honest result, not a gap to be filled with an estimate.",
+    "consumed_by": "The code that reads this value. A value with `consumed_by: null` is documentation the checker deliberately does not execute — usually because the doctrine states it as a hedge, and hardening a hedge into a threshold is the laundering knowledge/README.md exists to prevent.",
+    "refusal_rule": "A rule that cannot be expressed as data is not half-expressed here. It goes in `not_encoded` with the source that would settle it. See OPEN-QUESTIONS.md r2, which argued against writing this file at all until every value could carry its label; this envelope is the answer to that argument, and `not_encoded` is the half r2 was right about."
+  },
+
+  "registry": {
+    "root": "ai-registry: knowledge/media-generation/narrative-craft/trailer-structure",
+    "$comment": "Source paths below are relative to `root` unless they name another subject. The same strings appear as `cites:` on every StructureFinding — app/_phases/script/trailer/structure.ts:93-108."
+  },
+
+  "spine": {
+    "order": {
+      "value": ["cold-open", "introduction", "escalation", "climax", "tail"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § The spine, and what it is a spine of",
+      "quote": "Picture editors describe four parts — a cold open, an introduction, an escalation, and a climax, with an optional button after the title. Cue writers describe a four-movement structure with a five-second tail for the title and logos.",
+      "consumed_by": "app/_phases/script/trailer/types.ts SPINE_RANK / SPINE_ORDER — owned there, restated here for the reader. This file does not re-export it."
+    },
+    "optionalRoles": {
+      "value": ["cold-open", "tail"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § The spine, and what it is a spine of",
+      "quote": "It is not mandatory — a work with an existing audience, or an opening image strong enough on its own, is better off without one",
+      "consumed_by": "app/_phases/script/trailer/types.ts OPTIONAL_ROLES"
+    },
+    "legalBeatKinds": {
+      "value": {
+        "cold-open": ["cold-open", "title"],
+        "introduction": ["stakes", "title"],
+        "escalation": ["rung", "reset", "title"],
+        "climax": ["reset", "peak", "title"],
+        "tail": ["title", "button", "cta"]
+      },
+      "evidence": "INFERRED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § The spine, and what it is a spine of (what each part is FOR) + techniques/dynamic-reset.md (the reset runs ACROSS parts) + techniques/length-ladder.md § The drop order (title, CTA and button are last to go)",
+      "quote": "Two devices run across all of these rather than sitting in one. Dialogue is cobbled … And the dynamic reset — a deliberate stop, a fall to near-silence before the peak",
+      "rests_on": "The doctrine states what each part is for, and that two devices run across parts; it never enumerates which beat kinds are legal in which movement. This table IS that enumeration, derived from the part definitions — which makes it INFERRED, not OBSERVED, and it is the only inferred value this file hands to the checker. `title` is legal in every role because a title card both names the work and punctuates a section boundary (.vault C1, OBSERVED, S1: 'a title card punctuates this section, signalling transition to the climax').",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkSpine — LEGAL_KINDS"
+    },
+    "buttonSmallerThanClimax": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § The spine, and what it is a spine of",
+      "quote": "The button — a last joke, sting or flourish after the title — is optional and has one hard constraint: it must be smaller than the climax. A button that outperforms the peak retroactively re-reads the peak as its setup.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkMagnitude — executable ONLY when the caller injects a magnitude resolver; `unmeasured` otherwise, because the beat layer models no size. The direction is checkable; the MARGIN is not (see not_encoded.noticeableMargin)."
+    }
+  },
+
+  "escalation": {
+    "raisedVariables": {
+      "value": ["scale", "threat", "speed", "intimacy", "cost"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/escalation-without-mechanism.md § What a rung is made of",
+      "quote": "It raises exactly one variable. Scale, threat, speed, intimacy, cost. A rung that raises three at once has nothing left for the rung after it.",
+      "note": "The golden path's own list at § The spine differs — 'scale, threat, speed, emotional register'. The technique's list is the closed one and is what the code encodes.",
+      "consumed_by": "app/_phases/script/trailer/types.ts RaisedVariable"
+    },
+    "raisedVariablesPerRung": {
+      "value": 1,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/escalation-without-mechanism.md § What a rung is made of",
+      "quote": "It raises exactly one variable.",
+      "note": "Stated unconditionally, with no hedge — which is why this is a threshold and 'roughly ten seconds per rung' is not.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkEscalation"
+    },
+    "consecutiveRepeatIsAViolation": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/escalation-without-mechanism.md § Decision rules",
+      "quote": "When two rungs raise the same variable, merge them. Two widenings in a row are one widening with extra runtime.",
+      "note": "Consecutive only. Non-consecutive reuse is not a defect and is not reported as one.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkEscalation"
+    },
+    "moves": {
+      "value": ["widen-scope", "shorten-clock", "personalise-cost", "invert-frame"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/escalation-without-mechanism.md § Escalating without spending the mechanism",
+      "quote": "Widen the scope … Shorten the clock … Personalise the cost … Invert the frame",
+      "note": "In the source's own order of how much each costs. RECORDED, NEVER CHECKED: no rule in the subject constrains which move a rung uses, so a checker that graded them would be inventing craft.",
+      "consumed_by": "app/_phases/script/trailer/types.ts EscalationMove — authored data only"
+    }
+  },
+
+  "reset": {
+    "structuralResets": {
+      "value": 1,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/dynamic-reset.md § Decision rules",
+      "quote": "When there are three or more, remove all but one.",
+      "note": "The doctrine gives the count as a REMOVAL rule with its threshold at three, not as a ceiling at one — which is why `tooManyAt` is 3 and not 2, and why exactly two resets is reported without a grade rather than failed. Encoding a ceiling of one here would be stricter than the source.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkReset"
+    },
+    "tooManyAt": {
+      "value": 3,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/dynamic-reset.md § Decision rules",
+      "quote": "When there are three or more, remove all but one. Repetition converts the device from a reset into a rhythm",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkReset"
+    },
+    "secondResetIsReportedNotGraded": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/dynamic-reset.md",
+      "quote": "A punchline reset and a pre-peak reset can coexist if the first is brief and clearly smaller.",
+      "note": "Brevity is a duration and this repo's beat layer models no durations, so the permission cannot be evaluated. `unmeasured`, deliberately.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkReset"
+    },
+    "holdsPerReset": {
+      "value": 1,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/dynamic-reset.md § The four constraints",
+      "quote": "Fill the silence with one thing … A reset that holds two ideas has spent its whole value carrying neither.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkReset"
+    },
+    "positionIsAnchoredToThePeak": {
+      "value": "immediately-before-peak",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/dynamic-reset.md § Procedure",
+      "quote": "Locate the peak first. The reset has no position of its own; it sits immediately before whatever the cut's largest moment is.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkReset — decidable only against exactly one declared peak; `unmeasured` otherwise"
+    },
+    "mustLandOnACueBoundary": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/cue-first-assembly.md § The consequences for planning",
+      "quote": "The reset has a position, not a preference. The dynamic reset can only land on a natural downbeat, so the cue chooses it.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkReset — `unmeasured` when the cut declares no cue, because without one the check is measured against positions the music does not mark"
+    }
+  },
+
+  "ladder": {
+    "dropOrder": {
+      "value": ["introduction", "dialogue-lines", "middle-rungs", "reset", "cold-open"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/length-ladder.md § The drop order",
+      "quote": "What goes first, from most to least expendable. This ordering is the technique's actual content: 1. Exposition and the setup act … 2. Dialogue line count … 3. The escalation's middle rungs … 4. The dynamic reset … 5. The separate cold open.",
+      "consumed_by": "app/_phases/script/trailer/types.ts DROP_ORDER"
+    },
+    "lastToGo": {
+      "value": ["title", "cta", "button"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/length-ladder.md § The drop order",
+      "quote": "Last to go, and worth stating because it is counter-intuitive: the title, the call-to-action and the button. The first two are contractual and are the only thing the cut is actually buying.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkCards — the missing-title violation reads this rule; the ORDER of the three among themselves is not itself checked"
+    },
+    "titlePrecedesButton": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § What is measurable, and what is not",
+      "quote": "Card ordering (does a title precede the button) … are all mechanically checkable.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkCards"
+    }
+  },
+
+  "withholding": {
+    "assets": {
+      "value": ["turn", "reveal", "resolution", "best-moment", "novum"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/withholding-budget.md § What the budget is denominated in",
+      "quote": "Denominate it in the work's own assets, listed by name before any cutting starts: the turn … the reveal … the resolution … the best moment … the novum",
+      "consumed_by": "app/_phases/script/trailer/types.ts WorkAssetKind"
+    },
+    "allowances": {
+      "value": ["spend", "imply", "hold"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/withholding-budget.md § What the budget is denominated in",
+      "quote": "Each asset gets one of three allowances: spend (may appear), imply (may be signalled that it exists, never shown), hold (may not be referenced at all). That is the entire budget, and it fits on one page.",
+      "consumed_by": "app/_phases/script/trailer/types.ts Allowance"
+    },
+    "spendRequiresARecordedTrade": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/withholding-budget.md § Procedure",
+      "quote": "Record the trade for every spend. One sentence: what conversion this buys and what experience it costs. A spend with no recorded reason is a drift that has already happened.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkWithholding"
+    },
+    "budgetBindsToTheCampaignNotTheCut": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/withholding-budget.md § Procedure",
+      "quote": "Bind the budget to the campaign, not to the cut … single cuts rarely breach; series do.",
+      "note": "The checker sees ONE cut, so the breach the budget mainly exists to prevent — campaign drift — is outside its reach and is reported as `unmeasured` on every run.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts checkWithholding"
+    }
+  },
+
+  "checker": {
+    "advisoryRules": {
+      "value": ["promise", "efficacy"],
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "techniques/promise-ledger.md § As a gate + trailer-structure.md § What is measurable, and what is not",
+      "quote": "A system that blocks on it will block on correct work; report the rows and let a human read them.",
+      "note": "Findings under these rules never contribute to `malformed`. `efficacy` joins the list for the neighbouring reason: 'A structural checker can establish that a cut is malformed; it cannot establish that a cut works.'",
+      "consumed_by": "app/_phases/script/trailer/structure.ts ADVISORY_RULES"
+    },
+    "spineIsADiagnosticNotAGate": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § The spine is a default, not a law, and the exception is a lane",
+      "quote": "use the spine as the default and as the diagnostic, never as the gate. A cut that deviates from it is either a specialty-lane choice or a defect, and the structure alone cannot tell you which.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts — `StructureReport.malformed` is `boolean | null`, and null for a cut declaring the specialty lane"
+    },
+    "efficacyIsAlwaysUnmeasured": {
+      "value": true,
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § What is measurable, and what is not",
+      "quote": "A structural checker can establish that a cut is malformed; it cannot establish that a cut works",
+      "note": "Emitted on every report including a perfect one, and counted in `unmeasured` — so a cut can never score enforced: 100.",
+      "consumed_by": "app/_phases/script/trailer/structure.ts efficacyRow"
+    }
+  },
+
+  "duration": {
+    "$comment": "PLANNING CONTEXT, NOT A THRESHOLD. Nothing in this repo compares a cut against these numbers, and OPEN-QUESTIONS.md r1 forbids it until a cut has been timed here.",
+    "band": {
+      "value": { "min": 90, "default": 120, "max": 150 },
+      "unit": "seconds",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": ".vault/Research/2026-08-23-trailer-cinematic-grammar.md C7 (S30); restated in knowledge/templates/trailer/TEMPLATE.md § The format",
+      "quote": "a full trailer is ~90–150 s and may spell out plot",
+      "note": "A norm reported by practitioners, not a timing of anything. No cut has been timed in this repo.",
+      "consumed_by": "lib/projects.ts TEMPLATES — the band shown to a creator. NOT read by any checker."
+    },
+    "hardCeilingS": {
+      "value": 150,
+      "unit": "seconds",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § Length is a ladder, not a knob",
+      "quote": "The theatrical cut carries a hard external ceiling (2:30, with a single annual exception per distributor under the exhibitor-facing advertising rules)",
+      "note": "An external advertising rule, not a craft preference — and it coincides with the top of the craft band above. The coincidence is not corroboration.",
+      "consumed_by": null
+    },
+    "centreOfGravity": {
+      "value": "just above two minutes",
+      "evidence": "OBSERVED",
+      "n": 0,
+      "doctrine_only": true,
+      "source": "trailer-structure.md § Length is a ladder, not a knob",
+      "quote": "the measured centre of gravity across nine decades of releases sits just above two minutes — a stability worth knowing, because 'trailers keep getting longer' is a widely repeated claim the measurement does not support",
+      "note": "MEASURED BY SOMEBODY ELSE, ON SOMETHING ELSE. The underlying n is not given by the source, and the population is theatrical film trailers rather than AI-composed cuts. Left as a STRING on purpose: a reader who wanted to compare against it would need the n first. OPEN-QUESTIONS.md r1.",
+      "consumed_by": null
+    }
+  },
+
+  "not_encoded": {
+    "$comment": "The half of OPEN-QUESTIONS.md r2 that was right. Each entry is a rule the doctrine states and this file refuses to turn into a number, with what would settle it. A consumer that wants one of these has found an open question, not a missing field.",
+    "rungFloorSeconds": {
+      "reason": "The source's own word is 'roughly', and it is a practitioner's threshold with no n behind it. Encoding 10 would drop the qualifier and hand a checker a gate the doctrine never gave it.",
+      "source": "techniques/escalation-without-mechanism.md § Procedure",
+      "quote": "Below roughly ten seconds per rung the closure disappears and the chain reads as one montage; a short cut should carry two or three rungs, not six compressed ones.",
+      "settled_by": "timing rungs in cuts this studio has actually made — impossible before the Cut step knows shot boundaries. OPEN-QUESTIONS.md r1, r2."
+    },
+    "rungCount": {
+      "reason": "'Two or three rungs' is stated for a SHORT cut. Three-to-five at 90–150s is arithmetic performed here from the rung floor and the duration band — our inference, not the source's claim, and it inherits the floor's missing n.",
+      "source": "techniques/escalation-without-mechanism.md § Procedure",
+      "settled_by": "the same timed corpus. OPEN-QUESTIONS.md r2."
+    },
+    "shotLengthCurve": {
+      "reason": "The falling curve with a pre-peak spike is the one genuinely MEASURED structural fact in the subject — and it was measured on 130 theatrical film trailers over sixty years, not on anything this studio makes. Until r1 is answered, no check may compare a cut against it.",
+      "source": "trailer-structure.md § What is measurable, and what is not",
+      "quote": "one published analysis of 130 releases over sixty years found that trailer average shot length and its variance both decline over time … the dynamic reset produces the single most detectable structural signature in the form: a spike in shot length immediately before the peak",
+      "settled_by": "computing the same two statistics over cuts this studio produces. Cheap once a Cut step knows shot boundaries; impossible before it. OPEN-QUESTIONS.md r1."
+    },
+    "noticeableMargin": {
+      "reason": "The doctrine requires the peak to exceed the last rung 'by a margin a viewer would notice' and states no threshold. The direction is checked; the size of the gap is not, and inventing a number for it would be the checker asserting craft the registry does not state.",
+      "source": "techniques/escalation-without-mechanism.md § Procedure",
+      "settled_by": "nothing available here; it is a perception question and the instrument is a viewer, not a meter."
+    },
+    "withholdingDefaults": {
+      "reason": "The registry's own hedge is load-bearing and a params default would erase it. Encoding 'hold the turn, hold the resolution, imply the reveal' as defaults would make a contested trade look settled, and the counter-practice is real, deliberate and measurement-driven.",
+      "source": "techniques/withholding-budget.md § The default allowances, and what they cost to break",
+      "quote": "The craft consensus, where one exists, is: hold the turn, hold the resolution, imply the reveal, spend the best moment only against a decision.",
+      "settled_by": "nothing available here. The product move is to make the trade visible and recorded rather than to pick a side in a default. OPEN-QUESTIONS.md r6."
+    },
+    "partCountsPerRung": {
+      "reason": "'Two for a teaser, three for a spot' is stated in a part vocabulary that does not map onto the spine's movement roles without inventing the mapping — a teaser is 'a context section, and one set-piece'; a spot is 'a state, a consequence, a payoff'.",
+      "source": "techniques/length-ladder.md",
+      "settled_by": "a registry technique that states the mapping, or a corpus that shows it."
+    },
+    "energyCurveShape": {
+      "reason": "PRESENTATIONAL, NOT CRAFT. The y-values app/_phases/script/trailer/cut.ts draws are drawing coordinates chosen so the doctrine's SHAPE — open mid, fall back, step up, dip at the reset, peak, fall away — is visible on a 0..1 axis. They are not loudness, cut rate or magnitude; nothing in this repo measures any of those; and putting them in this file would convert seven arbitrary drawing constants into craft doctrine on sight. They live at their use site, named PRESENTATION, and the surface tells the user the same thing: 'a shape read from the parts — not a measurement'.",
+      "source": "app/_phases/script/trailer/cut.ts § the curve · app/_phases/script/trailer/EnergyCurve.tsx figcaption",
+      "settled_by": "nothing — this is not a knowledge question. It becomes one only if the curve ever claims to plot a measured quantity, at which point the quantity needs a source and this entry needs deleting."
+    },
+    "doesTheCutWork": {
+      "reason": "Not asked, and deliberately. Encoding a structural proxy for efficacy would be exactly the laundering this library exists to prevent.",
+      "source": "trailer-structure.md § What is measurable, and what is not · media-generation/_laws.md#unmeasured-is-not-pass",
+      "quote": "A structural checker can establish that a cut is malformed; it cannot establish that a cut works",
+      "settled_by": "a survey instrument this studio does not have. See OPEN-QUESTIONS.md § Not asked."
+    }
+  }
+}

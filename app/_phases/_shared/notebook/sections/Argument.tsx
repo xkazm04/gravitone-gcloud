@@ -4,7 +4,7 @@
 // mechanisms that explain it, the turns those mechanisms buy, and the strongest
 // case against the whole thing.
 
-import { ConnectorChip } from "../Chips";
+import { ChainConnectorChip, ConnectorChip } from "../Chips";
 import { NOTEBOOK } from "../notebook";
 import { H, chainLink } from "./H";
 
@@ -37,16 +37,42 @@ export default function ArgumentSections() {
               {m.id} · explains: {m.explains}
               {m.needsAnalogy ? " · needs an analogy" : ""}
             </p>
+            {/* `steps` WINS WHERE BOTH ARE PRESENT — the rule types.ts states
+                and nothing implemented. `chain: string[]` is the legacy form,
+                with the connector inlined in the prose and parsed back out at
+                render time by chainLink(); `steps: ChainStep[]` is the target
+                and the only form that can carry per-step evidence. Until now
+                this mapped `m.chain` unconditionally, so the typed form had no
+                renderer at all and the documented precedence was a comment. */}
             <ol className="mt-2.5 space-y-1.5">
-              {m.chain.map((step, i) => {
-                const { connector, text } = chainLink(step);
-                return (
-                  <li key={i} className="flex flex-wrap items-baseline gap-2 text-[13px] leading-relaxed">
-                    <ConnectorChip connector={connector} />
-                    <span className="text-slate-300">{text}</span>
-                  </li>
-                );
-              })}
+              {m.steps?.length
+                ? m.steps.map((step, i) => (
+                    <li key={i} className="flex flex-wrap items-baseline gap-2 text-[13px] leading-relaxed">
+                      <ChainConnectorChip connector={step.connector} />
+                      <span className="text-slate-300">{step.text}</span>
+                      {step.evidence?.length ? (
+                        <span className="font-jetbrains text-[10px] text-white/30">
+                          {step.evidence.join(", ")}
+                        </span>
+                      ) : (
+                        /* The point of the typed form is that a step can be cut
+                           out from underneath. One that cites nothing cannot be,
+                           and says so rather than looking supported. */
+                        <span className="font-jetbrains text-[10px] text-amber-200/60">
+                          no evidence on this step
+                        </span>
+                      )}
+                    </li>
+                  ))
+                : m.chain.map((step, i) => {
+                    const { connector, text } = chainLink(step);
+                    return (
+                      <li key={i} className="flex flex-wrap items-baseline gap-2 text-[13px] leading-relaxed">
+                        <ConnectorChip connector={connector} />
+                        <span className="text-slate-300">{text}</span>
+                      </li>
+                    );
+                  })}
             </ol>
             {m.note && <p className="mt-2 text-[13px] text-cyan-200/80 italic">{m.note}</p>}
           </div>
@@ -81,6 +107,60 @@ export default function ArgumentSections() {
         <p className="text-[13px] leading-relaxed text-white/50">{n.steelMan.whyInclude}</p>
         <p className="font-jetbrains text-[11px] text-white/30">evidence: {n.steelMan.evidence.join(", ")}</p>
       </section>
+
+      {/* THE POSITIONS THIS MODAL USED TO SWALLOW. NotebookBody promises
+          "Nothing here is summarised away: this is the artifact, and a notebook
+          you cannot read in full is a notebook you cannot check" — and
+          `counterPositions` was populated and drawn by nothing at all. The
+          first entry here is the four-year-cycle reading, which types.ts calls
+          the strongest counter in run 1 and notes "disproves the notebook's own
+          tension: high". It was invisible.
+
+          Beside the steel-man rather than inside it, because they are not the
+          same object: `steelMan` is singular and is the best case against the
+          verdict; this array holds the positions of identified holders, which
+          may be several and may each need attributing. `string` is the legacy
+          form the run-1 fixture carries — the typed CounterPosition form
+          renders its holder. */}
+      {n.counterPositions.length > 0 && (
+        <section className="space-y-2">
+          <H id="counters">counter-positions — held against the verdict</H>
+          <ul className="space-y-2">
+            {n.counterPositions.map((c, i) =>
+              typeof c === "string" ? (
+                <li key={`legacy-${i}`} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                  <p className="text-sm leading-relaxed text-slate-300">{c}</p>
+                  {/* The legacy form names no holder and cites no fact, so it
+                      cannot downgrade a tension. Saying so is the finding — see
+                      CounterPosition in types.ts. */}
+                  <p className="font-jetbrains mt-1.5 text-[11px] text-white/30">
+                    no holder named, no evidence cited — this position cannot bear on the tension
+                    until it has both
+                  </p>
+                </li>
+              ) : (
+                <li key={`${c.holder}-${i}`} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
+                  <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/35 uppercase">
+                    {c.holder}
+                    {c.locator ? ` · ${c.locator}` : ""}
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-slate-300">{c.position}</p>
+                  {c.statementVerbatim && (
+                    <p className="mt-1.5 border-l-2 border-white/10 pl-3 text-[13px] leading-relaxed text-slate-300">
+                      “{c.statementVerbatim}”
+                    </p>
+                  )}
+                  {c.evidence.length > 0 && (
+                    <p className="font-jetbrains mt-1.5 text-[11px] text-white/30">
+                      evidence: {c.evidence.join(", ")}
+                    </p>
+                  )}
+                </li>
+              ),
+            )}
+          </ul>
+        </section>
+      )}
     </>
   );
 }

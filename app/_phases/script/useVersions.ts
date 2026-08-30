@@ -64,7 +64,15 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
   const [accepted, setAccepted] = useState<Version[]>([]);
   const [candidate, setCandidate] = useState<Version | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
-  const [hydrated, setHydrated] = useState(false);
+  // Keyed to the project rather than a boolean reset in the effect. The reset
+  // was a synchronous setState inside an effect body — the area's own ratcheted
+  // lint finding — and "hydrated for THIS id" is also the stronger guard: the
+  // flag stayed true for one commit after `projectId` changed, which is the
+  // commit the save effect below runs in. Third hook in this family to take the
+  // shape; research/useScope.ts and research/beats/useBeatPicks.ts hold the
+  // other two, and useBeatPicks wrote down why first.
+  const [hydratedFor, setHydratedFor] = useState<string | null>(null);
+  const hydrated = hydratedFor === projectId;
   const [lostCandidate, setLostCandidate] = useState<LostCandidate | null>(null);
   /** The in-flight call, so a genuinely superseded run stops burning a model
    *  turn instead of being dropped on the floor client-side. */
@@ -83,7 +91,6 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
 
   useEffect(() => {
     let alive = true;
-    setHydrated(false);
     void loadStep<Stored>(projectId, PHASE).then((s) => {
       if (!alive) return;
       const loaded = s?.notes ?? [];
@@ -92,7 +99,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       setAccepted(s?.accepted ?? []);
       setCandidate(null);
       setLostCandidate(s?.staged ?? null);
-      setHydrated(true);
+      setHydratedFor(projectId);
     });
     return () => { alive = false; };
   }, [projectId]);
@@ -255,30 +262,77 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
 
   const notesFor = useCallback((cardId: string) => notes.filter((n) => n.cardId === cardId), [notes]);
 
-  return {
-    hydrated,
-    notes,
-    notesFor,
-    addNote,
-    removeNote,
-    clearNotes,
-    baseline,
-    candidate,
-    accepted,
-    running,
-    /** When the live run started, so a surface can show elapsed time. Null when
-     *  nothing is running. There is deliberately no percentage: the run is a
-     *  local Claude Opus 5 turn and nothing here knows how long it will take. */
-    runningSince: running ? (myJob?.startedAt ?? null) : null,
-    run,
-    accept,
-    discard,
-    /** Why the simulated engine ran, when it did. Null on a real model result. */
-    engineNote,
-    /** A candidate that was staged when this project was last closed and is now
-     *  gone. Shown once, cleared by the next run. */
-    lostCandidate,
-  };
+  /** When the live run started, so a surface can show elapsed time. Null when
+   *  nothing is running. There is deliberately no percentage: the run is a
+   *  local Claude Opus 5 turn and nothing here knows how long it will take.
+   *
+   *  Hoisted out of the returned literal so the memo below can depend on the
+   *  value rather than on `myJob`, which is re-found on every render. */
+  const runningSince = running ? (myJob?.startedAt ?? null) : null;
+
+  /** THE RETURNED OBJECT HAS A STABLE IDENTITY, and it used to be a fresh literal
+   *  on every render. `VersionsApi` is `ReturnType<typeof useVersions>`, and the
+   *  notes context is built out of it — `_notes/NotesContext.tsx` derives `count`
+   *  with `useCallback(…, [api])` and its provider value with `useMemo(…, [api, …])`.
+   *  A new object here made both of those dead: the context value was rebuilt on
+   *  every render of ScriptStep, and every `useNotes()` consumer re-rendered with it.
+   *
+   *  That is not a couple of components. `buildCards()` yields 39 cards and each one
+   *  renders a `<NoteHandle>` (`_matrix/Matrix{Coverage,Spend,Tracks}.tsx`) that calls
+   *  `useNotes()`, so twenty characters typed into the composer was ~780 handle
+   *  re-renders, each recomputing `count(cardId)` — an O(notes) filter — for a change
+   *  that touched one field.
+   *
+   *  The dep list is every property the object exposes, derived from the literal
+   *  rather than guessed: a memo that misses one returns a STALE api, which is a
+   *  worse defect than the slow one it replaces. The functions in it are already
+   *  `useCallback`ed and `baseline` is already `useMemo`ed, so in practice this
+   *  changes identity exactly when one of the values it carries changes.
+   *
+   *  Deliberately NOT done here: moving churning state out of the context value the
+   *  way `lib/announcer.tsx` does. That is the stronger shape and a separate call —
+   *  this is the one-line root fix, and it makes the two memos downstream live. */
+  return useMemo(
+    () => ({
+      hydrated,
+      notes,
+      notesFor,
+      addNote,
+      removeNote,
+      clearNotes,
+      baseline,
+      candidate,
+      accepted,
+      running,
+      runningSince,
+      run,
+      accept,
+      discard,
+      /** Why the simulated engine ran, when it did. Null on a real model result. */
+      engineNote,
+      /** A candidate that was staged when this project was last closed and is now
+       *  gone. Shown once, cleared by the next run. */
+      lostCandidate,
+    }),
+    [
+      hydrated,
+      notes,
+      notesFor,
+      addNote,
+      removeNote,
+      clearNotes,
+      baseline,
+      candidate,
+      accepted,
+      running,
+      runningSince,
+      run,
+      accept,
+      discard,
+      engineNote,
+      lostCandidate,
+    ],
+  );
 }
 
 export type VersionsApi = ReturnType<typeof useVersions>;

@@ -8,7 +8,7 @@
         "studio-design-system"
       ],
       "db_tables": [],
-      "description": "The Next.js App Router root config and authentication/persistence layer. layout.tsx injects Google Fonts and mounts GravitoneTokens as the first body child. lib/firebase.ts initializes Firebase Auth with a 12-hour session ceiling; lib/studioDb.ts and lib/projects.ts implement a zero-dependency IndexedDB layer for project CRUD; lib/jobs.tsx is the background-job system that lets long-running AI tasks (research, follow-up, recalibration) survive navigation without holding a screen hostage; lib/claudeCli.ts spawns a headless local Claude Code process authenticated via the machine's subscription, and lib/model.ts holds the model constant that routes and CLI calls share.",
+      "description": "The Next.js App Router root config and authentication/persistence layer. layout.tsx injects Google Fonts and mounts GravitoneTokens as the first body child; app/error.tsx and app/global-error.tsx provide Next.js error boundary surfaces wired to GlobalErrorBridge so edge errors are surfaced in the studio UI. lib/firebase.ts initializes Firebase Auth with a 12-hour session ceiling; lib/studioDb.ts and lib/projects.ts implement a zero-dependency IndexedDB layer for project CRUD; lib/jobs.tsx is the background-job system for long-running AI tasks; lib/claudeCli.ts spawns a headless local Claude Code process; lib/capabilities.ts exposes a per-deployment feature-flag matrix so surfaces can hide unavailable controls without re-deriving posture from environment keys; lib/deployment.ts answers whether the process can spawn a local binary (the local-first / SaaS split predicate); lib/apiAuth.ts and lib/localMode.ts gate API routes behind auth and local-only flags; lib/identityEviction.ts handles session invalidation; lib/harness/protocol.ts defines the UAT test-automation bridge protocol; lib/announcer.tsx provides screen-reader live-region announcements; lib/formatBrief.ts serialises project briefs for prompt injection.",
       "entry_points": [
         "app/layout.tsx",
         "next.config.ts"
@@ -25,24 +25,39 @@
         "lib/useProjects.ts",
         "lib/jobs.tsx",
         "lib/claudeCli.ts",
-        "lib/model.ts"
+        "lib/model.ts",
+        "lib/capabilities.ts",
+        "lib/deployment.ts",
+        "app/error.tsx",
+        "app/global-error.tsx",
+        "lib/GlobalErrorBridge.tsx",
+        "lib/announcer.tsx",
+        "lib/apiAuth.ts",
+        "lib/formatBrief.ts",
+        "lib/harness/protocol.ts",
+        "lib/identityEviction.ts",
+        "lib/localMode.ts",
+        "eslint.config.mjs",
+        "lint-baseline.json",
+        ".github/workflows/gates.yml"
       ],
       "group": "Application Infrastructure",
       "group_id": "6740aa5f-9fc3-41e2-b858-92808c5f84be",
       "id": "de5bdd42-0e8f-4ced-a1bb-5ff4fef12f28",
       "keywords": [
         "firebase",
-        "google-auth",
-        "indexeddb",
-        "session-policy",
-        "projects-crud",
-        "app-router",
-        "layout",
-        "persistence",
-        "useAuth",
-        "useProjects"
+        "auth",
+        "IndexedDB",
+        "projects",
+        "jobs",
+        "claudeCli",
+        "error-boundary",
+        "harness",
+        "localMode",
+        "apiAuth",
+        "announcer"
       ],
-      "last_written_at": "2026-08-12T21:18:21.569324900+00:00",
+      "last_written_at": "2026-08-29T09:19:58.111659500+00:00",
       "name": "app-infrastructure",
       "pinned": false,
       "tech_stack": [
@@ -119,6 +134,163 @@
       ]
     },
     {
+      "api_surface": "GET/POST /api/foundry/runs, GET /api/foundry/runs/[id], POST /api/foundry/runs/[id]/verdicts, POST /api/foundry/runs/[id]/commit, POST /api/foundry/extract, GET /api/foundry/extract/[id], POST /api/foundry/extract/[id]/step|verdicts|commit, GET /api/foundry/file, GET /api/foundry/styles",
+      "business_feature": "Style Foundry",
+      "category": "api",
+      "cross_refs": [
+        "foundry-ui",
+        "text-providers",
+        "imaging-providers",
+        "foundry-pipeline"
+      ],
+      "db_tables": [],
+      "description": "The server-side Foundry data layer and API surface — run manifests, style catalogues, verdict persistence, and the Extract engine. lib/foundry/store.ts reads and writes forge-py run manifests from the filesystem; lib/foundry/types.ts defines the full wire type hierarchy (Candidate, Grade, StyleDef, RunManifest, Verdicts, CommitResult); lib/foundry/extract/ is the VLM-backed style extraction engine — engine.ts orchestrates a text/reasoning turn against a gallery's readbacks using lib/text/router.ts, vocabulary.ts defines the closed observable vocabulary, prompts.ts builds the synthesis prompt, and store.ts persists extract runs. The /api/foundry/* routes expose run listing, detail, verdict recording, commit (delete rejected files, write ledger rows), style catalogue, file serving, and the three extract lifecycle endpoints (start, step, verdicts).",
+      "entry_points": [
+        "lib/foundry/store.ts",
+        "lib/foundry/extract/engine.ts",
+        "app/api/foundry/runs/route.ts"
+      ],
+      "file_paths": [
+        "lib/foundry/types.ts",
+        "lib/foundry/store.ts",
+        "lib/foundry/extract/engine.ts",
+        "lib/foundry/extract/imageDims.ts",
+        "lib/foundry/extract/prompts.ts",
+        "lib/foundry/extract/store.ts",
+        "lib/foundry/extract/types.ts",
+        "lib/foundry/extract/vocabulary.ts",
+        "app/api/foundry/runs/route.ts",
+        "app/api/foundry/runs/[id]/route.ts",
+        "app/api/foundry/runs/[id]/verdicts/route.ts",
+        "app/api/foundry/runs/[id]/commit/route.ts",
+        "app/api/foundry/extract/route.ts",
+        "app/api/foundry/extract/[id]/route.ts",
+        "app/api/foundry/extract/[id]/step/route.ts",
+        "app/api/foundry/extract/[id]/verdicts/route.ts",
+        "app/api/foundry/extract/[id]/commit/route.ts",
+        "app/api/foundry/file/route.ts",
+        "app/api/foundry/styles/route.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "29c77984-80e1-4a16-969b-9cedec63d8e9",
+      "keywords": [
+        "foundry",
+        "style",
+        "candidate",
+        "grade",
+        "verdict",
+        "commit",
+        "extract",
+        "ledger",
+        "manifest",
+        "readback",
+        "observable"
+      ],
+      "last_written_at": "2026-08-29T09:19:58.108129100+00:00",
+      "name": "foundry-api",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "TypeScript",
+        "Node.js fs"
+      ]
+    },
+    {
+      "api_surface": null,
+      "business_feature": "Style Foundry",
+      "category": "data",
+      "cross_refs": [
+        "foundry-api",
+        "foundry-ui"
+      ],
+      "db_tables": [],
+      "description": "The offline Python pipeline that runs for hours on a local GPU rig to produce the raw candidates the /foundry cull page reviews. intake.py ingests source frames from a plan; acquire.py fetches and prepares reference images; forge.py orchestrates the full generation loop (reference annotation → N styles × M mechanisms × seeds of candidates → automatic pre-grade); grade.py runs the VLM grader passes against generated images. plans/ holds sweep configuration JSON files; ledger.json and styles.json are the versioned output indices that the API layer reads. This pipeline owns the write side of the foundry's data; the API layer in lib/foundry/ is the read side.",
+      "entry_points": [
+        "pipeline/foundry/forge.py",
+        "pipeline/foundry/README.md"
+      ],
+      "file_paths": [
+        "pipeline/foundry/acquire.py",
+        "pipeline/foundry/forge.py",
+        "pipeline/foundry/grade.py",
+        "pipeline/foundry/intake.py"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "24c311f4-6dee-4c55-9ac4-22efb63955c8",
+      "keywords": [
+        "forge",
+        "grade",
+        "candidate",
+        "generation",
+        "sweep",
+        "plan",
+        "ledger",
+        "comfyui",
+        "gpu",
+        "python"
+      ],
+      "last_written_at": "2026-08-29T09:19:58.108680200+00:00",
+      "name": "foundry-pipeline",
+      "pinned": false,
+      "tech_stack": [
+        "Python",
+        "ComfyUI"
+      ]
+    },
+    {
+      "api_surface": null,
+      "business_feature": "Style Foundry",
+      "category": "ui",
+      "cross_refs": [
+        "foundry-api",
+        "asset-library",
+        "studio-design-system"
+      ],
+      "db_tables": [],
+      "description": "The /foundry page — where generated style candidates are reviewed and culled by hand before ratification into the style catalogue. FoundryView polls a run manifest and renders two primary surfaces: CullGrid displays a masonry grid of generated candidates with keyboard-driven keep/reject verdicts (immediate, idempotent, debounce-saved); ExtractView and ExtractBoard surface the Extract workflow where a gallery URL is submitted and a VLM turn synthesises named styles with observables and recipes from it. StylesShelf shows the current proven-style catalogue; Lightbox provides a full-screen compare view. foundryClient.ts and extractClient.ts are the typed fetch wrappers for the /api/foundry API.",
+      "entry_points": [
+        "app/foundry/FoundryView.tsx",
+        "app/foundry/CullGrid.tsx"
+      ],
+      "file_paths": [
+        "app/foundry/page.tsx",
+        "app/foundry/FoundryView.tsx",
+        "app/foundry/CullGrid.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/Lightbox.tsx",
+        "app/foundry/StylesShelf.tsx",
+        "app/foundry/parts.tsx",
+        "app/foundry/extractClient.ts",
+        "app/foundry/foundryClient.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "d613ff0c-ab83-4835-8282-56c33c9f4d57",
+      "keywords": [
+        "foundry",
+        "cull",
+        "style",
+        "candidate",
+        "verdict",
+        "extract",
+        "gallery",
+        "lightbox",
+        "readback",
+        "observable"
+      ],
+      "last_written_at": "2026-08-29T09:19:58.106900+00:00",
+      "name": "foundry-ui",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "React 19",
+        "TypeScript"
+      ]
+    },
+    {
       "api_surface": "POST /api/frames",
       "business_feature": "Frame Composition Step",
       "category": "ui",
@@ -128,7 +300,7 @@
         "shared-notebook"
       ],
       "db_tables": [],
-      "description": "Step 3 of the production pipeline — script beats in, composed picture plates out. FramesStep/FramesAssembly render a ledger-style shot list (one row per beat, three layer columns for plate/elements/texts) so the question 'what is not done' is answered by scanning a column, not scrolling a canvas. frames.ts defines the epistemic three-layer architecture (plate generated, elements vector-drawn, texts our own) and the Frame/FrameElement/FrameText types; useFrames orchestrates the IndexedDB state and calls /api/frames to derive scene specs via a local Claude CLI run; LayerPanel handles per-layer inspection and editing.",
+      "description": "Step 3 of the production pipeline — script beats in, composed picture plates out. FramesStep/FramesAssembly render a ledger-style shot list (one row per beat, three layer columns for plate/elements/texts); ShotSheet provides per-beat shot spec editing and shot-level generation control; shots.ts, shotPrompt.ts, and shotReview.ts model the shot entity, build the imaging prompt, and carry the review/approval flow; the alternatives/ sub-directory (AlternativesView, VariantContactSheet, alts.ts, useAlternatives) lets users compare generated variants and pick a winner before locking a frame. frames.ts defines the epistemic three-layer architecture; useFrames orchestrates IndexedDB state and calls /api/frames to derive scene specs via a local Claude CLI run.",
       "entry_points": [
         "app/_phases/frames/FramesStep.tsx",
         "app/_phases/frames/frames.ts",
@@ -142,30 +314,92 @@
         "app/_phases/frames/parts.tsx",
         "app/_phases/frames/sceneSpec.ts",
         "app/_phases/frames/useFrames.ts",
-        "app/api/frames/route.ts"
+        "app/api/frames/route.ts",
+        "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/frames/alternatives/AlternativesView.tsx",
+        "app/_phases/frames/alternatives/VariantContactSheet.tsx",
+        "app/_phases/frames/alternatives/alts.ts",
+        "app/_phases/frames/alternatives/useAlternatives.ts",
+        "app/_phases/frames/shotPrompt.ts",
+        "app/_phases/frames/shotReview.ts",
+        "app/_phases/frames/shots.ts"
       ],
       "group": null,
       "group_id": null,
       "id": "6bdc9182-5119-4439-86a4-14dcbaa274fd",
       "keywords": [
         "frames",
+        "shot",
         "plate",
-        "layer",
-        "assembly",
-        "scene",
-        "beat",
-        "generate",
-        "script",
-        "composition",
-        "ledger"
+        "sceneSpec",
+        "alternatives",
+        "variant",
+        "generation",
+        "ledger",
+        "three-layer",
+        "IndexedDB"
       ],
-      "last_written_at": "2026-08-14T10:50:24.949287900+00:00",
+      "last_written_at": "2026-08-27T09:57:49.778934300+00:00",
       "name": "frames-step",
       "pinned": false,
       "tech_stack": [
         "Next.js 15",
         "React 19",
         "TypeScript"
+      ]
+    },
+    {
+      "api_surface": null,
+      "business_feature": "Golden Path Probes",
+      "category": "test",
+      "cross_refs": [
+        "app-infrastructure",
+        "imaging-providers",
+        "text-providers"
+      ],
+      "db_tables": [],
+      "description": "The golden-path probe test suite — fast, hermetic unit-level specs that verify security invariants, transport resilience, and cross-cutting behavioral contracts without a running server. Each file targets a named seam: imaging SSRF prevention, CLI sandbox argument isolation, CLI transport resilience, object-URL ownership cleanup, imaging/music auth gating, identity persistence, harness-gate wiring, beat-score totals, cut-nudge batching, frames run bounding, style-extraction output, and the announcement live-region. tests/live/golden-path.live.spec.ts is the integration counterpart that runs the same paths against a real local server.",
+      "entry_points": [
+        "tests/golden-path/imaging-ssrf.probe.spec.ts",
+        "tests/golden-path/cli-transport-resilience.probe.spec.ts"
+      ],
+      "file_paths": [
+        "tests/golden-path/announcement.probe.spec.ts",
+        "tests/golden-path/harness-gate.probe.spec.ts",
+        "tests/golden-path/identity-and-writes.probe.spec.ts",
+        "tests/golden-path/imaging-auth.probe.spec.ts",
+        "tests/golden-path/cli-sandbox-args.probe.spec.ts",
+        "tests/golden-path/cli-transport-resilience.probe.spec.ts",
+        "tests/golden-path/cut-nudge-batching.probe.spec.ts",
+        "tests/golden-path/frames-run-bounded.probe.spec.ts",
+        "tests/golden-path/imaging-ssrf.probe.spec.ts",
+        "tests/golden-path/music-failure-classification.probe.spec.ts",
+        "tests/golden-path/object-url-ownership.probe.spec.ts",
+        "tests/golden-path/spine-rank-total.probe.spec.ts",
+        "tests/golden-path/style-extract.probe.spec.ts",
+        "tests/live/golden-path.live.spec.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "afbf291c-d8ac-4f08-8340-5e045b361065",
+      "keywords": [
+        "probe",
+        "golden-path",
+        "ssrf",
+        "auth",
+        "transport",
+        "resilience",
+        "invariant",
+        "vitest",
+        "integration"
+      ],
+      "last_written_at": "2026-08-29T09:19:58.105381300+00:00",
+      "name": "golden-path-tests",
+      "pinned": false,
+      "tech_stack": [
+        "Vitest",
+        "TypeScript",
+        "Next.js 15"
       ]
     },
     {
@@ -177,7 +411,7 @@
         "asset-library"
       ],
       "db_tables": [],
-      "description": "The server-side imaging abstraction layer — three capabilities (generate, edit, recognize) routed across three vendors (Google, Leonardo, Qwen) with zero vendor coupling above lib/imaging/. router.ts reads the environment to pick the right provider per capability; types.ts defines the single ImagingProvider interface all adapters satisfy; lib/stylePrompt.ts is the style-block-to-prompt compiler that ensures every generation carries the locked theme's full colour-role, element-vocabulary, and no-text constraints. pricing.ts is the single source of truth for per-call cost figures (measured or explicitly unpriced), served to the browser exclusively via GET /api/imaging/pricing to prevent price literals from scattering across components; log.ts provides a one-line-per-call structured server log with credential scrubbing. The three app/api/imaging/* routes are the only seam components may cross — no provider import may escape lib/imaging/.",
+      "description": "The server-side imaging abstraction layer — three capabilities (generate, edit, recognize) routed across three vendors (Google, Leonardo, Qwen) with zero vendor coupling above lib/imaging/. router.ts reads the environment to pick the right provider per capability; types.ts defines the single ImagingProvider interface all adapters satisfy; lib/stylePrompt.ts is the style-block-to-prompt compiler; pricing.ts is the single source of truth for per-call cost figures; budget.ts enforces per-project spend limits so generation runs cannot exceed a configured ceiling; safeUrl.ts validates image URLs before they are forwarded to any provider, blocking SSRF vectors; log.ts provides structured server logs with credential scrubbing. The three app/api/imaging/* routes are the only seam components may cross.",
       "entry_points": [
         "lib/imaging/router.ts",
         "lib/imaging/types.ts",
@@ -193,6 +427,8 @@
         "lib/imaging/json.ts",
         "lib/imaging/log.ts",
         "lib/imaging/pricing.ts",
+        "lib/imaging/budget.ts",
+        "lib/imaging/safeUrl.ts",
         "lib/imaging/providers/google.ts",
         "lib/imaging/providers/leonardo.ts",
         "lib/imaging/providers/qwen.ts",
@@ -211,14 +447,15 @@
         "generate",
         "edit",
         "recognize",
-        "provider",
-        "leonardo",
-        "google",
-        "qwen",
-        "style",
-        "plate"
+        "Leonardo",
+        "Google",
+        "Qwen",
+        "budget",
+        "pricing",
+        "stylePrompt",
+        "provider"
       ],
-      "last_written_at": "2026-08-14T17:29:33.345093500+00:00",
+      "last_written_at": "2026-08-29T09:19:58.111404800+00:00",
       "name": "imaging-providers",
       "pinned": false,
       "tech_stack": [
@@ -227,6 +464,123 @@
         "Google Imagen",
         "Leonardo AI",
         "Qwen VL"
+      ]
+    },
+    {
+      "api_surface": "POST /api/music/plan, POST /api/music/compose, POST /api/music/generate, POST /api/music/sfx",
+      "business_feature": "Music Generation",
+      "category": "api",
+      "cross_refs": [
+        "imaging-providers",
+        "script-step",
+        "trailer-script"
+      ],
+      "db_tables": [],
+      "description": "The server-side music generation abstraction layer — four capabilities (plan, compose, generate, sfx) routed through ElevenLabs with a thin client facade in lib/musicClient.ts. lib/music/plan.ts turns a scored script into a music brief; lib/music/elevenlabs.ts is the ElevenLabs adapter; lib/music/types.ts defines MusicBrief, MusicTrack, and SfxCue; lib/music/errors.ts provides typed error handling for API failures. The four app/api/music/* routes are the only seam components cross — no ElevenLabs import escapes lib/music/, mirroring the imaging abstraction contract.",
+      "entry_points": [
+        "lib/musicClient.ts",
+        "lib/music/plan.ts",
+        "app/api/music/compose/route.ts"
+      ],
+      "file_paths": [
+        "lib/music/types.ts",
+        "lib/music/plan.ts",
+        "lib/music/elevenlabs.ts",
+        "lib/music/errors.ts",
+        "lib/musicClient.ts",
+        "app/api/music/plan/route.ts",
+        "app/api/music/compose/route.ts",
+        "app/api/music/generate/route.ts",
+        "app/api/music/sfx/route.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "f7fb45b9-f005-4ace-80ec-10816dce1267",
+      "keywords": [
+        "music",
+        "ElevenLabs",
+        "compose",
+        "sfx",
+        "generation",
+        "plan",
+        "brief",
+        "audio",
+        "score",
+        "integration"
+      ],
+      "last_written_at": "2026-08-27T09:57:49.774583+00:00",
+      "name": "music-pipeline",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "TypeScript",
+        "ElevenLabs API"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Pipeline Automation",
+      "category": "config",
+      "cross_refs": [
+        "frames-step",
+        "research-step",
+        "script-step",
+        "imaging-providers"
+      ],
+      "db_tables": [],
+      "description": "The developer-facing pipeline automation layer — driver scripts that exercise the full studio flow headlessly, regression harnesses for gate/bundle/manifest checks, a lint ratchet enforcing code-quality baselines, and a VLM consistency probe suite. DRIVERS.md documents each script's purpose; drive-research-step.mjs and the other drive-*.mjs files are integration smoke tests run against a live local server; check-bundle.mjs and check-manifest.mjs validate the imaging style bundle manifests; lint-ratchet.mjs enforces that lint errors never exceed the committed baseline. The pipeline/vlm-probe/ directory is a Python probe suite for testing visual-language model consistency, shot-to-reference fidelity, and multi-chain clip generation against a local GPU rig — guard.py enforces VRAM/RAM headroom, consistency.py measures cross-seed and cross-mechanism coherence, identity.py and replicate.py test face/reference preservation.",
+      "entry_points": [
+        "pipeline/DRIVERS.md",
+        "pipeline/BEATS-PROMPT.md",
+        "pipeline/FRAMES-SCENE-PROMPT.md"
+      ],
+      "file_paths": [
+        "pipeline/drive-research-step.mjs",
+        "pipeline/drive-studio.mjs",
+        "pipeline/drive-script-step.mjs",
+        "pipeline/drive-recalibration.mjs",
+        "pipeline/check-bundle.mjs",
+        "pipeline/check-manifest.mjs",
+        "pipeline/lint-ratchet.mjs",
+        "pipeline/vlm-probe/CONSISTENCY-SPIKE.md",
+        "pipeline/vlm-probe/CONSISTENCY-FINDINGS.md",
+        "pipeline/vlm-probe/beats.py",
+        "pipeline/vlm-probe/consistency.py",
+        "pipeline/vlm-probe/guard.py",
+        "pipeline/vlm-probe/identity.py",
+        "pipeline/vlm-probe/replicate.py",
+        "pipeline/vlm-probe/fetch_ref2va.py",
+        "pipeline/vlm-probe/motion.py",
+        "pipeline/vlm-probe/clips/chain/lane.json",
+        "pipeline/vlm-probe/clips/ref2va/lane.json",
+        "pipeline/vlm-probe/shots/baseline/lane.json",
+        "pipeline/vlm-probe/shots/reference-face-e25/lane.json",
+        "pipeline/vlm-probe/shots/reference-face-late/lane.json",
+        "pipeline/vlm-probe/shots/reference-face-only/lane.json",
+        "pipeline/vlm-probe/shots/reference/lane.json"
+      ],
+      "group": "Content Pipeline",
+      "group_id": "a29f1861-3e17-4452-910a-b5b8647646af",
+      "id": "2b0e4967-fd1d-4417-8ac8-a5eddc5d50ab",
+      "keywords": [
+        "pipeline",
+        "driver",
+        "regression",
+        "lint",
+        "ratchet",
+        "bundle",
+        "manifest",
+        "prompt-template",
+        "taste-ledger",
+        "situations"
+      ],
+      "last_written_at": "2026-08-29T09:19:58.111897800+00:00",
+      "name": "pipeline-scripts",
+      "pinned": false,
+      "tech_stack": [
+        "Node.js",
+        "TypeScript",
+        "ESLint"
       ]
     },
     {
@@ -287,7 +641,7 @@
         "studio-navigation"
       ],
       "db_tables": [],
-      "description": "Step 1 of the production pipeline — a topic goes in, a structured notebook comes out. ResearchStep presents a two-section view (Topic for input and run control; Board for triage once a notebook exists) with a background-job model so the research run survives navigation. The _parts/ directory contains the triage card tiles, follow-up queue, scope bar/gate, and topic panel; the run/ directory models the run trace, types, and useResearchRun hook; scope.ts and followup.ts carry the business logic for creator-scoping decisions and follow-up interrogation.",
+      "description": "Step 1 of the production pipeline — a topic goes in, a structured notebook comes out. ResearchStep presents a two-section view (Topic for input and run control; Board for triage once a notebook exists) with a background-job model so the research run survives navigation. The beats/ sub-directory (BeatVariantBoard, ModeChooser, SlotColumn, VariantTile, beats.ts, useBeatPicks) extends the step with a beat-picking surface where users choose which research cards become script beats across trailer/free/educational discipline modes. The _parts/ directory contains the triage card tiles, follow-up queue, scope bar/gate, and topic panel; scope.ts, followup.ts, and useFollowUps.ts carry the business logic for creator-scoping decisions and follow-up interrogation.",
       "entry_points": [
         "app/_phases/research/ResearchStep.tsx",
         "app/_phases/_shared/types.ts",
@@ -310,24 +664,31 @@
         "app/_phases/research/run/types.ts",
         "app/_phases/research/run/useResearchRun.ts",
         "app/_phases/research/scope.ts",
-        "app/_phases/research/useScope.ts"
+        "app/_phases/research/useScope.ts",
+        "app/_phases/research/useFollowUps.ts",
+        "app/_phases/research/beats/BeatVariantBoard.tsx",
+        "app/_phases/research/beats/ModeChooser.tsx",
+        "app/_phases/research/beats/SlotColumn.tsx",
+        "app/_phases/research/beats/VariantTile.tsx",
+        "app/_phases/research/beats/beats.ts",
+        "app/_phases/research/beats/useBeatPicks.ts"
       ],
       "group": null,
       "group_id": null,
       "id": "fab029ff-06dc-49e8-b694-c43d79e707f5",
       "keywords": [
         "research",
+        "beats",
+        "variant",
         "notebook",
-        "scope",
         "triage",
+        "scope",
         "followup",
-        "facts",
-        "mechanisms",
-        "reversals",
-        "engine-fit",
-        "run-trace"
+        "background-job",
+        "discipline",
+        "mode"
       ],
-      "last_written_at": "2026-08-12T21:18:21.570227100+00:00",
+      "last_written_at": "2026-08-29T09:19:58.111027700+00:00",
       "name": "research-step",
       "pinned": false,
       "tech_stack": [
@@ -473,7 +834,7 @@
         "app-infrastructure"
       ],
       "db_tables": [],
-      "description": "The Gravitone 'Obsidian' dark-cinematic design system. tokens.ts is the single source for all color literals, easing curves, surface classes, and motion presets; GravitoneTokens emits every --gt-* CSS variable server-side to prevent FOUC; globals.css defines the Signal Layer contract for audio-reactive visuals. Primitives.tsx, Equalizer.tsx, StudioFrame.tsx, and NotificationBell.tsx provide core atoms; Modal, Field, AuthGate, and UserMenu extend the library with interactive surface patterns used across project management, research, and background-job notification flows.",
+      "description": "The Gravitone 'Obsidian' dark-cinematic design system. tokens.ts is the single source for all color literals, easing curves, surface classes, and motion presets; GravitoneTokens emits every --gt-* CSS variable server-side to prevent FOUC; globals.css defines the Signal Layer contract for audio-reactive visuals. Primitives.tsx, Equalizer.tsx, StudioFrame.tsx, and NotificationBell.tsx provide core atoms; Modal, Field, AuthGate, and UserMenu extend the library with interactive surface patterns; HarnessBridge.tsx injects the UAT test-automation overlay into the component tree so integration tests can observe and drive the live UI without a separate harness binary.",
       "entry_points": [
         "components/ui/tokens.ts",
         "components/ui/Primitives.tsx",
@@ -490,24 +851,25 @@
         "components/ui/AuthGate.tsx",
         "components/ui/UserMenu.tsx",
         "components/ui/NotificationBell.tsx",
-        "app/globals.css"
+        "app/globals.css",
+        "components/ui/HarnessBridge.tsx"
       ],
       "group": "Design System",
       "group_id": "15dbffba-869c-4a06-8a0f-99debfb50f85",
       "id": "5e10d5d4-71e2-4a69-8ffc-518cfa9cb987",
       "keywords": [
-        "design-tokens",
-        "css-variables",
+        "design-system",
+        "tokens",
+        "dark-cinematic",
+        "CSS-variables",
         "signal-layer",
-        "audio-reactive",
-        "dark-theme",
-        "modal",
+        "animation",
+        "harness",
         "auth-gate",
-        "field",
-        "primitives",
-        "obsidian"
+        "modal",
+        "notification"
       ],
-      "last_written_at": "2026-08-12T21:18:21.565386500+00:00",
+      "last_written_at": "2026-08-27T09:57:49.779403600+00:00",
       "name": "studio-design-system",
       "pinned": false,
       "tech_stack": [
@@ -526,7 +888,7 @@
         "asset-library"
       ],
       "db_tables": [],
-      "description": "The project management and studio routing layer. The landing page gates entry behind Google auth (GateContactSheet); /projects displays the production matrix shelf — a heat-grid of projects × six pipeline steps — after a prototype round that ran three variants and kept the matrix; /studio/[projectId] opens a named project on its active step via a horizontal Stepper rail. The studio route moved to a dynamic segment so the project ID is URL-native, enabling direct linking to any step of any project.",
+      "description": "The project management and studio routing layer. The landing page gates entry behind Google auth (GateContactSheet); /projects displays the production matrix shelf — a heat-grid of projects × six pipeline steps; /studio/[projectId] opens a named project on its active step via a horizontal Stepper rail. The studio route uses a dynamic segment so the project ID is URL-native, enabling direct linking to any step of any project. The /playground route provides a sandboxed component harness for UI experimentation outside the project flow.",
       "entry_points": [
         "app/projects/ProjectsView.tsx",
         "app/studio/StudioView.tsx",
@@ -545,25 +907,135 @@
         "app/studio/[projectId]/page.tsx",
         "app/studio/[projectId]/StudioView.tsx",
         "app/studio/[projectId]/Stepper.tsx",
-        "app/studio/[projectId]/phases.tsx"
+        "app/studio/[projectId]/phases.tsx",
+        "app/playground/page.tsx",
+        "app/playground/PlaygroundView.tsx"
       ],
       "group": "Studio Hub",
       "group_id": "3d91fe00-fa81-4526-a642-4f24470db9e1",
       "id": "115ef1be-a232-4f4b-8952-e878df48ff53",
       "keywords": [
+        "routing",
         "projects",
-        "ledger",
-        "call-sheet",
         "matrix",
-        "studio",
         "stepper",
         "landing",
         "auth-gate",
-        "project-crud",
-        "phase-navigation"
+        "studio",
+        "playground",
+        "dynamic-segment",
+        "discipline"
       ],
-      "last_written_at": "2026-08-12T21:18:21.564368200+00:00",
+      "last_written_at": "2026-08-27T09:57:49.779643100+00:00",
       "name": "studio-navigation",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "React 19",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "internal lib only — consumed by /api/recalibrate, /api/frames, /api/foundry/extract routes",
+      "business_feature": "Text Reasoning Engine",
+      "category": "lib",
+      "cross_refs": [
+        "imaging-providers",
+        "app-infrastructure",
+        "foundry-api",
+        "app-infrastructure"
+      ],
+      "db_tables": [],
+      "description": "The server-side text/reasoning abstraction layer — one capability (reason) routed across two providers (claude-cli local subprocess, Google cloud API) with zero vendor coupling above lib/text/. router.ts builds a fallback chain from deployment posture and environment keys, walking from the preferred local binary to the cloud endpoint when the former is absent or fails; types.ts defines TextProvider, TextRequest, TextResult, TurnClass, and TextProvenance with the same vocabulary as the imaging layer; providers/claudeCli.ts and providers/google.ts are the two adapters; pricing.ts and log.ts mirror the imaging layer's cost-tracking and credential-scrubbing contracts. TurnClass (edit-plan, scene-direction, style-synthesis, probe) is the routing and spend-attribution key — an unlabelled call is a type error.",
+      "entry_points": [
+        "lib/text/router.ts",
+        "lib/text/types.ts"
+      ],
+      "file_paths": [
+        "lib/text/types.ts",
+        "lib/text/router.ts",
+        "lib/text/env.ts",
+        "lib/text/errors.ts",
+        "lib/text/http.ts",
+        "lib/text/json.ts",
+        "lib/text/log.ts",
+        "lib/text/pricing.ts",
+        "lib/text/providers/claudeCli.ts",
+        "lib/text/providers/google.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "e44e6001-80c3-4cdf-88ec-f9f99e6d7277",
+      "keywords": [
+        "text",
+        "reasoning",
+        "claude-cli",
+        "google",
+        "fallback",
+        "router",
+        "turn-class",
+        "provenance",
+        "schema-enforcement",
+        "local-subprocess"
+      ],
+      "last_written_at": "2026-08-29T09:19:58.106028300+00:00",
+      "name": "text-providers",
+      "pinned": false,
+      "tech_stack": [
+        "TypeScript",
+        "Next.js 15",
+        "Google Generative AI"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Trailer Script Step",
+      "category": "ui",
+      "cross_refs": [
+        "script-step",
+        "research-step",
+        "shared-notebook"
+      ],
+      "db_tables": [],
+      "description": "The trailer discipline variant of Step 2 — turns research beats into a scored trailer cut with structural acts, energy curve, and withholding mechanics. TrailerScript is the root surface; StructurePanel and MovementSection organise acts and kinetic moves; EnergyCurve visualises intensity across the cut; PromiseLedger and WithholdingPanel model the audience-contract layer unique to trailers; BeatEditor, ConnectorPick, and RaisesChips handle per-beat editing and raises annotation; cut.ts and structure.ts carry the data model and scoring logic; useTrailerCut is the state hook; trailerFixtures.ts supplies a seeded demo cut for prototype sessions.",
+      "entry_points": [
+        "app/_phases/script/trailer/TrailerScript.tsx",
+        "app/_phases/script/trailer/cut.ts",
+        "app/_phases/script/trailer/useTrailerCut.ts"
+      ],
+      "file_paths": [
+        "app/_phases/script/trailer/TrailerScript.tsx",
+        "app/_phases/script/trailer/StructurePanel.tsx",
+        "app/_phases/script/trailer/MovementSection.tsx",
+        "app/_phases/script/trailer/EnergyCurve.tsx",
+        "app/_phases/script/trailer/PromiseLedger.tsx",
+        "app/_phases/script/trailer/WithholdingPanel.tsx",
+        "app/_phases/script/trailer/BeatEditor.tsx",
+        "app/_phases/script/trailer/ConnectorPick.tsx",
+        "app/_phases/script/trailer/RaisesChips.tsx",
+        "app/_phases/script/trailer/cut.ts",
+        "app/_phases/script/trailer/structure.ts",
+        "app/_phases/script/trailer/types.ts",
+        "app/_phases/script/trailer/useTrailerCut.ts",
+        "app/_studio/trailerFixtures.ts"
+      ],
+      "group": null,
+      "group_id": null,
+      "id": "455f8eda-795e-4030-afb2-07f940f1543b",
+      "keywords": [
+        "trailer",
+        "cut",
+        "structure",
+        "energy-curve",
+        "withholding",
+        "promise-ledger",
+        "acts",
+        "raises",
+        "beats",
+        "discipline"
+      ],
+      "last_written_at": "2026-08-27T09:57:49.774396800+00:00",
+      "name": "trailer-script",
       "pinned": false,
       "tech_stack": [
         "Next.js 15",
@@ -572,7 +1044,7 @@
       ]
     }
   ],
-  "generated_at": "2026-08-14T17:29:34.226089200+00:00",
+  "generated_at": "2026-08-29T09:19:59.231135500+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -616,6 +1088,13 @@
       "domain": "integration",
       "id": "f51b597e-76d8-4820-b519-0020c25074a1",
       "name": "Imaging Pipeline"
+    },
+    {
+      "color": "orange",
+      "context_count": 1,
+      "domain": "data",
+      "id": "a29f1861-3e17-4452-910a-b5b8647646af",
+      "name": "Content Pipeline"
     }
   ],
   "project": {
@@ -624,13 +1103,13 @@
     "root": "C:/Users/mkdol/dolla/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "d5ea0437034a64e1c2c27815707975446246688e",
-    "git_commit_count": 82
+    "git_commit": "681e43493c8ba4646eec86ce38700c214c0044e9",
+    "git_commit_count": 234
   },
   "stats": {
-    "contexts": 10,
-    "files": 153,
-    "groups": 6,
+    "contexts": 18,
+    "files": 290,
+    "groups": 7,
     "use_cases": 0
   },
   "taxonomy": {

@@ -46,23 +46,57 @@ export default function ProjectsView() {
   // Create walks straight into the studio — a project with no work in it has
   // nothing to show on this page, and the name the user just typed is the
   // headline waiting for them one route over.
+  // CLOSE ON SUCCESS, the way ConfirmDelete below already does — and for the
+  // reason stated there: "closing a confirmation over work that was not done is
+  // the same small lie as a button that does nothing."
+  //
+  // This closed FIRST and then wrote. Both writers resolve to null on failure
+  // and raise the error banner above, so the answer was available and only the
+  // delete flow read it; a quota or blocked-tab failure closed the dialog,
+  // discarded the draft the user had typed, and left a banner explaining a loss
+  // that had already happened. On a repo whose step store calls quota "a real
+  // destination and not a theoretical one", that is the reachable case.
+  //
+  // The dialog holds itself open and disables its own control while this
+  // resolves, so awaiting does not buy a double-submit.
   const submit = async (draft: ProjectDraft) => {
     const editing = dialog.project;
-    setDialog({ open: false, project: null });
     if (editing) {
-      await update(editing.id, draft);
+      const saved = await update(editing.id, draft);
+      if (saved) setDialog({ open: false, project: null });
       return;
     }
     const made = await create(draft);
-    if (made) router.push(`/studio/${made.id}`);
+    if (!made) return;
+    setDialog({ open: false, project: null });
+    router.push(`/studio/${made.id}`);
   };
 
   return (
     <StudioFrame>
-      <main className="pb-16">
-        <header className="pt-6">
-          <Eyebrow>projects</Eyebrow>
-          <h1 className="font-instrument mt-3 text-4xl text-white">Projects</h1>
+      {/* tabIndex={-1}: the landmark a closing dialog hands focus to when the
+          control it was opened from did not survive it — a restore onto a
+          detached node is silent, and focus falls to <body>. See
+          components/ui/Modal.tsx#restoreFocus. */}
+      <main tabIndex={-1} className="pb-16">
+        <header className="flex flex-wrap items-end justify-between gap-4 pt-6">
+          <div>
+            <Eyebrow>projects</Eyebrow>
+            <h1 className="font-instrument mt-3 text-4xl text-white">Projects</h1>
+          </div>
+          {/* The expert path: the old dialog, exactly as before, for whoever
+              knows the four answers already. The primary create walks the
+              guided wizard (/projects/new). Same theme-gate on both — a dead
+              button teaches nothing, /library is the actual next step. */}
+          <button
+            type="button"
+            onClick={() =>
+              gated ? router.push("/library") : setDialog({ open: true, project: null })
+            }
+            className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-[11px] text-white/45 transition hover:border-white/25 hover:text-white/75"
+          >
+            quick create — the expert form
+          </button>
         </header>
 
         {gated && (
@@ -103,10 +137,10 @@ export default function ProjectsView() {
               onEdit={(p) => setDialog({ open: true, project: p })}
               onDelete={(p) => setDoomed(p)}
               // Gated rather than disabled: a dead button teaches nothing,
-              // whereas landing on /library is the actual next step.
-              onCreate={() =>
-                gated ? router.push("/library") : setDialog({ open: true, project: null })
-              }
+              // whereas landing on /library is the actual next step. Ungated,
+              // the primary create is the guided wizard; the header's "quick
+              // create" keeps the dialog as the expert path.
+              onCreate={() => router.push(gated ? "/library" : "/projects/new")}
             />
           )}
         </section>
@@ -122,9 +156,30 @@ export default function ProjectsView() {
       <ConfirmDelete
         project={doomed}
         onClose={() => setDoomed(null)}
-        onConfirm={() => {
-          if (doomed) void remove(doomed.id);
-          setDoomed(null);
+        /**
+         * AWAIT THE REMOVAL, THEN CLOSE — because the ORDER decides where a
+         * keyboard user's focus lands, and this used to lose that race.
+         *
+         * `Modal#restoreFocus` hands focus back to the opener when it is still
+         * connected and to `<main>` when it is not. The opener here is the row's
+         * own delete button. `useProjects.remove` awaits the IndexedDB
+         * transaction BEFORE `setProjects`, so firing it and closing in the same
+         * commit left the row mounted at the moment the modal tore down: focus
+         * was restored onto a button that unmounted a tick later, and landed on
+         * `<body>`. Measured, after the Modal fix — which cannot see this,
+         * because from inside the dialog the opener is genuinely still there.
+         *
+         * Awaiting first makes the ordering true rather than lucky: by the time
+         * the dialog closes the row is gone, `isConnected` is false, and focus
+         * goes to the landmark. A failed delete keeps the row AND the dialog —
+         * `remove` returns null and reports through the error banner, and
+         * closing a confirmation over work that was not done is the same small
+         * lie as a button that does nothing.
+         */
+        onConfirm={async () => {
+          if (!doomed) return;
+          const took = await remove(doomed.id);
+          if (took) setDoomed(null);
         }}
       />
     </StudioFrame>

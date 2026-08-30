@@ -4,10 +4,12 @@
 // they type here is the headline /studio renders, which is why title is the
 // only required field and why the create button says where it goes.
 //
-// Three fields, no more. Template and target runtime come from the craft
-// library (knowledge/templates/*): picking a template sets the runtime it
-// measured, and the note under the pills is that template's own one-liner. A
-// project should be creatable in eight seconds.
+// Four choices, in the order they depend on each other: discipline (what kind
+// of video), template (which craft format inside it), style (a locked visual
+// identity that fits the discipline), runtime. Template and target runtime
+// come from the craft library (knowledge/templates/*): picking a template sets
+// the runtime it measured, and the note under the pills is that template's own
+// one-liner. A project should be creatable in eight seconds.
 
 import { useEffect, useMemo, useState } from "react";
 
@@ -15,21 +17,27 @@ import Modal from "@/components/ui/Modal";
 import { Eyebrow, Button } from "@/components/ui/Primitives";
 import { Field, NumberInput, Segmented, TextArea, TextInput } from "@/components/ui/Field";
 import {
+  DISCIPLINES,
+  DISCIPLINE_LABEL,
+  DISCIPLINE_NOTE,
   PHASE_TITLE,
-  TEMPLATES,
+  disciplineOf,
   projectContents,
   templateOf,
+  templatesFor,
+  type Discipline,
   type PhaseKey,
   type Project,
   type ProjectContents,
   type ProjectDraft,
   type TemplateId,
 } from "@/lib/projects";
-import { lockedOnly, projectStyle, STYLE_MISS_WORD, type Theme } from "@/lib/themes";
+import { lockedOnly, projectStyle, STYLE_MISS_WORD, styleFits, type Theme } from "@/lib/themes";
 
 const blank = (): ProjectDraft => ({
   title: "",
   logline: "",
+  discipline: "educational",
   template: "short-educational-video",
   targetS: templateOf("short-educational-video").defaultS,
   themeId: undefined,
@@ -52,7 +60,9 @@ export default function ProjectDialog({
    *  list is missing for a reason the user is owed. */
   themes: Theme[];
   onClose: () => void;
-  onSubmit: (draft: ProjectDraft) => void;
+  /** Resolves once the write has landed. The dialog stays open until it does,
+   *  so a failed save keeps the draft the user typed — see `submit` below. */
+  onSubmit: (draft: ProjectDraft) => void | Promise<unknown>;
 }) {
   const [draft, setDraft] = useState<ProjectDraft>(blank);
   // Whether the user has taken ownership of the runtime. Until they do,
@@ -65,7 +75,14 @@ export default function ProjectDialog({
     if (!open) return;
     if (project) {
       const { title, logline, template, targetS, themeId } = project;
-      setDraft({ title, logline, template, targetS, themeId });
+      setDraft({
+        title,
+        logline,
+        discipline: project.discipline ?? disciplineOf(template),
+        template,
+        targetS,
+        themeId,
+      });
       setOwnDuration(true);
     } else {
       // Pre-select the most recently locked style. It is the one they almost
@@ -77,6 +94,14 @@ export default function ProjectDialog({
   }, [open, project, lockedThemes]);
 
   const tpl = templateOf(draft.template);
+  const discipline: Discipline = draft.discipline ?? disciplineOf(draft.template);
+  const templates = templatesFor(discipline);
+  // Only styles that fit the discipline are offered: the SAME predicate
+  // /library filters its wall with (lib/themes.ts#styleFits).
+  const fittingThemes = useMemo(
+    () => lockedThemes.filter((t) => styleFits(t, discipline)),
+    [lockedThemes, discipline],
+  );
   // The SAME resolver the studio renders with (lib/themes.ts) — so what this
   // dialog says a project's style is, and what its frames actually come back
   // in, cannot disagree.
@@ -92,9 +117,53 @@ export default function ProjectDialog({
       targetS: ownDuration ? d.targetS : templateOf(template).defaultS,
     }));
 
-  const submit = () => {
-    if (!valid) return;
-    onSubmit(draft);
+  // Changing the discipline moves the template to the first of its own, so the
+  // record can never carry a template outside its discipline (on edit too).
+  // A chosen style that no longer fits is dropped on create; on edit the style
+  // is immutable and stays, whatever it is tagged.
+  const pickDiscipline = (next: Discipline) =>
+    setDraft((d) => {
+      const template = templatesFor(next)[0].id;
+      return {
+        ...d,
+        discipline: next,
+        template,
+        targetS: ownDuration ? d.targetS : templateOf(template).defaultS,
+        themeId:
+          project || !d.themeId || themes.some((t) => t.id === d.themeId && styleFits(t, next))
+            ? d.themeId
+            : undefined,
+      };
+    });
+
+  /** AWAIT THE WRITE, and hold the dialog open while it runs.
+   *
+   *  This used to be fire-and-forget, and the caller closed the dialog in the
+   *  line before it. `ConfirmDelete`, twenty lines away in the same view,
+   *  already argues the case at length: "closing a confirmation over work that
+   *  was not done is the same small lie as a button that does nothing." Both
+   *  writers report failure the same way — `create` and `update` resolve to
+   *  null and raise the shelf's error banner — and only the delete flow read
+   *  the answer. A quota or blocked-tab failure closed this dialog, discarded
+   *  everything the user had typed, and left a banner explaining a loss that
+   *  had already happened.
+   *
+   *  Holding it open needs the busy flag: the await opens a window the
+   *  close-first version did not have, and without it a slow write takes two
+   *  presses and makes two projects. */
+  const [busy, setBusy] = useState(false);
+
+  const submit = async () => {
+    if (!valid || busy) return;
+    setBusy(true);
+    try {
+      await onSubmit(draft);
+    } finally {
+      // The caller closes on success; on failure this dialog is still mounted
+      // and must be usable again. Setting it either way is safe — an unmounted
+      // component's setState is a no-op in React 19, not a warning.
+      setBusy(false);
+    }
   };
 
   return (
@@ -110,15 +179,15 @@ export default function ProjectDialog({
             {project ? "saved to this browser" : "opens in the studio"}
           </span>
           <div className="flex gap-2">
-            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose}>
+            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose} disabled={busy}>
               Cancel
             </Button>
             <Button
               className="cursor-pointer px-5 py-2"
-              disabled={!valid}
-              onClick={submit}
+              disabled={!valid || busy}
+              onClick={() => void submit()}
             >
-              {project ? "Save" : "Create & open"}
+              {busy ? "Saving…" : project ? "Save" : "Create & open"}
             </Button>
           </div>
         </div>
@@ -128,7 +197,7 @@ export default function ProjectDialog({
         className="grid gap-5"
         onSubmit={(e) => {
           e.preventDefault();
-          submit();
+          void submit();
         }}
       >
         <Field label="Project name" htmlFor="p-title">
@@ -158,9 +227,16 @@ export default function ProjectDialog({
         </Field>
 
         <Segmented
+          label="Discipline"
+          value={discipline}
+          options={DISCIPLINES.map((d) => ({ id: d, label: DISCIPLINE_LABEL[d], note: DISCIPLINE_NOTE[d] }))}
+          onChange={pickDiscipline}
+        />
+
+        <Segmented
           label="Template"
           value={draft.template}
-          options={TEMPLATES.map((t) => ({ id: t.id, label: t.label, note: t.note }))}
+          options={templates.map((t) => ({ id: t.id, label: t.label, note: t.note }))}
           onChange={pickTemplate}
         />
 
@@ -189,8 +265,14 @@ export default function ProjectDialog({
             label="Visual style"
             hint="A locked style from the library. Every frame this project renders is built on it."
           >
+            {!fittingThemes.length && (
+              <p className="font-hanken text-sm text-amber-200/90">
+                No locked style fits {DISCIPLINE_LABEL[discipline].toLowerCase()} yet. Lock one in the
+                library, or one from a brief, which fits every discipline.
+              </p>
+            )}
             <div className="flex flex-wrap gap-1.5">
-              {lockedThemes.map((t) => (
+              {fittingThemes.map((t) => (
                 <button
                   key={t.id}
                   type="button"
@@ -212,7 +294,13 @@ export default function ProjectDialog({
         <Field
           label="Target runtime"
           htmlFor="p-dur"
-          hint={`${tpl.label} was measured at ${tpl.range[0]}–${tpl.range[1]}s. Past that band the craft rules stop applying.`}
+          hint={
+            // Free form has no measured band — its `range` is only what the
+            // input accepts — so the hint must not call it a measurement.
+            discipline === "free"
+              ? "Nothing was measured for a free-form video. There is no craft band here; the studio only keeps time."
+              : `${tpl.label} was measured at ${tpl.range[0]}–${tpl.range[1]}s. Past that band the craft rules stop applying.`
+          }
         >
           <NumberInput
             id="p-dur"

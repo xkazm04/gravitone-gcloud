@@ -95,13 +95,20 @@ export const NOTEBOOK: Notebook = {
       "Without it the script is a bear case wearing an explainer's clothes. The honest position is 'the model changed', not 'it is going to zero'.",
   },
 
+  // Every conversion names the fact it converts. They were authored unlinked
+  // and the graph check could not see it (cards.ts::notebookIssues), so the
+  // felt forms sat beside the notebook rather than inside it. Linking them is
+  // what makes the felt version checkable against the claim it restates — and
+  // the first thing it exposes is scaleConversions[4]: f-correlation records
+  // the 0.70–0.80 band "in risk-on conditions", and the felt line drops the
+  // qualifier. The link does not fix that; it makes it a finding.
   scaleConversions: [
-    { raw: "$126,198 → ~$62,000", felt: "half the value, in ten months, while every piece of good news it ever wanted arrived" },
-    { raw: "3.67 million BTC distributed", felt: "more coins sold into strength than in any previous cycle — the people who held longest sold most" },
-    { raw: "mNAV 3.89x → below 1.0", felt: "the market went from paying $3.89 for every dollar of bitcoin the company held, to under a dollar" },
-    { raw: "32 BTC sold", felt: "about $2 million — for a company holding billions. The number is meaningless; the sentence 'Strategy sold bitcoin' is not." },
-    { raw: "0.70–0.80 correlation with Nasdaq", felt: "on most days, bitcoin is a tech stock with extra steps" },
-    { raw: "10-year yield ~4.5%", felt: "when a government bond pays you to do nothing, an asset that yields nothing has to argue harder" },
+    { for: "f-drawdown", raw: "$126,198 → ~$62,000", felt: "half the value, in ten months, while every piece of good news it ever wanted arrived" },
+    { for: "f-lth-distribution", raw: "3.67 million BTC distributed", felt: "more coins sold into strength than in any previous cycle — the people who held longest sold most" },
+    { for: "f-mnav", raw: "mNAV 3.89x → below 1.0", felt: "the market went from paying $3.89 for every dollar of bitcoin the company held, to under a dollar" },
+    { for: "f-mstr-sold", raw: "32 BTC sold", felt: "about $2 million — for a company holding billions. The number is meaningless; the sentence 'Strategy sold bitcoin' is not." },
+    { for: "f-correlation", raw: "0.70–0.80 correlation with Nasdaq", felt: "on most days, bitcoin is a tech stock with extra steps" },
+    { for: "f-yields", raw: "10-year yield ~4.5%", felt: "when a government bond pays you to do nothing, an asset that yields nothing has to argue harder" },
   ],
 
   analogyCandidates: [
@@ -187,7 +194,32 @@ export const NOTEBOOK_COUNTS = {
   flagged: NOTEBOOK.facts.filter((f) => f.loadBearing && f.confidence === "low").length,
   mechanisms: NOTEBOOK.mechanisms.length,
   reversals: NOTEBOOK.reversals.length,
+  // `sources` and `factSourceStrings` count TWO UNRELATED POPULATIONS, and the
+  // names are deliberately not interchangeable so a caller cannot reach for
+  // the wrong one by habit:
+  //
+  //   · `sources` is NOTEBOOK.sources — the document-level bibliography,
+  //     hand-written as full citation strings ("coindesk.com — bitcoin's U.S.
+  //     reserve still a work in progress (2026-07-06)"). Measured on this
+  //     fixture: 11 entries.
+  //   · `factSourceStrings` is the DISTINCT set of `Fact.source` values across
+  //     the 21 rows in facts.ts, hand-written as short attributions
+  //     ("invezz, crypto.news, intellectia", "whitehouse.gov fact sheet").
+  //     Measured on this fixture: 20 distinct strings.
+  //
+  // Nothing links them — no code asserts a fact's `source` appears anywhere in
+  // NOTEBOOK.sources, and a naive substring match would misfire immediately:
+  // the bibliography writes "whitehouse.gov — fact sheet: Strategic Bitcoin
+  // Reserve (2025-03-06)" where the fact writes "whitehouse.gov fact sheet".
+  // They were authored by different people at different times for different
+  // readers (a bibliography vs. an attribution beside a claim), and forcing a
+  // reconciliation here would either hide real gaps behind a bad matcher or
+  // invent one that does not exist. So both counts are surfaced honestly,
+  // named for the population each one actually counts, and
+  // notebook-source-population.probe.spec.ts pins both numbers so a future
+  // edit that grows one list without the other is caught rather than silent.
   sources: NOTEBOOK.sources.length,
+  factSourceStrings: new Set(NOTEBOOK.facts.map((f) => f.source)).size,
   unknowns: NOTEBOOK.unknowns.length,
   /** The count that actually constrains a script being written today. */
   unknownsOpen: NOTEBOOK.unknowns.filter((u) => !u.resolvedBy).length,

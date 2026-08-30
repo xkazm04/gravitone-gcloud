@@ -25,6 +25,22 @@ export async function POST(req: Request) {
     const plan = body.plan && typeof body.plan === "object" ? (body.plan as WirePlan) : undefined;
     const lengthMs = typeof body.lengthMs === "number" ? body.lengthMs : undefined;
 
+    // A LENGTH IS REQUIRED WHEN ONLY A PROMPT IS SENT. Without one the vendor
+    // picks the duration, and the spend ceiling (lib/music/budget.ts, metered in
+    // SECONDS OF AUDIO) would have to meter the call at the endpoint's 10-minute
+    // maximum to stay safe — which would let one unbounded playground call eat a
+    // whole window. Asking for the number is cheaper than guessing it high.
+    if (prompt && !plan && (lengthMs === undefined || lengthMs <= 0))
+      return Response.json(
+        {
+          detail:
+            '"lengthMs" is required with a prompt: the render is metered in seconds of audio, and ' +
+            "an unstated length would be metered at the vendor's 10-minute maximum.",
+          code: "bad-request",
+        },
+        { status: 400 },
+      );
+
     const out = await composeDetailed({
       prompt,
       plan,

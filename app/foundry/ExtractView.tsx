@@ -24,6 +24,7 @@ import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
 import { foreignLease, hasFailures } from "@/lib/foundry/extract/engine";
 import type { ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
+import { usePolling } from "@/lib/usePolling";
 
 import { ExtractBoard } from "./ExtractBoard";
 import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, saveExtractVerdicts, stepExtractRun } from "./extractClient";
@@ -60,14 +61,56 @@ export function ExtractView() {
     setVerdicts(v);
   }, []);
 
+  /** The newest detail request; an older response is dropped. Identical defect and
+   *  identical fix to app/foundry/FoundryView.tsx — this file is the newer copy of
+   *  that one (`1e4c8e2`), so the hole was propagated forward rather than
+   *  inherited, and both are closed together.
+   *
+   *  Without it: select run A, select run B before A lands, and A's response runs
+   *  `adoptVerdicts(A.verdicts)` while `selected` is B — after which `setVerdict`
+   *  autosaves that map under B's id. A human's judgements about one extract run,
+   *  written onto another's manifest, silently.
+   *
+   *  A monotonic ticket rather than an `id === selected` check, because the 4s
+   *  poll re-requests the SAME id and two in-flight loads for one run must still
+   *  resolve latest-wins. Same shape as `claimSaveSlot` in stepStore. */
+  const detailTicket = useRef(0);
+
   const loadDetail = useCallback(
-    (id: string, keepVerdicts: boolean) =>
-      fetchExtractRun(id).then((d) => {
-        setDetail(d);
-        setLoadedAt(Date.now());
-        if (!keepVerdicts) adoptVerdicts(d.verdicts);
-        return d;
-      }),
+    (id: string, keepVerdicts: boolean) => {
+      const ticket = ++detailTicket.current;
+      // AND A REJECTION PATH, because in this app an unhandled one is not
+      // silence -- it is a WRONG MESSAGE. GlobalErrorBridge listens on
+      // `unhandledrejection` and reports what it catches as
+      // `reportStorageTrouble("write", ...)`, so a failed READ of a run surfaces
+      // in the bell as the user's work failing to SAVE, and NotificationBell
+      // announces that one assertively (it is the app's only assertive case).
+      // On a 4s poll, a foundry that cannot be reached tells a screen-reader
+      // user their studio is not saving. `loadRuns` in this same file has
+      // always had its handler; this one did not.
+      return fetchExtractRun(id).then(
+        (d) => {
+          // Superseded: a newer load is already in flight for this surface. The
+          // drive loop awaits this only to sequence itself, never for the value.
+          if (ticket !== detailTicket.current) return undefined;
+          setDetail(d);
+          setLoadedAt(Date.now());
+          if (!keepVerdicts) adoptVerdicts(d.verdicts);
+          setRunsError(null);
+          return d;
+        },
+        (e) => {
+          if (ticket !== detailTicket.current) return undefined;
+          // `runsError`, NOT `driveError`: the latter is a statement about the
+          // drive loop, and it relabels the control to "retry" whose handler
+          // prunes failed units. A poll that could not reach the server must
+          // not offer to prune anything. This lands beside the run list, where
+          // `loadRuns` failures already show.
+          setRunsError(e instanceof Error ? e.message : "could not load that run");
+          return undefined;
+        },
+      );
+    },
     [adoptVerdicts],
   );
 
@@ -156,15 +199,20 @@ export function ExtractView() {
 
   // A live run this tab is NOT driving — the CLI, or another tab — rewrites
   // its manifest after every unit; poll it, keeping the local verdicts.
+  //
+  // Through `usePolling`, which pauses while the tab is hidden — this is the
+  // surface most likely to be left in a background tab, since the whole point of
+  // the poll is watching a run somebody else is driving.
   const live = detail ? EXTRACT_LIVE.includes(detail.run.status) : false;
-  useEffect(() => {
-    if (!selected || !live || driving) return;
-    const t = window.setInterval(() => {
-      loadDetail(selected, true);
+  usePolling(
+    () => {
+      if (!selected) return;
+      void loadDetail(selected, true);
       loadRuns();
-    }, 4000);
-    return () => window.clearInterval(t);
-  }, [selected, live, driving, loadDetail, loadRuns]);
+    },
+    4000,
+    Boolean(selected) && live && !driving,
+  );
 
   /* ── Verdicts ─────────────────────────────────────────────────────────── */
 

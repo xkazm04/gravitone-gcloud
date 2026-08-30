@@ -33,8 +33,10 @@ import Modal from "@/components/ui/Modal";
 import { Button, Eyebrow } from "@/components/ui/Primitives";
 import StudioFrame from "@/components/ui/StudioFrame";
 import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
+import { usePolling } from "@/lib/usePolling";
 
 import { CullGrid } from "./CullGrid";
+import { DojoView } from "./DojoView";
 import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
 import { StylesShelf } from "./StylesShelf";
@@ -49,6 +51,11 @@ const TABS = [
     blurb: "Drop a gallery. Its looks are read back, grouped into styles, replicated from words alone with self-critique, then transferred onto a scene the gallery never showed. Keep the styles that held; they join the catalogue.",
   },
   { id: "styles", label: "Styles", blurb: "The catalogue the forge draws from, and the evidence each style has earned." },
+  {
+    id: "dojo",
+    label: "Dojo",
+    blurb: "Gate the training loop's A/B cycles: read each claimed improvement's seed-matched pairs, approve what genuinely held, and commit — the media is culled, the verdicts are what the loop learns from.",
+  },
 ] as const;
 type Tab = (typeof TABS)[number]["id"];
 
@@ -76,12 +83,49 @@ export default function FoundryView() {
     setVerdicts(v);
   }, []);
 
+  /** The newest detail request. A response holding an older ticket is dropped.
+   *
+   *  THIS USED TO WRITE ONE RUN'S HUMAN VERDICTS ONTO ANOTHER RUN. `loadDetail`
+   *  awaited `fetchRun(id)` and applied the result with no check that `id` was
+   *  still the selected run. Two paths reach it — `selectRun`, and the 4s poll —
+   *  so: click run A, click run B before A's fetch lands, and A's response calls
+   *  `adoptVerdicts(A.verdicts)` while `selected` is B. The next verdict edit then
+   *  autosaves that map to B (`setVerdict` reads `verdictsRef.current`), and B's
+   *  manifest now carries judgements a human made about A. Silent, and the poll
+   *  makes the window recur every four seconds rather than once.
+   *
+   *  A monotonic ticket rather than an `id === selected` comparison, because the
+   *  poll re-requests the SAME id: two in-flight loads for one run must still
+   *  resolve latest-wins, and comparing ids cannot express that. Same shape as
+   *  `claimSaveSlot` in app/_phases/_shared/stepStore.ts, for the same reason —
+   *  arrival order is not issue order. The ticket is taken at CALL time and
+   *  checked before anything is applied. */
+  const detailTicket = useRef(0);
+
   const loadDetail = useCallback(
     (id: string, keepVerdicts: boolean) => {
-      fetchRun(id).then((d) => {
-        setDetail(d);
-        if (!keepVerdicts) adoptVerdicts(d.verdicts);
-      });
+      const ticket = ++detailTicket.current;
+      // AND A REJECTION PATH, because in this app an unhandled one is not
+      // silence -- it is a WRONG MESSAGE. GlobalErrorBridge listens on
+      // `unhandledrejection` and reports what it catches as
+      // `reportStorageTrouble("write", ...)`, so a failed READ of a run surfaces
+      // in the bell as the user's work failing to SAVE, and NotificationBell
+      // announces that one assertively (it is the app's only assertive case).
+      // On a 4s poll, a foundry that cannot be reached tells a screen-reader
+      // user their studio is not saving. `loadRuns` in this same file has
+      // always had its handler; this one did not.
+      fetchRun(id).then(
+        (d) => {
+          if (ticket !== detailTicket.current) return;
+          setDetail(d);
+          if (!keepVerdicts) adoptVerdicts(d.verdicts);
+          setRunsError(null);
+        },
+        (e) => {
+          if (ticket !== detailTicket.current) return;
+          setRunsError(e instanceof Error ? e.message : "could not load that run");
+        },
+      );
     },
     [adoptVerdicts],
   );
@@ -119,15 +163,20 @@ export default function FoundryView() {
 
   // A live run rewrites its manifest after every candidate; poll it — but
   // keep the local verdicts, which are the human's and never the forge's.
+  //
+  // Through `usePolling`, which pauses while the tab is hidden. This ran every
+  // four seconds against a backgrounded tab before, for a run nobody could see —
+  // half the load lib/apiAuth.ts sizes its limiter against.
   const live = detail ? LIVE.includes(detail.run.status) : false;
-  useEffect(() => {
-    if (!selected || !live) return;
-    const t = window.setInterval(() => {
+  usePolling(
+    () => {
+      if (!selected) return;
       loadDetail(selected, true);
       loadRuns();
-    }, 4000);
-    return () => window.clearInterval(t);
-  }, [selected, live, loadDetail, loadRuns]);
+    },
+    4000,
+    Boolean(selected) && live,
+  );
 
   const readOnly = detail?.run.status === "committed";
 
@@ -222,6 +271,8 @@ export default function FoundryView() {
             <StylesShelf />
           ) : tab === "extract" ? (
             <ExtractView />
+          ) : tab === "dojo" ? (
+            <DojoView />
           ) : (
             <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
               <aside>

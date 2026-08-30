@@ -53,6 +53,14 @@ export default function AlternativesView({
         {/* The 100-scene claim, judged rather than assumed: ×7 the cut with
             interactive synthetic scenes. Free — clones never call the API. */}
         <button
+          type="button"
+          // On, or off, carried by an amber border and nothing else. Three
+          // siblings in this directory already say it out loud — the sheet's own
+          // alternative tiles, FramesStep's view switcher, and LayerPanel, which
+          // wrote down why: `aria-pressed` is what makes the same fact available
+          // to a reader who cannot see the colour. This was the one toggle here
+          // that did not.
+          aria-pressed={alts.stress}
           onClick={() => alts.setStress(!alts.stress)}
           className={`font-jetbrains rounded-lg border px-2.5 py-1 text-[10px] tracking-[0.12em] uppercase transition ${
             alts.stress

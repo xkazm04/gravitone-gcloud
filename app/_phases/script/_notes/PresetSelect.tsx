@@ -85,8 +85,7 @@ export default function PresetSelect({
         aria-expanded={open}
         aria-controls={`preset-list-${cardId}`}
         // The trigger keeps focus while the list is open, so the active option is
-        // announced from here. Without it the arrow keys moved a highlight only a
-        // sighted user could see.
+        // announced from here — now that the role permits it.
         aria-activedescendant={open ? `preset-${cardId}-${PRESETS[active].kind}` : undefined}
         className="font-jetbrains flex w-full items-center justify-between gap-2 rounded-lg border border-amber-400/35 bg-amber-400/[0.06] px-2.5 py-1.5 text-[11px] text-amber-100 transition hover:border-amber-400/60 hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-40"
       >

@@ -31,7 +31,24 @@ const VIEWS = [
 
 export default function FramesStep({ projectId }: { projectId: string }) {
   const ctl = useFrames(projectId);
-  const [view, setView] = useState<(typeof VIEWS)[number]["id"]>("assembly");
+  const [chosen, setView] = useState<(typeof VIEWS)[number]["id"]>("assembly");
+
+  // A PROMOTIONAL CUT HAS NO FRAME LEDGER, so it must not open on one. Its beats
+  // decompose into SHOTS (./shots.ts) and `frames` is [] BY CONSTRUCTION --
+  // `framesFor` returns nothing for any origin but the explainer fixture
+  // (./frames.ts:398). Mounting the assembly ledger anyway drew a 0/0 grid under
+  // live "direct the cut" and "render 0 missing plates" buttons: an empty table
+  // that reads as "nothing done yet" when the truth is "this step does not work
+  // that way here". That is the happy-path-only surface the absence law forbids.
+  //
+  // DERIVED, NOT LATCHED, and deliberately not an effect. `ctl.render` is not
+  // resolved on the first render, so a lazy useState initialiser would latch
+  // whatever the placeholder said; and correcting it in an effect would add a
+  // `react-hooks/set-state-in-effect` warning to a rule this repo RATCHETS. So
+  // the pick stays the operator's and the EFFECTIVE view is computed from it --
+  // which also means a pick made on an explainer survives a look at a trailer.
+  const promotionalCut = ctl.render.origin !== "explainer-fixture";
+  const view = promotionalCut && chosen !== "shots" ? "shots" : chosen;
 
   if (!ctl.loaded)
     return (
@@ -72,22 +89,36 @@ export default function FramesStep({ projectId }: { projectId: string }) {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/[0.02] p-1">
-            {VIEWS.map((v) => (
+            {VIEWS.map((v) => {
+              // Disabled and SAID SO, rather than hidden: a control that
+              // vanishes teaches nothing about why it is not there.
+              const unavailable = promotionalCut && v.id !== "shots";
+              return (
               <button
                 key={v.id}
                 onClick={() => setView(v.id)}
-                title={v.sub}
+                disabled={unavailable}
+                title={
+                  unavailable
+                    ? `${v.name} is the explainer's frame ledger. This is a promotional cut: its beats decompose into shots, not frames, so this view has nothing to show.`
+                    : v.sub
+                }
                 // Which view is current is drawn in cyan and nowhere else. A
                 // switcher whose state lives only in a colour is a switcher an
                 // assistive-tech user cannot read.
                 aria-pressed={view === v.id}
                 className={`font-jetbrains rounded-lg px-3 py-1 text-[11px] tracking-[0.1em] uppercase transition ${
-                  view === v.id ? "bg-cyan-400/15 text-cyan-100" : "text-white/40 hover:text-white/70"
+                  view === v.id
+                    ? "bg-cyan-400/15 text-cyan-100"
+                    : unavailable
+                      ? "cursor-not-allowed text-white/15"
+                      : "text-white/40 hover:text-white/70"
                 }`}
               >
                 {v.name}
               </button>
-            ))}
+              );
+            })}
           </div>
           <p className="font-jetbrains text-[11px] text-white/35">
             {ctl.frames.length} frames derived from &ldquo;{ctl.render.title}&rdquo; ({ctl.render.engineLabel})

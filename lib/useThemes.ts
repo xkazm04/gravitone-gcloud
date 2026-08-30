@@ -19,6 +19,7 @@ import {
   listThemes,
   newTheme,
   putTheme,
+  ratchetBlocker,
   type Proof,
   type Theme,
   type ThemeDraft,
@@ -75,6 +76,14 @@ export function useThemes(uid: string | null) {
     async (id: string, patch: Partial<Theme>): Promise<Theme | null> => {
       const current = themes?.find((t) => t.id === id);
       if (!current) return null;
+      // The ratchet, asked of the RECORD rather than remembered by the caller.
+      // Every surface that can reach this already refuses in its own way; this
+      // is what makes the refusal true for the next one too.
+      const blocked = ratchetBlocker(current, patch);
+      if (blocked) {
+        setError(blocked);
+        return null;
+      }
       return commit({ ...current, ...patch });
     },
     [themes, commit],

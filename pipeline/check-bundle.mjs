@@ -60,36 +60,60 @@ const die = (code, headline, lines = []) => {
   process.exit(code);
 };
 
-/** Environment variables that must NEVER appear in browser output. Their names,
- *  because a name is what survives a build with an empty environment. Kept in
- *  step with .env.example's server-side block and lib/imaging/env.ts. */
-const SERVER_ONLY_VARS = [
-  "GOOGLE_AI_API_KEY",
-  "LEONARDO_API_KEY",
-  "QWEN_API_KEY",
-  "IMAGING_ACCESS_SECRET",
-  "IMAGING_BUDGET_USD_PER_WINDOW",
-  "IMAGING_BUDGET_WINDOW_MS",
-  "IMAGING_RATE_CAPACITY",
-  "IMAGING_RATE_WINDOW_SEC",
-  "IMAGING_RATE_KEY_CAP",
-  // ── the reasoning seam (lib/text/, 2026-08-27) ────────────────────────────
-  // Server-side posture and routing knobs. None is NEXT_PUBLIC_ and none may
-  // ever be: TEXT_ENV and LOCAL_BINARIES decide whether a process may spawn a
-  // binary, and GOOGLE_TEXT_* name the models a metered key bills against.
-  // GOOGLE_AI_API_KEY is already listed above and is shared by both seams.
-  //
-  // NOTE what is deliberately ABSENT from this list: every NEXT_PUBLIC_CAP_*
-  // flag in lib/capabilities.ts. Those are MEANT to be in the browser bundle —
-  // hiding a control is a client-side act — and the module's own header records
-  // why that is safe: they say what this deployment can do, not what any
-  // credential is, and they are not the security boundary. lib/apiAuth.ts is.
-  "TEXT_ENV",
-  "LOCAL_BINARIES",
-  "GOOGLE_TEXT_MODEL",
-  "GOOGLE_TEXT_MODEL_PLAN",
-  "GOOGLE_TEXT_BASE_URL",
-];
+/**
+ * Environment variables that must NEVER appear in browser output. Their names,
+ * because a name is what survives a build with an empty environment.
+ *
+ * DERIVED FROM `.env.example`, NOT RESTATED FROM IT. This used to be a literal
+ * array with the comment "Kept in step with .env.example's server-side block" —
+ * and it was not, because nothing made it. Measured 2026-08-27: the file declared
+ * ELEVENLABS_API_KEY, GOOGLE_IMAGE_MODEL, GOOGLE_IMAGE_SIZE, GOOGLE_VISION_MODEL,
+ * IMAGING_ENV and QWEN_BASE_URL, and the array listed none of them. A whole
+ * vendor - the music pipeline and its live credential - had been added since the
+ * array was written, and the gate that exists to catch a leaked key was not
+ * looking for that key at all.
+ *
+ * The rule in `.env.example` is stated in terms this can read: NEXT_PUBLIC_ is
+ * the public prefix and everything else is server-side. So the ground truth
+ * enumerates itself, and a vendor added tomorrow is covered by writing it into
+ * the file every contributor already edits.
+ *
+ * EXTRAS carries anything server-only that is NOT written into `.env.example` -
+ * there is nothing today, and the slot exists so that a future one is a
+ * deliberate line here rather than a silent gap.
+ */
+const EXTRAS = [];
+
+function serverOnlyVars() {
+  const at = join(ROOT, ".env.example");
+  if (!existsSync(at))
+    die(2, "COULD NOT RUN: .env.example is missing.", [
+      "The server-only variable list is derived from it; without it this gate",
+      "would search for nothing and report a clean bundle.",
+    ]);
+  const declared = [
+    ...new Set(
+      readFileSync(at, "utf8")
+        .split(/\r?\n/)
+        .map((l) => /^\s*([A-Z][A-Z0-9_]*)\s*=/.exec(l)?.[1])
+        .filter(Boolean),
+    ),
+  ];
+  const vars = [...new Set([...declared.filter((v) => !v.startsWith("NEXT_PUBLIC_")), ...EXTRAS])];
+  // FAIL LOUD ON A SMALL SET. If a reformat of .env.example ever stops matching
+  // the pattern above, this derivation returns a short list or an empty one and
+  // every clean verdict below becomes manufactured - the same failure the
+  // positive control exists to prevent, one layer up.
+  if (vars.length < 8)
+    die(2, `COULD NOT RUN: only ${vars.length} server-only variable(s) derived from .env.example.`, [
+      "Expected at least 8. Either the file was reformatted out of the",
+      "NAME=value shape this reads, or it lost its server-side block.",
+      `derived: ${vars.join(", ") || "(none)"}`,
+    ]);
+  return vars;
+}
+
+const SERVER_ONLY_VARS = serverOnlyVars();
 
 /** Strings that exist inside lib/imaging/ and nowhere a browser should reach.
  *  Chosen to be distinctive enough that a coincidental match is not plausible. */

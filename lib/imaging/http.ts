@@ -13,6 +13,7 @@
 // adapter raises its own `refused` after this function has returned a body.
 
 import { ImagingError, type ImagingErrorKind } from "./errors";
+import { BlockedUrlError, safeFetch, type Resolver } from "./safeUrl";
 import type { ProviderId } from "./types";
 
 export interface RequestOptions {
@@ -127,11 +128,20 @@ export async function fetchImageBase64(
   provider: ProviderId,
   url: string,
   timeoutMs = 60_000,
+  /** Injectable for the probe only - see safeUrl.Resolver. */
+  resolve?: Resolver,
 ): Promise<{ base64: string; mime: string }> {
   const ctl = new AbortController();
   const timer = setTimeout(() => ctl.abort(), timeoutMs);
   try {
-    const res = await fetch(url, { signal: ctl.signal });
+    // safeFetch, not fetch: this URL came out of a VENDOR RESPONSE, and until
+    // now the only things checked about it were how big and how slow the answer
+    // was allowed to be. Where it pointed was not checked at all, so a plate URL
+    // naming the cloud metadata endpoint or a loopback service was downloaded by
+    // the server and handed back as base64. safeFetch refuses private
+    // destinations and re-checks EVERY redirect hop, which is where the
+    // equivalent fix in a sibling app found the real hole. See ./safeUrl.
+    const res = await safeFetch(url, { signal: ctl.signal }, resolve);
     if (!res.ok)
       throw new ImagingError(
         `${provider} image download failed with ${res.status}.`,
@@ -166,6 +176,13 @@ export async function fetchImageBase64(
     };
   } catch (e) {
     if (e instanceof ImagingError) throw e;
+    if (e instanceof BlockedUrlError)
+      throw new ImagingError(
+        `${provider} pointed the image download at an address this server will not fetch.`,
+        "bad-response",
+        provider,
+        e.why,
+      );
     if ((e as Error)?.name === "AbortError")
       throw new ImagingError(`${provider} image download timed out.`, "timeout", provider);
     throw new ImagingError(`${provider} image download failed.`, "failed", provider, String(e));

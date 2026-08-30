@@ -11,7 +11,8 @@
 // Contract:
 //  · portalled to <body>, so a `overflow-hidden` shell (StudioFrame) cannot clip it
 //  · Escape closes; the backdrop closes; the page behind cannot scroll
-//  · focus moves into the dialog on open and returns to the opener on close
+//  · focus moves into the dialog on open, and on close returns to the opener —
+//    or to the surface's own <main> when the opener did not survive the dialog
 //  · the BODY scrolls, not the page — header and footer stay put
 //  · no colour literal: every colour here is a Tailwind utility (white-alpha
 //    hairlines, and `bg-[var(--gt-ink)]/80` on the backdrop), which is the
@@ -27,6 +28,61 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
+
+/**
+ * Hand focus back when the dialog closes: to the opener while it is still in the
+ * document, and to the surface's own <main> when it is not.
+ *
+ * The line this replaces was `openerRef.current?.focus?.()`, unconditionally.
+ * Focusing a DETACHED node is a silent no-op, so on every flow where the
+ * dialog's own confirm removes the control it was opened FROM, focus fell to
+ * <body> — and app/library/ContextMenu.tsx already states what that costs: "a
+ * dismissed menu that leaves focus on <body> strands a keyboard user at the top
+ * of the document". Measured on the Research step: Clear opens "clear this
+ * research?", confirming runs `doClear`, and `run.reset()` lands in the SAME
+ * commit as the close — so `ready` goes false, the Clear button unmounts with
+ * the dialog, and the restore focused a node that was already gone.
+ * ProjectsMatrix's per-row Delete is the same shape one page over.
+ *
+ * ContextMenu's own guard (`if (opener && document.contains(opener))`) is the
+ * right test and half the answer: it SKIPS a pointless focus() and moves focus
+ * nowhere, so its opener-is-gone case also ends on <body>. A restore needs a
+ * destination, not just a condition.
+ *
+ * <main> is that destination, and it is chosen rather than nearest-to-hand. From
+ * <body> the next Tab restarts at the top of the document and walks the
+ * wordmark, three module links, the bell and the account menu before reaching
+ * anything the user was doing; from <main> it reaches the first control of the
+ * surface the dialog was opened over, and a screen reader announces the landmark
+ * on the way. StudioFrame does NOT render one — it is chrome (aurora, nav,
+ * account controls) wrapped around `children` — so the landmark belongs to each
+ * view, and ProjectsView, LibraryView and StudioView each declare tabIndex={-1}
+ * on their own <main> for this. A surface with no <main> at all (the playground
+ * bench) keeps the old behaviour: there is no landmark to hand focus to, and
+ * inventing one from here would be guessing at someone else's layout.
+ *
+ * The RESULT of focus() is read rather than assumed, because focus() has exactly
+ * one failure mode and it is silence. `isConnected` cannot see an opener that is
+ * still in the document but no longer focusable — disabled while the dialog was
+ * open, collapsed behind a section — and `document.activeElement` afterwards
+ * sees both cases. focus() is synchronous, so there is nothing to wait for.
+ */
+function restoreFocus(opener: Element | null): void {
+  if (opener instanceof HTMLElement && opener.isConnected) opener.focus();
+  const landed = document.activeElement;
+  if (landed && landed !== document.body) return;
+  const main = document.querySelector("main");
+  if (!main) return;
+  // <main> takes programmatic focus only while it is focusable. The three views
+  // declare the attribute; setting it here too is not belt-and-braces but the
+  // same rule this function exists for — focus() on a <main> without it is one
+  // more silent no-op, and a view added later must not be able to re-open the
+  // defect by forgetting an attribute.
+  if (!main.hasAttribute("tabindex")) main.tabIndex = -1;
+  // preventScroll: the page behind the dialog is already where the user left it,
+  // and yanking it to the top of <main> on close would be its own surprise.
+  main.focus({ preventScroll: true });
+}
 
 export default function Modal({
   open,
@@ -134,7 +190,7 @@ export default function Modal({
       html.style.overflow = prev.html;
       document.body.style.overflow = prev.body;
       document.body.style.paddingRight = prev.pad;
-      (openerRef.current as HTMLElement | null)?.focus?.();
+      restoreFocus(openerRef.current);
     };
   }, [open, mounted]);
 

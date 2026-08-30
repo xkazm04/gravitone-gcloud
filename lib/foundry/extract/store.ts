@@ -243,8 +243,21 @@ export function liveIO(id: string, owner: DriverOwner): EngineIO {
 
 /** In-process lock per run, so two overlapping /step calls from one browser
  *  (a retry racing a slow round) cannot both append the same round. A second
- *  caller waits for the first and then takes its own unit. */
+ *  caller waits for the first and then takes its own unit.
+ *
+ *  IT HAS TO EMPTY AGAIN. A guard that is never released is a leak with a
+ *  respectable name: one entry per run id, held for the life of the process,
+ *  in a server that may see thousands. The release below compares against the
+ *  promise that was actually STORED - see the note there, because the obvious
+ *  way to write it does not work. */
 const locks = new Map<string, Promise<unknown>>();
+
+/** Test hook - how many run ids currently hold a step chain. Every caller
+ *  having settled must leave this at zero; a residue IS the leak. Exported so
+ *  a probe reads the real map rather than a copy of the rule. */
+export function __liveStepLocks(): number {
+  return locks.size;
+}
 
 export async function stepRun(id: string, units = 1, retry = false): Promise<StepResult> {
   const prev = locks.get(id) ?? Promise.resolve();
@@ -269,11 +282,24 @@ export async function stepRun(id: string, units = 1, retry = false): Promise<Ste
     }
     return last;
   });
-  locks.set(id, mine.catch(() => undefined));
+  // What the NEXT caller waits on is `mine` with its rejection swallowed: a
+  // step that failed must not poison every later call for this run.
+  //
+  // THAT SWALLOWED COPY IS A DIFFERENT PROMISE, and the release has to name it.
+  // This used to store `mine.catch(...)` and then compare `locks.get(id) ===
+  // mine`, which is false always - `.catch()` returns a new promise - so the
+  // entry was NEVER deleted and the map grew one row per run id for the life of
+  // the process. Nothing failed and nothing looked wrong; the guard kept working
+  // and only its memory was the defect. Hold the reference, compare against it.
+  const chained = mine.catch(() => undefined);
+  locks.set(id, chained);
   try {
     return await mine;
   } finally {
-    if (locks.get(id) === mine) locks.delete(id);
+    // Only if we are still the newest chain: a caller that arrived while ours
+    // was running owns the entry now, and deleting it would let a third caller
+    // run alongside them.
+    if (locks.get(id) === chained) locks.delete(id);
   }
 }
 

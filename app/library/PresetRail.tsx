@@ -10,17 +10,24 @@
 
 import Image from "next/image";
 
+import { styleFits, type DisciplineFilter } from "@/lib/themes";
+
 import { PRESETS, thumbSrc, type Preset } from "./presets";
 
 export default function PresetRail({
   onPick,
   onScratch,
   busy,
+  discipline,
 }: {
   onPick: (p: Preset) => void;
   onScratch: () => void;
   busy: boolean;
+  /** The atelier's discipline filter: the SAME predicate the style pills use
+   *  (lib/themes.ts#styleFits), so the rail and the wall never disagree. */
+  discipline: DisciplineFilter;
 }) {
+  const shown = PRESETS.filter((p) => styleFits(p, discipline));
   return (
     <aside className="space-y-4">
       <div>
@@ -39,8 +46,15 @@ export default function PresetRail({
 
       <div>
         <p className="font-jetbrains mb-2 text-[11px] tracking-[0.18em] text-white/40 uppercase">or a preset</p>
+        {/* Absence is said: every preset today is written for explainers, so
+            a trailer or free filter empties this rail rather than lying. */}
+        {!shown.length && (
+          <p className="font-hanken rounded-xl border border-dashed border-white/10 px-3 py-3 text-[12px] leading-snug text-slate-500">
+            No preset is written for this discipline yet. Start from a brief.
+          </p>
+        )}
         <div className="space-y-2">
-          {PRESETS.map((p) => (
+          {shown.map((p) => (
             <button
               key={p.id}
               onClick={() => onPick(p)}

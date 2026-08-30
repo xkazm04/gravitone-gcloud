@@ -8,7 +8,19 @@ import { MusicError, statusFor } from "@/lib/music/errors";
 import { generateSfx } from "@/lib/music/elevenlabs";
 
 export const runtime = "nodejs";
-export const maxDuration = 120;
+// LONGER THAN THE VENDOR DEADLINE IT RELIES ON, which is the only correct
+// relationship between the two. vendorFetch aborts at TIMEOUT_MS (240s,
+// lib/music/elevenlabs.ts) and throws a `timeout` MusicError naming the vendor
+// and the number. This used to be 120 -- SHORTER than that -- so the platform
+// killed the request first and elevenlabs.ts's own message, "The vendor did not
+// answer within 240s", was literally unreachable on this route. The caller got
+// an unclassified 5xx instead, indistinguishable from a slow render.
+//
+// That is the exact failure 737860e fixed for generate/compose (both 300) by
+// making the abort span the body read; it was reintroduced here by a route
+// config that never moved with it. The rule: no route's platform deadline may
+// be shorter than the vendor deadline it depends on.
+export const maxDuration = 300;
 
 export async function POST(req: Request) {
   const denied = guardRequest(req);

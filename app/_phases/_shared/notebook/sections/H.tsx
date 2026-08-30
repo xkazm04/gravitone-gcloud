@@ -2,12 +2,19 @@
 
 import type { Connector } from "../types";
 
-/** A notebook section heading. Carries the anchor the rail jumps to. */
+/** A notebook section heading. Carries the anchor the rail jumps to.
+ *
+ *  `tabIndex={-1}` so the rail can put FOCUS here, not just scroll here. A jump
+ *  that only moves the scroll container leaves a keyboard user's focus back on
+ *  the button they pressed: the next Tab continues through the rail, and
+ *  nothing they can perceive has changed. Not reachable by tabbing — -1 means
+ *  programmatic focus only. */
 export function H({ id, children }: { id: string; children: React.ReactNode }) {
   return (
     <h3
       id={`nb-${id}`}
-      className="font-jetbrains scroll-mt-2 border-b border-white/8 pb-1.5 text-[11px] tracking-[0.18em] text-cyan-300/80 uppercase"
+      tabIndex={-1}
+      className="font-jetbrains scroll-mt-2 border-b border-white/8 pb-1.5 text-[11px] tracking-[0.18em] text-cyan-300/80 uppercase focus-visible:outline-2 focus-visible:outline-offset-4"
     >
       {children}
     </h3>

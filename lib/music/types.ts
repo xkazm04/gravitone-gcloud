@@ -39,20 +39,83 @@ export interface MusicPlan {
 }
 
 /**
- * A spotting cue, as the Score surface knows it — the row the plan is
- * derived from. `durS` and `bpm` come from the cue list; `intent` is the
- * purpose sentence the spotting discipline requires every cue to carry.
+ * ONE SCENE OF THE PICTURE a cue plays under, in the music engine's own
+ * vocabulary.
+ *
+ * Every field here is COPIED from the project's scene record — none of it is
+ * authored for the brief. That is the whole point: spotting means scoring
+ * AGAINST PICTURE, and until this type existed the music pipeline had never
+ * seen the picture. `cueToPlan`'s only input was a hand-typed
+ * `{title, intent, bpm, durS, styleBlock}`, so the duration a cue asked the
+ * vendor for was a literal somebody typed next to a literal somebody else
+ * typed on the timeline, free to disagree with it forever.
+ *
+ * Declared here rather than importing `Scene` from `app/_studio/` on purpose:
+ * lib/music must not depend on a surface's fixtures, and the mapping is the
+ * caller's job (see `pictureFor` in app/_studio/score.ts).
+ */
+export interface CueScene {
+  /** 1-based narrative order, as the picture lane labels it. */
+  index: number;
+  /** The slugline, verbatim: "EXT. PIER 7 — NIGHT". */
+  slug: string;
+  /** The scene's mood, verbatim from the record. Load-bearing vocabulary —
+   *  it is the only word in the brief that describes the moment. */
+  mood: string;
+  /** Where the scene starts on the project clock, in seconds. */
+  startS: number;
+  /** How long it runs, in seconds. */
+  durS: number;
+}
+
+/**
+ * The stretch of film a cue is scored against.
+ *
+ * `scenes` is contiguous and in order. It is what makes a cue BRIEFABLE: a cue
+ * with no scenes is not a cue with a default duration, it is a cue with nothing
+ * to score, and `cueToPlan` refuses it rather than inventing a film.
+ */
+export interface CuePicture {
+  /** The production's title, for context the model can use. */
+  projectTitle: string;
+  /** The logline — one sentence of what the film IS, which is the only global
+   *  narrative context a section-level brief ever gets. */
+  logline: string;
+  scenes: CueScene[];
+}
+
+/**
+ * A spotting cue, as the Score surface knows it — the row the plan is derived
+ * from.
+ *
+ * ── WHAT CHANGED, AND WHY `durS` IS NOT HERE ───────────────────────────────
+ *
+ * This interface used to carry `durS`, hand-typed beside a `startS` that was
+ * hand-typed on the timeline. Two authored copies of one fact, with nothing
+ * holding them together: a cue could ask the vendor for 13 seconds while the
+ * span it was drawn over covered 12, and neither number would ever notice.
+ *
+ * The duration is now DERIVED from `picture` (see `cueDurationS`), so the
+ * length of music requested is the length of film it plays under, by
+ * construction. What stays hand-authored is what a human actually decides:
+ * WHICH scenes a cue covers (a human spots — auto-spotting is explicitly not
+ * this engine's job), the tempo, the title, and the purpose sentence.
  */
 export interface CueBrief {
   title: string;
+  /** The purpose sentence the spotting discipline requires every cue to carry
+   *  — what this cue is FOR, in the spotter's words. */
   intent: string;
   bpm: number;
-  durS: number;
   /** The production's standing style block, restated on every call —
    *  consistency is carried, never remembered. */
   styleBlock: string[];
   /** Standing excludes beyond the engine's defaults. */
   avoid?: string[];
+  /** The film this cue is scored against. Required: there is no such thing as
+   *  a cue for no picture, and a default one standing in for a film that does
+   *  not exist is the failure mode this field exists to make impossible. */
+  picture: CuePicture;
 }
 
 export interface MusicAudio {

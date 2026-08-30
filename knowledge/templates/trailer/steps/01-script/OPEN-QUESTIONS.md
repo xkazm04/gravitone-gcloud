@@ -17,7 +17,34 @@ which is cheap once there is a Cut step that knows shot boundaries, and impossib
 then, no downstream check may compare a cut against either figure**; they belong on the page as
 context, not as thresholds.
 
-### r2 · What would a `params.json` need? ⭐
+### r2 · What would a `params.json` need? ⭐ **ANSWERED IN PART, 2026-08-29**
+**[`params.json`](params.json) now exists, and this entry was right about half of it.** The table
+below is preserved verbatim as the analysis that decided the file's shape. What changed is not the
+evidence — it is that the same rules were living in **two** places, prose here and TypeScript
+literals in `app/_phases/script/trailer/structure.ts`, with nothing holding the copies together and
+no citations on the copy a creator actually meets.
+
+The split this entry predicted is the split the file has:
+
+- **The enumerations the doctrine states outright were written**, each with its evidence label, its
+  registry path and the quoted line — `parts`, `raisedVariables`, `resetCount`,
+  `withholding.assets`, the drop order, the advisory-rule list, the legal beat kinds (the one
+  **INFERRED** value, flagged as such: the doctrine says what each part is *for* and never enumerates
+  which beat kinds may sit in which movement).
+- **Every field that is a number and missing its evidence was NOT written.** They are in the file's
+  `not_encoded` block, each with the hedge quoted and the source that would settle it: `rung.minS`
+  (the source's own word is *roughly*), `rungCount` (3–5 is arithmetic performed here, not a claim
+  the source makes), `shotLength.curve` (`r1`), the "margin a viewer would notice", and
+  `withholding`'s default allowances (`r6` — a default would erase the registry's own hedge).
+- **`duration` is in the file and marked context, not threshold**, per `r1`'s instruction. Nothing
+  compares a cut against it.
+
+**Still open:** every `not_encoded` entry, which is to say every number. `r1` still blocks the only
+field that would be a real measurement. The file being written does not make this template n>0, and
+it says `sample_size: 0` in its second line.
+
+The original analysis, unchanged:
+
 Not written, per [`knowledge/README.md`](../../../../README.md)'s contract and the refusal precedent in
 [`short-educational-video/steps/02-frames/PATTERNS.md`](../../../short-educational-video/steps/02-frames/PATTERNS.md):
 *"an estimate laundered into the library is worse than a gap, because the gap is fixable and the

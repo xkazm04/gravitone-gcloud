@@ -220,13 +220,30 @@ export function next(m: ExtractManifest): Unit | null {
   return { kind: "finish" };
 }
 
-/** Total units the run will take, for the progress strip. Replica rounds are
- *  counted at their cap: the strip may finish early, never late. */
+/** Total units the run will take, for the progress strip. Replica ROUNDS are
+ *  counted at their cap — a loop that meets the target early takes fewer, and
+ *  `doneUnits` credits the cap for a settled replica, so the strip may finish
+ *  early and never late.
+ *
+ *  REPLICAS THEMSELVES ARE COUNTED AT THE REAL NUMBER, not at the cap, and that
+ *  is the half this used to get wrong. `options.replicas` is a CEILING on how
+ *  many members a style replicates; a style with one member replicates once
+ *  however high the ceiling is (`replicaSources`). Multiplying by the ceiling
+ *  charged the strip for rounds nothing would ever take, so `done` could not
+ *  reach `total` — measured on the probe's own fixture, the run stalled at 12 of
+ *  15 and then jumped to 15 of 15 when `finish` set them equal. Under-reporting
+ *  and then snapping is the specific dishonesty a progress strip must not have:
+ *  it reads as a stall on the longest, most expensive stage.
+ *
+ *  Before grouping there is no member list to count, so the ceiling IS the only
+ *  honest estimate and one style is the floor — that branch is unchanged. */
 export function totalUnits(m: ExtractManifest): number {
   const reads = m.sources.length;
-  const styles = Math.max(m.styles.length, 1);
-  const perStyle = m.options.replicas * m.options.rounds + Math.min(m.options.transfers, TRANSFER_SCENES.length);
-  return reads + 1 + styles * perStyle + 1;
+  const transfers = Math.min(m.options.transfers, TRANSFER_SCENES.length);
+  if (!m.styles.length) return reads + 1 + (m.options.replicas * m.options.rounds + transfers) + 1;
+  let work = 0;
+  for (const st of m.styles) work += replicaSources(m, st).length * m.options.rounds + transfers;
+  return reads + 1 + work + 1;
 }
 
 export function doneUnits(m: ExtractManifest): number {

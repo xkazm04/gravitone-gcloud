@@ -156,7 +156,35 @@ export const SYNTHESIS_SCHEMA: Record<string, unknown> = {
 /* ── Arithmetic ───────────────────────────────────────────────────────────── */
 
 /** Weighted fraction of the style's observables the readback agrees with.
- *  Null when the readback is missing. */
+ *  Null when the readback is missing.
+ *
+ *  ── OFF-VOCABULARY IS UNMEASURED, NOT WRONG ─────────────────────────────────
+ *
+ *  A field the readback answered outside `ENUMS` (or did not answer at all) is
+ *  dropped from BOTH sides of the fraction rather than scored as a miss. The
+ *  vision model was asked for one of a closed set and gave something else; what
+ *  the image actually does is then unknown, and "unknown" is not "wrong".
+ *
+ *  This module already holds that principle in the other direction — a null
+ *  readback returns a null score, not a zero — and `validateSynthesis` REFUSES a
+ *  synthesis carrying an off-vocabulary value rather than letting it through at
+ *  zero credit. Only this function treated the two as the same thing, and it is
+ *  the one whose number decides things: `replicaSettled` compares it against
+ *  `options.target`, and `bestRound` picks the recipe in force from it. So a
+ *  vendor's vocabulary drift used to spend a real generation round chasing a
+ *  field that was never measured, and could change which recipe a style ships
+ *  with. (`enforcesSchema` is false on the local engine — see
+ *  lib/text/providers/claudeCli.ts — so the enum in the schema is a request, not
+ *  a guarantee, and this is a live path rather than a hypothetical one.)
+ *
+ *  A field dropped this way is ABSENT from `per_field`, which is already
+ *  `Partial` and which every consumer already renders as "—" or omits. If every
+ *  field drops out the score is null, which is the correct terminal answer and
+ *  the one the caller already knows how to read.
+ *
+ *  `similarity()` below is deliberately NOT changed: it compares two readbacks
+ *  with each other rather than against the closed vocabulary, so two sources
+ *  that drifted the same way genuinely are alike, and grouping them is right. */
 export function styleScore(target: Observables, readback: Partial<Readback> | null): Scored {
   if (!readback) return { score: null, per_field: {} };
   const per: Partial<Record<ObservableField, number>> = {};
@@ -165,7 +193,9 @@ export function styleScore(target: Observables, readback: Partial<Readback> | nu
   for (const f of OBSERVABLE_FIELDS) {
     const want = target[f];
     if (!want) continue;
-    const hit = readback[f] === want ? 1 : 0;
+    const said = readback[f];
+    if (typeof said !== "string" || !ENUMS[f].includes(said)) continue;
+    const hit = said === want ? 1 : 0;
     per[f] = hit;
     got += hit * WEIGHTS[f];
     total += WEIGHTS[f];

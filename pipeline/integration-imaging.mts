@@ -6,9 +6,18 @@
 //       npx tsx pipeline/integration-imaging.mts --live --out ./somewhere
 //
 // Shaped like gate-regression.mts: OK/FAIL/SKIP per case, a count at the end,
-// non-zero exit if anything failed. There is no test framework in this repo
-// and this is not the place to introduce one — the offline half below closes a
-// real coverage hole WITHIN that constraint, and adds no dependency.
+// non-zero exit if anything failed. Written when there was no test framework in
+// this repo and it was not this file's place to introduce one — the offline half
+// below closed a real coverage hole WITHIN that constraint, and added no
+// dependency.
+//
+// THAT CONSTRAINT IS GONE: @playwright/test now runs `tests/golden-path/` and
+// `npm test` is inside `npm run verify`. This script stays as a script anyway,
+// on its own merits — the LIVE half spends real money at real vendors, which is
+// the one thing that must never be reachable from a suite somebody runs by
+// habit. The line is the billing, not the framework. (cards.ts used to cite the
+// old sentence here as authority for leaving the notebook graph untested; it no
+// longer does.)
 //
 // ── WHY THERE ARE TWO HALVES ───────────────────────────────────────────────
 //

@@ -66,60 +66,44 @@
 // load-bearing rather than merely cautious.
 
 
-import { atSeconds, type ShotLaneBeat } from "../script/trailer/types";
+import { atSeconds, type ShotLaneBeat, type ShotLaneSourceBeat } from "../script/trailer/types";
 
 /* ── What this layer consumes ─────────────────────────────────────────────── */
 
 /**
- * A beat, narrowed to the five fields this layer reads plus two it hopes for.
+ * A beat, AS THIS LAYER READS ONE — and it is one declaration now, not two.
  *
- * DELIBERATELY NOT `Beat`. The trailer BEAT vocabulary and the act/movement
- * container are a separate lane's to own; if this file imported that lane's
- * enum, widening it would break this one and the two would have to land
- * together. `kind` is therefore `string` — this layer never enumerates beat
- * kinds — and `ScriptRender.beats` satisfies the shape structurally today.
+ * This used to be a hand-kept SECOND copy of `ShotLaneBeat`'s field list, held
+ * to it by the `AssertAssignable` witness below and by a merge-time TODO at the
+ * bottom of this file that said to make the two one. That TODO is discharged
+ * here, and not the way it asked: its premise — "field-by-field they already
+ * agree" — was false, because the consumer is deliberately WIDER and that width
+ * is what lets `ScriptRender.beats` reach `shotsFromRender` at all.
+ *
+ * So the field list lives ONCE, in the beat layer, at the consumer's width
+ * (`ShotLaneSourceBeat`), with `ShotLaneBeat` declared as its narrowing. What
+ * this file adds is the ONE field that is the shot layer's own vocabulary and
+ * must not migrate into the beat layer:
+ *
+ *   `role` — the structural part a beat plays in the CUT, which is the thing
+ *   that changes a shot count. `TrailerRole` is declared BELOW, in this file;
+ *   a beat layer that imported it would be importing the shot layer's reason
+ *   for existing. When `role` is absent `ROLE_HINTS` is consulted, and when
+ *   that misses too the beat is decomposed into a single shot and the review
+ *   says the role was undeclared. It is never guessed.
  */
-export interface ShotSourceBeat {
-  /**
-   * The beat's stable id. Optional only because the explainer's `Beat` has none;
-   * the beat lane's `ShotLaneBeat` always carries one, and its reason is right:
-   * `at` is NOT unique, and a finding you cannot locate is a rumour.
-   */
-  id?: string;
-  at: string;
-  /**
-   * Seconds, ALREADY PARSED by the beat layer, with `null` meaning `at` is not a
-   * timecode. Prefer it over re-parsing: the beat layer's `atSeconds()` "returns
-   * null rather than guessing", and `frames.ts#secondsOf` — which this file used
-   * until the two lanes were reconciled — does the opposite. `"tbd".split(":")`
-   * gives `[NaN]` and `(m || 0) * 60 + (s || 0)` folds that to **0**, silently
-   * placing the beat at the head of the cut and stealing every following beat's
-   * span. `beatSeconds` below refuses the same way the beat layer does.
-   */
-  atS?: number | null;
-  /** The beat vocabulary's own term. Read only through `ROLE_HINTS`, never branched on. */
-  kind: string;
-  label: string;
-  text: string;
-  /** The act/movement this beat belongs to, when the beat layer models one. Carried, not interpreted. Named `movement` to match `ShotLaneBeat`. */
-  movement?: string;
-  /**
-   * The ONE thing this layer needs the beat layer to classify. When it is
-   * absent `ROLE_HINTS` is consulted, and when that misses too the beat is
-   * decomposed into a single shot and the review says the role was undeclared.
-   * It is never guessed.
-   */
-  role?: TrailerRole;
-}
+export type ShotSourceBeat = ShotLaneSourceBeat & { role?: TrailerRole };
 
-/* The producer must keep satisfying the consumer.
-   `ShotLaneBeat` (the beat layer's output) and `ShotSourceBeat` (this layer's
-   input) are deliberately NOT the same type — the consumer is wider, so today's
-   explainer `ScriptRender.beats` also satisfies it structurally. What must hold
-   is one direction: everything the beat layer emits, this layer can read. That
-   is a claim no reviewer can hold in their head across two files, so `tsc`
-   holds it. It keeps passing when `TrailerBeatKind` widens, because `kind` here
-   is `string` — which is the point. */
+/* The producer must keep satisfying the consumer — and now it does so BY
+   CONSTRUCTION, because `ShotLaneBeat extends ShotLaneSourceBeat` and there is
+   no second field list left to drift.
+
+   The witness is KEPT anyway, because the construction it checks is one edit
+   away from untrue: a REQUIRED field added to the intersection above (a `role`
+   without its `?`, say) compiles perfectly here and silently stops every beat
+   the beat layer emits from being readable. This line is where that is caught.
+   It keeps passing when `TrailerBeatKind` widens, because `kind` on the source
+   shape is `string` — which is the point. */
 type AssertAssignable<A extends B, B> = [A, B] extends [B, B] ? true : never;
 type _ShotLaneBeatIsReadable = AssertAssignable<ShotLaneBeat, ShotSourceBeat>;
 
@@ -356,7 +340,22 @@ export const SIZE_LADDER: Readonly<Record<TrailerRole, readonly ShotSize[]>> = {
  * has, and a predicate that guessed "trailer" from an unfamiliar id would
  * change the frame count of a render nobody asked about.
  */
-const TRAILER_TEMPLATES = new Set(["trailer", "teaser", "concept-teaser", "game-trailer", "promo-cut"]);
+const TRAILER_TEMPLATES = new Set([
+  // The three ids `lib/projects.ts#TEMPLATE_FAMILY` files under the `trailer`
+  // discipline. They were not all here: `teaser` and `trailer` were, `cinematic`
+  // was not, so a project created on the Cinematic template read as an explainer
+  // at this layer and its composed spine decomposed into nothing at all. Added
+  // as a single entry, which is what this list is for — the membership is still
+  // an allow-list whose default answer is NO, never derived from the id.
+  "trailer",
+  "teaser",
+  "cinematic",
+  // Ids no template in this repo emits yet, kept from the original list because
+  // removing one would silently narrow the predicate for a caller outside it.
+  "concept-teaser",
+  "game-trailer",
+  "promo-cut",
+]);
 
 export const isTrailerFormat = (template: string) => TRAILER_TEMPLATES.has(template.trim().toLowerCase());
 
@@ -621,15 +620,28 @@ export function shotsByBeat(shots: readonly Shot[]): { beatAt: string; beatLabel
  * explainer vocabulary and the trailer one are the beat layer's business, and
  * this layer reads a beat's `kind` only through `ROLE_HINTS`.
  *
- * ─── AND THE SEAM WITH THE BEAT LANE, WHICH IS NOT YET ONE FILE ─────────────
+ * ─── AND THE SEAM WITH THE BEAT LANE, WHICH IS ONE DECLARATION NOW ──────────
  *
- * `ShotSourceBeat` is the shape `app/_phases/script/trailer/types.ts` exports on
- * branch `trailer/story-model` as `ShotLaneBeat`, via `toShotLaneBeat()`. THE
- * TWO ARE NOT YET THE SAME DECLARATION and must be made one on merge: import
- * `ShotLaneBeat` and delete `ShotSourceBeat`, and import `atSeconds` and delete
- * `beatSeconds`'s parsing half. Field-by-field they already agree — `id`, `at`,
- * `atS: number | null`, `kind`, `label`, `text`, and `movement` (which this
- * layer stores as `Shot.movementId`, because on a shot it is an id).
+ * This paragraph used to carry a merge-time TODO: `ShotSourceBeat` is the shape
+ * `app/_phases/script/trailer/types.ts` exports as `ShotLaneBeat`, "THE TWO ARE
+ * NOT YET THE SAME DECLARATION and must be made one on merge". The branches
+ * merged long ago and the unification did not happen, because the TODO asked for
+ * something that would have been wrong: delete `ShotSourceBeat` and import
+ * `ShotLaneBeat`. That would have narrowed this layer's input to a beat carrying
+ * a required `id`, a required `movement` and a `TrailerBeatKind`, and the
+ * explainer's `ScriptRender.beats` would no longer have compiled against
+ * `shotsFromRender` — which is the one call whose answer for an explainer must
+ * stay "no shots at all".
+ *
+ * BOTH HALVES ARE NOW DISCHARGED, in the direction that keeps that guarantee:
+ *
+ *   · the field list lives ONCE, in the beat layer, at the consumer's width
+ *     (`ShotLaneSourceBeat`), and `ShotLaneBeat extends` it. `ShotSourceBeat`
+ *     above is that shape plus `role`, this layer's own vocabulary.
+ *   · `beatSeconds` has no parsing half left: it defers to `atSeconds`.
+ *
+ * `movement` is carried onto a shot as `Shot.movementId`, because on a shot it
+ * is an id rather than a container.
  *
  * ONE THING THIS LAYER CANNOT SUPPLY, and the reason is doctrinal rather than
  * an implementation gap: the beat lane's magnitude check wants an injected

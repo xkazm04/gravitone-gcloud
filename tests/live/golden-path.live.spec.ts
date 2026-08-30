@@ -238,4 +238,175 @@ test.describe("the assembled studio", () => {
 
     expect(errors, "page errors during the background run").toEqual([]);
   });
+  // ── FOCUS SURVIVES A DESTRUCTIVE KEYPRESS ────────────────────────────────
+  //
+  // Belongs on this rung and could not sit one below it: the claim is about
+  // where the browser's focus lands after React unmounts the focused node, and
+  // tests/golden-path/ runs in Node with no DOM and no focus at all.
+  //
+  // The rule is the repo's own, stated in app/library/ContextMenu.tsx: leaving
+  // focus on <body> "strands a keyboard user at the top of the document". The
+  // asset tile's Delete path broke it - the tile a keyboard user just removed IS
+  // the focused node, so focus fell to <body> with no way back into the grid.
+  test("removing a focused asset moves focus on, never to the document body", async ({ page }) => {
+    const errors = watchErrors(page);
+    await freshShelf(page);
+    await page.goto("/library", { waitUntil: "domcontentloaded" });
+    // /library opens on Styles; the tiles live in the Assets module. Reached the
+    // way a user reaches it, so the journey breaks if the tab does.
+    await page.getByRole("button", { name: "Assets", exact: true }).click();
+
+    // The shelf seeds from the trial index through the product's own path.
+    const tiles = page.locator("figure[data-asset-id]");
+    await expect(tiles.first()).toBeVisible({ timeout: 20_000 });
+    const before = await tiles.count();
+    expect(before, "the library needs at least two tiles for this claim").toBeGreaterThan(1);
+
+    const doomedId = await tiles.first().getAttribute("data-asset-id");
+    await tiles.first().focus();
+    await expect(tiles.first()).toBeFocused();
+
+    await page.keyboard.press("Delete");
+
+    await expect(tiles).toHaveCount(before - 1);
+    const landedOn = await page.evaluate(() => {
+      const el = document.activeElement as HTMLElement | null;
+      return { tag: el?.tagName ?? null, assetId: el?.dataset?.assetId ?? null };
+    });
+    // THE FINDING IS THE BODY. Naming it explicitly rather than asserting a
+    // positive only: a future regression lands here, and "focus is on BODY" is
+    // the sentence that explains itself.
+    expect(landedOn.tag, "focus was stranded on the document body").not.toBe("BODY");
+    expect(landedOn.assetId, "focus stayed on the tile that was removed").not.toBe(doomedId);
+
+    // Backspace is NOT a removal key - it is the browser's back key by muscle
+    // memory, and a shelf entry cannot be restored once removed.
+    const survivor = tiles.first();
+    await survivor.focus();
+    const after = await tiles.count();
+    await page.keyboard.press("Backspace");
+    await expect(tiles).toHaveCount(after);
+
+    expect(errors, "page errors during the library journey").toEqual([]);
+  });
+
+  // ── A DIALOG WHOSE OPENER DID NOT SURVIVE IT ─────────────────────────────
+  //
+  // The journey above is the same rule from the other side: there, the focused
+  // node was removed with nothing over it; here a modal is on top, and the
+  // control it was opened FROM is what disappears underneath. Modal.tsx restored
+  // focus to that control unconditionally, and focusing a detached node is a
+  // silent no-op — so the dialog closed onto <body>, which ContextMenu.tsx calls
+  // stranding "a keyboard user at the top of the document".
+  //
+  // This rung, not the probes: tests/golden-path/ runs in Node with no DOM, so
+  // there is no document.activeElement there to be wrong.
+  //
+  // The Research step's Clear is the flow where the ordering is not a race.
+  // `doClear` (ResearchStep.tsx) resets the run and closes the dialog in ONE
+  // commit, so `ready` goes false and the Clear button unmounts at the same
+  // moment the modal does — the opener is provably gone before focus is handed
+  // back. /projects' per-row Delete was the same defect with a race on top; its
+  // ordering is now deterministic too and it has its own journey below.
+  test("closing a dialog whose opener was removed moves focus on, never to the document body", async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    await freshShelf(page);
+
+    await page.getByTestId(`cell-${PROJECT}-research`).click();
+    await page.waitForURL(/\/studio\//);
+
+    // The product's own way to land the finished notebook without walking the
+    // run (see the hard-reload journey above). A notebook is what puts Clear on
+    // the surface at all, so it is also what makes this journey possible.
+    await page.getByTestId("load-saved-run").click();
+    await expect(page.getByTestId("load-saved-note")).toBeVisible();
+
+    // BY KEYBOARD, because the claim is about a keyboard user: the opener is
+    // focused and activated with Enter, which is what makes where focus lands
+    // afterwards the whole of the user's position on the page.
+    const clear = page.getByTestId("clear-research");
+    await clear.focus();
+    await expect(clear).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    const dialog = page.getByRole("dialog", { name: /clear this research/i });
+    await expect(dialog).toBeVisible();
+
+    await page.getByTestId("confirm-clear").click();
+
+    // Both halves of the premise, asserted rather than assumed: the dialog is
+    // gone AND its opener went with it. A journey that stopped at the first
+    // would also pass against a Clear button that never unmounted, which is not
+    // the situation this test exists for.
+    await expect(dialog).toHaveCount(0);
+    await expect(clear).toHaveCount(0);
+
+    // Polled, not read once: the restore runs in React's passive-effect flush,
+    // which lands a tick after the commit the expectations above observed.
+    await expect
+      .poll(async () => page.evaluate(() => document.activeElement?.tagName ?? null), {
+        message: "focus was stranded on the document body after the dialog closed",
+      })
+      .not.toBe("BODY");
+
+    // THE FINDING IS THE BODY (same reasoning as the journey above), but the
+    // positive is named too — "not BODY" would also be satisfied by focus stuck
+    // inside a dialog that failed to unmount, and <main> is the anchor the fix
+    // actually chose.
+    const landedOn = await page.evaluate(() => document.activeElement?.tagName ?? null);
+    expect(landedOn, "focus landed on the surface's own <main> landmark").toBe("MAIN");
+
+    expect(errors, "page errors during the clear-research journey").toEqual([]);
+  });
+  // The SECOND ordering, and the one that was still broken after the Modal fix.
+  //
+  // Deleting a project used to fire `remove()` and close the dialog in the same
+  // commit, while `useProjects.remove` awaits its IndexedDB transaction BEFORE
+  // `setProjects`. So the row was still mounted when the modal tore down: focus
+  // was restored onto a delete button that unmounted a tick later, and landed on
+  // <body>. Modal cannot see this — from inside the dialog the opener is
+  // genuinely still connected — so the fix is at the call site, and the claim is
+  // therefore about ORDER rather than about the dialog.
+  test("deleting a project hands focus to the landmark, not to the row that vanished", async ({
+    page,
+  }) => {
+    const errors = watchErrors(page);
+    const control = await freshShelf(page);
+    const before = (await control.snapshot()).projects.length;
+    expect(before, "the journey needs a seeded shelf to delete from").toBeGreaterThan(0);
+
+    // Addressed by its ACCESSIBLE NAME rather than a testid: the control already
+    // carries one, and a journey whose whole subject is a keyboard user should
+    // reach the button the way assistive technology reaches it. Driven by
+    // keyboard for the same reason.
+    // `exact`, because the seeded shelf carries both "Glass Harbor" and
+    // "Glass Harbor — trailer" and a substring match resolves to two buttons.
+    const opener = page.getByRole("button", { name: `Delete ${PROJECT_TITLE}`, exact: true });
+    await expect(opener).toBeVisible();
+    await opener.focus();
+    await expect(opener).toBeFocused();
+    await page.keyboard.press("Enter");
+
+    const confirm = page.getByTestId("confirm-delete");
+    await expect(confirm).toBeEnabled({ timeout: 10_000 });
+    await confirm.click();
+
+    // BOTH halves of the premise, or the assertion below proves nothing: the
+    // dialog must be gone AND the opener must be gone. A journey that only
+    // checked focus would pass on a delete that silently did nothing.
+    await expect(confirm).toBeHidden();
+    await expect(opener, "the row survived the delete - the premise does not hold").toHaveCount(0);
+
+    await expect
+      .poll(async () => page.evaluate(() => document.activeElement?.tagName ?? null), {
+        message: "focus was stranded on the document body after the project was deleted",
+      })
+      .not.toBe("BODY");
+    const landedOn = await page.evaluate(() => document.activeElement?.tagName ?? null);
+    expect(landedOn, "focus landed on the shelf's own <main> landmark").toBe("MAIN");
+
+    expect(errors, "page errors during the delete journey").toEqual([]);
+  });
 });

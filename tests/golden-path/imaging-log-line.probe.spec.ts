@@ -24,6 +24,8 @@
 //     userinfo are masked wherever they appear in the message, and a message
 //     with newlines or 5,000 characters still yields exactly one bounded line.
 import { test, expect } from "@playwright/test";
+
+import { keepEnv } from "./_helpers";
 import { formatCall, scrub, type CallLog } from "@/lib/imaging/log";
 import { KEY_VAR } from "@/lib/imaging/env";
 
@@ -32,6 +34,8 @@ import { KEY_VAR } from "@/lib/imaging/env";
 const FAKE_GOOGLE_KEY = "AIzaSyFAKEfakeFAKEfake0123456789abcd";
 
 const base: CallLog = { cap: "generate", env: "prod", ms: 4210 };
+
+keepEnv([KEY_VAR.google, KEY_VAR.leonardo, KEY_VAR.qwen]);
 
 test.beforeEach(() => {
   delete process.env[KEY_VAR.google];

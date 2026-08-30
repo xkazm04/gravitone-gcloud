@@ -380,6 +380,16 @@ export function recalibrateFromPlan(
     beats,
     summary: plan.summary,
     modelRefusals: plan.refusals,
+    // THE SEAMS THE PLAN BROKE, carried out instead of dropped. `applyEdits`
+    // has returned these all along and this function kept only `a.beats` from
+    // its result, so a cut that orphaned a BUT was detected, explained, probed
+    // — and then discarded one line before anything could show it. Flattened
+    // across renders with the render id on each row, because a break is
+    // located by render AND mark and the reviewer is looking at one render at
+    // a time.
+    chainBreaks: RENDERS.flatMap((r) =>
+      (applied[r.id]?.chainBreaks ?? []).map((b) => ({ ...b, renderId: r.id })),
+    ),
   };
 }
 

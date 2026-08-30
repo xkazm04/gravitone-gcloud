@@ -32,6 +32,11 @@ export class CliError extends Error {
   }
 }
 
+/** Whether this platform needs the shell to resolve `claude` (a `.cmd` shim on
+ *  Windows, which Node cannot spawn directly). Exported so the probe drives the
+ *  same predicate the spawn does, rather than a copy of it. */
+export const USES_SHELL = process.platform === "win32";
+
 /**
  * THE SINGLE SPAWN DOOR'S ENVIRONMENT — and the one thing it takes away.
  *
@@ -108,7 +113,7 @@ export function probeClaude(timeoutMs = 10_000): Promise<{ ok: boolean; version?
     try {
       child = spawn("claude", ["--version"], {
         stdio: ["ignore", "pipe", "pipe"],
-        shell: process.platform === "win32",
+        shell: USES_SHELL,
         env: seatOnlyEnv(),
       });
     } catch {
@@ -142,37 +147,59 @@ export function probeClaude(timeoutMs = 10_000): Promise<{ ok: boolean; version?
   });
 }
 
-/** Run one headless turn and return its text.
+/**
+ * The argv handed to the CLI.
  *
- *  `--allowed-tools ""` and `--max-turns 1` are load-bearing: this is a pure
- *  reasoning call over JSON that is handed to it, and an engine that could read
- *  the filesystem or search the web could quietly source a figure the notebook
- *  does not contain — which is the one thing RECALIBRATE-PROMPT.md forbids
- *  absolutely. Take the tools away rather than asking it not to use them. */
+ * `--allowed-tools ""` and `--max-turns 1` are load-bearing: this is a pure
+ * reasoning call over JSON that is handed to it, and an engine that could read
+ * the filesystem or search the web could quietly source a figure the notebook
+ * does not contain — which is the one thing RECALIBRATE-PROMPT.md forbids
+ * absolutely. Take the tools away rather than asking it not to use them.
+ *
+ * ── THE EMPTY ARGUMENT IS QUOTED, AND ON WINDOWS IT HAS TO BE (2026-08-27) ──
+ *
+ * `spawn(..., { shell: true })` CONCATENATES argv into one command line without
+ * escaping it, so a zero-length argument leaves no trace at all. Measured, with
+ * this exact array against an argv echo:
+ *
+ *   shell:false -> [… "--allowed-tools", "",          "--max-turns", "1"]
+ *   shell:true  -> [… "--allowed-tools", "--max-turns", "1"]          ← both gone
+ *
+ * On Windows the CLI was therefore receiving `--allowed-tools` with `--max-turns`
+ * as its VALUE and a stray positional `1` — so BOTH load-bearing restrictions
+ * were silently absent on the only platform this app is developed on. The engine
+ * ran unrestricted and multi-turn while the comment above described a sandbox.
+ *
+ * Passing the two-character literal `""` survives cmd's parsing and arrives as a
+ * genuine empty string; off-shell it must stay a real empty string, because
+ * there the two characters would be a literal tool name. Hence the branch — and
+ * hence the probe, because the failure is invisible from inside this process.
+ */
+export function cliArgs(usesShell: boolean = USES_SHELL): string[] {
+  return [
+    "-p",
+    "--output-format", "json",
+    "--model", MODEL,
+    "--effort", "high",
+    "--allowed-tools", usesShell ? '""' : "",
+    "--max-turns", "1",
+  ];
+}
+
+/** Run one headless turn and return its text. */
 export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResult> {
   // Floored, never taken literally: a zero or a garbage value here would kill
   // every turn in milliseconds and route the whole product to its fallback with
   // a probe that still reads green. See floorTimeout.
   const ceiling = floorTimeout(timeoutMs, 600_000);
   return new Promise((resolve, reject) => {
-    const child = spawn(
-      "claude",
-      [
-        "-p",
-        "--output-format", "json",
-        "--model", MODEL,
-        "--effort", "high",
-        "--allowed-tools", "",
-        "--max-turns", "1",
-      ],
-      {
-        stdio: ["pipe", "pipe", "pipe"],
-        shell: process.platform === "win32",
-        // The seat, never a metered key. See seatOnlyEnv — this is the single
-        // door, and it is the only place the strip can be guaranteed.
-        env: seatOnlyEnv(),
-      },
-    );
+    const child = spawn("claude", cliArgs(), {
+      stdio: ["pipe", "pipe", "pipe"],
+      shell: USES_SHELL,
+      // The seat, never a metered key. See seatOnlyEnv — this is the single
+      // door, and it is the only place the strip can be guaranteed.
+      env: seatOnlyEnv(),
+    });
 
     let out = "";
     let err = "";
@@ -217,6 +244,30 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
         reject(new CliError("The local Claude process returned output that was not JSON.", "failed"));
       }
       void err;
+    });
+
+    // THE PROMPT WRITE IS A DOOR OUT OF THIS PROCESS, AND IT HAD NO HANDLER.
+    //
+    // `child.stdin` is a stream, so its failures arrive as an 'error' EVENT. They
+    // do not throw at the call site below, and they do not reach `child.on
+    // ("error")` — that one reports the SPAWN, not the pipe. An 'error' event with
+    // no listener is re-raised by Node as an uncaughtException, which in a route
+    // handler is the SERVER going down, not this promise rejecting.
+    //
+    // Measured 2026-08-29 on Windows, with this exact shape and a binary that is
+    // not on PATH: `shell: true` starts cmd, cmd exits immediately because
+    // `claude` does not resolve, and the write lands on a closed pipe —
+    // `Error: write EOF`, uncaught, process gone. So on the only platform this app
+    // is developed on, a machine without the CLI could never reach the
+    // `not-installed` branch above, and lib/text/router.ts could never descend to
+    // its metered rung: nothing survived long enough to classify anything.
+    //
+    // The child is gone by definition when this fires, so the verdict stays with
+    // `close`/`error` above, which have the exit code and the stderr to classify
+    // from. This listener's whole job is to keep the failure inside the promise.
+    child.stdin.on("error", () => {
+      // Deliberately silent: the pipe closing IS the child ending, and the
+      // handlers above say what that means.
     });
 
     child.stdin.write(prompt);

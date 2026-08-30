@@ -7,7 +7,7 @@
 import { CONCLUSIONS, falsifierOf, falsifierText, type ConclusionSubject, type Falsifier, type Leap } from "./conclusions";
 import { CARD_DIMENSION, UNTAGGED_DIMENSION_ID, type DimensionId } from "./dimensions";
 import { NOTEBOOK } from "./notebook";
-import type { Notebook } from "./types";
+import type { FactSource, Notebook } from "./types";
 
 export type CardKind = "fact" | "mechanism" | "reversal" | "steel-man" | "conclusion";
 
@@ -21,6 +21,16 @@ export interface Card {
   loadBearing?: boolean;
   confidence?: "high" | "medium" | "low";
   source?: string;
+  /** The structured replacement for `source`, carried through where the fact
+   *  has been migrated (types.ts::FactSource — "a rule with no field to live
+   *  in is a comment"). `buildCards` used to write `source: f.source` and drop
+   *  `sources` on the floor entirely, which meant the one migrated row in
+   *  facts.ts had an evidence class the RESEARCHER authored and no card on the
+   *  triage board could ever show it — the field existed, one layer up
+   *  (FactRow.tsx) drew it, and the board that decides what a script may use
+   *  stayed blind to it. Only facts carry this; mechanisms, reversals and
+   *  conclusions have no sources of their own to lose. */
+  sources?: FactSource[];
   asOf?: string;
   /** Ids this card needs in order to stand. Descoping any of them wounds it. */
   dependsOn: string[];
@@ -59,13 +69,32 @@ export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
     cards.push({
       id: f.id, kind: "fact", dimension: CARD_DIMENSION[f.id] ?? UNTAGGED_DIMENSION_ID,
       title: f.claim, detail: f.note, loadBearing: f.loadBearing,
-      confidence: f.confidence, source: f.source, asOf: f.asOf, dependsOn: [],
+      confidence: f.confidence, source: f.source, sources: f.sources, asOf: f.asOf, dependsOn: [],
     });
   }
+  // A MECHANISM'S SUPPORT IS A CARD EDGE, and it was a hardcoded `[]`.
+  //
+  // types.ts explains the wound graph's blindness to the card class carrying
+  // the thesis as a DATA problem: "run 1's `m-institutionalisation` is annotated
+  // 'This is the video. Everything else is evidence for it.' and cites nothing,
+  // so cutting every fact under it wounded nothing." True, and only half of it.
+  // The other half is here: `dependsOn: []` meant that even once a run DID
+  // author `Mechanism.evidence` or `steps[].evidence`, `buildCards` threw it
+  // away before `woundsOf` could ever see it. The reasoned layer was traceable
+  // and the researched layer was not, and fixing the fixture alone would not
+  // have changed that.
+  //
+  // Deduped: a fact may support the mechanism as a whole AND one of its steps,
+  // and counting it twice would make one descope report two missing ids.
+  //
+  // No mechanism in the shipped fixture cites anything, so this wounds nothing
+  // TODAY. It is the difference between a graph that cannot read the edge and
+  // one that has no edge to read.
   for (const m of nb.mechanisms) {
     cards.push({
       id: m.id, kind: "mechanism", dimension: CARD_DIMENSION[m.id] ?? UNTAGGED_DIMENSION_ID,
-      title: m.name, detail: m.explains, dependsOn: [],
+      title: m.name, detail: m.explains,
+      dependsOn: [...new Set([...(m.evidence ?? []), ...(m.steps ?? []).flatMap((s) => s.evidence ?? [])])],
     });
   }
   for (const r of nb.reversals) {
@@ -130,7 +159,7 @@ export function untaggedIds(nb: Notebook = NOTEBOOK): string[] {
  *      indistinguishable, and the safety graph answers with confidence.
  *    · `FACT_BY_ID` / `UNKNOWN_BY_ID` are `Object.fromEntries`, so a reused id
  *      overwrites the earlier row. The loser does not error; it vanishes. */
-export type GraphIssueKind = "duplicate-id" | "dangling-ref" | "untagged" | "stale-tag";
+export type GraphIssueKind = "duplicate-id" | "dangling-ref" | "untagged" | "stale-tag" | "unlinked-conversion";
 
 /** Both ends of the broken edge, always. `from` holds the reference, `ref` is
  *  what it points at — an unresolvable id, or the one spent twice. */
@@ -184,7 +213,12 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
 
   // The edge woundsOf() actually reads.
   for (const c of cards) edge(c.id, "dependsOn", c.dependsOn, cardIds, "card");
-  // And the edges that never become card edges, so nothing else reaches them.
+  // And the same edges at their own, tighter universe. A mechanism's evidence
+  // is now also a card edge (see buildCards), so the pass above would catch a
+  // reference to nothing — but only "no such CARD". These must name a FACT, and
+  // a mechanism citing a reversal id is a real mis-wiring that the card pass
+  // would wave through. The rest of these edges become no card edge at all, so
+  // this is the only place anything reaches them.
   for (const f of nb.facts) {
     edge(f.id, "contests", f.contests, factIds, "fact");
     edge(f.id, "qualifies", f.qualifies, factIds, "fact");
@@ -200,6 +234,24 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
   for (const c of CONCLUSIONS) edge(c.id, "licensedBy", [c.licensedBy], factIds, "fact");
   nb.scaleConversions.forEach((s, i) => edge(`scaleConversions[${i}]`, "for", [s.for], factIds, "fact"));
   nb.analogyCandidates.forEach((a, i) => edge(`analogyCandidates[${i}]`, "for", [a.for], cardIds, "card"));
+  // AN ABSENT LINK IS NOT A HEALTHY ONE, and the pass above cannot tell them
+  // apart: edge() skips a null ref, so a conversion with no `for` is waved
+  // through with the same silence woundsOf() gives a dangling dependsOn. The
+  // type already states the rule — "required for new notebooks. A conversion
+  // with no `for` is uncheckable by construction" (types.ts) — and nothing
+  // read it, so all six shipped conversions were unlinked under a green gate.
+  // A felt version is a DERIVED claim: without the fact id nothing can check it
+  // against the claim it restates, and nothing can cap it at that fact's grade.
+  nb.scaleConversions.forEach((s, i) => {
+    if (!s.for)
+      add(
+        "unlinked-conversion",
+        `scaleConversions[${i}]`,
+        s.raw,
+        `is a felt version of a number that names no fact. The conversion is a derived claim; with no \`for\` nothing can check the felt form against the claim it restates, and nothing can cap it at that fact's confidence.`,
+      );
+  });
+
   edge("currency", "expiresFirst", nb.currency.expiresFirst, cardIds, "card");
   edge("currency", "durable", nb.currency.durable, cardIds, "card");
 
@@ -216,9 +268,23 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
  *  module instantiation: a broken edge announces itself the moment the notebook
  *  is imported, rather than waiting for somebody to remember a script. Not in
  *  production, and not in Node — there `pipeline/check-notebook.mts` owns the
- *  report and this would only prefix it with noise. This repo has no test suite
- *  and declined to add one (pipeline/integration-imaging.mts:8), so a module
- *  assertion and a script is the whole apparatus, on purpose. */
+ *  report and this would only prefix it with noise.
+ *
+ *  IT IS NO LONGER THE WHOLE APPARATUS, and this comment used to say it was:
+ *  "This repo has no test suite and declined to add one, so a module assertion
+ *  and a script is the whole apparatus, on purpose." That was true when it was
+ *  written. The repo now runs @playwright/test over `tests/golden-path/`, and
+ *  `npm test` is inside `npm run verify` — so the justification for leaving the
+ *  graph on a console line had expired without the comment noticing.
+ *
+ *  What each layer is FOR, now that there are three:
+ *    · this console line — the fastest feedback there is, while you edit
+ *    · `check:notebook` — the terminal report, and in the gate since a7be959
+ *    · `tests/golden-path/notebook-graph.probe.spec.ts` — the layer neither of
+ *      the other two has: it drives `notebookIssues` against DELIBERATELY BROKEN
+ *      notebooks, so a checker that quietly stopped detecting anything is itself
+ *      detected. A green check over a checker that cannot fail is the failure
+ *      mode a clean fixture hides best. */
 if (typeof window !== "undefined" && process.env.NODE_ENV !== "production") {
   const found = notebookIssues();
   if (found.length)

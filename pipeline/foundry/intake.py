@@ -64,7 +64,18 @@ def publish(folder: Path, slug: str, max_width=1280):
     existing = sorted(FRAMES_DIR.glob(f"{slug}-[0-9][0-9][0-9].jpg"))
     if existing:
         print(f"  note: {len(existing)} frame(s) already published under '{slug}-'; adding after them")
-    n = len(existing)
+    # THE NEXT INDEX IS THE HIGHEST ONE TAKEN, NOT HOW MANY ARE LEFT.
+    #
+    # This counted. Delete one bad screenshot from a published set and the count
+    # no longer matches the highest index, so the next publish reuses a number
+    # that is still on disk and overwrites it -- while printing "adding after
+    # them". Plans reference frames by NAME, so that is not a collision anyone
+    # sees: it is a plan that quietly points at a different picture, and the
+    # forge then annotates and grades the wrong source.
+    #
+    # Measured: publish 5, delete 003, publish 2 more -> mygame-005.jpg came
+    # back with different pixels under the same name.
+    n = max((int(p.stem.rsplit("-", 1)[1]) for p in existing), default=0)
     out = []
     for p in srcs:
         n += 1

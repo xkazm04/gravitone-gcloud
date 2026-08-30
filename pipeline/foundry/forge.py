@@ -69,6 +69,7 @@ from replicate import compose_prompt  # noqa: E402
 
 import grade  # noqa: E402
 
+NL = chr(10)
 ANNOTATOR = "qwen3.8:27b"
 NO_TEXT = ("No text, no letters, no numbers, no logos, no captions and no watermark "
            "anywhere in the image.")
@@ -81,10 +82,29 @@ def now():
 
 
 def save(run_dir, manifest):
-    """Atomic: the page polls this file while the forge writes it."""
+    """Atomic: the page polls this file while the forge writes it.
+
+    AND THE REPLACE IS RETRIED, because on Windows it is not unconditional.
+    os.replace raises PermissionError while any other handle to the destination
+    is open, and "the page polls this file" is a description of a handle being
+    open a great deal of the time. This function is called after every
+    candidate, from inside main()'s try -- so one unlucky poll would abort the
+    run, mark the manifest failed and throw away an evening of GPU, for a
+    conflict that resolves in microseconds.
+
+    Measured on the sibling path (acquire.py's 30 KB catalogue, a reader in a
+    tight loop): a bare replace lost 32 of 40 writes; with this retry, 0 of 40.
+    """
     tmp = run_dir / "run.json.tmp"
     tmp.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
-    os.replace(tmp, run_dir / "run.json")
+    for attempt in range(20):
+        try:
+            os.replace(tmp, run_dir / "run.json")
+            return
+        except PermissionError:
+            if attempt == 19:
+                raise
+            time.sleep(0.01)
 
 
 def log(manifest, run_dir, msg):
@@ -384,6 +404,39 @@ def main():
     missing = [s for s in plan["styles"] if s not in styles]
     if missing:
         raise SystemExit(f"unknown style ids: {missing}")
+    # A STYLE THIS RUN CANNOT SCORE IS WORSE THAN A STYLE IT CANNOT FIND.
+    #
+    # The check above catches a style id that does not exist, and it fails
+    # loudly. An observable typed one character wrong does not: style_score
+    # compares enum-for-enum with ==, so that field scores 0.0 against every
+    # candidate for the whole run -- and 0.0 is exactly what a style the
+    # generator genuinely missed looks like. The evening is spent, the plates
+    # are on disk, and the ledger row says the style does not work.
+    #
+    # styles.json is hand-edited on purpose: acquire.py lands a style as a
+    # hypothesis and prints "edit the recipe in styles.json before forging".
+    # So a typo here is the ordinary path, not an exotic one. Refuse before the
+    # first frame is annotated; the fix is one word in one file.
+    unscoreable = {sid: grade.unscoreable(styles[sid].get("observables") or {})
+                   for sid in plan["styles"]}
+    unscoreable = {sid: bad for sid, bad in unscoreable.items() if bad}
+    if unscoreable:
+        lines = [
+            f"  {sid}: " + ", ".join(
+                f"{f}={v!r} (allowed: {', '.join(grade.allowed_values(f))})"
+                for f, v in bad.items())
+            for sid, bad in unscoreable.items()
+        ]
+        raise SystemExit(
+            "styles.json holds observables the grader cannot score:" + NL + NL.join(lines))
+    # And a style with NO gradable observable at all leaves every candidate
+    # style-unmeasured -- the same evening, for no style signal.
+    blind = [sid for sid in plan["styles"]
+             if not any((styles[sid].get("observables") or {}).get(f) is not None
+                        for f in grade.STYLE_ENUMS)]
+    if blind:
+        raise SystemExit(
+            f"styles with no gradable observable ({', '.join(grade.STYLE_ENUMS)}): {blind}")
 
     run_id = args.run_id or f"{datetime.now().strftime('%Y-%m-%d')}-{plan['id']}"
     run_dir = OUT_ROOT / run_id

@@ -188,8 +188,22 @@ export function googleProvider(): ImagingProvider {
     async edit(req: EditRequest): Promise<GeneratedImages> {
       // Editing is the SAME endpoint with an image in the input — there is no
       // separate edit route. The instruction leads, the subject follows.
-      const input: InputPart[] = [{ type: "text", text: req.instruction }, imagePart(req.image)];
-      for (const r of (req.references ?? []).slice(0, 13)) input.push(imagePart(r));
+      //
+      // THE ROLE MAP IS NOT OPTIONAL HERE, and this path went without one while
+      // `generate` twelve lines up has carried it since it was written. That
+      // asymmetry is backwards: generate attaches ONE kind of image, and edit
+      // attaches two — the plate being edited and the style references — so it
+      // is the heterogeneous call, the exact case reference-role-map exists for.
+      // Unlabelled, the attachments are ambiguous about EACH OTHER: nothing
+      // tells the model which image is the thing to change and which are the
+      // look to change it into, and the failure mode is the same one generate's
+      // own comment names — a style reference read as content to reproduce.
+      const refs = (req.references ?? []).slice(0, 13);
+      const input: InputPart[] = [
+        { type: "text", text: buildEditPrompt(req.instruction, refs.length) },
+        imagePart(req.image),
+      ];
+      for (const r of refs) input.push(imagePart(r));
 
       // NO `image_size` here, and therefore NO PRICE — deliberately, on both
       // counts. An edit should come back at the resolution of the plate it was
@@ -339,7 +353,38 @@ async function runImage(
  * a subject to redraw or a look to imitate, and it guesses "subject". Saying so
  * explicitly is the difference between locking a style and cloning a frame.
  */
-function buildPrompt(prompt: string, negative?: string, refCount = 0): string {
+/** The EDIT path's role map. Two roles, because an edit call carries two kinds
+ *  of image, and `reference-role-map` is explicit that the map leads: "the half
+ *  that resolves ambiguity has to arrive before the ambiguous material does."
+ *  So it is prepended to the instruction rather than appended the way
+ *  `buildPrompt` appends its single-role note — there the prompt IS the subject
+ *  description and the note qualifies it; here the instruction is an operation
+ *  on assets the model has not been introduced to yet.
+ *
+ *  NEGATIVE SCOPE ON BOTH ROLES, per the technique's rule 4 ("the map states
+ *  what an asset must NOT influence when the risk is real"): the plate must not
+ *  contribute style once references are present, and the references must not
+ *  contribute content. Those are the two bleeds this call can actually suffer.
+ *
+ *  With no references there is one image and no ambiguity, so the instruction
+ *  goes through untouched — the same `refCount > 0` guard buildPrompt uses, and
+ *  the reason the no-reference edit path is byte-identical to what it was. */
+export function buildEditPrompt(instruction: string, refCount = 0): string {
+  if (refCount <= 0) return instruction;
+  return [
+    "IMAGE ROLES — read before the instruction.",
+    "· Image 1 is the SUBJECT PLATE: the image being edited. It controls the content, " +
+      "composition and identity of the result. Preserve them except where the instruction " +
+      "below says otherwise, and do not take its style from anywhere but the references.",
+    `· The ${refCount === 1 ? "next attached image is a STYLE REFERENCE" : `next ${refCount} attached images are STYLE REFERENCES`}. ` +
+      "They control technique, palette, line weight and finish, and nothing else. " +
+      "Do NOT copy their subject matter, composition or any object from them into the result.",
+    "",
+    instruction,
+  ].join("\n");
+}
+
+export function buildPrompt(prompt: string, negative?: string, refCount = 0): string {
   const parts = [prompt];
   if (refCount > 0)
     parts.push(

@@ -66,7 +66,13 @@ const RETIRED_PHASES: Record<string, PhaseKey> = { motion: "frames" };
  *  migration must not tell. */
 export function migrateProject(p: Project): Project {
   const legacy = Object.keys(RETIRED_PHASES).filter((k) => k in p.progress);
-  if (legacy.length === 0 && !(p.phase in RETIRED_PHASES)) return p;
+  const needsDiscipline = !p.discipline;
+  if (legacy.length === 0 && !(p.phase in RETIRED_PHASES) && !needsDiscipline) return p;
+
+  // A record from before disciplines existed: the template already implies
+  // one, so it is filled here rather than left for every surface to derive.
+  const discipline = p.discipline ?? disciplineOf(p.template);
+  if (legacy.length === 0 && !(p.phase in RETIRED_PHASES)) return { ...p, discipline };
 
   const progress = { ...p.progress };
   for (const old of legacy) {
@@ -77,6 +83,7 @@ export function migrateProject(p: Project): Project {
   }
   return {
     ...p,
+    discipline,
     phase: RETIRED_PHASES[p.phase] ?? p.phase,
     progress: progress as Record<PhaseKey, PhaseState>,
   };
@@ -104,6 +111,29 @@ export const PHASE_STATE_WORD: Record<PhaseState, string> = {
   review: "needs a call",
   done: "locked",
   blocked: "blocked",
+};
+
+/* ── Disciplines — the kind of video, above the template ──────────────────── */
+
+/** The discipline is the question asked BEFORE the template: what kind of
+ *  video is this at all. Educational and promotional pieces are different
+ *  contracts (see the note on the promotional formats below), and `free` is
+ *  the honest third answer — a video the craft library has no template for,
+ *  where the studio only keeps time. */
+export const DISCIPLINES = ["educational", "trailer", "free"] as const;
+export type Discipline = (typeof DISCIPLINES)[number];
+
+export const DISCIPLINE_LABEL: Record<Discipline, string> = {
+  educational: "Educational video",
+  trailer: "Movie · game trailer",
+  free: "Any video",
+};
+
+/** The one line the create dialog shows under each discipline pill. */
+export const DISCIPLINE_NOTE: Record<Discipline, string> = {
+  educational: "an argument explained well — the craft library measured these",
+  trailer: "a promotional cut that opens a debt another artifact pays",
+  free: "no craft template — your own discipline; the studio only keeps time",
 };
 
 /* ── Templates (knowledge/templates/*) ────────────────────────────────────── */
@@ -187,17 +217,56 @@ export const TEMPLATES = [
     range: [60, 120] as const,
     note: "imagery when the footage does not exist yet — a stage, not a length",
   },
+
+  // ── The free discipline ───────────────────────────────────────────────────
+  //
+  // ONE ID, APPENDED LAST, AND IT CLAIMS NO CRAFT. The `range` is not a
+  // measurement — nothing in knowledge/ measured "any video" — it is the
+  // widest band the runtime input accepts, and lib/formatBrief.ts renders this
+  // template as NOT STATED rather than as a format with rules.
+  {
+    id: "free-form",
+    label: "Free form",
+    defaultS: 90,
+    range: [15, 600] as const,
+    note: "no craft template — your own discipline; the studio only keeps time",
+  },
 ] as const;
 
 export type TemplateId = (typeof TEMPLATES)[number]["id"];
+
+/** Which discipline each template belongs to. Exhaustive on purpose: a template
+ *  appended without a family here is a typecheck failure, not an orphan pill. */
+export const TEMPLATE_FAMILY: Record<TemplateId, Discipline> = {
+  "short-form-clip": "educational",
+  "short-educational-video": "educational",
+  "mid-educational-video": "educational",
+  teaser: "trailer",
+  trailer: "trailer",
+  cinematic: "trailer",
+  "free-form": "free",
+};
+
+/** The templates a discipline offers, in catalogue order. Never empty — every
+ *  discipline owns at least one template, which is what lets the dialog take
+ *  `templatesFor(d)[0]` as the default without a guard. */
+export function templatesFor(d: Discipline) {
+  return TEMPLATES.filter((t) => TEMPLATE_FAMILY[t.id] === d);
+}
+
+/** The discipline a template implies — how a record written before
+ *  `discipline` existed gets one (see `migrateProject`). */
+export function disciplineOf(template: TemplateId): Discipline {
+  return TEMPLATE_FAMILY[template] ?? TEMPLATE_FAMILY[templateOf(template).id];
+}
 
 /** The catalogue entry for an id, with a fallback for one that is not in it.
  *
  *  THE FALLBACK IS POSITIONAL AND THAT IS LOAD-BEARING. `TEMPLATES[1]` is
  *  `short-educational-video` — the middle of the three self-sufficient formats,
  *  which is the right answer for a dropdown that must render something. It is
- *  only correct while the self-sufficient formats stay first, so the six
- *  promotional/educational entries are APPENDED and never inserted ahead of it;
+ *  only correct while the self-sufficient formats stay first, so the later
+ *  entries (promotional, then free-form) are APPENDED and never inserted ahead of it;
  *  an insert at the front would silently re-point every unrecognised id at a
  *  different format, and nothing would fail.
  *
@@ -218,6 +287,15 @@ export interface Project {
   /** One line about what it is. Optional: a project can exist before it has one. */
   logline: string;
   template: TemplateId;
+  /**
+   * The kind of video — the question above `template`. See DISCIPLINES.
+   *
+   * Optional on the TYPE, required by the create path, for the same reason as
+   * `themeId`: records written before the discipline existed have none, and
+   * the read seam (`migrateProject`) derives it from the template rather than
+   * treating those records as invalid.
+   */
+  discipline?: Discipline;
   /**
    * The locked visual identity this project is built on — see lib/themes.ts.
    *
@@ -249,7 +327,10 @@ export interface Project {
 }
 
 /** What the create/edit dialog collects. Everything else is derived. */
-export type ProjectDraft = Pick<Project, "title" | "logline" | "template" | "targetS" | "themeId">;
+export type ProjectDraft = Pick<
+  Project,
+  "title" | "logline" | "discipline" | "template" | "targetS" | "themeId"
+>;
 
 export const emptyProgress = (): Record<PhaseKey, PhaseState> =>
   Object.fromEntries(PHASES.map((p) => [p, "empty"])) as Record<PhaseKey, PhaseState>;
@@ -263,6 +344,7 @@ export function newProject(uid: string, draft: ProjectDraft): Project {
     title: draft.title.trim(),
     logline: draft.logline.trim(),
     template: draft.template,
+    discipline: draft.discipline ?? disciplineOf(draft.template),
     themeId: draft.themeId,
     targetS: draft.targetS,
     createdAt: now,

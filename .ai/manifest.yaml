@@ -59,6 +59,28 @@ capabilities:
   typecheck: { command: "npm run typecheck", verified: true }
   # (Was, until 2026-08-24: "this repo has no linter". It has one now — eslint.config.mjs, flat
   # config over eslint-config-next@16.3.0, wired into .github/workflows/gates.yml.)
+  # The only thing that imports app/_phases/script/trailer/structure.ts, whose params validation
+  # throws at import if knowledge/templates/trailer/steps/01-script/params.json drifts from the type
+  # unions — so this is the gate that catches that drift, and nobody else does. Run 2026-08-30: all
+  # 22 cases, 6 invariants and 5 seam checks behave correctly.
+  check-trailer-structure: { command: "npm run check:trailer-structure", verified: true }
+  # What a session runs before touching credentials or vendors: probes every capability read-only
+  # (no vendor contacted, nothing spent) and reports a reachable-now / reachable-after-a-named-action
+  # / absent-here ladder, plus an .env.example-vs-lib/ discrepancy check. Run 2026-08-30: exited 0;
+  # reported two ABSENT capabilities (no-model floor by design, localVideoRender needs a GPU this box
+  # doesn't have), zero .env.example discrepancies, and two pre-existing NOTES it explicitly declines
+  # to fix (a node 24 DEP0190 spawn warning, and guard.py's traceback with no nvidia-smi) since it does
+  # not own those files.
+  preflight: { command: "npm run preflight", verified: true }
+  # THE AGGREGATE CHAIN — every gate below in one ordered command, and the order is load-bearing:
+  # typecheck && lint:ratchet && check:manifest && check:notebook && check:trailer-structure && test
+  # && build && check:bundle. check:bundle in particular reads BUILT chunks, so build must run first;
+  # a reordering that moved it earlier would pass on a stale build and mean nothing. NOT run here on
+  # purpose — it chains `npm run build`, which this task did not need — so `verified` stays false; it
+  # is the composition of gates each individually verified true above (test, lint, check-manifest,
+  # check-notebook, check-trailer-structure, typecheck, check-bundle) plus `build` (unverified: false
+  # in its own entry above, unrun by this task).
+  verify: { command: "npm run verify", verified: false }
 
 paths:
   spec: .ai/SPEC.md
@@ -125,6 +147,10 @@ skills:
   - leonardo
   - perfect
   - research
+  - scan-sweep
   - ship-loop
   - tiger
   - uat
+  - dojo
+  - motionize
+  - spark

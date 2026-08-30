@@ -8,10 +8,20 @@
 // the decomposition is wrong the fix is in the beat chain or in `shots.ts`, not
 // in a text field on this page.
 //
-// For a non-trailer render it renders a statement of absence rather than an
-// empty table. An explainer beat IS one composed picture; saying "0 shots"
-// would imply the layer applies and found nothing, which is the opposite of
-// what is true.
+// THERE ARE TWO ABSENCES HERE AND THEY ARE DIFFERENT SENTENCES.
+//
+// For a non-trailer render it says the layer does not APPLY: an explainer beat
+// IS one composed picture, and the frame list is already that. For a trailer
+// project whose spine nobody has composed it says the CHAIN IS MISSING, and
+// points at the step that writes one. Both are drawn instead of an empty table,
+// because "0 shots" would claim the layer ran and found nothing — which in the
+// first case is a category error and in the second is a lie about the creator's
+// own work.
+//
+// Until the chain was resolved from the project record neither sentence could
+// be reached: every project was handed the explainer fixture, so a trailer
+// project read its own step as "shot decomposition applies to promotional cuts
+// only" — about somebody else's script.
 //
 // It also shows the PROPOSED text-to-image prompt per shot. Proposed is the
 // operative word: there is no button beside it, this module imports nothing
@@ -19,13 +29,13 @@
 // let you read it. Prompt WORDING is deliberately unscored here — see the
 // header of ./shotPrompt and the named gaps at the bottom of the page.
 
+import type { FramesRender } from "./frames";
 import {
   isTrailerFormat,
   shotsByBeat,
   shotsFromRender,
   unplaceableBeats,
   type Shot,
-  type ShotSourceRender,
 } from "./shots";
 import { promptsForShots, type ShotPrompt } from "./shotPrompt";
 import { reviewShotList, type ShotCheck, type ShotVerdict } from "./shotReview";
@@ -107,13 +117,37 @@ export default function ShotSheet({
   block,
   hasLockedStyle,
 }: {
-  render: ShotSourceRender & { title: string };
+  /** The chain this step resolved from the PROJECT'S OWN RECORD — see
+   *  ./frames#FramesRender. `origin` is read rather than inferred, because the
+   *  two absences below are indistinguishable from the beats alone. */
+  render: FramesRender;
   block: StyleBlock;
   /** False means `block` is a fallback preset, not this project's identity — the
    *  same distinction the assembly header colours in amber, and it matters more
    *  here because every prompt on the page restates it. */
   hasLockedStyle: boolean;
 }) {
+  // A TRAILER PROJECT WITH NOTHING COMPOSED. Absence, named, with the step that
+  // ends it — not an empty grid, and not the explainer's fixture standing in.
+  if (render.origin === "no-spine") {
+    return (
+      <div className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-6">
+        <p className="text-[13px] leading-relaxed text-amber-100/90">
+          &ldquo;{render.title}&rdquo; is a promotional cut, and nothing has composed its spine yet.
+          There is no beat chain to decompose — not an empty one, none.
+        </p>
+        <p className="mt-2 text-[12px] leading-relaxed text-white/45">
+          Step 1 offers candidate beats per part of the spine and Step 2 composes the ones you confirm
+          into a cut. This step reads that cut; it will not write one for you, because a spine invented
+          downstream is a spine nobody chose.
+        </p>
+        <p className="font-jetbrains mt-2 text-[11px] text-white/30">
+          nothing was derived, nothing was guessed, and no frame was seeded from another project&rsquo;s script
+        </p>
+      </div>
+    );
+  }
+
   if (!isTrailerFormat(render.template)) {
     return (
       <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-6">
@@ -147,6 +181,15 @@ export default function ShotSheet({
       <p className="font-jetbrains text-[11px] text-white/35">
         {report.shots} shots across {report.beats} beats · {report.engaged}/{report.checks.length} checks
         examined anything · derived, not authored
+        {/* WHOSE BEATS THESE ARE. Worth a clause of its own: this page spent its
+            whole life decomposing a fixture, so "derived" needs to say derived
+            from WHAT before a reader can trust a single row of it. */}
+        <span className="text-white/25">
+          {" · "}
+          {render.origin === "trailer-cut"
+            ? `from this project’s composed spine, over its ${render.durationS}s target`
+            : "from a fixture chain"}
+        </span>
       </p>
 
       {/* Stated rather than assumed, for the same reason the assembly header

@@ -18,7 +18,7 @@
 // Everything renders through the gated /api/music/* seams; no vendor
 // knowledge lives in this file beyond the wire plan types.
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
 import { ABSENCE_REASON, capabilities } from "@/lib/capabilities";
@@ -104,16 +104,58 @@ export default function PlaygroundView() {
   // cannot change under the component and does not need to be state.
   const caps = capabilities();
   const [renders, setRenders] = useState<Render[]>([]);
-  const [nextId, setNextId] = useState(1);
+  /**
+   * The id counter is a REF, not state, and that is the fix rather than a
+   * preference.
+   *
+   * It used to be `useState`, and `addRender` read `nextId` from the render
+   * closure while incrementing through `setNextId((n) => n + 1)`. The updater
+   * was correct and the line above it was not: two renders that resolve in the
+   * same batch — which is the normal case here, since every section of this
+   * bench can be firing at once — both read the same `nextId` and were filed
+   * under the SAME ID. `renders` is keyed by id, so the second one replaced the
+   * first in the list while its blob URL stayed allocated, and the section
+   * editor offered one source where two had been paid for.
+   *
+   * A ref increments once per call whatever React batches, and it takes
+   * `addRender` down to stable identity as a side effect, which is what its
+   * `useCallback` was for in the first place.
+   */
+  const nextId = useRef(1);
 
-  const addRender = useCallback(
-    (from: string, result: DetailedMusicResult) => {
-      const r: Render = { id: nextId, from, url: blobUrl(result.audio), result };
-      setNextId((n) => n + 1);
-      setRenders((rs) => [r, ...rs]);
-      return r;
+  /**
+   * THE BLOB URLS THIS PAGE OWNS, RELEASED WHEN IT GOES.
+   *
+   * `blobUrl`'s own docstring says "Caller revokes when done" and no caller in
+   * this repository ever did — `URL.revokeObjectURL` appeared nowhere in it.
+   * Every render on this bench allocates a multi-megabyte object URL the browser
+   * holds until the document is discarded, and this is the one surface built to
+   * produce many of them in a sitting.
+   *
+   * Ownership decides who revokes, so it is worth stating: this page owns every
+   * url `addRender` mints. `QuickTake` DISPLAYS one it got back and must not
+   * revoke it; `SfxBench` allocates its own and revokes its own.
+   *
+   * Written from inside `addRender` — an event handler — rather than by syncing
+   * a ref to `renders` during render, which is what react-hooks/refs objects to
+   * and objects to correctly.
+   */
+  const owned = useRef<string[]>([]);
+
+  const addRender = useCallback((from: string, result: DetailedMusicResult) => {
+    const url = blobUrl(result.audio);
+    owned.current.push(url);
+    const r: Render = { id: nextId.current++, from, url, result };
+    setRenders((rs) => [r, ...rs]);
+    return r;
+  }, []);
+
+  useEffect(
+    () => () => {
+      for (const url of owned.current) URL.revokeObjectURL(url);
+      owned.current = [];
     },
-    [nextId],
+    [],
   );
 
   return (
@@ -527,6 +569,18 @@ function SfxBench() {
   const [loop, setLoop] = useState(false);
   const [busy, setBusy] = useState<Busy>({ state: "idle" });
   const [url, setUrl] = useState<string | null>(null);
+
+  // This bench ALLOCATES its own url rather than taking one from the render
+  // list, so it owns it and has to release it. Every re-render used to drop the
+  // previous one on the floor: `setUrl(blobUrl(...))` overwrote the only
+  // reference to a multi-megabyte blob the browser then held until the document
+  // went away. Revoked when it is replaced, and on unmount.
+  useEffect(
+    () => () => {
+      if (url) URL.revokeObjectURL(url);
+    },
+    [url],
+  );
 
   async function run() {
     setBusy({ state: "working", label: "rendering sfx…" });

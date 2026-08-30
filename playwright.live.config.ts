@@ -75,6 +75,13 @@ export default defineConfig({
   // or about this harness, and it is meant to be looked at rather than absorbed.
   retries: 0,
 
+  // Same refusal as the node lane, for the same measured reason: Playwright's
+  // default lets one committed `test.only` reduce a blocking gate to a single
+  // test and exit 0. This lane is four journeys, so the collapse is smaller in
+  // absolute terms and identical in kind — a green that reports on almost
+  // nothing. See playwright.config.ts for the measurement.
+  forbidOnly: !!process.env.CI,
+
   timeout: 120_000,
   expect: { timeout: 20_000 },
 

@@ -59,7 +59,9 @@ test("every template in the catalogue has a format brief", () => {
     const brief = formatBriefFor(t.id);
     expect(brief, `no format brief for template "${t.id}"`).not.toBeNull();
     expect(brief!.name.length).toBeGreaterThan(0);
-    expect(brief!.direction.length).toBeGreaterThan(0);
+    // A brief with no direction is allowed ONLY if it says so in the prompt:
+    // `free-form` has no knowledge document and renders as NOT STATED.
+    if (brief!.direction.length === 0) expect(compileFormatBrief(t.id, t.defaultS)).toContain("NOT STATED");
   }
   // And nothing extra: a brief for an id the catalogue dropped would render a
   // format nobody can choose.

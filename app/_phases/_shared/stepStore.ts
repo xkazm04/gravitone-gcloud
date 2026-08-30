@@ -32,6 +32,8 @@ import { useSyncExternalStore } from "react";
 
 import { STEPS_STORE, openDb, runTx } from "@/lib/studioDb";
 
+import type { TrailerCut, WithholdingBudget } from "../script/trailer/types";
+
 export interface ResearchStepData {
   topic: string;
   researched: boolean;
@@ -46,6 +48,89 @@ export interface ResearchStepData {
 export interface ScopeStepData {
   scope: Record<string, { descoped: boolean; liked: boolean; deepen: boolean }>;
   confirmed: Record<string, { descoped: boolean; liked: boolean; deepen: boolean }> | null;
+  savedAt?: number;
+}
+
+/** The beat-variant picks of a trailer / free project's Research step, under
+ *  phase key `"research-beats"`.
+ *
+ *  A separate key from `research` and `research-scope` for the same cadence
+ *  reason ScopeStepData gives: the beat board writes on every tile click, the
+ *  research record is written by whichever surface owns `researched`, and one
+ *  record shared between them would have each save erase the other's field.
+ *
+ *  `picks` is slot id → chosen variant id, `null` for a slot the creator has
+ *  deliberately cleared (absent means never touched). `confirmed` is the frozen
+ *  spine — Script opens on THIS, never on the live picks. `mode` is the free
+ *  discipline's answer to "facts or beats"; trailer projects store `"beats"`. */
+export interface BeatPicksStepData {
+  mode: "facts" | "beats";
+  picks: Record<string, string | null>;
+  confirmed: Record<string, string> | null;
+  savedAt?: number;
+}
+
+/** Which face of a step the creator works in — the guided card wizard or the
+ *  full expert surface — under phase keys `"research-mode"` and `"script-mode"`.
+ *
+ *  Its own record per step for the cadence reason above, and its own TYPE
+ *  because the mode must never ride along with a step's decisions: switching
+ *  faces discards nothing (the ModeChooser doctrine), so the record that says
+ *  "guided" cannot be the record that holds what was decided there. Absent
+ *  means never chosen — surfaces default to guided only while the step has no
+ *  prior decisions, and that default is computed, never stored. */
+export interface GuidedModeStepData {
+  mode: "guided" | "expert";
+  savedAt?: number;
+}
+
+/** WHICH candidate script this project adopted, under phase key
+ *  `"script-adopted"` — the record frames.ts:300 names as missing.
+ *
+ *  One field on purpose: adoption is a pointer into the render registry, not a
+ *  copy of the render. The Frames step resolves it against RENDER_BY_ID and
+ *  falls back to the positional default when the id is unknown or the record
+ *  absent — absence keeps today's behaviour, honestly. Separate from
+ *  `"script-versions"` because the duel writes on a card click and the version
+ *  ledger on accept, and one record shared between them would have each save
+ *  erase the other's field. */
+export interface ScriptAdoptionStepData {
+  renderId: string;
+  savedAt?: number;
+}
+
+/** The trailer half of the Script step, under phase key `"script-trailer"`.
+ *
+ *  The cut is composed ONCE from the confirmed spine in `research-beats` and
+ *  is then the creator's own: every edit here (a rewritten beat, a connector,
+ *  a payer, a raised variable) lands on this record and never back on the
+ *  picks. The budget travels with the cut because it is the campaign's object
+ *  and the withholding rule reads them together — a budget stored elsewhere
+ *  would let the two drift apart between saves. */
+export interface TrailerCutStepData {
+  cut: TrailerCut;
+  budget: WithholdingBudget;
+  savedAt?: number;
+}
+
+/** The drift the creator has dialled into the Cut's sync bench, clip id → offset
+ *  in milliseconds.
+ *
+ *  Small on purpose, and that is what makes it storable. The Cut and Score steps
+ *  were the two of five phases that persisted nothing, and they are not the same
+ *  problem: this is a handful of integers, while a Score take is an object URL
+ *  over megabytes of decoded audio that no `blob:` string survives a reload to
+ *  reach. So the offsets land here now and the audio question stays open — see
+ *  .vault/Architect/decisions/2026-08-29-score-take-persistence.md.
+ *
+ *  ABSENT IS NOT ZERO. A clip nobody has touched must report what the cut itself
+ *  says about it (`TimelineClip.offsetMs`), not a dialled-in zero — `offsetFrom`
+ *  in the Cut step reads the record that way, and storing a zero for every clip
+ *  on first load would erase the distinction between "at its mark" and "brought
+ *  back to its mark", which the surface colours differently. Only clips the
+ *  creator has actually nudged appear in this map. */
+export interface CutStepData {
+  offsets: Record<string, number>;
   savedAt?: number;
 }
 
@@ -245,7 +330,31 @@ export function __resetSaveSlots(): void {
 }
 
 /** The steps store is created lazily rather than in the projects upgrade path,
- *  so an existing browser DB does not need a version bump to gain it. */
+ *  so an existing browser DB does not need a version bump to gain it.
+ *
+ *  THE CONNECTION IS OWNED HERE, and it used to leak. `openDb()` is not cached —
+ *  it calls `indexedDB.open` fresh every time — so every caller owns the handle
+ *  it gets back and has to close it. The thirteen other call sites in the data
+ *  layer do: `lib/projects.ts` (6), `lib/themes.ts` (4) and `lib/assets.ts` (3)
+ *  all wrap the work in `try { db = await openDb(); … } finally { db?.close(); }`.
+ *  This was the fourteenth, and the only one that did not — while being by a wide
+ *  margin the most frequently called of the fourteen, because every caller above
+ *  it fires `void saveStep(...)` on a keystroke.
+ *
+ *  The cost was not abstract. The latest-wins ticket below abandons a write only
+ *  when a later save for the same key is ISSUED before the earlier one reaches
+ *  its `put`; typing at ~150-250ms a character never overlaps a ~1-5ms warm
+ *  transaction, so every keystroke's write lands and every keystroke's connection
+ *  stayed open for the life of the tab. Each one keeps a live `onversionchange`
+ *  handler (lib/studioDb.ts), so a DB_VERSION bump fired one close-race per
+ *  keystroke instead of one per tab — the shape of the two-tab upgrade hang that
+ *  `e242b89` fixed from the other side, and a plausible source of the `blocked`
+ *  failure kind this file exists to report.
+ *
+ *  The close is in a `finally` and runs after `fn(db)` has settled, never before:
+ *  the transaction is live until then, and closing under it would abort the work
+ *  rather than release it. Closing does not change an outcome — a successful
+ *  write whose connection could not be closed is still a successful write. */
 async function withStore<T>(
   op: "read" | "write",
   projectId: string,
@@ -257,13 +366,16 @@ async function withStore<T>(
 
   if (typeof indexedDB === "undefined")
     return trouble("unavailable", "IndexedDB unavailable — nothing written in this session will survive it.");
+  let db: IDBDatabase | undefined;
   try {
-    const db = await openDb();
+    db = await openDb();
     if (!db.objectStoreNames.contains(STEPS_STORE))
       return trouble("missing-store", `The "${STEPS_STORE}" store is not in this database.`);
     return { ok: true, value: await fn(db) };
   } catch (e) {
     return trouble(classify(e), e instanceof Error ? e.message : String(e));
+  } finally {
+    db?.close();
   }
 }
 
@@ -299,6 +411,48 @@ export async function loadStep<T = ResearchStepData>(
 /** Never rejects: an ignored `void saveStep(...)` must not become an unhandled
  *  rejection, and a save on every keystroke is a caller with nowhere to put a
  *  catch. The outcome is returned AND pushed to the trouble channel. */
+/** The shape version stamped on every record this build writes.
+ *
+ *  WHAT THE DATABASE VERSION DOES NOT COVER. `DB_VERSION` in lib/studioDb.ts
+ *  versions the database — which stores exist, which indexes they carry — and its
+ *  upgrade path has never rewritten a record. The records INSIDE the stores had
+ *  no version of any kind, so a blob written by any earlier build was
+ *  indistinguishable from a current one and nothing could have noticed. The
+ *  compensation for that is already spread through the tree: three readers
+ *  optional-chain through fields their own interface declares REQUIRED, and
+ *  frames/frames.ts says it plainly — "there is no migration seam to hang this
+ *  off".
+ *
+ *  THE POLICY, in full at
+ *  .vault/Architect/decisions/2026-08-29-persisted-payload-versioning.md:
+ *
+ *   1. ABSENT MEANS v1, permanently. A record with no `v` is version 1, and v1 is
+ *      the shape as of 2026-08-29 WITH EVERY FIELD OPTIONAL — the only honest
+ *      description, since records predating a field genuinely lack it. This is
+ *      what guarantees no stored work is ever stranded: the absent case has a
+ *      meaning rather than being an error deferred to whoever hits it.
+ *   2. New writes carry `v` — this constant, stamped below. Additive, and safe
+ *      against every existing reader, which destructures what it knows.
+ *   3. A record from the FUTURE is refused, never downgraded. The dangerous
+ *      direction is new data meeting OLD code, which is real here: `e242b89`
+ *      documents two tabs on different builds sharing one database. Applying v2
+ *      assumptions to a v3 payload and then SAVING the result destroys work,
+ *      where refusing merely fails to show it.
+ *   4. Migrations are pure vN→vN+1 functions applied at the read seam, and each
+ *      one ships in the same commit as the shape change that needs it.
+ *
+ *  Rules 3 and 4 are NOT built yet, deliberately: there is one version in
+ *  existence, so the chain would hold zero functions and the refusal branch would
+ *  be unreachable — untestable machinery whose first real use would also be its
+ *  first execution. The stamp ships alone because it is the irreversible half. A
+ *  v2 reader can only tell v1 from v2 if v1 records were being marked BEFORE v2
+ *  existed, so every day without it is another day of records identifiable only
+ *  by guessing.
+ *
+ *  Nothing reads this yet. That is intended, and it is not dead weight — deleting
+ *  it as unused would silently restore the ambiguity it exists to end. */
+export const SCHEMA_VERSION = 1;
+
 export async function saveStep<T>(
   projectId: string,
   phase: string,
@@ -320,7 +474,12 @@ export async function saveStep<T>(
       // be issued between them.
       if (!slot.stillNewest()) return;
       wrote = true;
-      store.put({ id: key(projectId, phase), projectId, phase, data: { ...data, savedAt: Date.now() } });
+      store.put({
+        id: key(projectId, phase),
+        projectId,
+        phase,
+        data: { ...data, savedAt: Date.now(), v: SCHEMA_VERSION },
+      });
     }),
   );
   if (!r.ok) return r;

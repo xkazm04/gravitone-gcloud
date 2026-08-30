@@ -18,6 +18,7 @@
 
 import FactRow from "./FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "./notebook";
+import { CurrencyBody, SourcesBody } from "./sections/Shared";
 
 export default function EvidenceLog() {
   const n = NOTEBOOK;
@@ -69,26 +70,38 @@ export default function EvidenceLog() {
 
       <section className="space-y-1.5">
         <Head>how long this stays true</Head>
-        <p className="text-sm leading-relaxed text-slate-300">{n.currency.why}</p>
-        <p className="font-jetbrains text-[11px] text-white/40">
-          expires first: {n.currency.expiresFirst.join(", ")} · durable: {n.currency.durable.join(", ")}
-        </p>
-        <p className="text-[13px] text-cyan-200/80">{n.currency.advice}</p>
+        {/* No half-life here — the stat tile at the top of this page already
+            gives it, and printing it twice is how a number starts disagreeing
+            with itself. */}
+        <CurrencyBody />
       </section>
 
       <section className="space-y-1.5">
-        <Head>sources · {NOTEBOOK_COUNTS.sources}</Head>
-        <ul className="space-y-1">
-          {n.sources.map((s) => (
-            <li key={s} className="font-jetbrains text-[11px] leading-relaxed text-white/45">
-              {s}
-            </li>
-          ))}
-        </ul>
-        <p className="font-jetbrains pt-1 text-[11px] leading-relaxed text-amber-200/70">
-          {NOTEBOOK_COUNTS.gaps} declared gap{NOTEBOOK_COUNTS.gaps === 1 ? "" : "s"} — this run did not
-          reach primary on-chain data. See the notebook.
-        </p>
+        {/* This header used to read bare "sources · 11", which a reader of a
+            page whose own opening line claims "every claim dated, sourced and
+            rated" reasonably takes as "every source this notebook has". It is
+            not: 11 is NOTEBOOK.sources, the hand-written bibliography. The 21
+            facts above cite 20 DISTINCT source strings between them
+            (`factSourceStrings`) that this list does not enumerate and that no
+            code reconciles against it — see the comment on NOTEBOOK_COUNTS in
+            notebook.ts for why a reconciliation is not being built. "cited
+            bibliography" names the population instead of implying totality. */}
+        <Head>cited bibliography · {NOTEBOOK_COUNTS.sources}</Head>
+        <SourcesBody />
+        {/* The gap is READ, not retyped. The count beside it was already
+            computed, and the sentence describing it was a literal about run 1
+            ("this run did not reach primary on-chain data") — so any other
+            notebook would have made the two halves of one sentence disagree.
+            Same scar ResearchTriageBoard.tsx carries a comment about: its
+            column count "said six against seven for as long as it was a
+            literal". One gap is quoted because this is the summary line; the
+            notebook's own gaps section lists them all. */}
+        {NOTEBOOK_COUNTS.gaps > 0 && (
+          <p className="font-jetbrains pt-1 text-[11px] leading-relaxed text-amber-200/70">
+            {NOTEBOOK_COUNTS.gaps} declared gap{NOTEBOOK_COUNTS.gaps === 1 ? "" : "s"} — {n.researchGaps[0]}
+            {NOTEBOOK_COUNTS.gaps > 1 ? " See the notebook for the rest." : " See the notebook."}
+          </p>
+        )}
       </section>
     </div>
   );

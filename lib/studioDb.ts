@@ -19,13 +19,28 @@ export const THEMES_STORE = "themes";
 /** Reusable shelf entries — see lib/assets.ts. Pointers to bytes that live
  *  elsewhere, so this store stays small however many plates it indexes. */
 export const ASSETS_STORE = "assets";
+/**
+ * The bytes of UPLOADED references, one Blob per row, keyed by upload id.
+ *
+ * A separate store rather than a field on the asset, and that is the whole
+ * point of it. `listAssets` reads and sorts every row of ASSETS_STORE to build
+ * the folder tree, so a picture living in that store would be pulled through
+ * IndexedDB in full every time the rail was drawn. Here the asset keeps a
+ * `upload:<id>` pointer — the same shape a promoted proof already uses for
+ * bytes inside a theme — and these are read only for what is actually shown.
+ */
+export const UPLOADS_STORE = "uploads";
 /** Index over the owning uid — listing is always "this account's projects". */
 export const BY_UID = "by-uid";
 /** Index over the owning project, on STEPS_STORE only. Named here rather than
  *  spelled as a literal at the one call site, because that call site is
  *  `deleteProject` and a typo there deletes nothing while reporting success. */
 export const BY_PROJECT = "by-project";
-const DB_VERSION = 4;
+// 5 adds UPLOADS_STORE. The upgrade is additive like every one before it, and
+// the stale-tab handling below is what makes a bump safe: an old tab yields on
+// `versionchange` instead of blocking the upgrade forever, and a tab left
+// behind gets a sentence telling it to reload rather than a raw VersionError.
+const DB_VERSION = 5;
 
 export function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -56,6 +71,12 @@ export function openDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains(ASSETS_STORE)) {
         const assets = db.createObjectStore(ASSETS_STORE, { keyPath: "id" });
         assets.createIndex(BY_UID, "uid", { unique: false });
+      }
+      // No uid index: these are never listed, only fetched by the id an asset
+      // row names. The account scoping lives on the asset that points here, and
+      // a second place to get it wrong would be a second place it can disagree.
+      if (!db.objectStoreNames.contains(UPLOADS_STORE)) {
+        db.createObjectStore(UPLOADS_STORE, { keyPath: "id" });
       }
     };
     req.onsuccess = () => {

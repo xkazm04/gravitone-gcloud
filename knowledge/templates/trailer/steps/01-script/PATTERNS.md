@@ -230,7 +230,52 @@ anyone building a checker:
    a list.
 7. **Nothing that reports a green structural verdict as "this works."** §8.
 
-## 10. Confidence and limits
+## 10. The machine-readable half — [`params.json`](params.json)
+
+Opened 2026-08-29. Until then this template was the only one in the library with
+`PATTERNS.md` and no `params.json`, and the reason was good:
+[`OPEN-QUESTIONS.md`](OPEN-QUESTIONS.md) `r2` observed that about half the fields
+are enumerations the doctrine states outright, and **every field that is a number
+is missing its evidence** — so "a half-real `params.json` is read as wholly real."
+
+What changed is not the evidence. It is that the rules were living in **two
+places**: as prose here, and as TypeScript literals in
+`app/_phases/script/trailer/structure.ts` — the checker that gates a creator's
+work. Two copies with nothing holding them together is the drift this library
+exists to prevent, and the copy the creator actually meets was the one with no
+citations attached.
+
+So the file exists, and `r2`'s objection is answered by shape rather than
+ignored:
+
+- **Every value carries its own label, its registry path and the quoted line.**
+  A consumer cannot read the number without reading how strongly it is known.
+  Every value in the file is `doctrine_only: true` and `n: 0`. **Nothing in it
+  is MEASURED**, and the file says so where a reader cannot miss it.
+- **Every hedged quantity stayed out**, in a `not_encoded` block that names the
+  hedge, quotes it, and says what would settle it: the ~10s rung floor, the 3–5
+  rung count (our arithmetic, not the source's claim), the n=130 shot-length
+  curve, the "margin a viewer would notice", the withholding defaults (§ `r6`'s
+  contested trade — a default would erase the registry's own hedge), and the
+  per-rung part counts.
+- **The checker consumes it.** `structure.ts` reads the legal beat kinds, the
+  one-variable-per-rung rule, the reset counts and the advisory-rule list from
+  the file and validates them at import; a params file naming a role or a beat
+  kind the type union does not have fails loudly rather than silently checking
+  something else. The verdicts did not move when the numbers did — that was the
+  acceptance condition, and `npm run check:trailer-structure` is where it is
+  held.
+- **One value is INFERRED and is flagged as the only one:** the table of which
+  beat kinds are legal in which movement. The doctrine says what each part is
+  *for* and never enumerates it.
+
+The energy curve's seven heights are **not** in the file and are not craft.
+They are drawing coordinates, they say so at their use site
+(`app/_phases/script/trailer/cut.ts` → `PRESENTATION`), the surface says so to
+the user ("a shape read from the parts — not a measurement"), and `params.json`
+records the refusal rather than hosting the numbers.
+
+## 11. Confidence and limits
 
 - **n=0.** No trailer has been torn down here.
 - **The two MEASURED figures were measured on something else** — theatrical film trailers (n=130 over

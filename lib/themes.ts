@@ -17,6 +17,7 @@
 // and that skipping the approval step is the single reliable way to get forty
 // frames that do not match.
 
+import type { Discipline } from "./projects";
 import { getByIndex, getRecord, openDb, runTx, BY_UID, THEMES_STORE } from "./studioDb";
 
 /* ── The style block ──────────────────────────────────────────────────────── */
@@ -77,7 +78,11 @@ export const PROOF_CAP = 14;
 /* ── The record ───────────────────────────────────────────────────────────── */
 
 export type ThemeStatus = "draft" | "proofing" | "locked";
-export type ThemeOrigin = "scratch" | "preset" | "screenshot";
+/** Where a style's four slots came from. `plate` is a style forked off a plate
+ *  already on the shelf — the block is the one that rendered it, copied at
+ *  promotion time, so the fork starts from what a picture the user has SEEN was
+ *  actually made from rather than from a description of it. */
+export type ThemeOrigin = "scratch" | "preset" | "screenshot" | "plate";
 
 export const STATUS_WORD: Record<ThemeStatus, string> = {
   draft: "still words",
@@ -89,6 +94,7 @@ export const ORIGIN_WORD: Record<ThemeOrigin, string> = {
   scratch: "from a brief",
   preset: "from a preset",
   screenshot: "from a screenshot",
+  plate: "from a plate",
 };
 
 export interface Theme {
@@ -98,6 +104,11 @@ export interface Theme {
   origin: ThemeOrigin;
   /** Set when origin is "preset" — which one it started from. */
   presetId?: string;
+  /** The kind of video this style was made for. UNTAGGED MEANS EVERY
+   *  DISCIPLINE: a style from a brief, or one made before disciplines existed,
+   *  is offered to every project, and `styleFits` is the one place that rule is
+   *  read. A theme started from a preset inherits the preset's tag. */
+  discipline?: Discipline;
   block: StyleBlock;
   elements: string[];
   proofs: Proof[];
@@ -109,7 +120,19 @@ export interface Theme {
 export type ThemeDraft = Pick<Theme, "name" | "block" | "elements"> & {
   origin: ThemeOrigin;
   presetId?: string;
+  discipline?: Discipline;
 };
+
+/** Which disciplines a style list can be filtered by — the three, or none. */
+export type DisciplineFilter = Discipline | "all";
+
+/** THE one predicate for "may this style serve this discipline". The create
+ *  dialog, the atelier's style pills and the preset rail all filter with it,
+ *  because three copies of `!t.discipline || t.discipline === d` is how they
+ *  start disagreeing. Untagged fits everything; `"all"` matches everything. */
+export function styleFits(theme: { discipline?: Discipline }, discipline: DisciplineFilter): boolean {
+  return discipline === "all" || !theme.discipline || theme.discipline === discipline;
+}
 
 export function newTheme(uid: string, draft: ThemeDraft): Theme {
   const now = Date.now();
@@ -119,6 +142,7 @@ export function newTheme(uid: string, draft: ThemeDraft): Theme {
     name: draft.name.trim() || "Untitled style",
     origin: draft.origin,
     presetId: draft.presetId,
+    discipline: draft.discipline,
     block: draft.block,
     elements: draft.elements,
     proofs: [],
@@ -203,6 +227,46 @@ export function lockBlocker(t: Theme): string | null {
   const pending = t.proofs.filter((p) => p.state === "pending").length;
   if (pending) return `${pending} proof${pending > 1 ? "s" : ""} still undecided`;
   if (!approvedProofs(t).length) return "every proof was rejected — generate another";
+  return null;
+}
+
+/**
+ * WHAT A LOCK FREEZES — the ratchet, as a rule the RECORD holds rather than a
+ * rule each surface remembers.
+ *
+ * `projectStyle` below reasons from this and says so: "A theme that exists but
+ * is no longer locked is not a case here: the lock is a one-way ratchet
+ * (nothing clears `lockedAt`)". Every consumer gets to not handle that state —
+ * which is the technique's whole point (visual-style-locking /
+ * draft-proofing-locked-ratchet) and is only worth anything if it is true.
+ *
+ * It WAS true, and it was held in a view. `useThemes.update` takes a
+ * `Partial<Theme>` and commits it to any theme; what stopped a locked style
+ * being edited in place was `SpecEditor` computing `locked` for itself and
+ * rendering its slots read-only, plus `StyleSheet` disabling rename. Two
+ * presentational components, holding an invariant the data layer reasons from.
+ * A third surface, or one call to the exported `update`, and the reviewed work
+ * silently no longer matches its ratified standard.
+ *
+ * TWO FIELDS, NOT ALL OF THEM. The technique's hard rules are that nothing
+ * unlocks and that editing in place voids the approvals — so `lockedAt` and
+ * `block` freeze, and nothing else does. In particular ADDING a proof to a
+ * locked sheet stays allowed, deliberately: a locked style's plates are the
+ * most promotable of all (app/library/parts.tsx says so where it offers them),
+ * and an approved proof is a reference for the next call rather than a change
+ * to what was ratified.
+ *
+ * Returns the reason in the owner's words, or null when the patch may land —
+ * the same shape as `lockBlocker`, so a caller reports both the same way.
+ */
+export function ratchetBlocker(t: Theme, patch: Partial<Theme>): string | null {
+  if (!t.lockedAt) return null;
+  if ("lockedAt" in patch && patch.lockedAt !== t.lockedAt)
+    return "a lock is one-way — duplicate this style into a new draft instead of unlocking it";
+  // By VALUE, not by presence: a caller that spreads the whole record to change
+  // one field would otherwise be refused for carrying a block it did not touch.
+  if (patch.block && JSON.stringify(patch.block) !== JSON.stringify(t.block))
+    return "this style is locked and projects build on it — duplicate it into a new draft to change the block";
   return null;
 }
 

@@ -160,6 +160,51 @@ const STORE_KEY = "gravitone.jobs.v1";
  *  exactly the lifetime "who is running this" needs. */
 const TAB = `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
+/* ── THE EVICTION DOOR ─────────────────────────────────────────────────────── */
+//
+// `gravitone.jobs.v1` exists in TWO places at once, and only one of them was
+// ever evicted. lib/identityEviction.ts removes the stored record — the tray is
+// on its list, with the right reason beside it ("a job label is what the
+// previous user asked a model to research, in their own words"). It could not
+// remove the OTHER copy: `JobsProvider`'s React state, which holds the same jobs
+// and the same notification events, and which does not unmount on an account
+// switch because the provider is mounted at the app root and the root is what
+// survives everything.
+//
+// So the wipe left the bell exactly as it was. The previous account's research
+// topics stayed legible to the next one, and the first state change afterwards
+// wrote them straight back into the key the eviction had just removed.
+//
+// THE DIRECTION OF THE IMPORT IS THE WHOLE DESIGN. identityEviction's header
+// states its own rule: it imports every store it clears, and none of them import
+// it. A `useAuth()` call inside JobsProvider would satisfy this fix and invert
+// that rule, giving the job store a dependency on the identity layer and the
+// import cycle that follows. Instead this module publishes a subscription, the
+// provider registers on mount and releases on unmount, and the EVICTION calls
+// in — same direction as every other store it clears.
+const evictionListeners = new Set<() => void>();
+
+/** Register a listener that drops this store's in-memory copy. Returns its
+ *  reaper — the provider calls it on unmount, so a remount does not announce
+ *  into a closure that sets state on a component that is gone. */
+export function onIdentityEvicted(fn: () => void): () => void {
+  evictionListeners.add(fn);
+  return () => void evictionListeners.delete(fn);
+}
+
+/** Tell every mounted job store that the identity it was holding is gone.
+ *  Returns how many were told — zero is a legitimate answer (no provider is
+ *  mounted, as in a Node probe) and is what makes a silent no-op countable
+ *  rather than invisible. Called ONLY by lib/identityEviction.ts. */
+export function __announceIdentityEvicted(): number {
+  let told = 0;
+  for (const fn of evictionListeners) {
+    fn();
+    told++;
+  }
+  return told;
+}
+
 interface Persisted { jobs: Job[]; events: JobEvent[] }
 
 /** The shared record as written, with NO judgement applied. Used by everything
@@ -346,6 +391,25 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
       // Quota or private mode. Losing persistence is survivable; crashing is not.
     }
   }, [jobs, events, hydrated]);
+
+  // THE IDENTITY LEAVING. Registered here rather than reached for through auth —
+  // see the eviction door above for why the import points this way.
+  //
+  // `live.current` goes with the state: it is the serialisation guard, and a
+  // slot still held by the departed identity's run would refuse the new
+  // account's first recalibration for a job it can no longer see. `lastWritten`
+  // is nulled so the persist effect that follows this clear actually writes,
+  // rather than recognising its own last record and skipping.
+  useEffect(
+    () =>
+      onIdentityEvicted(() => {
+        live.current.clear();
+        lastWritten.current = null;
+        setJobs([]);
+        setEvents([]);
+      }),
+    [],
+  );
 
   // THE OTHER TAB, ARRIVING. `storage` fires in every tab of this origin EXCEPT
   // the one that wrote, so this is the whole cross-tab channel: no polling, no

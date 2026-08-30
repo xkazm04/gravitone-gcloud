@@ -19,6 +19,8 @@
 // mis-booking. These assertions exist because the counters would otherwise be
 // exactly what `formatCall` was: instrumentation nothing checks.
 import { test, expect } from "@playwright/test";
+
+import { keepEnv } from "./_helpers";
 import {
   assertWithinBudget,
   budgetCeilingUsd,
@@ -53,6 +55,8 @@ const book = (usd: number | undefined, at?: number) =>
     basis: "vendor",
     at,
   });
+
+keepEnv([BUDGET_VAR, WINDOW_VAR]);
 
 test.beforeEach(() => {
   __resetBudget();

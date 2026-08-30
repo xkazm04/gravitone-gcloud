@@ -231,6 +231,17 @@ export const FORMAT_BRIEFS: Record<TemplateId, FormatBrief> = {
         "target to hit, so do not pace toward one.",
     ],
   },
+  "free-form": {
+    name: "a free-form video",
+    // No knowledge document backs this entry. knowledge/templates/free-form/
+    // does not exist and is not going to: the discipline is the user's own,
+    // and `direction` is empty so `compileFormatBrief` renders NOT STATED
+    // rather than a shape nobody measured.
+    what:
+      "A video of the director's own discipline. The craft library has no template for it " +
+      "(there is no knowledge/templates/free-form/ document), so nothing here is a rule.",
+    direction: [],
+  },
 };
 
 /** The table as a plain lookup, so an id off the wire can be tested against it
@@ -271,11 +282,16 @@ export function compileFormatBrief(template: unknown, targetS: unknown): string 
   const brief = formatBriefFor(template);
   const runtime = runtimeWords(targetS);
 
-  if (!brief)
+  // An unknown id AND a known format with nothing to say (`free-form`, whose
+  // `direction` is empty on purpose) render the same block: in both cases the
+  // honest instruction is "do not assume a shape".
+  if (!brief || brief.direction.length === 0)
     return [
       "## THE FORMAT — NOT STATED",
       "",
-      "This run arrived without a format this studio recognises" +
+      (brief
+        ? `This run is **${brief.name}** — ${brief.what} It arrived with no format rules`
+        : "This run arrived without a format this studio recognises") +
         (runtime ? `, though its target runtime is ${runtime}` : "") +
         ".",
       "Do not guess one. Direct the beats you were given, and where a choice would have turned on the",

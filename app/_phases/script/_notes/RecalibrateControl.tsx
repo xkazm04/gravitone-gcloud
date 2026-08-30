@@ -34,20 +34,31 @@ function elapsedSince(started: number, now: number) {
 }
 
 export default function RecalibrateControl({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
+  // The clock only exists while something is running, so it is created and
+  // destroyed with the run rather than reset inside an effect body.
   const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    if (!api.running) return;
-    setNow(Date.now());
-    const iv = setInterval(() => setNow(Date.now()), 1_000);
-    return () => clearInterval(iv);
-  }, [api.running]);
+  useTicker(api.running, setNow);
 
-  // Armed = the first of the two deliberate actions has been taken. Keyed on
-  // the candidate's own timestamp so a discard-and-rerun starts disarmed: an
-  // override armed against one verdict may not be spent on another.
-  const [armed, setArmed] = useState(false);
+  // ARMED = the first of the two deliberate actions has been taken, and it is
+  // DERIVED rather than reset.
+  //
+  // It was `useState(false)` plus `useEffect(() => setArmed(false), [staged])`,
+  // and an effect fires after the render it is correcting has already been
+  // committed. So a newly staged candidate got one painted frame carrying the
+  // PREVIOUS candidate's arming: the button read "record the override and
+  // accept", and its handler — which reads `armed` at click time — would have
+  // spent `overrideFrom(gate, …)` on a verdict the creator never saw. Reachable
+  // by arming on a blocked candidate, discarding, and running again.
+  //
+  // That is the one thing the comment here always said it prevented ("an
+  // override armed against one verdict may not be spent on another"), and a
+  // reset cannot prevent it, because a reset is always one frame late. Storing
+  // WHICH candidate the arming belongs to makes the stale state unrepresentable
+  // instead of merely short-lived — the same move `hydratedFor` makes in
+  // useScope and useBeatPicks.
   const staged = api.candidate?.createdAt;
-  useEffect(() => setArmed(false), [staged]);
+  const [armedFor, setArmedFor] = useState<number | null>(null);
+  const armed = staged !== undefined && armedFor === staged;
 
   const blocked = Boolean(gate?.blocked);
   const n = api.notes.length;
@@ -125,7 +136,11 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
               accepts, so it may not go on saying that it does. */}
           <button
             data-testid="accept-candidate"
-            onClick={() => (blocked && !armed ? setArmed(true) : api.accept(armed && gate ? overrideFrom(gate, Date.now()) : undefined))}
+            onClick={() =>
+              blocked && !armed
+                ? setArmedFor(staged ?? null)
+                : api.accept(armed && gate ? overrideFrom(gate, Date.now()) : undefined)
+            }
             className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] transition ${
               blocked
                 ? "border-rose-400/45 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20"
@@ -136,7 +151,7 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
           </button>
           <button
             data-testid={armed ? "cancel-override" : "discard-candidate"}
-            onClick={() => (armed ? setArmed(false) : api.discard())}
+            onClick={() => (armed ? setArmedFor(null) : api.discard())}
             className="font-jetbrains rounded-full border border-white/15 px-3 py-1 text-[11px] text-white/60 transition hover:bg-white/5"
           >
             {armed ? "not yet" : "discard"}
@@ -243,4 +258,22 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
       )}
     </div>
   );
+}
+
+/** The elapsed-time clock, alive only while a run is.
+ *
+ *  Split out so the effect body no longer opens with `setNow(Date.now())` — a
+ *  synchronous setState inside an effect, and one of this area's ratcheted lint
+ *  findings. The reset it removed bought a first frame that was exact; without
+ *  it a second run on a still-mounted pad reads a `now` up to one second stale,
+ *  which `elapsedSince`'s own `Math.max(0, …)` renders as "0s" until the first
+ *  tick. A run that has been going for under a second reading "0s" is the right
+ *  answer arriving a beat early, not a wrong one — and the label beside it says
+ *  "minutes, not seconds". */
+function useTicker(running: boolean, set: (n: number) => void) {
+  useEffect(() => {
+    if (!running) return;
+    const iv = setInterval(() => set(Date.now()), 1_000);
+    return () => clearInterval(iv);
+  }, [running, set]);
 }

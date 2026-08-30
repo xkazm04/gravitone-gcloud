@@ -1,4 +1,11 @@
 /**
+ * DRIVES THE EDUCATIONAL BOARD ONLY. The Research step branches on the
+ * project's discipline (app/_phases/research/ResearchStep.tsx): trailer and
+ * free-in-beats-mode projects render the beat-variant board, which has no
+ * columns, no cards and none of the testids below. Point this at an
+ * educational project.
+ */
+/**
  * Drive the RESEARCH step's triage board through the gated studio.
  *
  *   NEXT_PUBLIC_DEV_AUTH=1 npx next dev -p 3183

@@ -10,13 +10,31 @@
 //    `like` and `deepen` stay as buttons — they are occasional, and they must not
 //    be reachable by accident while sweeping a column.
 //
+//    HOW THE WHOLE TARGET IS BUILT MATTERS, though, and it used to be built the
+//    way that costs the most. The <li> itself took role="button" — and ARIA
+//    gives `button` presentational children, so everything CardBody renders
+//    (the confidence, the load-bearing flag, the source, the wound warning)
+//    was dropped from the accessibility tree, and `aria-label` left the
+//    accessible name as the claim alone. The `like` and `deepen` buttons were
+//    inside that subtree and went with it: both actions were simply unreachable.
+//    A screen reader got a column of unlabelled toggles over an argument it
+//    could not read.
+//
+//    So the target is an overlay button covering the card instead of the card
+//    pretending to be one. Same click area, same keyboard behaviour (now the
+//    browser's, not a hand-rolled Enter/Space handler), and the body stays
+//    ordinary readable content. The actions sit ABOVE the overlay rather than
+//    inside it, which also retires the stopPropagation wrapper they needed
+//    when a click on them was a click on the card.
+//
 //  · MUTED TEXT UNMUTES ON HOVER. The secondary text (reasoning, precedent,
 //    falsifier, source) is muted so a column scans, but muted is not the same as
 //    unreadable — hovering a card brings every line up to full contrast on a
 //    linear transition, so "what is the pattern behind this conclusion?" is a
 //    hover away rather than a squint.
 
-import { ConfidenceChip } from "../../_shared/notebook/Chips";
+import { ConfidenceChip, EvidenceClassChip } from "../../_shared/notebook/Chips";
+import type { Leap } from "../../_shared/notebook/conclusions";
 import { stateOf, type Card, type Wound } from "../scope";
 import CardActions from "./CardActions";
 import type { ScopeApi } from "../useScope";
@@ -29,7 +47,13 @@ export const KIND_LABEL: Record<Card["kind"], string> = {
   conclusion: "conclusion",
 };
 
-const LEAP_TONE: Record<string, string> = {
+// Keyed to `Leap` rather than `Record<string, string>`. The loose signature
+// let `LEAP_TONE[card.leap ?? "moderate"]` compile against ANY string, so a
+// leap tier added to the union in conclusions.ts (near/moderate/far/unhinged
+// today) would fall through to `undefined` here and ship as
+// `className="undefined"` — a card silently losing its tone instead of the
+// build refusing to compile until this map grew a matching row.
+const LEAP_TONE: Record<Leap, string> = {
   near: "border-white/15 bg-white/[0.05] text-white/65",
   moderate: "border-amber-400/30 bg-amber-400/[0.06] text-amber-200",
   far: "border-violet-400/35 bg-violet-400/[0.08] text-violet-200",
@@ -117,10 +141,37 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
         </div>
       )}
 
-      {card.source && (
-        <p className={lift("font-jetbrains mt-1.5 text-[10px] text-white/28", "group-hover:text-white/60")}>
-          {card.source} · as of {card.asOf}
-        </p>
+      {/* STRUCTURED SOURCES, where the fact carries them. `buildCards` used to
+          write `source: f.source` and drop `sources` on the floor entirely, so
+          the one migrated row's evidence class never reached this board —
+          FactRow.tsx (the evidence log) could draw it and the triage board,
+          the surface that actually decides what a script may use, could not.
+          Compact by design: this is a dense board card, not the evidence log,
+          so one chip + name + locator per source rather than FactRow's fuller
+          layout (no confidenceNote line here). "A source a reader cannot
+          navigate to is a name, not a source" (FactRow.tsx) — absent is drawn
+          as absent, never omitted. Falls back to the legacy `card.source` line
+          below so the twenty unmigrated cards look exactly as before. */}
+      {card.sources?.length ? (
+        <ul className="mt-1.5 space-y-1">
+          {card.sources.map((s, i) => (
+            <li key={`${s.name}-${i}`} className="flex flex-wrap items-center gap-1.5">
+              <EvidenceClassChip c={s.evidenceClass} interested={s.interested} />
+              <span className={lift("font-jetbrains text-[10px] text-white/45", "group-hover:text-white/75")}>
+                {s.name}
+              </span>
+              <span className={lift("font-jetbrains text-[10px] text-white/28", "group-hover:text-white/60")}>
+                {s.locator ?? "no locator"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        card.source && (
+          <p className={lift("font-jetbrains mt-1.5 text-[10px] text-white/28", "group-hover:text-white/60")}>
+            {card.source} · as of {card.asOf}
+          </p>
+        )
       )}
 
       {risky && (
@@ -174,38 +225,17 @@ function ScopeChip({ card, descoped }: { card: Card; descoped: boolean }) {
 export default function CardTile({ card, api, wound }: { card: Card; api: ScopeApi; wound?: Wound }) {
   const s = stateOf(api.scope, card.id);
   const locked = !!card.required;
-  const toggle = () => !locked && api.toggle(card.id, "descoped");
 
   return (
     <li
       data-testid={`card-${card.id}`}
       data-descoped={s.descoped ? "true" : "false"}
-      role={locked ? undefined : "button"}
-      tabIndex={locked ? undefined : 0}
-      aria-pressed={locked ? undefined : !s.descoped}
-      aria-label={locked ? undefined : `${s.descoped ? "Include" : "Exclude"}: ${card.title}`}
-      title={
-        locked
-          ? card.requiredWhy
-          : card.optIn
-            ? "Click to take this conclusion into the script. Conclusions are off by default."
-            : "Click to descope. Reversible."
-      }
-      onClick={toggle}
-      onKeyDown={(e) => {
-        if (locked) return;
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          toggle();
-        }
-      }}
+      title={locked ? card.requiredWhy : undefined}
       // Descoped is signalled by the BORDER, never by fading the text. Muting a
       // card is self-defeating on a surface whose whole job is deciding what
       // stays: you cannot judge what you cannot read, and the card you most need
       // to re-read is the one you just cut.
-      className={`group rounded-xl border px-3.5 py-3 transition-colors duration-200 ease-linear focus-visible:outline-2 focus-visible:outline-offset-2 ${
-        locked ? "" : "cursor-pointer"
-      } ${
+      className={`group relative rounded-xl border px-3.5 py-3 transition-colors duration-200 ease-linear ${
         s.descoped
           ? "border-amber-400/55 bg-amber-400/[0.03] hover:border-amber-400/80"
           : wound?.severity === "broken"
@@ -215,13 +245,35 @@ export default function CardTile({ card, api, wound }: { card: Card; api: ScopeA
               : "border-white/8 bg-white/[0.02] hover:border-white/25 hover:bg-white/[0.04]"
       }`}
     >
+      {/* The whole-card target, as a real button laid over the card rather than
+          as a role on the card. It covers everything except the two action
+          pills, which sit above it. Bare `absolute inset-0` — it draws nothing
+          of its own; the card's border and background are the visual. */}
+      {!locked && (
+        <button
+          type="button"
+          data-testid={`scope-toggle-${card.id}`}
+          onClick={() => api.toggle(card.id, "descoped")}
+          aria-pressed={!s.descoped}
+          aria-label={`${s.descoped ? "Include" : "Exclude"}: ${card.title}`}
+          title={
+            card.optIn
+              ? "Click to take this conclusion into the script. Conclusions are off by default."
+              : "Click to descope. Reversible."
+          }
+          className="absolute inset-0 z-10 cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2"
+        />
+      )}
+
       <CardBody card={card} wound={wound} />
 
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
         <ScopeChip card={card} descoped={s.descoped} />
-        {/* like / deepen keep their buttons and stop the click here — sweeping a
-            column must never mark something "liked" by accident. */}
-        <div onClick={(e) => e.stopPropagation()}>
+        {/* Above the overlay, so a click here is never a click on the card —
+            sweeping a column must never mark something "liked" by accident.
+            This is what the stopPropagation wrapper used to buy, back when the
+            actions were nested inside the target rather than beside it. */}
+        <div className="relative z-20">
           <CardActions card={card} api={api} compact />
         </div>
       </div>

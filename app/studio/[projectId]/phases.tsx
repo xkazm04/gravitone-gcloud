@@ -24,7 +24,7 @@ const SURFACE: Record<PhaseKey, (projectId: string) => React.ReactNode> = {
   script: (projectId) => <ScriptStep projectId={projectId} />,
   frames: (projectId) => <FramesStep projectId={projectId} />,
   score: () => <ScoreSpotting />,
-  cut: () => <CutTimeline />,
+  cut: (projectId) => <CutTimeline projectId={projectId} />,
 };
 
 export const STEPS = PHASES.map((key, i) => ({
