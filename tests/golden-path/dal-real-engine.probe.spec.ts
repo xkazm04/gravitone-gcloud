@@ -32,6 +32,7 @@ import {
   PROJECTS_STORE,
   STEPS_STORE,
   THEMES_STORE,
+  UPLOADS_STORE,
   deleteByIndex,
   getByIndex,
   getKeysByIndex,
@@ -75,7 +76,7 @@ test("engine: the database really opens, with every store and index the code dec
   const db = await openDb();
   const stores = [...db.objectStoreNames].sort();
   console.log(`[dal] stores=${stores.join(",")}`);
-  expect(stores).toEqual([ASSETS_STORE, PROJECTS_STORE, STEPS_STORE, THEMES_STORE].sort());
+  expect(stores).toEqual([ASSETS_STORE, PROJECTS_STORE, STEPS_STORE, THEMES_STORE, UPLOADS_STORE].sort());
 
   // The indexes are the reason the by-uid and by-project reads are set-shaped
   // rather than per-id loops, so their existence is part of the contract.
