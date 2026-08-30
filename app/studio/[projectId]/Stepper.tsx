@@ -59,14 +59,14 @@ export default function Stepper({
               }`}
             >
               <span
-                className={`font-jetbrains grid h-5 w-5 shrink-0 place-items-center rounded-full border text-[10px] ${
+                className={`font-jetbrains grid h-5 w-5 shrink-0 place-items-center rounded-full border text-label ${
                   on ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-200" : BADGE[state]
                 }`}
               >
                 {s.n}
               </span>
               <span
-                className={`truncate text-sm ${on ? "font-medium text-white" : "text-white/60"}`}
+                className={`truncate text-label ${on ? "font-medium text-white" : "text-white/60"}`}
               >
                 {s.title}
               </span>

@@ -20,7 +20,7 @@ const CLIP_WORD: Record<ClipStatus, { word: string; cls: string }> = {
 
 export function ClipStatusWord({ status }: { status: ClipStatus }) {
   const s = CLIP_WORD[status];
-  return <span className={`font-jetbrains text-[11px] ${s.cls}`}>{s.word}</span>;
+  return <span className={`font-jetbrains text-label ${s.cls}`}>{s.word}</span>;
 }
 
 const CUE_WORD: Record<CueStatus, { word: string; cls: string }> = {
@@ -30,7 +30,7 @@ const CUE_WORD: Record<CueStatus, { word: string; cls: string }> = {
 
 export function CueStatusWord({ status }: { status: CueStatus }) {
   const s = CUE_WORD[status];
-  return <span className={`font-jetbrains text-[11px] ${s.cls}`}>{s.word}</span>;
+  return <span className={`font-jetbrains text-label ${s.cls}`}>{s.word}</span>;
 }
 
 /** Percent geometry against the project clock. */
@@ -48,7 +48,7 @@ export function TimeRuler() {
       {ticks.map((s) => (
         <span
           key={s}
-          className="font-jetbrains absolute -translate-x-1/2 text-[10px] text-white/30"
+          className="font-jetbrains absolute -translate-x-1/2 text-label text-white/30"
           style={{ left: `${(s / PROJECT.totalS) * 100}%` }}
         >
           {s}s

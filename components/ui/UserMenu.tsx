@@ -57,10 +57,10 @@ export default function UserMenu() {
   }, [open]);
 
   if (!ready) {
-    return <span className="font-jetbrains text-[11px] text-white/55">auth off</span>;
+    return <span className="font-jetbrains text-label text-white/55">auth off</span>;
   }
   if (loading) {
-    return <span className="font-jetbrains text-[11px] text-white/50">…</span>;
+    return <span className="font-jetbrains text-label text-white/50">…</span>;
   }
   if (!user) {
     return (
@@ -97,11 +97,11 @@ export default function UserMenu() {
             referrerPolicy="no-referrer"
           />
         ) : (
-          <span className="grid h-7 w-7 place-items-center rounded-full bg-cyan-300 text-sm font-semibold text-slate-950">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-cyan-300 text-label font-semibold text-slate-950">
             {initial}
           </span>
         )}
-        <span className="hidden max-w-[140px] truncate text-sm text-white/90 sm:block">
+        <span className="hidden max-w-[140px] truncate text-label text-white/90 sm:block">
           {profile?.displayName ?? user.email}
         </span>
       </button>
@@ -113,8 +113,8 @@ export default function UserMenu() {
           className="gt-rise glass-panel absolute top-full right-0 z-50 mt-2 w-60 rounded-xl p-2"
         >
           <div className="px-3 py-2">
-            <div className="truncate text-sm text-white">{profile?.displayName}</div>
-            <div className="font-jetbrains truncate text-[11px] text-white/55">
+            <div className="truncate text-label text-white">{profile?.displayName}</div>
+            <div className="font-jetbrains truncate text-label text-white/55">
               {LOCAL_MODE ? "this machine, this browser profile" : user.email}
             </div>
           </div>
@@ -124,7 +124,7 @@ export default function UserMenu() {
             // eviction a real sign-out runs would wipe the only copy of the
             // shelf. Leaving local mode is an env change, and the menu says so
             // instead of offering a button that must lie or destroy.
-            <p className="font-jetbrains px-3 py-2 text-[11px] leading-snug text-white/45">
+            <p className="font-jetbrains px-3 py-2 text-content leading-snug text-white/45">
               Local studio — work lives in this browser&apos;s storage. Unset NEXT_PUBLIC_LOCAL_MODE to
               run against Google sign-in.
             </p>
@@ -133,7 +133,7 @@ export default function UserMenu() {
               type="button"
               ref={firstItemRef}
               onClick={() => void signOut()}
-              className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-sm text-white/80 transition hover:bg-white/5"
+              className="w-full cursor-pointer rounded-lg px-3 py-2 text-left text-label text-white/80 transition hover:bg-white/5"
             >
               Sign out
             </button>

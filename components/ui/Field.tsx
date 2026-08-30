@@ -19,12 +19,12 @@ import { useId } from "react";
 // `/45` measures 4.5:1 there and still reads as clearly un-entered beside the
 // full-strength `text-white` a real value renders in.
 const CONTROL =
-  "w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-base text-white " +
+  "w-full rounded-xl border border-white/10 bg-white/[0.03] px-3.5 py-2.5 text-content text-white " +
   "placeholder:text-white/45 transition hover:border-white/20 focus:border-cyan-400/40 " +
   "focus-visible:outline-2 focus-visible:outline-offset-2";
 
 const LABEL_TEXT =
-  "font-jetbrains mb-1.5 block text-[11px] tracking-[0.18em] text-white/45 uppercase";
+  "font-jetbrains mb-1.5 block text-label tracking-[0.18em] text-white/45 uppercase";
 
 /**
  * Label + optional hint + the control it names.
@@ -58,7 +58,7 @@ export function Field({
   const body = (
     <>
       {children}
-      {hint && <p className="font-hanken mt-1.5 text-sm text-slate-400">{hint}</p>}
+      {hint && <p className="font-hanken mt-1.5 text-content text-slate-400">{hint}</p>}
     </>
   );
   if (!htmlFor) {
@@ -121,7 +121,7 @@ export function NumberInput({
         // Not `/35` (3.2:1). This span IS the disambiguation the component
         // exists for, so it is the last text in the app that should be hard to
         // read; `/50` measures 5.2:1 here.
-        className="font-jetbrains pointer-events-none absolute inset-y-0 right-3.5 grid place-items-center text-sm text-white/50"
+        className="font-jetbrains pointer-events-none absolute inset-y-0 right-3.5 grid place-items-center text-label text-white/50"
       >
         {unit}
       </span>
@@ -151,14 +151,14 @@ export function Segmented<T extends string>({
   const active = options.find((o) => o.id === value);
   return (
     <fieldset className={className}>
-      <legend className="font-jetbrains mb-1.5 block text-[11px] tracking-[0.18em] text-white/45 uppercase">
+      <legend className="font-jetbrains mb-1.5 block text-label tracking-[0.18em] text-white/45 uppercase">
         {label}
       </legend>
       <div className="flex flex-wrap gap-2">
         {options.map((o) => (
           <label
             key={o.id}
-            className={`font-jetbrains cursor-pointer rounded-full border px-3.5 py-1.5 text-[12px] transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${
+            className={`font-jetbrains cursor-pointer rounded-full border px-3.5 py-1.5 text-label transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${
               value === o.id
                 ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
                 : "border-white/10 text-white/55 hover:border-white/25 hover:text-white/85"
@@ -176,7 +176,7 @@ export function Segmented<T extends string>({
           </label>
         ))}
       </div>
-      {active?.note && <p className="font-hanken mt-1.5 text-sm text-slate-400">{active.note}</p>}
+      {active?.note && <p className="font-hanken mt-1.5 text-content text-slate-400">{active.note}</p>}
     </fieldset>
   );
 }

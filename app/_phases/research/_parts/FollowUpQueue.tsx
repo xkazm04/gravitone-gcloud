@@ -168,10 +168,10 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
     <section data-testid="followup" className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <p className="font-jetbrains text-[11px] tracking-[0.16em] text-white/55 uppercase">
+          <p className="font-jetbrains text-content tracking-[0.16em] text-white/55 uppercase">
             follow-up research
           </p>
-          <p className="font-hanken mt-1.5 max-w-2xl text-sm text-slate-400">
+          <p className="font-hanken mt-1.5 max-w-2xl text-content text-slate-400">
             Cards you marked <span className="text-cyan-200/80">deepen</span>, plus anything you want
             to ask. This routes to the <em>next</em> run — it does not change the script you are about
             to write.
@@ -183,7 +183,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
               {busy ? "Researching…" : `Run ${pending.length} follow-up${pending.length === 1 ? "" : "s"}`}
             </Button>
             {busy && (
-              <p data-testid="followup-busy" className="font-jetbrains max-w-[16rem] text-right text-[10px] leading-snug text-amber-200/80">
+              <p data-testid="followup-busy" className="font-jetbrains max-w-[16rem] text-right text-content leading-snug text-amber-200/80">
                 one follow-up at a time — it revises the same notebook, so this one finishes before
                 another can start
               </p>
@@ -199,13 +199,13 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && ask()}
           placeholder="ask the research something — “what about on-chain data on whales?”"
-          className="font-hanken min-w-[20rem] flex-1 rounded-xl border border-white/12 bg-white/[0.03] px-3.5 py-2 text-sm text-slate-200 placeholder:text-white/25 focus-visible:outline-2 focus-visible:outline-offset-2"
+          className="font-hanken min-w-[20rem] flex-1 rounded-xl border border-white/12 bg-white/[0.03] px-3.5 py-2 text-content text-slate-200 placeholder:text-white/25 focus-visible:outline-2 focus-visible:outline-offset-2"
         />
         <button
           data-testid="followup-ask"
           onClick={ask}
           disabled={!q.trim()}
-          className="font-jetbrains rounded-full border border-white/15 px-3.5 py-2 text-[11px] text-white/70 transition hover:bg-white/5 disabled:opacity-30"
+          className="font-jetbrains rounded-full border border-white/15 px-3.5 py-2 text-label text-white/70 transition hover:bg-white/5 disabled:opacity-30"
         >
           queue question
         </button>
@@ -213,7 +213,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
 
       {all.length === 0 ? (
         <>
-          <p className="font-jetbrains mt-4 text-[11px] text-white/30">
+          <p className="font-jetbrains mt-4 text-content text-white/30">
             Nothing queued. Mark a card <span className="text-cyan-200/70">deepen</span> on the board, or
             ask a question above.
           </p>
@@ -235,7 +235,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
               wrong sentence on the one screen this notice exists to make honest
               — the same rule the triage board's empty columns already follow. */}
           {landedFollowUps > 0 && (
-            <p data-testid="followup-none-here" className="font-jetbrains mt-2 text-[11px] leading-relaxed text-amber-200/80">
+            <p data-testid="followup-none-here" className="font-jetbrains mt-2 text-content leading-relaxed text-amber-200/80">
               the bell still records {landedFollowUps} completed follow-up
               {landedFollowUps === 1 ? "" : "s"} for this project, and their results are not here.
               This queue is held for the session — reloading, or clearing the research, starts it
@@ -259,22 +259,22 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-jetbrains rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-white/45">
+                <span className="font-jetbrains rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-label tracking-[0.1em] text-white/45">
                   {r.kind === "question" ? "question" : `deepen · ${r.cardId}`}
                 </span>
-                <span className={`font-jetbrains text-[10px] tracking-[0.12em] ${STATUS_TONE[r.status]}`}>
+                <span className={`font-jetbrains text-label tracking-[0.12em] ${STATUS_TONE[r.status]}`}>
                   {r.status === "unanswered" ? "no answer" : r.status}
                 </span>
                 {r.result && (
-                  <span className={`font-jetbrains text-[10px] tracking-[0.12em] ${VERDICT_TONE[r.result.verdict]}`}>
+                  <span className={`font-jetbrains text-label tracking-[0.12em] ${VERDICT_TONE[r.result.verdict]}`}>
                     · {r.result.verdict}
                   </span>
                 )}
               </div>
 
-              <p className="mt-1.5 text-[13px] leading-relaxed text-slate-300">{r.prompt}</p>
+              <p className="mt-1.5 text-content leading-relaxed text-slate-300">{r.prompt}</p>
               {r.systemReason && !r.result && (
-                <p className="font-jetbrains mt-1.5 text-[10px] leading-relaxed text-amber-200/75">
+                <p className="font-jetbrains mt-1.5 text-content leading-relaxed text-amber-200/75">
                   {r.systemReason}
                 </p>
               )}
@@ -282,7 +282,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
               {/* The dispatch ran and returned nothing. Said once, in terms of the
                   actual limit, rather than left to look like a queue still moving. */}
               {r.status === "unanswered" && (
-                <p data-testid={`followup-unanswered-${r.cardId ?? r.id}`} className="font-jetbrains mt-2 text-[10px] leading-relaxed text-amber-200/80">
+                <p data-testid={`followup-unanswered-${r.cardId ?? r.id}`} className="font-jetbrains mt-2 text-content leading-relaxed text-amber-200/80">
                   the dispatch returned nothing. This prototype answers from two follow-ups
                   transcribed from a real terminal run — a question about on-chain whale cohorts, and
                   a deepen on the vendor liquidity stat. There is no research process behind this
@@ -297,7 +297,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
       )}
 
       {returned.length > 0 && (
-        <p className="font-jetbrains mt-4 text-[11px] text-white/35">
+        <p className="font-jetbrains mt-4 text-content text-white/35">
           A follow-up can weaken the notebook as well as strengthen it. Read the verdict on each
           result — “weakened” is as valid an outcome as “strengthened”.
         </p>

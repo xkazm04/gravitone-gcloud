@@ -161,6 +161,10 @@ npx tsx pipeline/foundry/extract.mts --status <run-id>                          
 npx tsx pipeline/foundry/extract.mts --commit <run-id> --keep a,b --reject c        # headless cull
 ```
 
+Grouped mode is the OFFICIAL path (chosen 2026-08-28 after a three-run comparison — see the skill's LESSONS.md);
+`--singletons` is diagnostic: tightest per-source replication, but n=1 recipes carry scene-bound detail and
+transfer less consistently, and grouping becomes a cull-time merge decision instead.
+
 Or `/train-style <folder>` in Claude Code, which runs the same driver and
 reads the results back with its own eyes before the cull. Cull in the app
 at `/foundry` → Extract: ↑↓ rows, K keep, X throw, U clear, then **Learn the

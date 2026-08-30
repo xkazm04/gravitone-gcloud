@@ -82,7 +82,7 @@ export default function AssetLightbox({
       onClose={onClose}
       title={asset.name}
       eyebrow={
-        <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/40 uppercase">
+        <p className="font-jetbrains text-label tracking-[0.14em] text-white/40 uppercase">
           {asset.path.join(" › ")}
         </p>
       }
@@ -90,7 +90,7 @@ export default function AssetLightbox({
       className="max-w-5xl"
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="font-jetbrains text-[11px] text-white/45">
+          <div className="font-jetbrains text-label text-white/45">
             {total > 1 ? "← → step · " : ""}Esc close · {index} of {total}
           </div>
           <div className="flex items-center gap-2">
@@ -98,7 +98,7 @@ export default function AssetLightbox({
               <button
                 type="button"
                 onClick={onStartStyle}
-                className="font-jetbrains cursor-pointer rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-1.5 text-[12px] text-cyan-100 transition hover:bg-cyan-400/20"
+                className="font-jetbrains cursor-pointer rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-1.5 text-label text-cyan-100 transition hover:bg-cyan-400/20"
               >
                 Start a style from this
               </button>
@@ -109,7 +109,7 @@ export default function AssetLightbox({
             <button
               type="button"
               onClick={onRemove}
-              className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-4 py-1.5 text-[12px] text-rose-200 transition hover:bg-rose-400/20"
+              className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-4 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/20"
             >
               Remove from shelf
             </button>
@@ -143,8 +143,8 @@ export default function AssetLightbox({
             </span>
           )}
           {facts.hasText && (
-            <figcaption className="font-jetbrains mt-2 flex items-center gap-2 text-[11px] text-amber-200/85">
-              <span className="rounded bg-amber-300/90 px-1.5 py-0.5 text-[9px] font-semibold text-slate-950">
+            <figcaption className="font-jetbrains mt-2 flex items-center gap-2 text-label text-amber-200/85">
+              <span className="rounded bg-amber-300/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
                 TEXT
               </span>
               the grader found lettering in this plate — the one defect that makes one unusable
@@ -174,7 +174,7 @@ export default function AssetLightbox({
                 <p className="font-hanken text-sm leading-snug text-slate-300">{facts.problem}</p>
               )}
               {facts.beat && (
-                <p className="font-jetbrains mt-1.5 text-[11px] text-white/40">beat · {facts.beat}</p>
+                <p className="font-jetbrains mt-1.5 text-label text-white/40">beat · {facts.beat}</p>
               )}
             </Section>
           )}
@@ -218,8 +218,8 @@ export default function AssetLightbox({
               <dl className="space-y-1.5">
                 {blockRows(facts.block).map((r) => (
                   <div key={r.label} className="flex gap-2">
-                    <dt className="font-jetbrains w-20 shrink-0 text-[11px] text-white/35">{r.label}</dt>
-                    <dd className="font-hanken min-w-0 text-[13px] leading-snug text-slate-300">{r.value}</dd>
+                    <dt className="font-jetbrains w-20 shrink-0 text-label text-white/35">{r.label}</dt>
+                    <dd className="font-hanken min-w-0 text-content leading-snug text-slate-300">{r.value}</dd>
                   </div>
                 ))}
               </dl>
@@ -232,7 +232,7 @@ export default function AssetLightbox({
                   (lib/assets.ts#assetFromProof) precisely so it can be shown
                   here after the style has moved on. Saying so is the difference
                   between a record and a claim about the present. */}
-              <p className="font-jetbrains mt-3 text-[10px] leading-snug text-white/25">
+              <p className="font-jetbrains mt-3 text-label leading-snug text-white/25">
                 what the style said when this was rendered — editing the style since does not change
                 the plate
               </p>
@@ -254,10 +254,10 @@ function Facts({ rows }: { rows: [string, string | null | undefined][] }) {
     <dl className="space-y-1.5">
       {present.map(([label, value]) => (
         <div key={label} className="flex items-baseline gap-2">
-          <dt className="font-jetbrains w-24 shrink-0 text-[11px] tracking-[0.1em] text-white/35 uppercase">
+          <dt className="font-jetbrains w-24 shrink-0 text-label tracking-[0.1em] text-white/35 uppercase">
             {label}
           </dt>
-          <dd className="font-hanken min-w-0 truncate text-[13px] text-white/85">{value}</dd>
+          <dd className="font-hanken min-w-0 truncate text-content text-white/85">{value}</dd>
         </div>
       ))}
     </dl>
@@ -306,7 +306,7 @@ function NameEditor({ initial, onCommit }: { initial: string; onCommit: (name: s
           setValue(initial);
         }
       }}
-      className="font-hanken w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] text-white/90 outline-none transition focus:border-cyan-400/40"
+      className="font-hanken w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-content text-white/90 outline-none transition focus:border-cyan-400/40"
     />
   );
 }
@@ -314,7 +314,7 @@ function NameEditor({ initial, onCommit }: { initial: string; onCommit: (name: s
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
-      <p className="font-jetbrains mb-2 text-[11px] tracking-[0.14em] text-white/40 uppercase">{label}</p>
+      <p className="font-jetbrains mb-2 text-label tracking-[0.14em] text-white/40 uppercase">{label}</p>
       {children}
     </div>
   );

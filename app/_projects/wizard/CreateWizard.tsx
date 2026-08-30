@@ -199,7 +199,7 @@ export default function CreateWizard() {
           exit={
             <Link
               href="/projects"
-              className="font-jetbrains text-[11px] text-white/35 transition hover:text-white/60"
+              className="font-jetbrains text-label text-white/35 transition hover:text-white/60"
             >
               back to the shelf — nothing is kept
             </Link>

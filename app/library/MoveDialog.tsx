@@ -80,7 +80,7 @@ export default function MoveDialog({
       onClose={onClose}
       title={count === 1 ? `Move ${subject}` : `Move ${count} plates`}
       eyebrow={
-        <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/40 uppercase">refile</p>
+        <p className="font-jetbrains text-label tracking-[0.14em] text-white/40 uppercase">refile</p>
       }
       subtitle={
         <span className="font-hanken">
@@ -94,7 +94,7 @@ export default function MoveDialog({
       className="max-w-lg"
       footer={
         <div className="flex items-center justify-between gap-3">
-          <p className="font-jetbrains text-[11px] text-white/45">
+          <p className="font-jetbrains text-label text-white/45">
             {rootless
               ? "pick a folder, or name a new one"
               : same
@@ -114,7 +114,7 @@ export default function MoveDialog({
     >
       <div className="space-y-4">
         <div>
-          <p className="font-jetbrains mb-2 text-[11px] tracking-[0.14em] text-white/40 uppercase">
+          <p className="font-jetbrains mb-2 text-label tracking-[0.14em] text-white/40 uppercase">
             folders on the shelf
           </p>
           <div className="scroll-y max-h-64 space-y-0.5 rounded-xl border border-white/8 p-1">
@@ -139,8 +139,8 @@ export default function MoveDialog({
                         : "text-white/60 hover:bg-white/5 hover:text-white/85"
                     }`}
                   >
-                    <span className="font-hanken min-w-0 flex-1 truncate text-[13px]">{r.name}</span>
-                    <span className="font-jetbrains shrink-0 text-[10px] text-white/30">{r.total}</span>
+                    <span className="font-hanken min-w-0 flex-1 truncate text-content">{r.name}</span>
+                    <span className="font-jetbrains shrink-0 text-label text-white/30">{r.total}</span>
                   </button>
                 );
               })
@@ -151,7 +151,7 @@ export default function MoveDialog({
         <div>
           <label
             htmlFor="move-new-folder"
-            className="font-jetbrains mb-2 block text-[11px] tracking-[0.14em] text-white/40 uppercase"
+            className="font-jetbrains mb-2 block text-label tracking-[0.14em] text-white/40 uppercase"
           >
             or a new folder inside it
           </label>
@@ -160,15 +160,15 @@ export default function MoveDialog({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="keepers"
-            className="font-hanken w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-[13px] text-white/90 outline-none transition placeholder:text-white/25 focus:border-cyan-400/40"
+            className="font-hanken w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-content text-white/90 outline-none transition placeholder:text-white/25 focus:border-cyan-400/40"
           />
           {/* The typed name and the minted name are shown to differ BEFORE the
               move, not discovered afterwards in the tree. */}
           {slug && slug !== newName.trim() && (
-            <p className="font-jetbrains mt-1.5 text-[11px] text-white/35">filed as {slug}</p>
+            <p className="font-jetbrains mt-1.5 text-label text-white/35">filed as {slug}</p>
           )}
           {newName.trim() && !slug && (
-            <p className="font-jetbrains mt-1.5 text-[11px] text-amber-200/80">
+            <p className="font-jetbrains mt-1.5 text-label text-amber-200/80">
               nothing in that name survives as a folder — letters or numbers, please
             </p>
           )}

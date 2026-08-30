@@ -175,7 +175,7 @@ export default function ProjectDialog({
       className="max-w-xl"
       footer={
         <div className="flex items-center justify-between gap-3">
-          <span className="font-jetbrains text-[11px] text-white/35">
+          <span className="font-jetbrains text-label text-white/35">
             {project ? "saved to this browser" : "opens in the studio"}
           </span>
           <div className="flex gap-2">
@@ -245,7 +245,7 @@ export default function ProjectDialog({
           // style is this on" is a question the shelf should always answer.
           <Field label="Visual style" hint="Fixed at creation — frames are rendered against it.">
             {chosen.theme ? (
-              <p className="font-hanken flex items-center gap-2.5 text-sm text-slate-300">
+              <p className="font-hanken flex items-center gap-2.5 text-content text-slate-300">
                 <StyleSwatch theme={chosen.theme} />
                 {chosen.theme.name}
               </p>
@@ -254,7 +254,7 @@ export default function ProjectDialog({
               // This line used to read "created before styles existed" for both
               // cases, which turned a deleted style into a reassuring sentence
               // about an old record.
-              <p className="font-hanken text-sm text-amber-200/90">
+              <p className="font-hanken text-content text-amber-200/90">
                 Not available — {STYLE_MISS_WORD[chosen.miss]}. Its frames render on a fallback preset,
                 and the Frames step names it.
               </p>
@@ -277,7 +277,7 @@ export default function ProjectDialog({
                   key={t.id}
                   type="button"
                   onClick={() => setDraft((d) => ({ ...d, themeId: t.id }))}
-                  className={`font-jetbrains flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] transition ${
+                  className={`font-jetbrains flex items-center gap-2 rounded-full border px-3 py-1.5 text-label transition ${
                     draft.themeId === t.id
                       ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
                       : "border-white/12 text-white/60 hover:text-white/85"
@@ -394,14 +394,14 @@ export function ConfirmDelete({
             onClick={onConfirm}
             disabled={!holds}
             data-testid="confirm-delete"
-            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-[12px] text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/30"
+            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/30"
           >
             {holds ? "Delete" : "reading…"}
           </button>
         </div>
       }
     >
-      <p className="font-hanken text-base text-slate-300">
+      <p className="font-hanken text-content text-slate-300">
         The record goes from this browser&rsquo;s storage and does not come back. Nothing is deleted
         anywhere else — there is nowhere else yet.
       </p>
@@ -409,9 +409,9 @@ export function ConfirmDelete({
       {holds && holds.steps > 0 && (
         <p
           data-testid="delete-takes"
-          className="font-hanken mt-3 rounded-xl border border-rose-400/25 bg-rose-400/[0.06] px-4 py-3 text-sm leading-snug text-rose-100"
+          className="font-hanken mt-3 rounded-xl border border-rose-400/25 bg-rose-400/[0.06] px-4 py-3 text-content leading-snug text-rose-100"
         >
-          <span className="font-jetbrains text-[11px] tracking-[0.14em] text-rose-200/80 uppercase">
+          <span className="font-jetbrains text-label tracking-[0.14em] text-rose-200/80 uppercase">
             and its work goes with it
           </span>
           <br />
@@ -422,7 +422,7 @@ export function ConfirmDelete({
       )}
 
       {holds && holds.steps === 0 && (
-        <p data-testid="delete-takes" className="font-hanken mt-3 text-sm text-slate-400">
+        <p data-testid="delete-takes" className="font-hanken mt-3 text-content text-slate-400">
           Nothing has been saved into its steps yet, so the record is all there is to take.
         </p>
       )}

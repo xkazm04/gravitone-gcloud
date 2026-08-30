@@ -230,13 +230,13 @@ export default function Playground({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-1.5">
-        <p className="font-jetbrains mr-1 text-[11px] tracking-[0.14em] text-white/40 uppercase">try it on</p>
+        <p className="font-jetbrains mr-1 text-content tracking-[0.14em] text-white/40 uppercase">try it on</p>
         {TRIALS.map((t) => (
           <button
             key={t.id}
             onClick={() => setSubject(t.subject)}
             title={`${t.problem} · ${t.beat}`}
-            className={`font-jetbrains rounded-full border px-2.5 py-1 text-[11px] transition ${
+            className={`font-jetbrains rounded-full border px-2.5 py-1 text-label transition ${
               subject === t.subject
                 ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
                 : "border-white/10 text-white/50 hover:text-white/80"
@@ -251,7 +251,7 @@ export default function Playground({
         value={subject}
         onChange={(e) => setSubject(e.target.value)}
         rows={3}
-        className="font-hanken w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-[13px] leading-snug text-white placeholder:text-white/30 focus:border-cyan-400/40"
+        className="font-hanken w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-content leading-snug text-white placeholder:text-white/30 focus:border-cyan-400/40"
         placeholder="What should this style draw?"
       />
 
@@ -259,7 +259,7 @@ export default function Playground({
         <button
           onClick={run}
           disabled={busy || disabled || tooLong || !subject.trim()}
-          className="inline-flex items-center gap-2 rounded-xl bg-cyan-300/90 px-4 py-2 text-[13px] font-semibold text-slate-950 transition hover:brightness-110 disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-xl bg-cyan-300/90 px-4 py-2 text-label font-semibold text-slate-950 transition hover:brightness-110 disabled:opacity-40"
         >
           {busy ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
           {busy ? "rendering…" : "render a trial"}
@@ -272,7 +272,7 @@ export default function Playground({
             The figure comes from /api/imaging/pricing, so it is the same
             declaration the server bills against rather than a copy of it. */}
         <span
-          className={`font-jetbrains text-[10px] ${price === "unknown" ? "text-amber-300/70" : "text-white/40"}`}
+          className={`font-jetbrains text-label ${price === "unknown" ? "text-amber-300/70" : "text-white/40"}`}
           title={estimate.title}
         >
           {estimate.text}
@@ -284,12 +284,12 @@ export default function Playground({
             </span>
           )}
         </span>
-        <span className="font-jetbrains text-[10px] text-white/30">
+        <span className="font-jetbrains text-label text-white/30">
           {prompt.length}/{PROMPT_CHAR_LIMIT} chars
         </span>
 
         {references.length > 0 && (
-          <label className="font-jetbrains ml-auto flex cursor-pointer items-center gap-1.5 text-[11px] text-white/55">
+          <label className="font-jetbrains ml-auto flex cursor-pointer items-center gap-1.5 text-label text-white/55">
             <input
               type="checkbox"
               checked={useRefs}
@@ -303,14 +303,14 @@ export default function Playground({
 
 
       {tooLong && (
-        <p className="text-[12px] leading-snug text-amber-200/90">
+        <p className="text-content leading-snug text-amber-200/90">
           This block compiles to {prompt.length} characters and Leonardo accepts {PROMPT_CHAR_LIMIT}. Shorten
           the technique or finish line.
         </p>
       )}
 
       {error && (
-        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-3 py-2 text-[12px] leading-snug text-rose-200">
+        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-3 py-2 text-content leading-snug text-rose-200">
           {error}
         </p>
       )}
@@ -329,7 +329,7 @@ export default function Playground({
             className="w-full rounded-xl border border-white/10"
           />
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-jetbrains text-[10px] text-white/35">
+            <p className="font-jetbrains text-content text-white/35">
               {result.provenance.provider} · {result.provenance.model} ·{" "}
               {(result.provenance.durationMs / 1000).toFixed(1)}s ·{" "}
               {/* Whatever came back WINS over the estimate shown before the
@@ -369,7 +369,7 @@ export default function Playground({
                   }
                 }}
                 disabled={kept || keeping}
-                className="font-jetbrains rounded-lg border border-white/12 px-3 py-1.5 text-[11px] text-white/75 transition hover:bg-white/5 disabled:opacity-40"
+                className="font-jetbrains rounded-lg border border-white/12 px-3 py-1.5 text-label text-white/75 transition hover:bg-white/5 disabled:opacity-40"
               >
                 {kept ? "kept" : keeping ? "keeping…" : keepLabel}
               </button>

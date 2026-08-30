@@ -243,10 +243,10 @@ export function DojoView() {
     <>
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
         <aside>
-          <div className="font-jetbrains text-[11px] tracking-[0.14em] text-white/45 uppercase">cycles</div>
-          {listError && <p className="font-jetbrains mt-2 text-[11px] text-rose-200">{listError}</p>}
+          <div className="font-jetbrains text-label tracking-[0.14em] text-white/45 uppercase">cycles</div>
+          {listError && <p className="font-jetbrains mt-2 text-label text-rose-200">{listError}</p>}
           {cycles && cycles.length === 0 && (
-            <p className="font-hanken mt-2 text-[12px] text-slate-400">No cycles yet — the dojo trains while you&rsquo;re away.</p>
+            <p className="font-hanken mt-2 text-label text-slate-400">No cycles yet — the dojo trains while you&rsquo;re away.</p>
           )}
           <ul className="mt-2 flex flex-col gap-1">
             {cycles?.map((c) => (
@@ -257,11 +257,11 @@ export function DojoView() {
                     c.id === selected ? "border-cyan-400/40 bg-cyan-400/10" : "border-white/8 hover:bg-white/[0.03]"
                   }`}
                 >
-                  <div className="font-jetbrains truncate text-[12px] text-white/90">{c.id}</div>
-                  <div className="font-jetbrains mt-0.5 text-[10px] text-white/45">
+                  <div className="font-jetbrains truncate text-label text-white/90">{c.id}</div>
+                  <div className="font-jetbrains mt-0.5 text-label text-white/45">
                     {c.dimension} · {c.subject}
                   </div>
-                  <div className="font-jetbrains mt-0.5 text-[10px] text-white/45">
+                  <div className="font-jetbrains mt-0.5 text-label text-white/45">
                     {DOJO_STATUS_WORD[c.status]} · {c.media} · {c.decided}/{c.improvements} decided
                   </div>
                 </button>
@@ -271,22 +271,22 @@ export function DojoView() {
         </aside>
 
         <div>
-          {!detail && selected && <p className="font-jetbrains text-[12px] text-white/40">loading…</p>}
+          {!detail && selected && <p className="font-jetbrains text-label text-white/40">loading…</p>}
           {!selected && cycles && cycles.length > 0 && (
-            <p className="font-hanken text-[13px] text-slate-400">Pick a cycle to gate.</p>
+            <p className="font-hanken text-content text-slate-400">Pick a cycle to gate.</p>
           )}
           {detail && (
             <>
               <CycleStrip cycle={detail} />
               {result && (
-                <div className="font-jetbrains mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-4 py-2 text-[11px] text-emerald-200">
+                <div className="font-jetbrains mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-4 py-2 text-label text-emerald-200">
                   committed · {result.deleted} media file{result.deleted === 1 ? "" : "s"} deleted · {result.thumbs.length} thumb{result.thumbs.length === 1 ? "" : "s"} kept in git ·{" "}
                   {result.ledger_rows} ledger row{result.ledger_rows === 1 ? "" : "s"}
                 </div>
               )}
               <div className="mt-5 flex flex-col gap-6">
                 {detail.improvements.length === 0 && (
-                  <p className="font-hanken text-[13px] text-slate-400">This cycle claims no improvements yet.</p>
+                  <p className="font-hanken text-content text-slate-400">This cycle claims no improvements yet.</p>
                 )}
                 {detail.improvements.map((imp) => (
                   <ImprovementCard
@@ -312,7 +312,7 @@ export function DojoView() {
       {detail && gateable && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
-            <div className="font-jetbrains flex flex-wrap items-center gap-4 text-[11px] text-white/60">
+            <div className="font-jetbrains flex flex-wrap items-center gap-4 text-label text-white/60">
               <span>
                 <span className="text-white/90">{counts.decided}</span>/{counts.total} decided
               </span>
@@ -325,7 +325,7 @@ export function DojoView() {
             <Button
               disabled={counts.decided === 0}
               onClick={() => setConfirm(true)}
-              className="cursor-pointer px-5 py-2 text-[12px] disabled:cursor-not-allowed"
+              className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
               title={counts.decided === 0 ? "Decide at least one improvement first" : "Delete the decided media and write the ledger"}
             >
               Commit the gate
@@ -347,7 +347,7 @@ export function DojoView() {
             <button
               onClick={doCommit}
               disabled={committing}
-              className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-[12px] text-rose-200 transition hover:bg-rose-400/20 disabled:opacity-50"
+              className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20 disabled:opacity-50"
             >
               {committing ? "committing…" : `Commit ${counts.decided} decided`}
             </button>
@@ -357,7 +357,7 @@ export function DojoView() {
         <p className="font-hanken text-sm text-slate-300">
           Every decided improvement&rsquo;s media — both arms of every pair, posters included — is deleted from this machine. One thumbnail per approved
           improvement is copied into git, and one row per decided improvement joins{" "}
-          <code className="font-jetbrains text-[11px] text-white/70">pipeline/foundry/training-ledger.json</code> for the loop to reflect. Undecided
+          <code className="font-jetbrains text-label text-white/70">pipeline/foundry/training-ledger.json</code> for the loop to reflect. Undecided
           improvements keep their media. This cannot be undone.
         </p>
       </Modal>
@@ -373,7 +373,7 @@ function CycleStrip({ cycle }: { cycle: CycleManifest }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-2.5">
       <span
-        className={`font-jetbrains rounded-full border px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase ${
+        className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.14em] uppercase ${
           cycle.status === "committed"
             ? "border-emerald-400/40 text-emerald-200"
             : cycle.status === "failed"
@@ -385,12 +385,12 @@ function CycleStrip({ cycle }: { cycle: CycleManifest }) {
       >
         {DOJO_STATUS_WORD[cycle.status]}
       </span>
-      <span className="font-jetbrains text-[11px] text-white/50">
+      <span className="font-jetbrains text-label text-white/50">
         {cycle.dimension} · {cycle.subject} · {cycle.media} · {cycle.improvements.length} improvement{cycle.improvements.length === 1 ? "" : "s"}
       </span>
-      {typeof cycle.costUsd === "number" && <span className="font-jetbrains text-[11px] text-white/50">${cycle.costUsd.toFixed(2)}</span>}
-      {cycle.fail_streak > 0 && <span className="font-jetbrains text-[11px] text-rose-200/80">fail streak {cycle.fail_streak}</span>}
-      {live && last && <span className="font-jetbrains ml-auto truncate text-[10px] text-white/35">{last.msg}</span>}
+      {typeof cycle.costUsd === "number" && <span className="font-jetbrains text-label text-white/50">${cycle.costUsd.toFixed(2)}</span>}
+      {cycle.fail_streak > 0 && <span className="font-jetbrains text-label text-rose-200/80">fail streak {cycle.fail_streak}</span>}
+      {live && last && <span className="font-jetbrains ml-auto truncate text-label text-white/35">{last.msg}</span>}
     </div>
   );
 }
@@ -424,13 +424,13 @@ function ImprovementCard({
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="font-jetbrains text-[13px] text-white/90">{imp.technique}</div>
-          <p className="font-hanken mt-1 max-w-2xl text-[13px] leading-snug text-slate-300">{imp.claim}</p>
-          <p className="font-jetbrains mt-1 text-[10px] text-white/40">challenges: {imp.standard}</p>
+          <div className="font-jetbrains text-content text-white/90">{imp.technique}</div>
+          <p className="font-hanken mt-1 max-w-2xl text-content leading-snug text-slate-300">{imp.claim}</p>
+          <p className="font-jetbrains mt-1 text-label text-white/40">challenges: {imp.standard}</p>
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           <span
-            className={`font-jetbrains rounded border bg-black/50 px-1.5 py-0.5 text-[10px] tracking-wide ${
+            className={`font-jetbrains rounded border bg-black/50 px-1.5 py-0.5 text-label tracking-wide ${
               rate >= 0.75 ? "border-emerald-400/30 text-emerald-200" : rate >= 0.5 ? "border-white/15 text-white/70" : "border-rose-400/30 text-rose-200/90"
             }`}
             title={`Judge picked the challenger on ${challengerPicks} of ${imp.pairs.length} pair(s)`}
@@ -439,7 +439,7 @@ function ImprovementCard({
           </span>
           {gem !== undefined && (
             <span
-              className={`font-jetbrains rounded border bg-black/50 px-1.5 py-0.5 text-[10px] tracking-wide ${
+              className={`font-jetbrains rounded border bg-black/50 px-1.5 py-0.5 text-label tracking-wide ${
                 gem >= 0.75 ? "border-emerald-400/30 text-emerald-200" : "border-amber-400/30 text-amber-200/90"
               }`}
               title="How often Gemini agreed with the chokepoint judge"
@@ -449,7 +449,7 @@ function ImprovementCard({
           )}
           {verdict && (
             <span
-              className={`font-jetbrains rounded px-1.5 py-0.5 text-[10px] font-semibold text-slate-950 ${
+              className={`font-jetbrains rounded px-1.5 py-0.5 text-label font-semibold text-slate-950 ${
                 verdict === "approve" ? "bg-emerald-300/90" : "bg-rose-400/90"
               }`}
             >
@@ -464,7 +464,7 @@ function ImprovementCard({
                   onVerdict("approve");
                 }}
                 title="Approve (K)"
-                className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold transition ${
+                className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-label font-semibold transition ${
                   verdict === "approve" ? "bg-emerald-300 text-slate-950 ring-2 ring-emerald-200/70" : "bg-emerald-300/80 text-slate-950 hover:bg-emerald-300"
                 }`}
               >
@@ -476,7 +476,7 @@ function ImprovementCard({
                   onVerdict("reject");
                 }}
                 title="Reject (X)"
-                className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold transition ${
+                className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-label font-semibold transition ${
                   verdict === "reject" ? "bg-rose-400 text-slate-950 ring-2 ring-rose-200/70" : "bg-rose-400/80 text-slate-950 hover:bg-rose-400"
                 }`}
               >
@@ -489,7 +489,7 @@ function ImprovementCard({
                     onVerdict(null);
                   }}
                   title="Clear (U)"
-                  className="font-jetbrains cursor-pointer rounded border border-white/15 px-1.5 py-0.5 text-[10px] text-white/60 transition hover:text-white/90"
+                  className="font-jetbrains cursor-pointer rounded border border-white/15 px-1.5 py-0.5 text-label text-white/60 transition hover:text-white/90"
                 >
                   U
                 </button>
@@ -513,7 +513,7 @@ function PairDuo({ cycleId, pair }: { cycleId: string; pair: PairResult }) {
   const disagrees = pair.gemini_pick !== undefined && pair.gemini_pick !== pair.judge_pick;
   return (
     <div className="rounded-xl border border-white/8 bg-black/30 p-2">
-      <div className="font-jetbrains mb-1.5 flex items-center gap-2 text-[10px] text-white/45">
+      <div className="font-jetbrains mb-1.5 flex items-center gap-2 text-label text-white/45">
         <span className="truncate">{pair.scene}</span>
         <span className="ml-auto shrink-0">seed {pair.seed}</span>
       </div>
@@ -521,14 +521,14 @@ function PairDuo({ cycleId, pair }: { cycleId: string; pair: PairResult }) {
         <PairArm cycleId={cycleId} arm="baseline" ref_={pair.baseline} picked={pair.judge_pick === "baseline"} />
         <PairArm cycleId={cycleId} arm="challenger" ref_={pair.challenger} picked={pair.judge_pick === "challenger"} />
       </div>
-      <p className="font-hanken mt-1.5 text-[11px] leading-snug text-slate-400">
+      <p className="font-hanken mt-1.5 text-label leading-snug text-slate-400">
         <span className={pair.judge_pick === "tie" ? "text-white/60" : "text-cyan-200/90"}>
           judge: {pair.judge_pick}
         </span>{" "}
         — {pair.reason}
       </p>
       {disagrees && (
-        <p className="font-hanken mt-1 text-[11px] leading-snug text-amber-200/80">
+        <p className="font-hanken mt-1 text-label leading-snug text-amber-200/80">
           gemini disagrees: {pair.gemini_pick}
           {pair.gemini_reason ? ` — ${pair.gemini_reason}` : ""}
         </p>
@@ -542,17 +542,17 @@ function PairArm({ cycleId, arm, ref_, picked }: { cycleId: string; arm: "baseli
     <div className={`relative overflow-hidden rounded-lg border ${picked ? "border-cyan-300/60" : "border-white/10"}`}>
       {ref_.deleted ? (
         // Honest absence: the commit unlinked this file; the record stays.
-        <div className="font-jetbrains flex aspect-video items-center justify-center bg-black/40 text-[10px] text-white/35">culled</div>
+        <div className="font-jetbrains flex aspect-video items-center justify-center bg-black/40 text-label text-white/35">culled</div>
       ) : (
         // eslint-disable-next-line @next/next/no-img-element -- local disk through the file seam
         <img src={fileUrl(cycleId, ref_.poster ?? ref_.file, "training")} alt={`${arm} · ${ref_.file}`} className="aspect-video w-full object-cover" loading="lazy" />
       )}
-      <span className="font-jetbrains pointer-events-none absolute bottom-1 left-1 rounded bg-black/70 px-1 py-0.5 text-[9px] text-white/70">{arm}</span>
+      <span className="font-jetbrains pointer-events-none absolute bottom-1 left-1 rounded bg-black/70 px-1 py-0.5 text-label text-white/70">{arm}</span>
       {ref_.kind === "video" && (
-        <span className="font-jetbrains pointer-events-none absolute top-1 right-1 rounded bg-black/70 px-1 py-0.5 text-[9px] text-white/60">video · poster</span>
+        <span className="font-jetbrains pointer-events-none absolute top-1 right-1 rounded bg-black/70 px-1 py-0.5 text-label text-white/60">video · poster</span>
       )}
       {picked && (
-        <span className="font-jetbrains pointer-events-none absolute top-1 left-1 rounded bg-cyan-300/90 px-1 py-0.5 text-[9px] font-semibold text-slate-950">PICK</span>
+        <span className="font-jetbrains pointer-events-none absolute top-1 left-1 rounded bg-cyan-300/90 px-1 py-0.5 text-label font-semibold text-slate-950">PICK</span>
       )}
     </div>
   );

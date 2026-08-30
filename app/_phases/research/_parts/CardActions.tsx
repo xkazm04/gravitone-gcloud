@@ -18,7 +18,7 @@ export default function CardActions({ card, api, compact }: { card: Card; api: S
   const s = stateOf(api.scope, card.id);
   const pad = compact ? "px-2 py-0.5" : "px-2.5 py-1";
   return (
-    <div className="font-jetbrains flex flex-wrap items-center gap-1.5 text-[10px]">
+    <div className="font-jetbrains flex flex-wrap items-center gap-1.5 text-label">
       <button
         data-testid={`like-${card.id}`}
         onClick={() => api.toggle(card.id, "liked")}

@@ -59,15 +59,15 @@ const PACE_STYLE: Record<Shot["pace"], string> = {
 function CheckRow({ c }: { c: ShotCheck }) {
   return (
     <div className="grid grid-cols-[150px_1fr_78px] items-start gap-3 border-b border-white/5 px-3 py-2 last:border-b-0">
-      <span className={`font-jetbrains text-[11px] ${VERDICT_STYLE[c.verdict]}`}>{c.rule}</span>
-      <span className="text-[12px] leading-snug text-white/45">
+      <span className={`font-jetbrains text-label ${VERDICT_STYLE[c.verdict]}`}>{c.rule}</span>
+      <span className="text-label leading-snug text-white/45">
         {c.tests}
         <span className="block text-white/30">{c.detail}</span>
       </span>
       {/* The number that makes the verdict readable. A `pass` next to `0`
           cannot happen — `finalise()` downgrades it — so this column is how a
           reader sizes the green rather than trusting it. */}
-      <span className={`font-jetbrains text-right text-[11px] ${VERDICT_STYLE[c.verdict]}`}>
+      <span className={`font-jetbrains text-right text-label ${VERDICT_STYLE[c.verdict]}`}>
         {c.verdict} · {c.examined}
       </span>
     </div>
@@ -77,26 +77,26 @@ function CheckRow({ c }: { c: ShotCheck }) {
 function ShotRow({ s, prompt }: { s: Shot; prompt?: ShotPrompt }) {
   return (
     <div className="grid grid-cols-[38px_52px_60px_60px_88px_1fr_78px] items-center gap-2 border-b border-white/5 px-3 py-1.5 last:border-b-0">
-      <span className="font-jetbrains text-[11px] text-white/25">
+      <span className="font-jetbrains text-label text-white/25">
         {s.ordinal}/{s.ofBeat}
       </span>
-      <span className="font-jetbrains text-[11px] text-white/55">{s.holdS}s</span>
-      <span className={`font-jetbrains text-[11px] ${PACE_STYLE[s.pace]}`}>{s.pace}</span>
+      <span className="font-jetbrains text-label text-white/55">{s.holdS}s</span>
+      <span className={`font-jetbrains text-label ${PACE_STYLE[s.pace]}`}>{s.pace}</span>
       {/* Absence, stated. An undeclared size is not "none", it is nobody's
           decision yet — the same reading `Plate.state === "empty"` gets. */}
-      <span className="font-jetbrains text-[11px] text-white/55">{s.size ?? "—"}</span>
-      <span className="font-jetbrains text-[11px] text-white/35">
+      <span className="font-jetbrains text-label text-white/55">{s.size ?? "—"}</span>
+      <span className="font-jetbrains text-label text-white/35">
         {s.direction.replace("screen-", "")}
         {s.placement ? ` · ${s.placement}` : ""}
       </span>
       {/* The proposed action block, whole in the tooltip. The motion is the one
           field this layer refuses to seed, so its absence is named on the row
           rather than left blank. */}
-      <span className="truncate text-[11px] text-white/25" title={prompt?.text ?? s.basis}>
+      <span className="truncate text-label text-white/25" title={prompt?.text ?? s.basis}>
         {prompt?.action ?? "—"}
       </span>
       <span
-        className={`font-jetbrains text-right text-[10px] ${
+        className={`font-jetbrains text-right text-label ${
           prompt?.subjectMissing ? "text-amber-200/80" : "text-white/25"
         }`}
         title={
@@ -132,16 +132,16 @@ export default function ShotSheet({
   if (render.origin === "no-spine") {
     return (
       <div className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-6">
-        <p className="text-[13px] leading-relaxed text-amber-100/90">
+        <p className="text-content leading-relaxed text-amber-100/90">
           &ldquo;{render.title}&rdquo; is a promotional cut, and nothing has composed its spine yet.
           There is no beat chain to decompose — not an empty one, none.
         </p>
-        <p className="mt-2 text-[12px] leading-relaxed text-white/45">
+        <p className="mt-2 text-label leading-relaxed text-white/45">
           Step 1 offers candidate beats per part of the spine and Step 2 composes the ones you confirm
           into a cut. This step reads that cut; it will not write one for you, because a spine invented
           downstream is a spine nobody chose.
         </p>
-        <p className="font-jetbrains mt-2 text-[11px] text-white/30">
+        <p className="font-jetbrains mt-2 text-label text-white/30">
           nothing was derived, nothing was guessed, and no frame was seeded from another project&rsquo;s script
         </p>
       </div>
@@ -151,12 +151,12 @@ export default function ShotSheet({
   if (!isTrailerFormat(render.template)) {
     return (
       <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-6">
-        <p className="text-[13px] leading-relaxed text-white/45">
+        <p className="text-content leading-relaxed text-white/45">
           &ldquo;{render.title}&rdquo; is a <span className="text-white/70">{render.template}</span>. Shot
           decomposition applies to promotional cuts only — in an explainer a beat <em>is</em> one composed
           picture held while a sentence is spoken, and the frame list is already that.
         </p>
-        <p className="mt-2 text-[12px] leading-relaxed text-white/30">
+        <p className="mt-2 text-content leading-relaxed text-white/30">
           Nothing was derived here, and nothing about the assembly changed. This is not an empty result.
         </p>
       </div>
@@ -178,7 +178,7 @@ export default function ShotSheet({
 
   return (
     <div className="space-y-4">
-      <p className="font-jetbrains text-[11px] text-white/35">
+      <p className="font-jetbrains text-content text-white/35">
         {report.shots} shots across {report.beats} beats · {report.engaged}/{report.checks.length} checks
         examined anything · derived, not authored
         {/* WHOSE BEATS THESE ARE. Worth a clause of its own: this page spent its
@@ -196,14 +196,14 @@ export default function ShotSheet({
           states it: a fallback preset is not the project's style, and every
           prompt below restates whichever one this is. */}
       {!hasLockedStyle && (
-        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-[12px] leading-snug text-amber-100/90">
+        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-content leading-snug text-amber-100/90">
           These prompts restate a fallback style preset, not this project&rsquo;s locked style. Lock a style
           before reading them as the identity the plates would come back in.
         </p>
       )}
 
       {unplaceable.length > 0 && (
-        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-2.5 text-[12px] leading-snug text-rose-200">
+        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-2.5 text-content leading-snug text-rose-200">
           {unplaceable.length} beat{unplaceable.length === 1 ? "" : "s"} could not be placed and derived no
           shots — {unplaceable.map((b) => `"${b.at}"`).join(", ")} {unplaceable.length === 1 ? "is" : "are"}{" "}
           not a timecode. Nothing here guessed a position for them.
@@ -211,7 +211,7 @@ export default function ShotSheet({
       )}
 
       <div className="overflow-hidden rounded-xl border border-white/8">
-        <div className="font-jetbrains grid grid-cols-[38px_52px_60px_60px_88px_1fr_78px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-[10px] tracking-[0.14em] text-white/35 uppercase">
+        <div className="font-jetbrains grid grid-cols-[38px_52px_60px_60px_88px_1fr_78px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase">
           <span>#</span>
           <span>holds</span>
           <span>pace</span>
@@ -226,9 +226,9 @@ export default function ShotSheet({
         {groups.map((g) => (
           <div key={g.shots[0].id}>
             <div className="flex items-baseline gap-3 border-b border-white/5 bg-white/[0.015] px-3 py-1.5">
-              <span className="font-jetbrains text-[11px] text-white/40">{g.beatAt}</span>
-              <span className="truncate text-[12px] text-white/60">{g.beatLabel}</span>
-              <span className="font-jetbrains ml-auto shrink-0 text-[10px] text-white/25">
+              <span className="font-jetbrains text-label text-white/40">{g.beatAt}</span>
+              <span className="truncate text-label text-white/60">{g.beatLabel}</span>
+              <span className="font-jetbrains ml-auto shrink-0 text-label text-white/25">
                 {g.shots[0].basis}
               </span>
             </div>
@@ -240,7 +240,7 @@ export default function ShotSheet({
       </div>
 
       <div className="overflow-hidden rounded-xl border border-white/8">
-        <p className="font-jetbrains border-b border-white/8 bg-white/[0.02] px-3 py-2 text-[10px] tracking-[0.14em] text-white/35 uppercase">
+        <p className="font-jetbrains border-b border-white/8 bg-white/[0.02] px-3 py-2 text-content tracking-[0.14em] text-white/35 uppercase">
           review · verdict · sites examined
         </p>
         {report.checks.map((c) => (
@@ -251,10 +251,10 @@ export default function ShotSheet({
       {/* The gaps, on the page rather than in a file nobody opens. A green
           report is only worth what this list does not contain. */}
       <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
-        <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/35 uppercase">not checked</p>
+        <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">not checked</p>
         <ul className="mt-2 space-y-1.5">
           {report.notChecked.map((n) => (
-            <li key={n} className="text-[12px] leading-snug text-white/35">
+            <li key={n} className="text-label leading-snug text-white/35">
               · {n}
             </li>
           ))}

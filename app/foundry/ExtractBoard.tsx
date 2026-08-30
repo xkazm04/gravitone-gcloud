@@ -27,6 +27,61 @@ interface Zoom {
   perField?: Partial<Record<string, number>>;
 }
 
+/* The three tile inspections, shared by click and by the Enter key. */
+
+function roundZoom(style: ExtractedStyle, round: ReplicaRound, source: string): Zoom | null {
+  if (!round.file) return null;
+  return {
+    title: `${style.name} · replica of ${source} · round ${round.n} · ${pct(round.score)}`,
+    file: round.file,
+    perField: round.per_field,
+    words: [
+      { label: "critique", text: round.critique?.critique || (round.error ?? "—") },
+      { label: "recipe used", text: round.recipe },
+      { label: "recipe fix proposed", text: round.critique?.recipe_fix ?? "—" },
+      { label: "prompt", text: round.prompt },
+    ],
+  };
+}
+
+function transferZoom(style: ExtractedStyle, transfer: Transfer): Zoom | null {
+  if (!transfer.file) return null;
+  return {
+    title: `${style.name} · transfer · scene ${transfer.scene + 1} · ${pct(transfer.score)}`,
+    file: transfer.file,
+    perField: transfer.per_field,
+    words: [
+      { label: "scene", text: transfer.brief },
+      { label: "readback", text: transfer.readback ? OBSERVABLE_FIELDS.map((f) => `${f}=${transfer.readback![f]}`).join("  ") : (transfer.error ?? "—") },
+      { label: "prompt", text: transfer.prompt },
+    ],
+  };
+}
+
+/** The focused row's best face, for Enter: the highest-scoring replica with
+ *  pixels, else the first transfer, else the first source. */
+function focusedZoom(style: ExtractedStyle, sources: Map<string, ExtractManifest["sources"][number]>): Zoom | null {
+  let best: { round: ReplicaRound; source: string } | null = null;
+  for (const r of style.replicas)
+    for (const x of r.rounds)
+      if (x.file && (best === null || (x.score ?? -1) > (best.round.score ?? -1))) best = { round: x, source: r.source };
+  if (best) return roundZoom(style, best.round, best.source);
+  const t = style.transfers.find((x) => x.file);
+  if (t) return transferZoom(style, t);
+  const s = sources.get(style.members[0]);
+  if (!s) return null;
+  return {
+    title: `${style.name} · source ${s.id} · ${s.name}`,
+    file: s.file,
+    words: s.readback
+      ? [
+          { label: "look", text: s.readback.look },
+          { label: "depiction", text: s.readback.depiction },
+        ]
+      : [{ label: "error", text: s.error ?? "not read" }],
+  };
+}
+
 export function ExtractBoard({
   run,
   verdicts,
@@ -83,11 +138,21 @@ export function ExtractBoard({
         case "U":
           if (focused && !readOnly) onVerdict(focused, null);
           break;
+        case "Enter": {
+          if (!focused) break;
+          const st = run.styles.find((x) => x.id === focused);
+          const z = st && focusedZoom(st, sourcesById);
+          if (z) {
+            e.preventDefault();
+            setZoom(z);
+          }
+          break;
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [keysEnabled, readOnly, focused, order, onFocus, onVerdict]);
+  }, [keysEnabled, readOnly, focused, order, run.styles, sourcesById, onFocus, onVerdict]);
 
   useEffect(() => {
     if (!focused) return;
@@ -97,7 +162,7 @@ export function ExtractBoard({
   if (!run.styles.length) {
     return (
       <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
-        <p className="font-hanken text-[13px] text-slate-400">
+        <p className="font-hanken text-content text-slate-400">
           {run.status === "failed" ? "Nothing could be read back." : "Reading the sources — styles appear once every image has been read back."}
         </p>
         <div className="mt-3 grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8">
@@ -105,7 +170,7 @@ export function ExtractBoard({
             <figure key={s.id} className={`relative aspect-video overflow-hidden rounded-md border ${s.readback ? "border-emerald-300/40" : s.error ? "border-rose-400/40" : "border-white/10"}`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- local disk through the file seam */}
               <img src={extractFileUrl(run.id, s.file)} alt={s.name} loading="lazy" className="h-full w-full object-cover" />
-              <figcaption className="font-jetbrains absolute inset-x-0 bottom-0 truncate bg-black/60 px-1 text-[9px] text-white/70">
+              <figcaption className="font-jetbrains absolute inset-x-0 bottom-0 truncate bg-black/60 px-1 text-label text-white/70">
                 {s.readback ? s.readback.render_mode : s.error ? "failed" : "…"}
               </figcaption>
             </figure>
@@ -134,21 +199,29 @@ export function ExtractBoard({
             <header className="flex flex-wrap items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-hanken text-[15px] text-white">{st.name}</h3>
-                  <span className="font-jetbrains text-[10px] text-white/45">
+                  <h3 className="font-hanken text-content text-white">{st.name}</h3>
+                  <span className="font-jetbrains text-label text-white/60">
                     {st.id} · {st.family} · {st.members.length} source{st.members.length === 1 ? "" : "s"} · grouped by {st.grouped_by}
                   </span>
                   {v && (
                     <span
-                      className={`font-jetbrains rounded px-1.5 py-0.5 text-[9px] font-semibold ${v === "keep" ? "bg-emerald-300/90 text-slate-950" : "bg-rose-400/90 text-slate-950"}`}
+                      className={`font-jetbrains rounded px-1.5 py-0.5 text-label font-semibold ${v === "keep" ? "bg-emerald-300/90 text-slate-950" : "bg-rose-400/90 text-slate-950"}`}
                     >
-                      {v === "keep" ? "KEPT" : "THROWN"}
+                      {v === "keep" ? "KEPT" : "REJECTED"}
+                    </span>
+                  )}
+                  {st.similar_to && st.similar_to.length > 0 && (
+                    <span
+                      className="font-jetbrains rounded border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-label text-amber-200"
+                      title="Declared observables differ by at most one minor field — the generator likely renders these identically"
+                    >
+                      ≈ {st.similar_to.join(", ")}
                     </span>
                   )}
                 </div>
                 <div className="mt-1.5 flex flex-wrap gap-1">
                   {OBSERVABLE_FIELDS.filter((f) => st.observables[f]).map((f) => (
-                    <span key={f} className="font-jetbrains rounded border border-white/10 px-1.5 py-0.5 text-[9px] text-white/60">
+                    <span key={f} className="font-jetbrains rounded border border-white/10 px-1.5 py-0.5 text-label text-white/60">
                       {f.replace(/_/g, " ")}: <span className="text-white/85">{st.observables[f]}</span>
                     </span>
                   ))}
@@ -160,15 +233,15 @@ export function ExtractBoard({
                 {!readOnly && (
                   <span className="ml-1 flex gap-1" onClick={(e) => e.stopPropagation()}>
                     <RowKey label="K" active={v === "keep"} tone="emerald" onClick={() => onVerdict(st.id, v === "keep" ? null : "keep")} title="keep this style" />
-                    <RowKey label="X" active={v === "reject"} tone="rose" onClick={() => onVerdict(st.id, v === "reject" ? null : "reject")} title="throw this style" />
+                    <RowKey label="X" active={v === "reject"} tone="rose" onClick={() => onVerdict(st.id, v === "reject" ? null : "reject")} title="reject this style" />
                   </span>
                 )}
               </div>
             </header>
 
-            <p className="font-hanken mt-3 text-[12px] leading-relaxed text-slate-400">{st.recipe}</p>
+            <p className="font-hanken mt-3 text-content leading-relaxed text-slate-400">{st.recipe}</p>
             {st.recipe_history.length > 1 && (
-              <p className="font-jetbrains mt-1 text-[10px] text-white/35">
+              <p className="font-jetbrains mt-1 text-content text-white/55">
                 recipe in force is round-tested · {st.recipe_history.length} tried · negative: {st.negative}
               </p>
             )}
@@ -211,7 +284,7 @@ export function ExtractBoard({
                 <div className="flex flex-col gap-2">
                   {st.replicas.map((rep) => (
                     <div key={rep.source} className="flex items-start gap-1.5">
-                      <span className="font-jetbrains w-8 shrink-0 pt-1 text-[9px] text-white/40">{rep.source}</span>
+                      <span className="font-jetbrains w-8 shrink-0 pt-1 text-label text-white/60">{rep.source}</span>
                       <div className="grid flex-1 grid-cols-2 gap-1.5 sm:grid-cols-4">
                         {rep.rounds.map((r) => (
                           <RoundTile key={r.n} run={run.id} style={st} round={r} source={rep.source} onZoom={setZoom} />
@@ -247,7 +320,7 @@ export function ExtractBoard({
               {zoom.perField && (
                 <div className="flex flex-wrap gap-1">
                   {Object.entries(zoom.perField).map(([f, hit]) => (
-                    <span key={f} className={`font-jetbrains rounded border px-1.5 py-0.5 text-[9px] ${hit === 1 ? "border-emerald-400/40 text-emerald-200" : "border-rose-400/40 text-rose-200"}`}>
+                    <span key={f} className={`font-jetbrains rounded border px-1.5 py-0.5 text-label ${hit === 1 ? "border-emerald-400/40 text-emerald-200" : "border-rose-400/40 text-rose-200"}`}>
                       {f.replace(/_/g, " ")}
                     </span>
                   ))}
@@ -255,8 +328,8 @@ export function ExtractBoard({
               )}
               {zoom.words.map((w) => (
                 <div key={w.label}>
-                  <div className="font-jetbrains text-[10px] tracking-[0.14em] text-white/45 uppercase">{w.label}</div>
-                  <p className="font-hanken mt-0.5 text-[12px] leading-relaxed whitespace-pre-wrap text-slate-300">{w.text || "—"}</p>
+                  <div className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">{w.label}</div>
+                  <p className="font-hanken mt-0.5 text-content leading-relaxed whitespace-pre-wrap text-slate-300">{w.text || "—"}</p>
                 </div>
               ))}
             </div>
@@ -272,19 +345,19 @@ export function ExtractBoard({
 function Column({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="font-jetbrains mb-1.5 text-[10px] tracking-[0.14em] text-white/40 uppercase">{label}</div>
+      <div className="font-jetbrains mb-1.5 text-label tracking-[0.14em] text-white/60 uppercase">{label}</div>
       {children}
     </div>
   );
 }
 
 function Empty({ children }: { children: React.ReactNode }) {
-  return <div className="font-jetbrains rounded-md border border-dashed border-white/10 px-3 py-6 text-center text-[10px] text-white/30">{children}</div>;
+  return <div className="font-jetbrains rounded-md border border-dashed border-white/10 px-3 py-6 text-center text-label text-white/55">{children}</div>;
 }
 
 function Flag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="font-jetbrains absolute top-1 right-1 rounded border border-rose-400/50 bg-rose-400/20 px-1 py-0.5 text-[8px] font-semibold text-rose-100">{children}</span>
+    <span className="font-jetbrains absolute top-1 right-1 rounded border border-rose-400/50 bg-rose-400/20 px-1 py-0.5 text-label font-semibold text-rose-100">{children}</span>
   );
 }
 
@@ -314,19 +387,10 @@ function RoundTile({ run, style, round, source, onZoom }: { run: string; style: 
         file={round.file}
         alt={`${style.name} replica of ${source}, round ${round.n}`}
         ring={inForce ? "border-cyan-300/40" : "border-white/10"}
-        onClick={() =>
-          onZoom({
-            title: `${style.name} · replica of ${source} · round ${round.n} · ${pct(round.score)}`,
-            file: round.file!,
-            perField: round.per_field,
-            words: [
-              { label: "critique", text: round.critique?.critique || (round.error ?? "—") },
-              { label: "recipe used", text: round.recipe },
-              { label: "recipe fix proposed", text: round.critique?.recipe_fix ?? "—" },
-              { label: "prompt", text: round.prompt },
-            ],
-          })
-        }
+        onClick={() => {
+          const z = roundZoom(style, round, source);
+          if (z) onZoom(z);
+        }}
       >
         {round.critique?.has_text && <Flag>TEXT</Flag>}
         <span className="absolute bottom-1 left-1 flex gap-1">
@@ -344,18 +408,10 @@ function TransferTile({ run, style, transfer, onZoom }: { run: string; style: Ex
       run={run}
       file={transfer.file}
       alt={`${style.name} on scene ${transfer.scene + 1}`}
-      onClick={() =>
-        onZoom({
-          title: `${style.name} · transfer · scene ${transfer.scene + 1} · ${pct(transfer.score)}`,
-          file: transfer.file!,
-          perField: transfer.per_field,
-          words: [
-            { label: "scene", text: transfer.brief },
-            { label: "readback", text: transfer.readback ? OBSERVABLE_FIELDS.map((f) => `${f}=${transfer.readback![f]}`).join("  ") : (transfer.error ?? "—") },
-            { label: "prompt", text: transfer.prompt },
-          ],
-        })
-      }
+      onClick={() => {
+        const z = transferZoom(style, transfer);
+        if (z) onZoom(z);
+      }}
     >
       {transfer.readback?.has_text && <Flag>TEXT</Flag>}
       <span className="absolute bottom-1 left-1">
@@ -375,7 +431,7 @@ function RowKey({ label, active, tone, onClick, title }: { label: string; active
         ? "border-rose-400/70 bg-rose-400/20 text-rose-100"
         : "border-white/15 text-white/60 hover:border-rose-400/50 hover:text-rose-200";
   return (
-    <button onClick={onClick} title={title} className={`font-jetbrains h-7 w-7 cursor-pointer rounded-md border text-[11px] font-semibold transition ${cls}`}>
+    <button onClick={onClick} title={title} aria-label={title} aria-pressed={active} className={`font-jetbrains h-8 w-8 cursor-pointer rounded-md border text-label font-semibold transition ${cls}`}>
       {label}
     </button>
   );

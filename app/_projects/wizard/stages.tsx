@@ -129,7 +129,7 @@ export function EmptyStyleDeck({ discipline }: { discipline: Discipline }) {
       </p>
       <Link
         href="/library"
-        className="font-jetbrains mt-5 inline-block rounded-lg border border-amber-300/40 px-4 py-2 text-[12px] text-amber-100 transition hover:bg-amber-300/10"
+        className="font-jetbrains mt-5 inline-block rounded-lg border border-amber-300/40 px-4 py-2 text-label text-amber-100 transition hover:bg-amber-300/10"
       >
         commission one in the library →
       </Link>

@@ -144,7 +144,7 @@ export function NewProjectButton({
   return (
     <button
       onClick={onClick}
-      className={`font-jetbrains inline-flex cursor-pointer items-center gap-2 rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-1.5 text-[12px] text-cyan-200 transition hover:bg-cyan-400/20 ${className}`}
+      className={`font-jetbrains inline-flex cursor-pointer items-center gap-2 rounded-full border border-cyan-400/40 bg-cyan-400/10 px-4 py-1.5 text-label text-cyan-200 transition hover:bg-cyan-400/20 ${className}`}
     >
       <Plus className="h-3.5 w-3.5" />
       New project
@@ -157,13 +157,13 @@ export function EmptyShelf({ onCreate }: { onCreate: () => void }) {
   return (
     <div className="rounded-2xl border border-dashed border-white/12 px-6 py-16 text-center">
       <p className="font-instrument text-2xl text-white/80">No projects yet.</p>
-      <p className="font-hanken mx-auto mt-2 max-w-sm text-base text-slate-400">
+      <p className="font-hanken mx-auto mt-2 max-w-sm text-content text-slate-400">
         A project is a name, a discipline, a template and a target runtime. Everything else — scenes, frames, cues,
         the cut — is made inside the studio.
       </p>
       <button
         onClick={onCreate}
-        className="font-jetbrains mt-6 cursor-pointer rounded-full border border-cyan-400/40 bg-cyan-400/10 px-5 py-2 text-[12px] text-cyan-200 transition hover:bg-cyan-400/20"
+        className="font-jetbrains mt-6 cursor-pointer rounded-full border border-cyan-400/40 bg-cyan-400/10 px-5 py-2 text-label text-cyan-200 transition hover:bg-cyan-400/20"
       >
         New project
       </button>

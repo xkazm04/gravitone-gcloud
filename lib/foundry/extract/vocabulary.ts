@@ -42,9 +42,12 @@ export const ENUMS: Record<ObservableField, readonly string[]> = {
   detail_density: ["sparse", "moderate", "dense", "hyper-dense"],
   surface_realism: ["flat", "simplified", "plausible", "physically-convincing"],
   atmospherics: ["none", "light-haze", "heavy-haze", "particulate", "volumetric-shafts"],
+  particle_fx: ["none", "subtle-dust", "heavy-debris", "energy-glow"],
   palette_strategy: ["monochrome", "duotone", "complementary-split", "desaturated-naturalistic", "saturated-vivid", "warm-cool-split"],
   black_handling: ["crushed", "deep-neutral", "lifted-milky"],
   edge_treatment: ["crisp", "soft", "bloom-heavy", "diffused"],
+  finish: ["clean-smooth", "weathered-gritty", "painterly-textured"],
+  focus: ["deep-focus", "shallow-bokeh", "motion-blurred"],
 };
 
 const DESCRIPTIONS: Record<ObservableField, string> = {
@@ -53,10 +56,14 @@ const DESCRIPTIONS: Record<ObservableField, string> = {
     "What the image physically IS: a photograph; a 3D render (modelled forms, consistent specular, CG hair/cloth); a 2D digital painting (brushed or airbrushed shading on flat forms, painted hair as shapes); traditional paint on a real surface; a line drawing (pencil, ink); or mixed media.",
   detail_density: "How much incidental detail fills the frame — set dressing, wear, background business.",
   surface_realism: "How convincingly materials behave: skin, metal, cloth, stone.",
-  atmospherics: "Particulate and haze in the air.",
+  atmospherics: "Haze, fog and volumetric light in the air — the air itself.",
+  particle_fx:
+    "Floating debris IN the air, distinct from haze: none; subtle dust motes; heavy environmental debris (embers, snow, sparks, ash); or glowing energy effects. A clean studio render and an ember-swept action frame differ HERE.",
   palette_strategy: "How colour is organised across the frame.",
   black_handling: "What happens in the darkest areas.",
   edge_treatment: "How edges and highlights resolve.",
+  finish: "Micro-texture of surfaces: pristine and smooth; weathered with dirt, scratches and grit; or visibly brush-painted.",
+  focus: "Lens behaviour: sharp front to back; a shallow photographic depth of field with blurred bokeh background; or dominated by motion blur.",
 };
 
 /** Weight per field in a score. render_mode is the style; the rest is how it
@@ -67,9 +74,12 @@ export const WEIGHTS: Record<ObservableField, number> = {
   detail_density: 1,
   surface_realism: 1,
   atmospherics: 1,
+  particle_fx: 1,
   palette_strategy: 1,
   black_handling: 1,
   edge_treatment: 1,
+  finish: 1,
+  focus: 1,
 };
 
 /* ── Schemas (JSON Schema, vendor-native-safe: no oneOf/$ref/const) ───────── */
@@ -101,6 +111,24 @@ export const READBACK_SCHEMA: Record<string, unknown> = {
     },
   },
   required: ["has_text", ...OBSERVABLE_FIELDS, "dominant_colours", "look", "depiction"],
+};
+
+/** Singleton mode: the readback plus the style entry itself, written by the
+ *  vision model with the image in front of it. The recipe rules mirror the
+ *  synthesis prompt's — medium named first, style words only. */
+export const SINGLETON_SCHEMA: Record<string, unknown> = {
+  type: "object",
+  properties: {
+    ...(READBACK_SCHEMA.properties as Record<string, unknown>),
+    style_name: { type: "string", description: "A 2–4 word Title Case name for this LOOK — never the subject." },
+    recipe: {
+      type: "string",
+      description:
+        "60–110 words a text-to-image generator obeys to reproduce this LOOK on any subject. The FIRST clause names the medium ('a 2D digital painting with airbrushed shading', 'a photoreal 3D render', 'a graphite pencil drawing on paper'). Then surfaces, light, palette, blacks, edges, finish, particles, focus. Style words only — no subject matter, no names, no franchises.",
+    },
+    negative: { type: "string", description: "Comma-separated list of what this look must NOT contain. Always include: text, watermark." },
+  },
+  required: [...(READBACK_SCHEMA.required as string[]), "style_name", "recipe", "negative"],
 };
 
 /** The readback of a GENERATED image, plus the critique loop's two fields. */
@@ -203,13 +231,27 @@ export function styleScore(target: Observables, readback: Partial<Readback> | nu
   return { score: total ? Math.round((got / total) * 1000) / 1000 : null, per_field: per };
 }
 
-/** How alike two readbacks are, 0..1, same weights as the score. */
+/** Weights for GROUPING, not scoring. `particle_fx` and `focus` are largely
+ *  properties of the SHOT, not the style — one production shoots ember-swept
+ *  frames and clean frames in the same style — so for deciding whether two
+ *  images share a style they count half. (Measured 2026-08-27: full weight
+ *  fragmented eleven sources into eight styles, splitting one game's key art
+ *  by which shots happened to carry embers.) For scoring a REPLICA against a
+ *  declared recipe they keep full weight in WEIGHTS: the recipe states them,
+ *  so the generator is accountable for them. */
+export const GROUPING_WEIGHTS: Record<ObservableField, number> = {
+  ...WEIGHTS,
+  particle_fx: 0.5,
+  focus: 0.5,
+};
+
+/** How alike two readbacks are, 0..1, under the grouping weights. */
 export function similarity(a: Observables, b: Observables): number {
   let got = 0;
   let total = 0;
   for (const f of OBSERVABLE_FIELDS) {
-    total += WEIGHTS[f];
-    if (a[f] === b[f]) got += WEIGHTS[f];
+    total += GROUPING_WEIGHTS[f];
+    if (a[f] === b[f]) got += GROUPING_WEIGHTS[f];
   }
   return got / total;
 }
@@ -217,7 +259,8 @@ export function similarity(a: Observables, b: Observables): number {
 /**
  * Deterministic grouping: two sources share a style when their render_mode
  * AND medium agree and their weighted similarity is at least `threshold` —
- * at 0.75 that is those two plus four of the six dressing fields. Transitive
+ * at 0.8 that is those two plus all but two of the nine dressing fields.
+ * Transitive
  * (union–find), so a chain of near-neighbours becomes one group — which is
  * the right reading of "a gallery of one artist across many subjects" and the
  * wrong one of "everything in between", and the engine gets to correct it.
@@ -226,7 +269,7 @@ export function similarity(a: Observables, b: Observables): number {
  * a source that matches nothing is its own style, not a discard. The human
  * discards.
  */
-export function partition(readbacks: (Observables | null)[], threshold = 0.75): number[][] {
+export function partition(readbacks: (Observables | null)[], threshold = 0.8): number[][] {
   const parent = readbacks.map((_, i) => i);
   const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
   const union = (a: number, b: number) => {
@@ -268,12 +311,72 @@ export function majorityObservables(members: Observables[]): Observables {
   return out;
 }
 
+/**
+ * A style's browse family, derived from its observables. The catalogue's
+ * `family` is whatever a synthesis turn or a hand wrote — the singleton mode
+ * writes `unsorted`, and eleven of one day's commits proved that a filter
+ * built on the raw field filters nothing. This is the display taxonomy the
+ * Styles shelf groups by: derived, so it exists for every style with
+ * observables, and stable, so the same look always lands in the same bucket.
+ */
+export function deriveFamily(obs: Partial<Observables>): string {
+  switch (obs.medium) {
+    case "photograph":
+      return "photo";
+    case "line-drawing":
+      return "graphic";
+    case "traditional-paint":
+      return "painterly";
+    case "2d-digital-painting":
+      return obs.render_mode === "painterly" ? "painterly" : "illustration";
+    case "mixed-media":
+      return "illustration";
+  }
+  switch (obs.render_mode) {
+    case "photographic":
+    case "photoreal-cg":
+      return "cinematic";
+    case "stylised-realistic":
+    case "cel-shaded":
+      return "animation";
+    case "painterly":
+      return "painterly";
+    case "graphic-abstract":
+      return "graphic";
+  }
+  return "unsorted";
+}
+
 export function slugify(s: string): string {
   return s
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
+}
+
+/**
+ * Pairs of styles a generator will likely render identically: every
+ * double-weight field (render_mode, medium) agrees and at most ONE minor
+ * field differs. The first run produced three photoreal styles that all
+ * came back as the same cinematic render; this is the ex-post warning the
+ * synthesis distinctiveness rule tries to make unnecessary.
+ */
+export function nearDuplicates(styles: { id: string; observables: Observables }[]): [string, string][] {
+  const out: [string, string][] = [];
+  for (let i = 0; i < styles.length; i++) {
+    for (let j = i + 1; j < styles.length; j++) {
+      let minor = 0;
+      let major = 0;
+      for (const f of OBSERVABLE_FIELDS) {
+        if (styles[i].observables[f] === styles[j].observables[f]) continue;
+        if (WEIGHTS[f] > 1) major++;
+        else minor++;
+      }
+      if (major === 0 && minor <= 1) out.push([styles[i].id, styles[j].id]);
+    }
+  }
+  return out;
 }
 
 /** A style the deterministic partition writes when the engine's answer is
@@ -288,6 +391,9 @@ export function fallbackStyle(index: number, members: { id: string; readback: Re
     ...looks,
     colours.length ? `Palette of ${colours.join(", ")} — ${obs.palette_strategy.replace(/-/g, " ")}.` : "",
     `Blacks ${obs.black_handling.replace(/-/g, " ")}, edges ${obs.edge_treatment.replace(/-/g, " ")}, ${obs.atmospherics.replace(/-/g, " ")} atmosphere.`,
+    obs.finish && obs.particle_fx && obs.focus
+      ? `Surfaces ${obs.finish.replace(/-/g, " ")}; ${obs.particle_fx === "none" ? "no floating particles" : `${obs.particle_fx.replace(/-/g, " ")} in the air`}; ${obs.focus.replace(/-/g, " ")}.`
+      : "",
   ]
     .filter(Boolean)
     .join(" ");

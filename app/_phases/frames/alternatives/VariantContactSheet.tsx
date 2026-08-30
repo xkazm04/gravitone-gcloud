@@ -68,7 +68,7 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
 
   if (!alts.loaded) {
     return (
-      <p className="font-jetbrains py-16 text-center text-[11px] tracking-[0.18em] text-white/30 uppercase">
+      <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
         loading the sheet…
       </p>
     );
@@ -112,7 +112,7 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
         )}
       </div>
 
-      <p className="font-jetbrains text-[10px] tracking-[0.12em] text-white/30 uppercase">
+      <p className="font-jetbrains text-content tracking-[0.12em] text-white/30 uppercase">
         scanning {seen.from + 1}–{Math.min(seen.to, cols.length)} of {cols.length} · mounted {last - first + 1}
       </p>
     </div>
@@ -186,15 +186,15 @@ function SheetColumn({
     >
       <header className="space-y-1.5 border-b border-white/8 px-2.5 py-2">
         <div className="flex items-center gap-2">
-          <span className="font-jetbrains text-[10px] text-white/25">{String(index + 1).padStart(2, "0")}</span>
-          <span className="font-jetbrains text-[11px] text-white/55">{col.frame.at}</span>
+          <span className="font-jetbrains text-label text-white/25">{String(index + 1).padStart(2, "0")}</span>
+          <span className="font-jetbrains text-label text-white/55">{col.frame.at}</span>
           <KindChip kind={col.frame.kind} />
         </div>
         <div className="flex items-center gap-2">
-          <p className="font-hanken min-w-0 flex-1 truncate text-[13px] text-white/85" title={col.frame.title}>
+          <p className="font-hanken min-w-0 flex-1 truncate text-content text-white/85" title={col.frame.title}>
             {col.frame.title}
           </p>
-          <span className="font-jetbrains shrink-0 text-[10px] tracking-[0.12em] text-white/35 uppercase">
+          <span className="font-jetbrains shrink-0 text-label tracking-[0.12em] text-white/35 uppercase">
             {col.alts.length} alt{col.alts.length === 1 ? "" : "s"}
           </span>
         </div>
@@ -203,7 +203,7 @@ function SheetColumn({
       <div className="scroll-y flex-1 space-y-2 p-2.5">
         {col.alts.length === 0 && (
           <div className="rounded-xl border border-white/8 bg-white/[0.02] px-2.5 py-6 text-center">
-            <p className="font-jetbrains text-[10px] tracking-[0.12em] text-white/30 uppercase">no alternatives kept</p>
+            <p className="font-jetbrains text-content tracking-[0.12em] text-white/30 uppercase">no alternatives kept</p>
           </div>
         )}
 
@@ -234,7 +234,7 @@ function SheetColumn({
             <Plus className="h-3.5 w-3.5 text-white/40" aria-hidden />
           )}
           <span
-            className={`font-jetbrains text-[10px] tracking-[0.12em] uppercase ${busy ? "text-cyan-100" : "text-white/45"}`}
+            className={`font-jetbrains text-label tracking-[0.12em] uppercase ${busy ? "text-cyan-100" : "text-white/45"}`}
           >
             {busy ? "generating…" : "alternative"}
           </span>
@@ -273,7 +273,7 @@ function AltCard({
       </button>
 
       {active && (
-        <span className="font-jetbrains pointer-events-none absolute bottom-1.5 left-1.5 rounded-full border border-cyan-400/40 bg-slate-950/80 px-2 py-0.5 text-[9px] tracking-[0.12em] text-cyan-100 uppercase">
+        <span className="font-jetbrains pointer-events-none absolute bottom-1.5 left-1.5 rounded-full border border-cyan-400/40 bg-slate-950/80 px-2 py-0.5 text-label tracking-[0.12em] text-cyan-100 uppercase">
           in the cut
         </span>
       )}

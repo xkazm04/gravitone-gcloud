@@ -54,7 +54,8 @@ export async function POST(req: Request) {
     if (!base64) return Response.json({ detail: `images[${i}].base64 is required.` }, { status: 400 });
     uploads.push({ name: typeof im.name === "string" && im.name ? im.name : `image-${i + 1}`, mime: mime as ExtractUpload["mime"], base64 });
   }
-  const o = (typeof body.options === "object" && body.options ? body.options : {}) as Partial<ExtractOptions>;
+  const raw = (typeof body.options === "object" && body.options ? body.options : {}) as Record<string, unknown>;
+  const o: Partial<ExtractOptions> = { ...raw, grouping: raw.grouping === "none" ? "none" : undefined } as Partial<ExtractOptions>;
   try {
     const run = await createRun(slug, uploads, o);
     return Response.json({ run });

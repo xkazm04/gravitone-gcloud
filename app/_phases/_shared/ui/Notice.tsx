@@ -33,8 +33,8 @@ export default function Notice({
         : "border-cyan-400/25 bg-cyan-400/[0.05] text-cyan-200";
   return (
     <div className={`rounded-xl border px-4 py-3 ${tone}`} role={severity === "error" ? "alert" : "status"}>
-      <p className="font-jetbrains text-[11px] tracking-[0.14em] uppercase">{title}</p>
-      {children && <div className="mt-1.5 text-sm leading-relaxed opacity-90">{children}</div>}
+      <p className="font-jetbrains text-content tracking-[0.14em] uppercase">{title}</p>
+      {children && <div className="mt-1.5 text-content leading-relaxed opacity-90">{children}</div>}
     </div>
   );
 }

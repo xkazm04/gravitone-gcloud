@@ -29,7 +29,7 @@ import type { EducationalResearchApi } from "./useEducationalResearch";
 /** The expert face's artifact pills, same words and testids — only one face is
  *  ever mounted, so the ids stay unique on the page. */
 const PILL =
-  "font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-[11px] text-white/75 transition hover:bg-white/5";
+  "font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/75 transition hover:bg-white/5";
 
 function ArtifactPills({
   onOpenNotebook,
@@ -54,7 +54,7 @@ function ArtifactPills({
       <button
         data-testid="clear-research"
         onClick={onClear}
-        className="font-jetbrains rounded-full border border-white/12 px-3.5 py-1.5 text-[11px] text-white/45 transition hover:bg-white/5 hover:text-white/70"
+        className="font-jetbrains rounded-full border border-white/12 px-3.5 py-1.5 text-label text-white/45 transition hover:bg-white/5 hover:text-white/70"
       >
         clear the research
       </button>
@@ -92,13 +92,13 @@ export default function RunStage({
           />
           <div className="p-6">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <p className="font-jetbrains text-[10px] tracking-[0.16em] text-cyan-200/80 uppercase">
+              <p className="font-jetbrains text-label tracking-[0.16em] text-cyan-200/80 uppercase">
                 a notebook exists
               </p>
               <RunStatus state={run.state} />
             </div>
             <h3 className="font-instrument mt-1.5 text-2xl leading-snug text-slate-100">{topic}</h3>
-            <p className="font-jetbrains mt-2 text-[11px] text-white/40">
+            <p className="font-jetbrains mt-2 text-label text-white/40">
               {NOTEBOOK_COUNTS.facts} facts · {NOTEBOOK_COUNTS.mechanisms} mechanisms ·{" "}
               {NOTEBOOK_COUNTS.reversals} reversals · researched {NOTEBOOK.researched}
             </p>
@@ -166,13 +166,13 @@ export default function RunStage({
           />
           <div className="p-5">
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-              <p className="font-jetbrains text-[11px] tracking-[0.16em] text-white/50 uppercase">
+              <p className="font-jetbrains text-label tracking-[0.16em] text-white/50 uppercase">
                 run log
               </p>
               <RunStatus state={run.state} />
             </div>
             {running && (
-              <p data-testid="running-note" className="font-jetbrains mt-1.5 text-[11px] text-white/35">
+              <p data-testid="running-note" className="font-jetbrains mt-1.5 text-label text-white/35">
                 running in the background — you can leave this step, and the bell reports the result.
               </p>
             )}
@@ -191,7 +191,7 @@ export default function RunStage({
                     type="button"
                     onClick={startResearch}
                     disabled={!topic.trim()}
-                    className="font-jetbrains mt-2 rounded-full border border-rose-400/40 px-3.5 py-1.5 text-[11px] text-rose-200 transition hover:bg-rose-400/10 disabled:opacity-40"
+                    className="font-jetbrains mt-2 rounded-full border border-rose-400/40 px-3.5 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/10 disabled:opacity-40"
                   >
                     run it again
                   </button>
@@ -206,7 +206,7 @@ export default function RunStage({
                     type="button"
                     onClick={startResearch}
                     disabled={!topic.trim()}
-                    className="font-jetbrains mt-2 rounded-full border border-amber-400/40 px-3.5 py-1.5 text-[11px] text-amber-200 transition hover:bg-amber-400/10 disabled:opacity-40"
+                    className="font-jetbrains mt-2 rounded-full border border-amber-400/40 px-3.5 py-1.5 text-label text-amber-200 transition hover:bg-amber-400/10 disabled:opacity-40"
                   >
                     research another topic
                   </button>
@@ -220,7 +220,7 @@ export default function RunStage({
                   onOpenEvidence={onOpenEvidence}
                   onClear={onClear}
                 />
-                <span className="font-jetbrains ml-auto text-[11px] text-cyan-200/80">
+                <span className="font-jetbrains ml-auto text-label text-cyan-200/80">
                   Next deals the takes →
                 </span>
               </div>

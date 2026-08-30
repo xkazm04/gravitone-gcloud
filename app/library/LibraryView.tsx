@@ -60,7 +60,7 @@ export default function LibraryView() {
                   setFocusStyle(null);
                   setModule(m.id);
                 }}
-                className={`font-jetbrains rounded-full border px-3.5 py-1.5 text-[12px] transition ${
+                className={`font-jetbrains rounded-full border px-3.5 py-1.5 text-label transition ${
                   m.id === module
                     ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
                     : "border-white/10 text-white/50 hover:text-white/80"
@@ -71,7 +71,7 @@ export default function LibraryView() {
             ))}
           </div>
 
-          <p className="font-hanken mt-3 max-w-xl text-sm text-slate-400">{active.blurb}</p>
+          <p className="font-hanken mt-3 max-w-xl text-content text-slate-400">{active.blurb}</p>
         </header>
 
         <section className="mt-6">
@@ -103,8 +103,8 @@ function ComingSoon({ label, blurb }: { label: string; blurb: string }) {
   return (
     <div className="rounded-2xl border border-dashed border-white/10 px-6 py-16 text-center">
       <p className="font-instrument text-2xl text-white">{label} is not built yet</p>
-      <p className="font-hanken mx-auto mt-2 max-w-sm text-sm leading-snug text-slate-400">{blurb}</p>
-      <p className="font-jetbrains mx-auto mt-4 max-w-sm text-[11px] leading-snug text-white/30">
+      <p className="font-hanken mx-auto mt-2 max-w-sm text-content leading-snug text-slate-400">{blurb}</p>
+      <p className="font-jetbrains mx-auto mt-4 max-w-sm text-content leading-snug text-white/30">
         the slot is here because Step 3 will reach for it — nothing is stored yet
       </p>
     </div>

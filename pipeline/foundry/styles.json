@@ -846,6 +846,977 @@
           "at": "2026-08-27T07:13:28.768Z"
         }
       ]
+    },
+    {
+      "id": "ember-lit-realism",
+      "name": "Ember Lit Realism",
+      "family": "film",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train",
+        "models": [
+          "google/gemini-3.6-flash",
+          "claude-cli/claude-opus-5",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "particulate",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp"
+      },
+      "recipe": "Photoreal CG render, cinematic and hyper-detailed. Materials read physically: micro-scratched metal, weathered leather, coarse fur, damp skin, each with accurate specular response and fine surface noise. A single dominant chromatic emissive — fire-warm or ice-cold — supplies the key and rims edges hard against a desaturated cold ambient. Deep neutral blacks hold shadow detail; highlights bloom only immediately around light sources. The air is thick with drifting embers, sparks, snow or ash catching that key. Crisp focus on foreground micro-texture, high contrast, restrained saturation elsewhere, filmic grade, no softening of contours.",
+      "negative": "flat lighting, pastel palette, cel shading, visible brushstrokes, lifted washed blacks, clean airless space, low detail surfaces, text, watermark",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s01.png",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s02.png",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s05.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s11.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s12.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s15.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s30.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s31.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/ember-lit-realism/replica-s01-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/ember-lit-realism/replica-s02-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/ember-lit-realism/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "neon-wet-noir",
+      "name": "Neon Wet Noir",
+      "family": "film",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train",
+        "models": [
+          "google/gemini-3.6-flash",
+          "claude-cli/claude-opus-5",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "palette_strategy": "complementary-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "bloom-heavy"
+      },
+      "recipe": "Nocturnal photoreal CG. Surfaces are wet, glossy and dark — lacquered metal, slick asphalt sheen, damp fabric — with sharp mirror-like speculars and reflected colour smeared across them. Two opposing neon hues supply nearly all the light: a hot magenta, red or amber against cold cyan, teal or green, rimming forms from opposite sides. Deep neutral blacks dominate; ambient fill is almost absent. Emissive elements bloom and halo, with soft trails and glow spilling over edges. Micro-texture stays crisp under the glare. Thin haze catches the beams. High contrast, saturated accents, polished filmic finish.",
+      "negative": "daylight, warm naturalistic sunlight, matte dry surfaces, pastel palette, flat ambient light, painterly brushwork, text, watermark",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s08.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s24.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s25.png",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s33.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/neon-wet-noir/replica-s08-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/neon-wet-noir/replica-s24-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/neon-wet-noir/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "soft-backlit-bokeh",
+      "name": "Soft Backlit Bokeh",
+      "family": "photo",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train",
+        "models": [
+          "google/gemini-3.6-flash",
+          "claude-cli/claude-opus-5",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "detail_density": "sparse",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "particulate",
+        "palette_strategy": "desaturated-naturalistic",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "diffused"
+      },
+      "recipe": "Photoreal CG rendering with soft, diffused edges. Strong backlighting creating gentle rim highlights on surfaces. Shallow focus completely dissolving the background into smooth circular bokeh without hard geometric shapes. Fine airborne particles catching the light beam.",
+      "negative": "hard contrast, neon accents, crisp graphic edges, dense clutter, saturated palette, heavy grime texture, text, watermark",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s27.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/soft-backlit-bokeh/replica-s27-r2.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/soft-backlit-bokeh/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "brushed-rim-painting",
+      "name": "Brushed Rim Painting",
+      "family": "illustration",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train",
+        "models": [
+          "google/gemini-3.6-flash",
+          "claude-cli/claude-opus-5",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "painterly",
+        "detail_density": "dense",
+        "surface_realism": "plausible",
+        "atmospherics": "particulate",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp"
+      },
+      "recipe": "Digital painterly illustration with visible, directional brushwork left unblended across the surfaces. Materials are plausible but built from strokes — slick wet planes catch broken specular marks, textures read as paint rather than as scan. A sharp rim light cuts hard along contours while cool ambient shadow fills the remainder, with warm side-light crossing the cool. The palette runs deep and saturated: cobalt, violet, dark teal and charcoal against warm beige accents. Blacks are deep and neutral. Airborne spray and fine particulate hang in the light. Edges stay crisp and deliberate despite the visible strokes; rich, hand-made finish.",
+      "negative": "photographic smoothness, airbrushed gradients, pastel washes, lifted milky blacks, flat ambient lighting, cel shading, text, watermark",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s17.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/brushed-rim-painting/replica-s17-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/brushed-rim-painting/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "crimson-flare-photography",
+      "name": "Crimson Flare Photography",
+      "family": "photo",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train",
+        "models": [
+          "google/gemini-3.6-flash",
+          "claude-cli/claude-opus-5",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photographic",
+        "detail_density": "moderate",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "bloom-heavy"
+      },
+      "recipe": "Cinematic photographic capture on a fast lens. A single saturated crimson practical dominates the frame, flaring and blooming where it strikes organic surfaces and dark textiles, throwing hot specular highlights and coloured spill. Cool white rim light separates forms from the background. Real optics throughout: light haze, gentle lens glow, shallow focus, fine natural grain. Materials are physically convincing — skin, woven cloth, matte black textile — with moderate incidental detail. Blacks fall deep and neutral, contrast is high, and the palette stays narrow: red, black, brown, cool white, warm flesh. Nothing illustrative in the rendering.",
+      "negative": "3D render look, illustration, painterly brushwork, flat even lighting, pastel palette, desaturated grade, text, watermark",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "sources/s16.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/crimson-flare-photography/replica-s16-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train",
+          "file": "styles/crimson-flare-photography/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "brush-textured-3d",
+      "name": "Brush Textured 3D",
+      "family": "game",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-2",
+        "models": [
+          "google/gemini-3.6-flash",
+          "claude-cli/claude-opus-5",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "stylised-realistic",
+        "medium": "3d-render",
+        "detail_density": "moderate",
+        "surface_realism": "plausible",
+        "atmospherics": "light-haze",
+        "particle_fx": "none",
+        "palette_strategy": "desaturated-naturalistic",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp",
+        "finish": "painterly-textured",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A 3D render finished like a painting: modelled forms and consistent CG lighting, but surfaces carry visible brush texture and hand-painted grain instead of photographic micro-detail. Materials read plausible rather than physically exact — no pore-level skin, no measured PBR reflectance. Soft directional key light from the side, deep neutral shadows, crisp contour definition at silhouettes. The palette stays desaturated and quiet: navy, slate, teal, warm taupe and muted rose, punctuated by small bright glowing accent points. The air is clear — no drifting particles, only faint haze. Shallow depth of field softens the background into blocks of tone.",
+      "negative": "text, watermark, photographic skin pores, physically exact reflections, floating embers or debris, heavy haze, bloom-blown highlights, saturated neon, flat cel shading, outlines, line art",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-2",
+          "file": "sources/s18.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-2",
+          "file": "sources/s20.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-2",
+          "file": "styles/brush-textured-3d/replica-s18-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-2",
+          "file": "styles/brush-textured-3d/replica-s20-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-2",
+          "file": "styles/brush-textured-3d/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "volumetric-shaft-keyart",
+      "name": "Volumetric Shaft Key Art",
+      "family": "concept",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-2",
+        "models": [
+          "google/gemini-3.6-flash",
+          "claude-cli/claude-opus-5",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "stylised-realistic",
+        "medium": "3d-render",
+        "detail_density": "hyper-dense",
+        "surface_realism": "plausible",
+        "atmospherics": "volumetric-shafts",
+        "particle_fx": "heavy-debris",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp",
+        "finish": "weathered-gritty",
+        "focus": "deep-focus"
+      },
+      "recipe": "A stylised-realistic 3D key-art render: forms heightened slightly beyond photographic truth, materials plausible rather than physically measured. Great volumetric shafts of light stream through mist and hanging haze, carrying heavy debris — spray, sparks, ash, drifting motes. A hard warm-cool split sets cyan and teal energy against warm sunlight, reddish leather and fiery trails. Surfaces are weathered and gritty; wet stone and scratched metal return detailed speculars. Blacks stay deep and neutral, edges crisp and defined, and deep focus keeps foreground and far background equally sharp across a densely dressed frame.",
+      "negative": "text, watermark, shallow depth of field, clean pristine surfaces, flat ambient lighting, desaturated monochrome, visible canvas texture, cel shading, outlines, motion blur",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-2",
+          "file": "sources/s13.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-2",
+          "file": "styles/volumetric-shaft-keyart/replica-s13-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-2",
+          "file": "styles/volumetric-shaft-keyart/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "crimson-ember-dark-render",
+      "name": "Crimson Ember Dark Render",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "medium": "3d-render",
+        "detail_density": "dense",
+        "surface_realism": "plausible",
+        "atmospherics": "heavy-haze",
+        "particle_fx": "heavy-debris",
+        "palette_strategy": "duotone",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp",
+        "finish": "weathered-gritty",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A 3d render featuring complex metallic, cloth, and stone surfaces with a weathered, gritty finish. Light is driven by strong crimson backlighting contrasting against deep neutral blacks and crisp edge highlights. The palette follows a strict duotone of dark charcoal black and fiery rust red. Heavy environmental debris and floating embers drift through a dense, smoky atmospheric haze. Lens rendering exhibits a shallow depth of field with sharp foreground focus.",
+      "negative": "text, watermark, bright daylight, vibrant multi-color palette, pastel, clean smooth finish",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s01.png",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/crimson-ember-dark-render/replica-s01-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/crimson-ember-dark-render/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "cinematic-game-realism",
+      "name": "Cinematic Game Realism",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "medium": "3d-render",
+        "detail_density": "moderate",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "particle_fx": "subtle-dust",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp",
+        "finish": "weathered-gritty",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A 3D render featuring physically convincing surfaces like weathered leather, soft fabric, and realistic skin. Illumination uses directional key lighting with intense localized bloom from a bright light source set against cool, dark shadows. The palette relies on desaturated earth tones and deep neutral darks. Edges are crisp, accompanied by light atmospheric haze and subtle floating dust particles, framed within a shallow depth of field.",
+      "negative": "text, watermark, flat shading, 2D illustration, painterly, hyper-saturated, low resolution, blown-out shadows",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s05.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cinematic-game-realism/replica-s05-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cinematic-game-realism/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "cinematic-dark-fantasy-cg",
+      "name": "Cinematic Dark Fantasy CG",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "medium": "3d-render",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "particle_fx": "none",
+        "palette_strategy": "desaturated-naturalistic",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp",
+        "finish": "weathered-gritty",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A photoreal 3D render with physically convincing surfaces, featuring weathered metallic ornaments and fine strand-based hair. Lighting is cinematic key light from above and side, producing realistic specular reflections on dark bronzes and gold. The palette is desaturated naturalistic with deep neutral shadows. Foreground details are crisp with a shallow depth of field obscuring background elements.",
+      "negative": "text, watermark, 2d, flat shading, vibrant saturated colors, cartoon, low detail",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s06.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cinematic-dark-fantasy-cg/replica-s06-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cinematic-dark-fantasy-cg/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "atmospheric-candlelight-portraiture",
+      "name": "Atmospheric Candlelight Portraiture",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photographic",
+        "medium": "photograph",
+        "detail_density": "moderate",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "particle_fx": "none",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "soft",
+        "finish": "clean-smooth",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A photograph featuring physically-convincing naturalistic surfaces and realistic hair detail. Apply a warm-cool palette split with soft key light from warm point sources contrasting against dark, cool ambient surroundings. Maintain deep neutral shadows and soft, blooming highlight edges. The image relies on a clean, smooth finish with no visible noise, paired with a shallow depth of field that yields soft background bokeh.",
+      "negative": "text, watermark, 2d digital painting, stylized, vibrant saturated colors, harsh lighting, crushed blacks, motion blur, heavy dust",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s07.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/atmospheric-candlelight-portraiture/replica-s07-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/atmospheric-candlelight-portraiture/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "neon-noir-cyberpunk",
+      "name": "Neon Noir Cyberpunk",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "medium": "3d-render",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "particulate",
+        "particle_fx": "heavy-debris",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "bloom-heavy",
+        "finish": "weathered-gritty",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A photoreal 3D render with wet, reflective surfaces. High-contrast lighting uses a stark warm-cool split between glowing red emissives and deep cyan ambient sources. Blacks are deep, highlights feature strong bloom, and edges are sharp. Includes heavy falling rain particles, glossy leather, metal textures, and shallow bokeh depth of field.",
+      "negative": "text, watermark, bright daylight, dry surfaces, flat lighting, soft pencil, pastel, warm palette",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s08.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/neon-noir-cyberpunk/replica-s08-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/neon-noir-cyberpunk/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "cinematic-emissive-cyberpunk-render",
+      "name": "Cinematic Emissive Cyberpunk Render",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "medium": "3d-render",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "heavy-haze",
+        "particle_fx": "heavy-debris",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "bloom-heavy",
+        "finish": "weathered-gritty",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A 3D render with polished composite surfaces. Features crisp metallic and skin textures illuminated by high-contrast warm and cool light sources. Intense red emissive blades and muzzle flashes cast strong bloom into an atmospheric, cyan-tinted environment filled with smoke and floating sparks. Wet ground reflections capture specular highlights, while dark areas maintain deep neutral shadows. Edges are sharp with soft volumetric glow around light emitters, rendered in a crisp, cinematic focus with balanced depth.",
+      "negative": "text, watermark, traditional paint, flat shading, desaturated, monochrome, pencil drawing, low contrast",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s09.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cinematic-emissive-cyberpunk-render/replica-s09-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cinematic-emissive-cyberpunk-render/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "cinematic-macro-portrait",
+      "name": "Cinematic Macro Portrait",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photographic",
+        "medium": "photograph",
+        "detail_density": "moderate",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "none",
+        "particle_fx": "none",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp",
+        "finish": "clean-smooth",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A high-detail photograph featuring hyper-realistic skin textures and fine surface details. Lit with key warm directional light and subtle cool shadows. The palette favors natural skin tones contrasted against dark neutral tones. Edges are sharp in the focal plane, fading into a smooth, shallow depth of field bokeh. Surface rendering is crisp, with deep blacks and clear specular reflections.",
+      "negative": "text, watermark, 3d render, painting, graphic, illustration, heavy grain, soft focus, oversaturated",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s10.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cinematic-macro-portrait/replica-s10-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cinematic-macro-portrait/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "graphite-concept-sketch",
+      "name": "Graphite Concept Sketch",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "stylised-realistic",
+        "medium": "line-drawing",
+        "detail_density": "dense",
+        "surface_realism": "simplified",
+        "atmospherics": "none",
+        "particle_fx": "none",
+        "palette_strategy": "monochrome",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp",
+        "finish": "painterly-textured",
+        "focus": "deep-focus"
+      },
+      "recipe": "A graphite pencil drawing on textured paper, defined by precise contour lines and smooth tonal graphite shading. Features a strict monochrome grayscale palette spanning from deep charcoal darks to warm off-white highlights. Textures show fine paper grain and soft pencil blending. Clean crisp edges throughout, deep neutral shadow values, no atmospheric haze, no volumetric lighting, and deep focus across all elements.",
+      "negative": "text, watermark, color, photographic, glossy finish, digital render",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s23.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/graphite-concept-sketch/replica-s23-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/graphite-concept-sketch/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "gritty-cyber-noir",
+      "name": "Gritty Cyber Noir",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "medium": "3d-render",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "particle_fx": "none",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "crisp",
+        "finish": "weathered-gritty",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A photoreal 3D render featuring physically convincing wet surfaces, glossy reflections, and intense specular highlights. Shadowed low-key lighting creates deep neutral blacks, structured with a warm-cool palette split balancing amber ambient tones against vibrant neon accents. Subtle atmospheric haze softens the background while foreground subjects retain crisp detail and shallow bokeh. Overall finish is gritty and wet with tactile surface textures.",
+      "negative": "text, watermark, bright daylight, flat lighting, high-key, painterly, smooth clean surfaces",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s25.png",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/gritty-cyber-noir/replica-s25-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/gritty-cyber-noir/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "soft-backlit-photorealism",
+      "name": "Soft Backlit Photorealism",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "medium": "3d-render",
+        "detail_density": "moderate",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "particle_fx": "subtle-dust",
+        "palette_strategy": "desaturated-naturalistic",
+        "black_handling": "lifted-milky",
+        "edge_treatment": "diffused",
+        "finish": "clean-smooth",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A photoreal 3D render featuring physically convincing skin textures with soft subsurface scattering. Frame the subject in strong cool-toned backlighting that generates a bright rim effect along contours while leaving shadows soft and slightly lifted. Use a desaturated palette dominated by slate blues, cool greys, and natural skin tones. Render with a shallow depth of field, transforming background light sources into large circular bokeh spots, paired with subtle floating dust particles in the air.",
+      "negative": "text, watermark, vibrant colors, painterly textures, sharp deep focus, harsh direct lighting, line art",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s27.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/soft-backlit-photorealism/replica-s27-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/soft-backlit-photorealism/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
+    },
+    {
+      "id": "cyberpunk-neon-realism",
+      "name": "Cyberpunk Neon Realism",
+      "family": "unsorted",
+      "status": "candidate",
+      "origin": {
+        "kind": "extracted",
+        "source": "2026-08-27-artstyle-train-3",
+        "models": [
+          "google/gemini-3.6-flash",
+          "google/gemini-3.1-flash-image"
+        ]
+      },
+      "observables": {
+        "render_mode": "photoreal-cg",
+        "medium": "3d-render",
+        "detail_density": "dense",
+        "surface_realism": "physically-convincing",
+        "atmospherics": "light-haze",
+        "particle_fx": "none",
+        "palette_strategy": "warm-cool-split",
+        "black_handling": "deep-neutral",
+        "edge_treatment": "bloom-heavy",
+        "finish": "weathered-gritty",
+        "focus": "shallow-bokeh"
+      },
+      "recipe": "A 3D render featuring physically convincing metallic, glossy, and wet textures. Use a high-contrast warm-cool split lighting scheme driven by intense magenta and cyan neon light sources, generating vivid rim light and sharp specular reflections. Retain deep neutral blacks with strong neon bloom around light sources. Keep focus sharp on foreground subject with subtle background bokeh.",
+      "negative": "text, watermark, 2d, painterly, flat lighting, low contrast, monochrome, daylight",
+      "evidence": [],
+      "exemplars": [
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "sources/s33.jpg",
+          "role": "source"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cyberpunk-neon-realism/replica-s33-r1.jpg",
+          "role": "replica"
+        },
+        {
+          "kind": "extract",
+          "run": "2026-08-27-artstyle-train-3",
+          "file": "styles/cyberpunk-neon-realism/transfer-1.jpg",
+          "role": "transfer"
+        }
+      ]
     }
   ]
 }

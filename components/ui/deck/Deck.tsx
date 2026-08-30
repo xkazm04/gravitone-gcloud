@@ -78,7 +78,7 @@ export default function Deck({
               return (
                 <li key={s.id} className="flex items-center gap-1.5">
                   {i > 0 && (
-                    <span aria-hidden className="font-jetbrains text-[10px] text-white/20">
+                    <span aria-hidden className="font-jetbrains text-label text-white/20">
                       →
                     </span>
                   )}
@@ -87,7 +87,7 @@ export default function Deck({
                     disabled={!reachable(i)}
                     aria-current={activeStage ? "step" : undefined}
                     onClick={() => onNavigate(i)}
-                    className={`font-jetbrains rounded-full border px-2.5 py-1 text-[10px] tracking-[0.12em] transition disabled:cursor-not-allowed ${
+                    className={`font-jetbrains rounded-full border px-2.5 py-1 text-label tracking-[0.12em] transition disabled:cursor-not-allowed ${
                       activeStage
                         ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
                         : s.done

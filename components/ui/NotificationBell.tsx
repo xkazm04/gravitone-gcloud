@@ -170,7 +170,7 @@ export default function NotificationBell() {
             // Rose when the store is failing: an unread result and "your work is
             // not being saved" are not the same news, and the badge is the only
             // thing on screen before the panel opens.
-            className={`font-jetbrains absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-[9px] font-semibold ${
+            className={`font-jetbrains absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-label font-semibold ${
               trouble ? "bg-rose-400 text-slate-950" : "bg-cyan-300 text-slate-950"
             }`}
           >
@@ -203,7 +203,7 @@ export default function NotificationBell() {
           className="gt-float absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl focus-visible:outline-2 focus-visible:outline-offset-2"
         >
           <div className="flex items-center justify-between px-1 pb-2">
-            <p className="font-jetbrains text-[10px] tracking-[0.16em] text-white/45 uppercase">
+            <p className="font-jetbrains text-content tracking-[0.16em] text-white/45 uppercase">
               notifications
             </p>
             {count > 0 && (
@@ -211,7 +211,7 @@ export default function NotificationBell() {
                 type="button"
                 data-testid="bell-mark-all"
                 onClick={markAllRead}
-                className="font-jetbrains text-[10px] text-white/55 transition hover:text-white/85"
+                className="font-jetbrains text-label text-white/55 transition hover:text-white/85"
               >
                 mark all read
               </button>
@@ -226,25 +226,25 @@ export default function NotificationBell() {
               className="mb-2 rounded-xl border border-rose-400/35 bg-rose-400/[0.07] px-3 py-2"
             >
               <div className="flex items-start justify-between gap-2">
-                <p className="font-jetbrains text-[10px] tracking-[0.12em] text-rose-200 uppercase">
+                <p className="font-jetbrains text-content tracking-[0.12em] text-rose-200 uppercase">
                   storage {trouble.op} failed
                 </p>
                 <button
                   type="button"
                   onClick={clearStorageTrouble}
-                  className="font-jetbrains shrink-0 text-[10px] text-white/55 transition hover:text-white/85"
+                  className="font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"
                 >
                   dismiss
                 </button>
               </div>
-              <p className="mt-1 text-[12px] leading-snug text-rose-100/90">
+              <p className="mt-1 text-content leading-snug text-rose-100/90">
                 {TROUBLE_WORD[trouble.kind]}
               </p>
               {/* WHERE it happened, and what the browser actually said. The step
                   is the difference between "a notebook did not save" and "a
                   theme sheet did not save", and the raw message is the only
                   thing that survives from studioDb's own classification. */}
-              <p className="font-jetbrains mt-1 truncate text-[10px] text-white/50">
+              <p className="font-jetbrains mt-1 truncate text-content text-white/50">
                 {trouble.phase} · {trouble.message}
               </p>
             </div>
@@ -259,12 +259,12 @@ export default function NotificationBell() {
                   className="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.04] px-3 py-2"
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span className="font-jetbrains text-[10px] tracking-[0.12em] text-cyan-200 uppercase">
+                    <span className="font-jetbrains text-label tracking-[0.12em] text-cyan-200 uppercase">
                       {j.kind} running
                     </span>
-                    <span className="font-jetbrains text-[10px] text-white/50">{elapsed(j)}</span>
+                    <span className="font-jetbrains text-label text-white/50">{elapsed(j)}</span>
                   </div>
-                  <p className="mt-1 truncate text-[12px] text-slate-300">{j.label}</p>
+                  <p className="mt-1 truncate text-content text-slate-300">{j.label}</p>
                   {/* A DRIVEN job has no progress fraction — nobody knows how far
                       along a minutes-long model call is, and `j.progress` sits at
                       0. Drawing a determinate track off that number would report
@@ -296,11 +296,11 @@ export default function NotificationBell() {
                   data-testid="bell-interrupted"
                   className="rounded-xl border border-amber-400/30 bg-amber-400/[0.05] px-3 py-2"
                 >
-                  <p className="font-jetbrains text-[10px] tracking-[0.12em] text-amber-200 uppercase">
+                  <p className="font-jetbrains text-content tracking-[0.12em] text-amber-200 uppercase">
                     {j.kind} interrupted
                   </p>
-                  <p className="mt-1 truncate text-[12px] text-slate-300">{j.label}</p>
-                  <p className="font-jetbrains mt-1 text-[10px] leading-snug text-white/45">
+                  <p className="mt-1 truncate text-content text-slate-300">{j.label}</p>
+                  <p className="font-jetbrains mt-1 text-content leading-snug text-white/45">
                     The page reloaded while it was running — start it again.
                   </p>
                 </div>
@@ -309,7 +309,7 @@ export default function NotificationBell() {
           )}
 
           {count === 0 ? (
-            <p className="px-1 py-3 text-[12px] text-white/50">
+            <p className="px-1 py-3 text-content text-white/50">
               {trouble
                 ? "No run has reported anything — the failure above is the storage layer itself."
                 : running.length
@@ -332,7 +332,7 @@ export default function NotificationBell() {
                 >
                   <div className="flex items-start justify-between gap-2">
                     <p
-                      className={`font-jetbrains text-[10px] tracking-[0.12em] uppercase ${
+                      className={`font-jetbrains text-label tracking-[0.12em] uppercase ${
                         e.ok ? "text-cyan-200" : "text-rose-200"
                       }`}
                     >
@@ -341,17 +341,17 @@ export default function NotificationBell() {
                     <button
                       type="button"
                       onClick={() => markRead(e.id)}
-                      className="font-jetbrains shrink-0 text-[10px] text-white/55 transition hover:text-white/85"
+                      className="font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"
                     >
                       dismiss
                     </button>
                   </div>
-                  <p className="mt-1 text-[12px] leading-snug text-slate-300">{e.detail}</p>
+                  <p className="mt-1 text-content leading-snug text-slate-300">{e.detail}</p>
                   {/* What the user asked for, in their own words. Two dead
                       ternaries used to sit in front of this — both branches
                       `""`, on a live component — so all they ever did was cost
                       a reader the time to work out that they did nothing. */}
-                  <p className="font-jetbrains mt-1 truncate text-[10px] text-white/50">
+                  <p className="font-jetbrains mt-1 truncate text-content text-white/50">
                     {`“${eventLabel(e.jobId, jobs)}”`}
                   </p>
                 </li>

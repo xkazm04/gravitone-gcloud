@@ -46,12 +46,12 @@ export default function EvidenceLog() {
         <Head>constraints — what the script may not say</Head>
         {open.map((u) => (
           <div key={u.id} data-testid={`evidence-constraint-${u.id}`} className="rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
-            <p className="text-sm text-slate-200">{u.what}</p>
-            <p className="font-jetbrains mt-1.5 text-[12px] text-amber-200/90">{u.impact}</p>
+            <p className="text-content text-slate-200">{u.what}</p>
+            <p className="font-jetbrains mt-1.5 text-content text-amber-200/90">{u.impact}</p>
           </div>
         ))}
         {resolved.length > 0 && (
-          <p className="font-jetbrains pt-1 text-[11px] leading-relaxed text-emerald-200/70">
+          <p className="font-jetbrains pt-1 text-content leading-relaxed text-emerald-200/70">
             {resolved.length} further constraint{resolved.length === 1 ? " was" : "s were"} lifted by
             follow-up research — kept in the notebook so a script written under the old rule can be
             spotted as over-hedged.
@@ -97,7 +97,7 @@ export default function EvidenceLog() {
             literal". One gap is quoted because this is the summary line; the
             notebook's own gaps section lists them all. */}
         {NOTEBOOK_COUNTS.gaps > 0 && (
-          <p className="font-jetbrains pt-1 text-[11px] leading-relaxed text-amber-200/70">
+          <p className="font-jetbrains pt-1 text-content leading-relaxed text-amber-200/70">
             {NOTEBOOK_COUNTS.gaps} declared gap{NOTEBOOK_COUNTS.gaps === 1 ? "" : "s"} — {n.researchGaps[0]}
             {NOTEBOOK_COUNTS.gaps > 1 ? " See the notebook for the rest." : " See the notebook."}
           </p>
@@ -109,7 +109,7 @@ export default function EvidenceLog() {
 
 function Head({ children }: { children: React.ReactNode }) {
   return (
-    <h3 className="font-jetbrains border-b border-white/8 pb-1.5 text-[11px] tracking-[0.18em] text-cyan-300/80 uppercase">
+    <h3 className="font-jetbrains border-b border-white/8 pb-1.5 text-label tracking-[0.18em] text-cyan-300/80 uppercase">
       {children}
     </h3>
   );
@@ -128,7 +128,7 @@ function Tile({
 }) {
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3">
-      <p className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">{label}</p>
+      <p className="font-jetbrains text-content tracking-[0.16em] text-white/35 uppercase">{label}</p>
       <p
         className={`font-instrument mt-0.5 text-2xl ${
           tone === "bad" ? "text-rose-300" : tone === "warn" ? "text-amber-200" : "text-white"
@@ -136,7 +136,7 @@ function Tile({
       >
         {value}
       </p>
-      <p className="font-jetbrains mt-0.5 text-[11px] text-white/40">{note}</p>
+      <p className="font-jetbrains mt-0.5 text-content text-white/40">{note}</p>
     </div>
   );
 }

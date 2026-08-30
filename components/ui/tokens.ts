@@ -207,3 +207,12 @@ export function tokensCss(): string {
     .join("");
   return `:root{${decls}}`;
 }
+
+// ── TYPE SCALE, BY REFERENCE ────────────────────────────────────────────────
+// Font SIZES are tokens too, but they live where Tailwind can compile them:
+// app/globals.css declares `--text-content` (1rem, anything the user reads)
+// and `--text-label` (0.875rem, secondary short labels — the floor) in
+// @theme, and pipeline/check-type-scale.mjs fails `verify` on anything
+// smaller. Declared there rather than here for the same reason the colour
+// vars are emitted by <GravitoneTokens>: each token lives in the one place
+// the machinery that enforces it can read.

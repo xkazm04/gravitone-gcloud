@@ -255,15 +255,15 @@ export default function FoundryView() {
               <button
                 key={t.id}
                 onClick={() => setTab(t.id)}
-                className={`font-jetbrains rounded-full border px-3.5 py-1.5 text-[12px] transition ${
-                  t.id === tab ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/50 hover:text-white/80"
+                className={`font-jetbrains rounded-full border px-3.5 py-1.5 text-label transition ${
+                  t.id === tab ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/65 hover:text-white/80"
                 }`}
               >
                 {t.label}
               </button>
             ))}
           </div>
-          <p className="font-hanken mt-3 max-w-xl text-sm text-slate-400">{active.blurb}</p>
+          <p className="font-hanken mt-3 max-w-xl text-content text-slate-400">{active.blurb}</p>
         </header>
 
         <section className="mt-6">
@@ -276,8 +276,8 @@ export default function FoundryView() {
           ) : (
             <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
               <aside>
-                <div className="font-jetbrains text-[11px] tracking-[0.14em] text-white/45 uppercase">runs</div>
-                {runsError && <p className="font-jetbrains mt-2 text-[11px] text-rose-200">{runsError}</p>}
+                <div className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">runs</div>
+                {runsError && <p className="font-jetbrains mt-2 text-content text-rose-200">{runsError}</p>}
                 {runs && runs.length === 0 && <ForgeHint />}
                 <ul className="mt-2 flex flex-col gap-1">
                   {runs?.map((r) => (
@@ -288,8 +288,8 @@ export default function FoundryView() {
                           r.id === selected ? "border-cyan-400/40 bg-cyan-400/10" : "border-white/8 hover:bg-white/[0.03]"
                         }`}
                       >
-                        <div className="font-jetbrains truncate text-[12px] text-white/90">{r.id}</div>
-                        <div className="font-jetbrains mt-0.5 text-[10px] text-white/45">
+                        <div className="font-jetbrains truncate text-label text-white/90">{r.id}</div>
+                        <div className="font-jetbrains mt-0.5 text-label text-white/60">
                           {STATUS_WORD[r.status]}
                           {LIVE.includes(r.status) && r.progress.total > 0 ? ` ${r.progress.done}/${r.progress.total}` : ""}
                           {" · "}
@@ -302,7 +302,7 @@ export default function FoundryView() {
               </aside>
 
               <div>
-                {!run && selected && <p className="font-jetbrains text-[12px] text-white/40">loading…</p>}
+                {!run && selected && <p className="font-jetbrains text-content text-white/60">loading…</p>}
                 {run && (
                   <>
                     <StatusStrip run={run} />
@@ -328,8 +328,8 @@ export default function FoundryView() {
 
         {run && tab === "cull" && (
           <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
-            <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
-              <div className="font-jetbrains flex flex-wrap gap-4 text-[11px] text-white/60">
+            <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3">
+              <div className="font-jetbrains flex flex-wrap gap-4 text-label text-white/60">
                 <span>
                   <span className="text-emerald-200">{counts.kept}</span> kept
                 </span>
@@ -339,20 +339,20 @@ export default function FoundryView() {
                 <span>
                   <span className="text-white/90">{counts.undecided}</span> undecided
                 </span>
-                <span className={save === "error" ? "text-rose-200" : "text-white/35"}>
+                <span className={save === "error" ? "text-rose-200" : "text-white/55"}>
                   {readOnly ? "committed · verdicts are final" : save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
                 </span>
-                {!readOnly && <span className="hidden text-white/30 md:inline">arrows move · K keep · X reject · U clear · Enter compare</span>}
+                {!readOnly && <span className="hidden text-white/55 md:inline">arrows move · K keep · X reject · U clear · Enter compare</span>}
               </div>
               {readOnly ? (
-                <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-[11px] tracking-[0.14em] text-emerald-200 uppercase">
+                <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">
                   committed
                 </span>
               ) : (
                 <Button
                   disabled={run.status !== "done" || counts.kept === 0}
                   onClick={() => setConfirm(true)}
-                  className="cursor-pointer px-5 py-2 text-[12px] disabled:cursor-not-allowed"
+                  className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
                   title={run.status !== "done" ? `Run is ${STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one candidate first" : "Delete everything not kept and write the ledger"}
                 >
                   Commit the cull
@@ -387,18 +387,18 @@ export default function FoundryView() {
               <button
                 onClick={doCommit}
                 disabled={committing}
-                className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-[12px] text-rose-200 transition hover:bg-rose-400/20 disabled:opacity-50"
+                className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20 disabled:opacity-50"
               >
                 {committing ? "committing…" : `Delete ${counts.rejected + counts.undecided}, keep ${counts.kept}`}
               </button>
             </div>
           }
         >
-          <p className="font-hanken text-sm text-slate-300">
+          <p className="font-hanken text-content text-slate-300">
             <span className="text-emerald-200">{counts.kept}</span> kept candidates stay on disk untouched.{" "}
             <span className="text-rose-200">{counts.rejected}</span> rejected and <span className="text-white">{counts.undecided}</span> undecided
             are deleted — undecided counts as rejected: the cull is what you chose, not what you skipped. Every decided candidate is written to{" "}
-            <code className="font-jetbrains text-[11px] text-white/70">pipeline/foundry/ledger.json</code> and the style catalogue. This cannot be undone.
+            <code className="font-jetbrains text-label text-white/70">pipeline/foundry/ledger.json</code> and the style catalogue. This cannot be undone.
           </p>
         </Modal>
       </main>
@@ -412,7 +412,7 @@ function StatusStrip({ run }: { run: RunDetail["run"] }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-2.5">
       <span
-        className={`font-jetbrains rounded-full border px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase ${
+        className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.14em] uppercase ${
           run.status === "committed"
             ? "border-emerald-400/40 text-emerald-200"
             : run.status === "failed"
@@ -425,16 +425,16 @@ function StatusStrip({ run }: { run: RunDetail["run"] }) {
         {STATUS_WORD[run.status]}
         {live && run.progress.total > 0 ? ` ${run.progress.done}/${run.progress.total}` : ""}
       </span>
-      <span className="font-jetbrains text-[11px] text-white/50">
+      <span className="font-jetbrains text-label text-white/65">
         {run.scenes.length} scene{run.scenes.length === 1 ? "" : "s"} · {run.plan.styles.length} styles · {run.plan.mechanisms.length} mechanisms · {run.candidates.length} candidates
       </span>
       {run.committed && (
-        <span className="font-jetbrains text-[11px] text-white/50">
+        <span className="font-jetbrains text-label text-white/65">
           committed: {run.committed.kept} kept, {run.committed.deleted} deleted
         </span>
       )}
-      {run.error && <span className="font-jetbrains text-[11px] text-rose-200">{run.error}</span>}
-      {live && last && <span className="font-jetbrains ml-auto truncate text-[10px] text-white/35">{last.msg}</span>}
+      {run.error && <span className="font-jetbrains text-label text-rose-200">{run.error}</span>}
+      {live && last && <span className="font-jetbrains ml-auto truncate text-label text-white/55">{last.msg}</span>}
     </div>
   );
 }
@@ -442,10 +442,10 @@ function StatusStrip({ run }: { run: RunDetail["run"] }) {
 function CommitReport({ result }: { result: CommitResult }) {
   return (
     <details open className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04]">
-      <summary className="font-jetbrains cursor-pointer px-4 py-2 text-[11px] tracking-[0.14em] text-emerald-200 uppercase">
+      <summary className="font-jetbrains cursor-pointer px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">
         committed · {result.kept} kept · {result.deleted} deleted · findings.md written
       </summary>
-      <pre className="font-jetbrains max-h-96 overflow-auto px-4 pb-4 text-[11px] leading-relaxed whitespace-pre-wrap text-slate-300">{result.findings}</pre>
+      <pre className="font-jetbrains max-h-96 overflow-auto px-4 pb-4 text-content leading-relaxed whitespace-pre-wrap text-slate-300">{result.findings}</pre>
     </details>
   );
 }
@@ -453,8 +453,8 @@ function CommitReport({ result }: { result: CommitResult }) {
 function ForgeHint() {
   return (
     <div className="mt-2 rounded-lg border border-white/8 bg-white/[0.02] p-3">
-      <p className="font-hanken text-[12px] text-slate-400">No runs yet. Forge one from a plan:</p>
-      <pre className="font-jetbrains mt-2 text-[10px] leading-relaxed whitespace-pre-wrap text-white/60">{`cd pipeline/foundry
+      <p className="font-hanken text-content text-slate-400">No runs yet. Forge one from a plan:</p>
+      <pre className="font-jetbrains mt-2 text-content leading-relaxed whitespace-pre-wrap text-white/60">{`cd pipeline/foundry
 python forge.py plans/dry-run.json`}</pre>
     </div>
   );

@@ -14,7 +14,7 @@ export function H({ id, children }: { id: string; children: React.ReactNode }) {
     <h3
       id={`nb-${id}`}
       tabIndex={-1}
-      className="font-jetbrains scroll-mt-2 border-b border-white/8 pb-1.5 text-[11px] tracking-[0.18em] text-cyan-300/80 uppercase focus-visible:outline-2 focus-visible:outline-offset-4"
+      className="font-jetbrains scroll-mt-2 border-b border-white/8 pb-1.5 text-label tracking-[0.18em] text-cyan-300/80 uppercase focus-visible:outline-2 focus-visible:outline-offset-4"
     >
       {children}
     </h3>

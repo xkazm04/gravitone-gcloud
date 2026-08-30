@@ -28,11 +28,11 @@ export default function NoteComposer({ cardId, title }: { cardId: string; title?
       data-testid={`composer-${cardId}`}
       className="rounded-xl border border-amber-400/30 bg-amber-400/[0.05] p-2.5"
     >
-      <p className="font-jetbrains text-[10px] text-amber-200/70">{cardId}</p>
-      {title && <p className="mt-0.5 mb-1.5 text-[12px] leading-snug text-slate-300">{title}</p>}
+      <p className="font-jetbrains text-content text-amber-200/70">{cardId}</p>
+      {title && <p className="mt-0.5 mb-1.5 text-content leading-snug text-slate-300">{title}</p>}
 
       {api.running ? (
-        <p className="font-jetbrains text-[11px] text-amber-200/90">notes locked while recalibrating</p>
+        <p className="font-jetbrains text-content text-amber-200/90">notes locked while recalibrating</p>
       ) : (
         <>
           <PresetSelect cardId={cardId} onPick={(k) => add(k)} />
@@ -43,12 +43,12 @@ export default function NoteComposer({ cardId, title }: { cardId: string; title?
               onChange={(e) => setFree(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && free.trim() && add("custom", free.trim())}
               placeholder="something else…"
-              className="font-hanken min-w-0 flex-1 rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-[12px] text-slate-200 placeholder:text-white/25"
+              className="font-hanken min-w-0 flex-1 rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-content text-slate-200 placeholder:text-white/25"
             />
             <button
               onClick={() => free.trim() && add("custom", free.trim())}
               disabled={!free.trim()}
-              className="font-jetbrains rounded-lg border border-amber-400/35 px-2 py-1 text-[10px] text-amber-100/80 transition hover:bg-amber-400/10 disabled:opacity-30"
+              className="font-jetbrains rounded-lg border border-amber-400/35 px-2 py-1 text-label text-amber-100/80 transition hover:bg-amber-400/10 disabled:opacity-30"
             >
               add
             </button>
@@ -73,10 +73,10 @@ export function NoteList({ cardId, compact }: { cardId: string; compact?: boolea
     <ul className={compact ? "space-y-0.5" : "mt-2 space-y-0.5 border-t border-amber-400/20 pt-1.5"}>
       {mine.map((n) => (
         <li key={n.id} className="flex items-start gap-1.5">
-          <span aria-hidden className="font-jetbrains mt-px text-[10px] text-amber-300">
+          <span aria-hidden className="font-jetbrains mt-px text-label text-amber-300">
             •
           </span>
-          <span className="font-jetbrains min-w-0 flex-1 text-[11px] leading-snug text-amber-100/85">
+          <span className="font-jetbrains min-w-0 flex-1 text-label leading-snug text-amber-100/85">
             {n.kind === "custom" ? n.text : NOTE_KINDS.find((k) => k.kind === n.kind)?.label}
             {n.kind === "custom" && <span className="ml-1 text-white/30">· no weight change</span>}
           </span>
@@ -84,7 +84,7 @@ export function NoteList({ cardId, compact }: { cardId: string; compact?: boolea
             onClick={() => api.removeNote(n.id)}
             disabled={api.running}
             aria-label="remove note"
-            className="font-jetbrains shrink-0 text-[10px] text-white/25 transition hover:text-rose-300 disabled:opacity-30"
+            className="font-jetbrains shrink-0 text-label text-white/25 transition hover:text-rose-300 disabled:opacity-30"
           >
             ✕
           </button>

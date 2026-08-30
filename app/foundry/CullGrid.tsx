@@ -146,34 +146,34 @@ export function CullGrid({
               <img src={fileUrl(run.id, scene.source)} alt={scene.note || scene.id} className="w-full" />
             </div>
             <div className="mt-2">
-              <div className="font-jetbrains text-[11px] tracking-[0.14em] text-cyan-300 uppercase">source · {scene.id}</div>
-              <p className="font-hanken mt-1 text-[12px] leading-snug text-slate-400">{scene.note}</p>
+              <div className="font-jetbrains text-label tracking-[0.14em] text-cyan-300 uppercase">source · {scene.id}</div>
+              <p className="font-hanken mt-1 text-content leading-snug text-slate-400">{scene.note}</p>
               <div className="mt-2 flex flex-wrap gap-1">
                 {CRAFT_SUMMARY.map((f) => {
                   const v = scene.annotation?.[f];
                   return typeof v === "string" ? (
-                    <span key={f} className="font-jetbrains rounded border border-white/10 px-1.5 py-0.5 text-[9px] text-white/60">
+                    <span key={f} className="font-jetbrains rounded border border-white/10 px-1.5 py-0.5 text-label text-white/60">
                       {f.replace(/_/g, " ")}: <span className="text-white/85">{v}</span>
                     </span>
                   ) : null;
                 })}
               </div>
               {scene.annotation_from && (
-                <p className="font-jetbrains mt-2 text-[9px] text-white/35">annotation from {scene.annotation_from}</p>
+                <p className="font-jetbrains mt-2 text-content text-white/55">annotation from {scene.annotation_from}</p>
               )}
             </div>
           </aside>
 
           <div className="overflow-x-auto">
             <div
-              className="grid min-w-[520px] gap-2"
-              style={{ gridTemplateColumns: `150px repeat(${columns.length}, minmax(180px, 1fr))` }}
+              className="grid min-w-[560px] gap-2"
+              style={{ gridTemplateColumns: `170px repeat(${columns.length}, minmax(200px, 1fr))` }}
             >
               <div />
               {columns.map((col) => (
                 <div key={`${col.mechanism.id}-${col.seed}`} className="px-1 pb-1">
-                  <div className="font-jetbrains text-[11px] tracking-[0.14em] text-white/70 uppercase">{col.mechanism.id}</div>
-                  <div className="font-hanken text-[11px] leading-snug text-slate-500">
+                  <div className="font-jetbrains text-label tracking-[0.14em] text-white/70 uppercase">{col.mechanism.id}</div>
+                  <div className="font-hanken text-content leading-snug text-slate-500">
                     {col.mechanism.label ?? (col.mechanism.reference ? "reference-conditioned" : "words only")}
                     {run.plan.seeds.length > 1 ? ` · seed ${col.seed}` : ""}
                   </div>
@@ -191,8 +191,8 @@ export function CullGrid({
                 const rowAll = (v: Verdict) => rowLive.length > 0 && rowVerdicts.every((x) => x === v);
                 return [
                   <div key={`${sid}-head`} className="flex flex-col justify-center pr-2">
-                    <div className="font-hanken text-[13px] text-white">{style?.name ?? sid}</div>
-                    <div className="font-jetbrains text-[10px] text-white/45">
+                    <div className="font-hanken text-content text-white">{style?.name ?? sid}</div>
+                    <div className="font-jetbrains text-label text-white/60">
                       {style?.family} · {style?.origin.kind}
                       {style?.origin.source ? ` (${style.origin.source})` : ""}
                     </div>
@@ -201,8 +201,8 @@ export function CullGrid({
                         <button
                           onClick={() => onVerdict(rowLive, "keep")}
                           title="Keep the whole row"
-                          className={`font-jetbrains cursor-pointer rounded border px-1.5 py-0.5 text-[9px] transition ${
-                            rowAll("keep") ? "border-emerald-300/70 bg-emerald-300/20 text-emerald-100" : "border-white/15 text-white/50 hover:border-emerald-300/50 hover:text-emerald-200"
+                          className={`font-jetbrains cursor-pointer rounded border px-1.5 py-0.5 text-label transition ${
+                            rowAll("keep") ? "border-emerald-300/70 bg-emerald-300/20 text-emerald-100" : "border-white/15 text-white/65 hover:border-emerald-300/50 hover:text-emerald-200"
                           }`}
                         >
                           row K
@@ -210,8 +210,8 @@ export function CullGrid({
                         <button
                           onClick={() => onVerdict(rowLive, "reject")}
                           title="Reject the whole row"
-                          className={`font-jetbrains cursor-pointer rounded border px-1.5 py-0.5 text-[9px] transition ${
-                            rowAll("reject") ? "border-rose-400/70 bg-rose-400/20 text-rose-100" : "border-white/15 text-white/50 hover:border-rose-400/50 hover:text-rose-200"
+                          className={`font-jetbrains cursor-pointer rounded border px-1.5 py-0.5 text-label transition ${
+                            rowAll("reject") ? "border-rose-400/70 bg-rose-400/20 text-rose-100" : "border-white/15 text-white/65 hover:border-rose-400/50 hover:text-rose-200"
                           }`}
                         >
                           row X
@@ -278,7 +278,7 @@ function Tile({
         // eslint-disable-next-line @next/next/no-img-element -- local disk through the file seam
         <img src={fileUrl(run, candidate.file)} alt={candidate.id} className="h-full w-full cursor-zoom-in object-cover" loading="lazy" onClick={onOpen} />
       ) : (
-        <div className="font-jetbrains flex h-full w-full items-center justify-center text-[10px] text-white/35">
+        <div className="font-jetbrains flex h-full w-full items-center justify-center text-label text-white/55">
           {candidate?.deleted ? "deleted" : candidate?.status === "failed" ? `failed · ${candidate.error?.slice(0, 40)}` : candidate?.status ?? "—"}
         </div>
       )}
@@ -307,7 +307,7 @@ function Tile({
               onVerdict("keep");
             }}
             title="Keep (K)"
-            className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold transition ${
+            className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-label font-semibold transition ${
               verdict === "keep" ? "bg-emerald-300 text-slate-950 ring-2 ring-emerald-200/70" : "bg-emerald-300/80 text-slate-950 hover:bg-emerald-300"
             }`}
           >
@@ -320,7 +320,7 @@ function Tile({
               onVerdict("reject");
             }}
             title="Reject (X)"
-            className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-[10px] font-semibold transition ${
+            className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-label font-semibold transition ${
               verdict === "reject" ? "bg-rose-400 text-slate-950 ring-2 ring-rose-200/70" : "bg-rose-400/80 text-slate-950 hover:bg-rose-400"
             }`}
           >

@@ -51,7 +51,7 @@ export default function MatrixSpend({
   return (
     <div data-testid="matrix-spend">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="font-hanken max-w-xl text-sm text-slate-400">
+        <p className="font-hanken max-w-xl text-content text-slate-400">
           Every card as a share of the runtime it was given, on one scale. Cards no render used sit
           at zero rather than being hidden — an empty channel is still a decision.
         </p>
@@ -60,7 +60,7 @@ export default function MatrixSpend({
             data-testid="sort-change"
             aria-pressed={sort === "change"}
             onClick={() => setSort((s) => (s === "change" ? "spend" : "change"))}
-            className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] tracking-[0.1em] transition ${
+            className={`font-jetbrains rounded-full border px-3 py-1 text-label tracking-[0.1em] transition ${
               sort === "change"
                 ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
                 : "border-white/12 text-white/45 hover:text-white/75"
@@ -75,7 +75,7 @@ export default function MatrixSpend({
         {RENDERS.map((r, i) => {
           const c = coverageIn(version, r.id, ids);
           return (
-            <span key={r.id} className="font-jetbrains flex items-center gap-1.5 text-[11px]">
+            <span key={r.id} className="font-jetbrains flex items-center gap-1.5 text-label">
               <span className={`h-2 w-2 rounded-sm ${SEG[i]}`} aria-hidden />
               <span className="text-white/65">{r.engineLabel}</span>
               <span className={c.overrunS ? "text-amber-200" : "text-white/30"}>
@@ -160,13 +160,13 @@ function SpendRow({
         </div>
 
         <span
-          className={`font-jetbrains w-10 shrink-0 text-right text-[11px] ${total ? "text-white/60" : "text-white/25"}`}
+          className={`font-jetbrains w-10 shrink-0 text-right text-label ${total ? "text-white/60" : "text-white/25"}`}
         >
           {secs(total)}
         </span>
       </div>
 
-      <p className="pr-2 pl-6 text-[12px] leading-snug text-slate-300">{card.title}</p>
+      <p className="pr-2 pl-6 text-content leading-snug text-slate-300">{card.title}</p>
     </li>
   );
 }

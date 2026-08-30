@@ -47,7 +47,7 @@ export function ScoreChip({ label, value }: { label: string; value: number | nul
           ? "border-white/15 text-white/70"
           : "border-rose-400/30 text-rose-200/90";
   return (
-    <span className={`font-jetbrains rounded border bg-black/50 px-1 py-0.5 text-[9px] tracking-wide ${tone}`}>
+    <span className={`font-jetbrains rounded border bg-black/50 px-1 py-0.5 text-label tracking-wide ${tone}`}>
       {label} {pct(value)}
     </span>
   );
@@ -56,13 +56,13 @@ export function ScoreChip({ label, value }: { label: string; value: number | nul
 export function VetoChip({ candidate }: { candidate: Candidate }) {
   if (candidate.grade?.veto?.has_text)
     return (
-      <span className="font-jetbrains rounded border border-rose-400/50 bg-rose-400/20 px-1 py-0.5 text-[9px] font-semibold tracking-wide text-rose-100">
+      <span className="font-jetbrains rounded border border-rose-400/50 bg-rose-400/20 px-1 py-0.5 text-label font-semibold tracking-wide text-rose-100">
         TEXT
       </span>
     );
   if (candidate.status === "unmeasured")
     return (
-      <span className="font-jetbrains rounded border border-amber-400/40 bg-amber-400/15 px-1 py-0.5 text-[9px] tracking-wide text-amber-100">
+      <span className="font-jetbrains rounded border border-amber-400/40 bg-amber-400/15 px-1 py-0.5 text-label tracking-wide text-amber-100">
         unmeasured
       </span>
     );
@@ -72,11 +72,11 @@ export function VetoChip({ candidate }: { candidate: Candidate }) {
 export function VerdictStamp({ verdict }: { verdict: Verdict | undefined }) {
   if (!verdict) return null;
   return verdict === "keep" ? (
-    <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-emerald-300/90 px-1.5 py-0.5 text-[9px] font-semibold text-slate-950">
+    <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-emerald-300/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
       KEPT
     </span>
   ) : (
-    <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-rose-400/90 px-1.5 py-0.5 text-[9px] font-semibold text-slate-950">
+    <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-rose-400/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
       REJECTED
     </span>
   );
@@ -93,5 +93,5 @@ export function creditTone(v: number | undefined): string {
   if (v === 1) return "text-emerald-300";
   if (v === 0.5) return "text-amber-300";
   if (v === 0) return "text-rose-300";
-  return "text-white/40";
+  return "text-white/60";
 }

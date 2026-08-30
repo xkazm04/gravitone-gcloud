@@ -9,6 +9,12 @@ allowed-tools: Read, Write, Edit, Bash, PowerShell, Glob, Grep, Monitor
 
 # Train Style — extract, replicate, transfer, keep
 
+**The official path (operator's decision, 2026-08-28, after three measured runs):** GROUPED extraction — the
+default `grouping: "engine"` — with the readbacks on the cloud eye and the synthesis turn on the LOCAL reasoning
+model (rung 1 of the text ladder). `--singletons` is the diagnostic mode: best per-source replication, recipes that
+overfit their one image; use it when grouping keeps failing or to build merge evidence for a cull, not as the
+default.
+
 One logical layer serves two postures. In the hosted app the browser drives
 `lib/foundry/extract/engine.ts` one unit per request; here the CLI
 `pipeline/foundry/extract.mts` drives the same engine in-process. Nothing in
@@ -64,7 +70,7 @@ The engine's scores are a grader's — a pre-filter, never a verdict. Before the
 
 ## Step 3 — the cull
 
-Prefer the app: `http://localhost:3001/foundry` → **Extract** → the run. ↑↓ rows, **K** keep, **X** throw, **U** clear, any tile zooms with its prompt/critique/readback behind it, then **Learn the kept styles**. The dev server is usually already on :3001 (repo memory); do not start a second one.
+Prefer the app: `http://localhost:3001/foundry` → **Extract** → the run. Same keys as the Cull: ↑↓ move, **K** keep, **X** reject, **U** clear, **Enter** inspects the focused row (any tile zooms with its prompt/critique/readback behind it), then **Commit the kept styles**. The dev server is usually already on :3001 (repo memory); do not start a second one.
 
 Headless, when the user has decided from your read:
 
@@ -72,7 +78,7 @@ Headless, when the user has decided from your read:
 npx tsx pipeline/foundry/extract.mts --commit <run-id> --keep <id,id> --reject <id>
 ```
 
-Either way the kept styles land in `pipeline/foundry/styles.json` as `candidate` entries with `origin.kind: "extracted"` and `exemplars`, and appear on `/foundry` → Styles. Undecided counts as thrown. Nothing is deleted.
+Either way the kept styles land in `pipeline/foundry/styles.json` as `candidate` entries with `origin.kind: "extracted"` and `exemplars`, and appear on `/foundry` → Styles. Undecided counts as rejected. Nothing is deleted.
 
 ## Step 4 — harden
 

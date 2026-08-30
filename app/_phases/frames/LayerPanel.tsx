@@ -35,7 +35,7 @@ export default function LayerPanel({
 }) {
   return (
     <div className="space-y-2">
-      <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/40 uppercase">layers</p>
+      <p className="font-jetbrains text-content tracking-[0.14em] text-white/40 uppercase">layers</p>
 
       <Group label="texts">
         {[...frame.texts].reverse().map((t, i, arr) => (
@@ -80,7 +80,7 @@ export default function LayerPanel({
       </Group>
 
       <Group label="plate">
-        <p className="font-jetbrains px-1 py-1 text-[11px] text-white/40">
+        <p className="font-jetbrains px-1 py-1 text-content text-white/40">
           {frame.plate.state === "ready" ? "rendered · always the ground" : "not rendered"}
         </p>
       </Group>
@@ -95,15 +95,15 @@ export default function LayerPanel({
         <div className="space-y-1 px-1 py-1">
           {isAuthoredClip(frame) ? (
             <>
-              <p className="font-jetbrains flex items-center gap-1.5 text-[11px] text-white/40">
+              <p className="font-jetbrains flex items-center gap-1.5 text-content text-white/40">
                 authored ·<ClipStatusWord status={frame.clip.status} />
               </p>
-              <p className="font-hanken text-[11px] leading-snug text-white/60">{frame.clip.motion}</p>
+              <p className="font-hanken text-content leading-snug text-white/60">{frame.clip.motion}</p>
             </>
           ) : (
-            <p className="font-jetbrains text-[11px] text-white/40">no motion authored</p>
+            <p className="font-jetbrains text-content text-white/40">no motion authored</p>
           )}
-          <p className="font-jetbrains text-[10px] leading-snug text-white/25">
+          <p className="font-jetbrains text-content leading-snug text-white/25">
             no video engine is wired here — the render seam is unbuilt
           </p>
         </div>
@@ -115,14 +115,14 @@ export default function LayerPanel({
 function Group({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="rounded-lg border border-white/8 p-1.5">
-      <p className="font-jetbrains mb-1 px-1 text-[9px] tracking-[0.12em] text-white/30 uppercase">{label}</p>
+      <p className="font-jetbrains mb-1 px-1 text-content tracking-[0.12em] text-white/30 uppercase">{label}</p>
       <div className="space-y-0.5">{children}</div>
     </div>
   );
 }
 
 const Empty = ({ children }: { children: React.ReactNode }) => (
-  <p className="px-1 py-1 text-[11px] text-white/25">{children}</p>
+  <p className="px-1 py-1 text-content text-white/25">{children}</p>
 );
 
 function Row({
@@ -166,12 +166,12 @@ function Row({
         aria-pressed={selected}
         className="flex min-w-0 flex-1 items-center gap-1.5 py-0.5 text-left"
       >
-        <span className="font-jetbrains w-11 shrink-0 text-[9px] text-white/35">{kind}</span>
-        <span className={`font-hanken truncate text-[12px] ${selected ? "text-cyan-100" : "text-white/75"}`}>
+        <span className="font-jetbrains w-11 shrink-0 text-label text-white/35">{kind}</span>
+        <span className={`font-hanken truncate text-content ${selected ? "text-cyan-100" : "text-white/75"}`}>
           {name}
         </span>
         {warn && (
-          <span className="shrink-0 text-[9px] text-amber-300" title="figure with no fact behind it">
+          <span className="shrink-0 text-label text-amber-300" title="figure with no fact behind it">
             ●
           </span>
         )}

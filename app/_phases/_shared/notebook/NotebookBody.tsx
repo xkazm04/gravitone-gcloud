@@ -64,7 +64,7 @@ export default function NotebookBody() {
     <div className="space-y-7">
       <nav
         aria-label="Notebook sections"
-        className="font-jetbrains -mt-1 flex flex-wrap gap-1.5 text-[10px]"
+        className="font-jetbrains -mt-1 flex flex-wrap gap-1.5 text-label"
       >
         {SECTIONS.map(([id, label]) => (
           <button
@@ -85,11 +85,11 @@ export default function NotebookBody() {
 
       <section className="space-y-2">
         <p className="font-instrument text-lg leading-snug text-white">{n.question}</p>
-        <p className="text-sm leading-relaxed text-slate-300">
-          <span className="font-jetbrains text-[11px] tracking-[0.14em] text-cyan-300/80 uppercase">verdict </span>
+        <p className="text-content leading-relaxed text-slate-300">
+          <span className="font-jetbrains text-label tracking-[0.14em] text-cyan-300/80 uppercase">verdict </span>
           {n.verdict}
         </p>
-        <p className="font-jetbrains text-[11px] text-white/35">
+        <p className="font-jetbrains text-content text-white/35">
           researched {n.researched} · {n.researcher} · intent {n.templateIntent} ·{" "}
           {n.subjectDomain.join(" / ")}
         </p>

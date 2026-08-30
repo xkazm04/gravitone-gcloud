@@ -35,30 +35,30 @@ export default function SlotColumn({
       }`}
     >
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className={`font-jetbrains text-[13px] tracking-[0.16em] uppercase ${m.role === "climax" ? "text-cyan-300" : "text-white"}`}>
+        <h3 className={`font-jetbrains text-content tracking-[0.16em] uppercase ${m.role === "climax" ? "text-cyan-300" : "text-white"}`}>
           {m.label}
         </h3>
-        <span className="font-jetbrains text-[10px] text-white/30">
+        <span className="font-jetbrains text-label text-white/30">
           {readOnly ? "frozen" : picked ? "picked" : `${slot.variants.length} to choose from`}
         </span>
       </div>
-      <p className="font-jetbrains mt-1 text-[10px] tracking-[0.12em] text-white/35 uppercase">
+      <p className="font-jetbrains mt-1 text-label tracking-[0.12em] text-white/35 uppercase">
         {m.role} · ordinal {m.ordinal}
       </p>
-      <p className="mt-1.5 text-[12px] leading-relaxed text-white/40">
+      <p className="mt-1.5 text-label leading-relaxed text-white/40">
         {cueSection
           ? `sits on the cue's ${cueSection.label}${cueSection.isBoundary ? " — a boundary" : ""}`
           : "sits on no cue section — this act boundary is unmeasured"}
       </p>
 
       {unpicked && !readOnly && (
-        <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
+        <p className="font-jetbrains mt-3 text-label leading-relaxed text-amber-200/85">
           nothing picked here — the spine has a hole at {m.role} until one is
         </p>
       )}
 
       {readOnly && shown.length === 0 && (
-        <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
+        <p className="font-jetbrains mt-3 text-label leading-relaxed text-amber-200/85">
           the frozen spine names no beat for this part
         </p>
       )}

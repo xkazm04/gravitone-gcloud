@@ -23,7 +23,7 @@ function Receipt({ v }: { v: Version }) {
     <span
       data-testid={`receipt-${v.id}`}
       title={v.engineRun?.sessionId ? `claude session ${v.engineRun.sessionId}` : undefined}
-      className="font-jetbrains text-[10px] text-white/35"
+      className="font-jetbrains text-label text-white/35"
     >
       {line}
     </span>
@@ -37,7 +37,7 @@ function Override({ v }: { v: Version }) {
   const line = overrideLineOf(v);
   if (!line) return null;
   return (
-    <span data-testid={`override-${v.id}`} className="font-jetbrains text-[10px] text-rose-200/90">
+    <span data-testid={`override-${v.id}`} className="font-jetbrains text-label text-rose-200/90">
       {line}
     </span>
   );
@@ -55,7 +55,7 @@ export default function VersionBar({
   if (!api.candidate)
     return (
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <p className="font-jetbrains text-[11px] text-white/35">
+        <p className="font-jetbrains text-content text-white/35">
           {api.accepted.length > 0
             ? `Showing ${api.baseline.label} — accepted from ${api.baseline.notes.length} note${api.baseline.notes.length === 1 ? "" : "s"}.`
             : "Showing the baseline. Stack notes on a track id, then recalibrate to get something to compare."}
@@ -72,7 +72,7 @@ export default function VersionBar({
       data-testid="version-bar"
       className="flex flex-wrap items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/[0.04] px-3 py-2"
     >
-      <span className="font-jetbrains text-[10px] tracking-[0.14em] text-cyan-200 uppercase">showing</span>
+      <span className="font-jetbrains text-label tracking-[0.14em] text-cyan-200 uppercase">showing</span>
       {(
         [
           { key: "baseline" as const, label: api.baseline.label },
@@ -87,7 +87,7 @@ export default function VersionBar({
           // of the two is live.
           aria-pressed={showing === v.key}
           onClick={() => setShowing(v.key)}
-          className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] transition ${
+          className={`font-jetbrains rounded-full border px-3 py-1 text-label transition ${
             showing === v.key
               ? "border-cyan-400/50 bg-cyan-400/12 text-cyan-100"
               : "border-white/12 text-white/50 hover:text-white/80"
@@ -96,7 +96,7 @@ export default function VersionBar({
           {v.label}
         </button>
       ))}
-      <span className="font-jetbrains text-[10px] text-white/35">
+      <span className="font-jetbrains text-label text-white/35">
         {showing === "candidate"
           ? "deltas are against the baseline · nothing is committed until you accept"
           : "switch to the candidate to see what your notes did"}

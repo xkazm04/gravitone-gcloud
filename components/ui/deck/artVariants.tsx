@@ -139,14 +139,14 @@ export function ArtVariantSwitcher() {
   const [variant, setVariant] = useArtVariant();
   return (
     <div role="group" aria-label="Card art variant (prototype)" className="flex items-center gap-1.5">
-      <span className="font-jetbrains text-[10px] tracking-[0.14em] text-white/25 uppercase">art</span>
+      <span className="font-jetbrains text-label tracking-[0.14em] text-white/25 uppercase">art</span>
       {ART_VARIANTS.map((v) => (
         <button
           key={v}
           type="button"
           aria-pressed={variant === v}
           onClick={() => setVariant(v)}
-          className={`font-jetbrains rounded-full border px-2 py-0.5 text-[10px] tracking-[0.08em] transition ${
+          className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.08em] transition ${
             variant === v
               ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
               : "border-white/10 text-white/35 hover:border-white/25 hover:text-white/65"

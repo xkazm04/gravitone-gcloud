@@ -29,7 +29,7 @@ export default function ApparatusSections() {
         <H id="numbers">numbers made felt · analogies</H>
         <ul className="space-y-1.5">
           {n.scaleConversions.map((s) => (
-            <li key={s.raw} className="text-[13px] leading-relaxed">
+            <li key={s.raw} className="text-content leading-relaxed">
               <span className="font-jetbrains text-white/45">{s.raw}</span>
               <span className="text-white/25"> → </span>
               <span className="text-slate-300">{s.felt}</span>
@@ -39,10 +39,10 @@ export default function ApparatusSections() {
         <ul className="mt-2 space-y-2">
           {n.analogyCandidates.map((a) => (
             <li key={a.for} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
-              <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/35">
+              <p className="font-jetbrains text-content tracking-[0.14em] text-white/35">
                 for {a.for} · {a.quality}
               </p>
-              <p className="mt-1 text-[13px] leading-relaxed text-slate-300">{a.analogy}</p>
+              <p className="mt-1 text-content leading-relaxed text-slate-300">{a.analogy}</p>
             </li>
           ))}
         </ul>
@@ -65,17 +65,17 @@ export default function ApparatusSections() {
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-jetbrains text-[10px] tracking-[0.12em] text-white/30">{u.id}</span>
+                <span className="font-jetbrains text-label tracking-[0.12em] text-white/30">{u.id}</span>
                 {resolved && (
-                  <span className="font-jetbrains rounded border border-emerald-400/30 bg-emerald-400/[0.07] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-emerald-200">
+                  <span className="font-jetbrains rounded border border-emerald-400/30 bg-emerald-400/[0.07] px-1.5 py-0.5 text-label tracking-[0.1em] text-emerald-200">
                     resolved
                   </span>
                 )}
               </div>
-              <p className="mt-1.5 text-sm text-slate-200">{u.what}</p>
-              <p className="mt-1 text-[13px] text-white/45">{u.why}</p>
+              <p className="mt-1.5 text-content text-slate-200">{u.what}</p>
+              <p className="mt-1 text-content text-white/45">{u.why}</p>
               <p
-                className={`font-jetbrains mt-1.5 text-[12px] ${
+                className={`font-jetbrains mt-1.5 text-label ${
                   resolved ? "text-white/35 line-through" : "text-amber-200/90"
                 }`}
               >
@@ -86,7 +86,7 @@ export default function ApparatusSections() {
                   the Script step; keeping it also preserves the fact that a
                   render written before the resolution is now over-hedged. */}
               {u.resolvedBy && (
-                <p className="font-jetbrains mt-1.5 text-[12px] leading-relaxed text-emerald-200/85">
+                <p className="font-jetbrains mt-1.5 text-content leading-relaxed text-emerald-200/85">
                   resolved by {u.resolvedBy}
                 </p>
               )}
@@ -104,7 +104,7 @@ export default function ApparatusSections() {
           <H id="questions">candidate questions — what this run was aimed at</H>
           <ul className="space-y-1.5">
             {n.candidateQuestions.map((q) => (
-              <li key={q} className="flex gap-2 text-[13px] leading-relaxed text-slate-300">
+              <li key={q} className="flex gap-2 text-content leading-relaxed text-slate-300">
                 <span aria-hidden className="text-white/25">—</span>
                 <span>{q}</span>
               </li>
@@ -116,9 +116,9 @@ export default function ApparatusSections() {
       <section className="space-y-2">
         <H id="fit">engine fit — reported, never chosen here</H>
         {n.engineFit.map((e) => (
-          <div key={e.engine} className="flex gap-3 text-[13px] leading-relaxed">
+          <div key={e.engine} className="flex gap-3 text-content leading-relaxed">
             <span
-              className={`font-jetbrains mt-px w-20 shrink-0 text-[11px] tracking-[0.1em] ${
+              className={`font-jetbrains mt-px w-20 shrink-0 text-label tracking-[0.1em] ${
                 e.fit === "excellent" ? "text-emerald-300" : e.fit === "good" ? "text-cyan-300/80" : "text-white/30"
               }`}
             >
@@ -126,7 +126,7 @@ export default function ApparatusSections() {
             </span>
             <span>
               <span className="text-white">{e.label}</span>
-              {e.recommended && <span className="font-jetbrains ml-2 text-[10px] text-emerald-300">recommended</span>}
+              {e.recommended && <span className="font-jetbrains ml-2 text-label text-emerald-300">recommended</span>}
               <span className="block text-white/45">{e.why}</span>
             </span>
           </div>
@@ -155,13 +155,13 @@ export default function ApparatusSections() {
         <H id="gaps">gaps — what this run did not do</H>
         <ul className="space-y-1.5">
           {n.researchGaps.map((g) => (
-            <li key={g} className="flex gap-2 text-[13px] leading-relaxed text-amber-200/80">
+            <li key={g} className="flex gap-2 text-content leading-relaxed text-amber-200/80">
               <span aria-hidden>—</span>
               <span>{g}</span>
             </li>
           ))}
         </ul>
-        <p className="font-jetbrains pt-1 text-[11px] text-white/30">
+        <p className="font-jetbrains pt-1 text-content text-white/30">
           a notebook claiming no gaps did not look hard enough
         </p>
       </section>

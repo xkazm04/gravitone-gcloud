@@ -201,18 +201,18 @@ export default function StudioView({ projectId }: { projectId: string }) {
             <div className="flex flex-wrap items-center gap-3">
               <Eyebrow>studio</Eyebrow>
               {project && (
-                <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-[11px] tracking-[0.14em] text-white/55 uppercase">
+                <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label tracking-[0.14em] text-white/55 uppercase">
                   {DISCIPLINE_LABEL[project.discipline ?? disciplineOf(project.template)]} ·{" "}
                   {templateOf(project.template).label} · {project.targetS}s
                 </span>
               )}
-              <span className="font-jetbrains rounded-full border border-amber-400/25 bg-amber-400/5 px-3 py-1 text-[11px] tracking-[0.18em] text-amber-300/90 uppercase">
+              <span className="font-jetbrains rounded-full border border-amber-400/25 bg-amber-400/5 px-3 py-1 text-label tracking-[0.18em] text-amber-300/90 uppercase">
                 prototype · mocked data
               </span>
             </div>
 
             {/* view toggle: the production vs the shelves it fills */}
-            <div className="font-jetbrains flex gap-2 text-[12px]">
+            <div className="font-jetbrains flex gap-2 text-label">
               {(
                 [
                   { key: "project", label: "Project" },
@@ -255,14 +255,14 @@ export default function StudioView({ projectId }: { projectId: string }) {
             data-testid="door-absent"
             className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4"
           >
-            <p className="font-hanken text-sm leading-snug text-slate-300">
+            <p className="font-hanken text-content leading-snug text-slate-300">
               This address does not name a project on your account. Either it was deleted, or it
               belongs to a different account signed in on this browser — the studio will not say
               which, and cannot open it either way.
             </p>
             <Link
               href="/projects"
-              className="font-jetbrains mt-3 inline-block rounded-lg border border-white/15 px-3 py-1.5 text-[12px] text-white/70 transition hover:bg-white/5"
+              className="font-jetbrains mt-3 inline-block rounded-lg border border-white/15 px-3 py-1.5 text-label text-white/70 transition hover:bg-white/5"
             >
               back to your projects →
             </Link>
@@ -275,13 +275,13 @@ export default function StudioView({ projectId }: { projectId: string }) {
             {/* Same voice as /projects' banner, because it is the same failure —
                 and it says the same thing about whose fault it is. The work is
                 not gone; this browser would not hand it over. */}
-            <p className="font-hanken text-sm leading-snug text-rose-200">
+            <p className="font-hanken text-content leading-snug text-rose-200">
               {door.message} — this project lives in this browser&rsquo;s storage, and it did not
               answer. Nothing has been lost; nothing can be read or saved until it does.
             </p>
             <Link
               href="/projects"
-              className="font-jetbrains mt-3 inline-block rounded-lg border border-rose-400/30 px-3 py-1.5 text-[12px] text-rose-200 transition hover:bg-rose-400/10"
+              className="font-jetbrains mt-3 inline-block rounded-lg border border-rose-400/30 px-3 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/10"
             >
               back to your projects →
             </Link>

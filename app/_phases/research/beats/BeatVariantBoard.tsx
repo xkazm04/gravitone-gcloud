@@ -27,7 +27,7 @@ export default function BeatVariantBoard({
   const { complete, missing } = spineComplete(api.picks, slots);
 
   if (!api.hydrated)
-    return <p className="font-jetbrains text-[12px] text-white/35">opening the project’s picks…</p>;
+    return <p className="font-jetbrains text-label text-white/35">opening the project’s picks…</p>;
 
   return (
     <div className="space-y-5">
@@ -41,7 +41,7 @@ export default function BeatVariantBoard({
               <> This project has no craft template; it borrows the trailer spine because it is the only beat vocabulary the studio has.</>
             )}
           </p>
-          <p className="font-jetbrains mt-2 text-[11px] text-white/35">
+          <p className="font-jetbrains mt-2 text-label text-white/35">
             fixture · n=0 · the Glass Harbor slots, whatever the project&apos;s logline — a model run from
             pipeline/BEATS-PROMPT.md is what replaces them
           </p>
@@ -64,7 +64,7 @@ export default function BeatVariantBoard({
       <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="font-jetbrains text-[11px] tracking-[0.16em] text-white/55 uppercase">
+            <p className="font-jetbrains text-label tracking-[0.16em] text-white/55 uppercase">
               {frozen ? "spine composed" : "compose the spine"}
             </p>
             <p className="font-hanken mt-1.5 max-w-xl text-sm text-slate-400" data-testid="spine-status">
@@ -81,7 +81,7 @@ export default function BeatVariantBoard({
                 type="button"
                 data-testid="reopen-spine"
                 onClick={api.reopen}
-                className="font-jetbrains rounded-full border border-white/12 px-3.5 py-1.5 text-[11px] text-white/55 transition hover:bg-white/5"
+                className="font-jetbrains rounded-full border border-white/12 px-3.5 py-1.5 text-label text-white/55 transition hover:bg-white/5"
               >
                 reopen
               </button>
@@ -92,7 +92,7 @@ export default function BeatVariantBoard({
               onClick={() => void api.confirm()}
               disabled={!complete || !!frozen}
               title={!complete ? `unpicked: ${missing.join(", ")}` : undefined}
-              className="font-jetbrains rounded-full border border-cyan-400/40 bg-cyan-400/[0.08] px-4 py-1.5 text-[11px] text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-35"
+              className="font-jetbrains rounded-full border border-cyan-400/40 bg-cyan-400/[0.08] px-4 py-1.5 text-label text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-35"
             >
               {frozen ? "composed" : complete ? "compose spine →" : `compose spine · ${missing.length} missing`}
             </button>

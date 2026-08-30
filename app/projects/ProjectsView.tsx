@@ -93,7 +93,7 @@ export default function ProjectsView() {
             onClick={() =>
               gated ? router.push("/library") : setDialog({ open: true, project: null })
             }
-            className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-[11px] text-white/45 transition hover:border-white/25 hover:text-white/75"
+            className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-label text-white/45 transition hover:border-white/25 hover:text-white/75"
           >
             quick create — the expert form
           </button>
@@ -101,12 +101,12 @@ export default function ProjectsView() {
 
         {gated && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/[0.06] px-4 py-3">
-            <p className="font-hanken text-sm text-amber-100">
+            <p className="font-hanken text-content text-amber-100">
               A project is rendered against a locked visual style, and this account has none yet.
             </p>
             <Link
               href="/library"
-              className="font-jetbrains shrink-0 rounded-lg border border-amber-300/40 px-3 py-1.5 text-[12px] text-amber-100 transition hover:bg-amber-300/10"
+              className="font-jetbrains shrink-0 rounded-lg border border-amber-300/40 px-3 py-1.5 text-label text-amber-100 transition hover:bg-amber-300/10"
             >
               make one in the library →
             </Link>
@@ -114,14 +114,14 @@ export default function ProjectsView() {
         )}
 
         {error && (
-          <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
+          <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
             {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
           </p>
         )}
 
         <section className="mt-6">
           {loading ? (
-            <p className="font-jetbrains py-16 text-center text-[12px] tracking-[0.18em] text-white/30 uppercase">
+            <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
               reading the shelf…
             </p>
           ) : (

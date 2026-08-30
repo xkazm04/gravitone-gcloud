@@ -29,7 +29,7 @@ export function TopicField({
       disabled={disabled}
       placeholder={placeholder}
       aria-label="Topic"
-      className={`font-hanken w-full rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3 text-base text-white placeholder:text-white/25 focus-visible:border-cyan-400/40 disabled:opacity-50 ${className}`}
+      className={`font-hanken w-full rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3 text-content text-white placeholder:text-white/25 focus-visible:border-cyan-400/40 disabled:opacity-50 ${className}`}
     />
   );
 }
@@ -52,7 +52,7 @@ export function OutcomePicker({
   loaded?: boolean;
 }) {
   return (
-    <div className="font-jetbrains flex flex-wrap items-center gap-1.5 text-[10px]">
+    <div className="font-jetbrains flex flex-wrap items-center gap-1.5 text-label">
       <span className="tracking-[0.16em] text-white/25 uppercase">prototype · drive the ending</span>
       {OUTCOMES.map((o) => (
         <button
@@ -136,7 +136,7 @@ export function RunStatus({ state }: { state: RunState }) {
     <span
       data-testid="run-status"
       aria-live="polite"
-      className={`font-jetbrains text-[10px] tracking-[0.14em] uppercase ${STATUS_TONE[state.status]}`}
+      className={`font-jetbrains text-label tracking-[0.14em] uppercase ${STATUS_TONE[state.status]}`}
     >
       {statusOf(state)}
     </span>
@@ -146,7 +146,7 @@ export function RunStatus({ state }: { state: RunState }) {
 /** The honest line about what the engine actually is. Every surface carries it. */
 export function LocalProcessNote({ className = "" }: { className?: string }) {
   return (
-    <p className={`font-jetbrains text-[11px] leading-relaxed text-white/35 ${className}`}>
+    <p className={`font-jetbrains text-content leading-relaxed text-white/35 ${className}`}>
       research runs as a local Claude Code process — minutes, not milliseconds, and it can exit
       non-zero. Prototype: the trace is replayed at 8× from run 1 and nothing is executed.
     </p>

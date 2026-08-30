@@ -28,7 +28,7 @@ export function BandMeter({
   const note = value < lo ? belowNote : value > hi ? aboveNote : undefined;
   return (
     <div>
-      <div className="font-jetbrains flex items-baseline justify-between text-[11px]">
+      <div className="font-jetbrains flex items-baseline justify-between text-label">
         <span className="text-white/45">{label}</span>
         <span className={inBand ? "text-cyan-200" : "text-amber-200"}>
           {value}
@@ -45,7 +45,7 @@ export function BandMeter({
           style={{ left: `calc(${(value / span) * 100}% - 1.5px)` }}
         />
       </div>
-      {note && <p className="font-jetbrains mt-1 text-[11px] text-amber-200/80">{note}</p>}
+      {note && <p className="font-jetbrains mt-1 text-content text-amber-200/80">{note}</p>}
     </div>
   );
 }
@@ -69,7 +69,7 @@ export function CheckList({ rows }: { rows: CheckRow[] }) {
       {rows.map((r) => {
         const c = CHECK[r.state];
         return (
-          <li key={r.label} className="flex gap-2.5 text-[13px] leading-snug">
+          <li key={r.label} className="flex gap-2.5 text-label leading-snug">
             <span aria-hidden className={`font-jetbrains mt-px w-3 shrink-0 text-center ${c.cls}`}>
               {c.mark}
             </span>

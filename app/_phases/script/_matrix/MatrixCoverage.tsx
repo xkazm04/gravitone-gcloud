@@ -47,14 +47,14 @@ export default function MatrixCoverage({
   return (
     <div data-testid="matrix-coverage">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="font-hanken max-w-xl text-sm text-slate-400">
+        <p className="font-hanken max-w-xl text-content text-slate-400">
           Every card, every render. Read across a row to see who used it and for how long; a row of
           zeros is research no script spent a second on.
         </p>
         <button
           aria-pressed={only}
           onClick={() => setOnly((v) => !v)}
-          className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] tracking-[0.1em] transition ${
+          className={`font-jetbrains rounded-full border px-3 py-1 text-label tracking-[0.1em] transition ${
             only ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/12 text-white/45 hover:text-white/75"
           }`}
         >
@@ -64,21 +64,21 @@ export default function MatrixCoverage({
 
       <div className="mt-4 grid grid-cols-[1.4rem_1fr_repeat(3,4.75rem)_3.25rem] items-end gap-x-2 border-b border-white/12 pb-1.5">
         <span />
-        <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">research</span>
+        <span className="font-jetbrains text-label tracking-[0.16em] text-white/35 uppercase">research</span>
         {RENDERS.map((r) => {
           const c = coverageIn(version, r.id, ids);
           return (
             <span key={r.id} className="text-right">
-              <span className="font-jetbrains block truncate text-[10px] tracking-[0.1em] text-white/60 uppercase">
+              <span className="font-jetbrains block truncate text-label tracking-[0.1em] text-white/60 uppercase">
                 {r.engineLabel.split(" ")[0]}
               </span>
-              <span className={`font-jetbrains block text-[10px] ${c.overrunS ? "text-amber-200" : "text-white/30"}`}>
+              <span className={`font-jetbrains block text-label ${c.overrunS ? "text-amber-200" : "text-white/30"}`}>
                 {c.spoken} used{c.overrunS ? ` · +${c.overrunS}s over` : ""}
               </span>
             </span>
           );
         })}
-        <span className="font-jetbrains text-right text-[10px] tracking-[0.1em] text-white/35 uppercase">all</span>
+        <span className="font-jetbrains text-right text-label tracking-[0.1em] text-white/35 uppercase">all</span>
       </div>
 
       {columns.map((d) => {
@@ -90,7 +90,7 @@ export default function MatrixCoverage({
         return (
           <section key={d.id} data-testid={`coverage-dim-${d.id}`}>
             <h4
-              className={`font-jetbrains mt-3 border-b pb-1 text-[11px] tracking-[0.16em] uppercase ${
+              className={`font-jetbrains mt-3 border-b pb-1 text-label tracking-[0.16em] uppercase ${
                 orphan
                   ? "border-amber-400/25 text-amber-200"
                   : `border-white/8 ${d.id === "conclusions" ? "text-cyan-300" : "text-white/70"}`
@@ -99,7 +99,7 @@ export default function MatrixCoverage({
               {d.label}
             </h4>
             {orphan && (
-              <p className="font-jetbrains mt-1 text-[10px] leading-relaxed text-amber-200/70">
+              <p className="font-jetbrains mt-1 text-content leading-relaxed text-amber-200/70">
                 no dimension — tag {rows.length === 1 ? "it" : "them"} in
                 dimensions.ts::CARD_DIMENSION. The triage board says the same thing.
               </p>
@@ -159,7 +159,7 @@ function Row({
               data-testid={`cell-${r.id}-${card.id}`}
               data-usage={u.kind}
               title={u.kind === "cut" ? u.why : u.kind === "spoken" ? `beats ${u.beats.join(", ")}` : "no render used this"}
-              className={`font-jetbrains rounded border px-1 py-0.5 text-center text-[11px] ${t.cell} ${t.text} ${
+              className={`font-jetbrains rounded border px-1 py-0.5 text-center text-label ${t.cell} ${t.text} ${
                 dl ? "ring-1 ring-cyan-400/40" : ""
               }`}
             >
@@ -167,13 +167,13 @@ function Row({
             </span>
           );
         })}
-        <span className={`font-jetbrains text-right text-[11px] ${total ? "text-white/60" : "text-white/25"}`}>
+        <span className={`font-jetbrains text-right text-label ${total ? "text-white/60" : "text-white/25"}`}>
           {secs(total)}
         </span>
       </div>
 
       {/* The title, in full, on its own line. */}
-      <p className="pr-2 pl-6 text-[12px] leading-snug text-slate-300">{card.title}</p>
+      <p className="pr-2 pl-6 text-content leading-snug text-slate-300">{card.title}</p>
     </li>
   );
 }

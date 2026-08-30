@@ -185,13 +185,13 @@ export default function LibraryAtelier({
         />
 
         {error && (
-          <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
+          <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
             {error} — your styles live in this browser&rsquo;s storage, and it did not answer.
           </p>
         )}
 
         {loading ? (
-          <p className="font-jetbrains py-16 text-center text-[12px] tracking-[0.18em] text-white/30 uppercase">
+          <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
             reading the wall…
           </p>
         ) : !rows.length ? (
@@ -209,7 +209,7 @@ export default function LibraryAtelier({
                 <button
                   key={t.id}
                   onClick={() => setSelectedId(t.id)}
-                  className={`font-jetbrains flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] transition ${
+                  className={`font-jetbrains flex items-center gap-2 rounded-full border px-3 py-1.5 text-label transition ${
                     t.id === selected?.id
                       ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
                       : "border-white/10 text-white/50 hover:text-white/80"
@@ -239,7 +239,7 @@ export default function LibraryAtelier({
 
       <aside className="space-y-4">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-jetbrains text-[11px] tracking-[0.18em] text-white/40 uppercase">dossier</p>
+          <p className="font-jetbrains text-content tracking-[0.18em] text-white/40 uppercase">dossier</p>
           <GateChip themes={rows} />
         </div>
         {selected ? (
@@ -256,19 +256,19 @@ export default function LibraryAtelier({
                 abandoned drafts could only ever grow. */}
             <button
               onClick={() => void askDelete(selected)}
-              className="font-jetbrains w-full cursor-pointer rounded-lg border border-white/10 px-3 py-1.5 text-[11px] text-white/45 transition hover:border-rose-400/40 hover:text-rose-300"
+              className="font-jetbrains w-full cursor-pointer rounded-lg border border-white/10 px-3 py-1.5 text-label text-white/45 transition hover:border-rose-400/40 hover:text-rose-300"
             >
               delete this style
             </button>
           </>
         ) : (
           <Panel className="p-4">
-            <p className="text-[13px] leading-snug text-slate-400">
+            <p className="text-content leading-snug text-slate-400">
               Pick a preset on the left and its four slots appear here, ready to edit.
             </p>
           </Panel>
         )}
-        <p className="font-jetbrains text-[10px] leading-relaxed text-white/30">
+        <p className="font-jetbrains text-content leading-relaxed text-white/30">
           preset or brief → render trials → approve the ones that hold → locked
         </p>
       </aside>
@@ -288,11 +288,11 @@ function EmptyWall() {
   return (
     <div className="rounded-2xl border border-dashed border-white/10 px-6 py-14 text-center">
       <p className="font-instrument text-2xl text-white">The wall is empty</p>
-      <p className="font-hanken mx-auto mt-2 max-w-sm text-sm leading-snug text-slate-400">
+      <p className="font-hanken mx-auto mt-2 max-w-sm text-content leading-snug text-slate-400">
         Start from a preset on the left. You will get its four slots to edit, a playground to render
         trials in, and a proof sheet to approve — that sheet is what locks the style.
       </p>
-      <p className="font-jetbrains mx-auto mt-4 max-w-sm text-[11px] leading-snug text-white/30">
+      <p className="font-jetbrains mx-auto mt-4 max-w-sm text-content leading-snug text-white/30">
         Every preset thumbnail is a real render of the same subject — {CANON_SUBJECT.split(",")[0].toLowerCase()} —
         so the grid varies by style alone.
       </p>

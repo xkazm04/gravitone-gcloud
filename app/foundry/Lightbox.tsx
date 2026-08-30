@@ -78,17 +78,17 @@ export function Lightbox({
       onClose={onClose}
       title={candidate ? `${style?.name ?? candidate.style} · ${candidate.mechanism}` : ""}
       eyebrow={candidate?.id}
-      className="max-w-6xl"
+      className="max-w-[1440px]"
       footer={
         <div className="flex items-center justify-between gap-3">
-          <div className="font-jetbrains text-[11px] text-white/45">
+          <div className="font-jetbrains text-label text-white/60">
             {readOnly ? "this run is committed — verdicts are final" : "← → step · K keep · X reject · U clear · Esc close"}
           </div>
           {!readOnly && (
             <div className="flex items-center gap-2">
               <span
-                className={`font-jetbrains mr-2 text-[11px] ${
-                  verdict === "keep" ? "text-emerald-200" : verdict === "reject" ? "text-rose-200" : "text-white/35"
+                className={`font-jetbrains mr-2 text-label ${
+                  verdict === "keep" ? "text-emerald-200" : verdict === "reject" ? "text-rose-200" : "text-white/55"
                 }`}
               >
                 {verdict === "keep" ? "kept" : verdict === "reject" ? "rejected" : "undecided"}
@@ -96,14 +96,14 @@ export function Lightbox({
               {verdict && (
                 <button
                   onClick={() => onVerdict(null)}
-                  className="font-jetbrains cursor-pointer rounded-full border border-white/15 px-4 py-2 text-[12px] text-white/70 transition hover:bg-white/5"
+                  className="font-jetbrains cursor-pointer rounded-full border border-white/15 px-4 py-2 text-label text-white/70 transition hover:bg-white/5"
                 >
                   Clear
                 </button>
               )}
               <button
                 onClick={() => onVerdict("reject")}
-                className={`font-jetbrains cursor-pointer rounded-full border px-5 py-2 text-[12px] transition ${
+                className={`font-jetbrains cursor-pointer rounded-full border px-5 py-2 text-label transition ${
                   verdict === "reject"
                     ? "border-rose-300 bg-rose-400/30 text-rose-50 ring-2 ring-rose-300/40"
                     : "border-rose-400/40 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20"
@@ -128,7 +128,7 @@ export function Lightbox({
             <figure className="overflow-hidden rounded-lg border border-white/10 bg-black/50">
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={fileUrl(run.id, scene.source)} alt="source" className="w-full" />
-              <figcaption className="font-jetbrains px-3 py-1.5 text-[10px] tracking-[0.14em] text-white/50 uppercase">source · {scene.id}</figcaption>
+              <figcaption className="font-jetbrains px-3 py-1.5 text-label tracking-[0.14em] text-white/65 uppercase">source · {scene.id}</figcaption>
             </figure>
             <figure
               className={`relative overflow-hidden rounded-lg border-2 bg-black/50 transition ${
@@ -136,13 +136,13 @@ export function Lightbox({
               }`}
             >
               {candidate.deleted ? (
-                <div className="font-jetbrains flex aspect-video items-center justify-center text-white/40">deleted</div>
+                <div className="font-jetbrains flex aspect-video items-center justify-center text-white/60">deleted</div>
               ) : (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={fileUrl(run.id, candidate.file)} alt={candidate.id} className={`w-full transition ${verdict === "reject" ? "opacity-50" : ""}`} />
               )}
               <VerdictStamp verdict={verdict} />
-              <figcaption className="font-jetbrains px-3 py-1.5 text-[10px] tracking-[0.14em] text-white/50 uppercase">
+              <figcaption className="font-jetbrains px-3 py-1.5 text-label tracking-[0.14em] text-white/65 uppercase">
                 candidate · {candidate.mechanism} · seed {candidate.seed}
                 {candidate.timings?.generate_s ? ` · ${candidate.timings.generate_s}s` : ""}
               </figcaption>
@@ -153,15 +153,15 @@ export function Lightbox({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
                 <div className="flex items-baseline justify-between">
-                  <div className="font-jetbrains text-[11px] tracking-[0.14em] text-cyan-300 uppercase">craft fidelity</div>
-                  <div className="font-jetbrains text-[13px] text-white">{pct(g.craft?.score)}</div>
+                  <div className="font-jetbrains text-label tracking-[0.14em] text-cyan-300 uppercase">craft fidelity</div>
+                  <div className="font-jetbrains text-label text-white">{pct(g.craft?.score)}</div>
                 </div>
-                <p className="font-hanken mt-1 text-[11px] text-slate-500">Did the shot survive? Source annotation → candidate re-annotation, per field.</p>
-                <table className="mt-3 w-full text-[11px]">
+                <p className="font-hanken mt-1 text-content text-slate-500">Did the shot survive? Source annotation → candidate re-annotation, per field.</p>
+                <table className="mt-3 w-full text-label">
                   <tbody>
                     {Object.entries(g.craft?.per_field ?? {}).map(([f, v]) => (
                       <tr key={f} className="border-t border-white/6">
-                        <td className="font-jetbrains py-1 pr-2 text-white/50">{f.replace(/_/g, " ")}</td>
+                        <td className="font-jetbrains py-1 pr-2 text-white/65">{f.replace(/_/g, " ")}</td>
                         <td className="font-jetbrains py-1 pr-2 text-white/80">{String(scene.annotation?.[f] ?? "—")}</td>
                         <td className={`font-jetbrains py-1 ${creditTone(v)}`}>{String(g.craft?.annotation?.[f] ?? "—")}</td>
                       </tr>
@@ -172,52 +172,52 @@ export function Lightbox({
 
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
                 <div className="flex items-baseline justify-between">
-                  <div className="font-jetbrains text-[11px] tracking-[0.14em] text-violet-300 uppercase">style adherence</div>
-                  <div className="font-jetbrains text-[13px] text-white">{pct(g.style?.score)}</div>
+                  <div className="font-jetbrains text-label tracking-[0.14em] text-violet-300 uppercase">style adherence</div>
+                  <div className="font-jetbrains text-label text-white">{pct(g.style?.score)}</div>
                 </div>
-                <p className="font-hanken mt-1 text-[11px] text-slate-500">Did the look arrive? Target observables → what the grader read back.</p>
-                <table className="mt-3 w-full text-[11px]">
+                <p className="font-hanken mt-1 text-content text-slate-500">Did the look arrive? Target observables → what the grader read back.</p>
+                <table className="mt-3 w-full text-label">
                   <tbody>
                     {STYLE_FIELDS.map((f) => {
                       const want = style?.observables[f];
                       const got = g.style?.readback?.[f as keyof typeof g.style.readback];
                       return (
                         <tr key={f} className="border-t border-white/6">
-                          <td className="font-jetbrains py-1 pr-2 text-white/50">{f.replace(/_/g, " ")}</td>
+                          <td className="font-jetbrains py-1 pr-2 text-white/65">{f.replace(/_/g, " ")}</td>
                           <td className="font-jetbrains py-1 pr-2 text-white/80">{want ?? "—"}</td>
                           <td className={`font-jetbrains py-1 ${creditTone(g.style?.per_field?.[f])}`}>{String(got ?? "—")}</td>
                         </tr>
                       );
                     })}
                     <tr className="border-t border-white/6">
-                      <td className="font-jetbrains py-1 pr-2 text-white/50">text present</td>
+                      <td className="font-jetbrains py-1 pr-2 text-white/65">text present</td>
                       <td />
                       <td className={`font-jetbrains py-1 ${g.veto?.has_text ? "text-rose-300" : "text-emerald-300"}`}>{g.veto ? String(g.veto.has_text) : "—"}</td>
                     </tr>
                     <tr className="border-t border-white/6">
-                      <td className="font-jetbrains py-1 pr-2 text-white/50">colours</td>
+                      <td className="font-jetbrains py-1 pr-2 text-white/65">colours</td>
                       <td />
                       <td className="font-jetbrains py-1 text-white/80">{g.style?.readback?.dominant_colours?.join(", ") ?? "—"}</td>
                     </tr>
                   </tbody>
                 </table>
                 {g.style?.readback?.depiction && (
-                  <p className="font-hanken mt-3 text-[12px] text-slate-300">“{g.style.readback.depiction}”</p>
+                  <p className="font-hanken mt-3 text-content text-slate-300">“{g.style.readback.depiction}”</p>
                 )}
                 {g.unmeasured.length > 0 && (
-                  <p className="font-jetbrains mt-2 text-[10px] text-amber-200/80">unmeasured: {g.unmeasured.join(" · ")}</p>
+                  <p className="font-jetbrains mt-2 text-content text-amber-200/80">unmeasured: {g.unmeasured.join(" · ")}</p>
                 )}
-                <p className="font-jetbrains mt-2 text-[9px] text-white/30">graded by {g.grader}</p>
+                <p className="font-jetbrains mt-2 text-content text-white/55">graded by {g.grader}</p>
               </div>
             </div>
           ) : (
-            <p className="font-jetbrains text-[11px] text-amber-200/80">Not graded yet.</p>
+            <p className="font-jetbrains text-content text-amber-200/80">Not graded yet.</p>
           )}
 
           {candidate.prompt && (
             <details className="rounded-xl border border-white/8 bg-white/[0.02]">
-              <summary className="font-jetbrains cursor-pointer px-4 py-2 text-[11px] tracking-[0.14em] text-white/50 uppercase">prompt</summary>
-              <pre className="font-jetbrains px-4 pb-4 text-[11px] leading-relaxed whitespace-pre-wrap text-slate-400">{candidate.prompt}</pre>
+              <summary className="font-jetbrains cursor-pointer px-4 py-2 text-label tracking-[0.14em] text-white/65 uppercase">prompt</summary>
+              <pre className="font-jetbrains px-4 pb-4 text-content leading-relaxed whitespace-pre-wrap text-slate-400">{candidate.prompt}</pre>
             </details>
           )}
         </div>

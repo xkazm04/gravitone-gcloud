@@ -114,10 +114,10 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   if (current === null)
-    return <p className="font-jetbrains text-[12px] text-white/35">opening the project…</p>;
+    return <p className="font-jetbrains text-label text-white/35">opening the project…</p>;
   if (current.kind === "missing")
     return (
-      <p className="font-jetbrains text-[12px] text-amber-200/85" data-testid="script-no-project">
+      <p className="font-jetbrains text-label text-amber-200/85" data-testid="script-no-project">
         no project record for {projectId} — nothing to write against
       </p>
     );
@@ -192,7 +192,7 @@ function ExplainerScript({ projectId }: { projectId: string }) {
   const gate = useMemo(() => gateChains(chains, { conclusions: CONCLUSIONS }), [chains]);
 
   if (researched === null)
-    return <p className="font-jetbrains text-[12px] text-white/35">opening the project’s research…</p>;
+    return <p className="font-jetbrains text-content text-white/35">opening the project’s research…</p>;
 
   if (!researched)
     return (
@@ -216,17 +216,17 @@ function ExplainerScript({ projectId }: { projectId: string }) {
     <div>
       <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
         <div className="min-w-0 grow">
-          <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/35 uppercase">written against</p>
-          <p className="font-jetbrains mt-1 text-[12px] text-white/60">
+          <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">written against</p>
+          <p className="font-jetbrains mt-1 text-content text-white/60">
             {NOTEBOOK_COUNTS.facts} claims · {NOTEBOOK_COUNTS.loadBearing} load-bearing ·{" "}
             {NOTEBOOK_COUNTS.mechanisms} mechanisms · {NOTEBOOK_COUNTS.reversals} reversals ·{" "}
             <span className="text-amber-200">half-life {NOTEBOOK.currency.halfLife}</span>
           </p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-400">
+          <p className="mt-1.5 text-content leading-relaxed text-slate-400">
             tension strength — {NOTEBOOK.tension.strength}
           </p>
         </div>
-        <p className="font-jetbrains shrink-0 text-[10px] leading-snug text-white/30">
+        <p className="font-jetbrains shrink-0 text-content leading-snug text-white/30">
           the notebook and the evidence log
           <br />
           live in step 1
@@ -238,7 +238,7 @@ function ExplainerScript({ projectId }: { projectId: string }) {
           so it did not exist for a reader without colour. Toggle-button state is
           the honest promise here — a `role="tab"` set would also promise arrow-key
           navigation and a roving tabindex, which these buttons do not implement. */}
-      <div className="font-jetbrains mt-4 flex flex-wrap gap-2 text-[12px]">
+      <div className="font-jetbrains mt-4 flex flex-wrap gap-2 text-label">
         {TABS.map((t) => (
           <button
             key={t.key}
@@ -252,13 +252,13 @@ function ExplainerScript({ projectId }: { projectId: string }) {
             }`}
           >
             <span className="block text-white/85">{t.label}</span>
-            <span className="mt-0.5 block text-[10px] text-white/35">{t.sub}</span>
+            <span className="mt-0.5 block text-label text-white/35">{t.sub}</span>
           </button>
         ))}
       </div>
 
       {!ready ? (
-        <p className="font-jetbrains mt-4 text-[12px] text-white/35">loading this project’s scope…</p>
+        <p className="font-jetbrains mt-4 text-content text-white/35">loading this project’s scope…</p>
       ) : (
         <div className="mt-4">
           {weighing && (
@@ -294,7 +294,7 @@ function ExplainerScript({ projectId }: { projectId: string }) {
                       type="button"
                       data-testid="script-face-switch"
                       onClick={() => face.set(face.face === "guided" ? "expert" : "guided")}
-                      className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-[11px] text-white/50 transition hover:border-cyan-400/40 hover:text-cyan-200"
+                      className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label text-white/50 transition hover:border-cyan-400/40 hover:text-cyan-200"
                     >
                       {face.face === "guided" ? "full controls" : "guided"}
                     </button>

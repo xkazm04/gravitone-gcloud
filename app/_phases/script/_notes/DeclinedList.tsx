@@ -34,7 +34,7 @@ export default function DeclinedList({ version }: { version: Version }) {
         <p
           key={`m-${i}`}
           data-testid="model-refusal"
-          className="font-jetbrains mt-1.5 text-[11px] leading-snug text-amber-200"
+          className="font-jetbrains mt-1.5 text-label leading-snug text-amber-200"
         >
           not done · {r.note ? <span className="text-white/55">{r.note} — </span> : null}
           {r.why}
@@ -46,7 +46,7 @@ export default function DeclinedList({ version }: { version: Version }) {
         <p
           key={`r-${f.cardId}-${f.kind}-${i}`}
           data-testid="refusal"
-          className="font-jetbrains mt-1.5 text-[11px] leading-snug text-rose-200"
+          className="font-jetbrains mt-1.5 text-label leading-snug text-rose-200"
         >
           refused · {f.cardId} — {f.why}
         </p>
@@ -56,7 +56,7 @@ export default function DeclinedList({ version }: { version: Version }) {
         <p
           key={`c-${c.cardId}`}
           data-testid="conflict"
-          className="font-jetbrains mt-1.5 text-[11px] leading-snug text-amber-200"
+          className="font-jetbrains mt-1.5 text-label leading-snug text-amber-200"
         >
           conflict · {c.cardId} — applied {c.applied}; {c.why}
         </p>
@@ -66,7 +66,7 @@ export default function DeclinedList({ version }: { version: Version }) {
         <p
           key={`u-${u.cardId}`}
           data-testid="unsupported"
-          className={`font-jetbrains mt-1.5 text-[11px] leading-snug ${
+          className={`font-jetbrains mt-1.5 text-label leading-snug ${
             u.severity === "broken" ? "text-rose-200" : "text-amber-200"
           }`}
         >
@@ -89,7 +89,7 @@ export default function DeclinedList({ version }: { version: Version }) {
         <p
           key={`c-${b.renderId}-${b.at}-${i}`}
           data-testid="chain-break"
-          className="font-jetbrains mt-1.5 text-[11px] leading-snug text-rose-200"
+          className="font-jetbrains mt-1.5 text-label leading-snug text-rose-200"
         >
           seam · {b.renderId} {b.at} — {b.why}
         </p>

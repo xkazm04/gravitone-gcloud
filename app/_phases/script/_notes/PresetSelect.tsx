@@ -87,7 +87,7 @@ export default function PresetSelect({
         // The trigger keeps focus while the list is open, so the active option is
         // announced from here — now that the role permits it.
         aria-activedescendant={open ? `preset-${cardId}-${PRESETS[active].kind}` : undefined}
-        className="font-jetbrains flex w-full items-center justify-between gap-2 rounded-lg border border-amber-400/35 bg-amber-400/[0.06] px-2.5 py-1.5 text-[11px] text-amber-100 transition hover:border-amber-400/60 hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-40"
+        className="font-jetbrains flex w-full items-center justify-between gap-2 rounded-lg border border-amber-400/35 bg-amber-400/[0.06] px-2.5 py-1.5 text-label text-amber-100 transition hover:border-amber-400/60 hover:bg-amber-400/10 disabled:cursor-not-allowed disabled:opacity-40"
       >
         <span>add a note</span>
         <span aria-hidden className="text-amber-300/70">{open ? "▴" : "▾"}</span>
@@ -112,7 +112,7 @@ export default function PresetSelect({
                 // behind five options nobody wanted to walk through.
                 tabIndex={-1}
                 title={k.hint}
-                className={`font-jetbrains block w-full px-2.5 py-1.5 text-left text-[11px] transition ${
+                className={`font-jetbrains block w-full px-2.5 py-1.5 text-left text-label transition ${
                   i === active ? "bg-amber-400/15 text-amber-100" : "text-amber-100/70"
                 }`}
               >

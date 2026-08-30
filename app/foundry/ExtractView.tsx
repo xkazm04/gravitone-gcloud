@@ -180,7 +180,7 @@ export function ExtractView() {
     [],
   );
 
-  const startRun = async (slug: string, files: File[], options: { rounds: number; replicas: number; transfers: number }) => {
+  const startRun = async (slug: string, files: File[], options: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => {
     setCreating(true);
     setRunsError(null);
     try {
@@ -269,15 +269,15 @@ export function ExtractView() {
         <aside>
           <button
             onClick={() => selectRun(null)}
-            className={`font-jetbrains w-full cursor-pointer rounded-lg border px-3 py-2 text-left text-[12px] transition ${
+            className={`font-jetbrains w-full cursor-pointer rounded-lg border px-3 py-2 text-left text-label transition ${
               selected === null ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/70 hover:bg-white/[0.03]"
             }`}
           >
             + new extraction
           </button>
-          <div className="font-jetbrains mt-4 text-[11px] tracking-[0.14em] text-white/45 uppercase">runs</div>
-          {runsError && <p className="font-jetbrains mt-2 text-[11px] text-rose-200">{runsError}</p>}
-          {runs && runs.length === 0 && <p className="font-hanken mt-2 text-[12px] text-slate-400">No extractions yet.</p>}
+          <div className="font-jetbrains mt-4 text-label tracking-[0.14em] text-white/60 uppercase">runs</div>
+          {runsError && <p className="font-jetbrains mt-2 text-content text-rose-200">{runsError}</p>}
+          {runs && runs.length === 0 && <p className="font-hanken mt-2 text-content text-slate-400">No extractions yet.</p>}
           <ul className="mt-2 flex flex-col gap-1">
             {runs?.map((r) => (
               <li key={r.id}>
@@ -287,8 +287,8 @@ export function ExtractView() {
                     r.id === selected ? "border-cyan-400/40 bg-cyan-400/10" : "border-white/8 hover:bg-white/[0.03]"
                   }`}
                 >
-                  <div className="font-jetbrains truncate text-[12px] text-white/90">{r.id}</div>
-                  <div className="font-jetbrains mt-0.5 text-[10px] text-white/45">
+                  <div className="font-jetbrains truncate text-label text-white/90">{r.id}</div>
+                  <div className="font-jetbrains mt-0.5 text-label text-white/60">
                     {EXTRACT_STATUS_WORD[r.status]}
                     {EXTRACT_LIVE.includes(r.status) && r.progress.total > 0 ? ` ${r.progress.done}/${r.progress.total}` : ""}
                     {" · "}
@@ -302,12 +302,12 @@ export function ExtractView() {
 
         <div>
           {selected === null && <NewRun busy={creating} onStart={startRun} />}
-          {selected && !run && <p className="font-jetbrains text-[12px] text-white/40">loading…</p>}
+          {selected && !run && <p className="font-jetbrains text-content text-white/60">loading…</p>}
           {run && (
             <>
               <StatusStrip run={run} now={loadedAt} driving={driving} driveError={driveError} onResume={() => drive(run.id)} onRetry={() => drive(run.id, true)} onPause={pause} />
               {result && (
-                <div className="font-jetbrains mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-4 py-2 text-[11px] text-emerald-200">
+                <div className="font-jetbrains mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-4 py-2 text-label text-emerald-200">
                   committed · {result.written.join(", ")} → pipeline/foundry/styles.json · {result.rejected.length} rejected
                 </div>
               )}
@@ -330,32 +330,32 @@ export function ExtractView() {
 
       {run && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
-            <div className="font-jetbrains flex flex-wrap gap-4 text-[11px] text-white/60">
+          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3">
+            <div className="font-jetbrains flex flex-wrap gap-4 text-label text-white/60">
               <span>
                 <span className="text-emerald-200">{counts.kept}</span> kept
               </span>
               <span>
-                <span className="text-rose-200">{counts.rejected}</span> thrown
+                <span className="text-rose-200">{counts.rejected}</span> rejected
               </span>
               <span>
                 <span className="text-white/90">{counts.undecided}</span> undecided
               </span>
-              <span className={save === "error" ? "text-rose-200" : "text-white/35"}>
+              <span className={save === "error" ? "text-rose-200" : "text-white/55"}>
                 {readOnly ? "committed · verdicts are final" : save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
               </span>
-              {!readOnly && <span className="hidden text-white/30 md:inline">↑↓ rows · K keep · X throw · U clear</span>}
+              {!readOnly && <span className="hidden text-white/55 md:inline">↑↓ move · K keep · X reject · U clear · Enter inspect</span>}
             </div>
             {readOnly ? (
-              <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-[11px] tracking-[0.14em] text-emerald-200 uppercase">committed</span>
+              <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">committed</span>
             ) : (
               <Button
                 disabled={run.status !== "done" || counts.kept === 0}
                 onClick={() => setConfirm(true)}
-                className="cursor-pointer px-5 py-2 text-[12px] disabled:cursor-not-allowed"
+                className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
                 title={run.status !== "done" ? `Run is ${EXTRACT_STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one style first" : "Write the kept styles to the catalogue"}
               >
-                Learn the kept styles
+                Commit the kept styles
               </Button>
             )}
           </div>
@@ -365,22 +365,22 @@ export function ExtractView() {
       <Modal
         open={confirm}
         onClose={() => !committing && setConfirm(false)}
-        title="Learn the kept styles?"
+        title="Commit the kept styles?"
         className="max-w-md"
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={() => setConfirm(false)} disabled={committing}>
               Not yet
             </Button>
-            <Button onClick={doCommit} disabled={committing} className="cursor-pointer px-5 py-2 text-[12px]">
-              {committing ? "writing…" : `Learn ${counts.kept}, throw ${counts.rejected + counts.undecided}`}
+            <Button onClick={doCommit} disabled={committing} className="cursor-pointer px-5 py-2 text-label">
+              {committing ? "committing…" : `Commit ${counts.kept}, reject ${counts.rejected + counts.undecided}`}
             </Button>
           </div>
         }
       >
-        <p className="font-hanken text-sm text-slate-300">
+        <p className="font-hanken text-content text-slate-300">
           <span className="text-emerald-200">{counts.kept}</span> kept style{counts.kept === 1 ? "" : "s"} join{counts.kept === 1 ? "s" : ""}{" "}
-          <code className="font-jetbrains text-[11px] text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. The forge
+          <code className="font-jetbrains text-label text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. The forge
           can be pointed at them from the next plan. Undecided counts as thrown. Nothing is deleted, but the verdicts are final.
         </p>
       </Modal>
@@ -416,7 +416,7 @@ function StatusStrip({
     <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-2.5">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
         <span
-          className={`font-jetbrains rounded-full border px-2 py-0.5 text-[10px] tracking-[0.14em] uppercase ${
+          className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.14em] uppercase ${
             run.status === "committed"
               ? "border-emerald-400/40 text-emerald-200"
               : run.status === "failed"
@@ -429,39 +429,39 @@ function StatusStrip({
           {EXTRACT_STATUS_WORD[run.status]}
           {live && run.progress.total > 0 ? ` ${run.progress.done}/${run.progress.total}` : ""}
         </span>
-        <span className="font-jetbrains text-[11px] text-white/50">
+        <span className="font-jetbrains text-label text-white/65">
           {run.sources.length} source{run.sources.length === 1 ? "" : "s"} · {run.styles.length} style{run.styles.length === 1 ? "" : "s"} · {run.options.replicas}×{run.options.rounds} rounds ·{" "}
           {run.options.transfers} transfer{run.options.transfers === 1 ? "" : "s"}
         </span>
         {(run.engines.vision || run.engines.generator || run.engines.reasoner) && (
-          <span className="font-jetbrains text-[10px] text-white/35">
+          <span className="font-jetbrains text-label text-white/55">
             {[run.engines.vision && `eyes ${run.engines.vision}`, run.engines.generator && `pixels ${run.engines.generator}`, run.engines.reasoner && `words ${run.engines.reasoner}`]
               .filter(Boolean)
               .join(" · ")}
           </span>
         )}
-        {run.error && <span className="font-jetbrains text-[11px] text-rose-200">{run.error}</span>}
+        {run.error && <span className="font-jetbrains text-label text-rose-200">{run.error}</span>}
         {retryable && (
           <span className="ml-auto flex items-center gap-2">
-            {driveError && <span className="font-jetbrains text-[11px] text-rose-200">{driveError}</span>}
-            <Button className="cursor-pointer px-3 py-1 text-[11px]" onClick={onRetry} title="Prune every failed unit and take it again">
+            {driveError && <span className="font-jetbrains text-label text-rose-200">{driveError}</span>}
+            <Button className="cursor-pointer px-3 py-1 text-label" onClick={onRetry} title="Prune every failed unit and take it again">
               retry failed
             </Button>
           </span>
         )}
         {live && (
           <span className="ml-auto flex items-center gap-2">
-            {driveError && <span className="font-jetbrains text-[11px] text-rose-200">{driveError}</span>}
+            {driveError && <span className="font-jetbrains text-label text-rose-200">{driveError}</span>}
             {other ? (
-              <span className="font-jetbrains rounded-full border border-amber-400/30 px-3 py-1 text-[10px] tracking-[0.14em] text-amber-200 uppercase" title={`lease stamped ${other.at}`}>
+              <span className="font-jetbrains rounded-full border border-amber-400/30 px-3 py-1 text-label tracking-[0.14em] text-amber-200 uppercase" title={`lease stamped ${other.at}`}>
                 driven by the {other.owner}
               </span>
             ) : driving ? (
-              <Button variant="ghost" className="cursor-pointer px-3 py-1 text-[11px]" onClick={onPause}>
+              <Button variant="ghost" className="cursor-pointer px-3 py-1 text-label" onClick={onPause}>
                 pause
               </Button>
             ) : (
-              <Button className="cursor-pointer px-3 py-1 text-[11px]" onClick={onResume}>
+              <Button className="cursor-pointer px-3 py-1 text-label" onClick={onResume}>
                 {driveError ? "retry" : run.progress.done ? "resume" : "start"}
               </Button>
             )}
@@ -473,17 +473,18 @@ function StatusStrip({
           <div className="h-full rounded-full bg-cyan-300/70 transition-[width] duration-500" style={{ width: `${pct}%` }} />
         </div>
       )}
-      {live && last && <p className="font-jetbrains mt-1.5 truncate text-[10px] text-white/35">{last.msg}</p>}
+      {live && last && <p className="font-jetbrains mt-1.5 truncate text-content text-white/55">{last.msg}</p>}
     </div>
   );
 }
 
-function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, files: File[], o: { rounds: number; replicas: number; transfers: number }) => void }) {
+function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, files: File[], o: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => void }) {
   const [slug, setSlug] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [rounds, setRounds] = useState(2);
   const [replicas, setReplicas] = useState(2);
   const [transfers, setTransfers] = useState(1);
+  const [singletons, setSingletons] = useState(false);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -518,8 +519,8 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
         }`}
       >
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={(e) => accept(e.target.files)} />
-        <p className="font-hanken text-sm text-slate-300">Drop screenshots and images here, or click to choose.</p>
-        <p className="font-jetbrains mt-1 text-[11px] text-white/40">PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload</p>
+        <p className="font-hanken text-content text-slate-300">Drop screenshots and images here, or click to choose.</p>
+        <p className="font-jetbrains mt-1 text-content text-white/60">PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload</p>
       </div>
 
       {previews.length > 0 && (
@@ -533,7 +534,7 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
               <img src={p.url} alt={p.f.name} className="h-full w-full object-cover" />
-              <span className="font-jetbrains absolute inset-0 hidden items-center justify-center bg-black/60 text-[10px] text-rose-200 group-hover:flex">remove</span>
+              <span className="font-jetbrains absolute inset-0 hidden items-center justify-center bg-black/60 text-label text-rose-200 group-hover:flex">remove</span>
             </button>
           ))}
         </div>
@@ -541,12 +542,12 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
 
       <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto_auto]">
         <label className="flex flex-col gap-1">
-          <span className="font-jetbrains text-[10px] tracking-[0.14em] text-white/45 uppercase">slug</span>
+          <span className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">slug</span>
           <input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
             placeholder="my-gallery"
-            className="font-jetbrains rounded-lg border border-white/10 bg-transparent px-3 py-2 text-[12px] text-white/90 outline-none focus:border-cyan-400/40"
+            className="font-jetbrains rounded-lg border border-white/10 bg-transparent px-3 py-2 text-label text-white/90 outline-none focus:border-cyan-400/40"
           />
         </label>
         <Num label="rounds" value={rounds} min={1} max={4} onChange={setRounds} hint="self-critique rounds per replica" />
@@ -554,12 +555,21 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
         <Num label="transfers" value={transfers} min={0} max={4} onChange={setTransfers} hint="neutral scenes per style" />
       </div>
 
+      <label className="mt-4 flex cursor-pointer items-center gap-2" title="Every image becomes its own style; its recipe is written by the vision model with the image in view. No grouping turn at all. The board's ≈ chips then show which singletons were one style all along.">
+        <input type="checkbox" checked={singletons} onChange={(e) => setSingletons(e.target.checked)} className="accent-cyan-300" />
+        <span className="font-jetbrains text-label text-white/70">one style per image — no grouping</span>
+      </label>
+
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="font-hanken max-w-lg text-[12px] text-slate-400">
+        <p className="font-hanken max-w-lg text-content text-slate-400">
           Each source costs one recognition; each style costs up to replicas × rounds + transfers generations, each read back once. The run pauses if you leave this tab and resumes where it
           stopped.
         </p>
-        <Button disabled={!ready} onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers })} className="cursor-pointer px-5 py-2 text-[12px] disabled:cursor-not-allowed">
+        <Button
+          disabled={!ready}
+          onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}
+          className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
+        >
           {busy ? "uploading…" : `Extract from ${files.length} image${files.length === 1 ? "" : "s"}`}
         </Button>
       </div>
@@ -570,14 +580,14 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
 function Num({ label, value, min, max, onChange, hint }: { label: string; value: number; min: number; max: number; onChange: (n: number) => void; hint: string }) {
   return (
     <label className="flex flex-col gap-1" title={hint}>
-      <span className="font-jetbrains text-[10px] tracking-[0.14em] text-white/45 uppercase">{label}</span>
+      <span className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">{label}</span>
       <input
         type="number"
         min={min}
         max={max}
         value={value}
         onChange={(e) => onChange(Math.min(max, Math.max(min, Number(e.target.value) || min)))}
-        className="font-jetbrains w-20 rounded-lg border border-white/10 bg-transparent px-3 py-2 text-[12px] text-white/90 outline-none focus:border-cyan-400/40"
+        className="font-jetbrains w-20 rounded-lg border border-white/10 bg-transparent px-3 py-2 text-label text-white/90 outline-none focus:border-cyan-400/40"
       />
     </label>
   );

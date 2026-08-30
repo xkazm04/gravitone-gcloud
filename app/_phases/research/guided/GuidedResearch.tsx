@@ -54,7 +54,7 @@ export function FaceSwitch({ face, onSwitch }: { face: Face; onSwitch: (f: Face)
       data-testid="research-face-switch"
       onClick={() => onSwitch(other)}
       title={`Switch to ${word}. Nothing is discarded — both faces read and write the same record.`}
-      className="font-jetbrains rounded-full border border-white/12 px-2.5 py-1 text-[10px] tracking-[0.1em] text-white/45 transition hover:border-white/25 hover:text-white/75"
+      className="font-jetbrains rounded-full border border-white/12 px-2.5 py-1 text-label tracking-[0.1em] text-white/45 transition hover:border-white/25 hover:text-white/75"
     >
       switch to {word}
     </button>
@@ -108,22 +108,22 @@ function RequiredCard({
       </div>
       <div className="flex grow flex-col gap-2 p-4">
         {spec.eyebrow && (
-          <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">
+          <span className="font-jetbrains text-label tracking-[0.16em] text-white/35 uppercase">
             {spec.eyebrow}
           </span>
         )}
         <h3 className="font-instrument text-xl leading-snug text-slate-100">{spec.title}</h3>
         {spec.body && (
-          <p className="font-hanken line-clamp-4 text-[13px] leading-relaxed text-slate-400">
+          <p className="font-hanken line-clamp-4 text-content leading-relaxed text-slate-400">
             {spec.body}
           </p>
         )}
         {/* ScopeChip's words for a required card, so the two faces agree. */}
-        <span className="font-jetbrains w-fit rounded-full border border-amber-400/30 bg-amber-400/[0.06] px-2 py-0.5 text-[10px] tracking-[0.1em] text-amber-200">
+        <span className="font-jetbrains w-fit rounded-full border border-amber-400/30 bg-amber-400/[0.06] px-2 py-0.5 text-label tracking-[0.1em] text-amber-200">
           locked in scope — always travels
         </span>
         {why && (
-          <p className="font-jetbrains mt-auto pt-1 text-[10px] leading-relaxed text-white/35">
+          <p className="font-jetbrains mt-auto pt-1 text-label leading-relaxed text-white/35">
             {why}
           </p>
         )}
