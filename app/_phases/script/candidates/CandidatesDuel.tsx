@@ -237,7 +237,7 @@ export default function CandidatesDuel({
     id: r.id,
     eyebrow: r.engineLabel,
     title: r.title,
-    art: { kind: "gradient", tone: ART_TONE[r.id] ?? "" },
+    art: { kind: "gradient", tone: ART_TONE[r.id] ?? "", manifestKey: `engine-${r.id}` },
   }));
 
   return (

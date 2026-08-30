@@ -32,7 +32,7 @@ export type DeckArt =
    *  source file for the JIT to emit them). `hexes` — runtime data, e.g. a
    *  style's palette — wins over `tone` when present, drawn as an inline
    *  gradient because a class name composed at runtime gets no CSS. */
-  | { kind: "gradient"; tone: string; hexes?: string[] }
+  | { kind: "gradient"; tone: string; hexes?: string[]; manifestKey?: string }
   /** A real picture. `fallback` is what the gradient variant (and a missing
    *  image) draws instead — without it, the neutral default ground. */
   | { kind: "image"; src: string; alt?: string; fallback?: { tone?: string; hexes?: string[] } }

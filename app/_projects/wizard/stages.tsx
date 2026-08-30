@@ -57,7 +57,7 @@ export function disciplineCards(): DeckCardSpec[] {
         tone: "neutral",
       },
     ],
-    art: { kind: "gradient", tone: DISCIPLINE_TONE[d] },
+    art: { kind: "gradient", tone: DISCIPLINE_TONE[d], manifestKey: `discipline-${d}` },
   }));
 }
 
@@ -76,7 +76,7 @@ export function templateCards(discipline: Discipline): DeckCardSpec[] {
         : { label: `${t.range[0]}–${t.range[1]}s measured`, tone: "cyan" as const },
       { label: `target ${t.defaultS}s`, tone: "neutral" as const },
     ],
-    art: { kind: "gradient", tone: TEMPLATE_TONE[t.id] },
+    art: { kind: "gradient", tone: TEMPLATE_TONE[t.id], manifestKey: `template-${t.id}` },
   }));
 }
 
