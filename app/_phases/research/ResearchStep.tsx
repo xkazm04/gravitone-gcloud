@@ -27,18 +27,25 @@
 // to say which of the two it wants. So the default export reads the project
 // once and branches; `EducationalResearch` below is the surface that used to
 // be the whole file, every testid intact.
+//
+// THE TWO FACES (2026-08-30). The educational surface branches once more: the
+// guided card wizard (guided/GuidedResearch.tsx, on the deck engine) and the
+// expert Topic/Board tabs are two faces over ONE run wiring and ONE scope
+// record — the wiring lives in guided/useEducationalResearch.ts so neither
+// face forks it, the face choice under phase key "research-mode", and the
+// DEFAULT face is computed (guided only while the step holds no decisions),
+// never stored. Switching discards nothing, in either direction.
 
 import { useEffect, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
-import { useJobs } from "@/lib/jobs";
 import { getProject, type Discipline } from "@/lib/projects";
 
 import NotebookBody from "../_shared/notebook/NotebookBody";
 import EvidenceLog from "../_shared/notebook/EvidenceLog";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
-import { useResearchRun } from "./run/useResearchRun";
-import { loadStep, saveStep } from "../_shared/stepStore";
+import { saveStep, type GuidedModeStepData } from "../_shared/stepStore";
+import { useStepFor } from "../_shared/useLoadFor";
 
 import ResearchTriageBoard from "./ResearchTriageBoard";
 import FollowUpQueue from "./_parts/FollowUpQueue";
@@ -49,6 +56,8 @@ import { resetFollowUps } from "./useFollowUps";
 import BeatVariantBoard from "./beats/BeatVariantBoard";
 import ModeChooser, { ModeSwitch } from "./beats/ModeChooser";
 import { useBeatPicks } from "./beats/useBeatPicks";
+import GuidedResearch, { FaceSwitch, type Face } from "./guided/GuidedResearch";
+import { useEducationalResearch } from "./guided/useEducationalResearch";
 
 type Tab = "topic" | "board";
 
@@ -132,90 +141,76 @@ function BeatsResearch({
 }
 
 function EducationalResearch({ projectId }: { projectId: string }) {
-  const [tab, setTab] = useState<Tab>("topic");
-  const run = useResearchRun(projectId);
+  // ONE instance of the run wiring and ONE scope record, owned ABOVE the face
+  // branch — the guided wizard and the expert board are two faces on these
+  // same objects, which is what makes a decision on either visible on the
+  // other the moment you switch. The wiring itself moved verbatim to
+  // guided/useEducationalResearch.ts so neither face forks it.
+  const research = useEducationalResearch(projectId);
   const api = useScope(projectId);
-  const jobs = useJobs();
 
+  /* --------------------------------------------------------------- the face */
+  // The stored choice, under its own phase key ("research-mode") — see
+  // GuidedModeStepData for why the mode must never ride with the decisions.
+  const [stored, setStored] = useState<Face | null>(null);
+  const faceHydrated = useStepFor<GuidedModeStepData>(projectId, "research-mode", (d) =>
+    setStored(d?.mode ?? null),
+  );
+  const switchFace = (mode: Face) => {
+    setStored(mode);
+    void saveStep<GuidedModeStepData>(projectId, "research-mode", { mode });
+  };
+
+  // Every record the face computation reads, before any face is drawn — the
+  // wrong guess here flashes a whole surface. The DEFAULT face is computed,
+  // never stored (GuidedModeStepData's contract): guided only while the step
+  // holds no prior decisions — no notebook, no scope entry, no checkpoint.
+  if (!faceHydrated || !research.hydrated || !api.hydrated)
+    return <p className="font-jetbrains text-[12px] text-white/35">opening the step…</p>;
+  const decided =
+    research.ready || Object.keys(api.scope).length > 0 || api.confirmed !== null;
+
+  return (
+    <EducationalFaces
+      // Keyed so a project switch re-freezes the default for the new project.
+      key={projectId}
+      projectId={projectId}
+      research={research}
+      api={api}
+      face={stored}
+      defaultFace={decided ? "expert" : "guided"}
+      onSwitchFace={switchFace}
+    />
+  );
+}
+
+/** Below the hydration gate, so the computed default can be FROZEN at mount:
+ *  a live derivation would flip `researched` the moment the wizard's own run
+ *  landed and yank the creator to the expert board mid-wizard. Mount state is
+ *  the freeze, and the `key` above is the per-project reset. */
+function EducationalFaces({
+  projectId,
+  research,
+  api,
+  face,
+  defaultFace,
+  onSwitchFace,
+}: {
+  projectId: string;
+  research: ReturnType<typeof useEducationalResearch>;
+  api: ReturnType<typeof useScope>;
+  face: Face | null;
+  defaultFace: Face;
+  onSwitchFace: (mode: Face) => void;
+}) {
+  const [tab, setTab] = useState<Tab>("topic");
   const [artifact, setArtifact] = useState<"notebook" | "evidence" | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
-  const [topic, setTopic] = useState("");
-  const [hydrated, setHydrated] = useState(false);
+  // The frozen default — what this step looked like when it was opened.
+  const [fallback] = useState<Face>(defaultFace);
+  const shown = face ?? fallback;
 
-  const ready = run.state.status === "done";
-
-  /* ---------------------------------------------------------- load on mount */
-  // A project's step content is its own. The seeded Bitcoin project ships with
-  // the real notebook as its saved state, which is why opening it shows a
-  // finished run rather than an empty field. `load` refuses mid-run, so coming
-  // back to a step whose run is still going shows the run, not the saved result.
-  useEffect(() => {
-    let alive = true;
-    void loadStep(projectId, "research").then((saved) => {
-      if (!alive) return;
-      setTopic(saved?.topic ?? NOTEBOOK.topic);
-      if (saved?.researched) run.load();
-      setHydrated(true);
-    });
-    return () => { alive = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectId]);
-
-  /* ------------------------------------------------------------ persistence */
-  useEffect(() => {
-    if (!hydrated) return;
-    void saveStep(projectId, "research", { topic, researched: ready });
-  }, [projectId, topic, ready, hydrated]);
-
-  /* ------------------------------------------- the background job round-trip */
-  // "Is it running" has one answer, and the engine owns it. The job is the
-  // NOTIFICATION vehicle — it survives the step, it rings the bell — but it no
-  // longer schedules anything, so it can no longer disagree with the trace.
-  const running = run.state.status === "running";
-
-  const startResearch = () => {
-    // Parallel research is allowed on purpose — different topics are
-    // independent, and a creator who wants three subjects investigated at once
-    // should get three. Only follow-ups are serialised.
-    const j = jobs.start("research", projectId, topic, { driven: true });
-    if (!j) return;
-
-    // Frozen at click time, and deliberately not read off state later: this
-    // closure has to survive leaving the step. `jobs.settle` is stable and
-    // `JobsProvider` is mounted above the router, so a run that lands while the
-    // step is unmounted still closes its job.
-    const settle = jobs.settle;
-    const started = run.start(j.id, (final) => {
-      if (final.status === "done") {
-        settle(j.id, "done", "A notebook is ready for review.");
-      } else if (final.status === "no-tension") {
-        // A successful run, not a defect: RESEARCH-PROMPT § Phase 2 requires a
-        // topic with no tension to stop and say so, and it did.
-        settle(j.id, "done", "No tension in this topic — the run finished and says why. There is no notebook.");
-      } else if (final.status === "failed") {
-        settle(j.id, "failed", final.error);
-      }
-    });
-
-    // A run was already live here. Don't leave a job open that nothing settles.
-    if (!started) jobs.cancel(j.id);
-  };
-
-  /** Pull the process. The engine stops WITHOUT firing its ending — this handler
-   *  owns the job from here, and `cancel` is the one job exit that fires no bell
-   *  event, because you already know you stopped it.
-   *
-   *  The id comes off the RUN, not off this component. It used to be local
-   *  state, which is a shorter lifetime than the thing it identifies: the run
-   *  survives leaving the step and the id did not, so aborting after coming
-   *  back stopped the engine and cancelled nothing, stranding the job as
-   *  `running` in the bell until a reload called it interrupted. Read before
-   *  `stop`, which clears it. */
-  const abortResearch = () => {
-    const live = run.jobId;
-    run.stop();
-    if (live) jobs.cancel(live);
-  };
+  const { run, topic, setTopic, ready, running, startResearch, abortResearch } = research;
 
   // Everything the ClearDialog says is discarded, discarded. The follow-up
   // record is the third document this step owns — it lives above React so that
@@ -232,51 +227,67 @@ function EducationalResearch({ projectId }: { projectId: string }) {
 
   return (
     <div className="space-y-5">
-      <div className="font-jetbrains flex flex-wrap gap-2 text-[12px]">
-        {([
-          { key: "topic", label: "Topic", sub: "input, log & notebook" },
-          { key: "board", label: "Triage board", sub: ready ? "scope the material" : "locked until a notebook exists" },
-        ] as const).map((t) => {
-          const locked = t.key === "board" && !ready;
-          return (
-            <button
-              key={t.key}
-              data-testid={`tab-${t.key}`}
-              onClick={() => !locked && setTab(t.key)}
-              disabled={locked}
-              className={`rounded-xl border px-3.5 py-2 text-left transition ${
-                tab === t.key
-                  ? "border-cyan-400/40 bg-cyan-400/[0.07]"
-                  : locked
-                    ? "cursor-not-allowed border-white/6 bg-white/[0.01] opacity-45"
-                    : "border-white/8 bg-white/[0.02] hover:border-white/20"
-              }`}
-            >
-              <span className="block text-white/85">{t.label}</span>
-              <span className="mt-0.5 block text-[10px] text-white/35">{t.sub}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {tab === "topic" ? (
-        <TopicPanel
-          run={run}
-          topic={topic}
-          setTopic={setTopic}
-          running={running}
-          onStart={startResearch}
-          onAbort={abortResearch}
-          onClear={() => setConfirmClear(true)}
+      {shown === "guided" ? (
+        <GuidedResearch
+          research={research}
+          api={api}
           onOpenNotebook={() => setArtifact("notebook")}
           onOpenEvidence={() => setArtifact("evidence")}
-          onGoToBoard={() => setTab("board")}
+          onClear={() => setConfirmClear(true)}
+          onSwitchFace={onSwitchFace}
         />
       ) : (
         <>
-          <ResearchTriageBoard api={api} />
-          <FollowUpQueue api={api} projectId={projectId} />
-          <ConfirmScope api={api} />
+          <div className="font-jetbrains flex flex-wrap items-center gap-2 text-[12px]">
+            {([
+              { key: "topic", label: "Topic", sub: "input, log & notebook" },
+              { key: "board", label: "Triage board", sub: ready ? "scope the material" : "locked until a notebook exists" },
+            ] as const).map((t) => {
+              const locked = t.key === "board" && !ready;
+              return (
+                <button
+                  key={t.key}
+                  data-testid={`tab-${t.key}`}
+                  onClick={() => !locked && setTab(t.key)}
+                  disabled={locked}
+                  className={`rounded-xl border px-3.5 py-2 text-left transition ${
+                    tab === t.key
+                      ? "border-cyan-400/40 bg-cyan-400/[0.07]"
+                      : locked
+                        ? "cursor-not-allowed border-white/6 bg-white/[0.01] opacity-45"
+                        : "border-white/8 bg-white/[0.02] hover:border-white/20"
+                  }`}
+                >
+                  <span className="block text-white/85">{t.label}</span>
+                  <span className="mt-0.5 block text-[10px] text-white/35">{t.sub}</span>
+                </button>
+              );
+            })}
+            <span className="ml-auto">
+              <FaceSwitch face="expert" onSwitch={onSwitchFace} />
+            </span>
+          </div>
+
+          {tab === "topic" ? (
+            <TopicPanel
+              run={run}
+              topic={topic}
+              setTopic={setTopic}
+              running={running}
+              onStart={startResearch}
+              onAbort={abortResearch}
+              onClear={() => setConfirmClear(true)}
+              onOpenNotebook={() => setArtifact("notebook")}
+              onOpenEvidence={() => setArtifact("evidence")}
+              onGoToBoard={() => setTab("board")}
+            />
+          ) : (
+            <>
+              <ResearchTriageBoard api={api} />
+              <FollowUpQueue api={api} projectId={projectId} />
+              <ConfirmScope api={api} />
+            </>
+          )}
         </>
       )}
 
