@@ -26,6 +26,21 @@ Poll with Monitor, never a Bash background task — the 10-minute ceiling kills
 those (see the project memory note; a forge run is hours). Resumable per file:
 re-launching with `--resume` continues a dead run.
 
+### pairs (composition cycles)
+
+When the thing under test is a PROMPT rather than a style recipe, the forge
+is the wrong runner (one style id per plan). `pipeline/foundry/dojo_pairs.py`
+renders a spec of seed-matched duos through the same ComfyUI + guard turn and
+reads every image back with qwen (craft annotation + style readback):
+
+```powershell
+Start-Process -FilePath "python" -ArgumentList "pipeline/foundry/dojo_pairs.py", "foundry-out/training/<cycle-id>" -WorkingDirectory "C:/Users/kazda/kiro/gravitone-gcloud" -RedirectStandardOutput $log -RedirectStandardError "$log.err" -NoNewWindow
+```
+
+Baseline prompts for shot-based cycles come from the LIVE compiler:
+`npx tsx pipeline/foundry/dojo-shot-prompts.mts <shots.json>` prints
+`shotPrompt.actionFor` + `compilePrompt` output, never a retyped copy.
+
 ### video
 
 **Absent, deliberately.** Wan renders exist on this machine only as measured
@@ -44,6 +59,11 @@ Per cycle window (one window = one calendar day on this box):
   1280x720, 20 steps: ~2 GPU-hours worst case on this card.
 - **2 cycles max per window**; the loop stops at the ceiling and says so.
   `--resume` only once the window has moved.
+- **Operator override 2026-08-30 (second session):** cycles 3–10 authorised in
+  one window, 4 duos each (8 candidates), to gather a VARIETY of problems —
+  the operator's own ranking: cinematography composition, beat composition,
+  the thin art-style library — outranks the librarian's points. Reverts to
+  2/day afterwards.
 - Judge spend: local (Ollama) is unmetered; Gemini joint-judge calls capped at
   **30 requests per cycle**.
 
