@@ -26,7 +26,14 @@ const SECTIONS = [
   ["questions", `questions · ${NOTEBOOK.candidateQuestions.length}`],
   ["fit", "engine fit"],
   ["currency", "currency"],
-  ["sources", `sources · ${NOTEBOOK_COUNTS.sources}`],
+  // "sources" here is NOTEBOOK.sources, the hand-written bibliography (11 on
+  // this fixture) — a SEPARATE, unrelated population from the 20 distinct
+  // `Fact.source` strings the facts above cite (`NOTEBOOK_COUNTS.factSourceStrings`).
+  // Named "bibliography" rather than bare "sources" so the rail pill cannot be
+  // misread as a count of every source the notebook has; see the comment on
+  // NOTEBOOK_COUNTS in notebook.ts for the full measurement and why the two
+  // lists are not reconciled.
+  ["sources", `bibliography · ${NOTEBOOK_COUNTS.sources}`],
   ["gaps", `gaps · ${NOTEBOOK_COUNTS.gaps}`],
 ] as const;
 

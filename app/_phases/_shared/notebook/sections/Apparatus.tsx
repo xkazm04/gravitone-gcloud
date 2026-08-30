@@ -140,7 +140,14 @@ export default function ApparatusSections() {
       </section>
 
       <section className="space-y-1.5">
-        <H id="sources">sources</H>
+        {/* Bare "sources" reads as "every source this notebook has" — it is
+            the hand-written bibliography (NOTEBOOK.sources) only, a separate,
+            unrelated population from the distinct source strings the facts
+            above cite. Kept in step with the rail pill this heading is jumped
+            to from (SECTIONS in NotebookBody.tsx) and the Evidence Log's own
+            heading over the same body — see the comment on NOTEBOOK_COUNTS
+            in notebook.ts for the measurement. */}
+        <H id="sources">bibliography — the sources cited</H>
         <SourcesBody />
       </section>
 

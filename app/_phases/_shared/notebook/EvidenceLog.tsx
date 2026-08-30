@@ -77,7 +77,16 @@ export default function EvidenceLog() {
       </section>
 
       <section className="space-y-1.5">
-        <Head>sources · {NOTEBOOK_COUNTS.sources}</Head>
+        {/* This header used to read bare "sources · 11", which a reader of a
+            page whose own opening line claims "every claim dated, sourced and
+            rated" reasonably takes as "every source this notebook has". It is
+            not: 11 is NOTEBOOK.sources, the hand-written bibliography. The 21
+            facts above cite 20 DISTINCT source strings between them
+            (`factSourceStrings`) that this list does not enumerate and that no
+            code reconciles against it — see the comment on NOTEBOOK_COUNTS in
+            notebook.ts for why a reconciliation is not being built. "cited
+            bibliography" names the population instead of implying totality. */}
+        <Head>cited bibliography · {NOTEBOOK_COUNTS.sources}</Head>
         <SourcesBody />
         {/* The gap is READ, not retyped. The count beside it was already
             computed, and the sentence describing it was a literal about run 1

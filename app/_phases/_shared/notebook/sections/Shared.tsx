@@ -42,7 +42,13 @@ export function CurrencyBody({ withHalfLife = false }: { withHalfLife?: boolean 
   );
 }
 
-/** Every source the run cites, in the order the notebook lists them. */
+/** The document-level bibliography (NOTEBOOK.sources), in the order the
+ *  notebook lists them — NOT every source a fact cites. That is a separate,
+ *  larger, unrelated population (`Fact.source` across facts.ts, distinct
+ *  strings counted as `NOTEBOOK_COUNTS.factSourceStrings`); both hosts of this
+ *  body now name their heading "bibliography" rather than bare "sources" so
+ *  the two are not conflated. See the comment on NOTEBOOK_COUNTS in
+ *  notebook.ts for the measurement and why no reconciliation is built. */
 export function SourcesBody() {
   return (
     <ul className="space-y-1">
