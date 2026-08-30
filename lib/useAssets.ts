@@ -13,22 +13,43 @@
 // the user deleting every seeded asset, or "remove" stops meaning remove and an
 // emptied shelf silently refills on the next reload.
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   assetFromProof,
+  assetFromUpload,
   deleteAsset as dbDelete,
+  folderRenameEntries,
+  getAsset,
+  getUploadBlobs,
   hydrateProofSrcs,
+  hydrateUploadSrcs,
   listAssets,
+  moveAssets,
+  putUploads,
+  refileAssets,
+  renameAsset,
   promotedFrom,
   putAssets,
   readProofPointer,
+  readUploadPointer,
   type Asset,
 } from "./assets";
 import { listThemes, type Proof, type Theme } from "./themes";
 import { presetById } from "@/app/library/presets";
 
 const seededKey = (uid: string) => `gravitone.assets.seeded.${uid}`;
+
+/**
+ * The ceiling on one uploaded reference.
+ *
+ * Not a guess at what IndexedDB can hold — it is generous — but at what a
+ * reference IS. These are things a style gets pointed at, and a 40 MB camera
+ * original is a file the user meant to keep somewhere else. Refusing it by name
+ * is kinder than accepting it and spending a browser quota the user cannot see
+ * on a picture that will be downscaled before it is ever sent to a model.
+ */
+const MAX_UPLOAD_BYTES = 12_000_000;
 
 function alreadySeeded(uid: string): boolean {
   try {
@@ -109,7 +130,7 @@ async function seedFromTrials(uid: string): Promise<Asset[]> {
 /** Read the bytes a promoted proof points at. Only pays for the theme read when
  *  something on the shelf actually needs it — a sheet is base64 in the record,
  *  so listing every theme is not free. */
-async function hydrate(uid: string, rows: Asset[]): Promise<Asset[]> {
+async function hydrateProofs(uid: string, rows: Asset[]): Promise<Asset[]> {
   if (!rows.some((a) => readProofPointer(a.src))) return rows;
   return hydrateProofSrcs(rows, await listThemes(uid));
 }
@@ -123,6 +144,50 @@ async function hydrate(uid: string, rows: Asset[]): Promise<Asset[]> {
 export function useAssets(uid: string | null, { seed = true }: { seed?: boolean } = {}) {
   const [assets, setAssets] = useState<Asset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * THE BLOB URLS THIS HOOK OWNS, RELEASED WHEN IT GOES.
+   *
+   * Same rule and same shape as app/playground/PlaygroundView.tsx: an object URL
+   * leaks until revoked, so ownership has to be stated. This hook mints one per
+   * uploaded plate it draws and owns every one of them; nothing downstream may
+   * revoke a `src` it was handed.
+   *
+   * The previous batch is released at the START of the next hydrate. Revoking a
+   * URL does not unload an image the browser has already decoded, so the tiles
+   * on screen survive it — only a fresh fetch would fail, and the rows carrying
+   * these URLs are being replaced in the same pass.
+   */
+  const owned = useRef<string[]>([]);
+  const releaseOwned = useCallback(() => {
+    for (const url of owned.current) URL.revokeObjectURL(url);
+    owned.current = [];
+  }, []);
+
+  /** Resolve `upload:` pointers to URLs this hook owns. Only opens the byte
+   *  store when a row on the shelf actually points into it. */
+  const hydrateUploads = useCallback(
+    async (rows: Asset[]): Promise<Asset[]> => {
+      const ids = rows.map((a) => readUploadPointer(a.src)).filter((id): id is string => Boolean(id));
+      // Released BEFORE the early return, not after it. Removing the last
+      // uploaded plate produces a reload with no pointers left, and returning
+      // early without this would hold that plate's URL — and its bytes — until
+      // the page was closed, on precisely the action the user took to free it.
+      releaseOwned();
+      if (!ids.length) return rows;
+      const blobs = await getUploadBlobs(ids);
+      const urls = new Map<string, string>();
+      for (const [id, blob] of blobs) {
+        const url = URL.createObjectURL(blob);
+        owned.current.push(url);
+        urls.set(id, url);
+      }
+      return hydrateUploadSrcs(rows, urls);
+    },
+    [releaseOwned],
+  );
+
+  useEffect(() => releaseOwned, [releaseOwned]);
 
   const reload = useCallback(async () => {
     if (!uid) return;
@@ -139,13 +204,13 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
           rows = await listAssets(uid);
         }
       }
-      setAssets(await hydrate(uid, rows));
+      setAssets(await hydrateUploads(await hydrateProofs(uid, rows)));
       setError(null);
     } catch (e) {
       setAssets([]);
       setError(e instanceof Error ? e.message : "could not read your assets");
     }
-  }, [uid, seed]);
+  }, [uid, seed, hydrateUploads]);
 
   useEffect(() => {
     if (!uid) {
@@ -177,7 +242,19 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
     async (theme: Theme, proof: Proof): Promise<Asset | null> => {
       if (!uid) return null;
       try {
-        const asset = assetFromProof(uid, theme, proof);
+        const fresh = assetFromProof(uid, theme, proof);
+        // A plate the user has since REFILED keeps where they put it. The id is
+        // content-addressed, so a second promotion is an overwrite of the same
+        // row (assets.ts#promotedId) — and `assetFromProof` recomputes the path
+        // from the theme, so without this every reopened proof sheet would drag
+        // the plate back out of the folder the user moved it to, silently and
+        // on an action that reads as a no-op.
+        const prior = await getAsset(fresh.id);
+        // The NAME is preserved for the same reason as the path: both are the
+        // user's edits to a shelf entry, and `assetFromProof` recomputes both
+        // from the theme. A plate they renamed reverting to the proof's own
+        // label the next time the sheet is opened is the same silent undo.
+        const asset = prior ? { ...fresh, path: prior.path, name: prior.name } : fresh;
         await putAssets([asset]);
         // The stored row holds the pointer; the list holds what a gallery can
         // draw. Same record, dereferenced — see assets.ts.
@@ -195,6 +272,120 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
       }
     },
     [uid],
+  );
+
+  /**
+   * Refile rows under a new folder chain.
+   *
+   * Returns how many rows the store accepted, so a caller can say "moved 3
+   * plates to presets" rather than announcing a number it assumed. Local state
+   * is patched rather than reloaded: a reload would re-hydrate every promoted
+   * proof on the shelf — re-reading the themes and rebuilding megabytes of
+   * base64 — to reflect a change to one array of strings.
+   */
+  const move = useCallback(async (ids: string[], path: string[]): Promise<number> => {
+    if (!ids.length) return 0;
+    try {
+      await moveAssets(ids, path);
+      const moving = new Set(ids);
+      setAssets((as) => (as ?? []).map((a) => (moving.has(a.id) ? { ...a, path } : a)));
+      setError(null);
+      return ids.length;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "could not refile it");
+      return 0;
+    }
+  }, []);
+
+  /**
+   * Put the user's own files on the shelf.
+   *
+   * Returns what was refused and why, rather than a boolean. Dropping a folder
+   * of twelve files where three are PDFs and one is enormous is the ordinary
+   * case, and "some files were not added" is not something a user can act on —
+   * the caller names them.
+   *
+   * A reload follows the write instead of a local splice: hydration has to mint
+   * an object URL for each new row, and that allocation belongs to the one path
+   * that also records it as owned.
+   */
+  const addUploads = useCallback(
+    async (files: File[], path: string[]): Promise<{ added: number; rejected: string[] }> => {
+      if (!uid) return { added: 0, rejected: [] };
+      const rejected: string[] = [];
+      const pairs = [];
+      for (const f of files) {
+        if (!f.type.startsWith("image/")) {
+          rejected.push(`${f.name} — not an image`);
+          continue;
+        }
+        if (f.size > MAX_UPLOAD_BYTES) {
+          rejected.push(`${f.name} — over ${Math.round(MAX_UPLOAD_BYTES / 1_000_000)} MB`);
+          continue;
+        }
+        pairs.push(assetFromUpload(uid, f, path));
+      }
+      if (!pairs.length) return { added: 0, rejected };
+      try {
+        await putUploads(pairs);
+        await reload();
+        setError(null);
+        return { added: pairs.length, rejected };
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "could not add those files");
+        return { added: 0, rejected };
+      }
+    },
+    [uid, reload],
+  );
+
+  /**
+   * Rename one plate. An empty name is refused rather than stored: the shelf
+   * reads `name` for the tile caption, the drawer heading and the removal
+   * announcement, and a blank one would make a plate that cannot be referred
+   * to by any of the three.
+   */
+  const rename = useCallback(async (id: string, raw: string): Promise<boolean> => {
+    const name = raw.trim();
+    if (!name) return false;
+    try {
+      await renameAsset(id, name);
+      setAssets((as) => (as ?? []).map((a) => (a.id === id ? { ...a, name } : a)));
+      setError(null);
+      return true;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "could not rename it");
+      return false;
+    }
+  }, []);
+
+  /**
+   * Rename a folder — which, for a tree derived from paths, is a refile of
+   * everything at or below it.
+   *
+   * Returns how many plates moved so the caller can say so. The entries are
+   * computed from LOCAL state because that is what the user is looking at and
+   * what the count they are about to be told refers to; the writes themselves
+   * still go row by row through the store.
+   */
+  const renameFolder = useCallback(
+    async (path: string[], raw: string): Promise<number> => {
+      const name = raw.trim();
+      if (!name || !path.length || name === path[path.length - 1]) return 0;
+      const entries = folderRenameEntries(assets ?? [], path, name);
+      if (!entries.length) return 0;
+      try {
+        await refileAssets(entries);
+        const byId = new Map(entries.map((e) => [e.id, e.path]));
+        setAssets((as) => (as ?? []).map((a) => (byId.has(a.id) ? { ...a, path: byId.get(a.id)! } : a)));
+        setError(null);
+        return entries.length;
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "could not rename the folder");
+        return 0;
+      }
+    },
+    [assets],
   );
 
   /** Drop every shelf entry promoted out of one theme — what deleting that
@@ -218,5 +409,17 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
     [uid],
   );
 
-  return { assets, error, loading: assets === null, reload, remove, promote, removeFromTheme };
+  return {
+    assets,
+    error,
+    loading: assets === null,
+    reload,
+    remove,
+    move,
+    rename,
+    renameFolder,
+    addUploads,
+    promote,
+    removeFromTheme,
+  };
 }

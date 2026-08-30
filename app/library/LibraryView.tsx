@@ -33,6 +33,10 @@ type ModuleId = (typeof MODULES)[number]["id"];
 
 export default function LibraryView() {
   const [module, setModule] = useState<ModuleId>("styles");
+  /** A style the Assets tab has just created and wants opened. Consumed as the
+   *  atelier's INITIAL selection: switching modules unmounts it, so the handoff
+   *  needs no effect and cannot fight the user's later clicks. */
+  const [focusStyle, setFocusStyle] = useState<string | null>(null);
   const active = MODULES.find((m) => m.id === module)!;
 
   return (
@@ -50,7 +54,12 @@ export default function LibraryView() {
             {MODULES.map((m) => (
               <button
                 key={m.id}
-                onClick={() => setModule(m.id)}
+                onClick={() => {
+                  // A tab pressed by hand is not a handoff — drop any pending
+                  // focus so the atelier opens where the user left it.
+                  setFocusStyle(null);
+                  setModule(m.id);
+                }}
                 className={`font-jetbrains rounded-full border px-3.5 py-1.5 text-[12px] transition ${
                   m.id === module
                     ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
@@ -67,13 +76,18 @@ export default function LibraryView() {
 
         <section className="mt-6">
           {module === "styles" ? (
-            <LibraryAtelier />
+            <LibraryAtelier initialSelectedId={focusStyle} />
           ) : module === "assets" ? (
             // The shelf fills from Styles, so its empty state needs a way back
             // there. The module is this component's state, so the handler is
             // this component's to pass — an empty state that can only describe
             // the next step is half a surface.
-            <AssetsBrowser onOpenStyles={() => setModule("styles")} />
+            <AssetsBrowser
+              onOpenStyles={(themeId) => {
+                setFocusStyle(themeId ?? null);
+                setModule("styles");
+              }}
+            />
           ) : (
             <ComingSoon label={active.label} blurb={active.blurb} />
           )}
