@@ -90,3 +90,13 @@ tracking the human better, and record the decision here):
   path the tab drives. Reflect must SKIP rows whose cycle id is a fixture:
   revert `training-ledger.json` and delete `thumbs/fixture-*` instead of
   editing prompt surfaces.
+- 2026-08-30 — first live window (2 cycles, 24 candidates, ~1h40 GPU): the
+  forge takes ONE style id per plan, so an A/B is run by pre-building
+  `run.json` with both arms and launching with `--resume` (the plan file is
+  only forge's preflight). Expect 1–3 `finished with no image` races per
+  12-candidate pass on this 64 GB box (guard recycles ComfyUI under commit
+  pressure); a second `--resume` pass fills them. The qwen readback pre-filter
+  was FLAT on both cycles while Gemini picked the challenger 4/6 each time —
+  the grader's closed enums cannot see a lifted-black or a colour-role
+  change; the human gate is the only instrument for these techniques.
+  Gemini `3.7-flash` answered 503 across a whole batch; `3.6-flash` served.
