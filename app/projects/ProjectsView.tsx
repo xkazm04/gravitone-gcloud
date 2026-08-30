@@ -79,9 +79,24 @@ export default function ProjectsView() {
           detached node is silent, and focus falls to <body>. See
           components/ui/Modal.tsx#restoreFocus. */}
       <main tabIndex={-1} className="pb-16">
-        <header className="pt-6">
-          <Eyebrow>projects</Eyebrow>
-          <h1 className="font-instrument mt-3 text-4xl text-white">Projects</h1>
+        <header className="flex flex-wrap items-end justify-between gap-4 pt-6">
+          <div>
+            <Eyebrow>projects</Eyebrow>
+            <h1 className="font-instrument mt-3 text-4xl text-white">Projects</h1>
+          </div>
+          {/* The expert path: the old dialog, exactly as before, for whoever
+              knows the four answers already. The primary create walks the
+              guided wizard (/projects/new). Same theme-gate on both — a dead
+              button teaches nothing, /library is the actual next step. */}
+          <button
+            type="button"
+            onClick={() =>
+              gated ? router.push("/library") : setDialog({ open: true, project: null })
+            }
+            className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-[11px] text-white/45 transition hover:border-white/25 hover:text-white/75"
+          >
+            quick create — the expert form
+          </button>
         </header>
 
         {gated && (
@@ -122,10 +137,10 @@ export default function ProjectsView() {
               onEdit={(p) => setDialog({ open: true, project: p })}
               onDelete={(p) => setDoomed(p)}
               // Gated rather than disabled: a dead button teaches nothing,
-              // whereas landing on /library is the actual next step.
-              onCreate={() =>
-                gated ? router.push("/library") : setDialog({ open: true, project: null })
-              }
+              // whereas landing on /library is the actual next step. Ungated,
+              // the primary create is the guided wizard; the header's "quick
+              // create" keeps the dialog as the expert path.
+              onCreate={() => router.push(gated ? "/library" : "/projects/new")}
             />
           )}
         </section>
