@@ -33,7 +33,8 @@ import { Eyebrow } from "@/components/ui/Primitives";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
-import { lockedOnly, styleFits } from "@/lib/themes";
+import { lockedOnly, newTheme, putTheme, styleFits, type Proof } from "@/lib/themes";
+import { PRESETS, thumbSrc, type Preset } from "@/app/library/presets";
 import {
   DISCIPLINE_LABEL,
   templateOf,
@@ -42,7 +43,39 @@ import {
   type TemplateId,
 } from "@/lib/projects";
 
-import { disciplineCards, templateCards, styleCards, EmptyStyleDeck, NameStage } from "./stages";
+import {
+  disciplineCards,
+  templateCards,
+  styleCards,
+  presetCards,
+  presetCardId,
+  PRESET_CARD_PREFIX,
+  EmptyStyleDeck,
+  NameStage,
+} from "./stages";
+
+/** The preset's committed render, read back as proof bytes. The thumb IS a
+ *  real render of the block on the canonical subject (public/presets/,
+ *  pipeline/build-preset-thumbs.mts), which is what makes it honest as the
+ *  minted theme's one approved proof — the user is looking at exactly the
+ *  image that will serve as the style reference. */
+async function proofFromThumb(p: Preset): Promise<Proof> {
+  const res = await fetch(thumbSrc(p.id));
+  if (!res.ok) throw new Error(`the preset's render did not load (${res.status})`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return {
+    id: `pf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    label: `${p.name} — the committed preset render (canonical subject)`,
+    base64: btoa(bin),
+    mime: "image/jpeg",
+    state: "approved",
+    createdAt: Date.now(),
+  };
+}
 
 export default function CreateWizard() {
   const { user } = useAuth();
@@ -54,7 +87,10 @@ export default function CreateWizard() {
   const [active, setActive] = useState(0);
   const [discipline, setDiscipline] = useState<Discipline | null>(null);
   const [template, setTemplate] = useState<TemplateId | null>(null);
-  const [themeId, setThemeId] = useState<string | null>(null);
+  /** The style pick — a locked theme's id, or `preset:<id>` for a preset the
+   *  finish step mints into a locked theme (stages.tsx#presetCardId). */
+  const [styleId, setStyleId] = useState<string | null>(null);
+  const [mintError, setMintError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [logline, setLogline] = useState("");
   const [targetS, setTargetS] = useState(0);
@@ -68,6 +104,16 @@ export default function CreateWizard() {
     () => (discipline ? lockedThemes.filter((t) => styleFits(t, discipline)) : lockedThemes),
     [lockedThemes, discipline],
   );
+  // Presets sit beside the locked themes on the style stage — a complete
+  // four-slot block off the shelf is a real answer for a first project, and
+  // the finish step mints it into a locked theme (same filter as PresetRail).
+  const fittingPresets = useMemo(
+    () => (discipline ? PRESETS.filter((p) => styleFits(p, discipline)) : PRESETS),
+    [discipline],
+  );
+  const pickedPreset = styleId?.startsWith(PRESET_CARD_PREFIX)
+    ? (fittingPresets.find((p) => presetCardId(p) === styleId) ?? null)
+    : null;
 
   // The cascade, mirroring ProjectDialog#pickDiscipline's rules rather than
   // forking them: no record may carry a template outside its discipline, and a
@@ -82,8 +128,11 @@ export default function CreateWizard() {
       setTemplate(null);
       if (!ownDuration) setTargetS(0);
     }
-    if (themeId && !lockedThemes.some((t) => t.id === themeId && styleFits(t, next))) {
-      setThemeId(null);
+    if (styleId) {
+      const stillFits = styleId.startsWith(PRESET_CARD_PREFIX)
+        ? PRESETS.some((p) => presetCardId(p) === styleId && styleFits(p, next))
+        : lockedThemes.some((t) => t.id === styleId && styleFits(t, next));
+      if (!stillFits) setStyleId(null);
     }
   };
 
@@ -94,9 +143,40 @@ export default function CreateWizard() {
   };
 
   const finish = async () => {
-    if (busy || !discipline || !template || !themeId || !title.trim()) return;
+    if (busy || !user || !discipline || !template || !styleId || !title.trim()) return;
     setBusy(true);
+    setMintError(null);
     try {
+      let themeId = styleId;
+      if (pickedPreset) {
+        // Mint the preset into a LOCKED theme, one write: the committed render
+        // becomes the single approved proof (canLock's shape — one approved,
+        // none pending), and lockedAt is set at birth. The user ratified the
+        // style by choosing the card that IS that render; the library's
+        // commission flow remains the path for styles that need arguing over.
+        try {
+          const proof = await proofFromThumb(pickedPreset);
+          const minted = {
+            ...newTheme(user.uid, {
+              name: pickedPreset.name,
+              block: pickedPreset.block,
+              elements: pickedPreset.elements,
+              origin: "preset" as const,
+              presetId: pickedPreset.id,
+              discipline: pickedPreset.discipline,
+            }),
+            proofs: [proof],
+            lockedAt: Date.now(),
+          };
+          await putTheme(minted);
+          themeId = minted.id;
+        } catch (e) {
+          // The style did not land → no project either. The wizard stays with
+          // the pick intact and says which half failed.
+          setMintError(e instanceof Error ? e.message : "the style could not be saved");
+          return;
+        }
+      }
       const made = await create({
         title,
         logline,
@@ -140,14 +220,22 @@ export default function CreateWizard() {
       id: "style",
       label: "style",
       headline: "Which visual identity does it render in?",
-      sub: "A locked style from the library. Every frame this project renders is built on it, and it is fixed at creation.",
-      done: themeId !== null,
-      summary: themeId ? (lockedThemes.find((t) => t.id === themeId)?.name ?? undefined) : undefined,
+      sub: "A locked style from the library, or a preset off the shelf — a preset locks as this project's style when you create. Every frame renders against it, fixed at creation.",
+      done: styleId !== null,
+      summary: pickedPreset
+        ? `${pickedPreset.name} (preset)`
+        : styleId
+          ? (lockedThemes.find((t) => t.id === styleId)?.name ?? undefined)
+          : undefined,
       content:
-        discipline && fittingThemes.length === 0 ? (
+        discipline && fittingThemes.length === 0 && fittingPresets.length === 0 ? (
           <EmptyStyleDeck discipline={discipline} />
         ) : (
-          <DeckStage cards={styleCards(fittingThemes)} pickedId={themeId} onPick={setThemeId} />
+          <DeckStage
+            cards={[...styleCards(fittingThemes), ...presetCards(fittingPresets)]}
+            pickedId={styleId}
+            onPick={setStyleId}
+          />
         ),
     },
     {
@@ -190,7 +278,11 @@ export default function CreateWizard() {
           onFinish={() => void finish()}
           busy={busy}
           notice={
-            error ? (
+            mintError ? (
+              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
+                {mintError} — the project was not created; your picks are kept.
+              </p>
+            ) : error ? (
               <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
                 {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
               </p>

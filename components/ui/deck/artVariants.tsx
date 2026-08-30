@@ -27,7 +27,7 @@ import { DECK_ART } from "@/app/_studio/deckArt";
 
 import type { DeckArt } from "./DeckCard";
 import { DeckEmblem, emblemToneClass, hasEmblem } from "./emblems";
-import { ART_VARIANTS, useArtVariant } from "./useArtVariant";
+import { ART_VARIANTS, useArtVariant, type ArtVariant } from "./useArtVariant";
 
 /** Which deck-art/emblem key this art names, or undefined — never a guess. */
 function manifestKeyOf(art: DeckArt): string | undefined {
@@ -76,17 +76,35 @@ function glyphOf(title: string): string {
   return [...title.trim()][0]?.toUpperCase() ?? "·";
 }
 
-export function DeckArtView({ art, title }: { art: DeckArt; title: string }) {
-  const [variant] = useArtVariant();
+export function DeckArtView({
+  art,
+  title,
+  pinned,
+}: {
+  art: DeckArt;
+  title: string;
+  /** A settled per-card verdict — wins over the global bake-off switcher. */
+  pinned?: ArtVariant;
+}) {
+  const [global] = useArtVariant();
+  const variant = pinned ?? global;
   const key = manifestKeyOf(art);
 
-  if (variant === "illustrated") {
-    if (art.kind === "image") {
-      return (
-        // eslint-disable-next-line @next/next/no-img-element -- data: URL out of an IndexedDB proof sheet; next/image has nothing to fetch, optimise or cache
+  // kind:"image" is not in the bake-off: a real picture (a theme's approved
+  // proof, a preset's committed render) IS the card's face in EVERY variant —
+  // a gradient of its palette would sell the colours, not the style. The
+  // ground stands beneath while the file streams, and if it never arrives.
+  if (art.kind === "image") {
+    return (
+      <>
+        <GradientArt {...groundOf(art)} />
+        {/* eslint-disable-next-line @next/next/no-img-element -- a data: URL out of an IndexedDB proof sheet or a committed /presets file; next/image has nothing to fetch, optimise or cache */}
         <img src={art.src} alt={art.alt ?? ""} className="absolute inset-0 h-full w-full object-cover" />
-      );
-    }
+      </>
+    );
+  }
+
+  if (variant === "illustrated") {
     const entry = key ? DECK_ART[key] : undefined;
     if (entry) {
       return (

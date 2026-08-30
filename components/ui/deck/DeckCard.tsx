@@ -54,6 +54,11 @@ export interface DeckCardSpec {
   risk?: string;
   /** Small provenance/mono line. */
   footnote?: string;
+  /** A settled bake-off verdict for THIS card: pin its art face regardless of
+   *  the global switcher. The operator ruled emblem for the create wizard's
+   *  discipline and template stages (2026-08-30); surfaces still in the
+   *  bake-off leave this unset and follow the switcher. */
+  artVariant?: import("./useArtVariant").ArtVariant;
   disabled?: boolean;
 }
 
@@ -115,7 +120,7 @@ export default function DeckCard({
     >
       {/* art zone — the top ~40% */}
       <div className="relative h-28 shrink-0 overflow-hidden sm:h-32">
-        <DeckArtView art={spec.art} title={spec.title} />
+        <DeckArtView art={spec.art} title={spec.title} pinned={spec.artVariant} />
         {/* sheen — sweeps in on hover; a colour transition, which the CSS
             reduced-motion blanket already switches off */}
         <div

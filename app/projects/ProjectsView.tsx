@@ -86,13 +86,14 @@ export default function ProjectsView() {
           </div>
           {/* The expert path: the old dialog, exactly as before, for whoever
               knows the four answers already. The primary create walks the
-              guided wizard (/projects/new). Same theme-gate on both — a dead
-              button teaches nothing, /library is the actual next step. */}
+              guided wizard (/projects/new). NEITHER is theme-gated any more:
+              the wizard's style stage offers presets and mints a locked theme
+              at create, and the dialog explains an empty style shelf itself —
+              bouncing both buttons to /library was sending users away from
+              surfaces that can now answer them. */}
           <button
             type="button"
-            onClick={() =>
-              gated ? router.push("/library") : setDialog({ open: true, project: null })
-            }
+            onClick={() => setDialog({ open: true, project: null })}
             className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-[11px] text-white/45 transition hover:border-white/25 hover:text-white/75"
           >
             quick create — the expert form
@@ -102,7 +103,8 @@ export default function ProjectsView() {
         {gated && (
           <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/[0.06] px-4 py-3">
             <p className="font-hanken text-sm text-amber-100">
-              A project is rendered against a locked visual style, and this account has none yet.
+              A project is rendered against a locked visual style, and this account has none yet —
+              the create wizard offers presets that lock on create, or commission one in the library.
             </p>
             <Link
               href="/library"
@@ -136,11 +138,12 @@ export default function ProjectsView() {
               }
               onEdit={(p) => setDialog({ open: true, project: p })}
               onDelete={(p) => setDoomed(p)}
-              // Gated rather than disabled: a dead button teaches nothing,
-              // whereas landing on /library is the actual next step. Ungated,
-              // the primary create is the guided wizard; the header's "quick
+              // Always the wizard: its style stage offers presets (minted into
+              // a locked theme at create) and an honest empty state that
+              // routes, so there is no account state in which sending the user
+              // to /library first is the better answer. The header's "quick
               // create" keeps the dialog as the expert path.
-              onCreate={() => router.push(gated ? "/library" : "/projects/new")}
+              onCreate={() => router.push("/projects/new")}
             />
           )}
         </section>

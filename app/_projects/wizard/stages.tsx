@@ -17,7 +17,14 @@ import {
   type Discipline,
   type TemplateId,
 } from "@/lib/projects";
+import { thumbSrc, type Preset } from "@/app/library/presets";
 import { approvedProofs, ORIGIN_WORD, type Theme } from "@/lib/themes";
+
+/** Card ids must not collide with theme ids on the one pick surface they
+ *  share; the prefix is how the wizard tells a minted-on-create preset from a
+ *  locked theme that already exists. */
+export const PRESET_CARD_PREFIX = "preset:";
+export const presetCardId = (p: Preset) => `${PRESET_CARD_PREFIX}${p.id}`;
 
 /* ── Tones — distinct per discipline, and per template inside one ─────────── */
 
@@ -58,6 +65,10 @@ export function disciplineCards(): DeckCardSpec[] {
       },
     ],
     art: { kind: "gradient", tone: DISCIPLINE_TONE[d], manifestKey: `discipline-${d}` },
+    // The bake-off verdict for this stage (2026-08-30): emblem won for the
+    // project-type and duration cards. Pinned here; the style stage keeps its
+    // proof images, and other deck surfaces stay in the bake-off.
+    artVariant: "emblem",
   }));
 }
 
@@ -77,6 +88,9 @@ export function templateCards(discipline: Discipline): DeckCardSpec[] {
       { label: `target ${t.defaultS}s`, tone: "neutral" as const },
     ],
     art: { kind: "gradient", tone: TEMPLATE_TONE[t.id], manifestKey: `template-${t.id}` },
+    // Same verdict as the discipline stage — the template cards ARE the
+    // duration selection (each carries its measured band and target).
+    artVariant: "emblem",
   }));
 }
 
@@ -112,6 +126,31 @@ export function styleCards(themes: Theme[]): DeckCardSpec[] {
       footnote: t.lockedAt ? `locked ${new Date(t.lockedAt).toLocaleDateString()}` : undefined,
     };
   });
+}
+
+/** Cards for the presets that fit the discipline — complete four-slot style
+ *  blocks off the shelf (app/library/presets.ts), each faced by its own
+ *  committed render of the canonical subject. Picking one does not reference
+ *  an existing theme: the wizard MINTS a locked theme from it at create, with
+ *  that render as the approved proof — the card's footnote says so. */
+export function presetCards(presets: Preset[]): DeckCardSpec[] {
+  return presets.map((p) => ({
+    id: presetCardId(p),
+    eyebrow: "preset",
+    title: p.name,
+    body: p.line,
+    chips: [
+      { label: DISCIPLINE_LABEL[p.discipline].toLowerCase(), tone: "violet" as const },
+      { label: `carries ${p.elements.slice(0, 3).join(" · ")}`, tone: "neutral" as const },
+    ],
+    art: {
+      kind: "image" as const,
+      src: thumbSrc(p.id),
+      alt: `${p.name} rendered on the canonical subject`,
+      fallback: { hexes: p.block.palette.map((c) => c.hex) },
+    },
+    footnote: "locks as this project's style when you create",
+  }));
 }
 
 /* ── The empty style deck — honest, and it routes ─────────────────────────── */
