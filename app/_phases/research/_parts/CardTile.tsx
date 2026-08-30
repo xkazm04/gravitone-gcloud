@@ -33,7 +33,8 @@
 //    linear transition, so "what is the pattern behind this conclusion?" is a
 //    hover away rather than a squint.
 
-import { ConfidenceChip } from "../../_shared/notebook/Chips";
+import { ConfidenceChip, EvidenceClassChip } from "../../_shared/notebook/Chips";
+import type { Leap } from "../../_shared/notebook/conclusions";
 import { stateOf, type Card, type Wound } from "../scope";
 import CardActions from "./CardActions";
 import type { ScopeApi } from "../useScope";
@@ -46,7 +47,13 @@ export const KIND_LABEL: Record<Card["kind"], string> = {
   conclusion: "conclusion",
 };
 
-const LEAP_TONE: Record<string, string> = {
+// Keyed to `Leap` rather than `Record<string, string>`. The loose signature
+// let `LEAP_TONE[card.leap ?? "moderate"]` compile against ANY string, so a
+// leap tier added to the union in conclusions.ts (near/moderate/far/unhinged
+// today) would fall through to `undefined` here and ship as
+// `className="undefined"` — a card silently losing its tone instead of the
+// build refusing to compile until this map grew a matching row.
+const LEAP_TONE: Record<Leap, string> = {
   near: "border-white/15 bg-white/[0.05] text-white/65",
   moderate: "border-amber-400/30 bg-amber-400/[0.06] text-amber-200",
   far: "border-violet-400/35 bg-violet-400/[0.08] text-violet-200",
@@ -134,10 +141,37 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
         </div>
       )}
 
-      {card.source && (
-        <p className={lift("font-jetbrains mt-1.5 text-[10px] text-white/28", "group-hover:text-white/60")}>
-          {card.source} · as of {card.asOf}
-        </p>
+      {/* STRUCTURED SOURCES, where the fact carries them. `buildCards` used to
+          write `source: f.source` and drop `sources` on the floor entirely, so
+          the one migrated row's evidence class never reached this board —
+          FactRow.tsx (the evidence log) could draw it and the triage board,
+          the surface that actually decides what a script may use, could not.
+          Compact by design: this is a dense board card, not the evidence log,
+          so one chip + name + locator per source rather than FactRow's fuller
+          layout (no confidenceNote line here). "A source a reader cannot
+          navigate to is a name, not a source" (FactRow.tsx) — absent is drawn
+          as absent, never omitted. Falls back to the legacy `card.source` line
+          below so the twenty unmigrated cards look exactly as before. */}
+      {card.sources?.length ? (
+        <ul className="mt-1.5 space-y-1">
+          {card.sources.map((s, i) => (
+            <li key={`${s.name}-${i}`} className="flex flex-wrap items-center gap-1.5">
+              <EvidenceClassChip c={s.evidenceClass} interested={s.interested} />
+              <span className={lift("font-jetbrains text-[10px] text-white/45", "group-hover:text-white/75")}>
+                {s.name}
+              </span>
+              <span className={lift("font-jetbrains text-[10px] text-white/28", "group-hover:text-white/60")}>
+                {s.locator ?? "no locator"}
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        card.source && (
+          <p className={lift("font-jetbrains mt-1.5 text-[10px] text-white/28", "group-hover:text-white/60")}>
+            {card.source} · as of {card.asOf}
+          </p>
+        )
       )}
 
       {risky && (

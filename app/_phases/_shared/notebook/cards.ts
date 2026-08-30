@@ -7,7 +7,7 @@
 import { CONCLUSIONS, falsifierOf, falsifierText, type ConclusionSubject, type Falsifier, type Leap } from "./conclusions";
 import { CARD_DIMENSION, UNTAGGED_DIMENSION_ID, type DimensionId } from "./dimensions";
 import { NOTEBOOK } from "./notebook";
-import type { Notebook } from "./types";
+import type { FactSource, Notebook } from "./types";
 
 export type CardKind = "fact" | "mechanism" | "reversal" | "steel-man" | "conclusion";
 
@@ -21,6 +21,16 @@ export interface Card {
   loadBearing?: boolean;
   confidence?: "high" | "medium" | "low";
   source?: string;
+  /** The structured replacement for `source`, carried through where the fact
+   *  has been migrated (types.ts::FactSource — "a rule with no field to live
+   *  in is a comment"). `buildCards` used to write `source: f.source` and drop
+   *  `sources` on the floor entirely, which meant the one migrated row in
+   *  facts.ts had an evidence class the RESEARCHER authored and no card on the
+   *  triage board could ever show it — the field existed, one layer up
+   *  (FactRow.tsx) drew it, and the board that decides what a script may use
+   *  stayed blind to it. Only facts carry this; mechanisms, reversals and
+   *  conclusions have no sources of their own to lose. */
+  sources?: FactSource[];
   asOf?: string;
   /** Ids this card needs in order to stand. Descoping any of them wounds it. */
   dependsOn: string[];
@@ -59,7 +69,7 @@ export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
     cards.push({
       id: f.id, kind: "fact", dimension: CARD_DIMENSION[f.id] ?? UNTAGGED_DIMENSION_ID,
       title: f.claim, detail: f.note, loadBearing: f.loadBearing,
-      confidence: f.confidence, source: f.source, asOf: f.asOf, dependsOn: [],
+      confidence: f.confidence, source: f.source, sources: f.sources, asOf: f.asOf, dependsOn: [],
     });
   }
   // A MECHANISM'S SUPPORT IS A CARD EDGE, and it was a hardcoded `[]`.
