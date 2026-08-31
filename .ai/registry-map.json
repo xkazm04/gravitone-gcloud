@@ -212,7 +212,10 @@
           ],
           "grounding": "use_when",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "lib/claudeCli.ts:70-148 realizes availability-probe (zero-token probeClaude through the same spawn door) and subscription-auth-selection (seatOnlyEnv strips METERED_AUTH_VARS at the one door, :63-74,117,201); dated-capability-matrix and fallback-ladder are deliberately deferred to lib/text/providers/claudeCli.ts + lib/deployment.ts, which this file's own header names as the reason it stays a thin adapter.",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:19e56f275935f754"
         },
         {
           "subject": "client-state",
@@ -733,7 +736,10 @@
           ],
           "grounding": "use_when",
           "confidence": "strong",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "playwright.config.ts/playwright.live.config.ts split the harness into two machines by directory (suite-partitioning), tests/golden-path/cli-transport-resilience.probe.spec.ts:17-40 drives a real negative control (empty PATH) proving fallback classification survives, and tests/golden-path/_helpers.ts:1-38 states serial-by-design isolation instead of leaving it to accident.",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:19e56f275935f754"
         },
         {
           "subject": "eval-harness",
@@ -746,7 +752,10 @@
           ],
           "grounding": "use_when",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "tests/golden-path/*.spec.ts assert deterministic code behavior (SSRF guards, budget ceilings, auth truth tables) with sealed network and zero model judging anywhere in this context — eval-harness's precondition (scoring a non-deterministic system under measurement) never occurs in this lane; gates.yml calls the probes suite 'no live service whose mood can redden a clean tree'.",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:19e56f275935f754"
         }
       ],
       "governance": "governed"
@@ -945,7 +954,10 @@
           ],
           "grounding": "use_when",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "conformant",
+          "evidence": "pipeline/lint-ratchet.mjs:24-40 implements ratchet-design + gate-liveness with an explicit registry citation and three-outcome exit codes (pass/fail/could-not-run); pipeline/DRIVERS.md:11-49 demotes the nine drive-*.mjs scripts from an unwired improvised live harness to explicitly-labeled non-gates with a migration path, correctly naming the gate-laddering rule against itself.",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:19e56f275935f754"
         },
         {
           "subject": "pipeline-authoring",
@@ -958,7 +970,10 @@
           ],
           "grounding": "use_when",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "this context's files are gate implementations and one-off drivers consumed by a hand-written .github/workflows/gates.yml (not itself in this context); the repo is a single Next.js deliverable, below pipeline-authoring's own generation threshold ('a single-deliverable repository with six steps gains nothing and loses readability').",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:19e56f275935f754"
         },
         {
           "subject": "image-prompt-composition",
@@ -1454,7 +1469,10 @@
           ],
           "grounding": "use_when",
           "confidence": "probable",
-          "state": "unknown"
+          "state": "not-applicable",
+          "evidence": "lib/text/**/*.ts (lib/text/router.ts:1-27) is a text-generation LLM routing layer with no microphone capture, no transcription and no audio synthesis anywhere in the context; the pairing is a lexical false-positive from 'text' overlapping voice-io's 'text -> synthesis' vocabulary.",
+          "evaluatedAt": "2026-08-31",
+          "evaluatedAgainst": "sha256:19e56f275935f754"
         },
         {
           "subject": "agent-cli-transport",
