@@ -71,13 +71,19 @@ def prepare(cdir, no_gemini=False):
     work, blind, gem = [], [], {}
     for p in spec["pairs"]:
         pid = p["id"]
-        if not all((cdir / "pairs" / f"{pid}--{arm}.png").exists() for arm in ("baseline", "challenger")):
+        video = (cdir / "pairs" / f"{pid}--baseline.webm").exists()
+        ext = ".webm" if video else ".png"
+        if not all((cdir / "pairs" / f"{pid}--{arm}{ext}").exists() for arm in ("baseline", "challenger")):
             print(f"  skip {pid}: incomplete duo", flush=True)
             continue
         w = {"id": pid, "seed": p.get("seed"),
              "choke_A": rng.choice(["baseline", "challenger"]),
              "gem_A": rng.choice(["baseline", "challenger"]),
              "readback": {arm: rb.get(f"{pid}--{arm}", {}) for arm in ("baseline", "challenger")}}
+        if video:
+            for arm in ("baseline", "challenger"):
+                w[f"{arm}_ref"] = {"file": f"pairs/{pid}--{arm}.webm", "kind": "video",
+                                   "poster": f"pairs/{pid}--{arm}--t1.png"}
         work.append(w)
         a, b = w["choke_A"], ("challenger" if w["choke_A"] == "baseline" else "baseline")
         blind.append({"pair": pid, "A": w["readback"][a], "B": w["readback"][b]})

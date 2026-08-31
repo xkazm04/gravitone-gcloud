@@ -168,3 +168,10 @@ tracking the human better, and record the decision here):
   peak/tail, diagonal density doubles toward the tail, the build flips
   high-key; (3) A/B claims — verification instrument only, never the whole
   yield. A study report must say what each lane produced or why it is empty.
+- 2026-08-31 (third session, video window): first 8 Wan clips rendered clean,
+  0 failures, ~6 min/clip. Two protocol lessons the next video cycle inherits:
+  (1) the blind brief must carry EACH PAIR'S authored motion intent - a global
+  'one readable move' standard punishes authored near-stillness; (2) serial
+  continuity must be written as VISUAL clauses only - editorial meta-language
+  ('shot 2 of the sequence', 'cut from the pier') gets drawn, and the model
+  paints the world it was told it cut away from.
