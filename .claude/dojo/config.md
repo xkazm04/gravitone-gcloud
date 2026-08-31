@@ -130,3 +130,17 @@ tracking the human better, and record the decision here):
   budget-limits claim needs a much longer prompt to bite. When gating: a
   control cycle's challenger is a deliberate law violation — reject = law
   confirmed.
+- 2026-08-31 (second session) — the CORPUS-STUDY method proved end to end, twice,
+  with zero user help in the loop: gap-ranked source pick -> yt-dlp (official
+  studio trailer only; candidate fallback ladder — the first search hit was a
+  dead video id, `--js-runtimes node` needed) -> extract_frames.py -> qwen
+  annotation (63 frames ~35 min GPU) -> dojo_study.py cross-analysis ->
+  falsifiable claim -> dojo_pairs A/B -> parked. Study 1 (159 on-disk corpus
+  frames, no download): diagonal is A-tier action's top extreme-wide
+  composition and PLACEMENT_PHRASE cannot say it — A/B 0.67/3-of-3/1.0, and
+  the qwen composition readback measured the change directly (0/3 -> 2/3
+  diagonal), the first cycle where the pre-filter was not blind. Study 2
+  (Spider-Verse trailer): 89% of frames name >=2 in-world light sources —
+  the layered-environmental-light refinement of gated rule 7 — A/B
+  0.67/3-of-3/0.67. Acquisition boundary honoured: official promotional
+  material only, analyzed locally, frames never become generation references.
