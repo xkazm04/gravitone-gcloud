@@ -27,7 +27,7 @@ import { reason } from "@/lib/text/router";
 
 import { FoundryError } from "../store";
 import type { Exemplar, StyleDef } from "../types";
-import { foreignLease, newManifest, pruneFailures, step } from "./engine";
+import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
 import type {
@@ -348,7 +348,10 @@ export async function commitExtractRun(id: string, verdictsIn?: ExtractVerdicts)
     }
     for (const r of s.replicas) {
       const best = [...r.rounds].filter((x) => x.file).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
-      if (best?.file) exemplars.push({ kind: "extract", run: id, file: best.file, role: "replica" });
+      // The settle reason travels with the exemplar. Without it a replica the
+      // loop GAVE UP on enters the catalogue as evidence the recipe works,
+      // indistinguishable from one that hit the target.
+      if (best?.file) exemplars.push({ kind: "extract", run: id, file: best.file, role: "replica", settled: settleReason(run, r.rounds) ?? undefined });
     }
     for (const t of s.transfers) if (t.file) exemplars.push({ kind: "extract", run: id, file: t.file, role: "transfer" });
 

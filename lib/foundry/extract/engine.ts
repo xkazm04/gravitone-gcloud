@@ -35,6 +35,7 @@ import type { Aspect, ImageRef } from "@/lib/imaging/types";
 import { NO_TEXT, TRANSFER_SCENES, critiqueInstruction, readbackInstruction, replicaPrompt, synthesisPrompt, transferPrompt } from "./prompts";
 import type {
   Critique,
+  SettleReason,
   ExtractManifest,
   ExtractOptions,
   ExtractedStyle,
@@ -185,16 +186,30 @@ function replicaSources(m: ExtractManifest, s: ExtractedStyle): string[] {
   return s.members.filter((id) => m.sources.find((x) => x.id === id)?.readback).slice(0, m.options.replicas);
 }
 
-/** Has this replica's loop ended? Either the round cap was reached, the
- *  target was met, or the last round produced no usable fix to try. */
-function replicaSettled(m: ExtractManifest, rounds: ReplicaRound[]): boolean {
-  if (!rounds.length) return false;
-  if (rounds.length >= m.options.rounds) return true;
+/** WHY this replica's loop ended, or null while it is still running.
+ *
+ *  Same order and same conditions `replicaSettled` has always used — this
+ *  function only stops throwing the reason away. A settled replica is settled
+ *  for one of four reasons and two of them are the loop giving up; nothing
+ *  downstream could tell them apart while this returned a boolean. */
+export function settleReason(m: ExtractManifest, rounds: ReplicaRound[]): SettleReason | null {
+  if (!rounds.length) return null;
+  if (rounds.length >= m.options.rounds) return "round-cap";
   const last = rounds[rounds.length - 1];
-  if (last.error && !last.file) return true; // generation failed: do not burn rounds on a refusal
-  if (typeof last.score === "number" && last.score >= m.options.target) return true;
-  if (!usableFix(last.critique, last.recipe)) return true;
-  return false;
+  if (last.error && !last.file) return "generation-failed"; // do not burn rounds on a refusal
+  if (typeof last.score === "number" && last.score >= m.options.target) return "target-met";
+  if (!usableFix(last.critique, last.recipe)) return "no-usable-fix";
+  return null;
+}
+
+/** Has this replica's loop ended? Either the round cap was reached, the
+ *  target was met, or the last round produced no usable fix to try.
+ *
+ *  Deliberately unchanged in behaviour: the scheduler and the progress strip
+ *  both want "will more work happen here", and for that question an abandoned
+ *  replica is as finished as a successful one. */
+function replicaSettled(m: ExtractManifest, rounds: ReplicaRound[]): boolean {
+  return settleReason(m, rounds) !== null;
 }
 
 /** The next unit of work, or null when the run is finished. Pure over the

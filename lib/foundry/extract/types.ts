@@ -94,6 +94,20 @@ export interface Scored {
   per_field: Partial<Record<ObservableField, number>>;
 }
 
+/** Why a replica's critique loop stopped.
+ *
+ *  Two of these are OUTCOMES and two are ABANDONMENTS, and the difference is
+ *  not visible in the round list: `target-met` and `round-cap` mean the loop
+ *  did the work it was given, while `no-usable-fix` and `generation-failed`
+ *  mean it gave up because it could not say what to change or could not draw
+ *  anything. The engine has always treated all four the same — one boolean —
+ *  which is correct for "will more work happen here" and wrong for everything
+ *  that reads a replica as evidence the recipe works. */
+export type SettleReason = "round-cap" | "generation-failed" | "target-met" | "no-usable-fix";
+
+/** The two reasons that mean the loop ABANDONED this replica. */
+export const ABANDONED_SETTLES: readonly SettleReason[] = ["generation-failed", "no-usable-fix"];
+
 /** One self-critique round: generate, read back, score, propose a fix. */
 export interface ReplicaRound extends Scored {
   n: number;

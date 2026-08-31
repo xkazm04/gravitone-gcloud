@@ -1,3 +1,5 @@
+import type { SettleReason } from "./extract/types";
+
 // THE FOUNDRY WIRE TYPES — shared by the disk layer (lib/foundry/store.ts,
 // server only) and the /foundry page (client). Nothing here imports Node.
 //
@@ -77,6 +79,16 @@ export interface Exemplar {
   /** What this exemplar is: a source the style was read from, a replica the
    *  recipe produced, or a transfer onto a scene the sources never showed. */
   role: "source" | "replica" | "transfer";
+  /** For a `replica`: why its critique loop stopped. Absent on sources and
+   *  transfers, and absent on rows written before this field existed.
+   *
+   *  A replica whose loop was ABANDONED (`no-usable-fix`, `generation-failed`)
+   *  is not evidence that the recipe produces the style — the loop stopped
+   *  because it could not say what to change, not because it arrived. It is
+   *  kept rather than dropped, because a near miss is still material and
+   *  dropping it would be a second silent decision; but anything conditioning
+   *  on exemplars can now tell the two apart, which it could not before. */
+  settled?: SettleReason;
 }
 
 export interface StyleDef {

@@ -12,9 +12,9 @@
 // red suites.
 import { test, expect } from "@playwright/test";
 
-import { doneUnits, totalUnits, BREAKER_LIMIT, hasFailures, newManifest, next, pruneFailures, runToEnd, step, type EngineIO } from "@/lib/foundry/extract/engine";
+import { doneUnits, totalUnits, BREAKER_LIMIT, hasFailures, newManifest, next, pruneFailures, runToEnd, settleReason, step, type EngineIO } from "@/lib/foundry/extract/engine";
 import { CRITIQUE_SCHEMA, partition, styleScore, usableFix, validateSynthesis } from "@/lib/foundry/extract/vocabulary";
-import type { ExtractManifest, ExtractSource, Observables, Readback } from "@/lib/foundry/extract/types";
+import type { ExtractManifest, ExtractSource, Observables, Readback, ReplicaRound } from "@/lib/foundry/extract/types";
 
 const painterly: Observables = {
   render_mode: "painterly",
@@ -136,6 +136,9 @@ interface Script {
   reasonFails?: boolean;
   /** Every generate throws — a bad parameter, an expired key. */
   generateFails?: boolean;
+  /** The `recipe_fix` a critique comes back with, by round. Default is a real
+   *  revision; return "" to script a critic that cannot say what to change. */
+  recipeFix?: (round: number) => string;
 }
 
 function fakeIO(m: ExtractManifest, script: Script, calls: string[]): EngineIO {
@@ -161,7 +164,8 @@ function fakeIO(m: ExtractManifest, script: Script, calls: string[]): EngineIO {
       const round = Number(/r(\d+)/.exec(img.base64)?.[1] ?? 1);
       const isCritique = schema === CRITIQUE_SCHEMA;
       const obs = script.roundScore(round);
-      const value = isCritique ? { ...rb(obs), critique: "edges too crisp", recipe_fix: `Revised recipe ${round}: softer edges and heavier haze throughout the frame, matte brushwork.` } : rb(obs);
+      const fix = script.recipeFix ? script.recipeFix(round) : `Revised recipe ${round}: softer edges and heavier haze throughout the frame, matte brushwork.`;
+      const value = isCritique ? { ...rb(obs), critique: "edges too crisp", recipe_fix: fix } : rb(obs);
       return { value, model: "fake/eyes" };
     },
     async generate(_prompt, _negative, aspect, seed) {
@@ -331,3 +335,88 @@ test("progress: before grouping the ceiling is still the estimate, because there
   // 3 reads + group + (2 replicas x 2 rounds + 1 transfer) + finish
   expect(totalUnits(m)).toBe(3 + 1 + (2 * 2 + 1) + 1);
 });
+
+/* ── why a replica stopped ────────────────────────────────────────────────── */
+
+test("settleReason: four causes, two of which are the loop giving up — and the boolean could not tell them apart", async () => {
+  const m = manifest();
+  const opts = m.options; // rounds: 2, target: 0.85
+  const recipe = "warm haze over crushed blacks, soft edges, painterly surfaces, muted warm-cool split";
+  const round = (over: Partial<ReplicaRound>): ReplicaRound => ({
+    n: 1, file: "r1.jpg", recipe, prompt: "p", critique: null, generator: "g", vision: "v", error: null,
+    score: 0.5, per_field: {}, ...over,
+  });
+  const good = { ...rb(painterly), critique: "edges too crisp", recipe_fix: "Revised: softer edges and heavier haze throughout the frame, matte brushwork." };
+
+  // Still running: a low score AND something concrete to try next.
+  expect(settleReason(m, [])).toBeNull();
+  expect(settleReason(m, [round({ critique: good })])).toBeNull();
+
+  // The two OUTCOMES.
+  expect(settleReason(m, [round({ score: 0.91 })])).toBe("target-met");
+  expect(settleReason(m, [round({ critique: good }), round({ n: 2, critique: good })])).toBe("round-cap");
+
+  // The two ABANDONMENTS — the loop stopped because it could not proceed.
+  expect(settleReason(m, [round({ file: null, error: "provider refused", score: null })])).toBe("generation-failed");
+  expect(settleReason(m, [round({ critique: { ...good, recipe_fix: "" } })])).toBe("no-usable-fix");
+  // ...including a critic that answers with the recipe it was already given,
+  // which would spend a round to learn nothing.
+  expect(settleReason(m, [round({ critique: { ...good, recipe_fix: recipe } })])).toBe("no-usable-fix");
+
+  expect(opts.rounds).toBe(2);
+});
+
+test("a replica the critic gave up on is marked in the run, not laundered into a clean stop", async () => {
+  // The critic reads back short of the target every round AND has nothing to
+  // propose. Before `settleReason` existed the loop stopped here exactly as it
+  // does now — correctly — and nothing anywhere recorded that it had given up,
+  // so the replica's best frame went into the catalogue as an exemplar of a
+  // working recipe.
+  const m = manifest();
+  const io = fakeIO(m, {
+    roundScore: () => ({ ...painterly, edge_treatment: "crisp", atmospherics: "none" }), // 0.8 < 0.85
+    recipeFix: () => "",
+  }, []);
+  await runToEnd(m, io);
+  expect(m.status).toBe("done");
+
+  const reasons = m.styles.flatMap((s) => s.replicas.map((r) => settleReason(m, r.rounds)));
+  const abandoned = reasons.filter((r) => r === "no-usable-fix").length;
+  console.log(`[foundry] ${reasons.length} replica(s) settled: ${reasons.join(", ")}`);
+
+  // Every replica stopped after ONE round rather than taking its two, because
+  // the critique carried nothing to try — and every one of them is now legible
+  // as an abandonment rather than as a stop.
+  expect(abandoned).toBe(reasons.length);
+  expect(abandoned).toBeGreaterThan(0);
+  for (const s of m.styles) for (const r of s.replicas) expect(r.rounds.length).toBe(1);
+
+  /* ── the paired arm ─────────────────────────────────────────────────────
+   * A second run, same scores, same target, the ONLY difference being that
+   * the critic can say what to change. It walks both rounds and stops at the
+   * cap having never arrived. Both runs therefore end with every replica
+   * BELOW target — which is what makes the score a useless discriminator.
+   *
+   *   arm A (what a consumer could do before): infer from the score.
+   *   arm B (the settle reason): read it.
+   */
+  const capped = manifest();
+  await runToEnd(capped, fakeIO(capped, { roundScore: () => ({ ...painterly, edge_treatment: "crisp", atmospherics: "none" }) }, []));
+  const cappedReasons = capped.styles.flatMap((s) => s.replicas.map((r) => settleReason(capped, r.rounds)));
+
+  const belowTarget = (mm: ExtractManifest) =>
+    mm.styles.flatMap((s) => s.replicas).filter((r) => (Math.max(...r.rounds.map((x) => x.score ?? -1))) < mm.options.target).length;
+
+  // ARM A — the score proxy gives the SAME answer for both runs.
+  expect(belowTarget(m)).toBe(belowTarget(capped));
+  // ARM B — the reason separates them cleanly.
+  expect(new Set(reasons)).toEqual(new Set(["no-usable-fix"]));
+  expect(new Set(cappedReasons)).toEqual(new Set(["round-cap"]));
+
+  console.log(
+    `[foundry] arm A (score<target): gave-up run ${belowTarget(m)}, capped run ${belowTarget(capped)} — indistinguishable. ` +
+    `arm B (settle reason): ${new Set(reasons).size} vs ${new Set(cappedReasons).size} distinct cause(s), ` +
+    `${reasons.length} of ${reasons.length} replicas classified.`,
+  );
+});
+
