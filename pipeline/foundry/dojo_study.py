@@ -98,6 +98,26 @@ def analyze(per_source):
     return stats
 
 
+BEATS = ["setup(0-25%)", "build(25-55%)", "peak(55-85%)", "tail(85-100%)"]
+
+
+def beat_map(per_source):
+    """Yield lane 2: WHICH technique at WHICH position in the cut. A study that
+    returns one clause has under-delivered (operator finding, 2026-08-31); the
+    beat map is the lesson dozens of frames actually carry."""
+    out = {}
+    for src, frames in per_source.items():
+        seq = [frames[f] for f in sorted(frames)]
+        t = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))
+        for i, a in enumerate(seq):
+            f = i / max(len(seq) - 1, 1)
+            b = BEATS[0] if f < .25 else BEATS[1] if f < .55 else BEATS[2] if f < .85 else BEATS[3]
+            for fld in ("shot_size", "camera_angle", "composition", "lighting_key", "depth_of_field", "exposure"):
+                t[b][fld][str(a.get(fld))] += 1
+        out[src] = {b: {fld: dict(c.most_common(3)) for fld, c in flds.items()} for b, flds in t.items()}
+    return out
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("cmd", choices=["analyze"])
@@ -108,6 +128,7 @@ def main():
     if not per_source:
         raise SystemExit(f"no annotated frames match prefixes {args.prefixes}")
     stats = analyze(per_source)
+    stats["_beat_map"] = beat_map(per_source)
     text = json.dumps(stats, indent=1, ensure_ascii=False)
     if args.out:
         Path(args.out).write_text(text, encoding="utf-8")
