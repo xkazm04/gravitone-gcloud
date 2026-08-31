@@ -120,3 +120,13 @@ tracking the human better, and record the decision here):
   the grader's closed enums cannot see a lifted-black or a colour-role
   change; the human gate is the only instrument for these techniques.
   Gemini `3.7-flash` answered 503 across a whole batch; `3.6-flash` served.
+- 2026-08-31 — window ran 2 control-shaped cycles on image-prompt-composition
+  (the one allowed subject with no pending gate). order-control: the reversed
+  prompt LOST (challenger pick_rate 0.00; readbacks drifted photoreal-cg →
+  stylised-realistic when style came second) — style-first-token-ordering has
+  current Flux 2 evidence; in the tab, REJECT the challenger to confirm the
+  law. clause-position: NULL — the tail-appended lantern clause landed in both
+  arms on every pair (~1.3k chars is inside Flux 2's obeyed window); the
+  budget-limits claim needs a much longer prompt to bite. When gating: a
+  control cycle's challenger is a deliberate law violation — reject = law
+  confirmed.

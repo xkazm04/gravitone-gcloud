@@ -8,3 +8,5 @@
 {"ts": "2026-08-30T18:30:40Z", "bundle": "media-generation", "subjects": ["frame-direction"], "techniques": ["one-function-per-visual"], "deviations": 0}
 {"ts": "2026-08-30T18:53:54Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["reference-shows-only-invariants"], "deviations": 0}
 {"ts": "2026-08-30T19:31:34Z", "bundle": "media-generation", "subjects": ["visual-style-locking"], "techniques": ["style-onboarding-from-sample"], "deviations": 0}
+{"ts": "2026-08-31T08:37:06Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["style-first-token-ordering"], "deviations": 0}
+{"ts": "2026-08-31T09:04:30Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["prompt-budget-limits"], "deviations": 0}
