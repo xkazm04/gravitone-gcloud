@@ -58,6 +58,24 @@ number, bound to the notebook row that sourced it.
    do a flat elevation. The style is given to you — compose within it rather than against it.
 6. **Prefer one idea per frame.** Two competing mechanisms in one plate reads as clutter and the
    viewer resolves neither.
+7. **Name the light source, and say what stays dark.** (dojo 2026-08-30 `lighting-as-dramatic-instrument`,
+   human-gated: unanimous across both judges.) One in-world source the viewer can believe — a window,
+   a lamp, the sparks themselves — its hardness, its direction read on the subject, and the clause
+   amateurs omit: which part of the frame is NOT lit. A frame where everything is visible has said
+   nothing; the model lights evenly unless told what to leave dark.
+8. **Optics are described effects, never notation.** (dojo 2026-08-30 `lens-effect-language`, human-gated.)
+   "Background compressed flat behind her", "only the eyes sharp, the crowd reduced to smears",
+   "everything razor sharp to the far doorway" — never a focal length or f-number, which the model
+   does not honour. Caveat from the same cycle: long-lens compression did not land from words on
+   either arm; treat it as unproven on this stack.
+9. **A genre is a contract, not an adjective.** (dojo 2026-08-30 `genre-visual-contracts`, human-gated.)
+   "Film-noir" buys a weak average. Spell the layers: light-source honesty, camera intentionality,
+   lens habit, grade — and the IMPERFECTION BUDGET (grain, flare, focus hunting: prized, tolerated,
+   or forbidden). The unstated imperfection budget is what makes a register arrive sterile.
+10. **Performance is counted beats, never a category verb.** (dojo 2026-08-30 `performance-direction`,
+   human-gated: unanimous.) "Dances" samples the training mean. "Left knee dipped, right arm extended
+   palm up, head tilted back, one heel lifted" can be executed and checked. Three to five observable
+   beats, anchored to named things in the frame.
 
 ## Rules for the motion
 

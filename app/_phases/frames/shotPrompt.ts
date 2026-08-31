@@ -105,8 +105,12 @@ const SUBJECT_RECIPE: Readonly<Record<string, string>> = {
   "rung:WS":
     "Several figures at middle distance advancing toward the viewer out of smoke, rim-lit from behind, faces unreadable, low ground haze.",
   // recipe 29 — villain face, frontal, symmetrical.
+  // The lighting clauses below name one in-world source and say what stays
+  // dark — dojo 2026-08-30-what-stays-dark (`lighting-as-dramatic-instrument`,
+  // human-gated, unanimous): the model lights evenly unless told what NOT to
+  // light, and a frame where everything is visible has said nothing.
   "rung:MCU":
-    "A single figure framed head and shoulders, dead centre and symmetrical, low-key light with one strong colour cast, dark surround.",
+    "A single figure framed head and shoulders, dead centre and symmetrical, lit by one hard source with a strong colour cast from high to one side, the far side of the face falling to near-black, nothing else in the surround lit.",
   // recipe 43 — scale plate: beam / giant / army.
   "peak:EWS":
     "One vast form filling the horizon — a vertical beam of light above a massed crowd rendered as texture — with small figures beneath it for scale.",
@@ -115,10 +119,10 @@ const SUBJECT_RECIPE: Readonly<Record<string, string>> = {
     "Three figures abreast at medium distance moving toward the viewer through smoke, seen from below, backlit, legs cropped by the lower frame edge.",
   // recipe 39 — super slow-mo single event.
   "peak:ECU":
-    "One physical event frozen very close — debris, sparks and a single shard mid-flight — filling the frame against a dark ground.",
+    "One physical event frozen very close — debris, sparks and a single shard mid-flight — filling the frame against a dark ground, the sparks themselves the only light, everything a hand's width away falling to black.",
   // recipe 31 — the quiet wide where sound stops.
   "reset:EWS":
-    "A single small structure on a flat horizon at night, nothing moving, a wide empty sky, the lower third clear.",
+    "A single small structure on a flat horizon at night, one lit window its only light spilling a small warm pool onto the ground, the sky and the land otherwise dark, nothing moving, the lower third clear.",
   // recipe 46 — title over the held world plate; the quiet third is the card's ground.
   "tail:EWS":
     "A wide landscape plate with a deliberately quiet, empty upper third carrying no focal detail, atmosphere thinning toward the top of the frame.",
@@ -140,10 +144,18 @@ const SIZE_PHRASE: Readonly<Record<ShotSize, string>> = {
   ECU: "An extreme close-up",
 };
 
+/**
+ * The angle as ATTITUDE, not mechanics. Dojo cycle 2026-08-30-camera-attitude
+ * (`cinematic-language/camera-position-semantics`, human-gated) A/B'd exactly
+ * this table's old wording ("from a low angle looking up") against the
+ * stance's meaning plus its headroom consequence, and the meaning won: the
+ * model renders eye-level-centred-with-headroom as its null sentence, and only
+ * an attitude sentence reliably moves it off that.
+ */
 const ANGLE_PHRASE: Readonly<Record<NonNullable<Shot["angle"]>, string>> = {
-  LA: "from a low angle looking up",
-  HA: "from a high angle looking down",
-  eye: "at eye level",
+  LA: "seen from below, the camera low and tilted up so the subject looms against what is behind it, granted power, with almost no headroom",
+  HA: "from a high vantage looking steeply down so the subject is diminished, small and surveilled, excess empty space pressing down from above",
+  eye: "at eye level, meeting the subject as a peer",
 };
 
 /** [A] § Staging 1 — Miller's crosshair for fast cuts; thirds and negative space for holds. */
