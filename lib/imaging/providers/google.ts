@@ -256,6 +256,7 @@ export function googleProvider(): ImagingProvider {
         provenance: {
           provider: "google",
           model: VISION_MODEL,
+          modelBasis: "requested" as const,
           // Routed through the same table as everything else, and it comes back
           // undefined on purpose: recognition is billed per token, and no
           // USD-per-token rate has been checked. The row in pricing.ts carries
@@ -335,6 +336,7 @@ async function runImage(
     provenance: {
       provider: "google",
       model,
+      modelBasis: "requested" as const,
       costUsd: price.usd,
       costBasis: price.basis,
       durationMs: Date.now() - started,

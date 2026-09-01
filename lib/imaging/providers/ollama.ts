@@ -84,6 +84,7 @@ export function ollamaProvider(): ImagingProvider {
         provenance: {
           provider: "ollama",
           model: MODEL,
+          modelBasis: "requested" as const,
           costUsd: price.usd,
           costBasis: price.basis,
           durationMs: Date.now() - started,
