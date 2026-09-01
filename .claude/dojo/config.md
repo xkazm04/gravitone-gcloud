@@ -11,25 +11,30 @@ engine turn itself (`pipeline/vlm-probe/guard.py` starts/recycles ComfyUI and
 enforces the one-engine-at-a-time rule) — the runner template never starts
 ComfyUI by hand.
 
-### image — MODEL POLICY (operator, 2026-09-01)
+### MODEL POLICY — two pure stacks (operator, 2026-09-01, superseding same-day ban)
 
-**A dojo cycle trains the engine the product ships.** The product's pixels are
-Nano Banana 2 (`gemini-3.1-flash-image`) through `lib/imaging/router`; its
-eyes are the local ollama provider. Therefore:
+The dojo is RESEARCH: the app is not deployed and not commercial, so cycles
+exist to improve knowledge until similarly capable, permissively licensed
+models arrive. Two stacks, one wrapper, never mixed inside a cycle — a
+verdict is about the stack its cycle names:
 
-- **Flux 2 is BANNED from dojo cycles.** It is the forge's lab instrument for
-  style-recipe experiments; recipes gated against it transfer to the product
-  engine unproven (the 08-30/08-31 image cycles carry this caveat).
-- **Qwen cloud is BANNED** and removed from the router's dev plan; the local
-  eye serves recognition at $0.
-- Image A/B runner: `npx tsx pipeline/foundry/dojo-pairs-nb.mts <cycle-dir>`
-  — generation and readback both through the chokepoint, so budget metering,
-  provenance and reroutes apply exactly as in the app. **No seed on Google's
-  API (measured)**: the control is `repeats` per arm (default 3), judged as
-  distributions, never one roll against another. Proven live 2026-09-01:
-  pixels google/$0.045-per-image, eyes ollama/$0.
+| | **local** ($0) | **google** (billed) |
+|---|---|---|
+| image | Flux 2 via ComfyUI (`dojo_pairs.py`), seed-matched | Nano Banana 2 via router (`dojo-pairs-nb.mts`), no seed → k repeats per arm |
+| video | Wan 2.2 t2v; **MiniMax H3** ref2va/fl2va for reference-conditioned and serial cycles (operator authorization: research use, app non-commercial; H3's EU license row stands recorded and the call is the operator's, revisited when licensed peers land) | none declared |
+| eyes | ollama qwen3.8:27b | gemini-3.6-flash (`prefer: "google"`) |
 
-### image (forge — style-recipe lab only)
+- Wrapper: `python pipeline/foundry/dojo_run.py <cycle-dir>` dispatches on the
+  spec's `stack` + `media`; a spec naming no stack is refused, never guessed.
+- **Qwen cloud stays banned** (out of the router's dev plan).
+- The google stack's role: product-truth verification — NB re-runs of
+  local-stack-gated rules settle transfer before a reflection merges.
+- H3 protocol knowledge (lengths ≡ 5 mod 17; reference-conditioning holds
+  identity at 0.1887 across hard cuts vs 0.6262 chain drift; `<Picture N>`
+  tags or the reference is ignored) applies whenever the H3 lane runs —
+  `pipeline/vlm-probe/motion.py` holds the working graphs.
+
+### image (forge — style-recipe lab)
 
 One plan in, a graded candidate grid out. Dojo writes a plan crossing the
 baseline and challenger recipes over the scene roster with the fixed seed

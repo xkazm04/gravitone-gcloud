@@ -1,14 +1,14 @@
-// DOJO PAIR RUNNER, PRODUCT-TRUE — A/B duos through the imaging router.
+// DOJO PAIR RUNNER, GOOGLE STACK — A/B duos through the imaging router.
 //
 //   npx tsx pipeline/foundry/dojo-pairs-nb.mts foundry-out/training/<cycle-id>
 //
-// The operator's correction (2026-09-01): a dojo cycle trains the engine the
-// PRODUCT ships, and the product's pixels are Nano Banana through
-// lib/imaging/router — never Flux 2, which is the forge's lab instrument.
-// This runner generates every arm through the router's `generate` (so the
-// plan, budget metering, provenance and reroute trail all apply exactly as
-// they do in the app) and reads every candidate back through the router's
-// `recognize` (which the local eye now serves at $0).
+// One of the two PURE STACKS (operator, 2026-09-01): a cycle runs entirely
+// local (Flux/Wan/H3 pixels, ollama eyes, $0) or entirely Google (Nano
+// Banana pixels, Gemini eyes, billed) — never mixed, so a verdict is about
+// the stack it names. This is the Google half: generation AND readback
+// through the router with an explicit `prefer: "google"` steer, so the local
+// eye never touches a Google-stack cycle and every call keeps the app's
+// budget metering, provenance and reroute trail.
 //
 // NO SEED-MATCHING, BY MEASURED NECESSITY: Google's interactions API rejects
 // `seed` outright (providers/google.ts, measured 2026-08-27). The control is
@@ -55,6 +55,7 @@ for (const p of spec.pairs) {
         prompt: p[arm].prompt,
         aspect: (spec.aspect ?? "16:9") as "16:9",
         count: repeats,
+        prefer: "google",
       });
       out.images.forEach((img, i) => fs.writeFileSync(have[i], Buffer.from(img.base64, "base64")));
       console.log(`  ${p.id}--${arm}: ${out.images.length} image(s) via ${out.provenance.provider}/${out.provenance.model}` +
@@ -68,6 +69,7 @@ for (const p of spec.pairs) {
         image: { base64: png.toString("base64"), mime: "image/png" },
         instruction: readbackInstruction(),
         schema: READBACK_SCHEMA as Record<string, unknown>,
+        prefer: "google",
       });
       readbacks[key] = { style: { readback: r.json }, eye: `${r.provenance.provider}/${r.provenance.model}` };
       fs.writeFileSync(rbPath, JSON.stringify(readbacks, null, 1));
