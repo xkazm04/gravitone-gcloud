@@ -36,7 +36,7 @@
       "judge_pick_rate": 0.6666666666666666,
       "gemini_agreement": 0.6666666666666666,
       "thumb": "pipeline/foundry/training/thumbs/2026-08-31-study-diagonal--imp-1.png",
-      "reflected": false,
+      "reflected": "1dfce8f",
       "at": "2026-08-31T18:10:44.883Z"
     },
     {
@@ -49,7 +49,7 @@
       "judge_pick_rate": 0.6666666666666666,
       "gemini_agreement": 0.6666666666666666,
       "thumb": "pipeline/foundry/training/thumbs/2026-08-31-study-light-layers--imp-1.png",
-      "reflected": false,
+      "reflected": "1dfce8f",
       "at": "2026-08-31T18:10:59.738Z"
     }
   ]
