@@ -190,6 +190,7 @@ export function leonardoProvider(): ImagingProvider {
         provenance: {
           provider: "leonardo",
           model: "lucid-origin",
+          modelBasis: "requested" as const,
           remoteIds: [generationId],
           costUsd,
           costBasis: price.basis,

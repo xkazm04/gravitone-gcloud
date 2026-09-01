@@ -113,6 +113,7 @@ export function qwenProvider(): ImagingProvider {
             provenance: {
               provider: "qwen",
               model,
+              modelBasis: "requested" as const,
               // Same route through pricing.ts as every other adapter, and the
               // same honest `undefined` at the end of it: DashScope bills per
               // token, the three SKUs above bill at different rates against

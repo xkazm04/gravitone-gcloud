@@ -139,9 +139,30 @@ export interface RerouteStep {
  */
 export type CostBasis = "vendor-reported" | "estimated" | "unpriced";
 
+/**
+ * How to read `model`. The same distinction `CostBasis` draws for a number,
+ * drawn for an identity: a request parameter is a claim by the CALLER, and only
+ * an echoed identifier is a claim by the party that did the work.
+ *
+ * - `vendor-reported` — the response stated which model served the request.
+ * - `requested` — we asked for this and the vendor did not say; the artifact is
+ *   attributable to our intent, not to a confirmation.
+ * - `undisclosed` — the provider's contract exposes no identifier at all, so the
+ *   output is unattributable and must not enter a class that ships on provenance.
+ */
+export type ModelBasis = "vendor-reported" | "requested" | "undisclosed";
+
 export interface Provenance {
   provider: ProviderId;
   model: string;
+  /**
+   * How to read `model` — see `ModelBasis`. Required, because the failure it
+   * prevents is silent: an unmarked identifier reads as the served model, and
+   * every adapter here in fact fills it from a caller-side constant. Recording
+   * intent as though it were confirmation is the identity-shaped form of the
+   * error `costBasis` was added to make impossible for cost.
+   */
+  modelBasis: ModelBasis;
   /** Vendor-side ids, kept so a failed cleanup can be chased by hand. */
   remoteIds?: string[];
   costUsd?: number;
