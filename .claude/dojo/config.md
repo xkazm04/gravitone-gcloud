@@ -239,3 +239,15 @@ tracking the human better, and record the decision here):
   (UV_HANDLE_CLOSING assert after run completion of nothing); the runner is
   resumable and the second pass recovered everything — treat one silent early
   exit per chain as ordinary, same as the ComfyUI races.
+- 2026-09-01 (fourth session) — Colibri/GLM-5.3-Flash exploration (operator
+  ask): image generation NO (pure inference engine), recognition YES as a
+  prospective SLOW DEEP EYE (321B vision MoE, experts int4-streamed from
+  NVMe; the wall is disk bandwidth, ~4.8 GB touched per token — this box's
+  KC3000 + 64 GB RAM projects ~1-3 s/token vs the reference's 20-44 s).
+  Acquisition running detached: `colibri-models/convert-glm53.log`, 62
+  shards, ~195 GB, resumable — a later session serves it with
+  `C:/Users/kazda/kiro/colibri/coli serve --model C:/Users/kazda/kiro/colibri-models/glm53_i4`.
+  Pre-registered test protocol + decision rule live in the registry:
+  librarian/sources/2026-09-01-colibri-glm53-experiment.md. If the lane
+  earns its place it enters the LOCAL stack as a third eye tier (bulk =
+  qwen3.8:27b, deep = glm53) — never a bulk annotator.
