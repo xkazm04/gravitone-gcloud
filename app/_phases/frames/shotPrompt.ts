@@ -162,6 +162,10 @@ const ANGLE_PHRASE: Readonly<Record<NonNullable<Shot["angle"]>, string>> = {
 const PLACEMENT_PHRASE: Readonly<Record<NonNullable<Shot["placement"]>, string>> = {
   crosshair: "the subject dead centre on the crosshair so the eye finds it instantly",
   thirds: "the subject off-centre on a thirds intersection with generous negative space",
+  // dojo 2026-08-31-study-diagonal (human-gated): the composition built on one
+  // strong line — A-tier action's most common extreme-wide arrangement, which
+  // this table previously could not say.
+  diagonal: "the composition built on one strong diagonal, the line of action running corner to corner of the frame with the subject on it",
 };
 
 /** [A] § Staging 3 — the line of action. A neutral shot is the sequence's only legal reversal, so it is stated rather than omitted. */

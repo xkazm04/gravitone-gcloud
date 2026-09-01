@@ -39,6 +39,12 @@ check("lens-as-effect: the compression caveat survives", /long-lens compression 
 // 2026-08-30-genre-as-contract (genre-visual-contracts)
 check("genre-as-contract: authoring rule with the imperfection budget", /IMPERFECTION BUDGET/.test(doc), "FRAMES-SCENE-PROMPT.md");
 
+// 2026-08-31-study-diagonal (corpus study -> placement vocabulary)
+check("study-diagonal: the placement vocabulary can say diagonal", /diagonal: "the composition built on one strong diagonal/.test(shot), "shotPrompt.ts PLACEMENT_PHRASE");
+
+// 2026-08-31-study-light-layers (rule 7's environmental-layer refinement)
+check("study-light-layers: rule 7 carries the environmental layer", /ONE named\s+environmental layer/.test(doc), "FRAMES-SCENE-PROMPT.md rule 7");
+
 // 2026-08-30-counted-beats (performance-direction, unanimous)
 check("counted-beats: authoring rule", /Performance is counted beats, never a category verb/.test(doc), "FRAMES-SCENE-PROMPT.md");
 

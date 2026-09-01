@@ -62,7 +62,12 @@ number, bound to the notebook row that sourced it.
    human-gated: unanimous across both judges.) One in-world source the viewer can believe — a window,
    a lamp, the sparks themselves — its hardness, its direction read on the subject, and the clause
    amateurs omit: which part of the frame is NOT lit. A frame where everything is visible has said
-   nothing; the model lights evenly unless told what to leave dark.
+   nothing; the model lights evenly unless told what to leave dark. **Wide shots may add ONE named
+   environmental layer** on top of the dominant source — a dusk sky state above, a scatter of distant
+   practicals low on the horizon — because the second layer is what separates depth planes without
+   lifting the darks (dojo 2026-08-31 `study-light-layers`, human-gated; measured 89% of A-tier
+   animated frames name two or more in-world sources). One dominant source, at most one layer, darks
+   still stated.
 8. **Optics are described effects, never notation.** (dojo 2026-08-30 `lens-effect-language`, human-gated.)
    "Background compressed flat behind her", "only the eyes sharp, the crowd reduced to smears",
    "everything razor sharp to the far doorway" — never a focal length or f-number, which the model
