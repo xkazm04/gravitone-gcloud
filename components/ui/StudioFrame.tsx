@@ -48,12 +48,15 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
       {DEV_AUTH && (
         <div
           data-testid="dev-auth-banner"
-          className="font-jetbrains relative z-40 bg-amber-400/15 px-4 py-1.5 text-center text-[11px] tracking-[0.14em] text-amber-200 uppercase"
+          className="font-jetbrains relative z-40 bg-amber-400/15 px-4 py-1.5 text-center text-label tracking-[0.14em] text-amber-200 uppercase"
         >
           dev auth bypass active — signed in as a fixture, not a real account
         </div>
       )}
-      <div className="relative mx-auto max-w-6xl px-6">
+      {/* 1440px, gutters halved (2026-08-28): the type scale went up a rung
+          and the width to carry it comes out of x-spacing, not out of the
+          content — the operator's explicit trade. */}
+      <div className="relative mx-auto max-w-[1440px] px-4">
         <nav className="flex items-center justify-between gap-4 py-6">
           <div className="flex items-center gap-7">
             <Link href="/projects" aria-label="Projects">
@@ -63,11 +66,11 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
               // A mode, not a warning — quiet on purpose, unlike the amber
               // dev-auth banner. It answers "where is my work?" at a glance:
               // here, in this browser, nowhere else.
-              <span className="font-jetbrains rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-[10px] tracking-[0.14em] text-white/50 uppercase">
+              <span className="font-jetbrains rounded-full border border-white/12 bg-white/[0.04] px-2.5 py-0.5 text-label tracking-[0.14em] text-white/50 uppercase">
                 local
               </span>
             )}
-            <div className="font-jetbrains hidden items-center gap-7 text-[13px] text-white/70 md:flex">
+            <div className="font-jetbrains hidden items-center gap-7 text-label text-white/70 md:flex">
               {MODULES.map((m) => (
                 <Link key={m.href} href={m.href} className="transition hover:text-white">
                   {m.label}

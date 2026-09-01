@@ -56,7 +56,7 @@ export default function MovementSection({
     >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-instrument text-[18px] text-white/90">{movement.label}</h3>
-        <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/35 uppercase">
+        <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">
           {movement.role} · part {movement.ordinal}
           {section ? (
             <span className="ml-2 normal-case tracking-normal text-white/45">on cue · {section.label}</span>
@@ -67,7 +67,7 @@ export default function MovementSection({
       </header>
 
       {beats.length === 0 ? (
-        <p className="font-jetbrains mt-3 text-[11px] text-amber-200/80">
+        <p className="font-jetbrains mt-3 text-label text-amber-200/80">
           no beat picked for this part — the movement is declared and empty
         </p>
       ) : (

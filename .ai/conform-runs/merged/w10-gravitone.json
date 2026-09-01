@@ -1,0 +1,96 @@
+{
+  "worker": "w10-gravitone-pof",
+  "evaluatedAt": "2026-08-31",
+  "pairs": [
+    {
+      "context": "afbf291c-d8ac-4f08-8340-5e045b361065",
+      "subject": "test-harness",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evidence": "playwright.config.ts/playwright.live.config.ts split the harness into two machines by directory (suite-partitioning), tests/golden-path/cli-transport-resilience.probe.spec.ts:17-40 drives a real negative control (empty PATH) proving fallback classification survives, and tests/golden-path/_helpers.ts:1-38 states serial-by-design isolation instead of leaving it to accident.",
+      "techniques": [
+        { "technique": "suite-partitioning", "verdict": "conformant",
+          "evidence": "playwright.config.ts (node lane, tests/golden-path) vs playwright.live.config.ts (browser lane, tests/live) — one config per suite, membership by directory" },
+        { "technique": "negative-control-tests", "verdict": "conformant",
+          "evidence": "tests/golden-path/cli-transport-resilience.probe.spec.ts:17-40 — drives the real runClaude against an emptied PATH and asserts the process survives to classify the rejection" },
+        { "technique": "isolation-lanes", "verdict": "conformant",
+          "evidence": "playwright.config.ts fullyParallel:false with the reason stated, plus tests/golden-path/_helpers.ts:1-38 keepEnv() snapshot/restore for the shared-process.env lane" },
+        { "technique": "live-app-harness", "verdict": "conformant",
+          "evidence": "playwright.live.config.ts starts the real Next dev server on a non-default port and drives it in Chromium; pipeline/DRIVERS.md documents the migration from nine improvised drive-*.mjs scripts to this designed lane" },
+        { "technique": "history-driven-partitioning", "verdict": "not-applicable",
+          "evidence": "the node lane is deliberately serial in one process (shared process.env mutation), so there are no parallel workers to distribute duration across" }
+      ]
+    },
+    {
+      "context": "afbf291c-d8ac-4f08-8340-5e045b361065",
+      "subject": "eval-harness",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "tests/golden-path/*.spec.ts assert deterministic code behavior (SSRF guards, budget ceilings, auth truth tables) with sealed network and zero model judging anywhere in this context — eval-harness's precondition (scoring a non-deterministic system under measurement) never occurs in this lane; gates.yml calls the probes suite 'no live service whose mood can redden a clean tree'.",
+      "techniques": [
+        { "technique": "assertion-vs-judgment", "verdict": "not-applicable",
+          "evidence": "every probe in the context is a deterministic assertion; there is no judge, no rubric, no pass-rate-over-N-runs anywhere in tests/golden-path/" }
+      ],
+      "registryProposal": "the matcher scored eval-harness probable here on 'golden'/'suite'/'harness' vocabulary overlap; the repo's actual eval-harness-shaped machinery (scored criteria, a Fable judge, run history) lives in .claude/skills/gauntlet/, a context this map does not cover at all — a coverage hole, not a matcher miss inside this context."
+    },
+    {
+      "context": "de5bdd42-0e8f-4ced-a1bb-5ff4fef12f28",
+      "subject": "agent-cli-transport",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evidence": "lib/claudeCli.ts:70-148 realizes availability-probe (zero-token probeClaude through the same spawn door) and subscription-auth-selection (seatOnlyEnv strips METERED_AUTH_VARS at the one door, :63-74,117,201); dated-capability-matrix and fallback-ladder are deliberately deferred to lib/text/providers/claudeCli.ts + lib/deployment.ts, which this file's own header names as the reason it stays a thin adapter.",
+      "techniques": [
+        { "technique": "availability-probe", "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:110-148 — probeClaude runs `claude --version` through the same spawn door, zero-token, and states the ceiling it cannot prove (authorization)" },
+        { "technique": "subscription-auth-selection", "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:63-74 METERED_AUTH_VARS stripped by seatOnlyEnv(), applied at the single spawn door (:117, :201)" },
+        { "technique": "output-normalization", "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:233-246 — parses the CLI's JSON envelope into one CliResult shape, typed CliError on parse/subtype failure" },
+        { "technique": "permission-stance-enforcement", "verdict": "conformant",
+          "evidence": "lib/claudeCli.ts:150-187 cliArgs() enforces the one stance this transport uses (no tools, single turn); tests/golden-path/cli-sandbox-args.probe.spec.ts caught a Windows shell-quoting regression that had silently dropped both restrictions" },
+        { "technique": "dated-capability-matrix", "verdict": "not-applicable",
+          "evidence": "lib/text/providers/claudeCli.ts:1-9 states this transport is deliberately kept capability-blind so a pipeline script outside the app's module graph can still import it; the dated capability declaration lives one layer up, outside this context's paths" },
+        { "technique": "fallback-ladder", "verdict": "not-applicable",
+          "evidence": "the ladder (local CLI -> cloud API -> refusal) is implemented in lib/text/router.ts + lib/deployment.ts, neither of which is in this context's path set — this file is the ladder's first rung, not the ladder" }
+      ]
+    },
+    {
+      "context": "2b0e4967-fd1d-4417-8ac8-a5eddc5d50ab",
+      "subject": "quality-gates",
+      "bundle": "software-engineering",
+      "state": "conformant",
+      "evidence": "pipeline/lint-ratchet.mjs:24-40 implements ratchet-design + gate-liveness with an explicit registry citation and three-outcome exit codes (pass/fail/could-not-run); pipeline/DRIVERS.md:11-49 demotes the nine drive-*.mjs scripts from an unwired improvised live harness to explicitly-labeled non-gates with a migration path, correctly naming the gate-laddering rule against itself.",
+      "techniques": [
+        { "technique": "gate-liveness", "verdict": "conformant",
+          "evidence": "pipeline/lint-ratchet.mjs:24-40 — could-not-run is exit 2, distinct from pass (0) and fail (1); instrument asserted before result" },
+        { "technique": "ratchet-design", "verdict": "conformant",
+          "evidence": "pipeline/lint-ratchet.mjs:1-9 — per-rule buckets compared to lint-baseline.json, any move in either direction is red, cited from the registry technique by name" },
+        { "technique": "gate-laddering", "verdict": "conformant",
+          "evidence": "pipeline/DRIVERS.md:11-49 — the nine drive-*.mjs scripts are explicitly relabeled 'not a gate, nothing invokes them, and no claim in .ai/registry-conformance.md rests on them' rather than left masquerading as coverage" }
+      ]
+    },
+    {
+      "context": "2b0e4967-fd1d-4417-8ac8-a5eddc5d50ab",
+      "subject": "pipeline-authoring",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "this context's files are gate implementations and one-off drivers consumed by a hand-written .github/workflows/gates.yml (not itself in this context); the repo is a single Next.js deliverable, below pipeline-authoring's own generation threshold ('a single-deliverable repository with six steps gains nothing and loses readability').",
+      "techniques": [
+        { "technique": "runtime-pipeline-generation", "verdict": "not-applicable",
+          "evidence": "gates.yml is a static hand-written file; the repo has one deliverable and the plan's shape is not a function of anything a generator would compute" }
+      ]
+    },
+    {
+      "context": "e44e6001-80c3-4cdf-88ec-f9f99e6d7277",
+      "subject": "voice-io",
+      "bundle": "software-engineering",
+      "state": "not-applicable",
+      "evidence": "lib/text/**/*.ts (lib/text/router.ts:1-27) is a text-generation LLM routing layer with no microphone capture, no transcription and no audio synthesis anywhere in the context; the pairing is a lexical false-positive from 'text' overlapping voice-io's 'text -> synthesis' vocabulary.",
+      "techniques": [
+        { "technique": "stt-pipeline", "verdict": "not-applicable", "evidence": "no capture/transcription code exists in lib/text/**" },
+        { "technique": "tts-pipeline", "verdict": "not-applicable", "evidence": "no synthesis/playback code exists in lib/text/**; this router produces reasoning text, not audio" }
+      ],
+      "registryProposal": "matcher scored this 'probable' on why:['text','cloud','engine'] — those terms mean 'LLM text generation over cloud/local engines' here, not text-to-speech. Worth a disambiguating negative example in voice-io's use_when if this pattern recurs across the fleet."
+    }
+  ]
+}

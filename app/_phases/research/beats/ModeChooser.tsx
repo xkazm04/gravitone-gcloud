@@ -83,7 +83,7 @@ export function ModeSwitch({
   const other: Mode = mode === "facts" ? "beats" : "facts";
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/30 uppercase">
+      <span className="font-jetbrains text-label tracking-[0.16em] text-white/30 uppercase">
         research mode · {MODE_LABEL[mode]}
       </span>
       <button
@@ -92,7 +92,7 @@ export function ModeSwitch({
         onClick={() => !locked && onSwitch(other)}
         disabled={!!locked}
         title={locked ?? `Switch this project to ${MODE_LABEL[other]}. Nothing you have done here is discarded.`}
-        className="font-jetbrains rounded-full border border-white/12 px-2.5 py-1 text-[10px] tracking-[0.1em] text-white/45 transition hover:border-white/25 hover:text-white/75 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/12 disabled:hover:text-white/45"
+        className="font-jetbrains rounded-full border border-white/12 px-2.5 py-1 text-label tracking-[0.1em] text-white/45 transition hover:border-white/25 hover:text-white/75 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:border-white/12 disabled:hover:text-white/45"
       >
         switch to {MODE_LABEL[other]}
       </button>

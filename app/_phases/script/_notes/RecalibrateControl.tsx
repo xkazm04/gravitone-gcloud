@@ -81,7 +81,7 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
     const over = RENDERS.filter((r) => (api.candidate!.budget[r.id]?.overrunS ?? 0) > 0);
     return (
       <div data-testid="candidate-bar" className="rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06] p-2.5">
-        <p className="font-jetbrains text-[10px] tracking-[0.14em] text-cyan-200 uppercase">
+        <p className="font-jetbrains text-content tracking-[0.14em] text-cyan-200 uppercase">
           {api.candidate.label} · {api.candidate.notes.length} note
           {api.candidate.notes.length === 1 ? "" : "s"}
           {api.candidate.engine === "simulated" && (
@@ -92,12 +92,12 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
             used to render only in the idle state, so it was invisible at exactly
             the moment the creator was looking at output it explains. */}
         {api.engineNote && (
-          <p data-testid="engine-note" className="font-jetbrains mt-1.5 text-[11px] leading-snug text-amber-200/90">
+          <p data-testid="engine-note" className="font-jetbrains mt-1.5 text-content leading-snug text-amber-200/90">
             {api.engineNote}
           </p>
         )}
         {api.candidate.summary && (
-          <p className="mt-1 text-[12px] leading-snug text-slate-300">{api.candidate.summary}</p>
+          <p className="mt-1 text-content leading-snug text-slate-300">{api.candidate.summary}</p>
         )}
         {/* What it cost, beside the button that decides whether it was worth it. */}
         {receiptOf(api.candidate) && (
@@ -108,20 +108,20 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
                 ? `claude session ${api.candidate.engineRun.sessionId}`
                 : undefined
             }
-            className="font-jetbrains mt-1.5 text-[10px] text-white/40"
+            className="font-jetbrains mt-1.5 text-label text-white/40"
           >
             {receiptOf(api.candidate)}
           </p>
         )}
         {over.length > 0 && (
-          <p data-testid="overrun" className="font-jetbrains mt-1.5 text-[11px] leading-snug text-amber-200">
+          <p data-testid="overrun" className="font-jetbrains mt-1.5 text-content leading-snug text-amber-200">
             over budget —{" "}
             {over.map((r) => `${r.engineLabel} +${api.candidate!.budget[r.id].overrunS}s`).join(" · ")}
           </p>
         )}
 
         {blocked && (
-          <p data-testid="gate-blocking" className="font-jetbrains mt-1.5 text-[11px] leading-snug text-rose-200">
+          <p data-testid="gate-blocking" className="font-jetbrains mt-1.5 text-content leading-snug text-rose-200">
             The gate is blocking on {gate!.blocking.join(", ")} — {gate!.violations} finding
             {gate!.violations === 1 ? "" : "s"}, {gate!.enforced}% of it enforced. It reads a narrow
             lexical band, so it cannot stop you; accepting anyway is recorded on the version.
@@ -141,7 +141,7 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
                 ? setArmedFor(staged ?? null)
                 : api.accept(armed && gate ? overrideFrom(gate, Date.now()) : undefined)
             }
-            className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] transition ${
+            className={`font-jetbrains rounded-full border px-3 py-1 text-label transition ${
               blocked
                 ? "border-rose-400/45 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20"
                 : "border-cyan-400/45 bg-cyan-400/10 text-cyan-200 hover:bg-cyan-400/20"
@@ -152,7 +152,7 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
           <button
             data-testid={armed ? "cancel-override" : "discard-candidate"}
             onClick={() => (armed ? setArmedFor(null) : api.discard())}
-            className="font-jetbrains rounded-full border border-white/15 px-3 py-1 text-[11px] text-white/60 transition hover:bg-white/5"
+            className="font-jetbrains rounded-full border border-white/15 px-3 py-1 text-label text-white/60 transition hover:bg-white/5"
           >
             {armed ? "not yet" : "discard"}
           </button>
@@ -165,10 +165,10 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
     return (
       <div data-testid="recalibrating" className="rounded-xl border border-cyan-400/25 bg-cyan-400/[0.04] p-2.5">
         <div className="flex items-center justify-between gap-2">
-          <p className="font-jetbrains text-[10px] tracking-[0.14em] text-cyan-200 uppercase">
+          <p className="font-jetbrains text-content tracking-[0.14em] text-cyan-200 uppercase">
             recalibrating
           </p>
-          <span data-testid="recalibrate-elapsed" className="font-jetbrains text-[10px] text-white/40">
+          <span data-testid="recalibrate-elapsed" className="font-jetbrains text-label text-white/40">
             {api.runningSince === null ? "starting…" : elapsedSince(api.runningSince, now)}
           </span>
         </div>
@@ -176,7 +176,7 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
         <div className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/10">
           <span className="block h-full w-full animate-pulse rounded-full bg-cyan-300/70" />
         </div>
-        <p className="font-jetbrains mt-1.5 text-[10px] leading-snug text-white/35">
+        <p className="font-jetbrains mt-1.5 text-content leading-snug text-white/35">
           a real {MODEL} turn — minutes, not seconds. the pad stays locked until it lands.
         </p>
       </div>
@@ -188,7 +188,7 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
         data-testid="run-recalibration"
         onClick={api.run}
         disabled={!n}
-        className="font-jetbrains w-full rounded-xl border border-cyan-400/40 bg-cyan-400/[0.08] px-3 py-2 text-[12px] text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/25"
+        className="font-jetbrains w-full rounded-xl border border-cyan-400/40 bg-cyan-400/[0.08] px-3 py-2 text-label text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/25"
       >
         {n ? `Recalibrate · ${n} note${n === 1 ? "" : "s"}` : "Recalibrate"}
       </button>
@@ -196,27 +196,27 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
         {/* Derived from the last result's provenance, never hand-removed: the
             label disappears on its own when a real model produced the version,
             and comes back on its own if the call falls back. */}
-        <span className="font-jetbrains text-[10px] text-white/30">
+        <span className="font-jetbrains text-label text-white/30">
           {api.engineNote ? "simulated fallback" : `local claude code · ${MODEL} · edits, not rewrites`}
         </span>
         {n > 0 && (
           <button
             onClick={api.clearNotes}
-            className="font-jetbrains text-[10px] text-white/30 transition hover:text-rose-300"
+            className="font-jetbrains text-label text-white/30 transition hover:text-rose-300"
           >
             clear all
           </button>
         )}
       </div>
       {inert > 0 && (
-        <p className="font-jetbrains text-[10px] text-white/35">{inert} will not move a bar</p>
+        <p className="font-jetbrains text-content text-white/35">{inert} will not move a bar</p>
       )}
 
       {/* A candidate is staged, never persisted — accepting is what makes a
           version real. So closing the project throws one away, and saying so is
           the difference between "my run vanished" and "I never accepted it". */}
       {api.lostCandidate && (
-        <p data-testid="lost-candidate" className="font-jetbrains text-[10px] leading-snug text-amber-200/90">
+        <p data-testid="lost-candidate" className="font-jetbrains text-content leading-snug text-amber-200/90">
           {api.lostCandidate.label} was staged when this project last closed and never accepted, so it is
           gone.{" "}
           {api.lostCandidate.notes === 1
@@ -236,23 +236,23 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
           data-testid="baseline-declined"
           className="mt-1 rounded-xl border border-white/10 bg-white/[0.02] p-2.5"
         >
-          <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/45 uppercase">
+          <p className="font-jetbrains text-content tracking-[0.14em] text-white/45 uppercase">
             {api.baseline.label}
             {declinedBaseline > 0 ? ` · declined ${declinedBaseline}` : ""}
           </p>
           {overrideLineOf(api.baseline) && (
-            <p data-testid="baseline-override" className="font-jetbrains mt-1 text-[11px] leading-snug text-rose-200/90">
+            <p data-testid="baseline-override" className="font-jetbrains mt-1 text-content leading-snug text-rose-200/90">
               {overrideLineOf(api.baseline)}
             </p>
           )}
           {api.baseline.summary && (
-            <p className="mt-1 text-[12px] leading-snug text-slate-300">{api.baseline.summary}</p>
+            <p className="mt-1 text-content leading-snug text-slate-300">{api.baseline.summary}</p>
           )}
           <DeclinedList version={api.baseline} />
         </div>
       )}
       {api.engineNote && (
-        <p data-testid="engine-note" className="font-jetbrains text-[10px] leading-snug text-amber-200/90">
+        <p data-testid="engine-note" className="font-jetbrains text-content leading-snug text-amber-200/90">
           {api.engineNote}
         </p>
       )}

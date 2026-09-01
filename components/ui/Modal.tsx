@@ -224,7 +224,7 @@ export default function Modal({
           <div className="min-w-0">
             {eyebrow}
             <h2 className="font-instrument mt-1 truncate text-xl text-white">{title}</h2>
-            {subtitle && <div className="mt-1 text-sm text-slate-400">{subtitle}</div>}
+            {subtitle && <div className="mt-1 text-label text-slate-400">{subtitle}</div>}
           </div>
           <button
             type="button"

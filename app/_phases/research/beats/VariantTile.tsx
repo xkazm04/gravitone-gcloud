@@ -41,46 +41,46 @@ export default function VariantTile({
   const body = (
     <>
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className={lift("font-jetbrains rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-white/45", "group-hover:text-white/75")}>
+        <span className={lift("font-jetbrains rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-label tracking-[0.1em] text-white/45", "group-hover:text-white/75")}>
           {b.kind}
         </span>
         {b.connector && (
-          <span className={lift("font-jetbrains text-[10px] tracking-[0.12em] text-white/30", "group-hover:text-white/55")}>
+          <span className={lift("font-jetbrains text-label tracking-[0.12em] text-white/30", "group-hover:text-white/55")}>
             {b.connector.toLowerCase()} ·
           </span>
         )}
-        <span className={lift("font-jetbrains text-[10px] tracking-[0.12em] text-white/30", "group-hover:text-white/55")}>
+        <span className={lift("font-jetbrains text-label tracking-[0.12em] text-white/30", "group-hover:text-white/55")}>
           {b.at}
         </span>
         {b.raises?.map((r) => (
           <span
             key={r}
-            className={`font-jetbrains rounded border px-1.5 py-0.5 text-[10px] tracking-[0.1em] ${RAISED_TONE[r]}`}
+            className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.1em] ${RAISED_TONE[r]}`}
           >
             raises {r}
           </span>
         ))}
         {b.resetHolds?.map((h) => (
-          <span key={h} className="font-jetbrains rounded border border-white/15 bg-white/[0.05] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-white/70">
+          <span key={h} className="font-jetbrains rounded border border-white/15 bg-white/[0.05] px-1.5 py-0.5 text-label tracking-[0.1em] text-white/70">
             holds {h}
           </span>
         ))}
         {b.spends?.length ? (
-          <span className="font-jetbrains rounded border border-amber-400/30 bg-amber-400/[0.06] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-amber-200">
+          <span className="font-jetbrains rounded border border-amber-400/30 bg-amber-400/[0.06] px-1.5 py-0.5 text-label tracking-[0.1em] text-amber-200">
             spends {b.spends.length}
           </span>
         ) : null}
       </div>
 
       <p className="font-instrument mt-2 text-[15px] leading-snug text-slate-100">{b.label}</p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
+      <p className="mt-1.5 text-content leading-relaxed text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
         {b.text}
       </p>
-      <p className={lift("font-hanken mt-2 text-[12px] leading-relaxed text-white/40", "group-hover:text-white/70")}>
+      <p className={lift("font-hanken mt-2 text-label leading-relaxed text-white/40", "group-hover:text-white/70")}>
         {variant.rationale}
       </p>
       {variant.risk && (
-        <p className="font-jetbrains mt-2 text-[11px] leading-relaxed text-amber-200/85">
+        <p className="font-jetbrains mt-2 text-label leading-relaxed text-amber-200/85">
           risk — {variant.risk}
         </p>
       )}

@@ -51,14 +51,14 @@ export function MockPreview({ asset, className = "" }: { asset: Asset; className
     <div className={`relative overflow-hidden bg-gradient-to-br ${asset.tone} ${className}`}>
       {asset.kind === "audio" && <AudioBars id={asset.id} />}
       {asset.kind === "script" && (
-        <div className="font-jetbrains space-y-1.5 p-4 text-[10px] leading-relaxed text-white/25">
+        <div className="font-jetbrains space-y-1.5 p-4 text-content leading-relaxed text-white/25">
           <p>INT. HARBOR GATE — NIGHT</p>
           <p className="pl-4">MARLA (V.O.)</p>
           <p className="pl-8">Every city keeps one door unlocked.</p>
         </div>
       )}
       {asset.kind === "video" && (
-        <span className="font-jetbrains absolute right-2 bottom-2 rounded bg-black/60 px-1.5 py-0.5 text-[11px] text-white/80">
+        <span className="font-jetbrains absolute right-2 bottom-2 rounded bg-black/60 px-1.5 py-0.5 text-label text-white/80">
           {fmtDur(asset.durationS)}
         </span>
       )}
@@ -75,16 +75,16 @@ export function MockPreview({ asset, className = "" }: { asset: Asset; className
 /** The caption, or the truth about why there isn't one. */
 export function CaptionBlock({ asset }: { asset: Asset }) {
   if (asset.captionStatus === "written")
-    return <p className="text-sm leading-relaxed text-slate-300">{asset.caption}</p>;
+    return <p className="text-content leading-relaxed text-slate-300">{asset.caption}</p>;
   if (asset.captionStatus === "pending")
     return (
-      <p className="text-sm text-slate-400">
+      <p className="text-content text-slate-400">
         <span className="text-cyan-300">Caption in flight</span> — the library is watching this
         clip; search will find it once the caption lands.
       </p>
     );
   return (
-    <p className="rounded-lg border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-sm text-amber-200/90">
+    <p className="rounded-lg border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-content text-amber-200/90">
       {asset.captionError}
     </p>
   );
@@ -101,8 +101,8 @@ export function ProvenanceBlock({
   const p = asset.provenance;
   return (
     <div className="space-y-2">
-      <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/40 uppercase">provenance</p>
-      <p className="text-sm text-slate-300">
+      <p className="font-jetbrains text-content tracking-[0.14em] text-white/40 uppercase">provenance</p>
+      <p className="text-content text-slate-300">
         {p.source === "upload" ? (
           "Uploaded by you."
         ) : (
@@ -114,13 +114,13 @@ export function ProvenanceBlock({
         )}
       </p>
       {p.prompt && (
-        <p className="font-jetbrains rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2 text-[12px] text-slate-400">
+        <p className="font-jetbrains rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2 text-content text-slate-400">
           “{p.prompt}”
         </p>
       )}
       {p.parentIds.length > 0 && (
         <div className="space-y-1">
-          <p className="text-[13px] text-slate-500">from</p>
+          <p className="text-content text-slate-500">from</p>
           {p.parentIds.map((pid) => {
             const parent = assetById.get(pid);
             if (!parent) return null;
@@ -128,7 +128,7 @@ export function ProvenanceBlock({
               <button
                 key={pid}
                 onClick={() => onSelect(pid)}
-                className="flex w-full items-center gap-2 rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2 text-left text-sm text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
+                className="flex w-full items-center gap-2 rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2 text-left text-label text-slate-300 transition hover:border-cyan-400/30 hover:text-white"
               >
                 <KindGlyph kind={parent.kind} className="h-3.5 w-3.5 text-white/50" />
                 <span className="truncate">{parent.title}</span>

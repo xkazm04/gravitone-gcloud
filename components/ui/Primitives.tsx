@@ -8,7 +8,7 @@ import { EqBars, usePauseOffscreen, type BarColor } from "./Equalizer";
  *  app this design system was ported from) and nothing here ever imported it.
  *  If a surface does need the pill without <Eyebrow>'s dot, export it then. */
 const EYEBROW_CLASS =
-  "font-jetbrains inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/5 px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-cyan-300";
+  "font-jetbrains inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-400/5 px-3 py-1 text-label uppercase tracking-[0.18em] text-cyan-300";
 
 /** Mono uppercase eyebrow pill with a live dot. */
 export function Eyebrow({ children }: { children: React.ReactNode }) {
@@ -51,7 +51,7 @@ export function Button({ variant = "primary", className = "", children, ...rest 
   // re-deriving the token layer, which is the one thing tokens.ts exists to
   // stop.
   const base =
-    "rounded-full px-6 py-3 text-sm font-semibold transition disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2";
+    "rounded-full px-6 py-3 text-label font-semibold transition disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-offset-2";
   const styles =
     variant === "primary"
       ? "gt-glow bg-gradient-to-r from-cyan-300 to-cyan-200 text-slate-950 hover:brightness-110"

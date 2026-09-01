@@ -152,7 +152,7 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
                   aria-hidden
                 />
                 <span
-                  className="font-jetbrains absolute -top-0 z-10 -translate-x-1/2 rounded bg-cyan-400/10 px-1.5 text-[9px] text-cyan-300/80"
+                  className="font-jetbrains absolute -top-0 z-10 -translate-x-1/2 rounded bg-cyan-400/10 px-1.5 text-label text-cyan-300/80"
                   style={{ left: `${(TURN.atS / PROJECT.totalS) * 100}%` }}
                   title={`the reversal — ${TURN.slug}`}
                 >
@@ -165,7 +165,7 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
 
         {TRACKS.map((t) => (
           <div key={t.id} className="mt-2 flex items-center gap-3">
-            <span className="font-jetbrains w-14 shrink-0 text-right text-[10px] tracking-[0.12em] text-white/40 uppercase">
+            <span className="font-jetbrains w-14 shrink-0 text-right text-label tracking-[0.12em] text-white/40 uppercase">
               {t.label}
             </span>
             <div className="relative h-10 flex-1">
@@ -186,7 +186,7 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
                     }`}
                   >
                     <span
-                      className={`font-jetbrains block truncate text-[10px] leading-[2.4] ${
+                      className={`font-jetbrains block truncate text-label leading-[2.4] ${
                         state === "ok"
                           ? "text-white/60"
                           : state === "drift"
@@ -203,7 +203,7 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
           </div>
         ))}
 
-        <p className="font-jetbrains mt-3 flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-white/35">
+        <p className="font-jetbrains mt-3 flex flex-wrap gap-x-4 gap-y-1 text-content text-white/35">
           <span><span className="text-cyan-300/70">▬</span> placed</span>
           <span><span className="text-amber-300/80">▬</span> drift</span>
           <span><span className="text-rose-300/70">▭</span> missing — drawn, not hidden</span>
@@ -214,10 +214,10 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
         {/* the sync bench — now pointed at the field it always described */}
         {drifting && (
           <div className="rounded-2xl border border-amber-400/25 bg-amber-400/[0.03] p-4">
-            <p className="font-jetbrains text-[11px] tracking-[0.14em] text-amber-300/90 uppercase">
+            <p className="font-jetbrains text-content tracking-[0.14em] text-amber-300/90 uppercase">
               sync · {drifting.label}
             </p>
-            <p className="mt-1.5 text-sm leading-snug text-slate-300">
+            <p className="mt-1.5 text-content leading-snug text-slate-300">
               {drift === 0 ? (
                 <>
                   On its mark at <span className="text-cyan-300">{drifting.startS}s</span>.
@@ -233,7 +233,7 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
                 </>
               )}
             </p>
-            <div className="font-jetbrains mt-3 flex items-center gap-3 text-[12px]">
+            <div className="font-jetbrains mt-3 flex items-center gap-3 text-label">
               <button
                 onClick={() => nudge(drifting, -50)}
                 className="cursor-pointer rounded-lg border border-white/15 px-3 py-1.5 text-white/70 transition hover:bg-white/5"
@@ -262,7 +262,7 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
                 which is the whole cut this app has; there is no audio to shift
                 and nowhere to save a cut to yet, so the adjustment lives as long
                 as the session does. */}
-            <p className="font-jetbrains mt-2 text-[10px] leading-snug text-white/30">
+            <p className="font-jetbrains mt-2 text-content leading-snug text-white/30">
               Moves the block on the ruler above and nothing else — no audio is
               shifted, and this cut has nowhere to save to yet.
             </p>
@@ -271,8 +271,8 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
 
         {/* the honest wrap state */}
         <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-          <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/40 uppercase">this cut</p>
-          <p className="mt-1.5 text-sm leading-snug text-slate-400">
+          <p className="font-jetbrains text-content tracking-[0.14em] text-white/40 uppercase">this cut</p>
+          <p className="mt-1.5 text-content leading-snug text-slate-400">
             {PROJECT.totalS}s planned across {TRACKS.length} tracks.{" "}
             {missing.length === 0 ? (
               <span className="text-cyan-300">Every block has something behind it.</span>
@@ -287,7 +287,7 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
               </>
             )}
           </p>
-          <p className="mt-2 text-sm leading-snug text-slate-400">
+          <p className="mt-2 text-content leading-snug text-slate-400">
             There is no playback here. This app has no player, and nothing it could feed one —
             what is drawn is the plan for the cut: where each block sits, and where nothing does.
           </p>

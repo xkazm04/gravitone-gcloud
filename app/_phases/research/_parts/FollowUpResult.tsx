@@ -68,11 +68,11 @@ export default function FollowUpResult({
       {/* The quote, drawn as a quote. The rule on the ruled margin is the whole
           device: everything to the right of it is the run's words, unedited,
           and the correction below is not. */}
-      <p className="font-jetbrains text-[10px] tracking-[0.16em] text-white/30 uppercase">
+      <p className="font-jetbrains text-content tracking-[0.16em] text-white/30 uppercase">
         what the run returned{revisions.length > 0 ? " — one claim has since been corrected" : ""}
       </p>
       <p
-        className={`mt-1.5 border-l-2 pl-3 text-[13px] leading-relaxed text-slate-300 ${
+        className={`mt-1.5 border-l-2 pl-3 text-content leading-relaxed text-slate-300 ${
           revisions.length > 0 ? "border-amber-400/40" : "border-white/10"
         }`}
       >
@@ -88,26 +88,26 @@ export default function FollowUpResult({
           data-testid={`revision-${r.factId}`}
           className="mt-2.5 rounded-xl border border-amber-400/25 bg-amber-400/[0.04] px-3 py-2.5"
         >
-          <p className="font-jetbrains text-[10px] tracking-[0.14em] text-amber-200/90 uppercase">
+          <p className="font-jetbrains text-content tracking-[0.14em] text-amber-200/90 uppercase">
             corrected since — {r.factId}
           </p>
-          <p className="mt-1.5 text-[12px] leading-relaxed text-white/45">
-            <span className="font-jetbrains text-[10px] tracking-[0.1em] text-white/30 uppercase">
+          <p className="mt-1.5 text-content leading-relaxed text-white/45">
+            <span className="font-jetbrains text-label tracking-[0.1em] text-white/30 uppercase">
               returned ·{" "}
             </span>
             <span className="line-through decoration-amber-300/40">{r.transcribed}</span>{" "}
-            <span className="font-jetbrains text-[10px] text-white/25">({r.transcribedConfidence})</span>
+            <span className="font-jetbrains text-label text-white/25">({r.transcribedConfidence})</span>
           </p>
-          <p className="mt-1 text-[12px] leading-relaxed text-slate-200">
-            <span className="font-jetbrains text-[10px] tracking-[0.1em] text-amber-200/70 uppercase">
+          <p className="mt-1 text-content leading-relaxed text-slate-200">
+            <span className="font-jetbrains text-label tracking-[0.1em] text-amber-200/70 uppercase">
               notebook ·{" "}
             </span>
             {r.current}{" "}
-            <span className="font-jetbrains text-[10px] text-amber-200/60">({r.currentConfidence})</span>
+            <span className="font-jetbrains text-label text-amber-200/60">({r.currentConfidence})</span>
           </p>
-          <p className="font-jetbrains mt-1.5 text-[11px] leading-relaxed text-amber-200/75">{r.why}</p>
+          <p className="font-jetbrains mt-1.5 text-content leading-relaxed text-amber-200/75">{r.why}</p>
           {r.detail && (
-            <p className="mt-1 text-[11px] leading-relaxed text-white/40 italic">{r.detail}</p>
+            <p className="mt-1 text-content leading-relaxed text-white/40 italic">{r.detail}</p>
           )}
         </div>
       ))}
@@ -123,17 +123,17 @@ export default function FollowUpResult({
           // a finding.
           const corrected = revisions.some((r) => r.factId === target);
           return (
-            <li key={k} className="flex flex-wrap items-start gap-2 text-[12px]">
-              <span className={`font-jetbrains shrink-0 rounded border px-1.5 py-0.5 text-[10px] tracking-[0.1em] ${t.cls}`}>
+            <li key={k} className="flex flex-wrap items-start gap-2 text-label">
+              <span className={`font-jetbrains shrink-0 rounded border px-1.5 py-0.5 text-label tracking-[0.1em] ${t.cls}`}>
                 {t.label}
               </span>
-              <span className="font-jetbrains shrink-0 text-[10px] text-white/35">{target}</span>
+              <span className="font-jetbrains shrink-0 text-label text-white/35">{target}</span>
               <span className="flex-1 text-white/60">
                 <span className={corrected ? "text-white/40 line-through decoration-amber-300/40" : ""}>
                   {"claim" in e ? e.claim : ""}
                 </span>
                 {corrected && (
-                  <span className="font-jetbrains mt-0.5 block text-[10px] tracking-[0.1em] text-amber-200/70 uppercase">
+                  <span className="font-jetbrains mt-0.5 block text-label tracking-[0.1em] text-amber-200/70 uppercase">
                     corrected — the notebook&rsquo;s row is above
                   </span>
                 )}
@@ -148,7 +148,7 @@ export default function FollowUpResult({
                 <span
                   data-testid={`effect-standing-${target}`}
                   title={s.why}
-                  className={`font-jetbrains mt-1 block text-[10px] tracking-[0.1em] ${
+                  className={`font-jetbrains mt-1 block text-label tracking-[0.1em] ${
                     s.landed ? "text-white/30" : "text-amber-200/50"
                   }`}
                 >
@@ -160,7 +160,7 @@ export default function FollowUpResult({
         })}
       </ul>
 
-      <p data-testid="followup-apply-note" className="font-jetbrains mt-2.5 text-[10px] leading-relaxed text-white/28">
+      <p data-testid="followup-apply-note" className="font-jetbrains mt-2.5 text-content leading-relaxed text-white/28">
         {result.sources.length} source{result.sources.length === 1 ? "" : "s"} · nothing here is
         applied, and there is no apply action to reach for: an effect edits the notebook, and the
         notebook in this prototype is one static document shared by every project, so there is
@@ -187,7 +187,7 @@ export default function FollowUpResult({
       {result.sources.length > 0 && (
         <ul data-testid="followup-sources" className="mt-1.5 space-y-1">
           {result.sources.map((s) => (
-            <li key={s} className="font-jetbrains text-[10px] leading-relaxed break-all text-white/35">
+            <li key={s} className="font-jetbrains text-label leading-relaxed break-all text-white/35">
               {s}
             </li>
           ))}

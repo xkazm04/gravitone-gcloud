@@ -74,7 +74,8 @@ const usage = () => {
   console.log(
     [
       "usage:",
-      '  npx tsx pipeline/foundry/extract.mts "<folder>" --slug <slug> [--rounds 2] [--replicas 2] [--transfers 1] [--target 0.85] [--max 40] [--dry]',
+      '  npx tsx pipeline/foundry/extract.mts "<folder>" --slug <slug> [--rounds 2] [--replicas 2] [--transfers 1] [--target 0.85] [--max 40] [--singletons] [--dry]',
+      "      --singletons: no grouping — every image is its own style, its recipe written by the eye with the image in view",
       "  npx tsx pipeline/foundry/extract.mts --resume <run-id>       # continue; a failed run is pruned and retried",
       "  npx tsx pipeline/foundry/extract.mts --retry <run-id>        # a done run with failed units: take them again",
       "  npx tsx pipeline/foundry/extract.mts --status <run-id>",
@@ -224,6 +225,7 @@ async function main() {
     replicas: num("replicas", 2),
     transfers: num("transfers", 1),
     target: num("target", 0.85),
+    ...(has("singletons") ? { grouping: "none" as const } : {}),
   };
   const { uploads, skipped } = readFolder(folder, num("max", 40));
   if (!uploads.length) throw new Error("no PNG/JPEG/WebP files in that folder");

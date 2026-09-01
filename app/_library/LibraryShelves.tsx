@@ -53,7 +53,7 @@ export default function LibraryShelves() {
       {/* ——— the rail: what's on the shelves ——— */}
       <aside className="space-y-6">
         <div>
-          <p className="font-jetbrains mb-2 text-[11px] tracking-[0.14em] text-white/40 uppercase">kind</p>
+          <p className="font-jetbrains mb-2 text-content tracking-[0.14em] text-white/40 uppercase">kind</p>
           <ul className="space-y-1">
             <RailRow label="everything" count={ASSETS.length} active={kind === null} onClick={() => setKind(null)} />
             {KINDS.map((k) => (
@@ -69,7 +69,7 @@ export default function LibraryShelves() {
           </ul>
         </div>
         <div>
-          <p className="font-jetbrains mb-2 text-[11px] tracking-[0.14em] text-white/40 uppercase">collections</p>
+          <p className="font-jetbrains mb-2 text-content tracking-[0.14em] text-white/40 uppercase">collections</p>
           <ul className="space-y-1">
             {COLLECTIONS.map((c) => (
               <RailRow
@@ -92,12 +92,12 @@ export default function LibraryShelves() {
             value={q}
             onChange={(e) => setQ(e.target.value)}
             placeholder="Search titles, captions, tags — captions make everything findable"
-            className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-4 pl-10 text-sm text-white placeholder:text-white/30 focus:border-cyan-400/40"
+            className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-4 pl-10 text-label text-white placeholder:text-white/30 focus:border-cyan-400/40"
           />
         </label>
 
         {shown.length === 0 ? (
-          <p className="mt-10 text-sm text-slate-400">
+          <p className="mt-10 text-content text-slate-400">
             Nothing on the shelves matches — this is a filter over a library that exists, not an
             empty library.
           </p>
@@ -111,18 +111,18 @@ export default function LibraryShelves() {
                 >
                   <MockPreview asset={a} className="h-32" />
                   <div className="space-y-1.5 p-3.5">
-                    <p className="font-jetbrains flex items-center gap-2 text-[11px] text-white/40">
+                    <p className="font-jetbrains flex items-center gap-2 text-content text-white/40">
                       <KindGlyph kind={a.kind} className="h-3 w-3" />
                       {a.kind}
                       {a.durationS != null && <span>· {fmtDur(a.durationS)}</span>}
                     </p>
-                    <p className="truncate text-sm font-medium text-white">{a.title}</p>
+                    <p className="truncate text-content font-medium text-white">{a.title}</p>
                     {a.captionStatus === "written" ? (
-                      <p className="line-clamp-2 text-[13px] leading-snug text-slate-400">{a.caption}</p>
+                      <p className="line-clamp-2 text-content leading-snug text-slate-400">{a.caption}</p>
                     ) : a.captionStatus === "pending" ? (
-                      <p className="text-[13px] text-cyan-300/80">caption in flight…</p>
+                      <p className="text-content text-cyan-300/80">caption in flight…</p>
                     ) : (
-                      <p className="text-[13px] text-amber-300/90">caption failed — retryable</p>
+                      <p className="text-content text-amber-300/90">caption failed — retryable</p>
                     )}
                   </div>
                 </button>
@@ -156,7 +156,7 @@ function RailRow({
     <li>
       <button
         onClick={onClick}
-        className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-sm transition ${
+        className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-label transition ${
           active ? "bg-cyan-400/10 text-cyan-200" : "text-slate-400 hover:bg-white/5 hover:text-white"
         }`}
       >
@@ -164,7 +164,7 @@ function RailRow({
           {icon}
           <span className="truncate">{label}</span>
         </span>
-        <span className="font-jetbrains text-[11px] text-white/35">{count}</span>
+        <span className="font-jetbrains text-label text-white/35">{count}</span>
       </button>
     </li>
   );

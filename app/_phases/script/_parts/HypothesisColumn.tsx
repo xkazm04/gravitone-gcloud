@@ -49,7 +49,7 @@ export default function HypothesisColumn({
       }`}
     >
       <header>
-        <p className="font-jetbrains flex items-baseline justify-between text-[11px]">
+        <p className="font-jetbrains flex items-baseline justify-between text-content">
           <span className="tracking-[0.14em] text-white/45 uppercase">{r.engineLabel}</span>
           <span
             className={
@@ -59,18 +59,18 @@ export default function HypothesisColumn({
             fit: {fit?.fit ?? "—"}
           </span>
         </p>
-        <p className="mt-1 text-[13px] leading-relaxed text-slate-400">
+        <p className="mt-1 text-content leading-relaxed text-slate-400">
           pleasure: {r.pleasure}. Reads like {r.feelsLike}.
         </p>
         {r.derivedFromId && (
-          <p className="font-jetbrains mt-1 text-[11px] text-violet-200/80">
+          <p className="font-jetbrains mt-1 text-content text-violet-200/80">
             derived from the {RENDER_BY_ID[r.derivedFromId].engineLabel} — no additional research
           </p>
         )}
       </header>
 
       <div className="mt-3 space-y-2.5 border-t border-white/8 pt-3">
-        <p className="font-jetbrains flex items-baseline justify-between text-[11px] tracking-[0.14em] uppercase">
+        <p className="font-jetbrains flex items-baseline justify-between text-content tracking-[0.14em] uppercase">
           <span className="text-white/35">measured</span>
           {rewritten && (
             <span data-testid={`chain-${r.id}`} className="text-cyan-200/80">{chainLabel ?? "rewritten"}</span>
@@ -85,7 +85,7 @@ export default function HypothesisColumn({
             aboveNote="above the band, no conclusion stands long enough to matter"
           />
         ) : (
-          <p className="font-jetbrains text-[11px] text-white/35">
+          <p className="font-jetbrains text-content text-white/35">
             turns — n/a for this engine ({r.engine === "adjudication" ? "candidates, not turns" : "one turn by construction"})
           </p>
         )}
@@ -95,22 +95,22 @@ export default function HypothesisColumn({
           band={[Math.round(r.wordBudget * 0.9), r.wordBudget]}
           aboveNote="over the budget the duration bought"
         />
-        <p className="font-jetbrains text-[11px] text-white/45">
+        <p className="font-jetbrains text-content text-white/45">
           {mmss(r.durationS)} at {r.wpm} wpm · promise form: {r.promiseForm} · {r.questionsAloud}{" "}
           question{r.questionsAloud === 1 ? "" : "s"} aloud
         </p>
         {rewritten && (
-          <p className="font-jetbrains text-[11px] leading-snug text-amber-200/70">
+          <p className="font-jetbrains text-content leading-snug text-amber-200/70">
             words are counted from this version&rsquo;s own chain. Turns, questions aloud and the
             promise form are the original render&rsquo;s and were not re-measured.
           </p>
         )}
-        <p className="font-jetbrains text-[11px] text-white/35">
+        <p className="font-jetbrains text-content text-white/35">
           template {r.template}
           {r.template !== NOTEBOOK.templateIntent && " — outside the notebook's intent, by design"}
         </p>
         {r.causalDensityPct === null && (
-          <p className="font-jetbrains text-[11px] text-white/35">
+          <p className="font-jetbrains text-content text-white/35">
             causal-opener density — not measured on this render. Shown as unmeasured rather than as a
             pass.
           </p>
@@ -118,7 +118,7 @@ export default function HypothesisColumn({
       </div>
 
       <div className="mt-3 border-t border-white/8 pt-3">
-        <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/35 uppercase">
+        <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">
           craft checks
         </p>
         <div className="mt-2">
@@ -127,7 +127,7 @@ export default function HypothesisColumn({
         {rewritten && (
           <p
             data-testid={`checks-original-${r.id}`}
-            className="font-jetbrains mt-2 text-[11px] leading-snug text-amber-200/70"
+            className="font-jetbrains mt-2 text-label leading-snug text-amber-200/70"
           >
             typed by hand against the original chain and not re-run for this version. Of the three
             check blocks in this column, only the gate below reads the script on screen.
@@ -145,12 +145,12 @@ export default function HypothesisColumn({
       {(r.deviations.length > 0 || r.cutFacts.length > 0) && (
         <div className="mt-3 space-y-2 border-t border-white/8 pt-3">
           {r.deviations.map((d) => (
-            <p key={d} className="text-[12px] leading-snug text-amber-200/80">
+            <p key={d} className="text-content leading-snug text-amber-200/80">
               declared deviation — {d}
             </p>
           ))}
           {r.cutFacts.map((c) => (
-            <p key={c.factId} className="text-[12px] leading-snug text-white/45">
+            <p key={c.factId} className="text-content leading-snug text-white/45">
               cut <span className="font-jetbrains text-white/60">{c.factId}</span> — {c.why}
             </p>
           ))}
@@ -160,7 +160,7 @@ export default function HypothesisColumn({
       <div className="mt-4 flex flex-wrap gap-2 border-t border-white/8 pt-3">
         <button
           onClick={onToggle}
-          className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] transition ${
+          className={`font-jetbrains rounded-full border px-3 py-1 text-label transition ${
             expanded ? "border-cyan-400/40 text-cyan-200" : "border-white/12 text-white/50 hover:text-white/80"
           }`}
         >
@@ -168,7 +168,7 @@ export default function HypothesisColumn({
         </button>
         <button
           onClick={onAdopt}
-          className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-[11px] text-white/50 transition hover:border-cyan-400/40 hover:text-cyan-200"
+          className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label text-white/50 transition hover:border-cyan-400/40 hover:text-cyan-200"
         >
           {adopted ? "adopted — undo" : "adopt this one"}
         </button>

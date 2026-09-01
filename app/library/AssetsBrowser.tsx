@@ -402,7 +402,7 @@ export default function AssetsBrowser({
 
   if (loading)
     return (
-      <p className="font-jetbrains py-16 text-center text-[12px] tracking-[0.18em] text-white/30 uppercase">
+      <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
         reading the shelf…
       </p>
     );
@@ -410,7 +410,7 @@ export default function AssetsBrowser({
   return (
     <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
       <aside>
-        <p className="font-jetbrains mb-2 text-[11px] tracking-[0.18em] text-white/40 uppercase">categories</p>
+        <p className="font-jetbrains mb-2 text-content tracking-[0.18em] text-white/40 uppercase">categories</p>
         <FolderTree
           nodes={tree}
           selected={selected}
@@ -460,13 +460,13 @@ export default function AssetsBrowser({
         }
       >
         {error && (
-          <p className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
+          <p className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
             {error} — your shelf lives in this browser&rsquo;s storage, and it did not answer.
           </p>
         )}
 
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-          <p className="font-jetbrains text-[12px] text-white/50">
+          <p className="font-jetbrains text-content text-white/50">
             {selected.length ? selected.join(" › ") : "all assets"}
             <span className="text-white/30"> · {shown.length}</span>
           </p>
@@ -475,7 +475,7 @@ export default function AssetsBrowser({
               a button that does nothing. */}
           <div className="flex items-center gap-3">
             {shown.length > 0 && (
-              <p className="font-jetbrains text-[10px] text-white/25">
+              <p className="font-jetbrains text-label text-white/25">
                 click to open · drag onto a folder to refile · ctrl-click or X to select ·
                 right-click, or Delete on a focused tile, to remove
               </p>
@@ -486,7 +486,7 @@ export default function AssetsBrowser({
             <button
               type="button"
               onClick={() => fileInput.current?.click()}
-              className="font-jetbrains shrink-0 cursor-pointer rounded-full border border-white/15 px-3.5 py-1.5 text-[12px] text-white/80 transition hover:bg-white/5"
+              className="font-jetbrains shrink-0 cursor-pointer rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/80 transition hover:bg-white/5"
             >
               Add reference…
             </button>
@@ -508,35 +508,35 @@ export default function AssetsBrowser({
         </div>
 
         {uploadNote && (
-          <p className="mb-3 rounded-xl border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-[12px] text-amber-200/90">
+          <p className="mb-3 rounded-xl border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-label text-amber-200/90">
             {uploadNote}
           </p>
         )}
 
         {chosen.length > 0 && (
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-cyan-400/25 bg-cyan-400/[0.06] px-3 py-2">
-            <p className="font-jetbrains text-[12px] text-cyan-100">
+            <p className="font-jetbrains text-label text-cyan-100">
               {chosen.length} selected
             </p>
             <div className="ml-auto flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => setMoving(chosen)}
-                className="font-jetbrains cursor-pointer rounded-full border border-white/15 px-3.5 py-1.5 text-[12px] text-white/80 transition hover:bg-white/5"
+                className="font-jetbrains cursor-pointer rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/80 transition hover:bg-white/5"
               >
                 Move to folder…
               </button>
               <button
                 type="button"
                 onClick={() => void removeChosen()}
-                className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-3.5 py-1.5 text-[12px] text-rose-200 transition hover:bg-rose-400/20"
+                className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-3.5 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/20"
               >
                 Remove
               </button>
               <button
                 type="button"
                 onClick={clearPicks}
-                className="font-jetbrains cursor-pointer rounded-full px-3 py-1.5 text-[12px] text-white/45 transition hover:text-white/80"
+                className="font-jetbrains cursor-pointer rounded-full px-3 py-1.5 text-label text-white/45 transition hover:text-white/80"
               >
                 Clear
               </button>
@@ -776,14 +776,14 @@ function Tile({
         {/* Text leakage is the one defect that makes a plate unusable, so the
             shelf says so on the tile rather than burying it in a detail view. */}
         {meta.grade?.hasText && (
-          <span className="font-jetbrains absolute top-1.5 right-1.5 rounded bg-amber-300/90 px-1.5 py-0.5 text-[9px] font-semibold text-slate-950">
+          <span className="font-jetbrains absolute top-1.5 right-1.5 rounded bg-amber-300/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
             TEXT
           </span>
         )}
       </span>
       <figcaption className="px-2.5 py-2">
-        <span className="font-hanken block truncate text-[13px] text-white/85">{asset.name}</span>
-        <span className="font-jetbrains block truncate text-[10px] text-white/35">
+        <span className="font-hanken block truncate text-content text-white/85">{asset.name}</span>
+        <span className="font-jetbrains block truncate text-label text-white/35">
           {meta.styleName ?? asset.path.at(-1)}
           {meta.problem && ` · ${meta.problem}`}
         </span>
@@ -809,7 +809,7 @@ function EmptyShelf({ hasAny, onOpenStyles }: { hasAny: boolean; onOpenStyles?: 
       <p className="font-instrument text-2xl text-white">
         {hasAny ? "Nothing in this folder" : "The shelf is empty"}
       </p>
-      <p className="font-hanken mx-auto mt-2 max-w-sm text-sm leading-snug text-slate-400">
+      <p className="font-hanken mx-auto mt-2 max-w-sm text-content leading-snug text-slate-400">
         {hasAny
           ? "Pick another category on the left, or drop a file here to add one."
           : "Assets are the images a project can reach for again. The shelf fills two ways: render trials on a style and keep the ones that hold — they file themselves under the style that made them — or drop your own reference here."}

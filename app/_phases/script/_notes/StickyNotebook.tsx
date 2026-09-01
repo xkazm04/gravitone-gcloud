@@ -55,7 +55,7 @@ function Pad({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
           // accessibility tree, not state.
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="font-jetbrains flex w-full items-center justify-between text-[10px] tracking-[0.16em] text-amber-200/90 uppercase"
+          className="font-jetbrains flex w-full items-center justify-between text-label tracking-[0.16em] text-amber-200/90 uppercase"
         >
           <span>notes · {api.notes.length}</span>
           <span aria-hidden className="text-white/35">{open ? "▾" : "▸"}</span>
@@ -65,11 +65,11 @@ function Pad({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
           <>
             <div className="mt-2 max-h-[17rem] space-y-2 overflow-y-auto scroll-y">
               {cards.length === 0 ? (
-                <p className="font-jetbrains text-[11px] text-white/30">no notes yet</p>
+                <p className="font-jetbrains text-content text-white/30">no notes yet</p>
               ) : (
                 cards.map((id) => (
                   <div key={id}>
-                    <p className="font-jetbrains text-[10px] text-white/45">{id}</p>
+                    <p className="font-jetbrains text-content text-white/45">{id}</p>
                     <NoteList cardId={id} compact />
                   </div>
                 ))

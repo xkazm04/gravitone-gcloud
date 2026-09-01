@@ -32,20 +32,21 @@
 
 import type { Aspect, ImageRef } from "@/lib/imaging/types";
 
-import { NO_TEXT, TRANSFER_SCENES, critiqueInstruction, readbackInstruction, replicaPrompt, synthesisPrompt, transferPrompt } from "./prompts";
+import { NO_TEXT, TRANSFER_SCENES, critiqueInstruction, readbackInstruction, replicaPrompt, singletonInstruction, synthesisPrompt, transferPrompt } from "./prompts";
 import type {
   Critique,
   SettleReason,
   ExtractManifest,
   ExtractOptions,
   ExtractedStyle,
+  Observables,
   Readback,
   ReplicaRound,
   StepResult,
   Transfer,
 } from "./types";
 import { OBSERVABLE_FIELDS } from "./types";
-import { CRITIQUE_SCHEMA, READBACK_SCHEMA, SYNTHESIS_SCHEMA, fallbackStyle, partition, styleScore, usableFix, validateSynthesis } from "./vocabulary";
+import { CRITIQUE_SCHEMA, READBACK_SCHEMA, SINGLETON_SCHEMA, SYNTHESIS_SCHEMA, deriveFamily, fallbackStyle, nearDuplicates, partition, slugify, styleScore, usableFix, validateSynthesis } from "./vocabulary";
 
 /* ── The IO the engine needs, and nothing more ────────────────────────────── */
 
@@ -77,6 +78,7 @@ export const DEFAULT_OPTIONS: ExtractOptions = {
   transfers: 1,
   target: 0.85,
   seed: 20260827,
+  grouping: "engine",
 };
 
 /* ── The driver lease ─────────────────────────────────────────────────────── */
@@ -298,9 +300,10 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
     case "read": {
       setStage(m, "reading");
       const s = m.sources.find((x) => x.id === unit.source)!;
+      const singleton = m.options.grouping === "none";
       try {
         const img = await io.readImage(s.file);
-        const r = await io.recognize(img, readbackInstruction(), READBACK_SCHEMA);
+        const r = await io.recognize(img, singleton ? singletonInstruction() : readbackInstruction(), singleton ? SINGLETON_SCHEMA : READBACK_SCHEMA);
         if (!isReadback(r.value)) throw new Error("the readback did not carry every observable");
         s.readback = { ...r.value, dominant_colours: Array.isArray(r.value.dominant_colours) ? r.value.dominant_colours.slice(0, 5).map(String) : [] };
         m.engines.vision = r.model;
@@ -320,6 +323,37 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
     case "group": {
       setStage(m, "grouping");
       const readable = m.sources.filter((s) => s.readback) as { id: string; readback: Readback; name: string }[];
+      if (m.options.grouping === "none") {
+        // NO GROUPING: one style per readable source, entry written by the
+        // vision model at read time. No reasoning turn at all.
+        const ids = new Set<string>();
+        m.styles = readable.map((s) => {
+          let id = slugify(s.readback.style_name || s.readback.render_mode || "style") || "style";
+          if (ids.has(id)) id = `${id}-${s.id}`;
+          while (ids.has(id)) id = `${id}-x`;
+          ids.add(id);
+          const obs = {} as Observables;
+          for (const f of OBSERVABLE_FIELDS) obs[f] = s.readback[f];
+          const fb = fallbackStyle(0, [{ id: s.id, readback: s.readback }]);
+          const recipe = s.readback.recipe && s.readback.recipe.trim().length >= 40 ? s.readback.recipe.trim() : fb.recipe;
+          const negative = s.readback.negative?.trim() || fb.negative;
+          return {
+            id,
+            name: s.readback.style_name?.trim() || fb.name,
+            family: deriveFamily(obs),
+            members: [s.id],
+            observables: obs,
+            recipe,
+            negative: /\btext\b/i.test(negative) ? negative : `${negative}, text, watermark`,
+            recipe_history: [recipe],
+            grouped_by: "singleton" as const,
+            replicas: [],
+            transfers: [],
+          };
+        });
+        log(m, io, `no grouping: ${m.styles.length} singleton style(s), entries written by the eye`);
+        break;
+      }
       const groups = partition(readable.map((s) => s.readback));
       const hint = groups.map((g) => g.map((i) => readable[i].id));
       let styles: Omit<ExtractedStyle, "replicas" | "transfers">[] | null = null;
@@ -455,6 +489,17 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
         m.error = "No source could be read back.";
       } else {
         m.status = "done";
+        // The convergence warning: styles whose declared observables sit
+        // within one minor field of each other will come back from the
+        // generator as twins. The synthesis rules try to prevent this; when
+        // they fail, say so where the cull will read it.
+        for (const [a, b] of nearDuplicates(m.styles)) {
+          const sa = m.styles.find((s) => s.id === a)!;
+          const sb = m.styles.find((s) => s.id === b)!;
+          sa.similar_to = [...(sa.similar_to ?? []), b];
+          sb.similar_to = [...(sb.similar_to ?? []), a];
+          log(m, io, `warning: ${a} and ${b} differ by at most one minor observable — the generator likely renders them identically; consider keeping one`);
+        }
       }
       m.finished = io.now();
       m.progress = { stage: m.status, done: totalUnits(m), total: totalUnits(m) };
@@ -520,6 +565,7 @@ export function newManifest(
   now: string,
 ): ExtractManifest {
   const opts: ExtractOptions = {
+    grouping: options.grouping === "none" ? "none" : "engine",
     rounds: clampInt(options.rounds, 1, 4, DEFAULT_OPTIONS.rounds),
     replicas: clampInt(options.replicas, 1, 4, DEFAULT_OPTIONS.replicas),
     transfers: clampInt(options.transfers, 0, TRANSFER_SCENES.length, DEFAULT_OPTIONS.transfers),

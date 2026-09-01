@@ -107,7 +107,7 @@ export default function ContextMenu({
             item.onSelect();
             onClose();
           }}
-          className={`font-hanken block w-full rounded-lg px-3 py-2 text-left text-[13px] transition ${
+          className={`font-hanken block w-full rounded-lg px-3 py-2 text-left text-content transition ${
             item.destructive
               ? "text-rose-200 hover:bg-rose-400/15"
               : "text-slate-200 hover:bg-white/10"

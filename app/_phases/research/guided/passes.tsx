@@ -150,17 +150,17 @@ export function specOf(card: Card, s: CardState): DeckCardSpec {
     detail: hasDetail ? (
       <div className="space-y-2">
         {rest && (
-          <p className="font-hanken text-[13px] leading-relaxed text-slate-300">{rest}</p>
+          <p className="font-hanken text-content leading-relaxed text-slate-300">{rest}</p>
         )}
         {card.detail && (
-          <p className="font-hanken text-[13px] leading-relaxed text-slate-400">{card.detail}</p>
+          <p className="font-hanken text-content leading-relaxed text-slate-400">{card.detail}</p>
         )}
         {metaChips.length > 0 && (
           <div className="flex flex-wrap items-center gap-1.5">
             {metaChips.map((c) => (
               <span
                 key={c.label}
-                className={`font-jetbrains rounded border px-1.5 py-0.5 text-[10px] tracking-[0.1em] ${
+                className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.1em] ${
                   c.tone === "violet"
                     ? "border-violet-400/35 bg-violet-400/[0.08] text-violet-200"
                     : c.tone === "amber"
@@ -174,7 +174,7 @@ export function specOf(card: Card, s: CardState): DeckCardSpec {
           </div>
         )}
         {card.precedent && (
-          <p className="font-jetbrains text-[10px] text-white/30">
+          <p className="font-jetbrains text-label text-white/30">
             pattern · {card.precedent.domain}
           </p>
         )}

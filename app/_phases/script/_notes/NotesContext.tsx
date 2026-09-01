@@ -54,7 +54,7 @@ export function useNotes(): NotesCtx | null {
 export function NoteHandle({ cardId }: { cardId: string }) {
   const ctx = useNotes();
   if (!ctx)
-    return <span className="font-jetbrains text-[10px] text-white/25">{cardId}</span>;
+    return <span className="font-jetbrains text-label text-white/25">{cardId}</span>;
 
   const n = ctx.count(cardId);
   const isOpen = ctx.active === cardId;
@@ -70,7 +70,7 @@ export function NoteHandle({ cardId }: { cardId: string }) {
             ? `${n} note${n === 1 ? "" : "s"} on this track`
             : "Add a note to this track"
       }
-      className={`font-jetbrains rounded px-1 text-[10px] transition disabled:cursor-not-allowed ${
+      className={`font-jetbrains rounded px-1 text-label transition disabled:cursor-not-allowed ${
         isOpen
           ? "bg-cyan-400/20 text-cyan-100"
           : n

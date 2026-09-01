@@ -6,6 +6,35 @@
 .font-hanken     { font-family: var(--font-hanken), system-ui, sans-serif; }
 .font-jetbrains  { font-family: var(--font-jetbrains), ui-monospace, monospace; }
 
+/* ---------------------------------------------------------------------------
+   TYPE SCALE — two readable rungs, and nothing below them.
+
+   Measured 2026-08-28: the app had drifted to 631 arbitrary sizes between 8
+   and 13px across 81 files — score chips at 9px, run metadata at 10px, whole
+   paragraphs at 13px — readable only past 110% browser zoom. The scale is now
+   TWO tokens, declared here as Tailwind @theme font-size tokens (they compile
+   to `text-content` / `text-label` utilities, variants included) so a size is
+   a named decision rather than a px literal:
+
+     text-content  1rem      anything the user actually READS — prose,
+                             recipes, descriptions, primary labels.
+     text-label    0.875rem  the floor. Secondary SHORT labels only — tags,
+                             chips, stamps, metadata rows, keyboard hints.
+
+   Display sizes above these (text-lg…text-4xl and the landing's few px
+   headings) are unaffected. Anything below text-label is banned —
+   `npm run check:type` (pipeline/check-type-scale.mjs, wired into `verify`)
+   fails the build on `text-xs` or an arbitrary size under 14px. If a design
+   feels like it needs smaller text, the content is secondary enough to move
+   into a tooltip, a zoom, or a modal — the Foundry page did exactly that.
+--------------------------------------------------------------------------- */
+@theme {
+  --text-content: 1rem;
+  --text-content--line-height: 1.55;
+  --text-label: 0.875rem;
+  --text-label--line-height: 1.45;
+}
+
 * { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
 html { scroll-behavior: smooth; }
 body { margin: 0; }

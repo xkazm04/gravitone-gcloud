@@ -31,7 +31,7 @@ export function EnterButton({ className = "" }: { className?: string }) {
   const { user, loading, signIn, error } = useAuth();
 
   const shell =
-    "font-jetbrains inline-flex items-center gap-3 rounded-full px-8 py-4 text-sm tracking-[0.18em] uppercase " +
+    "font-jetbrains inline-flex items-center gap-3 rounded-full px-8 py-4 text-label tracking-[0.18em] uppercase " +
     "bg-gradient-to-r from-cyan-300 to-cyan-200 text-slate-950 font-semibold transition hover:brightness-110 " +
     "cta-glow disabled:opacity-40";
 
@@ -49,7 +49,7 @@ export function EnterButton({ className = "" }: { className?: string }) {
         </button>
       )}
       {error && (
-        <p className="font-jetbrains max-w-xs text-center text-[11px] text-rose-300/90">{error}</p>
+        <p className="font-jetbrains max-w-xs text-center text-content text-rose-300/90">{error}</p>
       )}
     </div>
   );

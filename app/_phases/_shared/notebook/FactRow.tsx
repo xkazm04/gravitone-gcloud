@@ -19,7 +19,7 @@ function Edge({ label, ids, tone }: { label: string; ids: string[]; tone: string
       {ids.map((id) => {
         const other = FACT_BY_ID[id];
         return (
-          <p key={id} className={`mt-1.5 text-[12px] leading-relaxed ${tone}`}>
+          <p key={id} className={`mt-1.5 text-content leading-relaxed ${tone}`}>
             <span className="font-jetbrains tracking-[0.12em] uppercase">{label} </span>
             <span className="font-jetbrains opacity-70">{id}</span>
             {other && <span className="opacity-80"> — {other.claim}</span>}
@@ -40,16 +40,16 @@ export default function FactRow({ f }: { f: Fact }) {
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-jetbrains text-[10px] tracking-[0.12em] text-white/35">{f.id}</span>
+        <span className="font-jetbrains text-label tracking-[0.12em] text-white/35">{f.id}</span>
         {f.loadBearing && (
-          <span className="font-jetbrains rounded border border-cyan-400/30 bg-cyan-400/[0.07] px-1.5 py-0.5 text-[10px] tracking-[0.12em] text-cyan-200">
+          <span className="font-jetbrains rounded border border-cyan-400/30 bg-cyan-400/[0.07] px-1.5 py-0.5 text-label tracking-[0.12em] text-cyan-200">
             load-bearing
           </span>
         )}
         <ConfidenceChip c={f.confidence} />
-        <span className="font-jetbrains ml-auto text-[10px] text-white/30">as of {f.asOf}</span>
+        <span className="font-jetbrains ml-auto text-label text-white/30">as of {f.asOf}</span>
       </div>
-      <p className="mt-1.5 text-sm leading-relaxed text-slate-300">{f.claim}</p>
+      <p className="mt-1.5 text-content leading-relaxed text-slate-300">{f.claim}</p>
 
       {/* SOURCES, PLURAL, WHERE THE ROW HAS THEM. `FactSource` was added because
           "run 1 shipped an all-aggregator source list — and nothing consumed it,
@@ -72,30 +72,30 @@ export default function FactRow({ f }: { f: Fact }) {
           {f.sources.map((s, i) => (
             <li key={`${s.name}-${i}`} className="flex flex-wrap items-center gap-1.5">
               <EvidenceClassChip c={s.evidenceClass} interested={s.interested} />
-              <span className="font-jetbrains text-[11px] text-white/45">{s.name}</span>
+              <span className="font-jetbrains text-label text-white/45">{s.name}</span>
               {/* "A source a reader cannot navigate to is a name, not a source."
                   Absent is drawn as absent rather than omitted — an unlocatable
                   source should look unlocatable. */}
-              <span className="font-jetbrains text-[10px] text-white/25">
+              <span className="font-jetbrains text-label text-white/25">
                 {s.locator ?? "no locator"}
               </span>
             </li>
           ))}
           {f.confidenceNote && (
-            <li className="font-jetbrains text-[11px] text-white/35">{f.confidenceNote}</li>
+            <li className="font-jetbrains text-label text-white/35">{f.confidenceNote}</li>
           )}
         </ul>
       ) : (
-        <p className="font-jetbrains mt-1.5 text-[11px] text-white/35">
+        <p className="font-jetbrains mt-1.5 text-content text-white/35">
           {f.source}
           {f.confidenceNote ? ` — ${f.confidenceNote}` : ""}
         </p>
       )}
       {!!f.contests?.length && <Edge label="contests" ids={f.contests} tone="text-violet-200/85" />}
       {!!f.qualifies?.length && <Edge label="qualifies" ids={f.qualifies} tone="text-white/50" />}
-      {f.note && <p className="mt-1.5 text-[13px] leading-relaxed text-white/55 italic">{f.note}</p>}
+      {f.note && <p className="mt-1.5 text-content leading-relaxed text-white/55 italic">{f.note}</p>}
       {danger && (
-        <p className="font-jetbrains mt-2 text-[11px] text-rose-300">
+        <p className="font-jetbrains mt-2 text-content text-rose-300">
           load-bearing at low confidence — needs a second source before any render may state it
         </p>
       )}

@@ -31,25 +31,25 @@ export default function PresetRail({
   return (
     <aside className="space-y-4">
       <div>
-        <p className="font-jetbrains mb-2 text-[11px] tracking-[0.18em] text-white/40 uppercase">start a style</p>
+        <p className="font-jetbrains mb-2 text-content tracking-[0.18em] text-white/40 uppercase">start a style</p>
         <button
           onClick={onScratch}
           disabled={busy}
           className="font-hanken w-full rounded-xl border border-dashed border-cyan-400/30 bg-cyan-400/[0.04] px-4 py-3.5 text-left transition hover:bg-cyan-400/[0.08] disabled:opacity-50"
         >
           <span className="font-instrument block text-lg text-white">From a brief</span>
-          <span className="mt-0.5 block text-[12px] leading-snug text-slate-400">
+          <span className="mt-0.5 block text-label leading-snug text-slate-400">
             Write the four slots yourself.
           </span>
         </button>
       </div>
 
       <div>
-        <p className="font-jetbrains mb-2 text-[11px] tracking-[0.18em] text-white/40 uppercase">or a preset</p>
+        <p className="font-jetbrains mb-2 text-content tracking-[0.18em] text-white/40 uppercase">or a preset</p>
         {/* Absence is said: every preset today is written for explainers, so
             a trailer or free filter empties this rail rather than lying. */}
         {!shown.length && (
-          <p className="font-hanken rounded-xl border border-dashed border-white/10 px-3 py-3 text-[12px] leading-snug text-slate-500">
+          <p className="font-hanken rounded-xl border border-dashed border-white/10 px-3 py-3 text-content leading-snug text-slate-500">
             No preset is written for this discipline yet. Start from a brief.
           </p>
         )}
@@ -78,8 +78,8 @@ export default function PresetRail({
                 />
               </span>
               <span className="block px-2.5 py-2">
-                <span className="font-hanken block text-[13px] text-white/85 group-hover:text-white">{p.name}</span>
-                <span className="block text-[11px] leading-snug text-slate-500">{p.line}</span>
+                <span className="font-hanken block text-content text-white/85 group-hover:text-white">{p.name}</span>
+                <span className="block text-label leading-snug text-slate-500">{p.line}</span>
               </span>
             </button>
           ))}

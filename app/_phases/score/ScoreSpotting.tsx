@@ -191,7 +191,7 @@ export default function ScoreSpotting() {
 
         {/* picture lane */}
         <div className="mt-3 flex items-center gap-3">
-          <span className="font-jetbrains w-14 shrink-0 text-right text-[10px] tracking-[0.12em] text-white/40 uppercase">
+          <span className="font-jetbrains w-14 shrink-0 text-right text-label tracking-[0.12em] text-white/40 uppercase">
             picture
           </span>
           <div className="relative h-9 flex-1">
@@ -202,7 +202,7 @@ export default function ScoreSpotting() {
                 className="absolute inset-y-0 rounded-md border border-white/10 bg-white/[0.04] px-2"
                 title={scene.slug}
               >
-                <span className="font-jetbrains text-[10px] leading-9 text-white/50">sc {scene.index}</span>
+                <span className="font-jetbrains text-label leading-9 text-white/50">sc {scene.index}</span>
               </div>
             ))}
           </div>
@@ -210,7 +210,7 @@ export default function ScoreSpotting() {
 
         {/* music lane */}
         <div className="mt-2 flex items-center gap-3">
-          <span className="font-jetbrains w-14 shrink-0 text-right text-[10px] tracking-[0.12em] text-white/40 uppercase">
+          <span className="font-jetbrains w-14 shrink-0 text-right text-label tracking-[0.12em] text-white/40 uppercase">
             music
           </span>
           <div className="relative h-11 flex-1">
@@ -227,7 +227,7 @@ export default function ScoreSpotting() {
                 } ${focus === c.id ? "ring-1 ring-cyan-300/50" : ""}`}
               >
                 <span
-                  className={`font-jetbrains block truncate text-[10px] leading-[2.6] ${
+                  className={`font-jetbrains block truncate text-label leading-[2.6] ${
                     c.status === "failed" ? "text-rose-300/90" : "text-cyan-200/90"
                   }`}
                 >
@@ -238,7 +238,7 @@ export default function ScoreSpotting() {
           </div>
         </div>
 
-        <p className="font-jetbrains mt-3 text-[11px] text-white/35">
+        <p className="font-jetbrains mt-3 text-content text-white/35">
           <span className="text-cyan-300/80">{scoredS}s scored</span>
           {" · "}
           <span className="text-rose-300/80">{refusedS}s refused</span>
@@ -251,7 +251,7 @@ export default function ScoreSpotting() {
             one. On a project with no scenes at all this is every spot, and the
             timeline above is honestly empty. */}
         {UNSPOTTABLE.length > 0 && (
-          <p className="font-jetbrains mt-2 text-[11px] leading-snug text-amber-200/70">
+          <p className="font-jetbrains mt-2 text-label leading-snug text-amber-200/70">
             {UNSPOTTABLE.length} spot{UNSPOTTABLE.length > 1 ? "s" : ""} could not be placed:{" "}
             {UNSPOTTABLE.map((u) => `"${u.spot.title}" ${u.why}`).join("; ")}.
           </p>
@@ -276,8 +276,8 @@ export default function ScoreSpotting() {
         }`}
       >
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h3 className="text-sm font-medium text-white">{cue.title}</h3>
-          <span className="font-jetbrains text-[11px] text-white/40">
+          <h3 className="text-label font-medium text-white">{cue.title}</h3>
+          <span className="font-jetbrains text-label text-white/40">
             {cue.startS}s → {cue.startS + cue.durS}s · {cue.bpm} bpm
           </span>
           <CueStatusWord status={cue.status} />
@@ -289,20 +289,20 @@ export default function ScoreSpotting() {
               indistinguishable from a fact and this exact spot printed a
               fictional vendor for months. */}
           {credit.text && (
-            <span className="font-jetbrains text-[11px] text-white/30" title={credit.why}>
+            <span className="font-jetbrains text-label text-white/30" title={credit.why}>
               {credit.text}
             </span>
           )}
           {cue.status === "failed" && cue.failure && (
             <span
-              className="font-jetbrains rounded border border-rose-400/25 px-1.5 py-0.5 text-[10px] text-rose-300/80"
+              className="font-jetbrains rounded border border-rose-400/25 px-1.5 py-0.5 text-label text-rose-300/80"
               title="The engine's own outcome vocabulary (MusicErrorKind, lib/music/errors.ts) — a state the adapter really returns, not a description of one."
             >
               kind={cue.failure}
             </span>
           )}
         </div>
-        <p className={`mt-1.5 text-sm leading-snug ${cue.status === "failed" ? "text-rose-200/90" : "text-slate-400"}`}>
+        <p className={`mt-1.5 text-content leading-snug ${cue.status === "failed" ? "text-rose-200/90" : "text-slate-400"}`}>
           {cue.note}
         </p>
         {/* A SPECIFIED BEHAVIOUR THIS BUILD DOES NOT HAVE, said out loud. The
@@ -310,7 +310,7 @@ export default function ScoreSpotting() {
             intends this, the studio does not do it, and nothing on the timeline
             above should be read as if it did. */}
         {cue.declaredNotPerformed && (
-          <p className="font-jetbrains mt-2 inline-flex items-center gap-2 rounded border border-dashed border-amber-300/30 px-2 py-1 text-[10px] text-amber-200/70">
+          <p className="font-jetbrains mt-2 inline-flex items-center gap-2 rounded border border-dashed border-amber-300/30 px-2 py-1 text-label text-amber-200/70">
             <span className="uppercase tracking-[0.14em] text-amber-300/60">not performed</span>
             {cue.declaredNotPerformed} — declared intent; there is no mixing stage in this build.
           </p>
@@ -324,7 +324,7 @@ export default function ScoreSpotting() {
           <button
             onClick={renderCue}
             disabled={take?.state === "working"}
-            className="rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] px-3 py-1.5 text-[11px] font-medium text-cyan-200/90 transition hover:bg-cyan-400/[0.14] disabled:cursor-wait disabled:opacity-50"
+            className="rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] px-3 py-1.5 text-label font-medium text-cyan-200/90 transition hover:bg-cyan-400/[0.14] disabled:cursor-wait disabled:opacity-50"
           >
             {take?.state === "working"
               ? "rendering…"
@@ -335,7 +335,7 @@ export default function ScoreSpotting() {
                   : "render this cue"}
           </button>
           <span
-            className="font-jetbrains text-[10px] text-white/35"
+            className="font-jetbrains text-label text-white/35"
             title={cue.picture.scenes.map((sc) => `sc ${sc.index} ${sc.slug} — ${sc.mood}`).join("\n")}
           >
             {cue.bpm} bpm · briefed from sc {cue.picture.scenes.map((sc) => sc.index).join(", ")} —
@@ -349,7 +349,7 @@ export default function ScoreSpotting() {
               not be. The figure comes from /api/music/pricing, the same
               declaration the server meters against. */}
           <span
-            className={`font-jetbrains text-[10px] ${price === "unknown" ? "text-amber-300/70" : "text-white/35"}`}
+            className={`font-jetbrains text-label ${price === "unknown" ? "text-amber-300/70" : "text-white/35"}`}
             title={estimate.title}
           >
             {estimate.text}
@@ -361,16 +361,16 @@ export default function ScoreSpotting() {
             {/* THE RECEIPT. Same vocabulary as the estimate above it, so a user
                 can compare them without translating — and the same refusal to
                 print a dollar figure nobody measured. */}
-            <p className="font-jetbrains mt-1.5 text-[10px] text-white/35" title={settled?.title}>
+            <p className="font-jetbrains mt-1.5 text-label text-white/35" title={settled?.title}>
               rendered · {settled?.text}
             </p>
           </>
         )}
         {(take?.state === "refused" || take?.state === "error") && (
-          <p className="font-jetbrains mt-3 text-[11px] leading-snug text-rose-200/70">{take.msg}</p>
+          <p className="font-jetbrains mt-3 text-content leading-snug text-rose-200/70">{take.msg}</p>
         )}
         {cue.status === "failed" && take?.state !== "done" && (
-          <p className="font-jetbrains mt-3 text-[11px] leading-snug text-rose-200/60">
+          <p className="font-jetbrains mt-3 text-content leading-snug text-rose-200/60">
             {cue.durS}s of the {PROJECT.totalS}s clock plays silent until a take lands. A refusal keeps
             it silent on purpose — refused-silence is a state this cut renders, not an error it hides.
           </p>

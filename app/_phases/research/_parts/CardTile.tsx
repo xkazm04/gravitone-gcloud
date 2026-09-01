@@ -70,14 +70,14 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
   return (
     <>
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className={lift("font-jetbrains text-[10px] tracking-[0.12em] text-white/30", "group-hover:text-white/60")}>
+        <span className={lift("font-jetbrains text-label tracking-[0.12em] text-white/30", "group-hover:text-white/60")}>
           {card.id}
         </span>
-        <span className={lift("font-jetbrains rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-white/45", "group-hover:text-white/75")}>
+        <span className={lift("font-jetbrains rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-label tracking-[0.1em] text-white/45", "group-hover:text-white/75")}>
           {KIND_LABEL[card.kind]}
         </span>
         {card.loadBearing && (
-          <span className="font-jetbrains rounded border border-cyan-400/25 bg-cyan-400/[0.06] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-cyan-200/90">
+          <span className="font-jetbrains rounded border border-cyan-400/25 bg-cyan-400/[0.06] px-1.5 py-0.5 text-label tracking-[0.1em] text-cyan-200/90">
             load-bearing
           </span>
         )}
@@ -86,23 +86,23 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
           <span
             data-testid="hottest-badge"
             title="The hottest take — a claim about motive, offered as speculation. Held to a higher bar, not a lower one."
-            className="font-jetbrains rounded border border-rose-400/45 bg-rose-400/10 px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-rose-200"
+            className="font-jetbrains rounded border border-rose-400/45 bg-rose-400/10 px-1.5 py-0.5 text-label tracking-[0.1em] text-rose-200"
           >
             😈 hottest take
           </span>
         )}
         {card.required && (
-          <span className="font-jetbrains rounded border border-amber-400/30 bg-amber-400/[0.06] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-amber-200">
+          <span className="font-jetbrains rounded border border-amber-400/30 bg-amber-400/[0.06] px-1.5 py-0.5 text-label tracking-[0.1em] text-amber-200">
             required
           </span>
         )}
       </div>
 
-      <p className="mt-2 text-[13px] leading-relaxed text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
+      <p className="mt-2 text-content leading-relaxed text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
         {card.title}
       </p>
       {card.detail && (
-        <p className={lift("mt-1.5 text-[12px] leading-relaxed text-white/45", "group-hover:text-white/80")}>
+        <p className={lift("mt-1.5 text-content leading-relaxed text-white/45", "group-hover:text-white/80")}>
           {card.detail}
         </p>
       )}
@@ -110,19 +110,19 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
       {card.kind === "conclusion" && (
         <div className="mt-2.5 space-y-2 border-l-2 border-violet-400/25 pl-3">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className={`font-jetbrains rounded border px-1.5 py-0.5 text-[10px] tracking-[0.1em] ${LEAP_TONE[card.leap ?? "moderate"]}`}>
+            <span className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.1em] ${LEAP_TONE[card.leap ?? "moderate"]}`}>
               {card.leap} leap
             </span>
-            <span className={lift("font-jetbrains rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-[10px] tracking-[0.1em] text-white/45", "group-hover:text-white/75")}>
+            <span className={lift("font-jetbrains rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-label tracking-[0.1em] text-white/45", "group-hover:text-white/75")}>
               would be the {card.useFor}
             </span>
-            <span className={lift("font-jetbrains text-[10px] text-white/30", "group-hover:text-white/60")}>
+            <span className={lift("font-jetbrains text-label text-white/30", "group-hover:text-white/60")}>
               {card.hottest ? "speculation about motive — not reporting" : "no direct source — reasoned"}
             </span>
           </div>
           {card.precedent && (
-            <p className={lift("text-[12px] leading-relaxed text-white/55", "group-hover:text-white/85")}>
-              <span className="font-jetbrains text-[10px] tracking-[0.12em] text-violet-200/80 uppercase transition-colors duration-200 ease-linear group-hover:text-violet-200">
+            <p className={lift("text-content leading-relaxed text-white/55", "group-hover:text-white/85")}>
+              <span className="font-jetbrains text-label tracking-[0.12em] text-violet-200/80 uppercase transition-colors duration-200 ease-linear group-hover:text-violet-200">
                 pattern · {card.precedent.domain}
               </span>
               <br />
@@ -130,8 +130,8 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
             </p>
           )}
           {card.falsifiableBy && (
-            <p className={lift("text-[12px] leading-relaxed text-white/50", "group-hover:text-white/80")}>
-              <span className={lift("font-jetbrains text-[10px] tracking-[0.12em] text-white/35 uppercase", "group-hover:text-white/70")}>
+            <p className={lift("text-content leading-relaxed text-white/50", "group-hover:text-white/80")}>
+              <span className={lift("font-jetbrains text-label tracking-[0.12em] text-white/35 uppercase", "group-hover:text-white/70")}>
                 wrong if
               </span>
               <br />
@@ -157,10 +157,10 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
           {card.sources.map((s, i) => (
             <li key={`${s.name}-${i}`} className="flex flex-wrap items-center gap-1.5">
               <EvidenceClassChip c={s.evidenceClass} interested={s.interested} />
-              <span className={lift("font-jetbrains text-[10px] text-white/45", "group-hover:text-white/75")}>
+              <span className={lift("font-jetbrains text-label text-white/45", "group-hover:text-white/75")}>
                 {s.name}
               </span>
-              <span className={lift("font-jetbrains text-[10px] text-white/28", "group-hover:text-white/60")}>
+              <span className={lift("font-jetbrains text-label text-white/28", "group-hover:text-white/60")}>
                 {s.locator ?? "no locator"}
               </span>
             </li>
@@ -168,20 +168,20 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
         </ul>
       ) : (
         card.source && (
-          <p className={lift("font-jetbrains mt-1.5 text-[10px] text-white/28", "group-hover:text-white/60")}>
+          <p className={lift("font-jetbrains mt-1.5 text-content text-white/28", "group-hover:text-white/60")}>
             {card.source} · as of {card.asOf}
           </p>
         )
       )}
 
       {risky && (
-        <p className="font-jetbrains mt-2 text-[10px] text-rose-300">
+        <p className="font-jetbrains mt-2 text-content text-rose-300">
           load-bearing at low confidence — needs a second source before any script may state it
         </p>
       )}
       {wound && (
         <p
-          className={`font-jetbrains mt-2 text-[10px] ${
+          className={`font-jetbrains mt-2 text-label ${
             wound.severity === "broken" ? "text-rose-300" : "text-amber-200"
           }`}
         >
@@ -199,7 +199,7 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
 function ScopeChip({ card, descoped }: { card: Card; descoped: boolean }) {
   if (card.required)
     return (
-      <span className="font-jetbrains rounded-full border border-white/10 px-2 py-0.5 text-[10px] tracking-[0.1em] text-white/30">
+      <span className="font-jetbrains rounded-full border border-white/10 px-2 py-0.5 text-label tracking-[0.1em] text-white/30">
         locked in scope
       </span>
     );
@@ -209,7 +209,7 @@ function ScopeChip({ card, descoped }: { card: Card; descoped: boolean }) {
   return (
     <span
       data-testid={`scope-state-${card.id}`}
-      className={`font-jetbrains rounded-full border px-2 py-0.5 text-[10px] tracking-[0.1em] ${
+      className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.1em] ${
         descoped
           ? "border-amber-400/50 bg-amber-400/[0.08] text-amber-200"
           : card.optIn

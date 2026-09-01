@@ -76,18 +76,18 @@ export default function Error({
         tabIndex={-1}
         className="w-full max-w-md rounded-2xl border border-white/10 bg-white/[0.03] p-8 text-center backdrop-blur-xl outline-none"
       >
-        <p className="font-jetbrains text-[10px] tracking-[0.16em] text-rose-200 uppercase">
+        <p className="font-jetbrains text-content tracking-[0.16em] text-rose-200 uppercase">
           something broke
         </p>
         <h1 className="font-instrument mt-3 text-2xl text-white">
           This screen failed to render.
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-white/55">
+        <p className="mt-2 text-content leading-relaxed text-white/55">
           The rest of the studio is unaffected — your saved work is on disk. Try
           this screen again, or reload the app.
         </p>
         {error.digest && (
-          <p className="font-jetbrains mt-3 truncate text-[10px] text-white/30">
+          <p className="font-jetbrains mt-3 truncate text-content text-white/30">
             ref · {error.digest}
           </p>
         )}

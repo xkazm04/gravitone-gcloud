@@ -30,7 +30,7 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
   const cls =
     tone === "bad" ? "text-rose-300" : tone === "warn" ? "text-amber-200" : tone === "good" ? "text-emerald-300" : tone === "info" ? "text-cyan-200" : "text-white/70";
   return (
-    <span className="font-jetbrains text-[11px]">
+    <span className="font-jetbrains text-label">
       <span className="tracking-[0.14em] text-white/30 uppercase">{label} </span>
       <span className={cls}>{value}</span>
     </span>
@@ -55,7 +55,7 @@ export function Consequences({ api }: { api: ScopeApi }) {
   }
   if (!s.wounds.length && !s.descoped) {
     return (
-      <p className="font-jetbrains text-[11px] text-white/35">
+      <p className="font-jetbrains text-content text-white/35">
         Nothing descoped. The script will be written against the full notebook
         {s.notTaken > 0
           ? `, minus the ${s.notTaken} conclusion${s.notTaken === 1 ? "" : "s"} you have not taken.`
@@ -77,14 +77,14 @@ export function Consequences({ api }: { api: ScopeApi }) {
     >
       <ul className="space-y-1">
         {s.wounds.map((w) => (
-          <li key={w.cardId} className="text-[13px]">
-            <span className="font-jetbrains text-[11px] text-white/45">{w.cardId}</span>{" "}
+          <li key={w.cardId} className="text-label">
+            <span className="font-jetbrains text-label text-white/45">{w.cardId}</span>{" "}
             {byId.get(w.cardId)?.title}
             <span className="text-white/45"> — lost {w.missing.join(", ")}</span>
           </li>
         ))}
       </ul>
-      <p className="mt-2 text-[12px] text-white/50">
+      <p className="mt-2 text-content text-white/50">
         {s.broken
           ? "A reversal with no surviving evidence is an assertion. Either restore a card or accept that the script loses that turn."
           : "These still stand, on less. The script may state them more cautiously than the notebook does."}

@@ -1,0 +1,27 @@
+{"ts": "2026-08-30T13:23:50Z", "bundle": "media-generation", "subjects": ["visual-style-locking"], "techniques": ["rejections-as-negative-evidence"], "deviations": 0}
+{"ts": "2026-08-30T14:49:30Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["assigned-colour-roles"], "deviations": 0}
+{"ts": "2026-08-30T15:56:20Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["camera-position-semantics"], "deviations": 0}
+{"ts": "2026-08-30T16:17:26Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["lighting-as-dramatic-instrument"], "deviations": 0}
+{"ts": "2026-08-30T16:35:46Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["lens-effect-language"], "deviations": 0}
+{"ts": "2026-08-30T16:56:40Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["genre-visual-contracts"], "deviations": 0}
+{"ts": "2026-08-30T17:16:25Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["performance-direction"], "deviations": 0}
+{"ts": "2026-08-30T18:30:40Z", "bundle": "media-generation", "subjects": ["frame-direction"], "techniques": ["one-function-per-visual"], "deviations": 0}
+{"ts": "2026-08-30T18:53:54Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["reference-shows-only-invariants"], "deviations": 0}
+{"ts": "2026-08-30T19:31:34Z", "bundle": "media-generation", "subjects": ["visual-style-locking"], "techniques": ["style-onboarding-from-sample"], "deviations": 0}
+{"ts": "2026-08-31T08:37:06Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["style-first-token-ordering"], "deviations": 0}
+{"ts": "2026-08-31T09:04:30Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["prompt-budget-limits"], "deviations": 0}
+{"ts": "2026-08-31T12:03:40Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["corpus-study:diagonal-placement"], "deviations": 0}
+{"ts": "2026-08-31T13:16:13Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["corpus-study:layered-environmental-light"], "deviations": 0}
+{"ts": "2026-08-31T13:16:57Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["camera-position-semantics"], "deviations": 1}
+{"ts": "2026-08-31T13:16:57Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["lighting-as-dramatic-instrument"], "deviations": 1}
+{"ts": "2026-08-31T18:34:16Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["motion-intent-authoring"], "deviations": 0}
+{"ts": "2026-08-31T18:34:36Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["motion-intent-authoring"], "deviations": 0}
+{"ts": "2026-08-31T18:43:13Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["scene-grammar-progression"], "deviations": 0}
+{"ts": "2026-08-31T18:43:47Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["scene-grammar-progression"], "deviations": 1}
+{"ts": "2026-09-01T04:29:22Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["camera-position-semantics", "lighting-as-dramatic-instrument"], "deviations": 0}
+{"ts": "2026-09-01T04:38:52Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["scene-grammar-progression"], "deviations": 0}
+{"ts": "2026-09-01T04:39:12Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["scene-grammar-progression"], "deviations": 0}
+{"ts": "2026-09-01T07:39:45Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["performance-direction"], "deviations": 0}
+{"ts": "2026-09-01T07:50:19Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["lighting-as-dramatic-instrument"], "deviations": 0}
+{"ts": "2026-09-01T07:50:38Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["lighting-as-dramatic-instrument"], "deviations": 0}
+{"ts": "2026-09-01T07:50:38Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["performance-direction"], "deviations": 0}

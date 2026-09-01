@@ -29,6 +29,7 @@ import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
 import { googleProvider } from "./providers/google";
 import { leonardoProvider } from "./providers/leonardo";
+import { ollamaProvider } from "./providers/ollama";
 import { qwenProvider } from "./providers/qwen";
 import type {
   Capability,
@@ -75,7 +76,15 @@ const PLAN: Record<ImagingEnv, Record<Capability, ProviderId[]>> = {
     // removal, not instruction-driven editing, so even in dev an edit is a
     // Nano Banana call.
     edit: ["google"],
-    recognize: ["qwen", "google"],
+    // Local first: the resident eye (qwen3.8:27b on this machine's own GPU,
+    // $0, nothing leaves the box) leads wherever OLLAMA_HOST is set; the
+    // cloud eyes stay as re-route targets, so a box without a daemon keeps
+    // working and the elimination lands in `trail` like every other skip.
+    // Qwen CLOUD removed from the plan entirely (operator, 2026-09-01): the
+    // local eye covers the capability at $0, and a cloud rung nobody wants
+    // billed is not a fallback, it is a surprise. The adapter stays for the
+    // day a steer or another deployment genuinely needs it.
+    recognize: ["ollama", "google"],
   },
   prod: {
     generate: ["google"],
@@ -88,6 +97,7 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
   leonardo: leonardoProvider,
   google: googleProvider,
   qwen: qwenProvider,
+  ollama: ollamaProvider,
 };
 
 /** Who would answer this capability right now, in order. Exported so the

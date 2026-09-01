@@ -49,7 +49,7 @@ export default function BaselineOnlyNote({
   return (
     <div
       data-testid="baseline-only"
-      className="font-jetbrains mb-3 space-y-1 rounded-xl border border-amber-400/25 bg-amber-400/[0.04] px-3 py-2 text-[11px] leading-snug text-amber-200/90"
+      className="font-jetbrains mb-3 space-y-1 rounded-xl border border-amber-400/25 bg-amber-400/[0.04] px-3 py-2 text-label leading-snug text-amber-200/90"
     >
       {api.candidate &&
         (readingCandidate && ownChain ? (

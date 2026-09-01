@@ -13,7 +13,7 @@ export function ConnectorChip({ connector }: { connector: Connector }) {
   const defect = connector === "AND THEN";
   return (
     <span
-      className={`font-jetbrains inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] tracking-[0.16em] ${
+      className={`font-jetbrains inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-label tracking-[0.16em] ${
         defect
           ? "border border-rose-400/40 bg-rose-400/10 text-rose-300"
           : connector === "BUT"
@@ -44,7 +44,7 @@ export function ChainConnectorChip({ connector }: { connector: ChainConnector | 
   if (!connector) return null;
   return (
     <span
-      className={`font-jetbrains inline-flex items-center rounded px-1.5 py-0.5 text-[10px] tracking-[0.16em] ${
+      className={`font-jetbrains inline-flex items-center rounded px-1.5 py-0.5 text-label tracking-[0.16em] ${
         connector === "BUT"
           ? "border border-violet-400/30 bg-violet-400/10 text-violet-200"
           : connector === "TRANSFER"
@@ -112,7 +112,7 @@ export function EvidenceClassChip({ c, interested }: { c: EvidenceClass; interes
       // demotion — types.ts is explicit that conflating them is how the ladder
       // demoted a regulator's own number.
       title={interested ? `${e.why} Flagged interested: a party with a stake in the answer.` : e.why}
-      className={`font-jetbrains rounded border px-1.5 py-0.5 text-[10px] tracking-[0.12em] ${e.tone}`}
+      className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.12em] ${e.tone}`}
     >
       {c}
       {interested && <span className="ml-1 opacity-70">· interested</span>}
@@ -128,7 +128,7 @@ const CONF: Record<Confidence, string> = {
 
 export function ConfidenceChip({ c }: { c: Confidence }) {
   return (
-    <span className={`font-jetbrains rounded border px-1.5 py-0.5 text-[10px] tracking-[0.12em] ${CONF[c]}`}>
+    <span className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.12em] ${CONF[c]}`}>
       {c}
     </span>
   );

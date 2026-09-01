@@ -13,7 +13,7 @@
 import { test, expect } from "@playwright/test";
 
 import { doneUnits, totalUnits, BREAKER_LIMIT, hasFailures, newManifest, next, pruneFailures, runToEnd, settleReason, step, type EngineIO } from "@/lib/foundry/extract/engine";
-import { CRITIQUE_SCHEMA, partition, styleScore, usableFix, validateSynthesis } from "@/lib/foundry/extract/vocabulary";
+import { CRITIQUE_SCHEMA, deriveFamily, nearDuplicates, partition, styleScore, usableFix, validateSynthesis } from "@/lib/foundry/extract/vocabulary";
 import type { ExtractManifest, ExtractSource, Observables, Readback, ReplicaRound } from "@/lib/foundry/extract/types";
 
 const painterly: Observables = {
@@ -22,9 +22,12 @@ const painterly: Observables = {
   detail_density: "moderate",
   surface_realism: "plausible",
   atmospherics: "heavy-haze",
+  particle_fx: "heavy-debris",
   palette_strategy: "warm-cool-split",
   black_handling: "crushed",
   edge_treatment: "soft",
+  finish: "painterly-textured",
+  focus: "deep-focus",
 };
 const cel: Observables = {
   render_mode: "cel-shaded",
@@ -32,9 +35,12 @@ const cel: Observables = {
   detail_density: "sparse",
   surface_realism: "flat",
   atmospherics: "none",
+  particle_fx: "none",
   palette_strategy: "saturated-vivid",
   black_handling: "deep-neutral",
   edge_treatment: "crisp",
+  finish: "clean-smooth",
+  focus: "deep-focus",
 };
 
 const rb = (o: Observables, extra: Partial<Readback> = {}): Readback => ({
@@ -49,13 +55,14 @@ const rb = (o: Observables, extra: Partial<Readback> = {}): Readback => ({
 /* ── grouping ─────────────────────────────────────────────────────────────── */
 
 test("partition: same render mode + medium + most observables → one group; a different render mode or medium never merges; every source placed once", () => {
-  const near = { ...painterly, edge_treatment: "diffused" }; // 1 of 6 dressing fields differs → 9/10
-  const far = { ...painterly, palette_strategy: "monochrome", atmospherics: "none", black_handling: "lifted-milky" }; // 3 differ → 7/10 < 0.75
+  const near = { ...painterly, edge_treatment: "diffused" }; // 1 of 9 dressing fields differs → 12/13
+  const far = { ...painterly, palette_strategy: "monochrome", atmospherics: "none", black_handling: "lifted-milky" }; // 3 differ → 10/13 < 0.8
   const otherMedium = { ...painterly, medium: "3d-render" }; // same seven, different medium → its own style
-  const groups = partition([painterly, near, cel, far, null, otherMedium]);
+  const otherShot = { ...painterly, particle_fx: "none", focus: "shallow-bokeh" }; // particles and focus are per-SHOT → same style
+  const groups = partition([painterly, near, cel, far, null, otherMedium, otherShot]);
   const flat = groups.flat().sort();
-  expect(flat).toEqual([0, 1, 2, 3, 5]); // the null (unread) source is not placed, nothing else is dropped or doubled
-  expect(groups.find((g) => g.includes(0))).toEqual([0, 1]);
+  expect(flat).toEqual([0, 1, 2, 3, 5, 6]); // the null (unread) source is not placed, nothing else is dropped or doubled
+  expect(groups.find((g) => g.includes(0))).toEqual([0, 1, 6]);
   expect(groups.find((g) => g.includes(2))).toEqual([2]);
   expect(groups.find((g) => g.includes(3))).toEqual([3]);
   expect(groups.find((g) => g.includes(5))).toEqual([5]);
@@ -89,9 +96,9 @@ test("validateSynthesis: full coverage is accepted and normalised; a missing or 
 
 test("styleScore: render_mode and medium count double; a null readback is unmeasured, not zero", () => {
   expect(styleScore(painterly, rb(painterly)).score).toBe(1);
-  expect(styleScore(painterly, rb({ ...painterly, render_mode: "cel-shaded" })).score).toBe(0.8); // 8/10
-  expect(styleScore(painterly, rb({ ...painterly, medium: "3d-render" })).score).toBe(0.8); // the medium slip the first live run missed
-  expect(styleScore(painterly, rb({ ...painterly, edge_treatment: "crisp" })).score).toBe(0.9); // 9/10
+  expect(styleScore(painterly, rb({ ...painterly, render_mode: "cel-shaded" })).score).toBe(0.846); // 11/13
+  expect(styleScore(painterly, rb({ ...painterly, medium: "3d-render" })).score).toBe(0.846); // the medium slip the first live run missed
+  expect(styleScore(painterly, rb({ ...painterly, edge_treatment: "crisp" })).score).toBe(0.923); // 12/13
   expect(styleScore(painterly, null).score).toBeNull();
   expect(usableFix({ ...rb(painterly), critique: "", recipe_fix: "short" }, "the recipe")).toBeNull();
   expect(usableFix({ ...rb(painterly), critique: "", recipe_fix: "The Recipe" }, "the recipe")).toBeNull(); // same words again
@@ -106,15 +113,15 @@ test("styleScore: a word OUTSIDE the vocabulary is unmeasured too — not a miss
   const drifted = rb({ ...painterly, surface_realism: "semi-realistic" }); // not in ENUMS.surface_realism
   const scored = styleScore(painterly, drifted);
   console.log(`[foundry] off-vocabulary surface_realism -> score ${scored.score}, ${Object.keys(scored.per_field).length} field(s) measured`);
-  // Every other field agrees, so what is left is a clean 9/9 rather than 9/10.
+  // Every other field agrees, so what is left is a clean 12/12 rather than 12/13.
   expect(scored.score).toBe(1);
   // ...and the field that could not be read is ABSENT rather than recorded as a
   // zero, which is what stops a critique round chasing it.
   expect(scored.per_field.surface_realism).toBeUndefined();
-  expect(Object.keys(scored.per_field).length).toBe(7);
+  expect(Object.keys(scored.per_field).length).toBe(10);
 
   // A real disagreement is still a miss — the rule must not launder those.
-  expect(styleScore(painterly, rb({ ...painterly, surface_realism: "flat" })).score).toBe(0.9);
+  expect(styleScore(painterly, rb({ ...painterly, surface_realism: "flat" })).score).toBe(0.923);
   expect(styleScore(painterly, rb({ ...painterly, surface_realism: "flat" })).per_field.surface_realism).toBe(0);
 
   // A readback that drifted on EVERY field measures nothing, which is the
@@ -139,6 +146,8 @@ interface Script {
   /** The `recipe_fix` a critique comes back with, by round. Default is a real
    *  revision; return "" to script a critic that cannot say what to change. */
   recipeFix?: (round: number) => string;
+  /** Singleton mode: the readback carries the style entry too. */
+  singleton?: boolean;
 }
 
 function fakeIO(m: ExtractManifest, script: Script, calls: string[]): EngineIO {
@@ -158,7 +167,10 @@ function fakeIO(m: ExtractManifest, script: Script, calls: string[]): EngineIO {
       if (img.base64.startsWith("src:")) {
         // Sources s01/s02 are painterly, s03 is cel.
         const o = img.base64 === "src:s03" ? cel : painterly;
-        return { value: rb(o), model: "fake/eyes" };
+        const extra = script.singleton
+          ? { style_name: `Look ${img.base64.slice(4)}`, recipe: `A 2D digital painting recipe written by the eye for ${img.base64.slice(4)}: ` + "airbrushed shading, warm-cool split, soft edges, painterly matte surfaces.", negative: "photo" }
+          : {};
+        return { value: { ...rb(o), ...extra }, model: "fake/eyes" };
       }
       // A generated image: scripted by the generate ordinal in its "pixels".
       const round = Number(/r(\d+)/.exec(img.base64)?.[1] ?? 1);
@@ -212,7 +224,7 @@ function manifest(opts: Partial<ExtractManifest["options"]> = {}): ExtractManife
 test("engine: reads every source, groups once, replicates per member with critique rounds, transfers, finishes — resumable at every unit", async () => {
   const m = manifest();
   const calls: string[] = [];
-  // Every replica round reads back two observables short of the target (0.8 < 0.85) → a second round is taken; the cap ends it at 2.
+  // Every replica round reads back two observables short of the target (0.846 < 0.85) → a second round is taken; the cap ends it at 2.
   const io = fakeIO(m, { roundScore: () => ({ ...painterly, edge_treatment: "crisp", atmospherics: "none" }) }, calls);
 
   const units: string[] = [];
@@ -246,11 +258,11 @@ test("engine: reads every source, groups once, replicates per member with critiq
 test("engine: a round at or over the target ends the loop early; the best-scoring recipe becomes the recipe in force", async () => {
   const m = manifest({ rounds: 3, replicas: 1 });
   const calls: string[] = [];
-  // Round 1 misses two fields (0.8), round 2 is exact (1.0) → stop at 2 of 3.
+  // Round 1 misses two fields (0.846), round 2 is exact (1.0) → stop at 2 of 3.
   const io = fakeIO(m, { roundScore: (n) => (n % 2 === 1 ? { ...painterly, edge_treatment: "crisp", atmospherics: "none" } : painterly) }, calls);
   await runToEnd(m, io);
   const painted = m.styles[0];
-  expect(painted.replicas[0].rounds.map((r) => r.score)).toEqual([0.8, 1]);
+  expect(painted.replicas[0].rounds.map((r) => r.score)).toEqual([0.846, 1]);
   expect(painted.recipe).toMatch(/^Revised recipe/); // the fix scored higher and was adopted
   expect(m.status).toBe("done");
 });
@@ -420,3 +432,46 @@ test("a replica the critic gave up on is marked in the run, not laundered into a
   );
 });
 
+test("nearDuplicates: styles one minor field apart are flagged as twins; a major-field or two-minor difference is not", () => {
+  const a = { id: "a", observables: painterly };
+  const b = { id: "b", observables: { ...painterly, black_handling: "deep-neutral" } }; // one minor field
+  const c = { id: "c", observables: { ...painterly, medium: "3d-render" } }; // a major field
+  const d = { id: "d", observables: { ...painterly, black_handling: "deep-neutral", focus: "shallow-bokeh" } }; // two minors
+  expect(nearDuplicates([a, b, c, d])).toEqual([
+    ["a", "b"],
+    ["b", "d"], // b and d differ only in focus — one minor field
+  ]);
+});
+
+test("singleton mode: no grouping, no reasoning turn — one style per source with the eye-written recipe; unique ids; the twin flags still fire", async () => {
+  const m = manifest({ rounds: 1, replicas: 1, transfers: 0 });
+  m.options.grouping = "none";
+  const calls: string[] = [];
+  const io = fakeIO(m, { roundScore: () => painterly, singleton: true }, calls);
+  await runToEnd(m, io);
+  expect(m.status).toBe("done");
+  expect(calls.filter((c) => c === "reason").length).toBe(0); // the whole point
+  expect(m.styles.length).toBe(3);
+  expect(m.styles.every((s) => s.grouped_by === "singleton" && s.members.length === 1)).toBe(true);
+  expect(m.styles.map((s) => s.members[0])).toEqual(["s01", "s02", "s03"]);
+  expect(m.styles[0].recipe).toMatch(/^A 2D digital painting recipe written by the eye/);
+  // s01 and s02 share a style_name pattern but ids stay unique.
+  expect(new Set(m.styles.map((s) => s.id)).size).toBe(3);
+  // s01 and s02 are identical observables → flagged as twins; cel s03 is not.
+  expect(m.styles[0].similar_to).toEqual([m.styles[1].id]);
+  expect(m.styles[2].similar_to).toBeUndefined();
+});
+
+test("deriveFamily: every medium/render combination lands in a browse bucket; singleton styles carry it", async () => {
+  expect(deriveFamily({ medium: "photograph" })).toBe("photo");
+  expect(deriveFamily({ medium: "line-drawing" })).toBe("graphic");
+  expect(deriveFamily({ medium: "2d-digital-painting", render_mode: "painterly" })).toBe("painterly");
+  expect(deriveFamily({ medium: "2d-digital-painting", render_mode: "stylised-realistic" })).toBe("illustration");
+  expect(deriveFamily({ medium: "3d-render", render_mode: "photoreal-cg" })).toBe("cinematic");
+  expect(deriveFamily({ medium: "3d-render", render_mode: "cel-shaded" })).toBe("animation");
+  expect(deriveFamily({})).toBe("unsorted");
+  const m = manifest({ rounds: 1, replicas: 1, transfers: 0 });
+  m.options.grouping = "none";
+  await runToEnd(m, fakeIO(m, { roundScore: () => painterly, singleton: true }, []));
+  expect(m.styles.map((s) => s.family)).toEqual(["painterly", "painterly", "illustration"]);
+});

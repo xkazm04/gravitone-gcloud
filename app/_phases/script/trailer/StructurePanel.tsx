@@ -53,24 +53,24 @@ export default function StructurePanel({ report, cut }: { report: StructureRepor
 
   const renderGroup = (g: (typeof grouped)[number]) => (
     <li key={g.rule} data-testid={`structure-rule-${g.rule}`}>
-      <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/40 uppercase">{g.rule}</p>
+      <p className="font-jetbrains text-label tracking-[0.14em] text-white/40 uppercase">{g.rule}</p>
       <ul className="mt-1 space-y-1.5">
         {g.findings.map((f, i) => {
           const m = MARK[f.verdict];
           const beatLabel = f.beatId ? labelOf.get(f.beatId) : undefined;
           return (
-            <li key={`${f.subject}-${i}`} className="text-[12px] leading-snug">
-              <span aria-hidden className={`font-jetbrains mr-1.5 text-[10px] tracking-[0.1em] ${m.cls}`}>
+            <li key={`${f.subject}-${i}`} className="text-label leading-snug">
+              <span aria-hidden className={`font-jetbrains mr-1.5 text-label tracking-[0.1em] ${m.cls}`}>
                 {m.glyph}
               </span>
-              <span className={`font-jetbrains text-[10px] tracking-[0.1em] ${m.cls}`}>{m.label}</span>
-              <span className="font-jetbrains ml-2 text-[10px] tracking-[0.1em] text-white/30">
+              <span className={`font-jetbrains text-label tracking-[0.1em] ${m.cls}`}>{m.label}</span>
+              <span className="font-jetbrains ml-2 text-label tracking-[0.1em] text-white/30">
                 {f.subject}
                 {beatLabel && ` · “${beatLabel}”`}
                 {f.at && ` @${f.at}`}
               </span>
               <span className="block pl-4 text-white/45">{f.detail}</span>
-              <span className="block pl-4 text-[10px] text-white/25">{f.cites}</span>
+              <span className="block pl-4 text-label text-white/25">{f.cites}</span>
             </li>
           );
         })}
@@ -80,26 +80,26 @@ export default function StructurePanel({ report, cut }: { report: StructureRepor
 
   return (
     <section data-testid="structure-panel" className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-      <p className="font-jetbrains flex flex-wrap items-baseline justify-between gap-2 text-[11px] tracking-[0.14em] uppercase">
+      <p className="font-jetbrains flex flex-wrap items-baseline justify-between gap-2 text-label tracking-[0.14em] uppercase">
         <span className="text-white/35">structure · computed over the cut on screen</span>
         <span data-testid="structure-malformed" className={malformedCls}>
           malformed: {malformed}
         </span>
       </p>
-      <p className="font-jetbrains mt-1.5 text-[10px] text-white/40">
+      <p className="font-jetbrains mt-1.5 text-label text-white/40">
         <span className="text-white/70">{report.enforced}% enforced</span>
         {" · "}
         {report.passes} pass · {report.violations} violation
         <span className="text-amber-200/80"> · {report.unmeasured} unmeasured</span>
         {report.notEngaged > 0 && <span> · {report.notEngaged} not-engaged</span>}
       </p>
-      <p className="mt-1.5 text-[12px] leading-snug text-white/45">{report.malformedNote}</p>
+      <p className="mt-1.5 text-label leading-snug text-white/45">{report.malformedNote}</p>
 
       <ul className="mt-3 space-y-3">{structural.map(renderGroup)}</ul>
 
       {advisory.length > 0 && (
         <div className="mt-4 border-t border-dashed border-amber-400/25 pt-3">
-          <p className="font-jetbrains text-[11px] tracking-[0.14em] text-amber-200/70 uppercase">
+          <p className="font-jetbrains text-label tracking-[0.14em] text-amber-200/70 uppercase">
             advisory · never counts toward malformed
           </p>
           <ul className="mt-2 space-y-3">{advisory.map(renderGroup)}</ul>

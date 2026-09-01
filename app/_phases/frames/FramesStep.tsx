@@ -52,7 +52,7 @@ export default function FramesStep({ projectId }: { projectId: string }) {
 
   if (!ctl.loaded)
     return (
-      <p className="font-jetbrains py-16 text-center text-[12px] tracking-[0.18em] text-white/30 uppercase">
+      <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
         reading the cut…
       </p>
     );
@@ -66,7 +66,7 @@ export default function FramesStep({ projectId }: { projectId: string }) {
   if (ctl.loadTrouble)
     return (
       <div className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-4">
-        <p className="text-[13px] leading-snug text-rose-200">
+        <p className="text-content leading-snug text-rose-200">
           This project&rsquo;s frames could not be read from local storage
           {ctl.loadTrouble.kind === "quota"
             ? " — the browser is out of room."
@@ -76,11 +76,11 @@ export default function FramesStep({ projectId }: { projectId: string }) {
                 ? " — this browser session has no storage at all."
                 : "."}
         </p>
-        <p className="mt-2 text-[12px] leading-relaxed text-white/45">
+        <p className="mt-2 text-content leading-relaxed text-white/45">
           Nothing was derived and nothing was written. Whatever is on disk is still there — reload once the
           reason above is gone rather than composing over it.
         </p>
-        <p className="font-jetbrains mt-2 text-[11px] text-white/30">{ctl.loadTrouble.message}</p>
+        <p className="font-jetbrains mt-2 text-content text-white/30">{ctl.loadTrouble.message}</p>
       </div>
     );
 
@@ -107,7 +107,7 @@ export default function FramesStep({ projectId }: { projectId: string }) {
                 // switcher whose state lives only in a colour is a switcher an
                 // assistive-tech user cannot read.
                 aria-pressed={view === v.id}
-                className={`font-jetbrains rounded-lg px-3 py-1 text-[11px] tracking-[0.1em] uppercase transition ${
+                className={`font-jetbrains rounded-lg px-3 py-1 text-label tracking-[0.1em] uppercase transition ${
                   view === v.id
                     ? "bg-cyan-400/15 text-cyan-100"
                     : unavailable
@@ -120,7 +120,7 @@ export default function FramesStep({ projectId }: { projectId: string }) {
               );
             })}
           </div>
-          <p className="font-jetbrains text-[11px] text-white/35">
+          <p className="font-jetbrains text-content text-white/35">
             {ctl.frames.length} frames derived from &ldquo;{ctl.render.title}&rdquo; ({ctl.render.engineLabel})
           </p>
         </div>
@@ -128,13 +128,13 @@ export default function FramesStep({ projectId }: { projectId: string }) {
         {/* Which identity these plates are in. Stated rather than assumed: a
             fallback preset is not the project's style, and a surface that let
             you believe it was would be lying at the moment it matters most. */}
-        <p className={`font-jetbrains text-[11px] ${ctl.hasLockedStyle ? "text-white/40" : "text-amber-200/90"}`}>
+        <p className={`font-jetbrains text-content ${ctl.hasLockedStyle ? "text-white/40" : "text-amber-200/90"}`}>
           style · {ctl.styleName}
         </p>
       </div>
 
       {ctl.error && (
-        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-2.5 text-[13px] leading-snug text-rose-200">
+        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-2.5 text-content leading-snug text-rose-200">
           {ctl.error}
         </p>
       )}
@@ -145,7 +145,7 @@ export default function FramesStep({ projectId }: { projectId: string }) {
           failed" and send the user to pay for it again. The per-beat reasons
           are on the rows — this is only the count. */}
       {ctl.notice && (
-        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-[13px] leading-snug text-amber-100/90">
+        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-content leading-snug text-amber-100/90">
           {ctl.notice}
         </p>
       )}

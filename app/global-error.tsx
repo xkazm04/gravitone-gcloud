@@ -63,7 +63,7 @@ export default function GlobalError({
         >
           <p
             style={{
-              fontSize: "10px",
+              fontSize: "0.875rem",
               letterSpacing: "0.16em",
               textTransform: "uppercase",
               color: "#fecdd3",
@@ -80,7 +80,7 @@ export default function GlobalError({
             to start the app again.
           </p>
           {error.digest && (
-            <p style={{ marginTop: "0.75rem", fontSize: "10px", color: "rgba(229,231,235,0.3)", fontFamily: "ui-monospace, monospace" }}>
+            <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "rgba(229,231,235,0.3)", fontFamily: "ui-monospace, monospace" }}>
               ref · {error.digest}
             </p>
           )}

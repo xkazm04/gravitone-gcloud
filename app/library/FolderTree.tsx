@@ -277,8 +277,8 @@ function Row({
           ) : (
             <Folder className="h-3.5 w-3.5 shrink-0 opacity-70" aria-hidden />
           )}
-          <span className="font-hanken truncate text-[13px]">{label}</span>
-          <span className="font-jetbrains ml-auto shrink-0 text-[10px] text-white/30">{count}</span>
+          <span className="font-hanken truncate text-content">{label}</span>
+          <span className="font-jetbrains ml-auto shrink-0 text-label text-white/30">{count}</span>
         </button>
       )}
     </div>
@@ -334,10 +334,10 @@ function FolderNameEditor({
             onCancel();
           }
         }}
-        className="font-hanken w-full rounded border border-cyan-400/40 bg-slate-950/80 px-2 py-0.5 text-[13px] text-white outline-none"
+        className="font-hanken w-full rounded border border-cyan-400/40 bg-slate-950/80 px-2 py-0.5 text-content text-white outline-none"
       />
       {merges && (
-        <span className="font-jetbrains mt-1 text-[10px] leading-snug text-amber-200/80">
+        <span className="font-jetbrains mt-1 text-label leading-snug text-amber-200/80">
           a folder here is already called {trimmed} — renaming merges them
         </span>
       )}

@@ -102,7 +102,7 @@ export default function ProjectsMatrix({
         {/* column heads. The five steps are the spine of this surface, so they
             are the accent and everything else on this row recedes. */}
         <div
-          className={`${GRID} font-jetbrains border-b border-white/8 bg-white/[0.02] px-3 py-2 text-[10px] tracking-[0.18em] text-white/35 uppercase`}
+          className={`${GRID} font-jetbrains border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.18em] text-white/35 uppercase`}
         >
           <span>Project</span>
           {PHASES.map((k, i) => (
@@ -129,7 +129,7 @@ export default function ProjectsMatrix({
           >
             <div className="flex min-w-0 items-center gap-2">
               <span
-                className="truncate text-sm font-medium text-white"
+                className="truncate text-label font-medium text-white"
                 title={`${p.title} — ${DISCIPLINE_LABEL[p.discipline ?? disciplineOf(p.template)]} · ${templateOf(p.template).label}`}
               >
                 {p.title}
@@ -157,10 +157,10 @@ export default function ProjectsMatrix({
               </span>
             ))}
 
-            <span className="font-jetbrains text-right text-[11px] text-white/45">
+            <span className="font-jetbrains text-right text-label text-white/45">
               {fmtDur(p.targetS)}
             </span>
-            <span className="font-jetbrains text-right text-[10px] text-white/30">
+            <span className="font-jetbrains text-right text-label text-white/30">
               {relTime(p.updatedAt)}
             </span>
             <span className="flex justify-end">
@@ -171,7 +171,7 @@ export default function ProjectsMatrix({
 
         {/* the payoff: each step totalled down its own column */}
         <div
-          className={`${GRID} font-jetbrains border-t border-white/8 bg-white/[0.02] px-3 py-2 text-[10px]`}
+          className={`${GRID} font-jetbrains border-t border-white/8 bg-white/[0.02] px-3 py-2 text-label`}
         >
           <span className="tracking-[0.18em] text-white/25 uppercase">Locked · stopped</span>
           {PHASES.map((k) => {
@@ -190,7 +190,7 @@ export default function ProjectsMatrix({
         </div>
       </div>
 
-      <div className="font-jetbrains mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1 text-[10px] text-white/35">
+      <div className="font-jetbrains mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1 text-label text-white/35">
         {LEGEND.map((s) => (
           <span key={s} className="inline-flex items-center gap-1.5">
             <span className={`h-2.5 w-4 rounded-[3px] ${CELL[s]}`} />

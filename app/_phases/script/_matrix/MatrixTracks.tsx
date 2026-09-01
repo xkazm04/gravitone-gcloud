@@ -64,7 +64,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
 
   return (
     <div data-testid="matrix-tracks">
-      <p className="font-hanken max-w-2xl text-sm text-slate-400">
+      <p className="font-hanken max-w-2xl text-content text-slate-400">
         Each script as its own track, in running order. A card’s position is where in the video it
         lands; its height is how long it holds. Hover a card to light it up wherever else it appears.
       </p>
@@ -86,10 +86,10 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
               className="rounded-2xl border border-white/8 bg-white/[0.015] p-3"
             >
               <header className="border-b border-white/8 pb-2">
-                <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/70 uppercase">
+                <p className="font-jetbrains text-content tracking-[0.14em] text-white/70 uppercase">
                   {r.engineLabel}
                 </p>
-                <p className="font-jetbrains mt-0.5 text-[10px] text-white/35">
+                <p className="font-jetbrains mt-0.5 text-content text-white/35">
                   {secs(r.durationS)} · {cov.spoken} cards · {secs(cov.unattributedS)} unattributed
                 </p>
               </header>
@@ -118,7 +118,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
                         <span className="flex items-baseline justify-between gap-1.5">
                           <NoteHandle cardId={card.id} />
                           <span
-                            className={`font-jetbrains shrink-0 text-[10px] ${placed ? "text-cyan-200/80" : "text-amber-200/80"}`}
+                            className={`font-jetbrains shrink-0 text-label ${placed ? "text-cyan-200/80" : "text-amber-200/80"}`}
                             title={
                               placed
                                 ? undefined
@@ -128,7 +128,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
                             {placed ? u.beats[0] : "not placed"} · {secs(u.seconds)}
                           </span>
                         </span>
-                        <span className="mt-0.5 block truncate text-[11px] leading-snug text-slate-300" title={card.title}>
+                        <span className="mt-0.5 block truncate text-label leading-snug text-slate-300" title={card.title}>
                           {card.title}
                         </span>
                       </span>
@@ -140,7 +140,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
               {cut.length > 0 && (
                 <div className="mt-2 border-t border-white/8 pt-2">
                   {cut.map((c) => (
-                    <p key={c.id} className="font-jetbrains text-[10px] leading-snug text-rose-200/80">
+                    <p key={c.id} className="font-jetbrains text-content leading-snug text-rose-200/80">
                       cut {c.id} — {usageIn(version, r.id, c.id).why}
                     </p>
                   ))}
@@ -153,10 +153,10 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
 
       {unused.length > 0 && (
         <section className="mt-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.03] p-3">
-          <h4 className="font-jetbrains text-[11px] tracking-[0.16em] text-amber-200/90 uppercase">
+          <h4 className="font-jetbrains text-label tracking-[0.16em] text-amber-200/90 uppercase">
             in no track · {unused.length} of {api.cards.length}
           </h4>
-          <p className="font-jetbrains mt-1 text-[10px] text-white/35">
+          <p className="font-jetbrains mt-1 text-content text-white/35">
             Researched, scoped, and never spoken. One gutter instead of {unused.length * 3} empty cells.
           </p>
           <ul className="mt-2 flex flex-wrap gap-1.5">
@@ -179,7 +179,7 @@ function UnusedChip({ card, api }: { card: Card; api: ScopeApi }) {
       <ScopePip card={card} api={api} />
       <span
         title={card.title}
-        className={`font-jetbrains max-w-[14rem] truncate rounded border px-1.5 py-0.5 text-[10px] ${
+        className={`font-jetbrains max-w-[14rem] truncate rounded border px-1.5 py-0.5 text-label ${
           descoped
             ? "border-amber-400/50 text-amber-200/80"
             : card.kind === "conclusion"

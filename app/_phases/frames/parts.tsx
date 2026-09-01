@@ -183,7 +183,7 @@ export function FrameCanvas({
         <div className="absolute inset-0 animate-pulse bg-white/[0.04]" aria-hidden />
       )}
       {frame.plate.state === "refused" && (
-        <p className="font-jetbrains absolute inset-x-2 bottom-2 rounded bg-rose-500/85 px-2 py-1 text-[10px] text-slate-950">
+        <p className="font-jetbrains absolute inset-x-2 bottom-2 rounded bg-rose-500/85 px-2 py-1 text-content text-slate-950">
           refused — change the subject, not the seed
         </p>
       )}
@@ -292,10 +292,10 @@ function ElementMark({ el }: { el: FrameElement }) {
 }
 
 const TEXT_CLASS: Record<FrameText["role"], string> = {
-  kicker: "font-jetbrains text-[9px] uppercase tracking-[0.18em] text-cyan-200",
-  caption: "font-hanken text-[11px] text-white",
+  kicker: "font-jetbrains text-label uppercase tracking-[0.18em] text-cyan-200",
+  caption: "font-hanken text-content text-white",
   figure: "font-instrument text-[26px] leading-none text-white",
-  label: "font-jetbrains text-[9px] text-white/70",
+  label: "font-jetbrains text-label text-white/70",
 };
 
 function TextMark({
@@ -321,7 +321,7 @@ function TextMark({
       {/* A figure with no fact behind it is the defect this step exists to
           prevent, so it is marked on the canvas rather than in a side panel. */}
       {t.role === "figure" && !t.factId && (
-        <span className="ml-1 align-super text-[8px] text-amber-300" title="not bound to a notebook fact">
+        <span className="ml-1 align-super text-label text-amber-300" title="not bound to a notebook fact">
           ●
         </span>
       )}
@@ -341,7 +341,7 @@ const KIND_TONE: Record<string, string> = {
 export function KindChip({ kind }: { kind: string }) {
   return (
     <span
-      className={`font-jetbrains rounded-full border px-2 py-0.5 text-[10px] tracking-[0.12em] uppercase ${
+      className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.12em] uppercase ${
         KIND_TONE[kind] ?? "border-white/15 text-white/50"
       }`}
     >
@@ -361,7 +361,7 @@ export function LayerBreakdown({ frame, compact = false }: { frame: Frame; compa
     { label: "texts", n: frame.texts.length, total: frame.texts.length },
   ];
   return (
-    <div className={`font-jetbrains flex items-center ${compact ? "gap-2" : "gap-3"} text-[10px]`}>
+    <div className={`font-jetbrains flex items-center ${compact ? "gap-2" : "gap-3"} text-label`}>
       {bits.map((b) => (
         <span key={b.label} className={b.n ? "text-white/70" : "text-white/25"}>
           <span className={`mr-1 inline-block h-1.5 w-1.5 rounded-full ${b.n ? "bg-cyan-300" : "bg-white/20"}`} />

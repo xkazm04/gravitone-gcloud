@@ -59,7 +59,7 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
           {/* The count is read off the columns rather than typed. It said "six"
               against seven for as long as it was a literal, and the untagged
               bucket makes the number conditional as well as wrong. */}
-          <p className="font-hanken mt-2 max-w-2xl text-sm text-slate-400">
+          <p className="font-hanken mt-2 max-w-2xl text-content text-slate-400">
             Every card the run produced, in the {columns.length - (hasUntagged ? 1 : 0)} domains the
             research brief requires
             {hasUntagged ? ", plus the queue of cards nobody filed" : ""}. Sweep the columns, cut
@@ -73,7 +73,7 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
           TOGGLES, so they carry `aria-pressed`: their only pressed signal is a
           cyan border, and every other toggle in this step already says it out
           loud (CardTile, beats/VariantTile). */}
-      <div className="font-jetbrains flex flex-wrap gap-1.5 text-[10px]" role="group" aria-label="Filter columns">
+      <div className="font-jetbrains flex flex-wrap gap-1.5 text-label" role="group" aria-label="Filter columns">
         <button
           type="button"
           onClick={() => setFocus(null)}
@@ -159,24 +159,24 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
                     accent, everything else plain white. Cheaper and clearer than
                     wrapping a whole column in a coloured border. */}
                 <h3
-                  className={`font-jetbrains text-[13px] tracking-[0.16em] uppercase ${
+                  className={`font-jetbrains text-label tracking-[0.16em] uppercase ${
                     d.id === "conclusions" ? "text-cyan-300" : orphan ? "text-amber-200" : "text-white"
                   }`}
                 >
                   {d.label}
                 </h3>
-                <span className="font-jetbrains text-[10px] text-white/30">
+                <span className="font-jetbrains text-label text-white/30">
                   {n.kept}/{n.total}
                 </span>
               </div>
-              <p className="mt-1.5 text-[12px] leading-relaxed text-white/40">{d.purpose}</p>
+              <p className="mt-1.5 text-content leading-relaxed text-white/40">{d.purpose}</p>
 
               {/* A card lands here because CARD_DIMENSION has no row for its id.
                   Saying so names the fix instead of leaving the reviewer to
                   wonder what they did — and it is the same sentence
                   check-notebook.mts prints, so the two reports agree. */}
               {orphan && (
-                <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
+                <p className="font-jetbrains mt-3 text-content leading-relaxed text-amber-200/85">
                   {cards.length === 1 ? "this card has" : `these ${cards.length} cards have`} no
                   dimension — tag {cards.length === 1 ? "it" : "them"} in
                   dimensions.ts::CARD_DIMENSION. Until then no domain column shows{" "}
@@ -196,17 +196,17 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
                   has no way to know. */}
               {empty ? (
                 <>
-                  <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
+                  <p className="font-jetbrains mt-3 text-content leading-relaxed text-amber-200/85">
                     the run produced nothing here — {emptyMeansOf(d)}
                   </p>
-                  <p className="font-jetbrains mt-1.5 text-[11px] leading-relaxed text-white/40">
+                  <p className="font-jetbrains mt-1.5 text-content leading-relaxed text-white/40">
                     unless that is correct for this topic: {d.notApplicable}
                   </p>
                 </>
               ) : (
                 <>
                   {noneKept && !orphan && (
-                    <p className="font-jetbrains mt-3 text-[11px] leading-relaxed text-amber-200/85">
+                    <p className="font-jetbrains mt-3 text-content leading-relaxed text-amber-200/85">
                       {d.id === "conclusions"
                         ? "none taken — conclusions are reasoned, not researched, so they stay out until you take one"
                         : `nothing in scope — ${emptyMeansOf(d)}`}

@@ -33,7 +33,7 @@ const STATUS_CLS: Record<ThemeStatus, string> = {
 export function StatusStamp({ status }: { status: ThemeStatus }) {
   return (
     <span
-      className={`font-jetbrains rounded-full border px-2.5 py-0.5 text-[10px] tracking-[0.14em] uppercase ${STATUS_CLS[status]}`}
+      className={`font-jetbrains rounded-full border px-2.5 py-0.5 text-label tracking-[0.14em] uppercase ${STATUS_CLS[status]}`}
     >
       {STATUS_WORD[status]}
     </span>
@@ -53,7 +53,7 @@ export function PaletteDots({ palette, withNames = false }: { palette: PaletteCo
             aria-hidden
           />
           {withNames && (
-            <span className="font-jetbrains text-[11px] text-white/55">
+            <span className="font-jetbrains text-label text-white/55">
               {c.name}
               <span className="text-white/30"> · {c.role}</span>
             </span>
@@ -108,23 +108,23 @@ export function ProofThumb({
         className={`h-full w-full object-cover ${onClick ? "cursor-zoom-in" : ""}`}
       />
 
-      <span className="font-jetbrains pointer-events-none absolute bottom-1 left-1.5 rounded bg-black/60 px-1 py-0.5 text-[9px] text-white/80">
+      <span className="font-jetbrains pointer-events-none absolute bottom-1 left-1.5 rounded bg-black/60 px-1 py-0.5 text-label text-white/80">
         {proof.label}
       </span>
 
       {proof.state === "approved" && (
-        <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-cyan-300/90 px-1.5 py-0.5 text-[9px] font-semibold text-slate-950">
+        <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-cyan-300/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
           APPROVED
         </span>
       )}
       {proof.state === "rejected" && (
-        <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-rose-400/90 px-1.5 py-0.5 text-[9px] font-semibold text-slate-950">
+        <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-rose-400/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
           REJECTED
         </span>
       )}
 
       {promoted && (
-        <span className="font-jetbrains pointer-events-none absolute right-1.5 bottom-1 flex items-center gap-1 rounded bg-black/60 px-1 py-0.5 text-[9px] text-white/75">
+        <span className="font-jetbrains pointer-events-none absolute right-1.5 bottom-1 flex items-center gap-1 rounded bg-black/60 px-1 py-0.5 text-label text-white/75">
           <Library className="h-2.5 w-2.5" aria-hidden />
           on the shelf
         </span>
@@ -212,7 +212,7 @@ export function StyleSheet({
           {/* The cap counts what it caps: approved proofs are the model's
               reference window, and the total is just how much judging has
               been done. */}
-          <p className="font-jetbrains mt-0.5 text-[11px] text-white/40">
+          <p className="font-jetbrains mt-0.5 text-content text-white/40">
             {ORIGIN_WORD[theme.origin]} · {approvedProofs(theme).length}/{PROOF_CAP} approved ·{" "}
             {theme.proofs.length} on the sheet
           </p>
@@ -237,7 +237,7 @@ export function StyleSheet({
         </div>
       )}
 
-      {note && <p className="font-jetbrains text-[11px] text-white/45">{note}</p>}
+      {note && <p className="font-jetbrains text-content text-white/45">{note}</p>}
 
       <div className="border-t border-white/8 pt-4">
         <Playground
@@ -256,13 +256,13 @@ export function StyleSheet({
           onKeep={locked ? undefined : onKeepTrial}
         />
         {locked ? (
-          <p className="font-jetbrains mt-2 text-[11px] text-white/40">
+          <p className="font-jetbrains mt-2 text-content text-white/40">
             Locked — the sheet is final. Trials still render so you can see what this style does; they
             cannot join it.
           </p>
         ) : (
           full && (
-            <p className="mt-2 text-[12px] text-amber-200/90">
+            <p className="mt-2 text-content text-amber-200/90">
               {PROOF_CAP} approved proofs — the model&rsquo;s whole reference-image window. Reject one to
               make room; it stays on the sheet as the record of what this style is not.
             </p>
@@ -314,7 +314,7 @@ export function ConfirmDeleteStyle({
           </Button>
           <button
             onClick={onConfirm}
-            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-[12px] text-rose-200 transition hover:bg-rose-400/20"
+            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20"
           >
             Delete the style
           </button>
@@ -322,7 +322,7 @@ export function ConfirmDeleteStyle({
       }
     >
       {theme && (
-        <div className="font-hanken space-y-3 text-base text-slate-300">
+        <div className="font-hanken space-y-3 text-content text-slate-300">
           <p>
             Its sheet goes with it: {theme.proofs.length} proof{theme.proofs.length === 1 ? "" : "s"},{" "}
             {approved} of them approved
@@ -337,13 +337,13 @@ export function ConfirmDeleteStyle({
           </p>
 
           {promoted > 0 && (
-            <p className="text-sm text-amber-200/90">
+            <p className="text-content text-amber-200/90">
               {promoted} of them {promoted === 1 ? "is" : "are"} on the asset shelf. A promoted plate
               points at the bytes inside this style, so {promoted === 1 ? "it goes" : "they go"} with it.
             </p>
           )}
 
-          <p className="text-sm text-amber-200/90">
+          <p className="text-content text-amber-200/90">
             {dependents === "counting"
               ? "Checking which projects were built on it…"
               : dependents === "unknown"
@@ -355,7 +355,7 @@ export function ConfirmDeleteStyle({
                     : `${dependents} projects were built on it. They are NOT deleted — they keep working, render on a fallback preset, and say so.`}
           </p>
 
-          <p className="font-jetbrains text-[11px] text-white/35">
+          <p className="font-jetbrains text-content text-white/35">
             The style goes from this browser&rsquo;s storage. Nothing is deleted anywhere else — there is
             nowhere else yet.
           </p>
@@ -371,7 +371,7 @@ export function GateChip({ themes }: { themes: Theme[] }) {
   const open = n > 0;
   return (
     <span
-      className={`font-jetbrains inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] ${
+      className={`font-jetbrains inline-flex items-center gap-2 rounded-full border px-3 py-1 text-label ${
         open ? "border-cyan-400/30 bg-cyan-400/5 text-cyan-200" : "border-amber-300/40 bg-amber-300/5 text-amber-200"
       }`}
     >

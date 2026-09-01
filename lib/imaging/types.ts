@@ -104,7 +104,7 @@ export interface RecognizeRequest extends ProviderSteer {
 
 /** The vendor roster, as a value: a request may name a vendor, so validation
  *  needs the list at runtime and there may be exactly one copy of it. */
-export const PROVIDER_IDS = ["leonardo", "google", "qwen"] as const;
+export const PROVIDER_IDS = ["leonardo", "google", "qwen", "ollama"] as const;
 
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 

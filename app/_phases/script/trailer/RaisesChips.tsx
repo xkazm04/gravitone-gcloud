@@ -41,7 +41,7 @@ export default function RaisesChips({
 
   return (
     <div data-testid={`raises-${beatId}`} className="mt-2">
-      <p className="font-jetbrains text-[10px] tracking-[0.14em] text-white/35 uppercase">
+      <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">
         raises
         {defect && (
           <span className="ml-2 text-amber-200 normal-case tracking-normal">
@@ -64,7 +64,7 @@ export default function RaisesChips({
               type="button"
               aria-pressed={on}
               onClick={() => toggle(v)}
-              className={`font-jetbrains rounded-full border px-2.5 py-1 text-[11px] transition ${cls}`}
+              className={`font-jetbrains rounded-full border px-2.5 py-1 text-label transition ${cls}`}
             >
               {v}
             </button>

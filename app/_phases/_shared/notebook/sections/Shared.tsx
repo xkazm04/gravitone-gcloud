@@ -34,10 +34,10 @@ export function CurrencyBody({ withHalfLife = false }: { withHalfLife?: boolean 
         )}
         {c.why}
       </p>
-      <p className="font-jetbrains text-[11px] text-white/40">
+      <p className="font-jetbrains text-label text-white/40">
         expires first: {c.expiresFirst.join(", ")} · durable: {c.durable.join(", ")}
       </p>
-      <p className="text-[13px] text-cyan-200/80">{c.advice}</p>
+      <p className="text-content text-cyan-200/80">{c.advice}</p>
     </>
   );
 }
@@ -53,7 +53,7 @@ export function SourcesBody() {
   return (
     <ul className="space-y-1">
       {NOTEBOOK.sources.map((s) => (
-        <li key={s} className="font-jetbrains text-[11px] leading-relaxed text-white/45">
+        <li key={s} className="font-jetbrains text-label leading-relaxed text-white/45">
           {s}
         </li>
       ))}

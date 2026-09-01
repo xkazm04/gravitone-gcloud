@@ -79,10 +79,10 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
   }, [projectId]);
 
   if (discipline === null)
-    return <p className="font-jetbrains text-[12px] text-white/35">opening the project…</p>;
+    return <p className="font-jetbrains text-label text-white/35">opening the project…</p>;
   if (discipline === undefined)
     return (
-      <p className="font-jetbrains text-[12px] text-amber-200/85" data-testid="research-no-project">
+      <p className="font-jetbrains text-label text-amber-200/85" data-testid="research-no-project">
         no project record for {projectId} — nothing to research against
       </p>
     );
@@ -112,7 +112,7 @@ function BeatsResearch({
   // surface that must not flash: a free project with a stored mode would show
   // "which kind of research is this?" for one frame before answering itself.
   if (!beats.hydrated)
-    return <p className="font-jetbrains text-[12px] text-white/35">opening the project’s picks…</p>;
+    return <p className="font-jetbrains text-label text-white/35">opening the project’s picks…</p>;
 
   if (discipline === "trailer") return <BeatVariantBoard api={beats} discipline="trailer" />;
 
@@ -166,7 +166,7 @@ function EducationalResearch({ projectId }: { projectId: string }) {
   // never stored (GuidedModeStepData's contract): guided only while the step
   // holds no prior decisions — no notebook, no scope entry, no checkpoint.
   if (!faceHydrated || !research.hydrated || !api.hydrated)
-    return <p className="font-jetbrains text-[12px] text-white/35">opening the step…</p>;
+    return <p className="font-jetbrains text-label text-white/35">opening the step…</p>;
   const decided =
     research.ready || Object.keys(api.scope).length > 0 || api.confirmed !== null;
 
@@ -238,7 +238,7 @@ function EducationalFaces({
         />
       ) : (
         <>
-          <div className="font-jetbrains flex flex-wrap items-center gap-2 text-[12px]">
+          <div className="font-jetbrains flex flex-wrap items-center gap-2 text-label">
             {([
               { key: "topic", label: "Topic", sub: "input, log & notebook" },
               { key: "board", label: "Triage board", sub: ready ? "scope the material" : "locked until a notebook exists" },
@@ -259,7 +259,7 @@ function EducationalFaces({
                   }`}
                 >
                   <span className="block text-white/85">{t.label}</span>
-                  <span className="mt-0.5 block text-[10px] text-white/35">{t.sub}</span>
+                  <span className="mt-0.5 block text-label text-white/35">{t.sub}</span>
                 </button>
               );
             })}
@@ -307,13 +307,13 @@ function EducationalFaces({
         onClose={() => setArtifact(null)}
         title="Evidence log"
         eyebrow={
-          <p className="font-jetbrains text-[11px] tracking-[0.18em] text-cyan-300/80 uppercase">
+          <p className="font-jetbrains text-content tracking-[0.18em] text-cyan-300/80 uppercase">
             notebook.json · every claim dated, sourced and rated
           </p>
         }
         subtitle="Nothing the script says may go beyond what this log supports."
         footer={
-          <p className="font-jetbrains text-[11px] text-white/35">
+          <p className="font-jetbrains text-content text-white/35">
             {NOTEBOOK_COUNTS.flagged === 0
               ? "no claim is both load-bearing and low-confidence"
               : `${NOTEBOOK_COUNTS.flagged} claim(s) load-bearing at low confidence — flagged, not quietly used`}

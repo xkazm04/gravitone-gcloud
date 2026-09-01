@@ -42,7 +42,7 @@ export default function EnergyCurve({ cut }: { cut: TrailerCut }) {
 
   return (
     <figure data-testid="energy-curve" className="gt-rise rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-      <figcaption className="font-jetbrains flex items-baseline justify-between text-[11px] tracking-[0.14em] uppercase">
+      <figcaption className="font-jetbrains flex items-baseline justify-between text-label tracking-[0.14em] uppercase">
         <span className="text-white/35">energy curve</span>
         <span className="text-white/30 normal-case tracking-normal">
           a shape read from the parts — not a measurement

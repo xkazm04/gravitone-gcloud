@@ -68,7 +68,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p
-          className="font-jetbrains text-[12px] text-white/50"
+          className="font-jetbrains text-label text-white/50"
           title={
             direction || plateCost > 0
               ? `${direction?.unpriced ? "at least " : ""}$${totalCost.toFixed(3)} spent on this step in total`
@@ -110,7 +110,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
           onClick={() => void ctl.direct()}
           disabled={ctl.directing}
           title="Read the whole script and art-direct every frame in one pass"
-          className="inline-flex items-center gap-2 rounded-xl border border-violet-300/35 bg-violet-300/10 px-3.5 py-1.5 text-[12px] font-semibold text-violet-100 transition hover:bg-violet-300/20 disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-xl border border-violet-300/35 bg-violet-300/10 px-3.5 py-1.5 text-label font-semibold text-violet-100 transition hover:bg-violet-300/20 disabled:opacity-40"
         >
           {ctl.directing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Wand2 className="h-3.5 w-3.5" aria-hidden />}
           {ctl.directing ? "directing…" : "direct the cut"}
@@ -118,7 +118,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
         <button
           onClick={() => void renderMissing()}
           disabled={runningAll || missing.length === 0}
-          className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-3.5 py-1.5 text-[12px] font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:opacity-40"
+          className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-3.5 py-1.5 text-label font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:opacity-40"
         >
           {runningAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
           {runningAll ? "rendering…" : `render ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`}
@@ -130,14 +130,14 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
           is all the plates there were", which is the opposite of what happened —
           the reason is in the error line above and the work is still owed. */}
       {stoppedWith !== null && (
-        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-[13px] leading-snug text-amber-100/90">
+        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-content leading-snug text-amber-100/90">
           The batch stopped after a failure that was about the run rather than one plate — {stoppedWith} plate
           {stoppedWith === 1 ? " was" : "s were"} not attempted. Fix the reason above, then run it again.
         </p>
       )}
 
       <div className="overflow-hidden rounded-xl border border-white/8">
-        <div className="font-jetbrains grid grid-cols-[52px_1fr_206px_120px_86px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-[10px] tracking-[0.14em] text-white/35 uppercase">
+        <div className="font-jetbrains grid grid-cols-[52px_1fr_206px_120px_86px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase">
           <span>at</span>
           <span>scene</span>
           <span>breakdown</span>
@@ -256,20 +256,20 @@ function Row({
           ) : (
             <ChevronRight className="h-3 w-3 shrink-0 text-white/40" aria-hidden />
           )}
-          <span className="font-jetbrains text-[11px] text-white/55">{frame.at}</span>
+          <span className="font-jetbrains text-label text-white/55">{frame.at}</span>
         </button>
 
         <button onClick={onToggle} aria-expanded={open} className="flex min-w-0 items-center gap-2 text-left">
-          <span className="font-jetbrains w-5 shrink-0 text-[10px] text-white/25">{String(index + 1).padStart(2, "0")}</span>
-          <span className="font-hanken truncate text-[13px] text-white/85">{frame.title}</span>
+          <span className="font-jetbrains w-5 shrink-0 text-label text-white/25">{String(index + 1).padStart(2, "0")}</span>
+          <span className="font-hanken truncate text-content text-white/85">{frame.title}</span>
           <KindChip kind={frame.kind} />
         </button>
 
         <LayerBreakdown frame={frame} compact />
 
-        <span className={`font-jetbrains text-[11px] ${plate.cls}`}>{plate.word}</span>
+        <span className={`font-jetbrains text-label ${plate.cls}`}>{plate.word}</span>
 
-        <span className="font-jetbrains text-right text-[11px] text-white/35" title={holdS === null ? "this beat's position is not a timecode, so its hold is unknown" : undefined}>
+        <span className="font-jetbrains text-right text-label text-white/35" title={holdS === null ? "this beat's position is not a timecode, so its hold is unknown" : undefined}>
           {holdS === null ? "—" : `${holdS}s`}
         </span>
       </div>
@@ -279,7 +279,7 @@ function Row({
           on: the reason names the defect, and the frame beside it still holds
           whatever it had before the pass ran. */}
       {rejection && (
-        <p className="font-jetbrains flex items-start gap-1.5 px-3 pb-2 text-[11px] leading-snug text-amber-200/85">
+        <p className="font-jetbrains flex items-start gap-1.5 px-3 pb-2 text-content leading-snug text-amber-200/85">
           <AlertTriangle className="mt-[2px] h-3 w-3 shrink-0" aria-hidden />
           <span>
             {rejection} <span className="text-white/35">This beat kept what it had.</span>
@@ -294,7 +294,7 @@ function Row({
               frame={frame}
               edit={{ selected, onSelect, onMove, onResize }}
             />
-            <p className="font-jetbrains text-[10px] text-white/30">
+            <p className="font-jetbrains text-content text-white/30">
               drag any layer to move it · a selected element gets a resize handle
             </p>
             <LayerPanel
@@ -310,31 +310,31 @@ function Row({
             />
           </div>
           <div className="space-y-2.5">
-            <p className="font-hanken text-[13px] leading-snug text-slate-400">&ldquo;{frame.line}&rdquo;</p>
+            <p className="font-hanken text-content leading-snug text-slate-400">&ldquo;{frame.line}&rdquo;</p>
             {frame.device && (
-              <p className="font-jetbrains text-[10px] text-white/35">device · {frame.device}</p>
+              <p className="font-jetbrains text-content text-white/35">device · {frame.device}</p>
             )}
 
             {/* The director's reasoning, shown. It is the difference between a
                 composed frame and a templated one, so it belongs on screen
                 where it can be disagreed with — not in a log. */}
             {frame.rationale && (
-              <p className="font-hanken rounded-lg border border-violet-300/20 bg-violet-300/[0.06] px-2.5 py-2 text-[12px] leading-snug text-violet-100/90">
+              <p className="font-hanken rounded-lg border border-violet-300/20 bg-violet-300/[0.06] px-2.5 py-2 text-content leading-snug text-violet-100/90">
                 {frame.rationale}
               </p>
             )}
 
             <div>
-              <p className="font-jetbrains mb-1 text-[10px] tracking-[0.14em] text-white/40 uppercase">texts</p>
+              <p className="font-jetbrains mb-1 text-content tracking-[0.14em] text-white/40 uppercase">texts</p>
               <div className="space-y-1.5">
                 {frame.texts.map((t) => (
                   <div key={t.id} className="space-y-1">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-jetbrains w-11 shrink-0 text-[9px] text-white/35">{t.role}</span>
+                      <span className="font-jetbrains w-11 shrink-0 text-label text-white/35">{t.role}</span>
                       <input
                         value={t.value}
                         onChange={(e) => onText(t.id, e.target.value)}
-                        className="font-hanken min-w-0 flex-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1 text-[12px] text-slate-200 focus:border-cyan-400/40"
+                        className="font-hanken min-w-0 flex-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1 text-content text-slate-200 focus:border-cyan-400/40"
                       />
                       <button
                         onClick={() => onRemoveText(t.id)}
@@ -354,7 +354,7 @@ function Row({
                         // The control's meaning comes from the row it sits
                         // under; on its own it announced as an unnamed combo box.
                         aria-label={`Notebook fact cited by the figure "${t.value}"`}
-                        className={`font-jetbrains ml-[3.1rem] w-[calc(100%-3.1rem)] rounded border bg-slate-950 px-1.5 py-1 text-[10px] ${
+                        className={`font-jetbrains ml-[3.1rem] w-[calc(100%-3.1rem)] rounded border bg-slate-950 px-1.5 py-1 text-label ${
                           t.factId ? "border-white/10 text-white/60" : "border-amber-300/40 text-amber-200"
                         }`}
                       >
@@ -373,7 +373,7 @@ function Row({
                     <button
                       key={r}
                       onClick={() => onAddText(r)}
-                      className="font-jetbrains rounded border border-white/12 px-1.5 py-1 text-[10px] text-white/55 transition hover:text-white/85"
+                      className="font-jetbrains rounded border border-white/12 px-1.5 py-1 text-label text-white/55 transition hover:text-white/85"
                     >
                       + {r}
                     </button>
@@ -382,13 +382,13 @@ function Row({
               </div>
             </div>
             <div>
-              <p className="font-jetbrains mb-1 text-[10px] tracking-[0.14em] text-white/40 uppercase">plate subject</p>
+              <p className="font-jetbrains mb-1 text-content tracking-[0.14em] text-white/40 uppercase">plate subject</p>
               <textarea
                 value={frame.plate.subject ?? ""}
                 onChange={(e) => onSubject(e.target.value)}
                 rows={3}
                 placeholder="derived from the beat's role — edit to steer"
-                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-cyan-400/40"
+                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-cyan-400/40"
               />
             </div>
 
@@ -401,15 +401,15 @@ function Row({
                 costs a line; a disabled button that implies a provider exists
                 costs the user's trust in every other number on this screen. */}
             <div>
-              <p className="font-jetbrains mb-1 text-[10px] tracking-[0.14em] text-white/40 uppercase">clip motion</p>
+              <p className="font-jetbrains mb-1 text-content tracking-[0.14em] text-white/40 uppercase">clip motion</p>
               <textarea
                 value={frame.clip?.motion ?? ""}
                 onChange={(e) => onMotion(e.target.value)}
                 rows={2}
                 placeholder="what this plate does — e.g. a slow push in as the left stack settles"
-                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-[12px] leading-snug text-slate-200 focus:border-violet-300/40"
+                className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-violet-300/40"
               />
-              <p className="font-jetbrains mt-1 text-[10px] leading-snug text-white/30">
+              <p className="font-jetbrains mt-1 text-content leading-snug text-white/30">
                 {holdS === null ? "hold unknown — the beat's position is not a timecode" : `holds ${holdS}s`} ·{" "}
                 {frame.clip?.motion.trim() ? "authored · not rendered" : "no motion authored"} — this app has no
                 video engine, so a clip is written here and rendered nowhere. The render seam is unbuilt.
@@ -418,7 +418,7 @@ function Row({
             <button
               onClick={onRender}
               disabled={busy}
-              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-300/90 py-2 text-[12px] font-semibold text-slate-950 transition hover:brightness-110 disabled:opacity-40"
+              className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-cyan-300/90 py-2 text-label font-semibold text-slate-950 transition hover:brightness-110 disabled:opacity-40"
             >
               {busy ? <Loader2 className="h-3 w-3 animate-spin" aria-hidden /> : <Sparkles className="h-3 w-3" aria-hidden />}
               {frame.plate.state === "ready" ? "render again" : "render the plate"}

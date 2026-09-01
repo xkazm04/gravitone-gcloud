@@ -28,7 +28,7 @@ export function deltaOf(base: Version, cand: Version | null, renderId: string, c
 export function DeltaTag({ d }: { d: number }) {
   if (!d) return null;
   return (
-    <span className={`font-jetbrains text-[10px] ${d > 0 ? "text-emerald-300" : "text-rose-300"}`}>
+    <span className={`font-jetbrains text-label ${d > 0 ? "text-emerald-300" : "text-rose-300"}`}>
       {d > 0 ? "+" : ""}
       {d}s
     </span>
@@ -46,7 +46,7 @@ export const TONE: Record<Usage["kind"], { cell: string; text: string; mark: str
 export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi; size?: "sm" | "md" }) {
   const s = stateOf(api.scope, card.id);
   const locked = card.required;
-  const dims = size === "md" ? "h-5 w-5 text-[11px]" : "h-4 w-4 text-[10px]";
+  const dims = size === "md" ? "h-5 w-5 text-label" : "h-4 w-4 text-label";
   return (
     <button
       data-testid={`scope-${card.id}`}
@@ -81,7 +81,7 @@ export function MatrixFootnotes({ cards, version }: { cards: Card[]; version: Ve
 
   return (
     <div className="mt-4 space-y-1.5 border-t border-white/8 pt-3">
-      <p className="font-jetbrains text-[11px] leading-relaxed text-white/40">
+      <p className="font-jetbrains text-content leading-relaxed text-white/40">
         {untouched.length} of {cards.length} cards are in no render
         {conclusions > 0 && (
           <>
@@ -92,13 +92,13 @@ export function MatrixFootnotes({ cards, version }: { cards: Card[]; version: Ve
         )}
       </p>
       {orphans.length > 0 && (
-        <p data-testid="matrix-orphan-cuts" className="font-jetbrains text-[11px] leading-relaxed text-rose-300/90">
+        <p data-testid="matrix-orphan-cuts" className="font-jetbrains text-content leading-relaxed text-rose-300/90">
           {orphans.length} cut record{orphans.length === 1 ? "" : "s"} name{orphans.length === 1 ? "s" : ""} a fact the
           notebook no longer has ({[...new Set(orphans.map((o) => o.factId))].join(", ")}) — the
           decision was real, but it has no row to sit in.
         </p>
       )}
-      <p className="font-jetbrains text-[11px] leading-relaxed text-white/30">
+      <p className="font-jetbrains text-content leading-relaxed text-white/30">
         Seconds are computed from each render’s own beat marks, not estimated. A beat resting on
         several cards splits its seconds between them, so every column sums to the runtime it came
         from. Runtime not attributed to any card is hook, promise and close.

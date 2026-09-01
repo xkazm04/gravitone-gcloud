@@ -30,7 +30,7 @@ export default function ConnectorPick({
       aria-label="connector to the previous beat"
       className="my-1.5 flex items-center gap-1.5 pl-2"
     >
-      <span aria-hidden className="font-jetbrains text-[10px] text-white/25">↓</span>
+      <span aria-hidden className="font-jetbrains text-label text-white/25">↓</span>
       {CONNECTOR_OPTIONS.map((c) => {
         const on = value === c;
         const defect = c === "AND THEN";
@@ -48,14 +48,14 @@ export default function ConnectorPick({
             aria-pressed={on}
             onClick={() => onChange(c)}
             title={defect ? "and-then is the defect the form names" : undefined}
-            className={`font-jetbrains rounded px-2 py-0.5 text-[10px] tracking-[0.12em] transition ${cls}`}
+            className={`font-jetbrains rounded px-2 py-0.5 text-label tracking-[0.12em] transition ${cls}`}
           >
             {WORD[c]}
           </button>
         );
       })}
       {value === null && (
-        <span className="font-jetbrains text-[10px] text-amber-200/70">no connector declared</span>
+        <span className="font-jetbrains text-label text-amber-200/70">no connector declared</span>
       )}
     </div>
   );

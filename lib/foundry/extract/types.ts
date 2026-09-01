@@ -29,21 +29,37 @@ import type { Aspect } from "@/lib/imaging/types";
  *  render are BOTH `stylised-realistic / plausible / soft` in the seven, so a
  *  replica that had slipped from painting to render scored 0.875 while the
  *  eye said the medium was wrong. The forge's grader iterates only its own
- *  four fields, so an eighth on a catalogue entry costs it nothing. */
+ *  four fields, so extra fields on a catalogue entry cost it nothing.
+ *
+ *  `finish`, `particle_fx` and `focus` are the FIDELITY axes, added the same
+ *  day after the first run's cull: its grouping merged clean studio renders
+ *  with gritty ember-swept key art, and true shallow-focus photography with
+ *  deep-focus renders, because nothing in the vocabulary could see grit,
+ *  airborne debris or lens behaviour. A Gemini vision critique over the
+ *  wrongly-merged images named these three (its fourth, shading pipeline, is
+ *  already expressible as medium × render_mode). */
 export const OBSERVABLE_FIELDS = [
   "render_mode",
   "medium",
   "detail_density",
   "surface_realism",
   "atmospherics",
+  "particle_fx",
   "palette_strategy",
   "black_handling",
   "edge_treatment",
+  "finish",
+  "focus",
 ] as const;
 export type ObservableField = (typeof OBSERVABLE_FIELDS)[number];
 export type Observables = Record<ObservableField, string>;
 
-/** What the vision model reads back off ONE image. */
+/** What the vision model reads back off ONE image.
+ *
+ *  The last three fields are present only in SINGLETON mode (see
+ *  ExtractOptions.grouping): there the vision model writes the whole style
+ *  entry while looking at the image, instead of a text model synthesising
+ *  one from enums afterwards. */
 export interface Readback extends Observables {
   has_text: boolean;
   /** Up to five colour words, most dominant first. */
@@ -55,6 +71,12 @@ export interface Readback extends Observables {
    *  franchises — a generator refuses those and a recipe must not depend on
    *  them. */
   depiction: string;
+  /** Singleton mode: a 2–4 word Title Case name for this image's look. */
+  style_name?: string;
+  /** Singleton mode: the 60–110 word generator recipe, medium named first. */
+  recipe?: string;
+  /** Singleton mode: what the look must not contain. */
+  negative?: string;
 }
 
 /** A readback of a GENERATED image, judged against a target style. */
@@ -156,7 +178,11 @@ export interface ExtractedStyle {
   recipe_history: string[];
   /** How the grouping was decided: the reasoning engine, or the deterministic
    *  partition when the engine's answer did not cover every source. */
-  grouped_by: "engine" | "partition";
+  grouped_by: "engine" | "partition" | "singleton";
+  /** Styles whose declared observables sit within one minor field of this
+   *  one — a generator will likely render them identically. Set at finish;
+   *  the cull decides which survives. */
+  similar_to?: string[];
   replicas: Replica[];
   transfers: Transfer[];
 }
@@ -184,6 +210,14 @@ export interface ExtractOptions {
   target: number;
   /** Generation seed, offset per image so a run is reproducible. */
   seed: number;
+  /** How styles are formed. `engine` (default): readbacks are grouped by the
+   *  reasoning turn, partition as fallback. `none`: EVERY IMAGE IS ITS OWN
+   *  STYLE — no grouping at all — and the vision model writes each style's
+   *  recipe while looking at the image. The mode for measuring per-source
+   *  replication fidelity, and for galleries where grouping keeps failing;
+   *  the cull (and nearDuplicates) then says which singletons were one style
+   *  all along. */
+  grouping: "engine" | "none";
 }
 
 export interface ExtractManifest {

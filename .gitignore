@@ -112,9 +112,13 @@ __pycache__/
 /.claude/skills/leonardo
 /.claude/skills/perfect
 /.claude/skills/research
+/.claude/skills/scan-sweep
 /.claude/skills/ship-loop
 /.claude/skills/tiger
 /.claude/skills/uat
+/.claude/skills/dojo
+/.claude/skills/motionize
+/.claude/skills/spark
 /.claude/rules/ai-registry-access.md
 /.claude/rules/ai-registry-software-engineering.md
 /.claude/rules/ai-registry-media-generation.md

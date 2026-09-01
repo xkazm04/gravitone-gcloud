@@ -28,7 +28,7 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
 
   return (
     <div className="mt-3 border-t border-white/8 pt-3" data-testid={`ledger-${renderId}`}>
-      <p className="font-jetbrains flex items-baseline justify-between text-[11px] tracking-[0.14em] uppercase">
+      <p className="font-jetbrains flex items-baseline justify-between text-content tracking-[0.14em] uppercase">
         <span className="text-white/35">constraint ledger</span>
         {stale ? (
           <span data-testid={`ledger-stale-${renderId}`} className="text-amber-200">
@@ -42,7 +42,7 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
       </p>
 
       {stale && (
-        <p className="font-jetbrains mt-1 text-[10px] leading-snug text-amber-200/70">
+        <p className="font-jetbrains mt-1 text-content leading-snug text-amber-200/70">
           hand-written about the original chain. It has no probe, so it cannot follow a rewrite — read
           the computed gate below instead.
         </p>
@@ -52,8 +52,8 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
         {rows.map((r) => {
           const m = MARK[r.effective];
           return (
-            <li key={r.unknownId} className="text-[12px] leading-snug">
-              <span aria-hidden className={`font-jetbrains mr-1.5 text-[10px] tracking-[0.1em] ${m.cls}`}>
+            <li key={r.unknownId} className="text-label leading-snug">
+              <span aria-hidden className={`font-jetbrains mr-1.5 text-label tracking-[0.1em] ${m.cls}`}>
                 {m.glyph}
               </span>
               <span className="sr-only">{m.label}: </span>
@@ -76,7 +76,7 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
       {dangling.length > 0 && (
         <p
           data-testid="ledger-dangling"
-          className="font-jetbrains mt-2 text-[11px] leading-snug text-rose-300"
+          className="font-jetbrains mt-2 text-label leading-snug text-rose-300"
         >
           {dangling.length} ledger row{dangling.length === 1 ? "" : "s"} name an unknown the notebook no
           longer has ({dangling.join(", ")}) — this score is incomplete

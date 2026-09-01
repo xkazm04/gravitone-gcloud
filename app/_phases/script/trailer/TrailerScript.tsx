@@ -35,7 +35,7 @@ export default function TrailerScript({
   const api = useTrailerCut({ projectId, discipline, title });
 
   if (!api.hydrated)
-    return <p className="font-jetbrains text-[12px] text-white/35">opening the project’s cut…</p>;
+    return <p className="font-jetbrains text-label text-white/35">opening the project’s cut…</p>;
 
   if (!api.cut || !api.budget || !api.report)
     return (
@@ -81,19 +81,19 @@ export default function TrailerScript({
     <div data-testid="trailer-script">
       <section className="flex flex-wrap items-center gap-3 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
         <div className="min-w-0 grow">
-          <p className="font-jetbrains text-[11px] tracking-[0.14em] text-white/35 uppercase">composed from</p>
-          <p className="font-jetbrains mt-1 text-[12px] text-white/60" data-testid="trailer-composed-line">
+          <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">composed from</p>
+          <p className="font-jetbrains mt-1 text-label text-white/60" data-testid="trailer-composed-line">
             {cut.beats.length} picked parts · cue: {cut.cue ? cut.cue.title : <span className="text-amber-200">none attached</span>} ·
             lane: {cut.lane}
           </p>
-          <p className="mt-1.5 text-[13px] leading-relaxed text-slate-400">
+          <p className="mt-1.5 text-content leading-relaxed text-slate-400">
             {cut.title} · {cut.rung}
             {cut.cue && !cut.cue.frozen && (
               <span className="text-amber-200/80"> · the cue is a candidate, not frozen</span>
             )}
           </p>
         </div>
-        <p className="font-jetbrains shrink-0 text-[10px] leading-snug text-white/30">
+        <p className="font-jetbrains shrink-0 text-label leading-snug text-white/30">
           the picks and their rationale
           <br />
           live in step 1

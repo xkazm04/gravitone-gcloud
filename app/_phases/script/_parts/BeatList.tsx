@@ -77,7 +77,7 @@ export default function BeatList({ beats, against }: { beats: Beat[]; against?: 
       {against && (
         <p
           data-testid="beat-diff-summary"
-          className="font-jetbrains mb-3 text-[11px] leading-snug text-white/40"
+          className="font-jetbrains mb-3 text-label leading-snug text-white/40"
         >
           {changed === 0
             ? "This version left every beat of the chain it was built on exactly as it found it."
@@ -95,12 +95,12 @@ export default function BeatList({ beats, against }: { beats: Beat[]; against?: 
               data-testid={`beat-${r.change}`}
               className={`grid grid-cols-[3.2rem_1fr] gap-3 ${r.change === "cut" ? "opacity-45" : ""}`}
             >
-              <span className="font-jetbrains pt-0.5 text-[11px] text-white/30">{b.at}</span>
+              <span className="font-jetbrains pt-0.5 text-label text-white/30">{b.at}</span>
               <div className="min-w-0">
                 <p className="flex flex-wrap items-center gap-2">
                   <ConnectorChip connector={b.connector} />
                   <span
-                    className={`font-jetbrains text-[11px] tracking-[0.1em] ${
+                    className={`font-jetbrains text-label tracking-[0.1em] ${
                       r.change === "cut"
                         ? "text-white/40 line-through"
                         : b.kind === "turn"
@@ -115,20 +115,20 @@ export default function BeatList({ beats, against }: { beats: Beat[]; against?: 
                     {b.label}
                   </span>
                   {b.device && (
-                    <span className="font-jetbrains rounded border border-white/10 px-1.5 py-0.5 text-[10px] text-white/35">
+                    <span className="font-jetbrains rounded border border-white/10 px-1.5 py-0.5 text-label text-white/35">
                       {b.device}
                     </span>
                   )}
                   {mark && (
                     <span
-                      className={`font-jetbrains rounded-full border px-1.5 py-0.5 text-[10px] tracking-[0.1em] ${mark.cls}`}
+                      className={`font-jetbrains rounded-full border px-1.5 py-0.5 text-label tracking-[0.1em] ${mark.cls}`}
                     >
                       {mark.label}
                     </span>
                   )}
                 </p>
                 <p
-                  className={`font-hanken mt-1 text-[15px] leading-relaxed ${
+                  className={`font-hanken mt-1 text-content leading-relaxed ${
                     r.change === "cut" ? "text-slate-500" : "text-slate-300"
                   }`}
                 >

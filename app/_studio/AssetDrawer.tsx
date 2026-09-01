@@ -32,7 +32,7 @@ export function AssetDrawer({
         <div className="scroll-y flex-1 space-y-5 p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-jetbrains flex items-center gap-2 text-[11px] tracking-[0.14em] text-white/40 uppercase">
+              <p className="font-jetbrains flex items-center gap-2 text-content tracking-[0.14em] text-white/40 uppercase">
                 <KindGlyph kind={asset.kind} /> {asset.kind}
                 {asset.dims && <span className="normal-case">· {asset.dims}</span>}
                 {asset.durationS != null && <span>· {fmtDur(asset.durationS)}</span>}
@@ -55,12 +55,12 @@ export function AssetDrawer({
             {asset.tags.map((t) => (
               <span
                 key={t}
-                className="font-jetbrains rounded-full border border-white/10 px-2 py-0.5 text-[11px] text-white/60"
+                className="font-jetbrains rounded-full border border-white/10 px-2 py-0.5 text-label text-white/60"
               >
                 {t}
               </span>
             ))}
-            <span className="font-jetbrains rounded-full border border-cyan-400/25 bg-cyan-400/5 px-2 py-0.5 text-[11px] text-cyan-300">
+            <span className="font-jetbrains rounded-full border border-cyan-400/25 bg-cyan-400/5 px-2 py-0.5 text-label text-cyan-300">
               {asset.collection}
             </span>
           </div>

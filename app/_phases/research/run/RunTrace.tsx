@@ -18,7 +18,7 @@ const KIND_TONE: Record<TraceStep["kind"], string> = {
 
 function PhaseHeading({ phase }: { phase: TraceStep["phase"] }) {
   return (
-    <p className="font-jetbrains mt-3 mb-1 text-[10px] tracking-[0.16em] text-white/30 uppercase first:mt-0">
+    <p className="font-jetbrains mt-3 mb-1 text-content tracking-[0.16em] text-white/30 uppercase first:mt-0">
       {PHASE_LABEL[phase]}
     </p>
   );
@@ -51,13 +51,13 @@ export default function RunTrace({
         <li key={s.id}>
           {(i === 0 || emitted[i - 1].phase !== s.phase) && <PhaseHeading phase={s.phase} />}
           <div className="flex gap-2.5">
-            <span className={`font-jetbrains mt-[3px] shrink-0 text-[10px] ${KIND_TONE[s.kind]}`}>
+            <span className={`font-jetbrains mt-[3px] shrink-0 text-label ${KIND_TONE[s.kind]}`}>
               {KIND_LABEL[s.kind]}
             </span>
             <span className="min-w-0">
-              <span className="text-[13px] text-slate-200">{s.label}</span>
-              <span className="font-jetbrains ml-2 text-[11px] text-white/35">{secs(s.ms)}</span>
-              <p className="font-jetbrains text-[11px] leading-relaxed text-white/40">{s.detail}</p>
+              <span className="text-label text-slate-200">{s.label}</span>
+              <span className="font-jetbrains ml-2 text-label text-white/35">{secs(s.ms)}</span>
+              <p className="font-jetbrains text-content leading-relaxed text-white/40">{s.detail}</p>
             </span>
           </div>
         </li>
@@ -65,8 +65,8 @@ export default function RunTrace({
 
       {running && (
         <li className="flex gap-2.5 pt-2">
-          <span className="font-jetbrains mt-[3px] shrink-0 text-[10px] text-white/25">···</span>
-          <span className="font-jetbrains text-[12px] text-white/45">working</span>
+          <span className="font-jetbrains mt-[3px] shrink-0 text-label text-white/25">···</span>
+          <span className="font-jetbrains text-label text-white/45">working</span>
         </li>
       )}
 
@@ -79,12 +79,12 @@ export default function RunTrace({
         <li data-testid="trace-failed-step">
           {(!last || last.phase !== died.phase) && <PhaseHeading phase={died.phase} />}
           <div className="flex gap-2.5">
-            <span className="font-jetbrains mt-[3px] shrink-0 text-[10px] text-rose-300/70">
+            <span className="font-jetbrains mt-[3px] shrink-0 text-label text-rose-300/70">
               {KIND_LABEL[died.kind]}
             </span>
             <span className="min-w-0">
-              <span className="text-[13px] text-rose-200/80">{died.label}</span>
-              <span className="font-jetbrains ml-2 text-[11px] text-rose-300">process ended here</span>
+              <span className="text-label text-rose-200/80">{died.label}</span>
+              <span className="font-jetbrains ml-2 text-label text-rose-300">process ended here</span>
             </span>
           </div>
         </li>

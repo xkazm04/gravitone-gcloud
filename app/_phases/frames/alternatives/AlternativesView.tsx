@@ -36,7 +36,7 @@ export default function AlternativesView({
 
   if (!alts.loaded)
     return (
-      <p className="font-jetbrains py-16 text-center text-[12px] tracking-[0.18em] text-white/30 uppercase">
+      <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
         reading the alternatives…
       </p>
     );
@@ -46,7 +46,7 @@ export default function AlternativesView({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="font-jetbrains text-[11px] text-white/35">
+        <p className="font-jetbrains text-content text-white/35">
           {kept} kept
           {alts.altCost > 0 && <span className="text-white/25"> · ${alts.altCost.toFixed(3)} on alternatives</span>}
         </p>
@@ -62,7 +62,7 @@ export default function AlternativesView({
           // that did not.
           aria-pressed={alts.stress}
           onClick={() => alts.setStress(!alts.stress)}
-          className={`font-jetbrains rounded-lg border px-2.5 py-1 text-[10px] tracking-[0.12em] uppercase transition ${
+          className={`font-jetbrains rounded-lg border px-2.5 py-1 text-label tracking-[0.12em] uppercase transition ${
             alts.stress
               ? "border-amber-300/40 bg-amber-300/10 text-amber-200"
               : "border-white/10 text-white/35 hover:text-white/60"
@@ -73,7 +73,7 @@ export default function AlternativesView({
       </div>
 
       {alts.error && (
-        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-2.5 text-[13px] leading-snug text-rose-200">
+        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-2.5 text-content leading-snug text-rose-200">
           {alts.error}
         </p>
       )}

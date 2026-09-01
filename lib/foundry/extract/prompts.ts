@@ -30,7 +30,23 @@ export function readbackInstruction(): string {
     "`look` is the rendering — materials, light, colour organisation, edges, finish — with NOTHING about what is depicted.",
     "`depiction` is what is depicted and how it is staged, written so another image could be asked for with the same staging: shot size, angle, figures, setting, action.",
     "`depiction` must never ask for writing: no letters, runes, glyphs, lettered signs, logos or captions — describe a neon sign as 'a lit sign' and a runic halo as 'a glowing ring', so a re-ask does not draw text. (Measured 2026-08-27: two replicas were vetoed for text the depiction itself had requested.)",
+    "The fidelity axes — `finish`, `particle_fx`, `focus` — are judged from surfaces, air and lens, never from what is depicted: a pristine studio render and an ember-swept battle frame can share every other field and are still different styles.",
     "Never name a character, a franchise, a game, a film, an artist or a title anywhere in your answer; describe them generically instead.",
+  ].join("\n");
+}
+
+/** Singleton mode: read the image back AND write its style entry, in one
+ *  look. The recipe is written with the pixels in front of the model — the
+ *  whole point of the mode: nothing is synthesised from enums after the
+ *  fact, so nothing can be averaged across images that never matched. */
+export function singletonInstruction(): string {
+  return [
+    readbackInstruction(),
+    "",
+    "Additionally, write this image's STYLE ENTRY, from what you see:",
+    "`style_name`: 2–4 words, Title Case, naming the LOOK (never the subject).",
+    "`recipe`: 60–110 words a text-to-image generator obeys to reproduce this look on any other subject. The FIRST clause names the medium. Then surfaces, light, palette, blacks, edges, finish, particles, focus — concrete and visual, so a generator given this recipe and a different scene lands back on THIS look.",
+    "`negative`: a comma-separated list of what the look must not contain; always include text, watermark.",
   ].join("\n");
 }
 
@@ -71,7 +87,11 @@ export function synthesisPrompt(
     "- Every source id appears in EXACTLY ONE style. Do not drop any. A source that matches nothing is its own style.",
     "- Group by the LOOK (rendering, surfaces, light, palette, edges), never by subject, character, franchise or artist.",
     "- Prefer fewer, coherent styles over many near-duplicates, but never merge two different render modes, and never merge two different MEDIA — a 2D digital painting and a 3D render are different styles however alike their light and palette.",
+    "- FIDELITY SEPARATES, SHOTS DO NOT. Never merge clean-smooth surfaces with weathered-gritty ones, never merge painterly-textured with either, and never merge a photograph with a render — fidelity and medium are properties of the STYLE. But `particle_fx` and `focus` are largely properties of the SHOT: one production shoots ember-swept frames and clean frames in the same style. Images that agree on medium, render mode and finish may share a style across different particle and focus readings — read the `look` sentences to decide; the style's declared value is the group's majority, and the recipe states it.",
+    "- DISTINCTIVENESS. Any two styles you output must differ in at least TWO observables, at least one of them among medium, render_mode, finish. Two styles that differ only in particle density or lens focus are one style with different shots — merge them; the library gains nothing from twins.",
+    "- BIG GROUPS EARN A SECOND LOOK. When a group exceeds five sources, reread its members' `look` sentences for coherent SUB-LOOKS — a lighting regime (one hot emissive against cold dark vs neutral daylight), a palette discipline, an atmosphere register. Split when you find two sub-looks with at least two sources each, and let each recipe state what separates it from its sibling. A source that fits neither sub-look cleanly goes with the nearer one, not into a singleton.",
     "- The recipe's FIRST clause names the medium in the generator's own words ('a 2D digital painting with airbrushed shading', 'a photoreal 3D render', 'a graphite pencil drawing on paper'). A recipe that leaves the medium implicit gets a 3D render back whatever the source was (measured 2026-08-27).",
+    "- Each recipe STATES its fidelity axes in words the generator obeys — 'no floating particles, deep focus throughout, pristine surfaces' or 'air thick with drifting embers, weathered gritty surfaces' — especially where they are what separates this style from a sibling.",
     "- `recipe`: 60–110 words the generator obeys — render mode, surfaces, light, palette, blacks, edges, finish. Style first. No subject matter, no names, no franchises, no titles.",
     "- `negative`: a comma-separated list of what the look must not contain; always include `text, watermark`.",
     "- `id`: kebab-case, 2–4 words, describing the look (e.g. `painted-neon-noir`, `soft-cel-anime`). `name`: the same in Title Case.",

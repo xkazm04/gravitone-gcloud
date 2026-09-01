@@ -69,11 +69,11 @@ export default function BeatEditor({
 
   return (
     <div data-testid={`tbeat-${beat.id}`} className="grid grid-cols-[3.2rem_1fr] gap-3">
-      <span className="font-jetbrains pt-1.5 text-[11px] text-white/30">{beat.at}</span>
+      <span className="font-jetbrains pt-1.5 text-label text-white/30">{beat.at}</span>
       <div className="min-w-0">
         <div className="flex flex-wrap items-center gap-2">
           <span
-            className={`font-jetbrains rounded border border-white/10 px-1.5 py-0.5 text-[10px] tracking-[0.14em] uppercase ${KIND_CLS[beat.kind] ?? "text-white/45"}`}
+            className={`font-jetbrains rounded border border-white/10 px-1.5 py-0.5 text-label tracking-[0.14em] uppercase ${KIND_CLS[beat.kind] ?? "text-white/45"}`}
           >
             {beat.kind}
           </span>
@@ -82,11 +82,11 @@ export default function BeatEditor({
             value={label}
             onChange={(e) => { setLabel(e.target.value); schedule(); }}
             onBlur={flush}
-            className="font-jetbrains min-w-0 flex-1 rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-[11px] tracking-[0.1em] text-white/80 placeholder:text-white/25"
+            className="font-jetbrains min-w-0 flex-1 rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-label tracking-[0.1em] text-white/80 placeholder:text-white/25"
             placeholder="label"
           />
           {beat.spends?.length ? (
-            <span className="font-jetbrains text-[10px] text-amber-200/70">spends {beat.spends.join(", ")}</span>
+            <span className="font-jetbrains text-label text-amber-200/70">spends {beat.spends.join(", ")}</span>
           ) : null}
         </div>
         <textarea

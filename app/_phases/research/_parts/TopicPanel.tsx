@@ -43,7 +43,7 @@ export default function TopicPanel({
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="min-w-[18rem] flex-1">
             <Eyebrow>step 1 · research</Eyebrow>
-            <p className="font-hanken mt-2 max-w-2xl text-sm text-slate-400">
+            <p className="font-hanken mt-2 max-w-2xl text-content text-slate-400">
               A topic in, a notebook out. This runs as a background job — you can leave this step,
               open another project, and the bell will tell you when it lands.
             </p>
@@ -91,11 +91,11 @@ export default function TopicPanel({
       {run.state.status !== "idle" && (
         <section className="rounded-2xl border border-white/8 bg-white/[0.015] p-5">
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <p className="font-jetbrains text-[11px] tracking-[0.16em] text-white/50 uppercase">run log</p>
+            <p className="font-jetbrains text-content tracking-[0.16em] text-white/50 uppercase">run log</p>
             <RunStatus state={run.state} />
           </div>
           {running && (
-            <p data-testid="running-note" className="font-jetbrains mt-1.5 text-[11px] text-white/35">
+            <p data-testid="running-note" className="font-jetbrains mt-1.5 text-content text-white/35">
               running in the background — you can leave this step, and the bell reports the result.
             </p>
           )}
@@ -136,14 +136,14 @@ export default function TopicPanel({
               <button
                 data-testid="open-notebook"
                 onClick={onOpenNotebook}
-                className="font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-[11px] text-white/75 transition hover:bg-white/5"
+                className="font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/75 transition hover:bg-white/5"
               >
                 notebook · the argument
               </button>
               <button
                 data-testid="open-evidence"
                 onClick={onOpenEvidence}
-                className="font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-[11px] text-white/75 transition hover:bg-white/5"
+                className="font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/75 transition hover:bg-white/5"
               >
                 evidence log · {NOTEBOOK_COUNTS.facts} claims
                 {NOTEBOOK_COUNTS.flagged > 0 && <span className="ml-1.5 text-rose-300">{NOTEBOOK_COUNTS.flagged} flagged</span>}
@@ -151,7 +151,7 @@ export default function TopicPanel({
               <button
                 data-testid="goto-board"
                 onClick={onGoToBoard}
-                className="font-jetbrains ml-auto rounded-full border border-cyan-400/35 bg-cyan-400/[0.07] px-3.5 py-1.5 text-[11px] text-cyan-200 transition hover:bg-cyan-400/15"
+                className="font-jetbrains ml-auto rounded-full border border-cyan-400/35 bg-cyan-400/[0.07] px-3.5 py-1.5 text-label text-cyan-200 transition hover:bg-cyan-400/15"
               >
                 triage board →
               </button>
