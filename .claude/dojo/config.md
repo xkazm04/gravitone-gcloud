@@ -41,7 +41,20 @@ Baseline prompts for shot-based cycles come from the LIVE compiler:
 `npx tsx pipeline/foundry/dojo-shot-prompts.mts <shots.json>` prints
 `shotPrompt.actionFor` + `compilePrompt` output, never a retyped copy.
 
-### video
+### video (opened 2026-08-31)
+
+Wan 2.2 TI2V 5B via ComfyUI (`pipeline/foundry/dojo_video.py`), 848x480x121
+(~5s @24fps), seed-matched t2v duos, same gen-spec shape as the pair runner
+plus `length`. Judging reads three posters per clip (t0/t1/t2, cut by ffmpeg)
+through the qwen annotator; **no Gemini on this dimension** (operator
+instruction, cost) — the chokepoint judge is the only machine judge, so
+`judge_pick_rate` alone carries the pre-human signal. Ladder: single 5-10s
+clips first (compose the gated stills knowledge into motion), then SERIAL
+pairs — two scenes cut into one sequence under continuity contracts (restated
+style block, one shared light world, preserved screen direction, cut on
+motion, a corpus-measured ladder jump). Budget: **12 clips max per window**.
+
+### video (the old declaration)
 
 **Absent, deliberately.** Wan renders exist on this machine only as measured
 experiments (`pipeline/vlm-probe/consistency.py`'s H3 chain lane notes,
@@ -130,3 +143,35 @@ tracking the human better, and record the decision here):
   budget-limits claim needs a much longer prompt to bite. When gating: a
   control cycle's challenger is a deliberate law violation — reject = law
   confirmed.
+- 2026-08-31 (second session) — the CORPUS-STUDY method proved end to end, twice,
+  with zero user help in the loop: gap-ranked source pick -> yt-dlp (official
+  studio trailer only; candidate fallback ladder — the first search hit was a
+  dead video id, `--js-runtimes node` needed) -> extract_frames.py -> qwen
+  annotation (63 frames ~35 min GPU) -> dojo_study.py cross-analysis ->
+  falsifiable claim -> dojo_pairs A/B -> parked. Study 1 (159 on-disk corpus
+  frames, no download): diagonal is A-tier action's top extreme-wide
+  composition and PLACEMENT_PHRASE cannot say it — A/B 0.67/3-of-3/1.0, and
+  the qwen composition readback measured the change directly (0/3 -> 2/3
+  diagonal), the first cycle where the pre-filter was not blind. Study 2
+  (Spider-Verse trailer): 89% of frames name >=2 in-world light sources —
+  the layered-environmental-light refinement of gated rule 7 — A/B
+  0.67/3-of-3/0.67. Acquisition boundary honoured: official promotional
+  material only, analyzed locally, frames never become generation references.
+- 2026-08-31 (third session) — OPERATOR FINDING, method-level: the corpus-study
+  cycles missed their purpose. Dozens of annotated frames must not collapse
+  into one clause-sized A/B. The study yield contract is now THREE LANES, all
+  owed per study: (1) STYLES — run the Extract engine over the frame set
+  (`extract.mts <folder> --slug ...`; queued for spiderverse-atsv next window,
+  it spends imaging budget); (2) the BEAT MAP — dojo_study.py now emits
+  `_beat_map` (technique distributions per cut position); spiderverse facts:
+  eye-level monopolizes the setup (16/16), angle drama appears only at
+  peak/tail, diagonal density doubles toward the tail, the build flips
+  high-key; (3) A/B claims — verification instrument only, never the whole
+  yield. A study report must say what each lane produced or why it is empty.
+- 2026-08-31 (third session, video window): first 8 Wan clips rendered clean,
+  0 failures, ~6 min/clip. Two protocol lessons the next video cycle inherits:
+  (1) the blind brief must carry EACH PAIR'S authored motion intent - a global
+  'one readable move' standard punishes authored near-stillness; (2) serial
+  continuity must be written as VISUAL clauses only - editorial meta-language
+  ('shot 2 of the sequence', 'cut from the pier') gets drawn, and the model
+  paints the world it was told it cut away from.

@@ -62,7 +62,7 @@ def gemini(model, claim, cdir, pid, a_arm):
         return json.loads(json.load(resp)["candidates"][0]["content"]["parts"][0]["text"])
 
 
-def prepare(cdir):
+def prepare(cdir, no_gemini=False):
     spec = json.loads((cdir / "gen-spec.json").read_text(encoding="utf-8"))
     rb = json.loads((cdir / "readbacks.json").read_text(encoding="utf-8"))
     cycle = json.loads((cdir / "cycle.json").read_text(encoding="utf-8"))
@@ -71,16 +71,25 @@ def prepare(cdir):
     work, blind, gem = [], [], {}
     for p in spec["pairs"]:
         pid = p["id"]
-        if not all((cdir / "pairs" / f"{pid}--{arm}.png").exists() for arm in ("baseline", "challenger")):
+        video = (cdir / "pairs" / f"{pid}--baseline.webm").exists()
+        ext = ".webm" if video else ".png"
+        if not all((cdir / "pairs" / f"{pid}--{arm}{ext}").exists() for arm in ("baseline", "challenger")):
             print(f"  skip {pid}: incomplete duo", flush=True)
             continue
-        w = {"id": pid, "seed": p["seed"],
+        w = {"id": pid, "seed": p.get("seed"),
              "choke_A": rng.choice(["baseline", "challenger"]),
              "gem_A": rng.choice(["baseline", "challenger"]),
              "readback": {arm: rb.get(f"{pid}--{arm}", {}) for arm in ("baseline", "challenger")}}
+        if video:
+            for arm in ("baseline", "challenger"):
+                w[f"{arm}_ref"] = {"file": f"pairs/{pid}--{arm}.webm", "kind": "video",
+                                   "poster": f"pairs/{pid}--{arm}--t1.png"}
         work.append(w)
         a, b = w["choke_A"], ("challenger" if w["choke_A"] == "baseline" else "baseline")
         blind.append({"pair": pid, "A": w["readback"][a], "B": w["readback"][b]})
+        if no_gemini:
+            gem[pid] = {"skipped": "operator: no gemini this dimension"}
+            continue
         got = None
         for attempt, model in enumerate(MODELS):
             try:
@@ -118,24 +127,28 @@ def park(cdir, choke_path):
     for w in work:
         pid = w["id"]
         cj = unblind(choke[pid]["pick"], w["choke_A"])
-        gj = unblind(gem[pid].get("pick", "tie"), w["gem_A"])
+        skipped = "skipped" in gem.get(pid, {})
+        gj = None if skipped else unblind(gem[pid].get("pick", "tie"), w["gem_A"])
         ch += cj == "challenger"
         gch += gj == "challenger"
-        if cj != "tie" and gj != "tie":
+        if gj is not None and cj != "tie" and gj != "tie":
             ad += 1
             an += cj == gj
-        pairs.append({"id": pid, "scene": pid.rsplit("-s", 1)[0], "seed": w["seed"],
-                      "baseline": {"file": f"pairs/{pid}--baseline.png", "kind": "image"},
-                      "challenger": {"file": f"pairs/{pid}--challenger.png", "kind": "image"},
-                      "judge_pick": cj, "reason": choke[pid]["reason"],
-                      "gemini_pick": gj, "gemini_reason": gem[pid].get("reason", gem[pid].get("error", ""))})
+        row = {"id": pid, "scene": pid.rsplit("-s", 1)[0], "seed": w["seed"],
+               "baseline": w.get("baseline_ref", {"file": f"pairs/{pid}--baseline.png", "kind": "image"}),
+               "challenger": w.get("challenger_ref", {"file": f"pairs/{pid}--challenger.png", "kind": "image"}),
+               "judge_pick": cj, "reason": choke[pid]["reason"]}
+        if gj is not None:
+            row["gemini_pick"] = gj
+            row["gemini_reason"] = gem[pid].get("reason", gem[pid].get("error", ""))
+        pairs.append(row)
         print(f"  {pid:28s} choke={cj:10s} gemini={gj}", flush=True)
     rate = ch / len(pairs) if pairs else 0.0
     agr = (an / ad) if ad else None
     cy = json.loads((cdir / "cycle.json").read_text(encoding="utf-8"))
     imp = cy["improvements"][0]
     imp["pairs"] = pairs
-    best = next((x for x in pairs if x["judge_pick"] == "challenger" and x["gemini_pick"] == "challenger"), None)
+    best = next((x for x in pairs if x["judge_pick"] == "challenger" and x.get("gemini_pick", "challenger") == "challenger"), None)
     imp["thumbnail"] = (best or pairs[0])["challenger"]["file"]
     cy["status"] = "awaiting-gate"
     cy.pop("lease", None)
@@ -155,7 +168,7 @@ if __name__ == "__main__":
     if not cdir.is_absolute():
         cdir = ROOT / cdir
     if cmd == "prepare":
-        prepare(cdir)
+        prepare(cdir, no_gemini="--no-gemini" in sys.argv)
     elif cmd == "park":
         park(cdir, sys.argv[3])
     else:
