@@ -230,3 +230,12 @@ tracking the human better, and record the decision here):
   (generation) still bill Google — the local Flux 2 lane exists only outside
   the router (forge/dojo), and folding it in is a declared seam, not done.
   `pipeline/foundry/prove-local-eye.mts` re-proves the wiring in one command.
+- 2026-09-01 (third session) — TRANSFER VERIFIED on the google stack: the two
+  unanimous Flux-gated rules re-run on Nano Banana with identical prompts
+  (k=2 repeats/arm, no seed on the API) both held at 0.75 pick rate —
+  what-stays-dark 3/4 + counted-beats 3/4-with-1-tie, ~$1.62 total. The
+  reflection branch's rules stand stack-agnostic pending the gate. One retry
+  lesson: the NB runner's first invocation crashed in Node teardown
+  (UV_HANDLE_CLOSING assert after run completion of nothing); the runner is
+  resumable and the second pass recovered everything — treat one silent early
+  exit per chain as ordinary, same as the ComfyUI races.
