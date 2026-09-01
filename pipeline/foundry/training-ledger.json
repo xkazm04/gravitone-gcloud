@@ -25,6 +25,32 @@
       "gemini_agreement": 0.5,
       "reflected": "not-better:no-edit",
       "at": "2026-08-30T15:02:47.830Z"
+    },
+    {
+      "cycle": "2026-08-31-study-diagonal",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "corpus-study:diagonal-placement",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 0.6666666666666666,
+      "gemini_agreement": 0.6666666666666666,
+      "thumb": "pipeline/foundry/training/thumbs/2026-08-31-study-diagonal--imp-1.png",
+      "reflected": false,
+      "at": "2026-08-31T18:10:44.883Z"
+    },
+    {
+      "cycle": "2026-08-31-study-light-layers",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "corpus-study:layered-environmental-light",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 0.6666666666666666,
+      "gemini_agreement": 0.6666666666666666,
+      "thumb": "pipeline/foundry/training/thumbs/2026-08-31-study-light-layers--imp-1.png",
+      "reflected": false,
+      "at": "2026-08-31T18:10:59.738Z"
     }
   ]
 }
