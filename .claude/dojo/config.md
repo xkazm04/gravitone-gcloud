@@ -186,3 +186,11 @@ tracking the human better, and record the decision here):
   recognitions rerouted to google because QWEN_API_KEY is unset - the video
   no-Gemini ban does not cover the imaging router's own routing) - cull in
   /foundry -> Extract. The three-lane study contract is now fully exercised.
+- 2026-09-01 (second session) — the imaging router grew a LOCAL provider:
+  `ollama` (recognition, qwen3.8:27b via OLLAMA_HOST) now leads the dev
+  recognize plan, cloud eyes demoted to trail-visible re-routes. Proven live
+  through the chokepoint: provider=ollama, $0.00, schema enforced. Extract
+  runs' `eyes` are now local wherever OLLAMA_HOST is set; `pixels`
+  (generation) still bill Google — the local Flux 2 lane exists only outside
+  the router (forge/dojo), and folding it in is a declared seam, not done.
+  `pipeline/foundry/prove-local-eye.mts` re-proves the wiring in one command.
