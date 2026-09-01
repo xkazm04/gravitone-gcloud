@@ -175,3 +175,14 @@ tracking the human better, and record the decision here):
   continuity must be written as VISUAL clauses only - editorial meta-language
   ('shot 2 of the sequence', 'cut from the pier') gets drawn, and the model
   paints the world it was told it cut away from.
+- 2026-09-01 — scheduled window: Phase 0 reflected the two approved study
+  cycles onto the review branch (diagonal placement joins SubjectPlacement;
+  rule 7 gains the environmental layer; both regression-pinned @ 1dfce8f).
+  Cycle 1 (video, serial-visual-only): the meta-language hypothesis LOST on
+  the new seed (0.00) after winning-shaped evidence the day before - serial
+  world drift looks seed-dominated; the claim needs >=4 seeds per arm before
+  another cycle, filed as a demand note. Cycle 2 (styles lane): the Extract
+  engine over the spiderverse gallery yielded 7 styles (~$1 imaging spend;
+  recognitions rerouted to google because QWEN_API_KEY is unset - the video
+  no-Gemini ban does not cover the imaging router's own routing) - cull in
+  /foundry -> Extract. The three-lane study contract is now fully exercised.
