@@ -80,7 +80,11 @@ const PLAN: Record<ImagingEnv, Record<Capability, ProviderId[]>> = {
     // $0, nothing leaves the box) leads wherever OLLAMA_HOST is set; the
     // cloud eyes stay as re-route targets, so a box without a daemon keeps
     // working and the elimination lands in `trail` like every other skip.
-    recognize: ["ollama", "qwen", "google"],
+    // Qwen CLOUD removed from the plan entirely (operator, 2026-09-01): the
+    // local eye covers the capability at $0, and a cloud rung nobody wants
+    // billed is not a fallback, it is a surprise. The adapter stays for the
+    // day a steer or another deployment genuinely needs it.
+    recognize: ["ollama", "google"],
   },
   prod: {
     generate: ["google"],

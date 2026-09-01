@@ -11,7 +11,25 @@ engine turn itself (`pipeline/vlm-probe/guard.py` starts/recycles ComfyUI and
 enforces the one-engine-at-a-time rule) — the runner template never starts
 ComfyUI by hand.
 
-### image
+### image — MODEL POLICY (operator, 2026-09-01)
+
+**A dojo cycle trains the engine the product ships.** The product's pixels are
+Nano Banana 2 (`gemini-3.1-flash-image`) through `lib/imaging/router`; its
+eyes are the local ollama provider. Therefore:
+
+- **Flux 2 is BANNED from dojo cycles.** It is the forge's lab instrument for
+  style-recipe experiments; recipes gated against it transfer to the product
+  engine unproven (the 08-30/08-31 image cycles carry this caveat).
+- **Qwen cloud is BANNED** and removed from the router's dev plan; the local
+  eye serves recognition at $0.
+- Image A/B runner: `npx tsx pipeline/foundry/dojo-pairs-nb.mts <cycle-dir>`
+  — generation and readback both through the chokepoint, so budget metering,
+  provenance and reroutes apply exactly as in the app. **No seed on Google's
+  API (measured)**: the control is `repeats` per arm (default 3), judged as
+  distributions, never one roll against another. Proven live 2026-09-01:
+  pixels google/$0.045-per-image, eyes ollama/$0.
+
+### image (forge — style-recipe lab only)
 
 One plan in, a graded candidate grid out. Dojo writes a plan crossing the
 baseline and challenger recipes over the scene roster with the fixed seed
@@ -42,6 +60,19 @@ Baseline prompts for shot-based cycles come from the LIVE compiler:
 `shotPrompt.actionFor` + `compilePrompt` output, never a retyped copy.
 
 ### video (opened 2026-08-31)
+
+**Why Wan and not MiniMax H3, despite the repo's own large H3 exercises**
+(vlm-probe consistency + motion spikes; ref2va identity 0.1887 across hard
+cuts vs 0.6262 chain drift — the checkpoints are on this disk): the
+registry's `generative-provider-routing/capability-to-vendor-plan` records
+that H3's Community License **excludes the EU from local deployment,
+including use of the outputs**, and this machine is in the EU. The same row
+names Wan 2.2 (Apache-2.0) as the local plan that survives the license
+check. H3's PROTOCOL knowledge carries over regardless of engine — lengths
+must be congruent to 5 mod 17, reference-conditioning beats last-frame
+chaining across cuts, `<Picture N>` tags or the reference is ignored — and
+H3's hosted API (~$0.08-0.13/s) is the lawful route if its quality is ever
+worth the bill; that is an operator decision, not the loop's.
 
 Wan 2.2 TI2V 5B via ComfyUI (`pipeline/foundry/dojo_video.py`), 848x480x121
 (~5s @24fps), seed-matched t2v duos, same gen-spec shape as the pair runner
