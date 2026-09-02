@@ -251,3 +251,13 @@ tracking the human better, and record the decision here):
   librarian/sources/2026-09-01-colibri-glm53-experiment.md. If the lane
   earns its place it enters the LOCAL stack as a third eye tier (bulk =
   qwen3.8:27b, deep = glm53) — never a bulk annotator.
+- 2026-09-02 — scheduled window, two cycles parked. serial-3seeds closed the
+  meta-language question: 3-3 at three seeds, failures identical in both arms
+  (figures absent, interiors missed) — phrasing is not the lever for serial
+  continuity on Wan-5B t2v; the successor is the H3 ref2va lane (reference
+  conditioning), which the NEXT video window should build (dojo_video_h3
+  runner from motion.py's graphs). setup-eye-level (google stack, from the
+  beat map): 0.67 for eye-level-as-peer at SETUP beats — approve = the
+  attitude vocabulary becomes peak/rung-gated, a beat-position refinement of
+  our own 08-30 reflection. Both cycles ran in PARALLEL (GPU + vendor API),
+  which fits inside one window cleanly.
