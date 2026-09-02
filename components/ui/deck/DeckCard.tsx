@@ -127,7 +127,7 @@ export default function DeckCard({
       {spec.chips.map((c) => (
         <span
           key={c.label}
-          className={`font-jetbrains rounded border px-1.5 py-0.5 text-[10px] tracking-[0.1em] ${CHIP_TONE[c.tone ?? "neutral"]}`}
+          className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.1em] ${CHIP_TONE[c.tone ?? "neutral"]}`}
         >
           {c.label}
         </span>
@@ -135,10 +135,10 @@ export default function DeckCard({
     </div>
   );
   const riskLine = spec.risk && (
-    <p className="font-jetbrains text-[11px] leading-relaxed text-amber-200/85">risk — {spec.risk}</p>
+    <p className="font-jetbrains text-label leading-relaxed text-amber-200/85">risk — {spec.risk}</p>
   );
   const footnoteLine = spec.footnote && (
-    <p className="font-jetbrains mt-auto pt-1 text-[10px] text-white/30">{spec.footnote}</p>
+    <p className="font-jetbrains mt-auto pt-1 text-label text-white/30">{spec.footnote}</p>
   );
 
   return (
@@ -212,7 +212,7 @@ export default function DeckCard({
                 </span>
               )}
               {spec.eyebrow && (
-                <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">
+                <span className="font-jetbrains text-label tracking-[0.16em] text-white/35 uppercase">
                   {spec.eyebrow}
                 </span>
               )}
@@ -245,7 +245,7 @@ export default function DeckCard({
                   data-testid={`deck-more-${spec.id}`}
                   aria-expanded={open}
                   onClick={() => setOpen((o) => !o)}
-                  className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] transition ${
+                  className={`font-jetbrains rounded-full border px-3 py-1 text-label transition ${
                     open
                       ? "border-cyan-400/40 text-cyan-200"
                       : "border-white/12 text-white/50 hover:text-white/80"
@@ -259,13 +259,13 @@ export default function DeckCard({
         ) : (
           <div className="flex grow flex-col gap-2 p-4">
             {spec.eyebrow && (
-              <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">
+              <span className="font-jetbrains text-label tracking-[0.16em] text-white/35 uppercase">
                 {spec.eyebrow}
               </span>
             )}
             <h3 className="font-instrument text-xl leading-snug text-slate-100">{spec.title}</h3>
             {spec.body && (
-              <p className="font-hanken line-clamp-3 text-[13px] leading-relaxed text-slate-400 transition-colors duration-200 ease-linear group-hover:text-slate-200">
+              <p className="font-hanken line-clamp-3 text-content leading-relaxed text-slate-400 transition-colors duration-200 ease-linear group-hover:text-slate-200">
                 {spec.body}
               </p>
             )}

@@ -94,7 +94,7 @@ export default function ProjectsView() {
           <button
             type="button"
             onClick={() => setDialog({ open: true, project: null })}
-            className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-[11px] text-white/45 transition hover:border-white/25 hover:text-white/75"
+            className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-label text-white/45 transition hover:border-white/25 hover:text-white/75"
           >
             quick create — the expert form
           </button>
@@ -108,7 +108,7 @@ export default function ProjectsView() {
             </p>
             <Link
               href="/library"
-              className="font-jetbrains shrink-0 rounded-lg border border-amber-300/40 px-3 py-1.5 text-[12px] text-amber-100 transition hover:bg-amber-300/10"
+              className="font-jetbrains shrink-0 rounded-lg border border-amber-300/40 px-3 py-1.5 text-label text-amber-100 transition hover:bg-amber-300/10"
             >
               make one in the library →
             </Link>
@@ -123,7 +123,7 @@ export default function ProjectsView() {
 
         <section className="mt-6">
           {loading ? (
-            <p className="font-jetbrains py-16 text-center text-[12px] tracking-[0.18em] text-white/30 uppercase">
+            <p className="font-jetbrains py-16 text-center text-label tracking-[0.18em] text-white/30 uppercase">
               reading the shelf…
             </p>
           ) : (

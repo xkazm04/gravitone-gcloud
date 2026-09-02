@@ -55,7 +55,7 @@ function VerdictCounts({ report, checks }: { report: GateReport; checks: ScriptR
   const fails = n("fail");
   const unmeasuredChecks = n("unmeasured");
   return (
-    <p className="font-jetbrains mt-auto pt-1 text-[10px] leading-relaxed text-white/40">
+    <p className="font-jetbrains mt-auto pt-1 text-label leading-relaxed text-white/40">
       gate: <span className="text-white/70">{report.enforced}% enforced</span>
       {" · "}
       <span className="text-emerald-300">{report.passes} checked</span>
@@ -78,7 +78,7 @@ function VerdictCounts({ report, checks }: { report: GateReport; checks: ScriptR
 
 /* ── one card's content block ────────────────────────────────────────────── */
 
-const CHIP = "font-jetbrains rounded border px-1.5 py-0.5 text-[10px] tracking-[0.1em]";
+const CHIP = "font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.1em]";
 
 function DuelCardBody({
   render: r,
@@ -121,7 +121,7 @@ function DuelCardBody({
 
   return (
     <div className="flex grow flex-col gap-2 p-4">
-      <span className="font-jetbrains text-[10px] tracking-[0.16em] text-white/35 uppercase">
+      <span className="font-jetbrains text-label tracking-[0.16em] text-white/35 uppercase">
         {r.engineLabel}
       </span>
       <h3 className="font-instrument text-xl leading-snug text-slate-100">{r.title}</h3>
@@ -129,7 +129,7 @@ function DuelCardBody({
         <ul className="space-y-1">
           {arc.map(({ word, beat }) => (
             <li key={word} className="font-hanken flex gap-2 text-[12.5px] leading-snug">
-              <span className="font-jetbrains shrink-0 pt-px text-[10px] tracking-[0.1em] text-white/35 uppercase">
+              <span className="font-jetbrains shrink-0 pt-px text-label tracking-[0.1em] text-white/35 uppercase">
                 {word}
               </span>
               <span className="text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
@@ -144,12 +144,12 @@ function DuelCardBody({
           {chain.length} beats · {mmss(r.durationS)}
         </span>
       </div>
-      <p className="font-jetbrains text-[11px] leading-relaxed text-amber-200/85">
+      <p className="font-jetbrains text-label leading-relaxed text-amber-200/85">
         risk — {r.weakness}
       </p>
 
       {picked && (
-        <p data-testid={`duel-adopted-${r.id}`} className="font-jetbrains text-[11px] text-cyan-200/90">
+        <p data-testid={`duel-adopted-${r.id}`} className="font-jetbrains text-label text-cyan-200/90">
           adopted — the Frames step opens on this chain
         </p>
       )}
@@ -167,7 +167,7 @@ function DuelCardBody({
             {/* The pitch and its fit moved here from the front (operator's
                 verdict): they are the render's self-description, and the
                 front's job is the CONTENT — the arc bullets above. */}
-            <p className="font-hanken text-[13px] leading-relaxed text-slate-400">
+            <p className="font-hanken text-content leading-relaxed text-slate-400">
               pleasure: {r.pleasure}. Reads like {r.feelsLike}.
             </p>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -187,7 +187,7 @@ function DuelCardBody({
                 aboveNote="above the band, no conclusion stands long enough to matter"
               />
             ) : (
-              <p className="font-jetbrains text-[11px] text-white/35">
+              <p className="font-jetbrains text-label text-white/35">
                 turns — n/a for this engine (
                 {r.engine === "adjudication" ? "candidates, not turns" : "one turn by construction"})
               </p>
@@ -198,12 +198,12 @@ function DuelCardBody({
               band={[Math.round(r.wordBudget * 0.9), r.wordBudget]}
               aboveNote="over the budget the duration bought"
             />
-            <p className="font-jetbrains text-[11px] text-white/45">
+            <p className="font-jetbrains text-label text-white/45">
               {mmss(r.durationS)} at {r.wpm} wpm · promise form: {r.promiseForm} · {r.questionsAloud}{" "}
               question{r.questionsAloud === 1 ? "" : "s"} aloud
             </p>
             {rewritten && (
-              <p className="font-jetbrains text-[11px] leading-snug text-amber-200/70">
+              <p className="font-jetbrains text-label leading-snug text-amber-200/70">
                 words are counted from {chainLabel ?? "this version"}&rsquo;s own chain. Turns,
                 questions aloud and the promise form are the original render&rsquo;s and were not
                 re-measured.
@@ -225,7 +225,7 @@ function DuelCardBody({
           data-testid={`duel-more-${r.id}`}
           aria-expanded={open}
           onClick={onToggleOpen}
-          className={`font-jetbrains rounded-full border px-3 py-1 text-[11px] transition ${
+          className={`font-jetbrains rounded-full border px-3 py-1 text-label transition ${
             open ? "border-cyan-400/40 text-cyan-200" : "border-white/12 text-white/50 hover:text-white/80"
           }`}
         >
@@ -236,7 +236,7 @@ function DuelCardBody({
             type="button"
             data-testid={`duel-beats-${r.id}`}
             onClick={onReadBeats}
-            className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-[11px] text-white/50 transition hover:border-cyan-400/40 hover:text-cyan-200"
+            className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label text-white/50 transition hover:border-cyan-400/40 hover:text-cyan-200"
           >
             read the beats
           </button>
