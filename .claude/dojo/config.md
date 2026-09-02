@@ -251,3 +251,26 @@ tracking the human better, and record the decision here):
   librarian/sources/2026-09-01-colibri-glm53-experiment.md. If the lane
   earns its place it enters the LOCAL stack as a third eye tier (bulk =
   qwen3.8:27b, deep = glm53) — never a bulk annotator.
+- 2026-09-02 — TWO LOOPS ON ONE CARD IS NOT A CONVENTION PROBLEM, IT IS A
+  GUARD PROBLEM (eval run, cycle `2026-09-01-emblem-slot`, status failed).
+  Two dojo sessions ran against this box under an agreed lock DIRECTORY
+  (`.claude/dojo/.eval-gpu-lock`); the lock was honoured on paper and ignored
+  in effect — the other session launched `dojo-2026-09-02-serial-3seeds`
+  while the directory said `opus`, and this cycle spent 10h48m producing 2 of
+  12 renders (two `finished with no image` races and one 900s timeout, on a
+  card that renders these prompts in 110s when it is alone). The real
+  interlock is `pipeline/vlm-probe/guard.py`, which did the right thing and
+  REFUSED to recycle ComfyUI out from under the other job. Consequences for
+  the next session: (1) the skill's "one dojo loop per machine" rail is the
+  operative rule and an out-of-band lock file does not implement it —
+  guard.py's run-id registry does; (2) before a long pass, read
+  `guard.comfy_process_ids()` / the running job's run-id and refuse to START
+  when a foreign run-id holds the engine, rather than discovering it at the
+  first recycle 12 minutes in; (3) a render that takes >3x its measured
+  per-unit time is contention, not a bad seed — abort the pass and re-check
+  the engine owner instead of letting the 900s timeout burn a unit.
+- 2026-09-02 — `dojo-shot-prompts.mts` output redirected with PowerShell `>`
+  is written UTF-8 **with BOM**, and `json.load` refuses it
+  (`Unexpected UTF-8 BOM`). Read the live-compiler output with
+  `encoding='utf-8-sig'` when building `gen-spec.json`, or write it from
+  Node instead of redirecting.
