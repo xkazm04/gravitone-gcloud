@@ -29,3 +29,4 @@
 {"ts": "2026-09-02T07:52:21Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["camera-position-semantics"], "deviations": 0}
 {"ts": "2026-09-02T08:13:45Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["scene-grammar-progression"], "deviations": 0}
 {"ts": "2026-09-02T08:14:15Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["scene-grammar-progression"], "deviations": 1}
+{"ts": "2026-09-01T20:59:31Z", "bundle": "media-generation", "subjects": ["visual-style-locking"], "techniques": ["style-block-restated-every-call"], "deviations": 0}
