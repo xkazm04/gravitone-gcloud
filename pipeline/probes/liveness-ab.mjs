@@ -30,7 +30,7 @@ function run(policy, name) {
     const t0 = Date.now();
     const child = spawn(process.execPath, ["-e", CHILDREN[name]], { stdio: ["ignore", "pipe", "ignore"] });
     let firstByte = null, bytes = 0, verdict = null;
-    const end = (v) => { if (verdict) return; verdict = v; try { child.kill(); } catch {} resolve({ policy, name, verdict: v, ms: Date.now() - t0, bytes }); };
+    const end = (v) => { if (verdict) return; verdict = v; try { child.kill(); } catch { /* already gone - the verdict stands either way */ } resolve({ policy, name, verdict: v, ms: Date.now() - t0, bytes }); };
     const ceiling = setTimeout(() => end("killed-by-ceiling"), CEILING);
     let startup = null, activity = null;
     if (policy === "B") {
