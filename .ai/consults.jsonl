@@ -31,3 +31,6 @@
 {"ts": "2026-09-02T08:14:15Z", "bundle": "media-generation", "subjects": ["cinematic-language"], "techniques": ["scene-grammar-progression"], "deviations": 1}
 {"ts": "2026-09-01T20:59:31Z", "bundle": "media-generation", "subjects": ["visual-style-locking"], "techniques": ["style-block-restated-every-call"], "deviations": 0}
 {"ts": "2026-09-02T08:10:00Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["shape-language-over-nouns"], "deviations": 2}
+{"ts": "2026-09-03T07:29:54Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["reference-shows-only-invariants"], "deviations": 0}
+{"ts": "2026-09-03T07:29:54Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["prompt-dialect-matching"], "deviations": 1}
+{"ts": "2026-09-03T10:52:09Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["reference-shows-only-invariants:ref2va-lane"], "deviations": 0}

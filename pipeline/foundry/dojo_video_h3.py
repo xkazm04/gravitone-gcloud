@@ -65,9 +65,10 @@ def main():
         if guard.foreign_job():
             raise SystemExit(f"runner: busy — foreign job on the engine: {guard.foreign_job()}")
         guard.require(ram_gb=0, free=["ollama"], verbose=False)
-        if guard.comfy_process_ids():
-            guard.recycle_comfy("fresh engine for dojo serial lanes")
-        elif not guard.start_comfy():
+        # A warm engine is kept, not recycled: the H3 first-load costs ~70 min
+        # on this box (measured 2026-09-03), so a resumed fill pass must reuse
+        # it. The engine-switch and headroom recycles below still fire.
+        if not guard.comfy_process_ids() and not guard.start_comfy():
             raise SystemExit("ComfyUI is not running and could not be started")
         current_engine = None
         staged = {}
@@ -94,7 +95,8 @@ def main():
                                             steps=4, prefix=f"dojo-{cdir.name}")
             t0 = time.time()
             try:
-                vid = generate_video(wf)
+                # H3's first-load pays ~70 min once; warm clips are minutes.
+                vid = generate_video(wf, timeout=5400 if engine != "wan" else 1800)
             except Exception as e:  # noqa: BLE001
                 print(f"  [{n}/{len(todo)}] {p['id']}--{arm} FAILED: {str(e)[:90]}", flush=True)
                 if not guard.recycle_comfy("after failure"):

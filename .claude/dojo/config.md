@@ -286,3 +286,21 @@ tracking the human better, and record the decision here):
   (`Unexpected UTF-8 BOM`). Read the live-compiler output with
   `encoding='utf-8-sig'` when building `gen-spec.json`, or write it from
   Node instead of redirecting.
+- 2026-09-03 — the ref2va bake-off (truncated by operator at 1 sequence):
+  H3 ref2va beat wan t2v 2/2 on figure presence, staging obedience and
+  identity carry - reference conditioning is confirmed as the serial lane's
+  direction. Measured cost on THIS box: ~60 min per 3s clip (2 clips + load
+  = ~3.2 h), because H3 wants ~62 GB free host RAM and Wolf has ~28 -
+  expert paging is the whole bill. THE HARDWARE LEVER: a RAM upgrade to
+  128 GB would put H3 at its ~5 min/clip rate and lift the GLM-5.3 eye's
+  cache too; until then the H3 lane is for one-sequence proofs, not cycles.
+  Runner lessons now in code: warm engines are never recycled on resume
+  (H3 first-load ~70 min), H3 timeouts are 90 min, the owner interlock
+  correctly refuses even our own orphans (kill your own orphan explicitly
+  before a fill pass).
+- 2026-09-03 — GLM-5.3-Flash keep/drop (operator decision recorded): KEEP.
+  Grounds: 245 GB still free WITH the 195 GB resident - the model is affordable; the n=1
+  quality preview was a class jump (palette roles unprompted); re-acquiring
+  costs ~10 h. Condition: the CUDA build gate gets one attempt within a
+  week - if it fails or slips, delete the weights and keep the findings
+  (re-download exists). The scored 5-frame protocol stays pre-registered.
