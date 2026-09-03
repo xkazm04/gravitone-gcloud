@@ -314,3 +314,8 @@ tracking the human better, and record the decision here):
   readback stays the GRADING instrument; the deep read is the SEEING one.
   Recommendation recorded: drop the GLM weights (frees 195 GB, findings
   kept, ~10 h to re-acquire if ever needed) - deletion left to the operator.
+- 2026-09-03 (third session) — 321B cleanup executed per operator: GLM weights
+  and the colibri clone deleted (407 GB free), glm53_eye_test.py removed. The
+  image-recognition eye is qwen3.8:27b, period: enum readback for grading,
+  DEEP-READ-PROMPT.md for seeing. The colibri evaluation survives only as
+  registry knowledge and the taught prompt.
