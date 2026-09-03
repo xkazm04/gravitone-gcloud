@@ -88,6 +88,27 @@ const BASE = process.env.GOOGLE_TEXT_BASE_URL?.trim() || "https://generativelang
  * `gemini-3.7-flash` is the newest flash and is left out for today: a 503 under
  * load is a bad property for the only engine a hosted deployment has. Promote it
  * by editing this table and re-running the pass, not by assuming it settled.
+ *
+ * 2026-09-02 — `gemini-3.8-flash` shipped and is NOT promoted here, deliberately,
+ * under that same rule: no pass has been run against it with this repo's key, and
+ * this table's ids are a measurement with a date rather than a guess. The pass is
+ * OWED, and it is cheap; what it has to answer is two things, not one.
+ *
+ *   1. Did the 503 follow the version? The property that disqualified 3.7 was
+ *      capacity under load, which is not a property a version bump necessarily
+ *      carries either way. It has to be observed.
+ *   2. What is the thoughts ratio? The vendor states 3.8 "works harder" — extra
+ *      reasoning steps and iterative tool calls, at the API default of
+ *      thinking_level=high — at the SAME per-token price as 3.7. Since this
+ *      adapter bills thoughtsTokenCount as output (see below: 3.6 measured 345
+ *      thinking tokens against a 27-token answer, 12.8x), an unchanged rate does
+ *      not mean an unchanged bill. Re-measure the ratio in the same pass; it is
+ *      the number that decides whether 3.8 is cheaper or dearer HERE, and the
+ *      vendor's own advice for efficiency-first work is to stay on the older id.
+ *
+ * lib/text/pricing.ts already carries a priced 3.8 row so that promotion is an
+ * edit to a table that knows the rate, and records that the rate is introductory
+ * and doubles on 2027-01-01.
  */
 const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   "edit-plan": process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",

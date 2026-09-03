@@ -107,6 +107,30 @@ const PRICES: TextModelPrice[] = [
       "so the 503 is recorded rather than rediscovered.",
     checked: "2026-08-27",
   },
+  {
+    provider: "google",
+    model: "gemini-3.8-flash",
+    usdPerMInput: 0.75,
+    usdPerMOutput: 3.75,
+    source:
+      "NOT IN SERVICE HERE, BUT PRICED — the inverse of every other google row, and worth " +
+      "reading as such. Announced 2026-09-02 (blog.google, 'Introducing Gemini 3.8 Flash and " +
+      "3.8 Flash Cyber') and confirmed as the stable id `gemini-3.8-flash` on ai.google.dev's " +
+      "model list the same day. The rate is the vendor's OWN published figure, not a guess, " +
+      "which is why this row may carry one while the in-service 3.6 row still may not. " +
+      "IT IS INTRODUCTORY AND DATED: 0.75/3.75 runs through 2026-12-31 and DOUBLES to " +
+      "1.50/7.50 on 2027-01-01, per the announcement's own footnote — so this row is wrong " +
+      "from that date and must be re-checked before then, not merely re-verified after. " +
+      "NOT promoted into MODEL_FOR_TURN: providers/google.ts says a newer flash is promoted by " +
+      "re-running the live pass, not by assuming it settled, and that pass has not been run " +
+      "against 3.8 with this repo's key. Two things to expect when it is. The 503 that " +
+      "disqualified 3.7 was a capacity property and may or may not have followed the version. " +
+      "And the vendor states 3.8 'works harder' — extra reasoning steps and iterative tool " +
+      "calls at the API default of thinking_level=high — so the thoughts multiplier this repo " +
+      "already measures (12.8x the answer on 3.6) should be re-measured, not assumed carried " +
+      "over: at an unchanged per-token rate that ratio is the whole cost story.",
+    checked: "2026-09-02",
+  },
 ];
 
 /**
