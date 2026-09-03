@@ -304,3 +304,13 @@ tracking the human better, and record the decision here):
   costs ~10 h. Condition: the CUDA build gate gets one attempt within a
   week - if it fails or slips, delete the weights and keep the findings
   (re-download exists). The scored 5-frame protocol stays pre-registered.
+- 2026-09-03 (second session) — STANDING CONSTRAINT, operator-declared: 64 GB
+  RAM is final on Wolf; every future cycle plans within ~28 GB free host RAM.
+  Consequences: H3 = one-sequence proofs only (~60 min/clip stands); no lane
+  may assume a RAM upgrade. And the 321B eye's value COLLAPSED INTO A
+  PROMPT: the taught deep-read (pipeline/foundry/DEEP-READ-PROMPT.md) pulls
+  GLM-class craft description from local qwen3.8:27b at 25 s/$0 (3-frame A/B
+  in foundry-out/training/_shared/taught-eye-results.json). The enum
+  readback stays the GRADING instrument; the deep read is the SEEING one.
+  Recommendation recorded: drop the GLM weights (frees 195 GB, findings
+  kept, ~10 h to re-acquire if ever needed) - deletion left to the operator.
