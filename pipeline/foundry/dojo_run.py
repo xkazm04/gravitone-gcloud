@@ -28,6 +28,7 @@ ROOT = HERE.parent.parent
 RUNNERS = {
     ("local", "image"): [sys.executable, str(HERE / "dojo_pairs.py")],
     ("local", "video"): [sys.executable, str(HERE / "dojo_video.py")],
+    ("local", "video-serial-lanes"): [sys.executable, str(HERE / "dojo_video_h3.py")],
     ("google", "image"): ["npx", "tsx", str(HERE / "dojo-pairs-nb.mts")],
 }
 
@@ -39,6 +40,8 @@ def main():
     spec = json.loads((cdir / "gen-spec.json").read_text(encoding="utf-8"))
     stack = spec.get("stack")
     media = spec.get("media", "image")
+    if media == "video" and any(a.get("engine") for pr in spec.get("pairs", []) for a in (pr.get("baseline", {}), pr.get("challenger", {}))):
+        media = "video-serial-lanes"
     if stack not in ("local", "google"):
         raise SystemExit(
             f"gen-spec.json declares stack={stack!r} — a cycle names 'local' or 'google' "
