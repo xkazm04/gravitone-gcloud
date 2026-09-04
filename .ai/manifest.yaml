@@ -25,6 +25,14 @@ repo:
 capabilities:
   # package.json scripts
   dev: { command: "npm run dev", verified: false }
+  # The same dev server with source-location stamping on: a Turbopack loader writes each host
+  # element's `app/.../File.tsx:LINE:COL` into the DOM as `data-loc`, and the overlay in
+  # app/_dev-inspector/ copies it on right-click (`;` then `i` to arm). It is how a human points an
+  # agent at the file behind a pixel. Runs on its own dist dir (.next-inspect) so it can sit beside
+  # a plain `npm run dev` and never shares its Turbopack cache. Verified 2026-08-30: server-rendered
+  # HTML for `/` carried 45 stamps resolving to real source lines; a plain `npm run dev` and every
+  # build carry none.
+  dev-inspect: { command: "npm run dev:inspect", verified: true }
   build: { command: "npm run build", verified: false }
   start: { command: "npm run start", verified: false }
   check-notebook: { command: "npm run check:notebook", verified: false }

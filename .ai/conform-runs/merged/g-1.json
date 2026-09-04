@@ -1,0 +1,166 @@
+{
+  "worker": "g-1",
+  "project": "gravity",
+  "evaluatedAt": "2026-08-29",
+  "pairs": [
+    {
+      "context": "6bdc9182-5119-4439-86a4-14dcbaa274fd",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "conformant",
+      "evidence": "app/_phases/frames/frames.ts:221-232 — the ledger's holds, counts and states are all reductions over one clock (the beats), gaps and unknowns are drawn rather than defaulted, and the four techniques whose preconditions this step meets are all realized.",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:153 draws every row's hold from durationOf() over the beat clock, FramesAssembly.tsx:78/101-106 compute composed/unsourced/authored counts by reduction (useFrames.ts:492-504), and FramesAssembly.tsx:272-274 renders an unplaceable beat's hold as a dash rather than a number — the technique's table form of the surface, with no typed caption on it."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/FramesAssembly.tsx:189-194 gives 'refused' its own drawn state keyed off PlateState; useFrames.ts:196-249 keeps refused (this subject) apart from failed (this run) and FramesAssembly.tsx:132-137 states how many plates a stopped batch did not attempt; FramesAssembly.tsx:412-416 and LayerPanel.tsx:106-108 state the unbuilt render seam instead of offering a dead control; FramesStep.tsx:49-68 refuses to draw a ledger over an unreadable step."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:209-232 — one parser (secondsOf delegating to atSeconds, with the three silent-number failures it replaced recorded at :189-208) and durationOf folding over the current material, skipping unplaceable beats and returning null so absence draws a dash rather than a zero."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:125-149 types the cut's overlay layer as declarative data, and sceneSpec.ts:262-281 folds a direction pass in by naming properties — the plate is explicitly not cleared and the clip status is carried through, so everything unnamed is provably untouched; app/api/frames/route.ts:204-221 has the machine assistant emit composition changes, never pixels."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: this context holds no music lane and no cue list — spotting lives in app/_phases/score, and nothing under app/_phases/frames requests or places audio."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no clip in this context is placed against an audio mark. app/_phases/frames/frames.ts:99-106 FrameClip carries status and motion only — there is no offset to measure or correct."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no generative video model is reachable. app/_phases/frames/frames.ts:79-98 states the imaging client returns stills only and FrameClip.status can hold only 'not-started'; app/_phases/frames/shots.ts:62-69 records that no shot can reach an image provider at all. (The still-plate path does carry the sourcing doctrine anyway — model, cost and subject travel with the accepted plate at frames.ts:66-75.)"
+        },
+        {
+          "technique": "motion-plate-library",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no motion is rendered anywhere (frames.ts:79-98), so there is no plate to normalize, bank, or bind appearance onto at use time."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: there is no multi-shot generation call to condition. app/_phases/frames/useFrames.ts:216-222 issues one image request per frame with count: 1; no panel grid is built or attached."
+        }
+      ]
+    },
+    {
+      "context": "6bdc9182-5119-4439-86a4-14dcbaa274fd",
+      "subject": "evidence-bound-visuals",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_phases/frames/sceneSpec.ts:165 resolves a figure's fact id and never reads the fact's grade, so a low-confidence row draws with the same authority as a high-confidence one; and no element (arrow, loop) binds to a fact at all.",
+      "techniques": [
+        {
+          "technique": "figure-must-cite-a-fact",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:50-62 types the text layer by role and binds by identifier; sceneSpec.ts:163-166 enforces both rejecting checks (no factId on a figure, and a factId absent from this notebook); sceneSpec.ts:200-244 collects per beat rather than failing the batch; pipeline/FRAMES-SCENE-PROMPT.md:92-93 carries the prompt-side instruction behind the validator. Residual, not a violation of the rule as written: a human-added figure (useFrames.ts:286-296) reaches the canvas unbound and is marked (parts.tsx:323-327) and counted (useFrames.ts:498-501) rather than rejected — there is no published surface for it to reach."
+        },
+        {
+          "technique": "precision-limit-propagation",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:157-174 — the validator resolves the fact id and stops; the fact's grade never travels into the render. Fact carries confidence and confidenceNote (app/_phases/_shared/notebook/types.ts:86-90) and no rendering-constraint field at all, and useFrames.ts:422 ships confidence into the direction prompt while pipeline/FRAMES-SCENE-PROMPT.md never mentions it. Consequence: f-midtier-distribute (confidence 'low', its own note saying the window is unresolved and the original comparison arithmetically false) can be drawn as an exact figure over an accent bar, visually identical to a 'high' fact — certainty laundering with the citation intact."
+        },
+        {
+          "technique": "causal-arrow-discipline",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:35-48 — FrameElement has no fact binding, so the strongest claim in the vocabulary is the one mark on the frame nothing has to source; frames.ts:294-295 then seeds an accent arrow on every 'turn' beat and a loop (a compound causal claim, every leg asserting causation) on every 'movement' beat, from the beat's rhetorical kind alone. sceneSpec.ts:141-155 validates an element's kind and box and never asks what grades the relation. Consequence: the notebook already holds graded causal chains (ChainStep.evidence, app/_phases/_shared/notebook/types.ts:170-176) and the frame layer cannot consult them, so a correlation beat gets the arrowhead a mechanism beat earns."
+        },
+        {
+          "technique": "epistemic-draw-routing",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/useFrames.ts:224-233 — a returned plate goes straight to state 'ready' with no check for rendered text. Two of the technique's three enforcement points are welded in (the prompt compiler always appends NO_TEXT_CLAUSE, lib/stylePrompt.ts:42-43 and :61-63; subject language is shapes-not-nouns, frames.ts:319-338, and sceneSpec.ts:126-127 rejects a subject that asks for glyphs) — the missing one is the guarantee. The repo's own measurement says text leaked on 6 of 6 styles when named objects were requested (frames.ts:322-324), and a hasText grade exists elsewhere (app/library/AssetsBrowser.tsx:200), so a lettered plate composites unaudited on the production path."
+        },
+        {
+          "technique": "generous-strawman-rendering",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/frames.ts:238-249 and :294-298 — the script's structure names the to-be-reversed beats ('steelman', and whatever the 'turn' turns over), and nothing pairs a setup frame with its turn frame or withholds conclusion-grade marks from the setup; pipeline/FRAMES-SCENE-PROMPT.md:97-106 directs the arc and says nothing about it. Consequence: a setup frame can be directed with the full authority kit and, travelling alone as a thumbnail or a pause, reads as the piece's verdict on a position the piece refutes."
+        },
+        {
+          "technique": "performer-claims-need-a-person",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no synthetic performer is cast anywhere in this context. Plates are non-figurative shape compositions by construction (app/_phases/frames/frames.ts:325-338) and lib/stylePrompt.ts:48-51 excludes photorealism and photographs; no line in the model is delivered by a depicted person."
+        },
+        {
+          "technique": "screenshots-claim-a-record",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: nothing here generates an interface or platform screenshot. The plate prompt forbids text, labels, logos and watermarks unconditionally (lib/stylePrompt.ts:42-43, :48-51), which structurally excludes the chrome that makes a rendered interface assert a record."
+        },
+        {
+          "technique": "slots-claim-their-subjects",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no position in this context denotes a real named subject with a generated occupant. The one generated element is the plate, and subjectFor (app/_phases/frames/frames.ts:319-338) routes it off the beat's rhetorical role rather than its sentence, precisely so the picture carries shape and not named entities (FRAMES-SCENE-PROMPT.md:25-31) — the technique's own 'break the denotation' remedy, applied at the architecture rather than per asset. Every denoting position (figure, label) is code-drawn and fact-bound."
+        }
+      ],
+      "registryProposal": "figure-must-cite-a-fact is written entirely against a generator that forgets; this repo's second author is a human typing into a bound field (useFrames.ts:286-296), where a rejecting validator has nothing to reject and the honest instrument is a standing count that gates a step's reported state (useFrames.ts:533-541). The technique could name that second path and say the gate for it is a measured, surfaced count rather than a throw — currently the repo looks non-conformant on a path the technique never considered."
+    },
+    {
+      "context": "4322a53f-e895-4eef-b2e2-d599beb9e88b",
+      "subject": "video-assembly",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_studio/score.ts:224-235 — TIMELINE's startS/durS are typed constants that duplicate the scene and cue clocks the same file derives at :147-216, so the Cut and Score surfaces are two time authorities that agree by coincidence.",
+      "techniques": [
+        {
+          "technique": "multitrack-timeline-discipline",
+          "verdict": "deviation",
+          "evidence": "app/_studio/score.ts:224-235 — every TIMELINE block's startS/durS is hand-typed (t-v1 0/6, t-v2 6/7, t-v3 13/6 … t-m2 13/13) and reproduces exactly what sceneClock() (score.ts:147-154) and cuesFrom() (score.ts:189-216) already derive from SCENES in the same module; app/_studio/scenes.ts:15 types PROJECT.totalS as 31 rather than summing SCENES' targetS, and every percentage on both surfaces divides by it (app/_studio/projectParts.tsx:37-40, :43-58). Consequence: lengthen one scene and the Score surface's picture lane and cue spans move while the Cut's blocks, its ruler and its coverage arithmetic do not — the same scene sits in two places, and the file header at score.ts:98-105 celebrates removing exactly this defect from SPOTS one screen above where it survives."
+        },
+        {
+          "technique": "drift-correction",
+          "verdict": "deviation",
+          "evidence": "app/_phases/cut/CutTimeline.tsx:75 — the dialled-in correction lives in component useState and is never written back to TimelineClip.offsetMs (app/_studio/projectTypes.ts:57-59), which the technique names outright: a correction that lives only in a control's local state is un-reviewable and un-shippable. CutTimeline.tsx:232-235 states the seam honestly, so the consequence is bounded — the cut loses every sync decision on reload. Second gap on the same technique: only one offset per clip is expressible, so head-and-tail diagnosis is impossible and every sync error is silently treated as a constant offset. The rest of the protocol is realized — seeded from the stored value (:54-56), the picture moves with the number (:88, :145), snap-to-mark returns exactly zero (:219-226), and status is re-derived from the current offset (:91-92)."
+        },
+        {
+          "technique": "gap-and-refusal-honesty",
+          "verdict": "conformant",
+          "evidence": "app/_phases/cut/CutTimeline.tsx:152/164/176 draws missing blocks in place, dashed and captioned, with a legend naming the state; app/_phases/score/ScoreSpotting.tsx:279-284 prices the refusal on the clock and :67-69 opens the surface on it; the coverage line at :108-110 keeps scored / refused / unspotted apart as three reductions; and the no-phantom rule holds in four places — no playback copy (CutTimeline.tsx:257-260), the sync bench's own bound (:232-235), the unbuilt duck demoted to declaredNotPerformed (app/_studio/score.ts:41-52, rendered NOT PERFORMED at ScoreSpotting.tsx:242-247), and engineCredit refusing to name a vendor without a take's provenance (ScoreSpotting.tsx:47-61)."
+        },
+        {
+          "technique": "derived-turn-markers",
+          "verdict": "conformant",
+          "evidence": "app/_phases/cut/CutTimeline.tsx:38-45 — the act-two mark names its semantic source (the scene whose mood matches /turn/i), folds the durations before it, and returns null so a fixture with no turn draws no mark rather than a mark at zero; the field is annotated load-bearing where it lives (app/_studio/projectTypes.ts:27-29, app/_studio/scenes.ts:49). Residual: two matching scenes would silently take the first, which the technique's decision rules say to surface as a material defect."
+        },
+        {
+          "technique": "music-spotting-against-picture",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts:106-138 is a cue list where every cue carries a purpose sentence and an authored edge decision ('Tail rings 1.5s past picture — intended', :136); spans are derived from the picture rather than typed (:189-216), a refusal is a spotting outcome that reverts the region to labelled silence (ScoreSpotting.tsx:92-98, :279-284), the three states are summed as a design review (:108-110), and the music style block is restated on every call (score.ts:88-96). The one rule with no implementation — music ducking under the voice lane — is declared rather than claimed (score.ts:115), since this build has no mixing stage."
+        },
+        {
+          "technique": "cut-compiled-from-source",
+          "verdict": "conformant",
+          "evidence": "app/_studio/score.ts and app/_studio/scenes.ts hold the cut as a declarative composition and both surfaces are renders of it — there is no pixel-first edit to retrofit reproducibility onto. No compile seam exists because nothing renders video, which the surfaces state (CutTimeline.tsx:257-260) rather than imply."
+        },
+        {
+          "technique": "generated-shot-sourcing",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: no generative video model produces the picture track. The video clips are fixture rows (app/_studio/score.ts:225-229) with no generation seam; the only generator this context reaches is the music engine (ScoreSpotting.tsx:78-87)."
+        },
+        {
+          "technique": "motion-plate-library",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: nothing in this context generates or restyles motion, so there is no plate to author appearance-free, bank by motion class, or bind at use time."
+        },
+        {
+          "technique": "storyboard-grid-conditioning",
+          "verdict": "not-applicable",
+          "evidence": "Precondition fails: there is no multi-shot generation to condition — SCENES carries pre-authored frame candidates as gradient tones (app/_studio/scenes.ts:25-30) and no image or video call is made from this context."
+        }
+      ],
+      "registryProposal": "music-spotting-against-picture step 2 says to mark cue in/out as times on the master clock and explicitly not as scene references; derived-turn-markers, in the same subject, says a typed time is an impression wearing a number. This repo resolves the conflict in the second technique's favour — cues are spotted as scene ids and their spans derived (app/_studio/score.ts:98-105, :189-216) — which buys automatic re-derivation on retime at the cost of mid-scene entries and exits. The spotting technique's rule reads as if a typed timecode were the only way to address the clock; it could instead say the cue's address must be a derivation over the picture, of which an absolute time against a structural mark is one form."
+    }
+  ]
+}

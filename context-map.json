@@ -358,7 +358,7 @@
         "text-providers"
       ],
       "db_tables": [],
-      "description": "The golden-path probe test suite — fast, hermetic unit-level specs that verify security invariants, transport resilience, and cross-cutting behavioral contracts without a running server. Each file targets a named seam: imaging SSRF prevention, CLI sandbox argument isolation, CLI transport resilience, object-URL ownership cleanup, imaging/music auth gating, identity persistence, harness-gate wiring, beat-score totals, cut-nudge batching, frames run bounding, style-extraction output, and the announcement live-region. tests/live/golden-path.live.spec.ts is the integration counterpart that runs the same paths against a real local server.",
+      "description": "The golden-path probe test suite — fast, hermetic unit-level specs that verify security invariants, transport resilience, and cross-cutting behavioral contracts without a running server. Each file targets a named seam: imaging SSRF prevention, CLI sandbox argument isolation, CLI transport resilience, object-URL ownership cleanup, imaging/music auth gating, identity persistence, harness-gate wiring, beat-score totals, cut-nudge batching, frames run bounding, style-extraction output, the announcement live-region, music cue briefs and provenance, notebook graph integrity, frames-cut resolution, extract-step lock behaviour, and trailer-cut lifecycle. tests/live/golden-path.live.spec.ts is the integration counterpart that runs the same paths against a real local server.",
       "entry_points": [
         "tests/golden-path/imaging-ssrf.probe.spec.ts",
         "tests/golden-path/cli-transport-resilience.probe.spec.ts"
@@ -377,6 +377,12 @@
         "tests/golden-path/object-url-ownership.probe.spec.ts",
         "tests/golden-path/spine-rank-total.probe.spec.ts",
         "tests/golden-path/style-extract.probe.spec.ts",
+        "tests/golden-path/extract-step-lock.probe.spec.ts",
+        "tests/golden-path/frames-cut-resolution.probe.spec.ts",
+        "tests/golden-path/music-cue-brief.probe.spec.ts",
+        "tests/golden-path/music-cue-provenance.probe.spec.ts",
+        "tests/golden-path/notebook-graph.probe.spec.ts",
+        "tests/golden-path/trailer-cut-lifecycle.probe.spec.ts",
         "tests/live/golden-path.live.spec.ts"
       ],
       "group": null,
@@ -393,7 +399,7 @@
         "vitest",
         "integration"
       ],
-      "last_written_at": "2026-08-29T09:19:58.105381300+00:00",
+      "last_written_at": "2026-08-29T10:03:26.352922400+00:00",
       "name": "golden-path-tests",
       "pinned": false,
       "tech_stack": [
@@ -476,7 +482,7 @@
         "trailer-script"
       ],
       "db_tables": [],
-      "description": "The server-side music generation abstraction layer — four capabilities (plan, compose, generate, sfx) routed through ElevenLabs with a thin client facade in lib/musicClient.ts. lib/music/plan.ts turns a scored script into a music brief; lib/music/elevenlabs.ts is the ElevenLabs adapter; lib/music/types.ts defines MusicBrief, MusicTrack, and SfxCue; lib/music/errors.ts provides typed error handling for API failures. The four app/api/music/* routes are the only seam components cross — no ElevenLabs import escapes lib/music/, mirroring the imaging abstraction contract.",
+      "description": "The server-side music generation abstraction layer — four capabilities (plan, compose, generate, sfx) routed through ElevenLabs with a thin client facade in lib/musicClient.ts. lib/music/plan.ts turns a scored script into a music brief; lib/music/elevenlabs.ts is the ElevenLabs adapter; lib/music/types.ts defines MusicBrief, MusicTrack, and SfxCue; lib/music/errors.ts provides typed error handling. lib/music/pricing.ts is the single source of truth for per-call cost figures using a three-link unit chain (seconds → credits → USD); lib/music/budget.ts enforces a per-window spend ceiling denominated in seconds of audio requested; lib/music/log.ts writes one structured, credential-scrubbed line per call mirroring the imaging log contract. The five app/api/music/* routes are the only seam components cross — no ElevenLabs import escapes lib/music/.",
       "entry_points": [
         "lib/musicClient.ts",
         "lib/music/plan.ts",
@@ -487,11 +493,15 @@
         "lib/music/plan.ts",
         "lib/music/elevenlabs.ts",
         "lib/music/errors.ts",
+        "lib/music/pricing.ts",
+        "lib/music/budget.ts",
+        "lib/music/log.ts",
         "lib/musicClient.ts",
         "app/api/music/plan/route.ts",
         "app/api/music/compose/route.ts",
         "app/api/music/generate/route.ts",
-        "app/api/music/sfx/route.ts"
+        "app/api/music/sfx/route.ts",
+        "app/api/music/pricing/route.ts"
       ],
       "group": null,
       "group_id": null,
@@ -508,7 +518,7 @@
         "score",
         "integration"
       ],
-      "last_written_at": "2026-08-27T09:57:49.774583+00:00",
+      "last_written_at": "2026-08-29T10:03:26.352129600+00:00",
       "name": "music-pipeline",
       "pinned": false,
       "tech_stack": [
@@ -528,7 +538,7 @@
         "imaging-providers"
       ],
       "db_tables": [],
-      "description": "The developer-facing pipeline automation layer — driver scripts that exercise the full studio flow headlessly, regression harnesses for gate/bundle/manifest checks, a lint ratchet enforcing code-quality baselines, and a VLM consistency probe suite. DRIVERS.md documents each script's purpose; drive-research-step.mjs and the other drive-*.mjs files are integration smoke tests run against a live local server; check-bundle.mjs and check-manifest.mjs validate the imaging style bundle manifests; lint-ratchet.mjs enforces that lint errors never exceed the committed baseline. The pipeline/vlm-probe/ directory is a Python probe suite for testing visual-language model consistency, shot-to-reference fidelity, and multi-chain clip generation against a local GPU rig — guard.py enforces VRAM/RAM headroom, consistency.py measures cross-seed and cross-mechanism coherence, identity.py and replicate.py test face/reference preservation.",
+      "description": "The developer-facing pipeline automation layer — driver scripts that exercise the full studio flow headlessly, regression harnesses for gate/bundle/manifest checks, a lint ratchet enforcing code-quality baselines, VLM consistency probe suites, and a knowledge template directory that codifies patterns, open questions, and parameter constraints per studio step. DRIVERS.md documents each script's purpose; drive-research-step.mjs and the other drive-*.mjs files are integration smoke tests run against a live local server; check-bundle.mjs and check-manifest.mjs validate the imaging style bundle manifests; lint-ratchet.mjs enforces that lint errors never exceed the committed baseline. knowledge/templates/trailer/ holds step-level TEMPLATE.md, PATTERNS.md, OPEN-QUESTIONS.md, params.json, and corpus scripts (bar-math.mjs) that ground the generative steps in measurable craft constraints.",
       "entry_points": [
         "pipeline/DRIVERS.md",
         "pipeline/BEATS-PROMPT.md",
@@ -557,7 +567,15 @@
         "pipeline/vlm-probe/shots/reference-face-e25/lane.json",
         "pipeline/vlm-probe/shots/reference-face-late/lane.json",
         "pipeline/vlm-probe/shots/reference-face-only/lane.json",
-        "pipeline/vlm-probe/shots/reference/lane.json"
+        "pipeline/vlm-probe/shots/reference/lane.json",
+        "knowledge/README.md",
+        "knowledge/templates/trailer/TEMPLATE.md",
+        "knowledge/templates/trailer/steps/01-script/OPEN-QUESTIONS.md",
+        "knowledge/templates/trailer/steps/01-script/PATTERNS.md",
+        "knowledge/templates/trailer/steps/01-script/params.json",
+        "knowledge/templates/trailer/steps/03-score/OPEN-QUESTIONS.md",
+        "knowledge/templates/trailer/steps/03-score/PATTERNS.md",
+        "knowledge/templates/trailer/steps/03-score/params.json"
       ],
       "group": "Content Pipeline",
       "group_id": "a29f1861-3e17-4452-910a-b5b8647646af",
@@ -574,7 +592,7 @@
         "taste-ledger",
         "situations"
       ],
-      "last_written_at": "2026-08-29T09:19:58.111897800+00:00",
+      "last_written_at": "2026-08-29T10:03:26.643012200+00:00",
       "name": "pipeline-scripts",
       "pinned": false,
       "tech_stack": [
@@ -777,7 +795,7 @@
         "app-infrastructure"
       ],
       "db_tables": [],
-      "description": "The cross-step notebook module — the canonical data structure a research run produces and that all downstream steps (Script, Frames, Motion, Score, Cut) read from. types.ts defines Fact, Mechanism, Reversal, and the Notebook type; facts.ts, unknowns.ts, cards.ts, conclusions.ts, and dimensions.ts are the live fixture from the 2026-08-11 Bitcoin run used as real prototype content across all surfaces. NotebookBody.tsx and EvidenceLog.tsx are the read-surface components; sections/ (Apparatus, Argument, H) break the notebook into structured sections; stepStore.ts provides the per-project IndexedDB key-value store that keeps step content isolated between projects.",
+      "description": "The cross-step notebook module — the canonical data structure a research run produces and that all downstream steps (Script, Frames, Motion, Score, Cut) read from. types.ts defines Fact, Mechanism, Reversal, and the Notebook type; facts.ts, unknowns.ts, cards.ts, conclusions.ts, and dimensions.ts are the live fixture from the 2026-08-11 Bitcoin run used as real prototype content across all surfaces. NotebookBody.tsx and EvidenceLog.tsx are the read-surface components; sections/ (Apparatus, Argument, H, and the newly added Shared) break the notebook into structured sections — Shared.tsx extracts the CurrencyBody and SourcesBody markup that both NotebookBody and EvidenceLog previously duplicated; stepStore.ts provides the per-project IndexedDB key-value store.",
       "entry_points": [
         "app/_phases/_shared/notebook/types.ts",
         "app/_phases/_shared/notebook/notebook.ts",
@@ -798,6 +816,7 @@
         "app/_phases/_shared/notebook/sections/Apparatus.tsx",
         "app/_phases/_shared/notebook/sections/Argument.tsx",
         "app/_phases/_shared/notebook/sections/H.tsx",
+        "app/_phases/_shared/notebook/sections/Shared.tsx",
         "app/_phases/_shared/stepStore.ts",
         "app/_phases/_shared/ui/Notice.tsx"
       ],
@@ -816,7 +835,7 @@
         "fixture",
         "bitcoin"
       ],
-      "last_written_at": "2026-08-12T21:18:21.504329200+00:00",
+      "last_written_at": "2026-08-29T10:03:26.352650500+00:00",
       "name": "shared-notebook",
       "pinned": false,
       "tech_stack": [
@@ -1044,7 +1063,7 @@
       ]
     }
   ],
-  "generated_at": "2026-08-29T09:19:59.231135500+00:00",
+  "generated_at": "2026-08-29T10:03:26.939002800+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -1103,12 +1122,12 @@
     "root": "C:/Users/mkdol/dolla/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "681e43493c8ba4646eec86ce38700c214c0044e9",
-    "git_commit_count": 234
+    "git_commit": "8881b601eee5a0be899e90005ecb9830c6b2965f",
+    "git_commit_count": 256
   },
   "stats": {
     "contexts": 18,
-    "files": 290,
+    "files": 309,
     "groups": 7,
     "use_cases": 0
   },

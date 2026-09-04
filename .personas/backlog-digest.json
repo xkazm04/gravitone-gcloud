@@ -1,11 +1,27 @@
 {
-  "backlog_cap": 15,
-  "generated_at": "2026-08-12T10:07:08.716396300+00:00",
+  "backlog_cap": 300,
+  "generated_at": "2026-08-29T10:03:27.093844300+00:00",
   "pending_count": 0,
   "titles": {
     "accepted": [],
     "pending": [],
-    "rejected": []
+    "rejected": [
+      "ShotSheet re-derives the whole sheet on every parent render",
+      "Canvas layers can be moved only with a pointer",
+      "A proposed prompt can be read only through a native title tooltip",
+      "Both ledgers are CSS grids with no table semantics",
+      "The review and the direction pass still key beats by a repeatable timecode",
+      "Deep scan recommended: bounty-hunter on imaging-providers",
+      "A Google edit is still booked at the 1K generate rate",
+      "The browser client cannot send seed, which the route and every adapter honour",
+      "Vendor content types are asserted onto ImageRef's mime union rather than checked",
+      "Two adapters disagree about what an empty vendor answer means",
+      "google.ts captures its env at module scope, against env.ts's written lazy-read decision",
+      "lib/imaging/budget.ts belongs to no context in context-map.json",
+      "The spend ceiling is per-process, so autoscaling multiplies it by the instance count",
+      "The reroute chain's worst case outlasts the route's own maxDuration, and cleanup never runs",
+      "A single failed candidate discards the whole paid batch"
+    ]
   },
   "version": 1
 }
