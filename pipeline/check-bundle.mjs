@@ -158,9 +158,24 @@ const SERVER_MODULE_FINGERPRINTS = [
  * that the guards are still inline, still first, and that the vocabulary module
  * stays types-only so these strings have nowhere else to come from.
  */
+/* Each entry is [fingerprint, what it would mean]. The second half exists
+ * because there are now two different seams in this list with two different
+ * causes, and a finding that names the wrong one sends the reader to the wrong
+ * file. */
 const TEST_ONLY_FINGERPRINTS = [
-  "__gravitoneHarness", // the control surface's key on `window`
-  "gravitone control surface installed", // the bridge's console banner
+  ["__gravitoneHarness", "the LIVE-HARNESS CONTROL SURFACE"], // its key on `window`
+  ["gravitone control surface installed", "the LIVE-HARNESS CONTROL SURFACE"], // console banner
+  // The DevInspector overlay (app/_dev-inspector/), a developer tool that must
+  // never reach a user's browser. Its NODE_ENV gate in app/layout.tsx stops it
+  // running and NOT shipping: a "use client" module imported by a Server
+  // Component is emitted as a client entry point whether or not a branch reaches
+  // it — measured 2026-08-30, the minified overlay was in a browser chunk. What
+  // keeps it out is the production `resolveAlias` in next.config.ts, which swaps
+  // the module for a null-rendering server component. An alias is a config line,
+  // and a config line is exactly the kind of thing that silently stops matching;
+  // this string is the attribute the overlay marks its own DOM with, so it is
+  // present in the module and nowhere else in the app.
+  ["data-devinspector", "the DEVINSPECTOR OVERLAY"],
 ];
 
 /** Something we KNOW is in browser output. If this is not found, the gate is not
@@ -242,12 +257,9 @@ for (const file of files) {
     if (text.includes(f))
       findings.push(`${rel}\n      contains ${JSON.stringify(f)} — a server-only module was bundled`);
 
-  for (const f of TEST_ONLY_FINGERPRINTS)
+  for (const [f, what] of TEST_ONLY_FINGERPRINTS)
     if (text.includes(f))
-      findings.push(
-        `${rel}\n      contains ${JSON.stringify(f)} — the LIVE-HARNESS CONTROL SURFACE ` +
-          "reached a shipped build",
-      );
+      findings.push(`${rel}\n      contains ${JSON.stringify(f)} — ${what} reached a shipped build`);
 }
 
 // THE POSITIVE CONTROL, checked before the verdict. "Found nothing" only means
@@ -276,6 +288,13 @@ if (findings.length)
     "sits inside that one function. Gating on the imported DEV_AUTH constant, or",
     "moving the body into a module the bridge calls, defeats it. See",
     "components/ui/HarnessBridge.tsx and tests/golden-path/harness-gate.probe.spec.ts.",
+    "",
+    "If the finding is the DEVINSPECTOR OVERLAY, the cause is a third one: a",
+    "`use client` module imported by a Server Component ships whether or not the",
+    "branch that renders it is reachable, so app/layout.tsx's NODE_ENV guard was",
+    "never what kept it out. What keeps it out is the production `resolveAlias` in",
+    "next.config.ts, which swaps the module for app/_dev-inspector/DevInspectorAbsent.tsx.",
+    "Check that alias still matches the specifier layout.tsx imports.",
   ]);
 
 console.log(
