@@ -52,8 +52,8 @@ import guard  # noqa: E402
 
 HERE = Path(__file__).parent
 SHOTS = HERE / "shots"
-COMFY = "http://127.0.0.1:8188"
-COMFY_DIR = Path(r"C:\Users\kazda\ComfyUI")
+COMFY = guard.COMFY
+COMFY_DIR = Path(guard.COMFY_DIR)
 COMFY_OUT = COMFY_DIR / "output"
 COMFY_IN = COMFY_DIR / "input"
 

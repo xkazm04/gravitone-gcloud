@@ -23,6 +23,7 @@ instead of degrading into a hang nobody attributes correctly.
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -30,6 +31,13 @@ import urllib.request
 
 OLLAMA = "http://127.0.0.1:11434"
 COMFY = "http://127.0.0.1:8188"
+
+# THE ONE PLACE the ComfyUI install is named. consistency.py, motion.py,
+# replicate.py and fetch_ref2va.py derive output/, input/ and models/ from
+# this; until 2026-09-04 each carried its own copy of the literal, so moving
+# the install meant five edits and a missed one meant a script reading a
+# tree nobody wrote to. Override with the COMFY_DIR environment variable.
+COMFY_DIR = os.environ.get("COMFY_DIR", r"C:\Users\kazda\ComfyUI")
 
 
 def _post(url, payload, timeout=120):
@@ -123,8 +131,6 @@ def free_comfy():
     except Exception:
         return False
 
-
-COMFY_DIR = r"C:\Users\kazda\ComfyUI"
 
 # Host RAM, not VRAM, is what actually takes this machine down. Measured
 # 2026-08-25 mid-run: the card sat at 69% used while system RAM went to
