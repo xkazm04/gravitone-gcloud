@@ -4,7 +4,7 @@
 //
 // `components/ui/tokens.ts` states the rule and, unusually, states how to
 // recheck it: "grep app/ and components/ for hex and rgb() literals, subtract
-// this file and the four classes above, and the remainder should be empty."
+// this file and the five classes above, and the remainder should be empty."
 //
 // Nothing ran that grep. The file's own history is the argument for this probe:
 // the rule "was NOT [empty], from 2026-08-14 until this line was written" —
@@ -23,7 +23,7 @@ import { extname } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-/** The four exemptions tokens.ts names, each with the reason it gives. An entry
+/** The five exemptions tokens.ts names, each with the reason it gives. An entry
  *  is a claim somebody defends in review — the same shape as
  *  object-url-ownership's KNOWN_LEAKS, and for the same reason: a silent
  *  exclusion list is how a gate stops meaning anything. */
@@ -34,6 +34,8 @@ const EXEMPT: Record<string, string> = {
     "STYLE-PRESET DATA — what a GENERATED IMAGE should look like. Prompt input shown to the user as a style's palette; content, not chrome.",
   "app/library/LibraryAtelier.tsx":
     "The same preset data, beside the presets it describes.",
+  "app/_dev-inspector/devInspectorUi.tsx":
+    "DEVTOOLS SKIN - dev-only chrome for the inspect overlay, deliberately fixed so that debugging the theme cannot be broken BY the theme. Never in a production bundle. Its own header also claims it renders where <GravitoneTokens> does not; that half is wrong (it mounts inside the root layout) and the exemption stands on debug-independence alone.",
   "app/global-error.tsx":
     "The App Router boundary that REPLACES the root layout, so <GravitoneTokens> never renders and a var(--gt-ink) there resolves to nothing. The one file that must not read tokens.ts.",
 };
@@ -66,7 +68,7 @@ function chromeSources(): string[] {
   );
 }
 
-test("no file draws chrome from a colour literal, except the four that may", () => {
+test("no file draws chrome from a colour literal, except the five that may", () => {
   const files = chromeSources();
 
   // A walk that reads nothing reports compliance in a voice indistinguishable

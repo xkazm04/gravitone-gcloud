@@ -15,7 +15,7 @@
 // furniture. Chrome colour is a shared vocabulary, and two files spelling the
 // same grey differently is drift.
 //
-// Four things sit outside that rule, and always did; the rule simply never
+// Five things sit outside that rule; four always did and the rule simply never
 // said so, which made it read as violated when it was not:
 //
 //  1. TAILWIND UTILITY CLASSES — `text-cyan-300`, `bg-white/5`,
@@ -40,10 +40,24 @@
 //     read this file. The cost is real and worth stating — its `#67e8f9`
 //     button is a hand-maintained copy of ACCENT.cyan, so changing the accent
 //     here means changing it there too, and nothing will tell you.
+//  5. app/_dev-inspector/devInspectorUi.tsx - the DEVTOOLS SKIN, and the one
+//     entry here that is not old. Dev-only furniture for the inspect overlay
+//     (`npm run dev:inspect`), deliberately fixed: a tool for debugging the
+//     theme must not be drawn FROM the theme, or a half-finished edit to the
+//     accents below takes the inspector down at exactly the moment it is
+//     wanted. It never reaches a production bundle - app/layout.tsx mounts it
+//     behind a NODE_ENV literal Next inlines, and next.config.ts keeps the
+//     client reference out of the build. The cost is item 4's, smaller: its
+//     cyan is a hand-kept cousin of ACCENT.cyan and nothing will tell you if
+//     the two diverge. (The file's own header also claims kinship with
+//     global-error.tsx on the grounds that it renders where <GravitoneTokens>
+//     does not. That half is wrong - it mounts inside the root layout, which
+//     the error boundary REPLACES, so it never renders there. The exemption
+//     stands on debug-independence alone.)
 //
 // Everything that actually draws chrome obeys. The inventory above is meant to
 // be RECHECKABLE, so it is worth saying how: grep app/ and components/ for hex
-// and rgb() literals, subtract this file and the four classes above, and the
+// and rgb() literals, subtract this file and the five classes above, and the
 // remainder should be empty. It was NOT, from 2026-08-14 until this line was
 // written — the list said "three things" and named globals.css prose plus the
 // preset data, while global-error.tsx had seven, which made the rule read as
