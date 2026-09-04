@@ -34,3 +34,5 @@
 {"ts": "2026-09-03T07:29:54Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["reference-shows-only-invariants"], "deviations": 0}
 {"ts": "2026-09-03T07:29:54Z", "bundle": "media-generation", "subjects": ["image-prompt-composition"], "techniques": ["prompt-dialect-matching"], "deviations": 1}
 {"ts": "2026-09-03T10:52:09Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["reference-shows-only-invariants:ref2va-lane"], "deviations": 0}
+{"ts": "2026-09-04T21:07:01Z", "bundle": "software-engineering", "subjects": ["quality-gates"], "techniques": ["gate-liveness", "ratchet-design", "renameable-detector-keys", "prose-rule-drift", "self-reported-gate-inputs"], "deviations": 4}
+{"ts": "2026-09-04T21:07:01Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["identity-ruler-calibration", "reference-admitted-late"], "deviations": 1}

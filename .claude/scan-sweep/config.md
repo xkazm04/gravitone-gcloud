@@ -60,3 +60,12 @@ before matching, the population walked off the filesystem rather than listed, an
   These are rows written before the 2026-08-29 ingest fix and they stay NULL until a scan
   re-emits the context, which never happens for a context that has not changed. Assigning
   them is a Dev Tools → Context Ledger action, not something a scan will fix.
+- **2026-09-04 — pipeline-scripts round (optimize).** The three gate scripts resolve their input
+  from their own location, so seeding one means editing the REAL file (`lint-baseline.json`,
+  `.ai/manifest.yaml`, a fingerprint literal) and reverting with `git checkout --` or a scratch copy;
+  the red-BEFORE figure comes from `git show HEAD:pipeline/<script> > scratch` run under the same
+  seed. `check:bundle` runs fine against a stale `.next` for fingerprint work (26 chunks). The
+  vlm-probe Python stack imports on this box (torch 2.13 cpu, facenet, transformers) and
+  `python identity.py` calibration takes ~1 min - it is the honest gate for that file. `.ai/registry-map.json`
+  and the linked skill text both moved under the session (28 lenses by the end, 23 at the pick):
+  count lenses from `references/lenses.md` at emit time.
