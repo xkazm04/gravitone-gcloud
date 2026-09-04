@@ -118,10 +118,13 @@ const SERVER_ONLY_VARS = serverOnlyVars();
 /** Strings that exist inside lib/imaging/ and nowhere a browser should reach.
  *  Chosen to be distinctive enough that a coincidental match is not plausible. */
 const SERVER_MODULE_FINGERPRINTS = [
-  "[imaging] budget ", // lib/imaging/budget.ts note()
-  "Imaging spend ceiling reached", // lib/imaging/budget.ts
-  "Refused before any vendor was called", // lib/imaging/budget.ts
-  "[api] rate ", // lib/apiAuth.ts rateNote()
+  { text: "[imaging] budget ", from: "lib/imaging/budget.ts" }, // note()
+  { text: "Imaging spend ceiling reached", from: "lib/imaging/budget.ts" },
+  // The source splits this sentence across two template-literal lines ("was " +
+  // "called"); the bundler folds them but a source read does not, so the
+  // fingerprint stops at the literal's edge. Still nine words nobody else says.
+  { text: "Refused before any vendor was", from: "lib/imaging/budget.ts" },
+  { text: "[api] rate ", from: "lib/apiAuth.ts" }, // rateNote()
   // ── the reasoning seam (lib/text/, 2026-08-27) ────────────────────────────
   // lib/text/ spawns processes and holds a metered key, so it is server-only for
   // the same reasons lib/imaging/ is — and it is reached from route handlers
@@ -129,11 +132,60 @@ const SERVER_MODULE_FINGERPRINTS = [
   // These four are distinctive enough that a coincidental match is not
   // plausible, and each comes from a different file so that importing any one
   // corner of the seam trips the gate.
-  "[text] ", // lib/text/log.ts formatTurn() — every turn's log line
-  "authenticates without an API key; keyFor()", // lib/text/env.ts
-  "No reasoning engine could serve this", // lib/text/router.ts, bottom of the ladder
-  "is a managed serverless platform, which has no local binary", // lib/deployment.ts
+  // formatTurn() builds the line from the bare literal "[text]" and joins with
+  // spaces at runtime, so "[text] " (with the space) was never in the source
+  // OR in any chunk — the source assertion below caught it on its first run,
+  // 2026-09-04: this leg of the gate had hunted nothing since 2026-08-27.
+  { text: "[text]", from: "lib/text/log.ts" }, // formatTurn() — every turn's log line
+  { text: "authenticates without an API key; keyFor()", from: "lib/text/env.ts" },
+  { text: "No reasoning engine could serve this", from: "lib/text/router.ts" }, // bottom of the ladder
+  { text: "is a managed serverless platform, which has no local binary", from: "lib/deployment.ts" },
 ];
+
+/**
+ * A FINGERPRINT IS A DETECTOR KEY, AND A KEY NOBODY VERIFIES IS RENAMEABLE.
+ *
+ * Every string above is a claim that a particular source file still contains
+ * it. Reword the log line in lib/imaging/budget.ts and the bundle gate keeps
+ * passing — it is now hunting a sentence that exists nowhere, and the module it
+ * was guarding can reach the browser unnoticed. Nothing made the list honest;
+ * measured 2026-09-04, none of the ten had ever been checked against source.
+ *
+ * So each fingerprint is asserted PRESENT in the file it names before it is
+ * asserted ABSENT from the chunks — the same shape as the positive control,
+ * one layer up. Comments are stripped first: a file that only *talks* about
+ * the string in a comment would otherwise satisfy this (registry
+ * quality-gates/renameable-detector-keys; gate-liveness).
+ */
+function stripComments(src) {
+  return src
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .split(/\r?\n/)
+    .filter((l) => !l.trimStart().startsWith("//"))
+    .join("\n");
+}
+
+function assertFingerprintsAtSource(list, what) {
+  const gone = [];
+  for (const { text, from } of list) {
+    const at = join(ROOT, from);
+    if (!existsSync(at)) {
+      gone.push(`${JSON.stringify(text)} — ${from} does not exist`);
+      continue;
+    }
+    if (!stripComments(readFileSync(at, "utf8")).includes(text))
+      gone.push(`${JSON.stringify(text)} — not in the code of ${from} (comments excluded)`);
+  }
+  if (gone.length)
+    die(2, `COULD NOT RUN: ${gone.length} ${what} fingerprint(s) no longer exist at source.`, [
+      ...gone,
+      "",
+      "A fingerprint that is not in its source file cannot be in a bundle either,",
+      "so its clean verdict is manufactured. Either the string was reworded — point",
+      "the fingerprint at the new wording — or the module moved. Do not delete the",
+      "entry: pick another string from the same file that a browser must never see.",
+    ]);
+}
 
 /**
  * TEST-ONLY SEAMS THAT MUST NOT REACH A SHIPPED BUILD.
@@ -159,9 +211,12 @@ const SERVER_MODULE_FINGERPRINTS = [
  * stays types-only so these strings have nowhere else to come from.
  */
 const TEST_ONLY_FINGERPRINTS = [
-  "__gravitoneHarness", // the control surface's key on `window`
-  "gravitone control surface installed", // the bridge's console banner
+  { text: "__gravitoneHarness", from: "components/ui/HarnessBridge.tsx" }, // the control surface's key on `window`
+  { text: "gravitone control surface installed", from: "components/ui/HarnessBridge.tsx" }, // the bridge's console banner
 ];
+
+assertFingerprintsAtSource(SERVER_MODULE_FINGERPRINTS, "server-module");
+assertFingerprintsAtSource(TEST_ONLY_FINGERPRINTS, "test-only");
 
 /** Something we KNOW is in browser output. If this is not found, the gate is not
  *  reading the browser bundle and every clean verdict below is manufactured. */
@@ -238,11 +293,11 @@ for (const file of files) {
     if (text.includes(val.trim()))
       findings.push(`${rel}\n      contains the LIVE VALUE of ${name} — rotate that key now`);
 
-  for (const f of SERVER_MODULE_FINGERPRINTS)
+  for (const { text: f, from } of SERVER_MODULE_FINGERPRINTS)
     if (text.includes(f))
-      findings.push(`${rel}\n      contains ${JSON.stringify(f)} — a server-only module was bundled`);
+      findings.push(`${rel}\n      contains ${JSON.stringify(f)} — ${from} was bundled for the browser`);
 
-  for (const f of TEST_ONLY_FINGERPRINTS)
+  for (const { text: f } of TEST_ONLY_FINGERPRINTS)
     if (text.includes(f))
       findings.push(
         `${rel}\n      contains ${JSON.stringify(f)} — the LIVE-HARNESS CONTROL SURFACE ` +
