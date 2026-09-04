@@ -178,6 +178,12 @@ export interface Provenance {
   costBasis?: CostBasis;
   durationMs: number;
   cleanup?: "deleted" | "failed" | "not-applicable";
+  /**
+   * Which channel actually carried `negativePrompt` on this call, copied from
+   * the served provider. Set ONLY when the request carried one, so its absence
+   * reads as "there was nothing to carry" and never as "unknown".
+   */
+  negativePromptChannel?: "native" | "prose";
   /** Vendors eliminated before the one that served, most-preferred first.
    *  Absent on the ordinary single-hop call — its PRESENCE is the re-route,
    *  which is how "why is this plate from Leonardo?" stays answerable later. */
@@ -218,6 +224,24 @@ export interface ImagingProvider {
    * letting adapters drop the field on the floor.
    */
   readonly supportsReferences?: boolean;
+  /**
+   * HOW does this provider receive `negativePrompt`?
+   *
+   * The same question `supportsReferences` asks, on the dimension where the
+   * answer is not yes-or-no. Both generating vendors honour a negative prompt,
+   * so neither can be routed around — but they honour it through channels of
+   * different fidelity. One takes a dedicated API field the sampler reads; the
+   * other has it appended to the positive prompt as a sentence, where it
+   * competes with the subject for the same text budget and the same attention.
+   *
+   * There is nothing to route here, which is exactly why it has to be
+   * DECLARED. An unequal channel that no field records is invisible in a
+   * side-by-side comparison, and Playground's grid then reads a channel
+   * difference as a model difference — attributing to the model a gap that
+   * belongs to its input surface. Same move as `costBasis`: say how to read
+   * the result instead of leaving a reader to infer it.
+   */
+  readonly negativePromptChannel?: "native" | "prose";
   generate?(req: GenerateRequest): Promise<GeneratedImages>;
   edit?(req: EditRequest): Promise<GeneratedImages>;
   recognize?(req: RecognizeRequest): Promise<Recognition>;

@@ -151,6 +151,10 @@ export function googleProvider(): ImagingProvider {
     // Nano Banana 2 (not Lite) conditions on style references — the reason
     // this project is on the full model.
     supportsReferences: true,
+    // Prose: there is no negative field on this API, so `buildPrompt` appends
+    // the exclusions to the positive prompt as a sentence. Honoured, but in the
+    // same channel as the subject — declared so a comparison can say so.
+    negativePromptChannel: "prose",
 
     async generate(req: GenerateRequest): Promise<GeneratedImages> {
       const refs = (req.references ?? []).slice(0, 14);

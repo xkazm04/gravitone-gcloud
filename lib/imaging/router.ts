@@ -411,8 +411,8 @@ async function run<T extends { provenance: Provenance }>(
   }
 }
 
-export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>
-  run(
+export const generate = async (req: GenerateRequest): Promise<GeneratedImages> => {
+  const served = await run(
     "generate",
     (p) => p.generate?.(req),
     req,
@@ -426,6 +426,14 @@ export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>
     // A batch of N images is priced (and gated) as N, not 1.
     req.count ?? 1,
   );
+  // Stamped here rather than in each adapter, for the reason the reference
+  // constraint above is also decided here: an adapter that forgets is exactly
+  // the silent case the declaration exists to prevent.
+  if (req.negativePrompt?.trim())
+    served.provenance.negativePromptChannel =
+      PROVIDERS[served.provenance.provider]().negativePromptChannel;
+  return served;
+};
 
 export const edit = (req: EditRequest): Promise<GeneratedImages> =>
   run("edit", (p) => p.edit?.(req), req);
