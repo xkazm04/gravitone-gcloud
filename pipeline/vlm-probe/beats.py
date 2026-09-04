@@ -108,8 +108,15 @@ def main():
         profiles = {}
         for s in srcs:
             cuts = cut_list(s, args.threshold)
-            if not cuts:
+            if cuts is None:
                 print(f"  {s['slug']}: no video")
+                continue
+            if not cuts:
+                # A cached empty list is a detection that found nothing, not a
+                # missing file. Calling it "no video" sends the reader to fetch
+                # media that is already on disk instead of at the threshold.
+                print(f"  {s['slug']}: video present but 0 cuts detected at "
+                      f"threshold {args.threshold} -- lower it, or delete the cache")
                 continue
             dur = probe_duration(MEDIA / f"{s['id']}.mp4")
             p = profile(cuts, dur)
