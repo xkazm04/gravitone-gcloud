@@ -135,7 +135,26 @@ function parse(text) {
     const body = line.trim();
     if (body.startsWith("- ")) {
       // Block sequence of scalars, the one sequence form the subset allows.
-      const [, container] = stack[stack.length - 1];
+      //
+      // A `key:` with nothing after it has ALREADY pushed an empty child
+      // mapping for the block it expects, so the top of the stack is that child
+      // and the key that owns the sequence is one frame down. Until 2026-09-04
+      // this read `__lastKey` off the child, found none, and dropped every item
+      // in silence: `skills` (14 entries), the three `scope` lists and
+      // `engines.text.rungs` all parsed to `{}`, and the B2 credential walk
+      // never saw a value under any of them. A parser that loses input without
+      // saying so is a gate reading less than it claims — so a sequence item
+      // now retracts the empty child and replaces it with the array.
+      let [, container] = stack[stack.length - 1];
+      if (container.__lastKey === undefined && stack.length > 1) {
+        const [, parent] = stack[stack.length - 2];
+        const owner = parent.__lastKey;
+        if (owner && parent[owner] === container && Object.keys(container).length === 0) {
+          parent[owner] = [];
+          stack.pop();
+          container = parent;
+        }
+      }
       const lastKey = container.__lastKey;
       if (lastKey) {
         if (!Array.isArray(container[lastKey])) container[lastKey] = [];
