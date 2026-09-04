@@ -280,7 +280,12 @@ def stop_comfy(wait=30):
     return False
 
 
-MY_PREFIXES = ("baseline", "reference", "hero", "chain-", "ref2va-", "shot")
+# Every filename_prefix a script in THIS directory submits: consistency.py
+# writes "hero", "shot" and "<lane>-<shot>" for the baseline/reference lanes,
+# motion.py writes "chain-"/"ref2va-", replicate.py writes "replica". A prefix
+# missing here makes our own stale job look like a tenant's, and the run that
+# should reclaim it refuses instead -- "replica" was missing until 2026-09-04.
+MY_PREFIXES = ("baseline", "reference", "hero", "chain-", "ref2va-", "shot", "replica")
 
 
 def foreign_job():
