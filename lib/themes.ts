@@ -173,18 +173,39 @@ export const approvedProofs = (t: Theme): Proof[] => t.proofs.filter((p) => p.st
  *  drifting copy. */
 export const SEND_REFS = 4;
 
-/** The references a generation call should carry for a theme: the newest
- *  approved proofs first (the most recent approval is the best statement of
- *  where the style landed), capped at SEND_REFS. Returns [] for a theme with
- *  nothing approved — callers turn that into "no references", never into a
- *  pending or rejected proof going up the wire. */
+/** How many of the sent references are PINNED to the theme's founding proofs.
+ *
+ *  Every plate and alternative is generated against styleRefs and never against
+ *  a sibling plate, so a sheet is a star: one master, N frames hanging off it,
+ *  no path along which one frame's error reaches another. That guarantee is
+ *  worth exactly as much as the master's stability, and a pure newest-first
+ *  window has none — with SEND_REFS=4 the founding proof leaves the reference
+ *  set at the fifth approval and never returns, so the frames minted late in a
+ *  sheet are judged against a style the early frames never saw.
+ *
+ *  Two bounds make a partly-pinned window work and both hold here: the pinned
+ *  portion is strictly smaller than the window (2 < 4), or nothing rolls and
+ *  the sheet stops responding to what was just approved; and the rolling
+ *  portion is at least one slot wide (2 >= 1), or the window cannot advance. */
+export const PINNED_REFS = 2;
+
+/** The references a generation call should carry for a theme: the founding
+ *  approved proofs, pinned, then the newest approvals for the remaining slots
+ *  (the most recent approval is the best statement of where the style landed,
+ *  and the first is the best statement of what it IS). Capped at SEND_REFS.
+ *  Returns [] for a theme with nothing approved — callers turn that into
+ *  "no references", never into a pending or rejected proof going up the wire. */
 export function styleRefs(t: Theme | null | undefined): { base64: string; mime: string }[] {
   if (!t) return [];
-  return approvedProofs(t)
+  const approved = approvedProofs(t)
     .slice()
-    .sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id))
-    .slice(0, SEND_REFS)
-    .map((p) => ({ base64: p.base64, mime: p.mime }));
+    .sort((a, b) => a.createdAt - b.createdAt || a.id.localeCompare(b.id));
+  const pinned = approved.slice(0, PINNED_REFS);
+  const rolling = approved
+    .slice(pinned.length)
+    .reverse()
+    .slice(0, Math.max(0, SEND_REFS - pinned.length));
+  return [...pinned, ...rolling].map((p) => ({ base64: p.base64, mime: p.mime }));
 }
 
 /** Whether the sheet already holds the model's whole reference window. The one
