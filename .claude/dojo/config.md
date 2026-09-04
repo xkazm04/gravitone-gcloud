@@ -319,3 +319,29 @@ tracking the human better, and record the decision here):
   image-recognition eye is qwen3.8:27b, period: enum readback for grading,
   DEEP-READ-PROMPT.md for seeing. The colibri evaluation survives only as
   registry knowledge and the taught prompt.
+- 2026-09-04 — evening window, two image-prompt-composition cycles parked on the
+  LOCAL stack (16 renders, 1 ComfyUI 900s hang with no foreign job and the card
+  at 3% — the hang race, not contention; the fill pass took 138s). Demand was
+  THIS repo's `.ai/conform-detail.json` (prompt-dialect-matching is a live
+  deviation in imaging-providers), not the librarian's fleet points.
+  dialect-probe: the technique's own step 1 (one probe pair, tags vs prose)
+  run on Flux 2 for the first time — 0.50 with a tie, i.e. the tag dialect did
+  NOT lose: Flux 2 reads dialect-indifferent on contract adherence at ~1k
+  chars. Two eye-level facts for the gate: the prose arm lost SHOT SIZE on
+  setup-ews ("silhouetted form occupying one third" became a medium-shot
+  figure), and the tag arm turned "crosshair composition" into a literally
+  drawn reticle plus amber on three elements — a tag-dialect text-magnet
+  (shape-language-over-nouns applies to composition words too). REJECT keeps
+  prose as the compiler's only rendering with the honest note that Flux 2 gave
+  no evidence it is better; APPROVE = the compiler owes the tag serialization.
+  accent-emphasis: repetition + dominance prose on the accent-role clause was
+  NULL (0.25, two ties; the non-ties split on seed-level element choice). Two
+  same-subject cycles is the ceiling — the next window should leave
+  image-prompt-composition alone until these are gated. Instrument fix: the
+  park's consult line hardcoded `deviations: 0`; it now reads this repo's
+  conform-detail count (2 for image-prompt-composition), so Phase 1's demand
+  signal stops erasing itself. Nine parked cycles now await the gate; the
+  08-30 batch of nine committed cycles has NO ledger rows (only 4 rows exist
+  while 8 thumbs do) — their rules already landed in FRAMES-SCENE-PROMPT.md
+  rules 7–10, so nothing is owed, but the ledger is not the record it claims
+  to be for that batch; likely committed from a worktree checkout.

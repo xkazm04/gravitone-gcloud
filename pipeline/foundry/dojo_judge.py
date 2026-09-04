@@ -113,6 +113,24 @@ def prepare(cdir, no_gemini=False):
     print(f"prepared {len(work)} pair(s)", flush=True)
 
 
+def live_deviations(subject):
+    """THIS repo's live deviation count on the subject, from .ai/conform-detail.json.
+
+    The consult line is the demand signal Phase 1 ranks on next morning; it used
+    to say 0 for every cycle, so every trained subject read as undeviated-here
+    (measured 2026-09-04: prompt-dialect-matching has a live deviation in
+    imaging-providers and two parks logged it as 0).
+    """
+    try:
+        d = json.loads((ROOT / ".ai" / "conform-detail.json").read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return 0
+    pairs = d.get("pairs", {})
+    pairs = pairs.values() if isinstance(pairs, dict) else pairs
+    return sum(1 for p in pairs if p.get("subject") == subject
+               for t in p.get("techniques", []) if t.get("verdict") == "deviation")
+
+
 def unblind(pick, a_arm):
     if pick == "tie":
         return "tie"
@@ -159,7 +177,8 @@ def park(cdir, choke_path):
     (cdir / "cycle.json").write_text(json.dumps(cy, indent=1, ensure_ascii=False), encoding="utf-8")
     with (ROOT / ".ai" / "consults.jsonl").open("a", encoding="utf-8") as f:
         f.write(json.dumps({"ts": now(), "bundle": "media-generation", "subjects": [imp["subject"]],
-                            "techniques": [imp["technique"]], "deviations": 0}) + "\n")
+                            "techniques": [imp["technique"]],
+                            "deviations": live_deviations(imp["subject"])}) + "\n")
     print(f"parked {cdir.name}: pick_rate={rate:.2f} gemini={gch}/{len(pairs)} agreement={agr}", flush=True)
 
 
