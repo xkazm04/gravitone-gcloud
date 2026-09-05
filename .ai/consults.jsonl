@@ -67,3 +67,4 @@
 {"ts": "2026-08-29T16:35:00Z", "bundle": "software-engineering", "subjects": ["design-tokens"], "techniques": ["token-enforcement", "token-taxonomy", "theme-architecture", "motion-tokens"], "deviations": 0}
 {"ts": "2026-08-29T16:40:00Z", "bundle": "software-engineering", "subjects": ["multi-project"], "techniques": ["per-project-tabs-and-state", "project-identity-and-joins", "project-onboarding-lifecycle"], "deviations": 0}
 {"ts": "2026-08-30T10:57:37Z", "bundle": "media-generation", "subjects": ["review-iteration-loops", "generated-output-grading", "visual-style-locking"], "techniques": [], "deviations": 0}
+{"ts": "2026-09-05T13:30:49Z", "bundle": "software-engineering", "subjects": ["agent-cli-transport", "quality-gates", "test-harness"], "techniques": ["availability-probe", "output-normalization", "termination-and-reaping", "ratchet-design", "prose-rule-drift", "gate-liveness", "negative-control-tests"], "deviations": 4}

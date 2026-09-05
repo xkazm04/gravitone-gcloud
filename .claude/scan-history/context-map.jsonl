@@ -1,1 +1,2 @@
 {"at": "2026-08-29T10:03:26Z", "mode": "delta", "subtree": null, "scan_id": "bc5f27fb-456b-4d4c-8c0d-339758825b45", "contexts_before": 13, "contexts_after": 18, "ungrouped_after": 12, "by": "reconstructed", "note": "baseline: read off the map, not observed. Pre-dates the group fix."}
+{"at":"2026-09-05T13:31:00Z","mode":"delta","subtree":null,"scan_id":"222a14e2-3277-4821-a4ca-db12f0cac8ff","contexts_before":18,"contexts_after":18,"ungrouped_after":12,"by":"scan-sweep","note":"LAUNCHED, app exited mid-scan (bridge pid changed, not running); no map change, unverified"}
