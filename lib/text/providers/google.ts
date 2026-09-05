@@ -347,6 +347,8 @@ export function googleProvider(): TextProvider {
           costUsd: quote.usd,
           costBasis: quote.basis,
           promptChars: prompt.length,
+          inputTokens: usage?.promptTokenCount,
+          outputTokens,
         },
       };
     },

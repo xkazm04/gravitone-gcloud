@@ -57,7 +57,8 @@ import { canSpawnLocalBinaries, describePosture, localPosture } from "../deploym
 import { currentTextEnv, isConfigured, KEY_VAR, type TextEnv } from "./env";
 import { noAlternative, noEngine, TextError, unsupported } from "./errors";
 import { parseAgainstSchema, schemaInstruction } from "./json";
-import { logTurn } from "./log";
+import { logTurn, type TurnLog } from "./log";
+import { emitLightTrack } from "./lighttrack";
 import { claudeCliProvider } from "./providers/claudeCli";
 import { googleProvider } from "./providers/google";
 import type {
@@ -196,7 +197,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
 
   try {
     const out = await walk();
-    logTurn({
+    const l: TurnLog = {
       turn: req.turn,
       env,
       ms: Date.now() - started,
@@ -208,11 +209,18 @@ export async function reason(req: TextRequest): Promise<TextResult> {
       rung: out.provenance.rung,
       costUsd: out.provenance.costUsd,
       schema: out.provenance.schemaEnforcement,
-    });
+      inputTokens: out.provenance.inputTokens,
+      outputTokens: out.provenance.outputTokens,
+    };
+    // Same settle point, two sinks: stdout always, LightTrack only when an
+    // operator has opted in. Neither call may affect the other — see
+    // lib/text/lighttrack.ts's own contract for why it can never throw here.
+    logTurn(l);
+    emitLightTrack(l);
     return out;
   } catch (e) {
     const err = e instanceof TextError ? e : null;
-    logTurn({
+    const l: TurnLog = {
       turn: req.turn,
       env,
       ms: Date.now() - started,
@@ -222,7 +230,9 @@ export async function reason(req: TextRequest): Promise<TextResult> {
       kind: err?.kind ?? "failed",
       provider: err?.provider,
       message: err?.message ?? String(e),
-    });
+    };
+    logTurn(l);
+    emitLightTrack(l);
     throw e;
   }
 

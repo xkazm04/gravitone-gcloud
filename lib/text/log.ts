@@ -110,8 +110,10 @@ export function scrub(text: string): string {
     );
 }
 
-/** One line means one line: no newline survives, and nothing runs away. */
-function oneLine(text: string, max = 240): string {
+/** One line means one line: no newline survives, and nothing runs away.
+ *  Exported so lib/text/lighttrack.ts can apply the same collapsing to the
+ *  `error` field it sends — one scrubber, one line-shape, used by both sinks. */
+export function oneLine(text: string, max = 240): string {
   const t = text.replace(/\s+/g, " ").trim();
   return t.length > max ? `${t.slice(0, max - 1)}…` : t;
 }
@@ -133,6 +135,14 @@ export interface TurnLog {
   rung?: LadderRung;
   costUsd?: number;
   schema?: SchemaEnforcement;
+  /** Token counts, where the serving vendor reports them. Not printed on the
+   *  stdout line — it already has `promptChars`, the one input-size figure
+   *  comparable across transports — but carried through for LightTrack's
+   *  `usage` field. `claude-cli` reports a cost, never a token count, so this
+   *  stays undefined for it; inventing a number here would be exactly the
+   *  mistake lib/text/pricing.ts's header refuses to make for cost. */
+  inputTokens?: number;
+  outputTokens?: number;
   /* — set when it did not — */
   kind?: TextErrorKind;
   message?: string;

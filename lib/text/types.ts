@@ -206,6 +206,14 @@ export interface TextProvenance {
    *  transport — token counts are per-tokeniser and not comparable across
    *  vendors, and /api/recalibrate already reports this field. */
   promptChars: number;
+  /** Token counts, where the serving vendor's envelope reports them (Google
+   *  does; `claude-cli` reports only a cost, never a count). Not shown
+   *  anywhere token counts would be compared across vendors — `promptChars`
+   *  is that figure — but carried through to the settle log for a usage sink
+   *  that wants them. `undefined` here means "not reported", same rule as
+   *  `costUsd`: never a guessed number standing in for a real one. */
+  inputTokens?: number;
+  outputTokens?: number;
   /** The CLI's own session id, where there is one. Kept because it is how a
    *  local run is chased afterwards in ~/.claude. */
   sessionId?: string;
