@@ -76,8 +76,20 @@ import {
   PROJECTS_STORE,
   STEPS_STORE,
   THEMES_STORE,
+  UPLOADS_STORE,
   openDb,
 } from "@/lib/studioDb";
+// The uploads store is the one place this shelf OWNS bytes (lib/assets.ts): an
+// asset row keeps an `upload:<id>` pointer and the picture lives under that id,
+// with NO uid on it — the account scoping is on the row that points here. So
+// the bytes are found the way `deleteAsset` finds them, through the pointer, and
+// they go in the same transaction as the rows. Until 2026-09-05 this file
+// deleted the rows by key and never read them, so every uploaded reference the
+// departed account had handed over — the only copy, multi-megabyte, a picture
+// of whatever they were working on — stayed resident under an id nothing could
+// name again, still spending the quota and still readable by anything that
+// opened the store.
+import { readUploadPointer } from "@/lib/assets";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 // The job store, like every other store this file clears, is imported BY it and
 // does not import it. See the eviction door in lib/jobs.tsx: removing
@@ -105,6 +117,12 @@ export interface EvictionReport {
   steps: number;
   themes: number;
   assets: number;
+  /** Upload byte records removed — the blobs behind the evicted account's
+   *  `upload:` assets. Counted apart from `assets` because the two can differ
+   *  (a shelf full of pointers to files on disk has many assets and no uploads),
+   *  and a wipe that took the rows and left the pictures has to be readable as
+   *  exactly that. */
+  uploads: number;
   /** localStorage keys removed. */
   local: number;
   /** Mounted job stores told to drop their in-memory copy of the tray. Zero is
@@ -188,6 +206,7 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
     steps: 0,
     themes: 0,
     assets: 0,
+    uploads: 0,
     local: 0,
     trays: 0,
     failed: false,
@@ -224,13 +243,14 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
   try {
     const db = await openDb();
     await new Promise<void>((resolve, reject) => {
-      // ONE transaction over all four stores. A wipe that half-commits is worse
+      // ONE transaction over all five stores. A wipe that half-commits is worse
       // than one that does not run: it leaves an account's steps behind with no
-      // projects to reach them by, which no surface will ever list and no future
+      // projects to reach them by — or its upload bytes behind with no asset row
+      // pointing at them — which no surface will ever list and no future
       // eviction will ever find, because the by-uid rows they were reachable
       // through are gone.
       const tx = db.transaction(
-        [PROJECTS_STORE, STEPS_STORE, THEMES_STORE, ASSETS_STORE],
+        [PROJECTS_STORE, STEPS_STORE, THEMES_STORE, ASSETS_STORE, UPLOADS_STORE],
         "readwrite",
       );
       tx.oncomplete = () => resolve();
@@ -260,18 +280,35 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
         }
       };
 
-      for (const [name, counter] of [
-        [THEMES_STORE, "themes"],
-        [ASSETS_STORE, "assets"],
-      ] as const) {
-        const store = tx.objectStore(name);
-        const req = store.index(BY_UID).getAllKeys(uid);
-        req.onsuccess = () => {
-          const keys = (req.result as IDBValidKey[]) ?? [];
-          report[counter] = keys.length;
-          for (const k of keys) store.delete(k);
-        };
-      }
+      const themes = tx.objectStore(THEMES_STORE);
+      const themeKeys = themes.index(BY_UID).getAllKeys(uid);
+      themeKeys.onsuccess = () => {
+        const keys = (themeKeys.result as IDBValidKey[]) ?? [];
+        report.themes = keys.length;
+        for (const k of keys) themes.delete(k);
+      };
+
+      // Assets are read as RECORDS, not keys, because the row is the only thing
+      // that knows whether bytes live behind it. The uploads store has no uid
+      // index on purpose (studioDb) — the scoping is on the pointer — so the
+      // pointer is followed here exactly as lib/assets.ts#deleteAsset follows it,
+      // inside the same transaction, so a row can never outlive its bytes and
+      // bytes can never outlive the account that owned them.
+      const assets = tx.objectStore(ASSETS_STORE);
+      const uploads = tx.objectStore(UPLOADS_STORE);
+      const assetRows = assets.index(BY_UID).getAll(uid);
+      assetRows.onsuccess = () => {
+        const rows = (assetRows.result as { id: IDBValidKey; src?: unknown }[]) ?? [];
+        report.assets = rows.length;
+        for (const row of rows) {
+          assets.delete(row.id);
+          const uploadId = typeof row.src === "string" ? readUploadPointer(row.src) : null;
+          if (uploadId) {
+            uploads.delete(uploadId);
+            report.uploads++;
+          }
+        }
+      };
     });
   } catch (e) {
     report.failed = true;
@@ -280,7 +317,8 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
 
   console.log(
     `[identity] evicted uid=${uid.slice(0, 6)}… reason=${reason} projects=${report.projects} ` +
-      `steps=${report.steps} themes=${report.themes} assets=${report.assets} local=${report.local} ` +
+      `steps=${report.steps} themes=${report.themes} assets=${report.assets} uploads=${report.uploads} ` +
+      `local=${report.local} ` +
       `trays=${report.trays}` +
       (report.failed ? " FAILED" : ""),
   );
