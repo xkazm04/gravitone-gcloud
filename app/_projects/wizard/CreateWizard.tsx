@@ -107,10 +107,24 @@ export default function CreateWizard() {
   // Presets sit beside the locked themes on the style stage — a complete
   // four-slot block off the shelf is a real answer for a first project, and
   // the finish step mints it into a locked theme (same filter as PresetRail).
-  const fittingPresets = useMemo(
+  //
+  // BORROWED PRESETS (2026-09-05, uat compose-from-scratch). Every shipped
+  // preset is tagged `educational`, so a trailer or free project on an account
+  // with no locked theme used to reach this stage with NOTHING to pick and a
+  // link to the library — where commissioning a style needs image generation.
+  // Measured: 5 of 10 Characters could not create their project. So when no
+  // preset is written for the discipline, the stage offers ALL presets and says
+  // on every card that they were written for explainers; picking one mints a
+  // theme UNTAGGED (`discipline: undefined` = fits every discipline, the rule
+  // lib/themes.ts#styleFits already reads) rather than one tagged with a
+  // discipline the block was never written for. A fitted style can still be
+  // commissioned in the library and swapped in later.
+  const disciplinePresets = useMemo(
     () => (discipline ? PRESETS.filter((p) => styleFits(p, discipline)) : PRESETS),
     [discipline],
   );
+  const borrowedPresets = disciplinePresets.length === 0;
+  const fittingPresets = borrowedPresets ? PRESETS : disciplinePresets;
   const pickedPreset = styleId?.startsWith(PRESET_CARD_PREFIX)
     ? (fittingPresets.find((p) => presetCardId(p) === styleId) ?? null)
     : null;
@@ -129,8 +143,12 @@ export default function CreateWizard() {
       if (!ownDuration) setTargetS(0);
     }
     if (styleId) {
+      // A preset pick survives a discipline change whenever the new discipline
+      // will offer it — fitted, or borrowed because nothing fits (the same
+      // rule `fittingPresets` applies above).
+      const nextHasFitted = PRESETS.some((p) => styleFits(p, next));
       const stillFits = styleId.startsWith(PRESET_CARD_PREFIX)
-        ? PRESETS.some((p) => presetCardId(p) === styleId && styleFits(p, next))
+        ? PRESETS.some((p) => presetCardId(p) === styleId && (!nextHasFitted || styleFits(p, next)))
         : lockedThemes.some((t) => t.id === styleId && styleFits(t, next));
       if (!stillFits) setStyleId(null);
     }
@@ -148,7 +166,21 @@ export default function CreateWizard() {
     setMintError(null);
     try {
       let themeId = styleId;
-      if (pickedPreset) {
+      // REUSE BEFORE MINTING (uat 2026-09-05, L2 amara-dialog). Ten creates from
+      // presets left the style shelf with three duplicate names — every create
+      // minted a fresh locked theme from the same block. A locked theme this
+      // account already minted from THIS preset, with the same tag, IS the
+      // style being asked for; a second copy is shelf noise, not a decision.
+      const already = pickedPreset
+        ? lockedThemes.find(
+            (t) =>
+              t.origin === "preset" &&
+              t.presetId === pickedPreset.id &&
+              (borrowedPresets ? !t.discipline : t.discipline === pickedPreset.discipline),
+          )
+        : undefined;
+      if (already) themeId = already.id;
+      else if (pickedPreset) {
         // Mint the preset into a LOCKED theme, one write: the committed render
         // becomes the single approved proof (canLock's shape — one approved,
         // none pending), and lockedAt is set at birth. The user ratified the
@@ -163,7 +195,10 @@ export default function CreateWizard() {
               elements: pickedPreset.elements,
               origin: "preset" as const,
               presetId: pickedPreset.id,
-              discipline: pickedPreset.discipline,
+              // Untagged when borrowed across disciplines — see the note at
+              // `fittingPresets`. A tag here would make the minted style not
+              // fit the very project it was chosen for.
+              discipline: borrowedPresets ? undefined : pickedPreset.discipline,
             }),
             proofs: [proof],
             lockedAt: Date.now(),
@@ -201,6 +236,7 @@ export default function CreateWizard() {
       sub: "The question before the template: educational and promotional pieces are different contracts, and the craft library measured them separately.",
       done: discipline !== null,
       summary: discipline ? DISCIPLINE_LABEL[discipline] : undefined,
+      blockedHint: "pick a card to continue",
       content: (
         <DeckStage cards={disciplineCards()} pickedId={discipline} onPick={pickDiscipline} />
       ),
@@ -212,6 +248,7 @@ export default function CreateWizard() {
       sub: "Picking a template sets the runtime it measured — you can take ownership of the number at the last stage.",
       done: template !== null,
       summary: template ? templateOf(template).label : undefined,
+      blockedHint: "pick a format to continue",
       content: discipline ? (
         <DeckStage cards={templateCards(discipline)} pickedId={template} onPick={pickTemplate} />
       ) : null,
@@ -220,8 +257,12 @@ export default function CreateWizard() {
       id: "style",
       label: "style",
       headline: "Which visual identity does it render in?",
-      sub: "A locked style from the library, or a preset off the shelf — a preset locks as this project's style when you create. Every frame renders against it, fixed at creation.",
+      sub:
+        discipline && borrowedPresets
+          ? `No style is written for ${DISCIPLINE_LABEL[discipline].toLowerCase()} yet, so the six explainer presets are offered as a starting look — one locks as this project's style when you create, and fits any discipline. A style made for this kind of video can be commissioned in the library and swapped in later.`
+          : "A locked style from the library, or a preset off the shelf — a preset locks as this project's style when you create. Every frame renders against it, fixed at creation.",
       done: styleId !== null,
+      blockedHint: "pick a style to continue",
       summary: pickedPreset
         ? `${pickedPreset.name} (preset)`
         : styleId
@@ -232,7 +273,7 @@ export default function CreateWizard() {
           <EmptyStyleDeck discipline={discipline} />
         ) : (
           <DeckStage
-            cards={[...styleCards(fittingThemes), ...presetCards(fittingPresets)]}
+            cards={[...styleCards(fittingThemes), ...presetCards(fittingPresets, borrowedPresets)]}
             pickedId={styleId}
             onPick={setStyleId}
           />
@@ -243,8 +284,11 @@ export default function CreateWizard() {
       label: "name",
       headline: "Name it, and set the clock",
       sub: "The name you type is the headline the studio opens on. Only the name is required.",
-      done: title.trim().length > 0,
+      // A project with no clock is not a project: `Number("") || 0` used to
+      // create a "· 0s" studio (uat 2026-09-05, LE-L1-7).
+      done: title.trim().length > 0 && targetS > 0,
       summary: title.trim() || undefined,
+      blockedHint: !title.trim() ? "a name is required" : targetS <= 0 ? "set a runtime above 0 s" : undefined,
       content:
         discipline && template ? (
           <NameStage

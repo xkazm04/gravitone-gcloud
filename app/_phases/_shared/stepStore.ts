@@ -110,6 +110,14 @@ export interface ScriptAdoptionStepData {
 export interface TrailerCutStepData {
   cut: TrailerCut;
   budget: WithholdingBudget;
+  /** THE SPINE THIS CUT WAS COMPOSED FROM — the confirmed picks, slot → variant,
+   *  as they stood at compose time (added 2026-09-05). A cut is composed ONCE
+   *  and then edited; the board's picks are its history, not its source. So
+   *  when the creator reopens the spine in Step 1 and composes a different one,
+   *  the Script step needs a way to tell that the cut on screen predates the
+   *  spine on the board — this is that record. Absent on cuts saved before the
+   *  field existed, which readers treat as "unknown", never as "current". */
+  spine?: Record<string, string>;
   savedAt?: number;
 }
 

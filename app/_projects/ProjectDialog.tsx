@@ -267,8 +267,13 @@ export default function ProjectDialog({
           >
             {!fittingThemes.length && (
               <p className="font-hanken text-sm text-amber-200/90">
-                No locked style fits {DISCIPLINE_LABEL[discipline].toLowerCase()} yet. Lock one in the
-                library, or one from a brief, which fits every discipline.
+                No locked style fits {DISCIPLINE_LABEL[discipline].toLowerCase()} yet. The guided
+                wizard at{" "}
+                <a href="/projects/new" className="underline decoration-amber-200/40 underline-offset-2">
+                  /projects/new
+                </a>{" "}
+                offers presets that lock on create; or lock one in the library, or one from a brief,
+                which fits every discipline.
               </p>
             )}
             <div className="flex flex-wrap gap-1.5">

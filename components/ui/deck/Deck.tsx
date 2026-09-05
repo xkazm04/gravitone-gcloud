@@ -28,6 +28,10 @@ export interface DeckStageDef {
   done: boolean;
   /** What was decided, shown in the rail once done — "Movie · game trailer". */
   summary?: string;
+  /** Why Next is disabled, in the user's words — drawn beside the button while
+   *  the stage is not done. A disabled control that says nothing about what
+   *  enables it is a wall, not a gate. */
+  blockedHint?: string;
   /** The stage body — usually a DeckStage, but any surface fits (the name
    *  stage is a form, and an empty deck renders its honest empty state). */
   content: React.ReactNode;
@@ -143,13 +147,20 @@ export default function Deck({
           </Button>
           {exit}
         </div>
-        <Button
-          className="cursor-pointer px-6 py-2.5"
-          disabled={!stage.done || busy}
-          onClick={() => (isLast ? onFinish() : onNavigate(active + 1))}
-        >
-          {isLast ? (busy ? "Saving…" : finishLabel) : "Next"}
-        </Button>
+        <div className="flex items-center gap-3">
+          {!stage.done && stage.blockedHint && (
+            <span data-testid="deck-blocked-hint" className="font-jetbrains text-label text-white/40">
+              {stage.blockedHint}
+            </span>
+          )}
+          <Button
+            className="cursor-pointer px-6 py-2.5"
+            disabled={!stage.done || busy}
+            onClick={() => (isLast ? onFinish() : onNavigate(active + 1))}
+          >
+            {isLast ? (busy ? "Saving…" : finishLabel) : "Next"}
+          </Button>
+        </div>
       </div>
     </div>
   );

@@ -21,7 +21,6 @@ import { useEffect, useState } from "react";
 
 import { useJobs } from "@/lib/jobs";
 
-import { NOTEBOOK } from "../../_shared/notebook/notebook";
 import { saveStep, type ResearchStepData } from "../../_shared/stepStore";
 import { useStepFor } from "../../_shared/useLoadFor";
 import { useResearchRun } from "../run/useResearchRun";
@@ -39,14 +38,23 @@ export function useEducationalResearch(projectId: string) {
   // the real notebook as its saved state, which is why opening it shows a
   // finished run rather than an empty field. `load` refuses mid-run, so coming
   // back to a step whose run is still going shows the run, not the saved result.
+  // A FRESH PROJECT'S FIELD IS EMPTY. It used to hydrate as NOTEBOOK.topic —
+  // "Why Bitcoin price does not rise" — for every project with no research
+  // record, so the first thing a creator saw on their own project was another
+  // project's subject, already in the box and already enabled to run (uat
+  // 2026-09-05: five Characters). The seeded Bitcoin project still opens on
+  // its topic, because stepStore#seededFor supplies it as `saved`.
   const hydrated = useStepFor<ResearchStepData>(projectId, "research", (saved) => {
-    setTopic(saved?.topic ?? NOTEBOOK.topic);
+    setTopic(saved?.topic ?? "");
     if (saved?.researched) run.load();
   });
 
   /* ------------------------------------------------------------ persistence */
   useEffect(() => {
     if (!hydrated) return;
+    // Nothing typed and nothing run is nothing to record — a project the
+    // creator has not touched must not gain a research row on mount.
+    if (!topic && !ready) return;
     void saveStep(projectId, "research", { topic, researched: ready });
   }, [projectId, topic, ready, hydrated]);
 

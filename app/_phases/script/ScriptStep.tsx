@@ -32,12 +32,13 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
-import { getProject, type Discipline } from "@/lib/projects";
+import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/projects";
 
 import { CONCLUSIONS } from "../_shared/notebook/conclusions";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
 import { loadStep, type BeatPicksStepData } from "../_shared/stepStore";
 import Notice from "../_shared/ui/Notice";
+import { usePhaseReport } from "../_shared/usePhaseReport";
 import { useScope } from "../research/useScope";
 
 import { gateChains } from "./gate";
@@ -52,7 +53,7 @@ import MatrixSpend from "./_matrix/MatrixSpend";
 import MatrixTracks from "./_matrix/MatrixTracks";
 import VersionBar from "./_matrix/VersionBar";
 import StickyNotebook from "./_notes/StickyNotebook";
-import { RENDERS, RENDER_BY_ID } from "./renders";
+import { mmss, RENDERS, RENDER_BY_ID } from "./renders";
 import BaselineOnlyNote from "./_parts/BaselineOnlyNote";
 import TrailerScript from "./trailer/TrailerScript";
 import { useVersions } from "./useVersions";
@@ -84,9 +85,18 @@ const TABS: { key: Tab; label: string; sub: string }[] = [
  *  layer. A trailer project, or a free project that chose beats over facts,
  *  opens on the trailer half and nothing of the explainer path mounts: its
  *  hooks read a notebook this project does not have. `null` = not read yet. */
+/** What the project asked for — carried to both halves so each can say when
+ *  the fixture it draws was cut for something else (uat 2026-09-05: the clock
+ *  the creator set reached the header and nothing below it). */
+interface Asked {
+  targetS: number;
+  template: TemplateId;
+  discipline: Discipline;
+}
+
 type Route =
-  | { id: string; kind: "explainer" }
-  | { id: string; kind: "trailer"; discipline: Discipline; title: string }
+  | { id: string; kind: "explainer"; asked: Asked }
+  | { id: string; kind: "trailer"; discipline: Discipline; title: string; asked: Asked }
   | { id: string; kind: "missing" };
 
 export default function ScriptStep({ projectId }: { projectId: string }) {
@@ -104,10 +114,11 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
       const discipline = p.discipline ?? "educational";
       const trailer =
         discipline === "trailer" || (discipline === "free" && picks?.mode === "beats");
+      const asked: Asked = { targetS: p.targetS, template: p.template, discipline };
       setRoute(
         trailer
-          ? { id: projectId, kind: "trailer", discipline, title: p.title }
-          : { id: projectId, kind: "explainer" },
+          ? { id: projectId, kind: "trailer", discipline, title: p.title, asked }
+          : { id: projectId, kind: "explainer", asked },
       );
     });
     return () => { alive = false; };
@@ -122,12 +133,19 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
       </p>
     );
   if (current.kind === "trailer")
-    return <TrailerScript projectId={projectId} discipline={current.discipline} title={current.title} />;
-  return <ExplainerScript projectId={projectId} />;
+    return (
+      <TrailerScript
+        projectId={projectId}
+        discipline={current.discipline}
+        title={current.title}
+        targetS={current.asked.targetS}
+      />
+    );
+  return <ExplainerScript projectId={projectId} asked={current.asked} />;
 }
 
 /** The explainer half, exactly as it was — every tab and testid intact. */
-function ExplainerScript({ projectId }: { projectId: string }) {
+function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked }) {
   const [tab, setTab] = useState<Tab>("candidates");
   const [showing, setShowing] = useState<"baseline" | "candidate">("candidate");
   const [researched, setResearched] = useState<boolean | null>(null);
@@ -165,6 +183,26 @@ function ExplainerScript({ projectId }: { projectId: string }) {
     });
     return () => { alive = false; };
   }, [projectId]);
+
+  // WHAT THIS STEP REPORTS TO THE SHELF (derive, never assert — the Frames
+  // rule). An adopted candidate or an accepted recalibration is work the
+  // creator did; three renders drawn from the fixture is not. `done` is
+  // unreachable: nothing here is a sign-off.
+  usePhaseReport(
+    projectId,
+    "script",
+    adoption.hydrated && versions.hydrated && (adoption.adoptedId || versions.accepted.length > 1)
+      ? "working"
+      : null,
+  );
+
+  // The runtime and template the project asked for versus what the fixture
+  // renders were cut for. The three renders carry their own durations
+  // (renders.ts) and this project's clock is not read by any of them — so the
+  // honest line is the mismatch, stated where the candidates are judged.
+  const askedTemplate = templateOf(asked.template).label;
+  const fixtureSpan = `${mmss(Math.min(...RENDERS.map((r) => r.durationS)))}–${mmss(Math.max(...RENDERS.map((r) => r.durationS)))}`;
+  const runtimeMismatch = !RENDERS.some((r) => r.durationS === asked.targetS);
 
   // WHICH SCRIPT THE CANDIDATES TAB IS ABOUT: the staged candidate if there is
   // one, otherwise the accepted version of record — and the chain it replaced,
@@ -225,6 +263,15 @@ function ExplainerScript({ projectId }: { projectId: string }) {
           <p className="mt-1.5 text-content leading-relaxed text-slate-400">
             tension strength — {NOTEBOOK.tension.strength}
           </p>
+          {runtimeMismatch && (
+            <p
+              data-testid="script-runtime-note"
+              className="font-jetbrains mt-1.5 text-label leading-snug text-amber-200/85"
+            >
+              this project asked for {askedTemplate} · {asked.targetS}s — the three renders below were
+              cut for the fixture&rsquo;s own runtimes ({fixtureSpan}) and your clock is not read here yet
+            </p>
+          )}
         </div>
         <p className="font-jetbrains shrink-0 text-content leading-snug text-white/30">
           the notebook and the evidence log

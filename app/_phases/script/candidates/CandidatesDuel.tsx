@@ -111,10 +111,18 @@ function DuelCardBody({
   // spread hoped to add up. Three beats mark the arc — where it opens, where
   // it turns (the middle of ITS OWN chain, so a recalibrated version shows its
   // own shape), where it lands.
+  //
+  // "turns" IS THE BEAT OF KIND `turn`, not the middle of the chain by index —
+  // that version named "escalation" for the Reversal Chain and a candidate for
+  // Adjudication, whose own depth says "turns — n/a for this engine". A chain
+  // with no turn beat gets no turns line (uat 2026-09-05, OW-L1-5).
+  const firstTurn = chain.find((b) => b.kind === "turn");
   const arc: { word: string; beat: Beat }[] = chain.length
     ? [
         { word: "opens", beat: chain[0] },
-        ...(chain.length > 2 ? [{ word: "turns", beat: chain[Math.floor(chain.length / 2)] }] : []),
+        ...(firstTurn && firstTurn !== chain[0] && firstTurn !== chain[chain.length - 1]
+          ? [{ word: "turns", beat: firstTurn }]
+          : []),
         ...(chain.length > 1 ? [{ word: "lands", beat: chain[chain.length - 1] }] : []),
       ]
     : [];
