@@ -98,7 +98,13 @@ test("negative control: plain child.kill() strands the grandchild on the shell p
   // The defect, pinned: this is WHY killTree exists. If the platform ever starts
   // cascading kills, this goes red and the helper can be simplified — knowingly.
   expect(still).toBe(true);
-  // Do not leave the evidence running on the operator's machine.
-  killTree({ pid: bottom, exitCode: null, killed: false, kill: () => process.kill(bottom) } as unknown as ChildProcess);
+  // Do not leave the evidence running on the operator's machine. Directly, not
+  // through the door under test: a stand-in ChildProcess cannot report its own
+  // exit, so the door's fallback would signal a pid that is already gone.
+  try {
+    process.kill(bottom);
+  } catch {
+    // Already gone between the check and the signal — the outcome we wanted.
+  }
   expect(await settle(bottom)).toBe(false);
 });
