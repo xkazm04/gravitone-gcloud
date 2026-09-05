@@ -86,3 +86,78 @@ export const noopProps = {
   onDelete: () => {},
   onCreate: () => {},
 };
+
+// Strip comments from TypeScript source, for the source-ratchet probes.
+//
+// COMMENTS MUST GO BEFORE A MATCHER RUNS, because the files in this repository
+// explain each rule in prose directly above the code that implements it — so a
+// matcher over raw text is satisfied by a file that TALKS about the rule and
+// does not follow it. object-url-ownership.probe.spec.ts records that happening
+// for real.
+//
+// WHY A SCANNER AND NOT TWO `replace` CALLS. The pair those probes each carry
+// privately strips block comments FIRST and line comments second. That treats a
+// block-open sequence appearing inside a LINE comment as really opening a block
+// — and this repo's prose is full of route globs written exactly that way:
+// /api/imaging/ + star, /api/foundry/ + star. The phantom block then runs to the
+// next genuine block terminator and takes every line between with it.
+//
+// Measured 2026-09-05 over 268 files under app/ and lib/: 14 files lose a
+// contiguous region that way — lib/imaging/api.ts 80% of its bytes,
+// lib/imaging/types.ts 78%, lib/localMode.ts 74%, app/foundry/extractClient.ts
+// 72%. Code inside those regions is invisible to every probe using that pair,
+// and invisible code reads as a clean codebase in a voice indistinguishable
+// from success.
+//
+// Checked the same day, and this is the honest half: NO probe in the suite was
+// actually blinded by it. object-url-ownership hides zero callers, and all 26
+// API routes still show their gate to imaging-auth. The one victim was a probe
+// being written at the time, caught only by seeding the defect and watching it
+// fail to go red. So this is a live hazard with no current casualty — which is
+// the moment to fix it, not evidence that it does not matter.
+//
+// Swapping the order of the two replaces is not the fix either: a block comment
+// containing a line comment then loses its terminator and survives the strip. So
+// this walks the source once, tracking the three quoting forms a comment can
+// hide inside. Newlines are preserved so line numbers still line up.
+export function stripComments(src: string): string {
+  let out = "";
+  let i = 0;
+  while (i < src.length) {
+    const c = src[i];
+    const d = src[i + 1];
+    if (c === "/" && d === "/") {
+      while (i < src.length && src[i] !== "\n") i++;
+      continue;
+    }
+    if (c === "/" && d === "*") {
+      i += 2;
+      while (i < src.length && !(src[i] === "*" && src[i + 1] === "/")) {
+        if (src[i] === "\n") out += "\n";
+        i++;
+      }
+      i += 2;
+      continue;
+    }
+    if (c === '"' || c === "'" || c === "`") {
+      const quote = c;
+      out += src[i++];
+      while (i < src.length) {
+        if (src[i] === "\\") {
+          out += src[i] + (src[i + 1] ?? "");
+          i += 2;
+          continue;
+        }
+        out += src[i];
+        if (src[i] === quote) {
+          i++;
+          break;
+        }
+        i++;
+      }
+      continue;
+    }
+    out += src[i++];
+  }
+  return out;
+}
