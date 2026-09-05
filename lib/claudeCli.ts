@@ -71,6 +71,41 @@ export function killTree(child: ChildProcess): void {
 }
 
 /**
+ * ONE VERDICT FOR A NON-ZERO EXIT, shared by the probe and the run.
+ *
+ * Off-shell, a binary that is not on PATH never produces an exit code at all —
+ * the spawn itself fails and `child.on("error")` says `not-installed`. Through
+ * a shell it is the SHELL that fails to resolve the name, and the shell says so
+ * in its own words on stderr and exits normally. MEASURED 2026-09-05, with this
+ * exact spawn shape and a name that resolves to nothing: cmd.exe exits 1 — not
+ * the 9009 an interactive prompt shows in %ERRORLEVEL% — with "'x' is not
+ * recognized as an internal or external command" on stderr. So the sentence is
+ * the signal and the well-known codes (9009, POSIX 127) are kept only as a
+ * second door. Until this function existed the run's `close` handler read all
+ * of it as an ordinary failure ("The local Claude process exited 1."), so on
+ * the only platform this app is developed on a machine without the CLI was
+ * classified `failed`, the text provider marked the call as DISPATCHED (a real
+ * attempt, not an absence), and the router's descent record named the wrong
+ * rung with the wrong remedy — "the engine broke" instead of "install it". The
+ * probe had the same blind spot in its own words.
+ *
+ * `usesShell` is a parameter so the mapping is assertable on either platform;
+ * the doors pass the real predicate. Off-shell the shell never spoke, so its
+ * sentences and codes are the binary's own and mean nothing special.
+ */
+const SHELL_NOT_FOUND = /is not recognized as an internal or external command|command not found|: not found\b/i;
+
+export function classifyExit(code: number | null, stderr: string, usesShell: boolean = USES_SHELL): CliError {
+  if (usesShell && (SHELL_NOT_FOUND.test(stderr) || code === 9009 || code === 127)) {
+    return new CliError("The `claude` CLI is not installed or not on PATH.", "not-installed");
+  }
+  if (/login|auth|credential/i.test(stderr)) {
+    return new CliError("The local Claude CLI is not logged in. Run `claude` once and sign in.", "not-logged-in");
+  }
+  return new CliError(`The local Claude process exited ${code}.`, "failed");
+}
+
+/**
  * THE SINGLE SPAWN DOOR'S ENVIRONMENT — and the one thing it takes away.
  *
  * The child inherits this process's environment, and the tools in this class
@@ -154,12 +189,14 @@ export function probeClaude(timeoutMs = 10_000): Promise<{ ok: boolean; version?
     }
 
     let out = "";
+    let err = "";
     const timer = setTimeout(() => {
       killTree(child);
       resolve({ ok: false, detail: `The \`claude\` CLI did not answer --version within ${Math.round(timeoutMs / 1000)}s.` });
     }, timeoutMs);
 
     child.stdout?.on("data", (c) => (out += c));
+    child.stderr?.on("data", (c) => (err += c));
     child.on("error", () => {
       clearTimeout(timer);
       resolve({ ok: false, detail: "The `claude` CLI is not installed or not on PATH." });
@@ -167,8 +204,18 @@ export function probeClaude(timeoutMs = 10_000): Promise<{ ok: boolean; version?
     child.on("close", (code) => {
       clearTimeout(timer);
       const version = out.trim().split(/\s+/)[0] || undefined;
-      if (code !== 0)
-        return resolve({ ok: false, detail: `The \`claude\` CLI exited ${code} when asked for its version.` });
+      if (code !== 0) {
+        // Through a shell, "not on PATH" arrives as an exit code — see
+        // classifyExit. Say that, not "exited 9009".
+        const verdict = classifyExit(code, err);
+        return resolve({
+          ok: false,
+          detail:
+            verdict.kind === "not-installed"
+              ? verdict.message
+              : `The \`claude\` CLI exited ${code} when asked for its version.`,
+        });
+      }
       resolve({
         ok: true,
         version,
@@ -253,19 +300,9 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
 
     child.on("close", (code) => {
       clearTimeout(timer);
-      if (code !== 0) {
-        const hint = /login|auth|credential/i.test(err)
-          ? "not-logged-in"
-          : "failed";
-        return reject(
-          new CliError(
-            hint === "not-logged-in"
-              ? "The local Claude CLI is not logged in. Run `claude` once and sign in."
-              : `The local Claude process exited ${code}.`,
-            hint,
-          ),
-        );
-      }
+      // The verdict is shared with the probe — see classifyExit — so the two
+      // doors cannot disagree about what a missing binary looks like.
+      if (code !== 0) return reject(classifyExit(code, err));
       try {
         const j = JSON.parse(out);
         if (j.is_error || j.subtype !== "success")
@@ -279,7 +316,6 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
       } catch {
         reject(new CliError("The local Claude process returned output that was not JSON.", "failed"));
       }
-      void err;
     });
 
     // THE PROMPT WRITE IS A DOOR OUT OF THIS PROCESS, AND IT HAD NO HANDLER.
