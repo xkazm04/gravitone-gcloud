@@ -102,7 +102,15 @@ export function classifyExit(code: number | null, stderr: string, usesShell: boo
   if (/login|auth|credential/i.test(stderr)) {
     return new CliError("The local Claude CLI is not logged in. Run `claude` once and sign in.", "not-logged-in");
   }
-  return new CliError(`The local Claude process exited ${code}.`, "failed");
+  // The tail of stderr travels WITH the verdict. Until 2026-09-05 this branch
+  // said "exited N" and threw the stream away (`void err`), so the one line the
+  // engine wrote about why — an unknown model id, a bad flag, a crashed
+  // session — reached neither the log line nor the route's answer, and the
+  // operator was left to reproduce a minutes-long turn by hand to read it.
+  // Whitespace collapsed and capped, because it lands in a log line and a JSON
+  // error body, not a terminal.
+  const tail = stderr.replace(/\s+/g, " ").trim().slice(-240);
+  return new CliError(`The local Claude process exited ${code}.${tail ? ` stderr: ${tail}` : ""}`, "failed");
 }
 
 /**

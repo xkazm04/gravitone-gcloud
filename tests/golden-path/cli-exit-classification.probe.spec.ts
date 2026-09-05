@@ -57,6 +57,23 @@ test("exit: a login complaint on stderr is `not-logged-in`, anything else is `fa
   expect(classifyExit(null, "", true).kind).toBe("failed");
 });
 
+test("exit: a `failed` verdict carries the tail of stderr — the engine's one line about why", () => {
+  // Before: "The local Claude process exited 1." and the stream discarded. The
+  // operator's only route to the reason was reproducing a minutes-long turn.
+  const e = classifyExit(1, "some noise\n\nError: model claude-nope-9 does not exist\n", true);
+  console.log(`[cli] failed -> ${e.message}`);
+  expect(e.kind).toBe("failed");
+  expect(e.message).toContain("exited 1");
+  expect(e.message).toContain("model claude-nope-9 does not exist");
+  // Collapsed to one line, so it fits a log line and a JSON body.
+  expect(e.message).not.toMatch(/\n/);
+  // Capped: a stack dump does not become the whole answer.
+  const long = classifyExit(1, "x".repeat(5000), true);
+  expect(long.message.length).toBeLessThan(320);
+  // And a silent exit stays the bare sentence, with no dangling "stderr:".
+  expect(classifyExit(2, "", true).message).toBe("The local Claude process exited 2.");
+});
+
 test("exit: the missing-binary verdict is decided BEFORE stderr is read", () => {
   // cmd's not-found text could one day contain a word the login regex matches;
   // the code decides first, so the remedy cannot flip to "sign in".
