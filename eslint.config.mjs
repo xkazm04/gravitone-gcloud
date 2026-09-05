@@ -31,6 +31,13 @@ const config = [
     // them would grade code this repo does not author.
     ignores: [
       "node_modules/**",
+      // UAT L2 SCRIPT FRAGMENTS. `uat/runs/<id>/l2/*.js` are not modules: the
+      // driver concatenates `_prelude.js` + `<character>.js` and evaluates the
+      // result as ONE async function body (uat/driver/drive-script.mjs), so each
+      // file on its own declares helpers it never calls or calls helpers it
+      // never declares. Graded standalone they are 19 false "unused" errors
+      // (measured 2026-09-05). The driver itself, uat/driver/*.mjs, stays linted.
+      "uat/runs/**/l2/*.js",
       // AGENT TOOLING, AND — THE REASON THIS ENTRY EXISTS — AGENT WORKTREES.
       //
       // `.claude/worktrees/<name>/` holds a git worktree: a SECOND FULL CHECKOUT
