@@ -184,11 +184,39 @@ def test_list_survives_a_row_from_another_schema():
     check("--list prints every readback row", len(buf.getvalue().strip().splitlines()), 3)
 
 
+# ── intake: the paid readback ───────────────────────────────────────────────
+
+def test_an_unparseable_readback_is_kept_on_disk():
+    """The readback is a paid vendor call over N frames. When the answer does
+    not parse -- a truncation at the token ceiling is the ordinary way -- the
+    bytes are the only record of what was bought, and losing them means paying
+    again to find out what happened."""
+    I = load("intake")
+    tmp = Path(tempfile.mkdtemp())
+    I.STYLE_OUT = tmp / "style.jsonl"
+    frames = [tmp / "f-001.jpg"]
+    frames[0].write_bytes(b"not really a jpeg")
+    I.style_mod.run_ollama_multi = lambda model, b64s: '{"signature": "cut off mid-'
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            I.readback(frames, "src", "qwen3.8:27b")
+    except BaseException:  # sys.exit is the designed outcome here
+        pass
+    rows = ([json.loads(l) for l in I.STYLE_OUT.read_text(encoding="utf-8").splitlines() if l.strip()]
+            if I.STYLE_OUT.exists() else [])
+    check("a failed readback leaves the raw answer on disk", len(rows), 1)
+    if rows:
+        check("...marked not ok", rows[0].get("ok"), False)
+        check("...carrying the bytes that were paid for",
+              rows[0].get("raw", "").startswith('{"signature"'), True)
+
+
 TESTS = [
     test_ungradable_candidate_does_not_kill_the_run,
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,
     test_list_survives_a_row_from_another_schema,
+    test_an_unparseable_readback_is_kept_on_disk,
 ]
 
 

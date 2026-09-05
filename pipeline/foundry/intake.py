@@ -101,13 +101,35 @@ def readback(frames, slug, model):
         text = style_mod.run_gemini_multi(model, b64s, key)
     else:
         text = style_mod.run_ollama_multi(model, b64s)
-    parsed = json.loads(text)
     row = {"source": slug, "model": model, "frames": len(frames),
            "frame_names": [p.name for p in frames],
-           "latency_s": round(time.time() - t0, 1), "parsed": parsed, "ok": True}
+           "latency_s": round(time.time() - t0, 1)}
+    # WRITE THE ROW EVEN WHEN IT DOES NOT PARSE. This call is the expensive
+    # part of an intake: N frames uploaded to a vendor, or the local eye given
+    # the card. The answer's bytes are the only record of what was bought, and
+    # when they were thrown away the operator had nothing to look at and no
+    # choice but to pay again to find out what had gone wrong -- while the
+    # frames from publish() were already on disk, so a re-run also had to be
+    # told not to publish them twice.
+    #
+    # A truncation at the token ceiling is the ordinary way this happens: both
+    # runners in ../vlm-probe/style.py ask for schema-enforced JSON, so what
+    # arrives is either valid or cut off, and a cut-off answer is exactly the
+    # one worth keeping. `ok: False` keeps it out of acquire.py's listing --
+    # readbacks() filters on that field -- so a kept failure is inert, not a
+    # row that can be acquired by accident.
+    try:
+        row["parsed"], row["ok"] = json.loads(text), True
+    except json.JSONDecodeError as e:
+        row["ok"], row["raw"], row["error"] = False, text, f"{type(e).__name__}: {e}"
     STYLE_OUT.parent.mkdir(parents=True, exist_ok=True)
     with STYLE_OUT.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    if not row["ok"]:
+        sys.exit(f"the {model} readback of '{slug}' did not parse ({row['error']}); "
+                 f"the {len(text)} bytes it returned are kept at {STYLE_OUT} -- "
+                 f"the frames are published, so re-run with --no-readback or fix and retry")
+    parsed = row["parsed"]
     print(f"  readback by {model} in {row['latency_s']}s:")
     print(f"    signature: {parsed.get('signature', '')}")
     print(f"    recipe:    {parsed.get('imitable_recipe', '')}")
