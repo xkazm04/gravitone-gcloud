@@ -27,12 +27,13 @@
 import { test, expect } from "@playwright/test";
 import { claimSaveSlot, __resetSaveSlots } from "@/app/_phases/_shared/stepStore";
 import {
+  IDENTITY_INDEPENDENT_LOCAL_KEYS,
   evictIdentity,
   transitionFor,
   userScopedLocalKeys,
 } from "@/lib/identityEviction";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, relative, resolve } from "node:path";
 
 test.beforeEach(() => __resetSaveSlots());
 
@@ -107,34 +108,76 @@ test("triggers: every identity FLIP is classified, and refresh is NOT one", () =
   expect(transitionFor(null, null)).toBe(null);
 });
 
-test("keys: the eviction list covers EVERY module that writes a uid-scoped key", () => {
+/** Every source file under the app that WRITES localStorage — walked off the
+ *  filesystem, comments stripped, so the population is the truth and not a list
+ *  somebody typed. A writer this walk finds and the table below does not know
+ *  is the finding. */
+function localStorageWriters(): string[] {
+  const root = resolve(__dirname, "../..");
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const p = join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name.startsWith(".")) continue;
+        walk(p);
+      } else if (/\.(ts|tsx)$/.test(e.name) && !/\.(spec|test)\./.test(e.name)) {
+        const src = readFileSync(p, "utf8")
+          .replace(/\/\*[\s\S]*?\*\//g, "")
+          .replace(/^\s*\/\/.*$/gm, "");
+        if (/\blocalStorage\.setItem\(/.test(src)) out.push(relative(root, p).replace(/\\/g, "/"));
+      }
+    }
+  };
+  for (const top of ["app", "lib", "components"]) walk(join(root, top));
+  return out.sort();
+}
+
+test("keys: EVERY module that writes localStorage is on one of the owner's two lists", () => {
   // The failure this catches is the one the technique names: a store added later
   // whose key nobody added to the owner. Nothing fails, no test notices, and the
-  // defect surfaces when two accounts share one machine. So the list is held
-  // against the modules that actually build those keys.
+  // defect surfaces when two accounts share one machine. So the population is
+  // WALKED — every writer the tree contains — and each one must be accounted
+  // for, either as a uid-scoped key the eviction removes or as an identity-
+  // independent key the owner has deliberately listed as an exception. This
+  // test used to read a hand-typed table of three writers, and the fourth
+  // (`gravitone.deck.art`, components/ui/deck/useArtVariant.ts) sat unlisted on
+  // both sides while the owner's header said "nothing yet".
   const uid = "uid-a";
-  const listed = new Set(userScopedLocalKeys(uid));
+  const evicted = new Set(userScopedLocalKeys(uid));
+  const exempt = new Set(IDENTITY_INDEPENDENT_LOCAL_KEYS);
 
-  const writers = [
-    ["lib/useProjects.ts", `gravitone.seeded.${uid}`],
-    ["lib/useAssets.ts", `gravitone.assets.seeded.${uid}`],
-    ["lib/jobs.tsx", "gravitone.jobs.v1"],
-  ] as const;
+  const table: Record<string, { evicted?: string; exempt?: string }> = {
+    "lib/useProjects.ts": { evicted: `gravitone.seeded.${uid}` },
+    "lib/useAssets.ts": { evicted: `gravitone.assets.seeded.${uid}` },
+    "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
+    "components/ui/deck/useArtVariant.ts": { exempt: "gravitone.deck.art" },
+  };
 
-  for (const [file, expected] of writers) {
+  const writers = localStorageWriters();
+  console.log(`[identity] localStorage writers walked: ${writers.length} — ${writers.join(", ")}`);
+  // The walk read something. A walk that finds nothing would pass every
+  // assertion below in a voice indistinguishable from success.
+  expect(writers.length).toBeGreaterThanOrEqual(3);
+
+  for (const file of writers) {
+    const row = table[file];
+    expect(row, `${file} writes localStorage and neither list accounts for it — user-scoped, or a listed exception?`).toBeTruthy();
+    const key = row!.evicted ?? row!.exempt!;
     const src = readFileSync(resolve(__dirname, "../..", file), "utf8");
-    // The key template really is still written in that file...
-    const template = expected.replace(uid, "${uid}");
+    // The key really is still written in that file...
+    const template = key.replace(uid, "${uid}");
     expect(
-      src.includes(template) || src.includes(expected),
-      `${file} no longer builds ${expected} — the eviction list is describing a key that moved`,
+      src.includes(template) || src.includes(key),
+      `${file} no longer builds ${key} — the table is describing a key that moved`,
     ).toBe(true);
-    // ...and the owner evicts it.
-    expect(listed.has(expected), `${file} writes ${expected} and the eviction list misses it`).toBe(
-      true,
-    );
+    // ...and the owner has it on the list the table says.
+    if (row!.evicted) expect(evicted.has(key), `${file} writes ${key} and the eviction list misses it`).toBe(true);
+    else expect(exempt.has(key), `${file} writes ${key} and the exception list misses it`).toBe(true);
   }
-  console.log(`[identity] eviction covers ${listed.size} local key(s): ${[...listed].join(", ")}`);
+  // And the table names nothing the tree no longer has.
+  for (const file of Object.keys(table)) expect(writers, `${file} is in the table but no longer writes localStorage`).toContain(file);
+  console.log(`[identity] eviction covers ${evicted.size} key(s), exempts ${exempt.size}: ${[...exempt].join(", ")}`);
 });
 
 test("eviction: it actually removes the keys, and only this uid's", async () => {

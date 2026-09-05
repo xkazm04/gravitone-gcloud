@@ -64,10 +64,16 @@
 // HAS ONE ANSWERABLE QUESTION: is it user-scoped, and if so, where is its line in
 // this file?
 //
-// The identity-INDEPENDENT state is the enumerated exception:
-//   · nothing yet. There is no theme switch, no language preference and no
-//     "seen this once" flag that outlives an account here. If one is added, it
-//     is listed HERE with its reason, not left out by accident.
+// The identity-INDEPENDENT state is the enumerated exception, and it is held in
+// `IDENTITY_INDEPENDENT_LOCAL_KEYS` below so a probe can walk every module that
+// writes localStorage and demand each key be on ONE of the two lists:
+//   · `gravitone.deck.art` — components/ui/deck/useArtVariant.ts. Which art
+//     variant the deck cards draw with: a per-browser display preference that
+//     says nothing about who is signed in and holds nothing they made. It was
+//     written before this paragraph knew it existed ("nothing yet", until
+//     2026-09-05), which is exactly the accident the list is here to prevent.
+//   There is still no theme switch, no language preference and no "seen this
+//   once" flag. If one is added, it is listed HERE with its reason.
 
 import {
   ASSETS_STORE,
@@ -156,6 +162,16 @@ export function userScopedLocalKeys(uid: string): string[] {
     JOBS_KEY, // lib/jobs.tsx — profile-wide, cleared wholesale (see above)
   ];
 }
+
+/**
+ * Every localStorage key this eviction deliberately LEAVES — the enumerated
+ * exception from the header, as data. A key that is on neither list is the
+ * defect: a writer nobody reviewed for scoping. Exported for the same probe
+ * that holds `userScopedLocalKeys` against the writers.
+ */
+export const IDENTITY_INDEPENDENT_LOCAL_KEYS: readonly string[] = [
+  "gravitone.deck.art", // components/ui/deck/useArtVariant.ts — a display preference
+];
 
 /**
  * Classify an identity transition. `null` means NOT a flip — do not evict.
