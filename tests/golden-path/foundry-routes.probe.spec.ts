@@ -8,7 +8,8 @@
 
 import { test, expect } from "@playwright/test";
 
-import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
+import { ACCESS_SECRET_VAR, __resetRateLimit } from "@/lib/apiAuth";
+import { MAX_BODY_BYTES, POST as extractPOST } from "@/app/api/foundry/extract/route";
 import { GET as fileGET } from "@/app/api/foundry/file/route";
 
 import { keepEnv } from "./_helpers";
@@ -53,6 +54,44 @@ test("file route: a WRONG `k` is told it was not accepted; a missing one is told
     const missingBody = (await missing.json()) as { detail: string };
     expect(missing.status).toBe(401);
     expect(missingBody.detail).toMatch(/requires access credentials/);
+  });
+});
+
+/* ── The extract POST refuses by declared size before it reads a byte ────── */
+
+const extractReq = (contentLength: string | null, body = "{}") =>
+  new Request("http://studio.local/api/foundry/extract", {
+    method: "POST",
+    headers: {
+      authorization: "Bearer right-secret",
+      "content-type": "application/json",
+      "x-forwarded-for": `10.9.${Math.floor(Math.random() * 250)}.${Math.floor(Math.random() * 250)}`,
+      ...(contentLength ? { "content-length": contentLength } : {}),
+    },
+    body,
+  });
+
+test("extract POST: a body declared over the cap is refused with 413 before it is parsed", async () => {
+  await withEnv({ [ACCESS_SECRET_VAR]: "right-secret" }, async () => {
+    __resetRateLimit();
+    // Before: nothing bounded the parse — 60 × 12 MB × 4/3 of base64 would
+    // have been materialised before the first image was refused.
+    const res = await extractPOST(extractReq(String(MAX_BODY_BYTES + 1)));
+    const body = (await res.json()) as { detail: string; code: string };
+    console.log(`[foundry] extract/oversize -> ${res.status} ${body.code}: ${body.detail.slice(0, 70)}`);
+    expect(res.status).toBe(413);
+    expect(body.code).toBe("too-large");
+    expect(body.detail).toContain(`${MAX_BODY_BYTES / 1024 / 1024} MB`);
+  });
+});
+
+test("extract POST: at or under the cap the body is parsed as before — a non-object is still a 400", async () => {
+  await withEnv({ [ACCESS_SECRET_VAR]: "right-secret" }, async () => {
+    __resetRateLimit();
+    const exact = await extractPOST(extractReq(String(MAX_BODY_BYTES), "[]"));
+    expect(exact.status).toBe(400);
+    const undeclared = await extractPOST(extractReq(null, "[]"));
+    expect(undeclared.status).toBe(400);
   });
 });
 

@@ -20,6 +20,19 @@ export const maxDuration = 120;
 
 const MIMES = new Set(["image/png", "image/jpeg", "image/webp"]);
 
+/**
+ * The most this route will PARSE. `req.json()` reads the whole body into one
+ * string before a single image is looked at, and until 2026-09-05 nothing
+ * bounded it: the per-image cap (12 MB) and the per-run cap (60 images) live in
+ * the store, AFTER the parse, so the route would happily materialise
+ * 60 × 12 MB × 4/3 ≈ 960 MB of base64 — and any body at all from a caller who
+ * had the public secret — before refusing. The browser resizes to a 1280 px
+ * long edge (≈1 MB a tile, ≈80 MB for a full gallery); the CLI does not go
+ * through this route. 256 MB is headroom for the browser's worst case and a
+ * ceiling on the rest. Refused on the DECLARED length, before the read.
+ */
+export const MAX_BODY_BYTES = 256 * 1024 * 1024;
+
 export async function GET(req: Request) {
   const denied = guardAccessOnly(req);
   if (denied) return denied;
@@ -34,6 +47,12 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
   const denied = guardRequest(req);
   if (denied) return denied;
+  const declared = Number(req.headers.get("content-length"));
+  if (Number.isFinite(declared) && declared > MAX_BODY_BYTES)
+    return Response.json(
+      { detail: `The upload is ${Math.round(declared / 1024 / 1024)} MB; this route takes at most ${MAX_BODY_BYTES / 1024 / 1024} MB per run. Resize the images or send fewer.`, code: "too-large" },
+      { status: 413 },
+    );
   let body: Record<string, unknown>;
   try {
     body = await req.json();
