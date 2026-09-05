@@ -54,7 +54,7 @@ PLANS = HERE / "plans"
 EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
-def publish(folder: Path, slug: str, max_width=1280):
+def publish(folder: Path, slug: str, max_edge=1280):
     """Copy screenshots in as <slug>-NNN.jpg, capped and letterbox left alone
     (forge crops letterbox per scene at plan time)."""
     from PIL import Image
@@ -81,8 +81,17 @@ def publish(folder: Path, slug: str, max_width=1280):
         n += 1
         dest = FRAMES_DIR / f"{slug}-{n:03d}.jpg"
         im = Image.open(p).convert("RGB")
-        if im.width > max_width:
-            im = im.resize((max_width, round(im.height * max_width / im.width)))
+        # THE CAP IS ON THE LONG EDGE, which is what this module's docstring
+        # has always said and what the reason behind it requires: "vision
+        # encoders tile anyway, and bytes are upload time" is true of height
+        # exactly as it is of width. Capping WIDTH let a portrait screenshot
+        # through untouched -- measured on 1080x1920, 1440x2560 and 1920x1080:
+        # only the landscape frame came out at 1280, the other two kept long
+        # edges of 1920 and 2276 and paid for them on every readback, which
+        # uploads the whole set at once.
+        if max(im.size) > max_edge:
+            scale = max_edge / max(im.size)
+            im = im.resize((round(im.width * scale), round(im.height * scale)))
         im.save(dest, quality=90)
         out.append(dest)
         print(f"  {p.name} -> {dest.name}  ({im.width}x{im.height})")

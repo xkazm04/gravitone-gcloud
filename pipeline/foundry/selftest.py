@@ -12,10 +12,14 @@ why that mattered: the README's "a candidate that could not be graded is
 `unmeasured`, counted separately, and never a pass" was false, and the statement
 that broke it sat directly under the code that had just made it true.
 
-WHAT IT MAY CONTAIN. Only cases that need no GPU, no ComfyUI, no Ollama and no
-network: the vendor calls are faked at the seam, so what is under test is this
-directory's own control flow. A case that needs a card belongs in a plan, not
-here.
+WHAT IT MAY CONTAIN. Only cases that need no GPU, no ComfyUI, no Ollama, no
+network AND NO THIRD-PARTY PACKAGE: the vendor calls are faked at the seam, so
+what is under test is this directory's own control flow. Verified stdlib-only
+by running it with PIL, numpy, requests, httpx, cv2 and torch blocked at import
+-- 5 cases green -- which is what would let a CI job run it with no pip step
+and still block. Pillow and numpy are imported INSIDE crop_letterbox and
+publish, so keep out of cases that call those; a case that needs a card belongs
+in a plan, not here.
 
 WHAT IT IS NOT. It is a courtesy, not yet a gate -- nothing invokes it. Running
 it is one command and it takes under a second; run it after touching anything
