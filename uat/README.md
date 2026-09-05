@@ -105,6 +105,21 @@ For this studio, explicitly call out **which phase loses people** ("Script and F
 everyone at the blocked shot, because nothing says what unblocks it"). The phase model is the
 product's central bet, and where it leaks is the finding that matters most.
 
+## Finding vocabulary — copy verbatim into every walker brief
+
+`severity`: `blocker` (the job cannot finish) · `major` (finishes, but a scored criterion fails) ·
+`minor` (finishes, criterion holds, trust or clarity cost) · `polish` · `strength`. No P-levels, no
+high/medium/low — ten walkers on 2026-09-05 used four vocabularies and the assembler had to
+normalise them. `impact` fields are `low | med | high`.
+
+## Two rules the 2026-09-05 run added
+
+- **The orchestrator may patch mid-run.** A brief says so, and asks walkers to grade HEAD and the
+  working tree separately when `git status` shows a fix to the surface they are on.
+- **Residue is a data source.** After any L2 with five or more Characters on the shared profile,
+  open the style shelf and the projects shelf and count duplicates — the tenth create is where a
+  per-create mint shows.
+
 ## Feed the loop
 
 A P0/P1 theme that needs product work rather than a patch belongs in
