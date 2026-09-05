@@ -190,6 +190,23 @@ test("queue: under storm it sheds the OLDEST POLITE message, never an assertive 
   expect(h2.q.peek().pending.some((p) => p.assertive)).toBe(true);
 });
 
+test("queue: an all-assertive storm sheds the OLDEST interrupt, not the one just queued", () => {
+  // Assertive messages jump to the FRONT, so "oldest" is the back of the queue.
+  // The shed used to splice index 0 when no polite message was left — the
+  // interrupt that had just arrived, which is the newest news there is.
+  const h = harness();
+  h.q.announce(msg("occupy", "occupying the drain"));
+  for (let i = 0; i < 12; i++) h.q.announce(msg(`a${i}`, `alert ${i}`, true));
+  const pending = h.q.peek().pending.map((p) => p.text);
+  console.log(`[a11y] assertive storm -> ${pending.length} pending, front=${pending[0]}, back=${pending.at(-1)}`);
+  expect(pending.length).toBeLessThanOrEqual(8);
+  // The newest interrupt is still at the front...
+  expect(pending[0]).toBe("alert 11");
+  // ...and it was the OLDEST ones that went.
+  expect(pending).not.toContain("alert 0");
+  expect(pending).not.toContain("alert 1");
+});
+
 test("queue: an empty message is not an utterance", () => {
   const h = harness();
   h.q.announce(msg("empty", ""));

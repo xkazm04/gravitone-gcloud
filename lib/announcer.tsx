@@ -182,10 +182,15 @@ export function createAnnouncerQueue(
       } else {
         queue.push(a);
       }
-      // Shed the oldest POLITE message under pressure, never an assertive one.
+      // Shed the oldest POLITE message under pressure, never an assertive one
+      // while a polite one remains. When ONLY assertive messages remain the
+      // oldest of those goes — and because assertive messages are unshifted,
+      // the oldest is at the BACK. This used to splice index 0, which in that
+      // case is the interrupt that was just queued: the newest news about the
+      // store, dropped to make room for eight older lines about it.
       while (queue.length > MAX_QUEUE) {
         const i = queue.findIndex((q) => !q.assertive);
-        queue.splice(i === -1 ? 0 : i, 1);
+        queue.splice(i === -1 ? queue.length - 1 : i, 1);
       }
       if (!draining) {
         draining = true;
