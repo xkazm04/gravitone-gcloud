@@ -12,7 +12,7 @@
 // SERVER ONLY. This spawns a process; it cannot and must not be imported from a
 // component.
 
-import { spawn } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
 
 import { MODEL } from "./model";
 
@@ -36,6 +36,39 @@ export class CliError extends Error {
  *  Windows, which Node cannot spawn directly). Exported so the probe drives the
  *  same predicate the spawn does, rather than a copy of it. */
 export const USES_SHELL = process.platform === "win32";
+
+/**
+ * END THE WHOLE TREE, not the shell in front of it.
+ *
+ * On Windows the spawn goes through `shell: true`, so `child` is cmd.exe and the
+ * real `claude` is its grandchild. `child.kill()` terminates cmd.exe alone —
+ * Windows does not cascade a kill down a process tree (next.config.ts learned
+ * the same lesson from stranded Turbopack workers) — and the grandchild keeps
+ * running, keeps the operator's seat busy, and keeps writing to a pipe nobody
+ * reads, for however long the turn would have taken. Measured 2026-09-05 with
+ * this exact spawn shape: after `child.kill()` the shell was gone and the
+ * grandchild was alive; after `taskkill /T` on the LIVE shell pid, both were
+ * gone in under a second. The order matters — once the shell has exited the
+ * tree cannot be walked from it any more, so taskkill goes first and the plain
+ * signal is the fallback, never the other way round.
+ *
+ * The registry's agent-cli-transport subject borrows termination-and-reaping
+ * from subprocess-lifecycle for exactly this: a timeout that leaves the child
+ * running has not enforced anything, it has only stopped listening.
+ *
+ * Off-shell (POSIX) `child` IS the binary, and the signal reaches it directly.
+ */
+export function killTree(child: ChildProcess): void {
+  if (USES_SHELL && child.pid) {
+    execFile("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true }, () => {
+      // taskkill could not (the tree was already gone, or this is not the
+      // platform the predicate thought). Whatever is still there gets the signal.
+      if (child.exitCode === null && !child.killed) child.kill();
+    });
+    return;
+  }
+  child.kill();
+}
 
 /**
  * THE SINGLE SPAWN DOOR'S ENVIRONMENT — and the one thing it takes away.
@@ -122,7 +155,7 @@ export function probeClaude(timeoutMs = 10_000): Promise<{ ok: boolean; version?
 
     let out = "";
     const timer = setTimeout(() => {
-      child.kill();
+      killTree(child);
       resolve({ ok: false, detail: `The \`claude\` CLI did not answer --version within ${Math.round(timeoutMs / 1000)}s.` });
     }, timeoutMs);
 
@@ -204,7 +237,10 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
     let out = "";
     let err = "";
     const timer = setTimeout(() => {
-      child.kill();
+      // The tree, not the shell — see killTree. A timeout that left `claude`
+      // running would keep spending the seat after the caller had been told
+      // the turn was over.
+      killTree(child);
       reject(new CliError(`The local Claude process did not finish within ${Math.round(ceiling / 1000)}s.`, "timeout"));
     }, ceiling);
 
