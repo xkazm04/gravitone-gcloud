@@ -91,6 +91,7 @@ function DuelCardBody({
   open,
   onToggleOpen,
   onReadBeats,
+  targetS,
 }: {
   render: ScriptRender;
   /** The chain this card is ABOUT — the front's arc bullets read from it. */
@@ -103,8 +104,13 @@ function DuelCardBody({
   open: boolean;
   onToggleOpen: () => void;
   onReadBeats: () => void;
+  /** The project's own clock. The subtraction the page had both operands for
+   *  and did not do (uat 2026-09-05, LE-L1-3: "one subtraction … and does not
+   *  do"). */
+  targetS?: number;
 }) {
   const reduced = useDeckReducedMotion();
+  const overS = typeof targetS === "number" && targetS > 0 ? r.durationS - targetS : null;
 
   // WHAT IS IN THIS CUT, on the front — the operator's rule (2026-08-30): the
   // reader identifies a candidate from content bullets, not from a metadata
@@ -210,6 +216,22 @@ function DuelCardBody({
               {mmss(r.durationS)} at {r.wpm} wpm · promise form: {r.promiseForm} · {r.questionsAloud}{" "}
               question{r.questionsAloud === 1 ? "" : "s"} aloud
             </p>
+            {overS !== null && overS !== 0 && (
+              <p
+                data-testid={`duel-runtime-delta-${r.id}`}
+                className={`font-jetbrains text-label ${overS > 0 ? "text-amber-200" : "text-white/45"}`}
+              >
+                {overS > 0 ? `+${overS} s over` : `${-overS} s under`} your {targetS} s at {r.wpm} wpm
+                {overS > 0 && ` — about ${Math.round((overS * r.wpm) / 60)} words to cut`}
+              </p>
+            )}
+            {/* The render's own declared deviations — the narration-led wpm
+                caveat among them — used to be expert-face only (LE-L1-3). */}
+            {r.deviations.map((d) => (
+              <p key={d} data-testid={`duel-deviation-${r.id}`} className="text-content leading-snug text-amber-200/80">
+                declared deviation — {d}
+              </p>
+            ))}
             {rewritten && (
               <p className="font-jetbrains text-label leading-snug text-amber-200/70">
                 words are counted from {chainLabel ?? "this version"}&rsquo;s own chain. Turns,
@@ -264,6 +286,7 @@ export default function CandidatesDuel({
   adoptedId,
   onAdopt,
   onReadBeats,
+  targetS,
 }: {
   renders: ScriptRender[];
   /** The chain each card is ABOUT — the same map the expert columns and the
@@ -278,6 +301,8 @@ export default function CandidatesDuel({
   /** Opens the SAME beats modal the expert face uses — the modal lives on the
    *  step, so both faces read one BeatList and cannot drift apart. */
   onReadBeats: (id: string) => void;
+  /** The project's target runtime, for the seconds-over line in each depth. */
+  targetS?: number;
 }) {
   const [openDepth, setOpenDepth] = useState<Record<string, boolean>>({});
 
@@ -314,6 +339,7 @@ export default function CandidatesDuel({
                 open={!!openDepth[r.id]}
                 onToggleOpen={() => setOpenDepth((o) => ({ ...o, [r.id]: !o[r.id] }))}
                 onReadBeats={() => onReadBeats(r.id)}
+                targetS={targetS}
               />
             </DeckCard>
           );

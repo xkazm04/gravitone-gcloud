@@ -1,0 +1,93 @@
+{
+  "run": "recertify-b001-b004",
+  "startedAt": "2026-09-05T18:35:28.671Z",
+  "steps": [
+    {
+      "at": 1788633328673,
+      "s": "goto /studio/p-mtokidjw-ri3i7v?step=script"
+    },
+    {
+      "at": 1788633330769,
+      "s": "click \"view-coverage\""
+    },
+    {
+      "at": 1788633335304,
+      "s": "snap 01-b001-coverage"
+    },
+    {
+      "at": 1788633335304,
+      "s": "goto /studio/p-mtokgh1c-owug0u?step=script"
+    },
+    {
+      "at": 1788633337147,
+      "s": "click \"duel-more-derived-short\""
+    },
+    {
+      "at": 1788633338012,
+      "s": "click \"duel-more-reversal-chain\""
+    },
+    {
+      "at": 1788633340305,
+      "s": "snap 02-b004-duel-depth"
+    }
+  ],
+  "checks": [
+    {
+      "label": "row for the cut card is marked descoped",
+      "ok": true,
+      "detail": "descoped"
+    },
+    {
+      "label": "the conflict marker names the seconds and the render",
+      "ok": true,
+      "detail": "cut · still spoken 12s by Reversal Chain, 13s by Adjudication"
+    },
+    {
+      "label": "the spoken cell carries the conflict attribute",
+      "ok": true
+    },
+    {
+      "label": "the footnote counts the disagreement",
+      "ok": true,
+      "detail": "1 card out of scope is still spoken by a render (f-ath) — the scope and these scripts disagree. These scripts were written against the full notebook; only a recalibration re-attributes them, and the gate does not check exclusions yet."
+    },
+    {
+      "label": "a not-taken conclusion's pip says 'Not taken', not 'Out of scope'",
+      "ok": true,
+      "detail": "Not taken — a conclusion is out of scope by default. Click to take it."
+    },
+    {
+      "label": "the not-taken row is not tinted as a cut",
+      "ok": true
+    },
+    {
+      "label": "a cut card's pip says 'Descoped'",
+      "ok": true,
+      "detail": "Descoped — you cut this. Click to bring it back."
+    },
+    {
+      "label": "the depth prints +5 s over your 40 s at 150 wpm",
+      "ok": true,
+      "detail": "+5 s over your 40 s at 150 wpm — about 13 words to cut"
+    },
+    {
+      "label": "and says roughly how many words that is",
+      "ok": true
+    },
+    {
+      "label": "the narration-led caveat is on the guided face",
+      "ok": true
+    },
+    {
+      "label": "the 5:00 render says how far over 40 s it is",
+      "ok": true,
+      "detail": "+260 s over your 40 s at 190 wpm — about 823 words to cut"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T18:35:40.305Z"
+}

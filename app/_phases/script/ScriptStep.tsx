@@ -355,6 +355,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
                       adoptedId={adoption.adoptedId}
                       onAdopt={adoption.adopt}
                       onReadBeats={setExpanded}
+                      targetS={asked.targetS}
                     />
                   ) : (
                     <div className="grid gap-3 lg:grid-cols-3">

@@ -15,11 +15,10 @@ import { useState } from "react";
 
 import type { Card } from "../../_shared/notebook/cards";
 import type { ScopeApi } from "../../research/useScope";
-import { stateOf } from "../../research/scope";
 import { NoteHandle } from "../_notes/NotesContext";
 import { UNTAGGED_DIMENSION_ID, columnsFor } from "../../_shared/notebook/dimensions";
 import { coverageIn, totalIn, usageIn, type Version } from "../versions";
-import { DeltaTag, MatrixFootnotes, RENDERS, ScopePip, TONE, deltaOf, secs } from "./shared";
+import { DeltaTag, MatrixFootnotes, RENDERS, ScopePip, TONE, deltaOf, outWord, secs, stillSpoken } from "./shared";
 
 export default function MatrixCoverage({
   api,
@@ -113,7 +112,7 @@ export default function MatrixCoverage({
         );
       })}
 
-      <MatrixFootnotes cards={api.cards} version={version} />
+      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} />
     </div>
   );
 }
@@ -131,7 +130,11 @@ function Row({
   baseline: Version;
   comparing: boolean;
 }) {
-  const descoped = stateOf(api.scope, card.id).descoped;
+  // "descoped" tints the row: it is a decision. "not-taken" does not: it is the
+  // default state of every conclusion, and a tint on arrival is an alarm nobody
+  // reads (scope.ts::scopeSummary says the same about the count).
+  const out = outWord(card, api.scope);
+  const conflict = stillSpoken(version, card, api.scope);
   const total = totalIn(version, card.id);
   const baseTotal = totalIn(baseline, card.id);
   const moved = comparing && total !== baseTotal;
@@ -139,7 +142,8 @@ function Row({
   return (
     <li
       data-testid={`row-${card.id}`}
-      className={`border-b border-white/[0.04] py-1 ${descoped ? "bg-amber-400/[0.03]" : ""} ${
+      data-scope={out}
+      className={`border-b border-white/[0.04] py-1 ${out === "descoped" ? "bg-amber-400/[0.03]" : ""} ${
         moved ? "bg-cyan-400/[0.04]" : ""
       }`}
     >
@@ -148,20 +152,41 @@ function Row({
         <span className="flex items-center gap-1.5">
           <NoteHandle cardId={card.id} />
           {moved && <DeltaTag d={total - baseTotal} />}
+          {conflict.length > 0 && (
+            // THE MARKER. Scope says out; a render says spoken. Named on the row
+            // so it cannot be read as ordinary seconds.
+            <span
+              data-testid={`conflict-${card.id}`}
+              className="font-jetbrains rounded border border-rose-400/40 bg-rose-400/[0.08] px-1.5 py-0.5 text-label text-rose-200"
+            >
+              {out === "descoped" ? "cut" : "not taken"} · still spoken{" "}
+              {conflict.map((c) => `${secs(c.seconds)} by ${c.label}`).join(", ")}
+            </span>
+          )}
         </span>
         {RENDERS.map((r) => {
           const u = usageIn(version, r.id, card.id);
           const t = TONE[u.kind];
           const dl = comparing ? deltaOf(baseline, version, r.id, card.id) : null;
+          const clash = u.kind === "spoken" && out !== "in";
           return (
             <span
               key={r.id}
               data-testid={`cell-${r.id}-${card.id}`}
               data-usage={u.kind}
-              title={u.kind === "cut" ? u.why : u.kind === "spoken" ? `beats ${u.beats.join(", ")}` : "no render used this"}
+              data-conflict={clash ? "true" : undefined}
+              title={
+                clash
+                  ? `${out === "descoped" ? "cut" : "not taken"} on the board, still spoken here for ${secs(u.seconds)} — beats ${u.beats.join(", ")}`
+                  : u.kind === "cut"
+                    ? u.why
+                    : u.kind === "spoken"
+                      ? `beats ${u.beats.join(", ")}`
+                      : "no render used this"
+              }
               className={`font-jetbrains rounded border px-1 py-0.5 text-center text-label ${t.cell} ${t.text} ${
                 dl ? "ring-1 ring-cyan-400/40" : ""
-              }`}
+              } ${clash ? "ring-1 ring-rose-400/60 text-rose-200" : ""}`}
             >
               {u.kind === "spoken" ? secs(u.seconds) : t.mark}
             </span>

@@ -12,10 +12,10 @@ new evidence to return).
 
 | # | kind | item | source | recertify with |
 |---|---|---|---|---|
-| B-001 | build | Coverage marks a descoped card that a render still speaks ("cut · still spoken 12 s by …") and counts them in the footnote; the pip and tint say `not taken` vs `descoped` in ScopeBar's words | PR-L1-2, DA-L1-12, HA-L1-5 | Priyanka, Hana |
+| B-001 | build · **shipped + recertified 2026-09-05** (`uat/runs/2026-09-05-compose/recertify.md`) | Coverage marks a descoped card that a render still speaks ("cut · still spoken 12 s by …") and counts them in the footnote; the pip and tint say `not taken` vs `descoped` in ScopeBar's words | PR-L1-2, DA-L1-12, HA-L1-5 | Priyanka, Hana |
 | B-002 | build (interim of C-001) | The guided review stage states how many cards it did not deal and links the expert board before `confirm scope` | PR-L1-5 | Priyanka, Kwame |
 | B-003 | build | Glossary layer: visible one-line glosses under chips/eyebrows on the guided faces; `requiredWhy` rewritten for a reader; ModeChooser lines and `DISCIPLINE_NOTE.trailer` in the maker's words | KW-L1-2, HA-L1-4, PR-L1-7, AM-L1-3/4, RA-L1-6, OW-L1-8 | Kwame, Hana, Amara |
-| B-004 | build (interim of C-002) | Duel depth prints the subtraction: `0:45 · +5 s over your 40 s at 150 wpm`; the narration-led caveat shown on the guided face | LE-L1-2, LE-L1-3 | Lena |
+| B-004 | build (interim of C-002) · **shipped + recertified 2026-09-05** | Duel depth prints the subtraction: `0:45 · +5 s over your 40 s at 150 wpm`; the narration-led caveat shown on the guided face | LE-L1-2, LE-L1-3 | Lena |
 | B-005 | build | Evidence-log modal mounted on Script; "what was cut, and why" list at the checkpoint with an optional reason per cut; `url` on `FactSource` rendered as an anchor when present | PR-L1-3, PR-L1-12, DA-L1-7 | Priyanka, Dani |
 | B-006 | build | A beat tile with no `risk` renders "no downside named" | MA-L1-6, RA-L1-4 | Marco |
 | B-007 | build | Lock facts→beats while an adoption or accepted version exists, with a reason; reopen keeps the beats→facts lock or the copy says Script still reads the last spine | OW-L1-6 | Owen |

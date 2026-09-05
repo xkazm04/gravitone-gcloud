@@ -760,12 +760,15 @@
   ],
   "code_check": "gateChains(chains, {conclusions}) — no scope argument; ATTRIBUTION maps beats to card ids, so the signal is computable.",
   "verdict": "confirmed",
-  "resolution": "open",
+  "resolution": "resolved-verified",
   "l2_priority": "Descope f-mnav, open Script Candidates: assert no duel card mentions the cut; open Coverage: assert the f-mnav row is tinted.",
   "mock_bound": true,
   "scope_note": "Ceiling: accepted gap 'A recalibration does not rewrite beat text — on the fallback path'. Raised only for the missing per-card signal, which ATTRIBUTION already makes computable.",
   "type_raw": "fixture",
-  "severity_raw": "low"
+  "severity_raw": "low",
+  "recertified": "2ad36a7..HEAD (B-001/B-004 build)",
+  "recertify_evidence": "l2/journals/recertify-b001-b004.log · shots/recertify/01-b001-coverage.png, 02-b004-duel-depth.png",
+  "ceiling": "The signal is on Coverage's row and footnote, not on the duel card front."
  },
  {
   "id": "DA-L1-S1",
@@ -1050,12 +1053,14 @@
   ],
   "code_check": "shared.tsx:46-73 has no `card.optIn` branch; scope.ts:113-115 already splits the count the pip ignores",
   "verdict": "confirmed",
-  "resolution": "open",
+  "resolution": "resolved-verified",
   "l2_priority": "Hover the pip on row-c-reserve-was-the-product in Coverage; assert title text. Precondition: no conclusion taken.",
   "mock_bound": false,
   "type_raw": "legibility",
   "severity_raw": "P3",
-  "recertify_evidence": "hana.log — Coverage pip title reads 'Out of scope. Click to bring it back.' for a not-taken conclusion"
+  "recertify_evidence": "l2/journals/recertify-b001-b004.log · shots/recertify/01-b001-coverage.png, 02-b004-duel-depth.png",
+  "recertified": "2ad36a7..HEAD (B-001/B-004 build)",
+  "ceiling": "Pip title and row attribute say 'not taken' vs 'descoped'; the tint is only on a cut. The Coverage footnote still says 'out of scope' as the umbrella word for both in its count."
  },
  {
   "id": "HA-L1-6",
@@ -1574,12 +1579,15 @@
   ],
   "code_check": "node -e: band [101,112], value 108, inBand true; 45 s × 190 wpm / 60 = 143 words",
   "verdict": "confirmed",
-  "resolution": "open",
+  "resolution": "resolved-verified",
   "l2_priority": "Expand duel-depth-derived-short: assert the text 'declared deviation' is absent; switch face and assert present. Same project as LE-L1-1.",
   "mock_bound": false,
   "scope_note": "Overlaps LE-L1-1 in cause (no runtime on the step) but is a separate fix: the meter's unit and where deviations render.",
   "type_raw": "legibility",
-  "severity_raw": "P2"
+  "severity_raw": "P2",
+  "recertified": "2ad36a7..HEAD (B-001/B-004 build)",
+  "recertify_evidence": "l2/journals/recertify-b001-b004.log · shots/recertify/01-b001-coverage.png, 02-b004-duel-depth.png",
+  "ceiling": "The subtraction uses the render's own wpm (150 image-led for the derived short, 190 for the long renders); the declared deviation is shown but a narration-led wpm is not applied — that rule is C-002."
  },
  {
   "id": "LE-L1-4",
@@ -2517,13 +2525,15 @@
   ],
   "code_check": "confirmed-absent",
   "verdict": "confirmed",
-  "resolution": "open",
+  "resolution": "resolved-verified",
   "mock_bound": false,
   "scope_note": "That the fixture scripts were written against the full notebook is accepted mock content; that the grid renders 'cut' and 'spoken' in one row with no reconciliation is the interface gap. A real rewrite (recalibration, optional here) is the only path that re-attributes.",
   "l2_priority": "Cut f-ath on the board, open Script → Coverage, assert row-f-ath shows pip '—' AND cell-reversal-chain-f-ath still reads 12s with no warning text. Precondition: educational project, run loaded, no recalibration accepted.",
   "type_raw": "trust",
   "severity_raw": "major",
-  "recertify_evidence": "priyanka.log — 'a cut card is drawn cut in Coverage (observe seconds still shown)'; shots/priyanka coverage"
+  "recertify_evidence": "l2/journals/recertify-b001-b004.log · shots/recertify/01-b001-coverage.png, 02-b004-duel-depth.png",
+  "recertified": "2ad36a7..HEAD (B-001/B-004 build)",
+  "ceiling": "Coverage marks the disagreement (row chip 'cut · still spoken 12s by Reversal Chain, 13s by Adjudication', rose-ringed cell, footnote count). It reports; nothing re-attributes the script and the gate still does not check exclusions (C-003)."
  },
  {
   "id": "PR-L1-3",

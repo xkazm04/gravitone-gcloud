@@ -167,7 +167,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
         </section>
       )}
 
-      <MatrixFootnotes cards={api.cards} version={version} />
+      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} />
     </div>
   );
 }

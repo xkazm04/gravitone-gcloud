@@ -101,7 +101,7 @@ export default function MatrixSpend({
         ))}
       </ul>
 
-      <MatrixFootnotes cards={api.cards} version={version} />
+      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} />
     </div>
   );
 }
