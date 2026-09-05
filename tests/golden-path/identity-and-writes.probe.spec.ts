@@ -22,8 +22,9 @@
 // database — the ordering rule and the trigger table are pure functions of call
 // order and uid, and a rule that cannot be asserted is a rule nobody can trust.
 // The localStorage half of the eviction IS driven end to end, against a stub.
-// What is NOT covered is the IDB transaction itself; that is the open
-// `data-access / repo-testing` item, and it is the same gap for both.
+// The IDB transaction itself is driven next door, against fake-indexeddb —
+// tests/golden-path/identity-eviction-idb.probe.spec.ts (2026-09-05); before
+// that file existed this paragraph named it as the open gap.
 import { test, expect } from "@playwright/test";
 import { claimSaveSlot, __resetSaveSlots } from "@/app/_phases/_shared/stepStore";
 import {
