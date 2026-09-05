@@ -113,6 +113,12 @@ def log(manifest, run_dir, msg):
     save(run_dir, manifest)
 
 
+def pct(v):
+    """A score as a percentage, or `n/a` when there is no score. Never None:
+    see the note in stage_grade."""
+    return "  n/a" if v is None else f"{100 * v:.0f}%"
+
+
 def set_stage(manifest, run_dir, stage, done=0, total=0):
     manifest["status"] = stage
     manifest["progress"] = {"stage": stage, "done": done, "total": total}
@@ -381,9 +387,23 @@ def stage_grade(manifest, run_dir, model):
         c.setdefault("timings", {})["grade_s"] = round(time.time() - t0, 1)
         craft = g["craft"]["score"] if g["craft"] else None
         sty = g["style"]["score"] if g["style"] else None
+        # THE PROGRESS LINE MUST SURVIVE AN ABSENT SCORE, because an absent
+        # score is the case this whole function is built to survive.
+        #
+        # `f"{None:>5}"` is a TypeError -- format specs do not apply to None --
+        # so the previous form, `{craft if craft is None else f'{100*craft:.0f}%':>5}`,
+        # raised on exactly the two paths the code above had just handled
+        # correctly: the craft or style pass threw and was recorded in
+        # `unmeasured` (the README's "a candidate that could not be graded is
+        # `unmeasured`, counted separately, and never a pass"), or craft_score
+        # returned None because the SOURCE annotation carries no scoreable
+        # field. main() catches BaseException, marks the manifest failed and
+        # re-raises, so one ungradable candidate ended the run -- at stage 2,
+        # with every plate already generated and an evening of GPU behind it.
+        # Format the string first; the spec then always has a string to pad.
         log(manifest, run_dir,
-            f"  [{n}/{len(todo)}] {c['id']:48s} craft {craft if craft is None else f'{100*craft:.0f}%':>5} "
-            f"style {sty if sty is None else f'{100*sty:.0f}%':>5} "
+            f"  [{n}/{len(todo)}] {c['id']:48s} craft {pct(craft):>5} "
+            f"style {pct(sty):>5} "
             f"{'TEXT!' if g['veto'] and g['veto']['has_text'] else ''}")
         manifest["progress"]["done"] = n
         save(run_dir, manifest)
