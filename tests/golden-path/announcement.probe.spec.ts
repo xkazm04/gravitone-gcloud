@@ -35,22 +35,31 @@ const KINDS: StorageFailure[] = ["quota", "blocked", "unavailable", "missing-sto
 /** A queue over a fake clock and a recording sink, so the POLICY is driven
  *  without a DOM, a renderer or real time. Every `tick()` runs whatever the
  *  queue scheduled next. */
+const DRAIN = 1000;
+const CLEAR = 10;
+
 function harness() {
   const writes: [level: "polite" | "assertive", text: string][] = [];
   let scheduled: (() => void) | null = null;
+  /** How far out the queue asked for the pending tick — the clear gap or the
+   *  drain gap, asserted where it matters. */
+  let scheduledMs: number | null = null;
   const q = createAnnouncerQueue(
     {
       polite: (t) => writes.push(["polite", t]),
       assertive: (t) => writes.push(["assertive", t]),
-      schedule: (fn) => {
+      schedule: (fn, ms) => {
         scheduled = fn;
+        scheduledMs = ms;
         return 1;
       },
       cancel: () => {
         scheduled = null;
+        scheduledMs = null;
       },
     },
-    1000,
+    DRAIN,
+    CLEAR,
   );
   /** Non-empty writes, in order — the actual utterances. The empty write before
    *  each is the deliberate region clear, asserted separately. */
@@ -59,10 +68,18 @@ function harness() {
     q,
     writes,
     spoken,
+    pendingMs: () => scheduledMs,
     tick() {
       const fn = scheduled;
       scheduled = null;
+      scheduledMs = null;
       fn?.();
+    },
+    /** One whole utterance from where the queue stands: the write tick, then
+     *  the drain tick that clears the next message (if any). */
+    utter() {
+      this.tick();
+      this.tick();
     },
   };
 }
@@ -78,20 +95,39 @@ test("queue: drains SERIALLY — one utterance per tick, not three in a frame", 
   h.q.announce(msg("b", "second"));
   h.q.announce(msg("c", "third"));
 
+  expect(h.spoken()).toEqual([]);
+  h.utter();
   expect(h.spoken()).toEqual(["polite:first"]);
-  h.tick();
+  h.utter();
   expect(h.spoken()).toEqual(["polite:first", "polite:second"]);
-  h.tick();
+  h.utter();
   expect(h.spoken()).toEqual(["polite:first", "polite:second", "polite:third"]);
   console.log(`[a11y] serial drain -> ${h.spoken().join(" | ")}`);
 });
 
-test("queue: each utterance CLEARS the region first", () => {
+test("queue: each utterance CLEARS the region first — on a tick of its OWN", () => {
   // Writing an identical string into the same region is not a mutation, so a
-  // repeat would be silently swallowed. Every drain is clear-then-write.
+  // repeat would be silently swallowed. Every drain is clear-then-write — and
+  // the two are SEPARATE commits. The sink is React state, and two setState
+  // calls in one task batch into one render: the region went old-text -> new
+  // text with the clear never reaching the DOM, so two utterances with the
+  // same words ("Removed plate from the shelf.", twice) voiced once. Measured
+  // as the contract here: the clear lands, the queue schedules, and only the
+  // scheduled tick writes the text.
   const h = harness();
   h.q.announce(msg("a", "same"));
   h.q.announce(msg("b", "same"));
+  // The clear is synchronous; the text is NOT here yet.
+  expect(h.writes).toEqual([["polite", ""]]);
+  expect(h.pendingMs()).toBe(CLEAR);
+  h.tick();
+  expect(h.writes).toEqual([
+    ["polite", ""],
+    ["polite", "same"],
+  ]);
+  // The drain gap is counted from the write.
+  expect(h.pendingMs()).toBe(DRAIN);
+  h.tick();
   h.tick();
   expect(h.writes).toEqual([
     ["polite", ""],
@@ -99,6 +135,9 @@ test("queue: each utterance CLEARS the region first", () => {
     ["polite", ""],
     ["polite", "same"],
   ]);
+  // The clear gap is a tick, not a pause: it is shorter than the drain gap.
+  expect(CLEAR).toBeLessThan(DRAIN);
+  console.log(`[a11y] clear/write -> ${h.writes.map(([, t]) => JSON.stringify(t)).join(" ")}`);
 });
 
 test("queue: the same EVENT is never announced twice (transitions, not renders)", () => {
@@ -109,8 +148,8 @@ test("queue: the same EVENT is never announced twice (transitions, not renders)"
   h.q.announce(msg("event:1", "Research finished"));
   h.q.announce(msg("event:1", "Research finished"));
   h.q.announce(msg("event:1", "Research finished — rephrased, same event"));
-  h.tick();
-  h.tick();
+  h.utter();
+  h.utter();
   console.log(`[a11y] dedupe -> ${h.spoken().length} utterance(s) from 3 announces`);
   expect(h.spoken()).toEqual(["polite:Research finished"]);
 });
@@ -122,8 +161,9 @@ test("queue: assertive JUMPS the queue and does not erase it", () => {
   // "routine one" is already draining; the interrupt goes in front of what is
   // still waiting, and the polite backlog resumes behind it.
   h.q.announce(msg("bad", "Not saved", true));
-  h.tick();
-  h.tick();
+  h.utter();
+  h.utter();
+  h.utter();
   console.log(`[a11y] jump -> ${h.spoken().join(" | ")}`);
   expect(h.spoken()).toEqual(["polite:routine one", "assertive:Not saved", "polite:routine two"]);
 });
@@ -163,11 +203,26 @@ test("queue: stop() ends the drain — no write after the channel is gone", () =
   const h = harness();
   h.q.announce(msg("a", "one"));
   h.q.announce(msg("b", "two"));
+  h.utter();
+  expect(h.spoken()).toEqual(["polite:one"]);
+  // "two" has been cleared for and its write is scheduled; stop() cancels it.
   h.q.stop();
+  h.tick();
   h.tick();
   expect(h.spoken()).toEqual(["polite:one"]);
   h.q.announce(msg("c", "three"));
   expect(h.spoken()).toEqual(["polite:one"]);
+});
+
+test("queue: stop() between the clear and the write — the write never lands", () => {
+  // The narrowest window the two-tick shape opens: the region was just cleared
+  // and the component unmounts. The scheduled write must not set state on it.
+  const h = harness();
+  h.q.announce(msg("a", "one"));
+  expect(h.writes).toEqual([["polite", ""]]);
+  h.q.stop();
+  h.tick();
+  expect(h.writes).toEqual([["polite", ""]]);
 });
 
 test("regions: they mount EMPTY, and live in the app SHELL", () => {

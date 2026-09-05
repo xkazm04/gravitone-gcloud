@@ -52,6 +52,11 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
  *  motion, so a reduced-motion preference must not change its timing. */
 const DRAIN_MS = 1400;
 
+/** The gap between CLEARING a region and WRITING into it — see `step`. One
+ *  tick is the whole point; the length only has to outlast a render commit.
+ *  Inaudible next to DRAIN_MS, and not derived from any animation either. */
+const CLEAR_MS = 50;
+
 /** Bounded, so a storm cannot build a backlog that replays minutes later. Under
  *  pressure the OLDEST polite messages are shed first: an assistive user gets
  *  the same triage a sighted user gets from a visual queue, not a transcript. */
@@ -119,7 +124,11 @@ export interface AnnouncerQueue {
  * tangled with hooks would have made it unassertable in a Node probe suite. The
  * provider below is a thin React wrapper over this.
  */
-export function createAnnouncerQueue(sink: AnnouncerSink, drainMs = DRAIN_MS): AnnouncerQueue {
+export function createAnnouncerQueue(
+  sink: AnnouncerSink,
+  drainMs = DRAIN_MS,
+  clearMs = CLEAR_MS,
+): AnnouncerQueue {
   /** Keys already spoken. Unbounded in principle and tiny in practice — one
    *  entry per real event in a session. */
   const spoken = new Set<string>();
@@ -135,17 +144,29 @@ export function createAnnouncerQueue(sink: AnnouncerSink, drainMs = DRAIN_MS): A
       draining = false;
       return;
     }
-    // One region mutation per drain. Clearing first is deliberate: writing an
-    // identical string into the same region is not a mutation, and a repeat
-    // would be silently swallowed.
-    if (next.assertive) {
-      sink.assertive("");
-      sink.assertive(next.text);
-    } else {
-      sink.polite("");
-      sink.polite(next.text);
-    }
-    handle = sink.schedule(step, drainMs);
+    const write = next.assertive ? sink.assertive : sink.polite;
+    // CLEAR NOW, SPEAK ON THE NEXT TICK — two commits, never one.
+    //
+    // Writing an identical string into a region is not a mutation, and assistive
+    // technology voices mutations, so every utterance is clear-then-write. That
+    // used to happen in one synchronous breath: `sink.polite("")` then
+    // `sink.polite(text)`. The sink is React state, and React batches two
+    // setState calls made in one task into ONE render — so the region went from
+    // its old text straight to the new text, the clear never touched the DOM,
+    // and when the two texts were equal nothing changed at all. The repeat this
+    // channel was designed to survive was the one it swallowed: remove two
+    // plates that share a name and "Removed plate from the shelf." is voiced
+    // once; two research runs finishing with one detail line, likewise.
+    //
+    // Scheduling the write one tick later puts the clear in its own commit. The
+    // drain gap is counted from the write, not the clear, so the cadence a
+    // listener hears is unchanged.
+    write("");
+    handle = sink.schedule(() => {
+      if (stopped) return;
+      write(next.text);
+      handle = sink.schedule(step, drainMs);
+    }, clearMs);
   };
 
   return {
