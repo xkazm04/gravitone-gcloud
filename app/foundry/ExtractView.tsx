@@ -46,6 +46,22 @@ export function ExtractView() {
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState<ExtractCommitResult | null>(null);
+  /** A commit that FAILED, shown inside the dialog that asked for it.
+   *
+   *  The catch used to write `runsError`, which renders beside the run list —
+   *  and the confirm dialog is `fixed inset-0 z-50` over a backdrop at 80%
+   *  with a blur, carrying `aria-modal="true"`. So the message landed
+   *  somewhere the reader could not see it and a screen reader would not
+   *  reach: aria-modal removes the rest of the page from the accessibility
+   *  tree. The dialog meanwhile went from "committing…" back to its button,
+   *  which is indistinguishable from a click that never registered.
+   *
+   *  This repo has already written the rule down, in
+   *  tests/golden-path/dialog-closes-on-success.probe.spec.ts: "closing a
+   *  confirmation over work that was not done is the same small lie as a
+   *  button that does nothing." Staying open was right; saying nothing was
+   *  not. */
+  const [commitError, setCommitError] = useState<string | null>(null);
   const [zoomOpen, setZoomOpen] = useState(false);
   /** The clock as of the last detail load — the lease is judged against
    *  this, not against render time, so render stays pure. */
@@ -248,6 +264,7 @@ export function ExtractView() {
   const doCommit = async () => {
     if (!selected) return;
     setCommitting(true);
+    setCommitError(null);
     try {
       const r = await commitExtractRun(selected);
       setResult(r);
@@ -255,7 +272,7 @@ export function ExtractView() {
       loadDetail(selected, false);
       loadRuns();
     } catch (e) {
-      setRunsError(e instanceof Error ? e.message : "commit failed");
+      setCommitError(e instanceof Error ? e.message : "commit failed");
     } finally {
       setCommitting(false);
     }
@@ -364,7 +381,11 @@ export function ExtractView() {
 
       <Modal
         open={confirm}
-        onClose={() => !committing && setConfirm(false)}
+        onClose={() => {
+          if (committing) return;
+          setConfirm(false);
+          setCommitError(null);
+        }}
         title="Commit the kept styles?"
         className="max-w-md"
         footer={
@@ -383,6 +404,11 @@ export function ExtractView() {
           <code className="font-jetbrains text-label text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. The forge
           can be pointed at them from the next plan. Undecided counts as thrown. Nothing is deleted, but the verdicts are final.
         </p>
+        {commitError && (
+          <p role="alert" className="font-jetbrains mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-content text-rose-200">
+            The commit failed and no style was written: {commitError}
+          </p>
+        )}
       </Modal>
     </>
   );
