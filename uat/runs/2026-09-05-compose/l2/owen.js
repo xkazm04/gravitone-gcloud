@@ -1,0 +1,23 @@
+const CHARACTER = "owen";
+const id = await createProject({ discipline: "free", template: "free-form", preset: "newsprint-cutout", title: "The 1987 disappearance", logline: "Everyone thought she left. The record says she was taken.", targetS: 600 });
+await openStep(id, "research");
+await waitFor("mode-facts", { ms: 60000 });
+expect("the chooser says it is reversible", /switch later/i.test(await bodyText()));
+await click("mode-facts");
+await sleep(600);
+expect("facts mode mounts the educational research", await has("run-research") || await has({ label: "Topic" }));
+await runResearch("The 1987 disappearance");
+await walkGuidedToScript(id, { takeHottest: true, confirm: true });
+expect("free+facts reaches Candidates", await has("candidates-duel"));
+const duel = await textOf("candidates-duel");
+expect("Adjudication card has no fake 'turns' line", !/turns\s+C3/i.test(duel), { detail: (duel.match(/turns[^\n]*\n[^\n]*/gi) || []).join(" | ").slice(0, 120) });
+expect("free project's 600s mismatch stated", /Free form · 600s/.test(await textOf("script-runtime-note").catch(() => "")), { detail: await textOf("script-runtime-note").catch(() => "absent") });
+await click("deck-card-reversal-chain");
+await sleep(300);
+expect("adopted", await has("duel-adopted-reversal-chain"));
+// ModeSwitch: facts → beats is not locked after adoption (OW-L1-6b, observe)
+await openStep(id, "research");
+await sleep(500);
+const sw = await disabled("switch-mode").catch(() => null);
+expect("facts→beats switch state after adoption (observe; L1 says never locked)", sw === false, { detail: `disabled=${sw}` });
+await snap("owen-modeswitch");

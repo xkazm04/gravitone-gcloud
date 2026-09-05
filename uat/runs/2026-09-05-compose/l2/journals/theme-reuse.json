@@ -1,0 +1,90 @@
+{
+  "run": "theme-reuse",
+  "startedAt": "2026-09-05T16:10:16.732Z",
+  "steps": [
+    {
+      "at": 1788624616734,
+      "s": "goto /projects"
+    },
+    {
+      "at": 1788624619310,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788624620574,
+      "s": "click \"deck-card-trailer\""
+    },
+    {
+      "at": 1788624621159,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624621747,
+      "s": "click \"deck-card-teaser\""
+    },
+    {
+      "at": 1788624622159,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624623179,
+      "s": "click \"deck-card-preset:paper-relief\""
+    },
+    {
+      "at": 1788624623830,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624624260,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Theme reuse check\""
+    },
+    {
+      "at": 1788624624358,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"60\""
+    },
+    {
+      "at": 1788624625610,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788624625620,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624626556,
+      "s": "recorded p-mtokx5vk-io40od → uat/runs/2026-09-05-compose/created.json"
+    }
+  ],
+  "checks": [
+    {
+      "label": "style stage offers presets for trailer",
+      "ok": true,
+      "detail": "presets=6 borrowed=true"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Theme reuse check"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "a second create from the same preset reuses the minted theme",
+      "ok": true,
+      "detail": "themes 14 → 14"
+    },
+    {
+      "label": "the project points at the existing untagged Paper Relief theme",
+      "ok": true,
+      "detail": "{\"presetId\":\"paper-relief\"}"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T16:10:26.894Z"
+}

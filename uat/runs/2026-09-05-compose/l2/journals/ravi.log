@@ -1,0 +1,39 @@
+· goto /projects/new
+· click "deck-card-free"
+· click {"role":"button","name":{}}
+· click "deck-card-free-form"
+· click {"role":"button","name":{}}
+ok   style stage offers presets for free — presets=6 borrowed=true
+· click "deck-card-preset:chalk-argument"
+· click {"role":"button","name":{}}
+· fill {"css":"#w-title"} ← "Hold music — a sketch"
+· fill {"css":"#w-logline"} ← "A caller on hold outlives the company."
+· fill {"css":"#w-dur"} ← "45"
+· snap 01-wizard-name-stage
+· click {"role":"button","name":{}}
+ok   studio headline is the name typed — Hold music — a sketch
+ok   header pill states discipline · template · runtime
+· recorded p-mtokn9w1-hjes5x → uat/runs/2026-09-05-compose/created.json
+· goto /studio/p-mtokn9w1-hjes5x?step=research
+FAIL the chooser is answerable without studio words (RA-L1-6, observe) — facts to involve
+A topic goes in, a notebook comes out, and you scope what the script may use.
+· click "mode-beats"
+ok   board says the spine is borrowed and a fixture
+· click "variant-cold-open-c"
+· click "variant-intro-b"
+· click "switch-mode"
+· click "switch-mode"
+ok   picks survive a facts⇄beats round trip
+· click "variant-esc1-a"
+· click "variant-esc2-a"
+· click "variant-esc3-a"
+· click "variant-reset-a"
+· click "variant-climax-a"
+· click "variant-tail-a"
+ok   every part picked — 8 of 8 parts picked — the spine is whole.
+· click "compose-spine"
+ok   spine composed
+ok   the mode switch is locked after compose and says why — reopen the composed spine first — composing it marked this project researched, and Script reads that
+· goto /studio/p-mtokn9w1-hjes5x?step=script
+ok   Script names the stand-in and his 45s — fixture · n=0 · the beat text, the cue and the withholding budget are the Glass Harbor stand-in, whatever this project’s logline, template or runtime — your target is 45s; these beats run to 1:50 and the clock is not read here yet
+· snap 02-ravi-script

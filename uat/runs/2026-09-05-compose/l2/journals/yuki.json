@@ -1,0 +1,203 @@
+{
+  "run": "yuki",
+  "startedAt": "2026-09-05T16:00:24.917Z",
+  "steps": [
+    {
+      "at": 1788624024919,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788624027021,
+      "s": "click \"deck-card-trailer\""
+    },
+    {
+      "at": 1788624027812,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624028555,
+      "s": "click \"deck-card-cinematic\""
+    },
+    {
+      "at": 1788624029164,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624030384,
+      "s": "click \"deck-card-preset:signal-ledger\""
+    },
+    {
+      "at": 1788624031117,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624031740,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Emberline — series pitch cinematic\""
+    },
+    {
+      "at": 1788624031932,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"90\""
+    },
+    {
+      "at": 1788624033359,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788624033367,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624034514,
+      "s": "recorded p-mtokkgys-akx3fl → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788624034519,
+      "s": "goto /studio/p-mtokkgys-akx3fl?step=research"
+    },
+    {
+      "at": 1788624040351,
+      "s": "click \"variant-cold-open-b\""
+    },
+    {
+      "at": 1788624041506,
+      "s": "click \"variant-intro-a\""
+    },
+    {
+      "at": 1788624042048,
+      "s": "click \"variant-esc1-a\""
+    },
+    {
+      "at": 1788624042552,
+      "s": "click \"variant-esc2-a\""
+    },
+    {
+      "at": 1788624052293,
+      "s": "click \"variant-esc3-a\""
+    },
+    {
+      "at": 1788624052982,
+      "s": "click \"variant-reset-a\""
+    },
+    {
+      "at": 1788624053665,
+      "s": "click \"variant-climax-a\""
+    },
+    {
+      "at": 1788624054298,
+      "s": "click \"variant-tail-a\""
+    },
+    {
+      "at": 1788624055097,
+      "s": "click \"compose-spine\""
+    },
+    {
+      "at": 1788624056617,
+      "s": "goto /studio/p-mtokkgys-akx3fl?step=script"
+    },
+    {
+      "at": 1788624072250,
+      "s": "snap 02-yuki-structure"
+    },
+    {
+      "at": 1788624072250,
+      "s": "goto /studio/p-mtokkgys-akx3fl?step=research"
+    },
+    {
+      "at": 1788624079983,
+      "s": "click \"reopen-spine\""
+    },
+    {
+      "at": 1788624085621,
+      "s": "goto /studio/p-mtokkgys-akx3fl?step=script"
+    },
+    {
+      "at": 1788624088040,
+      "s": "click \"step-script\""
+    },
+    {
+      "at": 1788624089000,
+      "s": "goto /studio/p-mtokkgys-akx3fl"
+    },
+    {
+      "at": 1788624100554,
+      "s": "goto /projects"
+    },
+    {
+      "at": 1788624108525,
+      "s": "snap 03-yuki-shelf"
+    }
+  ],
+  "checks": [
+    {
+      "label": "style stage offers presets for trailer",
+      "ok": true,
+      "detail": "presets=6 borrowed=true"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Emberline — series pitch cinematic"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "header pill: Movie · game trailer · Cinematic · 90s",
+      "ok": true
+    },
+    {
+      "label": "research not reported before any pick",
+      "ok": true,
+      "detail": "{\"research\":\"empty\",\"script\":\"empty\",\"frames\":\"empty\",\"score\":\"empty\",\"cut\":\"empty\"}"
+    },
+    {
+      "label": "one pick → research 'working'",
+      "ok": true,
+      "detail": "{\"research\":\"working\",\"script\":\"empty\",\"frames\":\"empty\",\"score\":\"empty\",\"cut\":\"empty\"}"
+    },
+    {
+      "label": "every part picked",
+      "ok": true,
+      "detail": "8 of 8 parts picked — the spine is whole."
+    },
+    {
+      "label": "spine composed",
+      "ok": true
+    },
+    {
+      "label": "composed spine → research 'done' (locked)",
+      "ok": true,
+      "detail": "{\"research\":\"done\",\"script\":\"empty\",\"frames\":\"empty\",\"score\":\"empty\",\"cut\":\"empty\"}"
+    },
+    {
+      "label": "structure report lists findings by rule",
+      "ok": true,
+      "detail": "12"
+    },
+    {
+      "label": "reopened → research back to 'working'",
+      "ok": true,
+      "detail": "{\"research\":\"working\",\"script\":\"working\",\"frames\":\"empty\",\"score\":\"empty\",\"cut\":\"empty\"}"
+    },
+    {
+      "label": "Script says the spine is reopened and this is the last composed cut",
+      "ok": true
+    },
+    {
+      "label": "reload lands on Script",
+      "ok": true
+    },
+    {
+      "label": "shelf research cell reflects the reopen (in progress)",
+      "ok": true,
+      "detail": "Research — in progress · open here"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T16:01:48.525Z"
+}

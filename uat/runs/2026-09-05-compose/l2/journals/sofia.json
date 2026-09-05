@@ -1,0 +1,176 @@
+{
+  "run": "sofia",
+  "startedAt": "2026-09-05T15:49:59.776Z",
+  "steps": [
+    {
+      "at": 1788623399778,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788623405896,
+      "s": "click \"deck-card-trailer\""
+    },
+    {
+      "at": 1788623406515,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623406907,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788623407674,
+      "s": "click \"deck-card-trailer\""
+    },
+    {
+      "at": 1788623408098,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623408455,
+      "s": "click \"deck-card-teaser\""
+    },
+    {
+      "at": 1788623408798,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623409727,
+      "s": "click \"deck-card-preset:paper-relief\""
+    },
+    {
+      "at": 1788623410081,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623410450,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Low Water — festival teaser\""
+    },
+    {
+      "at": 1788623410501,
+      "s": "fill {\"css\":\"#w-logline\"} ← \"Two sisters, one boat, the summer the river stopped.\""
+    },
+    {
+      "at": 1788623410578,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"60\""
+    },
+    {
+      "at": 1788623411731,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788623411740,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623412697,
+      "s": "recorded p-mtok75b6-08bq3d → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788623412697,
+      "s": "goto /studio/p-mtok75b6-08bq3d?step=research"
+    },
+    {
+      "at": 1788623417712,
+      "s": "click \"variant-cold-open-a\""
+    },
+    {
+      "at": 1788623418155,
+      "s": "click \"variant-intro-a\""
+    },
+    {
+      "at": 1788623418540,
+      "s": "click \"variant-esc1-a\""
+    },
+    {
+      "at": 1788623418903,
+      "s": "click \"variant-esc2-a\""
+    },
+    {
+      "at": 1788623419258,
+      "s": "click \"variant-esc3-a\""
+    },
+    {
+      "at": 1788623419668,
+      "s": "click \"variant-reset-a\""
+    },
+    {
+      "at": 1788623420054,
+      "s": "click \"variant-climax-a\""
+    },
+    {
+      "at": 1788623420397,
+      "s": "click \"variant-tail-a\""
+    },
+    {
+      "at": 1788623421285,
+      "s": "click \"compose-spine\""
+    },
+    {
+      "at": 1788623422158,
+      "s": "goto /studio/p-mtok75b6-08bq3d?step=script"
+    },
+    {
+      "at": 1788623425303,
+      "s": "click \"promise-add-beat\""
+    },
+    {
+      "at": 1788623430292,
+      "s": "snap 02-sofia-script"
+    }
+  ],
+  "checks": [
+    {
+      "label": "teaser band is labelled sourced, not measured",
+      "ok": true
+    },
+    {
+      "label": "style stage offers presets for trailer",
+      "ok": true,
+      "detail": "presets=6 borrowed=true"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Low Water — festival teaser"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "teaser gets a different slot set than a trailer (SO-L1-2, expect 8 = same)",
+      "ok": false,
+      "detail": "slots=8"
+    },
+    {
+      "label": "every part picked",
+      "ok": true,
+      "detail": "8 of 8 parts picked — the spine is whole."
+    },
+    {
+      "label": "spine composed",
+      "ok": true
+    },
+    {
+      "label": "Script states the 60s target vs the fixture's 1:50",
+      "ok": true,
+      "detail": "fixture · n=0 · the beat text, the cue and the withholding budget are the Glass Harbor stand-in, whatever this project’s logline, template or runtime — your target is 60s; these beats run to 1:50 and the clock is not read here yet"
+    },
+    {
+      "label": "lane is stated (SO-L1-4: no control to change it — observe)",
+      "ok": true
+    },
+    {
+      "label": "promise ledger says an empty ledger is not 'promises nothing'",
+      "ok": true
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T15:50:30.292Z"
+}

@@ -1,0 +1,185 @@
+{
+  "run": "amara",
+  "startedAt": "2026-09-05T15:53:35.112Z",
+  "steps": [
+    {
+      "at": 1788623615114,
+      "s": "goto /projects"
+    },
+    {
+      "at": 1788623616634,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623638793,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788623639839,
+      "s": "click \"deck-card-free\""
+    },
+    {
+      "at": 1788623640274,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623640687,
+      "s": "click \"deck-card-free-form\""
+    },
+    {
+      "at": 1788623641108,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623642116,
+      "s": "click \"deck-card-preset:signal-ledger\""
+    },
+    {
+      "at": 1788623642552,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623643019,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Glow Serum launch — 45s\""
+    },
+    {
+      "at": 1788623643195,
+      "s": "fill {\"css\":\"#w-logline\"} ← \"One drop. Eight hours. The promise is the product.\""
+    },
+    {
+      "at": 1788623643288,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"45\""
+    },
+    {
+      "at": 1788623644748,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788623644761,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623645880,
+      "s": "recorded p-mtokc55f-z9eaer → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788623645880,
+      "s": "goto /studio/p-mtokc55f-z9eaer?step=research"
+    },
+    {
+      "at": 1788623652322,
+      "s": "click \"mode-beats\""
+    },
+    {
+      "at": 1788623653457,
+      "s": "click \"variant-cold-open-a\""
+    },
+    {
+      "at": 1788623654034,
+      "s": "click \"variant-intro-a\""
+    },
+    {
+      "at": 1788623654532,
+      "s": "click \"variant-esc1-a\""
+    },
+    {
+      "at": 1788623655038,
+      "s": "click \"variant-esc2-a\""
+    },
+    {
+      "at": 1788623655529,
+      "s": "click \"variant-esc3-a\""
+    },
+    {
+      "at": 1788623655966,
+      "s": "click \"variant-reset-a\""
+    },
+    {
+      "at": 1788623656405,
+      "s": "click \"variant-climax-a\""
+    },
+    {
+      "at": 1788623657063,
+      "s": "click \"variant-tail-a\""
+    },
+    {
+      "at": 1788623657904,
+      "s": "click \"compose-spine\""
+    },
+    {
+      "at": 1788623658853,
+      "s": "goto /studio/p-mtokc55f-z9eaer?step=script"
+    },
+    {
+      "at": 1788623662792,
+      "s": "fill \"promise-add-sentence\" ← \"the serum will do in one night what the ritual took a month to do\""
+    },
+    {
+      "at": 1788623669873,
+      "s": "snap 02-amara-ledger"
+    },
+    {
+      "at": 1788623669874,
+      "s": "goto /projects"
+    },
+    {
+      "at": 1788623675272,
+      "s": "snap 03-amara-shelf"
+    }
+  ],
+  "checks": [
+    {
+      "label": "expert dialog's empty style copy routes to the wizard",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "label": "style stage offers presets for free",
+      "ok": true,
+      "detail": "presets=6 borrowed=true"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Glow Serum launch — 45s"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "every part picked",
+      "ok": true,
+      "detail": "8 of 8 parts picked — the spine is whole."
+    },
+    {
+      "label": "spine composed",
+      "ok": true
+    },
+    {
+      "label": "withholding budget is labelled a stand-in on Script",
+      "ok": true
+    },
+    {
+      "label": "a promise with no payer reads incomplete",
+      "ok": true,
+      "detail": "PROMISE LEDGER 1 PROMISED · 1 INCOMPLETE the serum will do in one night what the ritual took a month to do by claim · on “four of them, one rule” @0:12 PAYER in"
+    },
+    {
+      "label": "Monday's shelf shows research locked",
+      "ok": true,
+      "detail": "Research — locked · open here"
+    },
+    {
+      "label": "Monday's shelf shows script in progress",
+      "ok": true,
+      "detail": "Script — in progress · open here"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T15:54:35.272Z"
+}

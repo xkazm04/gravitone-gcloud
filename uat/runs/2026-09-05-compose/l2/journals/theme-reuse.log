@@ -1,0 +1,18 @@
+· goto /projects
+· goto /projects/new
+· click "deck-card-trailer"
+· click {"role":"button","name":{}}
+· click "deck-card-teaser"
+· click {"role":"button","name":{}}
+ok   style stage offers presets for trailer — presets=6 borrowed=true
+· click "deck-card-preset:paper-relief"
+· click {"role":"button","name":{}}
+· fill {"css":"#w-title"} ← "Theme reuse check"
+· fill {"css":"#w-dur"} ← "60"
+· snap 01-wizard-name-stage
+· click {"role":"button","name":{}}
+ok   studio headline is the name typed — Theme reuse check
+ok   header pill states discipline · template · runtime
+· recorded p-mtokx5vk-io40od → uat/runs/2026-09-05-compose/created.json
+ok   a second create from the same preset reuses the minted theme — themes 14 → 14
+ok   the project points at the existing untagged Paper Relief theme — {"presetId":"paper-relief"}

@@ -1,1 +1,3 @@
 runs/*/captures/
+runs/*/shots/
+.profile/

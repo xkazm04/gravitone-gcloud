@@ -1,0 +1,235 @@
+{
+  "run": "dani",
+  "startedAt": "2026-09-05T15:39:06.602Z",
+  "steps": [
+    {
+      "at": 1788622746604,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788622754013,
+      "s": "click \"deck-card-educational\""
+    },
+    {
+      "at": 1788622754516,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622754945,
+      "s": "click \"deck-card-mid-educational-video\""
+    },
+    {
+      "at": 1788622755325,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622756405,
+      "s": "click \"deck-card-preset:chalk-argument\""
+    },
+    {
+      "at": 1788622756753,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622757253,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Why bridges sing in the wind\""
+    },
+    {
+      "at": 1788622757311,
+      "s": "fill {\"css\":\"#w-logline\"} ← \"A bridge is a musical instrument nobody tuned.\""
+    },
+    {
+      "at": 1788622757367,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"300\""
+    },
+    {
+      "at": 1788622758572,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788622758581,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622767464,
+      "s": "recorded p-mtojt5dy-fre7w2 → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788622767464,
+      "s": "goto /studio/p-mtojt5dy-fre7w2?step=research"
+    },
+    {
+      "at": 1788622780028,
+      "s": "fill {\"label\":\"Topic\"} ← \"Why bridges sing in the wind\""
+    },
+    {
+      "at": 1788622780162,
+      "s": "click \"run-research\""
+    },
+    {
+      "at": 1788622788520,
+      "s": "snap 02-research-landed"
+    },
+    {
+      "at": 1788622788556,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622790899,
+      "s": "snap 03-guided-takes"
+    },
+    {
+      "at": 1788622790908,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622791614,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622792445,
+      "s": "click \"confirm-scope\""
+    },
+    {
+      "at": 1788622794484,
+      "s": "snap 04-guided-review"
+    },
+    {
+      "at": 1788622794495,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622795883,
+      "s": "click \"duel-more-reversal-chain\""
+    },
+    {
+      "at": 1788622796722,
+      "s": "click \"duel-beats-reversal-chain\""
+    },
+    {
+      "at": 1788622802870,
+      "s": "click \"deck-card-reversal-chain\""
+    },
+    {
+      "at": 1788622805294,
+      "s": "snap 05-script-adopted"
+    },
+    {
+      "at": 1788622805294,
+      "s": "goto /studio/p-mtojt5dy-fre7w2"
+    },
+    {
+      "at": 1788622807530,
+      "s": "goto /projects"
+    },
+    {
+      "at": 1788622814906,
+      "s": "snap 06-shelf-after"
+    }
+  ],
+  "checks": [
+    {
+      "label": "style stage offers presets for educational",
+      "ok": true,
+      "detail": "presets=6 borrowed=false"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Why bridges sing in the wind"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "label": "a fresh project's topic field is empty",
+      "ok": true,
+      "detail": "\"\""
+    },
+    {
+      "label": "the stand-in is disclosed BEFORE the run",
+      "ok": true
+    },
+    {
+      "label": "after the run the note names the stand-in against the typed topic",
+      "ok": true,
+      "detail": "prototype · this notebook is the saved 2026-08-11 Bitcoin run, not research on “Why bridges sing in the wind” — every ca"
+    },
+    {
+      "label": "the steel-man card says it always travels and why",
+      "ok": true,
+      "detail": "STEEL-MAN The forced-seller story is weaker than it looks, and the accumulation story is real locked in scope — always travels The steel-man"
+    },
+    {
+      "label": "the hottest take is labelled speculation and not taken by default",
+      "ok": true,
+      "detail": "😈 HOTTEST TAKE The Strategic Bitcoin Reserve was never meant to be built not taken risk — speculation about motive — no"
+    },
+    {
+      "label": "scope confirmed",
+      "ok": true
+    },
+    {
+      "label": "candidates duel is shown",
+      "ok": true
+    },
+    {
+      "label": "the 'turns' line names a turn beat, not 'escalation'",
+      "ok": true,
+      "detail": "TURNS\nTURN 1 · an inflow is not a purchase"
+    },
+    {
+      "label": "the runtime note is absent when the project's 300s matches a render",
+      "ok": true
+    },
+    {
+      "label": "depth shows words and wpm",
+      "ok": true
+    },
+    {
+      "label": "beats modal opens with readable beat text",
+      "ok": true
+    },
+    {
+      "label": "adoption is announced on the card",
+      "ok": true
+    },
+    {
+      "label": "reload lands on Script (parked by the hand-off)",
+      "ok": true,
+      "detail": "aria-current=step"
+    },
+    {
+      "label": "the adopted candidate survives a reload",
+      "ok": true
+    },
+    {
+      "label": "research reported to the project record",
+      "ok": true,
+      "detail": "{\"research\":\"done\",\"script\":\"working\",\"frames\":\"empty\",\"score\":\"empty\",\"cut\":\"empty\"}"
+    },
+    {
+      "label": "script reported to the project record",
+      "ok": true,
+      "detail": "{\"research\":\"done\",\"script\":\"working\",\"frames\":\"empty\",\"score\":\"empty\",\"cut\":\"empty\"}"
+    },
+    {
+      "label": "shelf research cell moved off 'not started'",
+      "ok": true,
+      "detail": "Research — locked · open here"
+    },
+    {
+      "label": "shelf script cell moved off 'not started'",
+      "ok": true,
+      "detail": "Script — in progress · open here"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T15:40:14.906Z"
+}

@@ -1,0 +1,203 @@
+{
+  "run": "kwame",
+  "startedAt": "2026-09-05T15:41:46.476Z",
+  "steps": [
+    {
+      "at": 1788622906478,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788622916340,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788622918294,
+      "s": "click \"deck-card-educational\""
+    },
+    {
+      "at": 1788622919267,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622920594,
+      "s": "click \"deck-card-short-educational-video\""
+    },
+    {
+      "at": 1788622921692,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622923427,
+      "s": "click \"deck-card-preset:newsprint-cutout\""
+    },
+    {
+      "at": 1788622924471,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622925502,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Suez in two minutes\""
+    },
+    {
+      "at": 1788622926043,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"120\""
+    },
+    {
+      "at": 1788622927828,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788622927835,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622928835,
+      "s": "recorded p-mtojwryg-76tcl4 → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788622928835,
+      "s": "goto /studio/p-mtojwryg-76tcl4?step=research"
+    },
+    {
+      "at": 1788622940983,
+      "s": "fill {\"label\":\"Topic\"} ← \"How the Suez crisis actually ended\""
+    },
+    {
+      "at": 1788622941412,
+      "s": "click \"run-research\""
+    },
+    {
+      "at": 1788622950581,
+      "s": "snap 02-research-landed"
+    },
+    {
+      "at": 1788622950595,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622953941,
+      "s": "snap 03-guided-takes"
+    },
+    {
+      "at": 1788622953950,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622954823,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622956296,
+      "s": "click \"confirm-scope\""
+    },
+    {
+      "at": 1788622959363,
+      "s": "snap 04-guided-review"
+    },
+    {
+      "at": 1788622959371,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788622962704,
+      "s": "snap 05-script-runtime-note"
+    },
+    {
+      "at": 1788622962724,
+      "s": "click \"deck-card-derived-short\""
+    },
+    {
+      "at": 1788622963526,
+      "s": "goto /projects"
+    }
+  ],
+  "checks": [
+    {
+      "label": "a disabled Next says what unlocks it",
+      "ok": true
+    },
+    {
+      "label": "style stage offers presets for educational",
+      "ok": true,
+      "detail": "presets=6 borrowed=false"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Suez in two minutes"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "label": "a fresh project's topic field is empty",
+      "ok": true,
+      "detail": "\"\""
+    },
+    {
+      "label": "the stand-in is disclosed BEFORE the run",
+      "ok": true
+    },
+    {
+      "label": "after the run the note names the stand-in against the typed topic",
+      "ok": true,
+      "detail": "prototype · this notebook is the saved 2026-08-11 Bitcoin run, not research on “How the Suez crisis actually ended” — ev"
+    },
+    {
+      "label": "the steel-man card says it always travels and why",
+      "ok": true,
+      "detail": "STEEL-MAN The forced-seller story is weaker than it looks, and the accumulation story is real locked in scope — always travels The steel-man"
+    },
+    {
+      "label": "the hottest take is labelled speculation and not taken by default",
+      "ok": true,
+      "detail": "😈 HOTTEST TAKE The Strategic Bitcoin Reserve was never meant to be built not taken risk — speculation about motive — no"
+    },
+    {
+      "label": "scope confirmed",
+      "ok": true
+    },
+    {
+      "label": "candidates shown",
+      "ok": true
+    },
+    {
+      "label": "the 120s vs fixture mismatch is STATED on Script",
+      "ok": true,
+      "detail": "this project asked for Short educational · 120s — the three renders below were cut for the fixture’s own runtimes (0:45–5:00) and your clock is not read here yet"
+    },
+    {
+      "label": "the note names his template and runtime",
+      "ok": true,
+      "detail": "this project asked for Short educational · 120s — the three renders below were cut for the fixture’s own runtimes (0:45–5:00) and your clock is not read here yet"
+    },
+    {
+      "label": "disabled Recalibrate carries a reason (observe)",
+      "ok": false,
+      "detail": "null"
+    },
+    {
+      "label": "adopted the short candidate",
+      "ok": true
+    },
+    {
+      "label": "shelf research cell moved",
+      "ok": true,
+      "detail": "Research — locked · open here"
+    },
+    {
+      "label": "shelf script cell moved",
+      "ok": true,
+      "detail": "Script — in progress · open here"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T15:42:44.801Z"
+}

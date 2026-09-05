@@ -1,0 +1,37 @@
+{
+  "run": "amara-dialog",
+  "startedAt": "2026-09-05T16:09:01.140Z",
+  "steps": [
+    {
+      "at": 1788624541142,
+      "s": "goto /projects"
+    },
+    {
+      "at": 1788624542651,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624545941,
+      "s": "snap 01-expert-dialog-any-video"
+    }
+  ],
+  "checks": [
+    {
+      "label": "dialog offers the wizard-minted untagged themes for Any video",
+      "ok": true
+    },
+    {
+      "label": "if the shelf is empty the copy routes to the wizard",
+      "ok": true,
+      "detail": "themes present, empty copy not shown"
+    },
+    {
+      "label": "the style shelf has no duplicate names from minting a theme per create (observe)",
+      "ok": false,
+      "detail": "8 pills, 3 duplicate names"
+    }
+  ],
+  "pageErrors": [],
+  "console": [],
+  "endedAt": "2026-09-05T16:09:06.070Z"
+}

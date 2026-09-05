@@ -1,0 +1,209 @@
+{
+  "run": "priyanka",
+  "startedAt": "2026-09-05T15:58:46.201Z",
+  "steps": [
+    {
+      "at": 1788623926203,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788623928839,
+      "s": "click \"deck-card-educational\""
+    },
+    {
+      "at": 1788623929414,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623929927,
+      "s": "click \"deck-card-short-educational-video\""
+    },
+    {
+      "at": 1788623930354,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623931404,
+      "s": "click \"deck-card-preset:blueprint\""
+    },
+    {
+      "at": 1788623931835,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623934295,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Module 7 — phishing in two minutes\""
+    },
+    {
+      "at": 1788623934356,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"120\""
+    },
+    {
+      "at": 1788623935570,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788623935578,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623936574,
+      "s": "recorded p-mtokidjw-ri3i7v → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788623936574,
+      "s": "goto /studio/p-mtokidjw-ri3i7v?step=research"
+    },
+    {
+      "at": 1788623944238,
+      "s": "fill {\"label\":\"Topic\"} ← \"How phishing emails get past a careful reader\""
+    },
+    {
+      "at": 1788623944352,
+      "s": "click \"run-research\""
+    },
+    {
+      "at": 1788623954413,
+      "s": "snap 02-research-landed"
+    },
+    {
+      "at": 1788623954424,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623956858,
+      "s": "snap 03-guided-takes"
+    },
+    {
+      "at": 1788623956865,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623957574,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623958370,
+      "s": "click \"confirm-scope\""
+    },
+    {
+      "at": 1788623960588,
+      "s": "snap 04-guided-review"
+    },
+    {
+      "at": 1788623960595,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623962766,
+      "s": "goto /studio/p-mtokidjw-ri3i7v?step=research"
+    },
+    {
+      "at": 1788623965326,
+      "s": "click \"tab-board\""
+    },
+    {
+      "at": 1788623966588,
+      "s": "click \"scope-toggle-f-ath\""
+    },
+    {
+      "at": 1788623976383,
+      "s": "snap 05-priyanka-drift"
+    },
+    {
+      "at": 1788623976473,
+      "s": "click \"confirm-scope\""
+    },
+    {
+      "at": 1788623977445,
+      "s": "goto /studio/p-mtokidjw-ri3i7v?step=script"
+    },
+    {
+      "at": 1788623978960,
+      "s": "click \"view-coverage\""
+    },
+    {
+      "at": 1788623983455,
+      "s": "snap 06-priyanka-coverage"
+    }
+  ],
+  "checks": [
+    {
+      "label": "style stage offers presets for educational",
+      "ok": true,
+      "detail": "presets=6 borrowed=false"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Module 7 — phishing in two minutes"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "a fresh project's topic field is empty",
+      "ok": true,
+      "detail": "\"\""
+    },
+    {
+      "label": "the stand-in is disclosed BEFORE the run",
+      "ok": true
+    },
+    {
+      "label": "after the run the note names the stand-in against the typed topic",
+      "ok": true,
+      "detail": "prototype · this notebook is the saved 2026-08-11 Bitcoin run, not research on “How phishing emails get past a careful r"
+    },
+    {
+      "label": "the steel-man card says it always travels and why",
+      "ok": true,
+      "detail": "STEEL-MAN The forced-seller story is weaker than it looks, and the accumulation story is real locked in scope — always travels The steel-man"
+    },
+    {
+      "label": "the hottest take is labelled speculation and not taken by default",
+      "ok": true,
+      "detail": "😈 HOTTEST TAKE The Strategic Bitcoin Reserve was never meant to be built not taken risk — speculation about motive — no"
+    },
+    {
+      "label": "scope confirmed",
+      "ok": true
+    },
+    {
+      "label": "return visit reopens on the expert face (DA-L1-11 — observe)",
+      "ok": true
+    },
+    {
+      "label": "expert board mounted",
+      "ok": true
+    },
+    {
+      "label": "drift is reported after a cut past the checkpoint",
+      "ok": true,
+      "detail": "moved · f-ath"
+    },
+    {
+      "label": "research progress reads 'review' (needs a call) on drift",
+      "ok": true,
+      "detail": "{\"research\":\"review\",\"script\":\"empty\",\"frames\":\"empty\",\"score\":\"empty\",\"cut\":\"empty\"}"
+    },
+    {
+      "label": "a cut card is drawn cut in Coverage (PR-L1-2: observe seconds still shown)",
+      "ok": true,
+      "detail": "usage=spoken text=12s"
+    },
+    {
+      "label": "evidence log reachable from Script (PR-L1-3, expect absent)",
+      "ok": false
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T15:59:43.455Z"
+}
