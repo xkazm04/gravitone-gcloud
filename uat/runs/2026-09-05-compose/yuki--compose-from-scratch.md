@@ -353,10 +353,10 @@ Worth the wait? Thirty minutes to a checked beat list is worth it. Would I adopt
 
 L2 verdict: **L2-pass** — every status I saw traced to an act, live, and the reopen was visible on Script; the spine is a Glass Harbor stand-in and the page says so.
 
-All five of my criteria held in the browser. Header pill: `Movie · game trailer · Cinematic · 90s`. Before any pick the record read `research: empty`; one pick → `working`; compose → `done`, drawn "locked" on the shelf; reopen → back to `working`, Script `working` too. That four-state sequence is the trace a producer needs, and it did not exist when I read the code this morning. Script said the spine was reopened and this was the last composed cut — the thing I feared most, now spoken. Reload landed on Script. The structure report listed twelve rows by rule I can paste for an artist.
+All five of my criteria held in the browser. Header pill: `Movie · game trailer · Cinematic · 90s`. Before any pick the record read `research: empty`; one pick → `working`; compose → `done`, drawn "locked" on the shelf; reopen → back to `working`, Script `working` too. That four-state sequence is the trace a producer needs, and it did not exist this morning. Script said the spine was reopened and this was the last composed cut — the thing I feared most, now spoken. Reload landed on Script. The structure report listed twelve rows by rule I can paste for an artist.
 
 The shelf (shot 03) shows "Emberline — series pitch cinematic", Research locked, Script in progress, sorted to the top by an updated time that finally moves with work.
 
-What I still cannot do: put the beat list in front of a client — it is a harbour heist with my title on it, and the amber line says so. "Locked" on the shelf means a checkpoint, "locked" on the style card means a minted theme, "locked in scope" means a card cannot be cut; one word per meaning, please, before the client sees it. Script never says "done", by design — accepted.
+What I still cannot do: put the beat list in front of a client — it is a harbour heist with my title on it, and the amber line says so. "Locked" on the shelf means a checkpoint, "locked" on the style card means a minted theme, "locked in scope" means a card cannot be cut; one word per meaning, please, before the client sees it. Script never says "done" — accepted.
 
 Would I tell a peer? Yes: "The state is honest now. Thursday, if the board reads our logline."

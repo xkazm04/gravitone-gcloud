@@ -476,7 +476,7 @@ peer? "Wait one release — the scoping is the best I've seen; the script side d
 
 L2 verdict: **L2-conditional** — the checkpoint reports drift to the board AND the shelf now, but Coverage still shows a cut fact being spoken for 12 s with no warning, which is the workflow I said I would refuse.
 
-I finished create → run → confirm → cut → confirm again → Script. The topic field was empty and the note named the Bitcoin stand-in against "How phishing emails get past a careful reader" before I decided anything; my legal reviewer could read that card. On the expert board I cut `f-ath` past the checkpoint and the gate said `moved · f-ath` (shot 05); the project record flipped Research to `review` and the shelf drew "needs a call". A status I can trace to an act — new since the design.
+I finished create → run → confirm → cut → confirm again → Script. The topic field was empty and the note named the Bitcoin stand-in against "How phishing emails get past a careful reader" before I decided anything; my legal reviewer could read that card. On the expert board I cut `f-ath` past the checkpoint and the gate said `moved · f-ath` (shot 05); the project record flipped Research to `review` and the shelf drew "needs a call". A status traced to an act — new since the design.
 
 Then Coverage: the row for the fact I cut is tinted and pipped `—`, and the same row reads `usage=spoken text=12s`. No conflict marker. Script still says the evidence log "lives in step 1" with nothing to click (`expect absent` held). The guided review still confirmed 29 cards after dealing me 8; the finish now hands me to Script, which is kinder, and also means a first-timer never meets the facts.
 
