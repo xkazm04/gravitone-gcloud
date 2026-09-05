@@ -17,6 +17,7 @@ import Modal from "@/components/ui/Modal";
 import type { ExtractManifest, ExtractVerdict, ExtractVerdicts, ExtractedStyle, ReplicaRound, Transfer } from "@/lib/foundry/extract/types";
 import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 
+import { activatesOnEnter } from "./CullGrid";
 import { extractFileUrl } from "./extractClient";
 import { ScoreChip, pct } from "./parts";
 
@@ -139,6 +140,17 @@ export function ExtractBoard({
           if (focused && !readOnly) onVerdict(focused, null);
           break;
         case "Enter": {
+          // Enter belongs to the focused element when that element activates on
+          // it — the same rule, and the same defect, as CullGrid's grid. Nothing
+          // in this board is focusable (a row is a `<section onClick>`), so the
+          // browser's focus is always on something ELSE while a row is "focused"
+          // in app state, and `focused` becomes non-null on the first row click
+          // anyone makes. Taking Enter here then suppressed the twelve real
+          // buttons live beside this board — Resume / Pause / Retry, the run
+          // list, "+ new extraction", the tab strip, Commit — and opened the
+          // zoom instead. Space still worked, which is the kind of half-working
+          // that takes a while to report.
+          if (activatesOnEnter(t)) break;
           if (!focused) break;
           const st = run.styles.find((x) => x.id === focused);
           const z = st && focusedZoom(st, sourcesById);

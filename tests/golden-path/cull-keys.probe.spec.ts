@@ -16,12 +16,14 @@
 // `activatesOnEnter` is the rule, exported so this drives the real predicate
 // rather than a copy of it. Enter is delivered to the focused element itself, so
 // the check is by tag and by role — no ancestor walk to reproduce here.
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { readFileSync, readdirSync } from "node:fs";
+import { join, resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
 import { activatesOnEnter } from "@/app/foundry/CullGrid";
+
+import { stripComments } from "./_helpers";
 
 const el = (tagName: string, role?: string) => ({
   tagName,
@@ -67,23 +69,82 @@ test("cull keys: an element with no getAttribute is handled, not thrown over", (
   expect(activatesOnEnter({})).toBe(false);
 });
 
-test("cull keys: the rule is WIRED into the Enter case, not merely exported", () => {
+/** The Enter case's body, whichever form it takes.
+ *
+ *  Slicing to the first `break;` was the obvious reading and it is wrong the
+ *  moment the case opens with a guard clause — `if (activatesOnEnter(t)) break;`
+ *  IS a `break;`, so the slice stopped before the preventDefault it was about to
+ *  order against, and the ordering assertion then compared against -1. The very
+ *  fix this probe exists to require is what defeated the parser.
+ *
+ *  So: brace-match when the case is a block, otherwise run to the next `case` or
+ *  the end of the switch. */
+function enterCaseBody(src: string, file: string): string {
+  const at = src.indexOf('case "Enter"');
+  expect(at, `${file}: no Enter case to read`).toBeGreaterThan(-1);
+  const colon = src.indexOf(":", at);
+  const rest = src.slice(colon + 1);
+  const firstNonSpace = rest.search(/\S/);
+  if (rest[firstNonSpace] === "{") {
+    let depth = 0;
+    for (let i = firstNonSpace; i < rest.length; i++) {
+      if (rest[i] === "{") depth++;
+      else if (rest[i] === "}" && --depth === 0) return rest.slice(firstNonSpace, i + 1);
+    }
+    throw new Error(`${file}: the Enter case's block is unbalanced`);
+  }
+  const next = rest.search(/\n\s*(case |default:|\})/);
+  return next > -1 ? rest.slice(0, next) : rest;
+}
+
+test("cull keys: the rule is WIRED into every Enter case, not merely exported", () => {
   // Every assertion above passes with the guard deleted from the handler — they
   // drive the predicate, and the predicate is not where the defect lived. So the
   // one thing that cannot be checked by calling a function is checked against
   // the source: that the Enter branch consults it before preventing the default.
   //
-  // COMMENTS ARE STRIPPED FIRST. The block above the Enter case names
+  // AND THE POPULATION IS DERIVED, which is the half this probe was missing.
+  // It named CullGrid.tsx. ExtractBoard.tsx — the Extract tab's board, same
+  // shape, `<section onClick>` rows, a window keydown, `case "Enter"` with a
+  // preventDefault — never called the predicate at all, and this probe was
+  // green throughout: it was reading the implementation it already knew about
+  // instead of the ground truth. Measured 2026-09-05: 1 of 2 window-level Enter
+  // handlers under app/foundry consulted the rule. The twelve buttons live
+  // beside that board (Resume / Pause / Retry, the run list, "+ new
+  // extraction", the tab strip, Commit) all stopped answering Enter after one
+  // row click, exactly as CullGrid's own comment describes for the grid.
+  //
+  // So: find every module that binds a keydown AND has an Enter case, and hold
+  // all of them to it. A third surface is covered by existing.
+  //
+  // COMMENTS ARE STRIPPED FIRST. The block above each Enter case names
   // `activatesOnEnter` in prose, so a matcher over raw text is satisfied by a
-  // file that TALKS about the rule and does not call it — which is the exact
-  // shape this repo has already been caught by twice.
-  const src = readFileSync(resolve(__dirname, "../../app/foundry/CullGrid.tsx"), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+  // file that TALKS about the rule and does not call it — the exact shape this
+  // repo has already been caught by twice.
+  const dir = resolve(__dirname, "../../app/foundry");
+  const files = readdirSync(dir).filter((f) => /\.tsx$/.test(f));
+  expect(files.length, "the app/foundry walk found nothing — wrong tree").toBeGreaterThan(3);
 
-  const enterCase = src.slice(src.indexOf('case "Enter":'));
-  const body = enterCase.slice(0, enterCase.indexOf("break;"));
-  expect(body, 'the Enter case does not call activatesOnEnter').toMatch(/activatesOnEnter\s*\(/);
-  // And it consults it BEFORE taking the key away from the focused element.
-  expect(body.indexOf("activatesOnEnter")).toBeLessThan(body.indexOf("preventDefault"));
+  const handlers: string[] = [];
+  for (const f of files) {
+    const src = stripComments(readFileSync(join(dir, f), "utf8"));
+    if (!/addEventListener\("keydown"/.test(src) || !src.includes('case "Enter"')) continue;
+    handlers.push(f);
+
+    const body = enterCaseBody(src, f);
+    const guard = body.indexOf("activatesOnEnter");
+    const prevent = body.indexOf("preventDefault");
+    expect(guard, `${f}: the Enter case does not call activatesOnEnter`).toBeGreaterThan(-1);
+    // preventDefault must still be THERE — an Enter case that never takes the
+    // key is not this rule being honoured, it is the feature being deleted, and
+    // an ordering assertion over two -1s would call that a pass.
+    expect(prevent, `${f}: the Enter case no longer prevents the default at all`).toBeGreaterThan(-1);
+    // And it consults the rule BEFORE taking the key from the focused element.
+    expect(guard, `${f}: activatesOnEnter is consulted after preventDefault`).toBeLessThan(prevent);
+  }
+
+  console.log(`[cull-keys] window-level Enter handlers under app/foundry: ${handlers.join(", ")}`);
+  // Both known surfaces must still be IN the population — a rename that drops
+  // one out would leave the loop above vacuously green over what remains.
+  expect(handlers.sort()).toEqual(["CullGrid.tsx", "ExtractBoard.tsx"]);
 });
