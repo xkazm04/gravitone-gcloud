@@ -177,9 +177,13 @@ def candidate_prompt(annotation, style):
 
 
 def flux_workflow(prompt, seed, ref_name=None, window=0.0, width=1280, height=720, steps=20,
-                  prefix="foundry"):
+                  prefix="foundry", late=0.0):
     """Flux 2 text-to-image; with `ref_name`, the reference conditions the
     denoise only inside [0, window] and the text alone finishes the image.
+    `late` is the opposite dial (consistency.py's `--late`, the
+    reference-admitted-late technique): the text alone owns [0, late] so
+    composition is the brief's, then the reference joins for [late, 1] to
+    assert identity. `window` and `late` are exclusive; `late` wins.
     Node layout matches consistency.py so that the chain sits between the text
     encode and FluxGuidance -- guidance first silently drops the reference."""
     w = {
@@ -201,7 +205,15 @@ def flux_workflow(prompt, seed, ref_name=None, window=0.0, width=1280, height=72
         w["20"] = {"class_type": "LoadImage", "inputs": {"image": ref_name}}
         w["21"] = {"class_type": "VAEEncode", "inputs": {"pixels": ["20", 0], "vae": ["3", 0]}}
         w["22"] = {"class_type": "ReferenceLatent", "inputs": {"conditioning": ["4", 0], "latent": ["21", 0]}}
-        if 0.0 < window < 1.0:
+        if 0.0 < late < 1.0:
+            w["30"] = {"class_type": "ConditioningSetTimestepRange",
+                       "inputs": {"conditioning": ["4", 0], "start": 0.0, "end": late}}
+            w["31"] = {"class_type": "ConditioningSetTimestepRange",
+                       "inputs": {"conditioning": ["22", 0], "start": late, "end": 1.0}}
+            w["32"] = {"class_type": "ConditioningCombine",
+                       "inputs": {"conditioning_1": ["30", 0], "conditioning_2": ["31", 0]}}
+            cond = ["32", 0]
+        elif 0.0 < window < 1.0:
             w["30"] = {"class_type": "ConditioningSetTimestepRange",
                        "inputs": {"conditioning": ["22", 0], "start": 0.0, "end": window}}
             w["31"] = {"class_type": "ConditioningSetTimestepRange",

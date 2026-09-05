@@ -345,3 +345,24 @@ tracking the human better, and record the decision here):
   while 8 thumbs do) — their rules already landed in FRAMES-SCENE-PROMPT.md
   rules 7–10, so nothing is owed, but the ledger is not the record it claims
   to be for that batch; likely committed from a worktree checkout.
+- 2026-09-05 — operator-ordered window of FIVE consecutive cycles (40 renders,
+  ~2h05 GPU wall, $0, one ComfyUI vanish race filled in 97s), one subject each
+  across the allowed set, all parked; 16 cycles now await the gate. What the
+  next window inherits: (1) MEASURED PRE-FILTERS exist - `dojo_measure.py`
+  gives the chokepoint judge a number where the enum readback is blind
+  (lower-third edge density; FaceNet-to-hero on identity.py's calibrated
+  ruler), mapped blind through the worksheet before the pick; (2) the pair
+  runner has a `late` arm field (reference-admitted-late's join dial,
+  `forge.flux_workflow(late=)`), exclusive with `window`; (3) on Flux 2's
+  ReferenceLatent an EARLY-window reference is a CONTENT reference - the gated
+  what-stays-dark thumb came back as the subject in 3/4 challengers - so
+  visual-style-locking's sheet is not testable as a style amplifier on the
+  local lane; (4) the join sweep put 0.10 nearer the hero than 0.25 in 4/4
+  with no camera cost, but the extreme wide collapses to a medium at BOTH
+  joins - the dial does not return the wide; (5) the build key flip works on
+  the wide squad shot and draws a ceiling panel on the MCU - approve as a
+  wide-only, beat-gated rule if approved at all; (6) the text-zone shape
+  clause empties the caption zone by pulling the camera back. Blind spot
+  named: a still cannot perform the REVEAL function for either arm. Rendering
+  rhythm: the second arm of a duo renders in ~44s when its text encode is
+  cached from the first (join-at-ten), else 100-180s.

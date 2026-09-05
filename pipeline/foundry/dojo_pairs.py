@@ -17,6 +17,8 @@ handed words, not just pixels.
          "pairs": [{"id": "...", "seed": 1,
                     "baseline":   {"prompt": "...", "ref": null, "window": 0.0},
                     "challenger": {"prompt": "...", "ref": "path.jpg", "window": 0.35}}]}
+        an arm may carry "late": 0.25 instead of "window" -- the text owns the
+        denoise until `late`, then the reference joins (reference-admitted-late)
     <cycle>/pairs/<id>--baseline.png, <id>--challenger.png (+ .json sidecars)
     <cycle>/readbacks.json        {"<id>--<arm>": {"craft": {...}, "style": {...}}}
 
@@ -85,6 +87,7 @@ def main():
                     staged[str(src)] = stage_reference(src)
                 ref = staged[str(src)]
             wf = flux_workflow(a["prompt"], p["seed"], ref_name=ref, window=a.get("window", 0.0),
+                               late=a.get("late", 0.0),
                                width=spec.get("width", 1280), height=spec.get("height", 720),
                                steps=spec.get("steps", 20), prefix=f"dojo-{cdir.name}")
             if since >= 6 or not guard.headroom_ok():
@@ -95,7 +98,7 @@ def main():
                 img = generate(wf)
             except Exception as e:
                 failed += 1
-                log(f"  [{n}/{len(todo)}] {p['id']}--{arm} FAILED: {str(e)[:80]}")
+                log(f"  [{n}/{len(todo)}] {p['id']}--{arm} FAILED: {str(e)[:300]}")
                 if not guard.recycle_comfy("after failure"):
                     break
                 since = 0
@@ -104,7 +107,8 @@ def main():
             shutil.copy2(img, out)
             out.with_suffix(".json").write_text(json.dumps(
                 {"id": p["id"], "arm": arm, "seed": p["seed"], "prompt": a["prompt"],
-                 "ref": a.get("ref"), "window": a.get("window", 0.0), "workflow": wf},
+                 "ref": a.get("ref"), "window": a.get("window", 0.0), "late": a.get("late", 0.0),
+                 "workflow": wf},
                 indent=2, ensure_ascii=False), encoding="utf-8")
             since += 1
             log(f"  [{n}/{len(todo)}] {p['id']}--{arm} -> {time.time()-t0:.0f}s")
