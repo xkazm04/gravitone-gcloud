@@ -80,3 +80,26 @@ before matching, the population walked off the filesystem rather than listed, an
   can be driven end to end by faking three seams — `F.guard.require_model`,
   `F.run_ollama`, `F.grade.run_style_readback`. That is how the two most severe defects
   of this round were both found and measured. Do not assume this directory needs the rig.
+- **2026-09-05 — the source-ratchet comment stripper in this repo was unsound, and a probe
+  written against it passed vacuously.** Nine probes each carried a private
+  `.replace(block-comments).replace(line-comments)` pair. Stripping BLOCK comments first
+  means a block-open sequence sitting inside a LINE comment really opens a block — and this
+  repo's prose is full of route globs (`/api/imaging/` + star). The phantom block runs to the
+  next real terminator: measured, 14 of 268 files under `app/` and `lib/` lose a contiguous
+  region, up to 80% of `lib/imaging/api.ts`. **Use `stripComments` from
+  `tests/golden-path/_helpers.ts`** (added 442e51f), never a local pair. Seven older probes
+  still carry the old one — adopting it there is a backlog card, because it may legitimately
+  turn one red by letting it see code it had been missing. And: a JSDoc that QUOTES the bad
+  pair terminates itself, so write that explanation as `//` lines.
+- **2026-09-05 — seeding the defect is what caught it, not reading the probe.** Both new
+  probes this round looked correct and one was vacuous. The step that found it was
+  §7.6's: restore the pre-fix source, run the probe, and require it to go RED — and for a
+  probe covering N surfaces, seed each surface INDEPENDENTLY. The upgraded
+  `cull-keys.probe.spec.ts` was only trustworthy once CullGrid alone and ExtractBoard alone
+  had each been made to fail. Budget a couple of minutes per probe for this; it is the
+  cheapest assertion in the round and it caught two real problems here.
+- **2026-09-05 — long bash heredocs carrying Python that carries JS/TS regexes mangle
+  backslashes twice.** `\n` inside a `python - <<'PY'` block became a literal newline in a
+  written regex and produced a syntactically broken test file. Use the Edit/Write tools for
+  any content containing backslashes — the same rule §7.6 already states for pattern
+  authoring — and reserve heredoc Python for pure data moves.
