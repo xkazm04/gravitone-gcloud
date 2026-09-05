@@ -24,11 +24,10 @@
     "    downgrade in eslint.config.mjs, so the rule stands at plain blocking",
     "    severity."
   ],
-  "measuredAt": "2026-08-29",
+  "measuredAt": "2026-09-05",
   "filesFloor": 150,
   "warnings": {
     "react-hooks/set-state-in-effect": 10,
-    "react-hooks/immutability": 0,
     "react-hooks/exhaustive-deps": 1,
     "react-hooks/refs": 3
   }
