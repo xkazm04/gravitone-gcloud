@@ -66,6 +66,25 @@
 #                        corpus rather than a committed one, that case moves to an
 #                        advisory job on a schedule; it may not stay in here.
 #
+#   type scale           BLOCKING.  Input: app/**/*.tsx and components/**/*.tsx,
+#                        this repo's own sources. `pipeline/check-type-scale.mjs`
+#                        walks them for a font size below the readable floor and
+#                        exits non-zero. Filesystem only — no network, no vendor.
+#                        Changes the answer: nothing; this stays blocking.
+#
+#   frames prompt        BLOCKING.  Input: pipeline/FRAMES-SCENE-PROMPT.md and
+#                        app/_phases/frames/shotPrompt.ts, both committed here.
+#                        `pipeline/frames-prompt-regression.mts` pins each rule a
+#                        human gated through the Dojo and exits non-zero when one
+#                        has fallen out. Filesystem only.
+#                        Changes the answer: nothing; this stays blocking.
+#
+#                        BOTH WERE IN `npm run verify` AND NOT IN THIS FILE
+#                        (measured 2026-09-05): the comment on the `gates` job
+#                        promised the two lists mirror each other, and they had
+#                        drifted by exactly these two steps — a developer's
+#                        pre-push ran them, the binding rung never did.
+#
 #   probes               BLOCKING.  Input: the repo's own modules. The suite is
 #                        Node-context with no browser and no webServer, and
 #                        `sealNetwork()` in the imaging probes proves no call
@@ -168,8 +187,8 @@ jobs:
 
     # `npm run verify` (package.json) mirrors this job's blocking steps after
     # install, in the same order: typecheck, lint:ratchet, check:manifest,
-    # check:notebook, check:trailer-structure, test, build, check:bundle. The
-    # pre-push hook runs it before any push to main.
+    # check:notebook, check:type, check:trailer-structure, check:frames-prompt,
+    # test, build, check:bundle. The pre-push hook runs it before any push to main.
     # If a step is added, removed, or reordered here, change `verify` in the
     # same commit — the two must not drift.
     steps:
@@ -230,8 +249,18 @@ jobs:
       - name: notebook graph
         run: npm run check:notebook
 
+      # BLOCKING. Same shape again — filesystem only, sub-second — and, like the
+      # two above, it already existed in `verify` and was guarded by nothing here.
+      - name: type scale
+        run: npm run check:type
+
       - name: trailer structure
         run: npm run check:trailer-structure
+
+      # BLOCKING. Pins the prompt rules a human gated through the Dojo; a rule
+      # that falls out of the prompt surface has no compiler to break, only this.
+      - name: frames prompt
+        run: npm run check:frames-prompt
 
       # BLOCKING. Node-context probes. Not skipped when earlier steps are
       # green-but-uninteresting: this is the rung that refuses.
