@@ -147,10 +147,48 @@ def test_resume_regrades_an_unmeasured_candidate():
           regraded, ["flaky", "ok-one"])
 
 
+# ── acquire: the readback catalogue ─────────────────────────────────────────
+
+def readback_row(source, **over):
+    parsed = {"render_mode": "photoreal", "palette_strategy": "warm-cool split",
+              "edge_treatment": "soft", "black_handling": "lifted",
+              "signature": "a signature", "imitable_recipe": "do the thing"}
+    parsed.update(over.pop("parsed", {}))
+    return dict({"source": source, "model": "gemini-3.7-flash", "ok": True,
+                 "parsed": parsed}, **over)
+
+
+def test_list_survives_a_row_from_another_schema():
+    """style.jsonl is append-only across model and schema versions, and
+    `readbacks()` already filters for heterogeneity (`ok`, `parsed` is a dict).
+    `--list` then indexes three keys raw, so ONE old row hides every row after
+    it -- and the operator's next step is to name a source from that listing."""
+    A = load("acquire")
+    tmp = Path(tempfile.mkdtemp())
+    rb = tmp / "style.jsonl"
+    rows = [readback_row("good-a"),
+            {"source": "older-b", "model": "gemini-3.7-flash", "ok": True,
+             "parsed": {"render_mode": "painterly", "signature": "from an older schema"}},
+            readback_row("good-c")]
+    rb.write_text("\n".join(json.dumps(r) for r in rows) + "\n", encoding="utf-8")
+    A.READBACKS = rb
+    argv, sys.argv = sys.argv, ["acquire.py", "--list"]
+    buf = io.StringIO()
+    try:
+        with contextlib.redirect_stdout(buf):
+            A.main()
+    except Exception:
+        pass
+    finally:
+        sys.argv = argv
+    check("--list prints every readback row", len(buf.getvalue().strip().splitlines()), 3)
+
+
 TESTS = [
     test_ungradable_candidate_does_not_kill_the_run,
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,
+    test_list_survives_a_row_from_another_schema,
 ]
 
 
