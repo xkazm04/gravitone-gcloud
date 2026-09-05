@@ -34,7 +34,8 @@ import type {
   Verdicts,
 } from "./types";
 
-const OUT_ROOT = path.join(process.cwd(), "foundry-out", "runs");
+/** Exported for the disk probe, which writes a probe-prefixed run under it. */
+export const OUT_ROOT = path.join(process.cwd(), "foundry-out", "runs");
 const FOUNDRY_DIR = path.join(process.cwd(), "pipeline", "foundry");
 const LEDGER = path.join(FOUNDRY_DIR, "ledger.json");
 const STYLES = path.join(FOUNDRY_DIR, "styles.json");
@@ -83,8 +84,23 @@ async function writeJsonAtomic(file: string, value: unknown): Promise<void> {
   await rename(tmp, file);
 }
 
+/** Read a manifest that may be mid-write or damaged. `undefined` means the
+ *  file is there and is not JSON — distinct from absent (`null`), because the
+ *  two want different answers: absent is "no such run", unreadable is "this
+ *  run is there and cannot be read right now". */
+async function readManifestFile<T>(file: string): Promise<T | null | undefined> {
+  try {
+    return await readJson<T | null>(file, null);
+  } catch (e) {
+    if (e instanceof SyntaxError) return undefined;
+    throw e;
+  }
+}
+
 async function readManifest(id: string): Promise<RunManifest> {
-  const m = await readJson<RunManifest | null>(path.join(runDir(id), "run.json"), null);
+  const m = await readManifestFile<RunManifest>(path.join(runDir(id), "run.json"));
+  if (m === undefined)
+    throw new FoundryError(`The manifest of run ${id} is unreadable — the forge may be mid-write, or the file is damaged. Try again; if it persists, inspect foundry-out/runs/${id}/run.json.`, 503);
   if (!m) throw new FoundryError(`No run called ${id}.`, 404);
   return m;
 }
@@ -106,7 +122,16 @@ export async function listRuns(): Promise<RunSummary[]> {
   const out: RunSummary[] = [];
   for (const name of names) {
     if (!RUN_ID.test(name)) continue;
-    const m = await readJson<RunManifest | null>(path.join(OUT_ROOT, name, "run.json"), null);
+    // ONE BAD MANIFEST MUST NOT HIDE THE REST. The forge rewrites run.json
+    // after every candidate while the page polls this list, and a damaged or
+    // half-written file used to throw out of the loop — a SyntaxError became a
+    // 500 and the shelf showed nothing, for every run, until that one file was
+    // fixed by hand. The unreadable run is skipped with a line that names it.
+    const m = await readManifestFile<RunManifest>(path.join(OUT_ROOT, name, "run.json"));
+    if (m === undefined) {
+      console.warn(`[foundry] run ${name}: run.json is unreadable — skipped from the list`);
+      continue;
+    }
     if (!m) continue;
     const v = await readJson<Verdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
     out.push({

@@ -83,8 +83,22 @@ async function writeJsonAtomic(file: string, value: unknown): Promise<void> {
   await rename(tmp, file);
 }
 
+/** Same three answers as lib/foundry/store.ts: present, absent (`null`), or
+ *  there-but-not-JSON (`undefined`) — a manifest mid-rewrite by the other
+ *  driver, or damaged. */
+async function readManifestFile<T>(file: string): Promise<T | null | undefined> {
+  try {
+    return await readJson<T | null>(file, null);
+  } catch (e) {
+    if (e instanceof SyntaxError) return undefined;
+    throw e;
+  }
+}
+
 async function readManifest(id: string): Promise<ExtractManifest> {
-  const m = await readJson<ExtractManifest | null>(path.join(runDir(id), "run.json"), null);
+  const m = await readManifestFile<ExtractManifest>(path.join(runDir(id), "run.json"));
+  if (m === undefined)
+    throw new FoundryError(`The manifest of extract run ${id} is unreadable — a driver may be mid-write, or the file is damaged. Try again; if it persists, inspect foundry-out/extract/${id}/run.json.`, 503);
   if (!m) throw new FoundryError(`No extract run called ${id}.`, 404);
   return m;
 }
@@ -175,7 +189,13 @@ export async function listExtractRuns(): Promise<ExtractSummary[]> {
   const out: ExtractSummary[] = [];
   for (const name of names) {
     if (!RUN_ID.test(name)) continue;
-    const m = await readJson<ExtractManifest | null>(path.join(EXTRACT_ROOT, name, "run.json"), null);
+    // One unreadable manifest is skipped and named, never allowed to 500 the
+    // whole list — see lib/foundry/store.ts#listRuns for the measured case.
+    const m = await readManifestFile<ExtractManifest>(path.join(EXTRACT_ROOT, name, "run.json"));
+    if (m === undefined) {
+      console.warn(`[foundry] extract run ${name}: run.json is unreadable — skipped from the list`);
+      continue;
+    }
     if (!m) continue;
     const v = await readJson<ExtractVerdicts>(path.join(EXTRACT_ROOT, name, "verdicts.json"), {});
     out.push({
