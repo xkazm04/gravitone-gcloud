@@ -131,9 +131,26 @@ def test_scoreless_source_annotation_does_not_kill_the_run():
     check("a source with no scoreable craft field does not abort the run", outcome, "survived")
 
 
+def test_resume_regrades_an_unmeasured_candidate():
+    """README: "Resumable by construction. A PNG on disk is a finished
+    generation whatever the manifest says." A candidate whose grade failed
+    transiently holds status `unmeasured`, which neither stage's todo filter
+    admits -- so the plate is on disk, paid for, and can never be graded."""
+    F = load("forge")
+    m = manifest_with(candidate("ok-one", "generated"), candidate("flaky", "unmeasured"))
+    run_dir = staged_run(m)
+    F.stage_generate(m, run_dir, recycle_every=6)
+    fake_graders(F, craft={"shot_size": "full shot"})
+    F.stage_grade(m, run_dir, "fake")
+    regraded = sorted(c["id"] for c in m["candidates"] if c["grade"] is not None)
+    check("resume re-grades every candidate with a plate on disk",
+          regraded, ["flaky", "ok-one"])
+
+
 TESTS = [
     test_ungradable_candidate_does_not_kill_the_run,
     test_scoreless_source_annotation_does_not_kill_the_run,
+    test_resume_regrades_an_unmeasured_candidate,
 ]
 
 

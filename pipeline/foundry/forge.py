@@ -357,7 +357,19 @@ def stage_generate(manifest, run_dir, recycle_every):
 
 def stage_grade(manifest, run_dir, model):
     scenes = {s["id"]: s for s in manifest["scenes"]}
-    todo = [c for c in manifest["candidates"] if c["status"] == "generated"]
+    # `unmeasured` IS A RESUMABLE STATE, and it was the one status no stage
+    # would take back. stage_generate re-adopts a plate for `pending` and
+    # `failed`; grading took `generated` only -- so a candidate whose grade
+    # failed transiently (one Ollama hiccup, one eviction mid-pass) landed in
+    # `unmeasured` and fell out of both todo lists permanently. Its PNG is on
+    # disk and paid for, and no re-run could ever score it: --resume walked
+    # past it every time, and the ledger kept counting it as ungraded.
+    #
+    # That contradicts the README's "Resumable by construction. A PNG on disk
+    # is a finished generation whatever the manifest says." A plate on disk
+    # with no grade is exactly what stage 2 is for. Re-grading one is cheap
+    # and idempotent -- the grade is overwritten, not appended.
+    todo = [c for c in manifest["candidates"] if c["status"] in ("generated", "unmeasured")]
     set_stage(manifest, run_dir, "grading", 0, len(todo))
     if not todo:
         return
