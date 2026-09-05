@@ -18,6 +18,26 @@ export const STATUS_WORD: Record<RunStatus, string> = {
 
 export const LIVE: RunStatus[] = ["created", "annotating", "generating", "grading"];
 
+/** The run statuses a cull may be committed from — the SAME set
+ *  `commitRun` in lib/foundry/store.ts enforces, and
+ *  tests/golden-path/commit-gate-parity.probe.spec.ts reads that function's
+ *  own array off disk and fails if these two drift apart.
+ *
+ *  `failed` belongs here and its absence was a real loss. A forge run that
+ *  dies partway is marked `failed` with every plate it did generate still on
+ *  disk — which is exactly the run whose survivors are worth culling, and the
+ *  server has always allowed it. The button disabled itself on anything but
+ *  `done`, so those plates could not be reached from the page at all: hours of
+ *  GPU, unreachable, with the server standing ready. The Extract tab's own
+ *  button already mirrored ITS server rule (`done` only, which is what
+ *  commitExtractRun enforces) — one rule, two implementations, and only one of
+ *  them had been kept true. */
+export const COMMITTABLE: RunStatus[] = ["done", "failed"];
+
+/** The same, for an extract run. Narrower than the forge's on purpose: a
+ *  failed extraction has no partial artefact worth ratifying. */
+export const EXTRACT_COMMITTABLE: ExtractStatus[] = ["done"];
+
 export const EXTRACT_STATUS_WORD: Record<ExtractStatus, string> = {
   created: "ready to start",
   reading: "reading sources",

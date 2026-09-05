@@ -41,7 +41,7 @@ import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
 import { StylesShelf } from "./StylesShelf";
 import { commitRun, fetchRun, fetchRuns, saveVerdicts } from "./foundryClient";
-import { LIVE, STATUS_WORD } from "./parts";
+import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
 
 const TABS = [
   { id: "cull", label: "Cull", blurb: "Read the grid, keep the good, commit. Rejected files are deleted; the verdicts are what stays." },
@@ -350,10 +350,18 @@ export default function FoundryView() {
                 </span>
               ) : (
                 <Button
-                  disabled={run.status !== "done" || counts.kept === 0}
+                  disabled={!COMMITTABLE.includes(run.status) || counts.kept === 0}
                   onClick={() => setConfirm(true)}
                   className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-                  title={run.status !== "done" ? `Run is ${STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one candidate first" : "Delete everything not kept and write the ledger"}
+                  title={
+                    !COMMITTABLE.includes(run.status)
+                      ? `Run is ${STATUS_WORD[run.status]}`
+                      : counts.kept === 0
+                        ? "Keep at least one candidate first"
+                        : run.status === "failed"
+                          ? "This run failed partway. Commit what it did produce: everything not kept is deleted and the ledger is written."
+                          : "Delete everything not kept and write the ledger"
+                  }
                 >
                   Commit the cull
                 </Button>

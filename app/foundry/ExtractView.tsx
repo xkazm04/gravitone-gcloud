@@ -28,7 +28,7 @@ import { usePolling } from "@/lib/usePolling";
 
 import { ExtractBoard } from "./ExtractBoard";
 import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, saveExtractVerdicts, stepExtractRun } from "./extractClient";
-import { EXTRACT_LIVE, EXTRACT_STATUS_WORD } from "./parts";
+import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD } from "./parts";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -350,10 +350,10 @@ export function ExtractView() {
               <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">committed</span>
             ) : (
               <Button
-                disabled={run.status !== "done" || counts.kept === 0}
+                disabled={!EXTRACT_COMMITTABLE.includes(run.status) || counts.kept === 0}
                 onClick={() => setConfirm(true)}
                 className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-                title={run.status !== "done" ? `Run is ${EXTRACT_STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one style first" : "Write the kept styles to the catalogue"}
+                title={!EXTRACT_COMMITTABLE.includes(run.status) ? `Run is ${EXTRACT_STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one style first" : "Write the kept styles to the catalogue"}
               >
                 Commit the kept styles
               </Button>
