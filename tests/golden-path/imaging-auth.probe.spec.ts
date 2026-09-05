@@ -326,6 +326,42 @@ test("rate limit: guardRequest answers 429 past capacity (before it even checks 
   delete process.env.IMAGING_RATE_CAPACITY;
 });
 
+// ── A knob below one is misconfiguration, floored like claudeCli's timeout ──
+
+test("rate limit: a fractional CAPACITY does not refuse everything forever — it is floored", () => {
+  // 0.5 tokens of capacity: every fresh bucket starts under one token, so
+  // before the floor EVERY call was refused with a retry-after nothing could
+  // satisfy. A knob cannot be an outage.
+  __resetRateLimit();
+  process.env.IMAGING_RATE_CAPACITY = "0.5";
+  const now = 1_000_000;
+  let allowed = 0;
+  for (let i = 0; i < 5; i++) if (rateLimit("10.4.0.1", now).allowed) allowed++;
+  console.log(`[auth] capacity=0.5 over 5 calls -> allowed=${allowed}`);
+  expect(allowed).toBe(5);
+  expect(rateStats().capacity).toBe(30);
+  delete process.env.IMAGING_RATE_CAPACITY;
+  __resetRateLimit();
+});
+
+test("rate limit: a fractional KEY CAP does not switch the limiter off — it is floored", () => {
+  // 0.5 floored to a cap of 0: the reaper ran on every call and evicted every
+  // bucket before the current key was inserted, so each call saw a fresh full
+  // bucket and NOTHING was ever refused, with the counters reading healthy.
+  __resetRateLimit();
+  process.env.IMAGING_RATE_CAPACITY = "3";
+  process.env.IMAGING_RATE_KEY_CAP = "0.5";
+  const now = 1_000_000;
+  let allowed = 0;
+  for (let i = 0; i < 6; i++) if (rateLimit("10.4.0.2", now).allowed) allowed++;
+  console.log(`[auth] keyCap=0.5 capacity=3 over 6 calls -> allowed=${allowed} keyCap=${rateStats().keyCap}`);
+  expect(allowed).toBe(3);
+  expect(rateStats().keyCap).toBe(10_000);
+  delete process.env.IMAGING_RATE_CAPACITY;
+  delete process.env.IMAGING_RATE_KEY_CAP;
+  __resetRateLimit();
+});
+
 // ── The limiter watches itself, and bounds itself (added 2026-08-24) ────────
 //
 // Before this, `rateLimit` returned a verdict and kept nothing: no admitted or
