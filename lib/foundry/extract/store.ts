@@ -118,11 +118,15 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
   if (!uploads.length) throw new FoundryError("At least one image is required.", 400);
   if (uploads.length > MAX_SOURCES) throw new FoundryError(`At most ${MAX_SOURCES} images per run.`, 400);
 
-  const id = await freshId(clean);
-  const dir = path.join(EXTRACT_ROOT, id);
-  await mkdir(path.join(dir, "sources"), { recursive: true });
-
-  const sources: ExtractSource[] = [];
+  // VALIDATE EVERY UPLOAD BEFORE TOUCHING THE DISK. This used to decode and
+  // write one image at a time, refusing on the first bad one — so a gallery
+  // whose third file was a GIF left `sources/s01`, `sources/s02` in a run
+  // directory with no run.json: invisible to the list (no manifest), counted
+  // by `freshId` (the directory exists), so the operator's next attempt with
+  // the same slug landed on `-2` and the orphan stayed on disk for good. A
+  // refusal must leave nothing behind, and the 400 must name the bad image
+  // before anything has been written for it.
+  const prepared: { bytes: Buffer; source: ExtractSource }[] = [];
   for (let i = 0; i < uploads.length; i++) {
     const u = uploads[i];
     const bytes = Buffer.from(u.base64, "base64");
@@ -132,19 +136,27 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
     if (!dims) throw new FoundryError(`Image ${i + 1} (${u.name}) is not a PNG, JPEG or WebP.`, 400);
     const sid = `s${String(i + 1).padStart(2, "0")}`;
     const rel = `sources/${sid}${EXT[u.mime]}`;
-    await writeFile(path.join(dir, rel), bytes);
-    sources.push({
-      id: sid,
-      name: u.name.slice(0, 120),
-      file: rel,
-      mime: u.mime,
-      width: dims.width,
-      height: dims.height,
-      aspect: nearestAspect(dims.width, dims.height),
-      readback: null,
-      error: null,
+    prepared.push({
+      bytes,
+      source: {
+        id: sid,
+        name: u.name.slice(0, 120),
+        file: rel,
+        mime: u.mime,
+        width: dims.width,
+        height: dims.height,
+        aspect: nearestAspect(dims.width, dims.height),
+        readback: null,
+        error: null,
+      },
     });
   }
+
+  const id = await freshId(clean);
+  const dir = path.join(EXTRACT_ROOT, id);
+  await mkdir(path.join(dir, "sources"), { recursive: true });
+  for (const p of prepared) await writeFile(path.join(dir, p.source.file), p.bytes);
+  const sources = prepared.map((p) => p.source);
   const m = newManifest(id, clean, sources, options, new Date().toISOString());
   await writeJsonAtomic(path.join(dir, "run.json"), m);
   return m;
