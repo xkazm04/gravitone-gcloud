@@ -1,0 +1,57 @@
+{
+  "schema": "lighttrack-use-cases/1",
+  "project": "gravity",
+  "generated_at": "2026-09-05",
+  "note": "Declared LLM call sites. Registered into LightTrack via `lt use-cases register`; the gap between this declaration and observed events.name is the coverage report.",
+  "use_cases": [
+    {
+      "key": "text.edit-plan",
+      "name": "Recalibrate notebook edits into a script edit-plan",
+      "description": "Turns a creator's notes plus the current render table into a validated edit plan for the script.",
+      "kind": "generation",
+      "status": "active",
+      "component": "app/api/recalibrate/route.ts:420 -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.1-pro-preview"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.scene-direction",
+      "name": "Direct scene specs from a script and notebook",
+      "description": "Turns a script and notebook into per-render scene/art-direction specs for the frames pipeline.",
+      "kind": "generation",
+      "status": "active",
+      "component": "app/api/frames/route.ts:203 -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.style-synthesis",
+      "name": "Synthesize named styles from a foundry gallery",
+      "description": "Turns a gallery's vision-readbacks into named styles with reusable generation recipes for one foundry extract run.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/foundry/extract/store.ts:261 -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.probe",
+      "name": "Text engine availability probe",
+      "description": "Zero-token health check that walks the text engine's provider chain to report which one would serve a given turn, without generating anything.",
+      "kind": "other",
+      "status": "active",
+      "component": "lib/text/router.ts::engineStatus() (~:401)",
+      "owner": "gravity"
+    },
+    {
+      "key": "image.recognize-readback",
+      "name": "Vision-language readback for image recognition",
+      "description": "Reads back a description or structured extraction from an image for the imaging pipeline (e.g. foundry style extraction).",
+      "kind": "extraction",
+      "status": "active",
+      "component": "app/api/imaging/recognize/route.ts:30 -> lib/imaging/router.ts::recognize()",
+      "expected_models": ["qwen3.8:27b", "gemini-3.6-flash"],
+      "owner": "gravity"
+    }
+  ]
+}
