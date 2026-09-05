@@ -25,14 +25,17 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
+
 import { COMMITTABLE, EXTRACT_COMMITTABLE } from "@/app/foundry/parts";
 
-/** Source with comments removed, so prose about the rule cannot satisfy it —
- *  these very files explain the rule directly above the code that implements
- *  it, and the first cut of a sibling probe passed on the comment alone. */
-function code(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
-}
+// Comments stripped before any matcher runs, so prose about the rule cannot
+// satisfy it — these very files explain the rule directly above the code that
+// implements it. Through the shared scanner rather than the two-`replace` pair
+// the older ratchets carry privately: that pair reads a route glob in a LINE
+// comment as opening a block and eats everything to the next terminator, which
+// on lib/foundry/store.ts would take the guard this probe reads.
+const code = stripComments;
 
 function read(rel: string): string {
   return code(readFileSync(join(process.cwd(), rel), "utf8"));
