@@ -55,9 +55,10 @@ export interface Capabilities {
    *  credential and no new account, only an adapter. The cue→plan doctrine in
    *  lib/music/plan.ts would survive it; the wire format would not.
    *
-   *  Still off by default in the cloud posture, because "the model is reachable"
-   *  and "this app can drive it" are different claims and only the first is
-   *  measured. Turn it on when an adapter exists, not before. */
+   *  Still OFF in the cloud posture — by the hosted block below, not by this
+   *  flag's default, which is on like every other — because "the model is
+   *  reachable" and "this app can drive it" are different claims and only the
+   *  first is measured. Turn it on when an adapter exists, not before. */
   musicGenerate: boolean;
 
   /** Section editing against stored audio, and raw wire-format compose.
@@ -108,11 +109,15 @@ export interface Capabilities {
  * deployment turns things off on purpose, in its own environment, where somebody
  * has thought about it.
  *
- * A hosted deployment sets, in one block:
+ * A hosted deployment sets, in one block (.env.example carries the same five,
+ * with a line of reason each — the two lists must agree, and until 2026-09-05
+ * this one was missing the last entry, so a deployment that copied THIS block
+ * shipped a music render button with no adapter behind it):
  *   NEXT_PUBLIC_CAP_MUSIC_SECTION_EDIT=0
  *   NEXT_PUBLIC_CAP_MUSIC_SFX=0
  *   NEXT_PUBLIC_CAP_LOCAL_VIDEO=0
  *   NEXT_PUBLIC_CAP_DESKTOP_TOOLING=0
+ *   NEXT_PUBLIC_CAP_MUSIC_GENERATE=0    (until a Google music adapter exists)
  */
 export function capabilities(): Capabilities {
   return {
