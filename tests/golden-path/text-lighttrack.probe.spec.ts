@@ -127,6 +127,28 @@ test.describe("lighttrack: the event body", () => {
     }
   });
 
+  test("(b) a turn whose transport reports no token counts omits usage, never zeroes it", async () => {
+    // The CLI transport reports a cost and never a count. A zero here would sum
+    // to zero in a rollup and read as "this call consumed no tokens", which is
+    // false - the same defect as a fabricated cost, one field over.
+    process.env.LIGHTTRACK_URL = "https://lighttrack.example/api";
+    const spy = mockFetch();
+    try {
+      emitLightTrack({
+        ...base,
+        turn: "edit-plan",
+        inputTokens: undefined,
+        outputTokens: undefined,
+        costUsd: 0.0231,
+      });
+      const body = JSON.parse(spy.calls[0].init.body as string);
+      expect("usage" in body).toBe(false);
+      expect(body.cost_usd).toBe(0.0231);
+    } finally {
+      spy.restore();
+    }
+  });
+
   test("(b) a failed turn reports status=error with a scrubbed message, no cost", async () => {
     process.env.LIGHTTRACK_URL = "https://lighttrack.example/api";
     const spy = mockFetch();

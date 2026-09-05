@@ -83,13 +83,16 @@ function eventFor(l: TurnLog) {
     // `text.` prefix .ai/use-cases.json puts on it — restored here rather than
     // stored twice.
     name: `text.${l.turn}`,
-    // Token counts, where the serving vendor reported them. `claude-cli`
-    // reports a cost but never a count, so this is honestly 0 for it rather
-    // than a promptChars figure mislabelled as tokens — see TurnLog's own
-    // comment on `inputTokens`/`outputTokens`.
-    usage: { input: l.inputTokens ?? 0, output: l.outputTokens ?? 0 },
     latency_ms: Math.round(l.ms),
   };
+  // Token counts and cost are omitted the same way and for the same reason: a
+  // zero that means "unknown" sums to zero in a rollup and reads as "this call
+  // consumed nothing", which is false. `claude-cli` reports a cost but never a
+  // count, so it sends the cost and no usage — see TurnLog's own comment on
+  // `inputTokens`/`outputTokens`.
+  if (l.inputTokens !== undefined || l.outputTokens !== undefined) {
+    body.usage = { input: l.inputTokens ?? 0, output: l.outputTokens ?? 0 };
+  }
   if (l.costUsd !== undefined) body.cost_usd = l.costUsd;
   if (l.kind && l.message) body.error = oneLine(scrub(l.message));
   else if (l.kind) body.error = l.kind;
