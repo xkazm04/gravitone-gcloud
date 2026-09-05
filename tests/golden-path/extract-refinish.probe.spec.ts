@@ -111,3 +111,24 @@ test("finish: twins are recorded ONCE in similar_to however many times the run f
   expect(m.styles[1].similar_to).toEqual(["haze-a"]);
   expect(warnings).toBe(1);
 });
+
+test("pruneFailures: a run with nothing failed is left exactly as it was — zero pruned, zero touched", async () => {
+  const m = atFinish();
+  await step(m, io);
+  expect(m.status).toBe("done");
+  const before = JSON.stringify(m);
+
+  // Before the fix: `finished` deleted, status back to "replicating", and the
+  // next step finished the run a second time with a second "done" line.
+  const n = pruneFailures(m);
+  console.log(`[extract] prune on a clean done run -> pruned=${n} status=${m.status} finished=${m.finished}`);
+  expect(n).toBe(0);
+  expect(m.status).toBe("done");
+  expect(m.finished).toBe(NOW);
+  expect(JSON.stringify(m)).toBe(before);
+
+  // And the step that follows a retry has nothing to do.
+  const r = await step(m, io);
+  expect(r.unit).toBeNull();
+  expect(m.log.filter((l) => l.msg.startsWith("done:")).length).toBe(1);
+});

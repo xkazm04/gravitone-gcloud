@@ -126,7 +126,13 @@ function tripped(m: ExtractManifest, io: EngineIO, what: string): boolean {
  *  whose image exists but whose critique failed is kept — the pixels cost
  *  money and the critique is retried by the next round's logic only if the
  *  loop is still open. Returns how many were pruned; resets the breaker and
- *  puts the run back in a live stage. */
+ *  puts the run back in a live stage.
+ *
+ *  A run with NOTHING to prune is left exactly as it was. This used to fall
+ *  through regardless — a clean `done` run lost its `finished` stamp, went
+ *  back to `replicating`, and finished a second time with a second "done"
+ *  line, while stepRun's comment called the retry a no-op. Zero pruned means
+ *  zero touched. */
 export function pruneFailures(m: ExtractManifest): number {
   let n = 0;
   for (const s of m.sources)
@@ -146,6 +152,7 @@ export function pruneFailures(m: ExtractManifest): number {
     st.transfers = st.transfers.filter((t) => t.file);
     n += before - st.transfers.length;
   }
+  if (n === 0) return 0;
   m.fail_streak = 0;
   delete m.error;
   delete m.finished;
