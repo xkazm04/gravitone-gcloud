@@ -377,7 +377,9 @@ export default function FoundryView() {
                         ? "Keep at least one candidate first"
                         : run.status === "failed"
                           ? "This run failed partway. Commit what it did produce: everything not kept is deleted and the ledger is written."
-                          : "Delete everything not kept and write the ledger"
+                          : run.status === "incomplete"
+                            ? "This run gave up partway and never reached the rest of its plan. Commit what it did produce: everything not kept is deleted and the ledger is written."
+                            : "Delete everything not kept and write the ledger"
                   }
                 >
                   Commit the cull
@@ -451,7 +453,9 @@ function StatusStrip({ run }: { run: RunDetail["run"] }) {
             ? "border-emerald-400/40 text-emerald-200"
             : run.status === "failed"
               ? "border-rose-400/40 text-rose-200"
-              : live
+              : run.status === "incomplete"
+                ? "border-amber-400/40 text-amber-200"
+                : live
                 ? "border-amber-400/40 text-amber-200"
                 : "border-cyan-400/40 text-cyan-200"
         }`}

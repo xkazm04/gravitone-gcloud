@@ -123,7 +123,22 @@ export interface Plan {
   steps?: number;
 }
 
-export type RunStatus = "created" | "annotating" | "generating" | "grading" | "done" | "failed" | "committed";
+/** A run's lifecycle state. `done` and `incomplete` are BOTH terminal and both
+ *  leave plates on disk; the difference is whether the forge got through the
+ *  plan. `stage_generate` breaks out of the candidate loop when ComfyUI cannot
+ *  be recycled after a failure, and the run then grades what exists and stops --
+ *  so `incomplete` is that outcome named, rather than derivable only from a
+ *  candidate count that does not add up and a log the operator has to open.
+ *  `failed` stays what it was: the run raised and did not reach its own end. */
+export type RunStatus =
+  | "created"
+  | "annotating"
+  | "generating"
+  | "grading"
+  | "done"
+  | "incomplete"
+  | "failed"
+  | "committed";
 
 export interface RunManifest {
   id: string;

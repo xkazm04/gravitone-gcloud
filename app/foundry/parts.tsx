@@ -12,6 +12,7 @@ export const STATUS_WORD: Record<RunStatus, string> = {
   generating: "generating",
   grading: "grading",
   done: "ready to cull",
+  incomplete: "gave up partway — ready to cull",
   failed: "failed",
   committed: "committed",
 };
@@ -32,7 +33,7 @@ export const LIVE: RunStatus[] = ["created", "annotating", "generating", "gradin
  *  button already mirrored ITS server rule (`done` only, which is what
  *  commitExtractRun enforces) — one rule, two implementations, and only one of
  *  them had been kept true. */
-export const COMMITTABLE: RunStatus[] = ["done", "failed"];
+export const COMMITTABLE: RunStatus[] = ["done", "incomplete", "failed"];
 
 /** The same, for an extract run. Narrower than the forge's on purpose: a
  *  failed extraction has no partial artefact worth ratifying. */
