@@ -6,7 +6,7 @@
 
 import FactRow from "../FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../notebook";
-import { H } from "./H";
+import { H, sectionRenders } from "./H";
 import { CurrencyBody, SourcesBody } from "./Shared";
 
 export default function ApparatusSections() {
@@ -99,7 +99,7 @@ export default function ApparatusSections() {
           run considered are how a reader tells which video this notebook was
           aimed at — and the modal that promises to summarise nothing away was
           dropping all five. */}
-      {n.candidateQuestions.length > 0 && (
+      {sectionRenders(n, "questions") && (
         <section className="space-y-2">
           <H id="questions">candidate questions — what this run was aimed at</H>
           <ul className="space-y-1.5">
