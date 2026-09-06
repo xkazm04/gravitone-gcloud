@@ -17,7 +17,10 @@ generatedFrom: [package.json, playwright.config.ts, tsconfig.json, eslint.config
 repo:
   name: gravity
   purpose: "UI-first content-creation studio — research, script, frames, score, cut — over a governed multi-vendor imaging chokepoint"
-  languages: [typescript]
+  # python joined this list on 2026-09-06 — not because .py files appeared (33 were always
+  # tracked) but because a gate now EXECUTES them. Until then the second language had zero
+  # gate coverage and naming it here would have overstated the contract.
+  languages: [typescript, python]
 
 # Capabilities, not tools. Every command below was read out of package.json scripts or verified to be
 # backed by a real config + devDependency in this repo; nothing here is invented.
@@ -80,6 +83,16 @@ capabilities:
   # to fix (a node 24 DEP0190 spawn warning, and guard.py's traceback with no nvidia-smi) since it does
   # not own those files.
   preflight: { command: "npm run preflight", verified: true }
+  # The foundry pipeline's own gate, and the ONLY capability here whose command is not npm-shaped —
+  # `python pipeline/foundry/selftest.py` is the whole definition, so there is no script to wrap it
+  # in and nothing for a wrapper to drift against. 5 cases, sub-second, no GPU / ComfyUI / Ollama /
+  # network, and STDLIB-ONLY by construction. NOT in `npm run verify`: that chain is npm and stays
+  # npm. It is a blocking job in .github/workflows/gates.yml (the `python` job, graded in that file's
+  # header on input determinism like every other). Run 2026-09-06 in both directions: 5 cases green
+  # / exit 0 on the real tree — and again green with PIL, numpy, requests, httpx, cv2 and torch
+  # blocked at `__import__`, which is what lets the CI job skip `pip install` and still block — then
+  # exit 1 on a seeded failing check.
+  foundry-selftest: { command: "python pipeline/foundry/selftest.py", verified: true }
   # THE AGGREGATE CHAIN — every gate below in one ordered command, and the order is load-bearing:
   # typecheck && lint:ratchet && check:manifest && check:notebook && check:trailer-structure && test
   # && build && check:bundle. check:bundle in particular reads BUILT chunks, so build must run first;
