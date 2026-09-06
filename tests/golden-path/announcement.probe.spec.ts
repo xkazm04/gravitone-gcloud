@@ -30,6 +30,8 @@ import type { StorageFailure } from "@/app/_phases/_shared/stepStore";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { stripComments } from "./_helpers";
+
 const KINDS: StorageFailure[] = ["quota", "blocked", "unavailable", "missing-store", "failed"];
 
 /** A queue over a fake clock and a recording sink, so the POLICY is driven
@@ -307,15 +309,13 @@ test("copy: every storage failure has a self-contained spoken form", () => {
 
 /* ── The error boundaries: a screen that failed to render must SAY so ───────── */
 
-/** Source with comments removed.
- *
- *  Load-bearing, and the reason this helper exists rather than a bare `include`:
- *  every file in this repo explains its rule in prose directly above the code
- *  that implements it, so a matcher run over raw text is satisfied by a file
- *  that TALKS about announcing and does not announce. Both assertions below were
- *  watched failing against the pre-fix files with this stripping in place. */
-const stripComments = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[^\n]*?\/\/.*$/gm, "");
+// Source with comments removed, through the shared scanner in _helpers.ts.
+//
+// Load-bearing, and the reason stripping happens at all rather than a bare
+// `include`: every file in this repo explains its rule in prose directly above
+// the code that implements it, so a matcher run over raw text is satisfied by a
+// file that TALKS about announcing and does not announce. Both assertions below
+// were watched failing against the pre-fix files with stripping in place.
 
 test("boundaries: the route boundary announces, and takes the focus its dead subtree dropped", () => {
   // Two silences, both invisible in review. React unmounts the subtree that

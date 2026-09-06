@@ -16,7 +16,7 @@ import { join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { keepEnv } from "./_helpers";
+import { keepEnv, stripComments } from "./_helpers";
 import {
   checkAccess,
   guardRequest,
@@ -134,9 +134,16 @@ const MONEY_DOOR = GATE_DOORS[0];
  *
  *  The files in this repo explain the rule in prose directly above the code that
  *  implements it, so a matcher run over raw text is satisfied by a route that
- *  TALKS about its guard and does not call one. Strip first, then match. */
+ *  TALKS about its guard and does not call one. Strip first, then match.
+ *
+ *  The shared scanner, not a private replace pair. Measured 2026-09-06 with a
+ *  seeded route whose first line read "see /api/foundry/ + star" and whose last
+ *  line was a block comment: the block-first pair this used to carry opened a
+ *  phantom block at the star, swallowed the whole file including its
+ *  guardRequest call, and reported a GATED route as ungated — the false red
+ *  the header above calls the worse of this gate's two failures. */
 function code(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  return stripComments(src);
 }
 
 test("the gate doors this probe looks for all still exist in lib/apiAuth.ts", () => {
@@ -267,7 +274,7 @@ test("guard: the constant-time compare is not short-circuited by its own length 
   expect(body, "secretsMatch not found - this guard is pinned to that function").toBeTruthy();
   // Comments explain the hazard and name the wrong shape, so they must not be
   // what the guard reads: strip them, or this passes on prose alone.
-  const code = body!.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const code = stripComments(body!);
   const cmp = code.indexOf("timingSafeEqual(");
   const len = code.search(/\.length\s*===/);
   console.log(`[auth] secretsMatch: timingSafeEqual@${cmp}, length-check@${len}`);

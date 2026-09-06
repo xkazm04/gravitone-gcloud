@@ -36,6 +36,8 @@ import {
 import { readFileSync, readdirSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 
+import { stripComments } from "./_helpers";
+
 test.beforeEach(() => __resetSaveSlots());
 
 // ── 1. Latest-wins ──────────────────────────────────────────────────────────
@@ -123,9 +125,7 @@ function localStorageWriters(): string[] {
         if (e.name === "node_modules" || e.name.startsWith(".")) continue;
         walk(p);
       } else if (/\.(ts|tsx)$/.test(e.name) && !/\.(spec|test)\./.test(e.name)) {
-        const src = readFileSync(p, "utf8")
-          .replace(/\/\*[\s\S]*?\*\//g, "")
-          .replace(/^\s*\/\/.*$/gm, "");
+        const src = stripComments(readFileSync(p, "utf8"));
         if (/\blocalStorage\.setItem\(/.test(src)) out.push(relative(root, p).replace(/\\/g, "/"));
       }
     }

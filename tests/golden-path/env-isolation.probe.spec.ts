@@ -21,7 +21,7 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { keepEnv } from "./_helpers";
+import { keepEnv, stripComments } from "./_helpers";
 
 const VAR = "GRAVITONE_ENV_ISOLATION_PROBE";
 keepEnv([VAR]);
@@ -51,7 +51,7 @@ test("every probe that writes process.env registers keepEnv", () => {
     // Comments are stripped: several of these files explain the contract in
     // prose directly above the code, so a matcher over raw text is satisfied by
     // a file that talks about restoring and does not.
-    const src = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const src = stripComments(raw);
     // A WRITE, not a read, and not a COMPARISON. The first version of this
     // matched `process.env.NODE_ENV === "production"` as an assignment, because
     // `=(?!=)` was missing — harness-gate.probe.spec.ts holds that expression as
