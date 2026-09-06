@@ -1,4 +1,8 @@
 // Shared fixtures for the golden-path dynamic probes.
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import path from "node:path";
+
 import { test } from "@playwright/test";
 
 import { PHASES, type PhaseKey, type PhaseState, type Project } from "@/lib/projects";
@@ -160,4 +164,36 @@ export function stripComments(src: string): string {
     out += src[i++];
   }
   return out;
+}
+
+/**
+ * Aim the foundry's two VERSIONED indices at a fresh temp directory for the
+ * duration of each test in the calling file, and return a getter for it.
+ *
+ * `pipeline/foundry/{ledger,styles}.json` are git-tracked, so before
+ * `foundryFile()` existed (lib/foundry/store.ts) there was no way to watch a
+ * commit do its work: `commitRun` and `commitExtractRun` could only be
+ * exercised by letting them rewrite two files under version control, which no
+ * probe may do. This helper is the other half of that override.
+ *
+ * A FRESH directory per test, not per file, because a commit's whole subject
+ * is what the second call sees of the first — a shared directory would let
+ * one test's rows decide another's count.
+ *
+ * Call it at FILE SCOPE. `keepEnv` is registered from inside so the snapshot
+ * lands before the assignment and `FOUNDRY_DIR` is gone again afterwards, for
+ * the same reason the doc above it gives.
+ */
+export function probeFoundryDir(): () => string {
+  keepEnv(["FOUNDRY_DIR"]);
+  let dir = "";
+  test.beforeEach(() => {
+    dir = mkdtempSync(path.join(tmpdir(), "foundry-probe-"));
+    process.env.FOUNDRY_DIR = dir;
+  });
+  test.afterEach(() => {
+    if (dir) rmSync(dir, { recursive: true, force: true });
+    dir = "";
+  });
+  return () => dir;
 }

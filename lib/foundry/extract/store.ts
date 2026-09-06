@@ -25,7 +25,7 @@ import { generate, recognize } from "@/lib/imaging/router";
 import type { ImageRef } from "@/lib/imaging/types";
 import { reason } from "@/lib/text/router";
 
-import { FoundryError } from "../store";
+import { FoundryError, foundryFile } from "../store";
 import type { Exemplar, StyleDef } from "../types";
 import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
 import type { EngineIO } from "./engine";
@@ -43,7 +43,6 @@ import type {
 } from "./types";
 
 export const EXTRACT_ROOT = path.join(process.cwd(), "foundry-out", "extract");
-const STYLES = path.join(process.cwd(), "pipeline", "foundry", "styles.json");
 
 const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
 const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json"]);
@@ -364,7 +363,7 @@ export async function commitExtractRun(id: string, verdictsIn?: ExtractVerdicts)
   const rejected = run.styles.filter((s) => verdicts[s.id]?.verdict === "reject");
   if (!kept.length) throw new FoundryError("Keep at least one style first.", 400);
 
-  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(STYLES, { styles: [] });
+  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
   const taken = new Set(catalogue.styles.map((s) => s.id));
   const written: string[] = [];
   const models = [run.engines.vision, run.engines.reasoner, run.engines.generator].filter((x): x is string => !!x);
@@ -401,7 +400,7 @@ export async function commitExtractRun(id: string, verdictsIn?: ExtractVerdicts)
     });
     written.push(cid);
   }
-  await writeJsonAtomic(STYLES, catalogue);
+  await writeJsonAtomic(foundryFile("styles.json"), catalogue);
 
   run.status = "committed";
   run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id) };

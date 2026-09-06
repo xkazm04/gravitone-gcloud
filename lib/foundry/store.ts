@@ -36,9 +36,23 @@ import type {
 
 /** Exported for the disk probe, which writes a probe-prefixed run under it. */
 export const OUT_ROOT = path.join(process.cwd(), "foundry-out", "runs");
-const FOUNDRY_DIR = path.join(process.cwd(), "pipeline", "foundry");
-const LEDGER = path.join(FOUNDRY_DIR, "ledger.json");
-const STYLES = path.join(FOUNDRY_DIR, "styles.json");
+/** THE VERSIONED INDICES' ROOT, and the one knob that moves it.
+ *
+ *  ledger.json and styles.json are git-TRACKED, so until this existed no test
+ *  could exercise a commit at all: the only way to watch `commitRun` or
+ *  `commitExtractRun` do their work was to let them rewrite two files under
+ *  version control. `FOUNDRY_DIR` points the pair somewhere else — the same
+ *  env-read shape next.config.ts uses for `NEXT_DIST_DIR` (`process.env.X ||
+ *  <the constant>`), and unset it resolves to exactly the path it replaced,
+ *  so the app, the CLI and the forge are unchanged.
+ *
+ *  Read PER CALL, not frozen at module load: the probe lane shares ONE Node
+ *  process across every spec file (playwright.config.ts), so a constant
+ *  captured at import time could only ever be aimed by whichever file loaded
+ *  this module first. */
+export function foundryFile(name: "ledger.json" | "styles.json"): string {
+  return path.join(process.env.FOUNDRY_DIR || path.join(process.cwd(), "pipeline", "foundry"), name);
+}
 
 const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
 const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".json"]);
@@ -156,8 +170,8 @@ export async function getRun(id: string): Promise<RunDetail> {
 
 export async function getCatalogue(): Promise<Catalogue> {
   const [styles, ledger] = await Promise.all([
-    readJson<{ styles: StyleDef[] }>(STYLES, { styles: [] }),
-    readJson<{ rows: LedgerRow[] }>(LEDGER, { rows: [] }),
+    readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }),
+    readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] }),
   ]);
   return { styles: styles.styles, ledger: ledger.rows };
 }
@@ -283,7 +297,7 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
 
   // The versioned indices. Ledger rows are append-only and keyed by every
   // axis; a style's evidence list is what promotes it.
-  const ledger = await readJson<{ rows: LedgerRow[] }>(LEDGER, { rows: [] });
+  const ledger = await readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] });
   for (const c of decided) {
     ledger.rows.push({
       run: id,
@@ -298,9 +312,9 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
       at,
     });
   }
-  await writeJsonAtomic(LEDGER, ledger);
+  await writeJsonAtomic(foundryFile("ledger.json"), ledger);
 
-  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(STYLES, { styles: [] });
+  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
   for (const s of catalogue.styles) {
     for (const c of decided.filter((c) => c.style === s.id)) {
       s.evidence.push({ run: id, scene: c.scene, mechanism: c.mechanism, verdict: verdicts[c.id].verdict as Verdict, at });
@@ -308,7 +322,7 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
     const keptScenes = new Set(s.evidence.filter((e) => e.verdict === "keep").map((e) => `${e.run}/${e.scene}`));
     if (keptScenes.size >= 2) s.status = "proven";
   }
-  await writeJsonAtomic(STYLES, catalogue);
+  await writeJsonAtomic(foundryFile("styles.json"), catalogue);
 
   const findings = findingsMarkdown(run, verdicts, decided);
   await writeFile(path.join(dir, "findings.md"), findings, "utf8");
