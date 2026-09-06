@@ -179,3 +179,41 @@ test("FOUNDRY_DIR: a real commit of either kind leaves the TRACKED indices byte-
     cleanup(run.id, ex);
   }
 });
+
+/* ── A retried commit must not double the indices ─────────────────────────── */
+
+/** Put the run back the way a FAILED commit leaves it: the ledger already has
+ *  its rows, and run.json still says `done`. commitRun writes run.json LAST,
+ *  after both indices, so any throw between the two is exactly this state —
+ *  and nothing in the store can tell it from a first attempt. */
+function rewindToDone(id: string): void {
+  const file = path.join(OUT_ROOT, id, "run.json");
+  const run = JSON.parse(readFileSync(file, "utf8")) as RunManifest;
+  run.status = "done";
+  delete run.committed;
+  for (const c of run.candidates) delete c.deleted;
+  writeFileSync(file, JSON.stringify(run), "utf8");
+}
+
+test("commitRun: a retry after a half-finished commit writes N ledger rows, not 2N", async () => {
+  const n = 3;
+  writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [styleDef("haze")] }), "utf8");
+  const run = forgeRun(`probe-retry-${Date.now().toString(36)}`, n);
+  try {
+    await commitRun(run.id, "leave");
+    expect(readIndex<{ rows: unknown[] }>("ledger.json").rows.length).toBe(n);
+
+    // The failure: styles.json (or findings.md, or run.json) threw after the
+    // ledger write. The operator presses commit again.
+    rewindToDone(run.id);
+    await commitRun(run.id, "leave");
+
+    const rows = readIndex<{ rows: { run: string }[] }>("ledger.json").rows;
+    const evidence = readIndex<{ styles: StyleDef[] }>("styles.json").styles.find((s) => s.id === "haze")!.evidence;
+    console.log(`[foundry] commit -> retry: ${rows.length} ledger row(s), ${evidence.length} evidence row(s) for ${n} decided candidate(s)`);
+    expect(rows.filter((r) => r.run === run.id).length).toBe(n);
+    expect(evidence.filter((e) => e.run === run.id).length).toBe(n);
+  } finally {
+    cleanup(run.id, "probe-none");
+  }
+});

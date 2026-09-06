@@ -295,9 +295,24 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
   }
   const kept = decided.length - deleted;
 
-  // The versioned indices. Ledger rows are append-only and keyed by every
-  // axis; a style's evidence list is what promotes it.
+  // The versioned indices. A run's rows are REPLACED, not appended.
+  //
+  // This function is not atomic and cannot be: it writes ledger.json, then
+  // styles.json, then findings.md, then verdicts.json, and only at the very
+  // end does run.json say `committed`. A throw anywhere after the ledger
+  // write (a full disk, a Windows watcher holding styles.json) leaves the run
+  // still reading `done` — and the only recovery the UI offers is to press
+  // commit again, which the guard at the top of this function happily allows
+  // because the run is not `committed`. Appending made that retry write every
+  // row a SECOND time: measured, 3 decided candidates became 6 ledger rows and
+  // 6 evidence rows, each identical on every key.
+  //
+  // So each commit clears whatever this run id contributed before and writes
+  // its rows fresh. Other runs are untouched, and on a first commit — where
+  // nothing carries this id — the filter removes nothing and the behaviour is
+  // exactly the append it replaced, multiplicity per seed included.
   const ledger = await readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] });
+  ledger.rows = ledger.rows.filter((r) => r.run !== id);
   for (const c of decided) {
     ledger.rows.push({
       run: id,
@@ -316,6 +331,11 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
 
   const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
   for (const s of catalogue.styles) {
+    // Same rule for the evidence list, and it matters more: `keptScenes`
+    // below dedupes by run/scene, so doubled evidence promotes nothing and
+    // shows up only as a list twice its true length that no reader can
+    // explain.
+    s.evidence = s.evidence.filter((e) => e.run !== id);
     for (const c of decided.filter((c) => c.style === s.id)) {
       s.evidence.push({ run: id, scene: c.scene, mechanism: c.mechanism, verdict: verdicts[c.id].verdict as Verdict, at });
     }
