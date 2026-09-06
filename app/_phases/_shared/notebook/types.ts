@@ -418,16 +418,23 @@ export interface CounterPosition {
  *  in their own export (`conclusions.ts::CONCLUSIONS`) and are joined to the
  *  rest only at the card layer, by `buildCards`.
  *
- *  WHAT THAT COSTS A CONSUMER, stated here because one is paying it: anything
- *  that serialises "the notebook" for a model must send `CONCLUSIONS`
- *  ALONGSIDE this object, or the model never sees a card class the UI lets the
- *  user annotate. `app/api/recalibrate/route.ts:47-56` does not — its comment
- *  says "a card is a fact, a mechanism, a reversal, a conclusion or the
- *  steel-man… every one of those slices stays, in full", and the payload it
- *  builds by dropping keys from THIS object contains no conclusions at all. A
- *  note on a `c-*` card therefore names a card the model has never seen. The
- *  fix is in that route: send `{ ...notebook, conclusions: CONCLUSIONS }`, or
- *  add `conclusions` to the payload beside it — one line, another lot's file. */
+ *  WHAT THAT COSTS A CONSUMER: anything that serialises "the notebook" for a
+ *  model must send `CONCLUSIONS` ALONGSIDE this object, or the model never sees
+ *  a card class the UI lets the user annotate — a note on a `c-*` card would
+ *  name a card the model has never seen.
+ *
+ *  `app/api/recalibrate/route.ts` DOES. It imports `CONCLUSIONS` and sends them
+ *  in their own block beside the notebook, with the separation intact and
+ *  out-of-scope conclusions named rather than dropped. This paragraph said the
+ *  opposite until 2026-09-06 — it described the route's payload as containing
+ *  "no conclusions at all" and offered the one-line fix, months after that fix
+ *  had landed. A comment asserting a defect the code no longer has is read as a
+ *  live finding by the next person to act on it, and there were two copies of
+ *  this one (see conclusions.ts's own note on the same route).
+ *
+ *  It is not a paragraph any more: the coupling is asserted in
+ *  tests/golden-path/shared-notebook-contracts.probe.spec.ts, so a route that
+ *  stops sending them fails rather than quietly making this true again. */
 export interface Notebook {
   id: string;
   topic: string;

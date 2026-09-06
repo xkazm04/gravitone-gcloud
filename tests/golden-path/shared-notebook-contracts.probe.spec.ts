@@ -90,6 +90,41 @@ test("rail: no section file still carries its own copy of a condition", () => {
   }
 });
 
+/* ── 1b · conclusions travel beside the notebook, and the note says so ──────── */
+
+test("conclusions: the one consumer that serialises the notebook for a model sends them too", () => {
+  // WHY THIS IS A TEST AND NOT A SENTENCE. `CONCLUSIONS` is deliberately not a
+  // field of `Notebook` — a conclusion has no source and may not be filed beside
+  // the sourced facts — so any consumer that serialises "the notebook" for a
+  // model has to send the array separately or the model never sees a card class
+  // the UI lets the user annotate.
+  //
+  // Both types.ts and conclusions.ts carried that rule with a worked example
+  // attached: "app/api/recalibrate/route.ts does not". The route has sent them
+  // since 2026-08, in its own block. Two copies of one claim, both asserting a
+  // defect that had already been fixed, and a comment that describes a live
+  // finding is acted on as one.
+  const route = stripComments(readFileSync(join(ROOT, "app/api/recalibrate/route.ts"), "utf8"));
+  expect(
+    /import\s*\{[^}]*\bCONCLUSIONS\b[^}]*\}\s*from/.test(route),
+    "the recalibrate route no longer imports CONCLUSIONS - the model would be annotated about c-* cards it was never shown",
+  ).toBe(true);
+  expect(
+    /\bconclusions\b/.test(route),
+    "the recalibrate route no longer names conclusions in its payload",
+  ).toBe(true);
+
+  // And neither note may go back to claiming otherwise. The prose is what a
+  // reader acts on, so it is held to the same standard as the code.
+  for (const file of ["types.ts", "conclusions.ts"]) {
+    const src = readFileSync(join(ROOT, "app/_phases/_shared/notebook", file), "utf8");
+    expect(
+      /recalibrate\/route\.ts[^\n]*\n?[^\n]*does not/.test(src),
+      `${file} claims the recalibrate route does not send conclusions - it does`,
+    ).toBe(false);
+  }
+});
+
 /* ── 2 · the load-side race guard: every hand-rolled site is named ──────────── */
 
 /**
