@@ -1,9 +1,10 @@
 // LANE — UNAUTHENTICATED-SPENDING-ROUTE (dynamic).
 //
-// The four routes app/api/imaging/{generate,edit,recognize} and app/api/frames
-// each spend a real vendor balance or local Claude-CLI compute. Before this
-// gate, none checked WHO was calling — a request at the origin billed the
-// operator's keys. This probe drives the ACTUAL exported route handlers (Node
+// Every route that spends a real vendor balance or local Claude-CLI compute —
+// eleven when this sentence was last checked, and DERIVED below rather than
+// counted here, because it was "four" when this file was written and the count
+// went stale twice. Before this gate, none checked WHO was calling — a request
+// at the origin billed the operator's keys. This probe drives the ACTUAL exported route handlers (Node
 // context, no server) and the ACTUAL guard, and pins the contract:
 //
 //   · every route returns 401 to an unauthenticated caller (FAILS against the
@@ -11,8 +12,8 @@
 //   · a valid secret passes the guard (the route then 4xx's on the bad body,
 //     never 401 — proving the guard let it through WITHOUT spending);
 //   · the rate limiter refuses past its capacity with 429.
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
@@ -219,6 +220,73 @@ test("every API route either gates or is deliberately public — derived, not li
 test("every deliberately-public exemption still names a route that exists", () => {
   for (const rel of Object.keys(DELIBERATELY_PUBLIC))
     expect(existsSync(join(process.cwd(), rel)), `${rel} is exempted and does not exist`).toBe(true);
+});
+
+/**
+ * Every module `rel` imports AT RUNTIME, resolved the way the bundler resolves
+ * them: `@/` to the repo root, `./` and `../` beside the importer, then `.ts`,
+ * `.tsx`, `/index.ts` tried in that order. `import type` is not a runtime edge
+ * and is skipped; a bare package name is not this repo's code and is skipped.
+ * A specifier that resolves to nothing is asserted, not ignored — a walk that
+ * silently drops an edge reports a smaller graph than the one that ships.
+ */
+function runtimeImports(rel: string): string[] {
+  const src = code(readFileSync(join(process.cwd(), rel), "utf8"));
+  const out: string[] = [];
+  for (const m of src.matchAll(/^import\s+(?!type\b)[\s\S]*?from\s+["']([^"']+)["']/gm)) {
+    const spec = m[1];
+    let base: string;
+    if (spec.startsWith("@/")) base = spec.slice(2);
+    else if (spec.startsWith(".")) base = join(dirname(rel), spec).split("\\").join("/");
+    else continue;
+    const hit = [base, `${base}.ts`, `${base}.tsx`, `${base}/index.ts`].find((c) => {
+      const full = join(process.cwd(), c);
+      return existsSync(full) && statSync(full).isFile();
+    });
+    expect(hit, `${rel} imports "${spec}", which resolves to no file - the walk cannot follow it`).toBeTruthy();
+    out.push(hit!);
+  }
+  return out;
+}
+
+/**
+ * THE ADMISSION CLAIM IS CHECKED, NOT QUOTED.
+ *
+ * Each DELIBERATELY_PUBLIC reason above says, in prose, that the route reads no
+ * environment and imports nothing that does — so a caller cannot learn from the
+ * response whether this deployment holds a key, nor what ceiling an operator
+ * set. Until 2026-09-06 that sentence was the only thing holding it: the music
+ * entry even says "verified on admission", and nothing re-verified it on any
+ * later commit. A `process.env` read added to lib/music/pricing.ts, or an
+ * import of lib/music/budget.ts to "show the ceiling too", would have shipped
+ * on a public route with this probe green.
+ *
+ * So the route's runtime import graph is WALKED, and every module reachable
+ * from it is asserted to read no `process.env`. The pricing modules are the
+ * whole graph today (two files each); the assertion is what keeps that true.
+ */
+test("every deliberately-public route reads no environment, transitively", () => {
+  for (const [route, why] of Object.entries(DELIBERATELY_PUBLIC)) {
+    const seen = new Set<string>();
+    const queue = [route];
+    while (queue.length) {
+      const f = queue.pop()!;
+      if (seen.has(f)) continue;
+      seen.add(f);
+      queue.push(...runtimeImports(f));
+    }
+    // The walk followed at least one edge — a route that "imports nothing"
+    // means the import matcher stopped seeing imports, not that the route is
+    // self-contained.
+    expect(seen.size, `${route}: the import walk followed no edge at all`).toBeGreaterThan(1);
+
+    const envReaders = [...seen].filter((f) => /process\.env/.test(code(readFileSync(join(process.cwd(), f), "utf8"))));
+    console.log(`[auth] ${route}: ${seen.size} module(s) reachable (${[...seen].filter((f) => f !== route).join(", ")}), ${envReaders.length} read process.env`);
+    expect(
+      envReaders,
+      `${route} is public because "${why.slice(0, 70)}…" — and these modules it reaches read the environment`,
+    ).toEqual([]);
+  }
 });
 
 keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", RATE_CAPACITY_VAR, RATE_WINDOW_SEC_VAR, RATE_KEY_CAP_VAR]);
