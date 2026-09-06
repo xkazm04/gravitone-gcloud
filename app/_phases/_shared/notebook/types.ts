@@ -393,8 +393,22 @@ export interface ScaleConversion {
  *  be several and may each need attributing. `string` is the legacy form.
  *
  *  Opt-in asymmetry: this is evidence-class material, not a conclusion — it is
- *  in by default like a fact, and the approach/refusal card it carries is the
- *  one card the board may not descope. */
+ *  in by default like a fact, rather than OFF until the creator lets it in.
+ *
+ *  IT CARRIES NO CARD, and this paragraph used to say it carried "the one card
+ *  the board may not descope". There is no approach/refusal card anywhere:
+ *  `buildCards` flattens facts, mechanisms, reversals, conclusions and the
+ *  steel-man, and counter-positions are not among them. The one card the board
+ *  may not descope is the STEEL-MAN, which is the only card `buildCards` marks
+ *  `required` — asserted, not asserted-about, in
+ *  tests/golden-path/shared-notebook-contracts.probe.spec.ts.
+ *
+ *  What that means for a counter-position is worth stating rather than
+ *  implying: it renders in the notebook modal (sections/Argument.tsx) and it
+ *  reaches the triage board not at all. The strongest counter in run 1 — the
+ *  four-year-cycle reading, which disproves the notebook's own `tension: high`
+ *  — is therefore readable and unscopeable. Giving it a card class is a
+ *  product decision about what a reviewer may cut, not a repair. */
 export interface CounterPosition {
   position: string;
   /** WHO holds it. Two independent holders collapsed into one singular

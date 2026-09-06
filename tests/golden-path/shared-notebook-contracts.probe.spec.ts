@@ -17,6 +17,7 @@ import { test, expect } from "@playwright/test";
 
 import { stripComments } from "./_helpers";
 
+import { buildCards } from "@/app/_phases/_shared/notebook/cards";
 import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
 import { railFor, SECTION_IDS } from "@/app/_phases/_shared/notebook/NotebookBody";
 import { CONDITIONAL_SECTIONS, sectionRenders } from "@/app/_phases/_shared/notebook/sections/H";
@@ -123,6 +124,31 @@ test("conclusions: the one consumer that serialises the notebook for a model sen
       `${file} claims the recalibrate route does not send conclusions - it does`,
     ).toBe(false);
   }
+});
+
+test("cards: the steel-man is the only card the board may not descope", () => {
+  // `CounterPosition`'s note claimed the counter-position "carries the one card
+  // the board may not descope". No such card exists: buildCards flattens facts,
+  // mechanisms, reversals, conclusions and the steel-man, and counter-positions
+  // are not among them. Both halves are pinned, because the sentence was wrong
+  // in both directions - it named a card class that is absent AND it moved the
+  // required mark off the card that actually carries it.
+  const cards = buildCards(NOTEBOOK);
+  const required = cards.filter((c) => c.required);
+  console.log(`[cards] ${cards.length} cards, ${required.length} required: ${required.map((c) => c.id).join(", ")}`);
+  expect(required.map((c) => c.id)).toEqual(["steel-man"]);
+  expect(required[0].requiredWhy, "the required card must say why it is required").toBeTruthy();
+
+  // No card is derived from a counter-position, however the field is spelled.
+  const positions = (NOTEBOOK.counterPositions as readonly (string | { position: string })[]).map(
+    (c) => (typeof c === "string" ? c : c.position),
+  );
+  expect(positions.length, "the fixture carries counter-positions").toBeGreaterThan(0);
+  for (const p of positions)
+    expect(
+      cards.some((c) => c.title === p),
+      "a counter-position now has a card - the note in types.ts saying it has none is stale",
+    ).toBe(false);
 });
 
 /* ── 2 · the load-side race guard: every hand-rolled site is named ──────────── */
