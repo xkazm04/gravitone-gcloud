@@ -253,7 +253,12 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
   const dir = runDir(id);
   const run = await readManifest(id);
   if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
-  if (!["done", "failed"].includes(run.status)) throw new FoundryError("The forge is still running this run.", 409);
+  // `incomplete` belongs here for the same reason `failed` does: the run stopped
+  // early with every plate it did generate on disk, and this button is the only
+  // way to reach them. Keep this array and COMMITTABLE in app/foundry/parts.tsx
+  // equal — tests/golden-path/commit-gate-parity.probe.spec.ts reads this one off
+  // disk and fails if they drift.
+  if (!["done", "incomplete", "failed"].includes(run.status)) throw new FoundryError("The forge is still running this run.", 409);
   const verdicts = await readVerdicts(id);
   const at = new Date().toISOString();
 

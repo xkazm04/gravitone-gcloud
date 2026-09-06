@@ -421,6 +421,27 @@ def stage_grade(manifest, run_dir, model):
         save(run_dir, manifest)
 
 
+def final_status(manifest):
+    """`done` means the forge got through the plan; `incomplete` means it gave up.
+
+    stage_generate BREAKS out of the candidate loop when ComfyUI cannot be
+    recycled after a failure -- the run then grades what exists and returns
+    normally, and main() used to write "done" over it unconditionally. A run
+    that abandoned 80 of 90 candidates was, in the one field the API reads as a
+    lifecycle state, indistinguishable from one that finished; the shortfall was
+    reconstructable only from a candidate count that does not add up and a log
+    the operator has to open.
+
+    A candidate still `pending` was never attempted; a `failed` one was attempted
+    and produced nothing. Either means the run did not deliver its plan, so it
+    does not get to say it finished. `incomplete` is terminal and committable --
+    the plates it DID produce are on disk and worth culling (lib/foundry/types.ts
+    holds the union, app/foundry/parts.tsx the word and the commit set).
+    """
+    left = [c for c in manifest["candidates"] if c["status"] in ("pending", "failed")]
+    return "incomplete" if left else "done"
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("plan")
@@ -493,13 +514,18 @@ def main():
         if not args.skip_grade:
             log(manifest, run_dir, "stage 2: grade candidates (annotator holds the card)")
             stage_grade(manifest, run_dir, args.annotator)
-        manifest["status"] = "done"
+        manifest["status"] = final_status(manifest)
         manifest["finished"] = now()
-        manifest["progress"] = {"stage": "done", "done": 0, "total": 0}
+        manifest["progress"] = {"stage": manifest["status"], "done": 0, "total": 0}
         save(run_dir, manifest)
         n_ok = sum(1 for c in manifest["candidates"] if c["status"] == "graded")
-        print(f"\nforge: done -- {n_ok}/{len(manifest['candidates'])} candidates graded. "
-              f"Open /foundry to cull.")
+        left = sum(1 for c in manifest["candidates"] if c["status"] in ("pending", "failed"))
+        if manifest["status"] == "incomplete":
+            print(f"\nforge: INCOMPLETE -- gave up with {left}/{len(manifest['candidates'])} candidates "
+                  f"never produced; {n_ok} graded. Open /foundry to cull what there is.")
+        else:
+            print(f"\nforge: done -- {n_ok}/{len(manifest['candidates'])} candidates graded. "
+                  f"Open /foundry to cull.")
     except BaseException as e:
         manifest["status"] = "failed"
         manifest["error"] = f"{type(e).__name__}: {str(e)[:300]}"
