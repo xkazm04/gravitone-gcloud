@@ -45,8 +45,17 @@ const ALL_KINDS: Record<StorageFailure, true> = {
   unavailable: true,
   "missing-store": true,
   failed: true,
+  "non-storage": true,
 };
 const KINDS = Object.keys(ALL_KINDS) as StorageFailure[];
+
+/** The kinds that are actually about STORAGE. `non-storage` shares the channel
+ *  and the vocabulary but not the claim: it is a failure that merely arrived
+ *  here, and "Not saved" would be a false statement about the user's work. Its
+ *  own copy is driven by unhandled-rejection-route.probe.spec.ts, which owns the
+ *  route that produces it; what this file asserts is that the storage sentences
+ *  did not change shape when it was added. */
+const STORAGE_KINDS = KINDS.filter((k) => k !== "non-storage");
 
 /** A queue over a fake clock and a recording sink, so the POLICY is driven
  *  without a DOM, a renderer or real time. Every `tick()` runs whatever the
@@ -301,7 +310,7 @@ test("politeness: derives from severity, and only blocking news interrupts", () 
 });
 
 test("copy: every storage failure has a self-contained spoken form", () => {
-  for (const kind of KINDS) {
+  for (const kind of STORAGE_KINDS) {
     const text = troubleAnnouncement(kind, "script");
     console.log(`[a11y] ${kind} -> ${text}`);
     // It arrives with no card, no heading and no phase line beside it, so it
@@ -318,7 +327,14 @@ test("copy: every storage failure has a self-contained spoken form", () => {
   }
   // Five kinds, five distinct sentences — a taxonomy that collapses in the
   // spoken channel is a taxonomy the assistive user does not have.
-  expect(new Set(KINDS.map((k) => troubleAnnouncement(k, "script"))).size).toBe(KINDS.length);
+  expect(new Set(STORAGE_KINDS.map((k) => troubleAnnouncement(k, "script"))).size).toBe(
+    STORAGE_KINDS.length,
+  );
+  // And the sixth is outside that set rather than a sixth member of it: it must
+  // not borrow a storage sentence, and it must not claim the work was lost.
+  const notStorage = troubleAnnouncement("non-storage", "script", "Failed to fetch");
+  expect(STORAGE_KINDS.map((k) => troubleAnnouncement(k, "script"))).not.toContain(notStorage);
+  expect(notStorage.startsWith("Not saved:")).toBe(false);
 });
 
 /* ── The error boundaries: a screen that failed to render must SAY so ───────── */

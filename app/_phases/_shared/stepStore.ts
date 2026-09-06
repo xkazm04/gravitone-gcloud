@@ -144,16 +144,28 @@ export interface CutStepData {
 
 /* ────────────────────────────── what went wrong ──────────────────────────── */
 
-/** WHY the storage operation failed. Five destinations that used to be one
+/** WHY the operation failed. Five storage destinations that used to be one
  *  `return fallback`, and they call for different things from a surface:
  *  `quota` means stop and export, `blocked` means close the other tab, and
- *  `unavailable` means this browser session was never going to persist. */
+ *  `unavailable` means this browser session was never going to persist.
+ *
+ *  `non-storage` is the sixth and it is NOT a storage failure — it is how a
+ *  failure that merely arrived through this channel says so. The only producer
+ *  is `reportTaskTrouble` (lib/GlobalErrorBridge's unhandled-rejection route),
+ *  and it exists because the alternative was worse: every non-storage rejection
+ *  — a `void fetch(...)` that dropped, an AbortError, a TypeError thrown in
+ *  fire-and-forget code — fell through `classify` into `failed` and was voiced
+ *  as "Not saved: the browser refused the operation", sending the creator to
+ *  check a quota that was never the problem. A kind rather than a second
+ *  channel, so the bell keeps one vocabulary and every exhaustive switch over
+ *  this union is forced to learn it. */
 export type StorageFailure =
   | "unavailable" // no IndexedDB at all — private mode, or a server render
   | "missing-store" // the DB opened without the steps store
   | "blocked" // another tab holds the old version open (studioDb's onblocked)
   | "quota" // out of room. The expensive one, and the reachable one
-  | "failed"; // everything else, reported rather than guessed at
+  | "failed" // everything else STORAGE-SHAPED, reported rather than guessed at
+  | "non-storage"; // not storage at all — it only travelled this channel
 
 export interface StorageTrouble {
   kind: StorageFailure;
@@ -266,6 +278,37 @@ export function reportStorageTrouble(
     kind: classify(e),
     op,
     projectId,
+    phase,
+    message: e instanceof Error ? e.message : String(e),
+    at: Date.now(),
+  };
+  report(t);
+  return t;
+}
+
+/**
+ * Publish a failure that reached NO owner — an unhandled promise rejection —
+ * through this same channel, without claiming it was a storage write.
+ *
+ * `reportStorageTrouble` is for a caller that KNOWS it was doing storage work
+ * and merely lost the error; this is for the last-resort reporter, which knows
+ * only that something rejected. The difference matters at the bell: `failed`
+ * prints "the browser refused the operation" and sends the creator to look at
+ * their quota, which is the wrong remedy for a dropped fetch.
+ *
+ * The three RECOGNISED storage kinds are still honoured, because a rejection
+ * really can be one: `saveStep` never rejects (see its header), but a direct
+ * IndexedDB user in fire-and-forget code can, and a QuotaExceededError arriving
+ * this way is still a quota. It is only `classify`'s catch-all — the bucket that
+ * means "not storage-shaped as far as anything here can tell" — that becomes
+ * `non-storage` and carries the reason's own message instead.
+ */
+export function reportTaskTrouble(phase: string, e: unknown): StorageTrouble {
+  const storageShaped = classify(e);
+  const t: StorageTrouble = {
+    kind: storageShaped === "failed" ? "non-storage" : storageShaped,
+    op: "write",
+    projectId: "app",
     phase,
     message: e instanceof Error ? e.message : String(e),
     at: Date.now(),
