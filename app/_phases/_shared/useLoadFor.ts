@@ -20,8 +20,20 @@
 // key, apply the result. It is NOT a data-fetching layer and it does not own
 // caching, retries, deduping or error taxonomy — those belong to the callers that
 // already have opinions about them (`stepStore`'s ReadOutcome, `useFrames`'
-// separation of read-failure from operation-failure). Three call sites in this
-// repository do something genuinely different and are LEFT ALONE on purpose:
+// separation of read-failure from operation-failure).
+//
+// WHICH SITES KEEP THEIR OWN GUARD IS NOW A LIST WITH A GATE, not a paragraph.
+// This header named three and said they were the exceptions; measured
+// 2026-09-06, EIGHT files carried the hand-rolled shape. The five it did not
+// name are precisely the sites where, in this file's own words above, the
+// reasoning was "rediscovered and retyped" — the failure it exists to stop,
+// happening unobserved because nothing walked the tree.
+//
+// The population is walked and every exemption carries its argument in
+// `OWN_LOAD_GUARD` (tests/golden-path/shared-notebook-contracts.probe.spec.ts).
+// A new file that hand-rolls the guard and states no reason fails there. The
+// three below are still the ones whose argument was written first, and they are
+// quoted in that list rather than duplicated here:
 //
 //   · `script/trailer/useTrailerCut.ts` — a branching two-stage load (try the
 //     saved cut, else compose one from the confirmed picks) with two distinct
