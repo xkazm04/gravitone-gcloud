@@ -33,13 +33,15 @@ import { join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
+
 /** Source with comments removed, so prose about the rule cannot satisfy it.
  *  These files explain their own contracts at length directly above the code
  *  that implements them — a matcher over raw text is satisfied by a file that
  *  TALKS about clearing and never does. Same helper, same reason, as
  *  object-url-ownership.probe.spec.ts next door. */
 function code(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  return stripComments(src);
 }
 
 const STEP_ROOT = join(process.cwd(), "app", "_phases", "research");

@@ -22,7 +22,7 @@ import { test, expect } from "@playwright/test";
 
 import { formatTurn, scrub } from "@/lib/text/log";
 
-import { keepEnv } from "./_helpers";
+import { keepEnv, stripComments } from "./_helpers";
 
 const GOOGLE_KEY = "AIzaSyFAKEfakeFAKEfake0123456789abcd";
 const ANTHROPIC_KEY = "sk-ant-api03-FAKEfakeFAKEfake0123456789";
@@ -121,7 +121,7 @@ test("scrub: the list here matches lib/claudeCli.ts's METERED_AUTH_VARS", () => 
   // dependency direction. So the coupling is checked rather than referenced —
   // the same trade harness-gate.probe.spec.ts makes for a build-time gate.
   const root = resolve(__dirname, "../..");
-  const strip = (s: string) => s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const strip = stripComments;
   const listOf = (rel: string, name: string): string[] => {
     const src = strip(readFileSync(resolve(root, rel), "utf8"));
     const m = new RegExp(`${name}\\s*=\\s*\\[([\\s\\S]*?)\\]`).exec(src);
