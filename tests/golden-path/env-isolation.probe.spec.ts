@@ -66,8 +66,18 @@ test("every probe that writes process.env registers keepEnv", () => {
     // finer-grained one — cli-transport-resilience restores PATH around a single
     // spawn rather than after the whole test, which is stricter than an
     // afterEach, not looser.
-    const restores =
-      /keepEnv\(/.test(src) || /test\.afterEach\(/.test(src) || /\}\s*finally\s*\{/.test(src);
+    //
+    // AN afterEach ONLY COUNTS IF ITS BODY TOUCHES process.env. The first
+    // version of this accepted any `test.afterEach(` at all, and was satisfied
+    // by music-failure-classification's — which restores `globalThis.fetch`
+    // and nothing else, while the file's beforeEach sets ELEVENLABS_API_KEY.
+    // Measured 2026-09-06 with a witness probe sorted after it: the key
+    // arrived as "probe-key" in every later file, and this check said 0
+    // offenders. A restore of something else is not a restore.
+    const afterEachRestoresEnv = [...src.matchAll(/test\.afterEach\(([\s\S]*?)\n\}\)/g)].some((m) =>
+      /process\.env/.test(m[1]),
+    );
+    const restores = /keepEnv\(/.test(src) || afterEachRestoresEnv || /\}\s*finally\s*\{/.test(src);
     if (!restores) offenders.push(f);
   }
 
