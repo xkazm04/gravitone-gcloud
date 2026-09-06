@@ -32,7 +32,21 @@ import { resolve } from "node:path";
 
 import { stripComments } from "./_helpers";
 
-const KINDS: StorageFailure[] = ["quota", "blocked", "unavailable", "missing-store", "failed"];
+/** The union, written out as a TOTAL record rather than an array. An array typed
+ *  `StorageFailure[]` checks every entry and says nothing about the entries
+ *  that are missing: a sixth failure kind added to stepStore.ts would have
+ *  compiled, shipped with whatever `troubleAnnouncement` says for it, and left
+ *  the "five distinct sentences" assertion below green over five of six. A
+ *  key missing here fails typecheck on this very line — the same shape
+ *  spine-rank-total uses for MovementRole. */
+const ALL_KINDS: Record<StorageFailure, true> = {
+  quota: true,
+  blocked: true,
+  unavailable: true,
+  "missing-store": true,
+  failed: true,
+};
+const KINDS = Object.keys(ALL_KINDS) as StorageFailure[];
 
 /** A queue over a fake clock and a recording sink, so the POLICY is driven
  *  without a DOM, a renderer or real time. Every `tick()` runs whatever the
@@ -304,7 +318,7 @@ test("copy: every storage failure has a self-contained spoken form", () => {
   }
   // Five kinds, five distinct sentences — a taxonomy that collapses in the
   // spoken channel is a taxonomy the assistive user does not have.
-  expect(new Set(KINDS.map((k) => troubleAnnouncement(k, "script"))).size).toBe(5);
+  expect(new Set(KINDS.map((k) => troubleAnnouncement(k, "script"))).size).toBe(KINDS.length);
 });
 
 /* ── The error boundaries: a screen that failed to render must SAY so ───────── */
