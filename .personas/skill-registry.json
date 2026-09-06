@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-08-29T10:03:29.008876800+00:00",
+  "generated_at": "2026-09-06T11:53:53.558477700+00:00",
   "library_commit": null,
   "library_kind": "home",
   "library_path": "C:/Users/mkdol/.claude/skills",
@@ -28,13 +28,13 @@
           "invokes_30d": 0,
           "project": "Grant Writing Nonprofits",
           "root_path": "C:/Users/mkdol/xprice/grant-writing-nonprofits",
-          "version": "1.2"
+          "version": "1.6"
         },
         {
           "invokes_30d": 0,
           "project": "Pumper",
           "root_path": "C:/Users/mkdol/dolla/pumper",
-          "version": "1.2"
+          "version": "1.6"
         },
         {
           "invokes_30d": 0,
@@ -46,17 +46,17 @@
           "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "1.2"
+          "version": "1.6"
         },
         {
           "invokes_30d": 0,
           "project": "politicas",
           "root_path": "C:/Users/mkdol/dolla/politicas",
-          "version": "1.2"
+          "version": "1.6"
         }
       ],
       "sync_state": "in_sync",
-      "version": "1.2"
+      "version": "1.6"
     },
     {
       "invokes_30d": 0,
@@ -67,29 +67,29 @@
           "invokes_30d": 0,
           "project": "Grant Writing Nonprofits",
           "root_path": "C:/Users/mkdol/xprice/grant-writing-nonprofits",
-          "version": "1.2"
+          "version": "1.4"
         },
         {
           "invokes_30d": 0,
           "project": "Pumper",
           "root_path": "C:/Users/mkdol/dolla/pumper",
-          "version": "1.2"
+          "version": "1.4"
         },
         {
           "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "1.2"
+          "version": "1.4"
         },
         {
           "invokes_30d": 0,
           "project": "politicas",
           "root_path": "C:/Users/mkdol/dolla/politicas",
-          "version": "1.2"
+          "version": "1.4"
         }
       ],
       "sync_state": "in_sync",
-      "version": "1.2"
+      "version": "1.4"
     },
     {
       "invokes_30d": 0,
@@ -127,19 +127,27 @@
     {
       "invokes_30d": 0,
       "library": null,
+      "name": "dojo",
+      "siblings": [],
+      "sync_state": "in_sync",
+      "version": "1.2"
+    },
+    {
+      "invokes_30d": 0,
+      "library": null,
       "name": "explorer",
       "siblings": [
         {
           "invokes_30d": 0,
           "project": "Grant Writing Nonprofits",
           "root_path": "C:/Users/mkdol/xprice/grant-writing-nonprofits",
-          "version": "1.2"
+          "version": "2.1"
         },
         {
           "invokes_30d": 0,
           "project": "Pumper",
           "root_path": "C:/Users/mkdol/dolla/pumper",
-          "version": "1.2"
+          "version": "2.1"
         },
         {
           "invokes_30d": 0,
@@ -151,17 +159,17 @@
           "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "1.2"
+          "version": "2.1"
         },
         {
           "invokes_30d": 0,
           "project": "politicas",
           "root_path": "C:/Users/mkdol/dolla/politicas",
-          "version": "1.2"
+          "version": "2.1"
         }
       ],
       "sync_state": "in_sync",
-      "version": "1.2"
+      "version": "2.1"
     },
     {
       "invokes_30d": 0,
@@ -180,11 +188,11 @@
           "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "1.2"
+          "version": "1.3"
         }
       ],
       "sync_state": "in_sync",
-      "version": "1.2"
+      "version": "1.3"
     },
     {
       "invokes_30d": 0,
@@ -195,11 +203,11 @@
           "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "1.1"
+          "version": "1.2"
         }
       ],
       "sync_state": "in_sync",
-      "version": "1.1"
+      "version": "1.2"
     },
     {
       "invokes_30d": 0,
@@ -233,13 +241,13 @@
           "invokes_30d": 0,
           "project": "Grant Writing Nonprofits",
           "root_path": "C:/Users/mkdol/xprice/grant-writing-nonprofits",
-          "version": "2.4"
+          "version": "2.5"
         },
         {
           "invokes_30d": 0,
           "project": "Pumper",
           "root_path": "C:/Users/mkdol/dolla/pumper",
-          "version": "2.4"
+          "version": "2.5"
         },
         {
           "invokes_30d": 0,
@@ -251,17 +259,17 @@
           "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "2.4"
+          "version": "2.5"
         },
         {
           "invokes_30d": 0,
           "project": "politicas",
           "root_path": "C:/Users/mkdol/dolla/politicas",
-          "version": "2.4"
+          "version": "2.5"
         }
       ],
       "sync_state": "in_sync",
-      "version": "2.4"
+      "version": "2.5"
     },
     {
       "invokes_30d": 0,
@@ -283,7 +291,7 @@
           "version": null
         },
         {
-          "invokes_30d": 2,
+          "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
           "version": null
@@ -307,29 +315,29 @@
           "invokes_30d": 0,
           "project": "Grant Writing Nonprofits",
           "root_path": "C:/Users/mkdol/xprice/grant-writing-nonprofits",
-          "version": "1.8"
+          "version": "1.9"
         },
         {
           "invokes_30d": 0,
           "project": "Pumper",
           "root_path": "C:/Users/mkdol/dolla/pumper",
-          "version": "1.8"
+          "version": "1.9"
         },
         {
-          "invokes_30d": 1,
+          "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "1.8"
+          "version": "1.9"
         },
         {
           "invokes_30d": 0,
           "project": "politicas",
           "root_path": "C:/Users/mkdol/dolla/politicas",
-          "version": "1.8"
+          "version": "1.9"
         }
       ],
       "sync_state": "in_sync",
-      "version": "1.8"
+      "version": "1.9"
     },
     {
       "invokes_30d": 0,
@@ -340,23 +348,23 @@
           "invokes_30d": 0,
           "project": "Pumper",
           "root_path": "C:/Users/mkdol/dolla/pumper",
-          "version": "2.7"
+          "version": "4.0"
         },
         {
           "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "2.7"
+          "version": "4.0"
         },
         {
           "invokes_30d": 0,
           "project": "politicas",
           "root_path": "C:/Users/mkdol/dolla/politicas",
-          "version": "2.7"
+          "version": "4.0"
         }
       ],
       "sync_state": "in_sync",
-      "version": "2.7"
+      "version": "4.0"
     },
     {
       "invokes_30d": 0,
@@ -400,17 +408,17 @@
           "invokes_30d": 0,
           "project": "personas",
           "root_path": "C:/Users/mkdol/dolla/personas",
-          "version": "1.2"
+          "version": "1.3"
         },
         {
           "invokes_30d": 0,
           "project": "politicas",
           "root_path": "C:/Users/mkdol/dolla/politicas",
-          "version": "1.2"
+          "version": "1.3"
         }
       ],
       "sync_state": "in_sync",
-      "version": "1.2"
+      "version": "1.3"
     },
     {
       "invokes_30d": 0,

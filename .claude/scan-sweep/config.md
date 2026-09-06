@@ -130,3 +130,20 @@ before matching, the population walked off the filesystem rather than listed, an
   every S card left was `Method: simulation` with its instrument named. Lane B is dispatched
   with `/scan-sweep --ab-only --workers 6`; the director merges into main and never pushes.
   The wave's ledger will be `.claude/scan-history/ab.jsonl`. Worktrees go under `C:/t/`.
+- **2026-09-06 — `--develop` on a `category: test` context: the deep tier is the wrong eight.**
+  feature-scout / growth / monetization / business had nothing real to say about a probe
+  suite, and every one of the round's 9 builds came from the five never-applied quality lenses
+  plus test-strategist. For a test context, "new capability" means a new DERIVED probe over a
+  population that was only asserted in prose (this round: the public routes' import graphs).
+  Two instruments that paid for themselves and are reusable: (1) a **witness probe** named to
+  sort after the suspect file, asserting the leaked variable is undefined, run with the
+  variable genuinely unset (`env -u VAR npx playwright test`) — Playwright's explicit-file
+  ordering is NOT alphabetical, so run the whole suite; (2) a **seeded route** under
+  `app/api/zz-*/route.ts` whose first line carries a route glob in a `//` comment and whose
+  last line is a block comment — under the old comment pair it reads as UNGATED, and that is
+  the false red imaging-auth's own header warns about. Both are deleted before the gate chain.
+- **2026-09-06 — the bridge was alive; delta scan 10b58155 launched to drain six map-drift lines.**
+  The gate chain shape that held for nine commits: `npm run typecheck > log && npm run
+  lint:ratchet >> log && npm test > tlog && grep passed tlog && git add <paths> && git commit
+  -F -`, run in the background with an `until grep` wait — ~90s each, and NO repo edit while
+  it runs (npm test reads the tree mid-chain).
