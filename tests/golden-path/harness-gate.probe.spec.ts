@@ -37,6 +37,8 @@ import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
+import { stripComments } from "./_helpers";
+
 const ROOT = resolve(__dirname, "../..");
 const read = (rel: string) => readFileSync(resolve(ROOT, rel), "utf8");
 
@@ -135,7 +137,11 @@ test("the harness protocol module emits nothing into any bundle", () => {
   // would be an exported constant, and NOTES.md (2026-08-12) measured that the
   // minifier keeps those — the key would then ship as dead data and the gate's
   // clean verdict would be about a string the product no longer uses.
-  const runtimeExports = protocol.match(/^export\s+(?!type\b|interface\b)\w+/gm) ?? [];
+  // `\w+` alone matched `const`, `function`, `enum`, `default` - and let two
+  // shapes through that ship runtime code just as surely: `export { x } from`
+  // and `export * from`, either of which re-exports whatever the far module
+  // holds. Both are matched now; `export type { X }` stays allowed.
+  const runtimeExports = stripComments(protocol).match(/^export\s+(?!type\b|interface\b)(?:\w+|\{|\*)/gm) ?? [];
   expect(
     runtimeExports,
     `${PROTOCOL_TS} must stay types-only; a runtime export here ships the harness ` +
