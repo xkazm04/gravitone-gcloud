@@ -151,6 +151,42 @@ def test_resume_regrades_an_unmeasured_candidate():
           regraded, ["flaky", "ok-one"])
 
 
+def test_a_run_that_gave_up_mid_generation_does_not_report_done():
+    """stage_generate `break`s out of the candidate loop when ComfyUI cannot be
+    recycled after a failure, leaving the rest of the plan `pending` -- and
+    main() then wrote `status: "done"` unconditionally. The one field
+    lib/foundry/store.ts reads as a lifecycle state said the run finished; the
+    shortfall was derivable only from a candidate count that does not add up
+    and a log the operator has to open. A run that abandoned candidates must
+    not read as a finished run."""
+    F = load("forge")
+    m = manifest_with(candidate("first", "pending"), candidate("abandoned", "pending"))
+    m["styles"]["st"]["recipe"] = "a recipe"
+    run_dir = Path(tempfile.mkdtemp())
+    (run_dir / "candidates").mkdir(parents=True)
+    # The seams stage_generate reaches for: no card, no ComfyUI, and a recycle
+    # that refuses exactly the way the finding describes.
+    F.guard.require = lambda *a, **k: None
+    F.guard.comfy_process_ids = lambda: [1]
+    F.guard.headroom_ok = lambda: True
+    F.guard.recycle_comfy = lambda why: why != "after failure"
+
+    def boom(wf):
+        raise RuntimeError("ComfyUI died")
+
+    F.generate = boom
+    with contextlib.redirect_stdout(io.StringIO()):
+        F.stage_generate(m, run_dir, recycle_every=6)
+    left = [c["id"] for c in m["candidates"] if c["status"] in ("pending", "failed")]
+    check("the run abandons the candidates it never reached", left, ["first", "abandoned"])
+    try:
+        status = F.final_status(m)
+    except AttributeError:
+        # Arm A: main() has no such decision -- it assigns "done" outright.
+        status = "done"
+    check("a run that gave up mid-generation does not report done", status, "incomplete")
+
+
 # ── acquire: the readback catalogue ─────────────────────────────────────────
 
 def readback_row(source, **over):
@@ -219,6 +255,7 @@ TESTS = [
     test_ungradable_candidate_does_not_kill_the_run,
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,
+    test_a_run_that_gave_up_mid_generation_does_not_report_done,
     test_list_survives_a_row_from_another_schema,
     test_an_unparseable_readback_is_kept_on_disk,
 ]
