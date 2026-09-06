@@ -342,12 +342,19 @@ export function __resetSaveSlots(): void {
  *
  *  THE CONNECTION IS OWNED HERE, and it used to leak. `openDb()` is not cached —
  *  it calls `indexedDB.open` fresh every time — so every caller owns the handle
- *  it gets back and has to close it. The thirteen other call sites in the data
- *  layer do: `lib/projects.ts` (6), `lib/themes.ts` (4) and `lib/assets.ts` (3)
- *  all wrap the work in `try { db = await openDb(); … } finally { db?.close(); }`.
- *  This was the fourteenth, and the only one that did not — while being by a wide
- *  margin the most frequently called of the fourteen, because every caller above
- *  it fires `void saveStep(...)` on a keystroke.
+ *  it gets back and has to close it. Every other call site in the data layer
+ *  does, wrapping the work in `try { db = await openDb(); … } finally {
+ *  db?.close(); }`. This was the one that did not — while being by a wide margin
+ *  the most frequently called of them, because every caller above it fires
+ *  `void saveStep(...)` on a keystroke.
+ *
+ *  THE COUNT IS NOT WRITTEN HERE ANY MORE, and that is the point. It said
+ *  "thirteen other call sites… `lib/assets.ts` (3)"; measured 2026-09-06 there
+ *  were twenty-one across five files and assets.ts held eight. The property was
+ *  still true and the number had been wrong for long enough that nobody could
+ *  have said when it stopped. The population is walked and the rule is gated in
+ *  tests/golden-path/shared-notebook-contracts.probe.spec.ts — which is also
+ *  where the one file that still does not close is listed, with its reason.
  *
  *  The cost was not abstract. The latest-wins ticket below abandons a write only
  *  when a later save for the same key is ISSUED before the earlier one reaches

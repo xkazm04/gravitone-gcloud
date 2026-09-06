@@ -169,3 +169,73 @@ test("load guard: every exemption still names a file that carries the shape", ()
     expect(sites.has(file), `${file} no longer keeps its own guard - drop the exemption`).toBe(true);
   }
 });
+
+/* ── 3 · the connection this store owns is the connection it closes ─────────── */
+
+/**
+ * `openDb()` callers that do not close what they opened, each with its reason.
+ *
+ * stepStore.ts's `withStore` spends twenty lines on this rule: `openDb()` is
+ * not cached, so every caller owns the handle it gets back and has to close it,
+ * and each unclosed one keeps a live `onversionchange` handler that turns a
+ * version bump into a close race. stepStore was "the fourteenth, and the only
+ * one that did not".
+ *
+ * Measured 2026-09-06: twenty-one call sites, and a FIFTEENTH file that does
+ * not close — the one below. It is listed rather than fixed here because it is
+ * another context's file; the entry is what makes the debt visible and bounded,
+ * and what makes a NEW unclosed caller fail.
+ */
+const UNCLOSED: Record<string, string> = {
+  "lib/identityEviction.ts":
+    "opens the database for the five-store eviction transaction (line ~260) and never closes it, so every sign-out and account switch leaks one connection with a live onversionchange handler — exactly the shape stepStore's withStore header describes. Out of this context's paths; the fix is a try/finally around the existing await, and it belongs to whoever owns lib/.",
+};
+
+/** Every file that opens a database connection, walked off the tree. */
+function dbOpeners(): string[] {
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      const full = join(dir, e.name);
+      if (e.isDirectory()) {
+        if (e.name === "node_modules" || e.name.startsWith(".")) continue;
+        walk(full);
+      } else if (/\.(ts|tsx)$/.test(e.name) && !/\.(spec|test)\./.test(e.name)) {
+        const src = stripComments(readFileSync(full, "utf8"));
+        // The factory itself declares the rule; it is not a caller of it.
+        if (/export async function openDb/.test(src)) continue;
+        if (/await openDb\(\)/.test(src)) out.push(relative(ROOT, full).split("\\").join("/"));
+      }
+    }
+  };
+  for (const top of ["app", "lib", "components"]) walk(join(ROOT, top));
+  return out.sort();
+}
+
+test("connections: every file that opens the database also closes it", () => {
+  const openers = dbOpeners();
+  expect(openers.length, "the source walk found no opener - it is reading the wrong tree").toBeGreaterThan(2);
+
+  const leaking = openers.filter(
+    (f) => !/db\??\.close\(\)/.test(stripComments(readFileSync(join(ROOT, f), "utf8"))),
+  );
+  console.log(`[db] ${openers.length} opener file(s); ${leaking.length} never close: ${leaking.join(", ") || "none"}`);
+
+  const unexplained = leaking.filter((f) => !UNCLOSED[f]);
+  expect(
+    unexplained,
+    "these open a connection and never close it - each one keeps a live onversionchange handler for the life of the tab",
+  ).toEqual([]);
+});
+
+test("connections: every unclosed exemption still describes a file that leaks", () => {
+  for (const [file, why] of Object.entries(UNCLOSED)) {
+    expect(why.length, `${file} is exempted with no reason`).toBeGreaterThan(40);
+    const src = stripComments(readFileSync(join(ROOT, file), "utf8"));
+    expect(/await openDb\(\)/.test(src), `${file} no longer opens a connection - drop the exemption`).toBe(true);
+    expect(
+      /db\??\.close\(\)/.test(src),
+      `${file} now closes its connection - drop the exemption rather than leaving it claiming a leak`,
+    ).toBe(false);
+  }
+});
