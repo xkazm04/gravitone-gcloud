@@ -41,6 +41,13 @@ export function ExtractView() {
   const [save, setSave] = useState<SaveState>("idle");
   const [focused, setFocused] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  /** WHICH IMAGE THE SHRINK PASS IS ON, while `creating` is true.
+   *
+   *  `creating` alone is a boolean over work that is linear in the size of the
+   *  gallery: sixty images is sixty decodes, and a boolean renders the same on
+   *  the first as on the sixtieth. This is what makes a working upload
+   *  distinguishable from a stalled one. */
+  const [shrinking, setShrinking] = useState<{ done: number; total: number } | null>(null);
   const [driving, setDriving] = useState(false);
   const [driveError, setDriveError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
@@ -198,10 +205,19 @@ export function ExtractView() {
 
   const startRun = async (slug: string, files: File[], options: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => {
     setCreating(true);
+    setShrinking({ done: 0, total: files.length });
     setRunsError(null);
     try {
       const uploads = [];
-      for (const f of files) uploads.push(await prepareUpload(f));
+      // ONE TICK PER IMAGE. The loop stays SERIAL on purpose: overlapping the
+      // decodes would hold the whole gallery's bitmaps at once, and peak memory
+      // is a separate decision from saying where we are. Each iteration already
+      // awaits, so the state written here is committed and painted before the
+      // next decode starts — the count is real, not a guess at a rate.
+      for (const f of files) {
+        uploads.push(await prepareUpload(f));
+        setShrinking({ done: uploads.length, total: files.length });
+      }
       const run = await createExtractRun(slug, uploads, options);
       loadRuns();
       selectRun(run.id);
@@ -210,6 +226,7 @@ export function ExtractView() {
       setRunsError(e instanceof Error ? e.message : "could not create the run");
     } finally {
       setCreating(false);
+      setShrinking(null);
     }
   };
 
@@ -318,7 +335,7 @@ export function ExtractView() {
         </aside>
 
         <div>
-          {selected === null && <NewRun busy={creating} onStart={startRun} />}
+          {selected === null && <NewRun busy={creating} shrinking={shrinking} onStart={startRun} />}
           {selected && !run && <p className="font-jetbrains text-content text-white/60">loading…</p>}
           {run && (
             <>
@@ -504,7 +521,15 @@ function StatusStrip({
   );
 }
 
-function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, files: File[], o: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => void }) {
+function NewRun({
+  busy,
+  shrinking,
+  onStart,
+}: {
+  busy: boolean;
+  shrinking: { done: number; total: number } | null;
+  onStart: (slug: string, files: File[], o: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => void;
+}) {
   const [slug, setSlug] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [rounds, setRounds] = useState(2);
@@ -591,13 +616,21 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
           Each source costs one recognition; each style costs up to replicas × rounds + transfers generations, each read back once. The run pauses if you leave this tab and resumes where it
           stopped.
         </p>
-        <Button
-          disabled={!ready}
-          onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}
-          className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-        >
-          {busy ? "uploading…" : `Extract from ${files.length} image${files.length === 1 ? "" : "s"}`}
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* The live region is rendered THROUGHOUT, empty when idle: a region
+              inserted at the same moment it gains text is one a screen reader
+              has no prior state to compare against, and announces nothing. */}
+          <span aria-live="polite" className="font-jetbrains text-label text-cyan-200/80">
+            {shrinking ? `shrinking ${Math.min(shrinking.done + 1, shrinking.total)} of ${shrinking.total}` : ""}
+          </span>
+          <Button
+            disabled={!ready}
+            onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}
+            className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
+          >
+            {busy ? "uploading…" : `Extract from ${files.length} image${files.length === 1 ? "" : "s"}`}
+          </Button>
+        </div>
       </div>
     </div>
   );
