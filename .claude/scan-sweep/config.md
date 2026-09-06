@@ -147,3 +147,30 @@ before matching, the population walked off the filesystem rather than listed, an
   lint:ratchet >> log && npm test > tlog && grep passed tlog && git add <paths> && git commit
   -F -`, run in the background with an `until grep` wait — ~90s each, and NO repo edit while
   it runs (npm test reads the tree mid-chain).
+- **2026-09-06 (round 2, shared-notebook) — the outbox is now AT 200/200. The next
+  round in this repo can record nothing at all.** This round had one line of headroom
+  and spent it on the round node; five built fixes have no progress node and the
+  per-lens coverage nodes were not attempted. Ingest `.personas/memory-outbox.jsonl`
+  in the Personas app (it deletes the file; nothing in this repo can) BEFORE the next
+  round, or that round's ledger line will claim a context was swept while recording
+  none of it — the failure the 2026-08-29 entry above already documents five times.
+  `.claude/scan-history/lanes.jsonl` has no cap and is where this round's Lane B/C
+  items actually live.
+- **2026-09-06 — on this repo's most-documented context, the prose is the defect
+  surface, and it fails in BOTH directions.** Round 3 of the previous session found
+  docstrings promising more than the code does. This context had the mirror image:
+  two files asserted a defect that was fixed in August ("app/api/recalibrate/route.ts
+  does not [send conclusions]" — it does, and has since 35c0b77), and `CounterPosition`
+  claimed "the one card the board may not descope" for material `buildCards` makes no
+  card for at all. A comment shaped like a live finding is ACTED ON as one. When
+  sweeping a context whose files carry long headers, grep the headers for claims about
+  OTHER files and check each one — four of this round's five fixes came from that, and
+  each became a gate rather than a corrected sentence.
+- **2026-09-06 — countable claims in prose go stale silently, so replace the count
+  with the walk.** stepStore's header said "the thirteen other call sites …
+  `lib/assets.ts` (3)"; measured, twenty-one across five files with assets.ts at eight.
+  The property was still true. The same paragraph's rule then turned out to have a
+  fifteenth violator nothing could see (`lib/identityEviction.ts` never closes its
+  connection). Two cheap greps that paid: `grep -c 'await openDb()'` per file against
+  `db?.close()`, and `grep -rn 'let alive = true'` against the three sites a header
+  claimed were the only exemptions — it was eight.
