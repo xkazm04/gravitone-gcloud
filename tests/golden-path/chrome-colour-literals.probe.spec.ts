@@ -23,6 +23,8 @@ import { extname } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
+
 /** The five exemptions tokens.ts names, each with the reason it gives. An entry
  *  is a claim somebody defends in review — the same shape as
  *  object-url-ownership's KNOWN_LEAKS, and for the same reason: a silent
@@ -53,8 +55,11 @@ const LITERAL = /#(?:[0-9a-fA-F]{8}|[0-9a-fA-F]{6}|[0-9a-fA-F]{4}|[0-9a-fA-F]{3}
  *  a matcher over raw text would flag exactly the comments that document the
  *  rule. CSS has no `//` comments, so only block comments are stripped there. */
 function code(src: string, css: boolean): string {
-  const noBlocks = src.replace(/\/\*[\s\S]*?\*\//g, "");
-  return css ? noBlocks : noBlocks.replace(/\/\/[^\n]*/g, "");
+  // The TS/TSX half adopts the sound scanner from _helpers. The CSS half
+  // keeps a block-only strip: CSS has no `//` comment at all, so a line
+  // strip there would eat `url(https://...)`, and with no `//` there is no
+  // phantom-block hazard for a block-only pass to fall into.
+  return css ? src.replace(/\/\*[\s\S]*?\*\//g, "") : stripComments(src);
 }
 
 /** Walked off git rather than listed — a hand-written population describes the

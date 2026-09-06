@@ -26,6 +26,8 @@ import { readFileSync } from "node:fs";
 
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
+
 import { buildEditPrompt, buildPrompt } from "@/lib/imaging/providers/google";
 
 test("an edit carrying style references declares both roles, and scopes both", () => {
@@ -76,9 +78,7 @@ test("both paths actually CALL their builder — a rule the caller ignores is no
   // function away and the call site did not reach it. So the wiring is asserted
   // too, on stripped source — these files explain the rule in prose directly
   // above the code, and a matcher over raw text is satisfied by the comment.
-  const src = readFileSync("lib/imaging/providers/google.ts", "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/\/\/[^\n]*/g, "");
+  const src = stripComments(readFileSync("lib/imaging/providers/google.ts", "utf8"));
 
   const body = (name: string) => {
     const i = src.indexOf(`async ${name}(`);

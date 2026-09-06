@@ -21,6 +21,7 @@ import { readFileSync } from "node:fs";
 import { test, expect } from "@playwright/test";
 
 import { canRemoveAlt, isSynthetic, SYNTH_MARK } from "@/app/_phases/frames/alternatives/alts";
+import { stripComments } from "./_helpers";
 
 test("the last kept alternative of a real scene stays", () => {
   expect(canRemoveAlt("frame-3", 1), "one kept picture, and the cut is using it").toBe(false);
@@ -48,8 +49,7 @@ test("both the hook and the view ask the same function — one rule, one home", 
   // copies of one invariant that must agree — the exact shape that produced the
   // defect being guarded here. Stripped source, because both files explain the
   // rule in prose directly above the code that implements it.
-  const strip = (p: string) =>
-    readFileSync(p, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const strip = (p: string) => stripComments(readFileSync(p, "utf8"));
 
   const hook = strip("app/_phases/frames/alternatives/useAlternatives.ts");
   const sheet = strip("app/_phases/frames/alternatives/VariantContactSheet.tsx");

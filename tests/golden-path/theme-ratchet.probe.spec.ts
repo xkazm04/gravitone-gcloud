@@ -23,6 +23,8 @@ import { resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
+
 import {
   canLock,
   lockBlocker,
@@ -162,9 +164,7 @@ test("the rule is WIRED into the write path, not merely exported", () => {
   // prose, and lib/themes.ts explains the whole rule in prose — a matcher over
   // raw text is satisfied by a file that talks about the ratchet and does not
   // ask it.
-  const src = readFileSync(resolve(__dirname, "../../lib/useThemes.ts"), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+  const src = stripComments(readFileSync(resolve(__dirname, "../../lib/useThemes.ts"), "utf8"));
 
   const from = src.indexOf("const update = useCallback");
   expect(from, "update() not found - this check is reading the wrong thing").toBeGreaterThan(-1);

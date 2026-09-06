@@ -20,6 +20,8 @@ import { resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
+
 import { classifyExit } from "@/lib/claudeCli";
 
 const CMD_NOT_FOUND = "'claude' is not recognized as an internal or external command,\r\noperable program or batch file.\r\n";
@@ -85,9 +87,7 @@ test("doors: the probe and the run both classify through the one function", () =
   // as the verdict. Two doors, two call sites — the probe's `close` and the
   // run's `close`. A third door added later without it shows up as a count of 2
   // where the file's own header promises the verdict is shared.
-  const src = readFileSync(resolve(__dirname, "../../lib/claudeCli.ts"), "utf8")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+  const src = stripComments(readFileSync(resolve(__dirname, "../../lib/claudeCli.ts"), "utf8"));
   const calls = src.match(/\bclassifyExit\(code, err\)/g) ?? [];
   console.log(`[cli] classifyExit call sites: ${calls.length}`);
   expect(calls.length).toBe(2);

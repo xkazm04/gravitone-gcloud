@@ -18,8 +18,9 @@
 // verdict against a route that is gated.
 //
 // The helper landed on 2026-09-05 with a note that adopting it elsewhere was a
-// backlog card. Measured 2026-09-06: 5 probes used it and 15 still carried the
-// pair. This is the ratchet that stops the 15 becoming 16: the population is
+// backlog card. Measured 2026-09-06: 5 probes used it and 10 still carried the
+// pair; those 10 adopted it the same day, leaving the single CSS residue the
+// list below explains. This is the ratchet that stops 0 becoming 1: the population is
 // walked off the filesystem, comments are stripped first (this file quotes the
 // pair in prose, so a raw-text match would report itself), and the remaining
 // carriers are LISTED, each an obligation rather than an omission nobody sees.
@@ -32,18 +33,18 @@ import { stripComments } from "./_helpers";
 
 /** Probes that still carry a private stripper, to be migrated as they are next
  *  touched. Drop a line here when its file adopts `stripComments`; the second
- *  test refuses a line that describes a file which no longer needs it. */
+ *  test refuses a line that describes a file which no longer needs it.
+ *
+ *  2026-09-06: the ten listed here adopted `stripComments`, and one line came
+ *  back — chrome-colour-literals walks `.css` as well as `.ts`/`.tsx`, and CSS
+ *  has NO `//` comment. The sound scanner would read `url(https://…)` as a line
+ *  comment and hide the rest of that line, which is this ratchet's own hazard
+ *  pointed the other way. Its CSS branch therefore keeps a BLOCK-ONLY regex
+ *  strip, which is sound precisely because `//` cannot open a comment there;
+ *  its TS/TSX branch calls `stripComments`. This is the one residue that is a
+ *  decision rather than a debt. */
 const STILL_CARRY: readonly string[] = [
-  "alt-last-one-stays.probe.spec.ts",
-  "cards-carry-evidence-class.probe.spec.ts",
-  "chain-break-reaches-the-reviewer.probe.spec.ts",
   "chrome-colour-literals.probe.spec.ts",
-  "cli-exit-classification.probe.spec.ts",
-  "dialog-closes-on-success.probe.spec.ts",
-  "imaging-reference-roles.probe.spec.ts",
-  "step-clear-completeness.probe.spec.ts",
-  "text-log-line.probe.spec.ts",
-  "theme-ratchet.probe.spec.ts",
 ];
 
 /** The shape that is unsound: a `.replace(` whose pattern opens with the block
