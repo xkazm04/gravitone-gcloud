@@ -246,7 +246,14 @@ export interface ExtractManifest {
   fail_streak?: number;
   log: { at: string; msg: string }[];
   error?: string;
-  committed?: { at: string; kept: string[]; rejected: string[] };
+  /** What the commit did. `kept` and `rejected` are the RUN-LOCAL style ids;
+   *  `written` is what the catalogue actually holds, which differs whenever a
+   *  kept id collided and was suffixed (`haze` -> `haze-2`). Without it the
+   *  manifest — the only copy that survives the HTTP response, and what the
+   *  Extract tab renders after a reload — names a style the catalogue has no
+   *  entry for. Optional because manifests written before this field existed
+   *  do not carry it; absent means "assume `kept`, and it may be wrong". */
+  committed?: { at: string; kept: string[]; rejected: string[]; written?: string[] };
 }
 
 export type ExtractVerdict = "keep" | "reject";
