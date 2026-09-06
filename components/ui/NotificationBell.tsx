@@ -37,7 +37,15 @@ const TROUBLE_WORD: Record<StorageFailure, string> = {
   unavailable: "This browser session cannot store anything — private mode, or storage is switched off. Nothing written here will survive a reload.",
   "missing-store": "This browser's database is missing the store the studio writes to. Reload; if it comes back, the database needs rebuilding.",
   failed: "The browser refused the operation.",
+  "non-storage":
+    "A background task failed. Your work is saved — this is not a storage problem, and what went wrong is on the line below.",
 };
+
+/** Is this trouble about STORAGE at all? The one card and the one announcement
+ *  both branch on it, and they must branch the same way — a heading that says
+ *  "storage write failed" over a dropped fetch is the same lie as the sentence
+ *  that used to be spoken over it. */
+const isStorage = (kind: StorageFailure) => kind !== "non-storage";
 
 /**
  * The spoken form of a storage failure.
@@ -47,9 +55,27 @@ const TROUBLE_WORD: Record<StorageFailure, string> = {
  * underneath, and an announcement arrives with neither. So it carries its own
  * context and stays one sentence — a paragraph read aloud into the middle of
  * someone's work is worse than silence.
+ *
+ * `non-storage` gets a DIFFERENT SENTENCE, not a sixth entry in the table,
+ * because "Not saved" is a claim about the user's work and it is false here:
+ * nothing was being written. It carries the reason's own `message` instead —
+ * the only thing anyone knows about a rejection that reached no owner — capped
+ * so the one-sentence rule above still holds against an error whose text is a
+ * stack trace.
  */
-export function troubleAnnouncement(kind: StorageFailure, phase: string): string {
-  const what: Record<StorageFailure, string> = {
+const MESSAGE_CAP = 80;
+
+export function troubleAnnouncement(kind: StorageFailure, phase: string, message?: string): string {
+  if (kind === "non-storage") {
+    // A trailing full stop is stripped because this string is EMBEDDED in a
+    // sentence, and "The operation was aborted.. Your work is saved" is how a
+    // screen reader reads the alternative.
+    const said = (message ?? "").trim().replace(/\s+/g, " ").replace(/\.+$/, "");
+    const short = said.length > MESSAGE_CAP ? `${said.slice(0, MESSAGE_CAP - 1)}…` : said;
+    const cause = short ? `: ${short}` : "";
+    return `${phase} failed${cause}. Your work is saved. Open notifications for what to do.`;
+  }
+  const what: Record<Exclude<StorageFailure, "non-storage">, string> = {
     quota: "this browser's storage is full",
     blocked: "another tab is holding an older version of the database",
     unavailable: "this browser session cannot store anything",
@@ -102,13 +128,24 @@ export default function NotificationBell() {
     if (!trouble) return;
     announce({
       // Identity is the FAILURE, not the render: the same failure re-reported by
-      // a later save of the same phase is the same news.
-      key: `trouble:${trouble.kind}:${trouble.phase}:${trouble.op}`,
-      text: troubleAnnouncement(trouble.kind, trouble.phase),
+      // a later save of the same phase is the same news. The MESSAGE is part of
+      // the identity for a background-task failure and only there: a storage
+      // kind already says everything about itself, but two different rejections
+      // reaching the bridge share kind, phase and op, and keying without the
+      // message would voice the first and silently swallow every later one —
+      // which would undo the whole point of carrying the reason's own words.
+      key: `trouble:${trouble.kind}:${trouble.phase}:${trouble.op}${
+        trouble.kind === "non-storage" ? `:${trouble.message}` : ""
+      }`,
+      text: troubleAnnouncement(trouble.kind, trouble.phase, trouble.message),
       // The one assertive case in the app. The store has stopped accepting
       // writes, so what the user is doing RIGHT NOW is not being saved — hearing
       // that after the current sentence finishes is too late to be useful.
-      assertive: politenessFor("blocking"),
+      //
+      // A background task that failed is NOT that case: the work is saved, and
+      // nothing the creator types next is at risk. Interrupting them mid-word
+      // for it is the same overreach as calling it a failed save.
+      assertive: politenessFor(isStorage(trouble.kind) ? "blocking" : "failure"),
     });
   }, [trouble, announce]);
 
@@ -227,7 +264,7 @@ export default function NotificationBell() {
             >
               <div className="flex items-start justify-between gap-2">
                 <p className="font-jetbrains text-content tracking-[0.12em] text-rose-200 uppercase">
-                  storage {trouble.op} failed
+                  {isStorage(trouble.kind) ? `storage ${trouble.op} failed` : "background task failed"}
                 </p>
                 <button
                   type="button"

@@ -1,0 +1,90 @@
+{
+  "worker": "g-3",
+  "project": "gravity",
+  "evaluatedAt": "2026-08-29",
+  "pairs": [
+    {
+      "context": "6bdc9182-5119-4439-86a4-14dcbaa274fd",
+      "subject": "frame-direction",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_phases/frames/sceneSpec.ts:19-80 the script-to-frames contract carries no visual function and no motif thread, so the metaphor budget, the image-led derivation and the establish-before-change check have nothing to read; the beat-kind shape table at app/_phases/frames/frames.ts:238-249 remains the live fallback.",
+      "techniques": [
+        {
+          "technique": "visual-function-vocabulary",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:19-29 (and SCENE_SCHEMA :32-80) carries beatAt/subject/motion/rationale/elements/texts and no `function`; the beat carries only a rhetorical `kind` (app/_phases/script/types.ts:9-19). The seven-function vocabulary exists solely in pipeline/DIRECTOR-DIMENSION.md, whose own header at :3 states 'Nothing here is implemented.' Consequence: the metaphor-visual cap, the image-led/narration-led ratio and the confidence cap are uncomputable over a cut, and the category lookup PROBLEM_OF -> subjectFor (app/_phases/frames/frames.ts:238-249, :325-339) is still the seeded and fallback subject at app/_phases/frames/useFrames.ts:209 - attractor #1 of the golden path, live."
+        },
+        {
+          "technique": "one-function-per-visual",
+          "verdict": "deviation",
+          "evidence": "pipeline/FRAMES-SCENE-PROMPT.md:59 softens the rule to 'Prefer one idea per frame' and nothing enforces it (the validator's checks are enumerated at app/_phases/frames/sceneSpec.ts:120-177 and count no functions, because there is no function field). app/_phases/frames/sceneSpec.ts:232 refuses a second scene for a beat, so the technique's prescribed remedy - more stills under the same narration - is closed on this path; the one-beat-to-many-shots surface is read-only (app/_phases/frames/FramesStep.tsx:26-29). Consequence: a beat doing two jobs ships as one cluttered frame and nothing on the surface can detect it. The frame-local corollaries that ARE realized: one move per frame (prompt :74) and 'an element states what it asserts' as a required label (sceneSpec.ts:148, prompt :88-90, :146)."
+        },
+        {
+          "technique": "plate-elements-text-split",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:5-15 states the epistemic split verbatim and :33-62 types the three layers; app/_phases/frames/sceneSpec.ts:126-127 rejects a subject asking for glyphs, :163-164 rejects an uncited figure and :165-166 a factId absent from the notebook; app/_phases/frames/frames.ts:338 reserves the lower third; app/_phases/frames/useFrames.ts:217 compiles the subject inside the locked style block; uncited figures are surfaced at app/_phases/frames/parts.tsx:321-323, LayerPanel.tsx:174 and FramesAssembly.tsx:99-102. The precision-limit rule is satisfied by construction: FrameElement (frames.ts:35-48) has no ticks or numeric axis to over-claim with, and every quantity must travel as a cited figure text."
+        },
+        {
+          "technique": "motion-intent-authoring",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/frames.ts:79-106 authors the move at composition time with no renderer, no duration field and the honesty note that status can only be 'not-started'; app/_phases/frames/sceneSpec.ts:134-139 enforces a picturable length, no text in the move, and rejects a motion that restates its subject; pipeline/FRAMES-SCENE-PROMPT.md:62-84 carries all four rules including near-stillness written as such; app/_phases/frames/frames.ts:309-312 seeds motion EMPTY rather than guessing from the beat kind; the surface says 'authored - not rendered' (FramesAssembly.tsx:404-414). Narrowness worth noting, not a failure: the restatement check is exact case-insensitive equality (sceneSpec.ts:138), so a subject with a verb bolted on passes."
+        },
+        {
+          "technique": "motif-establish-vary-payoff",
+          "verdict": "deviation",
+          "evidence": "app/_phases/frames/sceneSpec.ts:19-29 and :32-80 define no named thread and no lifecycle operation, so 'change' and 'reprise' have no prerequisite 'establish' to check - the structural invariant per-beat-rejection itself lists as enforceable. Motifs survive only as prose inside `rationale`, sliced to 200 chars (sceneSpec.ts:176), and direction is re-attached to beats by timestamp (applySceneSpecs, sceneSpec.ts:262-266), which is the position-keyed rot the technique warns against when a re-render reorders beats. The intent is explicit and unserved: app/_phases/frames/useFrames.ts:382-390 justifies the whole-cut pass by the engine's ability to 'carry a motif from the hook into the turn', and pipeline/FRAMES-SCENE-PROMPT.md:101-106 asks for it in prose. Consequence: a partial apply can admit a change whose establish was rejected, and no re-render can prove a reprise refers to something the viewer has seen."
+        },
+        {
+          "technique": "per-beat-rejection",
+          "verdict": "conformant",
+          "evidence": "app/_phases/frames/sceneSpec.ts:101-113 returns applied/rejected/missing with the disjointness argument written out; :115-119 reports the FIRST defect per beat, phrased for the beat's own row; :200-245 collects findings while still hard-failing what invalidates the whole response (:207-215); :141-176 splits clamp-what-is-safe from reject-what-changes-meaning; :129-133 documents the deliberate non-checks. app/_phases/frames/sceneSpec.ts:262-266 leaves a rejected beat with what it had, and app/_phases/frames/useFrames.ts:451-474 routes reasons to rows, counts rejected and missing separately, and names invented timestamps; FramesAssembly.tsx:281-286 draws 'This beat kept what it had.' The economics are told to the generator at pipeline/FRAMES-SCENE-PROMPT.md:161-164."
+        }
+      ]
+    },
+    {
+      "context": "fab029ff-06dc-49e8-b694-c43d79e707f5",
+      "subject": "content-research-grounding",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_phases/_shared/notebook/cards.ts:62 carries the deprecated comma-joined `source` string onto every triage card and drops `sources[]`, so CardTile.tsx:137-141 shows no evidence-class chip - the consumer pipeline/NOTEBOOK-SCHEMA.md:18 explicitly routes `evidence_class` to - and cutting decisions are made without the quality signal that should inform them.",
+      "techniques": [
+        {
+          "technique": "tension-finding-taxonomy",
+          "verdict": "deviation",
+          "evidence": "Strongly realized: the null is a first-class SUCCESSFUL ending (app/_phases/research/ResearchStep.tsx:190-193 settles the job `done`, not `failed`; TopicPanel.tsx:118-126; run/trace.ts:50-62), the triple is typed and rendered (app/_phases/_shared/notebook/types.ts:440-445; sections/Argument.tsx:19-28), the five shapes drive the run (run/trace.ts:30-31). Missing: the baseline. The repo's own brief mandates the baseline row (pipeline/RESEARCH-PROMPT.md:31, :36, :72-81) but the shipped review columns are seven with a counter-case and no baseline (app/_phases/_shared/notebook/dimensions.ts:76-108, drawn by ResearchTriageBoard.tsx:39), the spine trace runs six searches with none (app/_phases/research/run/trace.ts:24-29), and `strength` is a free string (types.ts:444; notebook.ts:31) that no surviving counter-case can step down one grade. Consequence: 'strength: high' is asserted with no distribution behind it and no column a reviewer could look for one in."
+        },
+        {
+          "technique": "prior-declaration-and-steel-man",
+          "verdict": "deviation",
+          "evidence": "The steel-man half is realized: provenance found/found-adjacent/constructed with its origin story (app/_phases/_shared/notebook/types.ts:227-249), and the counter-case is a mandatory search whose column can never be legitimately empty - an unfound counter-case is recorded as a fact about the search (dimensions.ts:98-100; run/trace.ts:29). The prior half does not exist: pipeline/RESEARCH-PROMPT.md:20-24 and its checklist at :165 require `prior` written before the first search and a discovery-or-mirror call, and the Notebook contract has no such field (app/_phases/_shared/notebook/types.ts:431-445) and no section renders one (NotebookBody.tsx:17-28). Consequence: this is the technique's own dead-lesson shape - a mandate with no field and no consumer - so no reviewer can tell a discovery from a mirror."
+        },
+        {
+          "technique": "pre-linked-causal-mechanisms",
+          "verdict": "deviation",
+          "evidence": "The vocabulary is modelled exactly, TRANSFER included, with the fake-THEREFORE anti-shape named (app/_phases/_shared/notebook/types.ts:149-164), per-link evidence typed (ChainStep, :166-177), the script layer held at zero AND THEN (:140-147) and the defect drawn as a chip (Chips.tsx:11-28). But the shipped asset is on the legacy prose form: app/_phases/_shared/notebook/notebook.ts:40-47 carries connectors inside the sentences and link 5 (:45) is a bare 'AND sellers at the same price level absorb what does arrive' - the untyped connector the TRANSFER extension was added for - with no `steps[]`, therefore no per-link evidence, and pipeline/check-notebook.mts gates no connector at all. Consequence: a chain can be well-sourced in aggregate while its load-bearing link is supported by nothing, and nothing can count the joints because they are prose."
+        },
+        {
+          "technique": "scale-conversion-of-numbers",
+          "verdict": "deviation",
+          "evidence": "The recompute discipline is realized as a surface, on the technique's own canonical scar: app/_phases/research/followup.ts:100-128 refuses to edit the transcript that called 77,800 'slightly more than' ~270,000 across different windows, and revisionsOf (:143-161) renders the corrected row, its arithmetic and its downgraded confidence beside the verbatim claim. The bookkeeping fields exist (unit/period/denominator, types.ts:97-102). The break: all six shipped conversions omit `for` (app/_phases/_shared/notebook/notebook.ts:98-105), the fact link the type itself calls uncheckable-by-construction when absent (types.ts:372-375). Consequence: a felt form polished from a low-confidence figure launders it, and no gate can follow the link back to the grade that should cap it."
+        },
+        {
+          "technique": "unknowns-as-constraints",
+          "verdict": "conformant",
+          "evidence": "app/_phases/_shared/notebook/unknowns.ts:1-63 writes each unknown as a prohibition with an impact, scopes it with `about` (:24-31) against the global-hedge failure, and keeps resolved unknowns flagged rather than deleted (:4-7, u-cohorts :40-41, u-liquidity-vendor :54-55) with the index-shift incident named as the reason. Rows are keyed by stable id through UNKNOWN_BY_ID (app/_phases/research/followup.ts:227) and a reference to an unknown the notebook does not carry is REPORTED, never dropped (followup.ts:228-233). Per-render scoring with at-risk/superseded lives one step downstream and is pointed at from unknowns.ts:17-20. The must-say half is typed and honestly declared unpopulated (types.ts:455-459)."
+        },
+        {
+          "technique": "evidence-grading-ladder",
+          "verdict": "deviation",
+          "evidence": "Both ladders are modelled well - class including `protected`, interested-is-not-low-confidence, plural FactSource with locator, fact kind, three dates, unit/period/denominator, load-bearing and confidenceNote (app/_phases/_shared/notebook/types.ts:12-138) - and the dangerous combination is flagged at triage (CardTile.tsx:62, :143-147) and in the evidence log (ResearchStep.tsx:297-302). The break is at the surface the ladder names: app/_phases/_shared/notebook/cards.ts:62 carries the @deprecated comma-joined `f.source` (types.ts:82-83) and drops `sources[]`, so app/_phases/research/_parts/CardTile.tsx:137-141 prints a source-shaped blob plus a confidence chip and no evidence-class chip - while pipeline/NOTEBOOK-SCHEMA.md:18 routes `facts[].sources[].evidence_class` to exactly 'the provenance chip at card triage'. Follow-ups reopen the same anti-shape: Effect 'adds-fact' types `source: string` (app/_phases/research/followup.ts:23) and a shipped row semicolon-joins two publications (:63). Consequence: a reviewer cuts an aggregator-sourced fact and a primary-record fact on identical information."
+        },
+        {
+          "technique": "provenance-signal-asymmetry",
+          "verdict": "deviation",
+          "evidence": "The durable guards the technique prefers are realized - a `primary` rung on the class ladder, three dates, and a locator that makes a claim checkable (app/_phases/_shared/notebook/types.ts:27-33, :62-69, :89-96) - but no machine-provenance state exists anywhere in the contract, and there is no field in which 'not checked' can be recorded distinctly from 'not detected'. The exposure is real rather than theoretical: follow-ups admit new facts sourced to open-web aggregator pages (app/_phases/research/followup.ts:82, :85, :90-94) through an Effect type that carries only a source string (:23). Consequence: a source whose origin was never questioned is indistinguishable at triage from one that was, which is the merge the three-state vocabulary exists to prevent. Lower consequence than the ladder deviation above, and it would be fixed in the same field."
+        }
+      ]
+    }
+  ]
+}

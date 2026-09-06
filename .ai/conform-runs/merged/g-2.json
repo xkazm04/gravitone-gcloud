@@ -1,0 +1,171 @@
+{
+  "worker": "g-2",
+  "project": "gravity",
+  "evaluatedAt": "2026-08-29",
+  "pairs": [
+    {
+      "context": "fab029ff-06dc-49e8-b694-c43d79e707f5",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_phases/research/_parts/CardActions.tsx:35-46 — the follow-up effect vocabulary and terminal `unanswered` are exemplary (followup.ts:18-48), but a claim the notebook already flags as load-bearing at low confidence is never auto-queued, and a `kills` effect has no propagation path (followup.ts:197-246), so a dead fact stays reachable by every later render.",
+      "techniques": [
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchStep.tsx:133-135 — these paths are the educational triage surface, where the notebook arrives from a run and the reviewer reacts with typed scope decisions; the divergence precondition (a reviewer who cannot say what they want, choosing among rendered candidates) does not hold, and the beat-variant slate lives at app/_phases/research/beats/, outside this context's paths."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/ScopeGate.tsx:93-97 — this context produces and scopes evidence rather than revising a reviewed artifact; the revision engine is the Script step (app/_phases/script/editPlan.ts), and the clear dialog correctly frames a re-run as a fresh draft rather than a revision."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/CardTile.tsx:191-247 — the medium is discrete notebook cards; the technique's own boundary excludes discrete media, and nothing here regenerates a region of a continuous artifact."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/_parts/CardActions.tsx:17-47 — this surface collects scope and routing signals (descope / like / deepen), not weight or order notes, and there are no edit operations here for a note kind to map onto; the taxonomy lives in app/_phases/script/versions.ts:40-47."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/_parts/ScopeBar.tsx:47-55 refuses to confirm a scope in the required card's own words and ScopeGate.tsx:63 disables the button before anything moves; FollowUpQueue.tsx:249-257 makes `unanswered` terminal with the real limit stated, and followup.ts:197-246 gives every effect an explicit standing instead of a silence."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "app/_phases/research/_parts/CardTile.tsx:165-172 renders required cards as `locked in scope` with no toggle; ScopeBar.tsx:16-17 keeps `descoped` and `not taken` as separate facts (opt-in silence is a refusal, not an omission); ScopeGate.tsx:36-38 reports drift because Script reads the live board, not the checkpoint."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/research/ResearchTriageBoard.tsx:46-52 counts cards, not seconds; there is no beat-to-duration ledger in this context — the share arithmetic lives in app/_phases/script/impact.ts and the matrix."
+        },
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "deviation",
+          "evidence": "app/_phases/research/_parts/CardActions.tsx:35-46 — `deepen` is only ever set by a human click, so a claim already flagged load-bearing at low confidence (CardTile.tsx:144-147, with its reason pre-written at followup.ts:255-257) is never auto-queued and the standing danger flag waits on someone noticing it."
+        }
+      ]
+    },
+    {
+      "context": "99a9ac98-40f7-4f99-bac6-2888372c9de6",
+      "subject": "review-iteration-loops",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "app/_phases/script/ScriptStep.tsx:160-171 — the loop is otherwise exemplary (typed notes, shared refusal guards, share-split ledger, re-gate over the chain on screen), but the post-apply gate is lexical only, so no causal connector is re-checked at the seams a cut or insert creates, and the plan's `unchanged` list is parsed and discarded.",
+      "techniques": [
+        {
+          "technique": "anchored-variation-slate",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/ScriptStep.tsx:263-277 shows three candidates side by side, each anchored to a named craft template carrying its own declared direction and weakness (app/_phases/script/renders.ts:9-27), and the pick terminates the phase (_parts/HypothesisColumn.tsx:173); notes then route to a recalibration that emits edits, never a re-run of the slate."
+        },
+        {
+          "technique": "edit-plan-over-regeneration",
+          "verdict": "deviation",
+          "evidence": "app/_phases/script/ScriptStep.tsx:160-171 re-gates after apply with `gateChains`, a lexical evidence/hedge gate, so no structural invariant is re-checked at a seam: editPlan.ts:146-148 splices a cut beat out and leaves its successor's BUT/THEREFORE connector written for a predecessor that no longer exists, and nothing reports the broken chain."
+        },
+        {
+          "technique": "partial-regeneration-seams",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/script/_matrix/MatrixTracks.tsx:97-138 — the artifact is a chain of discrete text beats; the technique's own boundary excludes discrete media, which have no acoustic or visual joint for a seam to fail at."
+        },
+        {
+          "technique": "note-taxonomy-focus-scope-order",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/_notes/PresetSelect.tsx:16-18 offers exactly the closed vocabulary defined at versions.ts:40-47 (more-focus / less-focus / descope / move-earlier / move-later plus a custom hatch), each hint naming its minimal operation; _notes/NoteComposer.tsx:80-81 and _notes/RecalibrateControl.tsx:196-198 say per note which ones move nothing rather than implying they moved a bar."
+        },
+        {
+          "technique": "refusal-as-valid-outcome",
+          "verdict": "deviation",
+          "evidence": "app/_phases/script/_notes/DeclinedList.tsx:24 records four declined kinds and no `considered and unchanged` list, while editPlan.ts:283 parses the plan's `unchanged` array and drops it — so a render the engine deliberately left alone is indistinguishable from one it forgot."
+        },
+        {
+          "technique": "scope-vs-preference-signals",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/_matrix/shared.tsx:44-73 writes the same scope record the triage board reads (no second door), and recalibrate.ts:80-108 refuses a note that would descope required material or re-weight a descoped card — routing it back in the triage board's own wording — with the refusals rendered at _notes/DeclinedList.tsx:42-50 and the conflict's winner named at recalibrate.ts:126-133."
+        },
+        {
+          "technique": "attribution-share-accounting",
+          "verdict": "conformant",
+          "evidence": "app/_phases/script/_matrix/shared.tsx:101-105 states the sum-to-runtime invariant that impact.ts::splitAcross enforces; _matrix/MatrixSpend.tsx:81-84 shows attributed seconds against the runtime with any overrun named, and shared.tsx:38-42 / 94-99 keeps spoken / cut / unused distinct and reports cut records naming a fact the notebook no longer has."
+        },
+        {
+          "technique": "follow-up-that-can-kill-a-fact",
+          "verdict": "not-applicable",
+          "evidence": "app/_phases/script/_matrix/shared.tsx:94-99 is the receiving end of a kill, not an interrogation channel; this context has no follow-up queue — evidence doubts route back to the Research step, and the technique forbids routing rendering complaints through it."
+        }
+      ],
+      "registryProposal": "Upward lesson rather than a defect: refusal-as-valid-outcome's refuse-before-apply ordering has no account of a guard that knows its own band is narrower than the rule it enforces. This repo's answer (app/_phases/script/_notes/RecalibrateControl.tsx:13-17,126-136) is that a blocking verdict does not disable the accept button — it makes the click a two-step deliberate act and stamps a permanent override receipt on the version, visible wherever that version is named (_matrix/VersionBar.tsx:33-44). That keeps the guard from becoming the expensive choice without letting the violation go unrecorded, and is worth a technique paragraph or an application with this file:line."
+    },
+    {
+      "context": "9c62ab0b-7ff9-49ba-a123-0e4eff5b2a0d",
+      "subject": "image-prompt-composition",
+      "bundle": "media-generation",
+      "state": "deviation",
+      "evidence": "lib/imaging/providers/google.ts:188-192 — the edit path attaches the subject image and up to 13 style references with no role declaration at all, and lib/imaging/providers/leonardo.ts:141 ships one dialect's prompt verbatim to a different model class on re-route; 8 of 11 techniques have no subject in this layer because the compiler is lib/stylePrompt.ts.",
+      "techniques": [
+        {
+          "technique": "two-block-style-and-action",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:76-85 — GenerateRequest carries one opaque prompt string; this context is the vendor transport layer and composes no prompt, so the style/action split has no subject here (it is compiled at lib/stylePrompt.ts:30-65)."
+        },
+        {
+          "technique": "style-first-token-ordering",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/google.ts:342-351 — buildPrompt appends the reference-labelling and exclusion clauses after the caller's prompt rather than prepending them, so the style block the compiler put first stays first and the constraint clause stays last."
+        },
+        {
+          "technique": "assigned-colour-roles",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/providers/google.ts:342-351 passes the palette through untouched; role assignment is a property of the style block compiled at lib/stylePrompt.ts:23-38, and nothing in this layer reads, rewrites or grades colour."
+        },
+        {
+          "technique": "shape-language-over-nouns",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:77 — the subject description arrives already written; this layer never authors or translates a noun, so there is nothing here that could invite or avoid a text magnet."
+        },
+        {
+          "technique": "negative-prompting",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/leonardo.ts:142 sends the exclusions as `negative_prompt`, while lib/imaging/providers/google.ts:350 folds the same string into a positive exclusion clause because Google exposes no negative channel — one vendor-neutral contract, two deliveries, exactly the per-vendor adapter the technique asks for."
+        },
+        {
+          "technique": "prompt-budget-limits",
+          "verdict": "conformant",
+          "evidence": "lib/imaging/providers/leonardo.ts:45-49,131-135 records the vendor's hard ceiling and enforces it before dispatch as `invalid-request` with a message naming what to shorten, and the fleet minimum is the same 1500 in the compiler (lib/stylePrompt.ts:67) — two copies of one constant is a drift risk, not a missing budget."
+        },
+        {
+          "technique": "prompt-dialect-matching",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/leonardo.ts:141 ships `req.prompt` verbatim to a caption-class diffusion model while providers/google.ts:158 ships the same string to an instruction-following multimodal model; the adapters differ only in negative delivery, so the re-route at router.ts:73 crosses a dialect boundary unrendered — and the 60-cell trial that demoted Leonardo (router.ts:60-72) compared one dialect's prompt across both classes."
+        },
+        {
+          "technique": "medium-vocabulary-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:77 — the medium vocabulary is authored in the style block (lib/themes.ts, lib/stylePrompt.ts:30-38); this layer neither writes nor audits medium terms."
+        },
+        {
+          "technique": "verbatim-text-locking",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/providers/google.ts:342-351 — this pipeline is the composited-plate architecture: the no-text clause is welded into the compiler (lib/stylePrompt.ts:43) and every checkable glyph is drawn by the vector layer, so the technique's precondition (the model, not a compositor, sets the text) does not hold."
+        },
+        {
+          "technique": "identity-split-from-state",
+          "verdict": "not-applicable",
+          "evidence": "lib/imaging/types.ts:82-84 — `references` carries approved style plates only; there is no recurring-subject identity block in this layer and no subject conditioning for the split to sit under."
+        },
+        {
+          "technique": "reference-role-map",
+          "verdict": "deviation",
+          "evidence": "lib/imaging/providers/google.ts:188-192 — the edit path attaches the subject image plus up to 13 style references with no role declaration at all (the generate path's labelling clause at google.ts:344-349 is never applied there, and even on generate the label trails the prompt instead of leading it), so heterogeneous attachments arrive ambiguous about each other."
+        }
+      ],
+      "registryProposal": "Not a defect in the standard — a mapping question. image-prompt-composition governs the prompt COMPILER, and in this repo that is lib/stylePrompt.ts (self-described as 'the one compiler', with restatement, assigned colour roles and the welded no-text clause), lib/themes.ts and app/_phases/frames/shotPrompt.ts — not lib/imaging/*. Eight of eleven techniques have no subject in the mapped paths, and the match looks like vocabulary overlap (prompt / negativePrompt / imaging) rather than the subject's precondition. Suggest re-pointing this subject at the compiler context and keeping only negative-prompting, prompt-budget-limits, prompt-dialect-matching and reference-role-map against the provider layer, since those four are genuinely per-vendor adapter concerns."
+    }
+  ]
+}

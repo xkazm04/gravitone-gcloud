@@ -113,6 +113,12 @@ def log(manifest, run_dir, msg):
     save(run_dir, manifest)
 
 
+def pct(v):
+    """A score as a percentage, or `n/a` when there is no score. Never None:
+    see the note in stage_grade."""
+    return "  n/a" if v is None else f"{100 * v:.0f}%"
+
+
 def set_stage(manifest, run_dir, stage, done=0, total=0):
     manifest["status"] = stage
     manifest["progress"] = {"stage": stage, "done": done, "total": total}
@@ -363,7 +369,19 @@ def stage_generate(manifest, run_dir, recycle_every):
 
 def stage_grade(manifest, run_dir, model):
     scenes = {s["id"]: s for s in manifest["scenes"]}
-    todo = [c for c in manifest["candidates"] if c["status"] == "generated"]
+    # `unmeasured` IS A RESUMABLE STATE, and it was the one status no stage
+    # would take back. stage_generate re-adopts a plate for `pending` and
+    # `failed`; grading took `generated` only -- so a candidate whose grade
+    # failed transiently (one Ollama hiccup, one eviction mid-pass) landed in
+    # `unmeasured` and fell out of both todo lists permanently. Its PNG is on
+    # disk and paid for, and no re-run could ever score it: --resume walked
+    # past it every time, and the ledger kept counting it as ungraded.
+    #
+    # That contradicts the README's "Resumable by construction. A PNG on disk
+    # is a finished generation whatever the manifest says." A plate on disk
+    # with no grade is exactly what stage 2 is for. Re-grading one is cheap
+    # and idempotent -- the grade is overwritten, not appended.
+    todo = [c for c in manifest["candidates"] if c["status"] in ("generated", "unmeasured")]
     set_stage(manifest, run_dir, "grading", 0, len(todo))
     if not todo:
         return
@@ -393,12 +411,47 @@ def stage_grade(manifest, run_dir, model):
         c.setdefault("timings", {})["grade_s"] = round(time.time() - t0, 1)
         craft = g["craft"]["score"] if g["craft"] else None
         sty = g["style"]["score"] if g["style"] else None
+        # THE PROGRESS LINE MUST SURVIVE AN ABSENT SCORE, because an absent
+        # score is the case this whole function is built to survive.
+        #
+        # `f"{None:>5}"` is a TypeError -- format specs do not apply to None --
+        # so the previous form, `{craft if craft is None else f'{100*craft:.0f}%':>5}`,
+        # raised on exactly the two paths the code above had just handled
+        # correctly: the craft or style pass threw and was recorded in
+        # `unmeasured` (the README's "a candidate that could not be graded is
+        # `unmeasured`, counted separately, and never a pass"), or craft_score
+        # returned None because the SOURCE annotation carries no scoreable
+        # field. main() catches BaseException, marks the manifest failed and
+        # re-raises, so one ungradable candidate ended the run -- at stage 2,
+        # with every plate already generated and an evening of GPU behind it.
+        # Format the string first; the spec then always has a string to pad.
         log(manifest, run_dir,
-            f"  [{n}/{len(todo)}] {c['id']:48s} craft {craft if craft is None else f'{100*craft:.0f}%':>5} "
-            f"style {sty if sty is None else f'{100*sty:.0f}%':>5} "
+            f"  [{n}/{len(todo)}] {c['id']:48s} craft {pct(craft):>5} "
+            f"style {pct(sty):>5} "
             f"{'TEXT!' if g['veto'] and g['veto']['has_text'] else ''}")
         manifest["progress"]["done"] = n
         save(run_dir, manifest)
+
+
+def final_status(manifest):
+    """`done` means the forge got through the plan; `incomplete` means it gave up.
+
+    stage_generate BREAKS out of the candidate loop when ComfyUI cannot be
+    recycled after a failure -- the run then grades what exists and returns
+    normally, and main() used to write "done" over it unconditionally. A run
+    that abandoned 80 of 90 candidates was, in the one field the API reads as a
+    lifecycle state, indistinguishable from one that finished; the shortfall was
+    reconstructable only from a candidate count that does not add up and a log
+    the operator has to open.
+
+    A candidate still `pending` was never attempted; a `failed` one was attempted
+    and produced nothing. Either means the run did not deliver its plan, so it
+    does not get to say it finished. `incomplete` is terminal and committable --
+    the plates it DID produce are on disk and worth culling (lib/foundry/types.ts
+    holds the union, app/foundry/parts.tsx the word and the commit set).
+    """
+    left = [c for c in manifest["candidates"] if c["status"] in ("pending", "failed")]
+    return "incomplete" if left else "done"
 
 
 def main():
@@ -473,13 +526,18 @@ def main():
         if not args.skip_grade:
             log(manifest, run_dir, "stage 2: grade candidates (annotator holds the card)")
             stage_grade(manifest, run_dir, args.annotator)
-        manifest["status"] = "done"
+        manifest["status"] = final_status(manifest)
         manifest["finished"] = now()
-        manifest["progress"] = {"stage": "done", "done": 0, "total": 0}
+        manifest["progress"] = {"stage": manifest["status"], "done": 0, "total": 0}
         save(run_dir, manifest)
         n_ok = sum(1 for c in manifest["candidates"] if c["status"] == "graded")
-        print(f"\nforge: done -- {n_ok}/{len(manifest['candidates'])} candidates graded. "
-              f"Open /foundry to cull.")
+        left = sum(1 for c in manifest["candidates"] if c["status"] in ("pending", "failed"))
+        if manifest["status"] == "incomplete":
+            print(f"\nforge: INCOMPLETE -- gave up with {left}/{len(manifest['candidates'])} candidates "
+                  f"never produced; {n_ok} graded. Open /foundry to cull what there is.")
+        else:
+            print(f"\nforge: done -- {n_ok}/{len(manifest['candidates'])} candidates graded. "
+                  f"Open /foundry to cull.")
     except BaseException as e:
         manifest["status"] = "failed"
         manifest["error"] = f"{type(e).__name__}: {str(e)[:300]}"

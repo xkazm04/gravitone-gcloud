@@ -62,6 +62,24 @@ function ArtifactPills({
   );
 }
 
+/** THE ONE SENTENCE THE PROTOTYPE OWES BEFORE A DECISION. Every research
+ *  surface says the process is replayed; none said the SUBJECT is fixed — so a
+ *  creator typed their own topic, ran, and scoped cards about Bitcoin under
+ *  their own heading. Shown before the run (what will happen) and after it
+ *  (what did), in the creator's words, not the engine's. */
+export function StandInNote({ topic, landed = false }: { topic: string; landed?: boolean }) {
+  const own = topic.trim() && topic.trim() !== NOTEBOOK.topic;
+  return (
+    <p data-testid="stand-in-note" className="font-jetbrains mt-2 text-label leading-snug text-amber-200/85">
+      {landed
+        ? own
+          ? `prototype · this notebook is the saved ${NOTEBOOK.researched} Bitcoin run, not research on “${topic.trim()}” — every card below is about Bitcoin`
+          : `prototype · this notebook is the saved ${NOTEBOOK.researched} Bitcoin run`
+        : `prototype · whatever topic you type, the run replays the saved ${NOTEBOOK.researched} Bitcoin notebook — the cards you scope next will be about Bitcoin, not your topic`}
+    </p>
+  );
+}
+
 export default function RunStage({
   research,
   onOpenNotebook,
@@ -97,11 +115,18 @@ export default function RunStage({
               </p>
               <RunStatus state={run.state} />
             </div>
-            <h3 className="font-instrument mt-1.5 text-2xl leading-snug text-slate-100">{topic}</h3>
+            {/* THE NOTEBOOK'S OWN TOPIC, not the typed one. The card used to
+                headline whatever the creator typed over the Bitcoin counts —
+                the one surface that should have said "stand-in" said the
+                opposite (uat 2026-09-05). */}
+            <h3 className="font-instrument mt-1.5 text-2xl leading-snug text-slate-100">
+              {NOTEBOOK.topic}
+            </h3>
             <p className="font-jetbrains mt-2 text-label text-white/40">
               {NOTEBOOK_COUNTS.facts} facts · {NOTEBOOK_COUNTS.mechanisms} mechanisms ·{" "}
               {NOTEBOOK_COUNTS.reversals} reversals · researched {NOTEBOOK.researched}
             </p>
+            <StandInNote topic={topic} landed />
             <div className="mt-4 flex flex-wrap items-center gap-2.5">
               <ArtifactPills
                 onOpenNotebook={onOpenNotebook}
@@ -214,6 +239,11 @@ export default function RunStage({
               </div>
             )}
             {run.state.status === "done" && (
+              <div className="mt-3">
+                <StandInNote topic={topic} landed />
+              </div>
+            )}
+            {run.state.status === "done" && (
               <div className="mt-4 flex flex-wrap items-center gap-2.5 border-t border-white/8 pt-4">
                 <ArtifactPills
                   onOpenNotebook={onOpenNotebook}
@@ -232,6 +262,7 @@ export default function RunStage({
       {run.state.status === "idle" && (
         <Notice severity="info" title="no notebook yet">
           <p>Run the research, or load the saved Bitcoin run, and the next stages unlock.</p>
+          <StandInNote topic={topic} />
         </Notice>
       )}
     </div>

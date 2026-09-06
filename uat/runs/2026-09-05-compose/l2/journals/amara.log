@@ -1,0 +1,41 @@
+· goto /projects
+· click {"role":"button","name":{}}
+FAIL expert dialog's empty style copy routes to the wizard
+· goto /projects/new
+· click "deck-card-free"
+· click {"role":"button","name":{}}
+· click "deck-card-free-form"
+· click {"role":"button","name":{}}
+ok   style stage offers presets for free — presets=6 borrowed=true
+· click "deck-card-preset:signal-ledger"
+· click {"role":"button","name":{}}
+· fill {"css":"#w-title"} ← "Glow Serum launch — 45s"
+· fill {"css":"#w-logline"} ← "One drop. Eight hours. The promise is the product."
+· fill {"css":"#w-dur"} ← "45"
+· snap 01-wizard-name-stage
+· click {"role":"button","name":{}}
+ok   studio headline is the name typed — Glow Serum launch — 45s
+ok   header pill states discipline · template · runtime
+· recorded p-mtokc55f-z9eaer → uat/runs/2026-09-05-compose/created.json
+· goto /studio/p-mtokc55f-z9eaer?step=research
+· click "mode-beats"
+· click "variant-cold-open-a"
+· click "variant-intro-a"
+· click "variant-esc1-a"
+· click "variant-esc2-a"
+· click "variant-esc3-a"
+· click "variant-reset-a"
+· click "variant-climax-a"
+· click "variant-tail-a"
+ok   every part picked — 8 of 8 parts picked — the spine is whole.
+· click "compose-spine"
+ok   spine composed
+· goto /studio/p-mtokc55f-z9eaer?step=script
+ok   withholding budget is labelled a stand-in on Script
+· fill "promise-add-sentence" ← "the serum will do in one night what the ritual took a month to do"
+ok   a promise with no payer reads incomplete — PROMISE LEDGER 1 PROMISED · 1 INCOMPLETE the serum will do in one night what the ritual took a month to do by claim · on “four of them, one rule” @0:12 PAYER in
+· snap 02-amara-ledger
+· goto /projects
+ok   Monday's shelf shows research locked — Research — locked · open here
+ok   Monday's shelf shows script in progress — Script — in progress · open here
+· snap 03-amara-shelf

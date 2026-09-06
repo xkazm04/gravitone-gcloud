@@ -37,6 +37,7 @@
 // never stored. Switching discards nothing, in either direction.
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import Modal from "@/components/ui/Modal";
 import { getProject, type Discipline } from "@/lib/projects";
@@ -46,6 +47,7 @@ import EvidenceLog from "../_shared/notebook/EvidenceLog";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
 import { saveStep, type GuidedModeStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
+import { usePhaseReport } from "../_shared/usePhaseReport";
 
 import ResearchTriageBoard from "./ResearchTriageBoard";
 import FollowUpQueue from "./_parts/FollowUpQueue";
@@ -108,6 +110,23 @@ function BeatsResearch({
 }) {
   const beats = useBeatPicks(projectId);
 
+  // WHAT THIS SURFACE REPORTS TO THE SHELF (derive, never assert). A pick is
+  // work; a composed spine is the creator's own checkpoint — the one act on
+  // this step that reads as a sign-off, so it is the one that earns `done`.
+  // Reopening it is `working` again. The facts mode reports from its own
+  // surface below.
+  usePhaseReport(
+    projectId,
+    "research",
+    !beats.hydrated || beats.mode !== "beats"
+      ? null
+      : beats.confirmed
+        ? "done"
+        : Object.values(beats.picks).some(Boolean)
+          ? "working"
+          : null,
+  );
+
   // Held here as well as inside BeatVariantBoard, because the CHOOSER is the
   // surface that must not flash: a free project with a stored mode would show
   // "which kind of research is this?" for one frame before answering itself.
@@ -148,6 +167,21 @@ function EducationalResearch({ projectId }: { projectId: string }) {
   // guided/useEducationalResearch.ts so neither face forks it.
   const research = useEducationalResearch(projectId);
   const api = useScope(projectId);
+
+  // WHAT THIS SURFACE REPORTS TO THE SHELF. A notebook exists → in progress;
+  // the scope checkpoint is taken → locked (the checkpoint IS the creator's
+  // sign-off on what travels); the board has moved since → needs a call.
+  usePhaseReport(
+    projectId,
+    "research",
+    !research.hydrated || !api.hydrated || !research.ready
+      ? null
+      : api.confirmed
+        ? api.diverged.length > 0
+          ? "review"
+          : "done"
+        : "working",
+  );
 
   /* --------------------------------------------------------------- the face */
   // The stored choice, under its own phase key ("research-mode") — see
@@ -203,6 +237,7 @@ function EducationalFaces({
   defaultFace: Face;
   onSwitchFace: (mode: Face) => void;
 }) {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("topic");
   const [artifact, setArtifact] = useState<"notebook" | "evidence" | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
@@ -235,6 +270,12 @@ function EducationalFaces({
           onOpenEvidence={() => setArtifact("evidence")}
           onClear={() => setConfirmClear(true)}
           onSwitchFace={onSwitchFace}
+          // The wizard's last stage hands the creator to Step 2 — it used to
+          // open the expert board, so a first-timer who had confirmed the
+          // scope was shown more controls instead of the script (uat
+          // 2026-09-05, KW-L1-4). The rail click this stands in for parks the
+          // project there (StudioView reads ?step= changes after open).
+          onFinish={() => router.push(`/studio/${projectId}?step=script`)}
         />
       ) : (
         <>

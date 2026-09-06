@@ -344,6 +344,35 @@ function claimInStore(job: Job): void {
   }
 }
 
+/**
+ * The cancel transition, as a pure function over the list.
+ *
+ * ONLY A RUNNING JOB CAN BE CANCELLED, which is the same rule `settle` states in
+ * its own docstring — "no-op on a job that is not running, so a late resolve
+ * after a cancel cannot resurrect it" — and which `cancel` did not hold. It
+ * mapped ANY job with the id to `failed` / "Stopped by you.", so the mirror race
+ * relabelled work that had already succeeded: a research run settles `done`, the
+ * bell says "Research returned", the creator hits stop a beat later while
+ * `run.jobId` still names it (app/_phases/research/guided/useEducationalResearch.ts:92-95
+ * reads the id, then cancels), and the tray now contradicts the notebook the
+ * results are sitting on.
+ *
+ * Pure and exported so it can be DRIVEN rather than argued about: the guard
+ * itself lives in a `useCallback` inside a provider, which the Node probe lane
+ * cannot render and the live lane will not take module-level claims about. See
+ * tests/golden-path/cancel-settled-job.probe.spec.ts.
+ *
+ * A non-running job is returned by REFERENCE, not rebuilt — identity is what a
+ * memoised row downstream compares on, and a no-op that churns it is not a no-op.
+ */
+export function applyCancel(jobs: Job[], jobId: string): Job[] {
+  return jobs.map((j) =>
+    j.id === jobId && j.status === "running"
+      ? { ...j, status: "failed" as const, endedAt: Date.now(), error: "Stopped by you." }
+      : j,
+  );
+}
+
 export function JobsProvider({ children }: { children: React.ReactNode }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [events, setEvents] = useState<JobEvent[]>([]);
@@ -556,9 +585,16 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const cancel = useCallback((jobId: string) => {
+    // The same refusal `settle` makes, in the same words, for the mirror case:
+    // a late CANCEL after a settle must not relabel a job that already ended.
+    // The slot release moved inside it deliberately — `finish` already released
+    // the slot of anything that reached `done`/`failed`/`interrupted`, so a
+    // release here could only ever be a second one for a job this call is now
+    // declining to touch.
     const j = jobsRef.current.find((x) => x.id === jobId);
-    if (j) live.current.delete(`${j.projectId}:${j.kind}`);
-    setJobs((js) => js.map((j) => (j.id === jobId ? { ...j, status: "failed", endedAt: Date.now(), error: "Stopped by you." } : j)));
+    if (!j || j.status !== "running") return;
+    live.current.delete(`${j.projectId}:${j.kind}`);
+    setJobs((js) => applyCancel(js, jobId));
   }, []);
 
   const value = useMemo<JobsApi>(

@@ -1,0 +1,39 @@
+· goto /projects/new
+· click "deck-card-trailer"
+· click {"role":"button","name":{}}
+ok   teaser band is labelled sourced, not measured
+· goto /projects/new
+· click "deck-card-trailer"
+· click {"role":"button","name":{}}
+· click "deck-card-teaser"
+· click {"role":"button","name":{}}
+ok   style stage offers presets for trailer — presets=6 borrowed=true
+· click "deck-card-preset:paper-relief"
+· click {"role":"button","name":{}}
+· fill {"css":"#w-title"} ← "Low Water — festival teaser"
+· fill {"css":"#w-logline"} ← "Two sisters, one boat, the summer the river stopped."
+· fill {"css":"#w-dur"} ← "60"
+· snap 01-wizard-name-stage
+· click {"role":"button","name":{}}
+ok   studio headline is the name typed — Low Water — festival teaser
+ok   header pill states discipline · template · runtime
+· recorded p-mtok75b6-08bq3d → uat/runs/2026-09-05-compose/created.json
+· goto /studio/p-mtok75b6-08bq3d?step=research
+FAIL teaser gets a different slot set than a trailer (SO-L1-2, expect 8 = same) — slots=8
+· click "variant-cold-open-a"
+· click "variant-intro-a"
+· click "variant-esc1-a"
+· click "variant-esc2-a"
+· click "variant-esc3-a"
+· click "variant-reset-a"
+· click "variant-climax-a"
+· click "variant-tail-a"
+ok   every part picked — 8 of 8 parts picked — the spine is whole.
+· click "compose-spine"
+ok   spine composed
+· goto /studio/p-mtok75b6-08bq3d?step=script
+ok   Script states the 60s target vs the fixture's 1:50 — fixture · n=0 · the beat text, the cue and the withholding budget are the Glass Harbor stand-in, whatever this project’s logline, template or runtime — your target is 60s; these beats run to 1:50 and the clock is not read here yet
+ok   lane is stated (SO-L1-4: no control to change it — observe)
+ok   promise ledger says an empty ledger is not 'promises nothing'
+· click "promise-add-beat"
+· snap 02-sofia-script

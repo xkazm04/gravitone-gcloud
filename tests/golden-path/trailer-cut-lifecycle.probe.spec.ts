@@ -94,11 +94,10 @@ function harness<T>(run: () => T) {
         },
       ];
     },
-    useRef(v: unknown) {
-      const k = ci++;
-      if (!(k in cells)) cells[k] = { current: v };
-      return cells[k];
-    },
+    // No useRef, on purpose: useTrailerCut does not call it (measured
+    // 2026-09-06: zero occurrences), and the promise above is that a hook the
+    // subject starts using is a TypeError here rather than a silent stub. A
+    // stub for a hook nobody calls is the promise quietly not being kept.
     useEffect(fn: () => void | (() => void), deps?: readonly unknown[]) {
       const k = ei++;
       const prev = committed[k];

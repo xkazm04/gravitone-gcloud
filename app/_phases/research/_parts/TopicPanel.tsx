@@ -5,6 +5,7 @@
 
 import { Button, Eyebrow } from "@/components/ui/Primitives";
 import { LocalProcessNote, OutcomePicker, RunStatus, TopicField } from "../run/controls";
+import { StandInNote } from "../guided/RunStage";
 import RunTrace from "../run/RunTrace";
 import type { useResearchRun } from "../run/useResearchRun";
 import { NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
@@ -77,6 +78,7 @@ export default function TopicPanel({
           )}
         </div>
         <LocalProcessNote className="mt-3" />
+        <StandInNote topic={topic} landed={ready} />
       </section>
 
       {/* THE LOG IS NOT GATED ON `!running` ANY MORE. It used to be, which meant

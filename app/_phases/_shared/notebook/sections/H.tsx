@@ -1,6 +1,36 @@
 "use client";
 
-import type { Connector } from "../types";
+import type { Connector, Notebook } from "../types";
+
+/** Sections that render only when they have something in them.
+ *
+ *  THE RAIL AND THE SECTION MUST AGREE, and they were two separate expressions
+ *  in two files. `NotebookBody`'s rail listed all thirteen pills
+ *  unconditionally; `counters` (Argument.tsx) and `questions` (Apparatus.tsx)
+ *  each render behind their own `length > 0`. On a notebook with no
+ *  counter-positions the pill was still drawn, `jump()` found no element and
+ *  returned before `setAt`, so pressing it moved nothing, focused nothing and
+ *  set no `aria-current` — the exact silence NotebookBody's own comment says
+ *  the rail state was added to end ("a keyboard user pressed 'sources', stayed
+ *  focused on the rail, and had nothing to tell them anything had happened").
+ *
+ *  The shipped fixture carries three counter-positions and five questions, so
+ *  neither is reachable today. Both conditions were written by someone who
+ *  expected zero.
+ *
+ *  One predicate, read by the rail and by the section. A section that grows a
+ *  condition adds it HERE, and the rail follows without anyone remembering. */
+export const CONDITIONAL_SECTIONS: Record<string, (n: Notebook) => boolean> = {
+  counters: (n) => n.counterPositions.length > 0,
+  questions: (n) => n.candidateQuestions.length > 0,
+};
+
+/** Does this section render for this notebook? Unconditional sections are
+ *  always true — the map holds only the ones that can be absent. */
+export function sectionRenders(n: Notebook, id: string): boolean {
+  const predicate = CONDITIONAL_SECTIONS[id];
+  return predicate ? predicate(n) : true;
+}
 
 /** A notebook section heading. Carries the anchor the rail jumps to.
  *

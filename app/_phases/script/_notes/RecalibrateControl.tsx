@@ -188,6 +188,14 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
         data-testid="run-recalibration"
         onClick={api.run}
         disabled={!n}
+        // A disabled control says what enables it (uat 2026-09-05, KW-L1-6): a
+        // first-timer on the guided Candidates tab had no way to learn that
+        // notes are opened from a track on the Coverage, Spend bar or Tracks tab.
+        title={
+          n
+            ? undefined
+            : "Nothing to recalibrate yet — open a track's note handle on the Coverage, Spend bar or Tracks tab to leave a note first."
+        }
         className="font-jetbrains w-full rounded-xl border border-cyan-400/40 bg-cyan-400/[0.08] px-3 py-2 text-label text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/25"
       >
         {n ? `Recalibrate · ${n} note${n === 1 ? "" : "s"}` : "Recalibrate"}

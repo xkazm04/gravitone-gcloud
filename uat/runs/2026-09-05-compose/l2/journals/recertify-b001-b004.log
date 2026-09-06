@@ -1,0 +1,18 @@
+· goto /studio/p-mtokidjw-ri3i7v?step=script
+· click "view-coverage"
+ok   row for the cut card is marked descoped — descoped
+ok   the conflict marker names the seconds and the render — cut · still spoken 12s by Reversal Chain, 13s by Adjudication
+ok   the spoken cell carries the conflict attribute
+ok   the footnote counts the disagreement — 1 card out of scope is still spoken by a render (f-ath) — the scope and these scripts disagree. These scripts were written against the full notebook; only a recalibration re-attributes them, and the gate does not check exclusions yet.
+ok   a not-taken conclusion's pip says 'Not taken', not 'Out of scope' — Not taken — a conclusion is out of scope by default. Click to take it.
+ok   the not-taken row is not tinted as a cut
+ok   a cut card's pip says 'Descoped' — Descoped — you cut this. Click to bring it back.
+· snap 01-b001-coverage
+· goto /studio/p-mtokgh1c-owug0u?step=script
+· click "duel-more-derived-short"
+ok   the depth prints +5 s over your 40 s at 150 wpm — +5 s over your 40 s at 150 wpm — about 13 words to cut
+ok   and says roughly how many words that is
+ok   the narration-led caveat is on the guided face
+· click "duel-more-reversal-chain"
+ok   the 5:00 render says how far over 40 s it is — +260 s over your 40 s at 190 wpm — about 823 words to cut
+· snap 02-b004-duel-depth

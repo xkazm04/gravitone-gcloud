@@ -12,8 +12,11 @@ journeys/*.md       goals (NOT scripts) + user-POV definition-of-done
 env.md              how to start the app + which FIXTURE STATES each journey needs to exist
 accepted-gaps.md    baseline of known-and-accepted issues (won't re-surface)
 rubric.md           evaluation lens + severity + finding types (scaffold on next init if absent)
-driver/drive.mjs    thin L2 driver - Playwright
-runs/<date-slug>/   journals, findings.json, report.md, SUMMARY.md (+ gitignored captures/)
+driver/lib.mjs           L2 core - persistent profile (uat/.profile), resolver, waits, snap/probe, idb()
+driver/drive-script.mjs  THE driver - inline step script on stdin, one process, exit 0/1/2
+driver/drive.mjs         the 2026-08-12 rebalance driver (kept; fresh-context, one journey)
+runs/<date-slug>/        per-Character reports, findings.json, SUMMARY.md, l2/ scripts + journals,
+                         created.json (what the run wrote into the profile), gitignored shots/
 ```
 
 ## What the product is
@@ -101,6 +104,21 @@ The product's real high-value flows, for `init`/`update` to draw from:
 For this studio, explicitly call out **which phase loses people** ("Script and Frames land; X loses
 everyone at the blocked shot, because nothing says what unblocks it"). The phase model is the
 product's central bet, and where it leaks is the finding that matters most.
+
+## Finding vocabulary — copy verbatim into every walker brief
+
+`severity`: `blocker` (the job cannot finish) · `major` (finishes, but a scored criterion fails) ·
+`minor` (finishes, criterion holds, trust or clarity cost) · `polish` · `strength`. No P-levels, no
+high/medium/low — ten walkers on 2026-09-05 used four vocabularies and the assembler had to
+normalise them. `impact` fields are `low | med | high`.
+
+## Two rules the 2026-09-05 run added
+
+- **The orchestrator may patch mid-run.** A brief says so, and asks walkers to grade HEAD and the
+  working tree separately when `git status` shows a fix to the surface they are on.
+- **Residue is a data source.** After any L2 with five or more Characters on the shared profile,
+  open the style shelf and the projects shelf and count duplicates — the tenth create is where a
+  per-create mint shows.
 
 ## Feed the loop
 

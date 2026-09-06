@@ -126,7 +126,13 @@ function tripped(m: ExtractManifest, io: EngineIO, what: string): boolean {
  *  whose image exists but whose critique failed is kept — the pixels cost
  *  money and the critique is retried by the next round's logic only if the
  *  loop is still open. Returns how many were pruned; resets the breaker and
- *  puts the run back in a live stage. */
+ *  puts the run back in a live stage.
+ *
+ *  A run with NOTHING to prune is left exactly as it was. This used to fall
+ *  through regardless — a clean `done` run lost its `finished` stamp, went
+ *  back to `replicating`, and finished a second time with a second "done"
+ *  line, while stepRun's comment called the retry a no-op. Zero pruned means
+ *  zero touched. */
 export function pruneFailures(m: ExtractManifest): number {
   let n = 0;
   for (const s of m.sources)
@@ -146,6 +152,7 @@ export function pruneFailures(m: ExtractManifest): number {
     st.transfers = st.transfers.filter((t) => t.file);
     n += before - st.transfers.length;
   }
+  if (n === 0) return 0;
   m.fail_streak = 0;
   delete m.error;
   delete m.finished;
@@ -493,12 +500,18 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
         // within one minor field of each other will come back from the
         // generator as twins. The synthesis rules try to prevent this; when
         // they fail, say so where the cull will read it.
+        //
+        // A run can FINISH MORE THAN ONCE — a retry prunes failed units and
+        // walks back here — and this used to append the pair on every pass,
+        // so a run retried twice carried `similar_to: [b, b, b]` and three
+        // copies of the warning in its log. The pair is recorded once.
         for (const [a, b] of nearDuplicates(m.styles)) {
           const sa = m.styles.find((s) => s.id === a)!;
           const sb = m.styles.find((s) => s.id === b)!;
-          sa.similar_to = [...(sa.similar_to ?? []), b];
-          sb.similar_to = [...(sb.similar_to ?? []), a];
-          log(m, io, `warning: ${a} and ${b} differ by at most one minor observable — the generator likely renders them identically; consider keeping one`);
+          const fresh = !(sa.similar_to ?? []).includes(b);
+          sa.similar_to = [...new Set([...(sa.similar_to ?? []), b])];
+          sb.similar_to = [...new Set([...(sb.similar_to ?? []), a])];
+          if (fresh) log(m, io, `warning: ${a} and ${b} differ by at most one minor observable — the generator likely renders them identically; consider keeping one`);
         }
       }
       m.finished = io.now();

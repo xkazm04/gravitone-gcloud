@@ -13,6 +13,8 @@ import { useCallback, useState } from "react";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "./notebook";
 import ArgumentSections from "./sections/Argument";
 import ApparatusSections from "./sections/Apparatus";
+import { sectionRenders } from "./sections/H";
+import type { Notebook } from "./types";
 
 const SECTIONS = [
   ["tension", "tension"],
@@ -36,6 +38,20 @@ const SECTIONS = [
   ["sources", `bibliography · ${NOTEBOOK_COUNTS.sources}`],
   ["gaps", `gaps · ${NOTEBOOK_COUNTS.gaps}`],
 ] as const;
+
+/** Every section the rail knows about, in order — including the two that only
+ *  render when they have content. */
+export const SECTION_IDS: readonly string[] = SECTIONS.map(([id]) => id);
+
+/** THE PILLS THIS NOTEBOOK ACTUALLY GETS.
+ *
+ *  A pill is drawn only where the section it jumps to will render. Exported
+ *  rather than inlined so the agreement can be asserted without a DOM, and so
+ *  the rail below has exactly one way to build itself — a `.map` over the raw
+ *  list is the defect, and the probe reads this file to say so. */
+export function railFor(n: Notebook): readonly (readonly [string, string])[] {
+  return SECTIONS.filter(([id]) => sectionRenders(n, id));
+}
 
 export default function NotebookBody() {
   // WHERE THE RAIL LAST SENT YOU. The rail had no state at all: eleven
@@ -66,7 +82,14 @@ export default function NotebookBody() {
         aria-label="Notebook sections"
         className="font-jetbrains -mt-1 flex flex-wrap gap-1.5 text-label"
       >
-        {SECTIONS.map(([id, label]) => (
+        {/* A PILL ONLY WHERE THE SECTION ACTUALLY RENDERS. Two of these
+            sections draw behind a `length > 0` of their own, and the rail
+            listed all thirteen regardless — so on a notebook with no
+            counter-positions the pill was drawn, `jump()` found no element and
+            returned before `setAt`, and pressing it did nothing at all, with
+            no state change to say so. One predicate, in sections/H.tsx, read by
+            the rail here and by the section there. */}
+        {railFor(n).map(([id, label]) => (
           <button
             key={id}
             type="button"

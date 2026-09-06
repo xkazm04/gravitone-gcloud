@@ -28,7 +28,7 @@ import { usePolling } from "@/lib/usePolling";
 
 import { ExtractBoard } from "./ExtractBoard";
 import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, saveExtractVerdicts, stepExtractRun } from "./extractClient";
-import { EXTRACT_LIVE, EXTRACT_STATUS_WORD } from "./parts";
+import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD } from "./parts";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -41,11 +41,34 @@ export function ExtractView() {
   const [save, setSave] = useState<SaveState>("idle");
   const [focused, setFocused] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  /** WHICH IMAGE THE SHRINK PASS IS ON, while `creating` is true.
+   *
+   *  `creating` alone is a boolean over work that is linear in the size of the
+   *  gallery: sixty images is sixty decodes, and a boolean renders the same on
+   *  the first as on the sixtieth. This is what makes a working upload
+   *  distinguishable from a stalled one. */
+  const [shrinking, setShrinking] = useState<{ done: number; total: number } | null>(null);
   const [driving, setDriving] = useState(false);
   const [driveError, setDriveError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState<ExtractCommitResult | null>(null);
+  /** A commit that FAILED, shown inside the dialog that asked for it.
+   *
+   *  The catch used to write `runsError`, which renders beside the run list —
+   *  and the confirm dialog is `fixed inset-0 z-50` over a backdrop at 80%
+   *  with a blur, carrying `aria-modal="true"`. So the message landed
+   *  somewhere the reader could not see it and a screen reader would not
+   *  reach: aria-modal removes the rest of the page from the accessibility
+   *  tree. The dialog meanwhile went from "committing…" back to its button,
+   *  which is indistinguishable from a click that never registered.
+   *
+   *  This repo has already written the rule down, in
+   *  tests/golden-path/dialog-closes-on-success.probe.spec.ts: "closing a
+   *  confirmation over work that was not done is the same small lie as a
+   *  button that does nothing." Staying open was right; saying nothing was
+   *  not. */
+  const [commitError, setCommitError] = useState<string | null>(null);
   const [zoomOpen, setZoomOpen] = useState(false);
   /** The clock as of the last detail load — the lease is judged against
    *  this, not against render time, so render stays pure. */
@@ -182,10 +205,19 @@ export function ExtractView() {
 
   const startRun = async (slug: string, files: File[], options: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => {
     setCreating(true);
+    setShrinking({ done: 0, total: files.length });
     setRunsError(null);
     try {
       const uploads = [];
-      for (const f of files) uploads.push(await prepareUpload(f));
+      // ONE TICK PER IMAGE. The loop stays SERIAL on purpose: overlapping the
+      // decodes would hold the whole gallery's bitmaps at once, and peak memory
+      // is a separate decision from saying where we are. Each iteration already
+      // awaits, so the state written here is committed and painted before the
+      // next decode starts — the count is real, not a guess at a rate.
+      for (const f of files) {
+        uploads.push(await prepareUpload(f));
+        setShrinking({ done: uploads.length, total: files.length });
+      }
       const run = await createExtractRun(slug, uploads, options);
       loadRuns();
       selectRun(run.id);
@@ -194,6 +226,7 @@ export function ExtractView() {
       setRunsError(e instanceof Error ? e.message : "could not create the run");
     } finally {
       setCreating(false);
+      setShrinking(null);
     }
   };
 
@@ -248,6 +281,7 @@ export function ExtractView() {
   const doCommit = async () => {
     if (!selected) return;
     setCommitting(true);
+    setCommitError(null);
     try {
       const r = await commitExtractRun(selected);
       setResult(r);
@@ -255,7 +289,7 @@ export function ExtractView() {
       loadDetail(selected, false);
       loadRuns();
     } catch (e) {
-      setRunsError(e instanceof Error ? e.message : "commit failed");
+      setCommitError(e instanceof Error ? e.message : "commit failed");
     } finally {
       setCommitting(false);
     }
@@ -301,7 +335,7 @@ export function ExtractView() {
         </aside>
 
         <div>
-          {selected === null && <NewRun busy={creating} onStart={startRun} />}
+          {selected === null && <NewRun busy={creating} shrinking={shrinking} onStart={startRun} />}
           {selected && !run && <p className="font-jetbrains text-content text-white/60">loading…</p>}
           {run && (
             <>
@@ -350,10 +384,10 @@ export function ExtractView() {
               <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">committed</span>
             ) : (
               <Button
-                disabled={run.status !== "done" || counts.kept === 0}
+                disabled={!EXTRACT_COMMITTABLE.includes(run.status) || counts.kept === 0}
                 onClick={() => setConfirm(true)}
                 className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-                title={run.status !== "done" ? `Run is ${EXTRACT_STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one style first" : "Write the kept styles to the catalogue"}
+                title={!EXTRACT_COMMITTABLE.includes(run.status) ? `Run is ${EXTRACT_STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one style first" : "Write the kept styles to the catalogue"}
               >
                 Commit the kept styles
               </Button>
@@ -364,7 +398,11 @@ export function ExtractView() {
 
       <Modal
         open={confirm}
-        onClose={() => !committing && setConfirm(false)}
+        onClose={() => {
+          if (committing) return;
+          setConfirm(false);
+          setCommitError(null);
+        }}
         title="Commit the kept styles?"
         className="max-w-md"
         footer={
@@ -383,6 +421,11 @@ export function ExtractView() {
           <code className="font-jetbrains text-label text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. The forge
           can be pointed at them from the next plan. Undecided counts as thrown. Nothing is deleted, but the verdicts are final.
         </p>
+        {commitError && (
+          <p role="alert" className="font-jetbrains mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-content text-rose-200">
+            The commit failed and no style was written: {commitError}
+          </p>
+        )}
       </Modal>
     </>
   );
@@ -478,7 +521,15 @@ function StatusStrip({
   );
 }
 
-function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, files: File[], o: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => void }) {
+function NewRun({
+  busy,
+  shrinking,
+  onStart,
+}: {
+  busy: boolean;
+  shrinking: { done: number; total: number } | null;
+  onStart: (slug: string, files: File[], o: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => void;
+}) {
   const [slug, setSlug] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [rounds, setRounds] = useState(2);
@@ -565,13 +616,21 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
           Each source costs one recognition; each style costs up to replicas × rounds + transfers generations, each read back once. The run pauses if you leave this tab and resumes where it
           stopped.
         </p>
-        <Button
-          disabled={!ready}
-          onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}
-          className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-        >
-          {busy ? "uploading…" : `Extract from ${files.length} image${files.length === 1 ? "" : "s"}`}
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* The live region is rendered THROUGHOUT, empty when idle: a region
+              inserted at the same moment it gains text is one a screen reader
+              has no prior state to compare against, and announces nothing. */}
+          <span aria-live="polite" className="font-jetbrains text-label text-cyan-200/80">
+            {shrinking ? `shrinking ${Math.min(shrinking.done + 1, shrinking.total)} of ${shrinking.total}` : ""}
+          </span>
+          <Button
+            disabled={!ready}
+            onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}
+            className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
+          >
+            {busy ? "uploading…" : `Extract from ${files.length} image${files.length === 1 ? "" : "s"}`}
+          </Button>
+        </div>
       </div>
     </div>
   );

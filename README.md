@@ -218,3 +218,41 @@ npm install
 npm run dev     # http://localhost:3000
 npm run build
 ```
+
+### Inspect mode — click a component, get its file
+
+`npm run dev:inspect` is the same dev server with **source-location stamping** on. It
+exists to answer one question fast: *which file draws this?* Point at a pixel, get
+`app/_phases/frames/FrameBoard.tsx:118` on the clipboard, paste it at an agent.
+
+```
+npm run dev:inspect            # http://localhost:3000, stamping on
+npm run dev:inspect -- -p 3199 # its own port; it already has its own dist dir
+```
+
+In the app press **`;`** (keyboard mode) then **`i`** to arm it. Hovering highlights the
+element and pins a `File.tsx:line` chip; **right-click** copies the **call site** — the
+step or page file that used the primitive, not `components/ui/Primitives.tsx` —
+**Alt+right-click** copies the innermost element, clicking a row in the HUD copies any
+enclosing file, and **Esc** exits. Left-click is deliberately untouched, so the app stays
+usable while the inspector is armed.
+
+Three moving parts, each gated:
+
+- `pipeline/dev-inspector/source-loc-loader.cjs` — a Turbopack loader, registered **only**
+  when `DEV_INSPECT=1`, that writes each host element's `data-loc="path:LINE:COL"` using
+  the TypeScript parser (no new dependency) as a pure text insertion, so **every line
+  number is preserved**.
+- `app/_dev-inspector/` — the overlay that reads those attributes. Mounted in any dev
+  session: under a plain `npm run dev` it arms fine and tells you stamping is off.
+- `pipeline/dev-guard.mjs` — reaps the dev server's whole process tree on exit and trips a
+  breaker at `DEV_GUARD_MAX_NODE`. Windows does not cascade a kill down a tree, and
+  Turbopack runs loaders in node workers; the sibling `kp` repo measured one unguarded
+  session stranding ~2,800 of them.
+
+It runs on its own dist dir (`.next-inspect`), so it can sit beside a plain `npm run dev`
+and never shares its Turbopack cache. **Nothing reaches production**: `next.config.ts`
+aliases the overlay to a null-rendering server component for production builds, and
+`npm run check:bundle` reads the emitted chunks for `data-devinspector` — verified in both
+directions on 2026-08-30. `npm run dev:inspect:webpack` is the escape hatch if the
+Turbopack path ever misbehaves.

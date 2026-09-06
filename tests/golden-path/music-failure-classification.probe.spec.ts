@@ -23,9 +23,17 @@
 // stated codes first, the heuristic only for a 4xx that named no reason.
 import { test, expect } from "@playwright/test";
 
+import { keepEnv } from "./_helpers";
+
 import { MusicError } from "@/lib/music/errors";
 import { composeMusic, MUSIC_KEY_VAR } from "@/lib/music/elevenlabs";
 import type { MusicPlan } from "@/lib/music/types";
+
+// The key set below is put back after every case. Before this line the
+// beforeEach left "probe-key" in ELEVENLABS_API_KEY for every probe sorted
+// after this file, and env-isolation could not see it because this file HAS an
+// afterEach — one that restores fetch and nothing else.
+keepEnv([MUSIC_KEY_VAR]);
 
 /** A plan the adapter's own pre-flight validation accepts, so every case below
  *  reaches the fetch rather than being refused before it. */

@@ -1,0 +1,172 @@
+{
+  "run": "ravi",
+  "startedAt": "2026-09-05T16:02:37.452Z",
+  "steps": [
+    {
+      "at": 1788624157454,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788624159107,
+      "s": "click \"deck-card-free\""
+    },
+    {
+      "at": 1788624159740,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624160120,
+      "s": "click \"deck-card-free-form\""
+    },
+    {
+      "at": 1788624160467,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624161479,
+      "s": "click \"deck-card-preset:chalk-argument\""
+    },
+    {
+      "at": 1788624161857,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624162837,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Hold music — a sketch\""
+    },
+    {
+      "at": 1788624162892,
+      "s": "fill {\"css\":\"#w-logline\"} ← \"A caller on hold outlives the company.\""
+    },
+    {
+      "at": 1788624162934,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"45\""
+    },
+    {
+      "at": 1788624164175,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788624164182,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788624165027,
+      "s": "recorded p-mtokn9w1-hjes5x → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788624165027,
+      "s": "goto /studio/p-mtokn9w1-hjes5x?step=research"
+    },
+    {
+      "at": 1788624169721,
+      "s": "click \"mode-beats\""
+    },
+    {
+      "at": 1788624170962,
+      "s": "click \"variant-cold-open-c\""
+    },
+    {
+      "at": 1788624171395,
+      "s": "click \"variant-intro-b\""
+    },
+    {
+      "at": 1788624171810,
+      "s": "click \"switch-mode\""
+    },
+    {
+      "at": 1788624172691,
+      "s": "click \"switch-mode\""
+    },
+    {
+      "at": 1788624173707,
+      "s": "click \"variant-esc1-a\""
+    },
+    {
+      "at": 1788624174104,
+      "s": "click \"variant-esc2-a\""
+    },
+    {
+      "at": 1788624174877,
+      "s": "click \"variant-esc3-a\""
+    },
+    {
+      "at": 1788624175278,
+      "s": "click \"variant-reset-a\""
+    },
+    {
+      "at": 1788624175715,
+      "s": "click \"variant-climax-a\""
+    },
+    {
+      "at": 1788624176164,
+      "s": "click \"variant-tail-a\""
+    },
+    {
+      "at": 1788624176890,
+      "s": "click \"compose-spine\""
+    },
+    {
+      "at": 1788624177777,
+      "s": "goto /studio/p-mtokn9w1-hjes5x?step=script"
+    },
+    {
+      "at": 1788624185364,
+      "s": "snap 02-ravi-script"
+    }
+  ],
+  "checks": [
+    {
+      "label": "style stage offers presets for free",
+      "ok": true,
+      "detail": "presets=6 borrowed=true"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Hold music — a sketch"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "the chooser is answerable without studio words (RA-L1-6, observe)",
+      "ok": false,
+      "detail": "facts to involve\nA topic goes in, a notebook comes out, and you scope what the script may use."
+    },
+    {
+      "label": "board says the spine is borrowed and a fixture",
+      "ok": true
+    },
+    {
+      "label": "picks survive a facts⇄beats round trip",
+      "ok": true
+    },
+    {
+      "label": "every part picked",
+      "ok": true,
+      "detail": "8 of 8 parts picked — the spine is whole."
+    },
+    {
+      "label": "spine composed",
+      "ok": true
+    },
+    {
+      "label": "the mode switch is locked after compose and says why",
+      "ok": true,
+      "detail": "reopen the composed spine first — composing it marked this project researched, and Script reads that"
+    },
+    {
+      "label": "Script names the stand-in and his 45s",
+      "ok": true,
+      "detail": "fixture · n=0 · the beat text, the cue and the withholding budget are the Glass Harbor stand-in, whatever this project’s logline, template or runtime — your target is 45s; these beats run to 1:50 and the clock is not read here yet"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T16:03:05.364Z"
+}

@@ -1,0 +1,6 @@
+· goto /projects
+· click {"role":"button","name":{}}
+· snap 01-expert-dialog-any-video
+ok   dialog offers the wizard-minted untagged themes for Any video
+ok   if the shelf is empty the copy routes to the wizard — themes present, empty copy not shown
+FAIL the style shelf has no duplicate names from minting a theme per create (observe) — 8 pills, 3 duplicate names

@@ -14,7 +14,7 @@
 // Still mocked below the rail: every step surface renders app/_studio's Glass
 // Harbor fixture whatever project is open. The pill in the header says so.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -174,6 +174,34 @@ export default function StudioView({ projectId }: { projectId: string }) {
       }
     })();
   };
+
+  // A `?step=` that CHANGES while the studio is open is the user moving the
+  // rail from inside a step (a wizard's "Go to Step 2" hands off this way), so
+  // it moves the rail AND parks like a rail click. The initial deep link is
+  // still read once above and does not park — that rule is unchanged. The rail
+  // move is a derive-from-props adjustment (no effect); the park is the same
+  // async write `pick` makes, in a callback.
+  const initialWanted = useRef(wanted);
+  const [seenWanted, setSeenWanted] = useState(wanted);
+  if (wanted !== seenWanted) {
+    setSeenWanted(wanted);
+    if (door.kind === "open" && wanted && (PHASES as readonly string[]).includes(wanted))
+      setPhaseKey(wanted as PhaseKey);
+  }
+  useEffect(() => {
+    if (door.kind !== "open" || !id || !user) return;
+    if (!wanted || wanted === initialWanted.current) return;
+    if (!(PHASES as readonly string[]).includes(wanted)) return;
+    void (async () => {
+      try {
+        await parkAt(id, wanted as PhaseKey);
+        const fresh = await getProject(id);
+        if (fresh && fresh.uid === user.uid) setProject(fresh);
+      } catch (e) {
+        reportStorageTrouble("write", id, "bookmark", e);
+      }
+    })();
+  }, [wanted, door.kind, id, user]);
 
   const step = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
   // The headline is the project's name when there is one. When there is not, it

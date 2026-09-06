@@ -12,7 +12,7 @@
 // SERVER ONLY. This spawns a process; it cannot and must not be imported from a
 // component.
 
-import { spawn } from "node:child_process";
+import { execFile, spawn, type ChildProcess } from "node:child_process";
 
 import { MODEL } from "./model";
 
@@ -36,6 +36,82 @@ export class CliError extends Error {
  *  Windows, which Node cannot spawn directly). Exported so the probe drives the
  *  same predicate the spawn does, rather than a copy of it. */
 export const USES_SHELL = process.platform === "win32";
+
+/**
+ * END THE WHOLE TREE, not the shell in front of it.
+ *
+ * On Windows the spawn goes through `shell: true`, so `child` is cmd.exe and the
+ * real `claude` is its grandchild. `child.kill()` terminates cmd.exe alone —
+ * Windows does not cascade a kill down a process tree (next.config.ts learned
+ * the same lesson from stranded Turbopack workers) — and the grandchild keeps
+ * running, keeps the operator's seat busy, and keeps writing to a pipe nobody
+ * reads, for however long the turn would have taken. Measured 2026-09-05 with
+ * this exact spawn shape: after `child.kill()` the shell was gone and the
+ * grandchild was alive; after `taskkill /T` on the LIVE shell pid, both were
+ * gone in under a second. The order matters — once the shell has exited the
+ * tree cannot be walked from it any more, so taskkill goes first and the plain
+ * signal is the fallback, never the other way round.
+ *
+ * The registry's agent-cli-transport subject borrows termination-and-reaping
+ * from subprocess-lifecycle for exactly this: a timeout that leaves the child
+ * running has not enforced anything, it has only stopped listening.
+ *
+ * Off-shell (POSIX) `child` IS the binary, and the signal reaches it directly.
+ */
+export function killTree(child: ChildProcess): void {
+  if (USES_SHELL && child.pid) {
+    execFile("taskkill", ["/pid", String(child.pid), "/T", "/F"], { windowsHide: true }, () => {
+      // taskkill could not (the tree was already gone, or this is not the
+      // platform the predicate thought). Whatever is still there gets the signal.
+      if (child.exitCode === null && !child.killed) child.kill();
+    });
+    return;
+  }
+  child.kill();
+}
+
+/**
+ * ONE VERDICT FOR A NON-ZERO EXIT, shared by the probe and the run.
+ *
+ * Off-shell, a binary that is not on PATH never produces an exit code at all —
+ * the spawn itself fails and `child.on("error")` says `not-installed`. Through
+ * a shell it is the SHELL that fails to resolve the name, and the shell says so
+ * in its own words on stderr and exits normally. MEASURED 2026-09-05, with this
+ * exact spawn shape and a name that resolves to nothing: cmd.exe exits 1 — not
+ * the 9009 an interactive prompt shows in %ERRORLEVEL% — with "'x' is not
+ * recognized as an internal or external command" on stderr. So the sentence is
+ * the signal and the well-known codes (9009, POSIX 127) are kept only as a
+ * second door. Until this function existed the run's `close` handler read all
+ * of it as an ordinary failure ("The local Claude process exited 1."), so on
+ * the only platform this app is developed on a machine without the CLI was
+ * classified `failed`, the text provider marked the call as DISPATCHED (a real
+ * attempt, not an absence), and the router's descent record named the wrong
+ * rung with the wrong remedy — "the engine broke" instead of "install it". The
+ * probe had the same blind spot in its own words.
+ *
+ * `usesShell` is a parameter so the mapping is assertable on either platform;
+ * the doors pass the real predicate. Off-shell the shell never spoke, so its
+ * sentences and codes are the binary's own and mean nothing special.
+ */
+const SHELL_NOT_FOUND = /is not recognized as an internal or external command|command not found|: not found\b/i;
+
+export function classifyExit(code: number | null, stderr: string, usesShell: boolean = USES_SHELL): CliError {
+  if (usesShell && (SHELL_NOT_FOUND.test(stderr) || code === 9009 || code === 127)) {
+    return new CliError("The `claude` CLI is not installed or not on PATH.", "not-installed");
+  }
+  if (/login|auth|credential/i.test(stderr)) {
+    return new CliError("The local Claude CLI is not logged in. Run `claude` once and sign in.", "not-logged-in");
+  }
+  // The tail of stderr travels WITH the verdict. Until 2026-09-05 this branch
+  // said "exited N" and threw the stream away (`void err`), so the one line the
+  // engine wrote about why — an unknown model id, a bad flag, a crashed
+  // session — reached neither the log line nor the route's answer, and the
+  // operator was left to reproduce a minutes-long turn by hand to read it.
+  // Whitespace collapsed and capped, because it lands in a log line and a JSON
+  // error body, not a terminal.
+  const tail = stderr.replace(/\s+/g, " ").trim().slice(-240);
+  return new CliError(`The local Claude process exited ${code}.${tail ? ` stderr: ${tail}` : ""}`, "failed");
+}
 
 /**
  * THE SINGLE SPAWN DOOR'S ENVIRONMENT — and the one thing it takes away.
@@ -121,12 +197,14 @@ export function probeClaude(timeoutMs = 10_000): Promise<{ ok: boolean; version?
     }
 
     let out = "";
+    let err = "";
     const timer = setTimeout(() => {
-      child.kill();
+      killTree(child);
       resolve({ ok: false, detail: `The \`claude\` CLI did not answer --version within ${Math.round(timeoutMs / 1000)}s.` });
     }, timeoutMs);
 
     child.stdout?.on("data", (c) => (out += c));
+    child.stderr?.on("data", (c) => (err += c));
     child.on("error", () => {
       clearTimeout(timer);
       resolve({ ok: false, detail: "The `claude` CLI is not installed or not on PATH." });
@@ -134,8 +212,18 @@ export function probeClaude(timeoutMs = 10_000): Promise<{ ok: boolean; version?
     child.on("close", (code) => {
       clearTimeout(timer);
       const version = out.trim().split(/\s+/)[0] || undefined;
-      if (code !== 0)
-        return resolve({ ok: false, detail: `The \`claude\` CLI exited ${code} when asked for its version.` });
+      if (code !== 0) {
+        // Through a shell, "not on PATH" arrives as an exit code — see
+        // classifyExit. Say that, not "exited 9009".
+        const verdict = classifyExit(code, err);
+        return resolve({
+          ok: false,
+          detail:
+            verdict.kind === "not-installed"
+              ? verdict.message
+              : `The \`claude\` CLI exited ${code} when asked for its version.`,
+        });
+      }
       resolve({
         ok: true,
         version,
@@ -204,7 +292,10 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
     let out = "";
     let err = "";
     const timer = setTimeout(() => {
-      child.kill();
+      // The tree, not the shell — see killTree. A timeout that left `claude`
+      // running would keep spending the seat after the caller had been told
+      // the turn was over.
+      killTree(child);
       reject(new CliError(`The local Claude process did not finish within ${Math.round(ceiling / 1000)}s.`, "timeout"));
     }, ceiling);
 
@@ -217,19 +308,9 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
 
     child.on("close", (code) => {
       clearTimeout(timer);
-      if (code !== 0) {
-        const hint = /login|auth|credential/i.test(err)
-          ? "not-logged-in"
-          : "failed";
-        return reject(
-          new CliError(
-            hint === "not-logged-in"
-              ? "The local Claude CLI is not logged in. Run `claude` once and sign in."
-              : `The local Claude process exited ${code}.`,
-            hint,
-          ),
-        );
-      }
+      // The verdict is shared with the probe — see classifyExit — so the two
+      // doors cannot disagree about what a missing binary looks like.
+      if (code !== 0) return reject(classifyExit(code, err));
       try {
         const j = JSON.parse(out);
         if (j.is_error || j.subtype !== "success")
@@ -243,7 +324,6 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
       } catch {
         reject(new CliError("The local Claude process returned output that was not JSON.", "failed"));
       }
-      void err;
     });
 
     // THE PROMPT WRITE IS A DOOR OUT OF THIS PROCESS, AND IT HAD NO HANDLER.

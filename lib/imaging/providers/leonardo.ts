@@ -116,6 +116,9 @@ export function leonardoProvider(): ImagingProvider {
     // v1 takes no style-reference image. Declared false so the router sends
     // style-locked work elsewhere instead of this adapter dropping the field.
     supportsReferences: false,
+    // Native: `negative_prompt` is its own request field, read by the sampler
+    // rather than by the text encoder alongside the subject.
+    negativePromptChannel: "native",
 
     async generate(req: GenerateRequest): Promise<GeneratedImages> {
       const started = Date.now();

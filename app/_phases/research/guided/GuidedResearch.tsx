@@ -114,6 +114,7 @@ export default function GuidedResearch({
   onOpenEvidence,
   onClear,
   onSwitchFace,
+  onFinish,
 }: {
   research: EducationalResearchApi;
   api: ScopeApi;
@@ -121,6 +122,9 @@ export default function GuidedResearch({
   onOpenEvidence: () => void;
   onClear: () => void;
   onSwitchFace: (f: Face) => void;
+  /** The last stage's primary action — go to Step 2. The expert board stays
+   *  one click away through the FaceSwitch in the exit slot. */
+  onFinish: () => void;
 }) {
   const ready = research.ready;
   // A notebook that already exists opens the wizard on stage 2 — stage 1 has
@@ -205,8 +209,8 @@ export default function GuidedResearch({
       stages={stages}
       active={active}
       onNavigate={setActive}
-      finishLabel="Open the expert board"
-      onFinish={() => onSwitchFace("expert")}
+      finishLabel="Go to Step 2 · Script →"
+      onFinish={onFinish}
       exit={<FaceSwitch face="guided" onSwitch={onSwitchFace} />}
     />
   );

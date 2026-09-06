@@ -1,9 +1,10 @@
 // LANE — UNAUTHENTICATED-SPENDING-ROUTE (dynamic).
 //
-// The four routes app/api/imaging/{generate,edit,recognize} and app/api/frames
-// each spend a real vendor balance or local Claude-CLI compute. Before this
-// gate, none checked WHO was calling — a request at the origin billed the
-// operator's keys. This probe drives the ACTUAL exported route handlers (Node
+// Every route that spends a real vendor balance or local Claude-CLI compute —
+// eleven when this sentence was last checked, and DERIVED below rather than
+// counted here, because it was "four" when this file was written and the count
+// went stale twice. Before this gate, none checked WHO was calling — a request
+// at the origin billed the operator's keys. This probe drives the ACTUAL exported route handlers (Node
 // context, no server) and the ACTUAL guard, and pins the contract:
 //
 //   · every route returns 401 to an unauthenticated caller (FAILS against the
@@ -11,12 +12,12 @@
 //   · a valid secret passes the guard (the route then 4xx's on the bad body,
 //     never 401 — proving the guard let it through WITHOUT spending);
 //   · the rate limiter refuses past its capacity with 429.
-import { existsSync, readFileSync, readdirSync } from "node:fs";
-import { join, relative } from "node:path";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { dirname, join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { keepEnv } from "./_helpers";
+import { keepEnv, stripComments } from "./_helpers";
 import {
   checkAccess,
   guardRequest,
@@ -134,9 +135,16 @@ const MONEY_DOOR = GATE_DOORS[0];
  *
  *  The files in this repo explain the rule in prose directly above the code that
  *  implements it, so a matcher run over raw text is satisfied by a route that
- *  TALKS about its guard and does not call one. Strip first, then match. */
+ *  TALKS about its guard and does not call one. Strip first, then match.
+ *
+ *  The shared scanner, not a private replace pair. Measured 2026-09-06 with a
+ *  seeded route whose first line read "see /api/foundry/ + star" and whose last
+ *  line was a block comment: the block-first pair this used to carry opened a
+ *  phantom block at the star, swallowed the whole file including its
+ *  guardRequest call, and reported a GATED route as ungated — the false red
+ *  the header above calls the worse of this gate's two failures. */
 function code(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  return stripComments(src);
 }
 
 test("the gate doors this probe looks for all still exist in lib/apiAuth.ts", () => {
@@ -214,6 +222,73 @@ test("every deliberately-public exemption still names a route that exists", () =
     expect(existsSync(join(process.cwd(), rel)), `${rel} is exempted and does not exist`).toBe(true);
 });
 
+/**
+ * Every module `rel` imports AT RUNTIME, resolved the way the bundler resolves
+ * them: `@/` to the repo root, `./` and `../` beside the importer, then `.ts`,
+ * `.tsx`, `/index.ts` tried in that order. `import type` is not a runtime edge
+ * and is skipped; a bare package name is not this repo's code and is skipped.
+ * A specifier that resolves to nothing is asserted, not ignored — a walk that
+ * silently drops an edge reports a smaller graph than the one that ships.
+ */
+function runtimeImports(rel: string): string[] {
+  const src = code(readFileSync(join(process.cwd(), rel), "utf8"));
+  const out: string[] = [];
+  for (const m of src.matchAll(/^import\s+(?!type\b)[\s\S]*?from\s+["']([^"']+)["']/gm)) {
+    const spec = m[1];
+    let base: string;
+    if (spec.startsWith("@/")) base = spec.slice(2);
+    else if (spec.startsWith(".")) base = join(dirname(rel), spec).split("\\").join("/");
+    else continue;
+    const hit = [base, `${base}.ts`, `${base}.tsx`, `${base}/index.ts`].find((c) => {
+      const full = join(process.cwd(), c);
+      return existsSync(full) && statSync(full).isFile();
+    });
+    expect(hit, `${rel} imports "${spec}", which resolves to no file - the walk cannot follow it`).toBeTruthy();
+    out.push(hit!);
+  }
+  return out;
+}
+
+/**
+ * THE ADMISSION CLAIM IS CHECKED, NOT QUOTED.
+ *
+ * Each DELIBERATELY_PUBLIC reason above says, in prose, that the route reads no
+ * environment and imports nothing that does — so a caller cannot learn from the
+ * response whether this deployment holds a key, nor what ceiling an operator
+ * set. Until 2026-09-06 that sentence was the only thing holding it: the music
+ * entry even says "verified on admission", and nothing re-verified it on any
+ * later commit. A `process.env` read added to lib/music/pricing.ts, or an
+ * import of lib/music/budget.ts to "show the ceiling too", would have shipped
+ * on a public route with this probe green.
+ *
+ * So the route's runtime import graph is WALKED, and every module reachable
+ * from it is asserted to read no `process.env`. The pricing modules are the
+ * whole graph today (two files each); the assertion is what keeps that true.
+ */
+test("every deliberately-public route reads no environment, transitively", () => {
+  for (const [route, why] of Object.entries(DELIBERATELY_PUBLIC)) {
+    const seen = new Set<string>();
+    const queue = [route];
+    while (queue.length) {
+      const f = queue.pop()!;
+      if (seen.has(f)) continue;
+      seen.add(f);
+      queue.push(...runtimeImports(f));
+    }
+    // The walk followed at least one edge — a route that "imports nothing"
+    // means the import matcher stopped seeing imports, not that the route is
+    // self-contained.
+    expect(seen.size, `${route}: the import walk followed no edge at all`).toBeGreaterThan(1);
+
+    const envReaders = [...seen].filter((f) => /process\.env/.test(code(readFileSync(join(process.cwd(), f), "utf8"))));
+    console.log(`[auth] ${route}: ${seen.size} module(s) reachable (${[...seen].filter((f) => f !== route).join(", ")}), ${envReaders.length} read process.env`);
+    expect(
+      envReaders,
+      `${route} is public because "${why.slice(0, 70)}…" — and these modules it reaches read the environment`,
+    ).toEqual([]);
+  }
+});
+
 keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", RATE_CAPACITY_VAR, RATE_WINDOW_SEC_VAR, RATE_KEY_CAP_VAR]);
 
 test.beforeEach(() => {
@@ -267,7 +342,7 @@ test("guard: the constant-time compare is not short-circuited by its own length 
   expect(body, "secretsMatch not found - this guard is pinned to that function").toBeTruthy();
   // Comments explain the hazard and name the wrong shape, so they must not be
   // what the guard reads: strip them, or this passes on prose alone.
-  const code = body!.replace(/\/\/[^\n]*/g, "").replace(/\/\*[\s\S]*?\*\//g, "");
+  const code = stripComments(body!);
   const cmp = code.indexOf("timingSafeEqual(");
   const len = code.search(/\.length\s*===/);
   console.log(`[auth] secretsMatch: timingSafeEqual@${cmp}, length-check@${len}`);
@@ -324,6 +399,42 @@ test("rate limit: guardRequest answers 429 past capacity (before it even checks 
   console.log(`[auth] flood statuses = ${statuses.join(",")}`);
   expect(statuses.filter((s) => s === 429).length).toBeGreaterThanOrEqual(1);
   delete process.env.IMAGING_RATE_CAPACITY;
+});
+
+// ── A knob below one is misconfiguration, floored like claudeCli's timeout ──
+
+test("rate limit: a fractional CAPACITY does not refuse everything forever — it is floored", () => {
+  // 0.5 tokens of capacity: every fresh bucket starts under one token, so
+  // before the floor EVERY call was refused with a retry-after nothing could
+  // satisfy. A knob cannot be an outage.
+  __resetRateLimit();
+  process.env.IMAGING_RATE_CAPACITY = "0.5";
+  const now = 1_000_000;
+  let allowed = 0;
+  for (let i = 0; i < 5; i++) if (rateLimit("10.4.0.1", now).allowed) allowed++;
+  console.log(`[auth] capacity=0.5 over 5 calls -> allowed=${allowed}`);
+  expect(allowed).toBe(5);
+  expect(rateStats().capacity).toBe(30);
+  delete process.env.IMAGING_RATE_CAPACITY;
+  __resetRateLimit();
+});
+
+test("rate limit: a fractional KEY CAP does not switch the limiter off — it is floored", () => {
+  // 0.5 floored to a cap of 0: the reaper ran on every call and evicted every
+  // bucket before the current key was inserted, so each call saw a fresh full
+  // bucket and NOTHING was ever refused, with the counters reading healthy.
+  __resetRateLimit();
+  process.env.IMAGING_RATE_CAPACITY = "3";
+  process.env.IMAGING_RATE_KEY_CAP = "0.5";
+  const now = 1_000_000;
+  let allowed = 0;
+  for (let i = 0; i < 6; i++) if (rateLimit("10.4.0.2", now).allowed) allowed++;
+  console.log(`[auth] keyCap=0.5 capacity=3 over 6 calls -> allowed=${allowed} keyCap=${rateStats().keyCap}`);
+  expect(allowed).toBe(3);
+  expect(rateStats().keyCap).toBe(10_000);
+  delete process.env.IMAGING_RATE_CAPACITY;
+  delete process.env.IMAGING_RATE_KEY_CAP;
+  __resetRateLimit();
 });
 
 // ── The limiter watches itself, and bounds itself (added 2026-08-24) ────────

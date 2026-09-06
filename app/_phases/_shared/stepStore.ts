@@ -110,6 +110,14 @@ export interface ScriptAdoptionStepData {
 export interface TrailerCutStepData {
   cut: TrailerCut;
   budget: WithholdingBudget;
+  /** THE SPINE THIS CUT WAS COMPOSED FROM — the confirmed picks, slot → variant,
+   *  as they stood at compose time (added 2026-09-05). A cut is composed ONCE
+   *  and then edited; the board's picks are its history, not its source. So
+   *  when the creator reopens the spine in Step 1 and composes a different one,
+   *  the Script step needs a way to tell that the cut on screen predates the
+   *  spine on the board — this is that record. Absent on cuts saved before the
+   *  field existed, which readers treat as "unknown", never as "current". */
+  spine?: Record<string, string>;
   savedAt?: number;
 }
 
@@ -136,16 +144,28 @@ export interface CutStepData {
 
 /* ────────────────────────────── what went wrong ──────────────────────────── */
 
-/** WHY the storage operation failed. Five destinations that used to be one
+/** WHY the operation failed. Five storage destinations that used to be one
  *  `return fallback`, and they call for different things from a surface:
  *  `quota` means stop and export, `blocked` means close the other tab, and
- *  `unavailable` means this browser session was never going to persist. */
+ *  `unavailable` means this browser session was never going to persist.
+ *
+ *  `non-storage` is the sixth and it is NOT a storage failure — it is how a
+ *  failure that merely arrived through this channel says so. The only producer
+ *  is `reportTaskTrouble` (lib/GlobalErrorBridge's unhandled-rejection route),
+ *  and it exists because the alternative was worse: every non-storage rejection
+ *  — a `void fetch(...)` that dropped, an AbortError, a TypeError thrown in
+ *  fire-and-forget code — fell through `classify` into `failed` and was voiced
+ *  as "Not saved: the browser refused the operation", sending the creator to
+ *  check a quota that was never the problem. A kind rather than a second
+ *  channel, so the bell keeps one vocabulary and every exhaustive switch over
+ *  this union is forced to learn it. */
 export type StorageFailure =
   | "unavailable" // no IndexedDB at all — private mode, or a server render
   | "missing-store" // the DB opened without the steps store
   | "blocked" // another tab holds the old version open (studioDb's onblocked)
   | "quota" // out of room. The expensive one, and the reachable one
-  | "failed"; // everything else, reported rather than guessed at
+  | "failed" // everything else STORAGE-SHAPED, reported rather than guessed at
+  | "non-storage"; // not storage at all — it only travelled this channel
 
 export interface StorageTrouble {
   kind: StorageFailure;
@@ -266,6 +286,37 @@ export function reportStorageTrouble(
   return t;
 }
 
+/**
+ * Publish a failure that reached NO owner — an unhandled promise rejection —
+ * through this same channel, without claiming it was a storage write.
+ *
+ * `reportStorageTrouble` is for a caller that KNOWS it was doing storage work
+ * and merely lost the error; this is for the last-resort reporter, which knows
+ * only that something rejected. The difference matters at the bell: `failed`
+ * prints "the browser refused the operation" and sends the creator to look at
+ * their quota, which is the wrong remedy for a dropped fetch.
+ *
+ * The three RECOGNISED storage kinds are still honoured, because a rejection
+ * really can be one: `saveStep` never rejects (see its header), but a direct
+ * IndexedDB user in fire-and-forget code can, and a QuotaExceededError arriving
+ * this way is still a quota. It is only `classify`'s catch-all — the bucket that
+ * means "not storage-shaped as far as anything here can tell" — that becomes
+ * `non-storage` and carries the reason's own message instead.
+ */
+export function reportTaskTrouble(phase: string, e: unknown): StorageTrouble {
+  const storageShaped = classify(e);
+  const t: StorageTrouble = {
+    kind: storageShaped === "failed" ? "non-storage" : storageShaped,
+    op: "write",
+    projectId: "app",
+    phase,
+    message: e instanceof Error ? e.message : String(e),
+    at: Date.now(),
+  };
+  report(t);
+  return t;
+}
+
 /* ────────────────────────────────── the store ────────────────────────────── */
 
 const key = (projectId: string, phase: string) => `${projectId}:${phase}`;
@@ -334,12 +385,19 @@ export function __resetSaveSlots(): void {
  *
  *  THE CONNECTION IS OWNED HERE, and it used to leak. `openDb()` is not cached —
  *  it calls `indexedDB.open` fresh every time — so every caller owns the handle
- *  it gets back and has to close it. The thirteen other call sites in the data
- *  layer do: `lib/projects.ts` (6), `lib/themes.ts` (4) and `lib/assets.ts` (3)
- *  all wrap the work in `try { db = await openDb(); … } finally { db?.close(); }`.
- *  This was the fourteenth, and the only one that did not — while being by a wide
- *  margin the most frequently called of the fourteen, because every caller above
- *  it fires `void saveStep(...)` on a keystroke.
+ *  it gets back and has to close it. Every other call site in the data layer
+ *  does, wrapping the work in `try { db = await openDb(); … } finally {
+ *  db?.close(); }`. This was the one that did not — while being by a wide margin
+ *  the most frequently called of them, because every caller above it fires
+ *  `void saveStep(...)` on a keystroke.
+ *
+ *  THE COUNT IS NOT WRITTEN HERE ANY MORE, and that is the point. It said
+ *  "thirteen other call sites… `lib/assets.ts` (3)"; measured 2026-09-06 there
+ *  were twenty-one across five files and assets.ts held eight. The property was
+ *  still true and the number had been wrong for long enough that nobody could
+ *  have said when it stopped. The population is walked and the rule is gated in
+ *  tests/golden-path/shared-notebook-contracts.probe.spec.ts — which is also
+ *  where the one file that still does not close is listed, with its reason.
  *
  *  The cost was not abstract. The latest-wins ticket below abandons a write only
  *  when a later save for the same key is ISSUED before the earlier one reaches

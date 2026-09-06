@@ -30,27 +30,61 @@ import type { StorageFailure } from "@/app/_phases/_shared/stepStore";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-const KINDS: StorageFailure[] = ["quota", "blocked", "unavailable", "missing-store", "failed"];
+import { stripComments } from "./_helpers";
+
+/** The union, written out as a TOTAL record rather than an array. An array typed
+ *  `StorageFailure[]` checks every entry and says nothing about the entries
+ *  that are missing: a sixth failure kind added to stepStore.ts would have
+ *  compiled, shipped with whatever `troubleAnnouncement` says for it, and left
+ *  the "five distinct sentences" assertion below green over five of six. A
+ *  key missing here fails typecheck on this very line — the same shape
+ *  spine-rank-total uses for MovementRole. */
+const ALL_KINDS: Record<StorageFailure, true> = {
+  quota: true,
+  blocked: true,
+  unavailable: true,
+  "missing-store": true,
+  failed: true,
+  "non-storage": true,
+};
+const KINDS = Object.keys(ALL_KINDS) as StorageFailure[];
+
+/** The kinds that are actually about STORAGE. `non-storage` shares the channel
+ *  and the vocabulary but not the claim: it is a failure that merely arrived
+ *  here, and "Not saved" would be a false statement about the user's work. Its
+ *  own copy is driven by unhandled-rejection-route.probe.spec.ts, which owns the
+ *  route that produces it; what this file asserts is that the storage sentences
+ *  did not change shape when it was added. */
+const STORAGE_KINDS = KINDS.filter((k) => k !== "non-storage");
 
 /** A queue over a fake clock and a recording sink, so the POLICY is driven
  *  without a DOM, a renderer or real time. Every `tick()` runs whatever the
  *  queue scheduled next. */
+const DRAIN = 1000;
+const CLEAR = 10;
+
 function harness() {
   const writes: [level: "polite" | "assertive", text: string][] = [];
   let scheduled: (() => void) | null = null;
+  /** How far out the queue asked for the pending tick — the clear gap or the
+   *  drain gap, asserted where it matters. */
+  let scheduledMs: number | null = null;
   const q = createAnnouncerQueue(
     {
       polite: (t) => writes.push(["polite", t]),
       assertive: (t) => writes.push(["assertive", t]),
-      schedule: (fn) => {
+      schedule: (fn, ms) => {
         scheduled = fn;
+        scheduledMs = ms;
         return 1;
       },
       cancel: () => {
         scheduled = null;
+        scheduledMs = null;
       },
     },
-    1000,
+    DRAIN,
+    CLEAR,
   );
   /** Non-empty writes, in order — the actual utterances. The empty write before
    *  each is the deliberate region clear, asserted separately. */
@@ -59,10 +93,18 @@ function harness() {
     q,
     writes,
     spoken,
+    pendingMs: () => scheduledMs,
     tick() {
       const fn = scheduled;
       scheduled = null;
+      scheduledMs = null;
       fn?.();
+    },
+    /** One whole utterance from where the queue stands: the write tick, then
+     *  the drain tick that clears the next message (if any). */
+    utter() {
+      this.tick();
+      this.tick();
     },
   };
 }
@@ -78,20 +120,39 @@ test("queue: drains SERIALLY — one utterance per tick, not three in a frame", 
   h.q.announce(msg("b", "second"));
   h.q.announce(msg("c", "third"));
 
+  expect(h.spoken()).toEqual([]);
+  h.utter();
   expect(h.spoken()).toEqual(["polite:first"]);
-  h.tick();
+  h.utter();
   expect(h.spoken()).toEqual(["polite:first", "polite:second"]);
-  h.tick();
+  h.utter();
   expect(h.spoken()).toEqual(["polite:first", "polite:second", "polite:third"]);
   console.log(`[a11y] serial drain -> ${h.spoken().join(" | ")}`);
 });
 
-test("queue: each utterance CLEARS the region first", () => {
+test("queue: each utterance CLEARS the region first — on a tick of its OWN", () => {
   // Writing an identical string into the same region is not a mutation, so a
-  // repeat would be silently swallowed. Every drain is clear-then-write.
+  // repeat would be silently swallowed. Every drain is clear-then-write — and
+  // the two are SEPARATE commits. The sink is React state, and two setState
+  // calls in one task batch into one render: the region went old-text -> new
+  // text with the clear never reaching the DOM, so two utterances with the
+  // same words ("Removed plate from the shelf.", twice) voiced once. Measured
+  // as the contract here: the clear lands, the queue schedules, and only the
+  // scheduled tick writes the text.
   const h = harness();
   h.q.announce(msg("a", "same"));
   h.q.announce(msg("b", "same"));
+  // The clear is synchronous; the text is NOT here yet.
+  expect(h.writes).toEqual([["polite", ""]]);
+  expect(h.pendingMs()).toBe(CLEAR);
+  h.tick();
+  expect(h.writes).toEqual([
+    ["polite", ""],
+    ["polite", "same"],
+  ]);
+  // The drain gap is counted from the write.
+  expect(h.pendingMs()).toBe(DRAIN);
+  h.tick();
   h.tick();
   expect(h.writes).toEqual([
     ["polite", ""],
@@ -99,6 +160,9 @@ test("queue: each utterance CLEARS the region first", () => {
     ["polite", ""],
     ["polite", "same"],
   ]);
+  // The clear gap is a tick, not a pause: it is shorter than the drain gap.
+  expect(CLEAR).toBeLessThan(DRAIN);
+  console.log(`[a11y] clear/write -> ${h.writes.map(([, t]) => JSON.stringify(t)).join(" ")}`);
 });
 
 test("queue: the same EVENT is never announced twice (transitions, not renders)", () => {
@@ -109,8 +173,8 @@ test("queue: the same EVENT is never announced twice (transitions, not renders)"
   h.q.announce(msg("event:1", "Research finished"));
   h.q.announce(msg("event:1", "Research finished"));
   h.q.announce(msg("event:1", "Research finished — rephrased, same event"));
-  h.tick();
-  h.tick();
+  h.utter();
+  h.utter();
   console.log(`[a11y] dedupe -> ${h.spoken().length} utterance(s) from 3 announces`);
   expect(h.spoken()).toEqual(["polite:Research finished"]);
 });
@@ -122,8 +186,9 @@ test("queue: assertive JUMPS the queue and does not erase it", () => {
   // "routine one" is already draining; the interrupt goes in front of what is
   // still waiting, and the polite backlog resumes behind it.
   h.q.announce(msg("bad", "Not saved", true));
-  h.tick();
-  h.tick();
+  h.utter();
+  h.utter();
+  h.utter();
   console.log(`[a11y] jump -> ${h.spoken().join(" | ")}`);
   expect(h.spoken()).toEqual(["polite:routine one", "assertive:Not saved", "polite:routine two"]);
 });
@@ -150,6 +215,23 @@ test("queue: under storm it sheds the OLDEST POLITE message, never an assertive 
   expect(h2.q.peek().pending.some((p) => p.assertive)).toBe(true);
 });
 
+test("queue: an all-assertive storm sheds the OLDEST interrupt, not the one just queued", () => {
+  // Assertive messages jump to the FRONT, so "oldest" is the back of the queue.
+  // The shed used to splice index 0 when no polite message was left — the
+  // interrupt that had just arrived, which is the newest news there is.
+  const h = harness();
+  h.q.announce(msg("occupy", "occupying the drain"));
+  for (let i = 0; i < 12; i++) h.q.announce(msg(`a${i}`, `alert ${i}`, true));
+  const pending = h.q.peek().pending.map((p) => p.text);
+  console.log(`[a11y] assertive storm -> ${pending.length} pending, front=${pending[0]}, back=${pending.at(-1)}`);
+  expect(pending.length).toBeLessThanOrEqual(8);
+  // The newest interrupt is still at the front...
+  expect(pending[0]).toBe("alert 11");
+  // ...and it was the OLDEST ones that went.
+  expect(pending).not.toContain("alert 0");
+  expect(pending).not.toContain("alert 1");
+});
+
 test("queue: an empty message is not an utterance", () => {
   const h = harness();
   h.q.announce(msg("empty", ""));
@@ -163,11 +245,26 @@ test("queue: stop() ends the drain — no write after the channel is gone", () =
   const h = harness();
   h.q.announce(msg("a", "one"));
   h.q.announce(msg("b", "two"));
+  h.utter();
+  expect(h.spoken()).toEqual(["polite:one"]);
+  // "two" has been cleared for and its write is scheduled; stop() cancels it.
   h.q.stop();
+  h.tick();
   h.tick();
   expect(h.spoken()).toEqual(["polite:one"]);
   h.q.announce(msg("c", "three"));
   expect(h.spoken()).toEqual(["polite:one"]);
+});
+
+test("queue: stop() between the clear and the write — the write never lands", () => {
+  // The narrowest window the two-tick shape opens: the region was just cleared
+  // and the component unmounts. The scheduled write must not set state on it.
+  const h = harness();
+  h.q.announce(msg("a", "one"));
+  expect(h.writes).toEqual([["polite", ""]]);
+  h.q.stop();
+  h.tick();
+  expect(h.writes).toEqual([["polite", ""]]);
 });
 
 test("regions: they mount EMPTY, and live in the app SHELL", () => {
@@ -213,7 +310,7 @@ test("politeness: derives from severity, and only blocking news interrupts", () 
 });
 
 test("copy: every storage failure has a self-contained spoken form", () => {
-  for (const kind of KINDS) {
+  for (const kind of STORAGE_KINDS) {
     const text = troubleAnnouncement(kind, "script");
     console.log(`[a11y] ${kind} -> ${text}`);
     // It arrives with no card, no heading and no phase line beside it, so it
@@ -230,20 +327,25 @@ test("copy: every storage failure has a self-contained spoken form", () => {
   }
   // Five kinds, five distinct sentences — a taxonomy that collapses in the
   // spoken channel is a taxonomy the assistive user does not have.
-  expect(new Set(KINDS.map((k) => troubleAnnouncement(k, "script"))).size).toBe(5);
+  expect(new Set(STORAGE_KINDS.map((k) => troubleAnnouncement(k, "script"))).size).toBe(
+    STORAGE_KINDS.length,
+  );
+  // And the sixth is outside that set rather than a sixth member of it: it must
+  // not borrow a storage sentence, and it must not claim the work was lost.
+  const notStorage = troubleAnnouncement("non-storage", "script", "Failed to fetch");
+  expect(STORAGE_KINDS.map((k) => troubleAnnouncement(k, "script"))).not.toContain(notStorage);
+  expect(notStorage.startsWith("Not saved:")).toBe(false);
 });
 
 /* ── The error boundaries: a screen that failed to render must SAY so ───────── */
 
-/** Source with comments removed.
- *
- *  Load-bearing, and the reason this helper exists rather than a bare `include`:
- *  every file in this repo explains its rule in prose directly above the code
- *  that implements it, so a matcher run over raw text is satisfied by a file
- *  that TALKS about announcing and does not announce. Both assertions below were
- *  watched failing against the pre-fix files with this stripping in place. */
-const stripComments = (s: string) =>
-  s.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^[^\n]*?\/\/.*$/gm, "");
+// Source with comments removed, through the shared scanner in _helpers.ts.
+//
+// Load-bearing, and the reason stripping happens at all rather than a bare
+// `include`: every file in this repo explains its rule in prose directly above
+// the code that implements it, so a matcher run over raw text is satisfied by a
+// file that TALKS about announcing and does not announce. Both assertions below
+// were watched failing against the pre-fix files with stripping in place.
 
 test("boundaries: the route boundary announces, and takes the focus its dead subtree dropped", () => {
   // Two silences, both invisible in review. React unmounts the subtree that

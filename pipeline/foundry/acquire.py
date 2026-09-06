@@ -80,6 +80,11 @@ def save_catalogue(cat):
             time.sleep(0.01)
 
 
+def cell(parsed, field, width):
+    """One listing column, present or not. See the note in main()'s --list."""
+    return str(parsed.get(field) or "-")[:width].ljust(width)
+
+
 def readbacks():
     if not READBACKS.exists():
         sys.exit(f"no readbacks at {READBACKS} -- run ../vlm-probe/style.py first")
@@ -101,9 +106,18 @@ def main():
 
     rows = readbacks()
     if args.list:
+        # ONE OLD ROW MUST NOT HIDE EVERY ROW AFTER IT. style.jsonl is
+        # append-only across model and schema versions -- readbacks() already
+        # says so by filtering for `ok` and for `parsed` being a dict -- so a
+        # row written under a different field set is the ordinary case, not an
+        # exotic one. Indexing three keys raw meant the first such row raised
+        # a KeyError mid-listing: the operator saw a partial catalogue with no
+        # sign it was partial, and --list is exactly how they choose the
+        # --source they type next.
         for r in rows:
             p = r["parsed"]
-            print(f"{r['source']:24s} {r['model']:18s} {p['render_mode']:20s} {p['palette_strategy']:26s} {p['signature'][:70]}")
+            print(f"{r['source']:24s} {r['model']:18s} {cell(p, 'render_mode', 20)} "
+                  f"{cell(p, 'palette_strategy', 26)} {str(p.get('signature') or '-')[:70]}")
         return
     if not (args.source and args.id and args.name):
         sys.exit("--source, --id and --name are required (or --list)")
@@ -113,6 +127,13 @@ def main():
         models = sorted({r["model"] for r in rows if r["source"] == args.source})
         sys.exit(f"no readback of {args.source} by {args.model}; available models: {models or 'none'}")
     p = hit[-1]["parsed"]
+    # And the same heterogeneity, one step later: `imitable_recipe` is the one
+    # field this command cannot substitute for -- it IS the entry -- so a row
+    # that predates it (or lost it to a truncated answer) must be named, not
+    # raised as a KeyError from the middle of building the entry.
+    if not str(p.get("imitable_recipe") or "").strip():
+        sys.exit(f"the {args.model} readback of {args.source} carries no `imitable_recipe` -- "
+                 "re-read the source with ../vlm-probe/style.py before acquiring it")
 
     cat = json.loads(STYLES.read_text(encoding="utf-8"))
     existing = next((s for s in cat["styles"] if s["id"] == args.id), None)

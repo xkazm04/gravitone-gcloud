@@ -1,0 +1,38 @@
+const CHARACTER = "yuki";
+const id = await createProject({ discipline: "trailer", template: "cinematic", preset: "signal-ledger", title: "Emberline — series pitch cinematic", targetS: 90 });
+expect("header pill: Movie · game trailer · Cinematic · 90s", /Cinematic · 90s/i.test(await bodyText()));
+await openStep(id, "research");
+await waitFor("compose-spine", { ms: 60000 });
+const before = await progressOf(id);
+expect("research not reported before any pick", (before?.research ?? "empty") === "empty", { detail: JSON.stringify(before) });
+await click("variant-cold-open-b");
+await sleep(600);
+const afterPick = await progressOf(id);
+expect("one pick → research 'working'", afterPick?.research === "working", { detail: JSON.stringify(afterPick) });
+await composeSpine({ ...SPINE_A, "cold-open": "cold-open-b" });
+await sleep(400);
+const afterCompose = await progressOf(id);
+expect("composed spine → research 'done' (locked)", afterCompose?.research === "done", { detail: JSON.stringify(afterCompose) });
+await openStep(id, "script");
+await waitFor("trailer-script", { ms: 30000 });
+expect("structure report lists findings by rule", (await count({ css: '[data-testid^="structure-rule-"]' })) >= 5, { detail: String(await count({ css: '[data-testid^="structure-rule-"]' })) });
+await snap("yuki-structure");
+// reopen only (no recompose): Script says so
+await openStep(id, "research");
+await click("reopen-spine");
+await sleep(300);
+const reopened = await progressOf(id);
+expect("reopened → research back to 'working'", reopened?.research === "working", { detail: JSON.stringify(reopened) });
+await openStep(id, "script");
+await waitFor("trailer-script", { ms: 30000 });
+expect("Script says the spine is reopened and this is the last composed cut", await has("trailer-spine-reopened"));
+// reload lands on the parked step
+await click("step-script");
+await sleep(400);
+await goto(`/studio/${id}`);
+await waitUntil(async () => (await attr("studio-headline", "data-door")) === "open", { label: "door", ms: 60000 });
+await sleep(500);
+expect("reload lands on Script", (await attr("step-script", "aria-current")) === "step");
+const cells = await shelfCells(id);
+expect("shelf research cell reflects the reopen (in progress)", /in progress/i.test(cells.research || ""), { detail: cells.research });
+await snap("yuki-shelf");

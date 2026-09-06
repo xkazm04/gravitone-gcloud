@@ -1,0 +1,23 @@
+const CHARACTER = "sofia";
+await goto("/projects/new");
+await waitFor("deck-card-trailer", { ms: 90000 });
+await click("deck-card-trailer");
+await click({ role: "button", name: /^Next$/ });
+const tpl = await bodyText();
+expect("teaser band is labelled sourced, not measured", /sourced · n=0 here/i.test(tpl) && !/60s measured/i.test(tpl));
+const id = await createProject({ discipline: "trailer", template: "teaser", preset: "paper-relief", title: "Low Water — festival teaser", logline: "Two sisters, one boat, the summer the river stopped.", targetS: 60 });
+await openStep(id, "research");
+await waitFor("compose-spine", { ms: 60000 });
+const slots = await count({ css: '[data-testid^="slot-"]' });
+expect("teaser gets a different slot set than a trailer (SO-L1-2, expect 8 = same)", slots !== 8, { detail: `slots=${slots}` });
+await composeSpine(SPINE_A);
+await openStep(id, "script");
+await waitFor("trailer-script", { ms: 30000 });
+const note = await textOf("trailer-fixture-note");
+expect("Script states the 60s target vs the fixture's 1:50", /your target is 60s/.test(note) && /1:50/.test(note), { detail: note });
+const body = await bodyText();
+expect("lane is stated (SO-L1-4: no control to change it — observe)", /lane: wide-release/.test(body));
+expect("promise ledger says an empty ledger is not 'promises nothing'", /not the same as the cut promising nothing/i.test(body));
+// add a promise with no payer → incomplete
+await click("promise-add-beat").catch(() => {});
+await snap("sofia-script");

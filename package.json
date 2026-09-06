@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:inspect": "node pipeline/dev-guard.mjs DEV_INSPECT=1 DEV_GUARD_MAX_NODE=150 NEXT_DIST_DIR=.next-inspect next dev",
+    "dev:inspect:webpack": "node pipeline/dev-guard.mjs DEV_INSPECT=1 DEV_INSPECT_BUNDLER=webpack DEV_GUARD_MAX_NODE=150 NEXT_DIST_DIR=.next-inspect next dev --webpack",
     "build": "next build",
     "start": "next start",
     "check:notebook": "npx tsx pipeline/check-notebook.mts",

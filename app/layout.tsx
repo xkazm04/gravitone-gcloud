@@ -11,6 +11,7 @@ import { AuthProvider } from "@/lib/useAuth";
 import { JobsProvider } from "@/lib/jobs";
 import { AnnouncerProvider } from "@/lib/announcer";
 import HarnessBridge from "@/components/ui/HarnessBridge";
+import DevInspector from "@/app/_dev-inspector/DevInspector";
 
 const instrument = Instrument_Serif({ weight: "400", subsets: ["latin"], variable: "--font-instrument", display: "swap" });
 const hanken = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-hanken", display: "swap" });
@@ -64,6 +65,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                   gate in pipeline/check-bundle.mjs. */}
               <HarnessBridge />
               {children}
+              {/* Click a component, copy its source path — `;` then `i`, then
+                  right-click. Dev-only twice over: this condition is a literal
+                  Next inlines, so the import is dead code in any production
+                  build, and the overlay does nothing until the DEV_INSPECT
+                  loader has stamped the DOM (`npm run dev:inspect`). It reads
+                  nothing from the providers above it; it sits inside them only
+                  so it is the last thing painted. See app/_dev-inspector/. */}
+              {process.env.NODE_ENV === "development" && <DevInspector />}
             </JobsProvider>
           </AuthProvider>
         </AnnouncerProvider>

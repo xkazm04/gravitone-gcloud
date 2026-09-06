@@ -6,7 +6,7 @@
 
 import { ChainConnectorChip, ConnectorChip } from "../Chips";
 import { NOTEBOOK } from "../notebook";
-import { H, chainLink } from "./H";
+import { H, chainLink, sectionRenders } from "./H";
 
 export default function ArgumentSections() {
   const n = NOTEBOOK;
@@ -122,7 +122,7 @@ export default function ArgumentSections() {
           may be several and may each need attributing. `string` is the legacy
           form the run-1 fixture carries — the typed CounterPosition form
           renders its holder. */}
-      {n.counterPositions.length > 0 && (
+      {sectionRenders(n, "counters") && (
         <section className="space-y-2">
           <H id="counters">counter-positions — held against the verdict</H>
           <ul className="space-y-2">

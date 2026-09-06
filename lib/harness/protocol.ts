@@ -108,7 +108,7 @@ export interface HarnessControl {
    * "Start this account from nothing."
    *
    * Delegates to `evictIdentity` — the product's OWN one-owner wipe across the
-   * four stores plus the seeded flags and the job tray (lib/identityEviction.ts)
+   * five stores plus the seeded flags and the job tray (lib/identityEviction.ts)
    * — rather than reimplementing a teardown that would drift from it. State
    * reset between tests is how independence is bought in a serial lane; see the
    * isolation-lanes technique.

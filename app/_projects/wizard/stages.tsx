@@ -82,9 +82,14 @@ export function templateCards(discipline: Discipline): DeckCardSpec[] {
       // Free form's range is what the input ACCEPTS, not a measured craft band
       // (lib/projects.ts says so at the catalogue) — the chip must not claim
       // a measurement the library never made.
+      // And the promotional bands are SOURCED, not measured: lib/projects.ts
+      // says their corpus is n=0 in this repo, so the chip may not say
+      // "measured" for them either (uat 2026-09-05, MA-L1-4).
       t.id === "free-form"
         ? { label: `${t.range[0]}–${t.range[1]}s accepted`, tone: "neutral" as const }
-        : { label: `${t.range[0]}–${t.range[1]}s measured`, tone: "cyan" as const },
+        : discipline === "trailer"
+          ? { label: `${t.range[0]}–${t.range[1]}s sourced · n=0 here`, tone: "amber" as const }
+          : { label: `${t.range[0]}–${t.range[1]}s measured`, tone: "cyan" as const },
       { label: `target ${t.defaultS}s`, tone: "neutral" as const },
     ],
     art: { kind: "gradient", tone: TEMPLATE_TONE[t.id], manifestKey: `template-${t.id}` },
@@ -133,14 +138,19 @@ export function styleCards(themes: Theme[]): DeckCardSpec[] {
  *  committed render of the canonical subject. Picking one does not reference
  *  an existing theme: the wizard MINTS a locked theme from it at create, with
  *  that render as the approved proof — the card's footnote says so. */
-export function presetCards(presets: Preset[]): DeckCardSpec[] {
+export function presetCards(presets: Preset[], borrowed = false): DeckCardSpec[] {
   return presets.map((p) => ({
     id: presetCardId(p),
     eyebrow: "preset",
     title: p.name,
     body: p.line,
     chips: [
-      { label: DISCIPLINE_LABEL[p.discipline].toLowerCase(), tone: "violet" as const },
+      // Borrowed = offered to a discipline it was not written for (the wizard
+      // falls back to every preset when none fits). The chip says so rather
+      // than tagging the card with the project's discipline.
+      borrowed
+        ? { label: `written for ${DISCIPLINE_LABEL[p.discipline].toLowerCase()} · fits any`, tone: "amber" as const }
+        : { label: DISCIPLINE_LABEL[p.discipline].toLowerCase(), tone: "violet" as const },
       { label: `carries ${p.elements.slice(0, 3).join(" · ")}`, tone: "neutral" as const },
     ],
     art: {
@@ -236,7 +246,9 @@ export function NameStage({
           // its range is only what the input accepts.
           discipline === "free"
             ? "Nothing was measured for a free-form video. There is no craft band here; the studio only keeps time."
-            : `${tpl.label} was measured at ${tpl.range[0]}–${tpl.range[1]}s. Past that band the craft rules stop applying.`
+            : discipline === "trailer"
+              ? `${tpl.label}'s band is ${tpl.range[0]}–${tpl.range[1]}s, sourced from the craft library — nothing was measured for it in this studio yet (n=0).`
+              : `${tpl.label} was measured at ${tpl.range[0]}–${tpl.range[1]}s. Past that band the craft rules stop applying.`
         }
       >
         <NumberInput
