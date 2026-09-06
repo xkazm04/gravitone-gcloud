@@ -47,11 +47,18 @@ export default function Deck({
   busy = false,
   notice,
   exit,
+  onBack,
 }: {
   eyebrow?: React.ReactNode;
   stages: DeckStageDef[];
   active: number;
   onNavigate: (index: number) => void;
+  /** What the Back control does, when stepping back is more than `active - 1`.
+   *  A consumer that mirrors its stages into session history (CreateWizard)
+   *  passes `history.back` here so ONE gesture means one thing: the in-page
+   *  Back and the browser's own Back walk the same entries in the same order.
+   *  Unset = the plain default, navigate one stage left. */
+  onBack?: () => void;
   /** The last stage's primary action — "Create & open". */
   finishLabel: string;
   onFinish: () => void;
@@ -120,8 +127,12 @@ export default function Deck({
       {/* the question */}
       <header className="mt-8">
         <h1 className="font-instrument text-3xl text-white sm:text-4xl">{stage.headline}</h1>
+        {/* text-content, never smaller. The stage's supporting line is PROSE the
+            user reads to answer the question above it — globals.css's scale puts
+            that on the content rung, and it sat on `text-sm` (the label floor,
+            for chips and stamps) until 2026-09-06. A subtitle is not a label. */}
         {stage.sub && (
-          <p className="font-hanken mt-2 max-w-2xl text-sm leading-relaxed text-slate-400">
+          <p className="font-hanken mt-2 max-w-2xl text-content leading-relaxed text-slate-400">
             {stage.sub}
           </p>
         )}
@@ -141,7 +152,7 @@ export default function Deck({
             variant="ghost"
             className="cursor-pointer px-4 py-2"
             disabled={active === 0 || busy}
-            onClick={() => onNavigate(active - 1)}
+            onClick={() => (onBack ? onBack() : onNavigate(active - 1))}
           >
             Back
           </Button>

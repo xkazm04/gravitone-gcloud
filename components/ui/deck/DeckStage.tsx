@@ -28,11 +28,15 @@ export default function DeckStage({
   cards,
   pickedId,
   onPick,
+  noUnpick = false,
   renderCard,
 }: {
   cards: DeckCardSpec[];
   pickedId: string | null;
   onPick: (id: string | null) => void;
+  /** Forwarded to every card: a click is always a choice, never a clear. Set
+   *  it on a stage whose pick moves the surface on (DeckCard#noUnpick). */
+  noUnpick?: boolean;
   /** Replaces the whole tile for a card — WP3's duel view slots in here. The
    *  override owns its own target and entrance; `dealDelay` is the stagger it
    *  should honour to stay in the deal. */
@@ -61,7 +65,13 @@ export default function DeckStage({
             {renderCard ? (
               renderCard({ spec, picked, dealDelay })
             ) : (
-              <DeckCard spec={spec} picked={picked} onPick={onPick} dealDelay={dealDelay} />
+              <DeckCard
+                spec={spec}
+                picked={picked}
+                onPick={onPick}
+                dealDelay={dealDelay}
+                noUnpick={noUnpick}
+              />
             )}
           </li>
         );

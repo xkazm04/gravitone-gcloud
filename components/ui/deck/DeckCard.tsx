@@ -60,6 +60,17 @@ export interface DeckCardSpec {
    *  discipline and template stages (2026-08-30); surfaces still in the
    *  bake-off leave this unset and follow the switcher. */
   artVariant?: import("./useArtVariant").ArtVariant;
+  /** HERO — the deciding card (operator verdict 2026-09-06, the create wizard's
+   *  three pick stages). Where `dense` is for cards you READ, hero is for cards
+   *  you CHOOSE BETWEEN: the illustration and one large centred title, and
+   *  nothing else. Eyebrow, body, chips, risk and footnote are not laid out at
+   *  all — on a stage whose headline already asks the question, a kicker
+   *  reading "discipline" over a card in the discipline deck is the label of a
+   *  label, and a template count is a number nobody chooses on. The supporting
+   *  facts live one level up, in the stage's own sub-line.
+   *
+   *  Hero cards are normally dealt with `noUnpick` (below): the card IS the
+   *  decision, so clicking it commits and the consumer moves on. */
   /** DENSE — the reading card (operator verdict 2026-08-30 for research and
    *  the later phases): these cards carry rich generated titles and metadata,
    *  so the showcase shape is wrong for them. Dense drops the art zone (the
@@ -68,7 +79,7 @@ export interface DeckCardSpec {
    *  serif, and folds `detail` behind an expand: the title carries the idea,
    *  the reader opens the rest only when not yet certain. The front keeps the
    *  decision-critical minimum — state chips and the honest-downside line. */
-  density?: "showcase" | "dense";
+  density?: "showcase" | "dense" | "hero";
   /** The output-type icon (dense cards): rendered small beside the eyebrow and
    *  large as the card's background watermark. */
   icon?: React.ReactNode;
@@ -105,6 +116,7 @@ export default function DeckCard({
   picked,
   onPick,
   dealDelay = 0,
+  noUnpick = false,
   children,
 }: {
   spec: DeckCardSpec;
@@ -113,6 +125,12 @@ export default function DeckCard({
   onPick: (id: string | null) => void;
   /** Seconds. DeckStage staggers this by distance from the stage centre. */
   dealDelay?: number;
+  /** Suppress the unpick half of the toggle: every click reports THIS card's
+   *  id, never null. For a deck whose pick advances the surface — the create
+   *  wizard's stages — the toggle is a trap rather than a shortcut: coming
+   *  back to a stage lands on the card you already chose, and the one gesture
+   *  that should re-confirm it would instead clear it and go nowhere. */
+  noUnpick?: boolean;
   /** Replaces the default content block below the art zone. */
   children?: React.ReactNode;
 }) {
@@ -120,6 +138,7 @@ export default function DeckCard({
   const pickable = spec.pickable !== false;
   const interactive = !spec.disabled && pickable;
   const dense = spec.density === "dense";
+  const hero = spec.density === "hero";
   const [open, setOpen] = useState(false);
 
   const chipRow = spec.chips && spec.chips.length > 0 && (
@@ -182,8 +201,13 @@ export default function DeckCard({
           )}
         </>
       ) : (
-        /* art zone — the top ~40% */
-        <div className="relative h-28 shrink-0 overflow-hidden sm:h-32">
+        /* art zone — the top ~40%, and taller on a hero card, where the
+           illustration and the title are the whole of the card */
+        <div
+          className={`relative shrink-0 overflow-hidden ${
+            hero ? "h-40 sm:h-48" : "h-28 sm:h-32"
+          }`}
+        >
           <DeckArtView art={spec.art} title={spec.title} pinned={spec.artVariant} />
           {/* sheen — sweeps in on hover; a colour transition, which the CSS
               reduced-motion blanket already switches off */}
@@ -203,7 +227,17 @@ export default function DeckCard({
       {picked && <div aria-hidden className="pointer-events-none absolute inset-0 bg-cyan-400/[0.05]" />}
 
       {children ??
-        (dense ? (
+        (hero ? (
+          /* The whole card, below the art: one large centred title and nothing
+             else. `grow` + centring is what makes it read as the middle of the
+             card rather than a caption under a picture — cards in a row keep
+             equal height, so short and long titles both sit on the same line. */
+          <div className="relative flex grow items-center justify-center p-5 text-center">
+            <h3 className="font-hanken text-2xl leading-tight font-semibold text-slate-100 transition-colors duration-200 ease-linear group-hover:text-white">
+              {spec.title}
+            </h3>
+          </div>
+        ) : dense ? (
           <div className="relative flex grow flex-col gap-2 p-4">
             <div className="flex items-center gap-1.5">
               {spec.icon && (
@@ -263,7 +297,14 @@ export default function DeckCard({
                 {spec.eyebrow}
               </span>
             )}
-            <h3 className="font-instrument text-xl leading-snug text-slate-100">{spec.title}</h3>
+            {/* The body face, not the landing serif. font-instrument is the
+                display voice of the marketing surfaces; on a working card it
+                poses where it should scan, and it was carrying every showcase
+                title in the app (operator verdict 2026-09-06). The serif stays
+                where it belongs — headlines and the landing page. */}
+            <h3 className="font-hanken text-xl leading-snug font-semibold text-slate-100">
+              {spec.title}
+            </h3>
             {spec.body && (
               <p className="font-hanken line-clamp-3 text-content leading-relaxed text-slate-400 transition-colors duration-200 ease-linear group-hover:text-slate-200">
                 {spec.body}
@@ -284,9 +325,9 @@ export default function DeckCard({
         <button
           type="button"
           disabled={spec.disabled}
-          onClick={() => onPick(picked ? null : spec.id)}
+          onClick={() => onPick(picked && !noUnpick ? null : spec.id)}
           aria-pressed={picked}
-          aria-label={`${picked ? "Unpick" : "Pick"}: ${spec.title}`}
+          aria-label={`${picked && !noUnpick ? "Unpick" : "Pick"}: ${spec.title}`}
           className="absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed"
         />
       )}

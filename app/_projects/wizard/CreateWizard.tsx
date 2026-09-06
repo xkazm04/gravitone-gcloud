@@ -22,7 +22,7 @@
 // over a write that did not land (the dialog-closes-on-success rule, held here
 // by the same busy latch).
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 
@@ -77,6 +77,11 @@ async function proofFromThumb(p: Preset): Promise<Proof> {
   };
 }
 
+/** Stage order, named — the pick handlers advance by name rather than by an
+ *  index literal that reads as a magic number and silently rots when a stage
+ *  is inserted. Kept in step with the `stages` array below. */
+const STAGE = { discipline: 0, template: 1, style: 2, name: 3 } as const;
+
 export default function CreateWizard() {
   const { user } = useAuth();
   const router = useRouter();
@@ -100,6 +105,40 @@ export default function CreateWizard() {
   const [ownDuration, setOwnDuration] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // ── The stages ARE history entries ───────────────────────────────────────
+  //
+  // The wizard is four screens behind one URL, so the browser's Back — the
+  // hardware button, the mouse's fourth button, the trackpad swipe — used to
+  // leave /projects/new entirely from stage 4, discarding three answered
+  // questions. Back means "undo my last step" to everyone who is not reading
+  // the React state.
+  //
+  // So every move between stages pushes an entry, and BOTH backs pop it: the
+  // deck's own Back control calls history.back() (Deck#onBack) rather than
+  // navigating itself, which is what keeps the two gestures identical instead
+  // of merely similar — an in-page Back that pushed a forward entry would be
+  // undone by the browser Back that follows it.
+  //
+  // `...history.state` is not decoration: Next's router keeps its own tree in
+  // there and a bare pushState would strip it, breaking the route-level back
+  // that carries the user out of the wizard at stage 1.
+  const goToStage = useCallback((index: number) => {
+    setActive(index);
+    window.history.pushState({ ...window.history.state, gtDeckStage: index }, "");
+  }, []);
+
+  useEffect(() => {
+    // Stamp the entry the wizard was opened on, so popping back to it is
+    // stage 0 rather than a state with no stage in it at all.
+    window.history.replaceState({ ...window.history.state, gtDeckStage: 0 }, "");
+    const onPop = (e: PopStateEvent) => {
+      const at = (e.state as { gtDeckStage?: number } | null)?.gtDeckStage;
+      if (typeof at === "number") setActive(at);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const fittingThemes = useMemo(
     () => (discipline ? lockedThemes.filter((t) => styleFits(t, discipline)) : lockedThemes),
     [lockedThemes, discipline],
@@ -114,7 +153,9 @@ export default function CreateWizard() {
   // link to the library — where commissioning a style needs image generation.
   // Measured: 5 of 10 Characters could not create their project. So when no
   // preset is written for the discipline, the stage offers ALL presets and says
-  // on every card that they were written for explainers; picking one mints a
+  // in its sub-line that they were written for explainers (it was a chip on
+  // every card until the hero-card pass of 2026-09-06 — same disclosure, said
+  // once for the hand instead of six times); picking one mints a
   // theme UNTAGGED (`discipline: undefined` = fits every discipline, the rule
   // lib/themes.ts#styleFits already reads) rather than one tagged with a
   // discipline the block was never written for. A fitted style can still be
@@ -134,10 +175,19 @@ export default function CreateWizard() {
   // chosen style that no longer fits is dropped. The one deliberate difference
   // is stated in the header comment — a non-fitting template is cleared (the
   // stage reopens) instead of moved to first-of-discipline.
+  // Picking IS the Next click. Each of the three card stages asks exactly one
+  // question, and the card the user clicked is the whole answer — making them
+  // then find a Next button to confirm what they just said is a second
+  // gesture for one decision. The stage rail and Back stay where they are, so
+  // a change of mind is one click backward.
+  //
+  // (The name stage keeps its explicit CTA: a form is not answered by a click,
+  // and its finish WRITES.)
   const pickDiscipline = (id: string | null) => {
     const next = id as Discipline | null;
     setDiscipline(next);
     if (!next) return;
+    goToStage(STAGE.template);
     if (template && !templatesFor(next).some((t) => t.id === template)) {
       setTemplate(null);
       if (!ownDuration) setTargetS(0);
@@ -157,7 +207,14 @@ export default function CreateWizard() {
   const pickTemplate = (id: string | null) => {
     const next = id as TemplateId | null;
     setTemplate(next);
-    if (next && !ownDuration) setTargetS(templateOf(next).defaultS);
+    if (!next) return;
+    if (!ownDuration) setTargetS(templateOf(next).defaultS);
+    goToStage(STAGE.style);
+  };
+
+  const pickStyle = (id: string | null) => {
+    setStyleId(id);
+    if (id) goToStage(STAGE.name);
   };
 
   const finish = async () => {
@@ -238,7 +295,12 @@ export default function CreateWizard() {
       summary: discipline ? DISCIPLINE_LABEL[discipline] : undefined,
       blockedHint: "pick a card to continue",
       content: (
-        <DeckStage cards={disciplineCards()} pickedId={discipline} onPick={pickDiscipline} />
+        <DeckStage
+          cards={disciplineCards()}
+          pickedId={discipline}
+          onPick={pickDiscipline}
+          noUnpick
+        />
       ),
     },
     {
@@ -250,7 +312,12 @@ export default function CreateWizard() {
       summary: template ? templateOf(template).label : undefined,
       blockedHint: "pick a format to continue",
       content: discipline ? (
-        <DeckStage cards={templateCards(discipline)} pickedId={template} onPick={pickTemplate} />
+        <DeckStage
+          cards={templateCards(discipline)}
+          pickedId={template}
+          onPick={pickTemplate}
+          noUnpick
+        />
       ) : null,
     },
     {
@@ -273,9 +340,10 @@ export default function CreateWizard() {
           <EmptyStyleDeck discipline={discipline} />
         ) : (
           <DeckStage
-            cards={[...styleCards(fittingThemes), ...presetCards(fittingPresets, borrowedPresets)]}
+            cards={[...styleCards(fittingThemes), ...presetCards(fittingPresets)]}
             pickedId={styleId}
-            onPick={setStyleId}
+            onPick={pickStyle}
+            noUnpick
           />
         ),
     },
@@ -317,7 +385,8 @@ export default function CreateWizard() {
           eyebrow={<Eyebrow>create</Eyebrow>}
           stages={stages}
           active={active}
-          onNavigate={setActive}
+          onNavigate={goToStage}
+          onBack={() => window.history.back()}
           finishLabel="Create & open"
           onFinish={() => void finish()}
           busy={busy}

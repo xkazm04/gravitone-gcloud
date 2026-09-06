@@ -11,14 +11,13 @@ import { Field, NumberInput, TextArea, TextInput } from "@/components/ui/Field";
 import {
   DISCIPLINES,
   DISCIPLINE_LABEL,
-  DISCIPLINE_NOTE,
   templateOf,
   templatesFor,
   type Discipline,
   type TemplateId,
 } from "@/lib/projects";
 import { thumbSrc, type Preset } from "@/app/library/presets";
-import { approvedProofs, ORIGIN_WORD, type Theme } from "@/lib/themes";
+import { approvedProofs, type Theme } from "@/lib/themes";
 
 /** Card ids must not collide with theme ids on the one pick surface they
  *  share; the prefix is how the wizard tells a minted-on-create preset from a
@@ -52,18 +51,28 @@ const TEMPLATE_TONE: Record<TemplateId, string> = {
 
 /* ── Card builders ────────────────────────────────────────────────────────── */
 
+// HERO CARDS — the illustration and the name, nothing else (operator verdict
+// 2026-09-06, DeckCard#density). Every pick stage in this wizard is a choice
+// between three to seven whole things, and the card was arguing a case nobody
+// asked it to make: an eyebrow repeating the stage's own label, a paragraph of
+// pitch, and chips counting things. What each card needs to carry is which
+// thing it is; what the stage needs to say, the stage's `sub` says once.
+//
+// WHERE THE STRIPPED FACTS WENT — none of them were the card's only home:
+//  · DISCIPLINE_NOTE / template notes / a style's technique · finish — prose
+//    the stage sub-line frames and the studio shows in full afterwards;
+//  · the "N templates" count — a number that describes the NEXT stage, which
+//    the user is one click from seeing in full;
+//  · the runtime band chips, including trailer's honest `sourced · n=0 here`
+//    (uat 2026-09-05, MA-L1-4) — restated in full on the name stage's runtime
+//    hint (NameStage below), which is where the number is actually chosen and
+//    therefore where the claim has to be true. Deleting the chip did NOT
+//    delete the disclosure; check NameStage before moving it again.
 export function disciplineCards(): DeckCardSpec[] {
   return DISCIPLINES.map((d) => ({
     id: d,
-    eyebrow: "discipline",
     title: DISCIPLINE_LABEL[d],
-    body: DISCIPLINE_NOTE[d],
-    chips: [
-      {
-        label: `${templatesFor(d).length} template${templatesFor(d).length === 1 ? "" : "s"}`,
-        tone: "neutral",
-      },
-    ],
+    density: "hero" as const,
     art: { kind: "gradient", tone: DISCIPLINE_TONE[d], manifestKey: `discipline-${d}` },
     // The bake-off verdict for this stage (2026-08-30): emblem won for the
     // project-type and duration cards. Pinned here; the style stage keeps its
@@ -75,26 +84,12 @@ export function disciplineCards(): DeckCardSpec[] {
 export function templateCards(discipline: Discipline): DeckCardSpec[] {
   return templatesFor(discipline).map((t) => ({
     id: t.id,
-    eyebrow: DISCIPLINE_LABEL[discipline].toLowerCase(),
     title: t.label,
-    body: t.note,
-    chips: [
-      // Free form's range is what the input ACCEPTS, not a measured craft band
-      // (lib/projects.ts says so at the catalogue) — the chip must not claim
-      // a measurement the library never made.
-      // And the promotional bands are SOURCED, not measured: lib/projects.ts
-      // says their corpus is n=0 in this repo, so the chip may not say
-      // "measured" for them either (uat 2026-09-05, MA-L1-4).
-      t.id === "free-form"
-        ? { label: `${t.range[0]}–${t.range[1]}s accepted`, tone: "neutral" as const }
-        : discipline === "trailer"
-          ? { label: `${t.range[0]}–${t.range[1]}s sourced · n=0 here`, tone: "amber" as const }
-          : { label: `${t.range[0]}–${t.range[1]}s measured`, tone: "cyan" as const },
-      { label: `target ${t.defaultS}s`, tone: "neutral" as const },
-    ],
+    density: "hero" as const,
     art: { kind: "gradient", tone: TEMPLATE_TONE[t.id], manifestKey: `template-${t.id}` },
     // Same verdict as the discipline stage — the template cards ARE the
-    // duration selection (each carries its measured band and target).
+    // duration selection (the band and target they set are stated where the
+    // number is edited, on the name stage's runtime hint).
     artVariant: "emblem",
   }));
 }
@@ -108,18 +103,10 @@ export function styleCards(themes: Theme[]): DeckCardSpec[] {
     // NOT (lib/themes.ts) and must not become its face here.
     const proof = approvedProofs(t)[0];
     const hexes = t.block.palette.map((c) => c.hex);
-    const approved = approvedProofs(t).length;
     return {
       id: t.id,
-      eyebrow: ORIGIN_WORD[t.origin],
       title: t.name,
-      body: `${t.block.technique} — ${t.block.finish}`,
-      chips: [
-        t.discipline
-          ? { label: DISCIPLINE_LABEL[t.discipline].toLowerCase(), tone: "violet" as const }
-          : { label: "fits every discipline", tone: "neutral" as const },
-        { label: `${approved} proof${approved === 1 ? "" : "s"} approved`, tone: "emerald" as const },
-      ],
+      density: "hero" as const,
       art: proof
         ? {
             kind: "image" as const,
@@ -128,7 +115,6 @@ export function styleCards(themes: Theme[]): DeckCardSpec[] {
             fallback: { hexes },
           }
         : { kind: "gradient" as const, tone: "", hexes },
-      footnote: t.lockedAt ? `locked ${new Date(t.lockedAt).toLocaleDateString()}` : undefined,
     };
   });
 }
@@ -137,29 +123,25 @@ export function styleCards(themes: Theme[]): DeckCardSpec[] {
  *  blocks off the shelf (app/library/presets.ts), each faced by its own
  *  committed render of the canonical subject. Picking one does not reference
  *  an existing theme: the wizard MINTS a locked theme from it at create, with
- *  that render as the approved proof — the card's footnote says so. */
-export function presetCards(presets: Preset[], borrowed = false): DeckCardSpec[] {
+ *  that render as the approved proof — the style stage's sub-line says so. */
+/* BORROWED, on a hero card. The `borrowed` case — a preset offered to a
+ * discipline it was not written for — used to be an amber chip on every card.
+ * The chips are gone, and the disclosure is NOT: the stage's own sub-line
+ * (CreateWizard#stages, the style stage) already says it in full and only when
+ * it is true, naming the discipline and what picking one means. That is the
+ * better home for it — it is a fact about the whole hand, not about one card,
+ * and it was repeated six times. */
+export function presetCards(presets: Preset[]): DeckCardSpec[] {
   return presets.map((p) => ({
     id: presetCardId(p),
-    eyebrow: "preset",
     title: p.name,
-    body: p.line,
-    chips: [
-      // Borrowed = offered to a discipline it was not written for (the wizard
-      // falls back to every preset when none fits). The chip says so rather
-      // than tagging the card with the project's discipline.
-      borrowed
-        ? { label: `written for ${DISCIPLINE_LABEL[p.discipline].toLowerCase()} · fits any`, tone: "amber" as const }
-        : { label: DISCIPLINE_LABEL[p.discipline].toLowerCase(), tone: "violet" as const },
-      { label: `carries ${p.elements.slice(0, 3).join(" · ")}`, tone: "neutral" as const },
-    ],
+    density: "hero" as const,
     art: {
       kind: "image" as const,
       src: thumbSrc(p.id),
       alt: `${p.name} rendered on the canonical subject`,
       fallback: { hexes: p.block.palette.map((c) => c.hex) },
     },
-    footnote: "locks as this project's style when you create",
   }));
 }
 
@@ -171,7 +153,7 @@ export function EmptyStyleDeck({ discipline }: { discipline: Discipline }) {
       <p className="font-instrument text-2xl text-amber-100">
         No locked style fits {DISCIPLINE_LABEL[discipline].toLowerCase()} yet
       </p>
-      <p className="font-hanken mt-3 text-sm leading-relaxed text-amber-100/80">
+      <p className="font-hanken mt-3 text-content leading-relaxed text-amber-100/80">
         Every frame a project renders is built on a locked visual identity, and this account has
         none that fits. Styles are commissioned in the library — a style from a brief fits every
         discipline. Your picks here are kept while you go back a stage.
