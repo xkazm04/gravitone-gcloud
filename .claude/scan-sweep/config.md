@@ -174,3 +174,11 @@ before matching, the population walked off the filesystem rather than listed, an
   connection). Two cheap greps that paid: `grep -c 'await openDb()'` per file against
   `db?.close()`, and `grep -rn 'let alive = true'` against the three sites a header
   claimed were the only exemptions — it was eight.
+- **2026-09-06 — first Lane B wave: 6 Opus workers, 8 cards, 8 `better`, 0 thrown, 0 fp.**
+  Ledger in `.claude/scan-history/ab.jsonl`. Two director lessons went straight into the
+  contract: never `npm ci` through the `node_modules` junction (it deletes the base
+  checkout's), and unlink the junction before `git worktree remove` (it deletes through it
+  too — the director's own gate run read three reds that were a missing compiler). One
+  pre-existing red on main surfaced and is NOT the wave's: `tests/live` "a background run
+  dispatched and forgotten actually lands" times out at 2.1m on main without any worker
+  branch, at sibling commit 024cba6. It is a finding for the next round, not a merge blocker.
