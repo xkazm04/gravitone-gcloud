@@ -145,6 +145,51 @@
 #                        source saying so.
 #                        Changes the answer: nothing; this stays blocking.
 #
+#   python               BLOCKING, and it is its OWN JOB — see below. Input: this
+#                        repo's own .py sources under pipeline/ plus a pinned
+#                        CPython from `actions/setup-python`. THERE IS NO
+#                        DEPENDENCY STEP, and that absence is what earns the
+#                        blocking grade rather than an advisory one: a job that
+#                        had to `pip install` from a public index would take an
+#                        input this commit does not pin — no lockfile, no
+#                        integrity hashes, nothing with the shape `npm ci` has —
+#                        and could hand a different verdict to the same commit
+#                        next month. `pipeline/foundry/selftest.py` is
+#                        STDLIB-ONLY on purpose (its own docstring says so and
+#                        why), verified 2026-09-06 by re-running it with PIL,
+#                        numpy, requests, httpx, cv2 and torch blocked at
+#                        `__import__` — 5 cases green, exit 0. Pillow and numpy
+#                        are imported INSIDE crop_letterbox and publish, and the
+#                        ../vlm-probe modules it pulls in have no module-level
+#                        third-party import. So its input shape is exactly
+#                        `typecheck`'s — this tree's sources plus a pinned
+#                        interpreter — and it may block. No GPU, no ComfyUI, no
+#                        Ollama, no network: every vendor call is faked at the
+#                        seam. Runs in under a second.
+#
+#                        WHY THIS EXISTS AT ALL. Until this job, no gate in the
+#                        repository executed a line of Python, while 33 tracked
+#                        .py files — ~965 lines under pipeline/foundry/ alone —
+#                        ran for hours on one card and then wrote a verdict. Both
+#                        test lanes are TypeScript, so an edit under
+#                        pipeline/foundry/ could take `npm test` green, take this
+#                        workflow green, and merge with nothing having run it.
+#                        The first three cases in selftest.py were each a total
+#                        loss of a multi-hour run, and two of them falsified the
+#                        directory README's two headline promises.
+#
+#                        WHY A SEPARATE JOB. It needs a different toolchain —
+#                        `setup-python`, and no `npm ci` at all — so folding it
+#                        into `gates` would make every Python check wait on a
+#                        Node install it does not use, and would put a step into
+#                        that job which `npm run verify` cannot mirror without
+#                        becoming polyglot. Same reasoning as `live`'s, by a
+#                        different door.
+#                        Changes the answer: a `pip install` step, which would
+#                        drop this to advisory unless what it installs is pinned
+#                        by hash in a committed requirements file. Bumping the
+#                        interpreter is a gates.yml edit, which is the point.
+#
 # NO SUPPLY-CHAIN JOB IS WIRED, AND THAT IS THE HONEST ANSWER, NOT AN OVERSIGHT.
 # `npm audit` reads an advisory feed that moves without this repository: an entry
 # published overnight against a transitive dependency would wall the next
@@ -163,6 +208,12 @@
 # `npm run lint:ratchet`, `npm run check:manifest`, `npm test`, `npm run build`,
 # `npm run check:bundle`, `npm run test:live`).
 # There is no second, CI-only definition of any check to drift against the local one.
+#
+# The `python` job is the one entry that names no npm script, and it does not
+# break the rule: `python pipeline/foundry/selftest.py` IS the whole definition —
+# one file, no config, no rule set, no flags — and it is character-for-character
+# what a developer types locally. Wrapping it in an npm script would add the
+# second definition this paragraph exists to forbid, not remove one.
 # ==============================================================================
 
 name: gates
@@ -337,3 +388,44 @@ jobs:
           path: test-results/
           retention-days: 7
           if-no-files-found: ignore
+
+  # ============================================================================
+  # THE PYTHON LANE — the repository's second language, executed at last.
+  #
+  # BLOCKING; graded in the header above. Its own job because it needs a
+  # different toolchain (setup-python, no npm ci) and because `npm run verify`,
+  # which mirrors the `gates` job step for step, is an npm chain and stays one.
+  #
+  # It runs INDEPENDENTLY of `gates`, for the same reason `live` does: a Python
+  # break and a typecheck break are different findings and a reader wants both on
+  # the same run rather than the second hidden behind the first.
+  # ============================================================================
+  python:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # PINNED, and it is the only input to this job that is not a committed file
+      # in this tree. No `cache:` — there is nothing to cache, because there is
+      # no dependency step; see the next one.
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # NO `pip install`, DELIBERATELY, and it is the whole reason this job may
+      # block rather than advise. `pipeline/foundry/selftest.py` is stdlib-only
+      # by construction — its docstring states the constraint and the reason —
+      # so this job's inputs are this commit's sources plus the interpreter
+      # pinned above, and nothing outside the tree can move the verdict.
+      #
+      # If a case is ever added that needs Pillow, numpy, torch or a card, it
+      # does not belong in selftest.py; it belongs in a plan under
+      # pipeline/foundry/plans/. Adding a dependency step here drops this job to
+      # advisory unless what it installs is pinned by hash in a committed
+      # requirements file.
+      #
+      # BLOCKING. Exits non-zero on any failing check, naming each one.
+      - name: foundry selftest (5 cases, no GPU, no network)
+        run: python pipeline/foundry/selftest.py
