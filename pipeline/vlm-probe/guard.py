@@ -25,6 +25,7 @@ import argparse
 import json
 import os
 import subprocess
+from pathlib import Path
 import sys
 import time
 import urllib.request
@@ -188,12 +189,28 @@ def start_comfy(wait=180):
             if comfy_up():
                 return True
         return False
+    # Capture the engine's own output. Recorded 2026-09-01 and unapplied until
+    # 2026-09-06: the server was started hidden with nothing redirected, so when
+    # it vanished mid-queue the runner could only say "read its stderr" about a
+    # stream that was never written anywhere. A vanish race costs a unit either
+    # way; being unable to say WHY costs every future one too.
+    redirect = ""
+    try:
+        log_dir = Path(__file__).parent.parent / "foundry" / "logs"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        _stamp = time.strftime("%Y%m%d-%H%M%S")
+        _out = log_dir / f"comfy-{_stamp}.log"
+        redirect = (f"-RedirectStandardOutput '{_out}' "
+                    f"-RedirectStandardError '{_out}.err' ")
+        print(f"  guard: comfy output -> {_out}")
+    except OSError:
+        pass                      # a log we cannot open must not block a restart
     exe = f"{COMFY_DIR}\\venv\\Scripts\\python.exe"
     subprocess.run(
         ["powershell", "-NoProfile", "-Command",
          f"Start-Process -FilePath '{exe}' "
          f"-ArgumentList 'main.py','--disable-pinned-memory','--disable-dynamic-vram' "
-         f"-WorkingDirectory '{COMFY_DIR}' -WindowStyle Hidden"],
+         f"-WorkingDirectory '{COMFY_DIR}' {redirect}-WindowStyle Hidden"],
         capture_output=True, text=True)
     deadline = time.time() + wait
     while time.time() < deadline:

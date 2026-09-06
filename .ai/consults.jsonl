@@ -81,3 +81,4 @@
 {"ts": "2026-09-05T20:46:04+00:00", "bundle": "software-engineering", "subjects": ["quality-gates", "eval-harness"], "techniques": ["gate-liveness", "blocking-by-input-determinism"], "deviations": 1}
 {"ts": "2026-09-06T12:45:00Z", "bundle": "software-engineering", "subjects": ["test-harness", "quality-gates"], "techniques": ["live-app-harness", "gate-sees-target", "gate-liveness"], "deviations": 3}
 {"ts": "2026-09-06T14:20:00Z", "bundle": "software-engineering", "subjects": ["test-harness", "quality-gates"], "techniques": ["gate-sees-target", "gate-liveness"], "deviations": 2}
+{"ts": "2026-09-06T18:35:00Z", "bundle": "media-generation", "subjects": ["character-identity-continuity"], "techniques": ["reference-shows-only-invariants"], "deviations": 0}
