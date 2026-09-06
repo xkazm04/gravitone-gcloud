@@ -103,3 +103,24 @@ before matching, the population walked off the filesystem rather than listed, an
   written regex and produced a syntactically broken test file. Use the Edit/Write tools for
   any content containing backslashes — the same rule §7.6 already states for pattern
   authoring — and reserve heredoc Python for pure data moves.
+- **2026-09-06 — the outbox is at 191/200 lines and the NEXT round cannot record itself.**
+  Three rounds this session took it 82 → 120 → 156 → 191, ~36 lines each, almost all of them
+  per-lens coverage nodes. Findings are fine (12 of 30); the LINE budget binds first, and the
+  overlay's 2026-08-29 entry records five earlier rounds silently dropping output while the
+  ledger recorded the context as swept. **Ingest the file in the Personas app before the next
+  round** — it deletes it, and nothing in this repo can. If it is still full, emit the findings
+  and the round node only, skip the per-lens coverage nodes, and mark the snapshot degraded.
+- **2026-09-06 — the strongest parity leads in this repo now fail, and that is the result.**
+  Round 3 hunted the §4.6 pair shape hard and the best candidate — a second run clock in the
+  newer `guided/` face — turned out to be a file that explicitly refuses to fork it and cites
+  the bug. What DID yield, four times out of four, was a different tell: **a docstring making a
+  promise the code does not keep.** `woundsOf` says "three beats away" and walks one hop;
+  the notice said "out of scope" and counted cuts; `standingOf` says a dangling id is REPORTED
+  and one branch did not; `revisionsOf` states a limit nobody had pinned. On a codebase whose
+  comments are this good, read the prose as a SPEC and diff it against the code — it is the
+  highest-yield instrument here, and it is what §4.6's grep battery misses.
+- **2026-09-06 — `cd` inside a Bash call persists and silently breaks later tool calls.**
+  A `cd app/_phases/research` early in the round made a later `npx playwright test tests/...`
+  report "No tests found" — which reads exactly like a broken spec file, not a wrong cwd. Use
+  absolute paths or a leading `cd /c/Users/mkdol/dolla/gravitone-gcloud &&` in every call that
+  runs a repo-root command.
