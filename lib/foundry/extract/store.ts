@@ -403,7 +403,7 @@ export async function commitExtractRun(id: string, verdictsIn?: ExtractVerdicts)
   await writeJsonAtomic(foundryFile("styles.json"), catalogue);
 
   run.status = "committed";
-  run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id) };
+  run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
   run.log.push({ at, msg: `committed: ${written.join(", ")} → styles.json` });
   await writeJsonAtomic(path.join(runDir(id), "run.json"), run);
   return { kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };

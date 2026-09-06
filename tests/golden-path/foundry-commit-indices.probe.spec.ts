@@ -217,3 +217,27 @@ test("commitRun: a retry after a half-finished commit writes N ledger rows, not 
     cleanup(run.id, "probe-none");
   }
 });
+
+/* ── The manifest must name the catalogue ids it produced ─────────────────── */
+
+test("commitExtractRun: a collided style's CATALOGUE id reaches the manifest, not just the response", async () => {
+  // The catalogue already holds `haze`, so the run's own `haze` is written as
+  // `haze-2` — the one case where the run-local id and the catalogue id differ.
+  writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [styleDef("haze")] }), "utf8");
+  const ex = extractRun(`probe-collide-${Date.now().toString(36)}`, "haze");
+  try {
+    const res = await commitExtractRun(ex, { haze: { verdict: "keep", at: new Date().toISOString() } });
+    expect(res.written).toEqual(["haze-2"]);
+    expect(readIndex<{ styles: StyleDef[] }>("styles.json").styles.map((s) => s.id)).toEqual(["haze", "haze-2"]);
+
+    // The response is transient. The manifest is what the Extract tab reads
+    // after a reload and what anything linking a run to the catalogue reads
+    // forever, so the catalogue id has to be ON IT.
+    const m = JSON.parse(readFileSync(path.join(EXTRACT_ROOT, ex, "run.json"), "utf8")) as ExtractManifest;
+    console.log(`[foundry] extract commit: kept=${m.committed?.kept.join(",")} written=${m.committed?.written?.join(",")} catalogue=haze-2`);
+    expect(m.committed?.kept).toEqual(["haze"]);
+    expect(m.committed?.written).toEqual(["haze-2"]);
+  } finally {
+    cleanup("probe-none", ex);
+  }
+});
