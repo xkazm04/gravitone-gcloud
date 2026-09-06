@@ -4,15 +4,20 @@
 // does not contain it"), quality-gates / gate-sees-target.
 //
 // ─────────────────────────────────────────────────────────────────────────────
-// WHAT THIS GUARDS. Two seams exist in this repository so the gated product can
-// be driven at all:
+// WHAT THIS GUARDS. Three seams exist in this repository so the gated product
+// can be driven at all:
 //
 //   · lib/devAuth.ts — signs a fixture account in without Google.
 //   · components/ui/HarnessBridge.tsx — installs the live harness's control
 //     surface on `window`.
+//   · lib/apiAuth.ts `devOpen()` — lets a request with NO secret through the
+//     money routes' guard, so test automation can drive /api/imaging/* and
+//     /api/frames without a configured secret.
 //
-// Both are gated on the SAME two conditions, and neither may ever be reachable
-// in a shipped build. The half of that which can be proved from the emitted
+// All three are gated on the SAME two conditions, and none may ever be reachable
+// in a shipped build. The third was not in this file until 2026-09-06: the header
+// said "two seams", the truth table below evaluated two, and the one that opens
+// the routes that SPEND was a third copy of the rule nobody was evaluating. The half of that which can be proved from the emitted
 // bundle is proved there (pipeline/check-bundle.mjs, after `npm run build`,
 // which is where absence is a fact rather than a reading). This probe holds the
 // half that a bundle cannot show: that the two seams still state the same gate,
@@ -38,6 +43,7 @@ const read = (rel: string) => readFileSync(resolve(ROOT, rel), "utf8");
 const DEV_AUTH_TS = "lib/devAuth.ts";
 const BRIDGE_TSX = "components/ui/HarnessBridge.tsx";
 const PROTOCOL_TS = "lib/harness/protocol.ts";
+const API_AUTH_TS = "lib/apiAuth.ts";
 
 /** The env shapes a gate can meet. `undefined` is a variable that is simply not
  *  set, which is the ordinary `next dev` case and must be OFF. */
@@ -52,27 +58,40 @@ const TRUTH_TABLE: Array<[Env, boolean, string]> = [
   [{ NODE_ENV: "test", NEXT_PUBLIC_DEV_AUTH: "1" }, true, "a non-production build with the flag"],
 ];
 
+/** The REAL expression, read out of the real file and evaluated against a
+ *  supplied environment. Not a copy of it — a copy is what the defect would
+ *  look like. */
+function gateFrom(file: string, pattern: RegExp, what: string): (env: Env) => unknown {
+  const m = read(file).match(pattern);
+  expect(
+    m,
+    `could not find the ${what} expression in ${file}. If it was renamed or ` +
+      "reshaped, this probe is no longer reading the gate and its pass is manufactured.",
+  ).not.toBeNull();
+  const expr = m![1];
+  return (env: Env): unknown => new Function("process", `return (${expr});`)({ env }) as unknown;
+}
+
 test("the auth bypass is off in every environment but the one", () => {
-  const src = read(DEV_AUTH_TS);
   // `\r?` — this repo is maintained from Windows (see gates.yml's install
   // footgun), where core.autocrlf checks the tree out CRLF. The gate expression
   // is the same bytes either way; a probe that can only read it on an LF
   // checkout fails the local `npm run verify` while CI stays green.
-  const m = src.match(/export const DEV_AUTH\s*=\s*([\s\S]*?);\r?\n/);
-  expect(
-    m,
-    `could not find the DEV_AUTH expression in ${DEV_AUTH_TS}. If it was renamed or ` +
-      "reshaped, this probe is no longer reading the gate and its pass is manufactured.",
-  ).not.toBeNull();
-
-  // The REAL expression, evaluated against a supplied environment. Not a copy of
-  // it — a copy is what the defect would look like.
-  const expr = m![1];
-  const gate = (env: Env): unknown =>
-    new Function("process", `return (${expr});`)({ env }) as unknown;
-
+  const gate = gateFrom(DEV_AUTH_TS, /export const DEV_AUTH\s*=\s*([\s\S]*?);\r?\n/, "DEV_AUTH");
   for (const [env, want, why] of TRUTH_TABLE) {
     expect(Boolean(gate(env)), `${why}: DEV_AUTH should be ${want}`).toBe(want);
+  }
+});
+
+test("the API guard's no-secret door states the same gate, and folds shut in every environment but the one", () => {
+  // `devOpen()` is the door `guardRequest` opens when NO secret is presented —
+  // the one that lets `npm run test:live` drive /api/imaging/* and /api/frames
+  // without a configured secret. It is a THIRD copy of the two-condition rule,
+  // in a file the two seams above never mention, and a third copy is exactly
+  // the shape a fix reaches two of. Same truth table, same real expression.
+  const gate = gateFrom(API_AUTH_TS, /function devOpen\(\)[^{]*\{\s*return\s+([\s\S]*?);\r?\n/, "devOpen");
+  for (const [env, want, why] of TRUTH_TABLE) {
+    expect(Boolean(gate(env)), `${why}: devOpen() should be ${want}`).toBe(want);
   }
 });
 
