@@ -10,14 +10,17 @@
 
 import { expect, type Page } from "@playwright/test";
 
-import type { AccountSnapshot, ProjectReadback, ResetOutcome } from "@/lib/harness/protocol";
+import type { AccountSnapshot, HarnessProtocol, ProjectReadback, ResetOutcome } from "@/lib/harness/protocol";
 
 /** How long to wait for the control surface after a navigation. The bridge
  *  installs from an effect, so it lands a tick after hydration. */
 const CONNECT_MS = 20_000;
 /** The protocol this client speaks. Asserted on connect, so a harness/product
- *  skew is reported as a skew. */
-const SPEAK = 1;
+ *  skew is reported as a skew — and TYPED against the product's own literal, so
+ *  a bump of `HarnessProtocol` on the product side fails `tsc --noEmit` here
+ *  before any browser starts, which is the promise this file's header makes
+ *  and this constant alone was not keeping. */
+const SPEAK: HarnessProtocol = 1;
 
 /** The refusal every command shares: reaching a command through a surface that
  *  is not there means the server is not the one this lane requires. */
