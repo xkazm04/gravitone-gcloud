@@ -56,15 +56,36 @@ import type { Capability, ProviderId } from "./types";
 
 export const BUDGET_VAR = "IMAGING_BUDGET_USD_PER_WINDOW";
 export const WINDOW_VAR = "IMAGING_BUDGET_WINDOW_MS";
+export const FLOOR_VAR = "IMAGING_BUDGET_FLOOR_USD";
 
 const DEFAULT_CEILING_USD = 5;
 const DEFAULT_WINDOW_MS = 3_600_000; // one hour
+const DEFAULT_FLOOR_USD = 0; // off unless an operator states a band
 
 /** The ceiling in USD. Unset/negative/NaN → the safe default. `0` is a valid
  *  ceiling meaning "spend nothing", not "disabled". */
 export function budgetCeilingUsd(): number {
   const n = Number(process.env[BUDGET_VAR]);
   return Number.isFinite(n) && n >= 0 ? n : DEFAULT_CEILING_USD;
+}
+
+/**
+ * The floor in USD — the BOTTOM of the expected consumption band.
+ *
+ * Every other control in this file looks upward: the ceiling refuses, the
+ * counters count what the ceiling saved. None of them can see a window that
+ * spent almost nothing, and "almost nothing" is not automatically good news. A
+ * run that finishes far under its band either never reached the work the budget
+ * was raised for, or reached it and served it from the cheapest provider in the
+ * plan — and both are findings that currently present as "under budget".
+ *
+ * Unset/negative/NaN → 0, which means NO band is declared and `underFloor` is
+ * never reported. This is reporting only: nothing here is read by
+ * `assertWithinBudget`, so declaring a floor can never change who gets refused.
+ */
+export function budgetFloorUsd(): number {
+  const n = Number(process.env[FLOOR_VAR]);
+  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_FLOOR_USD;
 }
 
 /** The rolling window in ms. Unset/non-positive/NaN → the safe default. */
@@ -214,6 +235,8 @@ export function currentSpendUsd(now: number = Date.now()): number {
  */
 export function budgetStats(now: number = Date.now()): {
   ceilingUsd: number;
+  floorUsd: number;
+  underFloor: boolean;
   spentUsd: number;
   remainingUsd: number;
   windowMs: number;
@@ -224,9 +247,15 @@ export function budgetStats(now: number = Date.now()): {
 } {
   const spentUsd = currentSpendUsd(now); // prunes first, so the counters are current
   const ceilingUsd = budgetCeilingUsd();
+  const floorUsd = budgetFloorUsd();
   const windowMs = budgetWindowMs();
   return {
     ceilingUsd,
+    floorUsd,
+    // A declared band, some traffic, and a total beneath the band's bottom.
+    // Rows must be non-zero: an idle window is not a thrifty one, and reporting
+    // an empty meter as under-floor would make the signal worthless.
+    underFloor: floorUsd > 0 && ledger.length > 0 && spentUsd < floorUsd,
     spentUsd,
     remainingUsd: Math.max(ceilingUsd - spentUsd, 0),
     windowMs,
@@ -235,6 +264,30 @@ export function budgetStats(now: number = Date.now()): {
     rows: ledger.length,
     counters: { ...counters },
   };
+}
+
+/**
+ * Which providers actually SERVED each capability in the window.
+ *
+ * `spendByAxis` already reports spend by provider, but flat across capabilities:
+ * a provider that served one `recognize` call reads as "called" for `generate`
+ * too. Reachability is a per-capability question — the plan is ordered per
+ * capability — so it needs its own projection, and `failed` rows are excluded
+ * because a vendor that was reached and fell over did not serve the work.
+ *
+ * This is the raw fact only. The plan lives in the router, so the VERDICT — was
+ * the preferred provider ever called — is computed there, against this.
+ */
+export function reachByCapability(now: number = Date.now()): Record<string, ProviderId[]> {
+  prune(now);
+  const reach: Record<string, Set<ProviderId>> = {};
+  for (const r of ledger) {
+    if (r.outcome !== "served" || !r.cap || !r.provider) continue;
+    (reach[r.cap] ??= new Set()).add(r.provider);
+  }
+  const out: Record<string, ProviderId[]> = {};
+  for (const [cap, set] of Object.entries(reach)) out[cap] = [...set].sort();
+  return out;
 }
 
 /**
