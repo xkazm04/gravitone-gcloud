@@ -32,6 +32,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button, Eyebrow } from "@/components/ui/Primitives";
 import StudioFrame from "@/components/ui/StudioFrame";
+import { Hint, Keycaps, StackBar, TabRail, type TabDef } from "@/components/ui/signal";
 import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
 
@@ -40,29 +41,59 @@ import { DojoView } from "./DojoView";
 import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
 import { StylesShelf } from "./StylesShelf";
-import { commitRun, fetchRun, fetchRuns, saveVerdicts } from "./foundryClient";
+import { fetchExtractRuns } from "./extractClient";
+import { commitRun, fetchCatalogue, fetchRun, fetchRuns, fetchTrainingCycles, saveVerdicts } from "./foundryClient";
 import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
 
-const TABS = [
-  { id: "cull", label: "Cull", blurb: "Read the grid, keep the good, commit. Rejected files are deleted; the verdicts are what stays." },
-  {
-    id: "extract",
-    label: "Extract",
-    blurb: "Drop a gallery. Its looks are read back, grouped into styles, replicated from words alone with self-critique, then transferred onto a scene the gallery never showed. Keep the styles that held; they join the catalogue.",
-  },
-  { id: "styles", label: "Styles", blurb: "The catalogue the forge draws from, and the evidence each style has earned." },
-  {
-    id: "dojo",
-    label: "Dojo",
-    blurb: "Gate the training loop's A/B cycles: read each claimed improvement's seed-matched pairs, approve what genuinely held, and commit — the media is culled, the verdicts are what the loop learns from.",
-  },
-] as const;
-type Tab = (typeof TABS)[number]["id"];
+// THE TABS CARRIED A BLURB AND SO THE BLURB GOT WRITTEN — up to 45 words per
+// tab, printed as a paragraph under the row. <TabRail> has no slot for one, on
+// purpose (components/ui/signal/README.md). What each blurb was reaching for
+// was the STATE behind its tab, and that rides as a <Tally> on the tab itself:
+//
+//   Cull    how many forge runs there are to read
+//   Extract how many extraction runs exist
+//   Styles  how big the catalogue is
+//   Dojo    how many cycles are parked waiting for a human verdict
+//
+// The facts the blurbs also carried are recorded where they are enforced
+// rather than where they were narrated: a cull DELETES the files it rejects
+// (the commit dialog says so, over a rail that draws it), an extraction's kept
+// styles join pipeline/foundry/styles.json (the Extract dialog), and a Dojo
+// commit deletes decided media keeping one thumbnail per approved improvement
+// (the Dojo dialog). Each is a consequence stated at the moment it is ordered.
+type Tab = "cull" | "extract" | "styles" | "dojo";
+
+/** The three counts the rail cannot derive from this component's own state.
+ *
+ *  Each tab's view loads its own list when it opens; this asks for the same
+ *  three lists once, at mount, so the rail is honest before anything is
+ *  clicked. A list that cannot be read leaves its tally OFF rather than
+ *  showing a zero — a zero meaning "we could not ask" is worse than no chip,
+ *  and the failure already has a home in each view's own error line. */
+function useShelfCounts() {
+  const [counts, setCounts] = useState<{ extract?: number; styles?: number; parked?: number }>({});
+  useEffect(() => {
+    // NO `alive` GUARD, deliberately. Each list is asked for exactly once for
+    // the life of the page, so there is no newer response for a late one to
+    // overwrite — the race app/_phases/_shared/useLoadFor.ts exists to close
+    // cannot arise, and a setState after unmount is a no-op. A REJECTION
+    // handler there must be: an unhandled one is picked up by
+    // GlobalErrorBridge and announced as the user's work failing to save (the
+    // same reasoning as `loadDetail` below).
+    const put = (patch: { extract?: number; styles?: number; parked?: number }) => setCounts((c) => ({ ...c, ...patch }));
+    const drop = () => undefined;
+    fetchExtractRuns().then((r) => put({ extract: r.length }), drop);
+    fetchCatalogue().then((c) => put({ styles: c.styles.length }), drop);
+    fetchTrainingCycles().then((c) => put({ parked: c.filter((x) => x.status === "awaiting-gate").length }), drop);
+  }, []);
+  return counts;
+}
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
 export default function FoundryView() {
   const [tab, setTab] = useState<Tab>("cull");
+  const shelf = useShelfCounts();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [runsError, setRunsError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -258,8 +289,31 @@ export default function FoundryView() {
     }
   };
 
-  const active = TABS.find((t) => t.id === tab)!;
   const run = detail?.run ?? null;
+
+  /** Why Commit will not go, in one clause — null when it will. The status
+   *  half is read from COMMITTABLE, never from an inline status comparison:
+   *  tests/golden-path/commit-gate-parity.probe.spec.ts holds that constant
+   *  equal to the server's own guard. */
+  const blocked = !run
+    ? null
+    : !COMMITTABLE.includes(run.status)
+      ? `run is ${STATUS_WORD[run.status]}`
+      : counts.kept === 0
+        ? "keep at least one candidate first"
+        : null;
+
+  // A tally is left OFF while its count is unknown; `undefined` is not zero.
+  // The tone is news, not decoration: amber where something is running or
+  // waiting on the human, neutral where it is only an inventory.
+  const anyLive = Boolean(runs?.some((r) => LIVE.includes(r.status)));
+  const tally = (value: number | undefined, tone: "neutral" | "amber") => (value === undefined ? undefined : { value, tone });
+  const tabs: TabDef<Tab>[] = [
+    { id: "cull", label: "Cull", testId: "foundry-tab-cull", tally: tally(runs?.length, anyLive ? "amber" : "neutral") },
+    { id: "extract", label: "Extract", testId: "foundry-tab-extract", tally: tally(shelf.extract, "neutral") },
+    { id: "styles", label: "Styles", testId: "foundry-tab-styles", tally: tally(shelf.styles, "neutral") },
+    { id: "dojo", label: "Dojo", testId: "foundry-tab-dojo", tally: tally(shelf.parked, shelf.parked ? "amber" : "neutral") },
+  ];
 
   return (
     <StudioFrame>
@@ -267,20 +321,7 @@ export default function FoundryView() {
         <header className="pt-6">
           <Eyebrow>foundry</Eyebrow>
           <h1 className="font-instrument mt-3 text-4xl text-white">Foundry</h1>
-          <div className="mt-5 flex flex-wrap items-center gap-2 border-b border-white/8 pb-3">
-            {TABS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTab(t.id)}
-                className={`font-jetbrains rounded-full border px-3.5 py-1.5 text-label transition ${
-                  t.id === tab ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/65 hover:text-white/80"
-                }`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-          <p className="font-hanken mt-3 max-w-xl text-content text-slate-400">{active.blurb}</p>
+          <TabRail label="foundry modules" tabs={tabs} active={tab} onSelect={setTab} className="mt-5" />
         </header>
 
         <section className="mt-6">
@@ -359,31 +400,43 @@ export default function FoundryView() {
                 <span className={save === "error" ? "text-rose-200" : "text-white/55"}>
                   {readOnly ? "committed · verdicts are final" : save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
                 </span>
-                {!readOnly && <span className="hidden text-white/55 md:inline">arrows move · K keep · X reject · U clear · Enter compare</span>}
+                {!readOnly && (
+                  <Keycaps
+                    label="Cull shortcuts"
+                    map={[
+                      { keys: ["←", "→", "↑", "↓"], does: "move" },
+                      { keys: ["K"], does: "keep" },
+                      { keys: ["X"], does: "reject" },
+                      { keys: ["U"], does: "clear" },
+                      { keys: ["Enter"], does: "compare" },
+                    ]}
+                  />
+                )}
               </div>
               {readOnly ? (
                 <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">
                   committed
                 </span>
               ) : (
-                <Button
-                  disabled={!COMMITTABLE.includes(run.status) || counts.kept === 0}
-                  onClick={() => setConfirm(true)}
-                  className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-                  title={
-                    !COMMITTABLE.includes(run.status)
-                      ? `Run is ${STATUS_WORD[run.status]}`
-                      : counts.kept === 0
-                        ? "Keep at least one candidate first"
-                        : run.status === "failed"
-                          ? "This run failed partway. Commit what it did produce: everything not kept is deleted and the ledger is written."
-                          : run.status === "incomplete"
-                            ? "This run gave up partway and never reached the rest of its plan. Commit what it did produce: everything not kept is deleted and the ledger is written."
-                            : "Delete everything not kept and write the ledger"
-                  }
-                >
-                  Commit the cull
-                </Button>
+                // A DISABLED BUTTON'S REASON IS NOT A HOVER ESSAY. It used to be
+                // three sentences of `title=` re-teaching what a failed or
+                // incomplete run is — which the status pill on the strip above
+                // already says in one word. What is left is the one clause the
+                // reader cannot see anywhere else: why THIS button will not go.
+                <span className="flex items-center gap-2">
+                  {blocked && (
+                    <Hint variant="lock" tone="amber" label="Why Commit is unavailable">
+                      {blocked}
+                    </Hint>
+                  )}
+                  <Button
+                    disabled={Boolean(blocked)}
+                    onClick={() => setConfirm(true)}
+                    className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
+                  >
+                    Commit the cull
+                  </Button>
+                </span>
               )}
             </div>
           </div>
@@ -425,10 +478,22 @@ export default function FoundryView() {
             </div>
           }
         >
-          <p className="font-hanken text-content text-slate-300">
-            <span className="text-emerald-200">{counts.kept}</span> kept candidates stay on disk untouched.{" "}
-            <span className="text-rose-200">{counts.rejected}</span> rejected and <span className="text-white">{counts.undecided}</span> undecided
-            are deleted — undecided counts as rejected: the cull is what you chose, not what you skipped. Every decided candidate is written to{" "}
+          {/* THE RAIL IS THE SENTENCE. "undecided counts as rejected: the cull
+              is what you chose, not what you skipped" was the app explaining a
+              picture — kept on one side, rejected on the other, and undecided
+              hatched into the rejected side because it is not a third outcome.
+              What stays in prose is the consequence a destructive confirm is
+              entitled to state, and the path the judgement is written to. */}
+          <StackBar
+            label="commit"
+            segments={[
+              { n: counts.kept, tone: "emerald", label: "kept" },
+              { n: counts.rejected, tone: "rose", label: "rejected" },
+              { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+            ]}
+          />
+          <p className="font-hanken mt-3 text-content text-slate-300">
+            Everything not kept is deleted from disk. Every decided candidate is written to{" "}
             <code className="font-jetbrains text-label text-white/70">pipeline/foundry/ledger.json</code> and the style catalogue. This cannot be undone.
           </p>
           {commitError && (
@@ -488,10 +553,12 @@ function CommitReport({ result }: { result: CommitResult }) {
   );
 }
 
+/** No runs. The command IS the answer, so the sentence introducing it was the
+ *  only part worth deleting — the shelf label says the state. */
 function ForgeHint() {
   return (
     <div className="mt-2 rounded-lg border border-white/8 bg-white/[0.02] p-3">
-      <p className="font-hanken text-content text-slate-400">No runs yet. Forge one from a plan:</p>
+      <div className="font-jetbrains text-label tracking-[0.14em] text-white/50 uppercase">none yet — forge one</div>
       <pre className="font-jetbrains mt-2 text-content leading-relaxed whitespace-pre-wrap text-white/60">{`cd pipeline/foundry
 python forge.py plans/dry-run.json`}</pre>
     </div>

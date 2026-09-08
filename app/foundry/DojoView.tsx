@@ -21,6 +21,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
+import { Ghost, Keycaps, StackBar } from "@/components/ui/signal";
 import type { CycleManifest, CycleStatus, Improvement, MediaRef, PairResult, TrainingCommitResult, TrainingCycleSummary, TrainingVerdict, TrainingVerdicts } from "@/lib/foundry/training/types";
 import { usePolling } from "@/lib/usePolling";
 
@@ -219,8 +220,9 @@ export function DojoView() {
 
   const counts = useMemo(() => {
     const ids = detail?.improvements.map((i) => i.id) ?? [];
-    const decided = ids.filter((id) => verdicts[id] === "approve" || verdicts[id] === "reject").length;
-    return { total: ids.length, decided };
+    const approved = ids.filter((id) => verdicts[id] === "approve").length;
+    const rejected = ids.filter((id) => verdicts[id] === "reject").length;
+    return { total: ids.length, decided: approved + rejected, approved, rejected, undecided: ids.length - approved - rejected };
   }, [detail, verdicts]);
 
   const doCommit = async () => {
@@ -245,9 +247,7 @@ export function DojoView() {
         <aside>
           <div className="font-jetbrains text-label tracking-[0.14em] text-white/45 uppercase">cycles</div>
           {listError && <p className="font-jetbrains mt-2 text-label text-rose-200">{listError}</p>}
-          {cycles && cycles.length === 0 && (
-            <p className="font-hanken mt-2 text-label text-slate-400">No cycles yet — the dojo trains while you&rsquo;re away.</p>
-          )}
+          {cycles && cycles.length === 0 && <Ghost className="mt-2" shape="row" count={3} label="no cycles yet" />}
           <ul className="mt-2 flex flex-col gap-1">
             {cycles?.map((c) => (
               <li key={c.id}>
@@ -320,7 +320,15 @@ export function DojoView() {
                 {save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
               </span>
               <span className="text-amber-200/80">Commit deletes decided media; one thumbnail per approved improvement survives in git.</span>
-              <span className="hidden text-white/30 md:inline">↑↓ cards · K approve · X reject · U clear</span>
+              <Keycaps
+                label="Gate shortcuts"
+                map={[
+                  { keys: ["↑", "↓"], does: "cards" },
+                  { keys: ["K"], does: "approve" },
+                  { keys: ["X"], does: "reject" },
+                  { keys: ["U"], does: "clear" },
+                ]}
+              />
             </div>
             <Button
               disabled={counts.decided === 0}
@@ -354,11 +362,23 @@ export function DojoView() {
           </div>
         }
       >
-        <p className="font-hanken text-sm text-slate-300">
+        {/* THE RAIL, and here undecided is genuinely a THIRD outcome rather
+            than a hatch on the rejected side: a Dojo commit leaves undecided
+            media alone and writes no ledger row for it, so drawing it as a
+            stand-in for "rejected" — the way the Cull and Extract dialogs
+            do — would be a lie about what the button is going to do. */}
+        <StackBar
+          label="gate"
+          segments={[
+            { n: counts.approved, tone: "emerald", label: "approved" },
+            { n: counts.rejected, tone: "rose", label: "rejected" },
+            { n: counts.undecided, tone: "neutral", label: "untouched" },
+          ]}
+        />
+        <p className="font-hanken mt-3 text-content text-slate-300">
           Every decided improvement&rsquo;s media — both arms of every pair, posters included — is deleted from this machine. One thumbnail per approved
           improvement is copied into git, and one row per decided improvement joins{" "}
-          <code className="font-jetbrains text-label text-white/70">pipeline/foundry/training-ledger.json</code> for the loop to reflect. Undecided
-          improvements keep their media. This cannot be undone.
+          <code className="font-jetbrains text-label text-white/70">pipeline/foundry/training-ledger.json</code>. This cannot be undone.
         </p>
       </Modal>
     </>

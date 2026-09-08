@@ -20,8 +20,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ImagePlus } from "lucide-react";
+
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
+import { Ghost, Hint, Keycaps, StackBar } from "@/components/ui/signal";
 import { foreignLease, hasFailures } from "@/lib/foundry/extract/engine";
 import type { ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
 import { usePolling } from "@/lib/usePolling";
@@ -297,6 +300,17 @@ export function ExtractView() {
 
   const run = detail?.run ?? null;
 
+  /** Why Commit will not go, in one clause — null when it will. Read from
+   *  EXTRACT_COMMITTABLE, never an inline status comparison; commit-gate-parity
+   *  holds that constant equal to commitExtractRun's own guard. */
+  const blocked = !run
+    ? null
+    : !EXTRACT_COMMITTABLE.includes(run.status)
+      ? `run is ${EXTRACT_STATUS_WORD[run.status]}`
+      : counts.kept === 0
+        ? "keep at least one style first"
+        : null;
+
   return (
     <>
       <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
@@ -311,7 +325,7 @@ export function ExtractView() {
           </button>
           <div className="font-jetbrains mt-4 text-label tracking-[0.14em] text-white/60 uppercase">runs</div>
           {runsError && <p className="font-jetbrains mt-2 text-content text-rose-200">{runsError}</p>}
-          {runs && runs.length === 0 && <p className="font-hanken mt-2 text-content text-slate-400">No extractions yet.</p>}
+          {runs && runs.length === 0 && <Ghost className="mt-2" shape="row" count={2} label="no extractions yet" />}
           <ul className="mt-2 flex flex-col gap-1">
             {runs?.map((r) => (
               <li key={r.id}>
@@ -378,19 +392,35 @@ export function ExtractView() {
               <span className={save === "error" ? "text-rose-200" : "text-white/55"}>
                 {readOnly ? "committed · verdicts are final" : save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
               </span>
-              {!readOnly && <span className="hidden text-white/55 md:inline">↑↓ move · K keep · X reject · U clear · Enter inspect</span>}
+              {!readOnly && (
+                <Keycaps
+                  label="Board shortcuts"
+                  map={[
+                    { keys: ["↑", "↓"], does: "move" },
+                    { keys: ["K"], does: "keep" },
+                    { keys: ["X"], does: "reject" },
+                    { keys: ["U"], does: "clear" },
+                    { keys: ["Enter"], does: "inspect" },
+                  ]}
+                />
+              )}
             </div>
             {readOnly ? (
               <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">committed</span>
             ) : (
-              <Button
-                disabled={!EXTRACT_COMMITTABLE.includes(run.status) || counts.kept === 0}
-                onClick={() => setConfirm(true)}
-                className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-                title={!EXTRACT_COMMITTABLE.includes(run.status) ? `Run is ${EXTRACT_STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one style first" : "Write the kept styles to the catalogue"}
-              >
-                Commit the kept styles
-              </Button>
+              // The reason a disabled control will not go, in one clause,
+              // beside it — not three sentences behind a hover. The status
+              // pill on the strip above already names the run's state.
+              <span className="flex items-center gap-2">
+                {blocked && (
+                  <Hint variant="lock" tone="amber" label="Why Commit is unavailable">
+                    {blocked}
+                  </Hint>
+                )}
+                <Button disabled={Boolean(blocked)} onClick={() => setConfirm(true)} className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed">
+                  Commit the kept styles
+                </Button>
+              </span>
             )}
           </div>
         </div>
@@ -416,10 +446,21 @@ export function ExtractView() {
           </div>
         }
       >
-        <p className="font-hanken text-content text-slate-300">
-          <span className="text-emerald-200">{counts.kept}</span> kept style{counts.kept === 1 ? "" : "s"} join{counts.kept === 1 ? "s" : ""}{" "}
-          <code className="font-jetbrains text-label text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. The forge
-          can be pointed at them from the next plan. Undecided counts as thrown. Nothing is deleted, but the verdicts are final.
+        {/* "Undecided counts as thrown" was prose describing a rail: kept on
+            one side, thrown on the other, undecided hatched into the thrown
+            side because it is not a third outcome. What stays is the
+            destination and the one irreversible fact. */}
+        <StackBar
+          label="commit"
+          segments={[
+            { n: counts.kept, tone: "emerald", label: "kept" },
+            { n: counts.rejected, tone: "rose", label: "thrown" },
+            { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+          ]}
+        />
+        <p className="font-hanken mt-3 text-content text-slate-300">
+          The kept styles join <code className="font-jetbrains text-label text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers
+          as exemplars. Nothing is deleted, but the verdicts are final.
         </p>
         {commitError && (
           <p role="alert" className="font-jetbrains mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-content text-rose-200">
@@ -565,13 +606,18 @@ function NewRun({
           accept(e.dataTransfer.files);
         }}
         onClick={() => inputRef.current?.click()}
+        data-testid="extract-dropzone"
+        // A DASHED BOX SAYS "DROP HERE" — the sentence that said it too went.
+        // The name is on the control for anyone who cannot see the box; what
+        // is left visible is the constraint set, which no shape can draw.
+        aria-label="Drop images here, or click to choose"
         className={`cursor-pointer rounded-xl border border-dashed px-6 py-10 text-center transition ${
           dragging ? "border-cyan-300/60 bg-cyan-400/5" : "border-white/15 hover:border-white/30"
         }`}
       >
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={(e) => accept(e.target.files)} />
-        <p className="font-hanken text-content text-slate-300">Drop screenshots and images here, or click to choose.</p>
-        <p className="font-jetbrains mt-1 text-content text-white/60">PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload</p>
+        <ImagePlus className="mx-auto h-7 w-7 text-white/35" aria-hidden />
+        <p className="font-jetbrains mt-2 text-content text-white/60">PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload</p>
       </div>
 
       {previews.length > 0 && (
@@ -606,10 +652,20 @@ function NewRun({
         <Num label="transfers" value={transfers} min={0} max={4} onChange={setTransfers} hint="neutral scenes per style" />
       </div>
 
-      <label className="mt-4 flex cursor-pointer items-center gap-2" title="Every image becomes its own style; its recipe is written by the vision model with the image in view. No grouping turn at all. The board's ≈ chips then show which singletons were one style all along.">
-        <input type="checkbox" checked={singletons} onChange={(e) => setSingletons(e.target.checked)} className="accent-cyan-300" />
-        <span className="font-jetbrains text-label text-white/70">one style per image — no grouping</span>
-      </label>
+      {/* THE DIFFERENTIATOR IS THE ARITHMETIC, not three sentences of `title=`.
+          `N img → 1 style` against `1 img → 1 style` is what the checkbox
+          changes; the ≈ chips on the board are what report the overlap after
+          the fact, and they carry their own hint there. */}
+      <div className="mt-4 flex items-center gap-2">
+        <label className="flex cursor-pointer items-center gap-2">
+          <input type="checkbox" checked={singletons} onChange={(e) => setSingletons(e.target.checked)} className="accent-cyan-300" />
+          <span className="font-jetbrains text-label text-white/70">one style per image — no grouping</span>
+        </label>
+        <span aria-hidden className="font-jetbrains rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-label text-white/55">
+          {singletons ? "1 img → 1 style" : "N img → 1 style"}
+        </span>
+        <Hint>each recipe is written with its own image in view</Hint>
+      </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="font-hanken max-w-lg text-content text-slate-400">

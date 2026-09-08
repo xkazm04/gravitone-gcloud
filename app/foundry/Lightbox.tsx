@@ -12,6 +12,8 @@
 
 import { useEffect } from "react";
 
+import { Check, CircleSlash, Minus, X } from "lucide-react";
+
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
 import type { Candidate, RunManifest, Verdict } from "@/lib/foundry/types";
@@ -20,6 +22,34 @@ import { fileUrl } from "./foundryClient";
 import { VerdictStamp, creditTone, pct } from "./parts";
 
 const STYLE_FIELDS = ["render_mode", "palette_strategy", "edge_treatment", "black_handling"];
+
+/** The section's whole verdict as one mark.
+ *
+ *  Each of these two panels used to open with a sentence asking its own
+ *  question — "Did the shot survive?", "Did the look arrive?" — and then
+ *  answering it with a table the reader has to add up. The question is the
+ *  section's name; the answer is a mark. The thresholds are ScoreChip's
+ *  (app/foundry/parts.tsx), so a panel header and the chips inside it cannot
+ *  disagree about what a number means, and the per-field diff below stays
+ *  exactly where the audit happens. */
+function GradeMark({ what, score }: { what: string; score: number | null | undefined }) {
+  const [Glyph, tone, word] =
+    typeof score !== "number"
+      ? ([CircleSlash, "text-amber-200/80", "not graded"] as const)
+      : score >= 0.75
+        ? ([Check, "text-emerald-300", "held"] as const)
+        : score >= 0.5
+          ? ([Minus, "text-white/60", "partly held"] as const)
+          : ([X, "text-rose-300", "did not hold"] as const);
+  return (
+    <span className={`inline-flex items-center ${tone}`}>
+      <Glyph className="h-4 w-4" aria-hidden />
+      <span className="sr-only">
+        {what}: {word}
+      </span>
+    </span>
+  );
+}
 
 export function Lightbox({
   run,
@@ -153,10 +183,12 @@ export function Lightbox({
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
                 <div className="flex items-baseline justify-between">
-                  <div className="font-jetbrains text-label tracking-[0.14em] text-cyan-300 uppercase">craft fidelity</div>
-                  <div className="font-jetbrains text-label text-white">{pct(g.craft?.score)}</div>
+                  <div className="font-jetbrains text-label tracking-[0.14em] text-cyan-300 uppercase">shot · craft fidelity</div>
+                  <div className="flex items-center gap-2">
+                    <GradeMark what="craft fidelity" score={g.craft?.score} />
+                    <div className="font-jetbrains text-label text-white">{pct(g.craft?.score)}</div>
+                  </div>
                 </div>
-                <p className="font-hanken mt-1 text-content text-slate-500">Did the shot survive? Source annotation → candidate re-annotation, per field.</p>
                 <table className="mt-3 w-full text-label">
                   <tbody>
                     {Object.entries(g.craft?.per_field ?? {}).map(([f, v]) => (
@@ -172,10 +204,12 @@ export function Lightbox({
 
               <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
                 <div className="flex items-baseline justify-between">
-                  <div className="font-jetbrains text-label tracking-[0.14em] text-violet-300 uppercase">style adherence</div>
-                  <div className="font-jetbrains text-label text-white">{pct(g.style?.score)}</div>
+                  <div className="font-jetbrains text-label tracking-[0.14em] text-violet-300 uppercase">look · style adherence</div>
+                  <div className="flex items-center gap-2">
+                    <GradeMark what="style adherence" score={g.style?.score} />
+                    <div className="font-jetbrains text-label text-white">{pct(g.style?.score)}</div>
+                  </div>
                 </div>
-                <p className="font-hanken mt-1 text-content text-slate-500">Did the look arrive? Target observables → what the grader read back.</p>
                 <table className="mt-3 w-full text-label">
                   <tbody>
                     {STYLE_FIELDS.map((f) => {

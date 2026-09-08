@@ -14,6 +14,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
+import { Hint } from "@/components/ui/signal";
 import type { ExtractManifest, ExtractVerdict, ExtractVerdicts, ExtractedStyle, ReplicaRound, Transfer } from "@/lib/foundry/extract/types";
 import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 
@@ -174,9 +175,17 @@ export function ExtractBoard({
   if (!run.styles.length) {
     return (
       <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
-        <p className="font-hanken text-content text-slate-400">
-          {run.status === "failed" ? "Nothing could be read back." : "Reading the sources — styles appear once every image has been read back."}
-        </p>
+        {/* "styles appear once every image has been read back" was the app
+            narrating its own order of work; the strip below already draws it,
+            one border per source, and the count says how far it has got. The
+            FAILURE line stays — that is an outcome, not a mechanism. */}
+        {run.status === "failed" ? (
+          <p className="font-hanken text-content text-rose-200">Nothing could be read back.</p>
+        ) : (
+          <div className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">
+            sources {run.sources.filter((s) => s.readback).length}/{run.sources.length} read
+          </div>
+        )}
         <div className="mt-3 grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8">
           {run.sources.map((s) => (
             <figure key={s.id} className={`relative aspect-video overflow-hidden rounded-md border ${s.readback ? "border-emerald-300/40" : s.error ? "border-rose-400/40" : "border-white/10"}`}>
@@ -223,11 +232,11 @@ export function ExtractBoard({
                     </span>
                   )}
                   {st.similar_to && st.similar_to.length > 0 && (
-                    <span
-                      className="font-jetbrains rounded border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-label text-amber-200"
-                      title="Declared observables differ by at most one minor field — the generator likely renders these identically"
-                    >
+                    <span className="font-jetbrains inline-flex items-center gap-1 rounded border border-amber-400/40 bg-amber-400/10 px-1.5 py-0.5 text-label text-amber-200">
                       ≈ {st.similar_to.join(", ")}
+                      <Hint tone="amber" label="What the ≈ chip means">
+                        declared observables differ by at most one minor field
+                      </Hint>
                     </span>
                   )}
                 </div>
