@@ -20,6 +20,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { Unlink } from "lucide-react";
+
+import { Hint } from "@/components/ui/signal";
+
 import type { Scene } from "../../_studio/projectTypes";
 
 import type { ScoreSpot } from "./spots";
@@ -29,9 +33,15 @@ const DEBOUNCE_MS = 400;
 /** The two shared control skins, spelled once. No colour literal: these are the
  *  same white-alpha and cyan utilities the rest of the step draws in, and the
  *  focus ring is the app-wide `:focus-visible` from globals.css. */
-const INPUT =
-  "font-jetbrains min-w-0 rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-label " +
-  "text-white/80 transition placeholder:text-white/45 hover:border-white/25";
+const INPUT_BASE =
+  "font-jetbrains min-w-0 rounded-lg border bg-white/[0.03] px-2 py-1 text-label " +
+  "text-white/80 transition placeholder:text-white/45";
+const INPUT = `${INPUT_BASE} border-white/12 hover:border-white/25`;
+/** The same control, marked: this ordinal names a scene the picture does not
+ *  have. Its own constant rather than a class appended after `border-white/12`,
+ *  because two border-colour utilities on one element are decided by the order
+ *  Tailwind emits them in, not by the order they are written. */
+const INPUT_ORPHAN = `${INPUT_BASE} border-amber-300/50 hover:border-amber-300/70`;
 const GHOST_BUTTON =
   "font-jetbrains rounded-lg border border-white/12 px-2.5 py-1 text-label text-white/55 " +
   "transition hover:border-white/25 hover:text-white/85";
@@ -115,7 +125,7 @@ function SpotRow({
           onChange={(e) => { setTitle(e.target.value); schedule(); }}
           onBlur={flush}
           onFocus={onFocus}
-          placeholder="what this cue is called"
+          placeholder="title"
           className={`${INPUT} flex-1 basis-56`}
         />
         {/* THE PROPOSAL STATE, said on the row that carries it. It disappears
@@ -123,15 +133,16 @@ function SpotRow({
             human has had an opinion about is not a proposal any more, and
             `patchSpot` clears the flag rather than this component deciding. */}
         {spot.proposed && (
-          <span
-            className="font-jetbrains rounded-full border border-amber-300/30 px-2 py-0.5 text-label tracking-[0.12em] text-amber-200/80 uppercase"
-            title={
-              spot.fromMovement
-                ? `Proposed from the script's movement "${spot.fromMovement}" — its label, the scenes its beats sit on, and the cue section it points into. Change anything here and it becomes yours.`
-                : "Proposed, not authored."
-            }
-          >
+          <span className="font-jetbrains inline-flex items-center gap-1 rounded-full border border-amber-300/30 px-2 py-0.5 text-label tracking-[0.12em] text-amber-200/80 uppercase">
             proposed
+            {/* WHICH movement, and nothing else. The tooltip that hung here
+                spent three clauses re-describing the pill, the row and the
+                span it draws on the timeline above. */}
+            {spot.fromMovement && (
+              <Hint tone="amber" label="the movement this came from">
+                {spot.fromMovement}
+              </Hint>
+            )}
           </span>
         )}
         <button
@@ -154,7 +165,7 @@ function SpotRow({
           aria-label="first scene"
           value={range?.from ?? ""}
           onChange={(e) => setRange(Number(e.target.value), range?.to ?? Number(e.target.value))}
-          className={`${INPUT} w-16`}
+          className={`${range === null ? INPUT_ORPHAN : INPUT} w-16`}
         />
         <span className="font-jetbrains text-label text-white/30">→</span>
         <input
@@ -165,7 +176,7 @@ function SpotRow({
           aria-label="last scene"
           value={range?.to ?? ""}
           onChange={(e) => setRange(range?.from ?? Number(e.target.value), Number(e.target.value))}
-          className={`${INPUT} w-16`}
+          className={`${range === null ? INPUT_ORPHAN : INPUT} w-16`}
         />
         {/* THE TEMPO, AND ITS ABSENCE. Empty is a real value here and it is the
             value every proposed spot arrives with: nothing upstream of this step
@@ -190,10 +201,15 @@ function SpotRow({
           className={`${INPUT} w-20`}
         />
         <span className="font-jetbrains text-label text-white/35">bpm</span>
+        {/* A RANGE OVER NOTHING, MARKED ON THE PAIR THAT IS WRONG rather than
+            written out beside it: the two ordinals name scenes this project does
+            not have, so there is no span and the derivation calls the spot
+            unspottable. */}
         {range === null && (
-          <span className="font-jetbrains text-label text-amber-200/70">
-            covers no scene this project has
-          </span>
+          <Unlink
+            aria-label="covers no scene this project has"
+            className="h-4 w-4 shrink-0 text-amber-300/80"
+          />
         )}
       </div>
 

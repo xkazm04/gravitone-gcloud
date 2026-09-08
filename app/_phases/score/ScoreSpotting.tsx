@@ -37,6 +37,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { MessageSquareDashed, Timer } from "lucide-react";
+
 import {
   MUSIC_STYLE_BLOCK,
   cuesFrom,
@@ -46,7 +48,20 @@ import {
   type SpottingCue,
 } from "../../_studio/score";
 import { CueStatusWord, LANE_GUTTER, TimeRuler, spanStyle } from "../../_studio/projectParts";
-import { getProject, type Discipline } from "@/lib/projects";
+import {
+  PHASES,
+  getProject,
+  type Discipline,
+  type PhaseKey,
+} from "@/lib/projects";
+import {
+  CHIP_CLASS,
+  Hint,
+  Provenance,
+  TALLY_TONE,
+  Tally,
+  UpstreamBreak,
+} from "@/components/ui/signal";
 import {
   MusicRequestError,
   audioUrl,
@@ -71,14 +86,116 @@ import { useScoreSpots, type SpotOrigin } from "./useSpots";
  *  would be inventing the artifact it exists to read. */
 const FRAMES_PHASE = "frames";
 
-/** WHY THE TEMPO SLOT CAN BE EMPTY, in one sentence, wherever the emptiness
- *  shows. Written once because it appears three times on this surface and a
- *  refusal explained differently in three places reads as three refusals. */
-const NO_TEMPO_WHY =
-  "Nothing upstream states a tempo: a movement of the cut carries a role, an ordinal and the cue " +
-  "section it sits on, and the cue itself carries sections without durations. This step's craft " +
-  "notes are n=0 for the form and say a trailer tempo is chosen from the picture by bar math, " +
-  "never defaulted — so the number is yours to set, and the render waits for it.";
+/** THE EMPTY TEMPO SLOT is now a glyph in the place the number would be, not a
+ *  sentence — three times over, which is what it was.
+ *
+ *  The reason it can be empty, kept here because it is a real constraint and the
+ *  surface no longer has room to print it: nothing upstream states a tempo. A
+ *  movement of the cut carries a role, an ordinal and the cue section it sits
+ *  on, and the cue itself carries sections without durations. This step's craft
+ *  notes are n=0 for the form and say a trailer tempo is chosen from the picture
+ *  by bar math, never defaulted — so the number is the creator's to set, and
+ *  `/api/music/generate` (bpm 40..220) waits for it.
+ *
+ *  What the glyph does instead of explaining: it puts the caret in the box that
+ *  takes the number. The row already exists in the session list below and owns
+ *  that input, so it is reached through the row's own test id rather than by
+ *  threading a ref through <SpotList> for one jump. */
+function focusSpotField(id: string, ariaLabel: string) {
+  document
+    .querySelector<HTMLInputElement>(`[data-testid="spot-${id}"] input[aria-label="${ariaLabel}"]`)
+    ?.focus();
+}
+
+/** The one hatch in this file, spelled the way `components/ui/signal` spells it:
+ *  painted from `currentColor` so no colour literal is declared outside
+ *  `components/ui/tokens.ts`. */
+const HATCH = "repeating-linear-gradient(45deg, currentColor 0 2px, transparent 2px 6px)";
+
+/** OFF THE CLOCK, AND DRAWN OFF IT. A beat with no timecode and a spot whose
+ *  scenes this project does not have are the same shape of fact: they exist, and
+ *  there is no span to put them in. So they sit beside the lanes as amber dashed
+ *  chips carrying their own name, with the derivation's own reason behind each
+ *  chip's disclosure — rather than as a sentence under the timeline listing them
+ *  in prose, which is what both of them were. */
+function OrphanTray({
+  label,
+  items,
+}: {
+  label: string;
+  items: { key: string; name: string; why?: string }[];
+}) {
+  if (items.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      <span className="sr-only">{label}:</span>
+      {items.map((it) => (
+        <span
+          key={it.key}
+          className={`${CHIP_CLASS} border-dashed ${TALLY_TONE.amber}`}
+        >
+          {it.name}
+          {it.why && (
+            <Hint variant="warn" tone="amber" label={`why “${it.name}” has no span`}>
+              {it.why}
+            </Hint>
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+/** THE LANES WITH NOTHING ON THEM — the shape of this surface, kept.
+ *
+ *  Every blocked branch on this step used to replace the whole timeline with a
+ *  paragraph, and a spotting screen with no timeline is a screen with no
+ *  subject. The ruler is drawn only against a number that exists: the project's
+ *  declared runtime, which is a real fact even when no frame has been composed
+ *  against it. `busy` swaps it for the app's own indeterminate sweep — a read in
+ *  flight claims no position, so it does not draw one. */
+function EmptyLanes({ targetS = 0, busy = false }: { targetS?: number; busy?: boolean }) {
+  return (
+    <div
+      role="status"
+      className="rounded-2xl border border-white/8 bg-white/[0.02] p-4"
+    >
+      <p className="sr-only">
+        {busy ? "Reading this project’s frames and spotting session." : "No picture on the clock."}
+      </p>
+      <div className="flex gap-3">
+        <span className={LANE_GUTTER} />
+        <div className="flex-1">
+          {busy ? (
+            <div className="relative h-5 overflow-hidden border-b border-white/8">
+              <span aria-hidden className="gt-indeterminate absolute inset-y-0 left-0 w-1/4 bg-cyan-400/20" />
+            </div>
+          ) : targetS > 0 ? (
+            <TimeRuler totalS={targetS} />
+          ) : (
+            <div className="h-5 border-b border-white/8" />
+          )}
+        </div>
+      </div>
+      {(["picture", "music"] as const).map((lane) => (
+        <div key={lane} className="mt-3 flex items-center gap-3">
+          <span
+            className={`font-jetbrains ${LANE_GUTTER} text-right text-label tracking-[0.12em] text-white/40 uppercase`}
+          >
+            {lane}
+          </span>
+          <div
+            aria-hidden
+            className={`h-9 flex-1 rounded-md border border-dashed border-white/10 text-white/8 ${
+              busy ? "animate-pulse bg-white/[0.03]" : ""
+            }`}
+            style={busy ? undefined : { backgroundImage: HATCH }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
 
 /** One cue's live take, in this session.
  *
@@ -141,79 +258,97 @@ export function engineCredit(cue: SpottingCue, take: Take | undefined): { text: 
  *  the state `cuesFrom` has always had a written sentence for and could never
  *  reach while `SCENES` was the only argument it was ever passed. */
 function UnspottableLine({ items }: { items: { spot: CueSpot; why: string }[] }) {
-  if (items.length === 0) return null;
   return (
-    <p className="font-jetbrains mt-2 text-label leading-snug text-amber-200/70">
-      {items.length} spot{items.length > 1 ? "s" : ""} could not be placed:{" "}
-      {items.map((u) => `"${u.spot.title}" ${u.why}`).join("; ")}.
-    </p>
+    <OrphanTray
+      label="spots that could not be placed"
+      items={items.map((u) => ({ key: u.spot.id, name: u.spot.title, why: u.why }))}
+    />
   );
 }
 
 /**
- * WHERE THESE SPOTS CAME FROM — one line, always, including when the answer is
- * "nowhere and here is why".
+ * WHERE THESE SPOTS CAME FROM — drawn, not taught.
  *
- * Four of the five origins are absences, and the reason each is written out
- * rather than collapsed into "no cues yet" is that they have different remedies:
- * a cut nobody composed is Step 2's work, an explainer script has no movement
+ * Four of the five origins are absences and they have different remedies, which
+ * is why they stay four branches rather than collapsing into "no cues yet": a
+ * cut nobody composed is Step 2's work, an explainer script has no movement
  * container at all and never will, and a cut that will not open is a storage
- * problem this step must not draw over.
+ * problem this step must not draw over. What changed is that each of them used
+ * to spend forty to sixty words re-teaching the five-step chain the app already
+ * declares once, in `lib/projects.ts#PHASES`. <UpstreamBreak> draws that chain
+ * instead; the machine line of a failed read is the only prose left, and it is
+ * rendered verbatim because it is the work.
  */
 function OriginLine({
+  projectId,
   origin,
   unplaced,
   discipline,
+  done,
 }: {
+  projectId: string;
   origin: SpotOrigin;
   unplaced: { movement: { id: string; label: string }; why: string }[];
   discipline: Discipline | undefined;
+  done: PhaseKey[];
 }) {
   if (origin.kind === "authored") return null;
 
   if (origin.kind === "proposed")
     return (
-      <div data-testid="spot-origin" className="mt-3 border-t border-white/8 pt-3">
-        <p className="text-content leading-snug text-slate-400">
-          {origin.placed} of {origin.movements} spot{origin.movements === 1 ? "" : "s"} proposed from
-          the script&rsquo;s movements — each one is a movement&rsquo;s own label, the scenes its
-          beats sit on, and the cue section it points into. Nothing here chose a tempo: the cut does
-          not state one and this step will not invent one. Edit, delete or add below; a spot you
-          touch stops calling itself a proposal.
-        </p>
-        {unplaced.length > 0 && (
-          <p className="font-jetbrains mt-2 text-label leading-snug text-amber-200/70">
-            {unplaced.length} movement{unplaced.length > 1 ? "s" : ""} could not be placed on this
-            picture and got no spot:{" "}
-            {unplaced.map((u) => `"${u.movement.label}" — ${u.why}`).join("; ")}.
-          </p>
-        )}
+      <div
+        data-testid="spot-origin"
+        className="mt-3 flex flex-wrap items-center gap-2 border-t border-white/8 pt-3"
+      >
+        <Tally
+          label="proposed"
+          value={origin.placed}
+          of={origin.movements}
+          tone="amber"
+          hint="from the cut's movements"
+        />
+        <OrphanTray
+          label="movements that got no spot"
+          items={unplaced.map((u) => ({ key: u.movement.id, name: u.movement.label, why: u.why }))}
+        />
       </div>
     );
 
   if (origin.kind === "cut-unreadable")
     return (
       <div data-testid="spot-origin" className="mt-3 border-t border-white/8 pt-3">
-        <p className="text-content leading-snug text-rose-200/90">
-          The script&rsquo;s cut could not be read, so nothing could be proposed from it. The cut is
-          not gone — this browser would not hand it over — and no spot below was derived from it.
-        </p>
-        <p className="font-jetbrains mt-2 text-label leading-snug text-rose-200/60">
-          {origin.trouble.kind} · on {origin.trouble.op} of the {origin.trouble.phase} step —{" "}
-          {origin.trouble.message}
-        </p>
+        <UpstreamBreak
+          blockedAt="script"
+          current="score"
+          done={done}
+          severity="error"
+          detail={`${origin.trouble.kind} · on ${origin.trouble.op} of the ${origin.trouble.phase} step — ${origin.trouble.message}`}
+        />
       </div>
     );
 
   return (
     <div data-testid="spot-origin" className="mt-3 border-t border-white/8 pt-3">
-      <p className="text-content leading-snug text-slate-400">
-        {origin.kind === "no-movements"
-          ? "This project's cut declares no movements, so there is nothing to propose a cue from — a cue's boundaries are the movements' boundaries, and this cut has none to read."
-          : discipline === "educational"
-            ? "Nothing was proposed, and it is not a fault of this step. Spots derive from the script's MOVEMENTS — \"act boundaries are cue boundaries\" — and only the trailer form carries them: an explainer's act structure lives as prose inside its beat labels, which no function can read. So this project has no musical intent to inherit, and the spotting below is yours to make."
-            : "Nothing was proposed: no cut is stored for this project. Step 2 composes one from the spine confirmed in Step 1, and the movements of that cut are what a spot is derived from. Until then the spotting below is yours to make."}
-      </p>
+      <UpstreamBreak
+        blockedAt="script"
+        current="score"
+        done={done}
+        // An explainer has no movement container and never will, so there is
+        // nowhere to send the creator: the spotting below is theirs to make.
+        // A trailer with no cut has a step that writes one.
+        action={
+          discipline === "educational"
+            ? undefined
+            : { label: "Compose the cut", href: `/studio/${projectId}?step=script` }
+        }
+        detail={
+          origin.kind === "no-movements"
+            ? "the cut declares no movements"
+            : discipline === "educational"
+              ? "an explainer script carries no movements"
+              : undefined
+        }
+      />
     </div>
   );
 }
@@ -245,6 +380,19 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
    *  of reach; drawing the first over the second would tell a creator with a
    *  finished cut that they have no film. */
   const [trouble, setTrouble] = useState<StorageTrouble | null>(null);
+  /** WHICH STEPS HAVE PRODUCED SOMETHING — the filled dots of the chain
+   *  <UpstreamBreak> draws.
+   *
+   *  Read off the project's own `progress`, which each step writes about ITSELF
+   *  the moment it has anything real (`reportPhase`), rather than guessed from
+   *  what this surface happens to hold. `empty` is the only value that means
+   *  nothing was made, and `done` is not usable here: nothing in this app can
+   *  lock a step, so it would leave every dot hollow on a finished project.
+   *
+   *  Kept out of `read` on purpose. A frames record that will not open still has
+   *  a project record that will, and the frames-unreadable branch is the first
+   *  one that needs the chain. */
+  const [doneUp, setDoneUp] = useState<PhaseKey[]>([]);
 
   // A project change must not leave the previous project's picture on screen for
   // the render or two before the new read lands — the adjust-during-render form
@@ -255,6 +403,7 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
     setSeenProject(projectId);
     setRead(null);
     setTrouble(null);
+    setDoneUp([]);
   }
 
   // Through the shared primitive rather than a hand-rolled `let alive = true`:
@@ -274,6 +423,12 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
       return { project, step };
     },
     ({ project, step }) => {
+      // Before the early return: the chain is drawn in the failure branch too,
+      // and a step's progress is a fact about the PROJECT record, not about the
+      // frames record that would not open.
+      setDoneUp(
+        project ? PHASES.filter((k) => k !== "score" && project.progress[k] !== "empty") : [],
+      );
       if (!step.ok) {
         setTrouble(step.trouble);
         setRead(null);
@@ -463,7 +618,6 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
   const spottedS = (picture?.scenes ?? [])
     .filter((s) => spottedSceneIds.has(s.id))
     .reduce((n, s) => n + s.targetS, 0);
-  const unspottedS = clockS - spottedS;
   const takesHeld = Object.values(takes).filter((t) => t.state === "done").length;
 
   /* THE FRAMES ARE ON DISK AND OUT OF REACH — a storage failure, which is NOT
@@ -481,19 +635,16 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
      resolve. Measured against a simulated read failure on 2026-09-08. */
   if (trouble)
     return (
-      <div className="rounded-2xl border border-rose-400/30 bg-rose-400/5 p-4">
-        <p className="text-content leading-snug text-rose-200">
-          This project&rsquo;s frames could not be read. Nothing has been lost, and nothing here
-          will guess: a cue is a span of film, so there is no cue to brief and no music to buy
-          until the picture can be read again.
-        </p>
-        {/* The store's own words, on their own line rather than spliced into the
-            sentence above — a browser's DOMException message ends with no full
-            stop and ran straight into the next sentence when it was inlined. */}
-        <p className="font-jetbrains mt-2 text-label leading-snug text-rose-200/60">
-          {trouble.kind} · on {trouble.op} of the {trouble.phase} step — {trouble.message}
-        </p>
-      </div>
+      <UpstreamBreak
+        blockedAt="frames"
+        current="score"
+        done={doneUp}
+        severity="error"
+        // The store's own words, verbatim and on their own line. A browser's
+        // DOMException message ends with no full stop and ran straight into the
+        // next sentence for as long as it was spliced into one.
+        detail={`${trouble.kind} · on ${trouble.op} of the ${trouble.phase} step — ${trouble.message}`}
+      />
     );
 
   /* THIS STEP'S OWN RECORD IS OUT OF REACH — the spotting session, not the
@@ -504,17 +655,13 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
      (see `useScoreSpots`), so the work on disk stays there. */
   if (session.trouble)
     return (
-      <div className="rounded-2xl border border-rose-400/30 bg-rose-400/5 p-4">
-        <p className="text-content leading-snug text-rose-200">
-          This project&rsquo;s spotting session could not be read. Nothing has been lost and nothing
-          has been written: the cues you placed are on disk, and this step will not propose a fresh
-          set over them.
-        </p>
-        <p className="font-jetbrains mt-2 text-label leading-snug text-rose-200/60">
-          {session.trouble.kind} · on {session.trouble.op} of the {session.trouble.phase} step —{" "}
-          {session.trouble.message}
-        </p>
-      </div>
+      <UpstreamBreak
+        blockedAt="score"
+        current="score"
+        done={doneUp}
+        severity="error"
+        detail={`${session.trouble.kind} · on ${session.trouble.op} of the ${session.trouble.phase} step — ${session.trouble.message}`}
+      />
     );
 
   /* THE READ HAS NOT LANDED — and it is a claim about this surface, not about
@@ -526,13 +673,7 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
      from the cut AND the picture, so they land one commit after the frames do,
      and an empty music lane in that window is the same false claim. */
   if (!picture || session.spots === null || session.origin === null)
-    return (
-      <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-        <p className="font-jetbrains text-content text-white/35">
-          reading this project&rsquo;s frames and its spotting session…
-        </p>
-      </div>
-    );
+    return <EmptyLanes busy />;
 
   /* NO PICTURE, NO CUES — and this is the state `cuesFrom` has carried a written
      sentence for since it was built, unreachable until now because the only
@@ -545,18 +686,20 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
      that has not been done yet and points at the step that does it. */
   if (picture.scenes.length === 0)
     return (
-      <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-        <p className="text-content leading-snug text-slate-400">
-          Nothing to spot. Cues are spans of film, and this project has no frames for them to sit
-          on — so there is no cue to brief, no duration to buy and nothing to draw on the clock.
-          Spot music once the picture exists: Step 3 is where a beat becomes a frame with a length.
-        </p>
-        {picture.unplaced.length > 0 && (
-          <p className="font-jetbrains mt-2 text-label leading-snug text-amber-200/70">
-            {picture.unplaced.length} beat{picture.unplaced.length > 1 ? "s" : ""} carry no
-            timecode, so nothing can say where they sit or how long they hold.
-          </p>
-        )}
+      <div>
+        <EmptyLanes targetS={read?.targetS ?? 0} />
+        <div className="mt-4">
+          <UpstreamBreak
+            blockedAt="frames"
+            current="score"
+            done={doneUp}
+            action={{ label: "Compose the picture", href: `/studio/${projectId}?step=frames` }}
+          />
+        </div>
+        <OrphanTray
+          label="beats that carry no timecode"
+          items={picture.unplaced.map((f) => ({ key: f.id, name: f.title }))}
+        />
         <UnspottableLine items={spotted.unspottable} />
       </div>
     );
@@ -606,6 +749,20 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
             music
           </span>
           <div className="relative h-11 flex-1">
+            {/* SPOTS, BUT NONE OF THEM ON THIS PICTURE — hatched across the
+                whole lane rather than written out underneath it. Every spot in
+                the session names scenes this project does not have, so not one
+                of them has a span: a cue's span IS the film it covers, and a
+                spot with no picture gets no span rather than a default one. Two
+                lanes with zero overlap is a thing you can see; it used to be a
+                sixty-word card below the timeline saying so. */}
+            {cues.length === 0 && session.spots.length > 0 && (
+              <div
+                aria-hidden
+                className="absolute inset-0 rounded-md border border-dashed border-amber-300/30 text-amber-300/25"
+                style={{ backgroundImage: HATCH }}
+              />
+            )}
             {/* A PROPOSED SPAN IS DRAWN AS ONE — dashed and amber, the same
                 vocabulary the "not performed" row and the unplaced lines use
                 everywhere else on this step for a thing that is declared rather
@@ -653,31 +810,63 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
           </div>
         </div>
 
-        <p className="font-jetbrains mt-3 text-content text-white/35">
-          <span className="text-cyan-300/80">{spottedS}s spotted</span>
-          {" · "}
-          {unspottedS}s with no cue over it — spans to scale on the {clockS}s of picture this
-          project has
-          {takesHeld > 0 &&
-            ` · ${takesHeld} take${takesHeld > 1 ? "s" : ""} rendered in this session, none kept past a reload`}
-        </p>
-        {/* BEATS THAT ARE NOT ON THE CLOCK. Named here rather than dropped in
-            silence: they exist in the cut, they simply have no timecode, so
-            there is no span to draw and nothing can be scored over them. See
-            the null-hold note in ./picture. */}
-        {picture.unplaced.length > 0 && (
-          <p className="font-jetbrains mt-2 text-label leading-snug text-amber-200/70">
-            {picture.unplaced.length} beat{picture.unplaced.length > 1 ? "s" : ""} carry no
-            timecode and hold no span, so they are not on this clock:{" "}
-            {picture.unplaced.map((f) => `"${f.title}"`).join(", ")}.
-          </p>
-        )}
+        {/* COVERAGE, TO SCALE, UNDER THE LANE IT MEASURES. It used to be the
+            sentence "{n}s spotted · {m}s with no cue over it — spans to scale on
+            the {clockS}s of picture this project has", which described the
+            picture directly above it. The rail IS that picture: one segment per
+            scene at its own width, cyan where a cue sits and washed where none
+            does. The two numerals stay because they are the work — and because
+            a rail cannot be read to the second. */}
+        <div className="mt-3 flex items-center gap-3">
+          <span className={LANE_GUTTER} />
+          <div
+            role="img"
+            aria-label={`${spottedS} of ${clockS} seconds carry a cue`}
+            className="flex h-1 flex-1 overflow-hidden rounded-full bg-white/[0.04]"
+          >
+            {sceneCells.map(({ scene }) => (
+              <span
+                key={scene.id}
+                style={{ width: `${(scene.targetS / clockS) * 100}%` }}
+                className={
+                  spottedSceneIds.has(scene.id) ? "bg-cyan-400/60" : "bg-white/[0.06]"
+                }
+              />
+            ))}
+          </div>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <span className="font-jetbrains text-content text-white/40">
+            <span className="text-cyan-300/80">{spottedS}s</span> / {clockS}s
+          </span>
+          {cues.length === 0 && session.spots.length > 0 && (
+            <Tally label="covered" value={0} of={picture.scenes.length} tone="amber" />
+          )}
+          {takesHeld > 0 && (
+            <Tally
+              label="takes"
+              value={takesHeld}
+              tone="cyan"
+              hint="not kept past a reload"
+            />
+          )}
+          {/* BEATS THAT ARE NOT ON THE CLOCK, sitting off it. They exist in the
+              cut, they simply have no timecode, so there is no span to draw and
+              nothing can be scored over them. See the null-hold note in
+              ./picture. */}
+          <OrphanTray
+            label="beats that carry no timecode"
+            items={picture.unplaced.map((f) => ({ key: f.id, name: f.title }))}
+          />
+        </div>
         <UnspottableLine items={spotted.unspottable} />
         {/* WHERE THE SPOTS CAME FROM, under the timeline they are drawn on. */}
         <OriginLine
+          projectId={projectId}
           origin={session.origin}
           unplaced={session.unplaced}
           discipline={read?.discipline}
+          done={doneUp}
         />
       </div>
 
@@ -692,33 +881,16 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
         onAdd={session.addSpot}
       />
 
-      {!cue ? (
-        /* SPOTS, BUT NONE OF THEM ON THIS PICTURE. Not an error and not an empty
-           box with a disabled button: every spot in the session names scenes
-           this project does not have, so not one of them has a span.
-           `text-content` rather than the `text-sm` this block carried since it
-           was written — 14px, under this app's 16px floor, and invisible to
-           `check:type`, which reads the extra-small class and arbitrary px
-           sizes but not the intermediate named rungs. Unreachable copy until
-           2026-09-08, which is exactly how it survived.
+      {/* SPOTS, BUT NONE OF THEM ON THIS PICTURE, has no card here any more: the
+          music lane above is hatched amber across its whole width and carries a
+          `covered 0/N` tally, which is the same fact drawn where it happens. The
+          card that used to stand here spent sixty words re-teaching that a cue's
+          span is the film it covers.
 
-           AN EMPTY SESSION DOES NOT REACH HERE, and that is a deliberate cut: it
-           is already answered twice above — `OriginLine` says why nothing was
-           proposed, and the spotting session's own card says "0 spots" beside
-           the button that adds one. A third panel restating it was three
-           paragraphs for one fact (measured on the Score step, 2026-09-08). */
-        session.spots.length > 0 && (
-          <div className="mt-4 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-            <p className="text-content leading-snug text-slate-400">
-              No cue sits on this picture. There {picture.scenes.length === 1 ? "is" : "are"}{" "}
-              {picture.scenes.length} scene{picture.scenes.length > 1 ? "s" : ""} on the clock
-              above, and not one spot in this session covers any of them — a cue&rsquo;s span IS
-              the film it covers, so a spot with no picture gets no span rather than a default one,
-              and nothing here will buy music for a film that does not exist.
-            </p>
-          </div>
-        )
-      ) : (
+          AN EMPTY SESSION never had a card either, for the neighbouring reason:
+          `OriginLine` says why nothing was proposed and the spotting session's
+          own header says "0 spots" beside the button that adds one. */}
+      {cue && (
       <div
         className={`mt-4 rounded-2xl border p-4 ${
           cue.status === "failed" ? "border-rose-400/25 bg-rose-400/[0.03]" : "border-white/8 bg-white/[0.02]"
@@ -729,15 +901,22 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
           <span className="font-jetbrains text-label text-white/40">
             {cue.startS}s → {cue.startS + cue.durS}s ·{" "}
             {cue.bpm === undefined ? (
-              /* NO TEMPO, SAID WHERE THE NUMBER WOULD HAVE GONE. Nothing
-                 upstream states one — a Movement has no tempo and neither does
-                 the Cue it points into — and this step's craft directory is n=0
-                 and says a trailer tempo "is chosen from the picture by bar
-                 math", never defaulted. So the slot reads as unanswered rather
-                 than being filled with a plausible 84. */
-              <span className="text-amber-200/80" title={NO_TEMPO_WHY}>
-                no tempo
-              </span>
+              /* NO TEMPO, DRAWN WHERE THE NUMBER WOULD HAVE GONE — an amber
+                 timer glyph that puts the caret in the box that takes it. The
+                 slot reads as unanswered rather than as a plausible 84, and the
+                 same fact used to be written out three times on this card (a
+                 four-sentence tooltip here, "no tempo yet" beside the button,
+                 and "set a tempo to render" ON the button). See
+                 `focusSpotField` for why it can be empty at all. */
+              <button
+                type="button"
+                onClick={() => focusSpotField(cue.id, "tempo in beats per minute")}
+                aria-label="set this cue’s tempo"
+                className="inline-flex items-center gap-1 rounded border border-dashed border-amber-300/40 px-1.5 py-0.5 text-amber-200/80 transition hover:bg-amber-300/10 focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                <Timer className="h-3.5 w-3.5" aria-hidden />
+                <span className="sr-only">no tempo</span>
+              </button>
             ) : (
               `${cue.bpm} bpm`
             )}
@@ -745,11 +924,10 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
           {/* Only a take has a status. A spot that has never been to the engine
               has none, and neither "rendered" nor "failed" is true of it. */}
           {cue.status && <CueStatusWord status={cue.status} />}
+          {/* The pill carries the whole meaning; the tooltip that used to hang
+              off it restated the amber dashed span drawn a few pixels above. */}
           {proposedIds.has(cue.id) && (
-            <span
-              className="font-jetbrains rounded-full border border-amber-300/30 px-2 py-0.5 text-label tracking-[0.12em] text-amber-200/80 uppercase"
-              title="Derived from a movement of the script's cut. Edit anything about it below and it becomes yours."
-            >
+            <span className="font-jetbrains rounded-full border border-amber-300/30 px-2 py-0.5 text-label tracking-[0.12em] text-amber-200/80 uppercase">
               proposed
             </span>
           )}
@@ -760,41 +938,51 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
               rather than falling back to a default, because a default here is
               indistinguishable from a fact and this exact spot printed a
               fictional vendor for months. */}
-          {credit.text && (
-            <span className="font-jetbrains text-label text-white/30" title={credit.why}>
-              {credit.text}
-            </span>
+          {take?.state === "done" ? (
+            <Provenance vendor={take.provenance.vendor} model={take.provenance.modelId} />
+          ) : (
+            credit.text && (
+              <span className={`${CHIP_CLASS} ${TALLY_TONE.neutral}`}>{credit.text}</span>
+            )
           )}
+          {/* `MusicErrorKind` (lib/music/errors.ts) — a state the adapter really
+              returns, printed verbatim. It needs no gloss: the footnote that
+              used to hang here was about where the vocabulary is declared. */}
           {cue.status === "failed" && cue.failure && (
-            <span
-              className="font-jetbrains rounded border border-rose-400/25 px-1.5 py-0.5 text-label text-rose-300/80"
-              title="The engine's own outcome vocabulary (MusicErrorKind, lib/music/errors.ts) — a state the adapter really returns, not a description of one."
-            >
-              kind={cue.failure}
-            </span>
+            <span className={`${CHIP_CLASS} ${TALLY_TONE.rose}`}>kind={cue.failure}</span>
           )}
         </div>
-        <p className={`mt-1.5 text-content leading-snug ${cue.status === "failed" ? "text-rose-200/90" : "text-slate-400"}`}>
-          {/* The purpose sentence, and its absence. A proposed spot carries the
-              label of the cue section its movement points into, verbatim; a
-              movement that names no section leaves this empty, which the script
-              step's own checker already reports as unmeasured rather than
-              filling in. Nothing here writes prose about somebody's film. */}
-          {cue.note || (
-            <span className="text-amber-200/70">
-              no intent recorded — say what this cue is for in the session below; it is the one
-              sentence the model is told about the moment.
-            </span>
-          )}
-        </p>
-        {/* A SPECIFIED BEHAVIOUR THIS BUILD DOES NOT HAVE, said out loud. The
-            dashed border and the words carry the whole meaning: the studio
-            intends this, the studio does not do it, and nothing on the timeline
-            above should be read as if it did. */}
+        {/* The purpose sentence, and its absence. A proposed spot carries the
+            label of the cue section its movement points into, verbatim; a
+            movement that names no section leaves this empty, which the script
+            step's own checker already reports as unmeasured rather than filling
+            in. Nothing here writes prose about somebody's film — including
+            about the hole where the sentence goes, which is now an amber glyph
+            that puts the caret in the field that takes it. */}
+        {cue.note ? (
+          <p className={`mt-1.5 text-content leading-snug ${cue.status === "failed" ? "text-rose-200/90" : "text-slate-400"}`}>
+            {cue.note}
+          </p>
+        ) : (
+          <button
+            type="button"
+            onClick={() => focusSpotField(cue.id, "what this cue is for")}
+            aria-label="say what this cue is for"
+            className="mt-1.5 inline-flex items-center rounded border border-dashed border-amber-300/40 p-1 text-amber-200/70 transition hover:bg-amber-300/10 focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            <MessageSquareDashed className="h-4 w-4" aria-hidden />
+            <span className="sr-only">no intent recorded</span>
+          </button>
+        )}
+        {/* A SPECIFIED BEHAVIOUR THIS BUILD DOES NOT HAVE. The dashed amber pill
+            and the declared value carry the whole meaning; the clause that used
+            to follow them ("declared intent; there is no mixing stage in this
+            build") was the product confessing a capability gap in body copy,
+            which the pill already says. */}
         {cue.declaredNotPerformed && (
           <p className="font-jetbrains mt-2 inline-flex items-center gap-2 rounded border border-dashed border-amber-300/30 px-2 py-1 text-label text-amber-200/70">
             <span className="uppercase tracking-[0.14em] text-amber-300/60">not performed</span>
-            {cue.declaredNotPerformed} — declared intent; there is no mixing stage in this build.
+            {cue.declaredNotPerformed}
           </p>
         )}
         {/* The music engine is real now — /api/music/generate renders a cue's
@@ -810,7 +998,6 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
             // `cueToPlan` puts it into the plan's own words and into `barsFit`;
             // there is nothing to send and nothing honest to substitute.
             disabled={take?.state === "working" || cue.bpm === undefined}
-            title={cue.bpm === undefined ? NO_TEMPO_WHY : undefined}
             className={`rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] px-3 py-1.5 text-label font-medium text-cyan-200/90 transition hover:bg-cyan-400/[0.14] disabled:opacity-50 ${
               // A render in flight is a wait; a missing tempo is a refusal. The
               // cursor should not say "hold on" about the second one.
@@ -819,18 +1006,12 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
           >
             {take?.state === "working"
               ? "rendering…"
-              : cue.bpm === undefined
-                ? "set a tempo to render"
-                : take?.state === "done"
-                  ? "render another take"
-                  : cue.status === "failed"
-                    ? "re-ask the model"
-                    : "render this cue"}
+              : take?.state === "done"
+                ? "render another take"
+                : cue.status === "failed"
+                  ? "re-ask the model"
+                  : "render this cue"}
           </button>
-          <span className="font-jetbrains text-label text-white/35">
-            {cue.bpm === undefined ? "no tempo yet" : `${cue.bpm} bpm`} · duration derived from
-            picture
-          </span>
           {/* WHAT THE CLICK COSTS, BESIDE THE BUTTON THAT SPENDS IT — not a
               dialog, which would kill the one thing a spotting session is for.
               Today it reads "13s of audio · unpriced", because ElevenLabs bills
@@ -858,14 +1039,25 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
             timeline above and the engine's own section names use. The moods
             stay on the title: they are what the model is told, and they are
             detail, not identity. */}
-        <p
-          className="font-jetbrains mt-2 text-label leading-snug text-white/35"
-          title={cue.picture.scenes.map((sc) => `${sc.index} ${sc.slug} — ${sc.mood}`).join("\n")}
-        >
-          briefed from {cue.picture.scenes.length} scene
-          {cue.picture.scenes.length > 1 ? "s" : ""} —{" "}
-          {cue.picture.scenes.map((sc) => `${sc.index} ${sc.slug}`).join(" · ")}
-        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="font-jetbrains text-label tracking-[0.12em] text-white/30 uppercase">
+            briefed from
+          </span>
+          {cue.picture.scenes.map((sc) => (
+            <span
+              key={`${sc.index}-${sc.slug}`}
+              className={`${CHIP_CLASS} ${TALLY_TONE.neutral}`}
+              // The mood is what the model is told about the scene — detail, not
+              // identity, so it rides on the chip rather than widening the row.
+              title={sc.mood}
+            >
+              <span aria-hidden className="opacity-50">
+                {sc.index}
+              </span>
+              <span className="text-white/85">{sc.slug}</span>
+            </span>
+          ))}
+        </div>
         {take?.state === "done" && (
           <>
             <audio controls src={take.url} className="mt-3 h-9 w-full" />
@@ -880,11 +1072,23 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
         {(take?.state === "refused" || take?.state === "error") && (
           <p className="font-jetbrains mt-3 text-content leading-snug text-rose-200/70">{take.msg}</p>
         )}
+        {/* REFUSED SILENCE, DRAWN — a flatline where the player would be, in the
+            slot the <audio> element takes when a take lands. It is a picture of
+            silence, and it used to be a sentence about one: "{durS}s of the
+            {clockS}s clock plays silent until a take lands…". Refused-silence is
+            a state this cut renders rather than an error it hides, which is what
+            the rail being drawn at all says. */}
         {cue.status === "failed" && take?.state !== "done" && (
-          <p className="font-jetbrains mt-3 text-content leading-snug text-rose-200/60">
-            {cue.durS}s of the {clockS}s clock plays silent until a take lands. A refusal keeps
-            it silent on purpose — refused-silence is a state this cut renders, not an error it hides.
-          </p>
+          <div
+            role="img"
+            aria-label={`${cue.durS} seconds silent — this cue was refused`}
+            className="mt-3 flex h-9 w-full items-center gap-3 rounded-lg border border-dashed border-rose-400/25 bg-rose-400/[0.03] px-3"
+          >
+            <span aria-hidden className="font-jetbrains text-label text-rose-200/70">
+              {cue.durS}s
+            </span>
+            <span aria-hidden className="h-px flex-1 bg-rose-400/45" />
+          </div>
         )}
       </div>
       )}
