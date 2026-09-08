@@ -114,7 +114,6 @@ export default function FramesStep({ projectId }: { projectId: string }) {
             label="frames views"
             active={view}
             onSelect={setView}
-            className="border-b-0 pb-0"
             tabs={VIEWS.map((id) => ({
               id,
               label: id,

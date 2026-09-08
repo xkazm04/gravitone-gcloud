@@ -90,6 +90,7 @@ export function TabRail<T extends string>({
   active,
   onSelect,
   label,
+  trailing,
   className = "",
 }: {
   tabs: ReadonlyArray<TabDef<T>>;
@@ -98,6 +99,10 @@ export function TabRail<T extends string>({
   /** Names the row for a screen reader — "library modules". Required: an
    *  unnamed tablist on a page with two of them is a coin toss. */
   label: string;
+  /** A control that sits on the rail's row but is NOT a tab — a face switch, a
+   *  filter. Rendered as a sibling of the tablist, because a tablist that owns
+   *  a non-tab child is lying to the accessibility tree. */
+  trailing?: React.ReactNode;
   className?: string;
 }) {
   const listRef = useRef<HTMLDivElement | null>(null);
@@ -125,12 +130,24 @@ export function TabRail<T extends string>({
     e.preventDefault();
   };
 
-  return (
+  // A TABLIST MUST OWN ONLY TABS, so a control that belongs beside the rail
+  // cannot live inside it — and the first two call sites that needed one both
+  // discovered that the same way, by hand. FramesStep invented
+  // `className="border-b-0 pb-0"` on an outer flex wrapper to move the hairline
+  // out to the parent; ResearchStep, converting later and independently, wrote
+  // `className="grow border-b-0 pb-0"` for its FaceSwitch. Two of five call
+  // sites carrying the same override is the component failing to offer a slot,
+  // not two authors being clever. `trailing` is that slot: rendered as a
+  // SIBLING of the tablist, so the accessibility tree stays honest and the
+  // hairline still spans the whole row.
+  const rail = (
     <div
       ref={listRef}
       role="tablist"
       aria-label={label}
-      className={`flex flex-wrap items-center gap-2 border-b border-white/8 pb-3 ${className}`}
+      className={`flex flex-wrap items-center gap-2 ${
+        trailing ? "grow" : `border-b border-white/8 pb-3 ${className}`
+      }`}
     >
       {tabs.map((t, i) => (
         <TabButton
@@ -141,6 +158,17 @@ export function TabRail<T extends string>({
           onKeyDown={(e) => onKeyDown(e, i)}
         />
       ))}
+    </div>
+  );
+
+  if (!trailing) return rail;
+
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-2 border-b border-white/8 pb-3 ${className}`}
+    >
+      {rail}
+      {trailing}
     </div>
   );
 }

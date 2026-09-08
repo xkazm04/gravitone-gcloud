@@ -305,34 +305,31 @@ function EducationalFaces({
               tests both spellings. The live spec's assertion says so out
               loud — tests/live/golden-path.live.spec.ts, "the board is
               unlocked". */}
-          <div className="flex flex-wrap items-center gap-3 border-b border-white/8 pb-3">
-            <TabRail
-              className="grow border-b-0 pb-0"
-              label="research views"
-              active={tab}
-              onSelect={setTab}
-              tabs={[
-                { id: "topic", label: "Topic", testId: "tab-topic", panelId: PANEL_ID },
-                {
-                  id: "board",
-                  label: "Triage board",
-                  testId: "tab-board",
-                  // Only while it can be opened: `aria-controls` pointing at a
-                  // panel this tab cannot reach is a promise it does not keep.
-                  ...(ready ? { panelId: PANEL_ID } : {}),
-                  disabled: !ready,
-                  disabledReason: "locked until a notebook exists",
-                  tally: {
-                    value: ready ? api.summary.kept : 0,
-                    of: ready ? api.summary.total : undefined,
-                    label: "kept",
-                    tone: ready ? "cyan" : "neutral",
-                  },
+          <TabRail
+            label="research views"
+            trailing={<FaceSwitch face="expert" onSwitch={onSwitchFace} />}
+            active={tab}
+            onSelect={setTab}
+            tabs={[
+              { id: "topic", label: "Topic", testId: "tab-topic", panelId: PANEL_ID },
+              {
+                id: "board",
+                label: "Triage board",
+                testId: "tab-board",
+                // Only while it can be opened: `aria-controls` pointing at a
+                // panel this tab cannot reach is a promise it does not keep.
+                ...(ready ? { panelId: PANEL_ID } : {}),
+                disabled: !ready,
+                disabledReason: "locked until a notebook exists",
+                tally: {
+                  value: ready ? api.summary.kept : 0,
+                  of: ready ? api.summary.total : undefined,
+                  label: "kept",
+                  tone: ready ? "cyan" : "neutral",
                 },
-              ]}
-            />
-            <FaceSwitch face="expert" onSwitch={onSwitchFace} />
-          </div>
+              },
+            ]}
+          />
 
           <div id={PANEL_ID} role="tabpanel" className="space-y-5">
             {tab === "topic" ? (
