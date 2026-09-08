@@ -11,10 +11,10 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Link from "next/link";
-import { Info, Zap } from "lucide-react";
+import { Zap } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Ghost } from "@/components/ui/signal";
+import { Ghost, Tally } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
@@ -252,35 +252,56 @@ export default function ProjectsView() {
           )}
         </section>
 
-        {/* THE STYLE NOTE — a fact, and it sits AFTER the shelf.
+        {/* THE STYLE GAP — a fact, DRAWN, and it sits AFTER the shelf.
 
-            It used to be an amber banner directly under the title: the
+            It was an amber banner directly under the title once: the
             highest-contrast element on a first-run screen, ending in a button
             to /library. Amber is this app's warning colour (see the dev-auth
-            banner in components/ui/StudioFrame), and the sentence's own second
-            half says nothing is blocked — the wizard hands out presets that
-            lock on create. So the loudest thing on the screen was announcing a
-            non-problem AND pointing away from the one action here.
+            banner in components/ui/StudioFrame), so the loudest thing on the
+            screen was announcing a non-problem AND pointing away from the one
+            action here. b49e8bd demoted it — below the shelf, neutral chrome —
+            and added "Nothing is blocked by that" so it stopped reading as an
+            error. BOTH OF THOSE DECISIONS STAND. What goes is the prose.
 
-            Neutral chrome, and moved below the shelf, so the page reads
-            primary action first and footnote second. The fact is kept rather
-            than dropped: the wizard's style stage states it again where it
-            actually bears on a decision, and /library is still one click from
-            here for someone who came to commission a style. */}
+            Two sentences of app-narration ("Every project is rendered against
+            a locked visual style… the create wizard offers presets that lock
+            when you create") are the app explaining its own mechanism, and the
+            second was there only to undo the alarm the first raised. The rules
+            they stated are enforced in code and restated where they bear on a
+            decision: lib/themes#lockedOnly gates this, and the wizard's style
+            stage offers the presets and mints a locked theme at create
+            (app/_projects/wizard/stages.tsx). Nothing is blocked here, which
+            is why this is a chip and not a Notice — amber says "needs a call",
+            rose would say "broken".
+
+            So: the hollow swatch this app already uses for a style that is not
+            there, the count, and the route. `of` is every style the account
+            holds, because "0 locked" and "0 locked of 3 drafts" are different
+            facts about what to do next, and only the ratio tells them apart.
+            The link is an ACTION, not narration — /library is still one click
+            from a shelf whose owner came to commission a style. */}
         {gated && (
-          <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-3">
-            <Info aria-hidden className="mt-1 h-4 w-4 shrink-0 text-white/25" />
-            <p className="font-hanken text-label text-slate-400">
-              Every project is rendered against a locked visual style, and this account has none
-              yet. Nothing is blocked by that — the create wizard offers presets that lock when you
-              create.{" "}
-              <Link
-                href="/library"
-                className="rounded-sm text-slate-300 underline underline-offset-4 transition hover:text-white"
-              >
-                Commission your own in the library →
-              </Link>
-            </p>
+          <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-3">
+            {/* The hollow twin of a style's face — the same absent-swatch shape
+                ProjectDialog#StyleSwatch draws for "no style" and the wizard's
+                EmptyStyleDeck draws where a style card would be. Dashed, so it
+                reads as a slot rather than a rule. */}
+            <span
+              aria-hidden
+              className="h-3.5 w-10 shrink-0 rounded-full border border-dashed border-amber-300/50"
+            />
+            <Tally
+              label="locked styles"
+              value={0}
+              of={allThemes.length || undefined}
+              tone="amber"
+            />
+            <Link
+              href="/library"
+              className="font-hanken rounded-sm text-label text-slate-300 underline underline-offset-4 transition hover:text-white"
+            >
+              Commission your own in the library →
+            </Link>
           </div>
         )}
       </main>
