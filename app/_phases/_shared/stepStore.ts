@@ -41,6 +41,47 @@ export interface ResearchStepData {
   savedAt?: number;
 }
 
+/** THE NOTEBOOK A REAL RUN PRODUCED, under phase key `"research-notebook"`.
+ *
+ *  Its own record, and its own key, for the cadence reason every type in this
+ *  file gives — but here there is a second and stronger reason. `ResearchStepData`
+ *  above is the SIMULATED path's record: `researched: true` there means "this
+ *  project shows the saved 2026-08-11 Bitcoin run", which is what the seed writes
+ *  and what four harness scripts drive. Folding a real notebook into that boolean
+ *  would make the one bit downstream reads mean two different things — a replayed
+ *  fixture and a creator's own reasoned notebook — which is the exact
+ *  indistinguishability app/_phases/research/guided/RunStage.tsx's `StandInNote`
+ *  exists to prevent.
+ *
+ *  So the two paths write two records, and WHICH RECORD A NOTEBOOK CAME FROM IS
+ *  ITS PROVENANCE. A reader that finds this key knows the notebook was reasoned
+ *  by an engine for `topic`; a reader that finds only `research` knows it is the
+ *  replay. Nothing has to be inferred from content.
+ *
+ *  `engine` is the run's receipt (`/api/research`'s `engine` block), kept ON the
+ *  record rather than beside it so that what a notebook cost, which rung served
+ *  it, and — the field no other receipt in this app has — whether the engine
+ *  could search, all survive the reload with the work they describe.
+ *
+ *  `notebook: null` is the CLEARED state and is distinct from no record at all:
+ *  the creator discarded a notebook here, and re-adopting one on the next mount
+ *  would silently undo their clear.
+ *
+ *  Typed loosely on purpose. `Notebook` lives in `_shared/notebook/types.ts` and
+ *  importing it here would put the whole fixture-adjacent type graph into every
+ *  module that touches the step store, including five that never see a notebook.
+ *  The one consumer (`research/run/live.ts`) casts at its own boundary, which is
+ *  also the boundary where `lib/notebook/validate.ts` has already checked it. */
+export interface ResearchNotebookStepData {
+  /** The topic as the creator typed it — the authority on what was asked. */
+  topic: string;
+  /** A validated notebook, or `null` for "cleared here". */
+  notebook: unknown | null;
+  /** The run's receipt, or `null` alongside a cleared notebook. */
+  engine: unknown | null;
+  savedAt?: number;
+}
+
 /** The creator's scoping decisions, kept under their own phase key.
  *
  *  Separate from ResearchStepData on purpose: the two are written by different

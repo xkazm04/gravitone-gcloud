@@ -66,11 +66,19 @@ function stepSources(): string[] {
  *  of their own, so the unit here is the FILE. */
 const STORE_DECL = /^const\s+\w+\s*=\s*new Map<string,/m;
 
-/** The two stores that exist, each with the reset `doClear` must call. An entry
- *  is a claim somebody defends in review — exactly like KNOWN_LEAKS next door. */
+/** The stores that exist, each with the reset `doClear` must call. An entry is a
+ *  claim somebody defends in review — exactly like KNOWN_LEAKS next door.
+ *
+ *  `run/live.ts` joined them on 2026-09-08 with the real-run path, and it is the
+ *  first of the three whose reset also reaches DISK: a reasoned notebook has its
+ *  own step record (`"research-notebook"`), so clearing the module store alone
+ *  would leave it on disk to be re-adopted on the next mount — the creator's
+ *  clear silently undoing itself, which is this probe's own founding defect in
+ *  a new place. */
 const STORES: Record<string, string> = {
   "app/_phases/research/useFollowUps.ts": "resetFollowUps(",
   "app/_phases/research/run/useResearchRun.ts": "run.reset()",
+  "app/_phases/research/run/live.ts": "live.reset()",
 };
 
 test("every session-lived record the Research step owns is reachable by its Clear", () => {

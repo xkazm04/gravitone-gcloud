@@ -25,7 +25,8 @@ import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
-import { LocalProcessNote, OutcomePicker, RunStatus, TopicField } from "../run/controls";
+import { LocalProcessNote, OutcomePicker, RealRunControl, RunStatus, TopicField } from "../run/controls";
+import LiveResult from "../run/LiveResult";
 import RunTrace from "../run/RunTrace";
 import type { EducationalResearchApi } from "./useEducationalResearch";
 
@@ -81,7 +82,16 @@ export function StandInNote({ topic }: { topic: string }) {
   return (
     <span data-testid="stand-in-note" className="flex flex-wrap items-center gap-1.5">
       {own && (
-        <span className="font-jetbrains text-label text-white/35 line-through decoration-amber-300/50">
+        // TRUNCATED, and that is a fix rather than a style. The typed topic is
+        // whatever the creator typed, and this span rendered it whole: a pasted
+        // paragraph ran straight off the right edge of the page and took the
+        // body's horizontal scroll with it (measured 2026-09-08 with a
+        // 400-character topic, driving the real-run path). `title` keeps the
+        // whole string reachable, which is what a struck-through label owes.
+        <span
+          title={topic.trim()}
+          className="font-jetbrains max-w-[32ch] truncate text-label text-white/35 line-through decoration-amber-300/50"
+        >
           {topic.trim()}
         </span>
       )}
@@ -108,7 +118,20 @@ export default function RunStage({
   onOpenEvidence: () => void;
   onClear: () => void;
 }) {
-  const { run, topic, setTopic, ready, running, startResearch, abortResearch } = research;
+  const {
+    run,
+    topic,
+    setTopic,
+    ready,
+    running,
+    startResearch,
+    abortResearch,
+    live,
+    liveRunning,
+    preflight,
+    startLiveResearch,
+    abortLiveResearch,
+  } = research;
 
   // Whether a notebook already existed when this stage was DEALT — not whether
   // one exists now. A run that lands while you watch keeps its trace on the
@@ -119,7 +142,29 @@ export default function RunStage({
 
   if (openedReady && run.state.status === "done") {
     return (
-      <div className="gt-rise mx-auto w-full max-w-2xl space-y-4">
+      // THE DEAD BAND UNDER THIS CARD IS NOT FIXABLE FROM HERE, and the attempt
+      // is recorded rather than left as CSS that looks like it works.
+      //
+      // Measured at 1920×1080 on 2026-09-08: Deck's stage-content div
+      // (`mt-8 grow`) is 625px tall, this card is 312px, and all 313px of slack
+      // sits underneath it. `min-h-full justify-center` on this wrapper was
+      // tried and measured at zero effect — a percentage min-height cannot
+      // resolve against a parent whose height comes from `flex-grow` rather than
+      // from a specified height, so the flex container collapsed to its content
+      // and `justify-center` had nothing to centre in.
+      //
+      // The fix is one class on components/ui/deck/Deck.tsx (`flex flex-col` on
+      // that div, then `my-auto` here) and it is NOT made: that div is the stage
+      // slot for four other surfaces — the create wizard's three card stages,
+      // the script duel and the passes deck — and turning it into a flex
+      // container stops margin collapsing for all of them. That is a change to
+      // the deck, on a page whose redesign is already the operator's; it is in
+      // the report rather than in this diff.
+      //
+      // WHAT IS DONE HERE IS SPACING: a roomier card (p-6), a wider gap between
+      // the card and what follows it, and — in the states that matter — more IN
+      // the band, because a real run now draws its own result underneath.
+      <div className="gt-rise mx-auto w-full max-w-3xl space-y-5">
         <div className="overflow-hidden rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.03]">
           <div
             aria-hidden
@@ -146,7 +191,7 @@ export default function RunStage({
             <div className="mt-2">
               <StandInNote topic={topic} />
             </div>
-            <div className="mt-4 flex flex-wrap items-center gap-2.5">
+            <div className="mt-5 flex flex-wrap items-center gap-2.5">
               <ArtifactPills
                 onOpenNotebook={onOpenNotebook}
                 onOpenEvidence={onOpenEvidence}
@@ -155,37 +200,55 @@ export default function RunStage({
             </div>
           </div>
         </div>
-        <OutcomePicker
-          outcome={run.outcome}
-          setOutcome={run.setOutcome}
-          disabled={running}
-          onLoad={run.load}
-          loaded={ready}
-        />
+
+        {/* The creator's own notebook, if one has been reasoned for this
+            project. It sits BESIDE the replay rather than replacing it: they are
+            two different objects and the surface says which is which. */}
+        <LiveResult state={live.state} />
+
+        {/* Gated — see run/controls.tsx. The pills drive which ending the
+            simulated run walks to and the load control skips the walk entirely;
+            both are evaluation affordances by their own comments, and neither
+            renders in a production build. */}
+        {process.env.NODE_ENV === "development" && (
+          <OutcomePicker
+            outcome={run.outcome}
+            setOutcome={run.setOutcome}
+            disabled={running}
+            onLoad={run.load}
+            loaded={ready}
+          />
+        )}
       </div>
     );
   }
 
   return (
+    // Roomier, not re-laid-out — see the compact branch above for the
+    // measurement of the dead band, why it cannot be closed from this file, and
+    // what was deliberately left for the redesign.
     <div className="mx-auto w-full max-w-3xl space-y-5">
-      <div className="rounded-2xl border border-white/8 bg-white/[0.015] p-5">
-        <OutcomePicker
-          outcome={run.outcome}
-          setOutcome={run.setOutcome}
-          disabled={running}
-          onLoad={run.load}
-          loaded={ready}
-        />
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+      <div className="rounded-2xl border border-white/8 bg-white/[0.015] p-6">
+        {/* Gated — see run/controls.tsx. */}
+        {process.env.NODE_ENV === "development" && (
+          <div className="mb-5">
+            <OutcomePicker
+              outcome={run.outcome}
+              setOutcome={run.setOutcome}
+              disabled={running}
+              onLoad={run.load}
+              loaded={ready}
+            />
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-3">
           <TopicField
             topic={topic}
             setTopic={setTopic}
-            disabled={running}
+            disabled={running || liveRunning}
+            maxLength={preflight?.maxTopicChars}
             className="min-w-[16rem] flex-1"
           />
-          {/* The substitution stands BESIDE the field it substitutes for —
-              typed topic struck out, notebook's topic in the chip. */}
-          <StandInNote topic={topic} />
           {running ? (
             <Button variant="ghost" onClick={abortResearch} className="shrink-0">
               Abort
@@ -194,15 +257,35 @@ export default function RunStage({
             <Button
               data-testid="run-research"
               onClick={startResearch}
-              disabled={!topic.trim()}
+              disabled={!topic.trim() || liveRunning}
               className="shrink-0"
             >
               Research this
             </Button>
           )}
         </div>
-        <LocalProcessNote className="mt-3" />
+        {/* THE TWO PATHS, EACH LABELLED WITH WHAT IT ACTUALLY IS. The default
+            button above walks the replay, and the substitution stands beside it
+            — typed topic struck out, the notebook's own topic in the chip. The
+            row below is the real engine and the money: explicit, second, and
+            carrying its price before it is pressed. */}
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <StandInNote topic={topic} />
+          <LocalProcessNote />
+        </div>
+        <div className="mt-4 border-t border-white/8 pt-4">
+          <RealRunControl
+            preflight={preflight}
+            onStart={startLiveResearch}
+            onAbort={abortLiveResearch}
+            running={liveRunning}
+            disabled={!topic.trim() || running}
+          />
+        </div>
       </div>
+
+      {/* What a real run is doing, or produced, or failed to produce. */}
+      <LiveResult state={live.state} />
 
       {run.state.status !== "idle" && (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">

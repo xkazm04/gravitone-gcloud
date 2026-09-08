@@ -70,8 +70,30 @@ export type TextCapability = "reason";
  *                        schema-shaped, a few KB of prompt; cheap enough for
  *                        flash, and its answer is validated for coverage
  *                        before anything is generated from it.
+ *   · `research`         /api/research — a topic in, a notebook out. Step 1's
+ *                        own turn, and it gets its own word rather than
+ *                        borrowing `edit-plan`'s for the reason this whole type
+ *                        exists: a research run and a recalibration are the two
+ *                        dearest things the app does, they are started by
+ *                        different people for different reasons, and a spend
+ *                        chart that cannot separate them is a spend chart
+ *                        nobody can act on. Its output is validated against
+ *                        NOTEBOOK-SCHEMA.md (lib/notebook/validate.ts) before
+ *                        it is accepted.
+ *
+ *                        ITS ONE PROPERTY NOTHING ELSE HERE HAS: the prompt it
+ *                        serves (pipeline/RESEARCH-PROMPT.md) asks for 4–8 WEB
+ *                        SEARCHES, and this engine has no tools on either rung
+ *                        — `lib/claudeCli.ts` spawns with `--allowed-tools ""
+ *                        --max-turns 1` and the Google adapter declares none.
+ *                        So a `research` turn is REASONED FROM THE MODEL'S OWN
+ *                        TRAINING, not retrieved, and the route says so to the
+ *                        engine and the surface says so to the creator. Do not
+ *                        quietly promote this turn to a tool-using one: that is
+ *                        a second capability and a separate seam, per the note
+ *                        on `TextCapability` above.
  */
-export type TurnClass = "edit-plan" | "scene-direction" | "style-synthesis" | "probe";
+export type TurnClass = "edit-plan" | "scene-direction" | "style-synthesis" | "research" | "probe";
 
 /**
  * HOW THE ANSWER WAS REACHED. Not cosmetic — see the header, point 1.

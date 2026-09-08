@@ -250,15 +250,36 @@ function EducationalFaces({
   const [fallback] = useState<Face>(defaultFace);
   const shown = face ?? fallback;
 
-  const { run, topic, setTopic, ready, running, startResearch, abortResearch } = research;
+  const {
+    run,
+    topic,
+    setTopic,
+    ready,
+    running,
+    startResearch,
+    abortResearch,
+    live,
+    liveRunning,
+    preflight,
+    startLiveResearch,
+    abortLiveResearch,
+  } = research;
 
   // Everything the ClearDialog says is discarded, discarded. The follow-up
   // record is the third document this step owns — it lives above React so that
   // navigation cannot lose it (useFollowUps.ts), which also means nothing here
   // ended it, and a returned deepen from the cleared run came back under the
   // next run's board.
+  //
+  // `live.reset()` is the FOURTH, added with the real-run path (run/live.ts). It
+  // is the one that also reaches DISK — the reasoned notebook has its own step
+  // record — because a cleared step that leaves a notebook in the store
+  // re-adopts it on the next mount and the creator's clear silently undoes
+  // itself. tests/golden-path/step-clear-completeness.probe.spec.ts walks this
+  // function's body for each store's reset by name.
   const doClear = () => {
     run.reset();
+    live.reset();
     api.reset();
     resetFollowUps(projectId);
     setConfirmClear(false);
@@ -344,6 +365,11 @@ function EducationalFaces({
                 onOpenNotebook={() => setArtifact("notebook")}
                 onOpenEvidence={() => setArtifact("evidence")}
                 onGoToBoard={() => setTab("board")}
+                live={live}
+                liveRunning={liveRunning}
+                preflight={preflight}
+                onStartLive={startLiveResearch}
+                onAbortLive={abortLiveResearch}
               />
             ) : (
               <>

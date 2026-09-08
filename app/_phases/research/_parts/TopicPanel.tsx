@@ -6,8 +6,10 @@
 import { Bell } from "lucide-react";
 
 import { Button, Eyebrow } from "@/components/ui/Primitives";
-import { LocalProcessNote, OutcomePicker, RunStatus, TopicField } from "../run/controls";
+import { LocalProcessNote, OutcomePicker, RealRunControl, RunStatus, TopicField } from "../run/controls";
 import { StandInNote } from "../guided/RunStage";
+import LiveResult from "../run/LiveResult";
+import type { LiveState, Preflight } from "../run/live";
 import RunTrace from "../run/RunTrace";
 import type { useResearchRun } from "../run/useResearchRun";
 import { NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
@@ -26,6 +28,11 @@ export default function TopicPanel({
   onOpenNotebook,
   onOpenEvidence,
   onGoToBoard,
+  live,
+  liveRunning,
+  preflight,
+  onStartLive,
+  onAbortLive,
 }: {
   run: Run;
   topic: string;
@@ -37,12 +44,20 @@ export default function TopicPanel({
   onOpenNotebook: () => void;
   onOpenEvidence: () => void;
   onGoToBoard: () => void;
+  /** THE SECOND PATH. The same objects the guided face gets — one hook owns
+   *  both runs (guided/useEducationalResearch.ts) and both faces read it, so a
+   *  notebook reasoned on one face is on the other the moment you switch. */
+  live: { state: LiveState };
+  liveRunning: boolean;
+  preflight: Preflight | null | undefined;
+  onStartLive: () => void;
+  onAbortLive: () => void;
 }) {
   const ready = run.state.status === "done";
 
   return (
     <>
-      <section className="rounded-2xl border border-white/8 bg-white/[0.015] p-5">
+      <section className="rounded-2xl border border-white/8 bg-white/[0.015] p-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
           {/* "A topic in, a notebook out. This runs as a background job — you
               can leave this step…" said, in prose, what the field beneath it,
@@ -53,24 +68,40 @@ export default function TopicPanel({
           <div className="min-w-[18rem] flex-1">
             <Eyebrow>step 1 · research</Eyebrow>
           </div>
-          <OutcomePicker
-            outcome={run.outcome}
-            setOutcome={run.setOutcome}
-            disabled={running}
-            onLoad={run.load}
-            loaded={ready}
-          />
+          {/* Gated — see run/controls.tsx. The pills and the load control are
+              evaluation affordances by their own comments and do not render in
+              a production build. */}
+          {process.env.NODE_ENV === "development" && (
+            <OutcomePicker
+              outcome={run.outcome}
+              setOutcome={run.setOutcome}
+              disabled={running}
+              onLoad={run.load}
+              loaded={ready}
+            />
+          )}
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-3">
-          <TopicField topic={topic} setTopic={setTopic} disabled={running} className="min-w-[20rem] flex-1" />
+          <TopicField
+            topic={topic}
+            setTopic={setTopic}
+            disabled={running || liveRunning}
+            maxLength={preflight?.maxTopicChars}
+            className="min-w-[20rem] flex-1"
+          />
           {running ? (
             <Button variant="ghost" onClick={onAbort} className="shrink-0">
               Abort
             </Button>
           ) : (
             <>
-              <Button data-testid="run-research" onClick={onStart} disabled={!topic.trim()} className="shrink-0">
+              <Button
+                data-testid="run-research"
+                onClick={onStart}
+                disabled={!topic.trim() || liveRunning}
+                className="shrink-0"
+              >
                 Research this
               </Button>
               {ready && (
@@ -85,7 +116,21 @@ export default function TopicPanel({
           <LocalProcessNote />
           <StandInNote topic={topic} />
         </div>
+        {/* The real engine, and the money. Explicit, second, and carrying its
+            price before it is pressed — the same control the guided face draws,
+            because there is one wiring and two faces on it. */}
+        <div className="mt-4 border-t border-white/8 pt-4">
+          <RealRunControl
+            preflight={preflight}
+            onStart={onStartLive}
+            onAbort={onAbortLive}
+            running={liveRunning}
+            disabled={!topic.trim() || running}
+          />
+        </div>
       </section>
+
+      <LiveResult state={live.state} />
 
       {/* THE LOG IS NOT GATED ON `!running` ANY MORE. It used to be, which meant
           the one moment the trace exists for — watching the process work through

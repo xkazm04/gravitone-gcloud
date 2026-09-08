@@ -93,12 +93,14 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "edit-plan": ["claude-cli", "google"],
     "scene-direction": ["claude-cli", "google"],
     "style-synthesis": ["claude-cli", "google"],
+    research: ["claude-cli", "google"],
     probe: ["claude-cli"],
   },
   cloud: {
     "edit-plan": ["google"],
     "scene-direction": ["google"],
     "style-synthesis": ["google"],
+    research: ["google"],
     probe: ["google"],
   },
 };
@@ -117,6 +119,10 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   "edit-plan": 600_000,
   "scene-direction": 600_000,
   "style-synthesis": 300_000,
+  // The same ceiling as the other two long turns, and for the same reason: a
+  // notebook is nine phases of judgement and one large structured answer. It
+  // sits under /api/research's own `maxDuration` so the engine gives up first.
+  research: 600_000,
   probe: 30_000,
 };
 

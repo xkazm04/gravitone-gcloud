@@ -161,7 +161,18 @@ export default function GuidedResearch({
       id: "run",
       label: "run",
       headline: "What should the research investigate?",
-      blockedHint: "run the research, or load the saved run",
+      // NAMES ONLY WHAT THE READER CAN SEE. It used to read "run the research,
+      // or load the saved run" — and "load the saved run" is an evaluation
+      // control that no longer renders in a production build (run/controls.tsx),
+      // so for a user the hint named a button that is not there. A gate that
+      // points at a missing control is worse than one that says nothing.
+      //
+      // AND IT IS THE SIMULATED RUN IT MEANS, deliberately. `done` here is the
+      // replay landing, not a real run: everything after this stage — the
+      // takes, the conclusions, the scope arithmetic — is dealt from the shipped
+      // fixture, so a reasoned notebook must not unlock a board that would then
+      // show somebody else's cards under the creator's topic.
+      blockedHint: "run the research to deal the takes",
       done: ready,
       summary: ready ? "notebook ready" : undefined,
       content: (

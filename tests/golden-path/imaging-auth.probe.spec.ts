@@ -35,6 +35,7 @@ import { POST as editPOST } from "@/app/api/imaging/edit/route";
 import { POST as recognizePOST } from "@/app/api/imaging/recognize/route";
 import { POST as framesPOST } from "@/app/api/frames/route";
 import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
+import { POST as researchPOST } from "@/app/api/research/route";
 import { POST as musicPlanPOST } from "@/app/api/music/plan/route";
 import { POST as musicComposePOST } from "@/app/api/music/compose/route";
 import { POST as musicGeneratePOST } from "@/app/api/music/generate/route";
@@ -65,6 +66,12 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   ["recognize", "/api/imaging/recognize", recognizePOST],
   ["frames", "/api/frames", framesPOST],
   ["recalibrate", "/api/recalibrate", recalibratePOST],
+  // Step 1's research turn. Its GET (the pre-flight) gates too, and
+  // deliberately: unlike /api/imaging/pricing it DOES disclose which engines are
+  // reachable and why the others are not, which is key-and-posture state. The
+  // POST is what is driven here because it is the one that spends; an empty body
+  // is a 400 from the topic check, well before any engine is reached.
+  ["research", "/api/research", researchPOST],
   ["music/plan", "/api/music/plan", musicPlanPOST],
   ["music/compose", "/api/music/compose", musicComposePOST],
   ["music/generate", "/api/music/generate", musicGeneratePOST],

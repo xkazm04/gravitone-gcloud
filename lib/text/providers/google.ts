@@ -114,6 +114,12 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   "edit-plan": process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
   "scene-direction": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   "style-synthesis": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  // The PRO model, like `edit-plan` and unlike the other two. A notebook is nine
+  // phases of judgement ending in a large structured object, and RESEARCH-PROMPT
+  // § Cost note is explicit that the bottleneck is Phase 2 — tension-finding —
+  // "which is judgment, not retrieval". Flash is the wrong instrument for the
+  // one step that decides whether the run produced a video or a wiki timeline.
+  research: process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
   probe: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
 };
 
