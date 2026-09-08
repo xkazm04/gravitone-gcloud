@@ -119,6 +119,110 @@
       ]
     },
     {
+      "api_surface": "",
+      "business_feature": "CLI & Infrastructure Verification",
+      "category": "test",
+      "cross_refs": [
+        "production-script-probes",
+        "studio-logic-probes"
+      ],
+      "db_tables": [],
+      "description": "Verifies the runtime boundary conditions that underpin every production feature: CLI spawn/exit semantics, environment variable isolation, Firebase absence handling, global error routing, and the DAL/engine parity contract. These probes run in Node context against the actual exported modules — no browser, no server — and they pin contracts that CI must see before any feature-level test can trust its host. Depends on the Claude CLI transport layer and the real SQLite engine.",
+      "entry_points": [
+        "tests/golden-path/cli-exit-classification.probe.spec.ts",
+        "tests/golden-path/dal-real-engine.probe.spec.ts"
+      ],
+      "file_paths": [
+        "tests/golden-path/cli-exit-classification.probe.spec.ts",
+        "tests/golden-path/cli-kill-tree.probe.spec.ts",
+        "tests/golden-path/cli-sandbox-args.probe.spec.ts",
+        "tests/golden-path/cli-transport-resilience.probe.spec.ts",
+        "tests/golden-path/env-isolation.probe.spec.ts",
+        "tests/golden-path/firebase-absent-env.probe.spec.ts",
+        "tests/golden-path/unhandled-rejection-route.probe.spec.ts",
+        "tests/golden-path/harness-gate.probe.spec.ts",
+        "tests/golden-path/gate-vacuous-pass.probe.spec.ts",
+        "tests/golden-path/dal-real-engine.probe.spec.ts",
+        "tests/golden-path/recalibrate-engine-parity.probe.spec.ts"
+      ],
+      "group": "Application Infrastructure",
+      "group_id": "2a405ad9-aed7-4ded-a73b-a0063b5762a9",
+      "id": "c825459c-a296-409e-8796-3876db9f15ec",
+      "keywords": [
+        "cli",
+        "transport",
+        "spawn",
+        "exit-code",
+        "env-isolation",
+        "firebase",
+        "DAL",
+        "engine",
+        "harness",
+        "gate"
+      ],
+      "last_written_at": "2026-09-08T16:43:06.434171100+00:00",
+      "name": "cli-infrastructure-probes",
+      "pinned": false,
+      "tech_stack": [
+        "Playwright",
+        "Node.js",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "Foundry REST routes",
+      "business_feature": "Foundry & Notebook Data Integrity",
+      "category": "test",
+      "cross_refs": [
+        "production-script-probes",
+        "studio-logic-probes",
+        "imaging-music-probes"
+      ],
+      "db_tables": [
+        "foundry_assets",
+        "notebook_facts"
+      ],
+      "description": "Verifies the data-integrity contracts for the Foundry asset store and the Notebook knowledge graph: Foundry route correctness, commit index consistency, disk persistence, and client-side single-rule enforcement; Notebook duplicate-id detection, dangling-dependsOn detection, source-population ordering, and the shared contract between notebook consumers. Also covers score-spot origin pinning, which ties musical cue placement to notebook fact provenance. These probes protect the two data structures that underpin knowledge tracking and asset lineage across the studio.",
+      "entry_points": [
+        "tests/golden-path/notebook-graph.probe.spec.ts",
+        "tests/golden-path/foundry-routes.probe.spec.ts"
+      ],
+      "file_paths": [
+        "tests/golden-path/foundry-client-one-rule.probe.spec.ts",
+        "tests/golden-path/foundry-commit-indices.probe.spec.ts",
+        "tests/golden-path/foundry-routes.probe.spec.ts",
+        "tests/golden-path/foundry-store-disk.probe.spec.ts",
+        "tests/golden-path/notebook-graph.probe.spec.ts",
+        "tests/golden-path/notebook-source-ladder.probe.spec.ts",
+        "tests/golden-path/notebook-source-population.probe.spec.ts",
+        "tests/golden-path/score-spot-origin.probe.spec.ts",
+        "tests/golden-path/shared-notebook-contracts.probe.spec.ts"
+      ],
+      "group": "Content Pipeline",
+      "group_id": "4db8a885-17e3-4530-b63b-87dd1a238476",
+      "id": "cdf0f2c4-e219-4ba2-90fa-dc33a84962ee",
+      "keywords": [
+        "foundry",
+        "notebook",
+        "graph",
+        "duplicate-id",
+        "dangling-ref",
+        "score",
+        "provenance",
+        "commit-index",
+        "disk-store",
+        "source-population"
+      ],
+      "last_written_at": "2026-09-08T16:43:06.437492+00:00",
+      "name": "data-asset-probes",
+      "pinned": false,
+      "tech_stack": [
+        "Playwright",
+        "Node.js",
+        "TypeScript"
+      ]
+    },
+    {
       "api_surface": "GET/PUT /api/foundry/runs, GET/PUT /api/foundry/extract, GET/PUT /api/foundry/training",
       "business_feature": "Foundry Curation",
       "category": "ui",
@@ -298,6 +402,56 @@
       "pinned": false,
       "tech_stack": [
         "React 19.2",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "imaging routes, music generation routes",
+      "business_feature": "Imaging & Music Pipeline Verification",
+      "category": "test",
+      "cross_refs": [
+        "cli-infrastructure-probes",
+        "data-asset-probes"
+      ],
+      "db_tables": [],
+      "description": "Verifies the security and correctness contracts for the two external-spend pipelines: imaging (SSRF guard, auth gate, budget accounting, log format, reference-role isolation) and music generation (budget ceiling, cue brief fidelity, provenance chain, failure classification, log format). Both pipelines bill real vendor balances, so these probes drive the actual route handlers rather than mocks to prove that unauthenticated callers cannot spend and that budget gates hold. Depends on lib/imaging and lib/music, and exercises the IMAGING_ACCESS_SECRET and Music API boundaries.",
+      "entry_points": [
+        "tests/golden-path/imaging-auth.probe.spec.ts",
+        "tests/golden-path/music-budget.probe.spec.ts"
+      ],
+      "file_paths": [
+        "tests/golden-path/imaging-auth.probe.spec.ts",
+        "tests/golden-path/imaging-budget.probe.spec.ts",
+        "tests/golden-path/imaging-log-line.probe.spec.ts",
+        "tests/golden-path/imaging-reference-roles.probe.spec.ts",
+        "tests/golden-path/imaging-ssrf.probe.spec.ts",
+        "tests/golden-path/music-budget.probe.spec.ts",
+        "tests/golden-path/music-cue-brief.probe.spec.ts",
+        "tests/golden-path/music-cue-provenance.probe.spec.ts",
+        "tests/golden-path/music-failure-classification.probe.spec.ts",
+        "tests/golden-path/music-log-line.probe.spec.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
+      "id": "d7d0c984-1f93-4499-98b2-bc28ed2e59fe",
+      "keywords": [
+        "imaging",
+        "music",
+        "SSRF",
+        "auth",
+        "budget",
+        "provenance",
+        "cue",
+        "vendor-spend",
+        "rate-limit",
+        "log-format"
+      ],
+      "last_written_at": "2026-09-08T16:43:06.435843500+00:00",
+      "name": "imaging-music-probes",
+      "pinned": false,
+      "tech_stack": [
+        "Playwright",
+        "Node.js",
         "TypeScript"
       ]
     },
@@ -596,6 +750,65 @@
     },
     {
       "api_surface": "",
+      "business_feature": "Production & Script Pipeline Verification",
+      "category": "test",
+      "cross_refs": [
+        "studio-logic-probes",
+        "imaging-music-probes",
+        "data-asset-probes"
+      ],
+      "db_tables": [],
+      "description": "Covers the video-production pipeline and script-editing layer: frame cut resolution, render budget caps, shot decomposition, trailer cut lifecycle and structural honesty, cut-nudge batching, and the full script edit/plan parser including reject-not-repair semantics for LLM structured output, step-lock enforcement, style extraction, followup revision chains, and scope decision recording. These probes run against real exported parsers and pipeline logic in Node context, pinning the contracts that guard both data integrity and LLM output correctness before changes land. Depends on app/_phases/script, app/_phases/frames, and the trailer/cut pipeline.",
+      "entry_points": [
+        "tests/golden-path/edit-plan-parse.probe.spec.ts",
+        "tests/golden-path/trailer-cut-lifecycle.probe.spec.ts",
+        "tests/golden-path/frames-cut-resolution.probe.spec.ts"
+      ],
+      "file_paths": [
+        "tests/golden-path/frames-cut-resolution.probe.spec.ts",
+        "tests/golden-path/frames-run-bounded.probe.spec.ts",
+        "tests/golden-path/render-budget.probe.spec.ts",
+        "tests/golden-path/shot-decomposition.probe.spec.ts",
+        "tests/golden-path/trailer-cut-lifecycle.probe.spec.ts",
+        "tests/golden-path/trailer-structure-honesty.probe.spec.ts",
+        "tests/golden-path/cut-nudge-batching.probe.spec.ts",
+        "tests/golden-path/edit-plan-chain-seam.probe.spec.ts",
+        "tests/golden-path/edit-plan-parse.probe.spec.ts",
+        "tests/golden-path/style-extract.probe.spec.ts",
+        "tests/golden-path/extract-refinish.probe.spec.ts",
+        "tests/golden-path/extract-step-lock.probe.spec.ts",
+        "tests/golden-path/format-brief.probe.spec.ts",
+        "tests/golden-path/followup-revisions.probe.spec.ts",
+        "tests/golden-path/followup-standing.probe.spec.ts",
+        "tests/golden-path/scope-consequences-copy.probe.spec.ts",
+        "tests/golden-path/scope-decisions.probe.spec.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
+      "id": "07ccdf07-2f2c-4965-81e0-85ae00430a4c",
+      "keywords": [
+        "frames",
+        "render",
+        "shot",
+        "trailer",
+        "cut",
+        "edit-plan",
+        "script",
+        "style",
+        "followup",
+        "scope"
+      ],
+      "last_written_at": "2026-09-08T16:43:06.436761500+00:00",
+      "name": "production-script-probes",
+      "pinned": false,
+      "tech_stack": [
+        "Playwright",
+        "Node.js",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "",
       "business_feature": "Project Shelf",
       "category": "ui",
       "cross_refs": [
@@ -843,6 +1056,68 @@
       ]
     },
     {
+      "api_surface": "Next.js dev server (live specs only)",
+      "business_feature": "Studio Logic & Live App Verification",
+      "category": "test",
+      "cross_refs": [
+        "ui-component-probes",
+        "production-script-probes",
+        "data-asset-probes",
+        "cli-infrastructure-probes"
+      ],
+      "db_tables": [],
+      "description": "Verifies the core studio logic contracts and the live-app harness: identity write consistency and IndexedDB eviction, chain-break reviewer notification, scene grade capping, sort stability, spine rank totals, step-clear completeness, text ladder/lighttrack/log-line correctness, and wound propagation across one hop. Also contains the live Playwright harness (_control, _gallery) and the two live specs (golden-path and extract-progress) that run against a real Next.js dev server with a real browser and Chrome's own IndexedDB — the only rung that can assert hydration, routing, and hard-reload persistence. Depends on app/_studio, lib/identity, and the live Next.js dev server.",
+      "entry_points": [
+        "tests/live/golden-path.live.spec.ts",
+        "tests/golden-path/_helpers.ts",
+        "tests/golden-path/identity-and-writes.probe.spec.ts"
+      ],
+      "file_paths": [
+        "tests/golden-path/_helpers.ts",
+        "tests/golden-path/chain-break-reaches-the-reviewer.probe.spec.ts",
+        "tests/golden-path/identity-and-writes.probe.spec.ts",
+        "tests/golden-path/identity-eviction-idb.probe.spec.ts",
+        "tests/golden-path/scene-grade-cap.probe.spec.ts",
+        "tests/golden-path/sort-stability.probe.spec.ts",
+        "tests/golden-path/spine-rank-total.probe.spec.ts",
+        "tests/golden-path/step-clear-completeness.probe.spec.ts",
+        "tests/golden-path/text-ladder.probe.spec.ts",
+        "tests/golden-path/text-lighttrack.probe.spec.ts",
+        "tests/golden-path/text-log-line.probe.spec.ts",
+        "tests/golden-path/wounds-one-hop.probe.spec.ts",
+        "tests/live/_control.ts",
+        "tests/live/_gallery.ts",
+        "tests/live/extract-progress.live.spec.ts",
+        "tests/live/golden-path.live.spec.ts"
+      ],
+      "group": "Studio Hub",
+      "group_id": "ad97aa70-ad85-48ca-a945-1eb105bcc2ad",
+      "id": "680278fd-623d-4b75-89da-768d7634cc0b",
+      "keywords": [
+        "identity",
+        "IDB",
+        "chain-break",
+        "wounds",
+        "sort",
+        "spine",
+        "scene-grade",
+        "text-ladder",
+        "live",
+        "hydration",
+        "hard-reload"
+      ],
+      "last_written_at": "2026-09-08T16:43:06.438914900+00:00",
+      "name": "studio-logic-probes",
+      "pinned": false,
+      "tech_stack": [
+        "Playwright",
+        "Next.js",
+        "Node.js",
+        "TypeScript",
+        "fake-indexeddb"
+      ]
+    },
+    {
       "api_surface": "",
       "business_feature": "Studio Workspace",
       "category": "ui",
@@ -1013,6 +1288,60 @@
     },
     {
       "api_surface": "",
+      "business_feature": "UI Component & Design System Verification",
+      "category": "test",
+      "cross_refs": [
+        "studio-logic-probes",
+        "cli-infrastructure-probes"
+      ],
+      "db_tables": [],
+      "description": "Guards the design-system ratchets and UI-layer contracts: colour-literal bans in Chrome palette, comment-strip ratchet, theme coverage, commit gate parity between UI and pipeline, render adoption correctness, alt-text last-one-stays invariant, keyboard resize behaviour, cull-key determinism, and dialog close-on-success. These probes run in Node context against the actual component and pipeline modules, catching regressions in the design token layer and UI correctness contracts before they reach a running browser. Depends on components/ui and the pipeline check scripts.",
+      "entry_points": [
+        "tests/golden-path/commit-gate-parity.probe.spec.ts",
+        "tests/golden-path/theme-ratchet.probe.spec.ts"
+      ],
+      "file_paths": [
+        "tests/golden-path/adopted-render.probe.spec.ts",
+        "tests/golden-path/alt-last-one-stays.probe.spec.ts",
+        "tests/golden-path/announcement.probe.spec.ts",
+        "tests/golden-path/cancel-settled-job.probe.spec.ts",
+        "tests/golden-path/cards-carry-evidence-class.probe.spec.ts",
+        "tests/golden-path/chrome-colour-literals.probe.spec.ts",
+        "tests/golden-path/comment-strip-ratchet.probe.spec.ts",
+        "tests/golden-path/commit-failure-visible.probe.spec.ts",
+        "tests/golden-path/commit-gate-parity.probe.spec.ts",
+        "tests/golden-path/cull-keys.probe.spec.ts",
+        "tests/golden-path/dialog-closes-on-success.probe.spec.ts",
+        "tests/golden-path/object-url-ownership.probe.spec.ts",
+        "tests/golden-path/resize-keyboard.probe.spec.ts",
+        "tests/golden-path/theme-ratchet.probe.spec.ts"
+      ],
+      "group": "Design System",
+      "group_id": "b59e5896-a7fb-4a80-82d0-9d8c10283f24",
+      "id": "1b96fc81-7518-4cc3-88f1-b666dc83a7ca",
+      "keywords": [
+        "theme",
+        "colour",
+        "ratchet",
+        "commit-gate",
+        "resize",
+        "keyboard",
+        "dialog",
+        "cull",
+        "announcement",
+        "alt-text"
+      ],
+      "last_written_at": "2026-09-08T16:43:06.438077300+00:00",
+      "name": "ui-component-probes",
+      "pinned": false,
+      "tech_stack": [
+        "Playwright",
+        "Node.js",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "",
       "business_feature": "Design System Shell",
       "category": "ui",
       "cross_refs": [
@@ -1117,19 +1446,19 @@
       ]
     }
   ],
-  "generated_at": "2026-09-08T16:37:55.996392200+00:00",
+  "generated_at": "2026-09-08T16:43:07.369813700+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
       "color": "amber",
-      "context_count": 2,
+      "context_count": 3,
       "domain": "feature",
       "id": "ad97aa70-ad85-48ca-a945-1eb105bcc2ad",
       "name": "Studio Hub"
     },
     {
       "color": "blue",
-      "context_count": 5,
+      "context_count": 7,
       "domain": "feature",
       "id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
       "name": "Production Pipeline"
@@ -1157,21 +1486,21 @@
     },
     {
       "color": "indigo",
-      "context_count": 2,
+      "context_count": 3,
       "domain": "shared",
       "id": "b59e5896-a7fb-4a80-82d0-9d8c10283f24",
       "name": "Design System"
     },
     {
       "color": "orange",
-      "context_count": 3,
+      "context_count": 4,
       "domain": "infrastructure",
       "id": "2a405ad9-aed7-4ded-a73b-a0063b5762a9",
       "name": "Application Infrastructure"
     },
     {
       "color": "red",
-      "context_count": 2,
+      "context_count": 3,
       "domain": "data",
       "id": "4db8a885-17e3-4530-b63b-87dd1a238476",
       "name": "Content Pipeline"
@@ -1183,12 +1512,12 @@
     "root": "C:/Users/kazda/kiro/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "27fead526e8308e1007ee7c6c7b6e1acb0ee3ab8",
-    "git_commit_count": 556
+    "git_commit": "5b8c1aa1eb9ac4fe49b711c7b82b89835b0887ae",
+    "git_commit_count": 559
   },
   "stats": {
-    "contexts": 19,
-    "files": 308,
+    "contexts": 25,
+    "files": 385,
     "groups": 8,
     "use_cases": 0
   },
