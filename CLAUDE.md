@@ -124,11 +124,23 @@ the map covers its neighbours.
   0 drift)`. A new file inside a directory an existing context already owns needs no scan — the map
   tracks file OWNERSHIP, and a delta pass over it changes nothing but the timestamps. This is the
   common case, and the `selective` line is not a reason to scan.
-- **DRIFT non-empty** → a **delta** scan. A file the map does not have, in a directory the map
-  otherwise covers completely, is the map falling behind. This is the ordinary refresh.
-- **DRIFT non-empty under a NEW directory with ~8+ source files** → a **subtree** scan of that
-  directory (see the granularity rule at the bottom — a subtree scan of a thin directory will merge,
-  not split, and may duplicate).
+- **DRIFT non-empty** → a **subtree** scan of the smallest directory that CONTAINS the drift and
+  holds 10–30 source files. Not a delta scan. This bullet used to say delta, "the ordinary refresh",
+  and that was measured false on 2026-09-08: a delta over this repo mapped **0 of 459 source files**
+  and said so itself — *"One session cannot emit a map for a codebase this size. Re-run scoped to
+  smaller subtrees so each scan has room to emit its whole map."* The run is spent for a timestamp.
+  The scoped scan that followed mapped 28 of 28 in `app/_phases/research` and took DRIFT from 12 to
+  6. **Delta is for a map whose repo is small enough to re-emit whole**; assume this one is not.
+- **DRIFT under a directory with fewer than ~8 source files** → **there is no valid scan for it.**
+  A subtree scan of a thin directory will merge rather than split, and may duplicate — that is the
+  corruption that produced two `production-phases` contexts on 2026-08-11 — and the parent is
+  usually the whole `app/`, which is the case the delta above fails at. `app/_dev-inspector` (4
+  files) is the standing example. Do not spend a scan on it: say so, and let the operator decide in
+  the Context Ledger whether the map should own it at all. A gap that no permitted scan can close is
+  a decision waiting to be made, not drift.
+- **A single unmapped file in a directory already ≥95% mapped** → price it before you scan. Clearing
+  `components/ui/deck/Deck.tsx` costs a full run over `components/ui`; `lib/assets.ts` costs one over
+  `lib/`. Usually not worth it. Report the file and move on.
 - **`stale` non-empty** → a delta scan; files the map still claims are gone.
 - **The `selective` count is a standing fact, not a trigger.** `pipeline/` and `tests/` are mapped
   in part on purpose — the map holds the probe lane's named seams and the pipeline's entry points,
