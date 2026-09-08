@@ -24,6 +24,18 @@ import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
 import LayerPanel from "./LayerPanel";
 import type { useFrames } from "./useFrames";
 
+// The assembly table's columns, shared by the header and every row — they can
+// only stay aligned if they read the same rule.
+//
+// `breakdown` is 244px because that is what it MEASURES: the column holds four
+// badges (plate · clip · elements · texts) in a row, and at text-label 16px
+// they need 235px including their three 8px gaps. It was 206px, cut for the
+// old 14px label, and the 2026-09-08 type bump pushed the four badges out of
+// their own column and over the plate word beside it. The other four tracks
+// were re-measured at the same time and still fit. `1fr` absorbs the
+// difference, so the table's overall width is unchanged.
+const ASSEMBLY_GRID = "grid-cols-[52px_1fr_244px_120px_86px]";
+
 export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFrames> }) {
   const { frames, render, busy, generatePlate, setSubject, plateCost, totalCost, direction } = ctl;
   const [openId, setOpenId] = useState<string | null>(null);
@@ -137,7 +149,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
       )}
 
       <div className="overflow-hidden rounded-xl border border-white/8">
-        <div className="font-jetbrains grid grid-cols-[52px_1fr_206px_120px_86px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase">
+        <div className={`font-jetbrains grid ${ASSEMBLY_GRID} gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase`}>
           <span>at</span>
           <span>scene</span>
           <span>breakdown</span>
@@ -246,7 +258,7 @@ function Row({
   const plate = PLATE_WORD[frame.plate.state];
   return (
     <div className={`border-b border-white/6 last:border-0 ${open ? "bg-white/[0.02]" : ""}`}>
-      <div className="grid grid-cols-[52px_1fr_206px_120px_86px] items-center gap-2 px-3 py-2">
+      <div className={`grid ${ASSEMBLY_GRID} items-center gap-2 px-3 py-2`}>
         {/* Both halves of the row toggle the same panel, so both carry the
             state. Without it the chevron is the only thing that says whether
             this row is open, and a chevron is a picture. */}

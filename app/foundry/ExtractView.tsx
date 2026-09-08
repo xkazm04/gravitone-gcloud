@@ -364,7 +364,7 @@ export function ExtractView() {
 
       {run && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
-          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-3 px-2 py-3">
             <div className="font-jetbrains flex flex-wrap gap-4 text-label text-white/60">
               <span>
                 <span className="text-emerald-200">{counts.kept}</span> kept

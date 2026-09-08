@@ -55,7 +55,7 @@ export default function MovementSection({
       className="rounded-2xl border border-white/8 bg-white/[0.02] p-4"
     >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-instrument text-[18px] text-white/90">{movement.label}</h3>
+        <h3 className="font-instrument text-[20px] text-white/90">{movement.label}</h3>
         <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">
           {movement.role} · part {movement.ordinal}
           {section ? (

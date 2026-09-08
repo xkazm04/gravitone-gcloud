@@ -253,7 +253,7 @@ export default function DeckCard({
             </div>
             {/* The reading title — the body face, not the landing serif: a
                 generated title can run long, and it has to scan, not pose. */}
-            <h3 className="font-hanken text-[15px] leading-snug font-semibold text-slate-100">
+            <h3 className="font-hanken text-[17px] leading-snug font-semibold text-slate-100">
               {spec.title}
             </h3>
             {chipRow}

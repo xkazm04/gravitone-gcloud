@@ -63,7 +63,7 @@ export default function GlobalError({
         >
           <p
             style={{
-              fontSize: "0.875rem",
+              fontSize: "1rem",
               letterSpacing: "0.16em",
               textTransform: "uppercase",
               color: "#fecdd3",
@@ -72,15 +72,15 @@ export default function GlobalError({
           >
             the app could not start
           </p>
-          <h1 style={{ margin: "0.75rem 0 0", fontSize: "1.5rem", fontWeight: 400 }}>
+          <h1 style={{ margin: "0.75rem 0 0", fontSize: "1.625rem", fontWeight: 400 }}>
             Gravitone hit an error it could not recover from.
           </h1>
-          <p style={{ marginTop: "0.5rem", fontSize: "0.875rem", lineHeight: 1.6, color: "rgba(229,231,235,0.55)" }}>
+          <p style={{ marginTop: "0.5rem", fontSize: "1rem", lineHeight: 1.6, color: "rgba(229,231,235,0.55)" }}>
             Your saved work is stored in this browser and is not affected. Reload
             to start the app again.
           </p>
           {error.digest && (
-            <p style={{ marginTop: "0.75rem", fontSize: "0.875rem", color: "rgba(229,231,235,0.3)", fontFamily: "ui-monospace, monospace" }}>
+            <p style={{ marginTop: "0.75rem", fontSize: "1rem", color: "rgba(229,231,235,0.3)", fontFamily: "ui-monospace, monospace" }}>
               ref · {error.digest}
             </p>
           )}
@@ -100,7 +100,7 @@ export default function GlobalError({
               style={{
                 borderRadius: "9999px",
                 padding: "0.75rem 1.5rem",
-                fontSize: "0.875rem",
+                fontSize: "1rem",
                 fontWeight: 600,
                 color: "#020617",
                 background: "linear-gradient(to right, #67e8f9, #a5f3fc)",
@@ -115,7 +115,7 @@ export default function GlobalError({
               style={{
                 borderRadius: "9999px",
                 padding: "0.75rem 1.5rem",
-                fontSize: "0.875rem",
+                fontSize: "1rem",
                 fontWeight: 600,
                 color: "rgba(229,231,235,0.75)",
                 background: "transparent",

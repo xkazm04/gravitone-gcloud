@@ -53,10 +53,13 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
           dev auth bypass active — signed in as a fixture, not a real account
         </div>
       )}
-      {/* 1440px, gutters halved (2026-08-28): the type scale went up a rung
-          and the width to carry it comes out of x-spacing, not out of the
-          content — the operator's explicit trade. */}
-      <div className="relative mx-auto max-w-[1440px] px-4">
+      {/* `max-w-shell` — 1760px with 8px gutters, declared once in globals.css
+          (--container-shell) because the foundry's three fixed bottom bars
+          escape this container and have to restate it. Raised from 1440/16px
+          on 2026-09-08 for the same reason as 2026-08-28's halving: the type
+          scale went up a rung and the width to carry it comes out of
+          x-spacing, not out of the content — the operator's explicit trade. */}
+      <div className="relative mx-auto max-w-shell px-2">
         <nav className="flex items-center justify-between gap-4 py-6">
           <div className="flex items-center gap-7">
             <Link href="/projects" aria-label="Projects">

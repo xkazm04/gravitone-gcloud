@@ -294,7 +294,7 @@ function ElementMark({ el }: { el: FrameElement }) {
 const TEXT_CLASS: Record<FrameText["role"], string> = {
   kicker: "font-jetbrains text-label uppercase tracking-[0.18em] text-cyan-200",
   caption: "font-hanken text-content text-white",
-  figure: "font-instrument text-[26px] leading-none text-white",
+  figure: "font-instrument text-[28px] leading-none text-white",
   label: "font-jetbrains text-label text-white/70",
 };
 

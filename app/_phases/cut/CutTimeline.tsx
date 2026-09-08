@@ -30,7 +30,7 @@ import { PROJECT, SCENES } from "../../_studio/scenes";
 import type { TimelineClip } from "../../_studio/projectTypes";
 import { saveStep, type CutStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
-import { TimeRuler, spanStyle } from "../../_studio/projectParts";
+import { LANE_GUTTER, TimeRuler, spanStyle } from "../../_studio/projectParts";
 
 /** Where the act-two turn lands, and it is a real boundary rather than a number
  *  somebody remembered: the reversal is the scene whose mood names it (see
@@ -134,14 +134,14 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
     <div>
       <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
         <div className="flex gap-3">
-          <span className="w-14 shrink-0" />
+          <span className={LANE_GUTTER} />
           <div className="flex-1">
             <TimeRuler />
           </div>
         </div>
 
         <div className="flex gap-3">
-          <span className="w-14 shrink-0" />
+          <span className={LANE_GUTTER} />
           <div className="relative flex-1">
             {/* static reference line at the act-two turn — a mark, not motion */}
             {TURN && (
@@ -165,7 +165,7 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
 
         {TRACKS.map((t) => (
           <div key={t.id} className="mt-2 flex items-center gap-3">
-            <span className="font-jetbrains w-14 shrink-0 text-right text-label tracking-[0.12em] text-white/40 uppercase">
+            <span className={`font-jetbrains ${LANE_GUTTER} text-right text-label tracking-[0.12em] text-white/40 uppercase`}>
               {t.label}
             </span>
             <div className="relative h-10 flex-1">

@@ -43,7 +43,7 @@ export default function WithholdingPanel({
           return (
             <li key={a.id} data-testid={`asset-${a.id}`} className="border-t border-white/8 pt-3 first:border-t-0 first:pt-0">
               <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">{a.kind}</p>
-              <p className="font-hanken mt-0.5 text-[14px] leading-snug text-slate-200">{a.name}</p>
+              <p className="font-hanken mt-0.5 text-label leading-snug text-slate-200">{a.name}</p>
               <Segmented<Allowance>
                 label="allowance"
                 value={a.allowance}

@@ -50,7 +50,7 @@ export default function PromiseLedger({
         <ul className="mt-3 space-y-2.5">
           {rows.map(({ beat, p }) => (
             <li key={p.id} data-testid={`promise-${p.id}`} className="text-label leading-snug">
-              <p className="font-hanken text-[14px] text-slate-200">{p.sentence}</p>
+              <p className="font-hanken text-label text-slate-200">{p.sentence}</p>
               <p className="font-jetbrains mt-0.5 text-label tracking-[0.1em] text-white/30">
                 by {p.source} · on “{beat.label}” @{beat.at}
                 {p.grade && <span className="ml-2 text-white/45">graded {p.grade}</span>}

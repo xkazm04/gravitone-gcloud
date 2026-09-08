@@ -16,23 +16,68 @@
    to `text-content` / `text-label` utilities, variants included) so a size is
    a named decision rather than a px literal:
 
-     text-content  1rem      anything the user actually READS — prose,
+     text-content  1.125rem  anything the user actually READS — prose,
                              recipes, descriptions, primary labels.
-     text-label    0.875rem  the floor. Secondary SHORT labels only — tags,
+     text-label    1rem      the floor. Secondary SHORT labels only — tags,
                              chips, stamps, metadata rows, keyboard hints.
 
-   Display sizes above these (text-lg…text-4xl and the landing's few px
-   headings) are unaffected. Anything below text-label is banned —
-   `npm run check:type` (pipeline/check-type-scale.mjs, wired into `verify`)
-   fails the build on `text-xs` or an arbitrary size under 14px. If a design
-   feels like it needs smaller text, the content is secondary enough to move
-   into a tooltip, a zoom, or a modal — the Foundry page did exactly that.
+   RAISED BY 2px ON 2026-09-08, on the operator's read that the whole app was
+   undersized — content 16→18, label 14→16. The rung GAP is unchanged at 2px,
+   so nothing about the two-rung doctrine moves; the pair simply sits higher.
+   The width to carry the longer lines came out of the shell's gutters, not out
+   of the content (see --container-shell below, and StudioFrame).
+
+   TAILWIND'S OWN RUNGS MOVE THE SAME 2px, below. They have to: `text-2xl` at
+   an unmoved 24px against an 18px body is a smaller step than it was against
+   16px, so display type that did not change would read as having shrunk. Their
+   `--line-height` siblings are Tailwind's unitless ratios and are deliberately
+   left alone — a ratio scales with the size it multiplies, so the leading
+   follows without a second declaration. `--text-xs` is the one rung NOT moved:
+   it is banned outright (below), and a banned size is not part of the scale.
+
+   Anything below text-label is banned — `npm run check:type`
+   (pipeline/check-type-scale.mjs, wired into `verify`) fails the build on
+   `text-xs` or an arbitrary size under 16px. If a design feels like it needs
+   smaller text, the content is secondary enough to move into a tooltip, a
+   zoom, or a modal — the Foundry page did exactly that.
 --------------------------------------------------------------------------- */
 @theme {
-  --text-content: 1rem;
+  --text-content: 1.125rem;
   --text-content--line-height: 1.55;
-  --text-label: 0.875rem;
+  --text-label: 1rem;
   --text-label--line-height: 1.45;
+
+  /* Tailwind's default rungs, each +2px. Display sizes only — nothing here is
+     a body size, and the two above remain the only rungs a component should
+     reach for by default. */
+  --text-sm: 1rem;
+  --text-base: 1.125rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.375rem;
+  --text-2xl: 1.625rem;
+  --text-3xl: 2rem;
+  --text-4xl: 2.375rem;
+  --text-5xl: 3.125rem;
+  --text-6xl: 3.875rem;
+  --text-7xl: 4.625rem;
+
+  /* ---------------------------------------------------------------------
+     THE SHELL WIDTH — one declaration, three consumers.
+
+     `max-w-shell` is the app's content column. StudioFrame draws it; the
+     three fixed bottom bars in app/foundry (Cull, Extract, Dojo) are
+     `inset-x-0` and therefore ESCAPE that container, so each has to restate
+     the width to stay aligned with the content above it. That was three
+     hand-typed copies of `max-w-[1440px] px-4` — and a fourth, Dojo's, which
+     had drifted to `max-w-6xl px-6` and sat visibly narrower than its own
+     content. One token, so a width change lands in all four at once.
+
+     1760px with 8px gutters (2026-09-08, raised from 1440/16px): the type
+     scale went up a rung again and the width to carry it comes out of
+     x-spacing, not out of the content — the operator's explicit trade, made
+     twice now.
+  --------------------------------------------------------------------- */
+  --container-shell: 1760px;
 }
 
 * { -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }

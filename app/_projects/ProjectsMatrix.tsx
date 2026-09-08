@@ -75,9 +75,20 @@ const GRID_CSS = `
 @media (min-width:768px){
   .gt-matrix{
     column-gap:.5rem;
-    grid-template-columns:minmax(0,1fr) repeat(5,4.25rem) 3.5rem 5.5rem 4.5rem;
+    grid-template-columns:minmax(0,1fr) repeat(5,5.75rem) 3.75rem 6rem 4.5rem;
   }
 }`;
+
+// WHY THESE TRACKS ARE WIDER THAN THEY LOOK. They are `rem` — root-relative —
+// so they do NOT follow the type scale, and when the scale went up 2px on
+// 2026-09-08 the md set (5×4.25rem, 3.5rem, 5.5rem) stopped fitting the very
+// labels it was cut for: measured in the browser, an untracked "1 RESEARCH" at
+// text-label 16px needs 90px against a 68px track, and it bled through SCRIPT
+// and FRAMES. `Run` and `Updated` fit to the exact pixel, which is not a fit —
+// a two-digit run or "100d ago" would have gone the same way. The five phase
+// tracks are now 92px (90 needed) and the two right-hand columns carry a
+// visible margin. If the scale moves again, re-measure rather than re-reason:
+// max scrollWidth per track across `.gt-matrix` rows is the whole check.
 
 export default function ProjectsMatrix({
   projects,
