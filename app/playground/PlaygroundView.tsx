@@ -55,8 +55,18 @@ function chunkMs(c: WireChunk): number {
 
 const card = "rounded-2xl border border-white/8 bg-white/[0.02] p-5";
 const label = "font-jetbrains block text-label tracking-[0.14em] text-white/40 uppercase";
+// THE LAST `focus:outline-none` IN THE REPO, and it made a documented invariant
+// false. app/globals.css states, as fact, that "all ten are gone" and that the
+// class "no longer appears anywhere in app/ or components/". It appeared here —
+// one input class string on a bench surface, carrying only a `focus:` border
+// tint, which is exactly the seven-of-ten case that sweep was written to end.
+// Found 2026-09-08 by an executor that had been handed the claim as law.
+//
+// The border tint stays; it just no longer replaces the ring. Dropping the
+// opt-out lets the base rule in globals.css apply, which is the whole point of
+// declaring it there once.
 const field =
-  "w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-label text-slate-200 placeholder:text-white/25 focus:border-cyan-400/40 focus:outline-none";
+  "w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-label text-slate-200 placeholder:text-white/25 focus:border-cyan-400/40";
 const btn =
   "rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] px-4 py-2 text-label font-medium text-cyan-200/90 transition hover:bg-cyan-400/[0.14] disabled:cursor-wait disabled:opacity-50";
 const chip =
