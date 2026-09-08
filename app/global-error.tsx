@@ -75,9 +75,12 @@ export default function GlobalError({
           <h1 style={{ margin: "0.75rem 0 0", fontSize: "1.625rem", fontWeight: 400 }}>
             Gravitone hit an error it could not recover from.
           </h1>
+          {/* Where the work is, and that it survived — the only thing a person
+              standing in front of a dead shell needs told. "Reload to start the
+              app again" used to follow it and is gone: it named the button
+              underneath, which is the app narrating its own controls. */}
           <p style={{ marginTop: "0.5rem", fontSize: "1rem", lineHeight: 1.6, color: "rgba(229,231,235,0.55)" }}>
-            Your saved work is stored in this browser and is not affected. Reload
-            to start the app again.
+            Your saved work is stored in this browser and is not affected.
           </p>
           {error.digest && (
             <p style={{ marginTop: "0.75rem", fontSize: "1rem", color: "rgba(229,231,235,0.3)", fontFamily: "ui-monospace, monospace" }}>
@@ -86,7 +89,8 @@ export default function GlobalError({
           )}
           {/* TWO WAYS OUT, AND THE LABELS ARE THE ACTIONS.
               This was one button that said "Reload" and called `reset()`, under
-              copy that says "Reload to start the app again". `reset()` does not
+              copy that then said "Reload to start the app again" (since deleted
+              — the buttons are the instruction). `reset()` does not
               reload: it re-renders the tree that just threw. This is the ROOT
               boundary, so what threw is the layout or a provider it mounts —
               deterministic on a fresh render more often than not — and the one

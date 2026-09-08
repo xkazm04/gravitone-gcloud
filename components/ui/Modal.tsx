@@ -98,6 +98,16 @@ export default function Modal({
   onClose: () => void;
   title: string;
   eyebrow?: React.ReactNode;
+  /**
+   * One line under the title — A FACT ABOUT THE SUBJECT, never a description of
+   * the dialog. The shape of a container is a prompt (Deck#sub says the same
+   * about its own slot, and components/ui/signal/README.md says why: prose was
+   * the only primitive available, so every paragraph slot got a paragraph), and
+   * this one is currently clean — its three consumers pass a style's proven /
+   * candidate status, a plate's current folder, an asset's origin line. All
+   * three are the WORK. A sentence starting "This dialog lets you…" is the app
+   * narrating itself; delete it rather than moving it here.
+   */
   subtitle?: React.ReactNode;
   footer?: React.ReactNode;
   children: React.ReactNode;

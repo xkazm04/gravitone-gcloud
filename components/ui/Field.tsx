@@ -36,6 +36,13 @@ const LABEL_TEXT =
  * nothing. To a screen reader that is loose text, and the thing it was meant to
  * name is announced unlabelled.
  *
+ * ON `hint`: it holds a CONSTRAINT the field cannot enforce or a consequence of
+ * the value — "Fixed at creation", "Every frame this project renders is built
+ * on it". It is not a place to restate the label in a sentence, and it is not a
+ * manual: past roughly twelve words it is almost certainly the app narrating
+ * itself, and components/ui/signal/README.md's rule applies here exactly as it
+ * does to a `<Hint>`. Delete it rather than shortening it.
+ *
  * That is not hypothetical: the two `Visual style` fields in ProjectDialog pass
  * no `htmlFor` because their content is a pill GROUP, not one input, so the
  * group had no accessible name at all. A group is what those are, so the
