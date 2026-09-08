@@ -23,7 +23,7 @@
 // with a real value in the fixture — was never read by anything. It reads and
 // writes it now, and the block moves on the ruler above.
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import { TIMELINE, TRACKS } from "../../_studio/score";
 import { PROJECT, SCENES } from "../../_studio/scenes";
@@ -31,6 +31,7 @@ import type { TimelineClip } from "../../_studio/projectTypes";
 import { saveStep, type CutStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
 import { LANE_GUTTER, TimeRuler, spanStyle } from "../../_studio/projectParts";
+import { Tally } from "@/components/ui/signal";
 
 /** Where the act-two turn lands, and it is a real boundary rather than a number
  *  somebody remembered: the reversal is the scene whose mood names it (see
@@ -46,7 +47,10 @@ const TURN = (() => {
   return null;
 })();
 
-const trackLabel = (id: TimelineClip["track"]) => TRACKS.find((t) => t.id === id)?.label ?? id;
+// `trackLabel` used to live here, for the one sentence that listed every
+// missing clip grouped by track name. The lanes draw that grouping — a missing
+// clip is a dashed rose block ON its track — so the sentence and its helper are
+// both gone.
 
 /** Offsets a clip carries: the dialled-in drift if there is one, else whatever
  *  the cut itself records. Exported so the arithmetic below can be driven
@@ -173,8 +177,20 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
                 const state = shownStatus(c);
                 const from = drawnStart(c);
                 return (
+                  <Fragment key={c.id}>
+                  {/* WHERE THE CLIP WOULD SIT WITH NO DRIFT - a dashed outline at
+                      its own mark, under the block that moved off it. The bench
+                      below used to say "Sits 150ms late of its 12s mark - drawn
+                      at 12.15s above" in a sentence; an offset is a distance, and
+                      a distance has two ends. This is the other end. */}
+                  {offsetOf(c) !== 0 && (
+                    <div
+                      aria-hidden
+                      style={spanStyle(c.startS, c.durS)}
+                      className="absolute inset-y-0 rounded-md border border-dashed border-white/15"
+                    />
+                  )}
                   <div
-                    key={c.id}
                     style={spanStyle(from, c.durS)}
                     title={`${c.label} · ${from.toFixed(1)}s → ${(from + c.durS).toFixed(1)}s`}
                     className={`absolute inset-y-0 overflow-hidden rounded-md border px-2 transition-[left] ${
@@ -194,19 +210,30 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
                             : "text-rose-300/80"
                       }`}
                     >
-                      {state === "missing" ? `${c.label} — missing` : c.label}
+                      {c.label}
                     </span>
                   </div>
+                  </Fragment>
                 );
               })}
             </div>
           </div>
         ))}
 
-        <p className="font-jetbrains mt-3 flex flex-wrap gap-x-4 gap-y-1 text-content text-white/35">
+        {/* The legend names the three block states and carries the only count
+            worth a number. It used to end "missing — drawn, not hidden", which
+            described the drawing rather than the cut. */}
+        <p className="font-jetbrains mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-content text-white/35">
           <span><span className="text-cyan-300/70">▬</span> placed</span>
           <span><span className="text-amber-300/80">▬</span> drift</span>
-          <span><span className="text-rose-300/70">▭</span> missing — drawn, not hidden</span>
+          <span className="inline-flex items-center gap-2">
+            <span><span className="text-rose-300/70">▭</span> missing</span>
+            <Tally
+              value={missing.length}
+              of={TIMELINE.length}
+              tone={missing.length === 0 ? "emerald" : "rose"}
+            />
+          </span>
         </p>
       </div>
 
@@ -217,19 +244,16 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
             <p className="font-jetbrains text-content tracking-[0.14em] text-amber-300/90 uppercase">
               sync · {drifting.label}
             </p>
-            <p className="mt-1.5 text-content leading-snug text-slate-300">
+            {/* The mark, and where the block is actually drawn. The ghost
+                outline on the lane above draws the same pair; these are the two
+                numbers a picture cannot be read to. */}
+            <p className="font-jetbrains mt-1.5 text-content text-slate-300">
               {drift === 0 ? (
-                <>
-                  On its mark at <span className="text-cyan-300">{drifting.startS}s</span>.
-                </>
+                <span className="text-cyan-300">{drifting.startS}s</span>
               ) : (
                 <>
-                  Sits{" "}
-                  <span className="text-amber-200">
-                    {Math.abs(drift)}ms {drift > 0 ? "late" : "early"}
-                  </span>{" "}
-                  of its {drifting.startS}s mark — drawn at {drawnStart(drifting).toFixed(2)}s
-                  above.
+                  {drifting.startS}s →{" "}
+                  <span className="text-amber-200">{drawnStart(drifting).toFixed(2)}s</span>
                 </>
               )}
             </p>
@@ -258,39 +282,36 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
                 </button>
               )}
             </div>
-            {/* What the nudge does and does not do. It moves the block above,
-                which is the whole cut this app has; there is no audio to shift
-                and nowhere to save a cut to yet, so the adjustment lives as long
-                as the session does. */}
-            <p className="font-jetbrains mt-2 text-content leading-snug text-white/30">
-              Moves the block on the ruler above and nothing else — no audio is
-              shifted, and this cut has nowhere to save to yet.
-            </p>
+            {/* The sentence that stood here — "Moves the block on the ruler
+                above and nothing else — no audio is shifted, and this cut has
+                nowhere to save to yet" — described a thing the reader watches
+                happen, and one clause of it was already false: the offsets are
+                persisted under this step's own key (see `saveStep` above). There
+                is still no audio in this app to shift. */}
           </div>
         )}
 
         {/* the honest wrap state */}
         <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
           <p className="font-jetbrains text-content tracking-[0.14em] text-white/40 uppercase">this cut</p>
-          <p className="mt-1.5 text-content leading-snug text-slate-400">
-            {PROJECT.totalS}s planned across {TRACKS.length} tracks.{" "}
-            {missing.length === 0 ? (
-              <span className="text-cyan-300">Every block has something behind it.</span>
-            ) : (
-              <>
-                <span className="text-rose-300">{missing.length} have nothing behind them</span> —{" "}
-                {TRACKS.map((t) => missing.filter((c) => c.track === t.id))
-                  .filter((cs) => cs.length > 0)
-                  .map((cs) => `${trackLabel(cs[0].track)}: ${cs.map((c) => c.label).join(", ")}`)
-                  .join(" · ")}
-                .
-              </>
-            )}
+          {/* THE NUMBERS, AND ONLY THE NUMBERS. Two paragraphs used to stand
+              here. The first listed every missing clip by track, which is what
+              the dashed rose blocks on the lanes above are. The second — "There
+              is no playback here. This app has no player…" — was a paragraph
+              about the absence of a play button, on a surface that draws no play
+              button. There is still no player and nothing to feed one; saying so
+              out loud made the plan read as a broken player rather than a plan. */}
+          <p className="font-jetbrains mt-1.5 text-content text-slate-400">
+            {PROJECT.totalS}s · {TRACKS.length} tracks
           </p>
-          <p className="mt-2 text-content leading-snug text-slate-400">
-            There is no playback here. This app has no player, and nothing it could feed one —
-            what is drawn is the plan for the cut: where each block sits, and where nothing does.
-          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <Tally
+              label="behind"
+              value={TIMELINE.length - missing.length}
+              of={TIMELINE.length}
+              tone={missing.length === 0 ? "emerald" : "rose"}
+            />
+          </div>
         </div>
       </div>
     </div>
