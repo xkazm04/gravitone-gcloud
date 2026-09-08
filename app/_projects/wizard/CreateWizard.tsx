@@ -179,7 +179,10 @@ export default function CreateWizard() {
   // question, and the card the user clicked is the whole answer — making them
   // then find a Next button to confirm what they just said is a second
   // gesture for one decision. The stage rail and Back stay where they are, so
-  // a change of mind is one click backward.
+  // a change of mind is one click backward. Those three stages therefore declare
+  // `advance: "pick"` below and the deck draws no Next on them — until
+  // 2026-09-08 this rule was true in the handlers and contradicted in the
+  // footer, by a Next button no state could ever enable.
   //
   // (The name stage keeps its explicit CTA: a form is not answered by a click,
   // and its finish WRITES.)
@@ -293,7 +296,12 @@ export default function CreateWizard() {
       sub: "The question before the template: educational and promotional pieces are different contracts, and the craft library measured them separately.",
       done: discipline !== null,
       summary: discipline ? DISCIPLINE_LABEL[discipline] : undefined,
-      blockedHint: "pick a card to continue",
+      // No Next, and no hint under it. `pickDiscipline` sets `done` and changes
+      // stage in the same handler, so the button was disabled in every state a
+      // user could ever see it in — a control that cannot be clicked, beside a
+      // line telling them to do the one thing that takes them off this stage.
+      // The cards are the control (Deck's DeckStageDef#advance).
+      advance: "pick",
       content: (
         <DeckStage
           cards={disciplineCards()}
@@ -310,7 +318,7 @@ export default function CreateWizard() {
       sub: "Picking a template sets the runtime it measured — you can take ownership of the number at the last stage.",
       done: template !== null,
       summary: template ? templateOf(template).label : undefined,
-      blockedHint: "pick a format to continue",
+      advance: "pick", // same shape as the discipline stage, above
       content: discipline ? (
         <DeckStage
           cards={templateCards(discipline)}
@@ -329,7 +337,7 @@ export default function CreateWizard() {
           ? `No style is written for ${DISCIPLINE_LABEL[discipline].toLowerCase()} yet, so the six explainer presets are offered as a starting look — one locks as this project's style when you create, and fits any discipline. A style made for this kind of video can be commissioned in the library and swapped in later.`
           : "A locked style from the library, or a preset off the shelf — a preset locks as this project's style when you create. Every frame renders against it, fixed at creation.",
       done: styleId !== null,
-      blockedHint: "pick a style to continue",
+      advance: "pick", // same shape as the discipline stage, above
       summary: pickedPreset
         ? `${pickedPreset.name} (preset)`
         : styleId
