@@ -79,9 +79,10 @@ export default function BeatList({ beats, against }: { beats: Beat[]; against?: 
           data-testid="beat-diff-summary"
           className="font-jetbrains mb-3 text-label leading-snug text-white/40"
         >
-          {changed === 0
-            ? "This version left every beat of the chain it was built on exactly as it found it."
-            : `${changed} of ${rows.length} beats differ from the chain this version was built on.`}
+          {/* One shape for both cases. Zero used to get a sentence of its own
+              ("left every beat exactly as it found it"), which is the app
+              admiring a number it can just print. */}
+          {changed} of {rows.length} beats changed
         </p>
       )}
 

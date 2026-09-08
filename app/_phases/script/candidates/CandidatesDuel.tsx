@@ -163,8 +163,11 @@ function DuelCardBody({
       </p>
 
       {picked && (
+        // The card is already cyan-ringed and aria-pressed; "the Frames step
+        // opens on this chain" is what adopting DOES, said next to the thing
+        // that did it.
         <p data-testid={`duel-adopted-${r.id}`} className="font-jetbrains text-label text-cyan-200/90">
-          adopted — the Frames step opens on this chain
+          adopted
         </p>
       )}
 

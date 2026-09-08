@@ -1,5 +1,7 @@
 "use client";
 
+import { StaleBadge } from "@/components/ui/signal";
+
 import { NOTEBOOK } from "../../_shared/notebook/notebook";
 import ConstraintLedger from "./ConstraintLedger";
 import GatePanel from "./GatePanel";
@@ -99,20 +101,29 @@ export default function HypothesisColumn({
           {mmss(r.durationS)} at {r.wpm} wpm · promise form: {r.promiseForm} · {r.questionsAloud}{" "}
           question{r.questionsAloud === 1 ? "" : "s"} aloud
         </p>
+        {/* Only the word count follows a rewrite; turns, questions aloud and the
+            promise form are the original render's figures. That was a sentence
+            under every one of three columns, twice each. */}
         {rewritten && (
-          <p className="font-jetbrains text-content leading-snug text-amber-200/70">
-            words are counted from this version&rsquo;s own chain. Turns, questions aloud and the
-            promise form are the original render&rsquo;s and were not re-measured.
+          <p>
+            <StaleBadge
+              words="turns · questions · promise form"
+              why="the original render's figures — only words were re-counted"
+            />
           </p>
         )}
         <p className="font-jetbrains text-content text-white/35">
           template {r.template}
           {r.template !== NOTEBOOK.templateIntent && " — outside the notebook's intent, by design"}
         </p>
+        {/* "Shown as unmeasured rather than as a pass" was the second sentence
+            defending the first. The em-dash IS the unmeasured mark — the same
+            one CheckList and the constraint ledger draw. */}
         {r.causalDensityPct === null && (
-          <p className="font-jetbrains text-content text-white/35">
-            causal-opener density — not measured on this render. Shown as unmeasured rather than as a
-            pass.
+          <p className="font-jetbrains flex items-baseline gap-2 text-content text-white/35">
+            <span>causal-opener density</span>
+            <span aria-hidden>—</span>
+            <span className="sr-only">not measured</span>
           </p>
         )}
       </div>
@@ -124,13 +135,13 @@ export default function HypothesisColumn({
         <div className="mt-2">
           <CheckList rows={r.checks} />
         </div>
+        {/* Of the three check blocks in this column only the gate below reads
+            the script on screen — which is the argument this surface makes, and
+            it is made by the badge on the two that cannot, not by a sentence
+            saying so under each. */}
         {rewritten && (
-          <p
-            data-testid={`checks-original-${r.id}`}
-            className="font-jetbrains mt-2 text-label leading-snug text-amber-200/70"
-          >
-            typed by hand against the original chain and not re-run for this version. Of the three
-            check blocks in this column, only the gate below reads the script on screen.
+          <p data-testid={`checks-original-${r.id}`} className="mt-2">
+            <StaleBadge words="not re-run" why="typed by hand against the original chain" />
           </p>
         )}
       </div>

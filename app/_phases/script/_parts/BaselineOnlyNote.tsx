@@ -1,5 +1,7 @@
 "use client";
 
+import { StaleBadge } from "@/components/ui/signal";
+
 import type { GateRollup } from "../gate";
 import type { Version, VersionsApi } from "../useVersions";
 
@@ -49,55 +51,44 @@ export default function BaselineOnlyNote({
   return (
     <div
       data-testid="baseline-only"
-      className="font-jetbrains mb-3 space-y-1 rounded-xl border border-amber-400/25 bg-amber-400/[0.04] px-3 py-2 text-label leading-snug text-amber-200/90"
+      className="font-jetbrains mb-3 flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-amber-400/25 bg-amber-400/[0.04] px-3 py-2 text-label leading-snug text-amber-200/90"
     >
       {api.candidate &&
         (readingCandidate && ownChain ? (
-          <p data-testid="reading-candidate">
-            You are reading <span className="text-white/80">{api.candidate.label}</span>&rsquo;s own
-            beat chain — what the engine actually wrote. Changes are marked against{" "}
-            {api.baseline.label}, and nothing is committed until you accept it.
-          </p>
+          <span data-testid="reading-candidate" className="text-cyan-200/90">
+            {api.candidate.label} · own chain
+          </span>
         ) : (
-          <p>
-            A recalibration is staged. {what} It re-weights the research rather than rewriting beats,
-            so compare it in Coverage or the Spend bar.
-          </p>
+          <span>
+            staged · {what} shows {api.baseline.label}
+          </span>
         ))}
 
       {/* THE GATE, WHERE THE DECISION IS. A verdict that lives three tabs away
-          from the accept button is a verdict nobody reads before deciding. */}
+          from the accept button is a verdict nobody reads before deciding. It
+          is a mark and its figures now: "read them in the render gate below
+          before accepting" was an instruction to scroll. */}
       {gate && (
-        <p
-          data-testid="chain-gate"
-          className={gate.blocked ? "text-rose-200" : "text-emerald-200/90"}
-        >
-          {gate.blocked
-            ? `The gate re-ran on this chain and found ${gate.violations} blocking finding${
-                gate.violations === 1 ? "" : "s"
-              } — ${gate.blocking.join(", ")}. Read them in the render gate below before accepting.`
-            : "The gate re-ran clean on this chain."}{" "}
+        <span data-testid="chain-gate" className={gate.blocked ? "text-rose-200" : "text-emerald-200/90"}>
+          <span aria-hidden>gate {gate.blocked ? "✕" : "✓"}</span>
+          <span className="sr-only">gate {gate.blocked ? "blocked" : "clean"}</span>
+          {gate.blocked && ` · ${gate.violations} blocking · ${gate.blocking.join(", ")}`}
           <span className="text-white/50">
+            {" · "}
             {gate.enforced}% enforced on the weakest render
-            {gate.unmeasured > 0 ? ` · ${gate.unmeasured} rules could not be tested at all` : ""}.
+            {gate.unmeasured > 0 ? ` · ${gate.unmeasured} untestable` : ""}
           </span>
-        </p>
+        </span>
       )}
 
-      {rebalanced &&
-        (ownChain ? (
-          <p data-testid="stale-verification">
-            Weights and beats are {api.baseline.label}&rsquo;s, and the gate was re-run on them. The
-            craft checks and the constraint ledger beside the chain were <span className="text-rose-200">not</span>{" "}
-            — those were computed against the original script and no longer describe it.
-          </p>
-        ) : (
-          <p data-testid="stale-verification">
-            Weights are {api.baseline.label}; the beat chain below and every check beside it were
-            computed against the original script and have <span className="text-rose-200">not</span>{" "}
-            been re-verified for it.
-          </p>
-        ))}
+      {rebalanced && (
+        <span data-testid="stale-verification" className="inline-flex items-center gap-1.5">
+          <span className="text-white/55">
+            {ownChain ? "craft checks & ledger" : "chain, checks & ledger"}
+          </span>
+          <StaleBadge words="not re-run" why={`typed against the original script, not ${api.baseline.label}`} />
+        </span>
+      )}
     </div>
   );
 }

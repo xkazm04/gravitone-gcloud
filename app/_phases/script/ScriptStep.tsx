@@ -328,7 +328,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
                 <>
                   <BaselineOnlyNote
                     api={versions}
-                    what="The beat chains below are the baseline."
+                    what="beat chains"
                     showing={reading}
                     gate={reading ? gate : undefined}
                   />
@@ -388,7 +388,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
 
               {tab === "tracks" && (
                 <>
-                  <BaselineOnlyNote api={versions} what="Running order is shown for the baseline." />
+                  <BaselineOnlyNote api={versions} what="running order" />
                   <MatrixTracks api={scope} version={versions.baseline} />
                 </>
               )}
