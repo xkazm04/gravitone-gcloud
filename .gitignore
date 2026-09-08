@@ -150,5 +150,9 @@ __pycache__/
 # makes every other checkout claim an id that does not exist in its own app.
 # That is not hypothetical — CLAUDE.md's context-map section hardcodes
 # `PID=91d8170c…` and a `C:/Users/mkdol/...` root_path from a different machine,
-# and the map could not be refreshed here for weeks because of it.
-/.personas/
+# and the map could not be refreshed on this machine at all because of it.
+#
+# Only the marker. The rest of .personas/ is deliberately tracked and shared
+# (backlog-digest.json, skill-registry.json), so this must not be `/.personas/`
+# — a directory rule here would shadow two files the repo means to carry.
+/.personas/project.json
