@@ -13,9 +13,21 @@ import { LOCAL_MODE } from "@/lib/localMode";
 // without a project is not a page, it is a redirect back here.
 // "Library" holds several modules now — Styles is the first, with Assets and
 // Animations beside it — so the nav names the place and the page's own tab
-// strip names the module. That also settles the earlier collision with the
-// studio's per-project asset shelves (app/_library): those are what ONE project
-// produced, this is the cross-project shelf everything is built from.
+// strip names the module.
+//
+// THE COLLISION THIS COMMENT ONCE CLAIMED TO HAVE SETTLED WAS NOT SETTLED. It
+// said renaming the nav item resolved the clash with the studio's per-project
+// asset shelves (app/_library) — but the studio went on drawing its own button
+// labelled "Library", three inches under this row and pointing somewhere else:
+// this one is a ROUTE to the cross-project shelf, that one swapped a panel
+// inside the open project. Two controls, one word, two destinations, visible
+// together on every studio screen. Naming one side of a collision settles
+// nothing while the other side keeps the word.
+// Settled for real on 2026-09-08 by changing the OTHER side: the studio's
+// control is now "Outputs" and is a disclosure toggle on the project's own
+// title line, not a nav (app/studio/[projectId]/StudioView.tsx). "Library" is
+// this link and only this link — the cross-project shelf everything is built
+// from; what ONE project produced is that project's Outputs.
 export const MODULES = [
   { label: "Projects", href: "/projects" },
   { label: "Library", href: "/library" },
@@ -50,6 +62,14 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
   // the question the nav answers is "which part of the app is this", not "which
   // URL". `aria-current="page"` is the same answer for a screen reader, which
   // reads nothing off a brighter white.
+  //
+  // And a brighter white is all a sighted reader had: white vs white/70 is one
+  // signal in one channel, which the repo's own law forbids for a state (colour
+  // is never the only signal). So the current module also carries a RULE under
+  // it — a shape, present or absent, legible at a glance and in a screenshot at
+  // any contrast. It doubles as the kind-marker this row needed: these four are
+  // PLACES, underlined the way a tab strip underlines, and nothing inside a
+  // page is drawn this way.
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
 
@@ -97,11 +117,17 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
                     key={m.href}
                     href={m.href}
                     aria-current={here ? "page" : undefined}
-                    className={`transition ${
+                    className={`relative transition ${
                       here ? "text-white" : "text-white/70 hover:text-white"
                     }`}
                   >
                     {m.label}
+                    {here && (
+                      <span
+                        aria-hidden
+                        className="absolute -bottom-1.5 left-0 h-px w-full bg-cyan-400/70"
+                      />
+                    )}
                   </Link>
                 );
               })}

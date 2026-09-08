@@ -13,12 +13,37 @@
 //
 // Still mocked below the rail: every step surface renders app/_studio's Glass
 // Harbor fixture whatever project is open. The pill in the header says so.
+//
+// ONE WORD, TWO DESTINATIONS — fixed 2026-09-08.
+// This header used to draw a two-button toggle, "Project | Library", on the row
+// under the app nav. The app nav's own "Library" is a ROUTE (/library, the
+// cross-project shelf everything is built from); this one was a VIEW SWITCH
+// (app/_library, what THIS project produced). Two controls, same word, three
+// inches apart, going to different places — and both drawn as rounded segmented
+// groups, so the toggle also read as a peer of the five-step rail directly
+// below it, as though "Library" were a sixth step.
+//
+// The fix changes the word AND the kind, because the word alone had already
+// been tried once (see the MODULES comment in components/ui/StudioFrame.tsx,
+// which claimed the collision settled while this file kept saying "Library"):
+//  · WORD — "Outputs". It says what the shelves hold rather than borrowing the
+//    name of the place they are not.
+//  · KIND — one pressed disclosure button, iconed and counted, sitting on the
+//    PROJECT'S TITLE LINE. Places you can go are word-links in the app chrome;
+//    work you walk through is the numbered rail; a view of the thing you are
+//    already inside is a single button attached to that thing's name. Three
+//    kinds, three shapes, no sentence explaining any of them.
+//  · The studio now holds exactly ONE segmented control, and it is the rail.
+//
+// The rail stays on screen while Outputs is open, and any step click closes it
+// (see `pick`): the way back to the work is the same control the work is
+// navigated with, so the shelf can never become a room you are stuck in.
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { FileQuestion } from "lucide-react";
+import { Boxes, FileQuestion, X } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
@@ -36,6 +61,7 @@ import {
 } from "@/lib/projects";
 
 import LibraryShelves from "../../_library/LibraryShelves";
+import { ASSETS } from "../../_studio/assets";
 import { STEPS } from "./phases";
 import Stepper from "./Stepper";
 
@@ -82,7 +108,10 @@ export default function StudioView({ projectId }: { projectId: string }) {
 
   const [project, setProject] = useState<Project | null>(null);
   const [door, setDoor] = useState<Door>({ kind: "opening" });
-  const [view, setView] = useState<"project" | "library">("project");
+  // Not a "view" any more, and not a route: a disclosure. Closed is the default
+  // and is the studio doing its job; open is the creator glancing at what this
+  // project has made so far.
+  const [outputsOpen, setOutputsOpen] = useState(false);
   const [phaseKey, setPhaseKey] = useState<PhaseKey>("script");
 
   useEffect(() => {
@@ -154,6 +183,11 @@ export default function StudioView({ projectId }: { projectId: string }) {
    */
   const pick = (key: PhaseKey) => {
     setPhaseKey(key);
+    // A rail click is a return to the work, whether or not the step changed —
+    // so it is also how the Outputs shelf closes. The shelf keeps the rail
+    // visible precisely so this is true; there is no state in which the primary
+    // navigation of the studio is off screen.
+    setOutputsOpen(false);
     if (!id || !user) return;
     void (async () => {
       try {
@@ -227,60 +261,78 @@ export default function StudioView({ projectId }: { projectId: string }) {
           components/ui/Modal.tsx#restoreFocus. */}
       <main tabIndex={-1} className="pb-16">
         <header className="pt-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Eyebrow>studio</Eyebrow>
-              {project && (
-                <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label tracking-[0.14em] text-white/55 uppercase">
-                  {DISCIPLINE_LABEL[project.discipline ?? disciplineOf(project.template)]} ·{" "}
-                  {templateOf(project.template).label} · {project.targetS}s
-                </span>
-              )}
-              <span className="font-jetbrains rounded-full border border-amber-400/25 bg-amber-400/5 px-3 py-1 text-label tracking-[0.18em] text-amber-300/90 uppercase">
-                prototype · mocked data
+          <div className="flex flex-wrap items-center gap-3">
+            <Eyebrow>studio</Eyebrow>
+            {project && (
+              <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label tracking-[0.14em] text-white/55 uppercase">
+                {DISCIPLINE_LABEL[project.discipline ?? disciplineOf(project.template)]} ·{" "}
+                {templateOf(project.template).label} · {project.targetS}s
               </span>
-            </div>
-
-            {/* view toggle: the production vs the shelves it fills */}
-            <div className="font-jetbrains flex gap-2 text-label">
-              {(
-                [
-                  { key: "project", label: "Project" },
-                  { key: "library", label: "Library" },
-                ] as const
-              ).map((v) => (
-                <button
-                  key={v.key}
-                  onClick={() => setView(v.key)}
-                  className={`cursor-pointer rounded-full border px-4 py-1.5 transition ${
-                    view === v.key
-                      ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
-                      : "border-white/10 text-white/50 hover:text-white/80"
-                  }`}
-                >
-                  {v.label}
-                </button>
-              ))}
-            </div>
+            )}
+            <span className="font-jetbrains rounded-full border border-amber-400/25 bg-amber-400/5 px-3 py-1 text-label tracking-[0.18em] text-amber-300/90 uppercase">
+              prototype · mocked data
+            </span>
           </div>
 
-          <h1
-            // The one element that says WHICH of the four doors this is — the
-            // project's name, or the sentence for absent / unreadable / still
-            // opening. `data-door` carries the machine-readable half so a
-            // harness asserts the state rather than pattern-matching the copy,
-            // which is the half that gets rewritten.
-            data-testid="studio-headline"
-            data-door={door.kind}
-            className={`font-instrument mt-4 text-4xl ${door.kind === "opening" ? "text-white/30" : "text-white"}`}
-          >
-            {headline}
-          </h1>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+            <h1
+              // The one element that says WHICH of the four doors this is — the
+              // project's name, or the sentence for absent / unreadable / still
+              // opening. `data-door` carries the machine-readable half so a
+              // harness asserts the state rather than pattern-matching the copy,
+              // which is the half that gets rewritten.
+              data-testid="studio-headline"
+              data-door={door.kind}
+              className={`font-instrument text-4xl ${door.kind === "opening" ? "text-white/30" : "text-white"}`}
+            >
+              {headline}
+            </h1>
+
+            {/* WHAT THIS PROJECT HAS MADE, hung off the project's own name.
+                Position is the argument: the app nav's four word-links sit in
+                the chrome above and lead OUT; this sits on the title line and
+                opens something belonging to the title. It is drawn as one
+                button rather than a segmented pair so that nothing in this
+                studio is shaped like the rail except the rail.
+
+                Pressed state carries two signals, because hue may not carry it
+                alone: the glyph swaps to an X — the affordance itself becomes
+                "close" — and the surface fills. The tally is the count of what
+                is on the shelves, which is the whole reason to look.
+
+                Only when the door is open: an absent or unreadable project has
+                no shelves, and the toggle used to render (and open!) over both. */}
+            {door.kind === "open" && project && (
+              <button
+                type="button"
+                data-testid="studio-outputs"
+                aria-pressed={outputsOpen}
+                onClick={() => setOutputsOpen((open) => !open)}
+                className={`font-jetbrains flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-label transition ${
+                  outputsOpen
+                    ? "border-cyan-400/45 bg-cyan-400/10 text-cyan-200"
+                    : "border-white/12 text-white/60 hover:border-white/25 hover:text-white/90"
+                }`}
+              >
+                {outputsOpen ? (
+                  <X className="h-4 w-4" aria-hidden />
+                ) : (
+                  <Boxes className="h-4 w-4" aria-hidden />
+                )}
+                Outputs
+                <span
+                  className={`rounded-full px-1.5 text-label ${
+                    outputsOpen ? "bg-cyan-400/15 text-cyan-100/80" : "bg-white/8 text-white/45"
+                  }`}
+                >
+                  {ASSETS.length}
+                </span>
+              </button>
+            )}
+          </div>
         </header>
 
-        {view === "library" ? (
-          <LibraryShelves />
-        ) : door.kind === "absent" ? (
+        {door.kind === "absent" ? (
           <div
             data-testid="door-absent"
             className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4"
@@ -326,12 +378,21 @@ export default function StudioView({ projectId }: { projectId: string }) {
           </div>
         ) : (
           <>
+            {/* The rail is drawn in every open state, INCLUDING while the
+                Outputs shelf is up. It keeps showing the step the work is
+                parked at, which is where a click returns you — the shelf is a
+                glance sideways, not a place that replaced the studio. That is
+                also why the shelf never became a route. */}
             {project && (
               <div className="mt-6">
                 <Stepper active={phaseKey} progress={project.progress} onPick={pick} />
               </div>
             )}
-            <section className="mt-8">{project ? step.render(project.id) : null}</section>
+            {/* LibraryShelves brings its own mt-8, so the section adds none
+                when it is the one rendering. */}
+            <section className={outputsOpen ? undefined : "mt-8"}>
+              {!project ? null : outputsOpen ? <LibraryShelves /> : step.render(project.id)}
+            </section>
           </>
         )}
       </main>
