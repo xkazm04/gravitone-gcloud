@@ -866,19 +866,66 @@
     },
     {
       "api_surface": "",
-      "business_feature": "Research Phase",
-      "category": "ui",
+      "business_feature": "Research Run Engine & Beat Selection",
+      "category": "lib",
       "cross_refs": [
-        "phase-shared",
-        "script-phase",
-        "ai-orchestration"
+        "research-scope-ui"
       ],
       "db_tables": [],
-      "description": "Step 1 of the production pipeline: scopes a topic, runs an AI research job in the background, and triages findings into the shared notebook. Branches on project discipline — educational projects get a guided deck wizard or expert Topic/Board tabs, while trailer projects get a beat-picking board per spine slot. The run engine is a 15-step resumable trace; findings land as notebook cards that the Script step reads.",
+      "description": "The research run engine, trace model, and beat-variant selection board for the Research step. Drives a multi-phase Claude CLI process that produces a research notebook, models its 15-step trace with typed outcomes, and provides a separate beat-picker board for trailer/promotional disciplines that have no notebook to research. Depends on trailer spine types and studio fixture data.",
+      "entry_points": [
+        "app/_phases/research/run/useResearchRun.ts",
+        "app/_phases/research/beats/beats.ts"
+      ],
+      "file_paths": [
+        "app/_phases/research/run/controls.tsx",
+        "app/_phases/research/run/RunTrace.tsx",
+        "app/_phases/research/run/trace.ts",
+        "app/_phases/research/run/types.ts",
+        "app/_phases/research/run/useResearchRun.ts",
+        "app/_phases/research/beats/beats.ts",
+        "app/_phases/research/beats/BeatVariantBoard.tsx",
+        "app/_phases/research/beats/ModeChooser.tsx",
+        "app/_phases/research/beats/SlotColumn.tsx",
+        "app/_phases/research/beats/useBeatPicks.ts",
+        "app/_phases/research/beats/VariantTile.tsx"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
+      "id": "70f0f930-f089-4116-bfaa-034421ee77c6",
+      "keywords": [
+        "run",
+        "trace",
+        "Claude CLI",
+        "beats",
+        "variants",
+        "spine",
+        "tension",
+        "notebook",
+        "outcome",
+        "trailer"
+      ],
+      "last_written_at": "2026-09-08T17:39:52.069241600+00:00",
+      "name": "research-run-engine",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Research Scope & Triage",
+      "category": "ui",
+      "cross_refs": [
+        "research-run-engine"
+      ],
+      "db_tables": [],
+      "description": "The Research step's scope-management and triage surfaces. Creators review notebook findings, keep or cut cards, confirm a scope, and queue follow-up questions; the guided wizard and expert triage board are two faces over one scope record. Key dependencies are the shared stepStore, deck UI primitives, and the signal component vocabulary.",
       "entry_points": [
         "app/_phases/research/ResearchStep.tsx",
-        "app/_phases/research/run/useResearchRun.ts",
-        "app/_phases/research/scope.ts"
+        "app/_phases/research/useScope.ts"
       ],
       "file_paths": [
         "app/_phases/research/ResearchStep.tsx",
@@ -887,44 +934,40 @@
         "app/_phases/research/useScope.ts",
         "app/_phases/research/followup.ts",
         "app/_phases/research/useFollowUps.ts",
-        "app/_phases/research/run/types.ts",
-        "app/_phases/research/run/trace.ts",
-        "app/_phases/research/run/useResearchRun.ts",
-        "app/_phases/research/run/RunTrace.tsx",
-        "app/_phases/research/run/controls.tsx",
-        "app/_phases/research/beats/beats.ts",
-        "app/_phases/research/beats/useBeatPicks.ts",
-        "app/_phases/research/beats/BeatVariantBoard.tsx",
-        "app/_phases/research/beats/SlotColumn.tsx",
-        "app/_phases/research/beats/VariantTile.tsx",
-        "app/_phases/research/beats/ModeChooser.tsx",
-        "app/_phases/research/guided/passes.tsx",
-        "app/_phases/research/guided/useEducationalResearch.ts",
+        "app/_phases/research/_parts/CardActions.tsx",
+        "app/_phases/research/_parts/CardTile.tsx",
+        "app/_phases/research/_parts/FollowUpQueue.tsx",
+        "app/_phases/research/_parts/FollowUpResult.tsx",
+        "app/_phases/research/_parts/ScopeBar.tsx",
+        "app/_phases/research/_parts/ScopeGate.tsx",
+        "app/_phases/research/_parts/TopicPanel.tsx",
         "app/_phases/research/guided/GuidedResearch.tsx",
+        "app/_phases/research/guided/passes.tsx",
         "app/_phases/research/guided/RunStage.tsx",
-        "app/_phases/research/_parts/ScopeBar.tsx"
+        "app/_phases/research/guided/useEducationalResearch.ts"
       ],
       "group": "Production Pipeline",
       "group_id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
-      "id": "94b27dcf-320d-4b90-81c0-c580abda11b5",
+      "id": "ae20c3b8-5a40-4760-927e-15dc08f4f9ee",
       "keywords": [
         "research",
         "scope",
-        "notebook",
         "triage",
-        "beats",
-        "guided",
+        "notebook",
         "follow-up",
-        "trace",
-        "discipline",
-        "trailer",
-        "educational"
+        "guided",
+        "wizard",
+        "cards",
+        "keep",
+        "cut",
+        "checkpoint"
       ],
-      "last_written_at": "2026-09-08T16:37:55.223233500+00:00",
-      "name": "research-phase",
+      "last_written_at": "2026-09-08T17:39:52.069729600+00:00",
+      "name": "research-scope-ui",
       "pinned": false,
       "tech_stack": [
-        "React 19.2",
+        "Next.js",
+        "React",
         "TypeScript"
       ]
     },
@@ -1012,7 +1055,7 @@
         "frames-score-cut"
       ],
       "db_tables": [],
-      "description": "A library of eleven reusable status-communication components that enforce a single editorial rule: every UI sentence's subject must be the work, never the app. Components include Tally (count chip), PipRow (pass/fail per item), StackBar (proportional breakdown), BandTrack (frequency visualiser), Ghost (skeleton loader), UpstreamBreak (error + recovery), Keycaps (keyboard shortcuts), StaleBadge, Provenance (AI model attribution), TabRail, and Hint. All exported through a single barrel.",
+      "description": "A library of eleven reusable status-communication components that enforce a single editorial rule: every UI sentence's subject must be the work, never the app. Components include Tally (count chip), PipRow (pass/fail per item), StackBar (proportional breakdown), BandTrack (frequency visualiser), Ghost (skeleton loader), UpstreamBreak (error + recovery), Keycaps (keyboard shortcuts), StaleBadge, Provenance (AI model attribution), Hint, and TabRail. TabRail implements a fully accessible ARIA tablist with roving tabindex, manual activation, disabled-but-reachable locked tabs (aria-disabled), per-tab Tally counts, a trailing slot for non-tab controls, and a testId field on TabDef so host test harnesses can locate tabs without hand-rolling tab bars. All components are exported through a single barrel.",
       "entry_points": [
         "components/ui/signal/index.ts",
         "components/ui/signal/README.md"
@@ -1035,19 +1078,20 @@
       "group_id": "b59e5896-a7fb-4a80-82d0-9d8c10283f24",
       "id": "bceefeba-ff15-407a-98c4-7db5c8ebf797",
       "keywords": [
+        "tablist",
+        "tab",
+        "aria",
         "signal",
-        "status",
         "tally",
-        "pip",
-        "stack-bar",
-        "ghost",
-        "skeleton",
+        "hint",
         "provenance",
-        "keycaps",
-        "tab-rail",
-        "hint"
+        "skeleton",
+        "error",
+        "keyboard",
+        "accessibility",
+        "trailing"
       ],
-      "last_written_at": "2026-09-08T16:37:53.354371+00:00",
+      "last_written_at": "2026-09-08T17:37:03.049765900+00:00",
       "name": "signal-vocabulary",
       "pinned": false,
       "tech_stack": [
@@ -1446,7 +1490,7 @@
       ]
     }
   ],
-  "generated_at": "2026-09-08T16:43:07.369813700+00:00",
+  "generated_at": "2026-09-08T17:39:52.281524+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -1458,7 +1502,7 @@
     },
     {
       "color": "blue",
-      "context_count": 7,
+      "context_count": 8,
       "domain": "feature",
       "id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
       "name": "Production Pipeline"
@@ -1512,12 +1556,12 @@
     "root": "C:/Users/kazda/kiro/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "5b8c1aa1eb9ac4fe49b711c7b82b89835b0887ae",
-    "git_commit_count": 559
+    "git_commit": "0c88669a8f87443639a7242224a46c1a16582508",
+    "git_commit_count": 561
   },
   "stats": {
-    "contexts": 25,
-    "files": 385,
+    "contexts": 26,
+    "files": 391,
     "groups": 8,
     "use_cases": 0
   },
