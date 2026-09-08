@@ -119,6 +119,7 @@ __pycache__/
 /.claude/skills/dojo
 /.claude/skills/motionize
 /.claude/skills/spark
+/.claude/skills/cx
 /.claude/rules/ai-registry-access.md
 /.claude/rules/ai-registry-software-engineering.md
 /.claude/rules/ai-registry-media-generation.md
