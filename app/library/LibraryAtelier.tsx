@@ -13,20 +13,34 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { ArrowLeft, RotateCw } from "lucide-react";
+
 import { Panel } from "@/components/ui/Primitives";
+import { Ghost } from "@/components/ui/signal";
 import { Segmented } from "@/components/ui/Field";
 import { promotedFrom } from "@/lib/assets";
 import { DISCIPLINES, DISCIPLINE_LABEL, listProjects } from "@/lib/projects";
 import { useAssets } from "@/lib/useAssets";
 import { useAuth } from "@/lib/useAuth";
 import { useThemes } from "@/lib/useThemes";
-import { statusOf, styleFits, type DisciplineFilter, type Proof, type Theme } from "@/lib/themes";
+import { lockedOnly, statusOf, styleFits, type DisciplineFilter, type Proof, type Theme } from "@/lib/themes";
 import type { GenerateResult } from "@/lib/imagingClient";
 
-import { ConfirmDeleteStyle, GateChip, PaletteDots, StyleSheet, type Dependents } from "./parts";
+import {
+  ConfirmDeleteStyle,
+  GateChip,
+  PaletteDots,
+  StyleSheet,
+  StyleStepper,
+  type Dependents,
+} from "./parts";
 import PresetRail from "./PresetRail";
 import SpecEditor from "./SpecEditor";
-import { CANON_SUBJECT, type Preset } from "./presets";
+import { type Preset } from "./presets";
+
+/** The four slots a style is written in, in SpecEditor's order. Named here only
+ *  to draw their outlines before a style exists to fill them. */
+const SLOT_NAMES = ["technique", "subject", "palette", "finish"] as const;
 
 /** What a "from a brief" style starts as — deliberately generic, and every
  *  slot obviously in need of the user's hand. */
@@ -43,17 +57,21 @@ const BLANK = {
 
 export default function LibraryAtelier({
   initialSelectedId = null,
+  onCounts,
 }: {
   /** A style to open on arrival — set when the Assets tab forked one off a
    *  plate and switched here. An INITIAL value, not a controlled prop: this
    *  component is unmounted while the other module is showing, so the handoff
    *  lands on mount and the user's own clicks own the selection from then on. */
   initialSelectedId?: string | null;
+  /** What the tab rail shows instead of a blurb. Reported from here because
+   *  this is where the live arrays are — including `assets`, which changes on
+   *  THIS tab whenever a proof is kept on the shelf. */
+  onCounts?: (c: { styles: number; locked: number; assets: number }) => void;
 } = {}) {
   const { user } = useAuth();
-  const { themes, error, loading, create, update, addProof, judgeProof, lock, remove } = useThemes(
-    user?.uid ?? null,
-  );
+  const { themes, error, loading, reload, create, update, addProof, judgeProof, lock, remove } =
+    useThemes(user?.uid ?? null);
 
   const [selectedId, setSelectedId] = useState<string | null>(initialSelectedId);
   /** Which kind of video the wall is being read for. "all" shows everything;
@@ -88,6 +106,11 @@ export default function LibraryAtelier({
   useEffect(() => {
     if (!selectedId && rows.length) setSelectedId(rows[0].id);
   }, [rows, selectedId]);
+
+  useEffect(() => {
+    if (themes === null) return; // still reading — an unknown count is not 0
+    onCounts?.({ styles: rows.length, locked: lockedOnly(rows).length, assets: (assets ?? []).length });
+  }, [onCounts, themes, rows, assets]);
 
   const startFrom = async (p: Preset) => {
     setBusy(true);
@@ -174,20 +197,44 @@ export default function LibraryAtelier({
       <PresetRail onPick={startFrom} onScratch={startBlank} busy={busy} discipline={discipline} />
 
       <section className="space-y-4">
+        {/* THE COUNT IS ON THE OPTION. A filter that can empty the wall used to
+            do it silently and then print a paragraph underneath — "No style on
+            the wall is tagged for this discipline. Untagged styles fit every
+            discipline, and a preset stamps its own." The zero was always
+            derivable and never shown; shown, the paragraph has nothing left to
+            say. `note` went for the same reason: "every style on the wall" is
+            the option's own label, restated. */}
         <Segmented
           label="Discipline"
           value={discipline}
           options={[
-            { id: "all" as const, label: "All", note: "every style on the wall" },
-            ...DISCIPLINES.map((d) => ({ id: d, label: DISCIPLINE_LABEL[d] })),
+            { id: "all" as const, label: `All ${rows.length}` },
+            ...DISCIPLINES.map((d) => ({
+              id: d,
+              label: `${DISCIPLINE_LABEL[d]} ${rows.filter((t) => styleFits(t, d)).length}`,
+            })),
           ]}
           onChange={setDiscipline}
         />
 
+        {/* The machine's own words, and a retry. The clause that used to follow
+            them explained where styles are stored — the app's mechanism, on the
+            line where the user wants the error and a way to try again. */}
         {error && (
-          <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
-            {error} — your styles live in this browser&rsquo;s storage, and it did not answer.
-          </p>
+          <div
+            role="alert"
+            className="flex items-center gap-3 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3"
+          >
+            <p className="min-w-0 flex-1 text-content text-rose-200">{error}</p>
+            <button
+              type="button"
+              onClick={() => void reload()}
+              aria-label="Read the wall again"
+              className="shrink-0 cursor-pointer rounded-full border border-rose-400/30 p-1.5 text-rose-200/80 transition hover:bg-rose-400/10 hover:text-rose-100"
+            >
+              <RotateCw className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         )}
 
         {loading ? (
@@ -198,12 +245,6 @@ export default function LibraryAtelier({
           <EmptyWall />
         ) : (
           <>
-            {!shown.length && (
-              <p className="font-hanken text-sm text-slate-400">
-                No style on the wall is tagged for this discipline. Untagged styles fit every
-                discipline, and a preset stamps its own.
-              </p>
-            )}
             <div className="flex flex-wrap gap-2">
               {shown.map((t) => (
                 <button
@@ -262,15 +303,27 @@ export default function LibraryAtelier({
             </button>
           </>
         ) : (
+          // The shape of what is coming, rather than a sentence about it.
+          // "Pick a preset on the left and its four slots appear here" is a
+          // stage direction; four labelled outlines in the place the slots will
+          // occupy are the same instruction, and they point left by sitting to
+          // the right of the rail that fills them.
           <Panel className="p-4">
-            <p className="text-content leading-snug text-slate-400">
-              Pick a preset on the left and its four slots appear here, ready to edit.
+            <p className="sr-only">
+              No style selected. Its technique, subject, palette and finish slots appear here.
             </p>
+            <div className="space-y-2">
+              {SLOT_NAMES.map((n) => (
+                <Ghost key={n} shape="slot" label="">
+                  <span className="font-jetbrains flex h-full items-center px-3 text-label tracking-[0.14em] text-white/45 uppercase">
+                    {n}
+                  </span>
+                </Ghost>
+              ))}
+            </div>
           </Panel>
         )}
-        <p className="font-jetbrains text-content leading-relaxed text-white/30">
-          preset or brief → render trials → approve the ones that hold → locked
-        </p>
+        <StyleStepper theme={selected} />
       </aside>
 
       <ConfirmDeleteStyle
@@ -284,18 +337,29 @@ export default function LibraryAtelier({
   );
 }
 
+/**
+ * The empty wall, as the shape of a wall.
+ *
+ * Two paragraphs went. The first was the tour — four slots, a playground, a
+ * proof sheet — which the dossier's own slot outlines and the stepper beside
+ * them now draw. The second said every preset thumbnail is a render of one
+ * canonical subject "so the grid varies by style alone": six identical subjects
+ * in six styles is a claim the pictures make on sight, and could not be made
+ * more convincingly in words.
+ */
 function EmptyWall() {
   return (
-    <div className="rounded-2xl border border-dashed border-white/10 px-6 py-14 text-center">
-      <p className="font-instrument text-2xl text-white">The wall is empty</p>
-      <p className="font-hanken mx-auto mt-2 max-w-sm text-content leading-snug text-slate-400">
-        Start from a preset on the left. You will get its four slots to edit, a playground to render
-        trials in, and a proof sheet to approve — that sheet is what locks the style.
-      </p>
-      <p className="font-jetbrains mx-auto mt-4 max-w-sm text-content leading-snug text-white/30">
-        Every preset thumbnail is a real render of the same subject — {CANON_SUBJECT.split(",")[0].toLowerCase()} —
-        so the grid varies by style alone.
-      </p>
+    <div className="rounded-2xl border border-dashed border-white/10 px-6 py-12">
+      <p className="font-instrument mb-5 text-center text-2xl text-white">The wall is empty</p>
+      <div className="mx-auto flex max-w-sm items-center gap-4">
+        <ArrowLeft className="h-6 w-6 shrink-0 animate-pulse text-cyan-300/60" aria-hidden />
+        <Ghost
+          shape="card"
+          count={1}
+          label="No styles yet. Start one from the preset rail on the left."
+          className="min-w-0 flex-1"
+        />
+      </div>
     </div>
   );
 }

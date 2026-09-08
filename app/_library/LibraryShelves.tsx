@@ -15,7 +15,7 @@
 // shelves are what this screen is, and they are honest.
 
 import { useMemo, useState } from "react";
-import { Search } from "lucide-react";
+import { RotateCw, Search, SearchX } from "lucide-react";
 
 import { ASSETS, COLLECTIONS } from "../_studio/assets";
 import type { AssetKind } from "../_studio/types";
@@ -91,16 +91,35 @@ export default function LibraryShelves() {
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search titles, captions, tags — captions make everything findable"
+            aria-label="Search titles, captions and tags"
+            placeholder="Search"
             className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-4 pl-10 text-label text-white placeholder:text-white/30 focus:border-cyan-400/40"
           />
         </label>
 
         {shown.length === 0 ? (
-          <p className="mt-10 text-content text-slate-400">
-            Nothing on the shelves matches — this is a filter over a library that exists, not an
-            empty library.
-          </p>
+          // A FILTER MISS, NOT AN EMPTY LIBRARY — and the way to say that is to
+          // hand back the control that undoes it. The sentence used to argue the
+          // distinction ("this is a filter over a library that exists"); the
+          // rail beside it already shows the counts, and a clear button is the
+          // reader's actual next move.
+          <div className="mt-10 flex flex-col items-center gap-4">
+            <SearchX className="h-8 w-8 text-white/25" aria-hidden />
+            <p className="text-content text-slate-400">Nothing matches</p>
+            {(kind || collection || q.trim()) && (
+              <button
+                type="button"
+                onClick={() => {
+                  setKind(null);
+                  setCollection(null);
+                  setQ("");
+                }}
+                className="font-jetbrains cursor-pointer rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/70 transition hover:border-cyan-400/40 hover:text-cyan-200"
+              >
+                clear filters
+              </button>
+            )}
+          </div>
         ) : (
           <ul className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {shown.map((a) => (
@@ -117,12 +136,28 @@ export default function LibraryShelves() {
                       {a.durationS != null && <span>· {fmtDur(a.durationS)}</span>}
                     </p>
                     <p className="truncate text-content font-medium text-white">{a.title}</p>
+                    {/* THE CAPTION'S STATE, WHERE THE CAPTION WOULD BE. A
+                        pulsing rule is a caption on its way; an amber one with
+                        a retry glyph is a caption that did not arrive. Both
+                        used to be sentences occupying the line the caption is
+                        for — the app narrating its own queue. */}
                     {a.captionStatus === "written" ? (
                       <p className="line-clamp-2 text-content leading-snug text-slate-400">{a.caption}</p>
                     ) : a.captionStatus === "pending" ? (
-                      <p className="text-content text-cyan-300/80">caption in flight…</p>
+                      <span
+                        role="img"
+                        aria-label="Caption still being written"
+                        className="block h-0.5 w-2/3 animate-pulse rounded bg-cyan-300/70"
+                      />
                     ) : (
-                      <p className="text-content text-amber-300/90">caption failed — retryable</p>
+                      <span
+                        className="flex items-center gap-1.5 text-content text-amber-300/90"
+                        role="img"
+                        aria-label="Caption failed — can be retried"
+                      >
+                        <RotateCw className="h-3.5 w-3.5" aria-hidden />
+                        <span aria-hidden className="h-0.5 w-1/2 rounded bg-amber-300/60" />
+                      </span>
                     )}
                   </div>
                 </button>

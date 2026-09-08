@@ -13,23 +13,33 @@
 // The empty one is named rather than hidden on purpose. This shelf is where
 // Step 3 will reach for it, so the slot is part of the map now — and a tab that
 // says what is coming is a smaller lie than a surface that pretends the library
-// is only ever about styles.
+// is only ever about styles. It rides as a LOCKED tab rather than an openable
+// one that lands on a placeholder page: `aria-disabled`, keyboard-reachable,
+// with its reason behind the tab's own disclosure. A whole screen whose only
+// content was three sentences about why it is blank was the placeholder saying
+// out loud what the padlock says on sight.
 
 import { useState } from "react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
+import { TabRail } from "@/components/ui/signal";
 
 import AssetsBrowser from "./AssetsBrowser";
 import LibraryAtelier from "./LibraryAtelier";
 
-const MODULES = [
-  { id: "styles", label: "Styles", blurb: "Visual identities. A locked one is required before any project." },
-  { id: "assets", label: "Assets", blurb: "Reusable source material. Seeded from the trial grid — right-click a tile, or focus one and press Delete, to remove it." },
-  { id: "animations", label: "Animations", blurb: "Reusable motion — entrance and ambient registers." },
-] as const;
+type ModuleId = "styles" | "assets" | "animations";
 
-type ModuleId = (typeof MODULES)[number]["id"];
+/** What each tab's blurb was reaching for: the count. Reported UP by whichever
+ *  pane holds the live array, rather than read a third time from IndexedDB
+ *  here — a second copy of a number is a number that goes stale the first time
+ *  the user makes something. The atelier reports assets too, because promoting
+ *  a plate to the shelf happens on the Styles tab while Assets is unmounted. */
+interface Counts {
+  styles?: number;
+  locked?: number;
+  assets?: number;
+}
 
 export default function LibraryView() {
   const [module, setModule] = useState<ModuleId>("styles");
@@ -37,7 +47,7 @@ export default function LibraryView() {
    *  atelier's INITIAL selection: switching modules unmounts it, so the handoff
    *  needs no effect and cannot fight the user's later clicks. */
   const [focusStyle, setFocusStyle] = useState<string | null>(null);
-  const active = MODULES.find((m) => m.id === module)!;
+  const [counts, setCounts] = useState<Counts>({});
 
   return (
     <StudioFrame>
@@ -50,63 +60,78 @@ export default function LibraryView() {
           <Eyebrow>library</Eyebrow>
           <h1 className="font-instrument mt-3 text-4xl text-white">Library</h1>
 
-          <div className="mt-5 flex flex-wrap items-center gap-2 border-b border-white/8 pb-3">
-            {MODULES.map((m) => (
-              <button
-                key={m.id}
-                onClick={() => {
-                  // A tab pressed by hand is not a handoff — drop any pending
-                  // focus so the atelier opens where the user left it.
-                  setFocusStyle(null);
-                  setModule(m.id);
-                }}
-                className={`font-jetbrains rounded-full border px-3.5 py-1.5 text-label transition ${
-                  m.id === module
-                    ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
-                    : "border-white/10 text-white/50 hover:text-white/80"
-                }`}
-              >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
-          <p className="font-hanken mt-3 max-w-xl text-content text-slate-400">{active.blurb}</p>
+          <TabRail
+            className="mt-5"
+            label="library modules"
+            active={module}
+            onSelect={(id) => {
+              // A tab pressed by hand is not a handoff — drop any pending
+              // focus so the atelier opens where the user left it.
+              setFocusStyle(null);
+              setModule(id);
+            }}
+            tabs={[
+              {
+                id: "styles",
+                label: "Styles",
+                panelId: "library-panel",
+                // Locked-of-total, not total: the gate this whole page exists
+                // to enforce is "at least one locked style", so the ratio IS
+                // the tab's news.
+                ...(counts.styles === undefined
+                  ? {}
+                  : {
+                      tally: {
+                        value: counts.locked ?? 0,
+                        of: counts.styles,
+                        label: "locked",
+                        tone: (counts.locked ?? 0) > 0 ? ("cyan" as const) : ("amber" as const),
+                      },
+                    }),
+              },
+              {
+                id: "assets",
+                label: "Assets",
+                panelId: "library-panel",
+                ...(counts.assets === undefined ? {} : { tally: { value: counts.assets } }),
+              },
+              {
+                id: "animations",
+                label: "Animations",
+                disabled: true,
+                disabledReason: "no engine yet",
+              },
+            ]}
+          />
         </header>
 
-        <section className="mt-6">
-          {module === "styles" ? (
-            <LibraryAtelier initialSelectedId={focusStyle} />
-          ) : module === "assets" ? (
+        <section id="library-panel" role="tabpanel" className="mt-6">
+          {module === "assets" ? (
             // The shelf fills from Styles, so its empty state needs a way back
             // there. The module is this component's state, so the handler is
             // this component's to pass — an empty state that can only describe
             // the next step is half a surface.
             <AssetsBrowser
+              onCount={(assets) => setCounts((c) => (c.assets === assets ? c : { ...c, assets }))}
               onOpenStyles={(themeId) => {
                 setFocusStyle(themeId ?? null);
                 setModule("styles");
               }}
             />
           ) : (
-            <ComingSoon label={active.label} blurb={active.blurb} />
+            <LibraryAtelier
+              initialSelectedId={focusStyle}
+              onCounts={(next) =>
+                setCounts((c) =>
+                  c.styles === next.styles && c.locked === next.locked && c.assets === next.assets
+                    ? c
+                    : { ...c, ...next },
+                )
+              }
+            />
           )}
         </section>
       </main>
     </StudioFrame>
-  );
-}
-
-/** An honest placeholder: it says what will live here and that nothing does
- *  yet, rather than showing an empty grid that looks like a loading failure. */
-function ComingSoon({ label, blurb }: { label: string; blurb: string }) {
-  return (
-    <div className="rounded-2xl border border-dashed border-white/10 px-6 py-16 text-center">
-      <p className="font-instrument text-2xl text-white">{label} is not built yet</p>
-      <p className="font-hanken mx-auto mt-2 max-w-sm text-content leading-snug text-slate-400">{blurb}</p>
-      <p className="font-jetbrains mx-auto mt-4 max-w-sm text-content leading-snug text-white/30">
-        the slot is here because Step 3 will reach for it — nothing is stored yet
-      </p>
-    </div>
   );
 }

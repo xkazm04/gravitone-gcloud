@@ -16,8 +16,10 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
+import { ImagePlus, RotateCw } from "lucide-react";
 
 import { Button } from "@/components/ui/Primitives";
+import { Ghost, Keycaps } from "@/components/ui/signal";
 import { useAnnounce } from "@/lib/announcer";
 import { DISCIPLINES, type Discipline } from "@/lib/projects";
 import { useAuth } from "@/lib/useAuth";
@@ -65,12 +67,16 @@ function foldersWithChildren(nodes: FolderNode[], into: string[] = []): string[]
 
 export default function AssetsBrowser({
   onOpenStyles,
+  onCount,
 }: {
   /** Switch the library to Styles, optionally landing on one. */
   onOpenStyles?: (themeId?: string) => void;
+  /** How many plates are on the shelf, for the tab rail. This instance is the
+   *  SEEDING one, so it is the first to know the real number. */
+  onCount?: (n: number) => void;
 }) {
   const { user } = useAuth();
-  const { assets, error, loading, remove, move, rename, renameFolder, addUploads } = useAssets(
+  const { assets, error, loading, reload, remove, move, rename, renameFolder, addUploads } = useAssets(
     user?.uid ?? null,
   );
   /** Only to WRITE a forked style. The atelier owns reading and working them;
@@ -130,6 +136,11 @@ export default function AssetsBrowser({
   const rows = useMemo(() => assets ?? [], [assets]);
   const tree = useMemo(() => buildTree(rows), [rows]);
   const shown = useMemo(() => assetsUnder(rows, selected), [rows, selected]);
+
+  useEffect(() => {
+    if (assets === null) return; // still reading — an unknown count is not 0
+    onCount?.(rows.length);
+  }, [onCount, assets, rows]);
 
   const openIndex = openId ? shown.findIndex((a) => a.id === openId) : -1;
   const openAsset = openIndex === -1 ? null : shown[openIndex];
@@ -459,10 +470,26 @@ export default function AssetsBrowser({
           fileOver ? "rounded-2xl outline-2 outline-offset-4 outline-dashed outline-cyan-400/60" : ""
         }
       >
+        {/* THE ERROR, AND A WAY OUT OF IT. What used to follow `{error}` was a
+            clause explaining that the shelf lives in this browser's storage —
+            the app describing its own mechanism, on the one line where the user
+            wants the machine's own words and a retry. The retry is the part that
+            was missing. */}
         {error && (
-          <p className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
-            {error} — your shelf lives in this browser&rsquo;s storage, and it did not answer.
-          </p>
+          <div
+            role="alert"
+            className="mb-4 flex items-center gap-3 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3"
+          >
+            <p className="min-w-0 flex-1 text-content text-rose-200">{error}</p>
+            <button
+              type="button"
+              onClick={() => void reload()}
+              aria-label="Read the shelf again"
+              className="shrink-0 cursor-pointer rounded-full border border-rose-400/30 p-1.5 text-rose-200/80 transition hover:bg-rose-400/10 hover:text-rose-100"
+            >
+              <RotateCw className="h-4 w-4" aria-hidden />
+            </button>
+          </div>
         )}
 
         <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
@@ -470,15 +497,24 @@ export default function AssetsBrowser({
             {selected.length ? selected.join(" › ") : "all assets"}
             <span className="text-white/30"> · {shown.length}</span>
           </p>
-          {/* Only where there is a tile to right-click. An instruction for an
-              action nothing on screen affords is the same small dishonesty as
-              a button that does nothing. */}
+          {/* Only where there is a tile to bind. A keymap is reference material
+              — wanted once, by the person looking for it, and furniture for
+              everyone else — so it rides behind a glyph rather than across the
+              top of the grid on every visit. The gestures it used to spell out
+              are drawn instead: `cursor-zoom-in` on the tile says click-to-open,
+              `cursor-grab` says draggable, and the tile's own aria-label says
+              all three to a screen reader. */}
           <div className="flex items-center gap-3">
             {shown.length > 0 && (
-              <p className="font-jetbrains text-label text-white/25">
-                click to open · drag onto a folder to refile · ctrl-click or X to select ·
-                right-click, or Delete on a focused tile, to remove
-              </p>
+              <Keycaps
+                label="Shelf shortcuts"
+                map={[
+                  { keys: ["Enter"], does: "open" },
+                  { keys: ["X"], does: "select" },
+                  { keys: ["Shift", "X"], does: "select a range" },
+                  { keys: ["Delete"], does: "remove" },
+                ]}
+              />
             )}
             {/* A real control beside the drop zone. Dropping is the fast way and
                 needs a mouse; this is the one a keyboard reaches, and it is the
@@ -754,7 +790,9 @@ function Tile({
           onActivate(e.shiftKey ? "range" : "toggle");
         }
       }}
-      className={`group cursor-pointer overflow-hidden rounded-xl border transition ${
+      // The gestures the keymap line used to spell out, drawn: zoom-in says a
+      // click opens the plate, grabbing says the tile is the thing that drags.
+      className={`group cursor-zoom-in overflow-hidden rounded-xl border transition active:cursor-grabbing ${
         selected
           ? "border-cyan-400/70 ring-1 ring-cyan-300/40"
           : "border-white/8 hover:border-cyan-400/35 focus:border-cyan-400/50"
@@ -801,24 +839,34 @@ function Tile({
  *
  * What actually puts an asset here is approving a plate on a style's proof
  * sheet and keeping it on the shelf. That is a thing the user can do, from one
- * tab away, so the state says so and offers the tab.
+ * tab away, so the state offers the tab.
+ *
+ * The paragraph that defined what an asset IS went with the second rewrite: it
+ * was the app explaining its own noun to somebody standing on the shelf. What
+ * replaces it is the shape of the missing thing — a grid of tile outlines,
+ * which is also the drop frame the section already accepts files into — plus
+ * the one control that fills it.
  */
 function EmptyShelf({ hasAny, onOpenStyles }: { hasAny: boolean; onOpenStyles?: () => void }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/10 px-6 py-14 text-center">
-      <p className="font-instrument text-2xl text-white">
+    <div className="rounded-2xl border border-dashed border-white/10 px-6 py-10">
+      <p className="font-instrument mb-6 text-center text-2xl text-white">
         {hasAny ? "Nothing in this folder" : "The shelf is empty"}
       </p>
-      <p className="font-hanken mx-auto mt-2 max-w-sm text-content leading-snug text-slate-400">
-        {hasAny
-          ? "Pick another category on the left, or drop a file here to add one."
-          : "Assets are the images a project can reach for again. The shelf fills two ways: render trials on a style and keep the ones that hold — they file themselves under the style that made them — or drop your own reference here."}
-      </p>
-      {!hasAny && onOpenStyles && (
-        <Button variant="ghost" onClick={onOpenStyles} className="mt-5">
-          open Styles
-        </Button>
-      )}
+      <Ghost
+        shape="tile"
+        count={1}
+        label={hasAny ? "This folder is empty" : "The shelf is empty"}
+        glyph={<ImagePlus className="h-8 w-8" aria-hidden />}
+        action={
+          !hasAny && onOpenStyles ? (
+            <Button variant="ghost" onClick={onOpenStyles}>
+              open Styles
+            </Button>
+          ) : undefined
+        }
+        className="mx-auto max-w-xs"
+      />
     </div>
   );
 }

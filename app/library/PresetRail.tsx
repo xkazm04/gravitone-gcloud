@@ -10,6 +10,7 @@
 
 import Image from "next/image";
 
+import { Ghost } from "@/components/ui/signal";
 import { styleFits, type DisciplineFilter } from "@/lib/themes";
 
 import { PRESETS, thumbSrc, type Preset } from "./presets";
@@ -37,22 +38,24 @@ export default function PresetRail({
           disabled={busy}
           className="font-hanken w-full rounded-xl border border-dashed border-cyan-400/30 bg-cyan-400/[0.04] px-4 py-3.5 text-left transition hover:bg-cyan-400/[0.08] disabled:opacity-50"
         >
+          {/* "Write the four slots yourself." went: the dossier this button
+              opens is four empty slots with a caret in the first one, which is
+              the same sentence in the only place it can be acted on. */}
           <span className="font-instrument block text-lg text-white">From a brief</span>
-          <span className="mt-0.5 block text-label leading-snug text-slate-400">
-            Write the four slots yourself.
-          </span>
         </button>
       </div>
 
       <div>
-        <p className="font-jetbrains mb-2 text-content tracking-[0.18em] text-white/40 uppercase">or a preset</p>
-        {/* Absence is said: every preset today is written for explainers, so
-            a trailer or free filter empties this rail rather than lying. */}
-        {!shown.length && (
-          <p className="font-hanken rounded-xl border border-dashed border-white/10 px-3 py-3 text-content leading-snug text-slate-500">
-            No preset is written for this discipline yet. Start from a brief.
-          </p>
-        )}
+        <p className="font-jetbrains mb-2 flex items-center gap-2 text-content tracking-[0.18em] text-white/40 uppercase">
+          or a preset
+          <span className="tracking-normal text-white/30">{shown.length}</span>
+        </p>
+        {/* Absence is DRAWN: every preset today is written for explainers, so a
+            trailer or free filter empties this rail. It used to say "No preset
+            is written for this discipline yet. Start from a brief." — a zero
+            beside the heading and one card-shaped outline say the first half,
+            and the "From a brief" button directly above says the second. */}
+        {!shown.length && <Ghost shape="card" count={1} label="No preset for this discipline" />}
         <div className="space-y-2">
           {shown.map((p) => (
             <button

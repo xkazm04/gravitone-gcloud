@@ -191,6 +191,9 @@ export default function Playground({
 
   const prompt = compilePrompt(block, subject);
   const tooLong = prompt.length > PROMPT_CHAR_LIMIT;
+  /** Amber before rose: a cap you can see coming is one you can steer away
+   *  from, and the block that overruns it is usually the one being typed. */
+  const nearLimit = !tooLong && prompt.length > PROMPT_CHAR_LIMIT * 0.9;
 
   const run = async () => {
     setBusy(true);
@@ -284,7 +287,15 @@ export default function Playground({
             </span>
           )}
         </span>
-        <span className="font-jetbrains text-label text-white/30">
+        {/* THE COUNTER IS THE WARNING. It used to sit here in white/30 while a
+            separate sentence below said "This block compiles to N characters and
+            Leonardo accepts M. Shorten the technique or finish line." — the same
+            two numbers, spelled out, under the counter holding them. Coloured,
+            the counter says it on sight; the vendor's cap is already its
+            denominator. */}
+        <span
+          className={`font-jetbrains text-label ${tooLong ? "text-rose-300" : nearLimit ? "text-amber-300/90" : "text-white/30"}`}
+        >
           {prompt.length}/{PROMPT_CHAR_LIMIT} chars
         </span>
 
@@ -302,12 +313,19 @@ export default function Playground({
       </div>
 
 
-      {tooLong && (
-        <p className="text-content leading-snug text-amber-200/90">
-          This block compiles to {prompt.length} characters and Leonardo accepts {PROMPT_CHAR_LIMIT}. Shorten
-          the technique or finish line.
-        </p>
-      )}
+      {/* A hairline fill bar under the textarea, rather than a sentence naming
+          two numbers the counter beside it already holds. */}
+      <span
+        role="img"
+        aria-label={`Prompt uses ${prompt.length} of ${PROMPT_CHAR_LIMIT} characters`}
+        className="block h-px w-full overflow-hidden rounded bg-white/8"
+      >
+        <span
+          aria-hidden
+          style={{ width: `${Math.min(100, (prompt.length / PROMPT_CHAR_LIMIT) * 100)}%` }}
+          className={`block h-full ${tooLong ? "bg-rose-400" : nearLimit ? "bg-amber-300" : "bg-cyan-300/50"}`}
+        />
+      </span>
 
       {error && (
         <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-3 py-2 text-content leading-snug text-rose-200">

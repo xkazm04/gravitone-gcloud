@@ -4,10 +4,11 @@
 // real generated pixels, so the only thing that changed conceptually is that a
 // proof can be WRONG — hence the judge affordances.
 
-import { Check, Library, X } from "lucide-react";
+import { Check, Library, Lock, LockOpen, X } from "lucide-react";
 
 import Modal from "@/components/ui/Modal";
 import { Panel, Button } from "@/components/ui/Primitives";
+import { CHIP_CLASS, Hint, PipRow, TALLY_TONE } from "@/components/ui/signal";
 import { promotedId } from "@/lib/assets";
 import type { GenerateResult } from "@/lib/imagingClient";
 import type { PaletteColor, Proof, ProofState, Theme, ThemeStatus } from "@/lib/themes";
@@ -198,6 +199,7 @@ export function StyleSheet({
   onKeepTrial: (r: GenerateResult, subject: string) => void | Promise<void>;
 }) {
   const full = sheetFull(theme);
+  const approved = approvedProofs(theme);
   return (
     <Panel className="space-y-4 p-5">
       <div className="flex items-start justify-between gap-3">
@@ -210,11 +212,28 @@ export function StyleSheet({
             aria-label="Style name"
           />
           {/* The cap counts what it caps: approved proofs are the model's
-              reference window, and the total is just how much judging has
-              been done. */}
-          <p className="font-jetbrains mt-0.5 text-content text-white/40">
-            {ORIGIN_WORD[theme.origin]} · {approvedProofs(theme).length}/{PROOF_CAP} approved ·{" "}
-            {theme.proofs.length} on the sheet
+              reference window, and the total is just how much judging has been
+              done. The window is DRAWN — one pip per slot, amber when there is
+              no room left — because "five approved proofs is the whole
+              reference window, reject one to make room" was two sentences
+              saying what a full row of pips says on sight. What survives as
+              words is the vendor rule itself, behind the row. */}
+          <p className="font-jetbrains mt-0.5 flex flex-wrap items-center gap-2 text-content text-white/40">
+            <span>{ORIGIN_WORD[theme.origin]}</span>
+            <span aria-hidden>·</span>
+            <PipRow
+              states={approved.map(() => (full ? ("amber" as const) : ("filled" as const)))}
+              max={PROOF_CAP}
+              label={`${approved.length} of ${PROOF_CAP} reference slots approved`}
+            />
+            <span>approved</span>
+            {full && !locked && (
+              <Hint variant="warn" tone="amber" label="Why no more proofs">
+                the model takes {PROOF_CAP} reference images, no more
+              </Hint>
+            )}
+            <span aria-hidden>·</span>
+            <span>{theme.proofs.length} on the sheet</span>
           </p>
         </div>
         <StatusStamp status={statusOf(theme)} />
@@ -244,7 +263,7 @@ export function StyleSheet({
           block={theme.block}
           // Newest approved first: the most recent approval is the best
           // statement of where the style landed.
-          references={approvedProofs(theme)
+          references={approved
             .slice()
             .sort((a, b) => b.createdAt - a.createdAt || a.id.localeCompare(b.id))
             .map((p) => ({ base64: p.base64, mime: p.mime }))}
@@ -255,19 +274,11 @@ export function StyleSheet({
           disabled={!locked && full}
           onKeep={locked ? undefined : onKeepTrial}
         />
-        {locked ? (
-          <p className="font-jetbrains mt-2 text-content text-white/40">
-            Locked — the sheet is final. Trials still render so you can see what this style does; they
-            cannot join it.
-          </p>
-        ) : (
-          full && (
-            <p className="mt-2 text-content text-amber-200/90">
-              {PROOF_CAP} approved proofs — the model&rsquo;s whole reference-image window. Reject one to
-              make room; it stays on the sheet as the record of what this style is not.
-            </p>
-          )
-        )}
+        {/* Nothing is written here any more. "Locked — the sheet is final.
+            Trials still render…" restated the lock chip in SpecEditor and the
+            StatusStamp two rows up, in a third spelling; the absent keep button
+            is the rest of it. The full-window sentence became the pip row in the
+            header. */}
       </div>
     </Panel>
   );
@@ -321,64 +332,171 @@ export function ConfirmDeleteStyle({
         </div>
       }
     >
+      {/* A LEDGER, NOT FOUR PARAGRAPHS. Every figure here is a fact about the
+          user's own work — how many plates, what a vendor was paid for them,
+          what else points at them — so none of it is deletable narration. It was
+          simply unreadable at the moment it is read: four sentences, scanned
+          under a rose button, with the numbers buried mid-clause. Laid out as
+          terms and figures the same facts are countable at a glance.
+
+          What DID go is the last paragraph — "the style goes from this
+          browser's storage; nothing is deleted anywhere else, there is nowhere
+          else yet" — which is the app describing its own persistence layer at
+          the moment the user is deciding about their work. */}
       {theme && (
-        <div className="font-hanken space-y-3 text-content text-slate-300">
-          <p>
-            Its sheet goes with it: {theme.proofs.length} proof{theme.proofs.length === 1 ? "" : "s"},{" "}
-            {approved} of them approved
-            {spend.usd > 0 && (
-              <>
-                {" "}
-                — ${spend.usd.toFixed(2)} of renders
-                {spend.unpriced > 0 && `, and ${spend.unpriced} the vendor did not price`}
-              </>
-            )}
-            . None of it can be got back.
-          </p>
-
-          {promoted > 0 && (
-            <p className="text-content text-amber-200/90">
-              {promoted} of them {promoted === 1 ? "is" : "are"} on the asset shelf. A promoted plate
-              points at the bytes inside this style, so {promoted === 1 ? "it goes" : "they go"} with it.
-            </p>
-          )}
-
-          <p className="text-content text-amber-200/90">
-            {dependents === "counting"
-              ? "Checking which projects were built on it…"
-              : dependents === "unknown"
-                ? "Which projects were built on it could not be read — check /projects before you delete."
-                : dependents === 0
-                  ? "No project was built on it."
-                  : dependents === 1
-                    ? "1 project was built on it. It is NOT deleted — it keeps working, renders on a fallback preset, and says so."
-                    : `${dependents} projects were built on it. They are NOT deleted — they keep working, render on a fallback preset, and say so.`}
-          </p>
-
-          <p className="font-jetbrains text-content text-white/35">
-            The style goes from this browser&rsquo;s storage. Nothing is deleted anywhere else — there is
-            nowhere else yet.
-          </p>
+        <div className="space-y-4">
+          <dl className="grid grid-cols-2 gap-x-5 gap-y-3.5">
+            <Figure term="proofs" value={theme.proofs.length} />
+            <Figure term="approved" value={approved} />
+            <Figure
+              term="paid for renders"
+              value={spend.usd > 0 ? `$${spend.usd.toFixed(2)}` : "$0.00"}
+              note={spend.unpriced > 0 ? `${spend.unpriced} the vendor did not price` : undefined}
+            />
+            <Figure
+              term="on the asset shelf"
+              value={promoted}
+              tone={promoted > 0 ? "amber" : undefined}
+              // A promoted plate is a POINTER at bytes inside this style, so it
+              // cannot outlive it. Said as a consequence, not a mechanism.
+              note={promoted > 0 ? (promoted === 1 ? "goes with it" : "go with it") : undefined}
+            />
+            <Figure
+              term="projects built on it"
+              value={
+                dependents === "counting" ? "…" : dependents === "unknown" ? "unknown" : dependents
+              }
+              tone={dependents === "unknown" || (typeof dependents === "number" && dependents > 0) ? "amber" : undefined}
+              note={
+                dependents === "unknown"
+                  ? "check /projects first"
+                  : typeof dependents === "number" && dependents > 0
+                    ? "kept — they fall back to a preset"
+                    : undefined
+              }
+            />
+          </dl>
+          <p className="font-hanken text-content text-slate-300">None of it can be got back.</p>
         </div>
       )}
     </Modal>
   );
 }
 
-/** The rule this page exists to enforce, stated where the user starts. */
+/** One term and one figure from the delete ledger. `note` is the consequence,
+ *  never a definition — it says what happens to the thing counted. */
+function Figure({
+  term,
+  value,
+  note,
+  tone,
+}: {
+  term: string;
+  value: number | string;
+  note?: string;
+  tone?: "amber";
+}) {
+  return (
+    <div>
+      <dt className="font-jetbrains text-label tracking-[0.12em] text-white/40 uppercase">{term}</dt>
+      <dd
+        className={`font-instrument mt-0.5 text-2xl ${tone === "amber" ? "text-amber-200" : "text-white"}`}
+      >
+        {value}
+      </dd>
+      {note && (
+        <dd
+          className={`font-jetbrains text-label leading-snug ${tone === "amber" ? "text-amber-200/70" : "text-white/40"}`}
+        >
+          {note}
+        </dd>
+      )}
+    </div>
+  );
+}
+
+/**
+ * THE PIPELINE, DRAWN — and drawn against the style the user is looking at.
+ *
+ * It was a sentence in the dossier: "preset or brief → render trials → approve
+ * the ones that hold → locked". A diagram written in prose, printed identically
+ * whatever state the selected style was in, so the one thing it could have told
+ * the reader — where THIS style has got to — was the one thing it did not say.
+ *
+ * Filled = passed. A lit ring = where the style stands now. Hollow = ahead of
+ * it. The rail between two nodes is cyan up to the current one and hairline
+ * after it, which is the same grammar <UpstreamBreak> uses for phases.
+ */
+const STAGES = ["start", "trials", "approved", "locked"] as const;
+
+export function StyleStepper({ theme }: { theme: Theme | null }) {
+  const approved = theme ? approvedProofs(theme).length : 0;
+  // Index of the first stage NOT reached. Cumulative on purpose: a locked style
+  // has necessarily been through the three before it, so the rail cannot show a
+  // gap the data cannot produce.
+  const reached = [Boolean(theme), (theme?.proofs.length ?? 0) > 0, approved > 0, theme ? statusOf(theme) === "locked" : false];
+  const firstOpen = reached.indexOf(false);
+  const at = firstOpen === -1 ? STAGES.length - 1 : Math.max(0, firstOpen);
+
+  return (
+    <ol
+      aria-label={`Style pipeline: at ${STAGES[at]}`}
+      className="font-jetbrains space-y-0 text-label"
+    >
+      {STAGES.map((s, i) => {
+        const done = reached[i];
+        const here = i === at && !done;
+        return (
+          <li key={s} className="flex items-start gap-2.5">
+            <span aria-hidden className="flex w-3 shrink-0 flex-col items-center">
+              <span
+                className={`mt-1.5 h-2.5 w-2.5 rounded-full border ${
+                  done
+                    ? "border-cyan-300/70 bg-cyan-300/80"
+                    : here
+                      ? "animate-pulse border-cyan-300/70"
+                      : "border-white/20"
+                }`}
+              />
+              {i < STAGES.length - 1 && (
+                <span className={`h-5 w-px ${done ? "bg-cyan-300/40" : "bg-white/12"}`} />
+              )}
+            </span>
+            <span className={done ? "text-cyan-200/70" : here ? "text-white/70" : "text-white/25"}>
+              {s}
+            </span>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+/**
+ * The gate, as a padlock.
+ *
+ * It used to read "no locked style — project creation is gated" / "2 locked
+ * styles — projects open": the rule spelled out beside a dot that already had
+ * two states. A closed padlock IS "gated" and an open one IS "projects open",
+ * so the words were the drawing said twice. The sentence survives for a screen
+ * reader, which gets nothing at all from a padlock.
+ */
 export function GateChip({ themes }: { themes: Theme[] }) {
   const n = lockedOnly(themes).length;
   const open = n > 0;
   return (
-    <span
-      className={`font-jetbrains inline-flex items-center gap-2 rounded-full border px-3 py-1 text-label ${
-        open ? "border-cyan-400/30 bg-cyan-400/5 text-cyan-200" : "border-amber-300/40 bg-amber-300/5 text-amber-200"
-      }`}
-    >
-      <span className={`h-1.5 w-1.5 rounded-full ${open ? "bg-cyan-300" : "bg-amber-300"}`} />
-      {open
-        ? `${n} locked ${n === 1 ? "style" : "styles"} — projects open`
-        : "no locked style — project creation is gated"}
+    <span className={`${CHIP_CLASS} ${TALLY_TONE[open ? "cyan" : "amber"]}`}>
+      {open ? (
+        <LockOpen className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      ) : (
+        <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+      )}
+      <span aria-hidden>{n}</span>
+      <span className="sr-only">
+        {open
+          ? `${n} locked ${n === 1 ? "style" : "styles"}. Projects can be created.`
+          : "No locked style. Project creation is gated."}
+      </span>
     </span>
   );
 }

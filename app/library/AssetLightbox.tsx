@@ -8,15 +8,18 @@
 // the technique, the palette, whether text leaked into it — was stored, paid
 // for, and unreadable.
 //
-// The grammar is the foundry lightbox's (app/foundry/Lightbox.tsx): a Modal,
-// arrow keys to walk the row already on screen, and a footer that names its own
-// bindings. Escape, the focus trap and the restore-to-opener belong to Modal, so
-// this file owns only the stepping.
+// The grammar is the foundry lightbox's (app/foundry/Lightbox.tsx): a Modal and
+// arrow keys to walk the row already on screen. Escape, the focus trap and the
+// restore-to-opener belong to Modal, so this file owns only the stepping — and
+// the footer draws that stepping as ‹ › controls rather than printing the
+// keymap, which is one disclosure away for the reader who wants it.
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import { ChevronLeft, ChevronRight, Unlink } from "lucide-react";
 
 import Modal from "@/components/ui/Modal";
+import { Hint, Keycaps } from "@/components/ui/signal";
 import type { Asset } from "@/lib/assets";
 
 import { blockRows, fmtUsd, fmtWhen, readAssetFacts } from "./assetMeta";
@@ -90,8 +93,45 @@ export default function AssetLightbox({
       className="max-w-5xl"
       footer={
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="font-jetbrains text-label text-white/45">
-            {total > 1 ? "← → step · " : ""}Esc close · {index} of {total}
+          {/* THE STEPPING, AS CONTROLS. The row used to read "← → step · Esc
+              close · 3 of 24" — a keymap printed permanently beside a position
+              that is the only part of it anybody reads twice. The arrows are
+              real buttons now, which also gives the walk to a pointer and to a
+              touch screen; the keys ride behind the disclosure. */}
+          <div className="font-jetbrains flex items-center gap-2 text-label text-white/45">
+            {total > 1 && (
+              <button
+                type="button"
+                onClick={() => onStep(-1)}
+                aria-label="Previous plate"
+                className="cursor-pointer rounded-full border border-white/12 p-1 text-white/60 transition hover:border-white/30 hover:text-white"
+              >
+                <ChevronLeft className="h-4 w-4" aria-hidden />
+              </button>
+            )}
+            <span aria-hidden>
+              {index} / {total}
+            </span>
+            <span className="sr-only">
+              Plate {index} of {total}
+            </span>
+            {total > 1 && (
+              <button
+                type="button"
+                onClick={() => onStep(1)}
+                aria-label="Next plate"
+                className="cursor-pointer rounded-full border border-white/12 p-1 text-white/60 transition hover:border-white/30 hover:text-white"
+              >
+                <ChevronRight className="h-4 w-4" aria-hidden />
+              </button>
+            )}
+            <Keycaps
+              label="Viewer shortcuts"
+              map={[
+                ...(total > 1 ? [{ keys: ["←", "→"], does: "step" }] : []),
+                { keys: ["Esc"], does: "close" },
+              ]}
+            />
           </div>
           <div className="flex items-center gap-2">
             {onStartStyle && (
@@ -121,11 +161,14 @@ export default function AssetLightbox({
         <figure className="min-w-0">
           {facts.unresolved ? (
             // NOT the 1x1 transparent PNG stretched to fill a frame — that
-            // reads as a rendering failure. An empty frame that says why.
-            <div className="grid aspect-video w-full place-items-center rounded-xl border border-dashed border-amber-400/25 bg-amber-400/[0.03] px-6 text-center">
-              <p className="font-hanken max-w-xs text-sm leading-snug text-amber-200/80">
-                The style holding these bytes was deleted. The row is kept so the shelf can say so,
-                but there is no picture left to show.
+            // reads as a rendering failure. A broken link, drawn: the row still
+            // exists, the bytes it addressed went with the style that held them.
+            // The two sentences that used to say so also explained WHY the row
+            // is kept, which is the app accounting for its own bookkeeping.
+            <div className="grid aspect-video w-full place-items-center gap-2 rounded-xl border border-dashed border-amber-400/25 bg-amber-400/[0.03] px-6 text-center">
+              <Unlink className="h-8 w-8 text-amber-300/50" aria-hidden />
+              <p className="font-jetbrains text-label tracking-[0.14em] text-amber-200/70 uppercase">
+                unresolved
               </p>
             </div>
           ) : (
@@ -144,10 +187,16 @@ export default function AssetLightbox({
           )}
           {facts.hasText && (
             <figcaption className="font-jetbrains mt-2 flex items-center gap-2 text-label text-amber-200/85">
+              {/* The badge is the finding; the tile carries the same one. What
+                  followed it was a sentence restating the badge plus a lesson
+                  about why lettering matters — behind the disclosure now, at a
+                  length that is a rule rather than a paragraph. */}
               <span className="rounded bg-amber-300/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
                 TEXT
               </span>
-              the grader found lettering in this plate — the one defect that makes one unusable
+              <Hint variant="warn" tone="amber" label="Why TEXT is flagged">
+                lettering makes a plate unusable as a reference
+              </Hint>
             </figcaption>
           )}
         </figure>
@@ -214,6 +263,13 @@ export default function AssetLightbox({
           )}
 
           {facts.block && (
+            // "rendered from" is past tense, and the render date two rows up in
+            // Facts dates it. The sentence that used to close this section —
+            // "what the style said when this was rendered — editing the style
+            // since does not change the plate" — was the app explaining that
+            // lib/assets.ts#assetFromProof COPIES the block onto the asset at
+            // promotion time. True, and a note for whoever reads that file: the
+            // label and the date already say it to whoever reads this screen.
             <Section label="rendered from">
               <dl className="space-y-1.5">
                 {blockRows(facts.block).map((r) => (
@@ -228,14 +284,6 @@ export default function AssetLightbox({
                   <PaletteDots palette={facts.block.palette} withNames />
                 </div>
               )}
-              {/* The block is COPIED onto the asset at promotion time
-                  (lib/assets.ts#assetFromProof) precisely so it can be shown
-                  here after the style has moved on. Saying so is the difference
-                  between a record and a claim about the present. */}
-              <p className="font-jetbrains mt-3 text-label leading-snug text-white/25">
-                what the style said when this was rendered — editing the style since does not change
-                the plate
-              </p>
             </Section>
           )}
         </div>
