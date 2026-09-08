@@ -144,3 +144,11 @@ __pycache__/
 /pipeline/vlm-probe/clips/**/*.png
 /pipeline/vlm-probe/clips/**/*.jpg
 /pipeline/vlm-probe/clips/**/*.mp4
+
+# Personas' per-machine project marker. It carries the project id from THIS
+# machine's Personas database, and it must never be shared: a committed marker
+# makes every other checkout claim an id that does not exist in its own app.
+# That is not hypothetical — CLAUDE.md's context-map section hardcodes
+# `PID=91d8170c…` and a `C:/Users/mkdol/...` root_path from a different machine,
+# and the map could not be refreshed here for weeks because of it.
+/.personas/
