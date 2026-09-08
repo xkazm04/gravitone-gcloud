@@ -1046,19 +1046,15 @@
     },
     {
       "api_surface": "",
-      "business_feature": "Signal & Status Vocabulary",
+      "business_feature": "Signal Vocabulary",
       "category": "ui",
       "cross_refs": [
-        "ui-shell",
-        "research-phase",
-        "script-phase",
-        "frames-score-cut"
+        "ui-shell"
       ],
       "db_tables": [],
-      "description": "A library of eleven reusable status-communication components that enforce a single editorial rule: every UI sentence's subject must be the work, never the app. Components include Tally (count chip), PipRow (pass/fail per item), StackBar (proportional breakdown), BandTrack (frequency visualiser), Ghost (skeleton loader), UpstreamBreak (error + recovery), Keycaps (keyboard shortcuts), StaleBadge, Provenance (AI model attribution), Hint, and TabRail. TabRail implements a fully accessible ARIA tablist with roving tabindex, manual activation, disabled-but-reachable locked tabs (aria-disabled), per-tab Tally counts, a trailing slot for non-tab controls, and a testId field on TabDef so host test harnesses can locate tabs without hand-rolling tab bars. All components are exported through a single barrel.",
+      "description": "A purpose-built vocabulary of display primitives that replace explanatory prose with data shapes: Hint (disclosure glyph), Tally (count chip), PipRow (discrete-step indicator), StackBar (proportional fill), BandTrack (multi-band coverage rail), Ghost (visually suppressed label with accessible sr-only text), UpstreamBreak (pipeline-gap marker), StaleBadge, Provenance, Keycaps (keymap table), and TabRail (slot-aware tab strip). Each component encodes one information shape so call sites express data rather than narrate it. Consumed across all feature surfaces; governed by the twelve-word rule and the narration gate (npm run check:narration).",
       "entry_points": [
-        "components/ui/signal/index.ts",
-        "components/ui/signal/README.md"
+        "components/ui/signal/index.ts"
       ],
       "file_paths": [
         "components/ui/signal/index.ts",
@@ -1069,34 +1065,89 @@
         "components/ui/signal/BandTrack.tsx",
         "components/ui/signal/Ghost.tsx",
         "components/ui/signal/UpstreamBreak.tsx",
-        "components/ui/signal/Keycaps.tsx",
         "components/ui/signal/StaleBadge.tsx",
         "components/ui/signal/Provenance.tsx",
-        "components/ui/signal/TabRail.tsx"
+        "components/ui/signal/Keycaps.tsx",
+        "components/ui/signal/TabRail.tsx",
+        "components/ui/signal/Tally.tsx"
       ],
       "group": "Design System",
       "group_id": "b59e5896-a7fb-4a80-82d0-9d8c10283f24",
-      "id": "bceefeba-ff15-407a-98c4-7db5c8ebf797",
+      "id": "8b4a6c36-343e-4ba5-bcbd-ee95b8b27834",
       "keywords": [
-        "tablist",
-        "tab",
-        "aria",
         "signal",
-        "tally",
         "hint",
-        "provenance",
-        "skeleton",
-        "error",
-        "keyboard",
-        "accessibility",
-        "trailing"
+        "tally",
+        "pip-row",
+        "stack-bar",
+        "band-track",
+        "narration-law",
+        "disclosure",
+        "keycaps",
+        "tab-rail"
       ],
-      "last_written_at": "2026-09-08T17:37:03.049765900+00:00",
+      "last_written_at": "2026-09-08T17:52:10.682899600+00:00",
       "name": "signal-vocabulary",
       "pinned": false,
       "tech_stack": [
-        "React 19.2",
-        "TypeScript"
+        "React",
+        "TypeScript",
+        "Tailwind CSS"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Studio Data Layer",
+      "category": "lib",
+      "cross_refs": [
+        "foundry-style-training",
+        "app-platform"
+      ],
+      "db_tables": [
+        "assets",
+        "uploads",
+        "projects",
+        "themes"
+      ],
+      "description": "Client-side IndexedDB persistence and React hooks for the studio's three core entity types: projects, assets, and themes. studioDb.ts defines the store names, index keys, and low-level transaction helpers; assets.ts and themes.ts implement the CRUD logic (including proof-pointer dereferencing and folder derivation); the use* hooks expose reactive, cache-friendly access to each store. model.ts centralises the AI model selection used across studio surfaces.",
+      "entry_points": [
+        "lib/studioDb.ts",
+        "lib/assets.ts",
+        "lib/themes.ts"
+      ],
+      "file_paths": [
+        "lib/assets.ts",
+        "lib/useAssets.ts",
+        "lib/projects.ts",
+        "lib/useProjects.ts",
+        "lib/studioDb.ts",
+        "lib/themes.ts",
+        "lib/useThemes.ts",
+        "lib/model.ts"
+      ],
+      "group": "Studio Hub",
+      "group_id": "ad97aa70-ad85-48ca-a945-1eb105bcc2ad",
+      "id": "edd26dab-e7de-45bd-957b-080aaced51ba",
+      "keywords": [
+        "IndexedDB",
+        "projects",
+        "assets",
+        "themes",
+        "proofs",
+        "style block",
+        "hooks",
+        "model selection",
+        "library",
+        "shelf"
+      ],
+      "last_written_at": "2026-09-08T17:55:44.115786700+00:00",
+      "name": "studio-data-layer",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "React 19",
+        "TypeScript",
+        "IndexedDB"
       ]
     },
     {
@@ -1225,54 +1276,54 @@
       ]
     },
     {
-      "api_surface": "",
-      "business_feature": "Text & LLM Generation",
+      "api_surface": "Consumed by /api/frames and other text-generation API routes",
+      "business_feature": "Text Generation",
       "category": "lib",
       "cross_refs": [
-        "ai-orchestration",
-        "imaging-service"
+        "app-platform",
+        "imaging-engine"
       ],
       "db_tables": [],
-      "description": "Vendor-agnostic text and LLM generation service mirroring the imaging layer's router pattern. Callers submit a generation request; the router selects Google Gemini, Claude CLI subprocess, or a generic HTTP provider transparently. Each provider adapter handles authentication, request formatting, and response parsing. Typed error kinds, structured logging, cost estimation per model, and a lightweight token tracker (lighttrack.ts) give the orchestration layer full spend visibility.",
+      "description": "Provider abstraction and routing layer for all LLM text generation, supporting Google Gemini and a local Claude CLI provider. Handles request validation, JSON streaming, budget/pricing, error normalisation, and lightweight token-cost tracking via lighttrack. claudeCli.ts is the Node-side shim that shells out to the Claude binary when the Google provider is unavailable or explicitly avoided.",
       "entry_points": [
         "lib/text/router.ts",
-        "lib/text/types.ts"
+        "lib/text/types.ts",
+        "lib/claudeCli.ts"
       ],
       "file_paths": [
-        "lib/text/types.ts",
-        "lib/text/router.ts",
-        "lib/text/providers/google.ts",
-        "lib/text/providers/claudeCli.ts",
+        "lib/text/env.ts",
+        "lib/text/errors.ts",
         "lib/text/http.ts",
         "lib/text/json.ts",
-        "lib/text/errors.ts",
+        "lib/text/lighttrack.ts",
         "lib/text/log.ts",
-        "lib/text/env.ts",
         "lib/text/pricing.ts",
-        "lib/text/lighttrack.ts"
+        "lib/text/providers/claudeCli.ts",
+        "lib/text/providers/google.ts",
+        "lib/text/router.ts",
+        "lib/text/types.ts",
+        "lib/claudeCli.ts"
       ],
-      "group": "Application Infrastructure",
-      "group_id": "2a405ad9-aed7-4ded-a73b-a0063b5762a9",
-      "id": "67d683b5-ba70-4e99-8856-65df1fc408cd",
+      "group": "Content Pipeline",
+      "group_id": "4db8a885-17e3-4530-b63b-87dd1a238476",
+      "id": "335f68d6-a5f9-4814-978d-bf9e68497831",
       "keywords": [
-        "text",
-        "llm",
-        "gemini",
-        "claude",
-        "router",
-        "provider",
+        "text generation",
+        "LLM",
+        "Google Gemini",
+        "Claude CLI",
+        "streaming",
+        "token budget",
+        "provider routing",
         "pricing",
-        "lighttrack",
-        "tokens",
-        "generation"
+        "lighttrack"
       ],
-      "last_written_at": "2026-09-08T16:37:53.358230800+00:00",
-      "name": "text-generation",
+      "last_written_at": "2026-09-08T17:55:44.114679700+00:00",
+      "name": "text-engine",
       "pinned": false,
       "tech_stack": [
-        "TypeScript",
-        "Google Gemini",
-        "Claude CLI"
+        "Next.js 15",
+        "TypeScript"
       ]
     },
     {
@@ -1386,63 +1437,62 @@
     },
     {
       "api_surface": "",
-      "business_feature": "Design System Shell",
+      "business_feature": "UI Shell & Design Tokens",
       "category": "ui",
       "cross_refs": [
-        "signal-vocabulary",
-        "project-shelf",
-        "studio-workspace"
+        "signal-vocabulary"
       ],
       "db_tables": [],
-      "description": "The Obsidian design language implementation: tokens.ts is the single source of truth for accent colours, glass surfaces, motion easing, and CSS custom-property tokens injected at the root. Primitives.tsx provides low-level accessible UI atoms (buttons, panels, inputs). The deck/ sub-system renders visual card-picking grids with staggered spring bloom animations, reduced-motion gating, and emblem assets used in discipline/style selection flows throughout the studio.",
+      "description": "Provides the application chrome: the Obsidian design token source of truth (tokens.ts / GravitoneTokens), reusable layout primitives (Eyebrow, Wordmark, Equalizer, Field, Modal), the top-level navigation frame (StudioFrame), user session controls (UserMenu, NotificationBell, AuthGate), and the Deck card-presentation system used by the studio to render art variants with motion guards and emblem overlays. Everything here is consumed across all feature surfaces and must stay consistent with the single-colour-literal rule declared in tokens.ts. Depends on lib/devAuth, lib/localMode, and the signal vocabulary.",
       "entry_points": [
         "components/ui/tokens.ts",
         "components/ui/Primitives.tsx",
-        "components/ui/deck/DeckStage.tsx"
+        "components/ui/StudioFrame.tsx"
       ],
       "file_paths": [
         "components/ui/tokens.ts",
         "components/ui/GravitoneTokens.tsx",
         "components/ui/Primitives.tsx",
+        "components/ui/Equalizer.tsx",
         "components/ui/Field.tsx",
         "components/ui/Modal.tsx",
-        "components/ui/AuthGate.tsx",
+        "components/ui/StudioFrame.tsx",
         "components/ui/UserMenu.tsx",
         "components/ui/NotificationBell.tsx",
-        "components/ui/StudioFrame.tsx",
-        "components/ui/Equalizer.tsx",
+        "components/ui/AuthGate.tsx",
         "components/ui/HarnessBridge.tsx",
-        "components/ui/deck/DeckStage.tsx",
+        "components/ui/deck/Deck.tsx",
         "components/ui/deck/DeckCard.tsx",
+        "components/ui/deck/DeckStage.tsx",
         "components/ui/deck/artVariants.tsx",
-        "components/ui/deck/useArtVariant.ts",
+        "components/ui/deck/emblems.tsx",
         "components/ui/deck/motionGuard.ts",
-        "components/ui/deck/emblems.tsx"
+        "components/ui/deck/useArtVariant.ts"
       ],
       "group": "Design System",
       "group_id": "b59e5896-a7fb-4a80-82d0-9d8c10283f24",
-      "id": "ac3f4f33-6485-43ed-8e3d-bd839ec4e4f7",
+      "id": "99cf420c-88ff-4f45-b8da-259761919b83",
       "keywords": [
-        "tokens",
-        "design-system",
+        "design-tokens",
         "obsidian",
-        "glass",
-        "primitives",
+        "chrome",
+        "navigation",
         "deck",
-        "card",
-        "animation",
-        "spring",
-        "accessibility",
-        "motion"
+        "art-variants",
+        "motion-guard",
+        "primitives",
+        "equalizer",
+        "auth-gate"
       ],
-      "last_written_at": "2026-09-08T16:37:55.225849700+00:00",
+      "last_written_at": "2026-09-08T17:52:10.681316+00:00",
       "name": "ui-shell",
       "pinned": false,
       "tech_stack": [
-        "React 19.2",
+        "Next.js",
+        "React",
         "TypeScript",
-        "motion 13.1",
-        "Tailwind CSS 4"
+        "Tailwind CSS",
+        "Framer Motion"
       ]
     },
     {
@@ -1490,12 +1540,12 @@
       ]
     }
   ],
-  "generated_at": "2026-09-08T17:39:52.281524+00:00",
+  "generated_at": "2026-09-08T17:57:20.679520900+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
       "color": "amber",
-      "context_count": 3,
+      "context_count": 4,
       "domain": "feature",
       "id": "ad97aa70-ad85-48ca-a945-1eb105bcc2ad",
       "name": "Studio Hub"
@@ -1537,14 +1587,14 @@
     },
     {
       "color": "orange",
-      "context_count": 4,
+      "context_count": 3,
       "domain": "infrastructure",
       "id": "2a405ad9-aed7-4ded-a73b-a0063b5762a9",
       "name": "Application Infrastructure"
     },
     {
       "color": "red",
-      "context_count": 3,
+      "context_count": 4,
       "domain": "data",
       "id": "4db8a885-17e3-4530-b63b-87dd1a238476",
       "name": "Content Pipeline"
@@ -1553,15 +1603,15 @@
   "project": {
     "id": "d57f858b-b917-4fd7-b5f4-ee7df0f989a0",
     "name": "gravitone-gcloud",
-    "root": "C:/Users/kazda/kiro/gravitone-gcloud"
+    "root": "C:\\Users\\kazda\\kiro\\gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "0c88669a8f87443639a7242224a46c1a16582508",
-    "git_commit_count": 561
+    "git_commit": "a89825c91d2041372f51d951d87a7ae95eee7220",
+    "git_commit_count": 563
   },
   "stats": {
-    "contexts": 26,
-    "files": 391,
+    "contexts": 27,
+    "files": 402,
     "groups": 8,
     "use_cases": 0
   },
