@@ -254,7 +254,12 @@ test.describe("the assembled studio", () => {
     await page.goto("/library", { waitUntil: "domcontentloaded" });
     // /library opens on Styles; the tiles live in the Assets module. Reached the
     // way a user reaches it, so the journey breaks if the tab does.
-    await page.getByRole("button", { name: "Assets", exact: true }).click();
+    // `role="tab"`, and the name carries the count — the module rail became a
+    // real tablist (components/ui/signal/TabRail) when /library stopped
+    // explaining itself in a paragraph per tab. `exact: "Assets"` matched the
+    // old <button>; the accessible name is now "Assets 30". Anchored prefix,
+    // so a changing count cannot break the journey again.
+    await page.getByRole("tab", { name: /^Assets/ }).click();
 
     // The shelf seeds from the trial index through the product's own path.
     const tiles = page.locator("figure[data-asset-id]");

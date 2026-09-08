@@ -141,7 +141,15 @@ if (spec.url !== "/" && (await page.getByTestId("dev-auth-banner").count()) === 
 }
 
 if (spec.tab) {
-  await page.getByRole("button", { name: spec.tab, exact: true }).first().click().catch(() => {});
+  // A module rail is a real tablist now (components/ui/signal/TabRail), and its
+  // accessible name carries the tab's count — "Assets 30", not "Assets". The
+  // `button`/exact form silently caught its own miss here and photographed the
+  // Styles tab labelled `library-assets`. Prefix match on the tab role, with
+  // the old button form kept for the rails that have not converted yet.
+  const tab = page
+    .getByRole("tab", { name: new RegExp(`^${spec.tab}`) })
+    .or(page.getByRole("button", { name: spec.tab, exact: true }));
+  await tab.first().click().catch(() => {});
   await page.waitForTimeout(1600);
 }
 

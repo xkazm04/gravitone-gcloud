@@ -61,6 +61,18 @@ export interface TabDef<T extends string> {
   disabledReason?: React.ReactNode;
   /** The `id` of the panel this tab controls, if the caller renders one. */
   panelId?: string;
+  /**
+   * `data-testid` for this tab.
+   *
+   * THIS EXISTS BECAUSE ITS ABSENCE COST TWO ADOPTIONS. TabRail was built to
+   * replace four hand-rolled tab bars; two of the four lanes converting to it
+   * (ScriptStep, ResearchStep) had to keep their own buttons instead, because
+   * `uat/driver/drive.mjs` clicks `view-coverage` and `tests/live` clicks
+   * `tab-topic`/`tab-board` by testid, and no lane would edit a shared
+   * component mid-wave to add one. A shared primitive that cannot carry the
+   * host's test contract is a primitive nobody can adopt.
+   */
+  testId?: string;
 }
 
 const TONE: Record<NonNullable<TabDef<string>["tone"]>, string> = {
@@ -171,6 +183,7 @@ function TabButton<T extends string>({
         aria-selected={selected}
         aria-disabled={tab.disabled || undefined}
         aria-controls={tab.panelId}
+        data-testid={tab.testId}
         tabIndex={selected ? 0 : -1}
         onKeyDown={onKeyDown}
         onClick={() => {

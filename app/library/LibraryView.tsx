@@ -73,6 +73,7 @@ export default function LibraryView() {
             tabs={[
               {
                 id: "styles",
+                testId: "module-styles",
                 label: "Styles",
                 panelId: "library-panel",
                 // Locked-of-total, not total: the gate this whole page exists
@@ -91,12 +92,14 @@ export default function LibraryView() {
               },
               {
                 id: "assets",
+                testId: "module-assets",
                 label: "Assets",
                 panelId: "library-panel",
                 ...(counts.assets === undefined ? {} : { tally: { value: counts.assets } }),
               },
               {
                 id: "animations",
+                testId: "module-animations",
                 label: "Animations",
                 disabled: true,
                 disabledReason: "no engine yet",
