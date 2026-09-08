@@ -23,7 +23,10 @@ const SURFACE: Record<PhaseKey, (projectId: string) => React.ReactNode> = {
   research: (projectId) => <ResearchStep projectId={projectId} />,
   script: (projectId) => <ScriptStep projectId={projectId} />,
   frames: (projectId) => <FramesStep projectId={projectId} />,
-  score: () => <ScoreSpotting />,
+  // Score takes the project too, since 2026-09-08: it spots against the frames
+  // Step 3 saved for THIS project rather than the Glass Harbor fixture, and a
+  // step with no project has no picture to read.
+  score: (projectId) => <ScoreSpotting projectId={projectId} />,
   cut: (projectId) => <CutTimeline projectId={projectId} />,
 };
 

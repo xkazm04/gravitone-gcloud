@@ -94,7 +94,14 @@ const UNRESOLVED: FramesRender = {
 /** What one `generatePlate` call ended as. See the doc on `generatePlate`. */
 export type PlateOutcome = "ready" | "refused" | "failed";
 
-interface FramesStepData {
+/** Exported since 2026-09-08 because this record has a second READER: the Score
+ *  step spots against the creator's own frames (score/picture.ts) and reads this
+ *  key to get them. The type travels with its writer rather than being retyped
+ *  at the reader, which is the only thing that keeps the two in step — a second
+ *  hand-written copy of a persisted shape drifts the moment a field is added.
+ *  Nothing but this hook WRITES it; a downstream step that seeded an upstream
+ *  step's record would be inventing the artifact it exists to read. */
+export interface FramesStepData {
   frames: Frame[];
   /** Which script render the frames were derived from. A different render is a
    *  different cut, so the frames are stale rather than merely out of date. */
