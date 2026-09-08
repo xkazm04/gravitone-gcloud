@@ -17,10 +17,30 @@
 //
 // Everything renders through the gated /api/music/* seams; no vendor
 // knowledge lives in this file beyond the wire plan types.
+//
+// ── WHY THE LAYOUT CHANGED ──────────────────────────────────────────────────
+//
+// The four notes above used to be printed on the page as well: four cards,
+// each with a numbered title and a teaching paragraph under it. Four equal
+// cards each explaining themselves is a numbered ESSAY, and the numbering was
+// carrying sequencing work that nothing visual carried — the dependency (① and
+// ② feed ③) existed only in a sentence inside ③ saying so.
+//
+// The ordinality and the readiness moved into a GUTTER RAIL down the left, one
+// node per bench: filled = it has produced something, a lit ring = it can be
+// used now, hollow = it is waiting on one above it. Then every paragraph had
+// nothing left to say, and each was replaced by the affordance it was
+// describing — the credit facts onto the buttons that spend them, the seam
+// lesson onto a waveform with ticks at the joints, the keep/condition grammar
+// onto a segmented ramp. This comment block is where those notes belong.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { Coins, Dices, Link2, Lock, Repeat } from "lucide-react";
+
 import StudioFrame from "@/components/ui/StudioFrame";
+import { Waveform } from "@/components/ui/Primitives";
+import { Ghost, PipRow, Tally } from "@/components/ui/signal";
 import { ABSENCE_REASON, capabilities } from "@/lib/capabilities";
 import {
   MusicRequestError,
@@ -53,6 +73,21 @@ function chunkMs(c: WireChunk): number {
   return isGenChunk(c) ? c.duration_ms : c.range.end_ms - c.range.start_ms;
 }
 
+/** Where the joints fall, as fractions of the whole — the interior boundaries
+ *  only, since the ends of a piece are not seams. This is the number a listener
+ *  is being asked to judge, so it is drawn rather than described. */
+function seams(chunks: WireChunk[]): number[] {
+  const total = chunks.reduce((n, c) => n + chunkMs(c), 0);
+  if (total <= 0) return [];
+  const out: number[] = [];
+  let at = 0;
+  for (const c of chunks.slice(0, -1)) {
+    at += chunkMs(c);
+    out.push(at / total);
+  }
+  return out;
+}
+
 const card = "rounded-2xl border border-white/8 bg-white/[0.02] p-5";
 const label = "font-jetbrains block text-label tracking-[0.14em] text-white/40 uppercase";
 // THE LAST `focus:outline-none` IN THE REPO, and it made a documented invariant
@@ -71,6 +106,114 @@ const btn =
   "rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] px-4 py-2 text-label font-medium text-cyan-200/90 transition hover:bg-cyan-400/[0.14] disabled:cursor-wait disabled:opacity-50";
 const chip =
   "rounded-full border border-white/12 bg-white/[0.04] px-3 py-1 text-label text-white/60 transition hover:border-cyan-400/40 hover:text-cyan-200";
+
+/** A bench's place in the sequence, drawn in the gutter rather than written
+ *  into its title. `produced` is the strongest claim on the page: this panel
+ *  has actually made audio in this session. */
+type Stage = "produced" | "ready" | "waiting" | "off";
+
+const STAGE_DOT: Record<Stage, string> = {
+  produced: "border-cyan-300/70 bg-cyan-300/80",
+  ready: "border-cyan-300/70",
+  waiting: "border-white/20",
+  off: "border-white/10",
+};
+
+const STAGE_SAID: Record<Stage, string> = {
+  produced: "has produced audio",
+  ready: "ready",
+  waiting: "waiting on an earlier bench",
+  off: "unavailable here",
+};
+
+/**
+ * One rung of the bench: the gutter node, the connector down to the next one,
+ * and the panel beside it.
+ *
+ * The ordinal is the node's POSITION, never a numeral typed into a heading —
+ * which is what "1 · Quick take", "2 · Plan lab" were, and what made reordering
+ * the page a copy edit.
+ */
+function Bench({
+  n,
+  of,
+  stage,
+  children,
+}: {
+  n: number;
+  of: number;
+  stage: Stage;
+  children: React.ReactNode;
+}) {
+  return (
+    <li className="grid grid-cols-[1.25rem_minmax(0,1fr)] gap-x-4">
+      <span
+        role="img"
+        aria-label={`Bench ${n} of ${of}: ${STAGE_SAID[stage]}`}
+        className="flex flex-col items-center pt-6"
+      >
+        <span
+          aria-hidden
+          className={`h-3 w-3 shrink-0 rounded-full border ${STAGE_DOT[stage]} ${
+            stage === "ready" ? "animate-pulse" : ""
+          }`}
+        />
+        {n < of && <span aria-hidden className="mt-1.5 w-px flex-1 bg-white/10" />}
+      </span>
+      {children}
+    </li>
+  );
+}
+
+/**
+ * A strip of audio with its JOINTS MARKED.
+ *
+ * Two sentences on this page taught the same lesson in words — "listen across
+ * the joint at least twice; a seam inaudible once is a metronome by the tenth
+ * pass", and "then A/B the seam by ear against the source". A seam is a place
+ * in a piece of audio, so it is drawn as one: a cyan hairline where two
+ * sections meet, or at both ends when the player is looping and the joint is
+ * the wrap itself.
+ */
+/** Bars in a seam strip. Fixed rather than responsive because EqBars draws a
+ *  fixed-width bar; this is the number that makes the strip about 430px. */
+const BARS = 72;
+
+function SeamStrip({ at, label }: { at: number[]; label: string }) {
+  return (
+    // A <div>, not a <span>: <Waveform> renders a flex <div>, and flow content
+    // inside phrasing content is invalid however it is styled.
+    //
+    // `w-fit` on the inner box is load-bearing. EqBars draws fixed 3px bars, so
+    // the waveform's real width is BARS * 6px and not the container's — ticks
+    // positioned as a percentage of a full-width box would sit beside the
+    // picture they are marking rather than on it.
+    <div
+      role="img"
+      aria-label={label}
+      className="mt-2 inline-block max-w-full overflow-hidden rounded-lg border border-white/8 bg-white/[0.02] px-2 py-1.5"
+    >
+      <div className="relative h-7 w-fit">
+        <Waveform bars={BARS} className="h-full" />
+        {at.map((f, i) => (
+          <span
+            key={i}
+            aria-hidden
+            style={{ left: `calc(${f * 100}% - 0.5px)` }}
+            className="absolute inset-y-0 w-px bg-cyan-300"
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** THE CREDIT FACT, ON THE BUTTON THAT SPENDS. The header used to carry it as
+ *  prose — "everything here spends real credits except drafting a plan" — a
+ *  paragraph away from every control it was about. */
+function Spends() {
+  return <Coins className="h-3.5 w-3.5 shrink-0 opacity-70" aria-label="spends credits" />;
+}
 
 function BusyLine({ busy }: { busy: Busy }) {
   if (busy.state === "working")
@@ -102,9 +245,17 @@ interface Render {
  *  chain: no elimination is silent. */
 function Unavailable({ title, reason }: { title: string; reason: string }) {
   return (
-    <section className={`${card} opacity-60`}>
-      <h2 className="font-instrument text-lg text-white/70">{title}</h2>
+    <section className={card}>
+      <h2 className="font-instrument flex items-center gap-2 text-lg text-white/70">
+        <Lock className="h-4 w-4 shrink-0 text-white/40" aria-hidden />
+        {title}
+      </h2>
+      {/* ABSENCE_REASON is verbatim: it names which vendor capability is
+          missing and what to do about it, which is the work, not narration. */}
       <p className="mt-2 text-content text-slate-400">{reason}</p>
+      {/* The SHAPE of what is missing, so a reader who knows the bench has four
+          panels can see this one still has controls somewhere else. */}
+      <Ghost shape="row" count={2} label={`${title} controls are unavailable here`} className="mt-4" />
     </section>
   );
 }
@@ -114,6 +265,9 @@ export default function PlaygroundView() {
   // cannot change under the component and does not need to be state.
   const caps = capabilities();
   const [renders, setRenders] = useState<Render[]>([]);
+  /** The SFX bench allocates and owns its own url rather than filing one in
+   *  `renders`, so its rung cannot be derived from that list — it says so. */
+  const [sfxDone, setSfxDone] = useState(false);
   /**
    * The id counter is a REF, not state, and that is the fix rather than a
    * preference.
@@ -168,44 +322,84 @@ export default function PlaygroundView() {
     [],
   );
 
+  /** Which benches have produced audio in this session, read off the one list
+   *  that records it. `from` is the bench's own name at the call site. */
+  const made = (from: string) => renders.some((r) => r.from.startsWith(from));
+  /** A render can be edited only if the vendor gave back a stored song and the
+   *  plan that produced it. Lifted here because the RAIL needs the same answer
+   *  the section editor does, and two copies of it would drift. */
+  const editable = renders.filter((r) => r.result.songId && r.result.plan);
+
   return (
     <StudioFrame>
       <div className="pb-16">
         <header className="mb-6">
           <h1 className="font-instrument text-3xl text-white">Music playground</h1>
-          <p className="mt-1 max-w-2xl text-content text-slate-400">
-            A temporary bench for the vendor&apos;s latest music features — free plan drafting, exact-duration
-            renders, section editing against stored audio, and text-to-SFX. Everything here spends real credits
-            except drafting a plan, which is free and is therefore where iteration belongs.
-          </p>
         </header>
 
-        <div className="grid gap-5 lg:grid-cols-2">
+        {/* ONE COLUMN, ONE RAIL. The two-column grid put the SFX bench beside
+            the quick take and the section editor two rows below the renders it
+            eats, so the reading order and the dependency order disagreed. In a
+            single column the rail can be continuous, and it is the rail that
+            says which bench is waiting on which. */}
+        <ol className="space-y-5">
           {/* QuickTake and PlanLab both render through /api/music/compose, so
               they stand or fall with the section-edit capability rather than
               with musicGenerate — which governs the Score phase's cue render,
               a different route with a different portability story. */}
-          {caps.musicSectionEdit ? (
-            <QuickTake addRender={addRender} />
-          ) : (
-            <Unavailable title="Quick take" reason={ABSENCE_REASON.musicSectionEdit} />
-          )}
-          {caps.musicSfx ? <SfxBench /> : <Unavailable title="SFX bench" reason={ABSENCE_REASON.musicSfx} />}
-        </div>
-        <div className="mt-5">
-          {caps.musicSectionEdit ? (
-            <PlanLab addRender={addRender} />
-          ) : (
-            <Unavailable title="Plan lab" reason={ABSENCE_REASON.musicSectionEdit} />
-          )}
-        </div>
-        <div className="mt-5">
-          {caps.musicSectionEdit ? (
-            <SectionEdit renders={renders} addRender={addRender} />
-          ) : (
-            <Unavailable title="Section edit" reason={ABSENCE_REASON.musicSectionEdit} />
-          )}
-        </div>
+          <Bench
+            n={1}
+            of={4}
+            stage={!caps.musicSectionEdit ? "off" : made("quick take") ? "produced" : "ready"}
+          >
+            {caps.musicSectionEdit ? (
+              <QuickTake addRender={addRender} />
+            ) : (
+              <Unavailable title="Quick take" reason={ABSENCE_REASON.musicSectionEdit} />
+            )}
+          </Bench>
+          <Bench
+            n={2}
+            of={4}
+            stage={!caps.musicSectionEdit ? "off" : made("plan lab") ? "produced" : "ready"}
+          >
+            {caps.musicSectionEdit ? (
+              <PlanLab addRender={addRender} />
+            ) : (
+              <Unavailable title="Plan lab" reason={ABSENCE_REASON.musicSectionEdit} />
+            )}
+          </Bench>
+          <Bench
+            n={3}
+            of={4}
+            // The dependency, drawn: ③ stays hollow until ① or ② has produced
+            // something it can edit. That is what the sentence "nothing
+            // editable yet — render something in the quick take or the plan lab
+            // first" was for, said by the gutter instead.
+            stage={
+              !caps.musicSectionEdit
+                ? "off"
+                : made("edit of")
+                  ? "produced"
+                  : editable.length > 0
+                    ? "ready"
+                    : "waiting"
+            }
+          >
+            {caps.musicSectionEdit ? (
+              <SectionEdit editable={editable} addRender={addRender} />
+            ) : (
+              <Unavailable title="Section edit" reason={ABSENCE_REASON.musicSectionEdit} />
+            )}
+          </Bench>
+          <Bench n={4} of={4} stage={!caps.musicSfx ? "off" : sfxDone ? "produced" : "ready"}>
+            {caps.musicSfx ? (
+              <SfxBench onProduced={() => setSfxDone(true)} />
+            ) : (
+              <Unavailable title="SFX bench" reason={ABSENCE_REASON.musicSfx} />
+            )}
+          </Bench>
+        </ol>
       </div>
     </StudioFrame>
   );
@@ -232,11 +426,7 @@ function QuickTake({ addRender }: { addRender: (from: string, r: DetailedMusicRe
 
   return (
     <section className={card}>
-      <h2 className="text-label font-medium text-white">1 · Quick take — the naive baseline</h2>
-      <p className="mt-1 text-content leading-snug text-slate-400">
-        One prose prompt, one take. Useful exactly once per idea: to feel how far no structure gets you before
-        the plan lab shows what structure buys.
-      </p>
+      <h2 className="font-instrument text-lg text-white">Quick take</h2>
       <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={3} className={`${field} mt-3`} />
       <div className="mt-3 flex items-center gap-3">
         <div>
@@ -250,12 +440,25 @@ function QuickTake({ addRender }: { addRender: (from: string, r: DetailedMusicRe
             className={`${field} w-24`}
           />
         </div>
-        <button onClick={run} disabled={busy.state === "working"} className={`${btn} mt-4`}>
+        <button
+          onClick={run}
+          disabled={busy.state === "working"}
+          className={`${btn} mt-4 inline-flex items-center gap-2`}
+        >
+          <Spends />
           render
         </button>
       </div>
       <BusyLine busy={busy} />
-      {url && <audio controls src={url} className="mt-3 h-9 w-full" />}
+      {url && (
+        <>
+          <audio controls src={url} className="mt-3 h-9 w-full" />
+          {/* One unbroken take: no joints, so no ticks. Drawn all the same, so
+              the plan lab's and the editor's strips read as the same object
+              with something added rather than as a different widget. */}
+          <SeamStrip at={[]} label={`One unbroken take, ${lengthS} seconds`} />
+        </>
+      )}
     </section>
   );
 }
@@ -310,12 +513,7 @@ function PlanLab({ addRender }: { addRender: (from: string, r: DetailedMusicResu
 
   return (
     <section className={card}>
-      <h2 className="text-label font-medium text-white">2 · Plan lab — structure for free, spend on the render</h2>
-      <p className="mt-1 text-content leading-snug text-slate-400">
-        Drafting a composition plan costs no credits, so this is the iteration surface: shape sections, durations
-        and styles until the plan reads right, then pay for exactly one render of it. Edit anything below before
-        rendering — the plan is the brief.
-      </p>
+      <h2 className="font-instrument text-lg text-white">Plan lab</h2>
       <textarea value={prompt} onChange={(e) => setPrompt(e.target.value)} rows={2} className={`${field} mt-3`} />
       <div className="mt-3 grid gap-3 md:grid-cols-3">
         <div>
@@ -331,12 +529,23 @@ function PlanLab({ addRender }: { addRender: (from: string, r: DetailedMusicResu
           <input value={negativeStyle} onChange={(e) => setNegativeStyle(e.target.value)} className={field} />
         </div>
       </div>
-      <div className="mt-3 flex gap-3">
+      <div className="mt-3 flex items-center gap-3">
+        {/* THE ONLY FREE CONTROL ON THE PAGE, and the page used to say so in a
+            header paragraph two panels away. It says it itself; every button
+            that spends carries a coin instead. */}
         <button onClick={draft} disabled={busy.state === "working"} className={btn}>
-          draft plan · free
+          draft plan
+          <span className="ml-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-2 py-0.5 text-label text-emerald-200/90">
+            free
+          </span>
         </button>
         {plan && (
-          <button onClick={render} disabled={busy.state === "working"} className={btn}>
+          <button
+            onClick={render}
+            disabled={busy.state === "working"}
+            className={`${btn} inline-flex items-center gap-2`}
+          >
+            <Spends />
             render this plan · {totalS.toFixed(0)}s
           </button>
         )}
@@ -345,6 +554,24 @@ function PlanLab({ addRender }: { addRender: (from: string, r: DetailedMusicResu
 
       {plan && (
         <div className="mt-4 space-y-3">
+          {/* THE PLAN AS A TIMELINE. Each section's width is its duration, so
+              "this is 40 seconds and the finale is a third of it" is readable
+              before a credit is spent — which is what a plan lab is for. */}
+          <div
+            role="img"
+            aria-label={`Plan timeline: ${plan.chunks.filter(isGenChunk).length} sections, ${totalS.toFixed(0)} seconds`}
+            className="flex gap-1"
+          >
+            {plan.chunks.filter(isGenChunk).map((c, i) => (
+              <span
+                key={i}
+                style={{ flexGrow: c.duration_ms, flexBasis: 0 }}
+                className="font-jetbrains flex h-8 min-w-0 items-center justify-center overflow-hidden rounded border border-cyan-400/20 bg-cyan-400/[0.06] text-label text-cyan-200/70"
+              >
+                {(c.duration_ms / 1000).toFixed(0)}s
+              </span>
+            ))}
+          </div>
           {plan.chunks.map((c, i) =>
             isGenChunk(c) ? (
               <div key={i} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
@@ -402,7 +629,15 @@ function PlanLab({ addRender }: { addRender: (from: string, r: DetailedMusicResu
           )}
         </div>
       )}
-      {url && <audio controls src={url} className="mt-4 h-9 w-full" />}
+      {url && plan && (
+        <>
+          <audio controls src={url} className="mt-4 h-9 w-full" />
+          <SeamStrip
+            at={seams(plan.chunks)}
+            label={`Rendered plan, ${totalS.toFixed(0)} seconds, with ${Math.max(0, plan.chunks.filter(isGenChunk).length - 1)} joints`}
+          />
+        </>
+      )}
     </section>
   );
 }
@@ -411,11 +646,79 @@ function PlanLab({ addRender }: { addRender: (from: string, r: DetailedMusicResu
 
 type EditMode = "keep" | "free" | "low" | "medium" | "high";
 
+/**
+ * THE KEEP/CONDITION GRAMMAR AS A RAMP, not five sentences in a `<select>`.
+ *
+ * The options used to read "keep — reference the original", "regenerate ·
+ * condition high", "regenerate · condition medium"… — the same two words
+ * repeated four times with an adjective changing, inside a control that shows
+ * one of them at a time so the ramp was invisible. Laid out as a segmented
+ * control the shape is the meaning: a link, then one, two, three pips of
+ * increasing hold on the original, then the dice.
+ *
+ * `spoken` is the non-visual channel and is deliberately the fuller sentence —
+ * a glyph a screen reader cannot name is the regression this vocabulary exists
+ * to avoid.
+ */
+const EDIT_RAMP: { id: EditMode; pips: number; spoken: string }[] = [
+  { id: "keep", pips: 0, spoken: "keep — reference the original, never re-rendered" },
+  { id: "low", pips: 1, spoken: "regenerate, conditioned lightly on the original" },
+  { id: "medium", pips: 2, spoken: "regenerate, conditioned moderately on the original" },
+  { id: "high", pips: 3, spoken: "regenerate, conditioned closely on the original" },
+  { id: "free", pips: 0, spoken: "regenerate freely, ignoring the original" },
+];
+
+function ModeRamp({
+  value,
+  onChange,
+  label,
+}: {
+  value: EditMode;
+  onChange: (m: EditMode) => void;
+  label: string;
+}) {
+  return (
+    <span role="radiogroup" aria-label={label} className="inline-flex items-center gap-1">
+      {EDIT_RAMP.map((o) => {
+        const on = o.id === value;
+        return (
+          <button
+            key={o.id}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            aria-label={o.spoken}
+            title={o.spoken}
+            onClick={() => onChange(o.id)}
+            className={`flex h-8 min-w-9 cursor-pointer items-center justify-center gap-0.5 rounded-lg border px-2 transition ${
+              on
+                ? "border-cyan-400/50 bg-cyan-400/10 text-cyan-200"
+                : "border-white/10 text-white/40 hover:border-white/25 hover:text-white/70"
+            }`}
+          >
+            {o.id === "keep" ? (
+              <Link2 className="h-4 w-4" aria-hidden />
+            ) : o.id === "free" ? (
+              <Dices className="h-4 w-4" aria-hidden />
+            ) : (
+              Array.from({ length: o.pips }, (_, i) => (
+                <span key={i} aria-hidden className="h-1.5 w-1.5 rounded-full bg-current" />
+              ))
+            )}
+          </button>
+        );
+      })}
+    </span>
+  );
+}
+
 function SectionEdit({
-  renders,
+  editable,
   addRender,
 }: {
-  renders: Render[];
+  /** The renders that CAN be edited, decided one level up because the gutter
+   *  rail asks the same question to draw this bench's readiness. */
+  editable: Render[];
   addRender: (from: string, r: DetailedMusicResult) => Render;
 }) {
   const [sourceId, setSourceId] = useState<number | null>(null);
@@ -424,7 +727,6 @@ function SectionEdit({
   const [busy, setBusy] = useState<Busy>({ state: "idle" });
   const [url, setUrl] = useState<string | null>(null);
 
-  const editable = renders.filter((r) => r.result.songId && r.result.plan);
   const source = editable.find((r) => r.id === sourceId) ?? null;
   const srcChunks = source?.result.plan?.chunks.filter(isGenChunk) ?? [];
 
@@ -472,21 +774,26 @@ function SectionEdit({
   }
 
   const touched = modes.filter((m) => m !== "keep").length;
+  /** Where the joints are, once, for both strips: the source and its edit are
+   *  the same plan by construction, so a second computation could only differ
+   *  by being wrong. */
+  const seamAt = seams(srcChunks);
 
   return (
     <section className={card}>
-      <h2 className="text-label font-medium text-white">3 · Section edit — keep the rest, byte for byte</h2>
-      <p className="mt-1 text-content leading-snug text-slate-400">
-        Pick any render made on this bench, choose per section: <em>keep</em> holds it by reference to the stored
-        original (never re-rendered); a regenerate mode redoes it — <em>free</em>, or conditioned on the original
-        at low/medium/high strength. Then A/B the seam by ear against the source. This is the feature the whole
-        bench exists to judge.
-      </p>
+      <h2 className="font-instrument text-lg text-white">Section edit</h2>
 
       {editable.length === 0 ? (
-        <p className="font-jetbrains mt-3 text-content text-white/35">
-          nothing editable yet — render something in the quick take or the plan lab first
-        </p>
+        // The chip row, empty — the shape of what the benches above produce.
+        // The sentence that used to name them ("render something in the quick
+        // take or the plan lab first") is the gutter rail's job: ③ is hollow
+        // while nothing feeds it.
+        <Ghost
+          shape="row"
+          count={1}
+          label="Nothing editable yet — the benches above have produced no source"
+          className="mt-3"
+        />
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
           {editable.map((r) => (
@@ -503,15 +810,27 @@ function SectionEdit({
 
       {source && (
         <>
-          <div className="mt-3 grid gap-2 md:grid-cols-2">
+          {/* SOURCE ABOVE EDIT, each over its own seam strip with a tick at
+              every joint. Stacked, the A/B is a comparison of two pictures of
+              the same shape — which is what "then A/B the seam by ear against
+              the source" was asking for in words. */}
+          <div className="mt-3 space-y-3">
             <div>
               <span className={label}>source</span>
               <audio controls src={source.url} className="mt-1 h-9 w-full" />
+              <SeamStrip
+                at={seamAt}
+                label={`Source, ${srcChunks.length} sections, ${seamAt.length} joints`}
+              />
             </div>
             {url && (
               <div>
                 <span className={label}>edit</span>
                 <audio controls src={url} className="mt-1 h-9 w-full" />
+                <SeamStrip
+                  at={seamAt}
+                  label={`Edit, ${srcChunks.length} sections, ${seamAt.length} joints`}
+                />
               </div>
             )}
           </div>
@@ -523,17 +842,11 @@ function SectionEdit({
                   <span className="font-jetbrains text-label tracking-[0.14em] text-cyan-200/70 uppercase">
                     section {i + 1} · {(c.duration_ms / 1000).toFixed(1)}s
                   </span>
-                  <select
+                  <ModeRamp
                     value={modes[i]}
-                    onChange={(e) => setModes((m) => m.map((v, j) => (j === i ? (e.target.value as EditMode) : v)))}
-                    className={`${field} w-56`}
-                  >
-                    <option value="keep">keep — reference the original</option>
-                    <option value="high">regenerate · condition high</option>
-                    <option value="medium">regenerate · condition medium</option>
-                    <option value="low">regenerate · condition low</option>
-                    <option value="free">regenerate · free</option>
-                  </select>
+                    label={`Section ${i + 1} mode`}
+                    onChange={(m) => setModes((ms) => ms.map((v, j) => (j === i ? m : v)))}
+                  />
                 </div>
                 {modes[i] !== "keep" && (
                   <textarea
@@ -547,13 +860,29 @@ function SectionEdit({
             ))}
           </div>
 
-          <div className="mt-3 flex items-center gap-3">
-            <button onClick={render} disabled={busy.state === "working" || touched === 0} className={btn}>
-              render the edit · {touched}/{srcChunks.length} sections touched
+          {/* "an edit that touches nothing is a copy" is gone. The button is
+              already disabled at zero; the pips say which sections move and
+              which are held, and a row of hollow pips beside a 0/4 is the
+              sentence, drawn. */}
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <button
+              onClick={render}
+              disabled={busy.state === "working" || touched === 0}
+              className={`${btn} inline-flex items-center gap-2`}
+            >
+              <Spends />
+              render the edit
             </button>
-            {touched === 0 && (
-              <span className="font-jetbrains text-label text-white/35">an edit that touches nothing is a copy</span>
-            )}
+            <PipRow
+              states={modes.map((m) => (m === "keep" ? ("hollow" as const) : ("filled" as const)))}
+              label={`${touched} of ${srcChunks.length} sections regenerated`}
+            />
+            <Tally
+              value={touched}
+              of={srcChunks.length}
+              label="touched"
+              tone={touched === 0 ? "neutral" : "cyan"}
+            />
           </div>
           <BusyLine busy={busy} />
         </>
@@ -572,7 +901,7 @@ const SFX_PRESETS: { label: string; text: string; seconds: number; loop: boolean
   { label: "boom", text: "Deep sub bass drop boom, slow decay, felt more than heard, no transient click", seconds: 4, loop: false },
 ];
 
-function SfxBench() {
+function SfxBench({ onProduced }: { onProduced: () => void }) {
   const [text, setText] = useState(SFX_PRESETS[0].text);
   const [seconds, setSeconds] = useState(SFX_PRESETS[0].seconds);
   const [influence, setInfluence] = useState(0.7);
@@ -598,6 +927,7 @@ function SfxBench() {
       const out = await generateSfx({ text, durationSeconds: seconds, promptInfluence: influence, loop });
       setUrl(blobUrl(out.audio));
       setBusy({ state: "idle" });
+      onProduced();
     } catch (e) {
       setBusy({ state: "error", msg: errMsg(e) });
     }
@@ -605,12 +935,10 @@ function SfxBench() {
 
   return (
     <section className={card}>
-      <h2 className="text-label font-medium text-white">4 · SFX bench — the trailer grammar, envelope-first</h2>
-      <p className="mt-1 text-content leading-snug text-slate-400">
-        Presets carry the punctuation vocabulary — hit, riser, whoosh, drone, boom — each described by its
-        envelope, not its mood. The influence dial is the spec-vs-fishing trade: high converges on the
-        description, low explores around it.
-      </p>
+      {/* The paragraph that stood here listed the five preset chips sitting
+          directly below it, and then explained what a slider labelled
+          "influence" does. Both are on the screen already. */}
+      <h2 className="font-instrument text-lg text-white">SFX bench</h2>
       <div className="mt-3 flex flex-wrap gap-2">
         {SFX_PRESETS.map((p) => (
           <button
@@ -640,16 +968,41 @@ function SfxBench() {
           <input type="checkbox" checked={loop} onChange={(e) => setLoop(e.target.checked)} className="accent-cyan-400" />
           seamless loop
         </label>
-        <button onClick={run} disabled={busy.state === "working"} className={btn}>
+        <button
+          onClick={run}
+          disabled={busy.state === "working"}
+          className={`${btn} inline-flex items-center justify-center gap-2`}
+        >
+          <Spends />
           render sfx
         </button>
       </div>
       <BusyLine busy={busy} />
-      {url && <audio controls src={url} loop={loop} className="mt-3 h-9 w-full" />}
-      {url && loop && (
-        <p className="font-jetbrains mt-2 text-content text-white/35">
-          player set to loop — listen across the joint at least twice; a seam inaudible once is a metronome by the tenth pass
-        </p>
+      {url && (
+        <>
+          <div className="mt-3 flex items-center gap-3">
+            <audio controls src={url} loop={loop} className="h-9 min-w-0 flex-1" />
+            {/* THE LOOP, LIT. "player set to loop — listen across the joint at
+                least twice; a seam inaudible once is a metronome by the tenth
+                pass" said three things: that the player loops, where the joint
+                is, and to listen twice. The glyph says the first, the strip's
+                end ticks say the second, and the third is what a listener does
+                with a looping player without being told. */}
+            <Repeat
+              className={`h-5 w-5 shrink-0 ${loop ? "text-cyan-300" : "text-white/20"}`}
+              aria-label={loop ? "Player is looping" : "Player is not looping"}
+            />
+          </div>
+          {/* A loop's joint is the wrap itself, so the seam sits at both ends. */}
+          <SeamStrip
+            at={loop ? [0, 1] : []}
+            label={
+              loop
+                ? `${seconds} second loop; the joint is at the wrap`
+                : `${seconds} seconds, one-shot`
+            }
+          />
+        </>
       )}
     </section>
   );
