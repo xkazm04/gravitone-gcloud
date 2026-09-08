@@ -10,34 +10,34 @@
 
 import { useCallback, useState } from "react";
 
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "./notebook";
+import { NOTEBOOK } from "./notebook";
 import ArgumentSections from "./sections/Argument";
 import ApparatusSections from "./sections/Apparatus";
-import { sectionRenders } from "./sections/H";
+import { SECTION_LABEL, sectionRenders } from "./sections/H";
 import type { Notebook } from "./types";
 
-const SECTIONS = [
-  ["tension", "tension"],
-  ["mechanisms", `mechanisms · ${NOTEBOOK_COUNTS.mechanisms}`],
-  ["reversals", `reversals · ${NOTEBOOK_COUNTS.reversals}`],
-  ["steelman", "steel-man"],
-  ["counters", `counter-positions · ${NOTEBOOK.counterPositions.length}`],
-  ["facts", `facts · ${NOTEBOOK_COUNTS.facts}`],
-  ["numbers", "numbers"],
-  ["unknowns", `unknowns · ${NOTEBOOK_COUNTS.unknownsOpen} open`],
-  ["questions", `questions · ${NOTEBOOK.candidateQuestions.length}`],
-  ["fit", "engine fit"],
-  ["currency", "currency"],
-  // "sources" here is NOTEBOOK.sources, the hand-written bibliography (11 on
-  // this fixture) — a SEPARATE, unrelated population from the 20 distinct
-  // `Fact.source` strings the facts above cite (`NOTEBOOK_COUNTS.factSourceStrings`).
-  // Named "bibliography" rather than bare "sources" so the rail pill cannot be
-  // misread as a count of every source the notebook has; see the comment on
-  // NOTEBOOK_COUNTS in notebook.ts for the full measurement and why the two
-  // lists are not reconciled.
-  ["sources", `bibliography · ${NOTEBOOK_COUNTS.sources}`],
-  ["gaps", `gaps · ${NOTEBOOK_COUNTS.gaps}`],
+// THE ORDER; the names come from SECTION_LABEL in sections/H.tsx, which is the
+// same map the headings themselves render. A pill and the heading it jumps to
+// were two separate expressions and drifted apart — the pill said
+// "mechanisms · 3" and the heading said "mechanisms — the beat chain,
+// pre-authored". One map, two readers, and they cannot disagree again.
+const SECTION_ORDER = [
+  "tension",
+  "mechanisms",
+  "reversals",
+  "steelman",
+  "counters",
+  "facts",
+  "numbers",
+  "unknowns",
+  "questions",
+  "fit",
+  "currency",
+  "sources",
+  "gaps",
 ] as const;
+
+const SECTIONS = SECTION_ORDER.map((id) => [id, SECTION_LABEL[id]] as const);
 
 /** Every section the rail knows about, in order — including the two that only
  *  render when they have content. */

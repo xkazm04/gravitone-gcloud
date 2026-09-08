@@ -6,7 +6,7 @@
 
 import FactRow from "../FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../notebook";
-import { H, sectionRenders } from "./H";
+import { H, SECTION_LABEL, sectionRenders } from "./H";
 import { CurrencyBody, SourcesBody } from "./Shared";
 
 export default function ApparatusSections() {
@@ -15,8 +15,8 @@ export default function ApparatusSections() {
     <>
       <section className="space-y-2">
         <H id="facts">
-          facts — {NOTEBOOK_COUNTS.loadBearing} load-bearing, {NOTEBOOK_COUNTS.lowConfidence} at low
-          confidence
+          {SECTION_LABEL.facts} · {NOTEBOOK_COUNTS.loadBearing} load-bearing ·{" "}
+          {NOTEBOOK_COUNTS.lowConfidence} at low confidence
         </H>
         <ul className="space-y-2">
           {n.facts.map((f) => (
@@ -26,7 +26,7 @@ export default function ApparatusSections() {
       </section>
 
       <section className="space-y-2">
-        <H id="numbers">numbers made felt · analogies</H>
+        <H id="numbers" />
         <ul className="space-y-1.5">
           {n.scaleConversions.map((s) => (
             <li key={s.raw} className="text-content leading-relaxed">
@@ -49,9 +49,7 @@ export default function ApparatusSections() {
       </section>
 
       <section className="space-y-2">
-        <H id="unknowns">
-          unknowns — {NOTEBOOK_COUNTS.unknownsOpen} still constrain the script
-        </H>
+        <H id="unknowns" />
         {n.unknowns.map((u) => {
           const resolved = !!u.resolvedBy;
           return (
@@ -101,7 +99,7 @@ export default function ApparatusSections() {
           dropping all five. */}
       {sectionRenders(n, "questions") && (
         <section className="space-y-2">
-          <H id="questions">candidate questions — what this run was aimed at</H>
+          <H id="questions" />
           <ul className="space-y-1.5">
             {n.candidateQuestions.map((q) => (
               <li key={q} className="flex gap-2 text-content leading-relaxed text-slate-300">
@@ -114,7 +112,7 @@ export default function ApparatusSections() {
       )}
 
       <section className="space-y-2">
-        <H id="fit">engine fit — reported, never chosen here</H>
+        <H id="fit" />
         {n.engineFit.map((e) => (
           <div key={e.engine} className="flex gap-3 text-content leading-relaxed">
             <span
@@ -134,25 +132,21 @@ export default function ApparatusSections() {
       </section>
 
       <section className="space-y-1.5">
-        <H id="currency">currency — how long is this true for</H>
+        <H id="currency" />
         {/* Inlined here: this artifact has no stat tile to carry it. */}
         <CurrencyBody withHalfLife />
       </section>
 
       <section className="space-y-1.5">
-        {/* Bare "sources" reads as "every source this notebook has" — it is
-            the hand-written bibliography (NOTEBOOK.sources) only, a separate,
-            unrelated population from the distinct source strings the facts
-            above cite. Kept in step with the rail pill this heading is jumped
-            to from (SECTIONS in NotebookBody.tsx) and the Evidence Log's own
-            heading over the same body — see the comment on NOTEBOOK_COUNTS
-            in notebook.ts for the measurement. */}
-        <H id="sources">bibliography — the sources cited</H>
+        {/* Named "bibliography", not "sources", and in step with the rail pill
+            by construction now — both read SECTION_LABEL in ./H.tsx, where the
+            reasoning lives. */}
+        <H id="sources" />
         <SourcesBody />
       </section>
 
       <section className="space-y-1.5">
-        <H id="gaps">gaps — what this run did not do</H>
+        <H id="gaps" />
         <ul className="space-y-1.5">
           {n.researchGaps.map((g) => (
             <li key={g} className="flex gap-2 text-content leading-relaxed text-amber-200/80">
@@ -161,9 +155,9 @@ export default function ApparatusSections() {
             </li>
           ))}
         </ul>
-        <p className="font-jetbrains pt-1 text-content text-white/30">
-          a notebook claiming no gaps did not look hard enough
-        </p>
+        {/* "a notebook claiming no gaps did not look hard enough" stood under
+            this list as an aphorism. It is true and it is the app editorialising
+            about its own artifact; the gaps themselves make the point. */}
       </section>
     </>
   );
