@@ -8,6 +8,7 @@ import Link from "next/link";
 
 import type { DeckCardSpec } from "@/components/ui/deck/DeckCard";
 import { Field, NumberInput, TextArea, TextInput } from "@/components/ui/Field";
+import { BandTrack, Hint } from "@/components/ui/signal";
 import {
   DISCIPLINES,
   DISCIPLINE_LABEL,
@@ -147,23 +148,41 @@ export function presetCards(presets: Preset[]): DeckCardSpec[] {
 
 /* ── The empty style deck — honest, and it routes ─────────────────────────── */
 
+/** THE ABSENCE, WHERE A CARD WOULD BE.
+ *
+ *  This was a 40-word amber paragraph in a panel: "Every frame a project
+ *  renders is built on a locked visual identity, and this account has none that
+ *  fits. Styles are commissioned in the library — a style from a brief fits
+ *  every discipline. Your picks here are kept while you go back a stage." Three
+ *  sentences, and only the middle one had anything the user could act on.
+ *
+ *  Sentence one is the rule the whole stage exists to enforce — restating it
+ *  inside the stage is the app explaining why it is asking. Sentence three
+ *  reassures about a loss that cannot happen: the deck discards nothing going
+ *  backward and its rail is showing the two ✓ summaries while this renders.
+ *  What survives is the fact (no style fits THIS discipline), the shape (a card
+ *  slot with a hollow swatch where a style's face would be), and the route. */
 export function EmptyStyleDeck({ discipline }: { discipline: Discipline }) {
   return (
-    <div className="mx-auto max-w-xl rounded-2xl border border-amber-300/25 bg-amber-300/[0.04] p-8 text-center">
-      <p className="font-instrument text-2xl text-amber-100">
-        No locked style fits {DISCIPLINE_LABEL[discipline].toLowerCase()} yet
-      </p>
-      <p className="font-hanken mt-3 text-content leading-relaxed text-amber-100/80">
-        Every frame a project renders is built on a locked visual identity, and this account has
-        none that fits. Styles are commissioned in the library — a style from a brief fits every
-        discipline. Your picks here are kept while you go back a stage.
-      </p>
-      <Link
-        href="/library"
-        className="font-jetbrains mt-5 inline-block rounded-lg border border-amber-300/40 px-4 py-2 text-label text-amber-100 transition hover:bg-amber-300/10"
-      >
-        commission one in the library →
-      </Link>
+    <div className="mx-auto w-full max-w-xs">
+      <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-amber-300/30 bg-amber-300/[0.03] p-6 text-center">
+        {/* The hollow twin of a style card's face — same slot, no style in it. */}
+        <span
+          aria-hidden
+          className="flex h-24 w-full items-center justify-center rounded-xl border border-dashed border-amber-300/25"
+        >
+          <span className="h-3 w-12 rounded-full border border-dashed border-amber-300/40" />
+        </span>
+        <p className="font-instrument text-2xl text-amber-100">
+          No style fits {DISCIPLINE_LABEL[discipline].toLowerCase()}
+        </p>
+        <Link
+          href="/library"
+          className="font-jetbrains rounded-lg border border-amber-300/40 px-4 py-2 text-label text-amber-100 transition hover:bg-amber-300/10"
+        >
+          commission one in the library →
+        </Link>
+      </div>
     </div>
   );
 }
@@ -220,6 +239,85 @@ function CapLeft({ n }: { n: number }) {
   return <span className="font-jetbrains block text-slate-300">{n} characters left</span>;
 }
 
+/* ── The runtime, as a window rather than a sentence ──────────────────────── */
+
+/** What the number input itself accepts. Named because the free-form rail is
+ *  scaled to exactly this and to nothing else — with no measured band, the only
+ *  true thing to draw is the range of answers the control will take. */
+export const DUR_MIN = 5;
+export const DUR_MAX = 900;
+
+/** The craft band, drawn — shared by the wizard's name stage and the expert
+ *  dialog, so the two faces of project creation cannot drift into two pictures
+ *  of the same fact (they had drifted into two spellings of the same paragraph:
+ *  the dialog's version carried two of the three branches and never grew the
+ *  trailer's n=0 disclosure).
+ *
+ *  THE RAIL'S DOMAIN IS NOT THE INPUT'S. At 5–900s a 90–150s window is a 7%
+ *  sliver against which no thumb position means anything. The domain is drawn
+ *  from the band itself — twice its top, or far enough to hold the user's own
+ *  number — so the window occupies the middle of the rail and "outside it" is a
+ *  visible distance rather than a rounding error. The printed bounds are the
+ *  band's real numbers either way; the scale is how the picture is framed, not
+ *  what it claims.
+ *
+ *  Free form is the one case with no band at all: `range` there is only what
+ *  the input accepts, so drawing it as a measured window would be a lie the old
+ *  prose was careful not to tell ("Nothing was measured for a free-form
+ *  video"). It gets a plain rail over the input's own domain and no window. */
+export function RuntimeBand({
+  targetS,
+  discipline,
+  template,
+}: {
+  targetS: number;
+  discipline: Discipline;
+  template: TemplateId;
+}) {
+  const tpl = templateOf(template);
+  if (discipline === "free") {
+    return (
+      <BandTrack
+        value={targetS}
+        min={DUR_MIN}
+        max={DUR_MAX}
+        unit="s"
+        label={`${tpl.label} — no measured band`}
+      />
+    );
+  }
+  // Trailer bands come from the craft library with nothing measured for them in
+  // this studio (n=0, uat 2026-09-05 MA-L1-4). `hatchBand` stripes the window
+  // so a stand-in never reads as a measurement, and BandTrack says so in its
+  // own accessible name; the Hint carries the number that makes the claim
+  // checkable, which is the half a hatch pattern cannot draw.
+  const sourced = discipline === "trailer";
+  return (
+    <span className="block">
+      <BandTrack
+        value={targetS}
+        min={0}
+        max={Math.max(tpl.range[1] * 2, targetS + 30)}
+        // Copied, not passed through: the catalogue's `range` is a readonly
+        // tuple (lib/projects.ts) and BandTrack takes a mutable pair — a
+        // catalogue entry no consumer can edit is the point of the readonly.
+        band={[tpl.range[0], tpl.range[1]]}
+        hatchBand={sourced}
+        unit="s"
+        label={tpl.label}
+      />
+      {sourced && (
+        <span className="font-jetbrains mt-1 inline-flex items-center gap-1 text-label text-white/40">
+          sourced
+          <Hint variant="warn" tone="amber" label="Why this band is a stand-in">
+            from the craft library; nothing measured it here (n=0)
+          </Hint>
+        </span>
+      )}
+    </span>
+  );
+}
+
 export function NameStage({
   title,
   logline,
@@ -250,7 +348,6 @@ export function NameStage({
    *  runtime (the `ownDuration` latch lives in the wizard). */
   onDuration: (v: number) => void;
 }) {
-  const tpl = templateOf(template);
   const titleLeft = charsLeft(title, 80);
   const loglineLeft = charsLeft(logline, 240);
   return (
@@ -272,15 +369,19 @@ export function NameStage({
         />
       </Field>
 
+      {/* `Optional` MOVED INTO THE LABEL, and the rest of the hint went.
+          It read "Optional — one sentence. It is what the script step argues
+          back against." One sentence is what the placeholder demonstrates, per
+          discipline, in the field itself (LOGLINE_PLACEHOLDER above); what a
+          later step does with the answer is a fact about the app's wiring, and
+          the script step makes it in front of the user when it gets there.
+          Optional-ness is the one bit the field itself cannot show, so it rides
+          on the label — where the runtime field already carries its provenance
+          the same way, and where it is part of the accessible name. */}
       <Field
-        label="Logline"
+        label="Logline · optional"
         htmlFor="w-logline"
-        hint={
-          <>
-            Optional — one sentence. It is what the script step argues back against.
-            {loglineLeft !== null && <CapLeft n={loglineLeft} />}
-          </>
-        }
+        hint={loglineLeft !== null ? <CapLeft n={loglineLeft} /> : undefined}
       >
         <TextArea
           id="w-logline"
@@ -292,7 +393,14 @@ export function NameStage({
         />
       </Field>
 
-      <Field
+      {/* THE BAND SITS BESIDE THE FIELD, NOT IN ITS `hint`. Field renders its
+          hint inside a <p> (components/ui/Field.tsx), and BandTrack's root is a
+          <div> — nesting them is invalid HTML and React says so at runtime as a
+          hydration error (measured: two dev-overlay issues on this stage). The
+          wrapper keeps the two as one item in the form's `gap-5` grid, so the
+          rail reads as part of the runtime control rather than a fourth field. */}
+      <div className="grid gap-1.5">
+        <Field
         // WHOSE NUMBER THIS IS, said in the label (cx 2026-09-08). The wizard
         // already MODELS the distinction — `ownDuration` decides whether
         // picking a template moves the number — and the screen showed none of
@@ -305,25 +413,31 @@ export function NameStage({
         // does not move once it is yours.
         label={ownDuration ? "Target runtime · yours" : "Target runtime · the template's"}
         htmlFor="w-dur"
-        hint={
-          // Same honesty rule as the dialog: free form has no measured band —
-          // its range is only what the input accepts.
-          discipline === "free"
-            ? "Nothing was measured for a free-form video. There is no craft band here; the studio only keeps time."
-            : discipline === "trailer"
-              ? `${tpl.label}'s band is ${tpl.range[0]}–${tpl.range[1]}s, sourced from the craft library — nothing was measured for it in this studio yet (n=0).`
-              : `${tpl.label} was measured at ${tpl.range[0]}–${tpl.range[1]}s. Past that band the craft rules stop applying.`
-        }
-      >
-        <NumberInput
-          id="w-dur"
-          unit="s"
-          min={5}
-          max={900}
-          value={targetS}
-          onChange={(e) => onDuration(Number(e.target.value) || 0)}
-        />
-      </Field>
+        // THE BAND IS A PICTURE NOW, NOT THREE BRANCHES OF PROSE. It read, per
+        // branch, up to 27 words — "…was measured at 90–150s. Past that band
+        // the craft rules stop applying." / "…sourced from the craft library —
+        // nothing was measured for it in this studio yet (n=0)." / "Nothing was
+        // measured for a free-form video…". The BRANCH was the picture: the
+        // whole content of those sentences is where the number sits relative to
+        // a window, and whether the window is a measurement at all.
+        //
+        // BandTrack draws exactly that and keeps every figure: the two bounds
+        // are printed under the rail, the thumb turns amber outside them, and
+        // `hatchBand` stripes a window nothing measured. Its `role="img"` name
+        // says the same in words for a screen reader, so nothing that was
+        // spoken stopped being spoken.
+        >
+          <NumberInput
+            id="w-dur"
+            unit="s"
+            min={DUR_MIN}
+            max={DUR_MAX}
+            value={targetS}
+            onChange={(e) => onDuration(Number(e.target.value) || 0)}
+          />
+        </Field>
+        <RuntimeBand targetS={targetS} discipline={discipline} template={template} />
+      </div>
 
       {/* WHAT THE BUTTON MAKES PERMANENT — the last thing in the form column,
           so it is the last thing crossed on the way from the name field to

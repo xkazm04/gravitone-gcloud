@@ -25,6 +25,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 
 import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
 import DeckStage from "@/components/ui/deck/DeckStage";
@@ -297,12 +298,43 @@ export default function CreateWizard() {
     }
   };
 
+  // ── NO `sub` ON A STAGE WHOSE CARDS ARE THE ANSWER (2026-09-08) ───────────
+  //
+  // Every one of the four stages shipped as the same sandwich: serif question,
+  // grey paragraph explaining the question, cards, control. Four in a row. The
+  // paragraphs were, verbatim:
+  //
+  //  · discipline — "The question before the template: educational and
+  //    promotional pieces are different contracts, and the craft library
+  //    measured them separately." An argument for why the stage exists, made to
+  //    a user who cannot skip it, above three cards that already differ by
+  //    emblem, tone and name.
+  //  · template — "Picking a template sets the runtime it measured — you can
+  //    take ownership of the number at the last stage." An announcement of a
+  //    downstream side effect. bd2701e made that announcement unnecessary by
+  //    showing the provenance where the number lives: the name stage's field
+  //    label reads `Target runtime · the template's` until the user edits it,
+  //    then `· yours`. A promise about a later screen, kept by that screen.
+  //  · style — see the borrowed-preset note below; the non-borrowed half of it
+  //    ("A locked style from the library, or a preset off the shelf…") restated
+  //    the permanence line stages.tsx now carries at the point of commit.
+  //  · name — "The name you type is the headline the studio opens on. Only the
+  //    name is required." Required-ness is the disabled CTA plus `blockedHint`,
+  //    which says it in the user's own terms and only when it bites.
+  //
+  // What is NOT deleted is the borrowed-preset disclosure: it is uat-driven
+  // (5 of 10 Characters were stranded), it is true only sometimes, and nothing
+  // else on the screen can say it. It is compressed instead — see below.
+  //
+  // The template stage does NOT gain a runtime stamp on its cards to replace
+  // its paragraph. The operator's 2026-09-06 density verdict is that these are
+  // hero cards — illustration and name, nothing else (stages.tsx#disciplineCards)
+  // — and a chip is exactly what that verdict removed.
   const stages: DeckStageDef[] = [
     {
       id: "discipline",
       label: "discipline",
       headline: "What kind of video is this?",
-      sub: "The question before the template: educational and promotional pieces are different contracts, and the craft library measured them separately.",
       done: discipline !== null,
       summary: discipline ? DISCIPLINE_LABEL[discipline] : undefined,
       // No Next, and no hint under it. `pickDiscipline` sets `done` and changes
@@ -324,7 +356,6 @@ export default function CreateWizard() {
       id: "template",
       label: "template",
       headline: "Which craft format inside it?",
-      sub: "Picking a template sets the runtime it measured — you can take ownership of the number at the last stage.",
       done: template !== null,
       summary: template ? templateOf(template).label : undefined,
       advance: "pick", // same shape as the discipline stage, above
@@ -341,10 +372,23 @@ export default function CreateWizard() {
       id: "style",
       label: "style",
       headline: "Which visual identity does it render in?",
+      // THE ONE SURVIVING `sub`, AND IT IS A DISCLOSURE, NOT A DESCRIPTION.
+      // Every shipped preset is tagged `educational`; a trailer or free project
+      // therefore meets six cards written for a different kind of video, and
+      // nothing on a hero card can say so (uat 2026-09-05: 5 of 10 Characters
+      // could not get past this stage before the borrow existed). It ran 48
+      // words and re-explained locking, minting and the library route — all of
+      // which the name stage's permanence line and the library itself already
+      // carry. Compressed to the part only this line knows: whose video these
+      // presets were written for. Amber because it is a caveat on the hand the
+      // user is being dealt, and absent entirely when it is not true.
       sub:
-        discipline && borrowedPresets
-          ? `No style is written for ${DISCIPLINE_LABEL[discipline].toLowerCase()} yet, so the six explainer presets are offered as a starting look — one locks as this project's style when you create, and fits any discipline. A style made for this kind of video can be commissioned in the library and swapped in later.`
-          : "A locked style from the library, or a preset off the shelf — a preset locks as this project's style when you create. Every frame renders against it, fixed at creation.",
+        discipline && borrowedPresets ? (
+          <span className="text-amber-200/90">
+            presets written for {DISCIPLINE_LABEL.educational.toLowerCase()} — they fit any
+            discipline
+          </span>
+        ) : undefined,
       done: styleId !== null,
       advance: "pick", // same shape as the discipline stage, above
       summary: pickedPreset ? `${styleName} (preset)` : styleName,
@@ -364,7 +408,6 @@ export default function CreateWizard() {
       id: "name",
       label: "name",
       headline: "Name it, and set the clock",
-      sub: "The name you type is the headline the studio opens on. Only the name is required.",
       // A project with no clock is not a project: `Number("") || 0` used to
       // create a "· 0s" studio (uat 2026-09-05, LE-L1-7).
       done: title.trim().length > 0 && targetS > 0,
@@ -405,23 +448,34 @@ export default function CreateWizard() {
           finishLabel="Create & open"
           onFinish={() => void finish()}
           busy={busy}
+          // THE MACHINE'S WORDS, AND NOTHING APPENDED. Both banners carried a
+          // reassurance the screen behind them already proves: the rail above
+          // still shows every ✓ and its summary, so "your picks are kept" is
+          // visible in the same viewport as the sentence claiming it, and "your
+          // projects live in this browser's storage" restates the `local` pill
+          // in the nav. What a failure owes the user is what failed.
           notice={
             mintError ? (
-              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
-                {mintError} — the project was not created; your picks are kept.
+              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
+                {mintError}
               </p>
             ) : error ? (
-              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
-                {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
+              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
+                {error}
               </p>
             ) : undefined
           }
+          // `back to the shelf — nothing is kept` became `← Projects`. Nothing
+          // has been created yet — there is no record for leaving to discard,
+          // so the clause was reassuring the user about a loss that cannot
+          // happen, next to the Back that is the actual undo.
           exit={
             <Link
               href="/projects"
-              className="font-jetbrains text-label text-white/35 transition hover:text-white/60"
+              className="font-jetbrains inline-flex items-center gap-1.5 text-label text-white/35 transition hover:text-white/60"
             >
-              back to the shelf — nothing is kept
+              <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
+              Projects
             </Link>
           }
         />
