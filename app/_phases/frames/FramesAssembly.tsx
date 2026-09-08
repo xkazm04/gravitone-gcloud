@@ -18,6 +18,8 @@
 import { useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
+import { Tally } from "@/components/ui/signal";
+
 import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef, type PlateState } from "./frames";
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
@@ -133,20 +135,29 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
           className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-3.5 py-1.5 text-label font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:opacity-40"
         >
           {runningAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
-          {runningAll ? "rendering…" : `render ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`}
+          {runningAll
+            ? "rendering…"
+            : stoppedWith !== null
+              ? `retry ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`
+              : `render ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`}
+          {/* WHAT THE STOPPED BATCH GOT THROUGH, on the button that ran it. A
+              paragraph used to stand under this row saying "The batch stopped
+              after a failure that was about the run rather than one plate — N
+              plates were not attempted. Fix the reason above, then run it
+              again." The reason is in the error line above; the count is this;
+              and "run it again" is the verb already on the button. */}
+          {stoppedWith !== null && !runningAll && (
+            <Tally
+              label="left"
+              value={stoppedWith}
+              of={frames.length}
+              tone="amber"
+              className="ml-1"
+            />
+          )}
         </button>
         </div>
       </div>
-
-      {/* A batch that stopped itself says so. Silence here would read as "that
-          is all the plates there were", which is the opposite of what happened —
-          the reason is in the error line above and the work is still owed. */}
-      {stoppedWith !== null && (
-        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-content leading-snug text-amber-100/90">
-          The batch stopped after a failure that was about the run rather than one plate — {stoppedWith} plate
-          {stoppedWith === 1 ? " was" : "s were"} not attempted. Fix the reason above, then run it again.
-        </p>
-      )}
 
       <div className="overflow-hidden rounded-xl border border-white/8">
         <div className={`font-jetbrains grid ${ASSEMBLY_GRID} gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase`}>
@@ -293,9 +304,9 @@ function Row({
       {rejection && (
         <p className="font-jetbrains flex items-start gap-1.5 px-3 pb-2 text-content leading-snug text-amber-200/85">
           <AlertTriangle className="mt-[2px] h-3 w-3 shrink-0" aria-hidden />
-          <span>
-            {rejection} <span className="text-white/35">This beat kept what it had.</span>
-          </span>
+          {/* The reason, and nothing after it. "This beat kept what it had"
+              described the row underneath, which is unchanged and visibly so. */}
+          <span>{rejection}</span>
         </p>
       )}
 
@@ -306,9 +317,11 @@ function Row({
               frame={frame}
               edit={{ selected, onSelect, onMove, onResize }}
             />
-            <p className="font-jetbrains text-content text-white/30">
-              drag any layer to move it · a selected element gets a resize handle
-            </p>
+            {/* "drag any layer to move it · a selected element gets a resize
+                handle" stood here. The canvas draws both affordances: a layer
+                under the pointer takes `cursor-move` (see FrameCanvas in
+                ./parts) and a selected element grows a handle. A sentence about
+                a direct-manipulation affordance is the affordance failing. */}
             <LayerPanel
               frame={frame}
               selected={selected}
@@ -399,7 +412,7 @@ function Row({
                 value={frame.plate.subject ?? ""}
                 onChange={(e) => onSubject(e.target.value)}
                 rows={3}
-                placeholder="derived from the beat's role — edit to steer"
+                placeholder="subject"
                 className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-cyan-400/40"
               />
             </div>
@@ -421,10 +434,17 @@ function Row({
                 placeholder="what this plate does — e.g. a slow push in as the left stack settles"
                 className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-violet-300/40"
               />
+              {/* The hold and the clip's state word, and that is all. The
+                  clause that followed — "this app has no video engine, so a
+                  clip is written here and rendered nowhere. The render seam is
+                  unbuilt" — was written three times on this one screen (here,
+                  in the header's `clips authored` count, and in LayerPanel's
+                  clip group). `authored` with no `rendered` beside it is the
+                  same fact, said once, in the vocabulary
+                  `ClipStatusWord` already uses. */}
               <p className="font-jetbrains mt-1 text-content leading-snug text-white/30">
-                {holdS === null ? "hold unknown — the beat's position is not a timecode" : `holds ${holdS}s`} ·{" "}
-                {frame.clip?.motion.trim() ? "authored · not rendered" : "no motion authored"} — this app has no
-                video engine, so a clip is written here and rendered nowhere. The render seam is unbuilt.
+                {holdS === null ? "hold unknown" : `holds ${holdS}s`} ·{" "}
+                {frame.clip?.motion.trim() ? "authored" : "—"}
               </p>
             </div>
             <button

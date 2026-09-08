@@ -12,6 +12,8 @@
 
 import { useCallback, useRef } from "react";
 
+import { Ban } from "lucide-react";
+
 import type { Frame, FrameElement, FrameText, LayerRef } from "./frames";
 
 /** The SVG's vertical extent. 100 wide × 56 tall is 16:9, so an x and a y in
@@ -182,10 +184,19 @@ export function FrameCanvas({
       {frame.plate.state === "generating" && (
         <div className="absolute inset-0 animate-pulse bg-white/[0.04]" aria-hidden />
       )}
+      {/* A REFUSAL, DRAWN ON THE PLATE THAT WAS REFUSED — a rose ban glyph
+          centred on the wash, rather than a rose banner painted across the
+          bottom of the picture telling the reader what to edit. What to change
+          is the subject box beside this canvas; the reason, when the engine gave
+          one, is on the row. */}
       {frame.plate.state === "refused" && (
-        <p className="font-jetbrains absolute inset-x-2 bottom-2 rounded bg-rose-500/85 px-2 py-1 text-content text-slate-950">
-          refused — change the subject, not the seed
-        </p>
+        <div className="absolute inset-0 grid place-items-center">
+          <Ban
+            role="img"
+            aria-label="this plate was refused"
+            className="h-10 w-10 text-rose-400/80"
+          />
+        </div>
       )}
     </div>
   );

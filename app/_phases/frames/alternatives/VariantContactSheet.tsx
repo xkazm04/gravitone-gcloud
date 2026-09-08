@@ -17,6 +17,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
+import { Ghost, Tally } from "@/components/ui/signal";
+
 import { canRemoveAlt, type AltsColumn, type AltsCtl, type SceneAlt } from "./alts";
 import type { Frame } from "../frames";
 import { FrameCanvas, KindChip } from "../parts";
@@ -112,9 +114,10 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
         )}
       </div>
 
-      <p className="font-jetbrains text-content tracking-[0.12em] text-white/30 uppercase">
-        scanning {seen.from + 1}–{Math.min(seen.to, cols.length)} of {cols.length} · mounted {last - first + 1}
-      </p>
+      {/* "scanning 4–9 of 112 · mounted 14" stood here. The scrubber above the
+          rail draws the first half as a cyan viewport rectangle over the whole
+          cut — that is what it is for — and `mounted` was a virtualization stat
+          about this component, not about the film. */}
     </div>
   );
 }
@@ -194,17 +197,15 @@ function SheetColumn({
           <p className="font-hanken min-w-0 flex-1 truncate text-content text-white/85" title={col.frame.title}>
             {col.frame.title}
           </p>
-          <span className="font-jetbrains shrink-0 text-label tracking-[0.12em] text-white/35 uppercase">
-            {col.alts.length} alt{col.alts.length === 1 ? "" : "s"}
-          </span>
+          <Tally label="alts" value={col.alts.length} className="shrink-0" />
         </div>
       </header>
 
       <div className="scroll-y flex-1 space-y-2 p-2.5">
+        {/* The empty column is the shape of a plate, not a sentence about one:
+            a dashed 16:9 outline the size of the thumbnails that will fill it. */}
         {col.alts.length === 0 && (
-          <div className="rounded-xl border border-white/8 bg-white/[0.02] px-2.5 py-6 text-center">
-            <p className="font-jetbrains text-content tracking-[0.12em] text-white/30 uppercase">no alternatives kept</p>
-          </div>
+          <Ghost shape="tile" label="no alternatives kept" />
         )}
 
         {col.alts.map((alt) => (
@@ -284,11 +285,6 @@ function AltCard({
         onClick={onRemove}
         disabled={!removable}
         aria-label={removable ? "Discard this alternative" : "The only kept alternative cannot be discarded"}
-        title={
-          removable
-            ? undefined
-            : "This is the only picture kept for the scene, and the cut is using it. Generate another alternative first."
-        }
         className="absolute top-1.5 right-1.5 rounded p-1 text-white/40 opacity-0 transition group-focus-within:opacity-100 group-hover:opacity-100 hover:text-rose-300 focus-visible:opacity-100 disabled:cursor-not-allowed disabled:text-white/15 disabled:hover:text-white/15"
       >
         <Trash2 className="h-3 w-3" aria-hidden />

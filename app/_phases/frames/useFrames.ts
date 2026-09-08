@@ -17,7 +17,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { accessHeader, generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
-import { getProject, reportPhase, type PhaseState, type Project } from "@/lib/projects";
+import {
+  PHASES,
+  getProject,
+  reportPhase,
+  type PhaseKey,
+  type PhaseState,
+  type Project,
+} from "@/lib/projects";
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
 import { projectStyle, STYLE_MISS_WORD, styleRefs, type StyleBlock } from "@/lib/themes";
 import { useThemes } from "@/lib/useThemes";
@@ -741,6 +748,16 @@ export function useFrames(projectId: string) {
      *  draw a ledger over it: an empty cut and an unreadable one look identical
      *  and mean opposite things. */
     loadTrouble,
+    /** WHICH OTHER STEPS HAVE PRODUCED SOMETHING — the filled dots of the chain
+     *  <UpstreamBreak> draws on this step's blocked branches (see ./ShotSheet).
+     *  Read off the project's own `progress`, which each step writes about
+     *  ITSELF the moment it has anything real (`reportPhase` below). `empty` is
+     *  the only value that means nothing was made; `done` is not usable, because
+     *  nothing in this app can lock a step and every dot would be hollow on a
+     *  finished project. */
+    donePhases: (project
+      ? PHASES.filter((k) => k !== "frames" && project.progress[k] !== "empty")
+      : []) as PhaseKey[],
     // The step does not draw until the style is known — see `styleReady` — nor
     // until the CHAIN is known, which is the new one: drawing before `source`
     // lands is drawing a ledger for a cut nobody has identified yet. A read that

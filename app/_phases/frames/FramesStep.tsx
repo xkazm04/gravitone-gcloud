@@ -15,23 +15,29 @@
 
 import { useState } from "react";
 
+import { TabRail } from "@/components/ui/signal";
+
+import Notice from "../_shared/ui/Notice";
+
 import AlternativesView from "./alternatives/AlternativesView";
 import FramesAssembly from "./FramesAssembly";
 import ShotSheet from "./ShotSheet";
 import { useFrames } from "./useFrames";
 
-const VIEWS = [
-  { id: "assembly", name: "assembly", sub: "the cut as a production ledger" },
-  { id: "alternatives", name: "alternatives", sub: "keep, compare and choose plates per scene" },
-  // READ-ONLY. A promotional cut's beat is one to many shots; this shows the
-  // decomposition and its review. It edits nothing and generates nothing — see
-  // the header of ./ShotSheet.
-  { id: "shots", name: "shots", sub: "one beat, one to many shots — derived, read-only" },
-] as const;
+// THE THREE VIEWS, AND NOTHING ABOUT THEM. Each id used to carry a `sub` — "the
+// cut as a production ledger", "keep, compare and choose plates per scene", "one
+// beat, one to many shots — derived, read-only" — hung on the tab as a tooltip.
+// <TabRail> has no slot for a blurb and that absence is the component: what the
+// blurbs reached for rides on the tab itself, as a count or, for a locked tab, a
+// reason. The shots view is still read-only (it edits nothing and generates
+// nothing — see the header of ./ShotSheet); it is read-only in the code, which
+// is where that fact does work.
+const VIEWS = ["assembly", "alternatives", "shots"] as const;
+type ViewId = (typeof VIEWS)[number];
 
 export default function FramesStep({ projectId }: { projectId: string }) {
   const ctl = useFrames(projectId);
-  const [chosen, setView] = useState<(typeof VIEWS)[number]["id"]>("assembly");
+  const [chosen, setView] = useState<ViewId>("assembly");
 
   // A PROMOTIONAL CUT HAS NO FRAME LEDGER, so it must not open on one. Its beats
   // decompose into SHOTS (./shots.ts) and `frames` is [] BY CONSTRUCTION --
@@ -48,7 +54,7 @@ export default function FramesStep({ projectId }: { projectId: string }) {
   // the pick stays the operator's and the EFFECTIVE view is computed from it --
   // which also means a pick made on an explainer survives a look at a trailer.
   const promotionalCut = ctl.render.origin !== "explainer-fixture";
-  const view = promotionalCut && chosen !== "shots" ? "shots" : chosen;
+  const view: ViewId = promotionalCut && chosen !== "shots" ? "shots" : chosen;
 
   if (!ctl.loaded)
     return (
@@ -63,63 +69,59 @@ export default function FramesStep({ projectId }: { projectId: string }) {
   // about work that may be several dollars of plates deep. Nothing below this
   // point is drawn, and `useFrames` has disarmed its save, so the record on disk
   // is left exactly as it is until the trouble clears.
+  // The one clause that is not the store's own words: the kind, in the reader's
+  // language. The paragraph that used to follow it ("Nothing was derived and
+  // nothing was written. Whatever is on disk is still there — reload once the
+  // reason above is gone…") described this component's own restraint, which is
+  // enforced in `useFrames` (its save is disarmed) rather than promised here.
   if (ctl.loadTrouble)
     return (
-      <div className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-4">
-        <p className="text-content leading-snug text-rose-200">
-          This project&rsquo;s frames could not be read from local storage
-          {ctl.loadTrouble.kind === "quota"
-            ? " — the browser is out of room."
+      <Notice
+        title={
+          ctl.loadTrouble.kind === "quota"
+            ? "out of room"
             : ctl.loadTrouble.kind === "blocked"
-              ? " — another tab is holding the database open."
+              ? "another tab holds the database open"
               : ctl.loadTrouble.kind === "unavailable"
-                ? " — this browser session has no storage at all."
-                : "."}
-        </p>
-        <p className="mt-2 text-content leading-relaxed text-white/45">
-          Nothing was derived and nothing was written. Whatever is on disk is still there — reload once the
-          reason above is gone rather than composing over it.
-        </p>
-        <p className="font-jetbrains mt-2 text-content text-white/30">{ctl.loadTrouble.message}</p>
-      </div>
+                ? "no storage in this browser session"
+                : ctl.loadTrouble.kind
+        }
+      >
+        <p className="font-jetbrains text-content text-white/45">{ctl.loadTrouble.message}</p>
+        {/* The only remedy this app has for a read that would not land. There is
+            no retry seam in `useFrames` — the read is issued once, on the
+            project — so the button says what it does. */}
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="font-jetbrains mt-2 rounded-lg border border-white/15 px-3 py-1.5 text-label text-white/70 transition hover:bg-white/5"
+        >
+          reload
+        </button>
+      </Notice>
     );
 
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1 rounded-xl border border-white/8 bg-white/[0.02] p-1">
-            {VIEWS.map((v) => {
-              // Disabled and SAID SO, rather than hidden: a control that
-              // vanishes teaches nothing about why it is not there.
-              const unavailable = promotionalCut && v.id !== "shots";
-              return (
-              <button
-                key={v.id}
-                onClick={() => setView(v.id)}
-                disabled={unavailable}
-                title={
-                  unavailable
-                    ? `${v.name} is the explainer's frame ledger. This is a promotional cut: its beats decompose into shots, not frames, so this view has nothing to show.`
-                    : v.sub
-                }
-                // Which view is current is drawn in cyan and nowhere else. A
-                // switcher whose state lives only in a colour is a switcher an
-                // assistive-tech user cannot read.
-                aria-pressed={view === v.id}
-                className={`font-jetbrains rounded-lg px-3 py-1 text-label tracking-[0.1em] uppercase transition ${
-                  view === v.id
-                    ? "bg-cyan-400/15 text-cyan-100"
-                    : unavailable
-                      ? "cursor-not-allowed text-white/15"
-                      : "text-white/40 hover:text-white/70"
-                }`}
-              >
-                {v.name}
-              </button>
-              );
-            })}
-          </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Locked and SAID SO, rather than hidden: a control that vanishes
+              teaches nothing about why it is not there. <TabRail> keeps a locked
+              tab in the tab order, marks it `aria-disabled`, and hangs the one
+              short clause behind its own disclosure — where the tooltip used to
+              spend three sentences re-teaching what a promotional cut is. */}
+          <TabRail
+            label="frames views"
+            active={view}
+            onSelect={setView}
+            className="border-b-0 pb-0"
+            tabs={VIEWS.map((id) => ({
+              id,
+              label: id,
+              disabled: promotionalCut && id !== "shots",
+              disabledReason: "not for promotional cuts",
+            }))}
+          />
           <p className="font-jetbrains text-content text-white/35">
             {ctl.frames.length} frames derived from &ldquo;{ctl.render.title}&rdquo; ({ctl.render.engineLabel})
           </p>
@@ -155,7 +157,13 @@ export default function FramesStep({ projectId }: { projectId: string }) {
       {/* The render satisfies `ShotSourceRender` structurally — the shot layer
           never imports the script step's beat enum. See ./shots. */}
       {view === "shots" && (
-        <ShotSheet render={ctl.render} block={ctl.block} hasLockedStyle={ctl.hasLockedStyle} />
+        <ShotSheet
+          projectId={projectId}
+          render={ctl.render}
+          block={ctl.block}
+          hasLockedStyle={ctl.hasLockedStyle}
+          donePhases={ctl.donePhases}
+        />
       )}
     </div>
   );
