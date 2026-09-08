@@ -155,6 +155,34 @@ Add these, product-specific:
 | **the long run** | Generation takes minutes, not milliseconds. Can the user leave, and does the app still hold the work when they come back? | what the screen does at t+30s; whether navigating away cancels; whether the bell reports the outcome |
 | **provenance of an asset** | Can the user tell where an image, cue or line came from — which style, which prompt, which run? | a lineage line on the tile; a style name; a way back to the run that made it |
 
+## The operator's standing direction (2026-09-08)
+
+Quoted, because it governs every read and every executor brief in this repo from here on:
+
+> "We need to start addressing for each page couple of points we repeat leading into overflowing
+> of text leading into difficult orientation what is going on, **app should explain itself by its
+> visual elements**, elements used for development should be **descoped** so other users can work
+> with the app."
+
+Three rules fall out of it. They outrank a reviewer's instinct and belong in every brief:
+
+1. **Draw it, do not narrate it.** Where a paragraph explains a state, the state should be visible
+   instead. A concurrent session ran this same pass across the app on 2026-09-08 — `507cee9`
+   (research), `3b4e711` (score), `a32f618` (library), `b7c2fda` (playground) — read one for the
+   house manner before proposing prose.
+2. **Development affordances leave the product.** Gating to `NODE_ENV` was the 2026-09-08 answer
+   (`2ef1538`); the operator has since ruled that the research run's dev controls and the deck's
+   art switcher are **removed from the codebase**, not gated. Prefer removal; gate only what the
+   operator still uses and says so.
+3. **Say a thing once.** Repetition across bands is what makes a page hard to orient in — six
+   chrome bands above one card at [[S5]], "Library" meaning two different places three inches
+   apart at S6. Count the bands before adding one.
+
+A fourth, learned the same day: **a walk that only subtracts teaches its reader that nothing was
+earned.** Name what a screen already gets right, in the stop note and in the brief, so a later
+executor does not "improve" it. This repo's surfaces carry UAT dates and verdict comments in the
+source; read them before filing a finding against a decision somebody already made deliberately.
+
 ## Skill improvement log
 
 <!-- dated one-liners; what the next /cx session in THIS repo needs to know -->
