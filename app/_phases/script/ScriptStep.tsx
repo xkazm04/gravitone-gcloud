@@ -32,7 +32,7 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
-import { Hint, Tally, UpstreamBreak, type TallyTone } from "@/components/ui/signal";
+import { Hint, TabRail, UpstreamBreak, type TabDef, type TallyTone } from "@/components/ui/signal";
 import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/projects";
 
 import { CONCLUSIONS } from "../_shared/notebook/conclusions";
@@ -60,6 +60,10 @@ import TrailerScript from "./trailer/TrailerScript";
 import { useVersions } from "./useVersions";
 
 type Tab = "candidates" | "coverage" | "spend" | "tracks";
+
+/** The one panel all four tabs govern — `aria-controls` on every tab,
+ *  `role="tabpanel"` on the section whose contents swap under them. */
+const PANEL_ID = "script-panel";
 
 /** The beats a version actually shows for one render. A version with no chain
  *  of its own (the simulated transform re-weights without rewriting) falls back
@@ -333,39 +337,38 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
         </a>
       </section>
 
-      {/* `aria-pressed` rather than a tablist: which of the four views you are in
-          was carried by a cyan border and a tinted background and nothing else,
-          so it did not exist for a reader without colour. Toggle-button state is
-          the honest promise here — a `role="tab"` set would also promise arrow-key
-          navigation and a roving tabindex, which these buttons do not implement. */}
-      <div className="font-jetbrains mt-4 flex flex-wrap gap-2 text-label">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            data-testid={`view-${t.key}`}
-            aria-pressed={tab === t.key}
-            onClick={() => setTab(t.key)}
-            className={`rounded-xl border px-3.5 py-2 text-left transition ${
-              tab === t.key
-                ? "border-cyan-400/40 bg-cyan-400/[0.07]"
-                : "border-white/8 bg-white/[0.02] hover:border-white/20"
-            }`}
-          >
-            <span className="inline-flex items-center gap-2 text-white/85">
-              {t.label}
-              {(() => {
-                const q = tallyFor(t.key);
-                return q ? <Tally value={q.value} label={q.label} tone={q.tone} /> : null;
-              })()}
-            </span>
-          </button>
-        ))}
-      </div>
+      {/* A REAL TABLIST NOW. This row used to be four `aria-pressed` buttons,
+          and the comment that stood here argued toggle-state was the honest
+          promise "because these buttons do not implement arrow-key navigation
+          and a roving tabindex". <TabRail> does implement both, so the promise
+          is now kept rather than lowered — and the four testids the drivers
+          click ride across on `TabDef.testId`, which is the prop whose absence
+          kept this file hand-rolled through the last wave. */}
+      <TabRail
+        className="mt-4"
+        label="script views"
+        active={tab}
+        onSelect={setTab}
+        tabs={TABS.map((t): TabDef<Tab> => {
+          const q = tallyFor(t.key);
+          return {
+            id: t.key,
+            label: t.label,
+            testId: `view-${t.key}`,
+            panelId: PANEL_ID,
+            // A tally is left OFF while the records are unread — `tallyFor`
+            // returns null over an unhydrated scope, and a `0` drawn there is
+            // a claim rather than a count.
+            ...(q ? { tally: q } : {}),
+          };
+        })}
+      />
 
-      {!ready ? (
-        <Skeleton className="mt-4" />
-      ) : (
-        <div className="mt-4">
+      <div id={PANEL_ID} role="tabpanel" className="mt-4">
+        {!ready ? (
+          <Skeleton />
+        ) : (
+          <>
           {weighing && (
             <div className="mb-3">
               <VersionBar api={versions} showing={showing} setShowing={setShowing} />
@@ -452,8 +455,9 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
               )}
             </>
           </StickyNotebook>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       <Modal
         open={!!expanded}

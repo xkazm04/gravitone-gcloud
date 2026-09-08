@@ -39,10 +39,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { Lock } from "lucide-react";
-
 import Modal from "@/components/ui/Modal";
-import { Tally } from "@/components/ui/signal";
+import { TabRail } from "@/components/ui/signal";
 import { getProject, type Discipline } from "@/lib/projects";
 
 import NotebookBody from "../_shared/notebook/NotebookBody";
@@ -65,6 +63,10 @@ import GuidedResearch, { FaceSwitch, type Face } from "./guided/GuidedResearch";
 import { useEducationalResearch } from "./guided/useEducationalResearch";
 
 type Tab = "topic" | "board";
+
+/** The one panel both tabs govern — `aria-controls` on the tab, `role="tabpanel"`
+ *  on the section that swaps under it. */
+const PANEL_ID = "research-panel";
 
 export default function ResearchStep({ projectId }: { projectId: string }) {
   // The project record, read the way StudioView reads it (`getProject` in an
@@ -286,72 +288,74 @@ function EducationalFaces({
               rides on the tab instead — <TabRail>'s argument, one directory
               over. "input, log & notebook" described the panel below; "locked
               until a notebook exists" described a lock the Lock glyph and the
-              disabled state already draw, and the tab's own accessible name
-              now carries the reason for anyone who cannot see either.
-              Hand-rolled rather than <TabRail> for one reason: these two
-              buttons carry `data-testid="tab-topic"/"tab-board"` and a real
-              `disabled`, both of which four harness scripts and a live spec
-              assert on. */}
-          <div className="font-jetbrains flex flex-wrap items-center gap-2 text-label">
-            {([
-              { key: "topic", label: "Topic" },
-              { key: "board", label: "Triage board" },
-            ] as const).map((t) => {
-              const locked = t.key === "board" && !ready;
-              return (
-                <button
-                  key={t.key}
-                  data-testid={`tab-${t.key}`}
-                  onClick={() => !locked && setTab(t.key)}
-                  disabled={locked}
-                  aria-pressed={tab === t.key}
-                  aria-label={locked ? `${t.label} — locked until a notebook exists` : undefined}
-                  className={`flex items-center gap-2 rounded-xl border px-3.5 py-2 text-left transition ${
-                    tab === t.key
-                      ? "border-cyan-400/40 bg-cyan-400/[0.07]"
-                      : locked
-                        ? "cursor-not-allowed border-white/6 bg-white/[0.01] opacity-45"
-                        : "border-white/8 bg-white/[0.02] hover:border-white/20"
-                  }`}
-                >
-                  {locked && <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />}
-                  <span className="text-white/85">{t.label}</span>
-                  {t.key === "board" && (
-                    <Tally
-                      value={ready ? api.summary.kept : 0}
-                      of={ready ? api.summary.total : undefined}
-                      label="kept"
-                      tone={ready ? "cyan" : "neutral"}
-                    />
-                  )}
-                </button>
-              );
-            })}
-            <span className="ml-auto">
-              <FaceSwitch face="expert" onSwitch={onSwitchFace} />
-            </span>
+              disabled state already draw, and the tab's own DESCRIPTION now
+              carries the reason for anyone who cannot see either.
+
+              These two buttons were hand-rolled for one reason — they carry
+              `data-testid="tab-topic"/"tab-board"`, which four harness scripts
+              and a live spec click, and `TabDef` had no testid to give them.
+              It has one now (`testId`), so the row is the shared primitive.
+
+              THE ONE SEMANTIC THAT MOVED: the lock. It was a real `disabled`
+              attribute, which takes the tab OUT of the tab order and puts the
+              reason behind a mouse. <TabRail> marks it `aria-disabled`, so the
+              tab stays reachable and its Hint readable. Every driver survives
+              that: Playwright folds `aria-disabled` into enabled-ness for
+              `role="tab"` (kAriaDisabledRoles), and uat/driver/lib.mjs already
+              tests both spellings. The live spec's assertion says so out
+              loud — tests/live/golden-path.live.spec.ts, "the board is
+              unlocked". */}
+          <div className="flex flex-wrap items-center gap-3 border-b border-white/8 pb-3">
+            <TabRail
+              className="grow border-b-0 pb-0"
+              label="research views"
+              active={tab}
+              onSelect={setTab}
+              tabs={[
+                { id: "topic", label: "Topic", testId: "tab-topic", panelId: PANEL_ID },
+                {
+                  id: "board",
+                  label: "Triage board",
+                  testId: "tab-board",
+                  // Only while it can be opened: `aria-controls` pointing at a
+                  // panel this tab cannot reach is a promise it does not keep.
+                  ...(ready ? { panelId: PANEL_ID } : {}),
+                  disabled: !ready,
+                  disabledReason: "locked until a notebook exists",
+                  tally: {
+                    value: ready ? api.summary.kept : 0,
+                    of: ready ? api.summary.total : undefined,
+                    label: "kept",
+                    tone: ready ? "cyan" : "neutral",
+                  },
+                },
+              ]}
+            />
+            <FaceSwitch face="expert" onSwitch={onSwitchFace} />
           </div>
 
-          {tab === "topic" ? (
-            <TopicPanel
-              run={run}
-              topic={topic}
-              setTopic={setTopic}
-              running={running}
-              onStart={startResearch}
-              onAbort={abortResearch}
-              onClear={() => setConfirmClear(true)}
-              onOpenNotebook={() => setArtifact("notebook")}
-              onOpenEvidence={() => setArtifact("evidence")}
-              onGoToBoard={() => setTab("board")}
-            />
-          ) : (
-            <>
-              <ResearchTriageBoard api={api} />
-              <FollowUpQueue api={api} projectId={projectId} />
-              <ConfirmScope api={api} />
-            </>
-          )}
+          <div id={PANEL_ID} role="tabpanel" className="space-y-5">
+            {tab === "topic" ? (
+              <TopicPanel
+                run={run}
+                topic={topic}
+                setTopic={setTopic}
+                running={running}
+                onStart={startResearch}
+                onAbort={abortResearch}
+                onClear={() => setConfirmClear(true)}
+                onOpenNotebook={() => setArtifact("notebook")}
+                onOpenEvidence={() => setArtifact("evidence")}
+                onGoToBoard={() => setTab("board")}
+              />
+            ) : (
+              <>
+                <ResearchTriageBoard api={api} />
+                <FollowUpQueue api={api} projectId={projectId} />
+                <ConfirmScope api={api} />
+              </>
+            )}
+          </div>
         </>
       )}
 
