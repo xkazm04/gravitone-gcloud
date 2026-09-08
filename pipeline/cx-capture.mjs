@@ -32,6 +32,8 @@ const PROJECT = process.env.CX_PROJECT ?? "seed-glass-harbor";
 const SCREENS = {
   landing: { url: "/" },
   projects: { url: "/projects" },
+  // seeded once, then emptied — see the `wipe` block below for why this is
+  // NOT what a new account sees.
   "projects-empty": { url: "/projects", wipe: true },
   "wizard-discipline": { url: "/projects/new" },
   "wizard-template": { url: "/projects/new", picks: 1 },
@@ -102,9 +104,30 @@ for (const step of spec.via ?? []) {
   await page.waitForTimeout(4000); // > the 600ms save debounce, with room for a derive
 }
 
+// THE EMPTY SHELF IS NOT THE FIRST-RUN SHELF, and clearing storage gets you the
+// wrong one of the two.
+//
+// A fresh account is HANDED a demo shelf: lib/useProjects.ts seeds six fictional
+// projects when `rows.length === 0 && !alreadySeeded(uid)`, then sets
+// `gravitone.seeded.<uid>`. So `localStorage.clear()` drops the flag too and the
+// seed simply runs again — measured 2026-09-08, the "empty" capture came back
+// with all six demo rows. What a real new user sees IS the populated shelf.
+//
+// The genuinely empty shelf is a POST-DELETION state: seeded once, then emptied.
+// Reached by keeping the seeded flag and dropping only the records — no uid
+// needed, which keeps this honest if the key format changes.
 if (spec.wipe) {
   await page.goto(`${BASE}/projects`, { waitUntil: "domcontentloaded" });
-  await page.evaluate(() => localStorage.clear());
+  await page.waitForTimeout(3000); // let the seed land and mark itself
+  await page.evaluate(async () => {
+    for (const k of Object.keys(localStorage)) {
+      if (!k.startsWith("gravitone.seeded.")) localStorage.removeItem(k);
+    }
+    for (const db of await indexedDB.databases()) {
+      if (db.name) indexedDB.deleteDatabase(db.name);
+    }
+  });
+  await page.waitForTimeout(700);
 }
 
 await page.goto(BASE + spec.url, { waitUntil: "domcontentloaded" });
