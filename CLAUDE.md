@@ -90,7 +90,22 @@ for p in known:
     per[p.split("/")[0]][0] += p in mapped
 deep = {k for k, (m, t) in per.items() if t and m / t >= 0.9}
 
-drift = sorted(p for p in src if p not in mapped and p.split("/")[0] in deep)
+# DECLARED EXCLUSIONS — source the map deliberately does not own, listed with
+# its reason in .claude/map-exclusions.txt. Subtracted from DRIFT and reported
+# separately, because a decision somebody already made is not a finding: left in
+# DRIFT it arrives every session looking like work nobody has done, and the
+# session that believes it either wastes a scan or learns to skim the line.
+# The bar for adding one is in the file, and it is deliberately high.
+excl = []
+if os.path.exists(".claude/map-exclusions.txt"):
+    for line in open(".claude/map-exclusions.txt", encoding="utf-8"):
+        line = line.split("#")[0].strip()
+        if line:
+            excl.append(line)
+is_excl = lambda p: any(p == e or p.startswith(e) for e in excl)
+
+drift = sorted(p for p in src if p not in mapped and p.split("/")[0] in deep and not is_excl(p))
+excluded = sorted(p for p in src if p not in mapped and is_excl(p))
 loose = sorted(p for p in src if p not in mapped and p.split("/")[0] not in deep)
 stale = sorted(p for p in mapped if not os.path.exists(p))
 fresh = sorted(p for p in src if added.get(p, 0) > mapT)
@@ -102,6 +117,7 @@ for k in sorted(set(p.split("/")[0] for p in src)):
     pct = f"{m/t*100:5.1f}%" if t else "  n/a "
     print(f"  {k:12s} {m:4d}/{t:<4d} {pct}  ({band}){f'  +{new} since the map' if new else ''}")
 print("DRIFT (scan)   :", drift or "none")
+print("excluded       :", f"{len(excluded)} declared in .claude/map-exclusions.txt" if excluded else "none")
 print("stale (scan)   :", stale or "none")
 print("selective      :", f"{len(loose)} unmapped under {sorted(set(p.split('/')[0] for p in loose))}")
 print("contexts:", len(d["contexts"]), "ungrouped:", len([c for c in d["contexts"] if not c.get("group")]))
