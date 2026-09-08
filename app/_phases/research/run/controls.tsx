@@ -3,6 +3,8 @@
 // The controls around a run: what you feed it, which ending to drive, where it
 // has got to, and the standing note about what the engine actually is.
 
+import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
+
 import { OUTCOMES } from "./trace";
 import type { RunOutcome, RunState } from "./types";
 import { LOAD_NOTE, secs } from "./useResearchRun";
@@ -143,12 +145,28 @@ export function RunStatus({ state }: { state: RunState }) {
   );
 }
 
-/** The honest line about what the engine actually is. Every surface carries it. */
+/** What the engine actually is — a stamp, not a paragraph.
+ *
+ *  It was two sentences under the run button on BOTH faces: "research runs as a
+ *  local Claude Code process — minutes, not milliseconds, and it can exit
+ *  non-zero. Prototype: the trace is replayed at 8× from run 1 and nothing is
+ *  executed." Everything in it that is the WORK survives here — the replay
+ *  factor is drawn as the chip itself, and the runtime it is a replay OF sits
+ *  behind the chip's disclosure. What went is the app narrating: "nothing is
+ *  executed" is what the word `replay` means, and the fact that a run can exit
+ *  non-zero is not a note, it is the `failed` ending the log renders in rose
+ *  when it happens. */
 export function LocalProcessNote({ className = "" }: { className?: string }) {
   return (
-    <p className={`font-jetbrains text-content leading-relaxed text-white/35 ${className}`}>
-      research runs as a local Claude Code process — minutes, not milliseconds, and it can exit
-      non-zero. Prototype: the trace is replayed at 8× from run 1 and nothing is executed.
-    </p>
+    <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
+      <span className={`${CHIP_CLASS} ${TALLY_TONE.neutral}`}>
+        <span aria-hidden className="opacity-50">replay</span>
+        <span className="sr-only">replayed at</span>
+        8×
+      </span>
+      <Hint label="What a real run is">
+        a local Claude Code process — minutes, not milliseconds
+      </Hint>
+    </div>
   );
 }

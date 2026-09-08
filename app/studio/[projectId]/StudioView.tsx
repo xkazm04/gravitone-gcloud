@@ -18,6 +18,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { FileQuestion } from "lucide-react";
+
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
@@ -283,10 +285,16 @@ export default function StudioView({ projectId }: { projectId: string }) {
             data-testid="door-absent"
             className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4"
           >
-            <p className="font-hanken text-content leading-snug text-slate-300">
-              This address does not name a project on your account. Either it was deleted, or it
-              belongs to a different account signed in on this browser — the studio will not say
-              which, and cannot open it either way.
+            {/* The headline above says "Nothing to open here" — that string is
+                asserted by pipeline/cx-capture.mjs and does not move. What was
+                under it restated it in four clauses and then narrated the app's
+                own reticence ("the studio will not say which, and cannot open
+                it either way"). The two possibilities ARE the work — the doctrine
+                at the top of this file spends a paragraph on why both are named
+                and neither is chosen — so both survive, in one clause. */}
+            <p className="font-hanken flex items-start gap-2 text-content leading-snug text-slate-300">
+              <FileQuestion className="mt-0.5 h-4 w-4 shrink-0 text-white/40" aria-hidden />
+              Deleted, or owned by another account signed in on this browser.
             </p>
             <Link
               href="/projects"
@@ -300,13 +308,15 @@ export default function StudioView({ projectId }: { projectId: string }) {
             data-testid="door-storage"
             className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-400/5 px-5 py-4"
           >
-            {/* Same voice as /projects' banner, because it is the same failure —
-                and it says the same thing about whose fault it is. The work is
-                not gone; this browser would not hand it over. */}
-            <p className="font-hanken text-content leading-snug text-rose-200">
-              {door.message} — this project lives in this browser&rsquo;s storage, and it did not
-              answer. Nothing has been lost; nothing can be read or saved until it does.
-            </p>
+            {/* THE MESSAGE IS THE WORK AND IT IS ALL THAT IS LEFT. studioDb
+                rejects with a real sentence — "storage is open in another tab",
+                the browser's own quota error — and it is the only thing here
+                that knows what actually happened. The two sentences that
+                followed it re-taught where a project lives and reassured that
+                nothing is lost, which is the app talking about itself over the
+                top of a real machine error. The headline says the project could
+                not be read; this says why. */}
+            <p className="font-hanken text-content leading-snug text-rose-200">{door.message}</p>
             <Link
               href="/projects"
               className="font-jetbrains mt-3 inline-block rounded-lg border border-rose-400/30 px-3 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/10"

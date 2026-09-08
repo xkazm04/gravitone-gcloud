@@ -53,7 +53,12 @@ export default function Stepper({
               // tests/live/.
               data-testid={`step-${s.key}`}
               aria-current={on ? "step" : undefined}
-              title={`${s.title} — ${PHASE_STATE_WORD[state]}`}
+              // THE TITLE NO LONGER REPEATS THE LABEL. It read "Research —
+              // working", and the word before the dash is printed on the button
+              // three inches to the right. What is left is the state, which the
+              // badge draws in colour and nothing else spelled — so it also
+              // moves into the accessible name below, where a colour cannot go.
+              title={PHASE_STATE_WORD[state]}
               className={`flex w-full cursor-pointer items-center justify-center gap-2 px-3 py-2.5 transition ${
                 on ? "bg-cyan-400/[0.09]" : "hover:bg-white/[0.04]"
               }`}
@@ -70,6 +75,7 @@ export default function Stepper({
               >
                 {s.title}
               </span>
+              <span className="sr-only"> — {PHASE_STATE_WORD[state]}</span>
             </button>
           </li>
         );

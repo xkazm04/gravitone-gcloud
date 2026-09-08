@@ -22,7 +22,8 @@ export default function CardActions({ card, api, compact }: { card: Card; api: S
       <button
         data-testid={`like-${card.id}`}
         onClick={() => api.toggle(card.id, "liked")}
-        title="A preference signal. Changes nothing in this script — it is training data for your tone profile."
+        // The half a reader cannot guess from a button labelled "like".
+        title="changes nothing in this script — it trains your tone profile"
         className={`rounded-full border tracking-[0.1em] transition ${pad} ${
           s.liked
             ? "border-emerald-400/45 bg-emerald-400/10 text-emerald-200"
@@ -35,7 +36,7 @@ export default function CardActions({ card, api, compact }: { card: Card; api: S
       <button
         data-testid={`deepen-${card.id}`}
         onClick={() => api.toggle(card.id, "deepen")}
-        title="Ask the next research run to go further here. Routes backward, not into this script."
+        title="routes to the next research run, not into this script"
         className={`rounded-full border tracking-[0.1em] transition ${pad} ${
           s.deepen
             ? "border-cyan-400/45 bg-cyan-400/10 text-cyan-200"

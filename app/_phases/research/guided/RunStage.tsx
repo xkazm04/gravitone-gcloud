@@ -18,7 +18,10 @@
 
 import { useState } from "react";
 
+import { Bell } from "lucide-react";
+
 import { Button } from "@/components/ui/Primitives";
+import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
@@ -62,21 +65,35 @@ function ArtifactPills({
   );
 }
 
-/** THE ONE SENTENCE THE PROTOTYPE OWES BEFORE A DECISION. Every research
- *  surface says the process is replayed; none said the SUBJECT is fixed — so a
+/** THE ONE FACT THE PROTOTYPE OWES BEFORE A DECISION — the SUBJECT is fixed.
+ *  Every research surface says the process is replayed; none said this, so a
  *  creator typed their own topic, ran, and scoped cards about Bitcoin under
- *  their own heading. Shown before the run (what will happen) and after it
- *  (what did), in the creator's words, not the engine's. */
-export function StandInNote({ topic, landed = false }: { topic: string; landed?: boolean }) {
+ *  their own heading.
+ *
+ *  IT IS DRAWN NOW RATHER THAN NARRATED. The substitution is two topics, one of
+ *  which is not in force, so the picture is the typed topic struck through
+ *  beside the notebook's own — which is the same information the three
+ *  branches of prose carried and does not have to be read to be seen. `landed`
+ *  is gone with them: the notebook's topic is the notebook's topic before the
+ *  run and after it, and the branch existed only to re-word the sentence. */
+export function StandInNote({ topic }: { topic: string }) {
   const own = topic.trim() && topic.trim() !== NOTEBOOK.topic;
   return (
-    <p data-testid="stand-in-note" className="font-jetbrains mt-2 text-label leading-snug text-amber-200/85">
-      {landed
-        ? own
-          ? `prototype · this notebook is the saved ${NOTEBOOK.researched} Bitcoin run, not research on “${topic.trim()}” — every card below is about Bitcoin`
-          : `prototype · this notebook is the saved ${NOTEBOOK.researched} Bitcoin run`
-        : `prototype · whatever topic you type, the run replays the saved ${NOTEBOOK.researched} Bitcoin notebook — the cards you scope next will be about Bitcoin, not your topic`}
-    </p>
+    <span data-testid="stand-in-note" className="flex flex-wrap items-center gap-1.5">
+      {own && (
+        <span className="font-jetbrains text-label text-white/35 line-through decoration-amber-300/50">
+          {topic.trim()}
+        </span>
+      )}
+      <span className={`${CHIP_CLASS} ${TALLY_TONE.amber}`}>
+        <span aria-hidden className="opacity-60">stand-in</span>
+        <span className="sr-only">the notebook this run replays:</span>
+        {NOTEBOOK.topic}
+      </span>
+      <Hint variant="warn" tone="amber" label="Why the notebook names another topic">
+        every card is from the saved {NOTEBOOK.researched} Bitcoin run
+      </Hint>
+    </span>
   );
 }
 
@@ -126,7 +143,9 @@ export default function RunStage({
               {NOTEBOOK_COUNTS.facts} facts · {NOTEBOOK_COUNTS.mechanisms} mechanisms ·{" "}
               {NOTEBOOK_COUNTS.reversals} reversals · researched {NOTEBOOK.researched}
             </p>
-            <StandInNote topic={topic} landed />
+            <div className="mt-2">
+              <StandInNote topic={topic} />
+            </div>
             <div className="mt-4 flex flex-wrap items-center gap-2.5">
               <ArtifactPills
                 onOpenNotebook={onOpenNotebook}
@@ -164,6 +183,9 @@ export default function RunStage({
             disabled={running}
             className="min-w-[16rem] flex-1"
           />
+          {/* The substitution stands BESIDE the field it substitutes for —
+              typed topic struck out, notebook's topic in the chip. */}
+          <StandInNote topic={topic} />
           {running ? (
             <Button variant="ghost" onClick={abortResearch} className="shrink-0">
               Abort
@@ -196,9 +218,20 @@ export default function RunStage({
               </p>
               <RunStatus state={run.state} />
             </div>
+            {/* THE BACKGROUND-JOB FACT, ONCE. It was three statements of one
+                thing on one screen — the panel's opening paragraph, the deck
+                stage's `sub`, and this. What is left is the half a reader
+                cannot deduce (they may leave, and the bell will find them),
+                carried by the glyph that will do the finding. The testid stays:
+                tests/live/golden-path.live.spec.ts and two pipeline drivers
+                assert on it. */}
             {running && (
-              <p data-testid="running-note" className="font-jetbrains mt-1.5 text-label text-white/35">
-                running in the background — you can leave this step, and the bell reports the result.
+              <p
+                data-testid="running-note"
+                className="font-jetbrains mt-1.5 flex items-center gap-1.5 text-label text-white/40"
+              >
+                <Bell className="h-3.5 w-3.5 shrink-0 animate-pulse text-cyan-300/70" aria-hidden />
+                in the background — the bell reports the result
               </p>
             )}
             <div className="mt-3">
@@ -240,7 +273,7 @@ export default function RunStage({
             )}
             {run.state.status === "done" && (
               <div className="mt-3">
-                <StandInNote topic={topic} landed />
+                <StandInNote topic={topic} />
               </div>
             )}
             {run.state.status === "done" && (
@@ -259,12 +292,12 @@ export default function RunStage({
         </div>
       )}
 
-      {run.state.status === "idle" && (
-        <Notice severity="info" title="no notebook yet">
-          <p>Run the research, or load the saved Bitcoin run, and the next stages unlock.</p>
-          <StandInNote topic={topic} />
-        </Notice>
-      )}
+      {/* NO "no notebook yet" NOTICE. An empty state that says the stage is
+          empty, on the stage whose entire content is the control that fills it,
+          is the app describing the screen the reader is looking at. The deck's
+          own Next is disabled and carries `blockedHint` (Deck#blockedHint,
+          GuidedResearch's run stage) — a gate that names what opens it, in the
+          place the reader is trying to press. */}
     </div>
   );
 }

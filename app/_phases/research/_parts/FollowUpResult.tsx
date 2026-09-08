@@ -27,6 +27,8 @@
 // longer take the false sentence away as a finding, and the run's own words are
 // still there to be read.
 
+import { Hint, Tally } from "@/components/ui/signal";
+
 import { revisionsOf, standingOf, type Effect, type FollowUpRequest, type FollowUpResult as FollowUpResultData } from "../followup";
 
 const EFFECT_TONE: Record<Effect["kind"], { label: string; cls: string }> = {
@@ -160,14 +162,20 @@ export default function FollowUpResult({
         })}
       </ul>
 
-      <p data-testid="followup-apply-note" className="font-jetbrains mt-2.5 text-content leading-relaxed text-white/28">
-        {result.sources.length} source{result.sources.length === 1 ? "" : "s"} · nothing here is
-        applied, and there is no apply action to reach for: an effect edits the notebook, and the
-        notebook in this prototype is one static document shared by every project, so there is
-        nowhere per-project to write one.
-        {landed > 0 &&
-          ` ${landed} of ${result.effects.length} describe material this notebook already carries — these results were transcribed from a real terminal run, and that run's output is already in the fixture.`}
-      </p>
+      {/* THREE FACTS, THREE SHAPES. The sources count and the landed ratio are
+          counts and read as counts; the reason there is no apply action is a
+          real limit of this prototype and sits behind the disclosure, one
+          clause long. What went with the sentence is its middle — a full
+          re-derivation of WHY the limit exists, printed under every result. */}
+      <div data-testid="followup-apply-note" className="mt-2.5 flex flex-wrap items-center gap-1.5">
+        <Tally value={result.sources.length} label="sources" />
+        {landed > 0 && (
+          <Tally value={landed} of={result.effects.length} label="landed" tone="cyan" />
+        )}
+        <Hint label="Why nothing can be applied">
+          the notebook is one static document — nothing here is applied
+        </Hint>
+      </div>
 
       {/* THE SOURCES, and not merely how many there are. The line above has
           counted them since the day it was written and drew none of them, so a

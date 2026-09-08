@@ -3,6 +3,8 @@
 // The Topic tab: the input, the run controls, the background-job note and the
 // run log. Everything up to the point a notebook exists.
 
+import { Bell } from "lucide-react";
+
 import { Button, Eyebrow } from "@/components/ui/Primitives";
 import { LocalProcessNote, OutcomePicker, RunStatus, TopicField } from "../run/controls";
 import { StandInNote } from "../guided/RunStage";
@@ -42,12 +44,14 @@ export default function TopicPanel({
     <>
       <section className="rounded-2xl border border-white/8 bg-white/[0.015] p-5">
         <div className="flex flex-wrap items-end justify-between gap-4">
+          {/* "A topic in, a notebook out. This runs as a background job — you
+              can leave this step…" said, in prose, what the field beneath it,
+              the button beside it and the bell in the shell all already do. The
+              one part a reader cannot deduce — that leaving is safe, and how
+              they will hear — is said once, on the run log, while a run is
+              actually in flight. */}
           <div className="min-w-[18rem] flex-1">
             <Eyebrow>step 1 · research</Eyebrow>
-            <p className="font-hanken mt-2 max-w-2xl text-content text-slate-400">
-              A topic in, a notebook out. This runs as a background job — you can leave this step,
-              open another project, and the bell will tell you when it lands.
-            </p>
           </div>
           <OutcomePicker
             outcome={run.outcome}
@@ -77,8 +81,10 @@ export default function TopicPanel({
             </>
           )}
         </div>
-        <LocalProcessNote className="mt-3" />
-        <StandInNote topic={topic} landed={ready} />
+        <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+          <LocalProcessNote />
+          <StandInNote topic={topic} />
+        </div>
       </section>
 
       {/* THE LOG IS NOT GATED ON `!running` ANY MORE. It used to be, which meant
@@ -96,9 +102,16 @@ export default function TopicPanel({
             <p className="font-jetbrains text-content tracking-[0.16em] text-white/50 uppercase">run log</p>
             <RunStatus state={run.state} />
           </div>
+          {/* Said once, here, while it is true — see RunStage's copy of this
+              block for the three-places-one-fact story. The testid is a live
+              contract (tests/live, pipeline/drive-persistence.mjs). */}
           {running && (
-            <p data-testid="running-note" className="font-jetbrains mt-1.5 text-content text-white/35">
-              running in the background — you can leave this step, and the bell reports the result.
+            <p
+              data-testid="running-note"
+              className="font-jetbrains mt-1.5 flex items-center gap-1.5 text-content text-white/40"
+            >
+              <Bell className="h-3.5 w-3.5 shrink-0 animate-pulse text-cyan-300/70" aria-hidden />
+              in the background — the bell reports the result
             </p>
           )}
           <div className="mt-3">
@@ -162,11 +175,10 @@ export default function TopicPanel({
         </section>
       )}
 
-      {run.state.status === "idle" && (
-        <Notice severity="info" title="no notebook yet">
-          <p>Run the research, or load the saved Bitcoin run, and the board unlocks.</p>
-        </Notice>
-      )}
+      {/* NO "no notebook yet" NOTICE. The Triage board tab above is locked,
+          carries a Lock glyph, and names the reason in its accessible label —
+          the gate is drawn where the reader will try to open it, rather than
+          described in a panel under the control that opens it. */}
     </>
   );
 }

@@ -256,11 +256,12 @@ export default function CardTile({ card, api, wound }: { card: Card; api: ScopeA
           onClick={() => api.toggle(card.id, "descoped")}
           aria-pressed={!s.descoped}
           aria-label={`${s.descoped ? "Include" : "Exclude"}: ${card.title}`}
-          title={
-            card.optIn
-              ? "Click to take this conclusion into the script. Conclusions are off by default."
-              : "Click to descope. Reversible."
-          }
+          // "Click to descope. Reversible." restated the control it was hung
+          // on: `aria-pressed` says the state, the aria-label says the action
+          // and names the claim, and the border says which way it went. What
+          // is left is the one thing the control cannot show — that a
+          // conclusion's OUT is the default rather than somebody's decision.
+          title={card.optIn ? "conclusions are out of scope by default" : undefined}
           className="absolute inset-0 z-10 cursor-pointer rounded-xl focus-visible:outline-2 focus-visible:outline-offset-2"
         />
       )}
