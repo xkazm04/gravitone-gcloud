@@ -25,17 +25,23 @@ import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
-import { LocalProcessNote, OutcomePicker, RealRunControl, RunStatus, TopicField } from "../run/controls";
+import { LocalProcessNote, RealRunControl, RunStatus, TopicField } from "../run/controls";
 import LiveResult from "../run/LiveResult";
 import RunTrace from "../run/RunTrace";
 import type { EducationalResearchApi } from "./useEducationalResearch";
 
-/** The expert face's artifact pills, same words and testids — only one face is
- *  ever mounted, so the ids stay unique on the page. */
+/** The three things you can do to a notebook that exists: read the argument,
+ *  audit the claims under it, throw it away.
+ *
+ *  ONE DEFINITION, BOTH FACES (2026-09-08). It used to be a copy of the expert
+ *  Topic tab's row — "same words and testids" by hand. The Topic tab is gone and
+ *  the expert face is the triage board, which needs the identical row in its
+ *  header, so ResearchStep imports this rather than writing a third spelling.
+ *  Only one face is ever mounted, so the testids stay unique on the page. */
 const PILL =
   "font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/75 transition hover:bg-white/5";
 
-function ArtifactPills({
+export function ArtifactPills({
   onOpenNotebook,
   onOpenEvidence,
   onClear,
@@ -205,20 +211,6 @@ export default function RunStage({
             project. It sits BESIDE the replay rather than replacing it: they are
             two different objects and the surface says which is which. */}
         <LiveResult state={live.state} />
-
-        {/* Gated — see run/controls.tsx. The pills drive which ending the
-            simulated run walks to and the load control skips the walk entirely;
-            both are evaluation affordances by their own comments, and neither
-            renders in a production build. */}
-        {process.env.NODE_ENV === "development" && (
-          <OutcomePicker
-            outcome={run.outcome}
-            setOutcome={run.setOutcome}
-            disabled={running}
-            onLoad={run.load}
-            loaded={ready}
-          />
-        )}
       </div>
     );
   }
@@ -229,18 +221,6 @@ export default function RunStage({
     // what was deliberately left for the redesign.
     <div className="mx-auto w-full max-w-3xl space-y-5">
       <div className="rounded-2xl border border-white/8 bg-white/[0.015] p-6">
-        {/* Gated — see run/controls.tsx. */}
-        {process.env.NODE_ENV === "development" && (
-          <div className="mb-5">
-            <OutcomePicker
-              outcome={run.outcome}
-              setOutcome={run.setOutcome}
-              disabled={running}
-              onLoad={run.load}
-              loaded={ready}
-            />
-          </div>
-        )}
         <div className="flex flex-wrap items-center gap-3">
           <TopicField
             topic={topic}

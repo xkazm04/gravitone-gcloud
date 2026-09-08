@@ -27,14 +27,27 @@
 //    inside it, which also retires the stopPropagation wrapper they needed
 //    when a click on them was a click on the card.
 //
+//  · THE ACTIONS AND THE CONFIDENCE ARE MARKS, NOT WORDS (2026-09-08). Thirty-six
+//    cards spelled "like", "deepen" and a confidence word each, so a column read
+//    as the same three labels repeated and the CLAIMS competed with them. What
+//    the icons did NOT cost is the whole of the rule above: `like` and `deepen`
+//    are still real <button>s with `aria-pressed`, a full accessible name on the
+//    button itself (the glyph inside contributes none) and a visible
+//    focus-visible ring — see CardActions.tsx. And every level is still legible
+//    without colour: the pressed states differ in SHAPE (a filled heart, a tick
+//    for a plus) and the confidence ladder is one, two or three bars.
+//
 //  · MUTED TEXT UNMUTES ON HOVER. The secondary text (reasoning, precedent,
 //    falsifier, source) is muted so a column scans, but muted is not the same as
 //    unreadable — hovering a card brings every line up to full contrast on a
 //    linear transition, so "what is the pattern behind this conclusion?" is a
 //    hover away rather than a squint.
 
-import { ConfidenceChip, EvidenceClassChip } from "../../_shared/notebook/Chips";
+import { SignalHigh, SignalLow, SignalMedium, type LucideIcon } from "lucide-react";
+
+import { EvidenceClassChip } from "../../_shared/notebook/Chips";
 import type { Leap } from "../../_shared/notebook/conclusions";
+import type { Confidence } from "../../_shared/notebook/types";
 import { stateOf, type Card, type Wound } from "../scope";
 import CardActions from "./CardActions";
 import type { ScopeApi } from "../useScope";
@@ -65,6 +78,40 @@ const LEAP_TONE: Record<Leap, string> = {
 const lift = (base: string, hover: string) =>
   `${base} ${hover} transition-colors duration-200 ease-linear`;
 
+/** CONFIDENCE, AS A MARK (2026-09-08) — a BOARD-LOCAL replacement for
+ *  `ConfidenceChip`, not a change to it.
+ *
+ *  The chip spells the word, which is right in the evidence log
+ *  (_shared/notebook/FactRow.tsx, the other caller): that is a reading surface,
+ *  one claim at a time. This is a wall of thirty-six cards in seven columns, and
+ *  a word repeated thirty-six times stops being read — the same argument the
+ *  card's actions just lost their labels to. So the chip keeps the word for the
+ *  log and the board gets a mark.
+ *
+ *  THE LEVEL IS THE SHAPE, NOT THE HUE. Lucide's signal glyphs draw one, two and
+ *  three bars, so the ladder is countable with no colour vision at all — repo
+ *  law: colour is never the only signal for a state. The tone ladder is the
+ *  chip's own, unchanged, so a reader who learned it in the evidence log reads
+ *  the board for free, and the level is on the accessible name in words. */
+const CONFIDENCE: Record<Confidence, { Icon: LucideIcon; tone: string }> = {
+  high: { Icon: SignalHigh, tone: "border-emerald-400/30 bg-emerald-400/[0.07] text-emerald-200" },
+  medium: { Icon: SignalMedium, tone: "border-white/12 bg-white/[0.04] text-white/60" },
+  low: { Icon: SignalLow, tone: "border-rose-400/35 bg-rose-400/[0.07] text-rose-200" },
+};
+
+function ConfidenceMark({ c }: { c: Confidence }) {
+  const { Icon, tone } = CONFIDENCE[c];
+  return (
+    <span
+      title={`${c} confidence`}
+      className={`inline-flex items-center rounded border px-1 py-0.5 ${tone}`}
+    >
+      <Icon className="h-4 w-4" aria-hidden />
+      <span className="sr-only">{c} confidence</span>
+    </span>
+  );
+}
+
 export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
   const risky = card.kind === "fact" && card.loadBearing && card.confidence === "low";
   return (
@@ -81,7 +128,7 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
             load-bearing
           </span>
         )}
-        {card.confidence && <ConfidenceChip c={card.confidence} />}
+        {card.confidence && <ConfidenceMark c={card.confidence} />}
         {card.hottest && (
           <span
             data-testid="hottest-badge"

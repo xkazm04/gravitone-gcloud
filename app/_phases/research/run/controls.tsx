@@ -1,45 +1,34 @@
 "use client";
 
-// The controls around a run: what you feed it, which ending to drive, where it
-// has got to, what a real run would bill, and the standing note about what the
-// engine actually is.
+// The controls around a run: what you feed it, where it has got to, what a real
+// run would bill, and the standing note about what the engine actually is.
 //
-// ── TWO OF THESE ARE EVALUATION AFFORDANCES AND ARE NOW GATED (2026-09-08) ──
+// ── THE EVALUATION PANEL IS GONE (2026-09-08) ──────────────────────────────
 //
 // `OutcomePicker` — the "prototype · drive the ending" pills and the "load saved
-// run" control next to them — shipped to users. Both say what they are in their
-// own comments ("Prototype scaffolding"; "an evaluation affordance, not a
-// product one — see LOAD_NOTE") and neither was behind anything, so Step 1 of
-// five opened on a prototype control panel in the visual centre of the page.
+// run" control beside them — used to live here. It was gated to
+// `NODE_ENV === "development"` earlier the same day; the operator's ruling is
+// that development affordances leave the product rather than hide inside it, so
+// it is DELETED, at all three of its call sites, with `OUTCOMES` and `LOAD_NOTE`
+// which existed only to feed it.
 //
-// GATED, NOT DELETED. The operator drives these constantly: three endings the
-// surface has to render honestly (a notebook, no tension, a dead process) are
-// only reachable through the pills, and the load control is what makes
-// reviewing everything downstream of a run possible without waiting 5s for a
-// replay every time. What changed is only who can see them.
+// WHAT THE DELETION COSTS, stated rather than discovered later: `outcome` had no
+// other writer, so the simulated run now always walks to a notebook and the
+// `no-tension` ending is unreachable from the UI. The `failed` ending is NOT —
+// Abort still lands there (`useResearchRun#stop`) — and every branch that
+// renders either one is untouched, because a run can still end badly for real.
 //
-// THE GUARD IS AT THE CALL SITES, not inside this component, and the shape is
-// commit 2ef1538's exactly — the inlined `process.env.NODE_ENV === "development"`
-// literal app/layout.tsx uses for <DevInspector /> and components/ui/deck/Deck.tsx
-// now uses for <ArtVariantSwitcher />. Next inlines it, the branch is
-// eliminated, the import goes unused and the minifier drops the component with
-// its strings. It is at the call sites rather than here because each of the
-// three has its own layout to close up afterwards, and a component that renders
-// `null` still leaves a gap in a flex row.
-//
-// THE `replay 8×` CHIP IS NOT GATED, and that is a decision rather than an
-// oversight. It is not a control and it does not drive anything: it is the
-// DISCLOSURE that the run a user is watching is a replay of somebody else's,
-// which is the honesty machinery this surface is otherwise exemplary for.
-// Hiding it in production would leave a creator watching a fake run with nothing
-// on screen saying so — the opposite of the change this file is making.
+// THE `replay 8×` CHIP STAYS, and it was never part of the panel. It is not a
+// control and it drives nothing: it is the DISCLOSURE that the run a creator is
+// watching is a replay of somebody else's. Removing the controls must not remove
+// the disclosure — a creator watching a fake run with nothing on screen saying so
+// is the opposite of what this surface is for.
 
 import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
 import { spendNote, type Preflight } from "./live";
-import { OUTCOMES } from "./trace";
-import type { RunOutcome, RunState } from "./types";
-import { LOAD_NOTE, secs } from "./useResearchRun";
+import type { RunState } from "./types";
+import { secs } from "./useResearchRun";
 
 /** The topic field. One string, one button — no engine picker, no duration, no
  *  tone: those are decisions the notebook has not earned yet. */
@@ -73,72 +62,6 @@ export function TopicField({
       aria-label="Topic"
       className={`font-hanken w-full rounded-xl border border-white/12 bg-white/[0.03] px-4 py-3 text-content text-white placeholder:text-white/25 focus-visible:border-cyan-400/40 disabled:opacity-50 ${className}`}
     />
-  );
-}
-
-/** Which ending to drive. Prototype scaffolding, and labelled as such — the
- *  three outcomes are real states the surface has to render, so they must be
- *  reachable without waiting for a bad day. */
-export function OutcomePicker({
-  outcome,
-  setOutcome,
-  disabled,
-  onLoad,
-  loaded,
-}: {
-  outcome: RunOutcome;
-  setOutcome: (o: RunOutcome) => void;
-  disabled?: boolean;
-  /** Jump straight to the finished notebook, skipping the simulated run. */
-  onLoad?: () => void;
-  loaded?: boolean;
-}) {
-  return (
-    <div className="font-jetbrains flex flex-wrap items-center gap-1.5 text-label">
-      <span className="tracking-[0.16em] text-white/25 uppercase">prototype · drive the ending</span>
-      {OUTCOMES.map((o) => (
-        <button
-          key={o.key}
-          onClick={() => setOutcome(o.key)}
-          disabled={disabled}
-          title={o.hint}
-          className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition disabled:opacity-40 ${
-            outcome === o.key
-              ? "border-white/25 bg-white/[0.06] text-white/80"
-              : "border-white/10 text-white/35 hover:text-white/70"
-          }`}
-        >
-          {o.label}
-        </button>
-      ))}
-
-      {/* Load the saved run. Separated by a hairline because it is a different
-          KIND of control: the outcome pills choose which ending the mocked run
-          walks to, this one skips the walk entirely. Cyan — it is the only
-          affordance here that is doing you a favour. */}
-      {onLoad && (
-        <>
-          <span aria-hidden className="mx-1 h-3 w-px bg-white/10" />
-          {/* Disabled mid-run for the same reason the pills are: this jumps the
-              state straight to a finished notebook, and doing that while the
-              engine is stepping would abandon a run whose job is still open. */}
-          <button
-            onClick={onLoad}
-            data-testid="load-saved-run"
-            disabled={disabled}
-            title={LOAD_NOTE}
-            className="rounded-full border border-cyan-400/30 bg-cyan-400/5 px-2.5 py-1 tracking-[0.1em] text-cyan-300/90 transition hover:border-cyan-400/50 hover:bg-cyan-400/10 hover:text-cyan-200 disabled:opacity-40 disabled:hover:border-cyan-400/30 disabled:hover:bg-cyan-400/5"
-          >
-            load saved run
-          </button>
-          {loaded && (
-            <span className="text-white/30" data-testid="load-saved-note">
-              saved research · not re-run
-            </span>
-          )}
-        </>
-      )}
-    </div>
   );
 }
 
