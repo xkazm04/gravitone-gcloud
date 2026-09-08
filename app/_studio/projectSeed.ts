@@ -20,6 +20,33 @@ import { emptyProgress, type Project } from "@/lib/projects";
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/** The prefix every id below carries. Those ids were already load-bearing —
+ *  `addProjects` relies on them being stable and content-addressed so a lost
+ *  seed race writes nothing — and the prefix is now also what makes a demo row
+ *  RECOGNISABLE on the shelf. A new seed row must keep it. */
+const SEED_ID = "seed-";
+
+/**
+ * Was this row handed to the account by the seed below, rather than made by the
+ * user? The shelf tags these so a stranger's first screen does not present six
+ * fictional productions exactly the way it presents their own work.
+ *
+ * DERIVED FROM THE ID, not a stored flag, and deliberately:
+ *  · a flag would be absent from every row already sitting in every existing
+ *    account's IndexedDB, so the shelves that most need the tag are the ones
+ *    that would never show it — and `migrateProject` could only backfill it by
+ *    reading the id, which is this function with an extra write;
+ *  · a flag is writable. `putProject` copies whole records so an edit would
+ *    carry it, but any future path that rebuilds a record field-by-field could
+ *    drop it and let a demo row claim to be the user's own work.
+ * The id is minted once and no surface edits it, and `newProject` mints user
+ * projects under `p-`, so this answer cannot drift from the truth — a demo the
+ * user renames is still a demo, which is the honest reading.
+ */
+export function isSeeded(p: { id: string }): boolean {
+  return p.id.startsWith(SEED_ID);
+}
+
 /** Seeded relative to `now` so a fresh account never shows 1970 timestamps. */
 export function seedProjects(uid: string, now: number = Date.now()): Project[] {
   return [

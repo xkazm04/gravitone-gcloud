@@ -7,10 +7,11 @@
 // this matrix. The matrix won and the other two are gone — a list tells you
 // what you have, and only the grid tells you where the whole shelf is jammed.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Link from "next/link";
+import { Info } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Eyebrow } from "@/components/ui/Primitives";
@@ -18,10 +19,12 @@ import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
 import { lockedOnly } from "@/lib/themes";
+import { isSeeded } from "@/app/_studio/projectSeed";
 import type { Project, ProjectDraft } from "@/lib/projects";
 
 import ProjectDialog, { ConfirmDelete } from "../_projects/ProjectDialog";
 import ProjectsMatrix from "../_projects/ProjectsMatrix";
+import { DemoTag } from "../_projects/parts";
 
 export default function ProjectsView() {
   const { user } = useAuth();
@@ -42,6 +45,44 @@ export default function ProjectsView() {
     project: null,
   });
   const [doomed, setDoomed] = useState<Project | null>(null);
+
+  /* ── The demo shelf, said out loud ──────────────────────────────────────
+   *
+   * A brand-new account is handed six fictional productions (lib/useProjects
+   * seeds them so the studio has something to open), and until now they were
+   * drawn exactly like work the user made: a stranger's real first screen was
+   * six projects with progress heat and "2h ago" timestamps that they had
+   * never touched. The seeding stays — it is the product decision, and the
+   * genuinely empty shelf is one click away now instead of six deletes.
+   *
+   * The strip is a NOTE, not a warning: same neutral chrome as the style note
+   * at the foot of the page, and it disappears on its own once the examples
+   * are gone. */
+  const demos = useMemo(() => (projects ?? []).filter(isSeeded), [projects]);
+  // Two-step, inline: this deletes several records at once, which no single
+  // row's confirmation covers, and a modal for it would be louder than the
+  // thing it guards. `clearing` is the question, `wiping` is the answer being
+  // carried out.
+  const [clearing, setClearing] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Sequential, not Promise.all: `remove` opens its own IndexedDB handle per
+  // call and the shelf re-renders after each one, so the row count visibly
+  // falls. A failure raises the banner above and stops nothing that already
+  // went — the shelf shows exactly what survived, which is the truth.
+  //
+  // Then focus lands on the landmark, for the reason ConfirmDelete's own note
+  // below states at length: the control this was fired from is inside the
+  // strip, the strip is gone the moment the last row is, and a restore onto a
+  // detached node is silent — focus falls to <body>.
+  const clearExamples = async () => {
+    setWiping(true);
+    for (const p of demos) await remove(p.id);
+    setWiping(false);
+    setClearing(false);
+    mainRef.current?.focus();
+  };
 
   // Create walks straight into the studio — a project with no work in it has
   // nothing to show on this page, and the name the user just typed is the
@@ -78,7 +119,7 @@ export default function ProjectsView() {
           control it was opened from did not survive it — a restore onto a
           detached node is silent, and focus falls to <body>. See
           components/ui/Modal.tsx#restoreFocus. */}
-      <main tabIndex={-1} className="pb-16">
+      <main ref={mainRef} tabIndex={-1} className="pb-16">
         <header className="flex flex-wrap items-end justify-between gap-4 pt-6">
           <div>
             <Eyebrow>projects</Eyebrow>
@@ -90,7 +131,12 @@ export default function ProjectsView() {
               the wizard's style stage offers presets and mints a locked theme
               at create, and the dialog explains an empty style shelf itself —
               bouncing both buttons to /library was sending users away from
-              surfaces that can now answer them. */}
+              surfaces that can now answer them.
+
+              IT STAYS OUTLINED AND DIM, and that is the point: it is a
+              shortcut for somebody who has been here before, and on a first
+              visit it must not compete with the filled create button in the
+              panel below. Reachable, never loudest. */}
           <button
             type="button"
             onClick={() => setDialog({ open: true, project: null })}
@@ -100,25 +146,55 @@ export default function ProjectsView() {
           </button>
         </header>
 
-        {gated && (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/[0.06] px-4 py-3">
-            <p className="font-hanken text-sm text-amber-100">
-              A project is rendered against a locked visual style, and this account has none yet —
-              the create wizard offers presets that lock on create, or commission one in the library.
-            </p>
-            <Link
-              href="/library"
-              className="font-jetbrains shrink-0 rounded-lg border border-amber-300/40 px-3 py-1.5 text-label text-amber-100 transition hover:bg-amber-300/10"
-            >
-              make one in the library →
-            </Link>
-          </div>
-        )}
-
         {error && (
           <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
             {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
           </p>
+        )}
+
+        {demos.length > 0 && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-2.5">
+            <p className="font-hanken flex flex-wrap items-center gap-2 text-label text-slate-400">
+              <DemoTag />
+              {demos.length === 1
+                ? "One row on this shelf is an example this account was opened with"
+                : `${demos.length} rows on this shelf are examples this account was opened with`}{" "}
+              — open them, edit them, or clear them out.
+            </p>
+            {/* THE TRIGGER IS ALSO THE CANCEL, and it never unmounts — it
+                changes its word. A confirm that swaps its own opener out drops
+                a keyboard user on <body>, which is the failure Modal.tsx and
+                ConfirmDelete below both spend paragraphs avoiding. The
+                confirmation button `autoFocus`es instead (it only ever mounts
+                from a click, so it cannot steal focus on load), and pressing
+                the trigger again backs out with focus still on it. */}
+            <span className="flex flex-wrap items-center gap-2">
+              {clearing && (
+                <>
+                  <span className="font-hanken text-label text-slate-300">
+                    Delete {demos.length === 1 ? "it" : `all ${demos.length}`}?
+                  </span>
+                  <button
+                    type="button"
+                    autoFocus
+                    onClick={clearExamples}
+                    disabled={wiping}
+                    className="font-jetbrains cursor-pointer rounded-lg border border-rose-400/35 px-3 py-1 text-label text-rose-200 transition hover:bg-rose-400/10 disabled:cursor-default disabled:opacity-50"
+                  >
+                    {wiping ? "clearing…" : "yes, clear them"}
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setClearing((c) => !c)}
+                disabled={wiping}
+                className="font-jetbrains shrink-0 cursor-pointer rounded-lg border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-white/25 hover:text-white/75 disabled:opacity-50"
+              >
+                {clearing ? "keep them" : "clear the examples"}
+              </button>
+            </span>
+          </div>
         )}
 
         <section className="mt-6">
@@ -147,6 +223,38 @@ export default function ProjectsView() {
             />
           )}
         </section>
+
+        {/* THE STYLE NOTE — a fact, and it sits AFTER the shelf.
+
+            It used to be an amber banner directly under the title: the
+            highest-contrast element on a first-run screen, ending in a button
+            to /library. Amber is this app's warning colour (see the dev-auth
+            banner in components/ui/StudioFrame), and the sentence's own second
+            half says nothing is blocked — the wizard hands out presets that
+            lock on create. So the loudest thing on the screen was announcing a
+            non-problem AND pointing away from the one action here.
+
+            Neutral chrome, and moved below the shelf, so the page reads
+            primary action first and footnote second. The fact is kept rather
+            than dropped: the wizard's style stage states it again where it
+            actually bears on a decision, and /library is still one click from
+            here for someone who came to commission a style. */}
+        {gated && (
+          <div className="mt-6 flex items-start gap-2.5 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-3">
+            <Info aria-hidden className="mt-1 h-4 w-4 shrink-0 text-white/25" />
+            <p className="font-hanken text-label text-slate-400">
+              Every project is rendered against a locked visual style, and this account has none
+              yet. Nothing is blocked by that — the create wizard offers presets that lock when you
+              create.{" "}
+              <Link
+                href="/library"
+                className="rounded-sm text-slate-300 underline underline-offset-4 transition hover:text-white"
+              >
+                Commission your own in the library →
+              </Link>
+            </p>
+          </div>
+        )}
       </main>
 
       <ProjectDialog

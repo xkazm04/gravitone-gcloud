@@ -11,7 +11,7 @@
 
 import { Pencil, Plus, Trash2 } from "lucide-react";
 
-import type { PhaseKey, Project, ProjectState } from "@/lib/projects";
+import { PHASES, PHASE_TITLE, type PhaseKey, type Project, type ProjectState } from "@/lib/projects";
 
 /* ── The status language, declared once ───────────────────────────────────── */
 
@@ -132,8 +132,34 @@ export function RowActions({
   );
 }
 
-/** The one CTA on this page. Same affordance in all three variants — they
- *  differ on where it sits, never on what it is. */
+/** The mark on a row the account was HANDED rather than made — see
+ *  `isSeeded` in app/_studio/projectSeed.ts.
+ *
+ *  A WORD, not a tint, because it has to survive the two ways this shelf is
+ *  read: colour is never the only signal for a state here, and a row's status
+ *  dot already owns the only colour a row carries. Deliberately the quietest
+ *  thing on the row — the demo shelf is a product decision, not a warning; it
+ *  only has to stop a stranger reading six fictional productions as their own.
+ *
+ *  Sized `leading-none` on purpose: this sits in the title cell of a ~32px
+ *  matrix row, and at text-label's own 1.45 line-height the tag (16 + 4 + 2 =
+ *  22px) stays under the title's line box (23px) instead of setting the row
+ *  height, the same constraint `RowActions` above answers with `p-1`. */
+export function DemoTag({ className = "" }: { className?: string }) {
+  return (
+    <span
+      title="An example production this account was opened with — not your work. Delete it whenever you like."
+      className={`font-jetbrains shrink-0 rounded-full border border-white/15 px-1.5 py-0.5 text-label leading-none text-white/40 ${className}`}
+    >
+      demo
+    </span>
+  );
+}
+
+/** The CTA on a shelf that already has work on it. Outlined, not filled: when
+ *  there are projects to read, the projects are the hero and the create button
+ *  is a tool on the shelf's edge. `EmptyShelf` deliberately draws the SAME
+ *  action filled — see the note there. */
 export function NewProjectButton({
   onClick,
   className = "",
@@ -152,19 +178,50 @@ export function NewProjectButton({
   );
 }
 
-/** Nothing on the shelf yet. Shared so all three variants say it the same way. */
+/** Nothing on the shelf yet. Shared so all three variants say it the same way.
+ *
+ *  THIS PANEL IS THE PAGE. There is one thing to do on an empty shelf, so the
+ *  create button here is FILLED — the only filled control on the screen — while
+ *  the two other create paths (the header's expert form, the library link under
+ *  the shelf) stay outlined and quiet. Weight is the whole fix: measured
+ *  2026-09-08 the brightest element on this screen was an amber banner whose
+ *  button pointed at /library, i.e. away.
+ *
+ *  IT ALSO CARRIES THE SPINE, and that is the other half. At `py-16` around
+ *  four short lines the panel was 350px of dashed border holding nothing, and
+ *  the populated shelf at the same viewport is dense over the same footprint.
+ *  Drawing the five steps hollow makes the empty state the same shape as the
+ *  grid it becomes rather than a placeholder for it — and it is the only
+ *  honest thing this screen knows about a project that does not exist yet. */
 export function EmptyShelf({ onCreate }: { onCreate: () => void }) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/12 px-6 py-16 text-center">
+    <div className="rounded-2xl border border-dashed border-white/12 px-6 py-12 text-center">
       <p className="font-instrument text-2xl text-white/80">No projects yet.</p>
-      <p className="font-hanken mx-auto mt-2 max-w-sm text-content text-slate-400">
+      <p className="font-hanken mx-auto mt-2 max-w-xl text-content text-slate-400">
         A project is a name, a discipline, a template and a target runtime. Everything else — scenes, frames, cues,
-        the cut — is made inside the studio.
+        the cut — is made inside the studio, one step at a time.
       </p>
+
+      {/* The five steps, hollow — the same cells and words the populated matrix
+          draws. The border matches `CELL.empty` in ProjectsMatrix ("not
+          started"): one vocabulary, so the shelf a user arrives at and the
+          shelf they build are visibly the same object. */}
+      <div className="mx-auto mt-8 grid max-w-xl grid-cols-5 gap-2">
+        {PHASES.map((k, i) => (
+          <div key={k}>
+            <div className="h-3 rounded-[3px] border border-white/[0.09]" />
+            <p className="font-jetbrains mt-2 text-label text-white/25">
+              <span className="text-white/40">{i + 1}</span> {PHASE_TITLE[k]}
+            </p>
+          </div>
+        ))}
+      </div>
+
       <button
         onClick={onCreate}
-        className="font-jetbrains mt-6 cursor-pointer rounded-full border border-cyan-400/40 bg-cyan-400/10 px-5 py-2 text-label text-cyan-200 transition hover:bg-cyan-400/20"
+        className="font-jetbrains mt-8 inline-flex cursor-pointer items-center gap-2 rounded-full bg-cyan-300 px-6 py-2.5 text-label font-medium text-slate-950 shadow-lg shadow-cyan-400/20 transition hover:bg-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2"
       >
+        <Plus className="h-4 w-4" />
         New project
       </button>
     </div>

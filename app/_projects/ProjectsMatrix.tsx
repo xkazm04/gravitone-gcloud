@@ -31,7 +31,10 @@ import {
   type PhaseState,
 } from "@/lib/projects";
 
+import { isSeeded } from "@/app/_studio/projectSeed";
+
 import {
+  DemoTag,
   EmptyShelf,
   NewProjectButton,
   RowActions,
@@ -149,6 +152,10 @@ export default function ProjectsMatrix({
                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${STATE_TONE[projectState(p)].dot}`}
                 title={STATE_TONE[projectState(p)].word}
               />
+              {/* Seeded rows are the account's demo shelf, not its work. The
+                  tag rides in the title cell — the only track that flexes
+                  (`minmax(0,1fr)`), so no measured phase track moves. */}
+              {isSeeded(p) && <DemoTag />}
             </div>
 
             {PHASES.map((k) => (
