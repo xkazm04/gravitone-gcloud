@@ -1,39 +1,87 @@
 "use client";
 
-// How a card's art zone is DRAWN, per art variant — the render half of the
-// bake-off useArtVariant.ts holds the switch for.
+// How a card's art zone is DRAWN — one DECLARED face per card family, and no
+// switch anywhere.
 //
-// WP2 makes all three variants real:
-//  · gradient — unchanged (WP1).
-//  · illustrated — kind:"image" cards draw their own picture (a theme's
-//    approved proof, in every variant the proof stays the face); every other
-//    card resolves a MANIFEST KEY against app/_studio/deckArt.ts (the fixture
-//    seam — 13 generated faces, one style brief, provenance in that file) and
-//    draws the illustration over its gradient ground. No key, or no entry for
-//    it → the gradient stands, honestly: the switcher is a global comparison
-//    control, not a per-card promise.
-//  · emblem — a stroke motif per card-family member (emblems.tsx), drawn in
-//    the family's accent over the gradient ground. A card with no motif keeps
-//    the WP1 glyph placeholder rather than borrowing a wrong emblem.
+// ── THE BAKE-OFF IS OVER (operator ruling, 2026-09-08) ──────────────────────
+//
+// Verbatim: *"Art tab switcher in app/_phases/research/ResearchStep.tsx:290
+// does nothing visibly. Lets remove it from the codebase."* So the switcher,
+// the `useArtVariant` store and its `gravitone.deck.art` localStorage key are
+// gone — including from the identity-eviction owner's exception list
+// (lib/identityEviction.ts) and the probe that walks it.
+//
+// A switch removed is a decision that has to be MADE rather than deferred, and
+// there were two open:
+//
+//  · discipline + template — already settled. Both stages pinned `emblem` on
+//    2026-08-30 and the pin was re-ruled permanent on 2026-09-08 after the
+//    committed illustrations were compared against redrawn denotative emblems
+//    and lost. That pin now lives here instead of on every card spec.
+//
+//  · engine-* (the script duel, app/_phases/script/candidates) — the one
+//    comparison nobody had ruled on, which is why the 2026-09-08 gating stopped
+//    short of deletion. RULED HERE, with both faces rendered at the real art-zone
+//    size (500×128, object-cover) before choosing: **emblem**.
+//
+//    Both options are denotative — unlike the discipline set, the engine
+//    illustrations really do read (a hairpin path, a balance, interlocked rings),
+//    so legibility did not decide it. What decided it is the duel's own stated
+//    law: "nothing here ranks the cards" (CandidatesDuel.tsx). The illustrations
+//    rank them anyway, by accident of the crop — object-cover into a 128px band
+//    keeps `adjudication` centred and blazing, cuts the arrowhead off
+//    `reversal-chain`, and leaves the three at visibly unequal weight. A stroke
+//    emblem is one accent, one stroke width, one optical size by construction,
+//    so it identifies without weighting. Second reason: with all three families
+//    on emblems the deck has ONE art vocabulary rather than two.
+//
+//    The three engine illustrations are NOT orphaned by this — public/deck-art
+//    ships all 13 and the landing page's gate contact sheet draws them by path
+//    (app/_landing/GateContactSheet.tsx).
+//
+// ── WHAT A CARD DRAWS, then ──────────────────────────────────────────────────
+//  · kind:"image" — its own picture, always. A theme's approved proof or a
+//    preset's committed render IS the card's face; a gradient of its palette
+//    would sell the colours, not the style.
+//  · a card whose art names a MANIFEST KEY in a family below — that family's
+//    face over the gradient ground.
+//  · anything else — the gradient, honestly. Never wrong art.
 //
 // HOW A CARD NAMES ITS ART — `manifestKey`, carried on the art itself:
 // gradient-kind art declares it (`DeckCard.tsx` owns the union; the wizard's
 // stages and the candidates duel pass `discipline-*` / `template-*` /
-// `engine-*` keys), and an emblem's `emblemId` IS a manifest key by
-// convention. A card without a key degrades to the gradient — never to
-// wrong art.
+// `engine-*` keys), and an emblem's `emblemId` IS a manifest key by convention.
 
-import { DECK_ART } from "@/app/_studio/deckArt";
+import type { DeckArtFamily } from "@/app/_studio/deckArt";
 
 import type { DeckArt } from "./DeckCard";
 import { DeckEmblem, emblemToneClass, hasEmblem } from "./emblems";
-import { ART_VARIANTS, useArtVariant, type ArtVariant } from "./useArtVariant";
+
+/** THE FACE EACH FAMILY DRAWS — the settled answer, per family, in one place.
+ *
+ *  Typed `Record<DeckArtFamily, "emblem">` rather than a wider union on purpose:
+ *  today the answer is uniform, and the type says so. The day a family is ruled
+ *  onto a different face, this annotation stops compiling and whoever widens it
+ *  has to add the branch in `DeckArtView` in the same edit — which is the
+ *  failure mode a `string` here would hide. */
+const FAMILY_FACE: Record<DeckArtFamily, "emblem"> = {
+  discipline: "emblem", // 2026-08-30, re-ruled permanent 2026-09-08
+  template: "emblem", // 2026-08-30, the same ruling
+  engine: "emblem", // 2026-09-08 — the last open comparison, closed above
+};
 
 /** Which deck-art/emblem key this art names, or undefined — never a guess. */
 function manifestKeyOf(art: DeckArt): string | undefined {
   if (art.kind === "gradient") return art.manifestKey;
   if (art.kind === "emblem") return art.emblemId;
   return undefined;
+}
+
+/** The family a manifest key belongs to (`<family>-<id>`), or undefined for a
+ *  key naming no family this deck draws. */
+function familyOf(key: string): DeckArtFamily | undefined {
+  const head = key.slice(0, key.indexOf("-"));
+  return head in FAMILY_FACE ? (head as DeckArtFamily) : undefined;
 }
 
 /** The neutral ground for a card whose data brought no tone of its own. */
@@ -58,7 +106,7 @@ function GradientArt({ tone, hexes }: { tone?: string; hexes?: string[] }) {
   return <div aria-hidden className={`absolute inset-0 bg-gradient-to-br ${tone || DEFAULT_TONE}`} />;
 }
 
-/** What the gradient/emblem variants stand on, whatever the art's kind. */
+/** What the emblem stands on, whatever the art's kind. */
 function groundOf(art: DeckArt): { tone?: string; hexes?: string[] } {
   switch (art.kind) {
     case "gradient":
@@ -70,29 +118,10 @@ function groundOf(art: DeckArt): { tone?: string; hexes?: string[] } {
   }
 }
 
-/** The glyph placeholder — now only the emblem variant's fallback for a card
- *  whose key has no drawn motif. */
-function glyphOf(title: string): string {
-  return [...title.trim()][0]?.toUpperCase() ?? "·";
-}
-
-export function DeckArtView({
-  art,
-  title,
-  pinned,
-}: {
-  art: DeckArt;
-  title: string;
-  /** A settled per-card verdict — wins over the global bake-off switcher. */
-  pinned?: ArtVariant;
-}) {
-  const [global] = useArtVariant();
-  const variant = pinned ?? global;
+export function DeckArtView({ art }: { art: DeckArt }) {
   const key = manifestKeyOf(art);
 
-  // kind:"image" is not in the bake-off: a real picture (a theme's approved
-  // proof, a preset's committed render) IS the card's face in EVERY variant —
-  // a gradient of its palette would sell the colours, not the style. The
+  // A real picture is the card's face whatever the family rule says — the
   // ground stands beneath while the file streams, and if it never arrives.
   if (art.kind === "image") {
     return (
@@ -104,75 +133,20 @@ export function DeckArtView({
     );
   }
 
-  if (variant === "illustrated") {
-    const entry = key ? DECK_ART[key] : undefined;
-    if (entry) {
-      return (
-        <>
-          {/* the gradient stands underneath — the ground while the file
-              streams in, and the honest face if it never arrives */}
-          <GradientArt {...groundOf(art)} />
-          {/* eslint-disable-next-line @next/next/no-img-element -- a static fixture under public/deck-art at final display weight; the deck's art zone is object-cover, there is nothing for next/image to size */}
-          <img
-            src={entry.src}
-            alt={entry.alt}
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-        </>
-      );
-    }
-    // no illustration exists for this card — the gradient, honestly.
-    return <GradientArt {...groundOf(art)} />;
-  }
-
-  if (variant === "emblem") {
+  // ONE fallback, not two. A key naming no family, and a key whose family draws
+  // emblems but which has no motif drawn for it, both land on the gradient —
+  // the honest face for "this card was never given art", rather than a big
+  // initial glyph duplicating the title printed directly underneath it.
+  if (key && familyOf(key) && hasEmblem(key)) {
     return (
       <>
         <GradientArt {...groundOf(art)} />
-        {key && hasEmblem(key) ? (
-          <span aria-hidden className={`absolute inset-0 grid place-items-center ${emblemToneClass(key)}`}>
-            <DeckEmblem emblemKey={key} className="h-16 w-16" />
-          </span>
-        ) : (
-          <span
-            aria-hidden
-            className="font-instrument absolute inset-0 grid place-items-center text-6xl text-white/50"
-          >
-            {glyphOf(title)}
-          </span>
-        )}
+        <span aria-hidden className={`absolute inset-0 grid place-items-center ${emblemToneClass(key)}`}>
+          <DeckEmblem emblemKey={key} className="h-16 w-16" />
+        </span>
       </>
     );
   }
 
-  // "gradient" — the WP1 baseline.
   return <GradientArt {...groundOf(art)} />;
-}
-
-/** The bake-off switch. A prototype control (WP2 retires it with a verdict), so
- *  it is discreet — mono, small, corner of the Deck shell — but labelled, so it
- *  is discoverable rather than secret. */
-export function ArtVariantSwitcher() {
-  const [variant, setVariant] = useArtVariant();
-  return (
-    <div role="group" aria-label="Card art variant (prototype)" className="flex items-center gap-1.5">
-      <span className="font-jetbrains text-label tracking-[0.14em] text-white/25 uppercase">art</span>
-      {ART_VARIANTS.map((v) => (
-        <button
-          key={v}
-          type="button"
-          aria-pressed={variant === v}
-          onClick={() => setVariant(v)}
-          className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.08em] transition ${
-            variant === v
-              ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
-              : "border-white/10 text-white/35 hover:border-white/25 hover:text-white/65"
-          }`}
-        >
-          {v}
-        </button>
-      ))}
-    </div>
-  );
 }

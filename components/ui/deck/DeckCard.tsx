@@ -55,29 +55,16 @@ export interface DeckCardSpec {
   risk?: string;
   /** Small provenance/mono line. */
   footnote?: string;
-  /** A settled bake-off verdict for THIS card: pin its art face regardless of
-   *  the global switcher. The operator ruled emblem for the create wizard's
-   *  discipline and template stages (2026-08-30); surfaces still in the
-   *  bake-off leave this unset and follow the switcher.
-   *
-   *  RE-RULED 2026-09-08, and this one is not provisional. A /cx walk found the
-   *  discipline cards unreadable with their titles covered, redrew the three
-   *  emblems on denotative motifs (mortarboard / clapperboard / framed play
-   *  mark), and compared them against the committed illustrated faces
-   *  (public/deck-art/discipline-*.webp) rather than assuming the earlier
-   *  verdict had picked the worse option. It had not: a fan of glass
-   *  node-chains, two monoliths and a plumb-bob are exactly as unguessable as
-   *  the marks they beat. The 2026-08-30 bake-off was choosing between two
-   *  renderings of the SAME abstract-atmospheric vocabulary, so the symbol
-   *  choice was the defect and the rendering never was.
-   *
-   *  Asked to choose between re-briefing those three illustrations on
-   *  denotative motifs or making the pin permanent, the operator ruled:
-   *  **the emblems stay.** So this pin is the answer, not a placeholder — do
-   *  not revive `illustrated` for the discipline stage without commissioning
-   *  art that survives the titles being covered, because doing so regresses
-   *  legibility this walk paid for. */
-  artVariant?: import("./useArtVariant").ArtVariant;
+  /* THERE IS NO PER-CARD ART PIN ANY MORE (2026-09-08). A card used to be able
+   * to carry `artVariant` to opt out of a global bake-off switcher; the operator
+   * ordered the switcher removed ("Lets remove it from the codebase"), so there
+   * is nothing left to opt out OF. What a card draws is decided once, per
+   * family, by the manifest key its `art` already carries — see FAMILY_FACE in
+   * artVariants.tsx, which also records how each family was ruled. The verdict
+   * this pin used to hold (emblem for the create wizard's discipline and
+   * template stages, 2026-08-30, re-ruled permanent 2026-09-08 after the
+   * committed illustrations were compared against redrawn denotative emblems
+   * and lost) lives there now, unchanged in effect. */
   /** HERO — the deciding card (operator verdict 2026-09-06, the create wizard's
    *  three pick stages). Where `dense` is for cards you READ, hero is for cards
    *  you CHOOSE BETWEEN: the illustration and one large centred title, and
@@ -226,7 +213,7 @@ export default function DeckCard({
             hero ? "h-40 sm:h-48" : "h-28 sm:h-32"
           }`}
         >
-          <DeckArtView art={spec.art} title={spec.title} pinned={spec.artVariant} />
+          <DeckArtView art={spec.art} />
           {/* sheen — sweeps in on hover; a colour transition, which the CSS
               reduced-motion blanket already switches off */}
           <div
@@ -270,8 +257,16 @@ export default function DeckCard({
               )}
             </div>
             {/* The reading title — the body face, not the landing serif: a
-                generated title can run long, and it has to scan, not pose. */}
-            <h3 className="font-hanken text-[17px] leading-snug font-semibold text-slate-100">
+                generated title can run long, and it has to scan, not pose.
+
+                IT HAS TO LEAD THE CARD, AND IT DID NOT. Measured at 1920 on a
+                real research card: title 17px/600, the prose it sits over 18px.
+                The title was literally SMALLER than the body underneath it, so
+                the eye entered the card at the paragraph and had to work back
+                up — which is what the operator reported as "small title".
+                `text-xl` (1.375rem/22px on this repo's scale) puts a clear step
+                between the two; the weight and the leading are unchanged. */}
+            <h3 className="font-hanken text-xl leading-snug font-semibold text-slate-100">
               {spec.title}
             </h3>
             {chipRow}
@@ -284,7 +279,31 @@ export default function DeckCard({
                 transition={reduced ? { duration: 0.15 } : { duration: 0.28, ease: "easeOut" }}
                 className="overflow-hidden"
               >
-                <div className="border-t border-white/8 pt-2.5">{spec.detail}</div>
+                {/* THE READING REGION OWNS ITS OWN LEGIBILITY (operator,
+                    2026-09-08: "poor description font for readability of
+                    multiple sentences, poor description readability if font
+                    color gray in the card").
+
+                    `detail` is arbitrary consumer JSX, and every consumer had
+                    reached for a muted grey: the research passes set their two
+                    prose paragraphs on slate-300 and slate-400, and slate-400
+                    (#94a3b8) over this card's ground is the grey the operator
+                    named. A card that opens a panel of prose cannot leave the
+                    readability of that prose to each caller's taste, so the rung
+                    and the contrast are DECLARED here — `text-content` (the
+                    1.125rem reading rung) and slate-200, the same brightness the
+                    dense title sits at one weight above.
+
+                    `[&_p.font-hanken]` rather than a plain colour on the
+                    wrapper, because an inherited colour loses to the child's own
+                    `text-slate-400`: a descendant selector outranks a bare class,
+                    so this wins. It is scoped to the PROSE face on purpose —
+                    mono lines inside a detail (provenance, pattern footnotes)
+                    are chrome, keep their own quieter tone, and are not
+                    touched. */}
+                <div className="border-t border-white/8 pt-2.5 [&_p.font-hanken]:text-content [&_p.font-hanken]:text-slate-200">
+                  {spec.detail}
+                </div>
               </motion.div>
             )}
             {footnoteLine}
@@ -323,8 +342,15 @@ export default function DeckCard({
             <h3 className="font-hanken text-xl leading-snug font-semibold text-slate-100">
               {spec.title}
             </h3>
+            {/* The pitch. Read at rest, not on hover — it used to sit on
+                slate-400 and brighten to slate-200 under the cursor, which is
+                the same muted grey the operator called out in the dense card's
+                detail panel (2026-09-08) and which a keyboard user or a reader
+                comparing a row of cards never lifts. Body copy starts legible;
+                the hover lift is the card's answer to the cursor, not the
+                condition for reading it. */}
             {spec.body && (
-              <p className="font-hanken line-clamp-3 text-content leading-relaxed text-slate-400 transition-colors duration-200 ease-linear group-hover:text-slate-200">
+              <p className="font-hanken line-clamp-3 text-content leading-relaxed text-slate-200">
                 {spec.body}
               </p>
             )}

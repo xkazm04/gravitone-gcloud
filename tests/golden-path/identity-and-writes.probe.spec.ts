@@ -144,6 +144,12 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
   // test used to read a hand-typed table of three writers, and the fourth
   // (`gravitone.deck.art`, components/ui/deck/useArtVariant.ts) sat unlisted on
   // both sides while the owner's header said "nothing yet".
+  //
+  // That fourth writer is GONE as of 2026-09-08 — the operator ordered the deck's
+  // art-variant switcher removed from the codebase, and the store that held the
+  // key went with it, so the exception list is empty again and the table is back
+  // to three rows. The walk is what keeps that honest: this test does not assert
+  // a count, it asserts that whatever the tree contains is accounted for.
   const uid = "uid-a";
   const evicted = new Set(userScopedLocalKeys(uid));
   const exempt = new Set(IDENTITY_INDEPENDENT_LOCAL_KEYS);
@@ -152,7 +158,6 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     "lib/useProjects.ts": { evicted: `gravitone.seeded.${uid}` },
     "lib/useAssets.ts": { evicted: `gravitone.assets.seeded.${uid}` },
     "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
-    "components/ui/deck/useArtVariant.ts": { exempt: "gravitone.deck.art" },
   };
 
   const writers = localStorageWriters();

@@ -1,8 +1,21 @@
-// The deck's illustrated card faces — the fixture seam for the art-variant
-// bake-off (WP2). Surfaces resolve through DECK_ART / deckArtFor, never a raw
-// path: a card whose id has no entry here HAS no illustration, and the renderer
-// (components/ui/deck/artVariants.tsx) falls back to the gradient honestly
-// rather than 404-ing an <img>.
+// The 13 generated deck stills — the manifest of what public/deck-art holds,
+// and the record of how it was made.
+//
+// WHAT READS IT, since 2026-09-08. The art-variant bake-off this file was the
+// fixture seam for is over: the operator ordered the switcher removed and every
+// card family was ruled onto its emblem (components/ui/deck/artVariants.tsx
+// #FAMILY_FACE says which and why), so NO DECK CARD DRAWS THESE FILES ANY MORE.
+// They are not orphaned — the landing page's gate contact sheet draws all 13 by
+// path (app/_landing/GateContactSheet.tsx) — and this file stays because it is
+// the only place that says what each one depicts and how the set was
+// commissioned. `DeckArtFamily` below is still the deck's live family registry:
+// artVariants.tsx imports it to type the face table, so a family added here and
+// nowhere else is a typecheck failure rather than a card with no art.
+//
+// The emblem set (components/ui/deck/emblems.tsx) is keyed exactly the same way
+// — `<family>-<id>` — and mostly echoes the motif each still was generated from,
+// the discipline family being the deliberate exception it explains beside
+// itself.
 //
 // PROVENANCE — the generation record, kept beside the data it describes.
 // Generated 2026-08-30 with gpt-image-2 (MEDIUM, 1024×768) via the Leonardo
@@ -95,8 +108,8 @@ export const DECK_ART: Record<string, DeckArtEntry> = {
   },
 };
 
-/** The lookup surfaces use. `undefined` is the honest answer for a card that
- *  was never illustrated — the caller falls back, it does not guess. */
+/** Key lookup by family + id. `undefined` is the honest answer for an id that
+ *  was never illustrated — a caller falls back, it does not guess. */
 export function deckArtFor(family: DeckArtFamily, id: string): DeckArtEntry | undefined {
   return DECK_ART[`${family}-${id}`];
 }

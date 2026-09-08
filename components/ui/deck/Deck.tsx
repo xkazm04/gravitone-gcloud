@@ -16,7 +16,6 @@
 // re-dealt, which is the deck saying "this decision is open again".
 
 import { Button } from "../Primitives";
-import { ArtVariantSwitcher } from "./artVariants";
 
 export interface DeckStageDef {
   id: string;
@@ -114,8 +113,21 @@ export default function Deck({
 
   return (
     <div className="relative flex min-h-[calc(100dvh-9rem)] flex-col">
-      {/* header row: eyebrow + rail on the left, and in development only the
-          prototype art switch in the corner on the right */}
+      {/* header row: the eyebrow and the step rail, and nothing else.
+          THE ART BAKE-OFF SWITCH USED TO SIT ON THE RIGHT OF THIS ROW. It was
+          rendered unconditionally until 2026-09-08, so every user creating a
+          project met an "ART · gradient | illustrated | emblem" toggle; it was
+          then gated to development, because the engine cards in the script duel
+          were the one family still following it and deleting it would have
+          retired that comparison by accident.
+
+          The operator has now ruled, verbatim: "Art tab switcher in
+          app/_phases/research/ResearchStep.tsx:290 does nothing visibly. Lets
+          remove it from the codebase." The comparison it protected was closed
+          deliberately rather than by accident — see artVariants.tsx, which
+          declares the face each card family draws and says how the engine
+          family was decided. There is no switch, no store and no
+          `gravitone.deck.art` key anywhere any more. */}
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           {eyebrow}
@@ -157,33 +169,6 @@ export default function Deck({
             })}
           </ol>
         </div>
-        {/* THE BAKE-OFF SWITCH IS AN OPERATOR CONTROL, AND IT SHIPPED (2026-09-08).
-            It was rendered unconditionally, so every user creating a project met
-            an "ART · gradient | illustrated | emblem" toggle — and on the two
-            stages where it is most prominent it does NOTHING: the create
-            wizard's discipline and template cards PIN `artVariant: "emblem"`
-            (DeckCard#artVariant, the operator's 2026-08-30 verdict), which wins
-            over this switch. Captured at 1920: the switch reading "gradient"
-            over three cards drawing emblems.
-
-            GATED, NOT DELETED, because the bake-off is settled only where a card
-            pins itself. The script duel's engine cards (CandidatesDuel.tsx) pass
-            `engine-*` manifest keys and pin nothing, so they still follow this
-            switch — their illustrated faces (public/deck-art/engine-*) and their
-            emblems exist and have never been ruled on. Deleting the switch would
-            retire that comparison by accident and freeze those cards on the
-            store's default, and it would strand `gravitone.deck.art` in
-            lib/identityEviction.ts and its probe.
-
-            The guard is the inline `process.env.NODE_ENV === "development"`
-            literal app/layout.tsx uses for <DevInspector /> — Next inlines it
-            and the branch is eliminated, so the control does not render for a
-            user. Note the distinction pipeline/check-bundle.mjs draws: a gate
-            like this stops something RUNNING, not necessarily shipping. That is
-            the right bar here (a switcher in a chunk is inert; a leaked key or a
-            reachable test harness is not), which is why no fingerprint is
-            added for it. */}
-        {process.env.NODE_ENV === "development" && <ArtVariantSwitcher />}
       </div>
 
       {/* the question */}

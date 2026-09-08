@@ -74,11 +74,12 @@ export function disciplineCards(): DeckCardSpec[] {
     id: d,
     title: DISCIPLINE_LABEL[d],
     density: "hero" as const,
+    // The manifest key is the whole art declaration now. It used to be
+    // accompanied by `artVariant: "emblem"` — a per-card pin that beat a global
+    // bake-off switcher — and the switcher was removed on the operator's ruling
+    // (2026-09-08). The verdict did not change: `discipline-*` draws its emblem,
+    // declared once for the family in components/ui/deck/artVariants.tsx.
     art: { kind: "gradient", tone: DISCIPLINE_TONE[d], manifestKey: `discipline-${d}` },
-    // The bake-off verdict for this stage (2026-08-30): emblem won for the
-    // project-type and duration cards. Pinned here; the style stage keeps its
-    // proof images, and other deck surfaces stay in the bake-off.
-    artVariant: "emblem",
   }));
 }
 
@@ -87,11 +88,10 @@ export function templateCards(discipline: Discipline): DeckCardSpec[] {
     id: t.id,
     title: t.label,
     density: "hero" as const,
+    // Same story as the discipline stage above: the key is the declaration, the
+    // `template-*` family draws its emblem, and the pin that used to say so is
+    // gone with the switcher it existed to override.
     art: { kind: "gradient", tone: TEMPLATE_TONE[t.id], manifestKey: `template-${t.id}` },
-    // Same verdict as the discipline stage — the template cards ARE the
-    // duration selection (the band and target they set are stated where the
-    // number is edited, on the name stage's runtime hint).
-    artVariant: "emblem",
   }));
 }
 
