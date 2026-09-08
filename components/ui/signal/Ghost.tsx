@@ -61,11 +61,21 @@ export function Ghost({
   return (
     <div className={`relative ${className}`}>
       <p className="sr-only">{label ?? "Nothing here yet"}</p>
-      <div aria-hidden className="flex flex-col gap-2 opacity-40">
+      {/* CONTRAST IS THE WHOLE JOB HERE, and the first version did not have it.
+          `border-white/30` inside `opacity-40` composites to ~0.12 alpha, and on
+          this app's #080a10 ground that is not a dashed outline — it is nothing.
+          Measured on the /playground capture (Wave 4): the Section-edit ghost
+          read as a plain empty panel, so the surface that was supposed to teach
+          its own shape taught nothing, and the paragraph it replaced had at
+          least been legible.
+          Every gate was green and the narration census read 100% converted; only
+          photographing the screen found it. Effective alpha is now ~0.25 — still
+          clearly a placeholder against a real row, no longer a rumour. */}
+      <div aria-hidden className="flex flex-col gap-2 opacity-55">
         {Array.from({ length: Math.max(1, count) }, (_, i) => (
           <div
             key={i}
-            className={`border border-dashed border-white/30 ${SHAPE[shape]}`}
+            className={`border border-dashed border-white/45 ${SHAPE[shape]}`}
           >
             {children}
           </div>
