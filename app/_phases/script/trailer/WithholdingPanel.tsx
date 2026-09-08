@@ -68,7 +68,7 @@ export default function WithholdingPanel({
                     defaultValue={a.trade ?? ""}
                     onBlur={(e) => onAllowance(a.id, "spend", e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && onAllowance(a.id, "spend", e.currentTarget.value)}
-                    placeholder="what this spend buys, and what it costs the work"
+                    placeholder="trade — what it costs"
                     className="font-hanken mt-1 w-full rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-label text-slate-200 placeholder:text-white/25"
                   />
                 </div>

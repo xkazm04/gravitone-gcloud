@@ -93,14 +93,18 @@ export default function StructurePanel({ report, cut }: { report: StructureRepor
         <span className="text-amber-200/80"> · {report.unmeasured} unmeasured</span>
         {report.notEngaged > 0 && <span> · {report.notEngaged} not-engaged</span>}
       </p>
-      <p className="mt-1.5 text-label leading-snug text-white/45">{report.malformedNote}</p>
+      {/* `report.malformedNote` is not drawn: it restates the verdict chip and
+          the enforced figure directly above it in a sentence. structure.ts still
+          computes it — the reasons are worth keeping, just not printing twice. */}
 
       <ul className="mt-3 space-y-3">{structural.map(renderGroup)}</ul>
 
       {advisory.length > 0 && (
         <div className="mt-4 border-t border-dashed border-amber-400/25 pt-3">
+          {/* The dashed amber divider above IS "never counts toward
+              malformed" — it is the only divider on this panel. */}
           <p className="font-jetbrains text-label tracking-[0.14em] text-amber-200/70 uppercase">
-            advisory · never counts toward malformed
+            advisory
           </p>
           <ul className="mt-2 space-y-3">{advisory.map(renderGroup)}</ul>
         </div>

@@ -3,12 +3,15 @@
 // The energy curve the author can see — PATTERNS.md § 9.6.
 //
 // It is drawn from `energyPoints`, which is a SHAPE derived from the roles the
-// cut declares, not a measurement of anything (see cut.ts). The caption says so
-// on the surface itself, because a curve without that sentence reads as data.
+// cut declares, not a measurement of anything (see cut.ts). The LINE says so —
+// it is dashed, which is the universal mark for derived rather than measured —
+// and the one clause naming what it is derived from rides the caption's hint.
 // Tokens and currentColor only; the entrance is the shared CSS `gt-rise`, which
 // globals.css switches off under prefers-reduced-motion.
 
 import { useMemo } from "react";
+
+import { Hint } from "@/components/ui/signal";
 
 import { energyPoints } from "./cut";
 import type { TrailerCut } from "./types";
@@ -44,9 +47,7 @@ export default function EnergyCurve({ cut }: { cut: TrailerCut }) {
     <figure data-testid="energy-curve" className="gt-rise rounded-2xl border border-white/8 bg-white/[0.02] p-4">
       <figcaption className="font-jetbrains flex items-baseline justify-between text-label tracking-[0.14em] uppercase">
         <span className="text-white/35">energy curve</span>
-        <span className="text-white/30 normal-case tracking-normal">
-          a shape read from the parts — not a measurement
-        </span>
+        <Hint>a shape read from the parts, not a measurement</Hint>
       </figcaption>
       <div className="mt-2 overflow-x-auto">
         <svg
@@ -57,11 +58,14 @@ export default function EnergyCurve({ cut }: { cut: TrailerCut }) {
         >
           <line x1={PAD_X} x2={W - PAD_X} y1={py(0)} y2={py(0)} stroke="currentColor" strokeOpacity={0.15} />
           {points.length > 1 && (
+            // DASHED, because it is derived and not measured — the universal
+            // mark for it, and the reason the caption saying so could go.
             <polyline
               points={line}
               fill="none"
               stroke="currentColor"
               strokeWidth={1.5}
+              strokeDasharray="5 4"
               strokeLinejoin="round"
               strokeLinecap="round"
             />
