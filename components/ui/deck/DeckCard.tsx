@@ -58,7 +58,25 @@ export interface DeckCardSpec {
   /** A settled bake-off verdict for THIS card: pin its art face regardless of
    *  the global switcher. The operator ruled emblem for the create wizard's
    *  discipline and template stages (2026-08-30); surfaces still in the
-   *  bake-off leave this unset and follow the switcher. */
+   *  bake-off leave this unset and follow the switcher.
+   *
+   *  RE-RULED 2026-09-08, and this one is not provisional. A /cx walk found the
+   *  discipline cards unreadable with their titles covered, redrew the three
+   *  emblems on denotative motifs (mortarboard / clapperboard / framed play
+   *  mark), and compared them against the committed illustrated faces
+   *  (public/deck-art/discipline-*.webp) rather than assuming the earlier
+   *  verdict had picked the worse option. It had not: a fan of glass
+   *  node-chains, two monoliths and a plumb-bob are exactly as unguessable as
+   *  the marks they beat. The 2026-08-30 bake-off was choosing between two
+   *  renderings of the SAME abstract-atmospheric vocabulary, so the symbol
+   *  choice was the defect and the rendering never was.
+   *
+   *  Asked to choose between re-briefing those three illustrations on
+   *  denotative motifs or making the pin permanent, the operator ruled:
+   *  **the emblems stay.** So this pin is the answer, not a placeholder — do
+   *  not revive `illustrated` for the discipline stage without commissioning
+   *  art that survives the titles being covered, because doing so regresses
+   *  legibility this walk paid for. */
   artVariant?: import("./useArtVariant").ArtVariant;
   /** HERO — the deciding card (operator verdict 2026-09-06, the create wizard's
    *  three pick stages). Where `dense` is for cards you READ, hero is for cards
