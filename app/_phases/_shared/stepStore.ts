@@ -32,6 +32,7 @@ import { useSyncExternalStore } from "react";
 
 import { STEPS_STORE, openDb, runTx } from "@/lib/studioDb";
 
+import type { ScoreSpot } from "../score/spots";
 import type { TrailerCut, WithholdingBudget } from "../script/trailer/types";
 
 export interface ResearchStepData {
@@ -139,6 +140,36 @@ export interface TrailerCutStepData {
  *  creator has actually nudged appear in this map. */
 export interface CutStepData {
   offsets: Record<string, number>;
+  savedAt?: number;
+}
+
+/** THE SPOTTING SESSION — where the cues go, and what each one is for.
+ *
+ *  The other half of the paragraph above, and it lands here on the same terms.
+ *  A spot is a title, a scene range, a purpose sentence and (once somebody
+ *  chooses one) a tempo: plain data, a few dozen bytes a row. A TAKE is still
+ *  an object URL over megabytes of decoded audio that no `blob:` string
+ *  survives a reload to reach, and this record does not carry one, does not
+ *  have a field for one, and must not grow one without answering the question
+ *  .vault/Architect/decisions/2026-08-29-score-take-persistence.md leaves open.
+ *  Spots survive a reload; takes do not, and the surface says so rather than
+ *  implying otherwise.
+ *
+ *  WHY IT IS THE WHOLE LIST AND NOT A DIFF AGAINST THE PROPOSAL. Spots are
+ *  seeded once — proposed from the script's movements the first time this step
+ *  meets a project with a picture (app/_phases/score/spots.ts), saved, and
+ *  after that they are the creator's. A record that stored only the edits would
+ *  have to re-derive the proposal on every load to know what the edits were
+ *  against, which makes a change upstream silently rewrite work downstream. The
+ *  same rule `useTrailerCut` composes a cut under: composed once from the
+ *  confirmed spine, then owned.
+ *
+ *  An EMPTY array is a decision — every spot deleted — and is distinct from no
+ *  record at all, which means this step has never been opened with a picture in
+ *  front of it. The seeder writes nothing in the second case, so re-opening the
+ *  step after composing a spine still proposes. */
+export interface ScoreStepData {
+  spots: ScoreSpot[];
   savedAt?: number;
 }
 
