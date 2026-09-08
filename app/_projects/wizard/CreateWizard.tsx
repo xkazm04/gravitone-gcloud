@@ -169,6 +169,15 @@ export default function CreateWizard() {
   const pickedPreset = styleId?.startsWith(PRESET_CARD_PREFIX)
     ? (fittingPresets.find((p) => presetCardId(p) === styleId) ?? null)
     : null;
+  /** The picked style's own name, resolved once — the rail summary shows it
+   *  with its origin, and the name stage's permanence line names it as the
+   *  thing that stops being editable. Undefined only if a locked theme's id
+   *  no longer resolves. */
+  const styleName = pickedPreset
+    ? pickedPreset.name
+    : styleId
+      ? lockedThemes.find((t) => t.id === styleId)?.name
+      : undefined;
 
   // The cascade, mirroring ProjectDialog#pickDiscipline's rules rather than
   // forking them: no record may carry a template outside its discipline, and a
@@ -338,11 +347,7 @@ export default function CreateWizard() {
           : "A locked style from the library, or a preset off the shelf — a preset locks as this project's style when you create. Every frame renders against it, fixed at creation.",
       done: styleId !== null,
       advance: "pick", // same shape as the discipline stage, above
-      summary: pickedPreset
-        ? `${pickedPreset.name} (preset)`
-        : styleId
-          ? (lockedThemes.find((t) => t.id === styleId)?.name ?? undefined)
-          : undefined,
+      summary: pickedPreset ? `${styleName} (preset)` : styleName,
       content:
         discipline && fittingThemes.length === 0 && fittingPresets.length === 0 ? (
           <EmptyStyleDeck discipline={discipline} />
@@ -373,6 +378,8 @@ export default function CreateWizard() {
             targetS={targetS}
             discipline={discipline}
             template={template}
+            styleName={styleName}
+            ownDuration={ownDuration}
             onTitle={setTitle}
             onLogline={setLogline}
             onDuration={(v) => {

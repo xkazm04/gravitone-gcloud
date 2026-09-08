@@ -170,12 +170,64 @@ export function EmptyStyleDeck({ discipline }: { discipline: Discipline }) {
 
 /* ── Stage 4 — not cards: the name, and the runtime ───────────────────────── */
 
+/** PLACEHOLDERS TEACH THE SHAPE, NOT THE CONTENT (cx 2026-09-08).
+ *
+ *  Both text fields used to carry the seeded demo's own identity: the title
+ *  said `Glass Harbor` and the logline was, character for character, the
+ *  `logline` of the `seed-glass-harbor` record in app/_studio/projectSeed.ts.
+ *  The shelf now marks those records AS demos (b49e8bd), which left this stage
+ *  as the last screen presenting the fixture as the user's exemplar — and it
+ *  did so at the one moment the user is inventing their own.
+ *
+ *  What a placeholder owes the user in this field is the KIND of thing that
+ *  goes in it: short, and a claim rather than a topic. The logline's is written
+ *  per discipline because a claim is not the same object in each — the
+ *  educational contract argues something, the promotional one opens a debt
+ *  another artifact pays (lib/projects#DISCIPLINE_NOTE), and free form is
+ *  promised nothing at all. */
+const LOGLINE_PLACEHOLDER: Record<Discipline, string> = {
+  educational: "The claim this one argues — one sentence.",
+  trailer: "The debt this cut opens — one sentence.",
+  free: "What this one is about — one sentence.",
+};
+
+/** How many characters are left, or `null` while the cap is still none of the
+ *  user's business.
+ *
+ *  A COUNTER THAT IS ALWAYS ON IS A QUOTA. `maxLength` truncates in silence —
+ *  typing simply stops, with nothing on screen having said a cap existed — but
+ *  an 80-character title is a limit ~nobody meets, so a permanent `0/80` would
+ *  be noise on every create to disclose something that bites on almost none of
+ *  them. It appears with 20 left instead: enough room to finish the word being
+ *  typed, or to decide which one to cut, and it reaches 0 saying why the keys
+ *  stopped doing anything. */
+const CAP_WARN_AT = 20;
+const charsLeft = (value: string, max: number): number | null =>
+  max - value.length <= CAP_WARN_AT ? max - value.length : null;
+
+/** The counter itself — mono and a shade brighter than the prose it may be
+ *  appended to, so it reads as the new thing on a line the user already read.
+ *  It states the number in words, so colour is not carrying it alone.
+ *
+ *  ITS OWN LINE, in both fields, and neither an inline suffix nor a margin.
+ *  Both alternatives were captured on 2026-09-08 and both were worse: an `ml-2`
+ *  read as a stray indent on the title, where the counter is the whole hint and
+ *  has nothing to be indented from; and appending it to the logline's sentence
+ *  behind a `·` wrapped, which left the separator alone at the head of the next
+ *  line looking like a bullet. A line of its own is the one shape that reads
+ *  the same under a field with a hint and under a field without one. */
+function CapLeft({ n }: { n: number }) {
+  return <span className="font-jetbrains block text-slate-300">{n} characters left</span>;
+}
+
 export function NameStage({
   title,
   logline,
   targetS,
   discipline,
   template,
+  styleName,
+  ownDuration,
   onTitle,
   onLogline,
   onDuration,
@@ -185,6 +237,13 @@ export function NameStage({
   targetS: number;
   discipline: Discipline;
   template: TemplateId;
+  /** The picked style's name — the permanence line below names it. Optional
+   *  only because a locked theme could fail to resolve; the line degrades to
+   *  the fact without the name rather than disappearing. */
+  styleName?: string;
+  /** Whether the runtime number is the user's or still the template's — the
+   *  wizard's `ownDuration` latch, shown rather than only obeyed. */
+  ownDuration: boolean;
   onTitle: (v: string) => void;
   onLogline: (v: string) => void;
   /** Fires with the user's number — taking it is taking OWNERSHIP of the
@@ -192,14 +251,22 @@ export function NameStage({
   onDuration: (v: number) => void;
 }) {
   const tpl = templateOf(template);
+  const titleLeft = charsLeft(title, 80);
+  const loglineLeft = charsLeft(logline, 240);
   return (
     <div className="gt-rise mx-auto grid w-full max-w-xl gap-5">
-      <Field label="Project name" htmlFor="w-title">
+      <Field
+        label="Project name"
+        htmlFor="w-title"
+        // No standing hint on this field: the counter IS the hint, and only
+        // once it has something to say.
+        hint={titleLeft !== null ? <CapLeft n={titleLeft} /> : undefined}
+      >
         <TextInput
           id="w-title"
           autoFocus
           value={title}
-          placeholder="Glass Harbor"
+          placeholder="A short working title"
           maxLength={80}
           onChange={(e) => onTitle(e.target.value)}
         />
@@ -208,20 +275,35 @@ export function NameStage({
       <Field
         label="Logline"
         htmlFor="w-logline"
-        hint="Optional — one sentence. It is what the script step argues back against."
+        hint={
+          <>
+            Optional — one sentence. It is what the script step argues back against.
+            {loglineLeft !== null && <CapLeft n={loglineLeft} />}
+          </>
+        }
       >
         <TextArea
           id="w-logline"
           rows={2}
           value={logline}
-          placeholder="A crew that never breaks in — they wait for the one door every city leaves unlocked."
+          placeholder={LOGLINE_PLACEHOLDER[discipline]}
           maxLength={240}
           onChange={(e) => onLogline(e.target.value)}
         />
       </Field>
 
       <Field
-        label="Target runtime"
+        // WHOSE NUMBER THIS IS, said in the label (cx 2026-09-08). The wizard
+        // already MODELS the distinction — `ownDuration` decides whether
+        // picking a template moves the number — and the screen showed none of
+        // it: 30 looked like a value the user had set. It goes in the label
+        // rather than the hint because the hint under this field is already
+        // carrying the craft band (and, for a trailer, an n=0 disclosure), and
+        // a provenance note is not allowed to compete with that. Said this way
+        // it is also the accessible name, and it explains the surprise the
+        // latch causes: go Back, pick a different template, and the number
+        // does not move once it is yours.
+        label={ownDuration ? "Target runtime · yours" : "Target runtime · the template's"}
         htmlFor="w-dur"
         hint={
           // Same honesty rule as the dialog: free form has no measured band —
@@ -242,6 +324,25 @@ export function NameStage({
           onChange={(e) => onDuration(Number(e.target.value) || 0)}
         />
       </Field>
+
+      {/* WHAT THE BUTTON MAKES PERMANENT — the last thing in the form column,
+          so it is the last thing crossed on the way from the name field to
+          "Create & open". It cannot go BESIDE that button: the footer's
+          forward half is Deck's, and Deck only renders text there while the
+          stage is blocked (Deck#blockedHint) — by the time this line matters
+          the stage is done and that slot is empty by contract.
+
+          Three decisions arrive at this stage as ✓ chips in the rail and read
+          as equally revisable. One is not: the style is immutable on edit
+          (ProjectDialog:109, and its EDIT dialog says "Fixed at creation" in
+          the same words), while name, logline and runtime are the editable
+          fields of the same record. Stated as fact, not warned about — Back is
+          still one click away, and this repo has just removed an amber banner
+          that alarmed people about a non-problem (b49e8bd). */}
+      <p className="font-hanken border-t border-white/8 pt-4 text-content leading-relaxed text-slate-400">
+        <span className="text-slate-300">{styleName ?? "The style you picked"}</span> is fixed at
+        creation — every frame renders against it. The name, logline and runtime stay editable.
+      </p>
     </div>
   );
 }
