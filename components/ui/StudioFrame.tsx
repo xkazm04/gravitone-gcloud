@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Wordmark } from "./Primitives";
 import UserMenu from "./UserMenu";
 import NotificationBell from "./NotificationBell";
@@ -37,6 +38,21 @@ export const MODULES = [
  *  app/projects/page.tsx and app/studio/page.tsx) rather than here, because the
  *  landing page uses no frame and every framed route is gated anyway. */
 export default function StudioFrame({ children }: { children: React.ReactNode }) {
+  // WHERE YOU ARE, MARKED IN THE ONE PLACE THAT IS ALWAYS ON SCREEN.
+  //
+  // The nav drew four identical links and no current state, so every module
+  // page then had to say its own name twice more — an <Eyebrow> and an <h1>
+  // over content that is already unmistakably the shelf, the library, the
+  // bench. Three labels for one location, and the only one a reader consults
+  // to orient themselves is this row. Marked here, the other two are removable.
+  //
+  // A child route counts as the module (`/projects/new` is Projects), because
+  // the question the nav answers is "which part of the app is this", not "which
+  // URL". `aria-current="page"` is the same answer for a screen reader, which
+  // reads nothing off a brighter white.
+  const pathname = usePathname();
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
   return (
     <div className="font-hanken relative min-h-screen overflow-hidden bg-[var(--gt-ink)] text-slate-200 grain">
       {/* The aurora reads --gt-level / --gt-working (globals.css, filter only),
@@ -74,11 +90,21 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
               </span>
             )}
             <div className="font-jetbrains hidden items-center gap-7 text-label text-white/70 md:flex">
-              {MODULES.map((m) => (
-                <Link key={m.href} href={m.href} className="transition hover:text-white">
-                  {m.label}
-                </Link>
-              ))}
+              {MODULES.map((m) => {
+                const here = isActive(m.href);
+                return (
+                  <Link
+                    key={m.href}
+                    href={m.href}
+                    aria-current={here ? "page" : undefined}
+                    className={`transition ${
+                      here ? "text-white" : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    {m.label}
+                  </Link>
+                );
+              })}
             </div>
           </div>
           <div className="flex items-center gap-3">
