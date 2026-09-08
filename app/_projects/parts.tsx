@@ -64,6 +64,17 @@ export type ShelfProps = {
   onEdit: (p: Project) => void;
   onDelete: (p: Project) => void;
   onCreate: () => void;
+  /** A second, quieter create path, drawn next to this shelf's own create
+   *  control rather than in a header of its own.
+   *
+   *  It lives here because of where it has to LAND, not because a shelf needs
+   *  to know about it: /projects used to carry an `eyebrow + <h1>` header whose
+   *  only other occupant was the expert-form button, and when the heading went
+   *  (the nav marks the active module since 0ffc865) that button was left alone
+   *  in a full-width band of nothing. Two create affordances differing only by
+   *  weight say "primary" and "shortcut" when they are adjacent; a hundred
+   *  pixels apart they are just two buttons. */
+  aside?: React.ReactNode;
 };
 
 /* ── Formatters ───────────────────────────────────────────────────────────── */
@@ -192,15 +203,32 @@ export function NewProjectButton({
  *  the populated shelf at the same viewport is dense over the same footprint.
  *  Drawing the five steps hollow makes the empty state the same shape as the
  *  grid it becomes rather than a placeholder for it — and it is the only
- *  honest thing this screen knows about a project that does not exist yet. */
-export function EmptyShelf({ onCreate }: { onCreate: () => void }) {
+ *  honest thing this screen knows about a project that does not exist yet.
+ *
+ *  THE DEFINITION IS GONE (2026-09-08). Under the headline sat "A project is a
+ *  name, a discipline, a template and a target runtime. Everything else —
+ *  scenes, frames, cues, the cut — is made inside the studio, one step at a
+ *  time." — the app reciting its own data model on the one screen where the
+ *  reader is about to be asked for those four things one at a time anyway
+ *  (/projects/new asks each as its own stage). The spine below already draws
+ *  the second sentence, and it draws it in the same cells the populated matrix
+ *  uses, which is more than the sentence claimed. `No projects yet.` stays: its
+ *  subject is the shelf's contents, not the software. */
+export function EmptyShelf({
+  onCreate,
+  aside,
+}: {
+  onCreate: () => void;
+  aside?: React.ReactNode;
+}) {
   return (
-    <div className="rounded-2xl border border-dashed border-white/12 px-6 py-12 text-center">
+    <div className="relative rounded-2xl border border-dashed border-white/12 px-6 py-12 text-center">
+      {/* The expert shortcut, in the panel's corner rather than in its stack:
+          reachable on a first-run shelf (an expert with an empty account is
+          still an expert), but out of the one column that holds the single
+          filled control this screen is built around. */}
+      {aside && <span className="absolute top-3 right-3">{aside}</span>}
       <p className="font-instrument text-2xl text-white/80">No projects yet.</p>
-      <p className="font-hanken mx-auto mt-2 max-w-xl text-content text-slate-400">
-        A project is a name, a discipline, a template and a target runtime. Everything else — scenes, frames, cues,
-        the cut — is made inside the studio, one step at a time.
-      </p>
 
       {/* The five steps, hollow — the same cells and words the populated matrix
           draws. The border matches `CELL.empty` in ProjectsMatrix ("not

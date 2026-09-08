@@ -99,8 +99,9 @@ export default function ProjectsMatrix({
   onEdit,
   onDelete,
   onCreate,
+  aside,
 }: ShelfProps) {
-  if (projects.length === 0) return <EmptyShelf onCreate={onCreate} />;
+  if (projects.length === 0) return <EmptyShelf onCreate={onCreate} aside={aside} />;
 
   const rows = [...projects].sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id));
 
@@ -108,7 +109,8 @@ export default function ProjectsMatrix({
     <div>
       <style>{GRID_CSS}</style>
 
-      <div className="mb-3 flex justify-end">
+      <div className="mb-3 flex items-center justify-end gap-2">
+        {aside}
         <NewProjectButton onClick={onCreate} />
       </div>
 
@@ -168,7 +170,12 @@ export default function ProjectsMatrix({
                 <button
                   data-testid={`cell-${p.id}-${k}`}
                   onClick={(e) => { e.stopPropagation(); onOpen(p, k); }}
-                  title={`${PHASE_TITLE[k]} — ${PHASE_STATE_WORD[p.progress[k]]} · open here`}
+                  // `· open here` used to close this tooltip. The cell grows a
+                  // cyan ring under the pointer that is already over it — the
+                  // hover state IS the sentence, and the aria-label below says
+                  // "Open …" for anyone the ring cannot reach. What the tooltip
+                  // owes is the two facts the colour alone cannot carry.
+                  title={`${PHASE_TITLE[k]} — ${PHASE_STATE_WORD[p.progress[k]]}`}
                   aria-label={`Open ${p.title} at ${PHASE_TITLE[k]} (${PHASE_STATE_WORD[p.progress[k]]})`}
                   className={`h-3 w-full rounded-[3px] transition hover:ring-2 hover:ring-cyan-300/50 focus-visible:outline-2 focus-visible:outline-offset-2 ${CELL[p.progress[k]]}`}
                 />
@@ -191,7 +198,18 @@ export default function ProjectsMatrix({
         <div
           className={`${GRID} font-jetbrains border-t border-white/8 bg-white/[0.02] px-3 py-2 text-label`}
         >
-          <span className="tracking-[0.18em] text-white/25 uppercase">Locked · stopped</span>
+          {/* THE KEY TO THE ROW, DRAWN. This cell read `Locked · stopped` over
+              five pairs of numbers that are already emerald and rose — the
+              words were a colour key printed in words, one column left of the
+              colours themselves. Two dots in the same two tones ARE the key,
+              and they sit in the reading order the pairs do. The words survive
+              `sr-only`, because a dot is nothing to a screen reader. */}
+          <span className="flex items-center gap-1.5">
+            <span className="sr-only">Locked · stopped, per step</span>
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-emerald-200/80" />
+            <span aria-hidden className="text-white/20">·</span>
+            <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-rose-300/80" />
+          </span>
           {PHASES.map((k) => {
             const done = rows.filter((p) => p.progress[k] === "done").length;
             const stuck = rows.filter((p) => p.progress[k] === "blocked").length;
@@ -208,13 +226,43 @@ export default function ProjectsMatrix({
         </div>
       </div>
 
-      <div className="font-jetbrains mt-2.5 flex flex-wrap items-center gap-x-4 gap-y-1.5 px-1 text-label text-white/35">
-        {LEGEND.map((s) => (
-          <span key={s} className="inline-flex items-center gap-1.5">
-            <span className={`h-2.5 w-4 rounded-[3px] ${CELL[s]}`} />
-            {PHASE_STATE_WORD[s]}
-          </span>
-        ))}
+      {/* THE LEGEND, PROGRESSIVELY DISCLOSED. Five swatches with their five
+          words printed beside them is right the first time somebody reads this
+          chart and dead weight on every visit after — and it was the last row
+          on the page, so it was five words of chrome under every shelf forever.
+
+          At rest it is one strip of colour, which is the same object the grid
+          above is made of. The words come back on hover of the strip, in a row
+          that occupies no height until then, so nothing on the page moves
+          except below the pointer. The full key is `sr-only` and permanent: a
+          strip of colour tells a screen reader nothing, and a hover is not a
+          gesture every reader has. */}
+      <div className="group mt-2.5 w-fit px-1">
+        <p className="sr-only">
+          Cell colours: {LEGEND.map((s) => PHASE_STATE_WORD[s]).join(", ")}.
+        </p>
+        {/* At rest: one strip, the swatches butted together so they read as a
+            single band of the grid's own vocabulary rather than five chips. */}
+        <div aria-hidden className="flex items-center gap-0.5 group-hover:hidden">
+          {LEGEND.map((s) => (
+            <span key={s} className={`h-2.5 w-8 rounded-[3px] ${CELL[s]}`} />
+          ))}
+        </div>
+        {/* On hover: the named key, each word beside its own swatch. Swapped
+            rather than revealed underneath — a word truncated to a swatch's
+            width is worse than no word, and "in progress" / "not started" do
+            not fit one. */}
+        <div
+          aria-hidden
+          className="font-jetbrains hidden flex-wrap items-center gap-x-4 gap-y-1.5 text-label text-white/35 group-hover:flex"
+        >
+          {LEGEND.map((s) => (
+            <span key={s} className="inline-flex items-center gap-1.5">
+              <span className={`h-2.5 w-4 rounded-[3px] ${CELL[s]}`} />
+              {PHASE_STATE_WORD[s]}
+            </span>
+          ))}
+        </div>
       </div>
     </div>
   );

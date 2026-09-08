@@ -11,10 +11,10 @@ import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Link from "next/link";
-import { Info } from "lucide-react";
+import { Info, Zap } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Eyebrow } from "@/components/ui/Primitives";
+import { Ghost } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
@@ -119,41 +119,35 @@ export default function ProjectsView() {
           control it was opened from did not survive it — a restore onto a
           detached node is silent, and focus falls to <body>. See
           components/ui/Modal.tsx#restoreFocus. */}
-      <main ref={mainRef} tabIndex={-1} className="pb-16">
-        <header className="flex flex-wrap items-end justify-between gap-4 pt-6">
-          <div>
-            <Eyebrow>projects</Eyebrow>
-            <h1 className="font-instrument mt-3 text-4xl text-white">Projects</h1>
-          </div>
-          {/* The expert path: the old dialog, exactly as before, for whoever
-              knows the four answers already. The primary create walks the
-              guided wizard (/projects/new). NEITHER is theme-gated any more:
-              the wizard's style stage offers presets and mints a locked theme
-              at create, and the dialog explains an empty style shelf itself —
-              bouncing both buttons to /library was sending users away from
-              surfaces that can now answer them.
+      <main ref={mainRef} tabIndex={-1} className="pt-6 pb-16">
+        {/* NO EYEBROW, NO <h1> ON THE PIXELS, AND NO HEADER (2026-09-08). This
+            page opened with `projects` / `Projects` over a nav whose Projects
+            item is the active one — three labels naming one place, stacked. The
+            nav has said which module you are in since 0ffc865 (`text-white` +
+            aria-current), which is what made these two redundant rather than
+            merely repetitive; with them gone the header band held one small
+            button and 100px of nothing, so the band went too and the button
+            moved next to the create control it is the shortcut for (`aside`,
+            _projects/parts.tsx#ShelfProps).
 
-              IT STAYS OUTLINED AND DIM, and that is the point: it is a
-              shortcut for somebody who has been here before, and on a first
-              visit it must not compete with the filled create button in the
-              panel below. Reachable, never loudest. */}
-          <button
-            type="button"
-            onClick={() => setDialog({ open: true, project: null })}
-            className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-label text-white/45 transition hover:border-white/25 hover:text-white/75"
-          >
-            quick create — the expert form
-          </button>
-        </header>
+            The heading stays as a landmark: `sr-only` keeps the document's
+            outline intact for a screen reader and for anything that walks
+            headings, which a deleted <h1> would have broken. */}
+        <h1 className="sr-only">Projects</h1>
 
+        {/* {error} ALONE. It used to be followed by "— your projects live in
+            this browser's storage, and it did not answer", which restates the
+            `local` pill standing in the nav two inches above it, on every
+            failure, forever. The machine's own words are the finding; where
+            the storage is, is chrome that is already on screen. */}
         {error && (
-          <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
-            {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
+          <p className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
+            {error}
           </p>
         )}
 
         {demos.length > 0 && (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-2.5">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-2.5">
             <p className="font-hanken flex flex-wrap items-center gap-2 text-label text-slate-400">
               <DemoTag />
               {demos.length === 1
@@ -197,11 +191,14 @@ export default function ProjectsView() {
           </div>
         )}
 
-        <section className="mt-6">
+        <section>
           {loading ? (
-            <p className="font-jetbrains py-16 text-center text-label tracking-[0.18em] text-white/30 uppercase">
-              reading the shelf…
-            </p>
+            // Three ghost rows, not "reading the shelf…". The wait is short and
+            // the sentence described the app's own errand; the outline is the
+            // shape of what is coming, in the row height the matrix will fill.
+            // `label` keeps it spoken — a dashed border says nothing to a
+            // screen reader (components/ui/signal/Ghost.tsx).
+            <Ghost shape="row" count={3} label="Reading the shelf" />
           ) : (
             <ProjectsMatrix
               projects={projects ?? []}
@@ -220,6 +217,37 @@ export default function ProjectsView() {
               // to /library first is the better answer. The header's "quick
               // create" keeps the dialog as the expert path.
               onCreate={() => router.push("/projects/new")}
+              /* The expert path: the old dialog, exactly as before, for whoever
+                 knows the four answers already. The primary create walks the
+                 guided wizard (/projects/new). NEITHER is theme-gated any more:
+                 the wizard's style stage offers presets and mints a locked theme
+                 at create, and the dialog explains an empty style shelf itself —
+                 bouncing both buttons to /library was sending users away from
+                 surfaces that can now answer them.
+
+                 IT STAYS OUTLINED AND DIM, and that is the point: it is a
+                 shortcut for somebody who has been here before, and it must not
+                 compete with the create control beside it. Reachable, never
+                 loudest.
+
+                 ITS LABEL WAS `quick create — the expert form`: a button naming
+                 its own audience, next to a filled cyan pill reading "New
+                 project". Weight already says primary-vs-shortcut, so the words
+                 only had to say WHICH ACT, and a glyph says that. The name
+                 survives where a name belongs — on `aria-label`, which is what
+                 a screen reader announces and what the two-word `title` echoes
+                 for a mouse. */
+              aside={
+                <button
+                  type="button"
+                  onClick={() => setDialog({ open: true, project: null })}
+                  aria-label="Quick create"
+                  title="Quick create"
+                  className="cursor-pointer rounded-full border border-white/12 p-2 text-white/45 transition hover:border-white/25 hover:text-white/75"
+                >
+                  <Zap aria-hidden className="h-4 w-4" />
+                </button>
+              }
             />
           )}
         </section>
