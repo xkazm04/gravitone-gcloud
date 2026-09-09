@@ -247,7 +247,24 @@ a tight box it is the thing doing the squeezing.
 `COMFY_LEGACY_LOADER=1` puts them back for a machine where the old reasoning
 turns out to hold.
 
-**A local 3-second H3 clip now costs 48 seconds instead of 27 minutes.** Every
+**A local 3-second H3 clip now costs 48 seconds instead of 27 minutes.**
+
+### Length is the quality ceiling, not resolution
+
+With the flags gone it became cheap enough to isolate. Same swatch, same prompt,
+same seed, three renders:
+
+| size | frames | seconds | result |
+| --- | --- | --- | --- |
+| 640x384 | **73** | 48 s | stays in the blueprint: drafting hatch, annotation rings |
+| 832x480 | 124 | 84 s | repaints yellow, adds sun, clouds and plants, ends blank |
+| 640x384 | 124 | 48 s | becomes a teal infographic with legend cards |
+
+**73 frames is inside the safe window and 124 is not, at either resolution.**
+H3 drifts progressively away from its start frame, so the horizon — not the
+pixel count — is what decides whether the style survives. A five-second clip is
+therefore not available directly from this engine; 73 frames is 3.04 s, and a
+loop is how it becomes five. Every
 "H3 is too slow" conclusion in this file and in the dojo's history was measured
 through those flags and should be re-read with that in mind — including the one
 immediately below, which is kept as written because being wrong in public is the
