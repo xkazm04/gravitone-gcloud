@@ -940,7 +940,6 @@
         "app/_phases/research/_parts/FollowUpResult.tsx",
         "app/_phases/research/_parts/ScopeBar.tsx",
         "app/_phases/research/_parts/ScopeGate.tsx",
-        "app/_phases/research/_parts/TopicPanel.tsx",
         "app/_phases/research/guided/GuidedResearch.tsx",
         "app/_phases/research/guided/passes.tsx",
         "app/_phases/research/guided/RunStage.tsx",
@@ -962,7 +961,7 @@
         "cut",
         "checkpoint"
       ],
-      "last_written_at": "2026-09-08T17:39:52.069729600+00:00",
+      "last_written_at": "2026-09-09T09:16:51.757937400+00:00",
       "name": "research-scope-ui",
       "pinned": false,
       "tech_stack": [
@@ -1466,8 +1465,7 @@
         "components/ui/deck/DeckStage.tsx",
         "components/ui/deck/artVariants.tsx",
         "components/ui/deck/emblems.tsx",
-        "components/ui/deck/motionGuard.ts",
-        "components/ui/deck/useArtVariant.ts"
+        "components/ui/deck/motionGuard.ts"
       ],
       "group": "Design System",
       "group_id": "b59e5896-a7fb-4a80-82d0-9d8c10283f24",
@@ -1484,7 +1482,7 @@
         "equalizer",
         "auth-gate"
       ],
-      "last_written_at": "2026-09-08T17:52:10.681316+00:00",
+      "last_written_at": "2026-09-09T09:16:51.762098+00:00",
       "name": "ui-shell",
       "pinned": false,
       "tech_stack": [
@@ -1540,7 +1538,7 @@
       ]
     }
   ],
-  "generated_at": "2026-09-08T17:57:20.679520900+00:00",
+  "generated_at": "2026-09-09T09:27:08.839968800+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -1606,12 +1604,12 @@
     "root": "C:\\Users\\kazda\\kiro\\gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "a89825c91d2041372f51d951d87a7ae95eee7220",
-    "git_commit_count": 563
+    "git_commit": "962e09c331bae3803a8790c8fc59ef008c9bc56c",
+    "git_commit_count": 572
   },
   "stats": {
     "contexts": 27,
-    "files": 402,
+    "files": 400,
     "groups": 8,
     "use_cases": 0
   },
