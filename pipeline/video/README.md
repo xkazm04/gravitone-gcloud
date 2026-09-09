@@ -7,6 +7,7 @@ Three files, and the split between them is the point.
 | `motion_author.py` | Reads a picture, then writes its motion prompt from what it saw | ~60 s, needs the card |
 | `compose_clip.py` | Animates a still by MOVING A PIECE OF IT | ~3.5 min once, then free |
 | `leonardo_reference.py` | Buys one hosted clip, to test whether the ceiling is ours | real money, one clip |
+| `gpu_trace.py` | Samples what the machine is actually doing during a render | free |
 | `render_preset_clips.py` | Renders raw clips on the local Wan stack | ~110 s per clip, needs the card |
 | `clip_check.py` | Says whether the OBJECTS moved or the picture just drifted | free |
 | `transcode.mjs` | Squeezes a raw clip into committed artefacts, under a byte budget | seconds, needs only ffmpeg |
@@ -215,3 +216,58 @@ chalkboard, which it did. But a bar rising IS a shape changing, so a prompt
 asking for it is arguing with itself. (The dojo's own NEG opens with `static
 frame, frozen image, no motion`, which pushes the other way for the other
 reason; it was removed here early, and it is worth knowing it was ever there.)
+
+## Local H3 is memory-bound, and the render size is not the lever
+
+Measured 2026-09-09 with `gpu_trace.py`, one local MiniMax H3 fl2va render:
+3 seconds (73 frames, the mod-17 length) at **640x384** — smaller than the
+832x480 the motion spike used — 8 steps with the fl2v 8-step turbo LoRA.
+
+| | |
+| --- | --- |
+| wall clock | **1646 s** (27 min) |
+| GPU utilisation | median 100%, under 50% for only 7% of the run |
+| GPU power | median **116 W of a 450 W cap — 26%** |
+| SM clock | 2670 MHz of 3105 (86%) |
+| VRAM peak | 23829 MiB of 24564 — **97%** |
+| host RAM free, minimum | **0.0 GB** |
+| commit charge peak | **132.1 GB of 133 — 99%** |
+| driver throttling | none |
+
+**The card is not the bottleneck and neither is the resolution.** A GPU pinned at
+100% while drawing a quarter of its power cap is waiting on memory, not
+computing. Host RAM reached zero and commit charge reached 99% of its limit —
+which is exactly the failure `pipeline/vlm-probe/guard.py` spends a paragraph
+on: "exhaustion presents as a hang, never as an error", and commit predicts it
+better than free physical memory does. One ComfyUI process was holding a 31.9 GB
+working set. Shrinking the frame from 832x480 to 640x384 did not help, because
+the cost is dominated by paging a 20 GB video model and a 32-billion-parameter
+text encoder through a box already at its commit ceiling.
+
+**And it is NOT slower than it used to be.** The spike's 1243 s was at 4 steps;
+this was at 8. Per sampling step that is 206 s now against 311 s then, at a
+smaller frame — faster, not slower. (4 was `motion.py`'s default, but `FL_LORA`
+is the *8-step* turbo LoRA, so 8 is its design point and the older runs were
+under-stepping it.) The felt regression is a step count, not a machine.
+
+The levers worth trying, in order, none of them the render size:
+
+1. **The loader flags.** `guard.start_comfy` always adds
+   `--disable-pinned-memory --disable-dynamic-vram`, and its own docstring calls
+   that path "slower to load ... the trade worth making" on a memory-tight box.
+   Nothing has ever measured the trade.
+2. **The commit ceiling.** 133 GB against 63 GB of RAM is roughly a 70 GB
+   pagefile. Raising it costs disk and buys headroom directly.
+3. **Not both engines at once.** H3 loads a 20 GB video model beside a 20 GB
+   text encoder. That is the working set, and it is most of the problem.
+
+### What the local clip looks like
+
+Better motion than any Wan attempt — concentration 0.80 against 0.42 — and it
+holds the composition. But it **recolours the drawing**: the bars fill with
+orange, red and yellow, colours that are not in the Blueprint palette. For a
+STYLE swatch that is disqualifying, because the swatch exists to show the style.
+
+Note the gap this exposes in `clip_check.py`: retention scored 0.92 on a clip
+whose colours were replaced wholesale, because retention reads edge energy and
+edges survived. **It is blind to colour.** A palette check belongs beside it.
