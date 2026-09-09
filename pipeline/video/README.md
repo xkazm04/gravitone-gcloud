@@ -217,6 +217,42 @@ asking for it is arguing with itself. (The dojo's own NEG opens with `static
 frame, frozen image, no motion`, which pushes the other way for the other
 reason; it was removed here early, and it is worth knowing it was ever there.)
 
+## The 30x: two ComfyUI launch flags
+
+**`--disable-pinned-memory --disable-dynamic-vram` cost this repo a factor of
+thirty on every render it has ever made.** `guard.start_comfy` added them to
+every start, justified by a line nobody had measured: they "do not fall over
+when host memory is tight, which on a 64 GB box sharing one card is the trade
+worth making".
+
+Three renders of the SAME MiniMax H3 clip, 640x384x73, 8 steps, same seed:
+
+| run | loader | host RAM free at start | wall clock | commit peak | RAM min |
+| --- | --- | --- | --- | --- | --- |
+| 1 | legacy | 35.1 GB | 1646 s | 99% of 133 GB | 0.0 GB |
+| 2 | **plain** | 42.5 GB | **48 s** | 79% of 126 GB | 3.3 GB |
+| 3 | legacy (control) | 40.7 GB | 1465 s | 98% of 126 GB | 0.2 GB |
+
+Runs 2 and 3 differ in the flags and nothing else — the control was run at the
+same freed-RAM state precisely so the flags were the only variable. **30x.** And
+the clips are identical on every quality measure (concentration 0.80, retention
+0.92, same seed, same output), so the flags bought nothing whatsoever.
+
+They also CAUSED the condition they were meant to survive. With them, host RAM
+reaches zero and commit charge reaches 98-99% of its limit. Without them, commit
+peaks at 79% and RAM never drops below 3 GB. The legacy path holds weights in
+host memory instead of letting the driver manage pinned and dynamic VRAM, so on
+a tight box it is the thing doing the squeezing.
+
+`COMFY_LEGACY_LOADER=1` puts them back for a machine where the old reasoning
+turns out to hold.
+
+**A local 3-second H3 clip now costs 48 seconds instead of 27 minutes.** Every
+"H3 is too slow" conclusion in this file and in the dojo's history was measured
+through those flags and should be re-read with that in mind — including the one
+immediately below, which is kept as written because being wrong in public is the
+point of writing measurements down.
+
 ## Local H3 is memory-bound, and the render size is not the lever
 
 Measured 2026-09-09 with `gpu_trace.py`, one local MiniMax H3 fl2va render:

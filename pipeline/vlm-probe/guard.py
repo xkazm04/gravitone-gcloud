@@ -189,10 +189,12 @@ def start_comfy(wait=180):
                 return True
         return False
     exe = f"{COMFY_DIR}\\venv\\Scripts\\python.exe"
+    args = "'main.py'"
+    if os.environ.get("COMFY_LEGACY_LOADER") == "1":
+        args += ",'--disable-pinned-memory','--disable-dynamic-vram'"
     subprocess.run(
         ["powershell", "-NoProfile", "-Command",
-         f"Start-Process -FilePath '{exe}' "
-         f"-ArgumentList 'main.py','--disable-pinned-memory','--disable-dynamic-vram' "
+         f"Start-Process -FilePath '{exe}' -ArgumentList {args} "
          f"-WorkingDirectory '{COMFY_DIR}' -WindowStyle Hidden"],
         capture_output=True, text=True)
     deadline = time.time() + wait
