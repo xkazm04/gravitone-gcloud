@@ -4,7 +4,7 @@
   "fps": 20,
   "seconds": 5,
   "budgetKB": 260,
-  "totalBytes": 596640,
+  "totalBytes": 557061,
   "clips": [
     {
       "id": "signal-ledger",
@@ -52,16 +52,16 @@
         {
           "src": "/clips/presets/blueprint.webm",
           "type": "video/webm; codecs=\"vp9\"",
-          "bytes": 155429
+          "bytes": 115901
         }
       ],
-      "bytes": 175358,
+      "bytes": 135779,
       "route": "h3-local",
       "width": 640,
       "height": 384,
       "fps": 20,
-      "frames": 61,
-      "seconds": 3.05
+      "frames": 58,
+      "seconds": 2.9
     },
     {
       "id": "chalk-argument",

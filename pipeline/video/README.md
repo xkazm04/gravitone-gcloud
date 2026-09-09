@@ -8,6 +8,8 @@ Three files, and the split between them is the point.
 | `compose_clip.py` | Animates a still by MOVING A PIECE OF IT | ~3.5 min once, then free |
 | `leonardo_reference.py` | Buys one hosted clip, to test whether the ceiling is ours | real money, one clip |
 | `gpu_trace.py` | Samples what the machine is actually doing during a render | free |
+| `retime.py` | Finds the part of a clip that is still moving and stretches it | free |
+| `compare.py` | Puts clips side by side without lying about their durations | free |
 | `render_preset_clips.py` | Renders raw clips on the local Wan stack | ~110 s per clip, needs the card |
 | `clip_check.py` | Says whether the OBJECTS moved or the picture just drifted | free |
 | `transcode.mjs` | Squeezes a raw clip into committed artefacts, under a byte budget | seconds, needs only ffmpeg |
@@ -248,6 +250,37 @@ a tight box it is the thing doing the squeezing.
 turns out to hold.
 
 **A local 3-second H3 clip now costs 48 seconds instead of 27 minutes.**
+
+### H3 front-loads: it arrives, then repaints
+
+A clip that measured well still read as broken — "it stops slightly after 1s,
+then stays stale for the rest of 3s", and the operator was right. Frame-to-frame
+energy could not see it, because the tail is not still, it is noise. The measure
+that sees it is DISPLACEMENT FROM THE FIRST FRAME. As a percentage of each
+clip's own peak, by decile:
+
+| clip | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| local H3 | 21 | 33 | 65 | 94 | 98 | 99 | 99 | 99 | 99 | 99 |
+| hosted hailuo-03 | 10 | 33 | 79 | 100 | 88 | 94 | 95 | 96 | 95 | 96 |
+| local H3, **retimed** | 12 | 18 | 22 | 28 | 33 | 40 | 61 | 79 | 92 | 99 |
+
+The local clip has ARRIVED by 40% of its length; every frame after is the same
+picture being repainted. The hosted one keeps moving around instead of settling.
+
+**No generation setting fixed it.** 25 steps without the turbo LoRA was weaker
+(mean 0.285 against 0.378). Pinning `first_frame == last_frame` — the fl2va node
+takes a `last_frame` that `chain_workflow` never passed — flattened the profile
+but reduced the motion to a slow breath. 124 frames wandered off the style, into
+a teal infographic with the LoRA and a dashboard of invented pie charts and text
+without it. The node has no negative prompt input, so the wandering cannot be
+forbidden either.
+
+So `retime.py` does it after the fact: find the arrival frame, keep what came
+before, slow it with optical-flow interpolation to fill the run. Blueprint keeps
+30 of 73 frames and plays them 2.48x slower, and the bottom row of the table is
+the result — a steady build with no plateau. `build-preset-clips.mts` runs it
+whenever a sidecar carries `retime`.
 
 ### Length is the quality ceiling, not resolution
 

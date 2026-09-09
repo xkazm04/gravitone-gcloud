@@ -93,6 +93,7 @@ for (const preset of wanted) {
   }
   try {
     const src = await probe(raw);
+    // (probe the ORIGINAL for the "from" line; `source` may be retimed below)
     // The renderer's own sidecar. A clip from pipeline/video/compose_clip.py is
     // already the exact loop, forward and back, so trimming its head would cut
     // the loop open and it would snap on repeat. A Wan render is trimmed because
@@ -101,7 +102,26 @@ for (const preset of wanted) {
     const sidecar = raw.replace(/\.(webm|mp4)$/, ".json");
     const meta = existsSync(sidecar) ? JSON.parse(readFileSync(sidecar, "utf8")) : {};
     const trim = meta.trim ?? (meta.route === "compose" ? 0 : 0.35);
-    const made = await makeClip(raw, {
+
+    // RETIME FIRST, when the sidecar asks. MiniMax H3 front-loads: the picture
+    // arrives about 40% of the way through and every later frame repaints it,
+    // which reads as a clip that stopped. pipeline/video/retime.py finds that
+    // arrival point by measuring displacement from the first frame, keeps what
+    // came before it and slows it to fill the run. It cannot add motion that was
+    // never generated; it stops the generated motion being crammed into the
+    // first second.
+    let source = raw;
+    if (meta.retime) {
+      const staged = path.join(rawDir, `${preset.id}.retimed.webm`);
+      const rt = spawnSync("python", [
+        path.join("pipeline", "video", "retime.py"), raw, staged,
+        "--seconds", String(meta.retime), "--fps", String(fps), "--width", String(width),
+      ], { encoding: "utf8" });
+      if (rt.status !== 0) throw new Error(`retime failed: ${(rt.stderr || rt.stdout || "").trim()}`);
+      process.stdout.write(rt.stdout);
+      source = staged;
+    }
+    const made = await makeClip(source, {
       outDir,
       slug: preset.id,
       profile,
