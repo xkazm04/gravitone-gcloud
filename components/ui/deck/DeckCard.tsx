@@ -23,7 +23,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 
 import { SURFACE } from "../tokens";
-import { DeckArtView } from "./artVariants";
+import { DeckArtView, DeckSceneView, sceneKeyOf } from "./artVariants";
 import { useDeckReducedMotion } from "./motionGuard";
 
 /* ── The spec ─────────────────────────────────────────────────────────────── */
@@ -67,8 +67,9 @@ export interface DeckCardSpec {
    * and lost) lives there now, unchanged in effect. */
   /** HERO — the deciding card (operator verdict 2026-09-06, the create wizard's
    *  three pick stages). Where `dense` is for cards you READ, hero is for cards
-   *  you CHOOSE BETWEEN: the illustration and one large centred title, and
-   *  nothing else. Eyebrow, body, chips, risk and footnote are not laid out at
+   *  you CHOOSE BETWEEN: the illustration and one large centred title, plus at
+   *  most ONE mono line of fact under it (`footnote` — 2026-09-09, the template
+   *  stage's runtime band). Eyebrow, body, chips and risk are not laid out at
    *  all — on a stage whose headline already asks the question, a kicker
    *  reading "discipline" over a card in the discipline deck is the label of a
    *  label, and a template count is a number nobody chooses on. The supporting
@@ -144,6 +145,11 @@ export default function DeckCard({
   const interactive = !spec.disabled && pickable;
   const dense = spec.density === "dense";
   const hero = spec.density === "hero";
+  /** A hero card whose family has a full-bleed scene drawn for it — the art
+   *  covers the card and the title is laid over it, instead of a 40% band with
+   *  a caption below (artVariants#sceneKeyOf, scenes.tsx). Undefined for every
+   *  other card, which keeps the banded art zone unchanged. */
+  const sceneKey = hero ? sceneKeyOf(spec.art) : undefined;
   const [open, setOpen] = useState(false);
 
   const chipRow = spec.chips && spec.chips.length > 0 && (
@@ -182,10 +188,46 @@ export default function DeckCard({
       }
       whileTap={reduced || !interactive ? undefined : { scale: 0.98, transition: LIFT_SPRING }}
       className={`group relative flex h-full flex-col overflow-hidden rounded-2xl ${SURFACE} ${
-        picked ? "ring-2 ring-cyan-300/60" : ""
-      } ${spec.disabled ? "opacity-50" : ""}`}
+        // The scene needs room to be a picture rather than a texture behind a
+        // word: without a floor the card collapses to the height of its title
+        // and the composition is cropped to a strip.
+        sceneKey ? "min-h-56 sm:min-h-64" : ""
+      } ${picked ? "ring-2 ring-cyan-300/60" : ""} ${spec.disabled ? "opacity-50" : ""}`}
     >
-      {dense ? (
+      {sceneKey ? (
+        // FULL-BLEED: the art is the card. The scrim under the title is a
+        // gradient of the app's own ink (--gt-ink), not a flat wash, so the
+        // scene stays legible at the edges where the strokes carry it and the
+        // centre still reads type at full contrast.
+        <>
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <DeckSceneView art={spec.art} sceneKey={sceneKey} />
+          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            // THE TITLE SITS AT THE FOOT OF THE CARD, so the scrim rises from
+            // there rather than pooling in the middle. A radial scrim was tried
+            // first and photographed on 2026-09-09: it put a hole of ink over
+            // the exact centre of every scene — the mortarboard, the play mark,
+            // the orb — which is where each motif is drawn. A poster does not
+            // clear its middle; it darkens its base and prints on that.
+            //
+            // Declared inline because the stops are a custom property and a
+            // keyword, and Tailwind's alpha modifier cannot reason about the
+            // colour behind a var. No literal either way.
+            style={{
+              background:
+                "linear-gradient(to top, var(--gt-ink) 0%, var(--gt-ink) 22%, transparent 72%)",
+            }}
+          />
+          {/* sheen — the same hover answer the banded art zone gives */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          />
+        </>
+      ) : dense ? (
         // The dense ground: the art's gradient as a faint full-card wash, the
         // icon as an oversized watermark bleeding off the top-right corner —
         // background, not a zone, so the card is only as tall as its words.
@@ -237,10 +279,29 @@ export default function DeckCard({
              else. `grow` + centring is what makes it read as the middle of the
              card rather than a caption under a picture — cards in a row keep
              equal height, so short and long titles both sit on the same line. */
-          <div className="relative flex grow items-center justify-center p-5 text-center">
+          <div
+            className={`relative flex grow flex-col items-center gap-1.5 p-5 text-center ${
+              // Full-bleed: the title is printed on the scrim at the foot of the
+              // picture. Banded: it is the middle of the half-card below the art.
+              sceneKey ? "justify-end" : "justify-center"
+            }`}
+          >
             <h3 className="font-hanken text-2xl leading-tight font-semibold text-slate-100 transition-colors duration-200 ease-linear group-hover:text-white">
               {spec.title}
             </h3>
+            {/* THE ONE FACT UNDER THE NAME, and it is the card's `footnote`.
+                Hero still lays out no eyebrow, body, chips or risk — the
+                2026-09-06 density verdict stands for everything that was
+                ARGUING a case. What the operator asked for on 2026-09-09 is
+                different in kind: the template stage's cards were being chosen
+                with no idea how long each format runs, so the runtime band is
+                the shape of the answer rather than a pitch for it. It rides on
+                the existing provenance slot, in the mono voice, one line. */}
+            {spec.footnote && (
+              <span className="font-jetbrains text-label tracking-[0.12em] text-white/50">
+                {spec.footnote}
+              </span>
+            )}
           </div>
         ) : dense ? (
           <div className="relative flex grow flex-col gap-2 p-4">

@@ -56,6 +56,7 @@ import type { DeckArtFamily } from "@/app/_studio/deckArt";
 
 import type { DeckArt } from "./DeckCard";
 import { DeckEmblem, emblemToneClass, hasEmblem } from "./emblems";
+import { DeckSceneArt, hasScene } from "./scenes";
 
 /** THE FACE EACH FAMILY DRAWS — the settled answer, per family, in one place.
  *
@@ -116,6 +117,36 @@ function groundOf(art: DeckArt): { tone?: string; hexes?: string[] } {
     case "emblem":
       return { tone: art.tone };
   }
+}
+
+/** THE SECOND DENSITY OF THE SAME MARK (2026-09-09).
+ *
+ *  A hero card whose art names a family key that has a SCENE drawn for it
+ *  (scenes.tsx) stops being a picture with a caption underneath: the scene is
+ *  laid over the whole card and the title sits on it. This returns the scene
+ *  key when that is what the card should draw, and undefined otherwise — so a
+ *  family without scenes, an image card, and a key with no motif all keep the
+ *  banded art zone rather than silently losing their face.
+ *
+ *  Deliberately NOT folded into `DeckArtView`: the two are different LAYOUTS,
+ *  not different pictures, and only the card knows which one it is drawing. */
+export function sceneKeyOf(art: DeckArt): string | undefined {
+  const key = manifestKeyOf(art);
+  return key && familyOf(key) && hasScene(key) ? key : undefined;
+}
+
+/** The full-bleed face: the family ground, then the scene over it at the
+ *  family accent. Rendered by DeckCard's hero branch inside its own
+ *  absolutely-positioned layer. */
+export function DeckSceneView({ art, sceneKey }: { art: DeckArt; sceneKey: string }) {
+  return (
+    <>
+      <GradientArt {...groundOf(art)} />
+      <span aria-hidden className={`absolute inset-0 ${emblemToneClass(sceneKey)}`}>
+        <DeckSceneArt sceneKey={sceneKey} className="h-full w-full" />
+      </span>
+    </>
+  );
 }
 
 export function DeckArtView({ art }: { art: DeckArt }) {

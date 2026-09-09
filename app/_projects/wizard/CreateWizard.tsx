@@ -30,7 +30,6 @@ import { ArrowLeft } from "lucide-react";
 import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
 import DeckStage from "@/components/ui/deck/DeckStage";
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Eyebrow } from "@/components/ui/Primitives";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
@@ -326,10 +325,16 @@ export default function CreateWizard() {
   // (5 of 10 Characters were stranded), it is true only sometimes, and nothing
   // else on the screen can say it. It is compressed instead — see below.
   //
-  // The template stage does NOT gain a runtime stamp on its cards to replace
-  // its paragraph. The operator's 2026-09-06 density verdict is that these are
-  // hero cards — illustration and name, nothing else (stages.tsx#disciplineCards)
-  // — and a chip is exactly what that verdict removed.
+  // THE TEMPLATE STAGE DID GAIN A RUNTIME STAMP, on 2026-09-09, and this note
+  // is what it reversed. The 2026-09-06 density verdict — hero cards carry the
+  // illustration and the name, nothing else — was read here as covering the
+  // craft band too, so the template stage asked the user to choose between
+  // seven formats while withholding the one fact that distinguishes them until
+  // two stages later. The operator's ruling: the band goes on the card, in the
+  // mono voice, one line under the title (stages.tsx#templateBandWords). What
+  // the density verdict actually removed is still gone — the pitch paragraph,
+  // the eyebrow repeating the stage label, the chip counting templates. A
+  // window is not a pitch.
   const stages: DeckStageDef[] = [
     {
       id: "discipline",
@@ -440,7 +445,13 @@ export default function CreateWizard() {
           ProjectsView's <main> (components/ui/Modal.tsx#restoreFocus). */}
       <main tabIndex={-1} className="pb-10">
         <Deck
-          eyebrow={<Eyebrow>create</Eyebrow>}
+          // NO EYEBROW (operator, 2026-09-09). It printed `create` on its own
+          // row directly under the nav — where StudioFrame's rule already marks
+          // Projects as the current module and the stage rail's first pill
+          // already says `1 discipline`. One word, one line, saying what the
+          // route and the rail both say, and it pushed the whole deck down by a
+          // row for it. Deck's `eyebrow` stays optional and GuidedResearch keeps
+          // its own, which names a step inside a page rather than the page.
           stages={stages}
           active={active}
           onNavigate={goToStage}

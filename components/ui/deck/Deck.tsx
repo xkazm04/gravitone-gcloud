@@ -16,6 +16,7 @@
 // re-dealt, which is the deck saying "this decision is open again".
 
 import { Button } from "../Primitives";
+import StageRail from "./rail/StageRail";
 
 export interface DeckStageDef {
   id: string;
@@ -129,45 +130,25 @@ export default function Deck({
           family was decided. There is no switch, no store and no
           `gravitone.deck.art` key anywhere any more. */}
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
+        <div className="w-full">
           {eyebrow}
-          <ol className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-2">
-            {stages.map((s, i) => {
-              const activeStage = i === active;
-              return (
-                <li key={s.id} className="flex items-center gap-1.5">
-                  {i > 0 && (
-                    <span aria-hidden className="font-jetbrains text-label text-white/20">
-                      →
-                    </span>
-                  )}
-                  <button
-                    type="button"
-                    disabled={!reachable(i)}
-                    aria-current={activeStage ? "step" : undefined}
-                    onClick={() => onNavigate(i)}
-                    className={`font-jetbrains rounded-full border px-2.5 py-1 text-label tracking-[0.12em] transition disabled:cursor-not-allowed ${
-                      activeStage
-                        ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
-                        : s.done
-                          ? "border-white/12 text-white/60 hover:border-white/25 hover:text-white/85"
-                          : reachable(i)
-                            ? "border-white/10 text-white/40 hover:border-white/25 hover:text-white/70"
-                            : "border-white/[0.06] text-white/25"
-                    }`}
-                  >
-                    <span className={activeStage ? "" : s.done ? "text-emerald-200/80" : ""}>
-                      {s.done && !activeStage ? "✓" : i + 1}
-                    </span>{" "}
-                    {s.label}
-                    {s.done && s.summary && !activeStage && (
-                      <span className="ml-1 text-cyan-200/70 normal-case">· {s.summary}</span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ol>
+          {/* The rail keeps its own top margin only when something sits above
+              it. The create wizard passes no eyebrow (2026-09-09) and a fixed
+              `mt-3` there is a row of nothing under the nav.
+
+              TODO(prototype, 2026-09-09): StageRail is a THREE-FACE SWITCHER,
+              not the shipped rail. It draws the baseline pills by default plus
+              two directions (filmstrip, ledger) for the operator to choose
+              between; the winner collapses this back to one component and the
+              losers are deleted. See components/ui/deck/rail/StageRail.tsx. */}
+          <div className={eyebrow ? "mt-3" : ""}>
+            <StageRail
+              stages={stages}
+              active={active}
+              onNavigate={onNavigate}
+              reachable={reachable}
+            />
+          </div>
         </div>
       </div>
 

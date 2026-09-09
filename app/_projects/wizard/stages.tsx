@@ -83,11 +83,45 @@ export function disciplineCards(): DeckCardSpec[] {
   }));
 }
 
+/** The craft band, said in the unit a person thinks in. Minutes once the top of
+ *  the band reaches two of them, seconds below that — so a clip reads "15–60 s"
+ *  and a mid-length explainer reads "3–6 min" rather than "180–360 s". A half
+ *  survives (`1.5–2.5 min`, the trailer's real 90–150s); a trailing `.0` does
+ *  not. */
+function bandWords(range: readonly [number, number]): string {
+  if (range[1] < 120) return `${range[0]}–${range[1]} s`;
+  const min = (s: number) => String(Math.round((s / 60) * 2) / 2).replace(/\.0$/, "");
+  return `${min(range[0])}–${min(range[1])} min`;
+}
+
+/** HOW LONG THIS FORMAT RUNS, on the card that picks it (operator, 2026-09-09).
+ *
+ *  This reverses one line of the 2026-09-06 density verdict, and only that one:
+ *  the card carried no runtime, so the whole template stage was a choice
+ *  between seven names with the single fact that separates them held back until
+ *  the stage after next. Everything else the hero pass removed — the pitch, the
+ *  chip counting templates, the eyebrow repeating the stage label — stays gone.
+ *
+ *  It is the BAND, not the default: what the user is choosing here is a format,
+ *  and a format is a window. The name stage still draws that window as a rail
+ *  with the user's own number on it (RuntimeBand), including the hatch and the
+ *  n=0 disclosure for the promotional formats — that claim lives where the
+ *  number is actually chosen, and this line does not restate it.
+ *
+ *  Free form is the one card with nothing to state: its `range` is the input's
+ *  own domain rather than a measurement (lib/projects.ts says so at the entry),
+ *  and printing it as a band here would be the lie RuntimeBand's free branch is
+ *  careful not to tell. */
+export function templateBandWords(id: TemplateId): string {
+  return id === "free-form" ? "any length" : bandWords(templateOf(id).range);
+}
+
 export function templateCards(discipline: Discipline): DeckCardSpec[] {
   return templatesFor(discipline).map((t) => ({
     id: t.id,
     title: t.label,
     density: "hero" as const,
+    footnote: templateBandWords(t.id),
     // Same story as the discipline stage above: the key is the declaration, the
     // `template-*` family draws its emblem, and the pin that used to say so is
     // gone with the switcher it existed to override.
@@ -164,7 +198,10 @@ export function presetCards(presets: Preset[]): DeckCardSpec[] {
  *  slot with a hollow swatch where a style's face would be), and the route. */
 export function EmptyStyleDeck({ discipline }: { discipline: Discipline }) {
   return (
-    <div className="mx-auto w-full max-w-xs">
+    // +20% on the stage block (operator, 2026-09-09) — max-w-xs → 24rem, the
+    // same proportion the name stage takes below, so the two non-deck stages
+    // stay one column width rather than drifting apart.
+    <div className="mx-auto w-full max-w-[24rem]">
       <div className="flex flex-col items-center gap-4 rounded-2xl border border-dashed border-amber-300/30 bg-amber-300/[0.03] p-6 text-center">
         {/* The hollow twin of a style card's face — same slot, no style in it. */}
         <span
@@ -351,7 +388,10 @@ export function NameStage({
   const titleLeft = charsLeft(title, 80);
   const loglineLeft = charsLeft(logline, 240);
   return (
-    <div className="gt-rise mx-auto grid w-full max-w-xl gap-5">
+    // +20% (operator, 2026-09-09): max-w-xl is 36rem, and the form was
+    // reading as a narrow column under a full-width headline — the fields, the
+    // runtime rail and the permanence line all want the extra measure.
+    <div className="gt-rise mx-auto grid w-full max-w-[43.2rem] gap-5">
       <Field
         label="Project name"
         htmlFor="w-title"
