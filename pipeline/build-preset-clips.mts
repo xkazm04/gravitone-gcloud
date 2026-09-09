@@ -76,8 +76,12 @@ const built: Entry[] = [];
 let failed = 0;
 
 for (const preset of wanted) {
-  const raw = path.join(rawDir, `${preset.id}.webm`);
-  if (!existsSync(raw)) {
+  // Whichever renderer produced it. The local Wan graph saves .webm; a clip
+  // bought through pipeline/video/leonardo_reference.py arrives as .mp4.
+  const raw = [".webm", ".mp4"]
+    .map((ext) => path.join(rawDir, `${preset.id}${ext}`))
+    .find((p) => existsSync(p));
+  if (!raw) {
     console.log(`MISS  ${preset.id} · no raw render — run with --render`);
     failed++;
     continue;
@@ -89,9 +93,9 @@ for (const preset of wanted) {
     // the loop open and it would snap on repeat. A Wan render is trimmed because
     // its first frames are the source still holding while the model finds the
     // motion, which reads as a stall on a five-second card.
-    const sidecar = raw.replace(/\.webm$/, ".json");
+    const sidecar = raw.replace(/\.(webm|mp4)$/, ".json");
     const meta = existsSync(sidecar) ? JSON.parse(readFileSync(sidecar, "utf8")) : {};
-    const trim = meta.route === "compose" ? 0 : 0.35;
+    const trim = meta.trim ?? (meta.route === "compose" ? 0 : 0.35);
     const made = await makeClip(raw, {
       outDir,
       slug: preset.id,

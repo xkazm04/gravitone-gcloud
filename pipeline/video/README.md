@@ -147,28 +147,54 @@ therefore slides off its curve rather than riding down it, and the sprite carrie
 a few pixels of the curve's tip with it. A curved path needs a third grounded
 point; rotation and scale need more than a translate.
 
-## The control: a hosted pipeline fails the same way
+## The control, and the two mistakes in the first attempt at it
 
 The local failures do not, on their own, say whether the ceiling is the CONTENT
 or OUR HANDLING of it. So one clip was bought from Leonardo — the same swatch,
 the same intent — and the answer is unambiguous.
 
-**Leonardo's image-to-video runs `motionModel: "WAN21"`.** Same model family as
-the local stack, behind a pipeline tuned by people whose job that is. Measured
-on the same instrument:
+The first attempt got a clip that failed exactly like the local stack, and
+concluded from it that the ceiling was the content. **That conclusion was wrong,
+and it was wrong because of two mistakes in how the clip was bought.**
 
-| clip | concentration | verdict |
-| --- | --- | --- |
-| Leonardo, Wan 2.1 hosted | 0.38 | camera move, not objects moving |
-| local, Wan 2.2 TI2V-5B | 0.42 | camera move, not objects moving |
-| composited, no video model | 1.00 | objects moving |
+**MISTAKE 1: THE MODEL WAS NEVER NAMED.** The request went to v1
+`/generations-image-to-video` with no model field and silently took the default,
+which came back as `motionModel: "WAN21"`. So the "hosted control" was the same
+model family as the local stack. Naming the model is not optional — it IS the
+experiment. The v2 endpoint takes an explicit id (`hailuo-03`, `veo-3`,
+`kling-2-5`) and `leonardo_reference.py` now requires one.
 
-Leonardo ignored the object instruction exactly as the local stack did, drifted
-the whole frame, and grew a second ghost circle in the last second. It is not
-better. **The ceiling is the content.** A video model asked to animate a
-technical drawing will move the camera, whoever is holding it.
+**MISTAKE 2: THE PROMPT WAS TOO LONG.** It sent the authored sentence — *"The
+circle with arrow slides left across the top. Everything else in the drawing
+holds perfectly still, and the camera does not move."* — and got a camera drift.
+A bare **"Animate the image"** does far better on the same picture. That reads
+backwards until you count what the long version actually says: one clause of
+motion and two of stillness, aimed at an element the model may not be able to
+ground. A model that cannot find "the circle with arrow" still understands
+"holds perfectly still" and "the camera does not move", so the instruction
+lands as a description of a nearly frozen frame. **A longer prompt is not a
+stronger instruction; here it was mostly a list of things not to do.**
 
-Watch `pipeline/runs/preset-clips/compare-3way.mp4` for the three side by side.
+Measured on the same instrument:
+
+| clip | energy | concentration | retention |
+| --- | --- | --- | --- |
+| Leonardo `hailuo-03`, "Animate the image" | **1.718** | **0.54** | 0.17 |
+| local Wan 2.2, authored sentence | 0.368 | 0.42 | 0.81 |
+| Leonardo Wan 2.1, authored sentence | 0.263 | 0.38 | 0.91 |
+| composited, no video model | 0.143 | 1.00 | 0.92 |
+
+`hailuo-03` produces roughly **six times** the motion of either Wan clip, and it
+is motion with intent: the bars fill with drafting hatch in sequence, a highlight
+sweeps across them, the circle becomes an animated reticle, and annotation marks
+tick in around the frame. It animates the blueprint AS a blueprint. The low
+retention is the honest cost — it does not preserve the drawing, it redraws it in
+its own idiom.
+
+So the earlier conclusion is retracted: the content is not the ceiling. The model
+and the prompt were.
+
+Watch `pipeline/runs/preset-clips/compare-4way.mp4` for all four side by side.
 
 ## Two places this pipeline is biased toward "move at least something"
 

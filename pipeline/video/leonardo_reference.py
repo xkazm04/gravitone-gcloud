@@ -37,6 +37,18 @@ HERE = Path(__file__).parent
 ROOT = HERE.parent.parent
 OUT = ROOT / "pipeline" / "runs" / "preset-clips"
 BASE = "https://cloud.leonardo.ai/api/rest/v1"
+BASE2 = "https://cloud.leonardo.ai/api/rest/v2"
+
+# THE MODEL IS NAMED, ALWAYS. The first run of this file posted to v1
+# /generations-image-to-video with no model field and took whatever the default
+# was; the reply came back `motionModel: "WAN21"`, so the "hosted control" was
+# the same model family as the local stack and proved less than it looked like.
+# v2 takes an explicit id, and these are the ones worth asking for.
+MODELS = {
+    "hailuo-03": "MiniMax Hailuo 03 (H3) — the local stack's other engine, hosted",
+    "veo-3": "Google Veo 3",
+    "kling-2-5": "Kling 2.5 Turbo",
+}
 ENV_FILE = Path(r"C:\Users\kazda\kiro\personas\.env")
 
 POLL_SECONDS = 10
@@ -117,67 +129,79 @@ def find_video_url(obj):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("image")
-    ap.add_argument("--prompt", default=None)
-    ap.add_argument("--resolution", default="RESOLUTION_720")
-    ap.add_argument("--model", default=None, help="e.g. VEO3, VEO3_1, Kling2_5; omit for the default")
+    ap.add_argument("--prompt", default="Animate the image",
+                    help="deliberately short by default; see the note in main()")
+    ap.add_argument("--model", default="hailuo-03", help=" | ".join(f"{k}: {v}" for k, v in MODELS.items()))
+    ap.add_argument("--width", type=int, default=856)
+    ap.add_argument("--height", type=int, default=480)
+    ap.add_argument("--duration", type=int, default=5)
+    ap.add_argument("--seed", type=int, default=586956)
+    ap.add_argument("--audio", action="store_true", help="H3 can score its own clip; off here")
     ap.add_argument("--out", default=None)
     a = ap.parse_args()
 
     image = Path(a.image)
     key = api_key()
     OUT.mkdir(parents=True, exist_ok=True)
-    dest = Path(a.out) if a.out else OUT / f"{image.stem}-leonardo.mp4"
+    dest = Path(a.out) if a.out else OUT / f"{image.stem}-{a.model}.mp4"
 
+    # THE PROMPT IS SHORT ON PURPOSE, and that is a finding rather than a
+    # shortcut. The first run sent the authored sentence -- "The circle with
+    # arrow slides left across the top. Everything else in the drawing holds
+    # perfectly still, and the camera does not move." -- and got a camera drift.
+    # A bare "Animate the image" is reported to do better on the same hosted
+    # stack. A long instruction is not a stronger instruction: most of that
+    # sentence is a list of things NOT to do, and a model that cannot ground
+    # "the circle with arrow" reads the rest as a description of stillness.
     prompt = a.prompt
-    if prompt is None:
-        # The same intent the local stack was given, so the comparison is about
-        # the pipeline and not about two different asks.
-        rec = OUT / f"{image.stem}-compose" / "author.json"
-        if rec.exists():
-            k = json.loads(rec.read_text(encoding="utf-8"))["keyframe"]
-            prompt = (f"The {k['moving']} {k['path']}. Everything else in the drawing "
-                      f"holds perfectly still, and the camera does not move.")
-        else:
-            raise SystemExit("no --prompt and no cached author.json to take the intent from")
 
-    print(f"leonardo · {image.name} · {a.resolution}{' · ' + a.model if a.model else ''}")
+    print(f"leonardo · {image.name} · {a.model} · {a.width}x{a.height} · {a.duration}s")
     print(f"  prompt: {prompt}")
 
     image_id = upload(image, key)
     print(f"  uploaded -> {image_id}")
 
     body = {
-        "imageType": "UPLOADED",
-        "imageId": image_id,
-        "prompt": prompt,
-        "resolution": a.resolution,
-        "frameInterpolation": True,
-        # OFF on purpose. The whole question is what the pipeline does with OUR
-        # intent; letting the vendor rewrite the prompt would answer a different
-        # one, and quietly.
-        "promptEnhance": False,
-        "isPublic": False,
+        "model": a.model,
+        "public": False,
+        "parameters": {
+            "duration": a.duration,
+            # OFF. The whole question is what the pipeline does with OUR intent;
+            # letting the vendor rewrite the prompt answers a different one.
+            "prompt_enhance": "OFF",
+            "quantity": 1,
+            "seed": a.seed,
+            "prompt": prompt,
+            "width": a.width,
+            "height": a.height,
+            "audio": bool(a.audio),
+            "guidances": {
+                "start_frame": [{"image": {"id": image_id, "type": "UPLOADED"}}],
+            },
+        },
     }
-    if a.model:
-        body["model"] = a.model
 
     t0 = time.time()
-    start = req("POST", f"{BASE}/generations-image-to-video", key, body)
-    job = start.get("motionVideoGenerationJob") or start.get("sdGenerationJob") or start
-    gid = job.get("generationId") or job.get("id")
+    start = req("POST", f"{BASE2}/generations", key, body)
+    # v2 nests the job under `generate`, alongside what it just charged.
+    gen = start.get("generate") or start
+    gid = gen.get("generationId") or gen.get("id")
+    cost = (gen.get("cost") or {}).get("amount") or gen.get("apiCreditCost")
+    if cost:
+        print(f"  cost -> {cost} credits")
     if not gid:
-        raise SystemExit(f"no generation id in the reply: {json.dumps(start)[:400]}")
+        raise SystemExit(f"no generation id in the reply: {json.dumps(start)[:500]}")
     print(f"  queued -> {gid}")
 
     url = None
     for i in range(MAX_POLLS):
         time.sleep(POLL_SECONDS)
         try:
-            res = req("GET", f"{BASE}/generations/{gid}", key)
+            res = req("GET", f"{BASE2}/generations/{gid}", key)
         except Exception as e:  # noqa: BLE001
             print(f"    poll {i + 1} error: {str(e)[:80]}")
             continue
-        pk = res.get("generations_by_pk") or {}
+        pk = res.get("generation") or res.get("generations_by_pk") or res
         status = str(pk.get("status", "")).upper()
         if status == "FAILED":
             raise SystemExit(f"leonardo reported FAILED: {json.dumps(res)[:400]}")
@@ -189,12 +213,15 @@ def main():
     if not url:
         raise SystemExit(f"no video url after {MAX_POLLS * POLL_SECONDS}s")
 
-    with urllib.request.urlopen(url, timeout=600) as r:
+    # A plain urlopen on the CDN answers 403; it wants a browser-ish agent.
+    dl = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0", "Accept": "*/*"})
+    with urllib.request.urlopen(dl, timeout=600) as r:
         dest.write_bytes(r.read())
     print(f"  done in {time.time() - t0:.0f}s -> {dest} ({dest.stat().st_size / 1024:.0f}KB)")
     (dest.with_suffix(".json")).write_text(json.dumps(
-        {"vendor": "leonardo", "model": a.model, "resolution": a.resolution,
-         "prompt": prompt, "generation_id": gid, "source": str(image), "url": url},
+        {"vendor": "leonardo", "model": a.model, "size": [a.width, a.height],
+         "duration": a.duration, "seed": a.seed, "prompt": prompt,
+         "generation_id": gid, "source": str(image), "url": url},
         indent=2, ensure_ascii=False), encoding="utf-8")
 
 
