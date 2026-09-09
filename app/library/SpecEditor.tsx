@@ -14,15 +14,17 @@ import { Lock } from "lucide-react";
 import { canLock, lockBlocker, statusOf, type StyleBlock, type Theme } from "@/lib/themes";
 import { compileStyleBlock } from "@/lib/stylePrompt";
 
-import { PaletteDots } from "./parts";
-
 export default function SpecEditor({
   theme,
   onChange,
+  onRename,
   onLock,
 }: {
   theme: Theme;
   onChange: (block: StyleBlock) => void;
+  /** The name came here with the proof sheet's header. A style's name is one of
+   *  its words, and every other word it has is edited on this panel. */
+  onRename: (name: string) => void;
   onLock: () => void;
 }) {
   const locked = statusOf(theme) === "locked";
@@ -31,14 +33,25 @@ export default function SpecEditor({
 
   return (
     <div className="space-y-3">
-      <Slot label="technique" value={theme.block.technique} locked={locked} onChange={(v) => set("technique", v)} />
-      <Slot label="subject" value={theme.block.subject} locked={locked} onChange={(v) => set("subject", v)} />
+      <input
+        value={theme.name}
+        onChange={(e) => onRename(e.target.value)}
+        disabled={locked}
+        aria-label="Style name"
+        className="font-instrument w-full rounded bg-transparent text-xl text-white disabled:opacity-100"
+      />
 
-      <div>
-        <p className="font-jetbrains mb-1.5 text-content tracking-[0.14em] text-white/40 uppercase">palette</p>
-        <PaletteDots palette={theme.block.palette} withNames />
-      </div>
+      {/* TECHNIQUE and SUBJECT moved to the playground. They are the two slots
+          that decide what a render looks like, and they were being edited three
+          panes away from the button that spends money on the result. The
+          dossier keeps what it is FOR: the finish, the compiled prompt, and the
+          lock.
 
+          The palette section went entirely. It was read-only — a list of the
+          three colours with their names and roles, repeating what the dots on
+          the style's own pill already show, and repeating it identically across
+          presets that share a colour name. The preset's colours are the
+          preset's; there is nothing to pick here. */}
       <Slot label="finish" value={theme.block.finish} locked={locked} onChange={(v) => set("finish", v)} />
 
       <details className="group">

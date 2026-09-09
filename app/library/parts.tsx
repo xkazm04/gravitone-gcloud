@@ -8,15 +8,13 @@ import { Check, Library, Lock, LockOpen, X } from "lucide-react";
 
 import Modal from "@/components/ui/Modal";
 import { Panel, Button } from "@/components/ui/Primitives";
-import { CHIP_CLASS, Hint, PipRow, TALLY_TONE } from "@/components/ui/signal";
+import { CHIP_CLASS, TALLY_TONE } from "@/components/ui/signal";
 import { promotedId } from "@/lib/assets";
 import type { GenerateResult } from "@/lib/imagingClient";
-import type { PaletteColor, Proof, ProofState, Theme, ThemeStatus } from "@/lib/themes";
+import type { PaletteColor, Proof, ProofState, StyleBlock, Theme, ThemeStatus } from "@/lib/themes";
 import {
   approvedProofs,
   lockedOnly,
-  ORIGIN_WORD,
-  PROOF_CAP,
   sheetFull,
   sheetSpend,
   STATUS_WORD,
@@ -182,8 +180,8 @@ export function StyleSheet({
   locked,
   shelved,
   note,
-  onRename,
   onJudge,
+  onBlockChange,
   onPromote,
   onKeepTrial,
 }: {
@@ -193,8 +191,9 @@ export function StyleSheet({
   shelved: Set<string>;
   /** What just happened to the shelf, if anything. */
   note: string | null;
-  onRename: (name: string) => void;
   onJudge: (proofId: string, state: ProofState) => void;
+  /** Absent when locked — the playground then shows the slots as prose. */
+  onBlockChange?: (block: StyleBlock) => void;
   onPromote: (proof: Proof) => void;
   onKeepTrial: (r: GenerateResult, subject: string) => void | Promise<void>;
 }) {
@@ -202,42 +201,18 @@ export function StyleSheet({
   const approved = approvedProofs(theme);
   return (
     <Panel className="space-y-4 p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <input
-            value={theme.name}
-            onChange={(e) => onRename(e.target.value)}
-            disabled={locked}
-            className="font-instrument w-full rounded bg-transparent text-2xl text-white disabled:opacity-100"
-            aria-label="Style name"
-          />
-          {/* The cap counts what it caps: approved proofs are the model's
-              reference window, and the total is just how much judging has been
-              done. The window is DRAWN — one pip per slot, amber when there is
-              no room left — because "five approved proofs is the whole
-              reference window, reject one to make room" was two sentences
-              saying what a full row of pips says on sight. What survives as
-              words is the vendor rule itself, behind the row. */}
-          <p className="font-jetbrains mt-0.5 flex flex-wrap items-center gap-2 text-content text-white/40">
-            <span>{ORIGIN_WORD[theme.origin]}</span>
-            <span aria-hidden>·</span>
-            <PipRow
-              states={approved.map(() => (full ? ("amber" as const) : ("filled" as const)))}
-              max={PROOF_CAP}
-              label={`${approved.length} of ${PROOF_CAP} reference slots approved`}
-            />
-            <span>approved</span>
-            {full && !locked && (
-              <Hint variant="warn" tone="amber" label="Why no more proofs">
-                the model takes {PROOF_CAP} reference images, no more
-              </Hint>
-            )}
-            <span aria-hidden>·</span>
-            <span>{theme.proofs.length} on the sheet</span>
-          </p>
-        </div>
-        <StatusStamp status={statusOf(theme)} />
-      </div>
+      {/* NO HEADER. It carried the style's name in an editable field, its
+          origin, a pip row counting approved proofs against the vendor's
+          reference cap, a count of everything on the sheet, and a status stamp
+          — five facts about the sheet, stacked above the sheet, before any
+          picture. Every one of them is legible elsewhere: the name and palette
+          are on the pill that selects this style, the status is the lock chip
+          in the dossier, and the proofs are countable by looking at them.
+          Renaming moved to the dossier, which is where a style's words live.
+
+          What is left starts where the work is: the plates, then the playground
+          that makes them. */}
+      <h2 className="sr-only">{theme.name} — proof sheet</h2>
 
       {theme.proofs.length > 0 && (
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -261,6 +236,7 @@ export function StyleSheet({
       <div className="border-t border-white/8 pt-4">
         <Playground
           block={theme.block}
+          onBlockChange={locked ? undefined : onBlockChange}
           // Newest approved first: the most recent approval is the best
           // statement of where the style landed.
           references={approved

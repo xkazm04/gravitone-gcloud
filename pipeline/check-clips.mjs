@@ -132,7 +132,7 @@ for (const clip of manifest.clips ?? []) {
         "-of", "json", file,
       ], { encoding: "utf8", maxBuffer: 1 << 22 }),
     );
-  } catch (e) {
+  } catch {
     console.error(`clips: could not probe ${video.src} — is ffprobe on PATH?`);
     process.exit(2);
   }

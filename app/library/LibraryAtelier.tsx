@@ -39,9 +39,13 @@ import PresetShowcase from "./PresetShowcase";
 import SpecEditor from "./SpecEditor";
 import { PRESETS, type Preset } from "./presets";
 
-/** The four slots a style is written in, in SpecEditor's order. Named here only
- *  to draw their outlines before a style exists to fill them. */
-const SLOT_NAMES = ["technique", "subject", "palette", "finish"] as const;
+/** What the DOSSIER holds, in SpecEditor's order — drawn as outlines before a
+ *  style exists to fill them. Two, not four: technique and subject moved to the
+ *  playground, next to the button that spends money on them, and the palette
+ *  section went because it was a read-only list of colours the style's own pill
+ *  already shows. An outline that promises a slot the panel no longer has is a
+ *  worse lie than no outline at all. */
+const SLOT_NAMES = ["name", "finish"] as const;
 
 export default function LibraryAtelier({
   initialSelectedId = null,
@@ -264,8 +268,8 @@ export default function LibraryAtelier({
                 locked={isLocked}
                 shelved={shelved}
                 note={shelfNote}
-                onRename={(name) => void update(selected.id, { name })}
                 onJudge={(proofId, state) => void judgeProof(selected.id, proofId, state)}
+                onBlockChange={(block) => void update(selected.id, { block })}
                 onPromote={(p) => void keepOnShelf(selected, p)}
                 onKeepTrial={(r, subject) => keepAsProof(selected, r, subject)}
               />
@@ -285,6 +289,7 @@ export default function LibraryAtelier({
               <SpecEditor
                 theme={selected}
                 onChange={(block) => void update(selected.id, { block })}
+                onRename={(name) => void update(selected.id, { name })}
                 onLock={() => void lock(selected.id)}
               />
             </Panel>
@@ -306,7 +311,8 @@ export default function LibraryAtelier({
           // the right of the rail that fills them.
           <Panel className="p-4">
             <p className="sr-only">
-              No style selected. Its technique, subject, palette and finish slots appear here.
+              No style selected. Its name and finish appear here; its technique and subject are
+              edited in the playground beside the proof sheet.
             </p>
             <div className="space-y-2">
               {SLOT_NAMES.map((n) => (
