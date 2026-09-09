@@ -37,6 +37,17 @@ background is genuinely held keeps it. Under 1.0 the picture ended softer than
 it started, which on a looping swatch is the thing the eye actually complains
 about.
 
+PALETTE (only when a source still is given) -- how far the clip's colours drift
+from the picture it was made from. A video model asked to animate a style swatch
+may animate it into a DIFFERENT style, and the earlier numbers are all blind to
+that: they read greyscale edges. Measured on a local H3 render that replaced a
+blueprint's blue and white with orange, red and yellow, retention still scored
+0.92, because the bars stayed where they were. For a swatch whose whole job is
+to show a palette, that is the disqualifying defect and nothing here could see
+it. Compared as a coarse 3D colour histogram, intersection over union: 1.0 is
+the same palette, and under PALETTE_FLOOR the clip is showing colours the style
+does not own.
+
 A PASS IS ENERGY AND CONCENTRATION. Retention is printed beside them as a
 diagnostic and deliberately does not gate -- the docstring on _retention says
 why, and says what was tried instead. The thresholds below are calibrated on this repo's own
@@ -90,6 +101,12 @@ from PIL import Image
 FROZEN = 0.01
 MIN_CONCENTRATION = 0.45
 MIN_SHARPNESS = 0.85
+# Calibrated 2026-09-09 with the ground removed (see _palette): blueprint's own
+# good clip scores well above this and the orange-and-red repaint well below.
+PALETTE_FLOOR = 0.55
+# 4 levels per channel: 64 buckets. Fine enough to separate blue-and-white from
+# orange-and-yellow, coarse enough that a compression shift does not register.
+PALETTE_BINS = 4
 
 # The busiest tenth. Not a tunable: it is the definition of "concentrated".
 BUSY_FRACTION = 0.10
@@ -172,13 +189,50 @@ def _retention(e0, mask, later_edges):
     return min(float(np.where(mask, e, 0.0).sum()) / base for e in later_edges)
 
 
+def _palette(rgb):
+    """A coarse 3D colour histogram of the INK, normalised.
+
+    THE BACKGROUND IS DROPPED FIRST, and that is what makes this work. Measured
+    2026-09-09: a clip that repainted a blueprint's bars orange, red and yellow
+    scored 0.90 against the swatch on a plain histogram, because the blue ground
+    is most of the frame and swamps everything drawn on it. Removing the single
+    largest bucket -- always the ground on a swatch of this kind -- leaves the
+    marks, which is where a style's palette actually lives.
+    """
+    q = (rgb.astype(np.int32) * PALETTE_BINS // 256).clip(0, PALETTE_BINS - 1)
+    idx = (q[..., 0] * PALETTE_BINS + q[..., 1]) * PALETTE_BINS + q[..., 2]
+    h = np.bincount(idx.ravel(), minlength=PALETTE_BINS ** 3).astype(np.float64)
+    h[h.argmax()] = 0.0
+    return h / max(h.sum(), 1.0)
+
+
+def palette_drift(video, source, at=None):
+    """Histogram intersection between the source still and the clip's frames.
+
+    The MINIMUM across sampled frames, not the mean: a clip that is faithful for
+    four seconds and then turns yellow has turned yellow.
+    """
+    src = _palette(np.asarray(Image.open(source).convert("RGB").resize((160, 96))))
+    worst = 1.0
+    for n in at:
+        r = subprocess.run(
+            ["ffmpeg", "-hide_banner", "-loglevel", "error", "-i", str(video),
+             "-vf", f"select='eq(n\\,{n})',scale=160:96", "-frames:v", "1",
+             "-f", "image2pipe", "-vcodec", "png", "-"], capture_output=True)
+        if not r.stdout:
+            continue
+        got = _palette(np.asarray(Image.open(io.BytesIO(r.stdout)).convert("RGB")))
+        worst = min(worst, float(np.minimum(src, got).sum()))
+    return worst
+
+
 def _laplacian_var(a):
     """Edge definition. The 4-neighbour Laplacian, variance of the response."""
     lap = (-4 * a[1:-1, 1:-1] + a[:-2, 1:-1] + a[2:, 1:-1] + a[1:-1, :-2] + a[1:-1, 2:])
     return float(lap.var())
 
 
-def inspect(video):
+def inspect(video, source=None):
     n = _count(video)
     if n < 3:
         raise RuntimeError(f"{video} has {n} frame(s)")
@@ -218,6 +272,7 @@ def inspect(video):
     retention = _retention(e0, mask, [_edges(f[k]) for k in probe_at[1:]])
 
     e = energy(video)
+    palette = palette_drift(video, source, probe_at) if source else None
     reasons = []
     if e < FROZEN:
         reasons.append(f"frozen ({e:.3f} < {FROZEN})")
@@ -233,6 +288,10 @@ def inspect(video):
     # last -- and as a threshold across different images it is worthless.
     if sharpness < MIN_SHARPNESS:
         reasons.append(f"ends softer than it starts ({sharpness:.2f} < {MIN_SHARPNESS})")
+    if palette is not None and palette < PALETTE_FLOOR:
+        reasons.append(
+            f"the colours leave the style ({palette:.2f} < {PALETTE_FLOOR}) — "
+            f"this clip is not showing the swatch's palette")
 
     return {
         "clip": str(video),
@@ -241,6 +300,7 @@ def inspect(video):
         "energy": round(e, 4),
         "concentration": round(concentration, 4),
         "retention": round(retention, 4),
+        "palette": None if palette is None else round(palette, 4),
         "sharpness": round(sharpness, 4),
         "ok": not reasons,
         "reasons": reasons,
@@ -248,16 +308,25 @@ def inspect(video):
 
 
 def main():
-    args = [a for a in sys.argv[1:] if not a.startswith("--")]
-    as_json = "--json" in sys.argv[1:]
-    rows = [inspect(Path(a)) for a in args]
+    argv = sys.argv[1:]
+    # --source <still> turns the palette check on; without it that column is
+    # blank rather than guessed at.
+    source = None
+    if "--source" in argv:
+        i = argv.index("--source")
+        source = Path(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
+    args = [a for a in argv if not a.startswith("--")]
+    as_json = "--json" in argv
+    rows = [inspect(Path(a), source) for a in args]
     if as_json:
         print(json.dumps(rows, indent=2))
         return
-    print(f"\n  {'clip':30s} {'energy':>8s} {'concen':>8s} {'retain':>8s} {'sharp':>7s}  verdict")
+    print(f"\n  {'clip':26s} {'energy':>8s} {'concen':>8s} {'retain':>8s} {'sharp':>7s} {'palette':>8s}  verdict")
     for r in rows:
-        print(f"  {Path(r['clip']).stem:30s} {r['energy']:8.3f} {r['concentration']:8.2f} "
-              f"{r['retention']:8.2f} {r['sharpness']:7.2f}  {'OK' if r['ok'] else 'FAIL'}")
+        pal = "     n/a" if r["palette"] is None else f"{r['palette']:8.2f}"
+        print(f"  {Path(r['clip']).stem:26s} {r['energy']:8.3f} {r['concentration']:8.2f} "
+              f"{r['retention']:8.2f} {r['sharpness']:7.2f} {pal}  {'OK' if r['ok'] else 'FAIL'}")
         for why in r["reasons"]:
             print(f"      · {why}")
     print()

@@ -282,6 +282,37 @@ before, slow it with optical-flow interpolation to fill the run. Blueprint keeps
 the result — a steady build with no plateau. `build-preset-clips.mts` runs it
 whenever a sidecar carries `retime`.
 
+### All six, and what the checks say about them
+
+Rendered locally on H3 at 640x384x73, prompt "Animate the image", retimed to 3s.
+About 45 seconds each. Judged with `clip_check.py --source <swatch>`:
+
+| preset | concen | retain | palette | verdict |
+| --- | --- | --- | --- | --- |
+| blueprint | 0.80 | 0.97 | 0.60 | hatch fills the bars, rings settle |
+| paper-relief | 0.51 | 0.06 | 0.87 | the paper layers shift, the arrow extends |
+| data-neon | 0.98 | 0.81 | 0.63 | bars grow along the grid |
+| newsprint-cutout | 0.87 | 0.51 | 0.67 | the ball rolls onto the bar |
+| signal-ledger | 0.90 | 0.89 | **0.18** | composition holds, but a GREEN ball appears |
+| chalk-argument | 0.51 | 0.82 | **0.42** | **a photographic HAND enters and draws** |
+
+The palette check is the one that earned its place. It is the only measure that
+sees either remaining defect, and it was blind to both until the background was
+dropped from the histogram — a repainted blueprint scored 0.90 on a plain one,
+because the blue ground is most of the frame.
+
+**chalk-argument is a prior, not a bad draw.** Three seeds, three hands: the
+model's idea of an animated chalkboard chart is a whiteboard-explainer video, so
+it brings an arm in from the right with a marker. The node takes no negative
+prompt, so it cannot be forbidden. Note the preset's own line is "Blackboard,
+drawn live", which makes the hand arguably ON style and definitely off register
+for a swatch — an operator call, not a measurement.
+
+**signal-ledger was a bad draw** and reseeding fixed most of it: the first three
+seeds dissolved the bars entirely (retention 0.03-0.29), the fourth holds the
+composition at 0.86. What remains is one green ball where the palette says
+harbor cyan.
+
 ### Length is the quality ceiling, not resolution
 
 With the flags gone it became cheap enough to isolate. Same swatch, same prompt,

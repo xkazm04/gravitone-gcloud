@@ -4,7 +4,7 @@
   "fps": 20,
   "seconds": 5,
   "budgetKB": 260,
-  "totalBytes": 557061,
+  "totalBytes": 448725,
   "clips": [
     {
       "id": "signal-ledger",
@@ -14,16 +14,16 @@
         {
           "src": "/clips/presets/signal-ledger.webm",
           "type": "video/webm; codecs=\"vp9\"",
-          "bytes": 45743
+          "bytes": 31771
         }
       ],
-      "bytes": 51054,
-      "route": "wan",
+      "bytes": 37031,
+      "route": "h3",
       "width": 640,
-      "height": 362,
+      "height": 384,
       "fps": 20,
-      "frames": 93,
-      "seconds": 4.7
+      "frames": 59,
+      "seconds": 2.95
     },
     {
       "id": "newsprint-cutout",
@@ -33,16 +33,16 @@
         {
           "src": "/clips/presets/newsprint-cutout.webm",
           "type": "video/webm; codecs=\"vp9\"",
-          "bytes": 82366
+          "bytes": 42228
         }
       ],
-      "bytes": 90030,
-      "route": "wan",
+      "bytes": 49814,
+      "route": "h3",
       "width": 640,
-      "height": 362,
+      "height": 384,
       "fps": 20,
-      "frames": 93,
-      "seconds": 4.7
+      "frames": 60,
+      "seconds": 3
     },
     {
       "id": "blueprint",
@@ -71,16 +71,16 @@
         {
           "src": "/clips/presets/chalk-argument.webm",
           "type": "video/webm; codecs=\"vp9\"",
-          "bytes": 141499
+          "bytes": 114185
         }
       ],
-      "bytes": 152341,
-      "route": "wan",
+      "bytes": 124852,
+      "route": "h3",
       "width": 640,
-      "height": 362,
+      "height": 384,
       "fps": 20,
-      "frames": 93,
-      "seconds": 4.7
+      "frames": 58,
+      "seconds": 2.9
     },
     {
       "id": "paper-relief",
@@ -90,16 +90,16 @@
         {
           "src": "/clips/presets/paper-relief.webm",
           "type": "video/webm; codecs=\"vp9\"",
-          "bytes": 70604
+          "bytes": 58707
         }
       ],
-      "bytes": 77376,
-      "route": "wan",
+      "bytes": 65467,
+      "route": "h3",
       "width": 640,
-      "height": 362,
+      "height": 384,
       "fps": 20,
-      "frames": 93,
-      "seconds": 4.7
+      "frames": 60,
+      "seconds": 3
     },
     {
       "id": "data-neon",
@@ -109,16 +109,16 @@
         {
           "src": "/clips/presets/data-neon.webm",
           "type": "video/webm; codecs=\"vp9\"",
-          "bytes": 42935
+          "bytes": 28700
         }
       ],
-      "bytes": 50481,
-      "route": "wan",
+      "bytes": 35782,
+      "route": "h3",
       "width": 640,
-      "height": 362,
+      "height": 384,
       "fps": 20,
-      "frames": 93,
-      "seconds": 4.7
+      "frames": 60,
+      "seconds": 3
     }
   ]
 }

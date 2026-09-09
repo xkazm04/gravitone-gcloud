@@ -36,6 +36,7 @@ ROOT = HERE.parent.parent
 sys.path.insert(0, str(ROOT / "pipeline" / "vlm-probe"))
 sys.path.insert(0, str(ROOT / "pipeline" / "foundry"))
 import guard  # noqa: E402
+import motion  # noqa: E402
 from consistency import stage_reference  # noqa: E402
 from dojo_video import generate_video  # noqa: E402
 
@@ -61,7 +62,20 @@ NEG = ("white streaks, horizontal bars, light bars, wipe, banner, flash, strobe,
        "camera shake, fast motion, zoom blur, "
        "text, letters, watermark, logo, caption, subtitles")
 
-W, H, LEN, FPS = 848, 480, 121, 24  # 5.04 s, the proven size on this card
+# TWO ENGINES, and h3 is the default because it is the one that works. Wan
+# renders the camera and leaves flat linework alone; MiniMax H3 fl2va animates
+# the drawing in its own idiom. pipeline/video/README.md carries the evidence.
+#
+# H3 is 640x384 because its dimensions must divide by 32, and 73 frames because
+# its length must be 5 mod 17 -- 124 is the next one up and it wanders off the
+# style there. It ARRIVES about 40% of the way through, so every h3 clip is
+# retimed afterwards; the sidecar carries the request and
+# pipeline/build-preset-clips.mts performs it.
+ENGINES = {
+    "h3": {"w": 640, "h": 384, "len": 73, "fps": 24, "steps": 8, "retime": 3.0},
+    "wan": {"w": 848, "h": 480, "len": 121, "fps": 24, "steps": 20, "retime": None},
+}
+W, H, LEN, FPS = 848, 480, 121, 24  # wan's proven size on this card
 OUT = ROOT / "pipeline" / "runs" / "preset-clips"
 PRESETS_TS = ROOT / "app" / "library" / "presets.ts"
 SWATCHES = ROOT / "public" / "presets"
@@ -130,16 +144,51 @@ def i2v_workflow(prompt, start_image, seed, prefix):
     }
 
 
+def h3_workflow(prompt, start_image, cfg, prefix):
+    """MiniMax H3 fl2va — first frame in, video out, turbo LoRA at its 8 steps.
+
+    Built here rather than calling motion.chain_workflow so the LoRA and the
+    sampler tail stay visible beside the Wan graph they are the alternative to.
+    """
+    w = {
+        "1": {"class_type": "UNETLoader",
+              "inputs": {"unet_name": motion.FL2VA, "weight_dtype": "default"}},
+        "2": {"class_type": "CLIPLoader",
+              "inputs": {"clip_name": motion.TEXT_ENC, "type": "minimax", "device": "default"}},
+        "3": {"class_type": "VAELoader", "inputs": {"vae_name": motion.VIDEO_VAE}},
+        "10": {"class_type": "LoadImage", "inputs": {"image": start_image}},
+        "11": {"class_type": "MiniMaxH3ImageToVideo",
+               "inputs": {"clip": ["2", 0], "vae": ["3", 0], "prompt": prompt,
+                          "width": cfg["w"], "height": cfg["h"], "length": cfg["len"],
+                          "first_frame": ["10", 0]}},
+        "12": {"class_type": "LoraLoaderModelOnly",
+               "inputs": {"model": ["1", 0], "lora_name": motion.FL_LORA, "strength_model": 1.0}},
+    }
+    return motion._tail(w, ["12", 0], ["11", 0], ["11", 1], cfg["steps"],
+                        "res_multistep", prefix, cfg["len"])
+
+
 def main():
     argv = sys.argv[1:]
     only = argv[argv.index("--only") + 1] if "--only" in argv else None
     force = "--force" in argv
+    engine = argv[argv.index("--engine") + 1] if "--engine" in argv else "h3"
+    # H3's noise seed lives at module scope in motion.py, so it is set rather
+    # than passed. It is the ONLY lever left for a clip that comes out wrong:
+    # the node takes no negative prompt, the prompt is already as short as it
+    # can be, and every other setting was measured worse. A bad draw is redrawn.
+    if "--seed" in argv:
+        motion.SEED = int(argv[argv.index("--seed") + 1])
+    if engine not in ENGINES:
+        raise SystemExit(f"--engine must be one of {', '.join(ENGINES)}")
+    cfg = ENGINES[engine]
 
     presets = [p for p in read_presets() if not only or p["id"] == only]
     OUT.mkdir(parents=True, exist_ok=True)
-    todo = [p for p in presets if force or not (OUT / f"{p['id']}.webm").exists()]
-    print(f"preset clips: {len(presets)} preset(s), {len(todo)} to render "
-          f"at {W}x{H}x{LEN} @ {FPS}fps", flush=True)
+    todo = [p for p in presets
+            if force or not any((OUT / f"{p['id']}{e}").exists() for e in (".webm", ".mp4"))]
+    print(f"preset clips: {engine} · {len(presets)} preset(s), {len(todo)} to render "
+          f"at {cfg['w']}x{cfg['h']}x{cfg['len']} @ {cfg['fps']}fps", flush=True)
     if not todo:
         return
 
@@ -160,7 +209,15 @@ def main():
         if not guard.headroom_ok():
             guard.recycle_comfy("headroom")
         ref = stage_reference(SWATCHES / f"{p['id']}.jpg")
-        wf = i2v_workflow(p["motion"], ref, SEED, prefix=f"preset-{p['id']}")
+        if engine == "h3":
+            # "Animate the image" and nothing more. The authored motion line was
+            # measured WORSE on every hosted and local engine tried: a long
+            # instruction is mostly a list of things not to do, and a model that
+            # cannot ground "the circle with arrow" reads the rest as a
+            # description of stillness. See the README.
+            wf = h3_workflow("Animate the image", ref, cfg, prefix=f"preset-{p['id']}")
+        else:
+            wf = i2v_workflow(p["motion"], ref, SEED, prefix=f"preset-{p['id']}")
         t0 = time.time()
         try:
             vid = generate_video(wf)
@@ -170,15 +227,25 @@ def main():
             if not guard.recycle_comfy("after failure"):
                 break
             continue
-        dest = OUT / f"{p['id']}.webm"
+        dest = OUT / f"{p['id']}{Path(vid).suffix}"
+        for stale in OUT.glob(f"{p['id']}.*"):
+            if stale != dest and stale.suffix in (".webm", ".mp4"):
+                stale.unlink()
         shutil.copy2(vid, dest)
-        dest.with_suffix(".json").write_text(json.dumps(
-            {"id": p["id"], "name": p["name"], "motion": p["motion"], "seed": SEED,
-             "size": [W, H, LEN], "fps": FPS, "engine": "wan2.2-ti2v-5B/i2v"},
-            indent=2, ensure_ascii=False), encoding="utf-8")
+        side = {"id": p["id"], "name": p["name"], "route": engine if engine == "h3" else "wan",
+                "engine": "minimax-h3-fl2va" if engine == "h3" else "wan2.2-ti2v-5B/i2v",
+                "size": [cfg["w"], cfg["h"], cfg["len"]], "fps": cfg["fps"],
+                "steps": cfg["steps"], "trim": 0 if engine == "h3" else 0.35,
+                "seed": motion.SEED,
+                "prompt": "Animate the image" if engine == "h3" else p["motion"]}
+        if cfg["retime"]:
+            side["retime"] = cfg["retime"]
+        (OUT / f"{p['id']}.json").write_text(
+            json.dumps(side, indent=2, ensure_ascii=False), encoding="utf-8")
         print(f"  [{n}/{len(todo)}] {p['id']} -> {time.time() - t0:.0f}s", flush=True)
 
-    done = sum(1 for p in presets if (OUT / f"{p['id']}.webm").exists())
+    done = sum(1 for p in presets
+               if any((OUT / f"{p['id']}{e}").exists() for e in (".webm", ".mp4")))
     print(f"preset clips: {done}/{len(presets)} rendered into {OUT}", flush=True)
     if failed:
         raise SystemExit(f"failed: {', '.join(failed)}")
