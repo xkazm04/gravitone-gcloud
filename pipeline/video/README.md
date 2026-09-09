@@ -5,7 +5,8 @@ Three files, and the split between them is the point.
 | file | what it does | what it costs |
 | --- | --- | --- |
 | `motion_author.py` | Reads a picture, then writes its motion prompt from what it saw | ~60 s, needs the card |
-| `compose_clip.py` | Animates a still by MOVING A PIECE OF IT — the route that works | ~3.5 min once, then free |
+| `compose_clip.py` | Animates a still by MOVING A PIECE OF IT | ~3.5 min once, then free |
+| `leonardo_reference.py` | Buys one hosted clip, to test whether the ceiling is ours | real money, one clip |
 | `render_preset_clips.py` | Renders raw clips on the local Wan stack | ~110 s per clip, needs the card |
 | `clip_check.py` | Says whether the OBJECTS moved or the picture just drifted | free |
 | `transcode.mjs` | Squeezes a raw clip into committed artefacts, under a byte budget | seconds, needs only ffmpeg |
@@ -145,3 +146,46 @@ it was drawn, because it is the same pixels translated.
 therefore slides off its curve rather than riding down it, and the sprite carries
 a few pixels of the curve's tip with it. A curved path needs a third grounded
 point; rotation and scale need more than a translate.
+
+## The control: a hosted pipeline fails the same way
+
+The local failures do not, on their own, say whether the ceiling is the CONTENT
+or OUR HANDLING of it. So one clip was bought from Leonardo — the same swatch,
+the same intent — and the answer is unambiguous.
+
+**Leonardo's image-to-video runs `motionModel: "WAN21"`.** Same model family as
+the local stack, behind a pipeline tuned by people whose job that is. Measured
+on the same instrument:
+
+| clip | concentration | verdict |
+| --- | --- | --- |
+| Leonardo, Wan 2.1 hosted | 0.38 | camera move, not objects moving |
+| local, Wan 2.2 TI2V-5B | 0.42 | camera move, not objects moving |
+| composited, no video model | 1.00 | objects moving |
+
+Leonardo ignored the object instruction exactly as the local stack did, drifted
+the whole frame, and grew a second ghost circle in the last second. It is not
+better. **The ceiling is the content.** A video model asked to animate a
+technical drawing will move the camera, whoever is holding it.
+
+Watch `pipeline/runs/preset-clips/compare-3way.mp4` for the three side by side.
+
+## Two places this pipeline is biased toward "move at least something"
+
+Both are real, both are ours, and neither is the cause of the failure above —
+the hosted control rules that out. They are worth fixing anyway.
+
+**1. The author cannot decline.** `motion_author.py`'s schemas make a move
+mandatory: `moves` is required with `minItems: 1`, and the keyframe pass must
+return a `moving` element and a `path`. There is no way for the reading stage to
+say *this picture has nothing that should move* or *this one needs a different
+treatment*. Handed a swatch with no separable movable element, it will invent
+one, and everything downstream will faithfully animate the invention.
+
+**2. The negative prompt forbids the motion the positive prompt asks for.**
+`render_preset_clips.py`'s NEG carries `morphing shapes, shapes appearing,
+shapes disappearing, added elements` — added to stop a gloved hand entering the
+chalkboard, which it did. But a bar rising IS a shape changing, so a prompt
+asking for it is arguing with itself. (The dojo's own NEG opens with `static
+frame, frozen image, no motion`, which pushes the other way for the other
+reason; it was removed here early, and it is worth knowing it was ever there.)
