@@ -46,7 +46,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Boxes, FileQuestion, X } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Eyebrow } from "@/components/ui/Primitives";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useAuth } from "@/lib/useAuth";
 import {
@@ -261,32 +260,53 @@ export default function StudioView({ projectId }: { projectId: string }) {
           components/ui/Modal.tsx#restoreFocus. */}
       <main tabIndex={-1} className="pb-16">
         <header className="pt-6">
-          <div className="flex flex-wrap items-center gap-3">
-            <Eyebrow>studio</Eyebrow>
-            {project && (
-              <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label tracking-[0.14em] text-white/55 uppercase">
-                {DISCIPLINE_LABEL[project.discipline ?? disciplineOf(project.template)]} ·{" "}
-                {templateOf(project.template).label} · {project.targetS}s
-              </span>
-            )}
-            <span className="font-jetbrains rounded-full border border-amber-400/25 bg-amber-400/5 px-3 py-1 text-label tracking-[0.18em] text-amber-300/90 uppercase">
-              prototype · mocked data
-            </span>
-          </div>
+          {/* THE ROW ABOVE THE TITLE IS GONE (operator, 2026-09-09), and its
+              two survivors moved onto the title's own line.
 
-          <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-            <h1
-              // The one element that says WHICH of the four doors this is — the
-              // project's name, or the sentence for absent / unreadable / still
-              // opening. `data-door` carries the machine-readable half so a
-              // harness asserts the state rather than pattern-matching the copy,
-              // which is the half that gets rewritten.
-              data-testid="studio-headline"
-              data-door={door.kind}
-              className={`font-instrument text-4xl ${door.kind === "opening" ? "text-white/30" : "text-white"}`}
-            >
-              {headline}
-            </h1>
+              It held three things. `studio` was the third label for one
+              location: StudioFrame's nav marks the current module with a rule
+              under it, the project's name is directly below, and nothing on
+              this page is anywhere but the studio. The spec pill and the
+              prototype stamp are the WORK — what this project is, and that its
+              data is mocked — so they moved rather than went; on the title line
+              they read as facts ABOUT the named project, which is what they are.
+              The row itself cost a whole row of vertical space to say one word.
+
+              `items-baseline` so the two chips sit on the serif's own baseline
+              rather than floating at the centre of a 4xl line box. */}
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-3">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+              <h1
+                // The one element that says WHICH of the four doors this is —
+                // the project's name, or the sentence for absent / unreadable /
+                // still opening. `data-door` carries the machine-readable half
+                // so a harness asserts the state rather than pattern-matching
+                // the copy, which is the half that gets rewritten.
+                data-testid="studio-headline"
+                data-door={door.kind}
+                className={`font-instrument text-4xl ${door.kind === "opening" ? "text-white/30" : "text-white"}`}
+              >
+                {headline}
+              </h1>
+
+              {/* WHAT THIS PROJECT IS — discipline, format, runtime — beside
+                  the name it describes rather than a row above it. Only when
+                  there is a project to describe; the three closed doors have no
+                  spec, and a chip drawn over "Nothing to open here" would be
+                  describing a record that is not there. */}
+              {project && (
+                <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label tracking-[0.14em] text-white/55 uppercase">
+                  {DISCIPLINE_LABEL[project.discipline ?? disciplineOf(project.template)]} ·{" "}
+                  {templateOf(project.template).label} · {project.targetS}s
+                </span>
+              )}
+
+              {/* The stamp stays unconditional: what it discloses is true of
+                  the whole surface, including the doors that failed to open. */}
+              <span className="font-jetbrains rounded-full border border-amber-400/25 bg-amber-400/5 px-3 py-1 text-label tracking-[0.18em] text-amber-300/90 uppercase">
+                prototype · mocked data
+              </span>
+            </div>
 
             {/* WHAT THIS PROJECT HAS MADE, hung off the project's own name.
                 Position is the argument: the app nav's four word-links sit in

@@ -30,9 +30,13 @@ const SURFACE: Record<PhaseKey, (projectId: string) => React.ReactNode> = {
   cut: (projectId) => <CutTimeline projectId={projectId} />,
 };
 
-export const STEPS = PHASES.map((key, i) => ({
+// NO ORDINAL ON THE STEP. `n: i + 1` was here for the rail's circled numerals,
+// and the operator removed those on 2026-09-09 (Stepper.tsx says why). The
+// order is the array's own, which is PHASES' order in lib/projects — a derived
+// copy of it on every entry is a second spelling of the same fact, and the one
+// that would still read `3` after a reorder if anybody stored it.
+export const STEPS = PHASES.map((key) => ({
   key,
-  n: i + 1,
   title: PHASE_TITLE[key],
   render: SURFACE[key],
 }));

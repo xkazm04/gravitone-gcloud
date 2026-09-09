@@ -24,7 +24,7 @@
 // the disclosure — a creator watching a fake run with nothing on screen saying so
 // is the opposite of what this surface is for.
 
-import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
+import { Hint } from "@/components/ui/signal";
 
 import { spendNote, type Preflight } from "./live";
 import type { RunState } from "./types";
@@ -133,6 +133,17 @@ export function RealRunControl({
       >
         {note.text}
       </span>
+      {/* WHAT A REAL RUN IS, on the control that starts one. It used to be a
+          `replay 8×` chip in a row under the topic field (`LocalProcessNote`,
+          deleted 2026-09-09 with that row) — a stamp on the DEFAULT button,
+          which is the replay, sitting where it read as a caveat on the whole
+          step. The replay factor is not restated here: it is what the word
+          replay means, and `StandInNote` names the saved run the cards come
+          from. What survives is the half nobody can deduce — that pressing THIS
+          one spends minutes of a local process, not a network round trip. */}
+      <Hint label="What a real run is">
+        a local Claude Code process — minutes, not milliseconds
+      </Hint>
     </div>
   );
 }
@@ -180,28 +191,3 @@ export function RunStatus({ state }: { state: RunState }) {
   );
 }
 
-/** What the engine actually is — a stamp, not a paragraph.
- *
- *  It was two sentences under the run button on BOTH faces: "research runs as a
- *  local Claude Code process — minutes, not milliseconds, and it can exit
- *  non-zero. Prototype: the trace is replayed at 8× from run 1 and nothing is
- *  executed." Everything in it that is the WORK survives here — the replay
- *  factor is drawn as the chip itself, and the runtime it is a replay OF sits
- *  behind the chip's disclosure. What went is the app narrating: "nothing is
- *  executed" is what the word `replay` means, and the fact that a run can exit
- *  non-zero is not a note, it is the `failed` ending the log renders in rose
- *  when it happens. */
-export function LocalProcessNote({ className = "" }: { className?: string }) {
-  return (
-    <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
-      <span className={`${CHIP_CLASS} ${TALLY_TONE.neutral}`}>
-        <span aria-hidden className="opacity-50">replay</span>
-        <span className="sr-only">replayed at</span>
-        8×
-      </span>
-      <Hint label="What a real run is">
-        a local Claude Code process — minutes, not milliseconds
-      </Hint>
-    </div>
-  );
-}

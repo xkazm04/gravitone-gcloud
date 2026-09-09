@@ -1,30 +1,75 @@
 "use client";
 
-// THE STEPPER — one row, numbers and titles only.
+// THE STEPPER — one row, five titles, and the state of each one drawn on it.
 //
-// It used to be a wrapping grid of cards: each step carried a lowercase
-// subtitle ("topic → notebook → scope") and a sentence of state ("2 on film · 1
-// rejected · 1 rendering · 1 blocked"), which cost three lines of height and
-// pushed the actual step surface below the fold on a laptop. The state belongs
-// to the surface you are standing on, not to the rail you navigate with.
+// ── THE NUMBERS ARE GONE (operator, 2026-09-09) ────────────────────────────
 //
-// What survives from that card rail is the ONE thing a rail should say without
-// words: the number is tinted by the project's own progress, so "where am I"
-// and "what is finished" are the same glance. No extra element, no extra line.
+// Every step wore a circled ordinal, and the circle was doing two jobs badly.
+// As a NUMBER it was noise: the steps are already left-to-right in production
+// order, they are named, and nobody navigates a five-item rail by counting. As
+// a STATE indicator it was the only thing carrying progress, tinted per state
+// with no other signal — so "done" and "blocked" differed by hue inside a ring
+// that looked identical, which is the one-signal-in-one-channel shape this
+// repo's law forbids, and it read as five badges competing with five titles.
+//
+// What replaced it is a MARK PER STATE, and the mark is the signal:
+//
+//   done     ✓ (a real check, drawn)   the step is locked
+//   review   ◆ a filled lozenge        it needs a call
+//   blocked  ▲ a triangle              it stopped, and why is on the surface
+//   working  ◦ a hollow ring           in progress
+//   empty    ·  nothing at all         not started — the honest absence
+//
+// `empty` renders NO glyph on purpose. A rail where every step wears a mark is
+// a rail where the marks mean nothing; the absence IS the state, and it leaves
+// the untouched steps quiet so the ones with news stand out. Colour still
+// agrees with each mark, and never decides alone — every one of these survives
+// a greyscale screenshot, which the tinted numerals did not.
+//
+// The state is the project's OWN progress record, which each step surface
+// derives and reports (usePhaseReport). It is not a guess made here.
+//
+// What this rail still refuses to do, unchanged from the card rail it replaced:
+// carry a subtitle or a sentence of counts. "2 on film · 1 rejected · 1
+// rendering" belongs to the surface you are standing on, not to the control you
+// navigate with, and it cost three lines of height that pushed the step itself
+// below the fold.
+
+import { Check } from "lucide-react";
 
 import { PHASE_STATE_WORD, type PhaseKey, type PhaseState } from "@/lib/projects";
 
 import { STEPS } from "./phases";
 
-/** Number-badge treatment per state. Selection outranks state — the step you
- *  are standing on is always the cyan one, whatever shape it is in. */
-const BADGE: Record<PhaseState, string> = {
-  done: "border-emerald-300/50 bg-emerald-300/10 text-emerald-200",
-  working: "border-cyan-300/35 text-cyan-200/80",
-  review: "border-amber-300/45 text-amber-200",
-  blocked: "border-rose-300/45 text-rose-200",
-  empty: "border-white/15 text-white/45",
+/** The tone each state is drawn in — applied to the mark AND the title, so the
+ *  two read as one statement about one step rather than a chip beside a word. */
+const TONE: Record<PhaseState, string> = {
+  done: "text-emerald-300/90",
+  review: "text-amber-300/90",
+  blocked: "text-rose-300/90",
+  working: "text-cyan-300/85",
+  empty: "text-white/30",
 };
+
+/** The mark, per state. `empty` is deliberately nothing — see the header. */
+function StateMark({ state }: { state: PhaseState }) {
+  if (state === "empty") return null;
+  if (state === "done") return <Check className="h-4 w-4" aria-hidden strokeWidth={2.5} />;
+  return (
+    <svg viewBox="0 0 12 12" aria-hidden className="h-3 w-3" fill="none" stroke="currentColor">
+      {state === "review" ? (
+        // the lozenge — a decision standing on its point, waiting to be made
+        <path d="M6 1 L11 6 L6 11 L1 6 Z" fill="currentColor" stroke="none" />
+      ) : state === "blocked" ? (
+        // the triangle — the road sign, and the only mark here with a hard edge
+        <path d="M6 1.5 L11 10.5 H1 Z" strokeWidth={1.6} strokeLinejoin="round" />
+      ) : (
+        // working — the hollow ring, a thing still open
+        <circle cx={6} cy={6} r={4.2} strokeWidth={1.8} />
+      )}
+    </svg>
+  );
+}
 
 export default function Stepper({
   active,
@@ -56,19 +101,24 @@ export default function Stepper({
               // THE TITLE NO LONGER REPEATS THE LABEL. It read "Research —
               // working", and the word before the dash is printed on the button
               // three inches to the right. What is left is the state, which the
-              // badge draws in colour and nothing else spelled — so it also
-              // moves into the accessible name below, where a colour cannot go.
+              // mark draws and nothing else spelled — so it also goes into the
+              // accessible name below, where a shape cannot go.
               title={PHASE_STATE_WORD[state]}
-              className={`flex w-full cursor-pointer items-center justify-center gap-2 px-3 py-2.5 transition ${
+              className={`relative flex w-full cursor-pointer items-center justify-center gap-2 px-3 py-2.5 transition ${
                 on ? "bg-cyan-400/[0.09]" : "hover:bg-white/[0.04]"
               }`}
             >
-              <span
-                className={`font-jetbrains grid h-5 w-5 shrink-0 place-items-center rounded-full border text-label ${
-                  on ? "border-cyan-400/60 bg-cyan-400/15 text-cyan-200" : BADGE[state]
-                }`}
-              >
-                {s.n}
+              {/* WHERE YOU ARE, as a rule under the step — not as a colour on
+                  the mark. Selection and state are two different questions and
+                  they used to share one channel: the active step's badge went
+                  cyan, overwriting whatever the step's own state was, so you
+                  could not see that the step you were standing on was blocked.
+                  They are separate signals now, and both are always visible. */}
+              {on && (
+                <span aria-hidden className="absolute inset-x-0 bottom-0 h-0.5 bg-cyan-300/70" />
+              )}
+              <span className={`flex h-4 w-4 shrink-0 items-center justify-center ${TONE[state]}`}>
+                <StateMark state={state} />
               </span>
               <span
                 className={`truncate text-label ${on ? "font-medium text-white" : "text-white/60"}`}

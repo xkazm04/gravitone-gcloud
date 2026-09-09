@@ -25,7 +25,7 @@ import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
-import { LocalProcessNote, RealRunControl, RunStatus, TopicField } from "../run/controls";
+import { RealRunControl, RunStatus, TopicField } from "../run/controls";
 import LiveResult from "../run/LiveResult";
 import RunTrace from "../run/RunTrace";
 import type { EducationalResearchApi } from "./useEducationalResearch";
@@ -244,15 +244,23 @@ export default function RunStage({
             </Button>
           )}
         </div>
-        {/* THE TWO PATHS, EACH LABELLED WITH WHAT IT ACTUALLY IS. The default
-            button above walks the replay, and the substitution stands beside it
-            — typed topic struck out, the notebook's own topic in the chip. The
-            row below is the real engine and the money: explicit, second, and
-            carrying its price before it is pressed. */}
-        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <StandInNote topic={topic} />
-          <LocalProcessNote />
-        </div>
+        {/* NO ROW OF CHIPS UNDER THE FIELD (operator, 2026-09-09). It carried
+            `StandInNote` and `LocalProcessNote` — the substitution and the
+            replay factor — before anything had been run, which made it a
+            pre-emptive footnote about a button rather than a statement about
+            any work.
+
+            THE DISCLOSURE IS NOT DELETED, and check here before moving it
+            again: `StandInNote` still renders at the two moments it actually
+            bites — on the "a notebook exists" card and under a landed run
+            (both below) — where there IS a typed topic to strike through and a
+            notebook to name. Said then, it is about something; said here, it
+            was about nothing yet.
+
+            What went with the row is `LocalProcessNote`'s `replay 8×` chip. Its
+            one irreducible fact — that a real run is a local Claude Code
+            process, minutes rather than milliseconds — moved onto the real-run
+            control below, which is the button that starts one (run/controls.tsx). */}
         <div className="mt-4 border-t border-white/8 pt-4">
           <RealRunControl
             preflight={preflight}
