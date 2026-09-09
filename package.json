@@ -19,12 +19,14 @@
     "lint:ratchet": "node pipeline/lint-ratchet.mjs",
     "test": "playwright test",
     "test:live": "playwright test -c playwright.live.config.ts",
-    "verify": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run check:type && npm run check:narration && npm run check:trailer-structure && npm run check:frames-prompt && npm run check:style-refs && npm test && npm run build && npm run check:bundle",
+    "verify": "npm run typecheck && npm run lint:ratchet && npm run check:manifest && npm run check:notebook && npm run check:type && npm run check:narration && npm run check:clips && npm run check:trailer-structure && npm run check:frames-prompt && npm run check:style-refs && npm test && npm run build && npm run check:bundle",
     "prepare": "git config core.hooksPath .githooks || exit 0",
     "check:type": "node pipeline/check-type-scale.mjs",
     "check:frames-prompt": "npx tsx pipeline/frames-prompt-regression.mts",
     "check:style-refs": "npx tsx pipeline/style-ref-stability.mts",
-    "check:narration": "node pipeline/check-narration.mjs"
+    "check:narration": "node pipeline/check-narration.mjs",
+    "check:clips": "node pipeline/check-clips.mjs",
+    "build:preset-clips": "npx tsx pipeline/build-preset-clips.mts"
   },
   "dependencies": {
     "firebase": "^12.17.1",

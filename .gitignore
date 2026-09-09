@@ -156,3 +156,10 @@ __pycache__/
 # (backlog-digest.json, skill-registry.json), so this must not be `/.personas/`
 # — a directory rule here would shadow two files the repo means to carry.
 /.personas/project.json
+
+# Raw preset clip renders (pipeline/video/render_preset_clips.py) — 1-2MB each,
+# minutes of GPU apiece, and NOT what ships. The committed artefacts are what
+# pipeline/build-preset-clips.mts squeezes out of them, under public/clips/,
+# where pipeline/check-clips.mjs weighs them. Keeping the raws would put the
+# expensive, machine-specific half of the pipeline in every clone.
+/pipeline/runs/preset-clips/

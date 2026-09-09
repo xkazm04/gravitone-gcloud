@@ -2,10 +2,10 @@
 
 // ATELIER — the library as a studio wall, now wired to real tooling.
 //
-// Three panes: styles begin on the left (a brief, or a preset off the shelf),
-// the selected style is worked in the middle (its proof sheet and the
-// playground that fills it), and the dossier on the right is where it earns
-// its lock.
+// Three panes: styles begin on the left (a preset off the shelf, shown five
+// seconds at a time in the showcase above the wall), the selected style is
+// worked in the middle (its proof sheet and the playground that fills it), and
+// the dossier on the right is where it earns its lock.
 //
 // Every image on this screen is real. The presets are committed renders, the
 // proofs come back from /api/imaging/generate and live in IndexedDB, and the
@@ -35,25 +35,13 @@ import {
   type Dependents,
 } from "./parts";
 import PresetRail from "./PresetRail";
+import PresetShowcase from "./PresetShowcase";
 import SpecEditor from "./SpecEditor";
-import { type Preset } from "./presets";
+import { PRESETS, type Preset } from "./presets";
 
 /** The four slots a style is written in, in SpecEditor's order. Named here only
  *  to draw their outlines before a style exists to fill them. */
 const SLOT_NAMES = ["technique", "subject", "palette", "finish"] as const;
-
-/** What a "from a brief" style starts as — deliberately generic, and every
- *  slot obviously in need of the user's hand. */
-const BLANK = {
-  technique: "flat vector illustration, even line weight",
-  subject: "objects drawn plainly, one idea per frame",
-  palette: [
-    { name: "ink", hex: "#101418", role: "ground" as const },
-    { name: "bone", hex: "#EFEAE0", role: "objects" as const },
-    { name: "signal", hex: "#5BC8F5", role: "accent" as const },
-  ],
-  finish: "matte, generous empty space",
-};
 
 export default function LibraryAtelier({
   initialSelectedId = null,
@@ -79,6 +67,11 @@ export default function LibraryAtelier({
    *  the pills filter with the same predicate. */
   const [discipline, setDiscipline] = useState<DisciplineFilter>("all");
   const [busy, setBusy] = useState(false);
+  /** The preset the showcase is playing: whichever rail card the pointer or
+   *  keyboard focus last landed on. It STICKS rather than clearing on leave —
+   *  a panel that blanks when the mouse moves away flickers all the way down a
+   *  rail of six. */
+  const [considering, setConsidering] = useState<Preset>(PRESETS[0]);
   /** The style the user has asked to delete, and how many projects it would
    *  cost. Counted on demand rather than held for every style — the answer is
    *  only needed at the moment it is being weighed. */
@@ -91,6 +84,14 @@ export default function LibraryAtelier({
   const [shelfNote, setShelfNote] = useState<string | null>(null);
   /** Which shelf entries exist, by id. The sheet asks it per plate. */
   const shelved = useMemo(() => new Set((assets ?? []).map((a) => a.id)), [assets]);
+
+  /** The preset the showcase actually plays. The filter owns the rail, so a
+   *  discipline that hides the considered preset must move the showcase too —
+   *  otherwise the panel is playing a card the user can no longer see. */
+  const showcased = useMemo(() => {
+    if (styleFits(considering, discipline)) return considering;
+    return PRESETS.find((p) => styleFits(p, discipline)) ?? considering;
+  }, [considering, discipline]);
 
   const rows = useMemo(() => themes ?? [], [themes]);
   const shown = useMemo(() => rows.filter((t) => styleFits(t, discipline)), [rows, discipline]);
@@ -123,13 +124,6 @@ export default function LibraryAtelier({
       block: p.block,
       elements: p.elements,
     });
-    if (made) setSelectedId(made.id);
-    setBusy(false);
-  };
-
-  const startBlank = async () => {
-    setBusy(true);
-    const made = await create({ name: "Untitled style", origin: "scratch", block: BLANK, elements: [] });
     if (made) setSelectedId(made.id);
     setBusy(false);
   };
@@ -194,7 +188,7 @@ export default function LibraryAtelier({
 
   return (
     <div className="grid gap-5 lg:grid-cols-[240px_1fr_300px]">
-      <PresetRail onPick={startFrom} onScratch={startBlank} busy={busy} discipline={discipline} />
+      <PresetRail onPick={startFrom} onConsider={setConsidering} busy={busy} discipline={discipline} />
 
       <section className="space-y-4">
         {/* THE COUNT IS ON THE OPTION. A filter that can empty the wall used to
@@ -216,6 +210,8 @@ export default function LibraryAtelier({
           ]}
           onChange={setDiscipline}
         />
+
+        <PresetShowcase preset={showcased} />
 
         {/* The machine's own words, and a retry. The clause that used to follow
             them explained where styles are stored — the app's mechanism, on the

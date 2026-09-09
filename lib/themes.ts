@@ -84,6 +84,10 @@ export type ThemeStatus = "draft" | "proofing" | "locked";
  *  actually made from rather than from a description of it. */
 export type ThemeOrigin = "scratch" | "preset" | "screenshot" | "plate";
 
+/** The name `newTheme` falls back to when a draft arrives without one, and the
+ *  name the retired "From a brief" button stamped on every style it minted. */
+export const UNTITLED = "Untitled style";
+
 export const STATUS_WORD: Record<ThemeStatus, string> = {
   draft: "still words",
   proofing: "proofing",
@@ -139,7 +143,7 @@ export function newTheme(uid: string, draft: ThemeDraft): Theme {
   return {
     id: `th-${now.toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     uid,
-    name: draft.name.trim() || "Untitled style",
+    name: draft.name.trim() || UNTITLED,
     origin: draft.origin,
     presetId: draft.presetId,
     discipline: draft.discipline,
@@ -377,6 +381,41 @@ export async function putTheme(t: Theme): Promise<Theme> {
     db = await openDb();
     await runTx(db, THEMES_STORE, "readwrite", (store) => store.put(stamped));
     return stamped;
+  } finally {
+    db?.close();
+  }
+}
+
+/**
+ * Drop the abandoned blanks.
+ *
+ * "From a brief" created a style called "Untitled style" carrying a hardcoded
+ * generic four-slot block, and a wall could only accumulate them: they are not
+ * a brief, they are a blank the user was expected to overwrite in full, and
+ * most never were. The button is gone; these are what it left behind, in every
+ * browser that pressed it.
+ *
+ * NARROW ON PURPOSE. Only a style that is still exactly `UNTITLED`, still has
+ * an empty proof sheet, and was never locked. A user who renamed one, proved
+ * one, or locked one has said it is theirs — and a cleanup that deletes work is
+ * a far worse bug than a leftover row.
+ */
+export async function purgeUntitledStyles(uid: string): Promise<number> {
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    const rows = await getByIndex<Theme>(db, THEMES_STORE, BY_UID, uid);
+    const doomed = rows.filter(
+      (t) => t.name.trim() === UNTITLED && !t.proofs.length && statusOf(t) !== "locked",
+    );
+    for (const t of doomed) {
+      await runTx(db, THEMES_STORE, "readwrite", (store) => store.delete(t.id));
+    }
+    return doomed.length;
+  } catch {
+    // A cleanup that cannot run is not a failure the user needs to hear about;
+    // the read that follows it is what matters, and it reports for itself.
+    return 0;
   } finally {
     db?.close();
   }

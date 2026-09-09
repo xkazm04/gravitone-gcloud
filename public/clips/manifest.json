@@ -1,0 +1,100 @@
+{
+  "profile": "showcase",
+  "width": 640,
+  "fps": 20,
+  "seconds": 5,
+  "budgetKB": 260,
+  "totalBytes": 570303,
+  "clips": [
+    {
+      "id": "signal-ledger",
+      "name": "Signal Ledger",
+      "poster": "/clips/presets/signal-ledger.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/signal-ledger.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 45743
+        }
+      ],
+      "bytes": 51054,
+      "width": 640,
+      "seconds": 5
+    },
+    {
+      "id": "newsprint-cutout",
+      "name": "Newsprint Cutout",
+      "poster": "/clips/presets/newsprint-cutout.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/newsprint-cutout.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 82366
+        }
+      ],
+      "bytes": 90030,
+      "width": 640,
+      "seconds": 5
+    },
+    {
+      "id": "blueprint",
+      "name": "Blueprint",
+      "poster": "/clips/presets/blueprint.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/blueprint.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 129030
+        }
+      ],
+      "bytes": 149021,
+      "width": 640,
+      "seconds": 5
+    },
+    {
+      "id": "chalk-argument",
+      "name": "Chalk Argument",
+      "poster": "/clips/presets/chalk-argument.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/chalk-argument.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 141499
+        }
+      ],
+      "bytes": 152341,
+      "width": 640,
+      "seconds": 5
+    },
+    {
+      "id": "paper-relief",
+      "name": "Paper Relief",
+      "poster": "/clips/presets/paper-relief.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/paper-relief.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 70604
+        }
+      ],
+      "bytes": 77376,
+      "width": 640,
+      "seconds": 5
+    },
+    {
+      "id": "data-neon",
+      "name": "Data Neon",
+      "poster": "/clips/presets/data-neon.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/data-neon.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 42935
+        }
+      ],
+      "bytes": 50481,
+      "width": 640,
+      "seconds": 5
+    }
+  ]
+}

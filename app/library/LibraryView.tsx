@@ -22,7 +22,6 @@
 import { useState } from "react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Eyebrow } from "@/components/ui/Primitives";
 import { TabRail } from "@/components/ui/signal";
 
 import AssetsBrowser from "./AssetsBrowser";
@@ -56,12 +55,16 @@ export default function LibraryView() {
           detached node is silent, and focus falls to <body>. See
           components/ui/Modal.tsx#restoreFocus. */}
       <main tabIndex={-1} className="pb-16">
+        {/* No eyebrow, no <h1>. Both said "Library" on a route the app header
+            already marks as Library — two rows of the viewport spent restating
+            the nav. The tab rail is the page's first row, and it is the only
+            one that carries news. */}
         <header className="pt-6">
-          <Eyebrow>library</Eyebrow>
-          <h1 className="font-instrument mt-3 text-4xl text-white">Library</h1>
+          {/* The heading stays in the non-visual channel. Deleting two rendered
+              rows must not cost the document its <h1>. */}
+          <h1 className="sr-only">Library</h1>
 
           <TabRail
-            className="mt-5"
             label="library modules"
             active={module}
             onSelect={(id) => {
