@@ -4,7 +4,9 @@ Three files, and the split between them is the point.
 
 | file | what it does | what it costs |
 | --- | --- | --- |
+| `motion_author.py` | Reads a picture, then writes its motion prompt from what it saw | ~40 s, needs the card |
 | `render_preset_clips.py` | Renders raw clips on the local Wan stack | ~110 s per clip, needs the card |
+| `clip_check.py` | Says whether the OBJECTS moved or the picture just drifted | free |
 | `transcode.mjs` | Squeezes a raw clip into committed artefacts, under a byte budget | seconds, needs only ffmpeg |
 | `../check-clips.mjs` | Weighs `public/clips/` on every `npm run verify` | free |
 
@@ -80,3 +82,39 @@ negative prompt in `render_preset_clips.py` differs from
 `pipeline/foundry/dojo_video.py`'s for the same reason — the dojo pushes *for*
 motion because it is judged on it, and a swatch wants the least motion that
 still reads as motion.
+
+## The standing finding: Wan cannot animate flat vector art
+
+**Do not spend another render trying.** Measured 2026-09-09 on `blueprint`, six
+renders, every combination of prompt shape and sampler setting that mattered:
+
+| render | prompt | sampler | what came out |
+| --- | --- | --- | --- |
+| shipped | camera-led line | cfg 5.0 shift 8.0 | drawing intact, camera drift, nothing moves |
+| v1 | authored, object verbs | cfg 5.0 shift 8.0 | the trend line detaches into a squiggle |
+| v2 | authored, object verbs | cfg 6.5 shift 5.0 | the circle balloons into a giant loop |
+| v3 | rigid, tiny translation | cfg 5.0 shift 5.0 | drawing perfect, camera zoom again |
+| v5 | rigid, large travel | cfg 5.5 shift 5.0 | the curve and circle vanish, then return |
+
+The pattern does not vary: **ask Wan 2.2 TI2V-5B to leave the linework alone and
+it moves the camera; ask it to move an element and it destroys the drawing.**
+There is no window between. Flat vector art is far outside what a video model
+trained on filmed footage knows how to deform, and the 5B is the small member of
+the family.
+
+MiniMax H3 fl2va, the other local video model, was tried and abandoned on cost:
+one 3-second clip at 832x480 (its dimensions must divide by 32; 848 raises
+`shape [...] is invalid for input of size 38160`) was still running after thirty
+minutes. Six thumbnails at that rate is an evening per iteration.
+
+What the two-pass author in `motion_author.py` DID fix is real and worth keeping:
+the prompts now name the things in the picture, which is why v1/v2 engaged with
+the drawing at all instead of drifting past it. The stage is sound; the renderer
+underneath it is the wrong tool for this content.
+
+**The route that has not been tried, and the one to try next:** render the
+motion's END STATE as a still with the image model, which is faithful to these
+styles because it is what drew them, and interpolate between the two stills with
+optical flow. The background is then held by construction rather than by asking
+a video model nicely, and the moving element moves because it is in a different
+place in the two frames.
