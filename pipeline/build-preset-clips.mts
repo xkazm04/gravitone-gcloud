@@ -23,7 +23,7 @@
 // Like build-preset-thumbs.mts, these are committed static assets. Six clips
 // that never change must not be six generations per page load.
 
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync, unlinkSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync, unlinkSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import path from "node:path";
 
@@ -84,14 +84,20 @@ for (const preset of wanted) {
   }
   try {
     const src = await probe(raw);
+    // The renderer's own sidecar. A clip from pipeline/video/compose_clip.py is
+    // already the exact loop, forward and back, so trimming its head would cut
+    // the loop open and it would snap on repeat. A Wan render is trimmed because
+    // its first frames are the source still holding while the model finds the
+    // motion, which reads as a stall on a five-second card.
+    const sidecar = raw.replace(/\.webm$/, ".json");
+    const meta = existsSync(sidecar) ? JSON.parse(readFileSync(sidecar, "utf8")) : {};
+    const trim = meta.route === "compose" ? 0 : 0.35;
     const made = await makeClip(raw, {
       outDir,
       slug: preset.id,
       profile,
-      // The first frames of an image-to-video render are the source still
-      // holding perfectly still while the model finds the motion. Starting the
-      // loop there reads as a stall on a five-second card.
-      start: 0.35,
+      fps: meta.fps ?? PROFILES[profile].fps,
+      start: trim,
       log: (l: string) => console.log(l),
     });
     built.push({
@@ -104,7 +110,7 @@ for (const preset of wanted) {
       seconds,
     });
     console.log(
-      `OK    ${preset.id} · from ${src.width}×${src.height} ${src.seconds.toFixed(1)}s · ` +
+      `OK    ${preset.id} · ${meta.route ?? "wan"} · from ${src.width}×${src.height} ${src.seconds.toFixed(1)}s · ` +
         `${formatBytes(made.totalBytes)} committed\n`,
     );
   } catch (e) {

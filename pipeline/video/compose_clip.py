@@ -290,6 +290,15 @@ def main():
         shutil.rmtree(fdir)
     compose(plate, sprite, mbox, dbox, frames, fdir)
     encode(fdir, dest)
+    # The sidecar the squeezer reads. A composed clip is ALREADY the exact loop:
+    # trimming its head, which pipeline/build-preset-clips.mts does to every Wan
+    # render to skip the frames where the model is still finding the motion,
+    # would cut the loop open and it would snap on repeat.
+    dest.with_suffix(".json").write_text(json.dumps({
+        "id": slug, "route": "compose", "trim": 0, "fps": FPS, "seconds": SECONDS,
+        "moving": rec["keyframe"]["moving"], "path": rec["keyframe"]["path"],
+        "boxes": rec["boxes"],
+    }, indent=2, ensure_ascii=False), encoding="utf-8")
     if not a.keep:
         shutil.rmtree(fdir)
     print(f"  4 frames   · {frames} forward + {frames} back @ {FPS}fps")
