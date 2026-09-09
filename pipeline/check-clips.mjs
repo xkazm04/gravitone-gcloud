@@ -20,6 +20,15 @@
 //      clip cannot spend the whole allowance.
 //   3. COMPLETENESS: every clip the manifest names is on disk, and every file on
 //      disk is named by the manifest. An orphan is weight nothing can reach.
+//   4. THE RECORD MATCHES THE FILES. Every clip's recorded dimensions, frame
+//      count and duration, checked by decoding the actual file.
+//
+// Check 4 exists because the manifest lied for a week and nothing noticed. It
+// copied the PROFILE's `width` and `seconds` into every entry, so all six clips
+// were recorded as "640px, 5s" while five were 640x362 at 4.70s and one was
+// 640x384 at 3.04s. The files were fine; the record was fiction, and a record
+// nobody measures is one that drifts silently. Numbers that are asserted must
+// be checked or they should not be written down.
 //
 // The manifest is written by pipeline/build-preset-clips.mts through
 // pipeline/video/transcode.mjs, which enforces the same per-file budget at
@@ -32,6 +41,7 @@
 //   2  could-not-run (no manifest, so a green verdict would mean nothing)
 
 import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
@@ -102,6 +112,41 @@ for (const [rel] of onDisk) {
   if (!claimed.has(rel)) fail.push(`${rel} is on disk and in no manifest entry`);
 }
 
+// 4 — decode each clip and hold the record to it. Dimensions and frame count
+// must be exact; duration is derived from a container timestamp, so it gets a
+// 50ms tolerance rather than an equality test it would fail on rounding alone.
+for (const clip of manifest.clips ?? []) {
+  const video = clip.sources?.[0];
+  if (!video || clip.width === undefined) {
+    fail.push(`${clip.id} records no measured shape — rebuild with build-preset-clips.mts`);
+    continue;
+  }
+  const file = path.join(ROOT, "public", video.src.replace(/^\//, ""));
+  if (!existsSync(file)) continue; // already reported by check 1
+  let got;
+  try {
+    got = JSON.parse(
+      execFileSync("ffprobe", [
+        "-v", "error", "-select_streams", "v:0", "-count_frames",
+        "-show_entries", "stream=width,height,nb_read_frames:format=duration",
+        "-of", "json", file,
+      ], { encoding: "utf8", maxBuffer: 1 << 22 }),
+    );
+  } catch (e) {
+    console.error(`clips: could not probe ${video.src} — is ffprobe on PATH?`);
+    process.exit(2);
+  }
+  const st = got.streams?.[0] ?? {};
+  const seconds = Number(got.format?.duration) || 0;
+  const frames = Number(st.nb_read_frames) || 0;
+  if (st.width !== clip.width || st.height !== clip.height)
+    fail.push(`${clip.id} is ${st.width}x${st.height} on disk, recorded as ${clip.width}x${clip.height}`);
+  if (clip.frames !== undefined && frames !== clip.frames)
+    fail.push(`${clip.id} has ${frames} frames on disk, recorded as ${clip.frames}`);
+  if (Math.abs(seconds - clip.seconds) > 0.05)
+    fail.push(`${clip.id} runs ${seconds.toFixed(2)}s on disk, recorded as ${clip.seconds}s`);
+}
+
 const total = [...onDisk.values()].reduce((n, b) => n + b, 0);
 if (total > TOTAL_BUDGET_KB * 1024) {
   fail.push(
@@ -110,6 +155,8 @@ if (total > TOTAL_BUDGET_KB * 1024) {
   );
 }
 note.push(`${manifest.clips?.length ?? 0} clip(s), ${onDisk.size} file(s), ${kb(total)} of ${TOTAL_BUDGET_KB}KB`);
+const secs = (manifest.clips ?? []).map((c) => c.seconds).filter((s) => s !== undefined);
+if (secs.length) note.push(`${Math.min(...secs).toFixed(2)}–${Math.max(...secs).toFixed(2)}s each`);
 
 function kb(n) {
   return n >= 1024 * 1024 ? `${(n / 1048576).toFixed(2)}MB` : `${Math.round(n / 1024)}KB`;

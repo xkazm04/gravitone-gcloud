@@ -104,12 +104,19 @@ export function formatBytes(n) {
   return n >= 1024 * 1024 ? `${(n / 1024 / 1024).toFixed(2)}MB` : `${Math.round(n / 1024)}KB`;
 }
 
-/** Duration, dimensions and fps of any video ffmpeg can open. */
-export async function probe(src) {
+/** Duration, dimensions and fps of any video ffmpeg can open.
+ *
+ *  `nb_frames` is a container HINT and WebM routinely omits it; `count` makes
+ *  ffprobe decode and count for real. Slower, and the only number that cannot
+ *  be wrong — which matters because this is what the manifest records and what
+ *  the gate checks. */
+export async function probe(src, { count = false } = {}) {
   const { stdout } = await run("ffprobe", [
     "-v", "error",
     "-select_streams", "v:0",
-    "-show_entries", "stream=width,height,r_frame_rate,nb_frames:format=duration",
+    ...(count ? ["-count_frames"] : []),
+    "-show_entries",
+    `stream=width,height,r_frame_rate,nb_frames${count ? ",nb_read_frames" : ""}:format=duration`,
     "-of", "json", src,
   ]);
   const j = JSON.parse(stdout);
@@ -119,7 +126,7 @@ export async function probe(src) {
     width: s.width ?? 0,
     height: s.height ?? 0,
     fps: den ? num / den : 0,
-    frames: Number(s.nb_frames) || 0,
+    frames: Number(s.nb_read_frames) || Number(s.nb_frames) || 0,
     seconds: Number(j.format?.duration) || 0,
   };
 }
@@ -205,6 +212,16 @@ export async function makeClip(src, opts) {
     poster,
   ]);
 
+  // WHAT CAME OUT, MEASURED — never what was asked for. The manifest used to
+  // copy the profile's `width` and `seconds` into every entry, so all six clips
+  // were recorded as "640px, 5s" while five were 640x362 at 4.70s and one was
+  // 640x384 at 3.04s. Nothing was wrong with the files; the RECORD was wrong,
+  // and a record nobody measures is a record that drifts silently.
+  //
+  // The 4.70s is itself worth seeing: a 5.04s source with 0.35s trimmed off its
+  // head cannot yield 5s. `seconds` in a profile is a CEILING, not a promise.
+  const out = await probe(path.join(outDir, `${slug}.${LADDER[formats[0]].ext}`), { count: true });
+
   return {
     slug,
     sources,
@@ -212,5 +229,12 @@ export async function makeClip(src, opts) {
     posterBytes: statSync(poster).size,
     totalBytes: sources.reduce((n, s) => n + s.bytes, 0) + statSync(poster).size,
     tries,
+    measured: {
+      width: out.width,
+      height: out.height,
+      fps: Math.round(out.fps * 100) / 100,
+      frames: out.frames,
+      seconds: Math.round(out.seconds * 1000) / 1000,
+    },
   };
 }

@@ -4,7 +4,7 @@
   "fps": 20,
   "seconds": 5,
   "budgetKB": 260,
-  "totalBytes": 570303,
+  "totalBytes": 596640,
   "clips": [
     {
       "id": "signal-ledger",
@@ -18,8 +18,12 @@
         }
       ],
       "bytes": 51054,
+      "route": "wan",
       "width": 640,
-      "seconds": 5
+      "height": 362,
+      "fps": 20,
+      "frames": 93,
+      "seconds": 4.7
     },
     {
       "id": "newsprint-cutout",
@@ -33,8 +37,12 @@
         }
       ],
       "bytes": 90030,
+      "route": "wan",
       "width": 640,
-      "seconds": 5
+      "height": 362,
+      "fps": 20,
+      "frames": 93,
+      "seconds": 4.7
     },
     {
       "id": "blueprint",
@@ -44,12 +52,16 @@
         {
           "src": "/clips/presets/blueprint.webm",
           "type": "video/webm; codecs=\"vp9\"",
-          "bytes": 129030
+          "bytes": 155429
         }
       ],
-      "bytes": 149021,
+      "bytes": 175358,
+      "route": "h3-local",
       "width": 640,
-      "seconds": 5
+      "height": 384,
+      "fps": 20,
+      "frames": 61,
+      "seconds": 3.05
     },
     {
       "id": "chalk-argument",
@@ -63,8 +75,12 @@
         }
       ],
       "bytes": 152341,
+      "route": "wan",
       "width": 640,
-      "seconds": 5
+      "height": 362,
+      "fps": 20,
+      "frames": 93,
+      "seconds": 4.7
     },
     {
       "id": "paper-relief",
@@ -78,8 +94,12 @@
         }
       ],
       "bytes": 77376,
+      "route": "wan",
       "width": 640,
-      "seconds": 5
+      "height": 362,
+      "fps": 20,
+      "frames": 93,
+      "seconds": 4.7
     },
     {
       "id": "data-neon",
@@ -93,8 +113,12 @@
         }
       ],
       "bytes": 50481,
+      "route": "wan",
       "width": 640,
-      "seconds": 5
+      "height": 362,
+      "fps": 20,
+      "frames": 93,
+      "seconds": 4.7
     }
   ]
 }

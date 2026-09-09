@@ -65,10 +65,15 @@ console.log(`profile ${profile} · ${width}px · ${fps}fps · ${seconds}s · ${b
 interface Entry {
   id: string;
   name: string;
+  route: string;
   poster: string;
   sources: { src: string; type: string; bytes: number }[];
   bytes: number;
+  /** MEASURED off the committed file, never copied from the profile. */
   width: number;
+  height: number;
+  fps: number;
+  frames: number;
   seconds: number;
 }
 
@@ -100,7 +105,11 @@ for (const preset of wanted) {
       outDir,
       slug: preset.id,
       profile,
-      fps: meta.fps ?? PROFILES[profile].fps,
+      // OUTPUT fps belongs to the PROFILE, not to the renderer. The sidecar's
+      // `fps` is a fact about the raw; reading it as an instruction here
+      // silently pushed the five Wan clips from the profile's 20fps to their
+      // source's 24, adding a fifth more frames and bytes for nothing a viewer
+      // would see. A sidecar says what a clip IS; only `trim` says what to do.
       start: trim,
       log: (l: string) => console.log(l),
     });
@@ -110,8 +119,8 @@ for (const preset of wanted) {
       poster: `/clips/presets/${made.poster}`,
       sources: made.sources.map((s) => ({ src: `/clips/presets/${s.src}`, type: s.type, bytes: s.bytes })),
       bytes: made.totalBytes,
-      width,
-      seconds,
+      route: meta.route ?? "wan",
+      ...made.measured,
     });
     console.log(
       `OK    ${preset.id} · ${meta.route ?? "wan"} · from ${src.width}×${src.height} ${src.seconds.toFixed(1)}s · ` +
