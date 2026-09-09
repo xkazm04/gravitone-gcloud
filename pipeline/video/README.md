@@ -244,6 +244,30 @@ working set. Shrinking the frame from 832x480 to 640x384 did not help, because
 the cost is dominated by paging a 20 GB video model and a 32-billion-parameter
 text encoder through a box already at its commit ceiling.
 
+**The past runs were real, and the record was honest.** Nine H3 clips from
+2026-08-26 are still on disk under `pipeline/vlm-probe/clips/{chain,ref2va}/`,
+832x480, 73 frames, 3.04 s each, all three of each lane. Their file timestamps
+give the per-clip cost directly: 25, 19, then 22, 28 and 58 minutes. And the
+dojo cycle `foundry-out/training/2026-09-03-serial-ref2va` wrote the diagnosis
+into its own log on the day, unprompted:
+
+> MEASURED: H3 ref2va on this box is ~63 min per 3s clip (first clip 75 min with
+> load, first warm-fill clip 63 min) — the registry row's ~300s/clip assumed the
+> full ~62 GB host RAM; Wolf's ~28 GB free forces expert paging. Not contention
+> (queue exclusively ours, verified).
+
+and closed with *"the RAM, not the model, is what makes it slow here."* That is
+the same conclusion `gpu_trace.py` reached independently today, and the cycle was
+truncated by the operator with a stated reason rather than quietly abandoned. **H3
+has never been fast on this machine, nothing regressed, and nothing was
+overstated.**
+
+It also puts a number on the prize: **~300 s/clip at ~62 GB free host RAM against
+~3800 s at ~28 GB.** Roughly twelvefold, bought with memory rather than silicon.
+Today's run began with 35 GB free and hit 0.0. As this is written, an idle
+ComfyUI is still holding a 23.2 GB working set and 99% of VRAM with nothing
+queued — that alone is most of the gap.
+
 **And it is NOT slower than it used to be.** The spike's 1243 s was at 4 steps;
 this was at 8. Per sampling step that is 206 s now against 311 s then, at a
 smaller frame — faster, not slower. (4 was `motion.py`'s default, but `FL_LORA`
