@@ -16,7 +16,7 @@
 // re-dealt, which is the deck saying "this decision is open again".
 
 import { Button } from "../Primitives";
-import StageRail from "./rail/StageRail";
+import StageRail from "./StageRail";
 
 export interface DeckStageDef {
   id: string;
@@ -133,14 +133,9 @@ export default function Deck({
         <div className="w-full">
           {eyebrow}
           {/* The rail keeps its own top margin only when something sits above
-              it. The create wizard passes no eyebrow (2026-09-09) and a fixed
-              `mt-3` there is a row of nothing under the nav.
-
-              TODO(prototype, 2026-09-09): StageRail is a THREE-FACE SWITCHER,
-              not the shipped rail. It draws the baseline pills by default plus
-              two directions (filmstrip, ledger) for the operator to choose
-              between; the winner collapses this back to one component and the
-              losers are deleted. See components/ui/deck/rail/StageRail.tsx. */}
+              it. Neither consumer passes an eyebrow any more (2026-09-09) and a
+              fixed `mt-3` there is a row of nothing under the nav. The prop
+              stays for a deck that earns one. */}
           <div className={eyebrow ? "mt-3" : ""}>
             <StageRail
               stages={stages}

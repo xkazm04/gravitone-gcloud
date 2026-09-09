@@ -25,7 +25,6 @@ import { useMemo, useState } from "react";
 import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
 import DeckCard from "@/components/ui/deck/DeckCard";
 import DeckStage from "@/components/ui/deck/DeckStage";
-import { Eyebrow } from "@/components/ui/Primitives";
 
 import type { GuidedModeStepData } from "../../_shared/stepStore";
 import { ConfirmScope } from "../_parts/ScopeGate";
@@ -227,7 +226,15 @@ export default function GuidedResearch({
 
   return (
     <Deck
-      eyebrow={<Eyebrow>step 1 · research · guided</Eyebrow>}
+      // NO EYEBROW (operator, 2026-09-09) — the same ruling that took `create`
+      // off the project wizard, applied to the tag this face drew in the same
+      // slot. It read `step 1 · research · guided`, on its own row above the
+      // stage rail, and every third of it was already on screen: the studio's
+      // own stepper marks step 1 Research as current (app/studio/[projectId]/
+      // phases.tsx), and which FACE you are on is what the FaceSwitch in the
+      // footer below says and is the control that changes it. Deck's `eyebrow`
+      // stays optional and its rail's top margin is conditional on it, so the
+      // row leaves no gap behind.
       stages={stages}
       active={active}
       onNavigate={setActive}
