@@ -13,7 +13,9 @@ So three numbers, and between them they separate the two cases.
 
 ENERGY -- mean luma of consecutive-frame differences, the same measure
 motion_energy.py takes, restated here so one command answers the whole
-question. Under FROZEN the clip did not move at all.
+question. It gates ONLY at the floor: under FROZEN the clip did not move at
+all. It deliberately has no upper requirement -- see the note beside FROZEN for
+the measurement that removed one.
 
 CONCENTRATION -- of all the change between the first frame and the last, what
 share falls in the busiest tenth of the frame. A camera drift moves every pixel
@@ -67,14 +69,25 @@ from PIL import Image
 # elements static" are the three under 0.45, and no other number separates them:
 # their energy overlaps the passing clips' completely.
 #
-# SHARPNESS CAUGHT NOTHING, and the threshold is kept anyway rather than quietly
-# dropped. Every clip above ended at or above the definition it started with --
-# a drifting Wan render re-interpolates edges and can score OVER 1.0. So the
-# softness a viewer reports is the DRIFT, not a loss of edge; this number is a
-# floor against a different failure that has not happened yet, and if it never
-# fires it should eventually be deleted rather than left as decoration.
+# SHARPNESS earns its place, though not at first: read against the LAST frame it
+# caught nothing, because a drifting Wan render re-interpolates edges and can
+# score over 1.0. Read against the frame that differs MOST from the first -- the
+# fix that ping-pong loops forced -- it fails data-neon at 0.79, whose motion is
+# a glow that blooms and takes the edges with it. The softness a viewer reports
+# is usually the drift; sometimes it is genuinely this.
+# ENERGY GATES ONLY AT THE FLOOR, and the reason is measured. A high energy
+# threshold assumes a clip that moves is a clip where a lot of the picture
+# changes -- true of a camera drift, false of the thing we actually want. The
+# first composited clip (one small circle gliding across a held background, the
+# best clip this pipeline has produced) scored 0.143 against a 0.15 floor and
+# was failed by it, while every camera drift cleared it. A floor calibrated on
+# the defect rejects the fix. Its only prior catch, data-neon at 0.115, was a
+# subtle clip and not obviously a defect at all.
+#
+# So: FROZEN says nothing happened, CONCENTRATION says the wrong thing happened,
+# and "not very much happened" is left to the eye, which can tell a restrained
+# clip from a dead one and an arithmetic mean cannot.
 FROZEN = 0.01
-MIN_ENERGY = 0.15
 MIN_CONCENTRATION = 0.45
 MIN_SHARPNESS = 0.85
 
@@ -169,8 +182,19 @@ def inspect(video):
     n = _count(video)
     if n < 3:
         raise RuntimeError(f"{video} has {n} frame(s)")
-    f = _frames(video, [0, n - 1])
-    first, last = f[0], f[n - 1]
+
+    # THE FAR FRAME IS FOUND, NOT ASSUMED. Comparing frame 0 with the LAST frame
+    # is wrong for any clip that returns to where it started, and the composited
+    # clips are all ping-pongs -- forward then reversed, so the loop closes with
+    # no snap. Measured 2026-09-09: a correct composited clip scored 0.00
+    # concentration and "barely moves", because its last frame IS its first.
+    # So sample across the clip and take the frame that differs most from the
+    # first; on a one-way clip that is the last frame anyway.
+    probe_at = sorted({int(round(i * (n - 1) / 8)) for i in range(9)})
+    f = _frames(video, probe_at)
+    first = f[probe_at[0]]
+    far_at = max(probe_at[1:], key=lambda k: float(np.abs(f[k] - first).sum()))
+    last = f[far_at]
 
     diff = np.abs(last - first).ravel()
     total = diff.sum()
@@ -191,15 +215,12 @@ def inspect(video):
     # frame 100, and an endpoint check would have called that clip perfect.
     e0 = _edges(first)
     mask = e0 >= np.quantile(e0, 0.97)
-    later = _frames(video, [n // 3, (2 * n) // 3, n - 1])
-    retention = _retention(e0, mask, [_edges(f) for f in later.values()])
+    retention = _retention(e0, mask, [_edges(f[k]) for k in probe_at[1:]])
 
     e = energy(video)
     reasons = []
     if e < FROZEN:
         reasons.append(f"frozen ({e:.3f} < {FROZEN})")
-    elif e < MIN_ENERGY:
-        reasons.append(f"barely moves ({e:.3f} < {MIN_ENERGY})")
     if concentration < MIN_CONCENTRATION:
         reasons.append(
             f"change is spread across the whole frame ({concentration:.2f} < "
@@ -216,6 +237,7 @@ def inspect(video):
     return {
         "clip": str(video),
         "frames": n,
+        "far_frame": far_at,
         "energy": round(e, 4),
         "concentration": round(concentration, 4),
         "retention": round(retention, 4),

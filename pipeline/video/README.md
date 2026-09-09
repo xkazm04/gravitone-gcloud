@@ -4,7 +4,8 @@ Three files, and the split between them is the point.
 
 | file | what it does | what it costs |
 | --- | --- | --- |
-| `motion_author.py` | Reads a picture, then writes its motion prompt from what it saw | ~40 s, needs the card |
+| `motion_author.py` | Reads a picture, then writes its motion prompt from what it saw | ~60 s, needs the card |
+| `compose_clip.py` | Animates a still by MOVING A PIECE OF IT — the route that works | ~3.5 min once, then free |
 | `render_preset_clips.py` | Renders raw clips on the local Wan stack | ~110 s per clip, needs the card |
 | `clip_check.py` | Says whether the OBJECTS moved or the picture just drifted | free |
 | `transcode.mjs` | Squeezes a raw clip into committed artefacts, under a byte budget | seconds, needs only ffmpeg |
@@ -112,9 +113,35 @@ the prompts now name the things in the picture, which is why v1/v2 engaged with
 the drawing at all instead of drifting past it. The stage is sound; the renderer
 underneath it is the wrong tool for this content.
 
-**The route that has not been tried, and the one to try next:** render the
-motion's END STATE as a still with the image model, which is faithful to these
-styles because it is what drew them, and interpolate between the two stills with
-optical flow. The background is then held by construction rather than by asking
-a video model nicely, and the moving element moves because it is in a different
-place in the two frames.
+## The route that works: compose_clip.py
+
+Interpolating between two GENERATED stills was the first idea and it does not
+work either: Flux at full reference strength redraws the whole scene rather than
+editing one element — measured on blueprint, the bars, the curve and the corner
+schematic all moved — so an interpolation between them is soft everywhere, which
+is the defect being removed.
+
+What works is to generate ONE new still and do the motion in numpy:
+
+1. **read** the picture, choose the element and where it goes, and ground both
+   as pixel boxes (`motion_author.py` plus a grounding pass; the boxes land on
+   the element accurately).
+2. **plate** — erase the element with Flux 2 inpainting, then composite the
+   result back into the ORIGINAL so every pixel outside the erased box is
+   bit-identical. Skipping that composite leaves a background that shimmers: a
+   VAE round-trip moves every pixel by about 2/255 even where the noise mask is
+   zero.
+3. **sprite** — the element is whatever the plate removed. Alpha from the
+   difference, colour from the original.
+4. **frames** — composite the sprite over the plate at eased positions, forward
+   then reversed so the loop closes without a snap.
+
+Measured on blueprint: concentration 1.00 (all the change is where the element
+is), retention 0.92, sharpness 1.00. The background is held *by construction* —
+it is the same array in every frame — and the element stays exactly as sharp as
+it was drawn, because it is the same pixels translated.
+
+**What it cannot do yet.** One element, one straight path. The blueprint circle
+therefore slides off its curve rather than riding down it, and the sprite carries
+a few pixels of the curve's tip with it. A curved path needs a third grounded
+point; rotation and scale need more than a translate.

@@ -204,11 +204,88 @@ def propose(readback, model=MODEL):
     return _chat([{"role": "user", "content": filled}], PROPOSE_SCHEMA, model)
 
 
+# ── PASS 2b · PROPOSE AN END STATE ─────────────────────────────────────────
+# The keyframe route does not ask a video model for motion at all. It asks the
+# IMAGE model -- the one that drew the swatch, and is therefore faithful to it --
+# for the SAME PICTURE with one element somewhere else, and interpolates between
+# the two. The background is then held by construction rather than by asking a
+# video model nicely, which pipeline/video/README.md records six renders proving
+# it will not do on flat vector art.
+#
+# So this pass writes a STILL prompt, not a motion prompt. Its whole discipline
+# is that the end state must be describable as the same picture: every rule below
+# pushes toward "identical, except".
+
+KEYFRAME_PROMPT = """You are choosing the END STATE of a 5-second loop.
+
+The loop is made from two still pictures and an interpolation between them. The
+first picture is fixed -- it is the one described below. You are writing a
+description of the SECOND picture.
+
+THE FIRST PICTURE
+{readback}
+
+The second picture must be THE SAME PICTURE with ONE element in a different
+place. Not a different composition, not a later moment in a story, not a new
+camera position. Everything a viewer could name must still be there, the same
+size, the same colour, the same style, in the same place -- except one element,
+which has moved a visible distance.
+
+Write `end_state` as a full description of that second picture, the way you
+would describe it to someone who has not seen the first. Describe the whole
+frame, not just the change: the model reading it renders a picture, not a diff.
+
+RULES:
+
+- ONE element moves. Name it in `moving` exactly as it is named in the list.
+- IT MOVES, IT DOES NOT CHANGE. Same size, same shape, same colour, same line
+  weight. A thing that grows or shrinks cannot be interpolated -- the frames
+  between would be a shape morphing, which is the defect this route exists to
+  avoid.
+- THE DISTANCE MUST BE VISIBLE but not the width of the frame. Roughly a tenth
+  to a third of the frame. Smaller and the loop looks broken; larger and the
+  interpolation between the two stills tears.
+- IT STAYS INSIDE THE FRAME, and it stays physically sensible: something resting
+  on a surface slides along it rather than flying off it.
+- NOTHING IS ADDED OR REMOVED. Same count of everything.
+- NO TEXT, no numbers, no labels.
+
+`path` is one short phrase for how it gets from the first place to the second --
+"slides right along the baseline", "rises straight up". It is not rendered; it
+is there so a human can see at a glance whether the two states agree."""
+
+KEYFRAME_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "end_state": {"type": "string"},
+        "moving": {"type": "string"},
+        "path": {"type": "string"},
+    },
+    "required": ["end_state", "moving", "path"],
+}
+
+
+def propose_keyframe(readback, model=MODEL):
+    """Pass 2b: the same picture, one element moved. Text only, like propose()."""
+    lines = [f"scene: {readback['scene']}", f"grounded: {readback['grounded']}", "elements:"]
+    lines += [f"  - {e['name']} ({e['where']})" for e in readback["elements"]]
+    filled = KEYFRAME_PROMPT.format(readback=chr(10).join(lines))
+    return _chat([{"role": "user", "content": filled}], KEYFRAME_SCHEMA, model)
+
+
 def author(path, model=MODEL):
     """The whole chain: a picture in, a rendering prompt out."""
     seen = read_image(path, model)
-    said = propose(seen, model)
-    return {"source": str(path), "model": model, "read": seen, "proposed": said}
+    return {
+        "source": str(path),
+        "model": model,
+        "read": seen,
+        # Both routes, from one reading. The video route is kept because the
+        # reading it is built on is sound even where the renderer under it is
+        # not; the keyframe route is the one that ships.
+        "proposed": propose(seen, model),
+        "keyframe": propose_keyframe(seen, model),
+    }
 
 
 def main():
@@ -227,7 +304,10 @@ def main():
         print(f"      · {e['name']} — {e['where']}")
     print(f"\nMOVES {', '.join(m['element'] + ' ' + m['verb'] for m in out['proposed']['moves'])}")
     print(f"STILL {', '.join(out['proposed']['holds_still'])}")
-    print(f"\nPROMPT\n{out['proposed']['prompt']}\n")
+    print(f"\nVIDEO PROMPT\n{out['proposed']['prompt']}")
+    k = out["keyframe"]
+    print(f"\nKEYFRAME · moves {k['moving']} — {k['path']}")
+    print(f"{k['end_state']}\n")
 
 
 if __name__ == "__main__":
