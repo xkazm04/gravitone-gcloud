@@ -1,12 +1,17 @@
 {
   "version": 1,
-  "checker": "native-copy/copy-check 1.0.0",
-  "generatedAt": "2026-09-14T10:17:12.153Z",
-  "count": 4,
+  "checker": "native-copy/copy-check 1.1.0",
+  "generatedAt": "2026-09-14T10:22:47.220Z",
+  "count": 9,
   "fingerprints": [
     "EN-DASH|app/_landing/parts.tsx|<h1>|ef05b6d4fbeed633c7412a5c564405c9754ee8bb",
+    "EN-DASH|app/foundry/page.tsx|metadata.title|b3c3fb73757f264e75d4d6f802d157241fb5f7e7",
     "EN-DASH|app/layout.tsx|metadata.description|a35aa427b94f4778323b891092b649b42d506dc5",
     "EN-DASH|app/layout.tsx|metadata.title|ef05b6d4fbeed633c7412a5c564405c9754ee8bb",
-    "EN-DASH|app/projects/new/page.tsx|metadata.title|e6c56df897f8345fe40f7402149aa50441ecf4c3"
+    "EN-DASH|app/library/page.tsx|metadata.title|b73ba5d3e55ccc0a39c83c93b6d284becbc27334",
+    "EN-DASH|app/playground/page.tsx|metadata.title|9ca2658da284d95173ac5615f14ca95c1819f6b5",
+    "EN-DASH|app/projects/new/page.tsx|metadata.title|e6c56df897f8345fe40f7402149aa50441ecf4c3",
+    "EN-DASH|app/projects/page.tsx|metadata.title|09432560e13c5f1ff2ac46c6613d4c99029fed4a",
+    "EN-DASH|app/studio/[projectId]/page.tsx|metadata.title|6bccfae64acbdb59cc3033399dcc0178d0bc24bf"
   ]
 }
