@@ -3,7 +3,7 @@ import AuthGate from "@/components/ui/AuthGate";
 import LibraryView from "./LibraryView";
 
 export const metadata = {
-  title: "Library — Gravitone",
+  title: "Library | Gravitone",
 };
 
 export default function Page() {

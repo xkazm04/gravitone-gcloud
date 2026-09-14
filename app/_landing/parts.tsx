@@ -93,7 +93,7 @@ export function LandingShell({
           ARIA never prunes a focusable descendant — verified in the AX dump,
           where it is still exposed and still first in tab order.) The string is
           the <title> in app/layout.tsx verbatim, so the two cannot drift. */}
-      <h1 className="sr-only">Gravitone — a content studio</h1>
+      <h1 className="sr-only">Gravitone: a content studio</h1>
       <div className="pointer-events-none absolute inset-0 aurora" />
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
       <main

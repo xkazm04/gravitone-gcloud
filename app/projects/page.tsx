@@ -3,7 +3,7 @@ import AuthGate from "@/components/ui/AuthGate";
 import ProjectsView from "./ProjectsView";
 
 export const metadata = {
-  title: "Projects — Gravitone",
+  title: "Projects | Gravitone",
 };
 
 export default function Page() {

@@ -3,7 +3,7 @@ import AuthGate from "@/components/ui/AuthGate";
 import PlaygroundView from "./PlaygroundView";
 
 export const metadata = {
-  title: "Playground — Gravitone",
+  title: "Playground | Gravitone",
 };
 
 export default function Page() {

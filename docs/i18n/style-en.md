@@ -22,11 +22,13 @@ are checked by `npm run copy:check`.
   technique).
 - **US English** (2026-09-14, operator). The extracted copy had no variant-marked word, so
   nothing needs migrating.
-- **No em dash** (2026-09-14, operator). At adoption 5 em dashes sat in gated strings (the
-  `Gravitone — a content studio` title, repeated verbatim in the sr-only `<h1>`, and the
-  layout description), all baselined. The `Name — Gravitone` tab-title separator on five
-  pages is not read by the checker. The standalone no-data glyph and code comments are out
-  of scope.
+- **No em dash** (2026-09-14, operator). At adoption 5 em dashes sat in gated strings, all
+  baselined; the layout description still carries its 3 as debt. The standalone no-data glyph
+  and code comments are out of scope.
+- **"Gravitone" is the official product name** (2026-09-14, operator) and stays in every
+  title. Page titles are `Page | Gravitone` (the separator is `|`, never a dash); the site
+  title and its verbatim sr-only `<h1>` read `Gravitone: a content studio`. Converted the same
+  day from `Page — Gravitone` on six pages and `Gravitone — a content studio`.
 - **Sentence case.** The button's capitals come from CSS `uppercase`; the string itself
   stays sentence case.
 

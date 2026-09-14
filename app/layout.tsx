@@ -18,7 +18,7 @@ const hanken = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-hanken", d
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Gravitone — a content studio",
+  title: "Gravitone: a content studio",
   description:
     "A content creation studio: one production walked through five steps — research, script, frames, score, cut — over a library that knows where every asset came from.",
 };
