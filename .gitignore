@@ -120,9 +120,11 @@ __pycache__/
 /.claude/skills/motionize
 /.claude/skills/spark
 /.claude/skills/cx
+/.claude/skills/native-copy
 /.claude/rules/ai-registry-access.md
 /.claude/rules/ai-registry-software-engineering.md
 /.claude/rules/ai-registry-media-generation.md
+/.claude/rules/ai-registry-localization.md
 # END ai-registry linked skills
 
 # Foundry runs (pipeline/foundry/forge.py) — generated candidates, their

@@ -10,6 +10,7 @@
     "start": "next start",
     "check:notebook": "npx tsx pipeline/check-notebook.mts",
     "check:manifest": "node pipeline/check-manifest.mjs",
+    "copy:check": "node .claude/skills/native-copy/scripts/copy-check.mjs",
     "check:bundle": "node pipeline/check-bundle.mjs",
     "verify:text": "npx tsx pipeline/verify-text-engine.mts",
     "check:trailer-structure": "npx tsx pipeline/trailer-structure-regression.mts",

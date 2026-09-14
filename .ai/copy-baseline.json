@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "checker": "native-copy/copy-check 1.0.0",
+  "generatedAt": "2026-09-14T10:17:12.153Z",
+  "count": 4,
+  "fingerprints": [
+    "EN-DASH|app/_landing/parts.tsx|<h1>|ef05b6d4fbeed633c7412a5c564405c9754ee8bb",
+    "EN-DASH|app/layout.tsx|metadata.description|a35aa427b94f4778323b891092b649b42d506dc5",
+    "EN-DASH|app/layout.tsx|metadata.title|ef05b6d4fbeed633c7412a5c564405c9754ee8bb",
+    "EN-DASH|app/projects/new/page.tsx|metadata.title|e6c56df897f8345fe40f7402149aa50441ecf4c3"
+  ]
+}
