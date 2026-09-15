@@ -366,3 +366,42 @@ tracking the human better, and record the decision here):
   named: a still cannot perform the REVEAL function for either arm. Rendering
   rhythm: the second arm of a duo renders in ~44s when its text encode is
   cached from the first (join-at-ten), else 100-180s.
+- 2026-09-06 — window STOPPED at one cycle, `2026-09-06-state-coupling` failed on
+  the breaker (7/24 rendered, units 9-11 consecutive). Four things the next
+  session inherits. (1) THE ENGINE, NOT THE JOB: `guard.foreign_job()` was null
+  before launch and throughout and the queue was empty, so this was not
+  contention — the box recycled ComfyUI after EVERY SINGLE render (commit
+  147-152/164 GB, RAM floor ~6 GB) and units 9-11 then died within ~60s of a
+  fresh recycle that had just freed 38-40 GB. Free RAM at the moment of death
+  is NOT the proximate cause and chasing it will waste a window; the 64 GB
+  standing constraint shows up as recycle-per-unit, and the vanish race is
+  downstream of that. Budget ~170-190s/unit on this box, not the 110s the
+  09-05 note measured, whenever the recycle line appears between every render.
+  (2) The 2026-09-01 lesson about capturing ComfyUI's output HAD NEVER BEEN
+  APPLIED — `start_comfy` still launched it `-WindowStyle Hidden` with no
+  redirection while the runner told you to "read its stderr". Fixed on branch
+  `dojo/instrument-2026-09-06`; comfy now writes
+  `pipeline/foundry/logs/comfy-<ts>.log[.err]`. A lesson in this log is not a
+  landed change — check the code before assuming a past session's fix exists.
+  (3) DO NOT PARK A PARTIAL ROSTER. 3 of 12 duos were complete, but what died
+  was exactly the extremes (gaze-down entirely, backlit entirely, alarm half),
+  and the coupling probe's three branches turn on whether the extremes land.
+  A partial answer in the cross-machine ledger is worse than a failed cycle.
+  (4) THE GATE IS THE BOTTLENECK, and it is now the loop's binding constraint:
+  16 cycles await a human, none gated since 08-31, and `dojo/reflect-2026-08-30`
+  (f33275c, assigned-colour-roles → palette-as-roles) has sat unmerged 7 days
+  while its ledger row reads `reflected: f33275c` as though it were live. Also
+  audited: 9 of 13 committed cycles have no ledger row; five landed as
+  FRAMES-SCENE-PROMPT rules 7-10 + shotPrompt, two were honest nulls owing no
+  edit (clause-position, order-control), and TWO — `invariants-only`,
+  `sample-to-block` — were committed with `human: null`, so no verdict was ever
+  recorded for them anywhere. `invariants-only` matters: it already claimed the
+  hard-coupled half ("a reference sets the state channel whether or not it was
+  supplied for state") and its result is lost.
+- 2026-09-06 — Phase 2 method note: the banked "Open leads" sections really are
+  cheaper than a scan. `character-identity-continuity` carries an explicitly
+  OWED, fleet-wide-unrun objective (the coupling probe), pre-scoped and costed,
+  and it shaped a better cycle than any librarian points ranking would have —
+  the probe and the A/B collapse into ONE experiment when the baseline arm is
+  "what the pipeline does today" (neutral reference + prose state) and the
+  challenger just removes the typed input. Read the leads before the scan.
