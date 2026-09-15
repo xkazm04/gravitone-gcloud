@@ -24,7 +24,12 @@
 // anyone unable to find out that it did.
 
 import { ImagingError, noAlternative, noKey, unsupported } from "./errors";
-import { assertWithinBudget, estimatePendingUsd, recordSpend } from "./budget";
+import {
+  assertWithinBudget,
+  estimatePendingUsd,
+  reachByCapability,
+  recordSpend,
+} from "./budget";
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
 import { googleProvider } from "./providers/google";
@@ -105,6 +110,47 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
  *  router acts on rather than restating it. */
 export function planFor(cap: Capability, env: ImagingEnv = currentEnv()): ProviderId[] {
   return PLAN[env][cap];
+}
+
+/** One capability whose preferred provider never served, though the capability
+ *  ran. `servedBy` is who answered instead. */
+export interface UnreachedTop {
+  cap: Capability;
+  top: ProviderId;
+  servedBy: ProviderId[];
+}
+
+/**
+ * Capabilities that saw traffic and NEVER reached the top of their plan.
+ *
+ * The plan's first entry holds its position because it won a measured
+ * cost-per-usable grid (see PLAN above). Nothing until now checked whether that
+ * winner is ever actually CALLED — and it can go uncalled for two opposite
+ * reasons, which is exactly why the fact is worth recording at the time:
+ *
+ *   · the grid is stale and the entry no longer deserves the position; or
+ *   · the work never reached it — a steer, a missing key, or a run that stopped
+ *     at the cheapest provider that could serve.
+ *
+ * A capability with no traffic is NOT reported: never asking for something is
+ * not the same as asking and not reaching. And an elimination is not silent
+ * here either — the router already trails per-call re-routes; this is the
+ * window-level view the trail cannot give, because no single call departed
+ * from the plan.
+ */
+export function unreachedPlanTops(
+  now: number = Date.now(),
+  env: ImagingEnv = currentEnv(),
+): UnreachedTop[] {
+  const reach = reachByCapability(now);
+  const out: UnreachedTop[] = [];
+  for (const [cap, servedBy] of Object.entries(reach)) {
+    const plan = PLAN[env][cap as Capability];
+    const top = plan?.[0];
+    if (!top || servedBy.includes(top)) continue;
+    out.push({ cap: cap as Capability, top, servedBy });
+  }
+  return out;
 }
 
 /**

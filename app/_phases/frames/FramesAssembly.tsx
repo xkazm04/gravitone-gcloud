@@ -18,11 +18,25 @@
 import { useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
+import { Tally } from "@/components/ui/signal";
+
 import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef, type PlateState } from "./frames";
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
 import LayerPanel from "./LayerPanel";
 import type { useFrames } from "./useFrames";
+
+// The assembly table's columns, shared by the header and every row — they can
+// only stay aligned if they read the same rule.
+//
+// `breakdown` is 244px because that is what it MEASURES: the column holds four
+// badges (plate · clip · elements · texts) in a row, and at text-label 16px
+// they need 235px including their three 8px gaps. It was 206px, cut for the
+// old 14px label, and the 2026-09-08 type bump pushed the four badges out of
+// their own column and over the plate word beside it. The other four tracks
+// were re-measured at the same time and still fit. `1fr` absorbs the
+// difference, so the table's overall width is unchanged.
+const ASSEMBLY_GRID = "grid-cols-[52px_1fr_244px_120px_86px]";
 
 export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFrames> }) {
   const { frames, render, busy, generatePlate, setSubject, plateCost, totalCost, direction } = ctl;
@@ -121,23 +135,32 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
           className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-3.5 py-1.5 text-label font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:opacity-40"
         >
           {runningAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
-          {runningAll ? "rendering…" : `render ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`}
+          {runningAll
+            ? "rendering…"
+            : stoppedWith !== null
+              ? `retry ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`
+              : `render ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`}
+          {/* WHAT THE STOPPED BATCH GOT THROUGH, on the button that ran it. A
+              paragraph used to stand under this row saying "The batch stopped
+              after a failure that was about the run rather than one plate — N
+              plates were not attempted. Fix the reason above, then run it
+              again." The reason is in the error line above; the count is this;
+              and "run it again" is the verb already on the button. */}
+          {stoppedWith !== null && !runningAll && (
+            <Tally
+              label="left"
+              value={stoppedWith}
+              of={frames.length}
+              tone="amber"
+              className="ml-1"
+            />
+          )}
         </button>
         </div>
       </div>
 
-      {/* A batch that stopped itself says so. Silence here would read as "that
-          is all the plates there were", which is the opposite of what happened —
-          the reason is in the error line above and the work is still owed. */}
-      {stoppedWith !== null && (
-        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-content leading-snug text-amber-100/90">
-          The batch stopped after a failure that was about the run rather than one plate — {stoppedWith} plate
-          {stoppedWith === 1 ? " was" : "s were"} not attempted. Fix the reason above, then run it again.
-        </p>
-      )}
-
       <div className="overflow-hidden rounded-xl border border-white/8">
-        <div className="font-jetbrains grid grid-cols-[52px_1fr_206px_120px_86px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase">
+        <div className={`font-jetbrains grid ${ASSEMBLY_GRID} gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase`}>
           <span>at</span>
           <span>scene</span>
           <span>breakdown</span>
@@ -246,7 +269,7 @@ function Row({
   const plate = PLATE_WORD[frame.plate.state];
   return (
     <div className={`border-b border-white/6 last:border-0 ${open ? "bg-white/[0.02]" : ""}`}>
-      <div className="grid grid-cols-[52px_1fr_206px_120px_86px] items-center gap-2 px-3 py-2">
+      <div className={`grid ${ASSEMBLY_GRID} items-center gap-2 px-3 py-2`}>
         {/* Both halves of the row toggle the same panel, so both carry the
             state. Without it the chevron is the only thing that says whether
             this row is open, and a chevron is a picture. */}
@@ -281,9 +304,9 @@ function Row({
       {rejection && (
         <p className="font-jetbrains flex items-start gap-1.5 px-3 pb-2 text-content leading-snug text-amber-200/85">
           <AlertTriangle className="mt-[2px] h-3 w-3 shrink-0" aria-hidden />
-          <span>
-            {rejection} <span className="text-white/35">This beat kept what it had.</span>
-          </span>
+          {/* The reason, and nothing after it. "This beat kept what it had"
+              described the row underneath, which is unchanged and visibly so. */}
+          <span>{rejection}</span>
         </p>
       )}
 
@@ -294,9 +317,11 @@ function Row({
               frame={frame}
               edit={{ selected, onSelect, onMove, onResize }}
             />
-            <p className="font-jetbrains text-content text-white/30">
-              drag any layer to move it · a selected element gets a resize handle
-            </p>
+            {/* "drag any layer to move it · a selected element gets a resize
+                handle" stood here. The canvas draws both affordances: a layer
+                under the pointer takes `cursor-move` (see FrameCanvas in
+                ./parts) and a selected element grows a handle. A sentence about
+                a direct-manipulation affordance is the affordance failing. */}
             <LayerPanel
               frame={frame}
               selected={selected}
@@ -387,7 +412,7 @@ function Row({
                 value={frame.plate.subject ?? ""}
                 onChange={(e) => onSubject(e.target.value)}
                 rows={3}
-                placeholder="derived from the beat's role — edit to steer"
+                placeholder="subject"
                 className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-cyan-400/40"
               />
             </div>
@@ -409,10 +434,17 @@ function Row({
                 placeholder="what this plate does — e.g. a slow push in as the left stack settles"
                 className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-violet-300/40"
               />
+              {/* The hold and the clip's state word, and that is all. The
+                  clause that followed — "this app has no video engine, so a
+                  clip is written here and rendered nowhere. The render seam is
+                  unbuilt" — was written three times on this one screen (here,
+                  in the header's `clips authored` count, and in LayerPanel's
+                  clip group). `authored` with no `rendered` beside it is the
+                  same fact, said once, in the vocabulary
+                  `ClipStatusWord` already uses. */}
               <p className="font-jetbrains mt-1 text-content leading-snug text-white/30">
-                {holdS === null ? "hold unknown — the beat's position is not a timecode" : `holds ${holdS}s`} ·{" "}
-                {frame.clip?.motion.trim() ? "authored · not rendered" : "no motion authored"} — this app has no
-                video engine, so a clip is written here and rendered nowhere. The render seam is unbuilt.
+                {holdS === null ? "hold unknown" : `holds ${holdS}s`} ·{" "}
+                {frame.clip?.motion.trim() ? "authored" : "—"}
               </p>
             </div>
             <button

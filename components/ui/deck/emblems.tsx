@@ -1,10 +1,12 @@
 // The deck's emblem set — WP2's replacement for the initial-glyph placeholder.
 //
 // One distinctive stroke motif per card-family member, drawn inline over the
-// gradient ground. Each motif echoes the same symbol its illustrated face
+// gradient ground. Motifs mostly echo the same symbol their illustrated face
 // (app/_studio/deckArt.ts) was generated from, so the emblem and illustrated
 // variants read as two densities of one identity rather than two art
-// directions. All strokes are `currentColor`; the family's accent arrives as a
+// directions — the DISCIPLINE family is the deliberate exception since
+// 2026-09-08 and says why beside itself. All strokes are `currentColor`; the
+// family's accent arrives as a
 // Tailwind text class from `emblemToneClass` — no colour literal leaves
 // components/ui/tokens.ts (the chrome-colour probe walks this file).
 //
@@ -17,29 +19,45 @@ import type { ReactNode } from "react";
 /** Motifs, 2–3 strokes each. viewBox 0 0 48 48, stroke inherited. */
 const EMBLEMS: Record<string, ReactNode> = {
   // ── disciplines (cyan) ──────────────────────────────────────────────────
-  // branching chains converging into one lens
+  //
+  // THESE THREE NAME THE THING, they do not echo the illustration (2026-09-08).
+  // See the note at the top of this file: the discipline cards are the first
+  // screen of the create wizard and they are HERO cards — the art and one
+  // title, nothing else — so the art is doing half the work of the only
+  // question on screen. It was not doing any: covering the three titles, the
+  // converging-chains lens, the two monoliths and the pendulum were mutually
+  // unguessable, and so (checked, same day) are the illustrated faces they
+  // echoed. A motif whose meaning arrives only from the caption beside it is
+  // decoration.
+  //
+  // So the discipline family alone trades the atmospheric motif for the
+  // denotative one — the mark a stranger reads in the first glance, before the
+  // words. The template and engine families keep the echo: their cards are
+  // picked AFTER the question has been narrowed, they are read against each
+  // other rather than cold, and nothing measured says they fail.
+  //
+  // the mortarboard — teaching, the thing being explained
   "discipline-educational": (
     <>
-      <path d="M6 12 C16 14 20 21 29 24 M6 24 H29 M6 36 C16 34 20 27 29 24" />
-      <circle cx={34} cy={24} r={5.5} />
-      <path d="M41 24 h3" />
+      <path d="M6 19.5 L24 11.5 L42 19.5 L24 27.5 Z" />
+      <path d="M14 23.1 V31 C14 34.6 34 34.6 34 31 V23.1" />
+      <path d="M42 19.5 V30" />
+      <circle cx={42} cy={32.5} r={2} fill="currentColor" stroke="none" />
     </>
   ),
-  // the cracked monolith gate, light through the gap
+  // the clapperboard — the cinema slate, a piece cut to sell a picture
   "discipline-trailer": (
     <>
-      <path d="M20 8 H10 V40 H20" />
-      <path d="M28 8 h10 V40 H28" />
-      <path d="M24 6 V42" />
+      <path d="M7 12 H41 V37 H7 Z" />
+      <path d="M7 21 H41" />
+      <path d="M14 21 L18 12 M23 21 L27 12 M32 21 L36 12" />
     </>
   ),
-  // the pendulum keeping time over an empty stage
+  // the open frame around a play mark — a video of no declared kind
   "discipline-free": (
     <>
-      <circle cx={24} cy={8} r={1.5} fill="currentColor" stroke="none" />
-      <path d="M24 8 L33 28" />
-      <circle cx={35} cy={32.5} r={4.5} />
-      <path d="M10 42 H38" />
+      <path d="M8 15 V9 H14 M34 9 H40 V15 M40 33 V39 H34 M14 39 H8 V33" />
+      <path d="M20 17.5 L31 24 L20 30.5 Z" />
     </>
   ),
 

@@ -23,7 +23,7 @@ import { useState } from "react";
 import { motion } from "motion/react";
 
 import { SURFACE } from "../tokens";
-import { DeckArtView } from "./artVariants";
+import { DeckArtView, DeckSceneView, sceneKeyOf } from "./artVariants";
 import { useDeckReducedMotion } from "./motionGuard";
 
 /* ── The spec ─────────────────────────────────────────────────────────────── */
@@ -55,15 +55,21 @@ export interface DeckCardSpec {
   risk?: string;
   /** Small provenance/mono line. */
   footnote?: string;
-  /** A settled bake-off verdict for THIS card: pin its art face regardless of
-   *  the global switcher. The operator ruled emblem for the create wizard's
-   *  discipline and template stages (2026-08-30); surfaces still in the
-   *  bake-off leave this unset and follow the switcher. */
-  artVariant?: import("./useArtVariant").ArtVariant;
+  /* THERE IS NO PER-CARD ART PIN ANY MORE (2026-09-08). A card used to be able
+   * to carry `artVariant` to opt out of a global bake-off switcher; the operator
+   * ordered the switcher removed ("Lets remove it from the codebase"), so there
+   * is nothing left to opt out OF. What a card draws is decided once, per
+   * family, by the manifest key its `art` already carries — see FAMILY_FACE in
+   * artVariants.tsx, which also records how each family was ruled. The verdict
+   * this pin used to hold (emblem for the create wizard's discipline and
+   * template stages, 2026-08-30, re-ruled permanent 2026-09-08 after the
+   * committed illustrations were compared against redrawn denotative emblems
+   * and lost) lives there now, unchanged in effect. */
   /** HERO — the deciding card (operator verdict 2026-09-06, the create wizard's
    *  three pick stages). Where `dense` is for cards you READ, hero is for cards
-   *  you CHOOSE BETWEEN: the illustration and one large centred title, and
-   *  nothing else. Eyebrow, body, chips, risk and footnote are not laid out at
+   *  you CHOOSE BETWEEN: the illustration and one large centred title, plus at
+   *  most ONE mono line of fact under it (`footnote` — 2026-09-09, the template
+   *  stage's runtime band). Eyebrow, body, chips and risk are not laid out at
    *  all — on a stage whose headline already asks the question, a kicker
    *  reading "discipline" over a card in the discipline deck is the label of a
    *  label, and a template count is a number nobody chooses on. The supporting
@@ -139,6 +145,11 @@ export default function DeckCard({
   const interactive = !spec.disabled && pickable;
   const dense = spec.density === "dense";
   const hero = spec.density === "hero";
+  /** A hero card whose family has a full-bleed scene drawn for it — the art
+   *  covers the card and the title is laid over it, instead of a 40% band with
+   *  a caption below (artVariants#sceneKeyOf, scenes.tsx). Undefined for every
+   *  other card, which keeps the banded art zone unchanged. */
+  const sceneKey = hero ? sceneKeyOf(spec.art) : undefined;
   const [open, setOpen] = useState(false);
 
   const chipRow = spec.chips && spec.chips.length > 0 && (
@@ -177,10 +188,46 @@ export default function DeckCard({
       }
       whileTap={reduced || !interactive ? undefined : { scale: 0.98, transition: LIFT_SPRING }}
       className={`group relative flex h-full flex-col overflow-hidden rounded-2xl ${SURFACE} ${
-        picked ? "ring-2 ring-cyan-300/60" : ""
-      } ${spec.disabled ? "opacity-50" : ""}`}
+        // The scene needs room to be a picture rather than a texture behind a
+        // word: without a floor the card collapses to the height of its title
+        // and the composition is cropped to a strip.
+        sceneKey ? "min-h-56 sm:min-h-64" : ""
+      } ${picked ? "ring-2 ring-cyan-300/60" : ""} ${spec.disabled ? "opacity-50" : ""}`}
     >
-      {dense ? (
+      {sceneKey ? (
+        // FULL-BLEED: the art is the card. The scrim under the title is a
+        // gradient of the app's own ink (--gt-ink), not a flat wash, so the
+        // scene stays legible at the edges where the strokes carry it and the
+        // centre still reads type at full contrast.
+        <>
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            <DeckSceneView art={spec.art} sceneKey={sceneKey} />
+          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            // THE TITLE SITS AT THE FOOT OF THE CARD, so the scrim rises from
+            // there rather than pooling in the middle. A radial scrim was tried
+            // first and photographed on 2026-09-09: it put a hole of ink over
+            // the exact centre of every scene — the mortarboard, the play mark,
+            // the orb — which is where each motif is drawn. A poster does not
+            // clear its middle; it darkens its base and prints on that.
+            //
+            // Declared inline because the stops are a custom property and a
+            // keyword, and Tailwind's alpha modifier cannot reason about the
+            // colour behind a var. No literal either way.
+            style={{
+              background:
+                "linear-gradient(to top, var(--gt-ink) 0%, var(--gt-ink) 22%, transparent 72%)",
+            }}
+          />
+          {/* sheen — the same hover answer the banded art zone gives */}
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          />
+        </>
+      ) : dense ? (
         // The dense ground: the art's gradient as a faint full-card wash, the
         // icon as an oversized watermark bleeding off the top-right corner —
         // background, not a zone, so the card is only as tall as its words.
@@ -208,7 +255,7 @@ export default function DeckCard({
             hero ? "h-40 sm:h-48" : "h-28 sm:h-32"
           }`}
         >
-          <DeckArtView art={spec.art} title={spec.title} pinned={spec.artVariant} />
+          <DeckArtView art={spec.art} />
           {/* sheen — sweeps in on hover; a colour transition, which the CSS
               reduced-motion blanket already switches off */}
           <div
@@ -232,10 +279,29 @@ export default function DeckCard({
              else. `grow` + centring is what makes it read as the middle of the
              card rather than a caption under a picture — cards in a row keep
              equal height, so short and long titles both sit on the same line. */
-          <div className="relative flex grow items-center justify-center p-5 text-center">
+          <div
+            className={`relative flex grow flex-col items-center gap-1.5 p-5 text-center ${
+              // Full-bleed: the title is printed on the scrim at the foot of the
+              // picture. Banded: it is the middle of the half-card below the art.
+              sceneKey ? "justify-end" : "justify-center"
+            }`}
+          >
             <h3 className="font-hanken text-2xl leading-tight font-semibold text-slate-100 transition-colors duration-200 ease-linear group-hover:text-white">
               {spec.title}
             </h3>
+            {/* THE ONE FACT UNDER THE NAME, and it is the card's `footnote`.
+                Hero still lays out no eyebrow, body, chips or risk — the
+                2026-09-06 density verdict stands for everything that was
+                ARGUING a case. What the operator asked for on 2026-09-09 is
+                different in kind: the template stage's cards were being chosen
+                with no idea how long each format runs, so the runtime band is
+                the shape of the answer rather than a pitch for it. It rides on
+                the existing provenance slot, in the mono voice, one line. */}
+            {spec.footnote && (
+              <span className="font-jetbrains text-label tracking-[0.12em] text-white/50">
+                {spec.footnote}
+              </span>
+            )}
           </div>
         ) : dense ? (
           <div className="relative flex grow flex-col gap-2 p-4">
@@ -252,8 +318,16 @@ export default function DeckCard({
               )}
             </div>
             {/* The reading title — the body face, not the landing serif: a
-                generated title can run long, and it has to scan, not pose. */}
-            <h3 className="font-hanken text-[15px] leading-snug font-semibold text-slate-100">
+                generated title can run long, and it has to scan, not pose.
+
+                IT HAS TO LEAD THE CARD, AND IT DID NOT. Measured at 1920 on a
+                real research card: title 17px/600, the prose it sits over 18px.
+                The title was literally SMALLER than the body underneath it, so
+                the eye entered the card at the paragraph and had to work back
+                up — which is what the operator reported as "small title".
+                `text-xl` (1.375rem/22px on this repo's scale) puts a clear step
+                between the two; the weight and the leading are unchanged. */}
+            <h3 className="font-hanken text-xl leading-snug font-semibold text-slate-100">
               {spec.title}
             </h3>
             {chipRow}
@@ -266,7 +340,31 @@ export default function DeckCard({
                 transition={reduced ? { duration: 0.15 } : { duration: 0.28, ease: "easeOut" }}
                 className="overflow-hidden"
               >
-                <div className="border-t border-white/8 pt-2.5">{spec.detail}</div>
+                {/* THE READING REGION OWNS ITS OWN LEGIBILITY (operator,
+                    2026-09-08: "poor description font for readability of
+                    multiple sentences, poor description readability if font
+                    color gray in the card").
+
+                    `detail` is arbitrary consumer JSX, and every consumer had
+                    reached for a muted grey: the research passes set their two
+                    prose paragraphs on slate-300 and slate-400, and slate-400
+                    (#94a3b8) over this card's ground is the grey the operator
+                    named. A card that opens a panel of prose cannot leave the
+                    readability of that prose to each caller's taste, so the rung
+                    and the contrast are DECLARED here — `text-content` (the
+                    1.125rem reading rung) and slate-200, the same brightness the
+                    dense title sits at one weight above.
+
+                    `[&_p.font-hanken]` rather than a plain colour on the
+                    wrapper, because an inherited colour loses to the child's own
+                    `text-slate-400`: a descendant selector outranks a bare class,
+                    so this wins. It is scoped to the PROSE face on purpose —
+                    mono lines inside a detail (provenance, pattern footnotes)
+                    are chrome, keep their own quieter tone, and are not
+                    touched. */}
+                <div className="border-t border-white/8 pt-2.5 [&_p.font-hanken]:text-content [&_p.font-hanken]:text-slate-200">
+                  {spec.detail}
+                </div>
               </motion.div>
             )}
             {footnoteLine}
@@ -305,8 +403,15 @@ export default function DeckCard({
             <h3 className="font-hanken text-xl leading-snug font-semibold text-slate-100">
               {spec.title}
             </h3>
+            {/* The pitch. Read at rest, not on hover — it used to sit on
+                slate-400 and brighten to slate-200 under the cursor, which is
+                the same muted grey the operator called out in the dense card's
+                detail panel (2026-09-08) and which a keyboard user or a reader
+                comparing a row of cards never lifts. Body copy starts legible;
+                the hover lift is the card's answer to the cursor, not the
+                condition for reading it. */}
             {spec.body && (
-              <p className="font-hanken line-clamp-3 text-content leading-relaxed text-slate-400 transition-colors duration-200 ease-linear group-hover:text-slate-200">
+              <p className="font-hanken line-clamp-3 text-content leading-relaxed text-slate-200">
                 {spec.body}
               </p>
             )}

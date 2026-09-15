@@ -77,8 +77,17 @@ test("dropping a gallery into Extract reports its progress before the create POS
   // without it would mean the gate is open to everyone.
   await expect(page.getByTestId("dev-auth-banner")).toBeVisible();
 
-  await page.getByRole("button", { name: "Extract", exact: true }).click();
-  const drop = page.getByText("Drop screenshots and images here, or click to choose.");
+  // BY TESTID, BOTH OF THEM, and that is not a preference — it is what the
+  // signal vocabulary's conversion left standing. The tab row is now
+  // <TabRail>, whose tabs are `role="tab"` and whose accessible name INCLUDES
+  // the tally chip ("Extract 3"), so `getByRole("button", { name: "Extract",
+  // exact: true })` matches nothing. And the dropzone's instruction sentence
+  // ("Drop screenshots and images here…") was deleted: a dashed box already
+  // says it, and what stays visible there is the constraint row. `testId` on
+  // TabDef exists for exactly this — a shared primitive that cannot carry the
+  // host's test contract is one nobody can adopt.
+  await page.getByTestId("foundry-tab-extract").click();
+  const drop = page.getByTestId("extract-dropzone");
   await expect(drop).toBeVisible();
 
   await page.locator('input[type="file"]').setInputFiles(gallery(N));

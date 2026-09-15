@@ -4,6 +4,7 @@
 // into Script, and clearing the research backward into nothing.
 
 import Modal from "@/components/ui/Modal";
+import { Hint } from "@/components/ui/signal";
 import { NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
 import type { ScopeApi } from "../useScope";
 
@@ -27,16 +28,29 @@ export function ConfirmScope({ api }: { api: ScopeApi }) {
     <section className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div>
-          <p className="font-jetbrains text-content tracking-[0.16em] text-white/55 uppercase">
+          {/* THE NUMBER STAYS; THE TWO PROSE BRANCHES GO. "How many cards will
+              go to the Script step" is the work and is the only thing here a
+              reader cannot see anywhere else. The other two branches described
+              the surface they were printed on — "The board matches the
+              checkpoint you confirmed" is what the eyebrow beside it says in
+              two words, and the drift branch's own count and ids are drawn
+              below as `moved · <ids>` with a button that reads "confirm again
+              →". What survives the trim is the one non-obvious mechanic —
+              Script reads the LIVE board, not the checkpoint — and it survives
+              behind a disclosure on the state that raises the question. */}
+          <p className="font-jetbrains flex items-center gap-1 text-content tracking-[0.16em] text-white/55 uppercase">
             {!api.confirmed ? "confirm the scope" : drifted ? "scope has moved" : "scope confirmed"}
+            {!!api.confirmed && drifted > 0 && (
+              <Hint variant="warn" tone="amber" label="What the Script step is reading">
+                Script reads the live board — confirming moves the checkpoint
+              </Hint>
+            )}
           </p>
-          <p className="font-hanken mt-1.5 max-w-xl text-content text-slate-400">
-            {!api.confirmed
-              ? `${api.summary.kept} of ${api.summary.total} cards will go to the Script step.`
-              : drifted
-                ? `${drifted} card${drifted === 1 ? " has" : "s have"} changed since you confirmed. The Script step works from the live board, so the change is already in it — confirm again to move the checkpoint up to it.`
-                : "The board matches the checkpoint you confirmed. Step 2 works from this board and can descope from its matrix; anything that moves is reported here."}
-          </p>
+          {!api.confirmed && (
+            <p className="font-hanken mt-1.5 max-w-xl text-content text-slate-400">
+              {api.summary.kept} of {api.summary.total} cards will go to the Script step.
+            </p>
+          )}
           {drifted > 0 && (
             <p
               data-testid="scope-diverged"

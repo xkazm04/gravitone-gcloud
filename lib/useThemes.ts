@@ -18,12 +18,16 @@ import {
   deleteTheme as dbDelete,
   listThemes,
   newTheme,
+  purgeUntitledStyles,
   putTheme,
   ratchetBlocker,
   type Proof,
   type Theme,
   type ThemeDraft,
 } from "./themes";
+
+/** Accounts whose abandoned blanks have already been swept this session. */
+const purged = new Set<string>();
 
 export function useThemes(uid: string | null) {
   const [themes, setThemes] = useState<Theme[] | null>(null);
@@ -32,6 +36,14 @@ export function useThemes(uid: string | null) {
   const reload = useCallback(async () => {
     if (!uid) return;
     try {
+      // Once per account per session, before the first read: the blanks the
+      // retired "From a brief" button left on the wall. Doing it here rather
+      // than inside listThemes keeps a read function a read function, and the
+      // guard keeps a wall that reloads often from re-scanning for nothing.
+      if (!purged.has(uid)) {
+        purged.add(uid);
+        await purgeUntitledStyles(uid);
+      }
       setThemes(await listThemes(uid));
       setError(null);
     } catch (e) {

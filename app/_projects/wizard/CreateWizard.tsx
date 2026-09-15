@@ -25,11 +25,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 
 import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
 import DeckStage from "@/components/ui/deck/DeckStage";
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Eyebrow } from "@/components/ui/Primitives";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
@@ -169,6 +169,15 @@ export default function CreateWizard() {
   const pickedPreset = styleId?.startsWith(PRESET_CARD_PREFIX)
     ? (fittingPresets.find((p) => presetCardId(p) === styleId) ?? null)
     : null;
+  /** The picked style's own name, resolved once — the rail summary shows it
+   *  with its origin, and the name stage's permanence line names it as the
+   *  thing that stops being editable. Undefined only if a locked theme's id
+   *  no longer resolves. */
+  const styleName = pickedPreset
+    ? pickedPreset.name
+    : styleId
+      ? lockedThemes.find((t) => t.id === styleId)?.name
+      : undefined;
 
   // The cascade, mirroring ProjectDialog#pickDiscipline's rules rather than
   // forking them: no record may carry a template outside its discipline, and a
@@ -179,7 +188,10 @@ export default function CreateWizard() {
   // question, and the card the user clicked is the whole answer — making them
   // then find a Next button to confirm what they just said is a second
   // gesture for one decision. The stage rail and Back stay where they are, so
-  // a change of mind is one click backward.
+  // a change of mind is one click backward. Those three stages therefore declare
+  // `advance: "pick"` below and the deck draws no Next on them — until
+  // 2026-09-08 this rule was true in the handlers and contradicted in the
+  // footer, by a Next button no state could ever enable.
   //
   // (The name stage keeps its explicit CTA: a form is not answered by a click,
   // and its finish WRITES.)
@@ -285,15 +297,57 @@ export default function CreateWizard() {
     }
   };
 
+  // ── NO `sub` ON A STAGE WHOSE CARDS ARE THE ANSWER (2026-09-08) ───────────
+  //
+  // Every one of the four stages shipped as the same sandwich: serif question,
+  // grey paragraph explaining the question, cards, control. Four in a row. The
+  // paragraphs were, verbatim:
+  //
+  //  · discipline — "The question before the template: educational and
+  //    promotional pieces are different contracts, and the craft library
+  //    measured them separately." An argument for why the stage exists, made to
+  //    a user who cannot skip it, above three cards that already differ by
+  //    emblem, tone and name.
+  //  · template — "Picking a template sets the runtime it measured — you can
+  //    take ownership of the number at the last stage." An announcement of a
+  //    downstream side effect. bd2701e made that announcement unnecessary by
+  //    showing the provenance where the number lives: the name stage's field
+  //    label reads `Target runtime · the template's` until the user edits it,
+  //    then `· yours`. A promise about a later screen, kept by that screen.
+  //  · style — see the borrowed-preset note below; the non-borrowed half of it
+  //    ("A locked style from the library, or a preset off the shelf…") restated
+  //    the permanence line stages.tsx now carries at the point of commit.
+  //  · name — "The name you type is the headline the studio opens on. Only the
+  //    name is required." Required-ness is the disabled CTA plus `blockedHint`,
+  //    which says it in the user's own terms and only when it bites.
+  //
+  // What is NOT deleted is the borrowed-preset disclosure: it is uat-driven
+  // (5 of 10 Characters were stranded), it is true only sometimes, and nothing
+  // else on the screen can say it. It is compressed instead — see below.
+  //
+  // THE TEMPLATE STAGE DID GAIN A RUNTIME STAMP, on 2026-09-09, and this note
+  // is what it reversed. The 2026-09-06 density verdict — hero cards carry the
+  // illustration and the name, nothing else — was read here as covering the
+  // craft band too, so the template stage asked the user to choose between
+  // seven formats while withholding the one fact that distinguishes them until
+  // two stages later. The operator's ruling: the band goes on the card, in the
+  // mono voice, one line under the title (stages.tsx#templateBandWords). What
+  // the density verdict actually removed is still gone — the pitch paragraph,
+  // the eyebrow repeating the stage label, the chip counting templates. A
+  // window is not a pitch.
   const stages: DeckStageDef[] = [
     {
       id: "discipline",
       label: "discipline",
       headline: "What kind of video is this?",
-      sub: "The question before the template: educational and promotional pieces are different contracts, and the craft library measured them separately.",
       done: discipline !== null,
       summary: discipline ? DISCIPLINE_LABEL[discipline] : undefined,
-      blockedHint: "pick a card to continue",
+      // No Next, and no hint under it. `pickDiscipline` sets `done` and changes
+      // stage in the same handler, so the button was disabled in every state a
+      // user could ever see it in — a control that cannot be clicked, beside a
+      // line telling them to do the one thing that takes them off this stage.
+      // The cards are the control (Deck's DeckStageDef#advance).
+      advance: "pick",
       content: (
         <DeckStage
           cards={disciplineCards()}
@@ -307,10 +361,9 @@ export default function CreateWizard() {
       id: "template",
       label: "template",
       headline: "Which craft format inside it?",
-      sub: "Picking a template sets the runtime it measured — you can take ownership of the number at the last stage.",
       done: template !== null,
       summary: template ? templateOf(template).label : undefined,
-      blockedHint: "pick a format to continue",
+      advance: "pick", // same shape as the discipline stage, above
       content: discipline ? (
         <DeckStage
           cards={templateCards(discipline)}
@@ -324,17 +377,26 @@ export default function CreateWizard() {
       id: "style",
       label: "style",
       headline: "Which visual identity does it render in?",
+      // THE ONE SURVIVING `sub`, AND IT IS A DISCLOSURE, NOT A DESCRIPTION.
+      // Every shipped preset is tagged `educational`; a trailer or free project
+      // therefore meets six cards written for a different kind of video, and
+      // nothing on a hero card can say so (uat 2026-09-05: 5 of 10 Characters
+      // could not get past this stage before the borrow existed). It ran 48
+      // words and re-explained locking, minting and the library route — all of
+      // which the name stage's permanence line and the library itself already
+      // carry. Compressed to the part only this line knows: whose video these
+      // presets were written for. Amber because it is a caveat on the hand the
+      // user is being dealt, and absent entirely when it is not true.
       sub:
-        discipline && borrowedPresets
-          ? `No style is written for ${DISCIPLINE_LABEL[discipline].toLowerCase()} yet, so the six explainer presets are offered as a starting look — one locks as this project's style when you create, and fits any discipline. A style made for this kind of video can be commissioned in the library and swapped in later.`
-          : "A locked style from the library, or a preset off the shelf — a preset locks as this project's style when you create. Every frame renders against it, fixed at creation.",
+        discipline && borrowedPresets ? (
+          <span className="text-amber-200/90">
+            presets written for {DISCIPLINE_LABEL.educational.toLowerCase()} — they fit any
+            discipline
+          </span>
+        ) : undefined,
       done: styleId !== null,
-      blockedHint: "pick a style to continue",
-      summary: pickedPreset
-        ? `${pickedPreset.name} (preset)`
-        : styleId
-          ? (lockedThemes.find((t) => t.id === styleId)?.name ?? undefined)
-          : undefined,
+      advance: "pick", // same shape as the discipline stage, above
+      summary: pickedPreset ? `${styleName} (preset)` : styleName,
       content:
         discipline && fittingThemes.length === 0 && fittingPresets.length === 0 ? (
           <EmptyStyleDeck discipline={discipline} />
@@ -351,7 +413,6 @@ export default function CreateWizard() {
       id: "name",
       label: "name",
       headline: "Name it, and set the clock",
-      sub: "The name you type is the headline the studio opens on. Only the name is required.",
       // A project with no clock is not a project: `Number("") || 0` used to
       // create a "· 0s" studio (uat 2026-09-05, LE-L1-7).
       done: title.trim().length > 0 && targetS > 0,
@@ -365,6 +426,8 @@ export default function CreateWizard() {
             targetS={targetS}
             discipline={discipline}
             template={template}
+            styleName={styleName}
+            ownDuration={ownDuration}
             onTitle={setTitle}
             onLogline={setLogline}
             onDuration={(v) => {
@@ -382,7 +445,13 @@ export default function CreateWizard() {
           ProjectsView's <main> (components/ui/Modal.tsx#restoreFocus). */}
       <main tabIndex={-1} className="pb-10">
         <Deck
-          eyebrow={<Eyebrow>create</Eyebrow>}
+          // NO EYEBROW (operator, 2026-09-09). It printed `create` on its own
+          // row directly under the nav — where StudioFrame's rule already marks
+          // Projects as the current module and the stage rail's first pill
+          // already says `1 discipline`. One word, one line, saying what the
+          // route and the rail both say, and it pushed the whole deck down by a
+          // row for it. Deck's `eyebrow` stays optional and GuidedResearch keeps
+          // its own, which names a step inside a page rather than the page.
           stages={stages}
           active={active}
           onNavigate={goToStage}
@@ -390,23 +459,34 @@ export default function CreateWizard() {
           finishLabel="Create & open"
           onFinish={() => void finish()}
           busy={busy}
+          // THE MACHINE'S WORDS, AND NOTHING APPENDED. Both banners carried a
+          // reassurance the screen behind them already proves: the rail above
+          // still shows every ✓ and its summary, so "your picks are kept" is
+          // visible in the same viewport as the sentence claiming it, and "your
+          // projects live in this browser's storage" restates the `local` pill
+          // in the nav. What a failure owes the user is what failed.
           notice={
             mintError ? (
-              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
-                {mintError} — the project was not created; your picks are kept.
+              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
+                {mintError}
               </p>
             ) : error ? (
-              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
-                {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
+              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
+                {error}
               </p>
             ) : undefined
           }
+          // `back to the shelf — nothing is kept` became `← Projects`. Nothing
+          // has been created yet — there is no record for leaving to discard,
+          // so the clause was reassuring the user about a loss that cannot
+          // happen, next to the Back that is the actual undo.
           exit={
             <Link
               href="/projects"
-              className="font-jetbrains text-label text-white/35 transition hover:text-white/60"
+              className="font-jetbrains inline-flex items-center gap-1.5 text-label text-white/35 transition hover:text-white/60"
             >
-              back to the shelf — nothing is kept
+              <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
+              Projects
             </Link>
           }
         />

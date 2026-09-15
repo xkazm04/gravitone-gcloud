@@ -1,6 +1,41 @@
 "use client";
 
+import { NOTEBOOK, NOTEBOOK_COUNTS } from "../notebook";
 import type { Connector, Notebook } from "../types";
+
+/** ONE NAME PER SECTION, read by the rail pill AND by the heading it jumps to.
+ *
+ *  They used to be two expressions in two files and they disagreed: the rail
+ *  said `mechanisms · 3` and the heading said "mechanisms — the beat chain,
+ *  pre-authored". Eleven of these headings were a noun plus a gloss explaining
+ *  what the section under it was for — "tension — the load-bearing field",
+ *  "steel-man — mandatory, not optional", "currency — how long is this true
+ *  for", "gaps — what this run did not do". The section IS the answer, and the
+ *  reader has just pressed the pill that named it.
+ *
+ *  The counts stay: a count is a finding. The glosses went. */
+export const SECTION_LABEL: Record<string, string> = {
+  tension: "tension",
+  mechanisms: `mechanisms · ${NOTEBOOK_COUNTS.mechanisms}`,
+  reversals: `reversals · ${NOTEBOOK_COUNTS.reversals}`,
+  steelman: "steel-man",
+  counters: `counter-positions · ${NOTEBOOK.counterPositions.length}`,
+  facts: `facts · ${NOTEBOOK_COUNTS.facts}`,
+  numbers: "numbers made felt · analogies",
+  unknowns: `unknowns · ${NOTEBOOK_COUNTS.unknownsOpen} open`,
+  questions: `questions · ${NOTEBOOK.candidateQuestions.length}`,
+  fit: "engine fit",
+  currency: "currency",
+  // "sources" here is NOTEBOOK.sources, the hand-written bibliography — a
+  // SEPARATE, unrelated population from the distinct `Fact.source` strings the
+  // facts cite (`NOTEBOOK_COUNTS.factSourceStrings`). Named "bibliography"
+  // rather than bare "sources" so neither the pill nor the heading can be
+  // misread as a count of every source the notebook has; see the comment on
+  // NOTEBOOK_COUNTS in notebook.ts for the measurement and why the two lists
+  // are not reconciled.
+  sources: `bibliography · ${NOTEBOOK_COUNTS.sources}`,
+  gaps: `gaps · ${NOTEBOOK_COUNTS.gaps}`,
+};
 
 /** Sections that render only when they have something in them.
  *
@@ -39,14 +74,14 @@ export function sectionRenders(n: Notebook, id: string): boolean {
  *  the button they pressed: the next Tab continues through the rail, and
  *  nothing they can perceive has changed. Not reachable by tabbing — -1 means
  *  programmatic focus only. */
-export function H({ id, children }: { id: string; children: React.ReactNode }) {
+export function H({ id, children }: { id: string; children?: React.ReactNode }) {
   return (
     <h3
       id={`nb-${id}`}
       tabIndex={-1}
       className="font-jetbrains scroll-mt-2 border-b border-white/8 pb-1.5 text-label tracking-[0.18em] text-cyan-300/80 uppercase focus-visible:outline-2 focus-visible:outline-offset-4"
     >
-      {children}
+      {children ?? SECTION_LABEL[id]}
     </h3>
   );
 }

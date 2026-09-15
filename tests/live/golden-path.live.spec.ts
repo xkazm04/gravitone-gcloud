@@ -187,7 +187,21 @@ test.describe("the assembled studio", () => {
 
     // And the surface reads it back, not just the store: the board is unlocked,
     // which it is not for a project with no notebook.
-    await expect(page.getByTestId("tab-board")).toBeEnabled();
+    //
+    // THE LOCK IS `aria-disabled` NOW, not a `disabled` attribute. The tab moved
+    // to <TabRail>, which keeps a locked tab in the tab order on purpose so the
+    // reason behind its Hint stays reachable by keyboard. `toBeEnabled()` still
+    // means what it meant — Playwright folds `aria-disabled` into enabled-ness
+    // for the roles in `kAriaDisabledRoles`, and `tab` is one of them (measured
+    // against playwright 1.62.1: a `role="tab"` with `aria-disabled="true"`
+    // reports `isDisabled() === true`). The attribute assertion beside it is
+    // what keeps this rung honest if that role table ever moves: a
+    // `toBeEnabled()` that stopped seeing the lock would pass vacuously, and a
+    // vacuous pass is exactly what this file's gate-vacuous-pass sibling exists
+    // to forbid.
+    const board = page.getByTestId("tab-board");
+    await expect(board).toBeEnabled();
+    await expect(board).not.toHaveAttribute("aria-disabled", "true");
 
     expect(errors, "page errors across the reload").toEqual([]);
   });
@@ -254,7 +268,12 @@ test.describe("the assembled studio", () => {
     await page.goto("/library", { waitUntil: "domcontentloaded" });
     // /library opens on Styles; the tiles live in the Assets module. Reached the
     // way a user reaches it, so the journey breaks if the tab does.
-    await page.getByRole("button", { name: "Assets", exact: true }).click();
+    // `role="tab"`, and the name carries the count — the module rail became a
+    // real tablist (components/ui/signal/TabRail) when /library stopped
+    // explaining itself in a paragraph per tab. `exact: "Assets"` matched the
+    // old <button>; the accessible name is now "Assets 30". Anchored prefix,
+    // so a changing count cannot break the journey again.
+    await page.getByRole("tab", { name: /^Assets/ }).click();
 
     // The shelf seeds from the trial index through the product's own path.
     const tiles = page.locator("figure[data-asset-id]");

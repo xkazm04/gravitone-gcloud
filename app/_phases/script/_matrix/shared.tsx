@@ -4,6 +4,8 @@
 // whichever way you are reading the grid — and so a before/after comparison is
 // computed one way rather than three.
 
+import { Hint } from "@/components/ui/signal";
+
 import { DIMENSIONS } from "../../_shared/notebook/dimensions";
 import type { Card } from "../../_shared/notebook/cards";
 import type { ScopeApi } from "../../research/useScope";
@@ -115,15 +117,16 @@ export function MatrixFootnotes({ cards, version, scope }: { cards: Card[]; vers
 
   return (
     <div className="mt-4 space-y-1.5 border-t border-white/8 pt-3">
-      <p className="font-jetbrains text-content leading-relaxed text-white/40">
-        {untouched.length} of {cards.length} cards are in no render
-        {conclusions > 0 && (
-          <>
-            {" "}— including all {conclusions} conclusions, which were reasoned{" "}
-            <span className="text-white/60">after</span> these {RENDERS.length} scripts were written.
-            That is a gap in the scripts, not in the research.
-          </>
-        )}
+      {/* The count is the finding. "That is a gap in the scripts, not in the
+          research" was the app arguing its own case beside it, and went; the one
+          fact inside that sentence — WHEN the conclusions were reasoned — is a
+          date, so it stays, behind the disclosure. */}
+      <p className="font-jetbrains flex flex-wrap items-baseline gap-x-1.5 text-content leading-relaxed text-white/40">
+        <span>
+          {untouched.length} of {cards.length} cards are in no render
+          {conclusions > 0 ? ` — including all ${conclusions} conclusions` : ""}
+        </span>
+        {conclusions > 0 && <Hint>reasoned after these {RENDERS.length} scripts were written</Hint>}
       </p>
       {conflicts.length > 0 && (
         <p data-testid="matrix-scope-conflicts" className="font-jetbrains text-content leading-relaxed text-rose-300/90">
@@ -140,11 +143,23 @@ export function MatrixFootnotes({ cards, version, scope }: { cards: Card[]; vers
           decision was real, but it has no row to sit in.
         </p>
       )}
-      <p className="font-jetbrains text-content leading-relaxed text-white/30">
-        Seconds are computed from each render’s own beat marks, not estimated. A beat resting on
-        several cards splits its seconds between them, so every column sums to the runtime it came
-        from. Runtime not attributed to any card is hook, promise and close.
-      </p>
     </div>
+  );
+}
+
+/** How a second in this grid was arrived at — a definition of the unit, not an
+ *  explanation of the tab. It used to be a three-sentence footnote printed under
+ *  all three weight tabs; it is now one glyph, placed where the totals are
+ *  named. The full statement, for the record and for whoever asks next:
+ *  seconds are computed from each render's own beat marks, never estimated; a
+ *  beat resting on several cards splits its seconds between them, so every
+ *  column sums to the runtime it came from; runtime attributed to no card is
+ *  hook, promise and close. */
+export function SecondsHint() {
+  return (
+    <Hint label="how seconds are counted">
+      from each render’s own beat marks · a shared beat splits its seconds · unattributed is hook,
+      promise and close
+    </Hint>
   );
 }

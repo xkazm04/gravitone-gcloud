@@ -29,6 +29,11 @@
 // let you read it. Prompt WORDING is deliberately unscored here — see the
 // header of ./shotPrompt and the named gaps at the bottom of the page.
 
+import { Unlock } from "lucide-react";
+
+import { CHIP_CLASS, Hint, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
+import type { PhaseKey } from "@/lib/projects";
+
 import type { FramesRender } from "./frames";
 import {
   isTrailerFormat,
@@ -113,10 +118,15 @@ function ShotRow({ s, prompt }: { s: Shot; prompt?: ShotPrompt }) {
 }
 
 export default function ShotSheet({
+  projectId,
   render,
   block,
   hasLockedStyle,
+  donePhases,
 }: {
+  /** For the one control the blocked branch offers: a way to the step that
+   *  composes a spine. */
+  projectId: string;
   /** The chain this step resolved from the PROJECT'S OWN RECORD — see
    *  ./frames#FramesRender. `origin` is read rather than inferred, because the
    *  two absences below are indistinguishable from the beats alone. */
@@ -126,38 +136,50 @@ export default function ShotSheet({
    *  same distinction the assembly header colours in amber, and it matters more
    *  here because every prompt on the page restates it. */
   hasLockedStyle: boolean;
+  /** The steps that have produced something — the filled dots of the chain.
+   *  Read off the project record by `useFrames`, never guessed here. */
+  donePhases: PhaseKey[];
 }) {
   // A TRAILER PROJECT WITH NOTHING COMPOSED. Absence, named, with the step that
   // ends it — not an empty grid, and not the explainer's fixture standing in.
   if (render.origin === "no-spine") {
     return (
-      <div className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-6">
-        <p className="text-content leading-relaxed text-amber-100/90">
-          &ldquo;{render.title}&rdquo; is a promotional cut, and nothing has composed its spine yet.
-          There is no beat chain to decompose — not an empty one, none.
-        </p>
-        <p className="mt-2 text-label leading-relaxed text-white/45">
-          Step 1 offers candidate beats per part of the spine and Step 2 composes the ones you confirm
-          into a cut. This step reads that cut; it will not write one for you, because a spine invented
-          downstream is a spine nobody chose.
-        </p>
-        <p className="font-jetbrains mt-2 text-label text-white/30">
-          nothing was derived, nothing was guessed, and no frame was seeded from another project&rsquo;s script
-        </p>
-      </div>
+      <UpstreamBreak
+        blockedAt="script"
+        current="frames"
+        done={donePhases}
+        action={{ label: "Compose the cut", href: `/studio/${projectId}?step=script` }}
+        detail={render.title}
+      />
     );
   }
 
+  // NOT AN EMPTY RESULT — a layer that does not apply, drawn as one. A struck
+  // grid of shot cells over the template's own name says the category error
+  // ("0 shots" would claim the layer ran and found nothing) without the two
+  // paragraphs that used to teach what an explainer beat is.
   if (!isTrailerFormat(render.template)) {
     return (
-      <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-6">
-        <p className="text-content leading-relaxed text-white/45">
-          &ldquo;{render.title}&rdquo; is a <span className="text-white/70">{render.template}</span>. Shot
-          decomposition applies to promotional cuts only — in an explainer a beat <em>is</em> one composed
-          picture held while a sentence is spoken, and the frame list is already that.
-        </p>
-        <p className="mt-2 text-content leading-relaxed text-white/30">
-          Nothing was derived here, and nothing about the assembly changed. This is not an empty result.
+      <div className="flex flex-col items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-8">
+        <span
+          role="img"
+          aria-label={`shot decomposition does not apply to a ${render.template}`}
+          className="relative grid grid-cols-3 gap-1.5 opacity-40"
+        >
+          {Array.from({ length: 6 }, (_, i) => (
+            <span
+              key={i}
+              aria-hidden
+              className="block h-5 w-8 rounded-sm border border-dashed border-white/30"
+            />
+          ))}
+          <span
+            aria-hidden
+            className="absolute top-1/2 -left-2 h-px w-[calc(100%+1rem)] -rotate-12 bg-white/45"
+          />
+        </span>
+        <p className="font-jetbrains text-content tracking-[0.12em] text-white/40 uppercase">
+          not applicable · {render.template}
         </p>
       </div>
     );
@@ -178,36 +200,67 @@ export default function ShotSheet({
 
   return (
     <div className="space-y-4">
-      <p className="font-jetbrains text-content text-white/35">
-        {report.shots} shots across {report.beats} beats · {report.engaged}/{report.checks.length} checks
-        examined anything · derived, not authored
-        {/* WHOSE BEATS THESE ARE. Worth a clause of its own: this page spent its
-            whole life decomposing a fixture, so "derived" needs to say derived
-            from WHAT before a reader can trust a single row of it. */}
-        <span className="text-white/25">
-          {" · "}
-          {render.origin === "trailer-cut"
-            ? `from this project’s composed spine, over its ${render.durationS}s target`
-            : "from a fixture chain"}
+      {/* THE COUNTS, AS COUNTS. This line used to read "{n} shots across {m}
+          beats · {e}/{c} checks examined anything · derived, not authored". Two
+          of those clauses were the page describing its own posture; the third,
+          "examined anything", is what a check's own `examined` column already
+          says row by row. WHOSE beats these are stays, because this page spent
+          its whole life decomposing a fixture. */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="font-jetbrains text-content tracking-[0.14em] text-white/30 uppercase">
+          derived
         </span>
-      </p>
+        <Tally label="shots" value={report.shots} />
+        <Tally label="beats" value={report.beats} />
+        <Tally label="checks" value={report.engaged} of={report.checks.length} />
+        <span className={`${CHIP_CLASS} ${TALLY_TONE.neutral}`}>
+          {render.origin === "trailer-cut" ? (
+            <>
+              <span aria-hidden className="uppercase opacity-50">
+                spine
+              </span>
+              <span className="sr-only">from this project’s composed spine, target</span>
+              <span className="text-white/85">{render.durationS}s</span>
+            </>
+          ) : (
+            <span className="text-white/85">fixture chain</span>
+          )}
+        </span>
+      </div>
 
       {/* Stated rather than assumed, for the same reason the assembly header
           states it: a fallback preset is not the project's style, and every
           prompt below restates whichever one this is. */}
       {!hasLockedStyle && (
-        <p className="rounded-xl border border-amber-300/25 bg-amber-300/5 px-4 py-2.5 text-content leading-snug text-amber-100/90">
-          These prompts restate a fallback style preset, not this project&rsquo;s locked style. Lock a style
-          before reading them as the identity the plates would come back in.
-        </p>
+        <a
+          href="/library"
+          className={`${CHIP_CLASS} ${TALLY_TONE.amber} w-fit transition hover:bg-amber-400/[0.14] focus-visible:outline-2 focus-visible:outline-offset-2`}
+        >
+          <Unlock className="h-3.5 w-3.5" aria-hidden />
+          fallback style
+          <Hint variant="lock" tone="amber" label="what a fallback style means here">
+            every prompt below restates this preset, not a locked identity
+          </Hint>
+        </a>
       )}
 
+      {/* BEATS THAT ARE NOT ON THE CLOCK, sitting off it — one amber dashed
+          chip per beat, carrying the `at` string that is not a timecode. The
+          sentence this replaces named them in prose and then explained, in a
+          third clause, that nothing had guessed a position for them. */}
       {unplaceable.length > 0 && (
-        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-2.5 text-content leading-snug text-rose-200">
-          {unplaceable.length} beat{unplaceable.length === 1 ? "" : "s"} could not be placed and derived no
-          shots — {unplaceable.map((b) => `"${b.at}"`).join(", ")} {unplaceable.length === 1 ? "is" : "are"}{" "}
-          not a timecode. Nothing here guessed a position for them.
-        </p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="sr-only">beats that could not be placed and derived no shots:</span>
+          <Tally label="unplaced" value={unplaceable.length} tone="amber" />
+          {unplaceable.map((b, i) => (
+            <span
+              key={`${b.at}-${i}`}
+              className={`${CHIP_CLASS} border-dashed ${TALLY_TONE.amber}`}
+            >
+              {b.at || "—"}
+            </span>
+          ))}
+        </div>
       )}
 
       <div className="overflow-hidden rounded-xl border border-white/8">

@@ -79,16 +79,14 @@ export function Consequences({ api }: { api: ScopeApi }) {
       </Notice>
     );
   }
-  if (!s.wounds.length && !s.descoped) {
-    return (
-      <p className="font-jetbrains text-content text-white/35">
-        Nothing descoped. The script will be written against the full notebook
-        {s.notTaken > 0
-          ? `, minus the ${s.notTaken} conclusion${s.notTaken === 1 ? "" : "s"} you have not taken.`
-          : "."}
-      </p>
-    );
-  }
+  // NOTHING CUT, NOTHING WOUNDED — and so nothing to report. This branch used
+  // to print "Nothing descoped. The script will be written against the full
+  // notebook, minus the N conclusions you have not taken." Both halves are
+  // already on the ScopeBar directly above it, as `DESCOPED 0` and `NOT TAKEN
+  // N`, which is where a reader checks a count. A panel that renders a sentence
+  // in the state where nothing has happened is a panel that is ignored in the
+  // state where something has.
+  if (!s.wounds.length && !s.descoped) return null;
   if (!s.wounds.length) {
     const copy = cutCopy(s);
     return (

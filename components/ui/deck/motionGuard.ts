@@ -16,11 +16,7 @@
 // preference. When this returns true, springs collapse to simple opacity (or
 // nothing) — see DeckCard/DeckStage for what each animation degrades to.
 
-import { useReducedMotion } from "motion/react";
-
-/** True when the user asked for no motion. `null` (SSR, first paint before the
- *  media query is read) is treated as "no preference stated", which matches
- *  what the CSS blanket rule does: it only acts on an explicit `reduce`. */
-export function useDeckReducedMotion(): boolean {
-  return useReducedMotion() ?? false;
-}
+// The implementation moved UP to components/ui/motionPreference.ts when a
+// second JS-driven mover arrived (an autoplaying <video>, components/ui/Clip.tsx).
+// This stays as the deck's name for it — one predicate, two call sites.
+export { usePrefersReducedMotion as useDeckReducedMotion } from "../motionPreference";

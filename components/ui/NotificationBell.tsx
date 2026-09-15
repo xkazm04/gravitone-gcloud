@@ -27,6 +27,7 @@ import {
 } from "@/app/_phases/_shared/stepStore";
 import { elapsed, useJobs } from "@/lib/jobs";
 import { politenessFor, useAnnounce } from "@/lib/announcer";
+import { Ghost } from "@/components/ui/signal";
 
 /** What each failure MEANS FOR THE USER, in the user's terms. studioDb and
  *  stepStore classify; this is the only place that has to say what to do about
@@ -181,6 +182,17 @@ export default function NotificationBell() {
   // discover is barely better than one nobody reports. The list below still
   // keys off `count`: trouble has its own card and is not an event.
   const badge = count + (trouble ? 1 : 0);
+
+  /** WHICH empty the tray is, drawn rather than narrated. The tone matches the
+   *  card the reader is looking at directly above the ghost; the label is the
+   *  spoken form and is the only place the branch is words. */
+  const empty = trouble
+    ? { tone: "text-rose-200/45", label: "Nothing unread. The failure above is the storage layer." }
+    : running.length
+      ? { tone: "text-cyan-200/45", label: "Nothing unread. Work is still running." }
+      : interrupted.length
+        ? { tone: "text-amber-200/45", label: "Nothing unread. A run above was interrupted." }
+        : { tone: "text-white/25", label: "Nothing unread." };
 
   return (
     <div ref={ref} className="relative">
@@ -346,15 +358,24 @@ export default function NotificationBell() {
           )}
 
           {count === 0 ? (
-            <p className="px-1 py-3 text-content text-white/50">
-              {trouble
-                ? "No run has reported anything — the failure above is the storage layer itself."
-                : running.length
-                  ? "Nothing to report yet — work is still running."
-                  : interrupted.length
-                    ? "Nothing unread. The interrupted run above did not finish."
-                    : "Nothing unread. Finished runs stay in the step's own log."}
-            </p>
+            // FOUR SENTENCES FOR ONE EMPTY PANEL, replaced by the shape of the
+            // row that will fill it. Every branch said "nothing" and then
+            // explained, in prose, a state the reader can already see standing
+            // above it: the rose storage card, the cyan running card, the amber
+            // interrupted one. So the branch survives as TONE on the glyph —
+            // the same colour as the card it refers to — and the words that
+            // carried it go.
+            //
+            // Not for a screen reader, which reads nothing off a tint: <Ghost>
+            // renders `label` sr-only, and that is where the distinction stays
+            // in words. Same floor the whole signal vocabulary is held to.
+            <div className="px-1 py-3">
+              <Ghost
+                shape="row"
+                glyph={<Bell className={`h-5 w-5 ${empty.tone}`} />}
+                label={empty.label}
+              />
+            </div>
           ) : (
             <ul className="max-h-[19rem] space-y-1.5 overflow-y-auto scroll-y">
               {unread.map((e) => (

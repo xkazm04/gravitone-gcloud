@@ -79,9 +79,12 @@ export default function LayerPanel({
         {!frame.elements.length && <Empty>no elements</Empty>}
       </Group>
 
+      {/* "always the ground" used to follow the plate's state word. The plate
+          is drawn at the bottom of this list and painted under every layer in
+          the canvas beside it — being the ground is the list position. */}
       <Group label="plate">
         <p className="font-jetbrains px-1 py-1 text-content text-white/40">
-          {frame.plate.state === "ready" ? "rendered · always the ground" : "not rendered"}
+          {frame.plate.state === "ready" ? "rendered" : "not rendered"}
         </p>
       </Group>
 
@@ -89,8 +92,12 @@ export default function LayerPanel({
           fifth thing stacked over the other four. It is the one row in this
           panel with nothing to select, reorder or hide, and that asymmetry is
           the honest shape: there is no video provider in this app, so a clip is
-          authored and never rendered. The line below says so every time rather
-          than once in a tooltip. */}
+          authored and never rendered.
+          "no video engine is wired here — the render seam is unbuilt" used to be
+          printed under every clip group. It was the third copy of that sentence
+          on one screen (FramesAssembly's motion box and its header carried the
+          other two) and it is now nowhere: `authored` with no `rendered` beside
+          it, and the absent controls, are the fact. */}
       <Group label="clip">
         <div className="space-y-1 px-1 py-1">
           {isAuthoredClip(frame) ? (
@@ -103,9 +110,6 @@ export default function LayerPanel({
           ) : (
             <p className="font-jetbrains text-content text-white/40">no motion authored</p>
           )}
-          <p className="font-jetbrains text-content leading-snug text-white/25">
-            no video engine is wired here — the render seam is unbuilt
-          </p>
         </div>
       </Group>
     </div>

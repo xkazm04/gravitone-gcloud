@@ -18,7 +18,18 @@ import type { ScopeApi } from "../../research/useScope";
 import { NoteHandle } from "../_notes/NotesContext";
 import { UNTAGGED_DIMENSION_ID, columnsFor } from "../../_shared/notebook/dimensions";
 import { coverageIn, totalIn, usageIn, type Version } from "../versions";
-import { DeltaTag, MatrixFootnotes, RENDERS, ScopePip, TONE, deltaOf, outWord, secs, stillSpoken } from "./shared";
+import {
+  DeltaTag,
+  MatrixFootnotes,
+  RENDERS,
+  ScopePip,
+  SecondsHint,
+  TONE,
+  deltaOf,
+  outWord,
+  secs,
+  stillSpoken,
+} from "./shared";
 
 export default function MatrixCoverage({
   api,
@@ -45,11 +56,9 @@ export default function MatrixCoverage({
 
   return (
     <div data-testid="matrix-coverage">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="font-hanken max-w-xl text-content text-slate-400">
-          Every card, every render. Read across a row to see who used it and for how long; a row of
-          zeros is research no script spent a second on.
-        </p>
+      {/* No intro paragraph: the grid IS "who used this, and for how long", and a
+          row of zeros already draws itself in TONE.unused grey. */}
+      <div className="flex flex-wrap items-end justify-end gap-3">
         <button
           aria-pressed={only}
           onClick={() => setOnly((v) => !v)}
@@ -77,7 +86,10 @@ export default function MatrixCoverage({
             </span>
           );
         })}
-        <span className="font-jetbrains text-right text-label tracking-[0.1em] text-white/35 uppercase">all</span>
+        <span className="font-jetbrains flex items-center justify-end gap-1 text-right text-label tracking-[0.1em] text-white/35 uppercase">
+          all
+          <SecondsHint />
+        </span>
       </div>
 
       {columns.map((d) => {
@@ -97,12 +109,11 @@ export default function MatrixCoverage({
             >
               {d.label}
             </h4>
-            {orphan && (
-              <p className="font-jetbrains mt-1 text-content leading-relaxed text-amber-200/70">
-                no dimension — tag {rows.length === 1 ? "it" : "them"} in
-                dimensions.ts::CARD_DIMENSION. The triage board says the same thing.
-              </p>
-            )}
+            {/* The amber column header carries the finding. Where to tag a card
+                (dimensions.ts::CARD_DIMENSION) is a source-code instruction, and
+                it is already stated by the triage board and by cards.ts's own
+                untagged diagnostic — twice was enough, three times was creator
+                UI reading like a TODO. */}
             <ul>
               {rows.map((c) => (
                 <Row key={c.id} card={c} api={api} version={version} baseline={baseline} comparing={comparing} />

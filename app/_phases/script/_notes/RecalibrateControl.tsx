@@ -18,6 +18,8 @@
 
 import { useEffect, useState } from "react";
 
+import { Hint } from "@/components/ui/signal";
+
 import { RENDERS } from "../renders";
 import { overrideFrom, overrideLineOf, receiptOf } from "../versions";
 import { inertNotes } from "../recalibrate";
@@ -121,10 +123,17 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
         )}
 
         {blocked && (
-          <p data-testid="gate-blocking" className="font-jetbrains mt-1.5 text-content leading-snug text-rose-200">
-            The gate is blocking on {gate!.blocking.join(", ")} — {gate!.violations} finding
-            {gate!.violations === 1 ? "" : "s"}, {gate!.enforced}% of it enforced. It reads a narrow
-            lexical band, so it cannot stop you; accepting anyway is recorded on the version.
+          <p
+            data-testid="gate-blocking"
+            className="font-jetbrains mt-1.5 flex flex-wrap items-center gap-1.5 text-content leading-snug text-rose-200"
+          >
+            <span>
+              blocking: {gate!.blocking.join(", ")} · {gate!.violations} finding
+              {gate!.violations === 1 ? "" : "s"} · {gate!.enforced}% enforced
+            </span>
+            {/* Why it cannot stop you, on the control it cannot stop. The
+                two-step arm/confirm below already teaches the rest. */}
+            <Hint tone="rose">it reads a narrow lexical band — an override is recorded on the version</Hint>
           </p>
         )}
 
@@ -176,9 +185,9 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
         <div className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/10">
           <span className="block h-full w-full animate-pulse rounded-full bg-cyan-300/70" />
         </div>
-        <p className="font-jetbrains mt-1.5 text-content leading-snug text-white/35">
-          a real {MODEL} turn — minutes, not seconds. the pad stays locked until it lands.
-        </p>
+        {/* No note. The indeterminate bar says "we do not know how long", the
+            live elapsed clock says how long it has been, and every control on
+            the pad is already disabled. */}
       </div>
     );
 
@@ -188,24 +197,30 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
         data-testid="run-recalibration"
         onClick={api.run}
         disabled={!n}
-        // A disabled control says what enables it (uat 2026-09-05, KW-L1-6): a
-        // first-timer on the guided Candidates tab had no way to learn that
-        // notes are opened from a track on the Coverage, Spend bar or Tracks tab.
-        title={
-          n
-            ? undefined
-            : "Nothing to recalibrate yet — open a track's note handle on the Coverage, Spend bar or Tracks tab to leave a note first."
-        }
+        // KEPT, and it is the one deliberate exception in this pass: a disabled
+        // control with no visual equivalent for what enables it (uat 2026-09-05,
+        // KW-L1-6 — a first-timer on the guided Candidates tab had no way to
+        // learn that notes are opened from a track handle). It rides a <Hint>
+        // beside the button now rather than a native `title`, so a keyboard and
+        // a touch device can reach it too.
         className="font-jetbrains w-full rounded-xl border border-cyan-400/40 bg-cyan-400/[0.08] px-3 py-2 text-label text-cyan-200 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/25"
       >
         {n ? `Recalibrate · ${n} note${n === 1 ? "" : "s"}` : "Recalibrate"}
       </button>
+      {!n && (
+        <p className="font-jetbrains flex items-center gap-1.5 text-label text-white/30">
+          nothing to recalibrate yet
+          <Hint label="What enables Recalibrate">
+            open a track&rsquo;s note handle on Coverage, the Spend bar or Tracks
+          </Hint>
+        </p>
+      )}
       <div className="flex items-center justify-between gap-2">
         {/* Derived from the last result's provenance, never hand-removed: the
             label disappears on its own when a real model produced the version,
             and comes back on its own if the call falls back. */}
         <span className="font-jetbrains text-label text-white/30">
-          {api.engineNote ? "simulated fallback" : `local claude code · ${MODEL} · edits, not rewrites`}
+          {api.engineNote ? "simulated fallback" : `local claude code · ${MODEL}`}
         </span>
         {n > 0 && (
           <button
@@ -225,12 +240,10 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
           the difference between "my run vanished" and "I never accepted it". */}
       {api.lostCandidate && (
         <p data-testid="lost-candidate" className="font-jetbrains text-content leading-snug text-amber-200/90">
-          {api.lostCandidate.label} was staged when this project last closed and never accepted, so it is
-          gone.{" "}
-          {api.lostCandidate.notes === 1
-            ? "The note that produced it is still on the pad"
-            : `The ${api.lostCandidate.notes} notes that produced it are still on the pad`}{" "}
-          — recalibrate to rebuild it.
+          {api.lostCandidate.label} · staged, never accepted · lost
+          <span className="ml-1.5 text-white/40">
+            {api.lostCandidate.notes} note{api.lostCandidate.notes === 1 ? "" : "s"} still on the pad
+          </span>
         </p>
       )}
 

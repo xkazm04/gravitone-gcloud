@@ -142,7 +142,7 @@ function DuelCardBody({
       {arc.length > 0 && (
         <ul className="space-y-1">
           {arc.map(({ word, beat }) => (
-            <li key={word} className="font-hanken flex gap-2 text-[12.5px] leading-snug">
+            <li key={word} className="font-hanken flex gap-2 text-label leading-snug">
               <span className="font-jetbrains shrink-0 pt-px text-label tracking-[0.1em] text-white/35 uppercase">
                 {word}
               </span>
@@ -163,8 +163,11 @@ function DuelCardBody({
       </p>
 
       {picked && (
+        // The card is already cyan-ringed and aria-pressed; "the Frames step
+        // opens on this chain" is what adopting DOES, said next to the thing
+        // that did it.
         <p data-testid={`duel-adopted-${r.id}`} className="font-jetbrains text-label text-cyan-200/90">
-          adopted — the Frames step opens on this chain
+          adopted
         </p>
       )}
 

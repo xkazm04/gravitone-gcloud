@@ -13,13 +13,18 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { ArrowUpRight } from "lucide-react";
+
 import Modal from "@/components/ui/Modal";
 import { Eyebrow, Button } from "@/components/ui/Primitives";
 import { Field, NumberInput, Segmented, TextArea, TextInput } from "@/components/ui/Field";
+import { Hint } from "@/components/ui/signal";
+import { DUR_MAX, DUR_MIN, RuntimeBand } from "./wizard/stages";
 import {
   DISCIPLINES,
   DISCIPLINE_LABEL,
   DISCIPLINE_NOTE,
+  PHASES,
   PHASE_TITLE,
   disciplineOf,
   projectContents,
@@ -93,7 +98,6 @@ export default function ProjectDialog({
     }
   }, [open, project, lockedThemes]);
 
-  const tpl = templateOf(draft.template);
   const discipline: Discipline = draft.discipline ?? disciplineOf(draft.template);
   const templates = templatesFor(discipline);
   // Only styles that fit the discipline are offered: the SAME predicate
@@ -173,23 +177,24 @@ export default function ProjectDialog({
       title={project ? project.title : "New project"}
       eyebrow={<Eyebrow>{project ? "edit" : "create"}</Eyebrow>}
       className="max-w-xl"
+      // The footer used to open with `saved to this browser` / `opens in the
+      // studio` — a caption for the button standing beside it, which already
+      // says "Save" and "Create & open". Where it saves is the `local` pill in
+      // the nav; where it opens is the second word of the button. The arrow
+      // does the one thing the words could not: draw the leaving.
       footer={
-        <div className="flex items-center justify-between gap-3">
-          <span className="font-jetbrains text-label text-white/35">
-            {project ? "saved to this browser" : "opens in the studio"}
-          </span>
-          <div className="flex gap-2">
-            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose} disabled={busy}>
-              Cancel
-            </Button>
-            <Button
-              className="cursor-pointer px-5 py-2"
-              disabled={!valid || busy}
-              onClick={() => void submit()}
-            >
-              {busy ? "Saving…" : project ? "Save" : "Create & open"}
-            </Button>
-          </div>
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose} disabled={busy}>
+            Cancel
+          </Button>
+          <Button
+            className="inline-flex cursor-pointer items-center gap-1.5 px-5 py-2"
+            disabled={!valid || busy}
+            onClick={() => void submit()}
+          >
+            {busy ? "Saving…" : project ? "Save" : "Create & open"}
+            {!busy && !project && <ArrowUpRight aria-hidden className="h-4 w-4" />}
+          </Button>
         </div>
       }
     >
@@ -211,11 +216,10 @@ export default function ProjectDialog({
           />
         </Field>
 
-        <Field
-          label="Logline"
-          htmlFor="p-logline"
-          hint="Optional — one sentence. It is what the script step argues back against."
-        >
+        {/* `Optional` in the label, the rest deleted — the same move and the
+            same reasoning as the wizard's logline field (wizard/stages.tsx),
+            said once in each of the two faces so they cannot drift. */}
+        <Field label="Logline · optional" htmlFor="p-logline">
           <TextArea
             id="p-logline"
             rows={2}
@@ -243,11 +247,20 @@ export default function ProjectDialog({
         {project ? (
           // Immutable after creation. Shown rather than hidden, because "which
           // style is this on" is a question the shelf should always answer.
-          <Field label="Visual style" hint="Fixed at creation — frames are rendered against it.">
+          //
+          // The hint under it read "Fixed at creation — frames are rendered
+          // against it." A lock is what a lock glyph means, and the disclosure
+          // behind it carries the reason in five words. The fact itself is not
+          // lost from the flow: the wizard's name stage states it in full at
+          // the one moment it is still a decision (wizard/stages.tsx, bd2701e).
+          <Field label="Visual style">
             {chosen.theme ? (
               <p className="font-hanken flex items-center gap-2.5 text-content text-slate-300">
                 <StyleSwatch theme={chosen.theme} />
                 {chosen.theme.name}
+                <Hint variant="lock" label="Why this cannot be changed">
+                  every frame was rendered against it
+                </Hint>
               </p>
             ) : (
               // A style that cannot be resolved is SAID, and said accurately.
@@ -261,20 +274,29 @@ export default function ProjectDialog({
             )}
           </Field>
         ) : (
-          <Field
-            label="Visual style"
-            hint="A locked style from the library. Every frame this project renders is built on it."
-          >
+          // No hint on create: what a style is, is the row of swatched pills
+          // under this label, and every one of them is a locked style from the
+          // library. The permanence the old hint reached for is stated at the
+          // point of commit instead — see the wizard's name stage.
+          <Field label="Visual style">
+            {/* A ROUTE, DRAWN AS THE PILL THAT IS MISSING. This was 45 words
+                that printed `/projects/new` as literal text in the middle of a
+                sentence — a URL for the user to read and retype, in an app
+                where every other destination is a link. It is now the hollow
+                twin of the pills beside it: the same shape, dashed, with an
+                empty swatch, sitting in the row where a style would be. */}
             {!fittingThemes.length && (
-              <p className="font-hanken text-sm text-amber-200/90">
-                No locked style fits {DISCIPLINE_LABEL[discipline].toLowerCase()} yet. The guided
-                wizard at{" "}
-                <a href="/projects/new" className="underline decoration-amber-200/40 underline-offset-2">
-                  /projects/new
-                </a>{" "}
-                offers presets that lock on create; or lock one in the library, or one from a brief,
-                which fits every discipline.
-              </p>
+              // The discipline is not named here: the Segmented control
+              // directly above has it selected and highlighted, so "fits WHAT"
+              // is answered two inches up. Naming it made the pill wrap.
+              <a
+                href="/projects/new"
+                aria-label={`No style fits ${DISCIPLINE_LABEL[discipline].toLowerCase()} — pick a preset in the guided create`}
+                className="font-jetbrains mb-2 inline-flex items-center gap-2 rounded-full border border-dashed border-amber-300/40 px-3 py-1.5 text-label whitespace-nowrap text-amber-200/90 transition hover:bg-amber-300/10"
+              >
+                <StyleSwatch />
+                No style fits — pick a preset →
+              </a>
             )}
             <div className="flex flex-wrap gap-1.5">
               {fittingThemes.map((t) => (
@@ -296,29 +318,34 @@ export default function ProjectDialog({
           </Field>
         )}
 
-        <Field
-          label="Target runtime"
-          htmlFor="p-dur"
-          hint={
-            // Free form has no measured band — its `range` is only what the
-            // input accepts — so the hint must not call it a measurement.
-            discipline === "free"
-              ? "Nothing was measured for a free-form video. There is no craft band here; the studio only keeps time."
-              : `${tpl.label} was measured at ${tpl.range[0]}–${tpl.range[1]}s. Past that band the craft rules stop applying.`
-          }
-        >
-          <NumberInput
-            id="p-dur"
-            unit="s"
-            min={5}
-            max={900}
-            value={draft.targetS}
-            onChange={(e) => {
-              setOwnDuration(true);
-              setDraft((d) => ({ ...d, targetS: Number(e.target.value) || 0 }));
-            }}
+        {/* The same band picture the wizard draws, from the same component —
+            this hint was the wizard's paragraph minus the trailer branch, so
+            the two faces of creation disagreed about whether a trailer's window
+            had ever been measured. One drawing, one truth.
+
+            Beside the Field rather than in its `hint`, for the reason stated
+            where the wizard does the same: Field's hint is a <p> and BandTrack
+            is a <div>. */}
+        <div className="grid gap-1.5">
+          <Field label="Target runtime" htmlFor="p-dur">
+            <NumberInput
+              id="p-dur"
+              unit="s"
+              min={DUR_MIN}
+              max={DUR_MAX}
+              value={draft.targetS}
+              onChange={(e) => {
+                setOwnDuration(true);
+                setDraft((d) => ({ ...d, targetS: Number(e.target.value) || 0 }));
+              }}
+            />
+          </Field>
+          <RuntimeBand
+            targetS={draft.targetS}
+            discipline={discipline}
+            template={draft.template}
           />
-        </Field>
+        </div>
       </form>
     </Modal>
   );
@@ -406,30 +433,65 @@ export function ConfirmDelete({
         </div>
       }
     >
-      <p className="font-hanken text-content text-slate-300">
-        The record goes from this browser&rsquo;s storage and does not come back. Nothing is deleted
-        anywhere else — there is nowhere else yet.
-      </p>
+      {/* THE PROSE ABOVE THE FIGURES IS GONE (2026-09-08). It read: "The record
+          goes from this browser's storage and does not come back. Nothing is
+          deleted anywhere else — there is nowhere else yet." A rose-bordered
+          modal headed `Delete "X"?` with a rose Delete button and a "Keep it"
+          beside it has already said every word of that. So has "There is no
+          undo.", which followed the figures below.
 
-      {holds && holds.steps > 0 && (
-        <p
-          data-testid="delete-takes"
-          className="font-hanken mt-3 rounded-xl border border-rose-400/25 bg-rose-400/[0.06] px-4 py-3 text-content leading-snug text-rose-100"
-        >
-          <span className="font-jetbrains text-label tracking-[0.14em] text-rose-200/80 uppercase">
-            and its work goes with it
-          </span>
-          <br />
-          {holds.steps} saved {holds.steps === 1 ? "step" : "steps"} — {named.join(", ")}.
-          {paid && " The frames include generated plates, which cost real money to produce."} There
-          is no undo.
-        </p>
-      )}
+          WHAT STAYS IS THE LEDGER, and it stays because it is the only thing on
+          this dialog the user cannot work out for themselves: how many steps
+          have work saved in them, which ones, and whether any of it was paid
+          for. Those are figures about the work, and they are the reason this
+          confirmation waits for `projectContents` before it will enable its own
+          button. They are now drawn as the same five cells the shelf's matrix
+          uses — filled rose where work exists, hollow where it does not — so
+          the count has a shape as well as a number. */}
+      {holds && (
+        <div data-testid="delete-takes">
+          {/* NUMBERS UNDER THE CELLS, NOT NAMES. This dialog is `max-w-md`, so
+              five tracks are ~80px each and "1 Research" wraps to two lines in
+              every one of them (measured 2026-09-08 — the fifth column ran past
+              the panel). The names are not lost: the ones that carry work are
+              spelled out in the line below, which is the only place they change
+              anything, and every cell keeps its own `title` plus the sr-only
+              key beneath. The numbers are the shelf's own column heads. */}
+          <p className="sr-only">
+            Steps holding saved work:{" "}
+            {holds.steps > 0 ? named.join(", ") : "none"}.
+          </p>
+          <div aria-hidden className="grid grid-cols-5 gap-2">
+            {PHASES.map((k, i) => {
+              const has = (holds.phases ?? []).includes(k);
+              return (
+                <div key={k} title={PHASE_TITLE[k]}>
+                  <div
+                    className={`h-3 rounded-[3px] ${
+                      has ? "bg-rose-400/55" : "border border-white/[0.09]"
+                    }`}
+                  />
+                  <p
+                    className={`font-jetbrains mt-1.5 text-center text-label ${
+                      has ? "text-rose-200/80" : "text-white/30"
+                    }`}
+                  >
+                    {i + 1}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
 
-      {holds && holds.steps === 0 && (
-        <p data-testid="delete-takes" className="font-hanken mt-3 text-content text-slate-400">
-          Nothing has been saved into its steps yet, so the record is all there is to take.
-        </p>
+          {holds.steps > 0 ? (
+            <p className="font-hanken mt-4 text-content leading-snug text-rose-100">
+              {holds.steps} saved {holds.steps === 1 ? "step" : "steps"} — {named.join(", ")}.
+              {paid && " The frames include generated plates, which cost real money to produce."}
+            </p>
+          ) : (
+            <p className="font-hanken mt-4 text-content text-slate-400">No saved steps.</p>
+          )}
+        </div>
       )}
     </Modal>
   );

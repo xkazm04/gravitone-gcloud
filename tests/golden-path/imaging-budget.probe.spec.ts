@@ -26,6 +26,7 @@ import {
   budgetCeilingUsd,
   budgetStats,
   currentSpendUsd,
+  reachByCapability,
   estimatePendingUsd,
   recordSpend,
   spendByAxis,
@@ -33,10 +34,11 @@ import {
   __resetBudget,
   BUDGET_VAR,
   WINDOW_VAR,
+  FLOOR_VAR,
 } from "@/lib/imaging/budget";
 import { estimatePerImage } from "@/lib/imaging/pricing";
 import { ImagingError, type ImagingErrorKind } from "@/lib/imaging/errors";
-import { billedOnFailure, generate } from "@/lib/imaging/router";
+import { billedOnFailure, generate, unreachedPlanTops } from "@/lib/imaging/router";
 
 const KEY_VARS = ["GOOGLE_AI_API_KEY", "LEONARDO_API_KEY", "QWEN_API_KEY"];
 
@@ -56,12 +58,13 @@ const book = (usd: number | undefined, at?: number) =>
     at,
   });
 
-keepEnv([BUDGET_VAR, WINDOW_VAR]);
+keepEnv([BUDGET_VAR, WINDOW_VAR, FLOOR_VAR]);
 
 test.beforeEach(() => {
   __resetBudget();
   delete process.env[BUDGET_VAR];
   delete process.env[WINDOW_VAR];
+  delete process.env[FLOOR_VAR];
 });
 
 test("estimate: pending cost is the dearest declared per-image rate, times count", () => {
@@ -348,4 +351,153 @@ test("failure booking: a no-key chain books NOTHING (the regression this must no
   expect(s.counters.booked).toBe(0);
   expect(s.counters.bookedFailed).toBe(0);
   console.log(`[budget] no-key chain booked nothing -> spent=$${s.spentUsd}, rows=${s.rows}`);
+});
+
+// ── LANE — THE THRIFTY RUN (added 2026-09-07) ──────────────────────────────
+//
+// Every control above looks UPWARD. The ceiling refuses, the counters count what
+// the refusals saved, the window explains a falling total. None of them can see
+// a window that spent almost nothing on the cheapest provider in the plan while
+// the measured-best entry — the one the grid in router.ts put first — was never
+// called at all. That run reports on time, under budget, zero refusals, and the
+// meter calls it health.
+//
+// The two tests below are a PAIRED comparison of the instrument against itself.
+// Both feed the SAME two windows: a THRIFTY one (a little spend, fallback only)
+// and a HEALTHY one (real spend, preferred provider served). The first test
+// asserts the pre-change fields cannot separate them; the second asserts the
+// added ones can. The first is the control, and it is the reason the second is
+// evidence rather than a restatement of its own implementation.
+
+/** The window a thrifty run leaves behind: one cheap call, fallback vendor. */
+function thriftyWindow(): void {
+  __resetBudget();
+  recordSpend({
+    usd: 0.0257,
+    cap: "generate",
+    provider: "leonardo",
+    model: "probe-model",
+    outcome: "served",
+    basis: "vendor",
+  });
+}
+
+/** The window a healthy run leaves behind: real spend, the plan's top served. */
+function healthyWindow(): void {
+  __resetBudget();
+  for (let i = 0; i < 40; i++) {
+    recordSpend({
+      usd: 0.045,
+      cap: "generate",
+      provider: "google",
+      model: "probe-model",
+      outcome: "served",
+      basis: "vendor",
+    });
+  }
+}
+
+test("thrifty run, arm A: the pre-change fields cannot tell it from a healthy one", () => {
+  process.env[BUDGET_VAR] = "5";
+
+  // The verdict a reader could reach BEFORE this lane existed: is anything in
+  // the meter's own report a complaint? Refusals, failed bookings, unpriced
+  // rows, an over-ceiling total. Everything the file offered as a health signal.
+  const armA = (s: ReturnType<typeof budgetStats>) =>
+    s.counters.refusals > 0 ||
+    s.counters.bookedFailed > 0 ||
+    s.counters.unpriced > 0 ||
+    s.spentUsd > s.ceilingUsd;
+
+  thriftyWindow();
+  const thrifty = armA(budgetStats());
+  healthyWindow();
+  const healthy = armA(budgetStats());
+
+  // Both clean. That is the defect: the instrument returns the same verdict for
+  // a run that did the work and a run that skipped the tier it was funded for.
+  expect(thrifty).toBe(false);
+  expect(healthy).toBe(false);
+  expect(thrifty).toBe(healthy);
+  console.log(`[budget] arm A verdicts — thrifty=${thrifty} healthy=${healthy} (indistinguishable)`);
+});
+
+test("thrifty run, arm B: the floor and the unreached plan top separate them", () => {
+  process.env[BUDGET_VAR] = "5";
+  // The band an operator declares when they raise a budget to buy a tier.
+  process.env[FLOOR_VAR] = "0.5";
+
+  thriftyWindow();
+  const thriftyStats = budgetStats();
+  const thriftyUnreached = unreachedPlanTops(Date.now(), "dev");
+
+  healthyWindow();
+  const healthyStats = budgetStats();
+  const healthyUnreached = unreachedPlanTops(Date.now(), "dev");
+
+  // The thrifty window is named on BOTH new axes.
+  expect(thriftyStats.underFloor).toBe(true);
+  expect(thriftyUnreached).toHaveLength(1);
+  expect(thriftyUnreached[0]).toMatchObject({
+    cap: "generate",
+    top: "google",
+    servedBy: ["leonardo"],
+  });
+
+  // The healthy window is named on neither.
+  expect(healthyStats.underFloor).toBe(false);
+  expect(healthyUnreached).toHaveLength(0);
+
+  console.log(
+    `[budget] arm B verdicts — thrifty underFloor=${thriftyStats.underFloor} ` +
+      `unreached=${thriftyUnreached.length}; healthy underFloor=${healthyStats.underFloor} ` +
+      `unreached=${healthyUnreached.length}`,
+  );
+});
+
+test("the floor never refuses, and an idle window is not a thrifty one", () => {
+  process.env[BUDGET_VAR] = "5";
+  process.env[FLOOR_VAR] = "0.5";
+
+  // An empty window is under the floor arithmetically and must NOT be reported:
+  // never spending is not the same as spending too little on the wrong thing.
+  __resetBudget();
+  expect(budgetStats().underFloor).toBe(false);
+
+  // And declaring a band changes nobody's fate at the gate — the whole point of
+  // keeping this on the reporting side. Well under the ceiling, still allowed.
+  thriftyWindow();
+  expect(budgetStats().underFloor).toBe(true);
+  expect(() => assertWithinBudget(0.05)).not.toThrow();
+
+  // With no band declared, the report is silent even on the thrifty window.
+  delete process.env[FLOOR_VAR];
+  expect(budgetStats().floorUsd).toBe(0);
+  expect(budgetStats().underFloor).toBe(false);
+});
+
+test("reach is per capability, and a failed call did not serve", () => {
+  __resetBudget();
+  // Google served `recognize` but never `generate`. A flat by-provider view
+  // (spendByAxis) says "google was called"; reach must not.
+  recordSpend({ usd: 0.01, cap: "recognize", provider: "google", outcome: "served", basis: "vendor" });
+  recordSpend({ usd: 0.02, cap: "generate", provider: "leonardo", outcome: "served", basis: "vendor" });
+  // Reached google for generate and it fell over — reached is not served.
+  recordSpend({ usd: 0.04, cap: "generate", provider: "google", outcome: "failed", basis: "vendor" });
+
+  const reach = reachByCapability();
+  expect(reach.generate).toEqual(["leonardo"]);
+  expect(reach.recognize).toEqual(["google"]);
+
+  // BOTH capabilities are reported, for different reasons, and that is the
+  // point: `generate` never left the fallback, and `recognize` was served by
+  // the cloud eye while the local one (ollama, the plan's top, $0) went
+  // uncalled. A flat by-provider view sees only "google was called" and cannot
+  // raise either.
+  const unreached = unreachedPlanTops(Date.now(), "dev");
+  expect(unreached).toEqual([
+    { cap: "recognize", top: "ollama", servedBy: ["google"] },
+    { cap: "generate", top: "google", servedBy: ["leonardo"] },
+  ]);
+  expect(spendByAxis().byProvider.google).toBeCloseTo(0.05, 6);
 });

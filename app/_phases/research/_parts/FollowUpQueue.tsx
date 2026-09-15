@@ -18,8 +18,12 @@
 
 import { useMemo, useState } from "react";
 
+import { Plus } from "lucide-react";
+
 import { Button } from "@/components/ui/Primitives";
+import { Ghost, Hint } from "@/components/ui/signal";
 import { useJobs } from "@/lib/jobs";
+import Notice from "../../_shared/ui/Notice";
 import { resultFor, suggestedReason, type FollowUpRequest } from "../followup";
 import { stateOf } from "../scope";
 import { useFollowUps } from "../useFollowUps";
@@ -108,7 +112,6 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
   // stored request the moment one exists, and questions come straight off it.
   const all = [...deepened, ...dispatchedDeepens, ...asked.filter((a) => a.kind === "question")];
   const pending = all.filter((r) => r.status === "queued");
-  const returned = all.filter((r) => r.status === "returned");
 
   const ask = () => {
     const text = q.trim();
@@ -167,16 +170,12 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
   return (
     <section data-testid="followup" className="rounded-2xl border border-white/10 bg-white/[0.02] p-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="font-jetbrains text-content tracking-[0.16em] text-white/55 uppercase">
-            follow-up research
-          </p>
-          <p className="font-hanken mt-1.5 max-w-2xl text-content text-slate-400">
-            Cards you marked <span className="text-cyan-200/80">deepen</span>, plus anything you want
-            to ask. This routes to the <em>next</em> run — it does not change the script you are about
-            to write.
-          </p>
-        </div>
+        {/* The intro named the two ways in — a `deepen` card and a typed
+            question — for a list whose rows already wear `deepen · <id>` and
+            `question` badges, and whose input sits directly beneath it. */}
+        <p className="font-jetbrains text-content tracking-[0.16em] text-white/55 uppercase">
+          follow-up research
+        </p>
         {(pending.length > 0 || busy) && (
           <div className="flex flex-col items-end gap-1.5">
             <Button data-testid="run-followup" onClick={runFollowUp} disabled={busy || pending.length === 0} className="shrink-0">
@@ -213,10 +212,11 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
 
       {all.length === 0 ? (
         <>
-          <p className="font-jetbrains mt-4 text-content text-white/30">
-            Nothing queued. Mark a card <span className="text-cyan-200/70">deepen</span> on the board, or
-            ask a question above.
-          </p>
+          {/* An empty state shaped like the row that will fill it, rather than a
+              sentence naming the two controls that are already on screen. */}
+          <div className="mt-4">
+            <Ghost shape="row" glyph={<Plus className="h-5 w-5" />} label="nothing queued" />
+          </div>
           {/* AN EMPTY QUEUE WITH A SETTLED JOB BEHIND IT IS NOT AN EMPTY QUEUE.
               The record is session-lived by design (../useFollowUps) — but the
               JOB is persisted to localStorage, so after a reload the bell still
@@ -235,13 +235,15 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
               wrong sentence on the one screen this notice exists to make honest
               — the same rule the triage board's empty columns already follow. */}
           {landedFollowUps > 0 && (
-            <p data-testid="followup-none-here" className="font-jetbrains mt-2 text-content leading-relaxed text-amber-200/80">
-              the bell still records {landedFollowUps} completed follow-up
-              {landedFollowUps === 1 ? "" : "s"} for this project, and their results are not here.
-              This queue is held for the session — reloading, or clearing the research, starts it
-              clean. Nothing was ever applied to the notebook, so nothing is inconsistent; the
-              answers would simply have to be asked for again.
-            </p>
+            <div data-testid="followup-none-here" className="mt-3">
+              <Notice severity="warning" title="results are not here">
+                <p>
+                  the bell records {landedFollowUps} completed follow-up
+                  {landedFollowUps === 1 ? "" : "s"} for this project; this queue is held for the
+                  session.
+                </p>
+              </Notice>
+            </div>
           )}
         </>
       ) : (
@@ -282,12 +284,17 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
               {/* The dispatch ran and returned nothing. Said once, in terms of the
                   actual limit, rather than left to look like a queue still moving. */}
               {r.status === "unanswered" && (
-                <p data-testid={`followup-unanswered-${r.cardId ?? r.id}`} className="font-jetbrains mt-2 text-content leading-relaxed text-amber-200/80">
-                  the dispatch returned nothing. This prototype answers from two follow-ups
-                  transcribed from a real terminal run — a question about on-chain whale cohorts, and
-                  a deepen on the vendor liquidity stat. There is no research process behind this
-                  field yet, so anything else comes back empty rather than invented.
-                </p>
+                <div data-testid={`followup-unanswered-${r.cardId ?? r.id}`} className="mt-2">
+                  <Notice severity="warning" title="no transcribed answer">
+                    <span className="inline-flex items-center gap-1.5">
+                      only two follow-ups are transcribed from a real run
+                      <Hint variant="warn" tone="amber" label="Which two are transcribed">
+                        a question on on-chain whale cohorts, and a deepen on the vendor liquidity
+                        stat
+                      </Hint>
+                    </span>
+                  </Notice>
+                </div>
               )}
 
               {r.result && <FollowUpResult result={r.result} cardIds={cardIds} />}
@@ -296,12 +303,13 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
         </ul>
       )}
 
-      {returned.length > 0 && (
-        <p className="font-jetbrains mt-4 text-content text-white/35">
-          A follow-up can weaken the notebook as well as strengthen it. Read the verdict on each
-          result — “weakened” is as valid an outcome as “strengthened”.
-        </p>
-      )}
+      {/* NO CLOSING ADVICE. "A follow-up can weaken the notebook as well as
+          strengthen it. Read the verdict on each result" told the reader to
+          read the badge that is already on every row, in the colour
+          VERDICT_TONE gives it — amber for weakened, emerald for strengthened.
+          The rule it states is real and it is enforced in the data
+          (followup.ts's `kills` / `downgrades` effect kinds, drawn as loudly as
+          `confirms`), not in a paragraph under the list. */}
     </section>
   );
 }

@@ -20,8 +20,14 @@
         ruler from pipeline/vlm-probe/identity.py (floor / ceiling printed so
         the number has a scale under it). A face the detector cannot find is
         reported as such, never as a distance.
+    python dojo_measure.py motion foundry-out/training/<cycle-id>
+        motion energy of every arm's CLIP (mean consecutive-frame luma
+        delta, see motion_energy.py) and the challenger-minus-baseline delta
+        per pair, with a frozen verdict against a measured floor. For
+        stillness claims: a directed near-still and a dead render look the
+        same across three posters and differ here by two orders of magnitude.
 
-Both write <cycle>/measures.json and print a per-pair table. They are
+All write <cycle>/measures.json and print a per-pair table. They are
 PRE-FILTERS: the judge reads them beside the readbacks, the human's pick is
 still the verdict.
 """
@@ -205,6 +211,31 @@ def face_state(cdir):
             "pairs": out}
 
 
+def motion(cdir):
+    """Frozen is a number, not a poster impression. The judge reads three
+    stills; this reads every frame. See motion_energy.py for the calibration
+    (the 2026-08-31 v1-reset-still clip the judge called frozen sat at 0.21
+    against a 0.000 floor)."""
+    sys.path.insert(0, str(HERE))
+    import motion_energy as me  # noqa: E402
+    out = {}
+    print(f"{'pair':30s} {'baseline':>9s} {'challenger':>11s} {'delta':>8s}   (frozen at <= {me.FROZEN_MAX})")
+    for pid in _pairs(cdir):
+        row = {}
+        for arm in ARMS:
+            f = cdir / "pairs" / f"{pid}--{arm}.webm"
+            row[arm] = me.summarize(me.yavg_series(f)) if f.exists() else None
+        if None in row.values():
+            print(f"{pid:30s} incomplete duo")
+            continue
+        b, c = row["baseline"]["mean"], row["challenger"]["mean"]
+        row["delta"] = c - b
+        out[pid] = row
+        flags = " ".join(f"{arm}=FROZEN" for arm in ARMS if row[arm]["frozen"])
+        print(f"{pid:30s} {b:9.3f} {c:11.3f} {c - b:+8.3f}   {flags}")
+    return {"measure": "motion-energy", "frozen_max": me.FROZEN_MAX, "pairs": out}
+
+
 if __name__ == "__main__":
     cmd, cdir = sys.argv[1], Path(sys.argv[2])
     if not cdir.is_absolute():
@@ -215,8 +246,10 @@ if __name__ == "__main__":
         res = face_state(cdir)
     elif cmd == "identity":
         res = identity(cdir, Path(sys.argv[3]))
+    elif cmd == "motion":
+        res = motion(cdir)
     else:
-        raise SystemExit("usage: dojo_measure.py lower-third|face-state|identity <cycle-dir> [hero]")
+        raise SystemExit("usage: dojo_measure.py lower-third|face-state|identity|motion <cycle-dir> [hero]")
     # Keyed by measure name, not overwritten: a cycle may need more than one
     # (state-coupling reads face-state AND identity -- what the state cost).
     mpath = cdir / "measures.json"

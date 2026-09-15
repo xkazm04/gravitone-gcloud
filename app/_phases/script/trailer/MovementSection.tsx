@@ -9,6 +9,8 @@
 // first beat of a part links it to the LAST beat of the part before — a chain
 // does not restart at a part boundary, and neither does the checker.
 
+import { Ghost } from "@/components/ui/signal";
+
 import BeatEditor from "./BeatEditor";
 import ConnectorPick from "./ConnectorPick";
 import type { BeatPatch } from "./cut";
@@ -55,7 +57,7 @@ export default function MovementSection({
       className="rounded-2xl border border-white/8 bg-white/[0.02] p-4"
     >
       <header className="flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="font-instrument text-[18px] text-white/90">{movement.label}</h3>
+        <h3 className="font-instrument text-[20px] text-white/90">{movement.label}</h3>
         <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">
           {movement.role} · part {movement.ordinal}
           {section ? (
@@ -67,9 +69,11 @@ export default function MovementSection({
       </header>
 
       {beats.length === 0 ? (
-        <p className="font-jetbrains mt-3 text-label text-amber-200/80">
-          no beat picked for this part — the movement is declared and empty
-        </p>
+        // A declared, empty part: a slot at beat height rather than a sentence
+        // saying there is one.
+        <div className="mt-3">
+          <Ghost shape="slot" label="no beat picked for this part" />
+        </div>
       ) : (
         <ol className="mt-3">
           {rows.map(({ beat: b, isRung, previousRaise }, i) => {

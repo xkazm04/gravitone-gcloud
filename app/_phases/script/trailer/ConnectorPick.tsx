@@ -47,7 +47,6 @@ export default function ConnectorPick({
             type="button"
             aria-pressed={on}
             onClick={() => onChange(c)}
-            title={defect ? "and-then is the defect the form names" : undefined}
             className={`font-jetbrains rounded px-2 py-0.5 text-label tracking-[0.12em] transition ${cls}`}
           >
             {WORD[c]}

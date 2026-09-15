@@ -251,7 +251,20 @@ def test_an_unparseable_readback_is_kept_on_disk():
               rows[0].get("raw", "").startswith('{"signature"'), True)
 
 
+def test_frozen_is_a_number_not_a_poster_impression():
+    """The 2026-08-31 v1-reset-still clip obeyed "almost still" and the
+    poster-reading judge called it frozen. motion_energy.summarize() is the
+    ruler that tells those apart; this pins its three verdicts."""
+    M = load("motion_energy")
+    check("a looped still measures frozen", M.summarize([0.0] * 118)["frozen"], True)
+    near = M.summarize([0.21] * 118)
+    check("a directed near-still clip is NOT frozen", near["frozen"], False)
+    check("...and carries the number the judge did not have", round(near["mean"], 3), 0.21)
+    check("an unreadable clip is unmeasured, never frozen", M.summarize([])["frozen"], None)
+
+
 TESTS = [
+    test_frozen_is_a_number_not_a_poster_impression,
     test_ungradable_candidate_does_not_kill_the_run,
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,
