@@ -49,6 +49,14 @@ import { connect, Control } from "./_control";
 const PROJECT = "seed-glass-harbor";
 const PROJECT_TITLE = "Glass Harbor";
 
+/** A project whose research is genuinely undecided — `projectSeed.ts` gives it
+ *  `emptyProgress()`, so `ResearchStep.tsx`'s `decided` is false and the step
+ *  opens on the GUIDED face at stage 1 by default, where `run-research` lives.
+ *  `PROJECT` cannot stand in for this: its research is already `"done"`, which
+ *  freezes the step open on the EXPERT (triage-only) face instead — the face
+ *  that starting a fresh run belongs on. */
+const FRESH_PROJECT = "seed-untitled";
+
 /** Every page error seen during a test, asserted at the end of each one. A React
  *  error boundary can swallow a throw and still render something plausible, so
  *  "the assertions passed" is not the same as "the page is healthy". */
@@ -150,11 +158,17 @@ test.describe("the assembled studio", () => {
     await page.getByTestId(`cell-${PROJECT}-research`).click();
     await page.waitForURL(/\/studio\//);
 
-    // `load saved run` is the product's own way to land the finished notebook
-    // without walking the simulated run — the same data, only the waiting
-    // skipped (see LOAD_NOTE in useResearchRun.ts).
-    await page.getByTestId("load-saved-run").click();
-    await expect(page.getByTestId("load-saved-note")).toBeVisible();
+    // There is no button to press for this any more. `seed-glass-harbor` ships
+    // with `progress.research: "done"` (projectSeed.ts), so hydration itself
+    // calls `run.load()` and lands the finished notebook without a click — see
+    // that function's header in useResearchRun.ts, which records that the
+    // "load saved run" control this replaced was deleted 2026-09-08 along with
+    // the rest of the development panel. A decided step also freezes the
+    // EXPERT face open (ResearchStep.tsx's `decided`), so `open-notebook` —
+    // drawn by ArtifactPills in both faces once `ready` is true — is the
+    // signal that survives the face choice; `run-status` only exists on the
+    // guided face's own run log.
+    await expect(page.getByTestId("open-notebook")).toBeVisible();
 
     // The step save is fire-and-forget from the click's point of view, so this
     // polls the store rather than sleeping on a guess.
@@ -185,23 +199,18 @@ test.describe("the assembled studio", () => {
     expect(survived.steps, "the notebook survived a hard reload").toBe(after.steps);
     expect(survived.phases).toContain("research");
 
-    // And the surface reads it back, not just the store: the board is unlocked,
-    // which it is not for a project with no notebook.
+    // And the surface reads it back, not just the store: the board is
+    // reachable, which it is not for a project with no notebook.
     //
-    // THE LOCK IS `aria-disabled` NOW, not a `disabled` attribute. The tab moved
-    // to <TabRail>, which keeps a locked tab in the tab order on purpose so the
-    // reason behind its Hint stays reachable by keyboard. `toBeEnabled()` still
-    // means what it meant — Playwright folds `aria-disabled` into enabled-ness
-    // for the roles in `kAriaDisabledRoles`, and `tab` is one of them (measured
-    // against playwright 1.62.1: a `role="tab"` with `aria-disabled="true"`
-    // reports `isDisabled() === true`). The attribute assertion beside it is
-    // what keeps this rung honest if that role table ever moves: a
-    // `toBeEnabled()` that stopped seeing the lock would pass vacuously, and a
-    // vacuous pass is exactly what this file's gate-vacuous-pass sibling exists
-    // to forbid.
-    const board = page.getByTestId("tab-board");
-    await expect(board).toBeEnabled();
-    await expect(board).not.toHaveAttribute("aria-disabled", "true");
+    // `tab-board` NO LONGER EXISTS. The Topic/Board tab pair this used to check
+    // (a locked <TabRail> tab, per the comment this replaced) was deleted
+    // 2026-09-08 with the rest of the Topic tab — the expert face renders the
+    // triage board directly now (ResearchStep.tsx, "THE EXPERT FACE IS TRIAGE
+    // ONLY"), with no lock state left to assert: a project with no notebook
+    // gets `expert-board-empty` instead of a disabled tab. `column-conclusions`
+    // is a column of the board's own fixture (notebook/dimensions.ts) and is
+    // only drawn once `ready` lets the board itself render.
+    await expect(page.getByTestId("column-conclusions")).toBeVisible();
 
     expect(errors, "page errors across the reload").toEqual([]);
   });
@@ -210,9 +219,12 @@ test.describe("the assembled studio", () => {
     const errors = watchErrors(page);
     const control = await freshShelf(page);
 
-    await page.getByTestId(`cell-${PROJECT}-research`).click();
+    // FRESH_PROJECT, not PROJECT: starting a run is a guided-face action, and
+    // PROJECT's research is already decided (see FRESH_PROJECT's own comment).
+    await page.getByTestId(`cell-${FRESH_PROJECT}-research`).click();
     await page.waitForURL(/\/studio\//);
 
+    await page.getByLabel("Topic").fill("a background-run smoke test");
     await page.getByTestId("run-research").click();
     await expect(page.getByTestId("running-note")).toBeVisible();
 
@@ -336,11 +348,11 @@ test.describe("the assembled studio", () => {
     await page.getByTestId(`cell-${PROJECT}-research`).click();
     await page.waitForURL(/\/studio\//);
 
-    // The product's own way to land the finished notebook without walking the
-    // run (see the hard-reload journey above). A notebook is what puts Clear on
-    // the surface at all, so it is also what makes this journey possible.
-    await page.getByTestId("load-saved-run").click();
-    await expect(page.getByTestId("load-saved-note")).toBeVisible();
+    // Hydration lands the finished notebook on its own (see the hard-reload
+    // journey above for why no click is involved, and why `open-notebook` is
+    // the face-agnostic signal for it). A notebook is what puts Clear on the
+    // surface at all, so it is also what makes this journey possible.
+    await expect(page.getByTestId("open-notebook")).toBeVisible();
 
     // BY KEYBOARD, because the claim is about a keyboard user: the opener is
     // focused and activated with Enter, which is what makes where focus lands
