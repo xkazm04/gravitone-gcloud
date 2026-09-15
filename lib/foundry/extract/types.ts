@@ -116,6 +116,20 @@ export interface Scored {
   per_field: Partial<Record<ObservableField, number>>;
 }
 
+/** Why a replica's critique loop stopped.
+ *
+ *  Two of these are OUTCOMES and two are ABANDONMENTS, and the difference is
+ *  not visible in the round list: `target-met` and `round-cap` mean the loop
+ *  did the work it was given, while `no-usable-fix` and `generation-failed`
+ *  mean it gave up because it could not say what to change or could not draw
+ *  anything. The engine has always treated all four the same — one boolean —
+ *  which is correct for "will more work happen here" and wrong for everything
+ *  that reads a replica as evidence the recipe works. */
+export type SettleReason = "round-cap" | "generation-failed" | "target-met" | "no-usable-fix";
+
+/** The two reasons that mean the loop ABANDONED this replica. */
+export const ABANDONED_SETTLES: readonly SettleReason[] = ["generation-failed", "no-usable-fix"];
+
 /** One self-critique round: generate, read back, score, propose a fix. */
 export interface ReplicaRound extends Scored {
   n: number;
@@ -232,7 +246,14 @@ export interface ExtractManifest {
   fail_streak?: number;
   log: { at: string; msg: string }[];
   error?: string;
-  committed?: { at: string; kept: string[]; rejected: string[] };
+  /** What the commit did. `kept` and `rejected` are the RUN-LOCAL style ids;
+   *  `written` is what the catalogue actually holds, which differs whenever a
+   *  kept id collided and was suffixed (`haze` -> `haze-2`). Without it the
+   *  manifest — the only copy that survives the HTTP response, and what the
+   *  Extract tab renders after a reload — names a style the catalogue has no
+   *  entry for. Optional because manifests written before this field existed
+   *  do not carry it; absent means "assume `kept`, and it may be wrong". */
+  committed?: { at: string; kept: string[]; rejected: string[]; written?: string[] };
 }
 
 export type ExtractVerdict = "keep" | "reject";

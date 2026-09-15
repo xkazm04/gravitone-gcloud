@@ -62,6 +62,12 @@ qualifies[]?, note?}`
 Every field below `sources[]` is **required for new notebooks** and optional in `types.ts`, because the
 run-1 fixture is the control for every adopted edit and a control rewritten to compile is not a control.
 
+- **`claim`** — a HEADLINE, not a paragraph: one declarative clause, ≤ 90 characters, no trailing
+  period. The argument, the numbers and every qualification live in the paired long field (`note`
+  here, `reasoning` on conclusions, `statement` on the steel-man). The claim is what a card face and
+  a sweep of the board show; run 1 shipped three-sentence claims and every reading surface has had
+  to truncate them since (2026-08-30, the guided wizard's card verdict). A claim that cannot fit the
+  budget is usually two claims.
 - **`load_bearing`** — does the argument collapse without it? Load-bearing facts at low confidence are
   the single most dangerous thing in a notebook and must be flagged for a second source.
 - **`confidence`** — `high | medium | low`, with the reason. Vendor research is `low` by default —

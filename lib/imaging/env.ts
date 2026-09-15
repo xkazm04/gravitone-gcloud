@@ -29,6 +29,10 @@ export const KEY_VAR: Record<ProviderId, string> = {
   leonardo: "LEONARDO_API_KEY",
   qwen: "QWEN_API_KEY",
   google: "GOOGLE_AI_API_KEY",
+  // Local provider: the "key" is the daemon's address. Set = this machine has
+  // opted in; unset = the router skips it with a no-key trail entry, which is
+  // exactly right on boxes that run no daemon.
+  ollama: "OLLAMA_HOST",
 };
 
 export function keyFor(provider: ProviderId): string {

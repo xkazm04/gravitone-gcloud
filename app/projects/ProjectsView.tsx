@@ -7,21 +7,24 @@
 // this matrix. The matrix won and the other two are gone — a list tells you
 // what you have, and only the grid tells you where the whole shelf is jammed.
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import Link from "next/link";
+import { Zap } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Eyebrow } from "@/components/ui/Primitives";
+import { Ghost, Tally } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
 import { lockedOnly } from "@/lib/themes";
+import { isSeeded } from "@/app/_studio/projectSeed";
 import type { Project, ProjectDraft } from "@/lib/projects";
 
 import ProjectDialog, { ConfirmDelete } from "../_projects/ProjectDialog";
 import ProjectsMatrix from "../_projects/ProjectsMatrix";
+import { DemoTag } from "../_projects/parts";
 
 export default function ProjectsView() {
   const { user } = useAuth();
@@ -42,6 +45,44 @@ export default function ProjectsView() {
     project: null,
   });
   const [doomed, setDoomed] = useState<Project | null>(null);
+
+  /* ── The demo shelf, said out loud ──────────────────────────────────────
+   *
+   * A brand-new account is handed six fictional productions (lib/useProjects
+   * seeds them so the studio has something to open), and until now they were
+   * drawn exactly like work the user made: a stranger's real first screen was
+   * six projects with progress heat and "2h ago" timestamps that they had
+   * never touched. The seeding stays — it is the product decision, and the
+   * genuinely empty shelf is one click away now instead of six deletes.
+   *
+   * The strip is a NOTE, not a warning: same neutral chrome as the style note
+   * at the foot of the page, and it disappears on its own once the examples
+   * are gone. */
+  const demos = useMemo(() => (projects ?? []).filter(isSeeded), [projects]);
+  // Two-step, inline: this deletes several records at once, which no single
+  // row's confirmation covers, and a modal for it would be louder than the
+  // thing it guards. `clearing` is the question, `wiping` is the answer being
+  // carried out.
+  const [clearing, setClearing] = useState(false);
+  const [wiping, setWiping] = useState(false);
+  const mainRef = useRef<HTMLElement>(null);
+
+  // Sequential, not Promise.all: `remove` opens its own IndexedDB handle per
+  // call and the shelf re-renders after each one, so the row count visibly
+  // falls. A failure raises the banner above and stops nothing that already
+  // went — the shelf shows exactly what survived, which is the truth.
+  //
+  // Then focus lands on the landmark, for the reason ConfirmDelete's own note
+  // below states at length: the control this was fired from is inside the
+  // strip, the strip is gone the moment the last row is, and a restore onto a
+  // detached node is silent — focus falls to <body>.
+  const clearExamples = async () => {
+    setWiping(true);
+    for (const p of demos) await remove(p.id);
+    setWiping(false);
+    setClearing(false);
+    mainRef.current?.focus();
+  };
 
   // Create walks straight into the studio — a project with no work in it has
   // nothing to show on this page, and the name the user just typed is the
@@ -78,52 +119,86 @@ export default function ProjectsView() {
           control it was opened from did not survive it — a restore onto a
           detached node is silent, and focus falls to <body>. See
           components/ui/Modal.tsx#restoreFocus. */}
-      <main tabIndex={-1} className="pb-16">
-        <header className="flex flex-wrap items-end justify-between gap-4 pt-6">
-          <div>
-            <Eyebrow>projects</Eyebrow>
-            <h1 className="font-instrument mt-3 text-4xl text-white">Projects</h1>
-          </div>
-          {/* The expert path: the old dialog, exactly as before, for whoever
-              knows the four answers already. The primary create walks the
-              guided wizard (/projects/new). Same theme-gate on both — a dead
-              button teaches nothing, /library is the actual next step. */}
-          <button
-            type="button"
-            onClick={() =>
-              gated ? router.push("/library") : setDialog({ open: true, project: null })
-            }
-            className="font-jetbrains rounded-full border border-white/12 px-3 py-1.5 text-label text-white/45 transition hover:border-white/25 hover:text-white/75"
-          >
-            quick create — the expert form
-          </button>
-        </header>
+      <main ref={mainRef} tabIndex={-1} className="pt-6 pb-16">
+        {/* NO EYEBROW, NO <h1> ON THE PIXELS, AND NO HEADER (2026-09-08). This
+            page opened with `projects` / `Projects` over a nav whose Projects
+            item is the active one — three labels naming one place, stacked. The
+            nav has said which module you are in since 0ffc865 (`text-white` +
+            aria-current), which is what made these two redundant rather than
+            merely repetitive; with them gone the header band held one small
+            button and 100px of nothing, so the band went too and the button
+            moved next to the create control it is the shortcut for (`aside`,
+            _projects/parts.tsx#ShelfProps).
 
-        {gated && (
-          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-amber-300/30 bg-amber-300/[0.06] px-4 py-3">
-            <p className="font-hanken text-content text-amber-100">
-              A project is rendered against a locked visual style, and this account has none yet.
-            </p>
-            <Link
-              href="/library"
-              className="font-jetbrains shrink-0 rounded-lg border border-amber-300/40 px-3 py-1.5 text-label text-amber-100 transition hover:bg-amber-300/10"
-            >
-              make one in the library →
-            </Link>
-          </div>
-        )}
+            The heading stays as a landmark: `sr-only` keeps the document's
+            outline intact for a screen reader and for anything that walks
+            headings, which a deleted <h1> would have broken. */}
+        <h1 className="sr-only">Projects</h1>
 
+        {/* {error} ALONE. It used to be followed by "— your projects live in
+            this browser's storage, and it did not answer", which restates the
+            `local` pill standing in the nav two inches above it, on every
+            failure, forever. The machine's own words are the finding; where
+            the storage is, is chrome that is already on screen. */}
         {error && (
-          <p className="mt-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
-            {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
+          <p className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
+            {error}
           </p>
         )}
 
-        <section className="mt-6">
-          {loading ? (
-            <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
-              reading the shelf…
+        {demos.length > 0 && (
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-2.5">
+            <p className="font-hanken flex flex-wrap items-center gap-2 text-label text-slate-400">
+              <DemoTag />
+              {demos.length === 1
+                ? "One row on this shelf is an example this account was opened with"
+                : `${demos.length} rows on this shelf are examples this account was opened with`}{" "}
+              — open them, edit them, or clear them out.
             </p>
+            {/* THE TRIGGER IS ALSO THE CANCEL, and it never unmounts — it
+                changes its word. A confirm that swaps its own opener out drops
+                a keyboard user on <body>, which is the failure Modal.tsx and
+                ConfirmDelete below both spend paragraphs avoiding. The
+                confirmation button `autoFocus`es instead (it only ever mounts
+                from a click, so it cannot steal focus on load), and pressing
+                the trigger again backs out with focus still on it. */}
+            <span className="flex flex-wrap items-center gap-2">
+              {clearing && (
+                <>
+                  <span className="font-hanken text-label text-slate-300">
+                    Delete {demos.length === 1 ? "it" : `all ${demos.length}`}?
+                  </span>
+                  <button
+                    type="button"
+                    autoFocus
+                    onClick={clearExamples}
+                    disabled={wiping}
+                    className="font-jetbrains cursor-pointer rounded-lg border border-rose-400/35 px-3 py-1 text-label text-rose-200 transition hover:bg-rose-400/10 disabled:cursor-default disabled:opacity-50"
+                  >
+                    {wiping ? "clearing…" : "yes, clear them"}
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => setClearing((c) => !c)}
+                disabled={wiping}
+                className="font-jetbrains shrink-0 cursor-pointer rounded-lg border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-white/25 hover:text-white/75 disabled:opacity-50"
+              >
+                {clearing ? "keep them" : "clear the examples"}
+              </button>
+            </span>
+          </div>
+        )}
+
+        <section>
+          {loading ? (
+            // Three ghost rows, not "reading the shelf…". The wait is short and
+            // the sentence described the app's own errand; the outline is the
+            // shape of what is coming, in the row height the matrix will fill.
+            // `label` keeps it spoken — a dashed border says nothing to a
+            // screen reader (components/ui/signal/Ghost.tsx).
+            <Ghost shape="row" count={3} label="Reading the shelf" />
           ) : (
             <ProjectsMatrix
               projects={projects ?? []}
@@ -136,14 +211,99 @@ export default function ProjectsView() {
               }
               onEdit={(p) => setDialog({ open: true, project: p })}
               onDelete={(p) => setDoomed(p)}
-              // Gated rather than disabled: a dead button teaches nothing,
-              // whereas landing on /library is the actual next step. Ungated,
-              // the primary create is the guided wizard; the header's "quick
+              // Always the wizard: its style stage offers presets (minted into
+              // a locked theme at create) and an honest empty state that
+              // routes, so there is no account state in which sending the user
+              // to /library first is the better answer. The header's "quick
               // create" keeps the dialog as the expert path.
-              onCreate={() => router.push(gated ? "/library" : "/projects/new")}
+              onCreate={() => router.push("/projects/new")}
+              /* The expert path: the old dialog, exactly as before, for whoever
+                 knows the four answers already. The primary create walks the
+                 guided wizard (/projects/new). NEITHER is theme-gated any more:
+                 the wizard's style stage offers presets and mints a locked theme
+                 at create, and the dialog explains an empty style shelf itself —
+                 bouncing both buttons to /library was sending users away from
+                 surfaces that can now answer them.
+
+                 IT STAYS OUTLINED AND DIM, and that is the point: it is a
+                 shortcut for somebody who has been here before, and it must not
+                 compete with the create control beside it. Reachable, never
+                 loudest.
+
+                 ITS LABEL WAS `quick create — the expert form`: a button naming
+                 its own audience, next to a filled cyan pill reading "New
+                 project". Weight already says primary-vs-shortcut, so the words
+                 only had to say WHICH ACT, and a glyph says that. The name
+                 survives where a name belongs — on `aria-label`, which is what
+                 a screen reader announces and what the two-word `title` echoes
+                 for a mouse. */
+              aside={
+                <button
+                  type="button"
+                  onClick={() => setDialog({ open: true, project: null })}
+                  aria-label="Quick create"
+                  title="Quick create"
+                  className="cursor-pointer rounded-full border border-white/12 p-2 text-white/45 transition hover:border-white/25 hover:text-white/75"
+                >
+                  <Zap aria-hidden className="h-4 w-4" />
+                </button>
+              }
             />
           )}
         </section>
+
+        {/* THE STYLE GAP — a fact, DRAWN, and it sits AFTER the shelf.
+
+            It was an amber banner directly under the title once: the
+            highest-contrast element on a first-run screen, ending in a button
+            to /library. Amber is this app's warning colour (see the dev-auth
+            banner in components/ui/StudioFrame), so the loudest thing on the
+            screen was announcing a non-problem AND pointing away from the one
+            action here. b49e8bd demoted it — below the shelf, neutral chrome —
+            and added "Nothing is blocked by that" so it stopped reading as an
+            error. BOTH OF THOSE DECISIONS STAND. What goes is the prose.
+
+            Two sentences of app-narration ("Every project is rendered against
+            a locked visual style… the create wizard offers presets that lock
+            when you create") are the app explaining its own mechanism, and the
+            second was there only to undo the alarm the first raised. The rules
+            they stated are enforced in code and restated where they bear on a
+            decision: lib/themes#lockedOnly gates this, and the wizard's style
+            stage offers the presets and mints a locked theme at create
+            (app/_projects/wizard/stages.tsx). Nothing is blocked here, which
+            is why this is a chip and not a Notice — amber says "needs a call",
+            rose would say "broken".
+
+            So: the hollow swatch this app already uses for a style that is not
+            there, the count, and the route. `of` is every style the account
+            holds, because "0 locked" and "0 locked of 3 drafts" are different
+            facts about what to do next, and only the ratio tells them apart.
+            The link is an ACTION, not narration — /library is still one click
+            from a shelf whose owner came to commission a style. */}
+        {gated && (
+          <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-3">
+            {/* The hollow twin of a style's face — the same absent-swatch shape
+                ProjectDialog#StyleSwatch draws for "no style" and the wizard's
+                EmptyStyleDeck draws where a style card would be. Dashed, so it
+                reads as a slot rather than a rule. */}
+            <span
+              aria-hidden
+              className="h-3.5 w-10 shrink-0 rounded-full border border-dashed border-amber-300/50"
+            />
+            <Tally
+              label="locked styles"
+              value={0}
+              of={allThemes.length || undefined}
+              tone="amber"
+            />
+            <Link
+              href="/library"
+              className="font-hanken rounded-sm text-label text-slate-300 underline underline-offset-4 transition hover:text-white"
+            >
+              Commission your own in the library →
+            </Link>
+          </div>
+        )}
       </main>
 
       <ProjectDialog

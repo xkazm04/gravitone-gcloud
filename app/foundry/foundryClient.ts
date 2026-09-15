@@ -17,7 +17,16 @@ export class FoundryRequestError extends Error {
   }
 }
 
-async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
+/** The one request rule for every /api/foundry/* seam — the access header, a
+ *  network failure turned into a FoundryRequestError with status 0, and the
+ *  route's own `detail` preferred over an HTTP number.
+ *
+ *  Exported because extractClient.ts held a byte-identical private copy of it.
+ *  Two implementations of one rule is the shape where only one ever gets
+ *  fixed: a timeout, a 401 re-auth, a retry added here would have reached the
+ *  Cull tab and silently missed the Extract tab. It already imports
+ *  FoundryRequestError and fileUrl from this module, so there is no new seam. */
+export async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {

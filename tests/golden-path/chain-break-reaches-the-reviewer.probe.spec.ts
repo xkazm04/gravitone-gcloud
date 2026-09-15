@@ -21,6 +21,7 @@ import { declinedCount } from "@/app/_phases/script/_notes/DeclinedList";
 import { buildCards } from "@/app/_phases/_shared/notebook/cards";
 import { BASELINE } from "@/app/_phases/script/versions";
 import type { EditPlan } from "@/app/_phases/script/editPlan";
+import { stripComments } from "./_helpers";
 
 const RENDER = "reversal-chain";
 const render = RENDERS.find((r) => r.id === RENDER)!;
@@ -80,8 +81,7 @@ test("the version carries the field and the panel reads it — the wiring, asser
   // it travels through, so a future refactor that drops one gets told which.
   // The sibling probe's five cases all pass against a recalibrateFromPlan that
   // throws chainBreaks away, which is exactly what it did.
-  const strip = (p: string) =>
-    readFileSync(p, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const strip = (p: string) => stripComments(readFileSync(p, "utf8"));
 
   const recal = strip("app/_phases/script/recalibrate.ts");
   const list = strip("app/_phases/script/_notes/DeclinedList.tsx");

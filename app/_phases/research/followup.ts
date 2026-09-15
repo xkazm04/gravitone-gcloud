@@ -237,11 +237,29 @@ export function standingOf(e: Effect, cardIds: ReadonlySet<string>): Standing {
     }
 
     case "downgrades":
-      return {
-        label: "not applied",
-        landed: false,
-        why: `Scope records kept or cut, not confidence — a downgrade has nowhere per-project to go. ${GLOBAL_NOTEBOOK}`,
-      };
+      // AND THIS BRANCH CONSULTS THE NOTEBOOK TOO, which it did not.
+      //
+      // Every other kind checks whether its target is actually here, and says
+      // "no such id here" when it is not — the rule this whole function is
+      // built on ("a record naming a card the notebook no longer has gets
+      // REPORTED, not quietly drawn as though it still pointed at something").
+      // `downgrades` returned "not applied" unconditionally, so a transcript
+      // naming an id the fixture does not carry read as a legitimate pending
+      // effect rather than a broken reference — the one failure the docstring
+      // says it exists to prevent, in the one branch that could not detect it.
+      //
+      // Measured: 4 of the 5 effect kinds consulted `cardIds`; this was the
+      // fifth. The CANNED fixture carries no downgrade today, which is exactly
+      // why nobody had met it: the kind is in the `Effect` union, the queue
+      // renders whatever the union allows, and the first real downgrade would
+      // have been the one to find out.
+      return cardIds.has(e.targetId)
+        ? {
+            label: "not applied",
+            landed: false,
+            why: `Scope records kept or cut, not confidence — a downgrade of ${e.targetId} has nowhere per-project to go. ${GLOBAL_NOTEBOOK}`,
+          }
+        : { label: "no such id here", landed: false, why: `This notebook has no card ${e.targetId}.` };
   }
 }
 

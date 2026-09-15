@@ -23,6 +23,7 @@ instead of degrading into a hang nobody attributes correctly.
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import time
@@ -30,6 +31,13 @@ import urllib.request
 
 OLLAMA = "http://127.0.0.1:11434"
 COMFY = "http://127.0.0.1:8188"
+
+# THE ONE PLACE the ComfyUI install is named. consistency.py, motion.py,
+# replicate.py and fetch_ref2va.py derive output/, input/ and models/ from
+# this; until 2026-09-04 each carried its own copy of the literal, so moving
+# the install meant five edits and a missed one meant a script reading a
+# tree nobody wrote to. Override with the COMFY_DIR environment variable.
+COMFY_DIR = os.environ.get("COMFY_DIR", r"C:\Users\kazda\ComfyUI")
 
 
 def _post(url, payload, timeout=120):
@@ -44,12 +52,34 @@ def _get(url, timeout=10):
         return json.loads(r.read().decode())
 
 
+class GuardUnavailable(RuntimeError):
+    """The guard could not MEASURE -- distinct from "measured, and refused".
+
+    A missing driver is not a resource shortfall, and reporting it as one (or
+    as a traceback, which is what happened until 2026-09-04: `preflight.mts`
+    documents skipping this file on a box without nvidia-smi because its first
+    call died unguarded) tells the caller the wrong thing to do next. Three
+    outcomes, three exit codes in main(): 0 headroom, 1 refused, 2 cannot run.
+    """
+
+
 def vram():
     """(free_gb, total_gb) from the driver -- the only number that counts."""
-    r = subprocess.run(["nvidia-smi", "--query-gpu=memory.free,memory.total",
-                        "--format=csv,noheader,nounits"],
-                       capture_output=True, text=True)
-    free, total = (int(x) for x in r.stdout.strip().splitlines()[0].split(","))
+    try:
+        r = subprocess.run(["nvidia-smi", "--query-gpu=memory.free,memory.total",
+                            "--format=csv,noheader,nounits"],
+                           capture_output=True, text=True)
+    except FileNotFoundError:
+        raise GuardUnavailable(
+            "nvidia-smi is not on PATH -- no NVIDIA driver on this box, so the guard "
+            "cannot measure VRAM. Nothing in this pipeline runs without the card; on a "
+            "machine that has one, install the driver and try again.") from None
+    line = r.stdout.strip().splitlines()[0] if r.stdout.strip() else ""
+    if r.returncode != 0 or "," not in line:
+        raise GuardUnavailable(
+            f"nvidia-smi answered nothing usable (exit {r.returncode}): "
+            f"{(r.stderr or r.stdout).strip()[:160] or 'no output'}")
+    free, total = (int(x) for x in line.split(","))
     return free / 1024, total / 1024
 
 
@@ -101,8 +131,6 @@ def free_comfy():
     except Exception:
         return False
 
-
-COMFY_DIR = r"C:\Users\kazda\ComfyUI"
 
 # Host RAM, not VRAM, is what actually takes this machine down. Measured
 # 2026-08-25 mid-run: the card sat at 69% used while system RAM went to
@@ -161,10 +189,12 @@ def start_comfy(wait=180):
                 return True
         return False
     exe = f"{COMFY_DIR}\\venv\\Scripts\\python.exe"
+    args = "'main.py'"
+    if os.environ.get("COMFY_LEGACY_LOADER") == "1":
+        args += ",'--disable-pinned-memory','--disable-dynamic-vram'"
     subprocess.run(
         ["powershell", "-NoProfile", "-Command",
-         f"Start-Process -FilePath '{exe}' "
-         f"-ArgumentList 'main.py','--disable-pinned-memory','--disable-dynamic-vram' "
+         f"Start-Process -FilePath '{exe}' -ArgumentList {args} "
          f"-WorkingDirectory '{COMFY_DIR}' -WindowStyle Hidden"],
         capture_output=True, text=True)
     deadline = time.time() + wait
@@ -258,7 +288,12 @@ def stop_comfy(wait=30):
     return False
 
 
-MY_PREFIXES = ("baseline", "reference", "hero", "chain-", "ref2va-", "shot")
+# Every filename_prefix a script in THIS directory submits: consistency.py
+# writes "hero", "shot" and "<lane>-<shot>" for the baseline/reference lanes,
+# motion.py writes "chain-"/"ref2va-", replicate.py writes "replica". A prefix
+# missing here makes our own stale job look like a tenant's, and the run that
+# should reclaim it refuses instead -- "replica" was missing until 2026-09-04.
+MY_PREFIXES = ("baseline", "reference", "hero", "chain-", "ref2va-", "shot", "replica")
 
 
 def foreign_job():
@@ -440,15 +475,17 @@ def main():
         print("freeing comfyui:", "ok" if free_comfy() else "not running")
         time.sleep(2)
 
-    if args.require_vram or args.require_ram:
-        try:
+    try:
+        if args.require_vram or args.require_ram:
             require(args.require_vram, args.require_ram, free=args.free)
-        except RuntimeError as e:
-            print(f"GUARD FAILED: {e}")
-            sys.exit(1)
-        return
-
-    status()
+            return
+        status()
+    except GuardUnavailable as e:
+        print(f"GUARD CANNOT RUN: {e}")
+        sys.exit(2)
+    except RuntimeError as e:
+        print(f"GUARD FAILED: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,40 @@
+const CHARACTER = "dani";
+const id = await createProject({ discipline: "educational", template: "mid-educational-video", preset: "chalk-argument", title: "Why bridges sing in the wind", logline: "A bridge is a musical instrument nobody tuned.", targetS: 300 });
+await openStep(id, "research");
+await runResearch("Why bridges sing in the wind");
+// the notebook card names its own topic, not his
+await walkGuidedToScript(id, { takeHottest: false, confirm: true });
+// Script — guided duel
+expect("candidates duel is shown", await has("candidates-duel"));
+const dueltxt = await textOf("candidates-duel");
+expect("the 'turns' line names a turn beat, not 'escalation'", !/turns\s+escalation/i.test(dueltxt), { detail: (dueltxt.match(/turns[^\n]*\n[^\n]*/i) || [""])[0].slice(0, 80) });
+expect("the runtime note is absent when the project's 300s matches a render", !(await has("script-runtime-note")));
+await click("duel-more-reversal-chain");
+await sleep(300);
+expect("depth shows words and wpm", /wpm/i.test(await textOf("duel-depth-reversal-chain")));
+await click("duel-beats-reversal-chain");
+await sleep(500);
+expect("beats modal opens with readable beat text", /beats ·/i.test(await bodyText()));
+await page.keyboard.press("Escape");
+await sleep(300);
+await click("deck-card-reversal-chain");
+await sleep(400);
+expect("adoption is announced on the card", await has("duel-adopted-reversal-chain"));
+await snap("script-adopted");
+// reload — persistence
+await goto(`/studio/${id}`);
+await waitUntil(async () => (await attr("studio-headline", "data-door")) === "open", { label: "door", ms: 60000 });
+await sleep(800);
+const st = await attr("step-script", "aria-current");
+expect("reload lands on Script (parked by the hand-off)", st === "step", { detail: `aria-current=${st}` });
+await waitFor("view-candidates", { ms: 30000 });
+await sleep(500);
+const adoptedAfter = (await has("duel-adopted-reversal-chain")) || /adopted/i.test(await bodyText());
+expect("the adopted candidate survives a reload", adoptedAfter);
+const prog = await progressOf(id);
+expect("research reported to the project record", prog?.research === "done", { detail: JSON.stringify(prog) });
+expect("script reported to the project record", prog?.script === "working", { detail: JSON.stringify(prog) });
+const cells = await shelfCells(id);
+expect("shelf research cell moved off 'not started'", !/not started/i.test(cells.research || ""), { detail: cells.research });
+expect("shelf script cell moved off 'not started'", !/not started/i.test(cells.script || ""), { detail: cells.script });
+await snap("shelf-after");

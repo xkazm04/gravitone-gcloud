@@ -1,4 +1,56 @@
 {
   "_purpose": "One row per human-gated dojo improvement. Append-only, written by Dojo commits from the /foundry gate. Git-tracked because it is the cross-machine sync channel between the GPU machine's training loop and this checkout: the media stays in gitignored foundry-out/ and dies with the commit, while this file and training/thumbs/ travel. Rows with reflected:false are the next cycle's reflection work queue -- the loop edits the named prompt surface for each, then stamps the commit sha into `reflected` so the row is never worked twice.",
-  "rows": []
+  "rows": [
+    {
+      "cycle": "2026-08-30-noir-colour-roles",
+      "dimension": "media-generation",
+      "subject": "image-prompt-composition",
+      "technique": "assigned-colour-roles",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 0.3333333333333333,
+      "gemini_agreement": 0.6666666666666666,
+      "thumb": "pipeline/foundry/training/thumbs/2026-08-30-noir-colour-roles--imp-1.png",
+      "reflected": "f33275c",
+      "at": "2026-08-30T15:01:56.500Z"
+    },
+    {
+      "cycle": "2026-08-30-oil-blacks-boundary",
+      "dimension": "media-generation",
+      "subject": "visual-style-locking",
+      "technique": "rejections-as-negative-evidence",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0.16666666666666666,
+      "gemini_agreement": 0.5,
+      "reflected": "not-better:no-edit",
+      "at": "2026-08-30T15:02:47.830Z"
+    },
+    {
+      "cycle": "2026-08-31-study-diagonal",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "corpus-study:diagonal-placement",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 0.6666666666666666,
+      "gemini_agreement": 0.6666666666666666,
+      "thumb": "pipeline/foundry/training/thumbs/2026-08-31-study-diagonal--imp-1.png",
+      "reflected": "1dfce8f",
+      "at": "2026-08-31T18:10:44.883Z"
+    },
+    {
+      "cycle": "2026-08-31-study-light-layers",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "corpus-study:layered-environmental-light",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 0.6666666666666666,
+      "gemini_agreement": 0.6666666666666666,
+      "thumb": "pipeline/foundry/training/thumbs/2026-08-31-study-light-layers--imp-1.png",
+      "reflected": "1dfce8f",
+      "at": "2026-08-31T18:10:59.738Z"
+    }
+  ]
 }

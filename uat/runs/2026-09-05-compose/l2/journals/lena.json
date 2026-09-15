@@ -1,0 +1,209 @@
+{
+  "run": "lena",
+  "startedAt": "2026-09-05T15:57:07.994Z",
+  "steps": [
+    {
+      "at": 1788623827996,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788623829966,
+      "s": "click \"deck-card-educational\""
+    },
+    {
+      "at": 1788623830720,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623831399,
+      "s": "click \"deck-card-short-form-clip\""
+    },
+    {
+      "at": 1788623832081,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623832978,
+      "s": "click \"deck-card-preset:data-neon\""
+    },
+    {
+      "at": 1788623833725,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623834603,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"40\""
+    },
+    {
+      "at": 1788623834839,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623835664,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623840740,
+      "s": "click \"deck-card-short-form-clip\""
+    },
+    {
+      "at": 1788623841596,
+      "s": "click \"deck-card-short-form-clip\""
+    },
+    {
+      "at": 1788623842728,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623843746,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623844685,
+      "s": "fill {\"css\":\"#w-title\"} ← \"One number about rent\""
+    },
+    {
+      "at": 1788623845080,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"0\""
+    },
+    {
+      "at": 1788623845848,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"40\""
+    },
+    {
+      "at": 1788623846336,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623847855,
+      "s": "recorded p-mtokgh1c-owug0u → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788623847855,
+      "s": "goto /studio/p-mtokgh1c-owug0u?step=research"
+    },
+    {
+      "at": 1788623856687,
+      "s": "fill {\"label\":\"Topic\"} ← \"Why rent rises faster than wages\""
+    },
+    {
+      "at": 1788623856942,
+      "s": "click \"run-research\""
+    },
+    {
+      "at": 1788623867866,
+      "s": "snap 01-research-landed"
+    },
+    {
+      "at": 1788623867876,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623870661,
+      "s": "snap 02-guided-takes"
+    },
+    {
+      "at": 1788623870668,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623871454,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623872678,
+      "s": "click \"confirm-scope\""
+    },
+    {
+      "at": 1788623875098,
+      "s": "snap 03-guided-review"
+    },
+    {
+      "at": 1788623875106,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623876820,
+      "s": "click \"duel-more-derived-short\""
+    },
+    {
+      "at": 1788623879591,
+      "s": "snap 04-lena-derived-depth"
+    },
+    {
+      "at": 1788623879603,
+      "s": "click \"deck-card-derived-short\""
+    }
+  ],
+  "checks": [
+    {
+      "label": "template seeded 30s",
+      "ok": true
+    },
+    {
+      "label": "owned runtime survives re-picking the template",
+      "ok": true,
+      "detail": "40"
+    },
+    {
+      "label": "a 0 s runtime disables Create & open and says why",
+      "ok": true
+    },
+    {
+      "label": "header pill shows 40s",
+      "ok": true
+    },
+    {
+      "label": "a fresh project's topic field is empty",
+      "ok": true,
+      "detail": "\"\""
+    },
+    {
+      "label": "the stand-in is disclosed BEFORE the run",
+      "ok": true
+    },
+    {
+      "label": "after the run the note names the stand-in against the typed topic",
+      "ok": true,
+      "detail": "prototype · this notebook is the saved 2026-08-11 Bitcoin run, not research on “Why rent rises faster than wages” — ever"
+    },
+    {
+      "label": "the steel-man card says it always travels and why",
+      "ok": true,
+      "detail": "STEEL-MAN The forced-seller story is weaker than it looks, and the accumulation story is real locked in scope — always travels The steel-man"
+    },
+    {
+      "label": "the hottest take is labelled speculation and not taken by default",
+      "ok": true,
+      "detail": "😈 HOTTEST TAKE The Strategic Bitcoin Reserve was never meant to be built not taken risk — speculation about motive — no"
+    },
+    {
+      "label": "scope confirmed",
+      "ok": true
+    },
+    {
+      "label": "runtime mismatch stated (40s vs fixture)",
+      "ok": true,
+      "detail": "this project asked for Short-form clip · 40s — the three renders below were cut for the fixture’s own runtimes (0:45–5:00) and your clock is not read here yet"
+    },
+    {
+      "label": "derived short shows seconds at a stated wpm",
+      "ok": true,
+      "detail": "0:45 at 150 wpm · promise form: contradiction · 0 questions aloud"
+    },
+    {
+      "label": "guided face says what the short is derived from (LE-L1-2, expect absent)",
+      "ok": false
+    },
+    {
+      "label": "adopted",
+      "ok": true
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T15:58:00.306Z"
+}

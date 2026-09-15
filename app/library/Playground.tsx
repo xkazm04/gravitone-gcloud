@@ -128,12 +128,20 @@ function priceLabel(price: PreClickPrice | "unknown" | null): { text: string; ti
 export default function Playground({
   block,
   references = [],
+  onBlockChange,
   onKeep,
   keepLabel = "keep as proof",
   disabled,
   usdPerImage,
 }: {
   block: StyleBlock;
+  /** Editing TECHNIQUE and SUBJECT, which arrived from the dossier. They are
+   *  the two slots that decide what a render looks like, and they were being
+   *  typed three panes away from the button that pays for the result — so a
+   *  trial that came back wrong meant crossing the screen to change the thing
+   *  that made it wrong, and crossing back to try again. Absent when the style
+   *  is locked; the panel then shows them as read-only prose. */
+  onBlockChange?: (block: StyleBlock) => void;
   /** Approved proofs from this theme, newest first. */
   references?: { base64: string; mime: string }[];
   onKeep?: (r: GenerateResult, subject: string) => void | Promise<void>;
@@ -190,7 +198,13 @@ export default function Playground({
   const conditioned = useRefs && refs.length > 0;
 
   const prompt = compilePrompt(block, subject);
+  const editable = Boolean(onBlockChange);
+  const setSlot = (k: "technique" | "subject") => (v: string) =>
+    onBlockChange?.({ ...block, [k]: v });
   const tooLong = prompt.length > PROMPT_CHAR_LIMIT;
+  /** Amber before rose: a cap you can see coming is one you can steer away
+   *  from, and the block that overruns it is usually the one being typed. */
+  const nearLimit = !tooLong && prompt.length > PROMPT_CHAR_LIMIT * 0.9;
 
   const run = async () => {
     setBusy(true);
@@ -229,6 +243,15 @@ export default function Playground({
 
   return (
     <div className="space-y-3">
+      {/* THE STYLE'S OWN WORDS, above the subject they will be applied to and
+          above the counter that adds all three together. The order on screen is
+          now the order of the compiled prompt: technique, subject, then the
+          trial's own clause. */}
+      <div className="grid gap-3 sm:grid-cols-2">
+        <PromptSlot label="technique" value={block.technique} onChange={editable ? setSlot("technique") : undefined} />
+        <PromptSlot label="subject" value={block.subject} onChange={editable ? setSlot("subject") : undefined} />
+      </div>
+
       <div className="flex flex-wrap items-center gap-1.5">
         <p className="font-jetbrains mr-1 text-content tracking-[0.14em] text-white/40 uppercase">try it on</p>
         {TRIALS.map((t) => (
@@ -253,6 +276,7 @@ export default function Playground({
         rows={3}
         className="font-hanken w-full resize-none rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5 text-content leading-snug text-white placeholder:text-white/30 focus:border-cyan-400/40"
         placeholder="What should this style draw?"
+        aria-label="Trial subject"
       />
 
       <div className="flex items-center gap-2">
@@ -284,7 +308,15 @@ export default function Playground({
             </span>
           )}
         </span>
-        <span className="font-jetbrains text-label text-white/30">
+        {/* THE COUNTER IS THE WARNING. It used to sit here in white/30 while a
+            separate sentence below said "This block compiles to N characters and
+            Leonardo accepts M. Shorten the technique or finish line." — the same
+            two numbers, spelled out, under the counter holding them. Coloured,
+            the counter says it on sight; the vendor's cap is already its
+            denominator. */}
+        <span
+          className={`font-jetbrains text-label ${tooLong ? "text-rose-300" : nearLimit ? "text-amber-300/90" : "text-white/30"}`}
+        >
           {prompt.length}/{PROMPT_CHAR_LIMIT} chars
         </span>
 
@@ -302,12 +334,19 @@ export default function Playground({
       </div>
 
 
-      {tooLong && (
-        <p className="text-content leading-snug text-amber-200/90">
-          This block compiles to {prompt.length} characters and Leonardo accepts {PROMPT_CHAR_LIMIT}. Shorten
-          the technique or finish line.
-        </p>
-      )}
+      {/* A hairline fill bar under the textarea, rather than a sentence naming
+          two numbers the counter beside it already holds. */}
+      <span
+        role="img"
+        aria-label={`Prompt uses ${prompt.length} of ${PROMPT_CHAR_LIMIT} characters`}
+        className="block h-px w-full overflow-hidden rounded bg-white/8"
+      >
+        <span
+          aria-hidden
+          style={{ width: `${Math.min(100, (prompt.length / PROMPT_CHAR_LIMIT) * 100)}%` }}
+          className={`block h-full ${tooLong ? "bg-rose-400" : nearLimit ? "bg-amber-300" : "bg-cyan-300/50"}`}
+        />
+      </span>
 
       {error && (
         <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-3 py-2 text-content leading-snug text-rose-200">
@@ -376,6 +415,40 @@ export default function Playground({
             )}
           </div>
         </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * One of the style's four slots, edited where it is spent.
+ *
+ * Read-only when there is no `onChange` — a locked style's words are final, and
+ * a disabled textarea reads as something you could type in if only you found
+ * the right click.
+ */
+function PromptSlot({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange?: (v: string) => void;
+}) {
+  return (
+    <div>
+      <p className="font-jetbrains mb-1 text-content tracking-[0.14em] text-white/40 uppercase">{label}</p>
+      {onChange ? (
+        <textarea
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          rows={2}
+          aria-label={`Style ${label}`}
+          className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-cyan-400/40"
+        />
+      ) : (
+        <p className="font-hanken text-content leading-snug text-slate-300">{value}</p>
       )}
     </div>
   );

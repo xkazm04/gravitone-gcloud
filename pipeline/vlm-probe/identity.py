@@ -53,6 +53,7 @@ WHERE THE RULER GOES BLIND, also measured, also worth knowing:
 import argparse
 import itertools
 import logging
+import sys
 import warnings
 from pathlib import Path
 
@@ -267,11 +268,46 @@ def contact_sheet(items, path, size=256):
     return path
 
 
+def missing_anchors(frames=None):
+    """Anchor stills that are not on disk. They are extracted frames, gitignored
+    (`frames/*` except `frames/truth/`), so a fresh clone has none of them --
+    and until 2026-09-04 the first `Image.open` died with a FileNotFoundError
+    traceback that named a jpg and not the reason."""
+    frames = FRAMES if frames is None else Path(frames)
+    return [v for v in ANCHORS.values() if not (frames / v).exists()]
+
+
+def ruler_blindness(s):
+    """Why the scale cannot back a verdict, or None when it can.
+
+    The registry's identity-ruler-calibration puts the inversion check BEFORE
+    any verdict: a ceiling at or below the floor means the instrument reads
+    costume louder than faces and every distance on it means the opposite of
+    what it says. This file printed that warning and then scored the lane
+    anyway, in the same vocabulary as a sound run. A blind ruler must refuse.
+    """
+    if s["id_floor"] is None or s["id_ceil"] is None:
+        return "the anchor pairs produced no identity floor or no ceiling (no scoreable face)"
+    if s["id_ceil"] - s["id_floor"] <= 0:
+        return (f"ceiling {s['id_ceil']:.4f} <= floor {s['id_floor']:.4f} -- the instrument is "
+                "inverted, distances read costume, not identity")
+    return None
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--set", help="directory of shots to score, every pair against every other")
     ap.add_argument("--contact", help="write a contact sheet of the crops here")
     args = ap.parse_args()
+
+    gone = missing_anchors()
+    if gone:
+        print(f"CANNOT CALIBRATE: {len(gone)} of {len(ANCHORS)} anchor stills missing under {FRAMES}:")
+        for v in gone:
+            print(f"  {v}")
+        print("  They are extracted frames (gitignored). Re-extract them with extract_frames.py "
+              "from the Duel of the Fates source before scoring anything.")
+        sys.exit(2)
 
     A = vecs_for({k: str(FRAMES / v) for k, v in ANCHORS.items()})
     for n, d in A.items():
@@ -282,17 +318,23 @@ def main():
     print(f"  identity floor (same actor, real cut)      {s['id_floor']}")
     print(f"  identity ceiling (same robes, diff actor)  {s['id_ceil']}")
     gap = (s["id_ceil"] or 0) - (s["id_floor"] or 0)
+    blind = ruler_blindness(s)
     print(f"  separation                                 {gap:+.4f}"
-          + ("   RULER IS BLIND -- do not read distances from it" if gap <= 0 else ""))
+          + ("   RULER IS BLIND -- do not read distances from it" if blind else ""))
     print(f"  look floor (same scene across a real cut)  {s['look_floor']}")
 
     if not args.set:
-        return
+        sys.exit(2 if blind else 0)
+    if blind:
+        print(f"\nREFUSING TO SCORE {args.set}: {blind}.\n"
+              "  A verdict from this scale would carry the vocabulary of a sound run and "
+              "none of its meaning.")
+        sys.exit(2)
     d = Path(args.set)
     shots = {f.stem: str(f) for f in sorted(d.glob("*.png")) + sorted(d.glob("*.jpg"))}
     if not shots:
         print(f"\nno shots in {d}")
-        return
+        sys.exit(2)
     S = vecs_for(shots)
     print()
     for n, v in S.items():
@@ -303,10 +345,13 @@ def main():
     print()
     for _, a, b, idn, lk, _ in trows:
         print(f"  {a} / {b}: {verdict(idn, lk, s)}")
-    scored = [r[3] for r in trows if r[3] is not None]
+    scored = [r for r in trows if r[3] is not None]
     if scored:
-        print(f"\n  worst identity pair {max(scored):.4f}"
-              f"   -> {verdict(max(scored), max(r[4] for r in trows), s)}")
+        # The worst pair is ONE pair: its own identity distance with its own
+        # look distance. Pairing the largest identity with the largest look
+        # across different rows described a pair that was never generated.
+        _, wa, wb, widn, wlk, _ = max(scored, key=lambda r: r[3])
+        print(f"\n  worst identity pair {widn:.4f} ({wa} / {wb})   -> {verdict(widn, wlk, s)}")
     if len(scored) < len(trows):
         print(f"  {len(trows) - len(scored)} of {len(trows)} pairs unscored -- no face detected")
 

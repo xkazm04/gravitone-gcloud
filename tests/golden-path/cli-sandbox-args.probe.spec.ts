@@ -22,7 +22,7 @@
 //   2. those two survive an ACTUAL `spawn` through the ACTUAL shell setting,
 //      measured against an argv echo rather than reasoned about.
 import { spawn } from "node:child_process";
-import { mkdtempSync, writeFileSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 
@@ -30,13 +30,24 @@ import { test, expect } from "@playwright/test";
 
 import { cliArgs, USES_SHELL } from "@/lib/claudeCli";
 
-/** A stand-in for the `claude` binary that reports exactly what argv it received. */
+/** A stand-in for the `claude` binary that reports exactly what argv it received.
+ *
+ *  ONE directory for the file, removed when the file is done. This used to mint
+ *  a fresh mkdtemp per spawn and remove none of them: measured 2026-09-06, 392
+ *  `gravitone-argv-*` directories in this machine's temp folder, three more on
+ *  every `npm test`. A probe that leaves residue on the operator's disk is a
+ *  probe with an unstated cost. */
+let dir: string | null = null;
 function argvEcho(): string {
-  const dir = mkdtempSync(join(tmpdir(), "gravitone-argv-"));
+  dir ??= mkdtempSync(join(tmpdir(), "gravitone-argv-"));
   const file = join(dir, "echo.mjs");
   writeFileSync(file, 'console.log("ARGV=" + JSON.stringify(process.argv.slice(2)));\n');
   return file;
 }
+test.afterAll(() => {
+  if (dir) rmSync(dir, { recursive: true, force: true });
+  dir = null;
+});
 
 /** Spawn the echo with `args`, through `shell`, and return the argv it saw. */
 function received(args: string[], shell: boolean): Promise<string[]> {

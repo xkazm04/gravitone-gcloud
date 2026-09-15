@@ -25,11 +25,12 @@ import { readFileSync } from "node:fs";
 
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
+
 /** Comments stripped: this view explains the ordering rule in prose directly
  *  above the code that implements it, so a matcher over raw text is satisfied
  *  by a file that TALKS about closing on success and does not. */
-const code = (p: string) =>
-  readFileSync(p, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+const code = (p: string) => stripComments(readFileSync(p, "utf8"));
 
 const VIEW = "app/projects/ProjectsView.tsx";
 const DIALOG = "app/_projects/ProjectDialog.tsx";

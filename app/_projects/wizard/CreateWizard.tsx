@@ -22,18 +22,19 @@
 // over a write that did not land (the dialog-closes-on-success rule, held here
 // by the same busy latch).
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { ArrowLeft } from "lucide-react";
 
 import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
 import DeckStage from "@/components/ui/deck/DeckStage";
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Eyebrow } from "@/components/ui/Primitives";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
-import { lockedOnly, styleFits } from "@/lib/themes";
+import { lockedOnly, newTheme, putTheme, styleFits, type Proof } from "@/lib/themes";
+import { PRESETS, thumbSrc, type Preset } from "@/app/library/presets";
 import {
   DISCIPLINE_LABEL,
   templateOf,
@@ -42,7 +43,44 @@ import {
   type TemplateId,
 } from "@/lib/projects";
 
-import { disciplineCards, templateCards, styleCards, EmptyStyleDeck, NameStage } from "./stages";
+import {
+  disciplineCards,
+  templateCards,
+  styleCards,
+  presetCards,
+  presetCardId,
+  PRESET_CARD_PREFIX,
+  EmptyStyleDeck,
+  NameStage,
+} from "./stages";
+
+/** The preset's committed render, read back as proof bytes. The thumb IS a
+ *  real render of the block on the canonical subject (public/presets/,
+ *  pipeline/build-preset-thumbs.mts), which is what makes it honest as the
+ *  minted theme's one approved proof — the user is looking at exactly the
+ *  image that will serve as the style reference. */
+async function proofFromThumb(p: Preset): Promise<Proof> {
+  const res = await fetch(thumbSrc(p.id));
+  if (!res.ok) throw new Error(`the preset's render did not load (${res.status})`);
+  const bytes = new Uint8Array(await res.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < bytes.length; i += 0x8000) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  }
+  return {
+    id: `pf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    label: `${p.name} — the committed preset render (canonical subject)`,
+    base64: btoa(bin),
+    mime: "image/jpeg",
+    state: "approved",
+    createdAt: Date.now(),
+  };
+}
+
+/** Stage order, named — the pick handlers advance by name rather than by an
+ *  index literal that reads as a magic number and silently rots when a stage
+ *  is inserted. Kept in step with the `stages` array below. */
+const STAGE = { discipline: 0, template: 1, style: 2, name: 3 } as const;
 
 export default function CreateWizard() {
   const { user } = useAuth();
@@ -54,7 +92,10 @@ export default function CreateWizard() {
   const [active, setActive] = useState(0);
   const [discipline, setDiscipline] = useState<Discipline | null>(null);
   const [template, setTemplate] = useState<TemplateId | null>(null);
-  const [themeId, setThemeId] = useState<string | null>(null);
+  /** The style pick — a locked theme's id, or `preset:<id>` for a preset the
+   *  finish step mints into a locked theme (stages.tsx#presetCardId). */
+  const [styleId, setStyleId] = useState<string | null>(null);
+  const [mintError, setMintError] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [logline, setLogline] = useState("");
   const [targetS, setTargetS] = useState(0);
@@ -64,39 +105,182 @@ export default function CreateWizard() {
   const [ownDuration, setOwnDuration] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // ── The stages ARE history entries ───────────────────────────────────────
+  //
+  // The wizard is four screens behind one URL, so the browser's Back — the
+  // hardware button, the mouse's fourth button, the trackpad swipe — used to
+  // leave /projects/new entirely from stage 4, discarding three answered
+  // questions. Back means "undo my last step" to everyone who is not reading
+  // the React state.
+  //
+  // So every move between stages pushes an entry, and BOTH backs pop it: the
+  // deck's own Back control calls history.back() (Deck#onBack) rather than
+  // navigating itself, which is what keeps the two gestures identical instead
+  // of merely similar — an in-page Back that pushed a forward entry would be
+  // undone by the browser Back that follows it.
+  //
+  // `...history.state` is not decoration: Next's router keeps its own tree in
+  // there and a bare pushState would strip it, breaking the route-level back
+  // that carries the user out of the wizard at stage 1.
+  const goToStage = useCallback((index: number) => {
+    setActive(index);
+    window.history.pushState({ ...window.history.state, gtDeckStage: index }, "");
+  }, []);
+
+  useEffect(() => {
+    // Stamp the entry the wizard was opened on, so popping back to it is
+    // stage 0 rather than a state with no stage in it at all.
+    window.history.replaceState({ ...window.history.state, gtDeckStage: 0 }, "");
+    const onPop = (e: PopStateEvent) => {
+      const at = (e.state as { gtDeckStage?: number } | null)?.gtDeckStage;
+      if (typeof at === "number") setActive(at);
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
+
   const fittingThemes = useMemo(
     () => (discipline ? lockedThemes.filter((t) => styleFits(t, discipline)) : lockedThemes),
     [lockedThemes, discipline],
   );
+  // Presets sit beside the locked themes on the style stage — a complete
+  // four-slot block off the shelf is a real answer for a first project, and
+  // the finish step mints it into a locked theme (same filter as PresetRail).
+  //
+  // BORROWED PRESETS (2026-09-05, uat compose-from-scratch). Every shipped
+  // preset is tagged `educational`, so a trailer or free project on an account
+  // with no locked theme used to reach this stage with NOTHING to pick and a
+  // link to the library — where commissioning a style needs image generation.
+  // Measured: 5 of 10 Characters could not create their project. So when no
+  // preset is written for the discipline, the stage offers ALL presets and says
+  // in its sub-line that they were written for explainers (it was a chip on
+  // every card until the hero-card pass of 2026-09-06 — same disclosure, said
+  // once for the hand instead of six times); picking one mints a
+  // theme UNTAGGED (`discipline: undefined` = fits every discipline, the rule
+  // lib/themes.ts#styleFits already reads) rather than one tagged with a
+  // discipline the block was never written for. A fitted style can still be
+  // commissioned in the library and swapped in later.
+  const disciplinePresets = useMemo(
+    () => (discipline ? PRESETS.filter((p) => styleFits(p, discipline)) : PRESETS),
+    [discipline],
+  );
+  const borrowedPresets = disciplinePresets.length === 0;
+  const fittingPresets = borrowedPresets ? PRESETS : disciplinePresets;
+  const pickedPreset = styleId?.startsWith(PRESET_CARD_PREFIX)
+    ? (fittingPresets.find((p) => presetCardId(p) === styleId) ?? null)
+    : null;
+  /** The picked style's own name, resolved once — the rail summary shows it
+   *  with its origin, and the name stage's permanence line names it as the
+   *  thing that stops being editable. Undefined only if a locked theme's id
+   *  no longer resolves. */
+  const styleName = pickedPreset
+    ? pickedPreset.name
+    : styleId
+      ? lockedThemes.find((t) => t.id === styleId)?.name
+      : undefined;
 
   // The cascade, mirroring ProjectDialog#pickDiscipline's rules rather than
   // forking them: no record may carry a template outside its discipline, and a
   // chosen style that no longer fits is dropped. The one deliberate difference
   // is stated in the header comment — a non-fitting template is cleared (the
   // stage reopens) instead of moved to first-of-discipline.
+  // Picking IS the Next click. Each of the three card stages asks exactly one
+  // question, and the card the user clicked is the whole answer — making them
+  // then find a Next button to confirm what they just said is a second
+  // gesture for one decision. The stage rail and Back stay where they are, so
+  // a change of mind is one click backward. Those three stages therefore declare
+  // `advance: "pick"` below and the deck draws no Next on them — until
+  // 2026-09-08 this rule was true in the handlers and contradicted in the
+  // footer, by a Next button no state could ever enable.
+  //
+  // (The name stage keeps its explicit CTA: a form is not answered by a click,
+  // and its finish WRITES.)
   const pickDiscipline = (id: string | null) => {
     const next = id as Discipline | null;
     setDiscipline(next);
     if (!next) return;
+    goToStage(STAGE.template);
     if (template && !templatesFor(next).some((t) => t.id === template)) {
       setTemplate(null);
       if (!ownDuration) setTargetS(0);
     }
-    if (themeId && !lockedThemes.some((t) => t.id === themeId && styleFits(t, next))) {
-      setThemeId(null);
+    if (styleId) {
+      // A preset pick survives a discipline change whenever the new discipline
+      // will offer it — fitted, or borrowed because nothing fits (the same
+      // rule `fittingPresets` applies above).
+      const nextHasFitted = PRESETS.some((p) => styleFits(p, next));
+      const stillFits = styleId.startsWith(PRESET_CARD_PREFIX)
+        ? PRESETS.some((p) => presetCardId(p) === styleId && (!nextHasFitted || styleFits(p, next)))
+        : lockedThemes.some((t) => t.id === styleId && styleFits(t, next));
+      if (!stillFits) setStyleId(null);
     }
   };
 
   const pickTemplate = (id: string | null) => {
     const next = id as TemplateId | null;
     setTemplate(next);
-    if (next && !ownDuration) setTargetS(templateOf(next).defaultS);
+    if (!next) return;
+    if (!ownDuration) setTargetS(templateOf(next).defaultS);
+    goToStage(STAGE.style);
+  };
+
+  const pickStyle = (id: string | null) => {
+    setStyleId(id);
+    if (id) goToStage(STAGE.name);
   };
 
   const finish = async () => {
-    if (busy || !discipline || !template || !themeId || !title.trim()) return;
+    if (busy || !user || !discipline || !template || !styleId || !title.trim()) return;
     setBusy(true);
+    setMintError(null);
     try {
+      let themeId = styleId;
+      // REUSE BEFORE MINTING (uat 2026-09-05, L2 amara-dialog). Ten creates from
+      // presets left the style shelf with three duplicate names — every create
+      // minted a fresh locked theme from the same block. A locked theme this
+      // account already minted from THIS preset, with the same tag, IS the
+      // style being asked for; a second copy is shelf noise, not a decision.
+      const already = pickedPreset
+        ? lockedThemes.find(
+            (t) =>
+              t.origin === "preset" &&
+              t.presetId === pickedPreset.id &&
+              (borrowedPresets ? !t.discipline : t.discipline === pickedPreset.discipline),
+          )
+        : undefined;
+      if (already) themeId = already.id;
+      else if (pickedPreset) {
+        // Mint the preset into a LOCKED theme, one write: the committed render
+        // becomes the single approved proof (canLock's shape — one approved,
+        // none pending), and lockedAt is set at birth. The user ratified the
+        // style by choosing the card that IS that render; the library's
+        // commission flow remains the path for styles that need arguing over.
+        try {
+          const proof = await proofFromThumb(pickedPreset);
+          const minted = {
+            ...newTheme(user.uid, {
+              name: pickedPreset.name,
+              block: pickedPreset.block,
+              elements: pickedPreset.elements,
+              origin: "preset" as const,
+              presetId: pickedPreset.id,
+              // Untagged when borrowed across disciplines — see the note at
+              // `fittingPresets`. A tag here would make the minted style not
+              // fit the very project it was chosen for.
+              discipline: borrowedPresets ? undefined : pickedPreset.discipline,
+            }),
+            proofs: [proof],
+            lockedAt: Date.now(),
+          };
+          await putTheme(minted);
+          themeId = minted.id;
+        } catch (e) {
+          // The style did not land → no project either. The wizard stays with
+          // the pick intact and says which half failed.
+          setMintError(e instanceof Error ? e.message : "the style could not be saved");
+          return;
+        }
+      }
       const made = await create({
         title,
         logline,
@@ -113,50 +297,127 @@ export default function CreateWizard() {
     }
   };
 
+  // ── NO `sub` ON A STAGE WHOSE CARDS ARE THE ANSWER (2026-09-08) ───────────
+  //
+  // Every one of the four stages shipped as the same sandwich: serif question,
+  // grey paragraph explaining the question, cards, control. Four in a row. The
+  // paragraphs were, verbatim:
+  //
+  //  · discipline — "The question before the template: educational and
+  //    promotional pieces are different contracts, and the craft library
+  //    measured them separately." An argument for why the stage exists, made to
+  //    a user who cannot skip it, above three cards that already differ by
+  //    emblem, tone and name.
+  //  · template — "Picking a template sets the runtime it measured — you can
+  //    take ownership of the number at the last stage." An announcement of a
+  //    downstream side effect. bd2701e made that announcement unnecessary by
+  //    showing the provenance where the number lives: the name stage's field
+  //    label reads `Target runtime · the template's` until the user edits it,
+  //    then `· yours`. A promise about a later screen, kept by that screen.
+  //  · style — see the borrowed-preset note below; the non-borrowed half of it
+  //    ("A locked style from the library, or a preset off the shelf…") restated
+  //    the permanence line stages.tsx now carries at the point of commit.
+  //  · name — "The name you type is the headline the studio opens on. Only the
+  //    name is required." Required-ness is the disabled CTA plus `blockedHint`,
+  //    which says it in the user's own terms and only when it bites.
+  //
+  // What is NOT deleted is the borrowed-preset disclosure: it is uat-driven
+  // (5 of 10 Characters were stranded), it is true only sometimes, and nothing
+  // else on the screen can say it. It is compressed instead — see below.
+  //
+  // THE TEMPLATE STAGE DID GAIN A RUNTIME STAMP, on 2026-09-09, and this note
+  // is what it reversed. The 2026-09-06 density verdict — hero cards carry the
+  // illustration and the name, nothing else — was read here as covering the
+  // craft band too, so the template stage asked the user to choose between
+  // seven formats while withholding the one fact that distinguishes them until
+  // two stages later. The operator's ruling: the band goes on the card, in the
+  // mono voice, one line under the title (stages.tsx#templateBandWords). What
+  // the density verdict actually removed is still gone — the pitch paragraph,
+  // the eyebrow repeating the stage label, the chip counting templates. A
+  // window is not a pitch.
   const stages: DeckStageDef[] = [
     {
       id: "discipline",
       label: "discipline",
       headline: "What kind of video is this?",
-      sub: "The question before the template: educational and promotional pieces are different contracts, and the craft library measured them separately.",
       done: discipline !== null,
       summary: discipline ? DISCIPLINE_LABEL[discipline] : undefined,
+      // No Next, and no hint under it. `pickDiscipline` sets `done` and changes
+      // stage in the same handler, so the button was disabled in every state a
+      // user could ever see it in — a control that cannot be clicked, beside a
+      // line telling them to do the one thing that takes them off this stage.
+      // The cards are the control (Deck's DeckStageDef#advance).
+      advance: "pick",
       content: (
-        <DeckStage cards={disciplineCards()} pickedId={discipline} onPick={pickDiscipline} />
+        <DeckStage
+          cards={disciplineCards()}
+          pickedId={discipline}
+          onPick={pickDiscipline}
+          noUnpick
+        />
       ),
     },
     {
       id: "template",
       label: "template",
       headline: "Which craft format inside it?",
-      sub: "Picking a template sets the runtime it measured — you can take ownership of the number at the last stage.",
       done: template !== null,
       summary: template ? templateOf(template).label : undefined,
+      advance: "pick", // same shape as the discipline stage, above
       content: discipline ? (
-        <DeckStage cards={templateCards(discipline)} pickedId={template} onPick={pickTemplate} />
+        <DeckStage
+          cards={templateCards(discipline)}
+          pickedId={template}
+          onPick={pickTemplate}
+          noUnpick
+        />
       ) : null,
     },
     {
       id: "style",
       label: "style",
       headline: "Which visual identity does it render in?",
-      sub: "A locked style from the library. Every frame this project renders is built on it, and it is fixed at creation.",
-      done: themeId !== null,
-      summary: themeId ? (lockedThemes.find((t) => t.id === themeId)?.name ?? undefined) : undefined,
+      // THE ONE SURVIVING `sub`, AND IT IS A DISCLOSURE, NOT A DESCRIPTION.
+      // Every shipped preset is tagged `educational`; a trailer or free project
+      // therefore meets six cards written for a different kind of video, and
+      // nothing on a hero card can say so (uat 2026-09-05: 5 of 10 Characters
+      // could not get past this stage before the borrow existed). It ran 48
+      // words and re-explained locking, minting and the library route — all of
+      // which the name stage's permanence line and the library itself already
+      // carry. Compressed to the part only this line knows: whose video these
+      // presets were written for. Amber because it is a caveat on the hand the
+      // user is being dealt, and absent entirely when it is not true.
+      sub:
+        discipline && borrowedPresets ? (
+          <span className="text-amber-200/90">
+            presets written for {DISCIPLINE_LABEL.educational.toLowerCase()} — they fit any
+            discipline
+          </span>
+        ) : undefined,
+      done: styleId !== null,
+      advance: "pick", // same shape as the discipline stage, above
+      summary: pickedPreset ? `${styleName} (preset)` : styleName,
       content:
-        discipline && fittingThemes.length === 0 ? (
+        discipline && fittingThemes.length === 0 && fittingPresets.length === 0 ? (
           <EmptyStyleDeck discipline={discipline} />
         ) : (
-          <DeckStage cards={styleCards(fittingThemes)} pickedId={themeId} onPick={setThemeId} />
+          <DeckStage
+            cards={[...styleCards(fittingThemes), ...presetCards(fittingPresets)]}
+            pickedId={styleId}
+            onPick={pickStyle}
+            noUnpick
+          />
         ),
     },
     {
       id: "name",
       label: "name",
       headline: "Name it, and set the clock",
-      sub: "The name you type is the headline the studio opens on. Only the name is required.",
-      done: title.trim().length > 0,
+      // A project with no clock is not a project: `Number("") || 0` used to
+      // create a "· 0s" studio (uat 2026-09-05, LE-L1-7).
+      done: title.trim().length > 0 && targetS > 0,
       summary: title.trim() || undefined,
+      blockedHint: !title.trim() ? "a name is required" : targetS <= 0 ? "set a runtime above 0 s" : undefined,
       content:
         discipline && template ? (
           <NameStage
@@ -165,6 +426,8 @@ export default function CreateWizard() {
             targetS={targetS}
             discipline={discipline}
             template={template}
+            styleName={styleName}
+            ownDuration={ownDuration}
             onTitle={setTitle}
             onLogline={setLogline}
             onDuration={(v) => {
@@ -182,26 +445,48 @@ export default function CreateWizard() {
           ProjectsView's <main> (components/ui/Modal.tsx#restoreFocus). */}
       <main tabIndex={-1} className="pb-10">
         <Deck
-          eyebrow={<Eyebrow>create</Eyebrow>}
+          // NO EYEBROW (operator, 2026-09-09). It printed `create` on its own
+          // row directly under the nav — where StudioFrame's rule already marks
+          // Projects as the current module and the stage rail's first pill
+          // already says `1 discipline`. One word, one line, saying what the
+          // route and the rail both say, and it pushed the whole deck down by a
+          // row for it. Deck's `eyebrow` stays optional and GuidedResearch keeps
+          // its own, which names a step inside a page rather than the page.
           stages={stages}
           active={active}
-          onNavigate={setActive}
+          onNavigate={goToStage}
+          onBack={() => window.history.back()}
           finishLabel="Create & open"
           onFinish={() => void finish()}
           busy={busy}
+          // THE MACHINE'S WORDS, AND NOTHING APPENDED. Both banners carried a
+          // reassurance the screen behind them already proves: the rail above
+          // still shows every ✓ and its summary, so "your picks are kept" is
+          // visible in the same viewport as the sentence claiming it, and "your
+          // projects live in this browser's storage" restates the `local` pill
+          // in the nav. What a failure owes the user is what failed.
           notice={
-            error ? (
-              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-sm text-rose-200">
-                {error} — your projects live in this browser&rsquo;s storage, and it did not answer.
+            mintError ? (
+              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
+                {mintError}
+              </p>
+            ) : error ? (
+              <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200">
+                {error}
               </p>
             ) : undefined
           }
+          // `back to the shelf — nothing is kept` became `← Projects`. Nothing
+          // has been created yet — there is no record for leaving to discard,
+          // so the clause was reassuring the user about a loss that cannot
+          // happen, next to the Back that is the actual undo.
           exit={
             <Link
               href="/projects"
-              className="font-jetbrains text-label text-white/35 transition hover:text-white/60"
+              className="font-jetbrains inline-flex items-center gap-1.5 text-label text-white/35 transition hover:text-white/60"
             >
-              back to the shelf — nothing is kept
+              <ArrowLeft aria-hidden className="h-3.5 w-3.5" />
+              Projects
             </Link>
           }
         />

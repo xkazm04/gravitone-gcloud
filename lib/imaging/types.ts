@@ -104,7 +104,7 @@ export interface RecognizeRequest extends ProviderSteer {
 
 /** The vendor roster, as a value: a request may name a vendor, so validation
  *  needs the list at runtime and there may be exactly one copy of it. */
-export const PROVIDER_IDS = ["leonardo", "google", "qwen"] as const;
+export const PROVIDER_IDS = ["leonardo", "google", "qwen", "ollama"] as const;
 
 export type ProviderId = (typeof PROVIDER_IDS)[number];
 
@@ -139,9 +139,30 @@ export interface RerouteStep {
  */
 export type CostBasis = "vendor-reported" | "estimated" | "unpriced";
 
+/**
+ * How to read `model`. The same distinction `CostBasis` draws for a number,
+ * drawn for an identity: a request parameter is a claim by the CALLER, and only
+ * an echoed identifier is a claim by the party that did the work.
+ *
+ * - `vendor-reported` — the response stated which model served the request.
+ * - `requested` — we asked for this and the vendor did not say; the artifact is
+ *   attributable to our intent, not to a confirmation.
+ * - `undisclosed` — the provider's contract exposes no identifier at all, so the
+ *   output is unattributable and must not enter a class that ships on provenance.
+ */
+export type ModelBasis = "vendor-reported" | "requested" | "undisclosed";
+
 export interface Provenance {
   provider: ProviderId;
   model: string;
+  /**
+   * How to read `model` — see `ModelBasis`. Required, because the failure it
+   * prevents is silent: an unmarked identifier reads as the served model, and
+   * every adapter here in fact fills it from a caller-side constant. Recording
+   * intent as though it were confirmation is the identity-shaped form of the
+   * error `costBasis` was added to make impossible for cost.
+   */
+  modelBasis: ModelBasis;
   /** Vendor-side ids, kept so a failed cleanup can be chased by hand. */
   remoteIds?: string[];
   costUsd?: number;
@@ -157,6 +178,12 @@ export interface Provenance {
   costBasis?: CostBasis;
   durationMs: number;
   cleanup?: "deleted" | "failed" | "not-applicable";
+  /**
+   * Which channel actually carried `negativePrompt` on this call, copied from
+   * the served provider. Set ONLY when the request carried one, so its absence
+   * reads as "there was nothing to carry" and never as "unknown".
+   */
+  negativePromptChannel?: "native" | "prose";
   /** Vendors eliminated before the one that served, most-preferred first.
    *  Absent on the ordinary single-hop call — its PRESENCE is the re-route,
    *  which is how "why is this plate from Leonardo?" stays answerable later. */
@@ -197,6 +224,24 @@ export interface ImagingProvider {
    * letting adapters drop the field on the floor.
    */
   readonly supportsReferences?: boolean;
+  /**
+   * HOW does this provider receive `negativePrompt`?
+   *
+   * The same question `supportsReferences` asks, on the dimension where the
+   * answer is not yes-or-no. Both generating vendors honour a negative prompt,
+   * so neither can be routed around — but they honour it through channels of
+   * different fidelity. One takes a dedicated API field the sampler reads; the
+   * other has it appended to the positive prompt as a sentence, where it
+   * competes with the subject for the same text budget and the same attention.
+   *
+   * There is nothing to route here, which is exactly why it has to be
+   * DECLARED. An unequal channel that no field records is invisible in a
+   * side-by-side comparison, and Playground's grid then reads a channel
+   * difference as a model difference — attributing to the model a gap that
+   * belongs to its input surface. Same move as `costBasis`: say how to read
+   * the result instead of leaving a reader to infer it.
+   */
+  readonly negativePromptChannel?: "native" | "prose";
   generate?(req: GenerateRequest): Promise<GeneratedImages>;
   edit?(req: EditRequest): Promise<GeneratedImages>;
   recognize?(req: RecognizeRequest): Promise<Recognition>;

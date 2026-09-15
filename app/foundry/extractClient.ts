@@ -2,7 +2,6 @@
 // plus the one piece of client-side work the browser does better than the
 // server — shrinking a gallery before it is uploaded.
 
-import { accessHeader } from "@/lib/imagingClient";
 import type {
   ExtractCommitResult,
   ExtractDetail,
@@ -14,22 +13,10 @@ import type {
   StepResult,
 } from "@/lib/foundry/extract/types";
 
-import { FoundryRequestError, fileUrl } from "./foundryClient";
-
-async function call<T>(path: string, init: RequestInit = {}): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(path, {
-      ...init,
-      headers: { "content-type": "application/json", ...accessHeader(), ...(init.headers ?? {}) },
-    });
-  } catch {
-    throw new FoundryRequestError("The studio could not be reached.", 0);
-  }
-  const json = await res.json().catch(() => ({}) as Record<string, unknown>);
-  if (!res.ok) throw new FoundryRequestError((json as { detail?: string }).detail ?? `HTTP ${res.status}`, res.status);
-  return json as T;
-}
+// The request rule itself lives in foundryClient.ts and is imported, not
+// restated: this file used to hold a byte-identical copy, which is the shape
+// where a fix reaches one tab and not the other.
+import { call, fileUrl } from "./foundryClient";
 
 export const fetchExtractRuns = () => call<{ runs: ExtractSummary[] }>("/api/foundry/extract").then((r) => r.runs);
 export const fetchExtractRun = (id: string) => call<ExtractDetail>(`/api/foundry/extract/${encodeURIComponent(id)}`);

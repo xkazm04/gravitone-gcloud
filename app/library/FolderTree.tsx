@@ -10,7 +10,7 @@
 // top of the move dialog, never the only way in — see MoveDialog.tsx.
 
 import { useState } from "react";
-import { ChevronDown, ChevronRight, Folder, FolderOpen } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderOpen, Merge } from "lucide-react";
 
 import { pathKey, type FolderNode } from "@/lib/assets";
 
@@ -334,11 +334,22 @@ function FolderNameEditor({
             onCancel();
           }
         }}
-        className="font-hanken w-full rounded border border-cyan-400/40 bg-slate-950/80 px-2 py-0.5 text-content text-white outline-none"
+        aria-describedby={merges ? "folder-rename-merges" : undefined}
+        className={`font-hanken w-full rounded border bg-slate-950/80 px-2 py-0.5 text-content text-white outline-none ${
+          merges ? "border-amber-400/70 ring-1 ring-amber-400/40" : "border-cyan-400/40"
+        }`}
       />
+      {/* A COLLISION, DRAWN. The amber ring says "this name is taken here"; the
+          merge arrows say what happens if you commit it anyway. The sentence
+          that used to spell both out reads once and then sits under every
+          rename that does not collide with anything. */}
       {merges && (
-        <span className="font-jetbrains mt-1 text-label leading-snug text-amber-200/80">
-          a folder here is already called {trimmed} — renaming merges them
+        <span
+          id="folder-rename-merges"
+          className="font-jetbrains mt-1 flex items-center gap-1.5 text-label text-amber-200/80"
+        >
+          <Merge className="h-3.5 w-3.5 shrink-0" aria-hidden />
+          merges with {trimmed}
         </span>
       )}
     </span>

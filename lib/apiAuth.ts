@@ -153,9 +153,18 @@ const buckets = new Map<string, Bucket>();
 const SWEEP_EVERY = 200;
 let sinceSweep = 0;
 
+// A KNOB BELOW ONE IS MISCONFIGURATION, AND IT IS FLOORED — the same rule
+// lib/claudeCli.ts applies to its timeout. Each of these used to accept any
+// positive number, and below 1 the two integer knobs invert the limiter:
+//   · a capacity of 0.5 leaves every fresh bucket under one token, so EVERY
+//     call is refused, forever, with a retry-after it can never satisfy;
+//   · a key cap of 0.5 floors to 0, so the reaper runs on every call and evicts
+//     every bucket before the current key is inserted — each call sees a fresh
+//     full bucket and NOTHING is ever refused. The limiter reads healthy.
+// Neither can be a considered setting, so both fall back to the default.
 function rateCapacity(): number {
   const n = Number(process.env[RATE_CAPACITY_VAR]);
-  return Number.isFinite(n) && n > 0 ? n : 30;
+  return Number.isFinite(n) && n >= 1 ? n : 30;
 }
 function rateWindowSec(): number {
   const n = Number(process.env[RATE_WINDOW_SEC_VAR]);
@@ -163,7 +172,7 @@ function rateWindowSec(): number {
 }
 function rateKeyCap(): number {
   const n = Number(process.env[RATE_KEY_CAP_VAR]);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : DEFAULT_KEY_CAP;
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_KEY_CAP;
 }
 
 /**

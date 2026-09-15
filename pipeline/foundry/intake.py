@@ -54,7 +54,7 @@ PLANS = HERE / "plans"
 EXTS = {".jpg", ".jpeg", ".png", ".webp", ".bmp"}
 
 
-def publish(folder: Path, slug: str, max_width=1280):
+def publish(folder: Path, slug: str, max_edge=1280):
     """Copy screenshots in as <slug>-NNN.jpg, capped and letterbox left alone
     (forge crops letterbox per scene at plan time)."""
     from PIL import Image
@@ -81,8 +81,17 @@ def publish(folder: Path, slug: str, max_width=1280):
         n += 1
         dest = FRAMES_DIR / f"{slug}-{n:03d}.jpg"
         im = Image.open(p).convert("RGB")
-        if im.width > max_width:
-            im = im.resize((max_width, round(im.height * max_width / im.width)))
+        # THE CAP IS ON THE LONG EDGE, which is what this module's docstring
+        # has always said and what the reason behind it requires: "vision
+        # encoders tile anyway, and bytes are upload time" is true of height
+        # exactly as it is of width. Capping WIDTH let a portrait screenshot
+        # through untouched -- measured on 1080x1920, 1440x2560 and 1920x1080:
+        # only the landscape frame came out at 1280, the other two kept long
+        # edges of 1920 and 2276 and paid for them on every readback, which
+        # uploads the whole set at once.
+        if max(im.size) > max_edge:
+            scale = max_edge / max(im.size)
+            im = im.resize((round(im.width * scale), round(im.height * scale)))
         im.save(dest, quality=90)
         out.append(dest)
         print(f"  {p.name} -> {dest.name}  ({im.width}x{im.height})")
@@ -101,13 +110,35 @@ def readback(frames, slug, model):
         text = style_mod.run_gemini_multi(model, b64s, key)
     else:
         text = style_mod.run_ollama_multi(model, b64s)
-    parsed = json.loads(text)
     row = {"source": slug, "model": model, "frames": len(frames),
            "frame_names": [p.name for p in frames],
-           "latency_s": round(time.time() - t0, 1), "parsed": parsed, "ok": True}
+           "latency_s": round(time.time() - t0, 1)}
+    # WRITE THE ROW EVEN WHEN IT DOES NOT PARSE. This call is the expensive
+    # part of an intake: N frames uploaded to a vendor, or the local eye given
+    # the card. The answer's bytes are the only record of what was bought, and
+    # when they were thrown away the operator had nothing to look at and no
+    # choice but to pay again to find out what had gone wrong -- while the
+    # frames from publish() were already on disk, so a re-run also had to be
+    # told not to publish them twice.
+    #
+    # A truncation at the token ceiling is the ordinary way this happens: both
+    # runners in ../vlm-probe/style.py ask for schema-enforced JSON, so what
+    # arrives is either valid or cut off, and a cut-off answer is exactly the
+    # one worth keeping. `ok: False` keeps it out of acquire.py's listing --
+    # readbacks() filters on that field -- so a kept failure is inert, not a
+    # row that can be acquired by accident.
+    try:
+        row["parsed"], row["ok"] = json.loads(text), True
+    except json.JSONDecodeError as e:
+        row["ok"], row["raw"], row["error"] = False, text, f"{type(e).__name__}: {e}"
     STYLE_OUT.parent.mkdir(parents=True, exist_ok=True)
     with STYLE_OUT.open("a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    if not row["ok"]:
+        sys.exit(f"the {model} readback of '{slug}' did not parse ({row['error']}); "
+                 f"the {len(text)} bytes it returned are kept at {STYLE_OUT} -- "
+                 f"the frames are published, so re-run with --no-readback or fix and retry")
+    parsed = row["parsed"]
     print(f"  readback by {model} in {row['latency_s']}s:")
     print(f"    signature: {parsed.get('signature', '')}")
     print(f"    recipe:    {parsed.get('imitable_recipe', '')}")

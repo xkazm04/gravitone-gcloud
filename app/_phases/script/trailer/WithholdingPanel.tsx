@@ -43,7 +43,7 @@ export default function WithholdingPanel({
           return (
             <li key={a.id} data-testid={`asset-${a.id}`} className="border-t border-white/8 pt-3 first:border-t-0 first:pt-0">
               <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">{a.kind}</p>
-              <p className="font-hanken mt-0.5 text-[14px] leading-snug text-slate-200">{a.name}</p>
+              <p className="font-hanken mt-0.5 text-label leading-snug text-slate-200">{a.name}</p>
               <Segmented<Allowance>
                 label="allowance"
                 value={a.allowance}
@@ -68,7 +68,7 @@ export default function WithholdingPanel({
                     defaultValue={a.trade ?? ""}
                     onBlur={(e) => onAllowance(a.id, "spend", e.target.value)}
                     onKeyDown={(e) => e.key === "Enter" && onAllowance(a.id, "spend", e.currentTarget.value)}
-                    placeholder="what this spend buys, and what it costs the work"
+                    placeholder="trade — what it costs"
                     className="font-hanken mt-1 w-full rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-label text-slate-200 placeholder:text-white/25"
                   />
                 </div>

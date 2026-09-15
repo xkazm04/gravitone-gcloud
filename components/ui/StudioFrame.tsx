@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Wordmark } from "./Primitives";
 import UserMenu from "./UserMenu";
 import NotificationBell from "./NotificationBell";
@@ -12,9 +13,21 @@ import { LOCAL_MODE } from "@/lib/localMode";
 // without a project is not a page, it is a redirect back here.
 // "Library" holds several modules now — Styles is the first, with Assets and
 // Animations beside it — so the nav names the place and the page's own tab
-// strip names the module. That also settles the earlier collision with the
-// studio's per-project asset shelves (app/_library): those are what ONE project
-// produced, this is the cross-project shelf everything is built from.
+// strip names the module.
+//
+// THE COLLISION THIS COMMENT ONCE CLAIMED TO HAVE SETTLED WAS NOT SETTLED. It
+// said renaming the nav item resolved the clash with the studio's per-project
+// asset shelves (app/_library) — but the studio went on drawing its own button
+// labelled "Library", three inches under this row and pointing somewhere else:
+// this one is a ROUTE to the cross-project shelf, that one swapped a panel
+// inside the open project. Two controls, one word, two destinations, visible
+// together on every studio screen. Naming one side of a collision settles
+// nothing while the other side keeps the word.
+// Settled for real on 2026-09-08 by changing the OTHER side: the studio's
+// control is now "Outputs" and is a disclosure toggle on the project's own
+// title line, not a nav (app/studio/[projectId]/StudioView.tsx). "Library" is
+// this link and only this link — the cross-project shelf everything is built
+// from; what ONE project produced is that project's Outputs.
 export const MODULES = [
   { label: "Projects", href: "/projects" },
   { label: "Library", href: "/library" },
@@ -37,6 +50,29 @@ export const MODULES = [
  *  app/projects/page.tsx and app/studio/page.tsx) rather than here, because the
  *  landing page uses no frame and every framed route is gated anyway. */
 export default function StudioFrame({ children }: { children: React.ReactNode }) {
+  // WHERE YOU ARE, MARKED IN THE ONE PLACE THAT IS ALWAYS ON SCREEN.
+  //
+  // The nav drew four identical links and no current state, so every module
+  // page then had to say its own name twice more — an <Eyebrow> and an <h1>
+  // over content that is already unmistakably the shelf, the library, the
+  // bench. Three labels for one location, and the only one a reader consults
+  // to orient themselves is this row. Marked here, the other two are removable.
+  //
+  // A child route counts as the module (`/projects/new` is Projects), because
+  // the question the nav answers is "which part of the app is this", not "which
+  // URL". `aria-current="page"` is the same answer for a screen reader, which
+  // reads nothing off a brighter white.
+  //
+  // And a brighter white is all a sighted reader had: white vs white/70 is one
+  // signal in one channel, which the repo's own law forbids for a state (colour
+  // is never the only signal). So the current module also carries a RULE under
+  // it — a shape, present or absent, legible at a glance and in a screenshot at
+  // any contrast. It doubles as the kind-marker this row needed: these four are
+  // PLACES, underlined the way a tab strip underlines, and nothing inside a
+  // page is drawn this way.
+  const pathname = usePathname();
+  const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
   return (
     <div className="font-hanken relative min-h-screen overflow-hidden bg-[var(--gt-ink)] text-slate-200 grain">
       {/* The aurora reads --gt-level / --gt-working (globals.css, filter only),
@@ -53,10 +89,13 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
           dev auth bypass active — signed in as a fixture, not a real account
         </div>
       )}
-      {/* 1440px, gutters halved (2026-08-28): the type scale went up a rung
-          and the width to carry it comes out of x-spacing, not out of the
-          content — the operator's explicit trade. */}
-      <div className="relative mx-auto max-w-[1440px] px-4">
+      {/* `max-w-shell` — 1760px with 8px gutters, declared once in globals.css
+          (--container-shell) because the foundry's three fixed bottom bars
+          escape this container and have to restate it. Raised from 1440/16px
+          on 2026-09-08 for the same reason as 2026-08-28's halving: the type
+          scale went up a rung and the width to carry it comes out of
+          x-spacing, not out of the content — the operator's explicit trade. */}
+      <div className="relative mx-auto max-w-shell px-2">
         <nav className="flex items-center justify-between gap-4 py-6">
           <div className="flex items-center gap-7">
             <Link href="/projects" aria-label="Projects">
@@ -71,11 +110,27 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
               </span>
             )}
             <div className="font-jetbrains hidden items-center gap-7 text-label text-white/70 md:flex">
-              {MODULES.map((m) => (
-                <Link key={m.href} href={m.href} className="transition hover:text-white">
-                  {m.label}
-                </Link>
-              ))}
+              {MODULES.map((m) => {
+                const here = isActive(m.href);
+                return (
+                  <Link
+                    key={m.href}
+                    href={m.href}
+                    aria-current={here ? "page" : undefined}
+                    className={`relative transition ${
+                      here ? "text-white" : "text-white/70 hover:text-white"
+                    }`}
+                  >
+                    {m.label}
+                    {here && (
+                      <span
+                        aria-hidden
+                        className="absolute -bottom-1.5 left-0 h-px w-full bg-cyan-400/70"
+                      />
+                    )}
+                  </Link>
+                );
+              })}
             </div>
           </div>
           <div className="flex items-center gap-3">

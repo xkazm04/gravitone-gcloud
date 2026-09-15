@@ -1,0 +1,47 @@
+· goto /projects/new
+· click "deck-card-educational"
+· click {"role":"button","name":{}}
+· click "deck-card-short-form-clip"
+· click {"role":"button","name":{}}
+· click "deck-card-preset:data-neon"
+· click {"role":"button","name":{}}
+ok   template seeded 30s
+· fill {"css":"#w-dur"} ← "40"
+· click {"role":"button","name":{}}
+· click {"role":"button","name":{}}
+· click "deck-card-short-form-clip"
+· click "deck-card-short-form-clip"
+· click {"role":"button","name":{}}
+· click {"role":"button","name":{}}
+ok   owned runtime survives re-picking the template — 40
+· fill {"css":"#w-title"} ← "One number about rent"
+· fill {"css":"#w-dur"} ← "0"
+ok   a 0 s runtime disables Create & open and says why
+· fill {"css":"#w-dur"} ← "40"
+· click {"role":"button","name":{}}
+ok   header pill shows 40s
+· recorded p-mtokgh1c-owug0u → uat/runs/2026-09-05-compose/created.json
+· goto /studio/p-mtokgh1c-owug0u?step=research
+ok   a fresh project's topic field is empty — ""
+ok   the stand-in is disclosed BEFORE the run
+· fill {"label":"Topic"} ← "Why rent rises faster than wages"
+· click "run-research"
+ok   after the run the note names the stand-in against the typed topic — prototype · this notebook is the saved 2026-08-11 Bitcoin run, not research on “Why rent rises faster than wages” — ever
+· snap 01-research-landed
+· click {"role":"button","name":{}}
+ok   the steel-man card says it always travels and why — STEEL-MAN The forced-seller story is weaker than it looks, and the accumulation story is real locked in scope — always travels The steel-man
+ok   the hottest take is labelled speculation and not taken by default — 😈 HOTTEST TAKE The Strategic Bitcoin Reserve was never meant to be built not taken risk — speculation about motive — no
+· snap 02-guided-takes
+· click {"role":"button","name":{}}
+· click {"role":"button","name":{}}
+· click "confirm-scope"
+ok   scope confirmed
+· snap 03-guided-review
+· click {"role":"button","name":{}}
+ok   runtime mismatch stated (40s vs fixture) — this project asked for Short-form clip · 40s — the three renders below were cut for the fixture’s own runtimes (0:45–5:00) and your clock is not read here yet
+· click "duel-more-derived-short"
+ok   derived short shows seconds at a stated wpm — 0:45 at 150 wpm · promise form: contradiction · 0 questions aloud
+FAIL guided face says what the short is derived from (LE-L1-2, expect absent)
+· snap 04-lena-derived-depth
+· click "deck-card-derived-short"
+ok   adopted

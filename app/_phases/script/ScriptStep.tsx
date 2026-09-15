@@ -32,32 +32,38 @@
 import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
-import { getProject, type Discipline } from "@/lib/projects";
+import { Hint, TabRail, UpstreamBreak, type TabDef, type TallyTone } from "@/components/ui/signal";
+import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/projects";
 
 import { CONCLUSIONS } from "../_shared/notebook/conclusions";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
 import { loadStep, type BeatPicksStepData } from "../_shared/stepStore";
-import Notice from "../_shared/ui/Notice";
+import { usePhaseReport } from "../_shared/usePhaseReport";
 import { useScope } from "../research/useScope";
 
 import { gateChains } from "./gate";
-import type { Version } from "./versions";
+import { coverageIn, usageIn, type Version } from "./versions";
 import BeatList from "./_parts/BeatList";
 import CandidatesDuel from "./candidates/CandidatesDuel";
 import { useAdoption } from "./candidates/useAdoption";
 import { useScriptFace } from "./candidates/useScriptFace";
 import HypothesisColumn from "./_parts/HypothesisColumn";
+import { stillSpoken } from "./_matrix/shared";
 import MatrixCoverage from "./_matrix/MatrixCoverage";
 import MatrixSpend from "./_matrix/MatrixSpend";
 import MatrixTracks from "./_matrix/MatrixTracks";
 import VersionBar from "./_matrix/VersionBar";
 import StickyNotebook from "./_notes/StickyNotebook";
-import { RENDERS, RENDER_BY_ID } from "./renders";
+import { mmss, RENDERS, RENDER_BY_ID } from "./renders";
 import BaselineOnlyNote from "./_parts/BaselineOnlyNote";
 import TrailerScript from "./trailer/TrailerScript";
 import { useVersions } from "./useVersions";
 
 type Tab = "candidates" | "coverage" | "spend" | "tracks";
+
+/** The one panel all four tabs govern — `aria-controls` on every tab,
+ *  `role="tabpanel"` on the section whose contents swap under them. */
+const PANEL_ID = "script-panel";
 
 /** The beats a version actually shows for one render. A version with no chain
  *  of its own (the simulated transform re-weights without rewriting) falls back
@@ -70,12 +76,31 @@ const chainOf = (v: Version | null, renderId: string) =>
 const wordsIn = (beats: { text: string }[]) =>
   beats.map((b) => b.text).join(" ").split(/\s+/).filter(Boolean).length;
 
-const TABS: { key: Tab; label: string; sub: string }[] = [
-  { key: "candidates", label: "Candidates", sub: "three renders, measured" },
-  { key: "coverage", label: "Coverage", sub: "who used what, and for how long" },
-  { key: "spend", label: "Spend bar", sub: "the runtime as a budget" },
-  { key: "tracks", label: "Tracks", sub: "running order — the bridge to Frames" },
+// NO CAPTION FIELD. Four tabs each carried a second line teaching what the tab
+// was for — "who used what, and for how long", "the runtime as a budget",
+// "running order — the bridge to Frames". A caption slot on a tab definition is
+// a prompt, and it was filled four times out of four. What the captions were
+// reaching for is the tab's STATE, which is a count, so a count is what rides
+// there now (see `tallyFor` below); the step's own header comment holds the four
+// questions for whoever is reading the code.
+const TABS: { key: Tab; label: string }[] = [
+  { key: "candidates", label: "Candidates" },
+  { key: "coverage", label: "Coverage" },
+  { key: "spend", label: "Spend bar" },
+  { key: "tracks", label: "Tracks" },
 ];
+
+/** One skeleton for the three sentences this step used to write while it read
+ *  ("opening the project…", "opening the project's research…", "loading this
+ *  project's scope…"). Three spellings of the same half-second. */
+function Skeleton({ className = "" }: { className?: string }) {
+  return (
+    <div role="status" aria-label="loading" className={`gt-rise space-y-2 ${className}`}>
+      <span aria-hidden className="block h-3 w-40 animate-pulse rounded-full bg-white/[0.07]" />
+      <span aria-hidden className="block h-3 w-64 animate-pulse rounded-full bg-white/[0.05]" />
+    </div>
+  );
+}
 
 /** WHICH HALF OF THE STEP THIS PROJECT GETS.
  *
@@ -84,9 +109,18 @@ const TABS: { key: Tab; label: string; sub: string }[] = [
  *  layer. A trailer project, or a free project that chose beats over facts,
  *  opens on the trailer half and nothing of the explainer path mounts: its
  *  hooks read a notebook this project does not have. `null` = not read yet. */
+/** What the project asked for — carried to both halves so each can say when
+ *  the fixture it draws was cut for something else (uat 2026-09-05: the clock
+ *  the creator set reached the header and nothing below it). */
+interface Asked {
+  targetS: number;
+  template: TemplateId;
+  discipline: Discipline;
+}
+
 type Route =
-  | { id: string; kind: "explainer" }
-  | { id: string; kind: "trailer"; discipline: Discipline; title: string }
+  | { id: string; kind: "explainer"; asked: Asked }
+  | { id: string; kind: "trailer"; discipline: Discipline; title: string; asked: Asked }
   | { id: string; kind: "missing" };
 
 export default function ScriptStep({ projectId }: { projectId: string }) {
@@ -104,17 +138,17 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
       const discipline = p.discipline ?? "educational";
       const trailer =
         discipline === "trailer" || (discipline === "free" && picks?.mode === "beats");
+      const asked: Asked = { targetS: p.targetS, template: p.template, discipline };
       setRoute(
         trailer
-          ? { id: projectId, kind: "trailer", discipline, title: p.title }
-          : { id: projectId, kind: "explainer" },
+          ? { id: projectId, kind: "trailer", discipline, title: p.title, asked }
+          : { id: projectId, kind: "explainer", asked },
       );
     });
     return () => { alive = false; };
   }, [projectId]);
 
-  if (current === null)
-    return <p className="font-jetbrains text-label text-white/35">opening the project…</p>;
+  if (current === null) return <Skeleton />;
   if (current.kind === "missing")
     return (
       <p className="font-jetbrains text-label text-amber-200/85" data-testid="script-no-project">
@@ -122,12 +156,19 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
       </p>
     );
   if (current.kind === "trailer")
-    return <TrailerScript projectId={projectId} discipline={current.discipline} title={current.title} />;
-  return <ExplainerScript projectId={projectId} />;
+    return (
+      <TrailerScript
+        projectId={projectId}
+        discipline={current.discipline}
+        title={current.title}
+        targetS={current.asked.targetS}
+      />
+    );
+  return <ExplainerScript projectId={projectId} asked={current.asked} />;
 }
 
 /** The explainer half, exactly as it was — every tab and testid intact. */
-function ExplainerScript({ projectId }: { projectId: string }) {
+function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked }) {
   const [tab, setTab] = useState<Tab>("candidates");
   const [showing, setShowing] = useState<"baseline" | "candidate">("candidate");
   const [researched, setResearched] = useState<boolean | null>(null);
@@ -166,6 +207,26 @@ function ExplainerScript({ projectId }: { projectId: string }) {
     return () => { alive = false; };
   }, [projectId]);
 
+  // WHAT THIS STEP REPORTS TO THE SHELF (derive, never assert — the Frames
+  // rule). An adopted candidate or an accepted recalibration is work the
+  // creator did; three renders drawn from the fixture is not. `done` is
+  // unreachable: nothing here is a sign-off.
+  usePhaseReport(
+    projectId,
+    "script",
+    adoption.hydrated && versions.hydrated && (adoption.adoptedId || versions.accepted.length > 1)
+      ? "working"
+      : null,
+  );
+
+  // The runtime and template the project asked for versus what the fixture
+  // renders were cut for. The three renders carry their own durations
+  // (renders.ts) and this project's clock is not read by any of them — so the
+  // honest line is the mismatch, stated where the candidates are judged.
+  const askedTemplate = templateOf(asked.template).label;
+  const fixtureSpan = `${mmss(Math.min(...RENDERS.map((r) => r.durationS)))}–${mmss(Math.max(...RENDERS.map((r) => r.durationS)))}`;
+  const runtimeMismatch = !RENDERS.some((r) => r.durationS === asked.targetS);
+
   // WHICH SCRIPT THE CANDIDATES TAB IS ABOUT: the staged candidate if there is
   // one, otherwise the accepted version of record — and the chain it replaced,
   // so the two can be read against each other rather than one at a time.
@@ -191,17 +252,20 @@ function ExplainerScript({ projectId }: { projectId: string }) {
   // candidate, so this is the verdict on the chain about to be accepted.
   const gate = useMemo(() => gateChains(chains, { conclusions: CONCLUSIONS }), [chains]);
 
-  if (researched === null)
-    return <p className="font-jetbrains text-content text-white/35">opening the project’s research…</p>;
+  if (researched === null) return <Skeleton />;
 
+  // BLOCKED BY AN UPSTREAM STEP, drawn as the pipeline it is. The essay that
+  // stood here ("the Script step writes against research, it does not produce
+  // it. Run Step 1 — or load the saved Bitcoin run there — and three candidate
+  // scripts appear here") re-taught a five-node chain the reader can see.
   if (!researched)
     return (
-      <Notice severity="info" title="no notebook for this project yet">
-        <p>
-          The Script step writes against research, it does not produce it. Run Step 1 — or load the
-          saved Bitcoin run there — and three candidate scripts appear here.
-        </p>
-      </Notice>
+      <UpstreamBreak
+        blockedAt="research"
+        current="script"
+        done={[]}
+        action={{ label: "Open Research", href: `/studio/${projectId}?step=research` }}
+      />
     );
 
   const weighing = tab === "coverage" || tab === "spend";
@@ -211,6 +275,29 @@ function ExplainerScript({ projectId }: { projectId: string }) {
   // the duel before its record lands would show "nothing adopted" over a
   // decision that is on disk, and the face default reads the adoption record.
   const ready = scope.hydrated && versions.hydrated && adoption.hydrated && face.hydrated;
+
+  // WHAT EACH TAB HOLDS — the state its caption was reaching for. Read off the
+  // version on screen, and only once the records are on disk: a "0 conflicts"
+  // drawn over an unread scope is a claim, not a count.
+  const cardIds = scope.cards.map((c) => c.id);
+  const state = ready
+    ? {
+        conflicts: scope.cards.filter((c) => stillSpoken(shown, c, scope.scope).length > 0).length,
+        overrun: RENDERS.filter((r) => coverageIn(shown, r.id, cardIds).overrunS > 0).length,
+        unused: scope.cards.filter((c) =>
+          RENDERS.every((r) => usageIn(shown, r.id, c.id).kind === "unused"),
+        ).length,
+      }
+    : null;
+  const tallyFor = (k: Tab): { value: number; label: string; tone: TallyTone } | null => {
+    if (!state) return null;
+    if (k === "candidates") return { value: RENDERS.length, label: "renders", tone: "neutral" };
+    if (k === "coverage")
+      return state.conflicts > 0 ? { value: state.conflicts, label: "conflict", tone: "rose" } : null;
+    if (k === "spend")
+      return state.overrun > 0 ? { value: state.overrun, label: "over", tone: "amber" } : null;
+    return state.unused > 0 ? { value: state.unused, label: "unused", tone: "amber" } : null;
+  };
 
   return (
     <div>
@@ -225,42 +312,63 @@ function ExplainerScript({ projectId }: { projectId: string }) {
           <p className="mt-1.5 text-content leading-relaxed text-slate-400">
             tension strength — {NOTEBOOK.tension.strength}
           </p>
+          {runtimeMismatch && (
+            <p
+              data-testid="script-runtime-note"
+              className="font-jetbrains mt-1.5 flex flex-wrap items-center gap-1.5 text-label text-amber-200/85"
+            >
+              <span>
+                asked {askedTemplate} · {asked.targetS}s
+              </span>
+              <span aria-hidden className="text-white/30">
+                vs
+              </span>
+              <span>fixture {fixtureSpan}</span>
+              <Hint tone="amber">your clock is not read by these three renders yet</Hint>
+            </p>
+          )}
         </div>
-        <p className="font-jetbrains shrink-0 text-content leading-snug text-white/30">
-          the notebook and the evidence log
-          <br />
-          live in step 1
-        </p>
+        {/* A LINK, not a sentence about where a link would go. */}
+        <a
+          href={`/studio/${projectId}?step=research`}
+          className="font-jetbrains shrink-0 rounded-full border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-cyan-400/40 hover:text-cyan-200"
+        >
+          <span aria-hidden>←</span> step 1 · notebook
+        </a>
       </section>
 
-      {/* `aria-pressed` rather than a tablist: which of the four views you are in
-          was carried by a cyan border and a tinted background and nothing else,
-          so it did not exist for a reader without colour. Toggle-button state is
-          the honest promise here — a `role="tab"` set would also promise arrow-key
-          navigation and a roving tabindex, which these buttons do not implement. */}
-      <div className="font-jetbrains mt-4 flex flex-wrap gap-2 text-label">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            data-testid={`view-${t.key}`}
-            aria-pressed={tab === t.key}
-            onClick={() => setTab(t.key)}
-            className={`rounded-xl border px-3.5 py-2 text-left transition ${
-              tab === t.key
-                ? "border-cyan-400/40 bg-cyan-400/[0.07]"
-                : "border-white/8 bg-white/[0.02] hover:border-white/20"
-            }`}
-          >
-            <span className="block text-white/85">{t.label}</span>
-            <span className="mt-0.5 block text-label text-white/35">{t.sub}</span>
-          </button>
-        ))}
-      </div>
+      {/* A REAL TABLIST NOW. This row used to be four `aria-pressed` buttons,
+          and the comment that stood here argued toggle-state was the honest
+          promise "because these buttons do not implement arrow-key navigation
+          and a roving tabindex". <TabRail> does implement both, so the promise
+          is now kept rather than lowered — and the four testids the drivers
+          click ride across on `TabDef.testId`, which is the prop whose absence
+          kept this file hand-rolled through the last wave. */}
+      <TabRail
+        className="mt-4"
+        label="script views"
+        active={tab}
+        onSelect={setTab}
+        tabs={TABS.map((t): TabDef<Tab> => {
+          const q = tallyFor(t.key);
+          return {
+            id: t.key,
+            label: t.label,
+            testId: `view-${t.key}`,
+            panelId: PANEL_ID,
+            // A tally is left OFF while the records are unread — `tallyFor`
+            // returns null over an unhydrated scope, and a `0` drawn there is
+            // a claim rather than a count.
+            ...(q ? { tally: q } : {}),
+          };
+        })}
+      />
 
-      {!ready ? (
-        <p className="font-jetbrains mt-4 text-content text-white/35">loading this project’s scope…</p>
-      ) : (
-        <div className="mt-4">
+      <div id={PANEL_ID} role="tabpanel" className="mt-4">
+        {!ready ? (
+          <Skeleton />
+        ) : (
+          <>
           {weighing && (
             <div className="mb-3">
               <VersionBar api={versions} showing={showing} setShowing={setShowing} />
@@ -281,7 +389,7 @@ function ExplainerScript({ projectId }: { projectId: string }) {
                 <>
                   <BaselineOnlyNote
                     api={versions}
-                    what="The beat chains below are the baseline."
+                    what="beat chains"
                     showing={reading}
                     gate={reading ? gate : undefined}
                   />
@@ -308,6 +416,7 @@ function ExplainerScript({ projectId }: { projectId: string }) {
                       adoptedId={adoption.adoptedId}
                       onAdopt={adoption.adopt}
                       onReadBeats={setExpanded}
+                      targetS={asked.targetS}
                     />
                   ) : (
                     <div className="grid gap-3 lg:grid-cols-3">
@@ -340,14 +449,15 @@ function ExplainerScript({ projectId }: { projectId: string }) {
 
               {tab === "tracks" && (
                 <>
-                  <BaselineOnlyNote api={versions} what="Running order is shown for the baseline." />
+                  <BaselineOnlyNote api={versions} what="running order" />
                   <MatrixTracks api={scope} version={versions.baseline} />
                 </>
               )}
             </>
           </StickyNotebook>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       <Modal
         open={!!expanded}

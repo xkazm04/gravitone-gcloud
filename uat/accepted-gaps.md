@@ -68,3 +68,21 @@ Known and accepted; do not re-surface as findings.
 - **Conflicts are reported on the result, not at note time.** Deliberate: the
   guards run inside the transform, which is where a real model's output must
   also be checked. Flagging at note time would duplicate the rule in two places.
+
+## Added 2026-09-05 (compose-from-scratch run)
+
+- **The runtime and template are not read by the Script step, and the beat
+  board deals one slot set for teaser / trailer / cinematic.** The fixture
+  renders carry their own durations (`script/renders.ts`) and the Glass Harbor
+  slots carry their own timecodes; `composeCut` hard-codes `long-cut` ·
+  `wide-release`. Accepted for the prototype **on the condition that the surface
+  says so where the decision is made**: `script-runtime-note` on the explainer
+  half and `trailer-fixture-note` on the trailer half state the project's own
+  clock against the fixture's. Lifting the gap means a runtime/template seam in
+  `composeCut` and `slotsFor`, not a copy change — see SO-L1-2 / MA-L1-5.
+- **The guided research face deals conclusions and the steel-man only.** Facts,
+  mechanisms and reversals are on the expert board one switch away. Accepted as
+  the current design of the guided face, raised for the drain (DA-L1-3,
+  OW-L1-3, PR-L1-5) — a stage that deals reversals is a product call.
+- **The teaser's craft library entry ("two parts, not four") reaches only the
+  frames brief (`lib/formatBrief.ts`), never the board.** Same seam as above.

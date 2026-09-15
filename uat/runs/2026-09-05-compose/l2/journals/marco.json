@@ -1,0 +1,231 @@
+{
+  "run": "marco",
+  "startedAt": "2026-09-05T15:48:31.430Z",
+  "steps": [
+    {
+      "at": 1788623311432,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788623314786,
+      "s": "click \"deck-card-trailer\""
+    },
+    {
+      "at": 1788623315375,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623315822,
+      "s": "click \"deck-card-trailer\""
+    },
+    {
+      "at": 1788623316205,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623317210,
+      "s": "click \"deck-card-preset:data-neon\""
+    },
+    {
+      "at": 1788623317576,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623317985,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Hollowdeep — Steam trailer\""
+    },
+    {
+      "at": 1788623318034,
+      "s": "fill {\"css\":\"#w-logline\"} ← \"Every run down is a run out of time.\""
+    },
+    {
+      "at": 1788623318092,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"90\""
+    },
+    {
+      "at": 1788623319280,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788623319288,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623319905,
+      "s": "recorded p-mtok55yx-1w4oyg → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788623320138,
+      "s": "goto /studio/p-mtok55yx-1w4oyg?step=research"
+    },
+    {
+      "at": 1788623325352,
+      "s": "click \"variant-cold-open-a\""
+    },
+    {
+      "at": 1788623325803,
+      "s": "click \"variant-intro-a\""
+    },
+    {
+      "at": 1788623326290,
+      "s": "click \"variant-esc1-a\""
+    },
+    {
+      "at": 1788623326713,
+      "s": "click \"variant-esc2-a\""
+    },
+    {
+      "at": 1788623327119,
+      "s": "click \"variant-esc3-a\""
+    },
+    {
+      "at": 1788623327529,
+      "s": "click \"variant-reset-a\""
+    },
+    {
+      "at": 1788623327896,
+      "s": "click \"variant-climax-a\""
+    },
+    {
+      "at": 1788623328279,
+      "s": "click \"variant-tail-a\""
+    },
+    {
+      "at": 1788623329015,
+      "s": "click \"compose-spine\""
+    },
+    {
+      "at": 1788623332040,
+      "s": "snap 02-marco-composed"
+    },
+    {
+      "at": 1788623332040,
+      "s": "goto /studio/p-mtok55yx-1w4oyg?step=script"
+    },
+    {
+      "at": 1788623338549,
+      "s": "snap 03-marco-script"
+    },
+    {
+      "at": 1788623338549,
+      "s": "goto /studio/p-mtok55yx-1w4oyg?step=research"
+    },
+    {
+      "at": 1788623340805,
+      "s": "click \"reopen-spine\""
+    },
+    {
+      "at": 1788623341569,
+      "s": "click \"variant-climax-b\""
+    },
+    {
+      "at": 1788623342640,
+      "s": "click \"compose-spine\""
+    },
+    {
+      "at": 1788623343465,
+      "s": "goto /studio/p-mtok55yx-1w4oyg?step=script"
+    },
+    {
+      "at": 1788623345988,
+      "s": "click \"recompose-cut\""
+    },
+    {
+      "at": 1788623357832,
+      "s": "snap 04-marco-recomposed"
+    },
+    {
+      "at": 1788623357833,
+      "s": "goto /projects"
+    }
+  ],
+  "checks": [
+    {
+      "label": "style stage offers presets for trailer",
+      "ok": true,
+      "detail": "presets=6 borrowed=true"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Hollowdeep — Steam trailer"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": true,
+      "detail": ""
+    },
+    {
+      "label": "the borrowed preset minted an UNTAGGED theme (fits any)",
+      "ok": true,
+      "detail": "{\"found\":true}"
+    },
+    {
+      "label": "board states the fixture before any pick",
+      "ok": true
+    },
+    {
+      "label": "a variant without a named risk says so (MA-L1-6, expect absent)",
+      "ok": false
+    },
+    {
+      "label": "every part picked",
+      "ok": true,
+      "detail": "8 of 8 parts picked — the spine is whole."
+    },
+    {
+      "label": "spine composed",
+      "ok": true
+    },
+    {
+      "label": "Script repeats the fixture disclosure",
+      "ok": true
+    },
+    {
+      "label": "the note states his 90s target vs the fixture's clock",
+      "ok": true,
+      "detail": "fixture · n=0 · the beat text, the cue and the withholding budget are the Glass Harbor stand-in, whatever this project’s logline, template or runtime — your target is 90s; these beats run to 1:50 and the clock is not read here yet"
+    },
+    {
+      "label": "structure panel never says works",
+      "ok": false
+    },
+    {
+      "label": "promise ledger present",
+      "ok": true
+    },
+    {
+      "label": "Script says the spine was recomposed after this cut",
+      "ok": true
+    },
+    {
+      "label": "script progress reads 'review' while stale",
+      "ok": true,
+      "detail": "{\"research\":\"done\",\"script\":\"review\",\"frames\":\"empty\",\"score\":\"empty\",\"cut\":\"empty\"}"
+    },
+    {
+      "label": "rebuilding takes the new climax pick",
+      "ok": true,
+      "detail": "climax\n\nCLIMAX · PART 6on cue · peak — f → climax\n\nCLIMAX · PART 6on cue · peak — f"
+    },
+    {
+      "label": "stale notice gone after rebuild",
+      "ok": true
+    },
+    {
+      "label": "shelf research cell moved (composed = locked)",
+      "ok": true,
+      "detail": "Research — locked · open here"
+    },
+    {
+      "label": "shelf script cell moved",
+      "ok": true,
+      "detail": "Script — in progress · open here"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T15:49:18.942Z"
+}

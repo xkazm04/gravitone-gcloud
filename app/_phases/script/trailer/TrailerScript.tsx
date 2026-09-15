@@ -11,9 +11,11 @@
 // an energy curve, and a structure check that reports malformed / unmeasured
 // and never "works".
 
+import { Hint } from "@/components/ui/signal";
 import type { Discipline } from "@/lib/projects";
 
 import Notice from "../../_shared/ui/Notice";
+import { usePhaseReport } from "../../_shared/usePhaseReport";
 
 import EnergyCurve from "./EnergyCurve";
 import MovementSection from "./MovementSection";
@@ -23,16 +25,36 @@ import WithholdingPanel from "./WithholdingPanel";
 import type { TrailerBeat } from "./types";
 import { useTrailerCut } from "./useTrailerCut";
 
+/** "1:50" → 110. The fixture's beats carry mm:ss timecodes; the project's
+ *  clock is seconds. */
+const secondsOf = (at: string): number => {
+  const [m, s] = at.split(":").map(Number);
+  return Number.isFinite(m) && Number.isFinite(s) ? m * 60 + s : 0;
+};
+
 export default function TrailerScript({
   projectId,
   discipline,
   title,
+  targetS,
 }: {
   projectId: string;
   discipline: Discipline;
   title: string;
+  /** The runtime the project asked for. The composed cut does not read it
+   *  yet (the fixture beats carry their own timecodes) — so the surface says
+   *  so rather than presenting the fixture's clock as the project's. */
+  targetS?: number;
 }) {
   const api = useTrailerCut({ projectId, discipline, title });
+
+  // WHAT THIS STEP REPORTS TO THE SHELF: a cut exists → in progress; the board's
+  // spine has moved past it → needs a call. Never `done` — no sign-off lives here.
+  usePhaseReport(
+    projectId,
+    "script",
+    !api.hydrated || !api.cut ? null : api.staleSpine ? "review" : "working",
+  );
 
   if (!api.hydrated)
     return <p className="font-jetbrains text-label text-white/35">opening the project’s cut…</p>;
@@ -48,6 +70,8 @@ export default function TrailerScript({
     );
 
   const { cut, budget, report } = api;
+  const lastAt = cut.beats.reduce((n, b) => Math.max(n, secondsOf(b.at)), 0);
+  const lastBeatAt = cut.beats.find((b) => secondsOf(b.at) === lastAt)?.at ?? "the fixture's end";
   const byMovement = new Map<string, TrailerBeat[]>();
   for (const b of cut.beats) byMovement.set(b.movement, [...(byMovement.get(b.movement) ?? []), b]);
 
@@ -93,12 +117,102 @@ export default function TrailerScript({
             )}
           </p>
         </div>
-        <p className="font-jetbrains shrink-0 text-label leading-snug text-white/30">
-          the picks and their rationale
-          <br />
-          live in step 1
+        {/* A LINK, not a sentence about where a link would go. */}
+        <a
+          href={`/studio/${projectId}?step=research`}
+          className="font-jetbrains shrink-0 rounded-full border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-cyan-400/40 hover:text-cyan-200"
+        >
+          <span aria-hidden>←</span> step 1 · picks
+        </a>
+        {/* THE SAME DISCLOSURE THE BOARD CARRIES, repeated on the surface that
+            looks most like a deliverable. Step 1 said "fixture · n=0"; this
+            step showed the heist cue and campaign budget under the project's
+            own title and said nothing (uat 2026-09-05, four Characters). */}
+        <p
+          data-testid="trailer-fixture-note"
+          className="font-jetbrains flex w-full flex-wrap items-center gap-x-2 gap-y-1 text-label text-amber-200/80"
+        >
+          <span className="rounded-full border border-amber-400/35 bg-amber-400/[0.07] px-2 py-0.5 tracking-[0.1em]">
+            fixture · n=0
+          </span>
+          <Hint tone="amber">
+            the beat text, the cue and the withholding budget are the Glass Harbor stand-in
+          </Hint>
+          {typeof targetS === "number" && lastAt > 0 && lastAt !== targetS && (
+            <>
+              <span>target {targetS}s</span>
+              <span aria-hidden className="text-white/30">
+                vs
+              </span>
+              <span>beats to {lastBeatAt}</span>
+              <Hint tone="amber">your clock is not read by these beats yet</Hint>
+            </>
+          )}
         </p>
       </section>
+
+      {/* SCRIPT BEHIND THE BOARD. The cut is composed once and then edited; it
+          does not follow the picks. So when the spine on Step 1 moves past
+          the one this cut came from, it is said here, with the way to take
+          the new spine — and what that costs. */}
+      {api.staleSpine === true && (
+        <div className="mt-4">
+          <Notice severity="warning" title="the spine was recomposed after this cut">
+            {/* WHAT THE BUTTON BELOW WOULD DO, as three marks rather than as a
+                sentence about consequence. The Notice title already says the
+                spine moved. */}
+            <p
+              data-testid="trailer-stale-spine"
+              className="font-jetbrains flex flex-wrap items-center gap-x-3 gap-y-1 text-label"
+            >
+              <span className="text-white/40">rebuilding</span>
+              <span className="text-cyan-200/85">
+                <span aria-hidden>↻ </span>beats from the board&rsquo;s picks
+              </span>
+              <span className="text-rose-200/85">
+                <span aria-hidden>✕ </span>
+                <span className="sr-only">discards </span>your edits here
+              </span>
+              <span className="text-emerald-200/85">
+                <span aria-hidden>✓ </span>
+                <span className="sr-only">keeps </span>the withholding budget
+              </span>
+            </p>
+            <button
+              type="button"
+              data-testid="recompose-cut"
+              onClick={api.recompose}
+              className="font-jetbrains mt-2 rounded-full border border-amber-400/40 px-3.5 py-1.5 text-label text-amber-200 transition hover:bg-amber-400/10"
+            >
+              rebuild from the new spine
+            </button>
+          </Notice>
+        </div>
+      )}
+      {/* ONE CHIP PER SPINE STATE. Each used to be a paragraph explaining what
+          its own state implied. */}
+      {api.staleSpine === null && (
+        <p
+          data-testid="trailer-spine-unknown"
+          className="font-jetbrains mt-3 flex items-center gap-1.5 text-label text-white/35"
+        >
+          <span aria-hidden>spine ?</span>
+          <span className="sr-only">spine state</span>
+          unknown
+          <Hint>composed before spines were stamped — rebuild from Step 1 to be sure</Hint>
+        </p>
+      )}
+      {api.spineReopened && api.staleSpine !== true && (
+        <p
+          data-testid="trailer-spine-reopened"
+          className="font-jetbrains mt-3 flex items-center gap-1.5 text-label text-white/35"
+        >
+          <span aria-hidden>spine ⌛</span>
+          <span className="sr-only">spine state</span>
+          reopened in step 1
+          <Hint>the last composed cut, and it stays until a new one is composed</Hint>
+        </p>
+      )}
 
       <div className="mt-4">
         <EnergyCurve cut={cut} />

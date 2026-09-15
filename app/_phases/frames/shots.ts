@@ -185,7 +185,13 @@ export type ShotPace = "rapid" | "measured" | "held";
 export type ScreenDirection = "screen-left" | "screen-right" | "toward-camera" | "neutral";
 
 /** Where the eye is asked to find the subject. [A] § Staging 1. */
-export type SubjectPlacement = "crosshair" | "thirds";
+/** `diagonal` joined 2026-08-31 — dojo cycle 2026-08-31-study-diagonal
+ *  (corpus study, human-gated): across 159 A-tier frames, diagonal is the
+ *  most common extreme-wide action composition (10/31 EW) and this vocabulary
+ *  could not express it. `placementFor` still emits only the original two —
+ *  diagonal is an art director's or beat layer's choice, not a hold-time
+ *  default. */
+export type SubjectPlacement = "crosshair" | "thirds" | "diagonal";
 
 /* ── The shot ─────────────────────────────────────────────────────────────── */
 

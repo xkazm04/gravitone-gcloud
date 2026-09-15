@@ -1,0 +1,56 @@
+· goto /projects/new
+· click "deck-card-trailer"
+· click {"role":"button","name":{}}
+· click "deck-card-trailer"
+· click {"role":"button","name":{}}
+ok   style stage offers presets for trailer — presets=6 borrowed=true
+· click "deck-card-preset:data-neon"
+· click {"role":"button","name":{}}
+· fill {"css":"#w-title"} ← "Hollowdeep — Steam trailer"
+· fill {"css":"#w-logline"} ← "Every run down is a run out of time."
+· fill {"css":"#w-dur"} ← "90"
+· snap 01-wizard-name-stage
+· click {"role":"button","name":{}}
+ok   studio headline is the name typed — Hollowdeep — Steam trailer
+ok   header pill states discipline · template · runtime
+· recorded p-mtok55yx-1w4oyg → uat/runs/2026-09-05-compose/created.json
+ok   the borrowed preset minted an UNTAGGED theme (fits any) — {"found":true}
+· goto /studio/p-mtok55yx-1w4oyg?step=research
+ok   board states the fixture before any pick
+FAIL a variant without a named risk says so (MA-L1-6, expect absent)
+· click "variant-cold-open-a"
+· click "variant-intro-a"
+· click "variant-esc1-a"
+· click "variant-esc2-a"
+· click "variant-esc3-a"
+· click "variant-reset-a"
+· click "variant-climax-a"
+· click "variant-tail-a"
+ok   every part picked — 8 of 8 parts picked — the spine is whole.
+· click "compose-spine"
+ok   spine composed
+· snap 02-marco-composed
+· goto /studio/p-mtok55yx-1w4oyg?step=script
+ok   Script repeats the fixture disclosure
+ok   the note states his 90s target vs the fixture's clock — fixture · n=0 · the beat text, the cue and the withholding budget are the Glass Harbor stand-in, whatever this project’s logline, template or runtime — your target is 90s; these beats run to 1:50 and the clock is not read here yet
+FAIL structure panel never says works
+ok   promise ledger present
+· snap 03-marco-script
+· goto /studio/p-mtok55yx-1w4oyg?step=research
+· click "reopen-spine"
+· click "variant-climax-b"
+· click "compose-spine"
+· goto /studio/p-mtok55yx-1w4oyg?step=script
+ok   Script says the spine was recomposed after this cut
+ok   script progress reads 'review' while stale — {"research":"done","script":"review","frames":"empty","score":"empty","cut":"empty"}
+· click "recompose-cut"
+ok   rebuilding takes the new climax pick — climax
+
+CLIMAX · PART 6on cue · peak — f → climax
+
+CLIMAX · PART 6on cue · peak — f
+ok   stale notice gone after rebuild
+· snap 04-marco-recomposed
+· goto /projects
+ok   shelf research cell moved (composed = locked) — Research — locked · open here
+ok   shelf script cell moved — Script — in progress · open here

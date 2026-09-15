@@ -20,15 +20,18 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { ImagePlus } from "lucide-react";
+
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
+import { Ghost, Hint, Keycaps, StackBar } from "@/components/ui/signal";
 import { foreignLease, hasFailures } from "@/lib/foundry/extract/engine";
 import type { ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
 import { usePolling } from "@/lib/usePolling";
 
 import { ExtractBoard } from "./ExtractBoard";
 import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, saveExtractVerdicts, stepExtractRun } from "./extractClient";
-import { EXTRACT_LIVE, EXTRACT_STATUS_WORD } from "./parts";
+import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD } from "./parts";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -41,11 +44,34 @@ export function ExtractView() {
   const [save, setSave] = useState<SaveState>("idle");
   const [focused, setFocused] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  /** WHICH IMAGE THE SHRINK PASS IS ON, while `creating` is true.
+   *
+   *  `creating` alone is a boolean over work that is linear in the size of the
+   *  gallery: sixty images is sixty decodes, and a boolean renders the same on
+   *  the first as on the sixtieth. This is what makes a working upload
+   *  distinguishable from a stalled one. */
+  const [shrinking, setShrinking] = useState<{ done: number; total: number } | null>(null);
   const [driving, setDriving] = useState(false);
   const [driveError, setDriveError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState<ExtractCommitResult | null>(null);
+  /** A commit that FAILED, shown inside the dialog that asked for it.
+   *
+   *  The catch used to write `runsError`, which renders beside the run list —
+   *  and the confirm dialog is `fixed inset-0 z-50` over a backdrop at 80%
+   *  with a blur, carrying `aria-modal="true"`. So the message landed
+   *  somewhere the reader could not see it and a screen reader would not
+   *  reach: aria-modal removes the rest of the page from the accessibility
+   *  tree. The dialog meanwhile went from "committing…" back to its button,
+   *  which is indistinguishable from a click that never registered.
+   *
+   *  This repo has already written the rule down, in
+   *  tests/golden-path/dialog-closes-on-success.probe.spec.ts: "closing a
+   *  confirmation over work that was not done is the same small lie as a
+   *  button that does nothing." Staying open was right; saying nothing was
+   *  not. */
+  const [commitError, setCommitError] = useState<string | null>(null);
   const [zoomOpen, setZoomOpen] = useState(false);
   /** The clock as of the last detail load — the lease is judged against
    *  this, not against render time, so render stays pure. */
@@ -182,10 +208,19 @@ export function ExtractView() {
 
   const startRun = async (slug: string, files: File[], options: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => {
     setCreating(true);
+    setShrinking({ done: 0, total: files.length });
     setRunsError(null);
     try {
       const uploads = [];
-      for (const f of files) uploads.push(await prepareUpload(f));
+      // ONE TICK PER IMAGE. The loop stays SERIAL on purpose: overlapping the
+      // decodes would hold the whole gallery's bitmaps at once, and peak memory
+      // is a separate decision from saying where we are. Each iteration already
+      // awaits, so the state written here is committed and painted before the
+      // next decode starts — the count is real, not a guess at a rate.
+      for (const f of files) {
+        uploads.push(await prepareUpload(f));
+        setShrinking({ done: uploads.length, total: files.length });
+      }
       const run = await createExtractRun(slug, uploads, options);
       loadRuns();
       selectRun(run.id);
@@ -194,6 +229,7 @@ export function ExtractView() {
       setRunsError(e instanceof Error ? e.message : "could not create the run");
     } finally {
       setCreating(false);
+      setShrinking(null);
     }
   };
 
@@ -248,6 +284,7 @@ export function ExtractView() {
   const doCommit = async () => {
     if (!selected) return;
     setCommitting(true);
+    setCommitError(null);
     try {
       const r = await commitExtractRun(selected);
       setResult(r);
@@ -255,13 +292,24 @@ export function ExtractView() {
       loadDetail(selected, false);
       loadRuns();
     } catch (e) {
-      setRunsError(e instanceof Error ? e.message : "commit failed");
+      setCommitError(e instanceof Error ? e.message : "commit failed");
     } finally {
       setCommitting(false);
     }
   };
 
   const run = detail?.run ?? null;
+
+  /** Why Commit will not go, in one clause — null when it will. Read from
+   *  EXTRACT_COMMITTABLE, never an inline status comparison; commit-gate-parity
+   *  holds that constant equal to commitExtractRun's own guard. */
+  const blocked = !run
+    ? null
+    : !EXTRACT_COMMITTABLE.includes(run.status)
+      ? `run is ${EXTRACT_STATUS_WORD[run.status]}`
+      : counts.kept === 0
+        ? "keep at least one style first"
+        : null;
 
   return (
     <>
@@ -277,7 +325,7 @@ export function ExtractView() {
           </button>
           <div className="font-jetbrains mt-4 text-label tracking-[0.14em] text-white/60 uppercase">runs</div>
           {runsError && <p className="font-jetbrains mt-2 text-content text-rose-200">{runsError}</p>}
-          {runs && runs.length === 0 && <p className="font-hanken mt-2 text-content text-slate-400">No extractions yet.</p>}
+          {runs && runs.length === 0 && <Ghost className="mt-2" shape="row" count={2} label="no extractions yet" />}
           <ul className="mt-2 flex flex-col gap-1">
             {runs?.map((r) => (
               <li key={r.id}>
@@ -301,7 +349,7 @@ export function ExtractView() {
         </aside>
 
         <div>
-          {selected === null && <NewRun busy={creating} onStart={startRun} />}
+          {selected === null && <NewRun busy={creating} shrinking={shrinking} onStart={startRun} />}
           {selected && !run && <p className="font-jetbrains text-content text-white/60">loading…</p>}
           {run && (
             <>
@@ -330,7 +378,7 @@ export function ExtractView() {
 
       {run && (
         <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
-          <div className="mx-auto flex max-w-[1440px] flex-wrap items-center justify-between gap-3 px-4 py-3">
+          <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-3 px-2 py-3">
             <div className="font-jetbrains flex flex-wrap gap-4 text-label text-white/60">
               <span>
                 <span className="text-emerald-200">{counts.kept}</span> kept
@@ -344,19 +392,35 @@ export function ExtractView() {
               <span className={save === "error" ? "text-rose-200" : "text-white/55"}>
                 {readOnly ? "committed · verdicts are final" : save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
               </span>
-              {!readOnly && <span className="hidden text-white/55 md:inline">↑↓ move · K keep · X reject · U clear · Enter inspect</span>}
+              {!readOnly && (
+                <Keycaps
+                  label="Board shortcuts"
+                  map={[
+                    { keys: ["↑", "↓"], does: "move" },
+                    { keys: ["K"], does: "keep" },
+                    { keys: ["X"], does: "reject" },
+                    { keys: ["U"], does: "clear" },
+                    { keys: ["Enter"], does: "inspect" },
+                  ]}
+                />
+              )}
             </div>
             {readOnly ? (
               <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">committed</span>
             ) : (
-              <Button
-                disabled={run.status !== "done" || counts.kept === 0}
-                onClick={() => setConfirm(true)}
-                className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-                title={run.status !== "done" ? `Run is ${EXTRACT_STATUS_WORD[run.status]}` : counts.kept === 0 ? "Keep at least one style first" : "Write the kept styles to the catalogue"}
-              >
-                Commit the kept styles
-              </Button>
+              // The reason a disabled control will not go, in one clause,
+              // beside it — not three sentences behind a hover. The status
+              // pill on the strip above already names the run's state.
+              <span className="flex items-center gap-2">
+                {blocked && (
+                  <Hint variant="lock" tone="amber" label="Why Commit is unavailable">
+                    {blocked}
+                  </Hint>
+                )}
+                <Button disabled={Boolean(blocked)} onClick={() => setConfirm(true)} className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed">
+                  Commit the kept styles
+                </Button>
+              </span>
             )}
           </div>
         </div>
@@ -364,7 +428,11 @@ export function ExtractView() {
 
       <Modal
         open={confirm}
-        onClose={() => !committing && setConfirm(false)}
+        onClose={() => {
+          if (committing) return;
+          setConfirm(false);
+          setCommitError(null);
+        }}
         title="Commit the kept styles?"
         className="max-w-md"
         footer={
@@ -378,11 +446,27 @@ export function ExtractView() {
           </div>
         }
       >
-        <p className="font-hanken text-content text-slate-300">
-          <span className="text-emerald-200">{counts.kept}</span> kept style{counts.kept === 1 ? "" : "s"} join{counts.kept === 1 ? "s" : ""}{" "}
-          <code className="font-jetbrains text-label text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. The forge
-          can be pointed at them from the next plan. Undecided counts as thrown. Nothing is deleted, but the verdicts are final.
+        {/* "Undecided counts as thrown" was prose describing a rail: kept on
+            one side, thrown on the other, undecided hatched into the thrown
+            side because it is not a third outcome. What stays is the
+            destination and the one irreversible fact. */}
+        <StackBar
+          label="commit"
+          segments={[
+            { n: counts.kept, tone: "emerald", label: "kept" },
+            { n: counts.rejected, tone: "rose", label: "thrown" },
+            { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+          ]}
+        />
+        <p className="font-hanken mt-3 text-content text-slate-300">
+          The kept styles join <code className="font-jetbrains text-label text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers
+          as exemplars. Nothing is deleted, but the verdicts are final.
         </p>
+        {commitError && (
+          <p role="alert" className="font-jetbrains mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-content text-rose-200">
+            The commit failed and no style was written: {commitError}
+          </p>
+        )}
       </Modal>
     </>
   );
@@ -478,7 +562,15 @@ function StatusStrip({
   );
 }
 
-function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, files: File[], o: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => void }) {
+function NewRun({
+  busy,
+  shrinking,
+  onStart,
+}: {
+  busy: boolean;
+  shrinking: { done: number; total: number } | null;
+  onStart: (slug: string, files: File[], o: { rounds: number; replicas: number; transfers: number; grouping?: "none" }) => void;
+}) {
   const [slug, setSlug] = useState("");
   const [files, setFiles] = useState<File[]>([]);
   const [rounds, setRounds] = useState(2);
@@ -514,13 +606,18 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
           accept(e.dataTransfer.files);
         }}
         onClick={() => inputRef.current?.click()}
+        data-testid="extract-dropzone"
+        // A DASHED BOX SAYS "DROP HERE" — the sentence that said it too went.
+        // The name is on the control for anyone who cannot see the box; what
+        // is left visible is the constraint set, which no shape can draw.
+        aria-label="Drop images here, or click to choose"
         className={`cursor-pointer rounded-xl border border-dashed px-6 py-10 text-center transition ${
           dragging ? "border-cyan-300/60 bg-cyan-400/5" : "border-white/15 hover:border-white/30"
         }`}
       >
         <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={(e) => accept(e.target.files)} />
-        <p className="font-hanken text-content text-slate-300">Drop screenshots and images here, or click to choose.</p>
-        <p className="font-jetbrains mt-1 text-content text-white/60">PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload</p>
+        <ImagePlus className="mx-auto h-7 w-7 text-white/35" aria-hidden />
+        <p className="font-jetbrains mt-2 text-content text-white/60">PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload</p>
       </div>
 
       {previews.length > 0 && (
@@ -555,23 +652,41 @@ function NewRun({ busy, onStart }: { busy: boolean; onStart: (slug: string, file
         <Num label="transfers" value={transfers} min={0} max={4} onChange={setTransfers} hint="neutral scenes per style" />
       </div>
 
-      <label className="mt-4 flex cursor-pointer items-center gap-2" title="Every image becomes its own style; its recipe is written by the vision model with the image in view. No grouping turn at all. The board's ≈ chips then show which singletons were one style all along.">
-        <input type="checkbox" checked={singletons} onChange={(e) => setSingletons(e.target.checked)} className="accent-cyan-300" />
-        <span className="font-jetbrains text-label text-white/70">one style per image — no grouping</span>
-      </label>
+      {/* THE DIFFERENTIATOR IS THE ARITHMETIC, not three sentences of `title=`.
+          `N img → 1 style` against `1 img → 1 style` is what the checkbox
+          changes; the ≈ chips on the board are what report the overlap after
+          the fact, and they carry their own hint there. */}
+      <div className="mt-4 flex items-center gap-2">
+        <label className="flex cursor-pointer items-center gap-2">
+          <input type="checkbox" checked={singletons} onChange={(e) => setSingletons(e.target.checked)} className="accent-cyan-300" />
+          <span className="font-jetbrains text-label text-white/70">one style per image — no grouping</span>
+        </label>
+        <span aria-hidden className="font-jetbrains rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-label text-white/55">
+          {singletons ? "1 img → 1 style" : "N img → 1 style"}
+        </span>
+        <Hint>each recipe is written with its own image in view</Hint>
+      </div>
 
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
         <p className="font-hanken max-w-lg text-content text-slate-400">
           Each source costs one recognition; each style costs up to replicas × rounds + transfers generations, each read back once. The run pauses if you leave this tab and resumes where it
           stopped.
         </p>
-        <Button
-          disabled={!ready}
-          onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}
-          className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-        >
-          {busy ? "uploading…" : `Extract from ${files.length} image${files.length === 1 ? "" : "s"}`}
-        </Button>
+        <div className="flex items-center gap-3">
+          {/* The live region is rendered THROUGHOUT, empty when idle: a region
+              inserted at the same moment it gains text is one a screen reader
+              has no prior state to compare against, and announces nothing. */}
+          <span aria-live="polite" className="font-jetbrains text-label text-cyan-200/80">
+            {shrinking ? `shrinking ${Math.min(shrinking.done + 1, shrinking.total)} of ${shrinking.total}` : ""}
+          </span>
+          <Button
+            disabled={!ready}
+            onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}
+            className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
+          >
+            {busy ? "uploading…" : `Extract from ${files.length} image${files.length === 1 ? "" : "s"}`}
+          </Button>
+        </div>
       </div>
     </div>
   );

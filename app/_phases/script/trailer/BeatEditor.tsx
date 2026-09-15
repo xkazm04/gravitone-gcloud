@@ -96,7 +96,7 @@ export default function BeatEditor({
           rows={3}
           onChange={(e) => { setText(e.target.value); schedule(); }}
           onBlur={flush}
-          className="font-hanken mt-1.5 w-full resize-y rounded-lg border border-white/12 bg-white/[0.03] px-2.5 py-1.5 text-[14px] leading-relaxed text-slate-200 placeholder:text-white/25"
+          className="font-hanken mt-1.5 w-full resize-y rounded-lg border border-white/12 bg-white/[0.03] px-2.5 py-1.5 text-label leading-relaxed text-slate-200 placeholder:text-white/25"
           placeholder="what is on screen"
         />
         {isRung && (

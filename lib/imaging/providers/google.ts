@@ -151,6 +151,10 @@ export function googleProvider(): ImagingProvider {
     // Nano Banana 2 (not Lite) conditions on style references — the reason
     // this project is on the full model.
     supportsReferences: true,
+    // Prose: there is no negative field on this API, so `buildPrompt` appends
+    // the exclusions to the positive prompt as a sentence. Honoured, but in the
+    // same channel as the subject — declared so a comparison can say so.
+    negativePromptChannel: "prose",
 
     async generate(req: GenerateRequest): Promise<GeneratedImages> {
       const refs = (req.references ?? []).slice(0, 14);
@@ -256,6 +260,7 @@ export function googleProvider(): ImagingProvider {
         provenance: {
           provider: "google",
           model: VISION_MODEL,
+          modelBasis: "requested" as const,
           // Routed through the same table as everything else, and it comes back
           // undefined on purpose: recognition is billed per token, and no
           // USD-per-token rate has been checked. The row in pricing.ts carries
@@ -335,6 +340,7 @@ async function runImage(
     provenance: {
       provider: "google",
       model,
+      modelBasis: "requested" as const,
       costUsd: price.usd,
       costBasis: price.basis,
       durationMs: Date.now() - started,

@@ -11,7 +11,10 @@
 // admitting that. Switching discards nothing; the picks and the topic live in
 // separate records and both survive.
 
+import { FileText, Waypoints } from "lucide-react";
+
 import { Eyebrow } from "@/components/ui/Primitives";
+import { HintPopover, hintRootClass, useHint } from "@/components/ui/signal";
 
 type Mode = "facts" | "beats";
 
@@ -19,38 +22,64 @@ const OPTIONS = [
   {
     id: "facts",
     label: "facts to involve",
-    line: "A topic goes in, a notebook comes out, and you scope what the script may use.",
+    icon: FileText,
+    /** Behind the card's own disclosure — a distinction, not an instruction. */
+    line: "a notebook of facts; you scope what the script may use",
   },
   {
     id: "beats",
     label: "beats to choose",
-    line: "Candidate beats per part of a spine; you pick one each, and Script opens on the spine.",
+    icon: Waypoints,
+    line: "candidate beats per part; Script opens on the spine you pick",
   },
 ] as const;
+
+/** ONE CARD, AND ITS OWN DISCLOSURE ON THE CARD ITSELF. The distinguishing line
+ *  cannot hang on a <Hint> glyph here: the card IS a button, and a button inside
+ *  a button is invalid HTML — the same constraint <TabRail> hits, answered the
+ *  same way, with `useHint` + `<HintPopover>` and the card as the trigger. So
+ *  each option needs its own hook call, which is why this is a component rather
+ *  than a `.map` body. */
+function ModeCard({
+  option,
+  onChoose,
+}: {
+  option: (typeof OPTIONS)[number];
+  onChoose: (mode: Mode) => void;
+}) {
+  const d = useHint();
+  const Icon = option.icon;
+  return (
+    <span {...d.rootProps} className={`${hintRootClass} w-full`}>
+      <button
+        type="button"
+        data-testid={`mode-${option.id}`}
+        {...d.triggerProps}
+        onClick={() => onChoose(option.id)}
+        className="flex w-full items-center gap-4 rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-left transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.05] focus-visible:outline-2 focus-visible:outline-offset-2"
+      >
+        <Icon className="h-7 w-7 shrink-0 text-cyan-300/70" aria-hidden />
+        <span className="font-instrument block text-2xl text-slate-100">{option.label}</span>
+      </button>
+      <HintPopover d={d}>{option.line}</HintPopover>
+    </span>
+  );
+}
 
 export default function ModeChooser({ onChoose }: { onChoose: (mode: Mode) => void }) {
   return (
     <div className="space-y-5">
-      <div>
-        <Eyebrow>any video · research mode</Eyebrow>
-        <p className="font-hanken mt-2 max-w-2xl text-sm text-slate-400">
-          This project claims no craft template, so the studio does not know what its research is.
-          The choice is kept with the project, and you can switch later — neither mode discards the
-          other’s work.
-        </p>
-      </div>
+      {/* THE PARAGRAPH IS GONE. "This project claims no craft template, so the
+          studio does not know what its research is" is the app explaining why
+          it is asking — the question above the two cards is the only part of
+          that a creator can act on. And "you can switch later" was a promise
+          about a control: `ModeSwitch` is drawn on the very next screen, above
+          whichever board this answer names, which proves it where a sentence
+          could only assert it. */}
+      <Eyebrow>any video · research mode</Eyebrow>
       <div className="grid gap-4 md:grid-cols-2">
         {OPTIONS.map((o) => (
-          <button
-            key={o.id}
-            type="button"
-            data-testid={`mode-${o.id}`}
-            onClick={() => onChoose(o.id)}
-            className="rounded-2xl border border-white/10 bg-white/[0.02] p-6 text-left transition hover:border-cyan-400/40 hover:bg-cyan-400/[0.05] focus-visible:outline-2 focus-visible:outline-offset-2"
-          >
-            <span className="font-instrument block text-2xl text-slate-100">{o.label}</span>
-            <span className="font-hanken mt-2 block text-sm leading-relaxed text-slate-400">{o.line}</span>
-          </button>
+          <ModeCard key={o.id} option={o} onChoose={onChoose} />
         ))}
       </div>
     </div>

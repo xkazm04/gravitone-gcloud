@@ -34,8 +34,11 @@ from pathlib import Path
 # 21 GB download that finishes beats a fast one that does not start.
 os.environ["HF_HUB_DISABLE_XET"] = "1"
 
+sys.path.insert(0, str(Path(__file__).parent))
+import guard  # noqa: E402
+
 REPO = "Comfy-Org/MiniMax-H3"
-COMFY_MODELS = Path(r"C:\Users\kazda\ComfyUI\models")
+COMFY_MODELS = Path(guard.COMFY_DIR) / "models"
 
 WANTED = [
     ("diffusion_models/minimax_h3_ref2va_pruned_fp8_scaled.safetensors", 20.96),

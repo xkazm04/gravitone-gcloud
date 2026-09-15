@@ -1,0 +1,200 @@
+{
+  "run": "hana",
+  "startedAt": "2026-09-05T15:44:40.543Z",
+  "steps": [
+    {
+      "at": 1788623080545,
+      "s": "goto /projects/new"
+    },
+    {
+      "at": 1788623083152,
+      "s": "click \"deck-card-educational\""
+    },
+    {
+      "at": 1788623083713,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623084241,
+      "s": "click \"deck-card-mid-educational-video\""
+    },
+    {
+      "at": 1788623084624,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623085638,
+      "s": "click \"deck-card-preset:paper-relief\""
+    },
+    {
+      "at": 1788623086035,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623086423,
+      "s": "fill {\"css\":\"#w-title\"} ← \"Why is the sky blue at noon and red at night\""
+    },
+    {
+      "at": 1788623086484,
+      "s": "fill {\"css\":\"#w-dur\"} ← \"240\""
+    },
+    {
+      "at": 1788623087778,
+      "s": "snap 01-wizard-name-stage"
+    },
+    {
+      "at": 1788623087785,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623089262,
+      "s": "recorded p-mtok07jy-7o79vy → uat/runs/2026-09-05-compose/created.json"
+    },
+    {
+      "at": 1788623089262,
+      "s": "goto /studio/p-mtok07jy-7o79vy?step=research"
+    },
+    {
+      "at": 1788623096846,
+      "s": "fill {\"label\":\"Topic\"} ← \"Why is the sky blue at noon and red at night\""
+    },
+    {
+      "at": 1788623096911,
+      "s": "click \"run-research\""
+    },
+    {
+      "at": 1788623108076,
+      "s": "snap 02-research-landed"
+    },
+    {
+      "at": 1788623108095,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623110517,
+      "s": "snap 03-guided-takes"
+    },
+    {
+      "at": 1788623110526,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623111252,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623112055,
+      "s": "click \"confirm-scope\""
+    },
+    {
+      "at": 1788623114203,
+      "s": "snap 04-guided-review"
+    },
+    {
+      "at": 1788623114211,
+      "s": "click {\"role\":\"button\",\"name\":{}}"
+    },
+    {
+      "at": 1788623115707,
+      "s": "click \"view-coverage\""
+    },
+    {
+      "at": 1788623120514,
+      "s": "snap 05-hana-coverage"
+    },
+    {
+      "at": 1788623120554,
+      "s": "click \"view-candidates\""
+    },
+    {
+      "at": 1788623121463,
+      "s": "click \"duel-more-adjudication\""
+    },
+    {
+      "at": 1788623122244,
+      "s": "click \"duel-beats-adjudication\""
+    },
+    {
+      "at": 1788623123348,
+      "s": "click \"deck-card-adjudication\""
+    },
+    {
+      "at": 1788623124404,
+      "s": "goto /projects"
+    }
+  ],
+  "checks": [
+    {
+      "label": "style stage offers presets for educational",
+      "ok": true,
+      "detail": "presets=6 borrowed=false"
+    },
+    {
+      "label": "studio headline is the name typed",
+      "ok": true,
+      "detail": "Why is the sky blue at noon and red at night"
+    },
+    {
+      "label": "header pill states discipline · template · runtime",
+      "ok": false,
+      "detail": ""
+    },
+    {
+      "label": "a fresh project's topic field is empty",
+      "ok": true,
+      "detail": "\"\""
+    },
+    {
+      "label": "the stand-in is disclosed BEFORE the run",
+      "ok": true
+    },
+    {
+      "label": "after the run the note names the stand-in against the typed topic",
+      "ok": true,
+      "detail": "prototype · this notebook is the saved 2026-08-11 Bitcoin run, not research on “Why is the sky blue at noon and red at n"
+    },
+    {
+      "label": "the steel-man card says it always travels and why",
+      "ok": true,
+      "detail": "STEEL-MAN The forced-seller story is weaker than it looks, and the accumulation story is real locked in scope — always travels The steel-man"
+    },
+    {
+      "label": "the hottest take is labelled speculation and not taken by default",
+      "ok": true,
+      "detail": "😈 HOTTEST TAKE The Strategic Bitcoin Reserve was never meant to be built not taken risk — speculation about motive — no"
+    },
+    {
+      "label": "scope confirmed",
+      "ok": true
+    },
+    {
+      "label": "240s mismatch stated on Script",
+      "ok": true,
+      "detail": "this project asked for Mid-length educational · 240s — the three renders below were cut for the fixture’s own runtimes (0:45–5:00) and your clock is not read here yet"
+    },
+    {
+      "label": "Coverage reflects the hottest take as not taken / out of scope",
+      "ok": true,
+      "detail": "Out of scope. Click to bring it back."
+    },
+    {
+      "label": "beat text readable before adoption",
+      "ok": true
+    },
+    {
+      "label": "adopted",
+      "ok": true
+    },
+    {
+      "label": "shelf research moved",
+      "ok": true,
+      "detail": "Research — locked · open here"
+    }
+  ],
+  "pageErrors": [],
+  "console": [
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled",
+    "warning: You have Reduced Motion enabled on your device. Animations may not appear as expected.. For more information and steps for solving, visit https://motion.dev/troubleshooting/reduced-motion-disabled"
+  ],
+  "endedAt": "2026-09-05T15:45:25.526Z"
+}

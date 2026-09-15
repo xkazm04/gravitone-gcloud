@@ -37,6 +37,32 @@ function Stat({ label, value, tone }: { label: string; value: string | number; t
   );
 }
 
+/** THE WORDS FOR A BOARD WITH CUTS AND NO WOUNDS — pure, so the probe drives
+ *  the real copy rather than a second copy of it.
+ *
+ *  The notice used to be titled `${s.descoped} cards out of scope`, and
+ *  `descoped` is precisely the count that EXCLUDES the opt-in conclusions
+ *  nobody has taken. Measured on the shipped notebook: 7 of 36 cards are
+ *  opt-in, so with one card cut the panel announced "1 card out of scope"
+ *  while 8 were — understating by 7 in every reachable case, on the one
+ *  surface whose subject is what the script will not see.
+ *
+ *  scope.ts split those two counts on purpose and says why: cut is a decision,
+ *  not-taken is the default state, and folding them together lights an alarm on
+ *  arrival. So the fix is not to swap in `outOfScope` and re-light it — it is to
+ *  title the alarm with the DECISION and let the body carry the rest. The branch
+ *  directly above this one already did exactly that; this one had not been
+ *  brought along. */
+export function cutCopy(s: ScopeApi["summary"]): { title: string; alsoNotTaken: string | null } {
+  return {
+    title: `${s.descoped} card${s.descoped === 1 ? "" : "s"} cut`,
+    alsoNotTaken:
+      s.notTaken > 0
+        ? `${s.outOfScope} of ${s.total} cards are out of scope in total — these ${s.descoped}, plus the ${s.notTaken} conclusion${s.notTaken === 1 ? "" : "s"} you have not taken.`
+        : null,
+  };
+}
+
 /** The consequences panel. A scope decision that quietly disarms a turn three
  *  beats away is the exact failure this step exists to prevent, so the
  *  arithmetic is stated rather than left to be noticed. */
@@ -53,20 +79,20 @@ export function Consequences({ api }: { api: ScopeApi }) {
       </Notice>
     );
   }
-  if (!s.wounds.length && !s.descoped) {
-    return (
-      <p className="font-jetbrains text-content text-white/35">
-        Nothing descoped. The script will be written against the full notebook
-        {s.notTaken > 0
-          ? `, minus the ${s.notTaken} conclusion${s.notTaken === 1 ? "" : "s"} you have not taken.`
-          : "."}
-      </p>
-    );
-  }
+  // NOTHING CUT, NOTHING WOUNDED — and so nothing to report. This branch used
+  // to print "Nothing descoped. The script will be written against the full
+  // notebook, minus the N conclusions you have not taken." Both halves are
+  // already on the ScopeBar directly above it, as `DESCOPED 0` and `NOT TAKEN
+  // N`, which is where a reader checks a count. A panel that renders a sentence
+  // in the state where nothing has happened is a panel that is ignored in the
+  // state where something has.
+  if (!s.wounds.length && !s.descoped) return null;
   if (!s.wounds.length) {
+    const copy = cutCopy(s);
     return (
-      <Notice severity="info" title={`${s.descoped} card${s.descoped === 1 ? "" : "s"} out of scope`}>
+      <Notice severity="info" title={copy.title}>
         <p>Nothing downstream depends on them. The beat chain is intact.</p>
+        {copy.alsoNotTaken && <p className="mt-1 text-white/50">{copy.alsoNotTaken}</p>}
       </Notice>
     );
   }

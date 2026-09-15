@@ -1,0 +1,47 @@
+· goto /projects/new
+· click "deck-card-free"
+· click {"role":"button","name":{}}
+· click "deck-card-free-form"
+· click {"role":"button","name":{}}
+ok   style stage offers presets for free — presets=6 borrowed=true
+· click "deck-card-preset:newsprint-cutout"
+· click {"role":"button","name":{}}
+· fill {"css":"#w-title"} ← "The 1987 disappearance"
+· fill {"css":"#w-logline"} ← "Everyone thought she left. The record says she was taken."
+· fill {"css":"#w-dur"} ← "600"
+· snap 01-wizard-name-stage
+· click {"role":"button","name":{}}
+ok   studio headline is the name typed — The 1987 disappearance
+ok   header pill states discipline · template · runtime
+· recorded p-mtok3mcf-i45vvp → uat/runs/2026-09-05-compose/created.json
+· goto /studio/p-mtok3mcf-i45vvp?step=research
+ok   the chooser says it is reversible
+· click "mode-facts"
+ok   facts mode mounts the educational research
+ok   a fresh project's topic field is empty — ""
+ok   the stand-in is disclosed BEFORE the run
+· fill {"label":"Topic"} ← "The 1987 disappearance"
+· click "run-research"
+ok   after the run the note names the stand-in against the typed topic — prototype · this notebook is the saved 2026-08-11 Bitcoin run, not research on “The 1987 disappearance” — every card bel
+· snap 02-research-landed
+· click {"role":"button","name":{}}
+ok   the steel-man card says it always travels and why — STEEL-MAN The forced-seller story is weaker than it looks, and the accumulation story is real locked in scope — always travels The steel-man
+ok   the hottest take is labelled speculation and not taken by default — 😈 HOTTEST TAKE The Strategic Bitcoin Reserve was never meant to be built not taken risk — speculation about motive — no
+· click "deck-card-c-reserve-was-the-product"
+· snap 03-guided-takes
+· click {"role":"button","name":{}}
+· click {"role":"button","name":{}}
+· click "confirm-scope"
+ok   scope confirmed
+· snap 04-guided-review
+· click {"role":"button","name":{}}
+ok   free+facts reaches Candidates
+ok   Adjudication card has no fake 'turns' line — TURNS
+TURN 1 · an inflow is not a purchase | TURNS
+the reversal
+ok   free project's 600s mismatch stated — this project asked for Free form · 600s — the three renders below were cut for the fixture’s own runtimes (0:45–5:00) and your clock is not read here yet
+· click "deck-card-reversal-chain"
+ok   adopted
+· goto /studio/p-mtok3mcf-i45vvp?step=research
+ok   facts→beats switch state after adoption (observe; L1 says never locked) — disabled=false
+· snap 05-owen-modeswitch

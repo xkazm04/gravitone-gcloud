@@ -122,11 +122,15 @@ export default function UserMenu() {
           {LOCAL_MODE ? (
             // No sign-out in local mode: there is no session to end, and the
             // eviction a real sign-out runs would wipe the only copy of the
-            // shelf. Leaving local mode is an env change, and the menu says so
-            // instead of offering a button that must lie or destroy.
+            // shelf. So the menu states where the work is instead of offering a
+            // button that must lie or destroy.
+            //
+            // It used to close with "Unset NEXT_PUBLIC_LOCAL_MODE to run against
+            // Google sign-in" — an env var, in an account menu, addressed to
+            // nobody who is looking at one. Leaving local mode is a deployment
+            // act; the person here wants to know their work is somewhere.
             <p className="font-jetbrains px-3 py-2 text-content leading-snug text-white/45">
-              Local studio — work lives in this browser&apos;s storage. Unset NEXT_PUBLIC_LOCAL_MODE to
-              run against Google sign-in.
+              Local studio — work lives in this browser&apos;s storage, not in an account.
             </p>
           ) : (
             <button

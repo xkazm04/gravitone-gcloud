@@ -94,11 +94,11 @@ export default function FactRow({ f }: { f: Fact }) {
       {!!f.contests?.length && <Edge label="contests" ids={f.contests} tone="text-violet-200/85" />}
       {!!f.qualifies?.length && <Edge label="qualifies" ids={f.qualifies} tone="text-white/50" />}
       {f.note && <p className="mt-1.5 text-content leading-relaxed text-white/55 italic">{f.note}</p>}
-      {danger && (
-        <p className="font-jetbrains mt-2 text-content text-rose-300">
-          load-bearing at low confidence — needs a second source before any render may state it
-        </p>
-      )}
+      {/* The row is already rose-bordered and already carries a `load-bearing`
+          chip beside a `low` chip, so "load-bearing at low confidence" was the
+          row reading its own two chips aloud. What is left is the consequence,
+          which nothing else draws. */}
+      {danger && <p className="font-jetbrains mt-2 text-content text-rose-300">needs a second source</p>}
     </li>
   );
 }

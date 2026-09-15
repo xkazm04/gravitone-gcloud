@@ -24,11 +24,17 @@
 // anyone unable to find out that it did.
 
 import { ImagingError, noAlternative, noKey, unsupported } from "./errors";
-import { assertWithinBudget, estimatePendingUsd, recordSpend } from "./budget";
+import {
+  assertWithinBudget,
+  estimatePendingUsd,
+  reachByCapability,
+  recordSpend,
+} from "./budget";
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
 import { googleProvider } from "./providers/google";
 import { leonardoProvider } from "./providers/leonardo";
+import { ollamaProvider } from "./providers/ollama";
 import { qwenProvider } from "./providers/qwen";
 import type {
   Capability,
@@ -75,7 +81,15 @@ const PLAN: Record<ImagingEnv, Record<Capability, ProviderId[]>> = {
     // removal, not instruction-driven editing, so even in dev an edit is a
     // Nano Banana call.
     edit: ["google"],
-    recognize: ["qwen", "google"],
+    // Local first: the resident eye (qwen3.8:27b on this machine's own GPU,
+    // $0, nothing leaves the box) leads wherever OLLAMA_HOST is set; the
+    // cloud eyes stay as re-route targets, so a box without a daemon keeps
+    // working and the elimination lands in `trail` like every other skip.
+    // Qwen CLOUD removed from the plan entirely (operator, 2026-09-01): the
+    // local eye covers the capability at $0, and a cloud rung nobody wants
+    // billed is not a fallback, it is a surprise. The adapter stays for the
+    // day a steer or another deployment genuinely needs it.
+    recognize: ["ollama", "google"],
   },
   prod: {
     generate: ["google"],
@@ -88,6 +102,7 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
   leonardo: leonardoProvider,
   google: googleProvider,
   qwen: qwenProvider,
+  ollama: ollamaProvider,
 };
 
 /** Who would answer this capability right now, in order. Exported so the
@@ -95,6 +110,47 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
  *  router acts on rather than restating it. */
 export function planFor(cap: Capability, env: ImagingEnv = currentEnv()): ProviderId[] {
   return PLAN[env][cap];
+}
+
+/** One capability whose preferred provider never served, though the capability
+ *  ran. `servedBy` is who answered instead. */
+export interface UnreachedTop {
+  cap: Capability;
+  top: ProviderId;
+  servedBy: ProviderId[];
+}
+
+/**
+ * Capabilities that saw traffic and NEVER reached the top of their plan.
+ *
+ * The plan's first entry holds its position because it won a measured
+ * cost-per-usable grid (see PLAN above). Nothing until now checked whether that
+ * winner is ever actually CALLED — and it can go uncalled for two opposite
+ * reasons, which is exactly why the fact is worth recording at the time:
+ *
+ *   · the grid is stale and the entry no longer deserves the position; or
+ *   · the work never reached it — a steer, a missing key, or a run that stopped
+ *     at the cheapest provider that could serve.
+ *
+ * A capability with no traffic is NOT reported: never asking for something is
+ * not the same as asking and not reaching. And an elimination is not silent
+ * here either — the router already trails per-call re-routes; this is the
+ * window-level view the trail cannot give, because no single call departed
+ * from the plan.
+ */
+export function unreachedPlanTops(
+  now: number = Date.now(),
+  env: ImagingEnv = currentEnv(),
+): UnreachedTop[] {
+  const reach = reachByCapability(now);
+  const out: UnreachedTop[] = [];
+  for (const [cap, servedBy] of Object.entries(reach)) {
+    const plan = PLAN[env][cap as Capability];
+    const top = plan?.[0];
+    if (!top || servedBy.includes(top)) continue;
+    out.push({ cap: cap as Capability, top, servedBy });
+  }
+  return out;
 }
 
 /**
@@ -401,8 +457,8 @@ async function run<T extends { provenance: Provenance }>(
   }
 }
 
-export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>
-  run(
+export const generate = async (req: GenerateRequest): Promise<GeneratedImages> => {
+  const served = await run(
     "generate",
     (p) => p.generate?.(req),
     req,
@@ -416,6 +472,14 @@ export const generate = (req: GenerateRequest): Promise<GeneratedImages> =>
     // A batch of N images is priced (and gated) as N, not 1.
     req.count ?? 1,
   );
+  // Stamped here rather than in each adapter, for the reason the reference
+  // constraint above is also decided here: an adapter that forgets is exactly
+  // the silent case the declaration exists to prevent.
+  if (req.negativePrompt?.trim())
+    served.provenance.negativePromptChannel =
+      PROVIDERS[served.provenance.provider]().negativePromptChannel;
+  return served;
+};
 
 export const edit = (req: EditRequest): Promise<GeneratedImages> =>
   run("edit", (p) => p.edit?.(req), req);

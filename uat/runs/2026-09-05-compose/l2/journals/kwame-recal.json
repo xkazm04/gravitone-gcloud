@@ -1,0 +1,20 @@
+{
+  "run": "kwame-recal",
+  "startedAt": "2026-09-05T16:07:34.778Z",
+  "steps": [
+    {
+      "at": 1788624454779,
+      "s": "goto /studio/p-mtojwryg-76tcl4?step=script"
+    }
+  ],
+  "checks": [
+    {
+      "label": "disabled Recalibrate now says what enables it",
+      "ok": true,
+      "detail": "Nothing to recalibrate yet — open a track's note handle on the Coverage, Spend bar or Tracks tab to leave a note first."
+    }
+  ],
+  "pageErrors": [],
+  "console": [],
+  "endedAt": "2026-09-05T16:07:36.541Z"
+}

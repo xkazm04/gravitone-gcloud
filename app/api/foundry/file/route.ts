@@ -11,7 +11,7 @@
 // Access-checked but NOT rate-limited: a gallery of fifty tiles is fifty
 // requests in one second, and the money-route bucket would refuse the tail.
 
-import { checkAccess } from "@/lib/apiAuth";
+import { guardAccessOnly } from "@/lib/apiAuth";
 import { FoundryError, fileStat } from "@/lib/foundry/store";
 import { extractFileStat } from "@/lib/foundry/extract/store";
 import { trainingFileStat } from "@/lib/foundry/training/store";
@@ -32,7 +32,13 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const k = url.searchParams.get("k");
   const probe = k ? new Request(req.url, { headers: { authorization: `Bearer ${k}` } }) : req;
-  if (checkAccess(probe) !== "ok") return Response.json({ detail: "Access denied." }, { status: 401 });
+  // THE SAME THREE SENTENCES EVERY OTHER GATED ROUTE GIVES. This used to answer
+  // a bare "Access denied." for all three verdicts, so a deployment with no
+  // IMAGING_ACCESS_SECRET configured — the fail-closed default — showed a
+  // gallery of broken tiles whose only word was one that sends a reader to
+  // check the key they presented, not the one the server never had.
+  const denied = guardAccessOnly(probe);
+  if (denied) return denied;
 
   const run = url.searchParams.get("run") ?? "";
   const rel = url.searchParams.get("path") ?? "";

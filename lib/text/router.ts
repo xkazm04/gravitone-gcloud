@@ -57,7 +57,8 @@ import { canSpawnLocalBinaries, describePosture, localPosture } from "../deploym
 import { currentTextEnv, isConfigured, KEY_VAR, type TextEnv } from "./env";
 import { noAlternative, noEngine, TextError, unsupported } from "./errors";
 import { parseAgainstSchema, schemaInstruction } from "./json";
-import { logTurn } from "./log";
+import { logTurn, type TurnLog } from "./log";
+import { emitLightTrack } from "./lighttrack";
 import { claudeCliProvider } from "./providers/claudeCli";
 import { googleProvider } from "./providers/google";
 import type {
@@ -92,12 +93,14 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "edit-plan": ["claude-cli", "google"],
     "scene-direction": ["claude-cli", "google"],
     "style-synthesis": ["claude-cli", "google"],
+    research: ["claude-cli", "google"],
     probe: ["claude-cli"],
   },
   cloud: {
     "edit-plan": ["google"],
     "scene-direction": ["google"],
     "style-synthesis": ["google"],
+    research: ["google"],
     probe: ["google"],
   },
 };
@@ -116,6 +119,10 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   "edit-plan": 600_000,
   "scene-direction": 600_000,
   "style-synthesis": 300_000,
+  // The same ceiling as the other two long turns, and for the same reason: a
+  // notebook is nine phases of judgement and one large structured answer. It
+  // sits under /api/research's own `maxDuration` so the engine gives up first.
+  research: 600_000,
   probe: 30_000,
 };
 
@@ -196,7 +203,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
 
   try {
     const out = await walk();
-    logTurn({
+    const l: TurnLog = {
       turn: req.turn,
       env,
       ms: Date.now() - started,
@@ -208,11 +215,18 @@ export async function reason(req: TextRequest): Promise<TextResult> {
       rung: out.provenance.rung,
       costUsd: out.provenance.costUsd,
       schema: out.provenance.schemaEnforcement,
-    });
+      inputTokens: out.provenance.inputTokens,
+      outputTokens: out.provenance.outputTokens,
+    };
+    // Same settle point, two sinks: stdout always, LightTrack only when an
+    // operator has opted in. Neither call may affect the other — see
+    // lib/text/lighttrack.ts's own contract for why it can never throw here.
+    logTurn(l);
+    emitLightTrack(l);
     return out;
   } catch (e) {
     const err = e instanceof TextError ? e : null;
-    logTurn({
+    const l: TurnLog = {
       turn: req.turn,
       env,
       ms: Date.now() - started,
@@ -222,7 +236,9 @@ export async function reason(req: TextRequest): Promise<TextResult> {
       kind: err?.kind ?? "failed",
       provider: err?.provider,
       message: err?.message ?? String(e),
-    });
+    };
+    logTurn(l);
+    emitLightTrack(l);
     throw e;
   }
 

@@ -9,6 +9,8 @@
 // chips accept any set, and the set that is a defect turns amber here, before
 // the structure panel says the same thing at the foot of the page.
 
+import { Tally } from "@/components/ui/signal";
+
 import type { RaisedVariable } from "./types";
 
 export const RAISED_VARIABLES: readonly RaisedVariable[] = [
@@ -44,8 +46,15 @@ export default function RaisesChips({
       <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">
         raises
         {defect && (
+          // The repeat NAMES the variable, so it stays a sentence. "A rung
+          // raises exactly one" is the rule the chips already enforce in amber,
+          // so too-many is just the count against that one.
           <span className="ml-2 text-amber-200 normal-case tracking-normal">
-            {tooMany ? `${value.length} variables — a rung raises exactly one` : `repeats the previous rung's ${previous}`}
+            {tooMany ? (
+              <Tally value={value.length} of={1} label="raises" tone="amber" />
+            ) : (
+              `repeats the previous rung's ${previous}`
+            )}
           </span>
         )}
         {none && <span className="ml-2 text-amber-200/80 normal-case tracking-normal">none declared</span>}

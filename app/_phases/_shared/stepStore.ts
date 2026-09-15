@@ -31,12 +31,55 @@
 import { useSyncExternalStore } from "react";
 
 import { STEPS_STORE, openDb, runTx } from "@/lib/studioDb";
+import { seededResearchTopic } from "@/app/_studio/projectSeed";
 
+import type { ScoreSpot } from "../score/spots";
 import type { TrailerCut, WithholdingBudget } from "../script/trailer/types";
 
 export interface ResearchStepData {
   topic: string;
   researched: boolean;
+  savedAt?: number;
+}
+
+/** THE NOTEBOOK A REAL RUN PRODUCED, under phase key `"research-notebook"`.
+ *
+ *  Its own record, and its own key, for the cadence reason every type in this
+ *  file gives — but here there is a second and stronger reason. `ResearchStepData`
+ *  above is the SIMULATED path's record: `researched: true` there means "this
+ *  project shows the saved 2026-08-11 Bitcoin run", which is what the seed writes
+ *  and what four harness scripts drive. Folding a real notebook into that boolean
+ *  would make the one bit downstream reads mean two different things — a replayed
+ *  fixture and a creator's own reasoned notebook — which is the exact
+ *  indistinguishability app/_phases/research/guided/RunStage.tsx's `StandInNote`
+ *  exists to prevent.
+ *
+ *  So the two paths write two records, and WHICH RECORD A NOTEBOOK CAME FROM IS
+ *  ITS PROVENANCE. A reader that finds this key knows the notebook was reasoned
+ *  by an engine for `topic`; a reader that finds only `research` knows it is the
+ *  replay. Nothing has to be inferred from content.
+ *
+ *  `engine` is the run's receipt (`/api/research`'s `engine` block), kept ON the
+ *  record rather than beside it so that what a notebook cost, which rung served
+ *  it, and — the field no other receipt in this app has — whether the engine
+ *  could search, all survive the reload with the work they describe.
+ *
+ *  `notebook: null` is the CLEARED state and is distinct from no record at all:
+ *  the creator discarded a notebook here, and re-adopting one on the next mount
+ *  would silently undo their clear.
+ *
+ *  Typed loosely on purpose. `Notebook` lives in `_shared/notebook/types.ts` and
+ *  importing it here would put the whole fixture-adjacent type graph into every
+ *  module that touches the step store, including five that never see a notebook.
+ *  The one consumer (`research/run/live.ts`) casts at its own boundary, which is
+ *  also the boundary where `lib/notebook/validate.ts` has already checked it. */
+export interface ResearchNotebookStepData {
+  /** The topic as the creator typed it — the authority on what was asked. */
+  topic: string;
+  /** A validated notebook, or `null` for "cleared here". */
+  notebook: unknown | null;
+  /** The run's receipt, or `null` alongside a cleared notebook. */
+  engine: unknown | null;
   savedAt?: number;
 }
 
@@ -110,6 +153,14 @@ export interface ScriptAdoptionStepData {
 export interface TrailerCutStepData {
   cut: TrailerCut;
   budget: WithholdingBudget;
+  /** THE SPINE THIS CUT WAS COMPOSED FROM — the confirmed picks, slot → variant,
+   *  as they stood at compose time (added 2026-09-05). A cut is composed ONCE
+   *  and then edited; the board's picks are its history, not its source. So
+   *  when the creator reopens the spine in Step 1 and composes a different one,
+   *  the Script step needs a way to tell that the cut on screen predates the
+   *  spine on the board — this is that record. Absent on cuts saved before the
+   *  field existed, which readers treat as "unknown", never as "current". */
+  spine?: Record<string, string>;
   savedAt?: number;
 }
 
@@ -134,18 +185,60 @@ export interface CutStepData {
   savedAt?: number;
 }
 
+/** THE SPOTTING SESSION — where the cues go, and what each one is for.
+ *
+ *  The other half of the paragraph above, and it lands here on the same terms.
+ *  A spot is a title, a scene range, a purpose sentence and (once somebody
+ *  chooses one) a tempo: plain data, a few dozen bytes a row. A TAKE is still
+ *  an object URL over megabytes of decoded audio that no `blob:` string
+ *  survives a reload to reach, and this record does not carry one, does not
+ *  have a field for one, and must not grow one without answering the question
+ *  .vault/Architect/decisions/2026-08-29-score-take-persistence.md leaves open.
+ *  Spots survive a reload; takes do not, and the surface says so rather than
+ *  implying otherwise.
+ *
+ *  WHY IT IS THE WHOLE LIST AND NOT A DIFF AGAINST THE PROPOSAL. Spots are
+ *  seeded once — proposed from the script's movements the first time this step
+ *  meets a project with a picture (app/_phases/score/spots.ts), saved, and
+ *  after that they are the creator's. A record that stored only the edits would
+ *  have to re-derive the proposal on every load to know what the edits were
+ *  against, which makes a change upstream silently rewrite work downstream. The
+ *  same rule `useTrailerCut` composes a cut under: composed once from the
+ *  confirmed spine, then owned.
+ *
+ *  An EMPTY array is a decision — every spot deleted — and is distinct from no
+ *  record at all, which means this step has never been opened with a picture in
+ *  front of it. The seeder writes nothing in the second case, so re-opening the
+ *  step after composing a spine still proposes. */
+export interface ScoreStepData {
+  spots: ScoreSpot[];
+  savedAt?: number;
+}
+
 /* ────────────────────────────── what went wrong ──────────────────────────── */
 
-/** WHY the storage operation failed. Five destinations that used to be one
+/** WHY the operation failed. Five storage destinations that used to be one
  *  `return fallback`, and they call for different things from a surface:
  *  `quota` means stop and export, `blocked` means close the other tab, and
- *  `unavailable` means this browser session was never going to persist. */
+ *  `unavailable` means this browser session was never going to persist.
+ *
+ *  `non-storage` is the sixth and it is NOT a storage failure — it is how a
+ *  failure that merely arrived through this channel says so. The only producer
+ *  is `reportTaskTrouble` (lib/GlobalErrorBridge's unhandled-rejection route),
+ *  and it exists because the alternative was worse: every non-storage rejection
+ *  — a `void fetch(...)` that dropped, an AbortError, a TypeError thrown in
+ *  fire-and-forget code — fell through `classify` into `failed` and was voiced
+ *  as "Not saved: the browser refused the operation", sending the creator to
+ *  check a quota that was never the problem. A kind rather than a second
+ *  channel, so the bell keeps one vocabulary and every exhaustive switch over
+ *  this union is forced to learn it. */
 export type StorageFailure =
   | "unavailable" // no IndexedDB at all — private mode, or a server render
   | "missing-store" // the DB opened without the steps store
   | "blocked" // another tab holds the old version open (studioDb's onblocked)
   | "quota" // out of room. The expensive one, and the reachable one
-  | "failed"; // everything else, reported rather than guessed at
+  | "failed" // everything else STORAGE-SHAPED, reported rather than guessed at
+  | "non-storage"; // not storage at all — it only travelled this channel
 
 export interface StorageTrouble {
   kind: StorageFailure;
@@ -266,6 +359,37 @@ export function reportStorageTrouble(
   return t;
 }
 
+/**
+ * Publish a failure that reached NO owner — an unhandled promise rejection —
+ * through this same channel, without claiming it was a storage write.
+ *
+ * `reportStorageTrouble` is for a caller that KNOWS it was doing storage work
+ * and merely lost the error; this is for the last-resort reporter, which knows
+ * only that something rejected. The difference matters at the bell: `failed`
+ * prints "the browser refused the operation" and sends the creator to look at
+ * their quota, which is the wrong remedy for a dropped fetch.
+ *
+ * The three RECOGNISED storage kinds are still honoured, because a rejection
+ * really can be one: `saveStep` never rejects (see its header), but a direct
+ * IndexedDB user in fire-and-forget code can, and a QuotaExceededError arriving
+ * this way is still a quota. It is only `classify`'s catch-all — the bucket that
+ * means "not storage-shaped as far as anything here can tell" — that becomes
+ * `non-storage` and carries the reason's own message instead.
+ */
+export function reportTaskTrouble(phase: string, e: unknown): StorageTrouble {
+  const storageShaped = classify(e);
+  const t: StorageTrouble = {
+    kind: storageShaped === "failed" ? "non-storage" : storageShaped,
+    op: "write",
+    projectId: "app",
+    phase,
+    message: e instanceof Error ? e.message : String(e),
+    at: Date.now(),
+  };
+  report(t);
+  return t;
+}
+
 /* ────────────────────────────────── the store ────────────────────────────── */
 
 const key = (projectId: string, phase: string) => `${projectId}:${phase}`;
@@ -334,12 +458,19 @@ export function __resetSaveSlots(): void {
  *
  *  THE CONNECTION IS OWNED HERE, and it used to leak. `openDb()` is not cached —
  *  it calls `indexedDB.open` fresh every time — so every caller owns the handle
- *  it gets back and has to close it. The thirteen other call sites in the data
- *  layer do: `lib/projects.ts` (6), `lib/themes.ts` (4) and `lib/assets.ts` (3)
- *  all wrap the work in `try { db = await openDb(); … } finally { db?.close(); }`.
- *  This was the fourteenth, and the only one that did not — while being by a wide
- *  margin the most frequently called of the fourteen, because every caller above
- *  it fires `void saveStep(...)` on a keystroke.
+ *  it gets back and has to close it. Every other call site in the data layer
+ *  does, wrapping the work in `try { db = await openDb(); … } finally {
+ *  db?.close(); }`. This was the one that did not — while being by a wide margin
+ *  the most frequently called of them, because every caller above it fires
+ *  `void saveStep(...)` on a keystroke.
+ *
+ *  THE COUNT IS NOT WRITTEN HERE ANY MORE, and that is the point. It said
+ *  "thirteen other call sites… `lib/assets.ts` (3)"; measured 2026-09-06 there
+ *  were twenty-one across five files and assets.ts held eight. The property was
+ *  still true and the number had been wrong for long enough that nobody could
+ *  have said when it stopped. The population is walked and the rule is gated in
+ *  tests/golden-path/shared-notebook-contracts.probe.spec.ts — which is also
+ *  where the one file that still does not close is listed, with its reason.
  *
  *  The cost was not abstract. The latest-wins ticket below abandons a write only
  *  when a later save for the same key is ISSUED before the earlier one reaches
@@ -486,14 +617,24 @@ export async function saveStep<T>(
   return wrote ? { ok: true } : { ok: true, superseded: true };
 }
 
-/** The Bitcoin project ships researched.
+/** A seeded project ships with the research its own seed row claims.
  *
- *  Its notebook is the real 2026-08-11 run, so the honest starting state for that
- *  project is "already has a notebook" — not an empty topic field the user would
- *  have to re-run to see anything. Every other project starts empty, which is
- *  also honest: nothing has been researched for them. */
+ *  THE MATCH USED TO BE `/bitcoin/i` (fixed 2026-09-09). The reasoning was
+ *  sound for the project it named — the shipped notebook is the real 2026-08-11
+ *  Bitcoin run, so that project's honest starting state is "already has a
+ *  notebook" rather than an empty field — but the test was the project's NAME,
+ *  and three other seed rows declare `progress.research: "done"` without having
+ *  it in theirs. Those three printed "locked" on the shelf and then opened Step
+ *  1 on an empty topic field with the guided wizard parked at stage 1 and every
+ *  later stage unreachable. The shelf and the step contradicted each other about
+ *  the same project, and the step was the one telling the truth.
+ *
+ *  It asks the seed itself now (`seededResearchTopic`), so the two cannot
+ *  disagree again: a row that claims done gets a record, a row that does not,
+ *  does not. A project the USER made still starts empty, which is honest —
+ *  nothing has been researched for it. */
 function seededFor(projectId: string, phase: string): ResearchStepData | undefined {
   if (phase !== "research") return undefined;
-  if (!/bitcoin/i.test(projectId)) return undefined;
-  return { topic: "Why Bitcoin price does not rise", researched: true };
+  const topic = seededResearchTopic(projectId);
+  return topic ? { topic, researched: true } : undefined;
 }

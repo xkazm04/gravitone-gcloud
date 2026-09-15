@@ -82,6 +82,7 @@ const CHIP = "font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0
 
 function DuelCardBody({
   render: r,
+  chain,
   words,
   rewritten,
   chainLabel,
@@ -90,8 +91,11 @@ function DuelCardBody({
   open,
   onToggleOpen,
   onReadBeats,
+  targetS,
 }: {
   render: ScriptRender;
+  /** The chain this card is ABOUT — the front's arc bullets read from it. */
+  chain: Beat[];
   words: number;
   rewritten: boolean;
   chainLabel?: string;
@@ -100,8 +104,34 @@ function DuelCardBody({
   open: boolean;
   onToggleOpen: () => void;
   onReadBeats: () => void;
+  /** The project's own clock. The subtraction the page had both operands for
+   *  and did not do (uat 2026-09-05, LE-L1-3: "one subtraction … and does not
+   *  do"). */
+  targetS?: number;
 }) {
   const reduced = useDeckReducedMotion();
+  const overS = typeof targetS === "number" && targetS > 0 ? r.durationS - targetS : null;
+
+  // WHAT IS IN THIS CUT, on the front — the operator's rule (2026-08-30): the
+  // reader identifies a candidate from content bullets, not from a metadata
+  // spread hoped to add up. Three beats mark the arc — where it opens, where
+  // it turns (the middle of ITS OWN chain, so a recalibrated version shows its
+  // own shape), where it lands.
+  //
+  // "turns" IS THE BEAT OF KIND `turn`, not the middle of the chain by index —
+  // that version named "escalation" for the Reversal Chain and a candidate for
+  // Adjudication, whose own depth says "turns — n/a for this engine". A chain
+  // with no turn beat gets no turns line (uat 2026-09-05, OW-L1-5).
+  const firstTurn = chain.find((b) => b.kind === "turn");
+  const arc: { word: string; beat: Beat }[] = chain.length
+    ? [
+        { word: "opens", beat: chain[0] },
+        ...(firstTurn && firstTurn !== chain[0] && firstTurn !== chain[chain.length - 1]
+          ? [{ word: "turns", beat: firstTurn }]
+          : []),
+        ...(chain.length > 1 ? [{ word: "lands", beat: chain[chain.length - 1] }] : []),
+      ]
+    : [];
 
   return (
     <div className="flex grow flex-col gap-2 p-4">
@@ -109,15 +139,23 @@ function DuelCardBody({
         {r.engineLabel}
       </span>
       <h3 className="font-instrument text-xl leading-snug text-slate-100">{r.title}</h3>
-      <p className="font-hanken text-content leading-relaxed text-slate-400 transition-colors duration-200 ease-linear group-hover:text-slate-200">
-        pleasure: {r.pleasure}. Reads like {r.feelsLike}.
-      </p>
+      {arc.length > 0 && (
+        <ul className="space-y-1">
+          {arc.map(({ word, beat }) => (
+            <li key={word} className="font-hanken flex gap-2 text-label leading-snug">
+              <span className="font-jetbrains shrink-0 pt-px text-label tracking-[0.1em] text-white/35 uppercase">
+                {word}
+              </span>
+              <span className="text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
+                {beat.label}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="flex flex-wrap items-center gap-1.5">
-        <span className={`${CHIP} border-cyan-400/30 bg-cyan-400/[0.06] text-cyan-200/90`}>
-          {r.bestFor}
-        </span>
         <span className={`${CHIP} border-white/12 bg-white/[0.04] text-white/60`}>
-          {mmss(r.durationS)} · {words} words
+          {chain.length} beats · {mmss(r.durationS)}
         </span>
       </div>
       <p className="font-jetbrains text-label leading-relaxed text-amber-200/85">
@@ -125,8 +163,11 @@ function DuelCardBody({
       </p>
 
       {picked && (
+        // The card is already cyan-ringed and aria-pressed; "the Frames step
+        // opens on this chain" is what adopting DOES, said next to the thing
+        // that did it.
         <p data-testid={`duel-adopted-${r.id}`} className="font-jetbrains text-label text-cyan-200/90">
-          adopted — the Frames step opens on this chain
+          adopted
         </p>
       )}
 
@@ -140,6 +181,20 @@ function DuelCardBody({
           className="overflow-hidden"
         >
           <div className="space-y-2.5 border-t border-white/8 pt-3">
+            {/* The pitch and its fit moved here from the front (operator's
+                verdict): they are the render's self-description, and the
+                front's job is the CONTENT — the arc bullets above. */}
+            <p className="font-hanken text-content leading-relaxed text-slate-400">
+              pleasure: {r.pleasure}. Reads like {r.feelsLike}.
+            </p>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className={`${CHIP} border-cyan-400/30 bg-cyan-400/[0.06] text-cyan-200/90`}>
+                {r.bestFor}
+              </span>
+              <span className={`${CHIP} border-white/12 bg-white/[0.04] text-white/60`}>
+                {words} words
+              </span>
+            </div>
             {r.turns !== null && r.turnBand ? (
               <BandMeter
                 label="turns"
@@ -164,6 +219,22 @@ function DuelCardBody({
               {mmss(r.durationS)} at {r.wpm} wpm · promise form: {r.promiseForm} · {r.questionsAloud}{" "}
               question{r.questionsAloud === 1 ? "" : "s"} aloud
             </p>
+            {overS !== null && overS !== 0 && (
+              <p
+                data-testid={`duel-runtime-delta-${r.id}`}
+                className={`font-jetbrains text-label ${overS > 0 ? "text-amber-200" : "text-white/45"}`}
+              >
+                {overS > 0 ? `+${overS} s over` : `${-overS} s under`} your {targetS} s at {r.wpm} wpm
+                {overS > 0 && ` — about ${Math.round((overS * r.wpm) / 60)} words to cut`}
+              </p>
+            )}
+            {/* The render's own declared deviations — the narration-led wpm
+                caveat among them — used to be expert-face only (LE-L1-3). */}
+            {r.deviations.map((d) => (
+              <p key={d} data-testid={`duel-deviation-${r.id}`} className="text-content leading-snug text-amber-200/80">
+                declared deviation — {d}
+              </p>
+            ))}
             {rewritten && (
               <p className="font-jetbrains text-label leading-snug text-amber-200/70">
                 words are counted from {chainLabel ?? "this version"}&rsquo;s own chain. Turns,
@@ -171,11 +242,13 @@ function DuelCardBody({
                 re-measured.
               </p>
             )}
+            {/* Counts, not a score, and IN the depth with the rest of the
+                measurements — the front no longer stacks a metadata spread.
+                Same data, same vocabulary, one gesture away. */}
+            <VerdictCounts report={report} checks={r.checks} />
           </div>
         </motion.div>
       )}
-
-      <VerdictCounts report={report} checks={r.checks} />
 
       {/* Actions sit ABOVE the whole-card pick target (z-20 over its z-10) —
           the deck's own rule for anything layered on a card. */}
@@ -216,6 +289,7 @@ export default function CandidatesDuel({
   adoptedId,
   onAdopt,
   onReadBeats,
+  targetS,
 }: {
   renders: ScriptRender[];
   /** The chain each card is ABOUT — the same map the expert columns and the
@@ -230,6 +304,8 @@ export default function CandidatesDuel({
   /** Opens the SAME beats modal the expert face uses — the modal lives on the
    *  step, so both faces read one BeatList and cannot drift apart. */
   onReadBeats: (id: string) => void;
+  /** The project's target runtime, for the seconds-over line in each depth. */
+  targetS?: number;
 }) {
   const [openDepth, setOpenDepth] = useState<Record<string, boolean>>({});
 
@@ -257,6 +333,7 @@ export default function CandidatesDuel({
             <DeckCard spec={spec} picked={picked} onPick={onAdopt} dealDelay={dealDelay}>
               <DuelCardBody
                 render={r}
+                chain={chain}
                 words={words}
                 rewritten={rewritten}
                 chainLabel={chainLabel}
@@ -265,6 +342,7 @@ export default function CandidatesDuel({
                 open={!!openDepth[r.id]}
                 onToggleOpen={() => setOpenDepth((o) => ({ ...o, [r.id]: !o[r.id] }))}
                 onReadBeats={() => onReadBeats(r.id)}
+                targetS={targetS}
               />
             </DeckCard>
           );

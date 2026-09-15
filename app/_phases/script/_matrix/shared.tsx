@@ -4,10 +4,12 @@
 // whichever way you are reading the grid — and so a before/after comparison is
 // computed one way rather than three.
 
+import { Hint } from "@/components/ui/signal";
+
 import { DIMENSIONS } from "../../_shared/notebook/dimensions";
 import type { Card } from "../../_shared/notebook/cards";
 import type { ScopeApi } from "../../research/useScope";
-import { stateOf } from "../../research/scope";
+import { stateOf, type Scope } from "../../research/scope";
 import { orphanedCuts, type Usage } from "../impact";
 import { RENDERS } from "../renders";
 import { usageIn, type Version } from "../versions";
@@ -41,10 +43,20 @@ export const TONE: Record<Usage["kind"], { cell: string; text: string; mark: str
   unused: { cell: "border-white/6", text: "text-white/25", mark: "0s" },
 };
 
+/** "not taken" is a DEFAULT, "descoped" is a DECISION — the same two words the
+ *  Research chips and ScopeBar use (scope.ts::OPT_IN_DEFAULT). Coverage used to
+ *  fold both into "Out of scope" (uat 2026-09-05, HA-L1-5: "I keep those apart on
+ *  purpose"). */
+export function outWord(card: Card, scope: Scope): "in" | "not-taken" | "descoped" {
+  const s = stateOf(scope, card.id);
+  if (!s.descoped) return "in";
+  return card.optIn ? "not-taken" : "descoped";
+}
+
 /** The scope control. Descoping here writes the record the triage board reads —
  *  this is not a Step 2 shadow copy. */
 export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi; size?: "sm" | "md" }) {
-  const s = stateOf(api.scope, card.id);
+  const out = outWord(card, api.scope);
   const locked = card.required;
   const dims = size === "md" ? "h-5 w-5 text-label" : "h-4 w-4 text-label";
   return (
@@ -55,42 +67,75 @@ export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi
       title={
         locked
           ? card.requiredWhy
-          : s.descoped
-            ? "Out of scope. Click to bring it back."
-            : "In scope. Click to descope — the triage board will agree."
+          : out === "descoped"
+            ? "Descoped — you cut this. Click to bring it back."
+            : out === "not-taken"
+              ? "Not taken — a conclusion is out of scope by default. Click to take it."
+              : "In scope. Click to descope — the triage board will agree."
       }
       className={`grid shrink-0 place-items-center rounded border transition ${dims} ${
         locked
           ? "cursor-not-allowed border-white/10 text-white/20"
-          : s.descoped
+          : out === "descoped"
             ? "border-amber-400/60 bg-amber-400/10 text-amber-300 hover:border-amber-400"
-            : "border-white/20 text-transparent hover:border-cyan-400/60 hover:text-cyan-400/40"
+            : out === "not-taken"
+              ? "border-white/15 text-white/35 hover:border-cyan-400/60"
+              : "border-white/20 text-transparent hover:border-cyan-400/60 hover:text-cyan-400/40"
       }`}
-      aria-label={s.descoped ? `${card.id} is out of scope` : `${card.id} is in scope`}
+      aria-label={
+        out === "descoped"
+          ? `${card.id} is descoped`
+          : out === "not-taken"
+            ? `${card.id} is not taken`
+            : `${card.id} is in scope`
+      }
     >
-      {s.descoped ? "—" : "✓"}
+      {out === "descoped" ? "—" : out === "not-taken" ? "·" : "✓"}
     </button>
   );
 }
 
-export function MatrixFootnotes({ cards, version }: { cards: Card[]; version: Version }) {
+/** THE CONFLICT — a card the creator took OUT that a render still SPEAKS. The
+ *  scope is the creator's decision; the script is what a render said; here is
+ *  the one place they meet, and until 2026-09-05 they disagreed silently
+ *  (PR-L1-2: "the workflow I said I would refuse"). Returns the renders that
+ *  still speak the card, with seconds, or an empty list. */
+export function stillSpoken(version: Version, card: Card, scope: Scope): { renderId: string; label: string; seconds: number }[] {
+  if (outWord(card, scope) === "in") return [];
+  return RENDERS.flatMap((r) => {
+    const u = usageIn(version, r.id, card.id);
+    return u.kind === "spoken" ? [{ renderId: r.id, label: r.engineLabel, seconds: u.seconds }] : [];
+  });
+}
+
+export function MatrixFootnotes({ cards, version, scope }: { cards: Card[]; version: Version; scope?: Scope }) {
   const ids = new Set(cards.map((c) => c.id));
   const orphans = orphanedCuts(ids);
+  const conflicts = scope ? cards.filter((c) => stillSpoken(version, c, scope).length > 0) : [];
   const untouched = cards.filter((c) => RENDERS.every((r) => usageIn(version, r.id, c.id).kind === "unused"));
   const conclusions = untouched.filter((c) => c.kind === "conclusion").length;
 
   return (
     <div className="mt-4 space-y-1.5 border-t border-white/8 pt-3">
-      <p className="font-jetbrains text-content leading-relaxed text-white/40">
-        {untouched.length} of {cards.length} cards are in no render
-        {conclusions > 0 && (
-          <>
-            {" "}— including all {conclusions} conclusions, which were reasoned{" "}
-            <span className="text-white/60">after</span> these {RENDERS.length} scripts were written.
-            That is a gap in the scripts, not in the research.
-          </>
-        )}
+      {/* The count is the finding. "That is a gap in the scripts, not in the
+          research" was the app arguing its own case beside it, and went; the one
+          fact inside that sentence — WHEN the conclusions were reasoned — is a
+          date, so it stays, behind the disclosure. */}
+      <p className="font-jetbrains flex flex-wrap items-baseline gap-x-1.5 text-content leading-relaxed text-white/40">
+        <span>
+          {untouched.length} of {cards.length} cards are in no render
+          {conclusions > 0 ? ` — including all ${conclusions} conclusions` : ""}
+        </span>
+        {conclusions > 0 && <Hint>reasoned after these {RENDERS.length} scripts were written</Hint>}
       </p>
+      {conflicts.length > 0 && (
+        <p data-testid="matrix-scope-conflicts" className="font-jetbrains text-content leading-relaxed text-rose-300/90">
+          {conflicts.length} card{conflicts.length === 1 ? "" : "s"} out of scope {conflicts.length === 1 ? "is" : "are"}{" "}
+          still spoken by a render ({conflicts.map((c) => c.id).join(", ")}) — the scope and these scripts
+          disagree. These scripts were written against the full notebook; only a recalibration re-attributes
+          them, and the gate does not check exclusions yet.
+        </p>
+      )}
       {orphans.length > 0 && (
         <p data-testid="matrix-orphan-cuts" className="font-jetbrains text-content leading-relaxed text-rose-300/90">
           {orphans.length} cut record{orphans.length === 1 ? "" : "s"} name{orphans.length === 1 ? "s" : ""} a fact the
@@ -98,11 +143,23 @@ export function MatrixFootnotes({ cards, version }: { cards: Card[]; version: Ve
           decision was real, but it has no row to sit in.
         </p>
       )}
-      <p className="font-jetbrains text-content leading-relaxed text-white/30">
-        Seconds are computed from each render’s own beat marks, not estimated. A beat resting on
-        several cards splits its seconds between them, so every column sums to the runtime it came
-        from. Runtime not attributed to any card is hook, promise and close.
-      </p>
     </div>
+  );
+}
+
+/** How a second in this grid was arrived at — a definition of the unit, not an
+ *  explanation of the tab. It used to be a three-sentence footnote printed under
+ *  all three weight tabs; it is now one glyph, placed where the totals are
+ *  named. The full statement, for the record and for whoever asks next:
+ *  seconds are computed from each render's own beat marks, never estimated; a
+ *  beat resting on several cards splits its seconds between them, so every
+ *  column sums to the runtime it came from; runtime attributed to no card is
+ *  hook, promise and close. */
+export function SecondsHint() {
+  return (
+    <Hint label="how seconds are counted">
+      from each render’s own beat marks · a shared beat splits its seconds · unattributed is hook,
+      promise and close
+    </Hint>
   );
 }

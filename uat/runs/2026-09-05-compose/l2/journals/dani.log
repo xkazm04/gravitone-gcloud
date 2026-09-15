@@ -1,0 +1,53 @@
+· goto /projects/new
+· click "deck-card-educational"
+· click {"role":"button","name":{}}
+· click "deck-card-mid-educational-video"
+· click {"role":"button","name":{}}
+ok   style stage offers presets for educational — presets=6 borrowed=false
+· click "deck-card-preset:chalk-argument"
+· click {"role":"button","name":{}}
+· fill {"css":"#w-title"} ← "Why bridges sing in the wind"
+· fill {"css":"#w-logline"} ← "A bridge is a musical instrument nobody tuned."
+· fill {"css":"#w-dur"} ← "300"
+· snap 01-wizard-name-stage
+· click {"role":"button","name":{}}
+ok   studio headline is the name typed — Why bridges sing in the wind
+FAIL header pill states discipline · template · runtime
+· recorded p-mtojt5dy-fre7w2 → uat/runs/2026-09-05-compose/created.json
+· goto /studio/p-mtojt5dy-fre7w2?step=research
+ok   a fresh project's topic field is empty — ""
+ok   the stand-in is disclosed BEFORE the run
+· fill {"label":"Topic"} ← "Why bridges sing in the wind"
+· click "run-research"
+ok   after the run the note names the stand-in against the typed topic — prototype · this notebook is the saved 2026-08-11 Bitcoin run, not research on “Why bridges sing in the wind” — every ca
+· snap 02-research-landed
+· click {"role":"button","name":{}}
+ok   the steel-man card says it always travels and why — STEEL-MAN The forced-seller story is weaker than it looks, and the accumulation story is real locked in scope — always travels The steel-man
+ok   the hottest take is labelled speculation and not taken by default — 😈 HOTTEST TAKE The Strategic Bitcoin Reserve was never meant to be built not taken risk — speculation about motive — no
+· snap 03-guided-takes
+· click {"role":"button","name":{}}
+· click {"role":"button","name":{}}
+· click "confirm-scope"
+ok   scope confirmed
+· snap 04-guided-review
+· click {"role":"button","name":{}}
+ok   candidates duel is shown
+ok   the 'turns' line names a turn beat, not 'escalation' — TURNS
+TURN 1 · an inflow is not a purchase
+ok   the runtime note is absent when the project's 300s matches a render
+· click "duel-more-reversal-chain"
+ok   depth shows words and wpm
+· click "duel-beats-reversal-chain"
+ok   beats modal opens with readable beat text
+· click "deck-card-reversal-chain"
+ok   adoption is announced on the card
+· snap 05-script-adopted
+· goto /studio/p-mtojt5dy-fre7w2
+ok   reload lands on Script (parked by the hand-off) — aria-current=step
+ok   the adopted candidate survives a reload
+ok   research reported to the project record — {"research":"done","script":"working","frames":"empty","score":"empty","cut":"empty"}
+ok   script reported to the project record — {"research":"done","script":"working","frames":"empty","score":"empty","cut":"empty"}
+· goto /projects
+ok   shelf research cell moved off 'not started' — Research — locked · open here
+ok   shelf script cell moved off 'not started' — Script — in progress · open here
+· snap 06-shelf-after

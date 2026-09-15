@@ -17,6 +17,7 @@ import { useState } from "react";
 
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
+import { Ghost } from "@/components/ui/signal";
 import { pathKey, type FolderNode } from "@/lib/assets";
 
 /** The same rule folder names are minted under when a style produces one
@@ -94,12 +95,12 @@ export default function MoveDialog({
       className="max-w-lg"
       footer={
         <div className="flex items-center justify-between gap-3">
+          {/* The DESTINATION, when there is one. "pick a folder, or name a new
+              one" was an instruction for the two controls filling the panel
+              above it, printed beside a Move button already disabled until one
+              of them is used — the button's own state is the instruction. */}
           <p className="font-jetbrains text-label text-white/45">
-            {rootless
-              ? "pick a folder, or name a new one"
-              : same
-                ? "already here"
-                : `to ${dest.join(" › ")}`}
+            {rootless ? "" : same ? "already here" : `to ${dest.join(" › ")}`}
           </p>
           <div className="flex items-center gap-2">
             <Button variant="ghost" onClick={onClose} className="px-5 py-2">
@@ -119,9 +120,9 @@ export default function MoveDialog({
           </p>
           <div className="scroll-y max-h-64 space-y-0.5 rounded-xl border border-white/8 p-1">
             {rows.length === 0 ? (
-              <p className="font-hanken px-3 py-4 text-sm text-slate-400">
-                No folders yet — name one below and this plate makes it.
-              </p>
+              // The row-shaped hole, not a sentence about it: the "or a new
+              // folder inside it" field sits directly below and is the answer.
+              <Ghost shape="row" count={1} label="No folders on the shelf yet" className="p-1" />
             ) : (
               rows.map((r) => {
                 const key = pathKey(r.path);
@@ -160,16 +161,25 @@ export default function MoveDialog({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="keepers"
-            className="font-hanken w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-content text-white/90 outline-none transition placeholder:text-white/25 focus:border-cyan-400/40"
+            aria-invalid={Boolean(newName.trim()) && !slug}
+            aria-describedby={Boolean(newName.trim()) && !slug ? "move-new-folder-bad" : undefined}
+            className={`font-hanken w-full rounded-lg border bg-white/[0.03] px-3 py-2 text-content text-white/90 outline-none transition placeholder:text-white/25 ${
+              Boolean(newName.trim()) && !slug
+                ? "border-amber-400/60 focus:border-amber-400/70"
+                : "border-white/10 focus:border-cyan-400/40"
+            }`}
           />
           {/* The typed name and the minted name are shown to differ BEFORE the
               move, not discovered afterwards in the tree. */}
           {slug && slug !== newName.trim() && (
             <p className="font-jetbrains mt-1.5 text-label text-white/35">filed as {slug}</p>
           )}
-          {newName.trim() && !slug && (
-            <p className="font-jetbrains mt-1.5 text-label text-amber-200/80">
-              nothing in that name survives as a folder — letters or numbers, please
+          {/* An amber ring on the field carries "this will not do"; what stays
+              in words is the RULE, which is a constraint rather than narration —
+              and is what the reader needs to type something that works. */}
+          {Boolean(newName.trim()) && !slug && (
+            <p id="move-new-folder-bad" className="font-jetbrains mt-1.5 text-label text-amber-200/80">
+              letters or numbers, please
             </p>
           )}
         </div>

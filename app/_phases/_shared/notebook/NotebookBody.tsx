@@ -10,32 +10,48 @@
 
 import { useCallback, useState } from "react";
 
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "./notebook";
+import { NOTEBOOK } from "./notebook";
 import ArgumentSections from "./sections/Argument";
 import ApparatusSections from "./sections/Apparatus";
+import { SECTION_LABEL, sectionRenders } from "./sections/H";
+import type { Notebook } from "./types";
 
-const SECTIONS = [
-  ["tension", "tension"],
-  ["mechanisms", `mechanisms · ${NOTEBOOK_COUNTS.mechanisms}`],
-  ["reversals", `reversals · ${NOTEBOOK_COUNTS.reversals}`],
-  ["steelman", "steel-man"],
-  ["counters", `counter-positions · ${NOTEBOOK.counterPositions.length}`],
-  ["facts", `facts · ${NOTEBOOK_COUNTS.facts}`],
-  ["numbers", "numbers"],
-  ["unknowns", `unknowns · ${NOTEBOOK_COUNTS.unknownsOpen} open`],
-  ["questions", `questions · ${NOTEBOOK.candidateQuestions.length}`],
-  ["fit", "engine fit"],
-  ["currency", "currency"],
-  // "sources" here is NOTEBOOK.sources, the hand-written bibliography (11 on
-  // this fixture) — a SEPARATE, unrelated population from the 20 distinct
-  // `Fact.source` strings the facts above cite (`NOTEBOOK_COUNTS.factSourceStrings`).
-  // Named "bibliography" rather than bare "sources" so the rail pill cannot be
-  // misread as a count of every source the notebook has; see the comment on
-  // NOTEBOOK_COUNTS in notebook.ts for the full measurement and why the two
-  // lists are not reconciled.
-  ["sources", `bibliography · ${NOTEBOOK_COUNTS.sources}`],
-  ["gaps", `gaps · ${NOTEBOOK_COUNTS.gaps}`],
+// THE ORDER; the names come from SECTION_LABEL in sections/H.tsx, which is the
+// same map the headings themselves render. A pill and the heading it jumps to
+// were two separate expressions and drifted apart — the pill said
+// "mechanisms · 3" and the heading said "mechanisms — the beat chain,
+// pre-authored". One map, two readers, and they cannot disagree again.
+const SECTION_ORDER = [
+  "tension",
+  "mechanisms",
+  "reversals",
+  "steelman",
+  "counters",
+  "facts",
+  "numbers",
+  "unknowns",
+  "questions",
+  "fit",
+  "currency",
+  "sources",
+  "gaps",
 ] as const;
+
+const SECTIONS = SECTION_ORDER.map((id) => [id, SECTION_LABEL[id]] as const);
+
+/** Every section the rail knows about, in order — including the two that only
+ *  render when they have content. */
+export const SECTION_IDS: readonly string[] = SECTIONS.map(([id]) => id);
+
+/** THE PILLS THIS NOTEBOOK ACTUALLY GETS.
+ *
+ *  A pill is drawn only where the section it jumps to will render. Exported
+ *  rather than inlined so the agreement can be asserted without a DOM, and so
+ *  the rail below has exactly one way to build itself — a `.map` over the raw
+ *  list is the defect, and the probe reads this file to say so. */
+export function railFor(n: Notebook): readonly (readonly [string, string])[] {
+  return SECTIONS.filter(([id]) => sectionRenders(n, id));
+}
 
 export default function NotebookBody() {
   // WHERE THE RAIL LAST SENT YOU. The rail had no state at all: eleven
@@ -66,7 +82,14 @@ export default function NotebookBody() {
         aria-label="Notebook sections"
         className="font-jetbrains -mt-1 flex flex-wrap gap-1.5 text-label"
       >
-        {SECTIONS.map(([id, label]) => (
+        {/* A PILL ONLY WHERE THE SECTION ACTUALLY RENDERS. Two of these
+            sections draw behind a `length > 0` of their own, and the rail
+            listed all thirteen regardless — so on a notebook with no
+            counter-positions the pill was drawn, `jump()` found no element and
+            returned before `setAt`, and pressing it did nothing at all, with
+            no state change to say so. One predicate, in sections/H.tsx, read by
+            the rail here and by the section there. */}
+        {railFor(n).map(([id, label]) => (
           <button
             key={id}
             type="button"

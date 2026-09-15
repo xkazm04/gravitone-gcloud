@@ -33,6 +33,7 @@ import { test, expect } from "@playwright/test";
 import { buildCards } from "@/app/_phases/_shared/notebook/cards";
 import { FACTS } from "@/app/_phases/_shared/notebook/facts";
 import { NOTEBOOK } from "@/app/_phases/_shared/notebook/notebook";
+import { stripComments } from "./_helpers";
 
 const LADDER = ["primary", "secondary", "aggregator", "vendor", "self-published", "protected"];
 
@@ -83,6 +84,6 @@ test("the call site reads card.sources, not just card.source — a data-path pro
   // layer up in FactRow.tsx, so it is easy for a file to TALK about
   // `card.sources` — in a comment explaining why it now matters — without ever
   // reading it in code that runs.
-  const stripped = raw.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  const stripped = stripComments(raw);
   expect(stripped, "no comment-stripped occurrence of `card.sources` in CardTile.tsx — the component still only reads the flattened `card.source` string, which is precisely the bug this whole probe exists to catch one layer up from the data path").toMatch(/card\.sources/);
 });

@@ -19,6 +19,8 @@ import { join, relative } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
+
 /** Callers that allocate an object URL and do not yet release it, each with the
  *  reason it is still here. An entry is a claim somebody defends in review. */
 const KNOWN_LEAKS: Record<string, string> = {
@@ -36,9 +38,11 @@ const KNOWN_LEAKS: Record<string, string> = {
   // is what makes that failure unambiguous.
 };
 
-/** Source with comments removed, so prose about the rule cannot satisfy it. */
+/** Source with comments removed, so prose about the rule cannot satisfy it.
+ *  The shared scanner: the private pair this carried opened a phantom block
+ *  at a route glob inside a line comment (see _helpers.ts). */
 function code(src: string): string {
-  return src.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
+  return stripComments(src);
 }
 
 /** Every source file under app/ and lib/. */

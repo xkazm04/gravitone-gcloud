@@ -1,0 +1,124 @@
+{
+  "profile": "showcase",
+  "width": 640,
+  "fps": 20,
+  "seconds": 5,
+  "budgetKB": 260,
+  "totalBytes": 448725,
+  "clips": [
+    {
+      "id": "signal-ledger",
+      "name": "Signal Ledger",
+      "poster": "/clips/presets/signal-ledger.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/signal-ledger.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 31771
+        }
+      ],
+      "bytes": 37031,
+      "route": "h3",
+      "width": 640,
+      "height": 384,
+      "fps": 20,
+      "frames": 59,
+      "seconds": 2.95
+    },
+    {
+      "id": "newsprint-cutout",
+      "name": "Newsprint Cutout",
+      "poster": "/clips/presets/newsprint-cutout.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/newsprint-cutout.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 42228
+        }
+      ],
+      "bytes": 49814,
+      "route": "h3",
+      "width": 640,
+      "height": 384,
+      "fps": 20,
+      "frames": 60,
+      "seconds": 3
+    },
+    {
+      "id": "blueprint",
+      "name": "Blueprint",
+      "poster": "/clips/presets/blueprint.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/blueprint.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 115901
+        }
+      ],
+      "bytes": 135779,
+      "route": "h3-local",
+      "width": 640,
+      "height": 384,
+      "fps": 20,
+      "frames": 58,
+      "seconds": 2.9
+    },
+    {
+      "id": "chalk-argument",
+      "name": "Chalk Argument",
+      "poster": "/clips/presets/chalk-argument.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/chalk-argument.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 114185
+        }
+      ],
+      "bytes": 124852,
+      "route": "h3",
+      "width": 640,
+      "height": 384,
+      "fps": 20,
+      "frames": 58,
+      "seconds": 2.9
+    },
+    {
+      "id": "paper-relief",
+      "name": "Paper Relief",
+      "poster": "/clips/presets/paper-relief.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/paper-relief.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 58707
+        }
+      ],
+      "bytes": 65467,
+      "route": "h3",
+      "width": 640,
+      "height": 384,
+      "fps": 20,
+      "frames": 60,
+      "seconds": 3
+    },
+    {
+      "id": "data-neon",
+      "name": "Data Neon",
+      "poster": "/clips/presets/data-neon.jpg",
+      "sources": [
+        {
+          "src": "/clips/presets/data-neon.webm",
+          "type": "video/webm; codecs=\"vp9\"",
+          "bytes": 28700
+        }
+      ],
+      "bytes": 35782,
+      "route": "h3",
+      "width": 640,
+      "height": 384,
+      "fps": 20,
+      "frames": 60,
+      "seconds": 3
+    }
+  ]
+}

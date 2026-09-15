@@ -1,11 +1,6 @@
 "use client";
 
-// STEP 1 — Research. Two sections behind a switcher, because one page was
-// getting long enough that the board pushed the run controls off-screen:
-//
-//   · TOPIC — the input, the run log, and the notebook reference.
-//   · BOARD — locked until a notebook exists, then the triage board and the
-//             follow-up queue, to the end of the page.
+// STEP 1 — Research.
 //
 // The run itself is a BACKGROUND JOB (lib/jobs). Research is minutes of careful
 // work; holding the screen for it would be the wrong trade, so the step starts a
@@ -30,13 +25,27 @@
 //
 // THE TWO FACES (2026-08-30). The educational surface branches once more: the
 // guided card wizard (guided/GuidedResearch.tsx, on the deck engine) and the
-// expert Topic/Board tabs are two faces over ONE run wiring and ONE scope
-// record — the wiring lives in guided/useEducationalResearch.ts so neither
-// face forks it, the face choice under phase key "research-mode", and the
-// DEFAULT face is computed (guided only while the step holds no decisions),
-// never stored. Switching discards nothing, in either direction.
+// expert board are two faces over ONE run wiring and ONE scope record — the
+// wiring lives in guided/useEducationalResearch.ts so neither face forks it,
+// the face choice under phase key "research-mode", and the DEFAULT face is
+// computed (guided only while the step holds no decisions), never stored.
+// Switching discards nothing, in either direction.
+//
+// THE EXPERT FACE IS TRIAGE ONLY (2026-09-08). It used to be a Topic/Board tab
+// pair, and the Topic tab was a second complete run surface — field, run button,
+// spend control, trace, artifact pills — beside the guided face's own. Two ways
+// to start one run, on one step, is the repetition that makes a page hard to
+// orient in, and the tab strip existed only to hold them apart. Operator's
+// ruling: you run research in the guided flow, and the expert face is where you
+// work the cards. So `TopicPanel` is deleted, the tab strip with it, and the
+// expert face renders the board directly — with the notebook's artifacts and the
+// way back to the wizard in its own header, because losing the tabs must not
+// lose the exits that were riding on them.
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+
+import { BookOpenCheck } from "lucide-react";
 
 import Modal from "@/components/ui/Modal";
 import { getProject, type Discipline } from "@/lib/projects";
@@ -46,10 +55,10 @@ import EvidenceLog from "../_shared/notebook/EvidenceLog";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
 import { saveStep, type GuidedModeStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
+import { usePhaseReport } from "../_shared/usePhaseReport";
 
 import ResearchTriageBoard from "./ResearchTriageBoard";
 import FollowUpQueue from "./_parts/FollowUpQueue";
-import TopicPanel from "./_parts/TopicPanel";
 import { ClearDialog, ConfirmScope } from "./_parts/ScopeGate";
 import { useScope } from "./useScope";
 import { resetFollowUps } from "./useFollowUps";
@@ -57,9 +66,8 @@ import BeatVariantBoard from "./beats/BeatVariantBoard";
 import ModeChooser, { ModeSwitch } from "./beats/ModeChooser";
 import { useBeatPicks } from "./beats/useBeatPicks";
 import GuidedResearch, { FaceSwitch, type Face } from "./guided/GuidedResearch";
+import { ArtifactPills } from "./guided/RunStage";
 import { useEducationalResearch } from "./guided/useEducationalResearch";
-
-type Tab = "topic" | "board";
 
 export default function ResearchStep({ projectId }: { projectId: string }) {
   // The project record, read the way StudioView reads it (`getProject` in an
@@ -108,6 +116,23 @@ function BeatsResearch({
 }) {
   const beats = useBeatPicks(projectId);
 
+  // WHAT THIS SURFACE REPORTS TO THE SHELF (derive, never assert). A pick is
+  // work; a composed spine is the creator's own checkpoint — the one act on
+  // this step that reads as a sign-off, so it is the one that earns `done`.
+  // Reopening it is `working` again. The facts mode reports from its own
+  // surface below.
+  usePhaseReport(
+    projectId,
+    "research",
+    !beats.hydrated || beats.mode !== "beats"
+      ? null
+      : beats.confirmed
+        ? "done"
+        : Object.values(beats.picks).some(Boolean)
+          ? "working"
+          : null,
+  );
+
   // Held here as well as inside BeatVariantBoard, because the CHOOSER is the
   // surface that must not flash: a free project with a stored mode would show
   // "which kind of research is this?" for one frame before answering itself.
@@ -148,6 +173,21 @@ function EducationalResearch({ projectId }: { projectId: string }) {
   // guided/useEducationalResearch.ts so neither face forks it.
   const research = useEducationalResearch(projectId);
   const api = useScope(projectId);
+
+  // WHAT THIS SURFACE REPORTS TO THE SHELF. A notebook exists → in progress;
+  // the scope checkpoint is taken → locked (the checkpoint IS the creator's
+  // sign-off on what travels); the board has moved since → needs a call.
+  usePhaseReport(
+    projectId,
+    "research",
+    !research.hydrated || !api.hydrated || !research.ready
+      ? null
+      : api.confirmed
+        ? api.diverged.length > 0
+          ? "review"
+          : "done"
+        : "working",
+  );
 
   /* --------------------------------------------------------------- the face */
   // The stored choice, under its own phase key ("research-mode") — see
@@ -203,26 +243,42 @@ function EducationalFaces({
   defaultFace: Face;
   onSwitchFace: (mode: Face) => void;
 }) {
-  const [tab, setTab] = useState<Tab>("topic");
+  const router = useRouter();
   const [artifact, setArtifact] = useState<"notebook" | "evidence" | null>(null);
   const [confirmClear, setConfirmClear] = useState(false);
   // The frozen default — what this step looked like when it was opened.
   const [fallback] = useState<Face>(defaultFace);
   const shown = face ?? fallback;
 
-  const { run, topic, setTopic, ready, running, startResearch, abortResearch } = research;
+  const { run, ready, live } = research;
 
   // Everything the ClearDialog says is discarded, discarded. The follow-up
   // record is the third document this step owns — it lives above React so that
   // navigation cannot lose it (useFollowUps.ts), which also means nothing here
   // ended it, and a returned deepen from the cleared run came back under the
   // next run's board.
+  //
+  // `live.reset()` is the FOURTH, added with the real-run path (run/live.ts). It
+  // is the one that also reaches DISK — the reasoned notebook has its own step
+  // record — because a cleared step that leaves a notebook in the store
+  // re-adopts it on the next mount and the creator's clear silently undoes
+  // itself. tests/golden-path/step-clear-completeness.probe.spec.ts walks this
+  // function's body for each store's reset by name.
+  //
+  // WHERE A CLEAR LANDS YOU. It used to be `setTab("topic")` — back to the run
+  // controls, which is the only sensible place to be with no notebook. The tabs
+  // are gone and the expert face is the board, so clearing there would leave the
+  // creator staring at the empty shape of the thing they just discarded. The
+  // guided face is where a run is started now, so that is where a cleared step
+  // goes. On the guided face this is a no-op it already agrees with: the wizard
+  // re-deals from stage 1 once `ready` is false.
   const doClear = () => {
     run.reset();
+    live.reset();
     api.reset();
     resetFollowUps(projectId);
     setConfirmClear(false);
-    setTab("topic");
+    onSwitchFace("guided");
   };
 
   return (
@@ -235,60 +291,23 @@ function EducationalFaces({
           onOpenEvidence={() => setArtifact("evidence")}
           onClear={() => setConfirmClear(true)}
           onSwitchFace={onSwitchFace}
+          // The wizard's last stage hands the creator to Step 2 — it used to
+          // open the expert board, so a first-timer who had confirmed the
+          // scope was shown more controls instead of the script (uat
+          // 2026-09-05, KW-L1-4). The rail click this stands in for parks the
+          // project there (StudioView reads ?step= changes after open).
+          onFinish={() => router.push(`/studio/${projectId}?step=script`)}
         />
       ) : (
-        <>
-          <div className="font-jetbrains flex flex-wrap items-center gap-2 text-label">
-            {([
-              { key: "topic", label: "Topic", sub: "input, log & notebook" },
-              { key: "board", label: "Triage board", sub: ready ? "scope the material" : "locked until a notebook exists" },
-            ] as const).map((t) => {
-              const locked = t.key === "board" && !ready;
-              return (
-                <button
-                  key={t.key}
-                  data-testid={`tab-${t.key}`}
-                  onClick={() => !locked && setTab(t.key)}
-                  disabled={locked}
-                  className={`rounded-xl border px-3.5 py-2 text-left transition ${
-                    tab === t.key
-                      ? "border-cyan-400/40 bg-cyan-400/[0.07]"
-                      : locked
-                        ? "cursor-not-allowed border-white/6 bg-white/[0.01] opacity-45"
-                        : "border-white/8 bg-white/[0.02] hover:border-white/20"
-                  }`}
-                >
-                  <span className="block text-white/85">{t.label}</span>
-                  <span className="mt-0.5 block text-label text-white/35">{t.sub}</span>
-                </button>
-              );
-            })}
-            <span className="ml-auto">
-              <FaceSwitch face="expert" onSwitch={onSwitchFace} />
-            </span>
-          </div>
-
-          {tab === "topic" ? (
-            <TopicPanel
-              run={run}
-              topic={topic}
-              setTopic={setTopic}
-              running={running}
-              onStart={startResearch}
-              onAbort={abortResearch}
-              onClear={() => setConfirmClear(true)}
-              onOpenNotebook={() => setArtifact("notebook")}
-              onOpenEvidence={() => setArtifact("evidence")}
-              onGoToBoard={() => setTab("board")}
-            />
-          ) : (
-            <>
-              <ResearchTriageBoard api={api} />
-              <FollowUpQueue api={api} projectId={projectId} />
-              <ConfirmScope api={api} />
-            </>
-          )}
-        </>
+        <ExpertBoard
+          api={api}
+          projectId={projectId}
+          ready={ready}
+          onOpenNotebook={() => setArtifact("notebook")}
+          onOpenEvidence={() => setArtifact("evidence")}
+          onClear={() => setConfirmClear(true)}
+          onSwitchFace={onSwitchFace}
+        />
       )}
 
       <ClearDialog open={confirmClear} onClose={() => setConfirmClear(false)} onConfirm={doClear} />
@@ -308,10 +327,9 @@ function EducationalFaces({
         title="Evidence log"
         eyebrow={
           <p className="font-jetbrains text-content tracking-[0.18em] text-cyan-300/80 uppercase">
-            notebook.json · every claim dated, sourced and rated
+            notebook.json
           </p>
         }
-        subtitle="Nothing the script says may go beyond what this log supports."
         footer={
           <p className="font-jetbrains text-content text-white/35">
             {NOTEBOOK_COUNTS.flagged === 0
@@ -323,6 +341,91 @@ function EducationalFaces({
         <EvidenceLog />
       </Modal>
 
+    </div>
+  );
+}
+
+/** THE EXPERT FACE — the triage board, and nothing that is not triage.
+ *
+ *  What the tab strip used to hold, and where each piece went:
+ *   · the run (field, button, spend control, trace) → the guided face owns it.
+ *     There is one run wiring and it is reached from one place.
+ *   · the notebook and evidence-log pills, and Clear → this header. They are
+ *     what you do to a notebook you already have, which is what this face is
+ *     for. Same component and same testids as the wizard's own row.
+ *   · the way to the other face → this header's own FaceSwitch, which is where
+ *     it already was (TabRail's `trailing` slot).
+ *
+ *  NOBODY IS STRANDED WITH NO NOTEBOOK. The board's cards come from the run, so
+ *  with none the board is empty — and an empty board on the face that cannot
+ *  start one is a dead end. So the empty state is not a description of the
+ *  board; it is the way out of it, and the switch is the button in it. */
+function ExpertBoard({
+  api,
+  projectId,
+  ready,
+  onOpenNotebook,
+  onOpenEvidence,
+  onClear,
+  onSwitchFace,
+}: {
+  api: ReturnType<typeof useScope>;
+  projectId: string;
+  /** The simulated run landed — there is a notebook, so there are cards. */
+  ready: boolean;
+  onOpenNotebook: () => void;
+  onOpenEvidence: () => void;
+  onClear: () => void;
+  onSwitchFace: (f: Face) => void;
+}) {
+  return (
+    <div className="space-y-5">
+      {/* NO EYEBROW OF ITS OWN. The board underneath brings one ("triage
+          board", ResearchTriageBoard's header) and two stacked eyebrows is the
+          repetition this wave is removing. The row is the exits only. */}
+      <div className="flex flex-wrap items-center justify-end gap-2.5">
+        {ready && (
+          <ArtifactPills
+            onOpenNotebook={onOpenNotebook}
+            onOpenEvidence={onOpenEvidence}
+            onClear={onClear}
+          />
+        )}
+        <FaceSwitch face="expert" onSwitch={onSwitchFace} />
+      </div>
+
+      {ready ? (
+        <>
+          <ResearchTriageBoard api={api} />
+          <FollowUpQueue api={api} projectId={projectId} />
+          <ConfirmScope api={api} />
+        </>
+      ) : (
+        <section
+          data-testid="expert-board-empty"
+          className="rounded-2xl border border-white/8 bg-white/[0.015] p-6"
+        >
+          <div className="flex flex-wrap items-center gap-3">
+            <BookOpenCheck className="h-5 w-5 shrink-0 text-cyan-300/70" aria-hidden />
+            <p className="font-jetbrains text-content text-white/55">
+              the board is dealt from a notebook — this project has none yet
+            </p>
+          </div>
+          {/* THE ACTION, not a sentence about where the action is. The grey
+              FaceSwitch above is navigation and reads as navigation; this is
+              the one thing there is to do here, so it is drawn as the primary
+              it is. Both go to the same face, which is the honest answer to
+              "where do I start research" now that this one cannot. */}
+          <button
+            type="button"
+            data-testid="expert-board-start"
+            onClick={() => onSwitchFace("guided")}
+            className="font-jetbrains mt-4 rounded-full border border-cyan-400/35 bg-cyan-400/[0.07] px-3.5 py-1.5 text-label text-cyan-200 transition hover:bg-cyan-400/15 focus-visible:outline-2 focus-visible:outline-offset-2"
+          >
+            start the research →
+          </button>
+        </section>
+      )}
     </div>
   );
 }

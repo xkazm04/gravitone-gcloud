@@ -35,6 +35,7 @@ import type { Aspect, ImageRef } from "@/lib/imaging/types";
 import { NO_TEXT, TRANSFER_SCENES, critiqueInstruction, readbackInstruction, replicaPrompt, singletonInstruction, synthesisPrompt, transferPrompt } from "./prompts";
 import type {
   Critique,
+  SettleReason,
   ExtractManifest,
   ExtractOptions,
   ExtractedStyle,
@@ -125,7 +126,13 @@ function tripped(m: ExtractManifest, io: EngineIO, what: string): boolean {
  *  whose image exists but whose critique failed is kept — the pixels cost
  *  money and the critique is retried by the next round's logic only if the
  *  loop is still open. Returns how many were pruned; resets the breaker and
- *  puts the run back in a live stage. */
+ *  puts the run back in a live stage.
+ *
+ *  A run with NOTHING to prune is left exactly as it was. This used to fall
+ *  through regardless — a clean `done` run lost its `finished` stamp, went
+ *  back to `replicating`, and finished a second time with a second "done"
+ *  line, while stepRun's comment called the retry a no-op. Zero pruned means
+ *  zero touched. */
 export function pruneFailures(m: ExtractManifest): number {
   let n = 0;
   for (const s of m.sources)
@@ -145,6 +152,7 @@ export function pruneFailures(m: ExtractManifest): number {
     st.transfers = st.transfers.filter((t) => t.file);
     n += before - st.transfers.length;
   }
+  if (n === 0) return 0;
   m.fail_streak = 0;
   delete m.error;
   delete m.finished;
@@ -187,16 +195,30 @@ function replicaSources(m: ExtractManifest, s: ExtractedStyle): string[] {
   return s.members.filter((id) => m.sources.find((x) => x.id === id)?.readback).slice(0, m.options.replicas);
 }
 
-/** Has this replica's loop ended? Either the round cap was reached, the
- *  target was met, or the last round produced no usable fix to try. */
-function replicaSettled(m: ExtractManifest, rounds: ReplicaRound[]): boolean {
-  if (!rounds.length) return false;
-  if (rounds.length >= m.options.rounds) return true;
+/** WHY this replica's loop ended, or null while it is still running.
+ *
+ *  Same order and same conditions `replicaSettled` has always used — this
+ *  function only stops throwing the reason away. A settled replica is settled
+ *  for one of four reasons and two of them are the loop giving up; nothing
+ *  downstream could tell them apart while this returned a boolean. */
+export function settleReason(m: ExtractManifest, rounds: ReplicaRound[]): SettleReason | null {
+  if (!rounds.length) return null;
+  if (rounds.length >= m.options.rounds) return "round-cap";
   const last = rounds[rounds.length - 1];
-  if (last.error && !last.file) return true; // generation failed: do not burn rounds on a refusal
-  if (typeof last.score === "number" && last.score >= m.options.target) return true;
-  if (!usableFix(last.critique, last.recipe)) return true;
-  return false;
+  if (last.error && !last.file) return "generation-failed"; // do not burn rounds on a refusal
+  if (typeof last.score === "number" && last.score >= m.options.target) return "target-met";
+  if (!usableFix(last.critique, last.recipe)) return "no-usable-fix";
+  return null;
+}
+
+/** Has this replica's loop ended? Either the round cap was reached, the
+ *  target was met, or the last round produced no usable fix to try.
+ *
+ *  Deliberately unchanged in behaviour: the scheduler and the progress strip
+ *  both want "will more work happen here", and for that question an abandoned
+ *  replica is as finished as a successful one. */
+function replicaSettled(m: ExtractManifest, rounds: ReplicaRound[]): boolean {
+  return settleReason(m, rounds) !== null;
 }
 
 /** The next unit of work, or null when the run is finished. Pure over the
@@ -478,12 +500,18 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
         // within one minor field of each other will come back from the
         // generator as twins. The synthesis rules try to prevent this; when
         // they fail, say so where the cull will read it.
+        //
+        // A run can FINISH MORE THAN ONCE — a retry prunes failed units and
+        // walks back here — and this used to append the pair on every pass,
+        // so a run retried twice carried `similar_to: [b, b, b]` and three
+        // copies of the warning in its log. The pair is recorded once.
         for (const [a, b] of nearDuplicates(m.styles)) {
           const sa = m.styles.find((s) => s.id === a)!;
           const sb = m.styles.find((s) => s.id === b)!;
-          sa.similar_to = [...(sa.similar_to ?? []), b];
-          sb.similar_to = [...(sb.similar_to ?? []), a];
-          log(m, io, `warning: ${a} and ${b} differ by at most one minor observable — the generator likely renders them identically; consider keeping one`);
+          const fresh = !(sa.similar_to ?? []).includes(b);
+          sa.similar_to = [...new Set([...(sa.similar_to ?? []), b])];
+          sb.similar_to = [...new Set([...(sb.similar_to ?? []), a])];
+          if (fresh) log(m, io, `warning: ${a} and ${b} differ by at most one minor observable — the generator likely renders them identically; consider keeping one`);
         }
       }
       m.finished = io.now();

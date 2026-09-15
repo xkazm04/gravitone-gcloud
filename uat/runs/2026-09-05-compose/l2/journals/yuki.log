@@ -1,0 +1,45 @@
+· goto /projects/new
+· click "deck-card-trailer"
+· click {"role":"button","name":{}}
+· click "deck-card-cinematic"
+· click {"role":"button","name":{}}
+ok   style stage offers presets for trailer — presets=6 borrowed=true
+· click "deck-card-preset:signal-ledger"
+· click {"role":"button","name":{}}
+· fill {"css":"#w-title"} ← "Emberline — series pitch cinematic"
+· fill {"css":"#w-dur"} ← "90"
+· snap 01-wizard-name-stage
+· click {"role":"button","name":{}}
+ok   studio headline is the name typed — Emberline — series pitch cinematic
+ok   header pill states discipline · template · runtime
+· recorded p-mtokkgys-akx3fl → uat/runs/2026-09-05-compose/created.json
+ok   header pill: Movie · game trailer · Cinematic · 90s
+· goto /studio/p-mtokkgys-akx3fl?step=research
+ok   research not reported before any pick — {"research":"empty","script":"empty","frames":"empty","score":"empty","cut":"empty"}
+· click "variant-cold-open-b"
+ok   one pick → research 'working' — {"research":"working","script":"empty","frames":"empty","score":"empty","cut":"empty"}
+· click "variant-intro-a"
+· click "variant-esc1-a"
+· click "variant-esc2-a"
+· click "variant-esc3-a"
+· click "variant-reset-a"
+· click "variant-climax-a"
+· click "variant-tail-a"
+ok   every part picked — 8 of 8 parts picked — the spine is whole.
+· click "compose-spine"
+ok   spine composed
+ok   composed spine → research 'done' (locked) — {"research":"done","script":"empty","frames":"empty","score":"empty","cut":"empty"}
+· goto /studio/p-mtokkgys-akx3fl?step=script
+ok   structure report lists findings by rule — 12
+· snap 02-yuki-structure
+· goto /studio/p-mtokkgys-akx3fl?step=research
+· click "reopen-spine"
+ok   reopened → research back to 'working' — {"research":"working","script":"working","frames":"empty","score":"empty","cut":"empty"}
+· goto /studio/p-mtokkgys-akx3fl?step=script
+ok   Script says the spine is reopened and this is the last composed cut
+· click "step-script"
+· goto /studio/p-mtokkgys-akx3fl
+ok   reload lands on Script
+· goto /projects
+ok   shelf research cell reflects the reopen (in progress) — Research — in progress · open here
+· snap 03-yuki-shelf

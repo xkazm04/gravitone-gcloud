@@ -38,7 +38,9 @@
     ".next-drive/types/**/*.ts",
     ".next-drive/dev/types/**/*.ts",
     ".next-live/types/**/*.ts",
-    ".next-live/dev/types/**/*.ts"
+    ".next-live/dev/types/**/*.ts",
+    ".next-inspect/types/**/*.ts",
+    ".next-inspect/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

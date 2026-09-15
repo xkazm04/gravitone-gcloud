@@ -13,13 +13,39 @@
 //
 // Still mocked below the rail: every step surface renders app/_studio's Glass
 // Harbor fixture whatever project is open. The pill in the header says so.
+//
+// ONE WORD, TWO DESTINATIONS — fixed 2026-09-08.
+// This header used to draw a two-button toggle, "Project | Library", on the row
+// under the app nav. The app nav's own "Library" is a ROUTE (/library, the
+// cross-project shelf everything is built from); this one was a VIEW SWITCH
+// (app/_library, what THIS project produced). Two controls, same word, three
+// inches apart, going to different places — and both drawn as rounded segmented
+// groups, so the toggle also read as a peer of the five-step rail directly
+// below it, as though "Library" were a sixth step.
+//
+// The fix changes the word AND the kind, because the word alone had already
+// been tried once (see the MODULES comment in components/ui/StudioFrame.tsx,
+// which claimed the collision settled while this file kept saying "Library"):
+//  · WORD — "Outputs". It says what the shelves hold rather than borrowing the
+//    name of the place they are not.
+//  · KIND — one pressed disclosure button, iconed and counted, sitting on the
+//    PROJECT'S TITLE LINE. Places you can go are word-links in the app chrome;
+//    work you walk through is the numbered rail; a view of the thing you are
+//    already inside is a single button attached to that thing's name. Three
+//    kinds, three shapes, no sentence explaining any of them.
+//  · The studio now holds exactly ONE segmented control, and it is the rail.
+//
+// The rail stays on screen while Outputs is open, and any step click closes it
+// (see `pick`): the way back to the work is the same control the work is
+// navigated with, so the shelf can never become a room you are stuck in.
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import { Boxes, FileQuestion, X } from "lucide-react";
+
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Eyebrow } from "@/components/ui/Primitives";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useAuth } from "@/lib/useAuth";
 import {
@@ -34,6 +60,7 @@ import {
 } from "@/lib/projects";
 
 import LibraryShelves from "../../_library/LibraryShelves";
+import { ASSETS } from "../../_studio/assets";
 import { STEPS } from "./phases";
 import Stepper from "./Stepper";
 
@@ -80,7 +107,10 @@ export default function StudioView({ projectId }: { projectId: string }) {
 
   const [project, setProject] = useState<Project | null>(null);
   const [door, setDoor] = useState<Door>({ kind: "opening" });
-  const [view, setView] = useState<"project" | "library">("project");
+  // Not a "view" any more, and not a route: a disclosure. Closed is the default
+  // and is the studio doing its job; open is the creator glancing at what this
+  // project has made so far.
+  const [outputsOpen, setOutputsOpen] = useState(false);
   const [phaseKey, setPhaseKey] = useState<PhaseKey>("script");
 
   useEffect(() => {
@@ -152,6 +182,11 @@ export default function StudioView({ projectId }: { projectId: string }) {
    */
   const pick = (key: PhaseKey) => {
     setPhaseKey(key);
+    // A rail click is a return to the work, whether or not the step changed —
+    // so it is also how the Outputs shelf closes. The shelf keeps the rail
+    // visible precisely so this is true; there is no state in which the primary
+    // navigation of the studio is off screen.
+    setOutputsOpen(false);
     if (!id || !user) return;
     void (async () => {
       try {
@@ -175,6 +210,34 @@ export default function StudioView({ projectId }: { projectId: string }) {
     })();
   };
 
+  // A `?step=` that CHANGES while the studio is open is the user moving the
+  // rail from inside a step (a wizard's "Go to Step 2" hands off this way), so
+  // it moves the rail AND parks like a rail click. The initial deep link is
+  // still read once above and does not park — that rule is unchanged. The rail
+  // move is a derive-from-props adjustment (no effect); the park is the same
+  // async write `pick` makes, in a callback.
+  const initialWanted = useRef(wanted);
+  const [seenWanted, setSeenWanted] = useState(wanted);
+  if (wanted !== seenWanted) {
+    setSeenWanted(wanted);
+    if (door.kind === "open" && wanted && (PHASES as readonly string[]).includes(wanted))
+      setPhaseKey(wanted as PhaseKey);
+  }
+  useEffect(() => {
+    if (door.kind !== "open" || !id || !user) return;
+    if (!wanted || wanted === initialWanted.current) return;
+    if (!(PHASES as readonly string[]).includes(wanted)) return;
+    void (async () => {
+      try {
+        await parkAt(id, wanted as PhaseKey);
+        const fresh = await getProject(id);
+        if (fresh && fresh.uid === user.uid) setProject(fresh);
+      } catch (e) {
+        reportStorageTrouble("write", id, "bookmark", e);
+      }
+    })();
+  }, [wanted, door.kind, id, user]);
+
   const step = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
   // The headline is the project's name when there is one. When there is not, it
   // says which of the three doors this is rather than sitting on "opening…"
@@ -197,68 +260,113 @@ export default function StudioView({ projectId }: { projectId: string }) {
           components/ui/Modal.tsx#restoreFocus. */}
       <main tabIndex={-1} className="pb-16">
         <header className="pt-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Eyebrow>studio</Eyebrow>
+          {/* THE ROW ABOVE THE TITLE IS GONE (operator, 2026-09-09), and its
+              two survivors moved onto the title's own line.
+
+              It held three things. `studio` was the third label for one
+              location: StudioFrame's nav marks the current module with a rule
+              under it, the project's name is directly below, and nothing on
+              this page is anywhere but the studio. The spec pill and the
+              prototype stamp are the WORK — what this project is, and that its
+              data is mocked — so they moved rather than went; on the title line
+              they read as facts ABOUT the named project, which is what they are.
+              The row itself cost a whole row of vertical space to say one word.
+
+              `items-baseline` so the two chips sit on the serif's own baseline
+              rather than floating at the centre of a 4xl line box. */}
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-3">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-2">
+              <h1
+                // The one element that says WHICH of the four doors this is —
+                // the project's name, or the sentence for absent / unreadable /
+                // still opening. `data-door` carries the machine-readable half
+                // so a harness asserts the state rather than pattern-matching
+                // the copy, which is the half that gets rewritten.
+                data-testid="studio-headline"
+                data-door={door.kind}
+                className={`font-instrument text-4xl ${door.kind === "opening" ? "text-white/30" : "text-white"}`}
+              >
+                {headline}
+              </h1>
+
+              {/* WHAT THIS PROJECT IS — discipline, format, runtime — beside
+                  the name it describes rather than a row above it. Only when
+                  there is a project to describe; the three closed doors have no
+                  spec, and a chip drawn over "Nothing to open here" would be
+                  describing a record that is not there. */}
               {project && (
                 <span className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label tracking-[0.14em] text-white/55 uppercase">
                   {DISCIPLINE_LABEL[project.discipline ?? disciplineOf(project.template)]} ·{" "}
                   {templateOf(project.template).label} · {project.targetS}s
                 </span>
               )}
+
+              {/* The stamp stays unconditional: what it discloses is true of
+                  the whole surface, including the doors that failed to open. */}
               <span className="font-jetbrains rounded-full border border-amber-400/25 bg-amber-400/5 px-3 py-1 text-label tracking-[0.18em] text-amber-300/90 uppercase">
                 prototype · mocked data
               </span>
             </div>
 
-            {/* view toggle: the production vs the shelves it fills */}
-            <div className="font-jetbrains flex gap-2 text-label">
-              {(
-                [
-                  { key: "project", label: "Project" },
-                  { key: "library", label: "Library" },
-                ] as const
-              ).map((v) => (
-                <button
-                  key={v.key}
-                  onClick={() => setView(v.key)}
-                  className={`cursor-pointer rounded-full border px-4 py-1.5 transition ${
-                    view === v.key
-                      ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
-                      : "border-white/10 text-white/50 hover:text-white/80"
+            {/* WHAT THIS PROJECT HAS MADE, hung off the project's own name.
+                Position is the argument: the app nav's four word-links sit in
+                the chrome above and lead OUT; this sits on the title line and
+                opens something belonging to the title. It is drawn as one
+                button rather than a segmented pair so that nothing in this
+                studio is shaped like the rail except the rail.
+
+                Pressed state carries two signals, because hue may not carry it
+                alone: the glyph swaps to an X — the affordance itself becomes
+                "close" — and the surface fills. The tally is the count of what
+                is on the shelves, which is the whole reason to look.
+
+                Only when the door is open: an absent or unreadable project has
+                no shelves, and the toggle used to render (and open!) over both. */}
+            {door.kind === "open" && project && (
+              <button
+                type="button"
+                data-testid="studio-outputs"
+                aria-pressed={outputsOpen}
+                onClick={() => setOutputsOpen((open) => !open)}
+                className={`font-jetbrains flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-label transition ${
+                  outputsOpen
+                    ? "border-cyan-400/45 bg-cyan-400/10 text-cyan-200"
+                    : "border-white/12 text-white/60 hover:border-white/25 hover:text-white/90"
+                }`}
+              >
+                {outputsOpen ? (
+                  <X className="h-4 w-4" aria-hidden />
+                ) : (
+                  <Boxes className="h-4 w-4" aria-hidden />
+                )}
+                Outputs
+                <span
+                  className={`rounded-full px-1.5 text-label ${
+                    outputsOpen ? "bg-cyan-400/15 text-cyan-100/80" : "bg-white/8 text-white/45"
                   }`}
                 >
-                  {v.label}
-                </button>
-              ))}
-            </div>
+                  {ASSETS.length}
+                </span>
+              </button>
+            )}
           </div>
-
-          <h1
-            // The one element that says WHICH of the four doors this is — the
-            // project's name, or the sentence for absent / unreadable / still
-            // opening. `data-door` carries the machine-readable half so a
-            // harness asserts the state rather than pattern-matching the copy,
-            // which is the half that gets rewritten.
-            data-testid="studio-headline"
-            data-door={door.kind}
-            className={`font-instrument mt-4 text-4xl ${door.kind === "opening" ? "text-white/30" : "text-white"}`}
-          >
-            {headline}
-          </h1>
         </header>
 
-        {view === "library" ? (
-          <LibraryShelves />
-        ) : door.kind === "absent" ? (
+        {door.kind === "absent" ? (
           <div
             data-testid="door-absent"
             className="mt-6 rounded-2xl border border-white/10 bg-white/[0.02] px-5 py-4"
           >
-            <p className="font-hanken text-content leading-snug text-slate-300">
-              This address does not name a project on your account. Either it was deleted, or it
-              belongs to a different account signed in on this browser — the studio will not say
-              which, and cannot open it either way.
+            {/* The headline above says "Nothing to open here" — that string is
+                asserted by pipeline/cx-capture.mjs and does not move. What was
+                under it restated it in four clauses and then narrated the app's
+                own reticence ("the studio will not say which, and cannot open
+                it either way"). The two possibilities ARE the work — the doctrine
+                at the top of this file spends a paragraph on why both are named
+                and neither is chosen — so both survive, in one clause. */}
+            <p className="font-hanken flex items-start gap-2 text-content leading-snug text-slate-300">
+              <FileQuestion className="mt-0.5 h-4 w-4 shrink-0 text-white/40" aria-hidden />
+              Deleted, or owned by another account signed in on this browser.
             </p>
             <Link
               href="/projects"
@@ -272,13 +380,15 @@ export default function StudioView({ projectId }: { projectId: string }) {
             data-testid="door-storage"
             className="mt-6 rounded-2xl border border-rose-400/30 bg-rose-400/5 px-5 py-4"
           >
-            {/* Same voice as /projects' banner, because it is the same failure —
-                and it says the same thing about whose fault it is. The work is
-                not gone; this browser would not hand it over. */}
-            <p className="font-hanken text-content leading-snug text-rose-200">
-              {door.message} — this project lives in this browser&rsquo;s storage, and it did not
-              answer. Nothing has been lost; nothing can be read or saved until it does.
-            </p>
+            {/* THE MESSAGE IS THE WORK AND IT IS ALL THAT IS LEFT. studioDb
+                rejects with a real sentence — "storage is open in another tab",
+                the browser's own quota error — and it is the only thing here
+                that knows what actually happened. The two sentences that
+                followed it re-taught where a project lives and reassured that
+                nothing is lost, which is the app talking about itself over the
+                top of a real machine error. The headline says the project could
+                not be read; this says why. */}
+            <p className="font-hanken text-content leading-snug text-rose-200">{door.message}</p>
             <Link
               href="/projects"
               className="font-jetbrains mt-3 inline-block rounded-lg border border-rose-400/30 px-3 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/10"
@@ -288,12 +398,21 @@ export default function StudioView({ projectId }: { projectId: string }) {
           </div>
         ) : (
           <>
+            {/* The rail is drawn in every open state, INCLUDING while the
+                Outputs shelf is up. It keeps showing the step the work is
+                parked at, which is where a click returns you — the shelf is a
+                glance sideways, not a place that replaced the studio. That is
+                also why the shelf never became a route. */}
             {project && (
               <div className="mt-6">
                 <Stepper active={phaseKey} progress={project.progress} onPick={pick} />
               </div>
             )}
-            <section className="mt-8">{project ? step.render(project.id) : null}</section>
+            {/* LibraryShelves brings its own mt-8, so the section adds none
+                when it is the one rendering. */}
+            <section className={outputsOpen ? undefined : "mt-8"}>
+              {!project ? null : outputsOpen ? <LibraryShelves /> : step.render(project.id)}
+            </section>
           </>
         )}
       </main>

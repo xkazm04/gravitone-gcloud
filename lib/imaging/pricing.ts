@@ -136,6 +136,17 @@ export const PRICES: readonly ModelPrice[] = [
   // because the adapter rotates across three SKUs on quota
   // (providers/qwen.ts:29-31) and one per-call figure could not be right for
   // all three even if we had it.
+  // Ollama — local inference on this machine's GPU. No vendor bill exists,
+  // which is a real price, not a missing one.
+  {
+    provider: "ollama",
+    model: "qwen3.8:27b",
+    bills: "per-image",
+    usdPerImage: 0,
+    source:
+      "Local inference (Ollama on this box's own GPU). The electricity is real but nobody invoices it; $0 is the vendor-billed truth, and the point of the provider.",
+    checked: "2026-09-01",
+  },
   {
     provider: "qwen",
     model: "qwen3.8-max",

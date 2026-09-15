@@ -31,6 +31,13 @@ const config = [
     // them would grade code this repo does not author.
     ignores: [
       "node_modules/**",
+      // UAT L2 SCRIPT FRAGMENTS. `uat/runs/<id>/l2/*.js` are not modules: the
+      // driver concatenates `_prelude.js` + `<character>.js` and evaluates the
+      // result as ONE async function body (uat/driver/drive-script.mjs), so each
+      // file on its own declares helpers it never calls or calls helpers it
+      // never declares. Graded standalone they are 19 false "unused" errors
+      // (measured 2026-09-05). The driver itself, uat/driver/*.mjs, stays linted.
+      "uat/runs/**/l2/*.js",
       // AGENT TOOLING, AND — THE REASON THIS ENTRY EXISTS — AGENT WORKTREES.
       //
       // `.claude/worktrees/<name>/` holds a git worktree: a SECOND FULL CHECKOUT
@@ -142,7 +149,9 @@ const config = [
     //
     // PROMOTION TRIGGER (falsifiable): when a bucket below reaches 0 in
     // `lint-baseline.json`, delete its entry there AND its entry here, so the rule
-    // stands at the plain blocking severity the preset gives it.
+    // stands at the plain blocking severity the preset gives it. Graduated so
+    // far: `react-hooks/immutability` (0 in the 2026-08-29 baseline, promoted
+    // 2026-09-05 — a seeded prop mutation now fails `lint:ratchet` as an error).
     //
     // SCOPED to the extensions the Next preset actually registers the
     // react-hooks plugin for. Without the `files` key this object applies to
@@ -153,7 +162,6 @@ const config = [
     files: ["**/*.{js,mjs,jsx,ts,tsx,mts}"],
     rules: {
       "react-hooks/set-state-in-effect": "warn",
-      "react-hooks/immutability": "warn",
       "react-hooks/refs": "warn",
     },
   },
