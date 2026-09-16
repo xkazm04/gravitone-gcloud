@@ -165,3 +165,13 @@ __pycache__/
 # where pipeline/check-clips.mjs weighs them. Keeping the raws would put the
 # expensive, machine-specific half of the pipeline in every clone.
 /pipeline/runs/preset-clips/
+
+# /consult log. Installation-local, and the reason is arithmetic rather than
+# taste: scripts/signals-collect.mjs in the ai-registry SUMS these lines into
+# per-subject consult and deviation counts with no identity key, so a row that
+# survives into a second checkout is counted as a second observation. The lane
+# is "one file per contributing installation" (docs/signals-lane.md) and this is
+# where that rule is kept. Its sibling .ai/registry-leads.jsonl is the opposite
+# case and stays tracked: leads-collect.mjs dedupes on (ts, bundle, claim), so
+# the same lead seen twice is recognised, not double-counted.
+/.ai/consults.jsonl
