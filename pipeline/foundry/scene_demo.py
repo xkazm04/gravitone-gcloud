@@ -35,6 +35,33 @@ The scene is original and IP-neutral. Unlike the nine plates it does NOT avoid
 faces or two-figure contact: those were avoided in the plate library for
 generation-risk reasons, and avoiding them is precisely what made the plates
 scene-free.
+
+MEASURED 2026-09-20 by `vlm-probe/identity.py` (scale: identity floor 0.3644 =
+same actor across a real cut; hard ceiling 0.6246 = different actor, same
+costume; look floor 0.5923):
+
+    ref-keeper / s5-turn    identity 0.3620   look 0.7152
+        -> "same person, as tight as real film" - it BEATS the real-film floor,
+           and it beats it although the keeper loses his wire-rimmed glasses
+           between the two frames. The eye called that an identity drift; the
+           ruler says glasses are costume, not identity.
+    ref-broker / ref-keeper identity 0.8040   look 0.5580   (negative control,
+        correctly "different person", and the world HOLDS between them)
+    ref-broker / s5-turn    identity 0.8245                 (correctly different)
+
+    LOOK is the failure: 0.7152 against a 0.5923 floor on the one pair that
+    could be scored, i.e. the WORLD drifts more between our shots than a real
+    film's world drifts across a cut. That is the location-continuity gap
+    banked as a lead on 2026-09-07 (reference-role-map has a location role and
+    no continuity rule), now carrying a number.
+
+    18 of 21 pairs were UNSCORED: MIN_FACE_PX is 80 and at 1280x544 only
+    close-ups clear it. Measured face heights: s1-master 59px, s3-ots-broker
+    56px, s2-ots-keeper 70px, s5-turn 175px, refs 136/187px. The real-film
+    anchors sit at 82-88px for mediums, so the threshold is calibrated, not
+    arbitrary. **Render this scene at 1920x816 (1.5x) and all three failing
+    shots clear the bar** (88 / 84 / 105px) - which is the precondition for
+    measuring identity across a coverage progression at all.
 """
 import json
 import shutil
