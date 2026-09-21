@@ -119,6 +119,63 @@
       ]
     },
     {
+      "api_surface": "ComfyUI workflow API (local), Replicate API (cloud generation)",
+      "business_feature": "Character Consistency Evaluation",
+      "category": "lib",
+      "cross_refs": [
+        "vlm-frame-annotation",
+        "probe-frame-data"
+      ],
+      "db_tables": [],
+      "description": "Evaluates whether a generated character's visual identity holds across camera setups (stills) and across time within a clip (motion), using a ruler calibrated against real film rather than self-reported scores. identity.py provides the two-axis ruler (FaceNet/VGGFace2 for identity, DINOv2 for look) anchored to measured floor and ceiling values from Star Wars: Duel of the Fates; consistency.py and motion.py run generation lanes (baseline, reference-conditioned, Ref2VA, chain) that must beat those anchors. reconcile.py, survey.py, style.py and palette_measure.py handle the complementary visual-style and corpus-design passes.",
+      "entry_points": [
+        "pipeline/vlm-probe/identity.py",
+        "pipeline/vlm-probe/consistency.py",
+        "pipeline/vlm-probe/CORPUS-DESIGN.md"
+      ],
+      "file_paths": [
+        "pipeline/vlm-probe/consistency.py",
+        "pipeline/vlm-probe/identity.py",
+        "pipeline/vlm-probe/motion.py",
+        "pipeline/vlm-probe/replicate.py",
+        "pipeline/vlm-probe/fetch_ref2va.py",
+        "pipeline/vlm-probe/style.py",
+        "pipeline/vlm-probe/palette_measure.py",
+        "pipeline/vlm-probe/reconcile.py",
+        "pipeline/vlm-probe/survey.py",
+        "pipeline/vlm-probe/corpus.json",
+        "pipeline/vlm-probe/CONSISTENCY-FINDINGS.md",
+        "pipeline/vlm-probe/CONSISTENCY-SPIKE.md",
+        "pipeline/vlm-probe/CORPUS-DESIGN.md"
+      ],
+      "group": "Imaging Pipeline",
+      "group_id": "b4efa9ce-69e1-4be5-a959-cde521a32c40",
+      "id": "d490a4c1-21c2-49a6-b9b2-306c506b8928",
+      "keywords": [
+        "character-consistency",
+        "identity-ruler",
+        "facenet",
+        "dinov2",
+        "reference-conditioning",
+        "ref2va",
+        "chain",
+        "flux",
+        "generation-lanes",
+        "visual-style"
+      ],
+      "last_written_at": "2026-09-21T20:38:45.416485200+00:00",
+      "name": "character-consistency-testing",
+      "pinned": false,
+      "tech_stack": [
+        "Python 3.12",
+        "FaceNet/VGGFace2",
+        "DINOv2",
+        "MTCNN",
+        "DETR",
+        "ComfyUI"
+      ]
+    },
+    {
       "api_surface": "",
       "business_feature": "CLI & Infrastructure Verification",
       "category": "test",
@@ -275,6 +332,57 @@
       ]
     },
     {
+      "api_surface": "",
+      "business_feature": "Dojo Training Evaluation",
+      "category": "lib",
+      "cross_refs": [
+        "foundry-forge"
+      ],
+      "db_tables": [],
+      "description": "Implements the dojo training evaluation loop — a controlled A/B harness that measures whether a named technique (e.g. ref-early, text-only) improves style fidelity over a baseline, using local (Flux 2 / Wan) or Google (Nano Banana / Gemini) stacks with strict stack-purity rules. Includes style extraction from unseen galleries via a step-machine that reads observables, partitions styles, critiques recipes, and transfers them onto neutral scenes; results feed training-ledger.json and the ai-registry knowledge path. Depends on foundry-forge for the style catalogue and vlm-probe for the vision ruler.",
+      "entry_points": [
+        "pipeline/foundry/dojo_run.py",
+        "pipeline/foundry/extract.mts"
+      ],
+      "file_paths": [
+        "pipeline/foundry/dojo_run.py",
+        "pipeline/foundry/dojo_pairs.py",
+        "pipeline/foundry/dojo_judge.py",
+        "pipeline/foundry/dojo_measure.py",
+        "pipeline/foundry/dojo_study.py",
+        "pipeline/foundry/dojo_video.py",
+        "pipeline/foundry/dojo_video_h3.py",
+        "pipeline/foundry/training-ledger.json",
+        "pipeline/foundry/DEEP-READ-PROMPT.md"
+      ],
+      "group": "Content Pipeline",
+      "group_id": "4db8a885-17e3-4530-b63b-87dd1a238476",
+      "id": "5f28a7aa-bb6d-4846-9def-ea436e2a1812",
+      "keywords": [
+        "dojo",
+        "extract",
+        "training",
+        "A/B",
+        "judge",
+        "measure",
+        "study",
+        "video",
+        "fixture",
+        "recipe"
+      ],
+      "last_written_at": "2026-09-21T20:37:18.152760800+00:00",
+      "name": "foundry-dojo",
+      "pinned": false,
+      "tech_stack": [
+        "Python 3.12",
+        "TypeScript",
+        "Wan",
+        "Gemini",
+        "Ollama",
+        "Flux 2"
+      ]
+    },
+    {
       "api_surface": "GET /api/foundry/runs, GET/PUT /api/foundry/runs/[id]/verdicts, POST /api/foundry/runs/[id]/commit, POST /api/foundry/extract, POST /api/foundry/extract/[id]/step, GET /api/foundry/file",
       "business_feature": "Foundry Engine",
       "category": "api",
@@ -338,6 +446,61 @@
       "tech_stack": [
         "Next.js 16.3",
         "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Style Forge & Culling",
+      "category": "lib",
+      "cross_refs": [
+        "foundry-dojo"
+      ],
+      "db_tables": [],
+      "description": "Runs the mass-generation and hand-culling loop that turns reference frames into a versioned style catalogue. The forge crosses scenes against style recipes and grading mechanisms to produce candidate images, which a human then keeps or rejects via the /foundry UI; committed verdicts update ledger.json and styles.json — the two durable artefacts the trial-matrix technique prescribes. Depends on ComfyUI (Flux 2) for generation, Ollama/Gemini for vision grading, and vlm-probe frames as source material.",
+      "entry_points": [
+        "pipeline/foundry/forge.py",
+        "pipeline/foundry/README.md"
+      ],
+      "file_paths": [
+        "pipeline/foundry/forge.py",
+        "pipeline/foundry/acquire.py",
+        "pipeline/foundry/intake.py",
+        "pipeline/foundry/grade.py",
+        "pipeline/foundry/motion_energy.py",
+        "pipeline/foundry/scenario_probe.py",
+        "pipeline/foundry/scene_demo.py",
+        "pipeline/foundry/selftest.py",
+        "pipeline/foundry/styles.json",
+        "pipeline/foundry/ledger.json",
+        "pipeline/foundry/plans/dry-run.json",
+        "pipeline/foundry/plans/sweep-01.json",
+        "pipeline/foundry/SCENARIO-ENVELOPE.md",
+        "pipeline/foundry/README.md"
+      ],
+      "group": "Content Pipeline",
+      "group_id": "4db8a885-17e3-4530-b63b-87dd1a238476",
+      "id": "8a6d90d5-c6d1-4937-9228-f5787eb49f2a",
+      "keywords": [
+        "forge",
+        "style",
+        "grade",
+        "candidate",
+        "ledger",
+        "trial-matrix",
+        "cull",
+        "scenario",
+        "recipe",
+        "Flux"
+      ],
+      "last_written_at": "2026-09-21T20:37:18.151952200+00:00",
+      "name": "foundry-forge",
+      "pinned": false,
+      "tech_stack": [
+        "Python 3.12",
+        "ComfyUI",
+        "Flux 2",
+        "Ollama",
+        "Gemini"
       ]
     },
     {
@@ -515,6 +678,106 @@
       "pinned": false,
       "tech_stack": [
         "Next.js 16.3",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Asset Shelf Browser",
+      "category": "ui",
+      "cross_refs": [
+        "library-atelier"
+      ],
+      "db_tables": [],
+      "description": "The reusable-asset shelf that organises promoted proof plates into a folder tree users can browse, refile, rename and delete. Assets are pointers into the imaging store rather than copies; the browser manages drag-and-drop refiling, a context menu, a plate viewer, and a move dialog. Depends on useAssets, lib/assets, and IndexedDB.",
+      "entry_points": [
+        "app/library/AssetsBrowser.tsx",
+        "app/library/assets/useShelf.ts"
+      ],
+      "file_paths": [
+        "app/library/AssetsBrowser.tsx",
+        "app/library/FolderTree.tsx",
+        "app/library/MoveDialog.tsx",
+        "app/library/ContextMenu.tsx",
+        "app/library/assets/EmptyShelf.tsx",
+        "app/library/assets/shelf.ts",
+        "app/library/assets/ShelfDialogs.tsx",
+        "app/library/assets/ShelfGallery.tsx",
+        "app/library/assets/Tile.tsx",
+        "app/library/assets/useShelf.ts"
+      ],
+      "group": "Asset Management",
+      "group_id": "dbf64836-e57a-49bd-885a-eeab7ed06182",
+      "id": "bb43e25c-f710-4c40-a3a1-11942a3b8d68",
+      "keywords": [
+        "shelf",
+        "asset",
+        "folder",
+        "tile",
+        "gallery",
+        "drag-drop",
+        "refile",
+        "plate",
+        "promotion",
+        "browser"
+      ],
+      "last_written_at": "2026-09-21T20:37:03.048942500+00:00",
+      "name": "library-assets-browser",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "consumes POST /api/imaging/generate",
+      "business_feature": "Style Atelier",
+      "category": "ui",
+      "cross_refs": [
+        "library-assets-browser"
+      ],
+      "db_tables": [],
+      "description": "The visual-identity studio where users create, proof, and lock styles that all projects are built from. Users start from a preset, iterate proof images against the style block via the imaging API, judge each proof, and lock the style when it is ready. Depends on useThemes, useAssets, imagingClient, and the IndexedDB asset store.",
+      "entry_points": [
+        "app/library/LibraryView.tsx",
+        "app/library/LibraryAtelier.tsx"
+      ],
+      "file_paths": [
+        "app/library/page.tsx",
+        "app/library/LibraryView.tsx",
+        "app/library/LibraryAtelier.tsx",
+        "app/library/parts.tsx",
+        "app/library/presets.ts",
+        "app/library/PresetRail.tsx",
+        "app/library/PresetShowcase.tsx",
+        "app/library/SpecEditor.tsx",
+        "app/library/Playground.tsx",
+        "app/library/assetMeta.ts",
+        "app/library/AssetLightbox.tsx",
+        "app/library/trials.ts"
+      ],
+      "group": "Asset Management",
+      "group_id": "dbf64836-e57a-49bd-885a-eeab7ed06182",
+      "id": "5bf3aa6a-c33f-4a41-bf75-43975f9152d5",
+      "keywords": [
+        "style",
+        "preset",
+        "proof",
+        "lock",
+        "atelier",
+        "theme",
+        "palette",
+        "discipline",
+        "dossier",
+        "visual-identity"
+      ],
+      "last_written_at": "2026-09-21T20:37:03.047560600+00:00",
+      "name": "library-atelier",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
         "TypeScript"
       ]
     },
@@ -746,6 +1009,69 @@
         "TypeScript",
         "Playwright",
         "Node.js"
+      ]
+    },
+    {
+      "api_surface": "",
+      "business_feature": "Probe Frame Data",
+      "category": "data",
+      "cross_refs": [
+        "vlm-frame-annotation",
+        "character-consistency-testing"
+      ],
+      "db_tables": [],
+      "description": "Stores the per-source frame manifests that record which frames were extracted and how (sampling strategy, timestamps, quality gates), the ground-truth annotation sidecars for frames generated with known camera and lighting specifications, and the shot-generation lane configuration files used by the consistency and motion evaluation runs. Frame manifests bridge the raw media and the annotation results; truth sidecars are the only part of the evaluation that measures accuracy rather than agreement; lane configs encode the character, location and shot prompts for each experiment variant.",
+      "entry_points": [
+        "pipeline/vlm-probe/frames/truth/duel-keyframe.json",
+        "pipeline/vlm-probe/shots/baseline/lane.json"
+      ],
+      "file_paths": [
+        "pipeline/vlm-probe/frames/ac3-e3-manifest.json",
+        "pipeline/vlm-probe/frames/arcane-fights-manifest.json",
+        "pipeline/vlm-probe/frames/lotr-scene-manifest.json",
+        "pipeline/vlm-probe/frames/matrix-bullets-manifest.json",
+        "pipeline/vlm-probe/frames/mk11-announce-manifest.json",
+        "pipeline/vlm-probe/frames/sc2-legacy-void-manifest.json",
+        "pipeline/vlm-probe/frames/spiderman2-be-greater-manifest.json",
+        "pipeline/vlm-probe/frames/sw-duel-of-fates-manifest.json",
+        "pipeline/vlm-probe/frames/swtor-deceived-manifest.json",
+        "pipeline/vlm-probe/frames/swtor-sacrifice-manifest.json",
+        "pipeline/vlm-probe/frames/transformers-freeway-manifest.json",
+        "pipeline/vlm-probe/frames/truth/arcane.json",
+        "pipeline/vlm-probe/frames/truth/duel-keyframe.json",
+        "pipeline/vlm-probe/frames/wow-battle-azeroth-manifest.json",
+        "pipeline/vlm-probe/frames/wow-shadowlands-manifest.json",
+        "pipeline/vlm-probe/frames/wukong-preorder-manifest.json",
+        "pipeline/vlm-probe/shots/baseline/lane.json",
+        "pipeline/vlm-probe/shots/baseline-zoom/lane.json",
+        "pipeline/vlm-probe/shots/reference/lane.json",
+        "pipeline/vlm-probe/shots/reference-face-e25/lane.json",
+        "pipeline/vlm-probe/shots/reference-face-late/lane.json",
+        "pipeline/vlm-probe/shots/reference-face-only/lane.json",
+        "pipeline/vlm-probe/clips/chain/lane.json",
+        "pipeline/vlm-probe/clips/ref2va/lane.json"
+      ],
+      "group": "Content Pipeline",
+      "group_id": "4db8a885-17e3-4530-b63b-87dd1a238476",
+      "id": "cb736239-b48b-4b73-882b-c973e17b4392",
+      "keywords": [
+        "frame-manifest",
+        "ground-truth",
+        "shot-lane",
+        "sampling",
+        "truth-labels",
+        "generation-config",
+        "reference-conditioning",
+        "chain",
+        "ref2va",
+        "experiment-lanes"
+      ],
+      "last_written_at": "2026-09-21T20:38:45.988289400+00:00",
+      "name": "probe-frame-data",
+      "pinned": false,
+      "tech_stack": [
+        "Python 3.12",
+        "ffmpeg"
       ]
     },
     {
@@ -1494,51 +1820,118 @@
       ]
     },
     {
-      "api_surface": "",
-      "business_feature": "VLM Style Probe & Research Archive",
+      "api_surface": "Leonardo /generations-image-to-video (v2, explicit model id); Ollama /api/chat (qwen3.8:27b); ComfyUI local queue",
+      "business_feature": "Video Clip Generation",
       "category": "lib",
       "cross_refs": [
-        "pipeline-scripts",
-        "imaging-service"
+        "ai-orchestration"
       ],
       "db_tables": [],
-      "description": "A Python experiment that evaluates whether a vision-language model can accurately read visual style attributes off reference video frames. The probe extracts scene-change frames via FFmpeg, feeds them to a VLM and writes readback JSON, then scores the results against hand-authored ground-truth annotations to produce accuracy figures. It also holds archived research run outputs — a notebook, tone profiles, and three script renders — from the first end-to-end pipeline experiment on the Bitcoin topic.",
+      "description": "Generates, animates, quality-checks, and transcodes the short video clips that replace static preset swatches in the UI. It covers three authoring routes — LLM-derived motion prompts fed to a local Wan render stack, a numpy sprite-compositing path that holds background by construction, and a hosted Leonardo reference purchase — plus post-render tools for retiming, side-by-side comparison, GPU profiling, and byte-budget transcoding to committed WebM artefacts. The pipeline depends on a local ComfyUI/Wan/H3 stack, the Flux inpainting service, and the qwen3.8:27b VLM annotator already used by the dojo.",
       "entry_points": [
-        "pipeline/vlm-probe/README.md",
-        "pipeline/vlm-probe/score.py",
-        "pipeline/runs/2026-08-11-why-bitcoin-price-does-not-rise/notebook.json"
+        "pipeline/video/README.md",
+        "pipeline/video/render_preset_clips.py",
+        "pipeline/video/transcode.mjs"
       ],
       "file_paths": [
-        "pipeline/vlm-probe/extract_frames.py",
-        "pipeline/vlm-probe/ingest.py",
-        "pipeline/vlm-probe/score.py"
+        "pipeline/video/motion_author.py",
+        "pipeline/video/compose_clip.py",
+        "pipeline/video/leonardo_reference.py",
+        "pipeline/video/gpu_trace.py",
+        "pipeline/video/transcode.mjs",
+        "pipeline/video/compare.py",
+        "pipeline/video/retime.py",
+        "pipeline/video/clip_check.py",
+        "pipeline/video/render_preset_clips.py",
+        "pipeline/video/README.md",
+        "pipeline/video/flux_still.py"
       ],
-      "group": "Content Pipeline",
-      "group_id": "4db8a885-17e3-4530-b63b-87dd1a238476",
-      "id": "7dfa4ab0-fdef-409c-bd59-06924cd44a14",
+      "group": "Production Pipeline",
+      "group_id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
+      "id": "e9a96029-cbf6-44e5-b660-b38242d0ae6b",
       "keywords": [
-        "vlm",
-        "vision",
-        "probe",
-        "frames",
-        "ground-truth",
-        "score",
-        "readback",
-        "research-run",
-        "notebook",
-        "tone-profiles",
-        "ffmpeg"
+        "video-clip",
+        "image-to-video",
+        "motion-prompt",
+        "wan",
+        "h3",
+        "comfyui",
+        "inpainting",
+        "sprite-compositing",
+        "retime",
+        "transcode",
+        "webm",
+        "clip-quality",
+        "concentration",
+        "retention",
+        "gpu-trace"
       ],
-      "last_written_at": "2026-09-08T16:37:53.362067200+00:00",
-      "name": "vlm-probe",
+      "last_written_at": "2026-09-21T20:37:03.305463900+00:00",
+      "name": "video-clip-pipeline",
       "pinned": false,
       "tech_stack": [
-        "Python",
-        "FFmpeg"
+        "Python 3.12",
+        "NumPy",
+        "Pillow",
+        "ffmpeg",
+        "Node.js",
+        "ComfyUI",
+        "Ollama"
+      ]
+    },
+    {
+      "api_surface": "Ollama /api/generate (local), Gemini generateContent REST API",
+      "business_feature": "VLM Frame Annotation",
+      "category": "lib",
+      "cross_refs": [
+        "character-consistency-testing",
+        "probe-frame-data"
+      ],
+      "db_tables": [],
+      "description": "Measures whether a locally-hosted vision model can annotate film frames to a cinematography vocabulary (shot size, angle, lens register, lighting, composition) well enough to build a corpus — or whether that job requires a metered frontier API. probe.py drives both Ollama (local) and Gemini (remote) backends against an identical schema and prompt defined in schema.py, so any quality gap is a model gap rather than a prompt gap. score.py evaluates results in disqualifying order: schema validity, truth-set accuracy (frames we generated ourselves), yardstick agreement, and cost.",
+      "entry_points": [
+        "pipeline/vlm-probe/probe.py",
+        "pipeline/vlm-probe/schema.py",
+        "pipeline/vlm-probe/score.py"
+      ],
+      "file_paths": [
+        "pipeline/vlm-probe/schema.py",
+        "pipeline/vlm-probe/probe.py",
+        "pipeline/vlm-probe/score.py",
+        "pipeline/vlm-probe/extract_frames.py",
+        "pipeline/vlm-probe/ingest.py",
+        "pipeline/vlm-probe/guard.py",
+        "pipeline/vlm-probe/beats.py",
+        "pipeline/vlm-probe/build_gallery.py",
+        "pipeline/vlm-probe/fetch_curl.sh",
+        "pipeline/vlm-probe/README.md"
+      ],
+      "group": "Imaging Pipeline",
+      "group_id": "b4efa9ce-69e1-4be5-a959-cde521a32c40",
+      "id": "1fcced52-ba63-4939-8918-f98d8a6fb42a",
+      "keywords": [
+        "vlm",
+        "frame-annotation",
+        "cinematography",
+        "ollama",
+        "gemini",
+        "shot-size",
+        "lens-register",
+        "schema",
+        "scoring",
+        "corpus"
+      ],
+      "last_written_at": "2026-09-21T20:38:45.988585+00:00",
+      "name": "vlm-frame-annotation",
+      "pinned": false,
+      "tech_stack": [
+        "Python 3.12",
+        "Ollama",
+        "Gemini API"
       ]
     }
   ],
-  "generated_at": "2026-09-09T09:27:08.839968800+00:00",
+  "generated_at": "2026-09-21T20:38:46.082678500+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -1550,21 +1943,21 @@
     },
     {
       "color": "blue",
-      "context_count": 8,
+      "context_count": 9,
       "domain": "feature",
       "id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
       "name": "Production Pipeline"
     },
     {
       "color": "emerald",
-      "context_count": 3,
+      "context_count": 5,
       "domain": "feature",
       "id": "dbf64836-e57a-49bd-885a-eeab7ed06182",
       "name": "Asset Management"
     },
     {
       "color": "violet",
-      "context_count": 1,
+      "context_count": 3,
       "domain": "integration",
       "id": "b4efa9ce-69e1-4be5-a959-cde521a32c40",
       "name": "Imaging Pipeline"
@@ -1592,7 +1985,7 @@
     },
     {
       "color": "red",
-      "context_count": 4,
+      "context_count": 6,
       "domain": "data",
       "id": "4db8a885-17e3-4530-b63b-87dd1a238476",
       "name": "Content Pipeline"
@@ -1604,12 +1997,12 @@
     "root": "C:\\Users\\kazda\\kiro\\gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "962e09c331bae3803a8790c8fc59ef008c9bc56c",
-    "git_commit_count": 572
+    "git_commit": "773f4d83dd927d8fab9686dce8fdf66c27087957",
+    "git_commit_count": 602
   },
   "stats": {
-    "contexts": 27,
-    "files": 400,
+    "contexts": 34,
+    "files": 500,
     "groups": 8,
     "use_cases": 0
   },
