@@ -122,7 +122,9 @@ test("Lane2b/editPlan: an insert's afterBeatAt is checked too — the silent REL
   // afterBeatAt does not resolve, so the beat ships at the close of the script.
   const bad = {
     ...okPlan(),
-    edits: [{ renderId: RID, op: "insert", afterBeatAt: "9:99", text: "x", cards: ["f-ath"], why: "x" }],
+    // `connector` is declared so the MARK is the only thing wrong: an insert
+    // without one now fails on the contract first (edit-plan-connector probe).
+    edits: [{ renderId: RID, op: "insert", afterBeatAt: "9:99", connector: "THEREFORE", text: "x", cards: ["f-ath"], why: "x" }],
   };
   expect(() => parseEditPlan(JSON.stringify(bad))).toThrow(/names no beat/i);
 });
