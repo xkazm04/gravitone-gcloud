@@ -4,6 +4,7 @@
 // rests on, the limits it declared, how long it stays true, and what the run
 // never looked at.
 
+import { HazardLine } from "../Chips";
 import FactRow from "../FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../notebook";
 import { H, SECTION_LABEL, sectionRenders } from "./H";
@@ -126,6 +127,7 @@ export default function ApparatusSections() {
               <span className="text-white">{e.label}</span>
               {e.recommended && <span className="font-jetbrains ml-2 text-label text-emerald-300">recommended</span>}
               <span className="block text-white/45">{e.why}</span>
+              <HazardLine hazard={e.hazard} />
             </span>
           </div>
         ))}

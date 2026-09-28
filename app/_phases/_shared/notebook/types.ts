@@ -352,7 +352,11 @@ export interface EngineFit {
    *  and the catalogue never asked what a wrong render costs.
    *
    *  Anti-shape: demoting `fit` to carry the warning. That hides the engine from
-   *  selection instead of arming the person selecting it. */
+   *  selection instead of arming the person selecting it.
+   *
+   *  Required for new notebooks (lib/notebook/validate.ts), where "" means
+   *  assessed, none found. Optional here only because the run-1 fixture
+   *  predates it: undefined means never asked, and `HazardLine` draws it so. */
   hazard?: string;
 }
 

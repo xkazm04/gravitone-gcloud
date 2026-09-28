@@ -136,3 +136,28 @@ export function ConfidenceChip({ c }: { c: Confidence }) {
     </span>
   );
 }
+
+/** The second axis of engine fit, drawn beside the first where an engine is
+ *  chosen. `hazard` was stored from the start and read by nothing, so the
+ *  warning the research wrote stopped at the notebook and `fit: good` reached
+ *  the person adopting the engine alone. The gauntlet's 2026-08-12 notebooks
+ *  carried "REFUSE" and "HIGH FIT, HIGH HAZARD" on `good` rows; a surface that
+ *  shows only `fit` renders those as a recommendation.
+ *
+ *  Three states, and the two blanks are NOT the same reading:
+ *    · text      — the cost of a wrong render, shown as a warning;
+ *    · ""        — assessed, none found (NOTEBOOK-SCHEMA.md);
+ *    · undefined — never asked. Drawn as such, because an unasked axis that
+ *                  renders as nothing reads as clean. */
+export function HazardLine({ hazard }: { hazard: string | undefined }) {
+  if (hazard === undefined)
+    return <span className="font-jetbrains block text-label tracking-[0.12em] text-white/30">hazard not assessed</span>;
+  if (hazard.trim() === "")
+    return <span className="font-jetbrains block text-label tracking-[0.12em] text-white/35">hazard: none found</span>;
+  return (
+    <span className="block text-amber-200/80">
+      <span className="font-jetbrains mr-1.5 text-label tracking-[0.12em] text-amber-300/90">hazard</span>
+      {hazard}
+    </span>
+  );
+}

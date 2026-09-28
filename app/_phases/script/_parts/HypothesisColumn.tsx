@@ -2,6 +2,7 @@
 
 import { StaleBadge } from "@/components/ui/signal";
 
+import { HazardLine } from "../../_shared/notebook/Chips";
 import { NOTEBOOK } from "../../_shared/notebook/notebook";
 import ConstraintLedger from "./ConstraintLedger";
 import GatePanel from "./GatePanel";
@@ -61,6 +62,12 @@ export default function HypothesisColumn({
             fit: {fit?.fit ?? "—"}
           </span>
         </p>
+        {/* Beside fit, before adopt: the hazard is read at selection, not after. */}
+        {fit && (
+          <p className="mt-1 text-content leading-relaxed">
+            <HazardLine hazard={fit.hazard} />
+          </p>
+        )}
         <p className="mt-1 text-content leading-relaxed text-slate-400">
           pleasure: {r.pleasure}. Reads like {r.feelsLike}.
         </p>

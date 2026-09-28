@@ -307,9 +307,12 @@ export const NOTEBOOK_SCHEMA = {
           fit: { type: "string", enum: ["excellent", "good", "poor"] },
           why: { type: "string" },
           recommended: { type: "boolean" },
-          hazard: { type: "string", description: "what a WRONG render through this engine costs" },
+          hazard: {
+            type: "string",
+            description: "what a WRONG render through this engine costs; empty string means assessed, none found",
+          },
         },
-        required: ["engine", "label", "fit", "why"],
+        required: ["engine", "label", "fit", "why", "hazard"],
       },
     },
     currency: {
@@ -538,6 +541,13 @@ function shapeFindings(nb: Record<string, unknown>): string[] {
   /* engine fit — Phase 8. Reported, never chosen (rule 10). */
   if (!arr(nb.engineFit) || nb.engineFit.length === 0)
     say("`engineFit` is empty. Phase 8 assesses fit from the material; the human decides (rule 10).");
+  else
+    nb.engineFit.forEach((raw, i) => {
+      // Required, and "" is a valid answer. A record with no hazard key never
+      // asked the second axis, and a blank that renders as nothing reads as clean.
+      if (isObj(raw) && typeof raw.hazard !== "string")
+        say(`engineFit[${i}].hazard is missing. Write "" for assessed, none found; a missing key means never asked.`);
+    });
 
   /* gaps — Phase 9 */
   const gaps = nb.researchGaps;
