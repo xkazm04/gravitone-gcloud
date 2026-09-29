@@ -91,7 +91,7 @@ for (const d of WORLD_CSS_DIRS) {
     fs.readFileSync(file, "utf8").split("\n").forEach((line, i) => {
       for (const m of line.matchAll(FONT_SIZE_DECL)) {
         const value = m[2].replace(/var\([^)]*\)/g, "");
-        for (const n of value.matchAll(/(\d+(?:\.\d+)?)(px|rem)/g)) {
+        for (const n of value.matchAll(/(\d+(?:\.\d+)?)(px|rem)\b/g)) {
           const px = Number(n[1]) * (n[2] === "rem" ? 16 : 1);
           if (px < WORLD_CSS_FLOOR_PX) findings.push(`${rel}:${i + 1} — ${m[1]} ${n[0]} (world CSS floor is ${WORLD_CSS_FLOOR_PX}px)`);
         }
