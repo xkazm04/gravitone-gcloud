@@ -1,17 +1,20 @@
-// THE DOOR — the public landing. No headline, no subtitle, no feature list:
-// one picture at page scale that says what the studio is, and one button that
-// opens Google's sign-in. Everything behind it is gated (components/ui/AuthGate).
+// THE DOOR — the public landing. One picture at page scale that says what the
+// studio is (a star atlas of real candidates, four of them picked and joined by
+// a cut), and one button that opens Google's sign-in. Everything behind it is
+// gated (components/ui/AuthGate).
 //
-// The studio itself used to live at this route; it now sits at /studio, opened
-// from a row on /projects.
+// The studio itself lives at /studio, opened from a row on /projects.
 //
-// Prototype round 1 ran three doors — an aperture (the studio as a lens), a
-// transport (the studio as a finished cut) and this one. The contact sheet won:
-// the other two drew the instrument and the result, and only this one draws the
-// WORK — candidates on a wall, four of them ringed because somebody decided.
+// History: round 1 ran three doors (an aperture, a transport, a contact sheet);
+// the contact sheet won and shipped as a wall of thirty frames. On 2026-09-29
+// the owner chose the Almanac from contest landing-nextgen-brand-r2 to replace
+// it: see app/_landing/Door.tsx.
+//
+// The optional `slot` on the door is where the brand kit's link will sit once
+// the /kit route exists; nothing fills it yet.
 
-import GateContactSheet from "./_landing/GateContactSheet";
+import Door from "./_landing/Door";
 
 export default function LandingPage() {
-  return <GateContactSheet />;
+  return <Door />;
 }
