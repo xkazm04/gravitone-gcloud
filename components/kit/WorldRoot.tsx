@@ -10,6 +10,7 @@
 import { WorldProvider } from "@/components/ui/world";
 
 import "./kit.css";
+import "./workbench.css";
 import { Sky } from "./Sky";
 
 export function WorldRoot({ children, className = "" }: { children: React.ReactNode; className?: string }) {

@@ -16,6 +16,7 @@
 // re-dealt, which is the deck saying "this decision is open again".
 
 import { Button } from "../Primitives";
+import { useWorld } from "../world";
 import StageRail from "./StageRail";
 
 export interface DeckStageDef {
@@ -103,6 +104,7 @@ export default function Deck({
   /** A low-key way out of the wizard (a Link back to where it was opened). */
   exit?: React.ReactNode;
 }) {
+  const almanac = useWorld() === "almanac";
   const stage = stages[active];
   const isLast = active === stages.length - 1;
   /** A "pick" stage has no forward control — its cards are the control. */
@@ -113,7 +115,7 @@ export default function Deck({
     i <= active || stages.slice(0, i).every((s) => s.done);
 
   return (
-    <div className="relative flex min-h-[calc(100dvh-9rem)] flex-col">
+    <div className={`relative flex min-h-[calc(100dvh-9rem)] flex-col${almanac ? " k-deck" : ""}`}>
       {/* header row: the eyebrow and the step rail, and nothing else.
           THE ART BAKE-OFF SWITCH USED TO SIT ON THE RIGHT OF THIS ROW. It was
           rendered unconditionally until 2026-09-08, so every user creating a
@@ -149,12 +151,15 @@ export default function Deck({
 
       {/* the question */}
       <header className="mt-8">
-        <h1 className="font-instrument text-3xl text-white sm:text-4xl">{stage.headline}</h1>
+        {/* Almanac: the question is upright display serif and the supporting
+            line the kit's prose voice (white / vellum, no grey). */}
+        <h1 className={almanac ? "k-deck__q" : "font-instrument text-3xl text-white sm:text-4xl"}>{stage.headline}</h1>
         {/* text-content, never smaller. The stage's supporting line is PROSE the
             user reads to answer the question above it — globals.css's scale puts
             that on the content rung, and it sat on `text-sm` (the label floor,
             for chips and stamps) until 2026-09-06. A subtitle is not a label. */}
-        {stage.sub && (
+        {stage.sub && almanac && <p className="k-prose k-deck__sub">{stage.sub}</p>}
+        {stage.sub && !almanac && (
           <p className="font-hanken mt-2 max-w-2xl text-content leading-relaxed text-slate-400">
             {stage.sub}
           </p>
@@ -169,7 +174,11 @@ export default function Deck({
       {notice && <div className="mt-6">{notice}</div>}
 
       {/* controls */}
-      <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-white/8 pt-5 pb-4">
+      <div
+        className={`mt-10 flex flex-wrap items-center justify-between gap-3 pt-5 pb-4 ${
+          almanac ? "k-deck__foot" : "border-t border-white/8"
+        }`}
+      >
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
@@ -187,7 +196,10 @@ export default function Deck({
         {commits && (
           <div className="flex items-center gap-3">
             {!stage.done && stage.blockedHint && (
-              <span data-testid="deck-blocked-hint" className="font-jetbrains text-label text-white/40">
+              <span
+                data-testid="deck-blocked-hint"
+                className={almanac ? "k-deck__hint" : "font-jetbrains text-label text-white/40"}
+              >
                 {stage.blockedHint}
               </span>
             )}

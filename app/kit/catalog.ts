@@ -223,7 +223,113 @@ export const KIT_GROUPS = [
       { name: "CheckField", api: "<CheckField label checked onChange/>" },
       { name: "FieldRow", api: "<FieldRow>fields</FieldRow>" },
       { name: "PanelBox", api: "<PanelBox>block</PanelBox>" },
+      { name: "Field", api: "<Field label htmlFor? hint?>control</Field>" },
+      { name: "TextInput", api: "<TextInput id value onChange placeholder? aria-invalid?/>" },
+      { name: "TextArea", api: "<TextArea id value onChange rows? placeholder?/>" },
+      { name: "NumberInput", api: "<NumberInput id unit value onChange min? max?/>" },
+      { name: "Select", api: "<Select id value onChange>{<option/>}</Select>" },
+      { name: "Segmented", api: "<Segmented label value options=[{id,label,note?}] onChange/>" },
       { name: "Button", api: '<Button variant="primary|ghost|danger|keep|reject" size="md|sm"/>' },
+    ],
+  },
+  {
+    id: "voice",
+    title: "Claims and outcomes",
+    for: "a claim with its source; the outcome of an action for a moment",
+    parts: [
+      { name: "Callout", api: '<Callout source? tone="gold|ald|ant" size="md|sm" dashed?>the claim</Callout>' },
+      { name: "useToast", api: "const { toasts, push, dismiss } = useToast(); push({ kind, text, action?, ttl?, key? })" },
+      { name: "ToastTray", api: "<ToastTray toasts onDismiss inline? label?/>" },
+    ],
+  },
+  {
+    id: "table",
+    title: "Sortable table",
+    for: "rows that are worked: sortable heads, a head that sticks",
+    parts: [
+      { name: "Table", api: "<Table label columns=[{id,head,cell,sortBy?,num?}] rows sort? defaultSort? onSort? maxHeight? onOpenRow?/>" },
+    ],
+  },
+  {
+    id: "pager",
+    title: "Windowed list",
+    for: "a list that windows itself and shows how much lies beyond",
+    parts: [
+      { name: "Pager", api: "<Pager shown total onMore onAll? step? noun? auto?/>" },
+      { name: "useWindow", api: "useWindow(items, {size?, step?}) -> {visible, shown, total, remaining, more, all, reset}" },
+    ],
+  },
+  {
+    id: "steps",
+    title: "Studio steps",
+    for: "Research, Script, Frames, Score, Cut as stars on a meridian",
+    parts: [
+      { name: "Steps", api: "<Steps label steps=[{id,label,state?,tally?,locked?,testId?}] current onSelect?/>" },
+      { name: "STUDIO_STEPS", api: "[{id,label}] the five steps in production order; the caller sets state and tally" },
+    ],
+  },
+  {
+    id: "roving",
+    title: "Roving focus",
+    for: "one tab stop per grid; the arrows move within it",
+    parts: [
+      { name: "useRoving", api: "useRoving({count, active?, onActive?, onActivate?, arrows?, wrap?}) -> {containerProps, itemProps(i)}; <Tile rovingProps/>" },
+    ],
+  },
+  {
+    id: "account",
+    title: "Account",
+    for: "the bell and the user menu, in <Bar right>",
+    parts: [
+      { name: "NotificationBell", api: "<NotificationBell defaultOpen?/> reads useJobs; skins itself by useWorld" },
+      { name: "UserMenu", api: "<UserMenu defaultOpen?/> reads useAuth; skins itself by useWorld" },
+    ],
+  },
+  {
+    id: "deck",
+    title: "Deck",
+    for: "a full-viewport wizard drawn as a card table (components/ui/deck, in the world)",
+    parts: [
+      { name: "Deck", api: "<Deck stages=[{id,label,headline,done,summary?,blockedHint?,advance?,content}] active onNavigate finishLabel onFinish busy? notice? exit?/>" },
+      { name: "DeckStage", api: "<DeckStage cards pickedId onPick noUnpick? renderCard?/>" },
+      { name: "DeckCard", api: '<DeckCard spec={{id,title,art,density?,eyebrow?,body?,chips?,risk?,footnote?,detail?,disabled?}} picked onPick noUnpick?/>' },
+      { name: "StageRail", api: "<StageRail stages=[{id,label,done,summary?}] active onNavigate reachable/>" },
+    ],
+  },
+  {
+    id: "menu",
+    title: "Menu and tree",
+    for: "a right-click menu over a row; a tree of named places",
+    parts: [
+      { name: "ContextMenu", api: "<ContextMenu label x y items=[{id,label,onSelect,destructive?,disabled?,keys?}] onClose inline?/>" },
+      { name: "FolderTree", api: "<FolderTree label nodes selected expanded onSelect onToggle total? dragActive? over? onOver? onDropOn? onRename? onMenu?/>" },
+    ],
+  },
+  {
+    id: "layers",
+    title: "Layers",
+    for: "SideList rows that reorder",
+    parts: [
+      { name: "LayerList", api: "<LayerList label heading layers=[{id,kind,name,hidden?,flag?}] selectedId emptyLabel onSelect onReorder(id,toIndex) onToggleHidden onRemove/>" },
+    ],
+  },
+  {
+    id: "player",
+    title: "Player",
+    for: "transport marks and a magnitude waveform, controlled",
+    parts: [
+      { name: "Transport", api: "<Transport label playing position duration step? disabled? onToggle onSeek/>" },
+      { name: "Waveform", api: "<Waveform label peaks position duration marks?=[{at,label}] disabled? onSeek/>" },
+      { name: "Player", api: '<Player label kind="audio|video" screen? peaks marks? playing position duration disabled? onToggle onSeek/>' },
+      { name: "clock", api: 'clock(seconds) -> "0:07" | "1:02:03"' },
+    ],
+  },
+  {
+    id: "timeline",
+    title: "Timeline",
+    for: "tracks on a time axis with cues as marks",
+    parts: [
+      { name: "Timeline", api: "<Timeline label duration tracks=[{id,label,clips:[{id,label,start,dur,state?,offset?}]}] cues? playhead? selectedId? onSelect? tick? pxPerSecond?/>" },
     ],
   },
   {

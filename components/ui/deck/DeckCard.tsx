@@ -24,7 +24,9 @@ import { motion } from "motion/react";
 
 import { SURFACE } from "../tokens";
 import { DeckArtView, DeckSceneView, sceneKeyOf } from "./artVariants";
+import DeckCardAlmanac from "./DeckCardAlmanac";
 import { useDeckReducedMotion } from "./motionGuard";
+import { useWorld } from "../world";
 
 /* ── The spec ─────────────────────────────────────────────────────────────── */
 
@@ -151,6 +153,17 @@ export default function DeckCard({
    *  other card, which keeps the banded art zone unchanged. */
   const sceneKey = hero ? sceneKeyOf(spec.art) : undefined;
   const [open, setOpen] = useState(false);
+  // The Almanac world draws its own card (DeckCardAlmanac.tsx); the pick
+  // contract and the deal are this file's, unchanged. Read AFTER every hook so
+  // the hook order is the same in both worlds.
+  const almanac = useWorld() === "almanac";
+  if (almanac) {
+    return (
+      <DeckCardAlmanac spec={spec} picked={picked} onPick={onPick} dealDelay={dealDelay} noUnpick={noUnpick}>
+        {children}
+      </DeckCardAlmanac>
+    );
+  }
 
   const chipRow = spec.chips && spec.chips.length > 0 && (
     <div className="flex flex-wrap items-center gap-1.5">

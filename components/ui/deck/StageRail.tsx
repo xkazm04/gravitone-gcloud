@@ -60,6 +60,8 @@ export interface RailStage {
   summary?: string;
 }
 
+import { useWorld } from "../world";
+
 export default function StageRail({
   stages,
   active,
@@ -73,6 +75,40 @@ export default function StageRail({
    *  deck owns that rule — a rail only asks. */
   reachable: (index: number) => boolean;
 }) {
+  // The Almanac ledger line (kit-grow-g3.css, `k-stg`): the same rule with marks
+  // on it, drawn from the world's tokens. Filled and ringed = here, filled =
+  // answered, dashed ring = not yet; an unreachable stage takes a dashed edge
+  // rather than a dimmer colour.
+  if (useWorld() === "almanac") {
+    return (
+      <ol className="k-stg" aria-label="Stages">
+        {stages.map((s, i) => {
+          const here = i === active;
+          const open = reachable(i);
+          return (
+            <li key={s.id} className="k-stg__st">
+              <button
+                type="button"
+                disabled={!open}
+                aria-current={here ? "step" : undefined}
+                onClick={() => onNavigate(i)}
+                className={`k-stg__b${here ? " is-here" : s.done ? " is-done" : ""}${i <= active ? " is-inked" : ""}`}
+              >
+                <span className="k-stg__n k-caps">
+                  {i + 1} {s.label}
+                </span>
+                <span aria-hidden className="k-stg__rule">
+                  <span className="k-stg__mark" />
+                </span>
+                <span className={`k-stg__sum${s.summary ? "" : " is-blank"}`}>{s.summary ?? "—"}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ol>
+    );
+  }
+
   return (
     <ol className="grid w-full grid-cols-2 gap-y-5 sm:grid-cols-4">
       {stages.map((s, i) => {

@@ -9,10 +9,17 @@
 // <select> renders its options in system chrome against a near-black studio and
 // reads as broken, so choice-of-few is a radio group drawn as pills instead.
 //
+// UNDER A WORLD. Every control here reads useWorld() like Button and Modal do.
+// In the Almanac world the same components draw the kit skin (`k-fld`, `k-ctl`,
+// `k-seg` in components/kit/forms.css): a caps label over a ruled control, gold
+// focus, the chosen segment a filled ring, disabled a dashed edge. Props and
+// markup semantics are identical in both worlds.
+//
 // No colour literal: the cyan/white-alpha utilities here are the rendered form
 // of the accents already declared in components/ui/tokens.ts.
 
 import { useId } from "react";
+import { useWorld } from "./world";
 
 // The placeholder was `text-white/25`: ~2.2:1 against this control's own
 // background, which is not readable text, it is a hint you have to already know.
@@ -62,6 +69,23 @@ export function Field({
   htmlFor?: string;
   children: React.ReactNode;
 }) {
+  const almanac = useWorld() === "almanac";
+  if (almanac) {
+    const head = htmlFor ? (
+      <label htmlFor={htmlFor} className="k-fld__l k-caps">
+        {label}
+      </label>
+    ) : (
+      <span className="k-fld__l k-caps">{label}</span>
+    );
+    return (
+      <div className="k-fld" {...(htmlFor ? {} : { role: "group", "aria-label": label })}>
+        {head}
+        {children}
+        {hint && <p className="k-fld__hint">{hint}</p>}
+      </div>
+    );
+  }
   const body = (
     <>
       {children}
@@ -90,14 +114,47 @@ export function TextInput({
   className = "",
   ...rest
 }: React.InputHTMLAttributes<HTMLInputElement>) {
-  return <input {...rest} className={`${CONTROL} ${className}`} />;
+  const almanac = useWorld() === "almanac";
+  return <input {...rest} className={almanac ? `k-ctl ${className}` : `${CONTROL} ${className}`} />;
 }
 
 export function TextArea({
   className = "",
   ...rest
 }: React.TextareaHTMLAttributes<HTMLTextAreaElement>) {
-  return <textarea {...rest} className={`${CONTROL} resize-none ${className}`} />;
+  const almanac = useWorld() === "almanac";
+  return <textarea {...rest} className={almanac ? `k-ctl k-ctl--area ${className}` : `${CONTROL} resize-none ${className}`} />;
+}
+
+/**
+ * A native <select> in the world's skin. Native on purpose: the option list is
+ * the platform's, so keyboard, type-ahead and screen readers come free. Both
+ * worlds draw the closed control and a chevron and set `color-scheme: dark`, so
+ * the OS popup does not open white on a near-black ground. Three choices or
+ * fewer are still better as <Segmented> (see the header).
+ */
+export function Select({
+  className = "",
+  children,
+  ...rest
+}: React.SelectHTMLAttributes<HTMLSelectElement>) {
+  const almanac = useWorld() === "almanac";
+  return (
+    <span className={almanac ? "k-sel" : "relative block"}>
+      <select
+        {...rest}
+        className={almanac ? `k-ctl k-ctl--select ${className}` : `${CONTROL} appearance-none pr-9 [color-scheme:dark] ${className}`}
+      >
+        {children}
+      </select>
+      <span
+        aria-hidden
+        className={almanac ? "k-sel__chev" : "pointer-events-none absolute inset-y-0 right-3.5 grid place-items-center text-label text-white/60"}
+      >
+        {almanac ? null : "▾"}
+      </span>
+    </span>
+  );
 }
 
 /** A number with its unit welded on, so "300" can never be read as minutes.
@@ -114,6 +171,23 @@ export function NumberInput({
   ...rest
 }: React.InputHTMLAttributes<HTMLInputElement> & { unit: string }) {
   const unitId = useId();
+  const almanac = useWorld() === "almanac";
+  if (almanac) {
+    return (
+      <div className="k-num-in">
+        <input
+          type="number"
+          inputMode="numeric"
+          aria-describedby={[describedBy, unitId].filter(Boolean).join(" ")}
+          {...rest}
+          className={`k-ctl k-ctl--num ${className}`}
+        />
+        <span id={unitId} className="k-num-in__u">
+          {unit}
+        </span>
+      </div>
+    );
+  }
   return (
     <div className="relative">
       <input
@@ -155,7 +229,24 @@ export function Segmented<T extends string>({
   className?: string;
 }) {
   const name = useId();
+  const almanac = useWorld() === "almanac";
   const active = options.find((o) => o.id === value);
+  if (almanac) {
+    return (
+      <fieldset className={`k-seg ${className}`}>
+        <legend className="k-fld__l k-caps">{label}</legend>
+        <div className="k-seg__row">
+          {options.map((o) => (
+            <label key={o.id} className="k-seg__opt" data-on={value === o.id ? "" : undefined}>
+              <input type="radio" name={name} value={o.id} checked={value === o.id} onChange={() => onChange(o.id)} />
+              <span>{o.label}</span>
+            </label>
+          ))}
+        </div>
+        {active?.note && <p className="k-fld__hint">{active.note}</p>}
+      </fieldset>
+    );
+  }
   return (
     <fieldset className={className}>
       <legend className="font-jetbrains mb-1.5 block text-label tracking-[0.18em] text-white/45 uppercase">

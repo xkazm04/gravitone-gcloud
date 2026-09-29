@@ -20,7 +20,7 @@
 
 import { useEffect, useMemo } from "react";
 
-import { Chip, Chips, FlagChip, Matrix, Plate, RowHead, Scene, ScoreChip, Tile, VerdictKeys } from "@/components/kit";
+import { Chip, Chips, FlagChip, Matrix, Plate, RowHead, Scene, ScoreChip, Tile, VerdictKeys, useRoving } from "@/components/kit";
 import type { Candidate, RunManifest, Verdict, Verdicts } from "@/lib/foundry/types";
 
 import { fileUrl } from "./foundryClient";
@@ -80,6 +80,31 @@ export function CullGrid({
   );
   const order = useMemo(() => run.candidates.map((c) => c.id), [run.candidates]);
   const byId = useMemo(() => new Map(run.candidates.map((c) => [c.id, c])), [run.candidates]);
+  const indexOf = useMemo(() => new Map(order.map((id, i) => [id, i])), [order]);
+
+  // ROVING FOCUS ALONGSIDE THE WINDOW KEYS. The arrows, K/X/U and Enter stay bound on
+  // `window` below (the probe holds that contract, and a cull should not need the
+  // browser's focus anywhere in particular). What this adds is the tab stop: exactly one
+  // tile is focusable, the app's own focused candidate, and when the grid already holds
+  // the browser's focus it follows the arrows. `arrows: false` and no `onActivate`, so
+  // neither key is handled twice.
+  //
+  // The tab stop must be a tile that IS drawn: the arrows walk `order`, which holds every
+  // candidate of the run, including ones no cell of this plan draws, so the app's focus can
+  // rest on a candidate with no tile. Then the first drawn tile keeps the grid reachable.
+  const drawn = useMemo(() => {
+    const ids = new Set<string>();
+    for (const scene of run.scenes)
+      for (const sid of run.plan.styles) for (const col of columns) ids.add(`${scene.id}/${sid}--${col.mechanism.id}--s${col.seed}`);
+    return ids;
+  }, [run.scenes, run.plan.styles, columns]);
+  const firstDrawn = order.findIndex((id) => drawn.has(id));
+  const roving = useRoving({
+    count: order.length,
+    active: focused && drawn.has(focused) && indexOf.has(focused) ? indexOf.get(focused)! : Math.max(0, firstDrawn),
+    onActive: (i) => order[i] && onFocus(order[i]),
+    arrows: false,
+  });
 
   useEffect(() => {
     if (!keysEnabled) return;
@@ -142,7 +167,7 @@ export function CullGrid({
   }, [focused]);
 
   return (
-    <div className="flex flex-col gap-10">
+    <div className="flex flex-col gap-10" {...roving.containerProps}>
       {run.scenes.map((scene) => (
         <Scene
           key={scene.id}
@@ -223,6 +248,7 @@ export function CullGrid({
                       label={`${style?.name ?? sid}, ${c?.mechanism ?? ""}, seed ${c?.seed ?? ""}`}
                       verdict={verdicts[id]?.verdict}
                       focused={focused === id}
+                      rovingProps={indexOf.has(id) ? roving.itemProps(indexOf.get(id)!) : undefined}
                       readOnly={readOnly}
                       onFocus={() => onFocus(id)}
                       onOpen={() => onOpen(id)}
@@ -250,6 +276,7 @@ function CandidateTile({
   label,
   verdict,
   focused,
+  rovingProps,
   readOnly,
   onFocus,
   onOpen,
@@ -261,6 +288,7 @@ function CandidateTile({
   label: string;
   verdict: Verdict | undefined;
   focused: boolean;
+  rovingProps?: { tabIndex: 0 | -1; "data-roving": number };
   readOnly: boolean;
   onFocus: () => void;
   onOpen: () => void;
@@ -275,6 +303,7 @@ function CandidateTile({
       src={ready ? fileUrl(run, candidate.file) : undefined}
       verdict={verdict}
       focused={focused}
+      rovingProps={rovingProps}
       state={state}
       detail={state === "failed" ? (candidate?.error ?? undefined) : undefined}
       onFocus={onFocus}

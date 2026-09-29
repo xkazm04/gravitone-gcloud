@@ -9,8 +9,9 @@
 //
 // A tile that has no picture says why in a mark and a word: queued, generating (with
 // its step), failed (with the real error), deleted (the file is gone, the record
-// stays). Nothing in a tile is focusable except its own buttons: the window owns
-// the arrow keys (CullGrid), and Enter is the caller's.
+// stays). Nothing in a tile is focusable except its own buttons, unless the grid
+// hands it `rovingProps` (useRoving): then the tile is the grid's one tab stop when
+// it is the active item and the arrows move between tiles. Enter is the caller's.
 
 import { StatusGlyph } from "./StatusGlyph";
 
@@ -33,6 +34,7 @@ export function Tile({
   onFocus,
   onOpen,
   keepStamp = "kept",
+  rovingProps,
 }: {
   /** The DOM id, for scrolling a focused tile into view. */
   id?: string;
@@ -57,11 +59,15 @@ export function Tile({
   onFocus?: () => void;
   onOpen?: () => void;
   keepStamp?: string;
+  /** `useRoving().itemProps(i)`: the tile becomes the grid's one tab stop when it is
+   *  the active item, and takes the arrows' focus. Without it a tile is not focusable. */
+  rovingProps?: { tabIndex: 0 | -1; "data-roving": number };
 }) {
   const v = state === "ready" ? verdict : null;
   return (
     <div
       id={id}
+      {...rovingProps}
       role="group"
       aria-roledescription="candidate"
       aria-label={`${label}${v ? (v === "keep" ? ", kept" : ", rejected") : ""}`}

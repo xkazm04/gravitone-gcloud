@@ -18,6 +18,15 @@ import {
   Card,
   CardGrid,
   CheckField,
+  Callout,
+  Field,
+  NumberInput,
+  Segmented,
+  Select,
+  TextArea,
+  TextInput,
+  ToastTray,
+  useToast,
   Chip,
   Chips,
   Column,
@@ -93,6 +102,21 @@ import {
 import { ASTERISM_PATH, ASTERISM_STARS, Mark, Wordmark } from "@/components/kit/brand";
 
 import { KIT_GROUPS, PART_COUNT, type PartName } from "./catalog";
+import { BellDemo, PagerDemo, RovingDemo, StepsConstDemo, StepsDemo, TableDemo, UserDemo, WindowDemo } from "./PartsWorkbench";
+import {
+  ClockDemo,
+  ContextMenuDemo,
+  DeckCardDemo,
+  DeckDemo,
+  DeckStageDemo,
+  FolderTreeDemo,
+  LayerListDemo,
+  PlayerDemo,
+  StageRailDemo,
+  TimelineDemo,
+  TransportDemo,
+  WaveformDemo,
+} from "./GrowG3Demos";
 
 const IMG = {
   blueprint: "/presets/blueprint.jpg",
@@ -344,6 +368,121 @@ function RowDemo() {
     </FieldRow>
   );
 }
+
+function FieldDemo() {
+  const [v, setV] = useState("Paper Relief");
+  return (
+    <div className="kr-fields">
+      <S name="labelled, with a constraint">
+        <Field label="Project name" htmlFor="kf-name" hint="Fixed at creation">
+          <TextInput id="kf-name" value={v} onChange={(e) => setV(e.target.value)} />
+        </Field>
+      </S>
+      <S name="empty, placeholder">
+        <Field label="Working title" htmlFor="kf-empty">
+          <TextInput id="kf-empty" value="" onChange={noop} placeholder="untitled" />
+        </Field>
+      </S>
+      <S name="invalid">
+        <Field label="Seeds" htmlFor="kf-bad" hint="1 to 9 per style">
+          <TextInput id="kf-bad" value="12" onChange={noop} aria-invalid="true" />
+        </Field>
+      </S>
+      <S name="disabled, dashed">
+        <Field label="Engine" htmlFor="kf-dis">
+          <TextInput id="kf-dis" value="flux-dev" onChange={noop} disabled />
+        </Field>
+      </S>
+      <S name="group, no single input">
+        <Field label="Visual style">
+          <Button variant="ghost" size="sm">Choose</Button>
+        </Field>
+      </S>
+    </div>
+  );
+}
+function TextInputDemo() {
+  const [v, setV] = useState("");
+  return <TextInput aria-label="Search styles" value={v} onChange={(e) => setV(e.target.value)} placeholder="search styles" />;
+}
+function AreaDemo() {
+  const [v, setV] = useState("A lighthouse keeper counts the ships that do not return.");
+  return (
+    <Field label="Logline" htmlFor="kf-area">
+      <TextArea id="kf-area" value={v} onChange={(e) => setV(e.target.value)} rows={4} />
+    </Field>
+  );
+}
+function NumberInputDemo() {
+  const [n, setN] = useState(300);
+  return (
+    <Field label="Duration" htmlFor="kf-dur">
+      <NumberInput id="kf-dur" unit="sec" value={n} min={30} max={900} onChange={(e) => setN(Number(e.target.value))} />
+    </Field>
+  );
+}
+function SelectDemo() {
+  const [v, setV] = useState("flux-dev");
+  return (
+    <div className="kr-fields">
+      <S name="enabled">
+        <Field label="Engine" htmlFor="kf-sel">
+          <Select id="kf-sel" value={v} onChange={(e) => setV(e.target.value)}>
+            <option value="flux-dev">flux-dev</option>
+            <option value="flux-schnell">flux-schnell</option>
+            <option value="sdxl">sdxl</option>
+          </Select>
+        </Field>
+      </S>
+      <S name="disabled, dashed">
+        <Field label="Engine" htmlFor="kf-sel-d">
+          <Select id="kf-sel-d" value="sdxl" onChange={noop} disabled>
+            <option value="sdxl">sdxl</option>
+          </Select>
+        </Field>
+      </S>
+    </div>
+  );
+}
+function SegmentedDemo() {
+  const [v, setV] = useState("cinematic");
+  return (
+    <Segmented
+      label="Aspect"
+      value={v}
+      onChange={setV}
+      options={[
+        { id: "cinematic", label: "2.39:1", note: "Anamorphic crop; 1920 x 803" },
+        { id: "wide", label: "16:9" },
+        { id: "tall", label: "9:16" },
+      ]}
+    />
+  );
+}
+function ToastDemo() {
+  const t = useToast();
+  return (
+    <>
+      <div className="kr-row">
+        <Button size="sm" variant="ghost" onClick={() => t.push({ kind: "ok", text: "Committed run-0412: kept 3, deleted 9" })}>Push ok</Button>
+        <Button size="sm" variant="ghost" onClick={() => t.push({ kind: "info", text: "Extract started on 24 images" })}>Push info</Button>
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={() => t.push({ kind: "failed", key: "kt-fail", text: "EPERM: operation not permitted, unlink 'cell-s01-m3.png'", action: <Button size="sm" variant="ghost">Retry</Button> })}
+        >
+          Push failure
+        </Button>
+      </div>
+      <ToastTray inline toasts={t.toasts} onDismiss={t.dismiss} />
+    </>
+  );
+}
+const TOAST_FIXTURE = [
+  { id: "a", kind: "ok", text: "Committed run-0412: kept 3, deleted 9" },
+  { id: "b", kind: "info", text: "Extract started on 24 images" },
+  { id: "c", kind: "failed", text: "Could not reach the imaging service: ECONNREFUSED 127.0.0.1:8188", action: <Button size="sm" variant="ghost">Retry</Button> },
+] as const;
 
 function DropDemo() {
   const [n, setN] = useState<number | null>(null);
@@ -828,6 +967,22 @@ const DEMOS: Record<PartName, () => ReactNode> = {
     </div>
   ),
   Dropzone: () => <DropDemo />,
+  Field: () => <FieldDemo />,
+  TextInput: () => <TextInputDemo />,
+  TextArea: () => <AreaDemo />,
+  NumberInput: () => <NumberInputDemo />,
+  Select: () => <SelectDemo />,
+  Segmented: () => <SegmentedDemo />,
+  Callout: () => (
+    <div className="kr-fields">
+      <S name="gold, as returned"><Callout source="run-0412 · finding 3">The archive holds no record of a second keeper.</Callout></S>
+      <S name="ald, held"><Callout tone="ald" source="held against 2 sources">The light was lit at dusk on 14 March.</Callout></S>
+      <S name="ant, dashed: corrected"><Callout tone="ant" dashed source="corrected since">Eleven ships were lost that winter.</Callout></S>
+      <S name="sm"><Callout size="sm" source="gate · promise 2">&ldquo;He never speaks of the tower again.&rdquo;</Callout></S>
+    </div>
+  ),
+  useToast: () => <ToastDemo />,
+  ToastTray: () => <ToastTray inline toasts={TOAST_FIXTURE} onDismiss={noop} />,
   TextField: () => <TextDemo />,
   NumberField: () => <NumberDemo />,
   CheckField: () => <CheckDemo />,
@@ -853,6 +1008,26 @@ const DEMOS: Record<PartName, () => ReactNode> = {
       </div>
     </>
   ),
+  Deck: () => <DeckDemo />,
+  DeckStage: () => <DeckStageDemo />,
+  DeckCard: () => <DeckCardDemo />,
+  StageRail: () => <StageRailDemo />,
+  ContextMenu: () => <ContextMenuDemo />,
+  FolderTree: () => <FolderTreeDemo />,
+  LayerList: () => <LayerListDemo />,
+  Transport: () => <TransportDemo />,
+  Waveform: () => <WaveformDemo />,
+  Player: () => <PlayerDemo />,
+  clock: () => <ClockDemo />,
+  Timeline: () => <TimelineDemo />,
+  Table: () => <TableDemo />,
+  Pager: () => <PagerDemo />,
+  useWindow: () => <WindowDemo />,
+  Steps: () => <StepsDemo />,
+  STUDIO_STEPS: () => <StepsConstDemo />,
+  useRoving: () => <RovingDemo />,
+  NotificationBell: () => <BellDemo />,
+  UserMenu: () => <UserDemo />,
   Mark: () => (
     <div className="kr-row" style={{ alignItems: "flex-end" }}>
       <S name="24, plain"><Mark size={24} construction={false} title="Gravitone, 24px" /></S>
@@ -878,8 +1053,10 @@ const DEMOS: Record<PartName, () => ReactNode> = {
 
 /** Parts whose specimen needs the whole row. */
 const WIDE: ReadonlySet<PartName> = new Set<PartName>([
+  "Table", "Pager", "Steps", "useRoving", "NotificationBell", "UserMenu",
+  "Deck", "DeckStage", "DeckCard", "StageRail", "FolderTree", "ContextMenu", "LayerList", "Player", "Waveform", "Timeline",
   "Bar", "PageHead", "TabRail", "StatusStrip", "Tile", "Scene", "Matrix", "Entry", "Card", "CardGrid",
-  "Dock", "ConfirmDialog", "Figures", "Doc", "DataTable", "Ghost", "Thumb", "Dropzone", "Plate",
+  "Dock", "ConfirmDialog", "Figures", "Doc", "DataTable", "Ghost", "Thumb", "Dropzone", "Plate", "Field", "Select", "Callout", "ToastTray", "useToast",
 ]);
 
 export function Parts() {
