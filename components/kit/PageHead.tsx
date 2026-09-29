@@ -1,4 +1,4 @@
-// THE PAGE HEADER: a small gold eyebrow, the page's name in display italic, and —
+// THE PAGE HEADER: a small gold eyebrow, the page's name in the display voice, and —
 // at the right — the page's figure (a constellation, labelled stylised).
 // The figure is a slot; the kit draws none, because each page's is its own.
 

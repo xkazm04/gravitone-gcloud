@@ -75,7 +75,7 @@ function MatrixRowCells({ row }: { row: MatrixRow }) {
   );
 }
 
-/** A row's head: the style's name in italic, its family beneath. */
+/** A row's head: the style's name in the display voice, its family beneath. */
 export function RowHead({ name, meta, children }: { name: string; meta?: React.ReactNode; children?: React.ReactNode }) {
   return (
     <>

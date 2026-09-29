@@ -250,27 +250,31 @@ export interface TokenRole {
   role: string;
   use: string;
   surface: "all" | "working" | "figure";
+  /** May this token be drawn as text? `false` rows show their ratio as a fact about the fill, ring or rule. */
+  text: boolean;
 }
 
 /** Every key of WORLD_ALMANAC, with its role and where it is drawn. The probe fails on a key with no row. */
 export const TOKEN_ROLES: Record<string, TokenRole> = {
-  "--al-night": { name: "Prussian Night", role: "the ground", use: "page ground, plates, the token under text", surface: "all" },
-  "--al-deep": { name: "Deep Field", role: "darker than the ground", use: "frames, occulting disc, scrims, the veil", surface: "all" },
-  "--al-field": { name: "Field", role: "raised panel", use: "panels, table heads, the rejected disc", surface: "all" },
-  "--al-gold": { name: "Gold Leaf", role: "the line of the cut; the ring of focus", use: "engraving, focus outline, the one call to act", surface: "all" },
-  "--al-white": { name: "Star White", role: "type and star-points", use: "text, stars, ready and committed marks", surface: "all" },
-  "--al-vellum": { name: "Vellum", role: "catalogue text", use: "secondary text, names in chips, hairlines", surface: "all" },
-  "--al-ash": { name: "Ash", role: "what was rejected", use: "reject rings, grid rules, the undecided ground", surface: "all" },
-  "--al-ald": { name: "Aldebaran", role: "a person kept this", use: "keep ring, pick, the Cut star", surface: "all" },
-  "--al-ant": { name: "Antares", role: "an error; what a commit deletes", use: "failed mark, ErrorBox, danger button, delete rail", surface: "working" },
-  "--al-tint-templates": { name: "Templates tint", role: "constellation hue", use: "the Templates figure and its label", surface: "figure" },
-  "--al-tint-bracket": { name: "Bracket tint", role: "constellation hue", use: "the Bracket figure and its label", surface: "figure" },
-  "--al-tint-disciplines": { name: "Disciplines tint", role: "constellation hue", use: "the Disciplines figure and its label", surface: "figure" },
-  "--al-tint-engines": { name: "Engines tint", role: "constellation hue", use: "the Engines figure and its label", surface: "figure" },
-  "--al-line": { name: "Line", role: "hairline", use: "rules between sections, panel borders", surface: "all" },
-  "--al-line-strong": { name: "Line, strong", role: "hairline that is a boundary", use: "boxed words, active borders", surface: "all" },
-  "--al-sky": { name: "Sky", role: "the ground gradient", use: "the page background behind <Sky>", surface: "all" },
-  "--al-ease": { name: "Ease", role: "the one curve", use: "every transition and animation in the kit", surface: "all" },
+  "--al-night": { name: "Prussian Night", role: "the ground", use: "page ground, plates, the token under text", surface: "all", text: false },
+  "--al-deep": { name: "Deep Field", role: "darker than the ground", use: "frames, occulting disc, scrims, the veil", surface: "all", text: false },
+  "--al-field": { name: "Field", role: "raised panel", use: "panels, table heads, the rejected disc", surface: "all", text: false },
+  "--al-gold": { name: "Gold Leaf", role: "the line of the cut; the ring of focus", use: "engraving, focus outline, the one call to act; gold caps", surface: "all", text: true },
+  "--al-white": { name: "Star White", role: "text, level one", use: "headings, values, star-points, anything a person reads first", surface: "all", text: true },
+  "--al-vellum": { name: "Vellum", role: "text, level two: the only muting", use: "secondary text, names in chips, labels, crumbs", surface: "all", text: true },
+  "--al-ash": { name: "Ash", role: "what was rejected", use: "reject rings, grid rules, hairlines, the undecided ground; never text", surface: "all", text: false },
+  "--al-ald": { name: "Aldebaran", role: "a person kept this", use: "keep ring, pick, the Cut star; as text use --al-ald-t", surface: "all", text: false },
+  "--al-ald-t": { name: "Aldebaran, as text", role: "the red, lightened to read", use: "a kept count, the word kept, a pick's slug", surface: "all", text: true },
+  "--al-ant": { name: "Antares", role: "an error; what a commit deletes", use: "failed ring and fill, danger border; as text use --al-ant-t", surface: "working", text: false },
+  "--al-ant-t": { name: "Antares, as text", role: "the error red, lightened to read", use: "failed word, ErrorBox, veto, the sign-in error", surface: "working", text: true },
+  "--al-tint-templates": { name: "Templates tint", role: "constellation hue", use: "the Templates figure; its label is the tint mixed 70/30 with white", surface: "figure", text: false },
+  "--al-tint-bracket": { name: "Bracket tint", role: "constellation hue", use: "the Bracket figure; its label is the tint mixed 70/30 with white", surface: "figure", text: false },
+  "--al-tint-disciplines": { name: "Disciplines tint", role: "constellation hue", use: "the Disciplines figure; its label is the tint mixed 70/30 with white", surface: "figure", text: false },
+  "--al-tint-engines": { name: "Engines tint", role: "constellation hue", use: "the Engines figure; its label is the tint mixed 70/30 with white", surface: "figure", text: false },
+  "--al-line": { name: "Line", role: "hairline", use: "rules between sections, panel borders", surface: "all", text: false },
+  "--al-line-strong": { name: "Line, strong", role: "hairline that is a boundary", use: "boxed words, active borders", surface: "all", text: false },
+  "--al-sky": { name: "Sky", role: "the ground gradient", use: "the page background behind <Sky>", surface: "all", text: false },
+  "--al-ease": { name: "Ease", role: "the one curve", use: "every transition and animation in the kit", surface: "all", text: false },
 };
 
 /** Tokens whose value is not a flat colour: shown as a role only, no contrast. */
@@ -288,10 +292,12 @@ export interface TypeRole {
 }
 
 export const TYPE_ROLES: readonly TypeRole[] = [
-  { role: "Display", family: "font-instrument", spelling: "k-it · PageHead h1", size: "44–76px fluid", where: "page titles, the work's voice", sample: "Pick the stars.", className: "kr-t-display" },
-  { role: "Name", family: "font-instrument", spelling: "k-it · Entry h3, Card h3", size: "22–28px", where: "a style, a card, a constellation", sample: "Paper Relief", className: "kr-t-name" },
-  { role: "Body", family: "font-hanken", spelling: "text-content · k-world", size: "18px", where: "anything a person reads", sample: "Seed-matched, pick marked.", className: "kr-t-body" },
-  { role: "Label", family: "font-hanken", spelling: "k-caps · text-label", size: "16px caps, 0.14em", where: "kickers, column heads, counts, steps", sample: "GRV·07 · Templates", className: "kr-t-label" },
+  { role: "Display", family: "font-instrument", spelling: "k-it · PageHead h1", size: "48–84px fluid, upright, 400", where: "page titles, the work's voice", sample: "Pick the stars.", className: "kr-t-display" },
+  { role: "Name", family: "font-instrument", spelling: "k-it · Entry h3, Card h3", size: "28–30px, upright, 400", where: "a style, a card, a constellation, a tab", sample: "Paper Relief", className: "kr-t-name" },
+  { role: "Body", family: "font-hanken", spelling: "text-content · k-world", size: "18px, 450, white", where: "anything a person reads", sample: "Seed-matched, pick marked.", className: "kr-t-body" },
+  { role: "Secondary", family: "font-hanken", spelling: "k-muted · vellum", size: "16px, 450, vellum", where: "facts, metadata, captions, crumbs", sample: "flux-dev · seed 3 · 36 candidates", className: "kr-t-2nd" },
+  { role: "Label", family: "font-hanken", spelling: "k-caps · text-label", size: "16px caps, 500, 0.1em", where: "kickers, column heads, counts, steps", sample: "GRV·07 · Templates", className: "kr-t-label" },
+  { role: "Door label", family: "font-hanken", spelling: "door.module.css .sc", size: "14–16px fluid caps, 500, 0.1em", where: "chart labels, crumbs, steps on the door", sample: "Templates · 5 stars", className: "kr-t-door" },
   { role: "Mono", family: "font-jetbrains", spelling: "font-jetbrains · code", size: "16px", where: "tokens, ids, commands, verbatim", sample: "--al-ease", className: "kr-t-mono" },
 ];
 
@@ -328,7 +334,11 @@ export const RULES: readonly LawRule[] = [
   { rule: "One red means a person decided.", gate: "Aldebaran on keep, pick, Cut only" },
   { rule: "Antares appears on working surfaces only.", gate: "TOKEN_ROLES surface: working" },
   { rule: "Colour is a token. A missing hue is a report.", gate: "chrome-colour-literals probe" },
-  { rule: "Nothing below 16px.", gate: "check:type" },
+  { rule: "Nothing below 16px; the door's chart labels are 14px.", gate: "check:type; the type-pass audit for the door" },
+  { rule: "No italics: the display voice is Instrument Serif upright.", gate: "type-pass audit (italic nodes = 0); the diff" },
+  { rule: "One muting level: white, then vellum, both 11:1 or better.", gate: "/kit contrast table, computed from WORLD_ALMANAC" },
+  { rule: "No grey text: ash is for rings and rules; a hue as text is lightened toward white, never faded.", gate: "type-pass audit (ash text = 0, text under 7:1 counted); the diff" },
+  { rule: "State is never a dimmer colour: locked, disabled, low and rejected take a dashed edge or a rule.", gate: "type-pass audit (dimmed text counted); the diff" },
   { rule: "Every mark has an accessible name.", gate: "StatusGlyph label, aria-label on keys" },
   { rule: "A local duplicate of a kit part is a finding.", gate: "components/kit/README.md" },
 ];

@@ -30,7 +30,7 @@ import { ASTERISM_PATH, ASTERISM_STARS, Mark, Wordmark } from "@/components/kit/
 import { WORLD_ALMANAC } from "@/components/ui/tokens";
 
 import { MOTION, NON_COLOUR, TOKEN_ROLES, TYPE_ROLES } from "./catalog";
-import { contrast, tierOf } from "./contrast";
+import { contrast, mixHex, resolve, tierOf } from "./contrast";
 
 const ZOOM = 19;
 const pct = (v: number) => `${(((v + ZOOM) / (2 * ZOOM)) * 100).toFixed(2)}%`;
@@ -126,18 +126,60 @@ function Logo() {
 
 const GROUND = ["--al-night", "--al-deep", "--al-field"];
 const tokenKeys = Object.keys(WORLD_ALMANAC);
+/** A token's flat colour, resolving the colour-mix text variants; null for gradients and curves. */
+const flat = (k: string) => resolve(WORLD_ALMANAC[k], WORLD_ALMANAC);
 
 function ratioCell(a: string, against: string) {
   if (NON_COLOUR.includes(a)) return "—";
   if (GROUND.includes(a)) return <span className="k-caps k-muted">ground</span>;
-  const r = contrast(WORLD_ALMANAC[a], WORLD_ALMANAC[against]);
+  const [fg, bg] = [flat(a), flat(against)];
+  const r = fg && bg ? contrast(fg, bg) : null;
   if (r === null || a === against) return "—";
   const t = tierOf(r);
+  // A token that is not a text colour prints its ratio as a fact about the fill, not a grade.
+  const mark = TOKEN_ROLES[a].text ? t : "non-text";
   return (
     <span className="kr-tier">
       <b>{r.toFixed(1)}</b>
-      <i className={t === "fails" ? "kr-rowflag" : undefined}>{t}</i>
+      <i className={TOKEN_ROLES[a].text && t === "fails" ? "kr-rowflag" : undefined}>{mark}</i>
     </span>
+  );
+}
+
+/** A hue drawn as text is `hue` mixed toward white; the raw hue and the mix are both measured, on all three grounds. */
+function TextOnHue() {
+  const white = flat("--al-white")!;
+  const hues: { name: string; from: string; mix: number; recipe: string }[] = [
+    { name: "Aldebaran", from: "--al-ald", mix: 65, recipe: "--al-ald-t · 65% + white" },
+    { name: "Antares", from: "--al-ant", mix: 70, recipe: "--al-ant-t · 70% + white" },
+    ...CONS.map((c) => ({ name: `${c.name} tint`, from: `--al-tint-${c.id}`, mix: 70, recipe: "70% + white" })),
+  ];
+  const on = (fg: string) => GROUND.map((g) => contrast(fg, flat(g)!)!);
+  const cell = (r: number, key: string) => (
+    <span key={key} className="kr-tier">
+      <b>{r.toFixed(1)}</b>
+      <i className={r < 7 ? "kr-rowflag" : undefined}>{tierOf(r)}</i>
+    </span>
+  );
+  return (
+    <DataTable
+      head={["Hue", "Raw on night", "Raw on deep", "Raw on field", "As text", "On night", "On deep", "On field"]}
+      rows={hues.map((h) => {
+        const raw = flat(h.from)!;
+        const as = mixHex(raw, white, h.mix);
+        const [r, t] = [on(raw), on(as)];
+        return [
+          h.name,
+          cell(r[0], "r0"),
+          cell(r[1], "r1"),
+          cell(r[2], "r2"),
+          <span key="a" className="kr-out">{h.recipe}</span>,
+          cell(t[0], "t0"),
+          cell(t[1], "t1"),
+          cell(t[2], "t2"),
+        ];
+      })}
+    />
   );
 }
 
@@ -157,11 +199,14 @@ function Palette() {
       role.surface === "all" ? role.use : `${role.use} · ${role.surface === "working" ? "working surfaces only" : "figure and label only"}`,
       ratioCell(k, "--al-night"),
       ratioCell(k, "--al-deep"),
+      ratioCell(k, "--al-field"),
     ];
   });
   return (
     <>
-      <DataTable head={["", "Token", "Value", "Role", "Where", "On night", "On deep"]} rows={rows} />
+      <DataTable head={["", "Token", "Value", "Role", "Where", "On night", "On deep", "On field"]} rows={rows} />
+      <h3 className="kr-sub k-caps">A hue as text</h3>
+      <TextOnHue />
       <h3 className="kr-sub k-caps">The single red</h3>
       <div className="kr-one">
         <div>
@@ -191,7 +236,7 @@ function Palette() {
                 </g>
               </svg>
               <figcaption>
-                <span className="k-caps" style={{ color: c.tint }}>{c.figure} · {c.name}</span>
+                <span className="k-caps" style={{ color: `color-mix(in srgb, ${c.tint} 70%, var(--al-white))` }}>{c.figure} · {c.name}</span>
                 <Tag>stylised</Tag>
               </figcaption>
             </figure>
@@ -215,8 +260,9 @@ function TypeSpec() {
       <Stats
         items={[
           { n: "18px", label: "body" },
-          { n: "16px", label: "floor · check:type" },
-          { n: "12px", label: "door floor · chart labels" },
+          { n: "16px", label: "secondary · floor, check:type" },
+          { n: "14px", label: "door floor · chart labels" },
+          { n: "0", label: "italics" },
         ]}
       />
       <DataTable
@@ -324,7 +370,7 @@ export function Identity() {
       </section>
       <section className="kr-section" aria-labelledby="kr-type">
         <Kicker>Type</Kicker>
-        <h2 id="kr-type">Old-style italic, humanist sans, mono</h2>
+        <h2 id="kr-type">Upright display serif, humanist sans, mono</h2>
         <TypeSpec />
       </section>
       <section className="kr-section" aria-labelledby="kr-marks">

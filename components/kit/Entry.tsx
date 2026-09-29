@@ -22,7 +22,7 @@ export function Entry({
   label: string;
   focused?: boolean;
   verdict?: "keep" | "reject" | null;
-  /** The italic heading. */
+  /** The display-voice heading. */
   title: React.ReactNode;
   /** Under the heading: id, family, the claim. */
   lede?: React.ReactNode;

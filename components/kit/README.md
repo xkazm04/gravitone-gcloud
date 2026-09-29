@@ -13,6 +13,7 @@ context (`components/ui/world.tsx`). The shared parts `Button`, `Tally`, `TabRai
 read it, so they wear the Almanac skin from the imports a surface already uses. Outside a `WorldRoot` nothing changes.
 
 Styles are `kit.css` (`k-*` classes): colours only via `var(--al-*)` / `color-mix`, nothing under `text-label` (1rem).
+Type: no italics (the display voice is upright Instrument Serif), text is `--al-white` or `--al-vellum` and nothing else (both 11:1 or better; `--al-ash` is for rings and rules, never text), a hue used as text is its lightened `-t` spelling, and state is a dashed edge or a rule, never a dimmer colour. `/kit` Identity measures all of it.
 
 ## Parts
 

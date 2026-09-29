@@ -201,6 +201,15 @@ export const CSS_TOKENS: Record<string, string> = {
  * `ald` (Aldebaran) is the single red that means "a person kept this",
  * `ant` (Antares) is errors and what a commit deletes and appears on working
  * surfaces only. Sizes and families are Tailwind/@theme business (globals.css).
+ *
+ * TEXT HAS TWO LEVELS, `white` and `vellum`, and nothing else: both clear 11:1 on
+ * night and deep. `ash` is NOT a text colour (6.1:1 on night, read as grey on this
+ * ground); it draws rings, rules and the rejected disc. A hue used as text is
+ * lightened toward white by mixing, never dimmed with opacity: `--al-ald-t` and
+ * `--al-ant-t` are the text spellings of the two reds (>= 7:1 on night, deep and
+ * field), and a constellation tint as text is `color-mix(in srgb, <tint> 70%,
+ * var(--al-white))`. Values that are a colour-mix over other tokens stay here so
+ * /kit can resolve and measure them.
  */
 export const WORLD_ALMANAC: Record<string, string> = {
   "--al-night": "#0A1230",
@@ -208,10 +217,12 @@ export const WORLD_ALMANAC: Record<string, string> = {
   "--al-field": "#121C44",
   "--al-gold": "#D9B26A",
   "--al-white": "#F3EEDF",
-  "--al-vellum": "#B9B4A4",
+  "--al-vellum": "#D6D0BE",
   "--al-ash": "#8C93B3",
   "--al-ald": "#E2704F",
   "--al-ant": "#EE6A8C",
+  "--al-ald-t": "color-mix(in srgb, var(--al-ald) 65%, var(--al-white))",
+  "--al-ant-t": "color-mix(in srgb, var(--al-ant) 70%, var(--al-white))",
   // the four constellations' own hues (door tints, chosen with the design)
   "--al-tint-templates": "#9A86F0",
   "--al-tint-bracket": "#E8C27A",

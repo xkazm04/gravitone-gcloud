@@ -1,4 +1,4 @@
-// A MEDIA CARD: one picture, a name in italic, a line of facts and a status. It is
+// A MEDIA CARD: one picture, a name in the display voice, a line of facts and a status. It is
 // a single button; everything else about what it names lives on the sheet it opens.
 // No picture is a state, not a blank: a dashed frame that says so.
 

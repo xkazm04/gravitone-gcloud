@@ -54,7 +54,7 @@ export function EnterButton({ className = "" }: { className?: string }) {
         </button>
       )}
       {error && (
-        <p role="alert" className="font-hanken max-w-[240px] text-right text-label text-[var(--al-ant)]">
+        <p role="alert" className="font-hanken max-w-[240px] text-right text-label text-[var(--al-ant-t)]">
           {error}
         </p>
       )}

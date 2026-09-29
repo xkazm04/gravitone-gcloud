@@ -95,7 +95,7 @@ export function Tally({
   return (
     <span className={`${almanac ? ALMANAC_TONE[tone] : `${CHIP_CLASS} ${TALLY_TONE[tone]}`} ${className}`} title={title}>
       {label && (
-        <span aria-hidden className="uppercase opacity-55">
+        <span aria-hidden className={almanac ? "uppercase" : "uppercase opacity-55"}>
           {label}
         </span>
       )}

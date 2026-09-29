@@ -10,13 +10,13 @@
 //
 // THREE LEVELS: Sky, then a constellation (the camera flies in, the others dim),
 // then a plate (./Plate). Esc, the back pill, the crumbs and the arrow keys work
-// at every level. Hovering a star puts its name at the centre in large italic.
+// at every level. Hovering a star puts its name at the centre in the large display voice.
 //
 // HOW IT IS BUILT. The chart is a fixed 1600x1000 stage (1000x2250 on phones),
 // letterboxed inside a full-bleed sky, so it never stretches. The camera is two
 // transformed layers (figures behind, stars in front) driven by one tween; text
 // lives in a separate screen-space layer whose positions are re-projected every
-// frame, so a label's computed size is its rendered size (the 12px floor holds
+// frame, so a label's computed size is its rendered size (the 14px floor holds
 // through a zoom instead of being resampled below it). State that changes what
 // React draws (level, hover, the arrival beat) is React state; the per-frame
 // camera is refs and direct style writes, because a 60fps tween is not a render.
@@ -83,10 +83,23 @@ interface LabelSpec {
 }
 
 /** Star-name labels, one per star, under its eyepiece. Filled at render. */
+/** A constellation tint drawn as text: mixed toward white so it reads >= 7:1 on the night ground (never faded). */
+const textTint = (tint: string) => `color-mix(in srgb, ${tint} 70%, var(--al-white))`;
+
+/** -1 or 1 when another eyepiece of the constellation sits beside this one on the same baseline (its side), else 0. */
+function mateSide(g: Geo, it: (typeof ALL)[number]): number {
+  const p = posOf(g.L, it), sz = sizeOf(g.k, it);
+  const mate = ALL.find((o) => o !== it && o.ci === it.ci && Math.abs(posOf(g.L, o).y - p.y) < sz * 0.5 && Math.abs(posOf(g.L, o).x - p.x) < sz * 2.2);
+  return mate ? Math.sign(posOf(g.L, mate).x - p.x) : 0;
+}
+
 function labelsForStars(g: Geo): LabelSpec[] {
   return ALL.map((it) => {
     const p = posOf(g.L, it), sz = sizeOf(g.k, it);
-    return { key: `s:${it.cat}`, x: p.x, y: p.y + (sz / 2) * 1.15, dy: 10, tf: "translateX(-50%)", node: null };
+    // Two eyepieces side by side share one baseline; centred names would run into
+    // each other at 14px, so the pair's names read outward from the gap between them
+    // (the slab's own alignment class does the shifting, .lb is zero-width).
+    return { key: `s:${it.cat}`, x: p.x + mateSide(g, it) * (sz / 2), y: p.y + (sz / 2) * 1.15, dy: 10, tf: "", node: null };
   });
 }
 /** Constellation names, as buttons. Filled at render. */
@@ -470,10 +483,10 @@ export default function Door({ slot }: { slot?: React.ReactNode }) {
                   <li className={s.xs}><button onClick={() => { if (level === 2) closePlate(true); goSky(); }}>Sky</button></li>
                   <li className={`${s.sep} ${s.xs}`} aria-hidden="true">›</li>
                   {level === 1 ? (
-                    <li><span aria-current="location" style={{ color: curCon!.tint }}>{curCon!.name}</span></li>
+                    <li><span aria-current="location" style={{ color: textTint(curCon!.tint) }}>{curCon!.name}</span></li>
                   ) : (
                     <>
-                      <li><button style={{ color: curCon!.tint }} onClick={() => closePlate()}>{curCon!.name}</button></li>
+                      <li><button style={{ color: textTint(curCon!.tint) }} onClick={() => closePlate()}>{curCon!.name}</button></li>
                       <li className={s.sep} aria-hidden="true">›</li>
                       <li><span aria-current="location">{nav.item?.name}</span></li>
                     </>
@@ -628,7 +641,7 @@ export default function Door({ slot }: { slot?: React.ReactNode }) {
                 if (L.key.startsWith("s:")) {
                   const it = ALL.find((x) => `s:${x.cat}` === L.key)!;
                   node = (
-                    <div className={`${s.slab} ${level === 1 && navCi === it.ci ? s.on : ""}`}>
+                    <div className={`${s.slab} ${mateSide(stage, it) > 0 ? s.rt : mateSide(stage, it) < 0 ? s.lf : ""} ${level === 1 && navCi === it.ci ? s.on : ""}`}>
                       <b>{it.name}</b> <span className={it.pick ? s.pk : undefined}>{it.cat}</span>
                     </div>
                   );

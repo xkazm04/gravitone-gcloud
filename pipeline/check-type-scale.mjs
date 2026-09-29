@@ -67,10 +67,43 @@ for (const dir of ["app", "components"]) {
   }
 }
 
+// SCOPED FLOOR FOR THE ALMANAC WORLD'S STYLESHEETS (2026-09-29, owner: "lets scope
+// the check"). The tsx floor above cannot see a .css file, so the door's chart
+// labels and the kit's caps labels were unchecked, not compliant. World CSS is
+// now read, at its OWN floor: 14px, the smallest a chart label or caps label may
+// be. Body and content sizes are 16px and up by their tokens; this floor exists
+// so a stylesheet cannot slip a 12px label in beside them. Numbers inside var()
+// are tokens and are checked where they are declared.
+const WORLD_CSS_FLOOR_PX = 14;
+const WORLD_CSS_DIRS = ["components/kit", "app/kit", "app/foundry", "app/_landing"];
+const FONT_SIZE_DECL = /(?:^|[\s{;])(font-size|--k-fs[\w-]*)\s*:\s*([^;}]+)/g;
+function* walkCss(dir) {
+  if (!fs.existsSync(dir)) return;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) yield* walkCss(p);
+    else if (e.name.endsWith(".css")) yield p;
+  }
+}
+for (const d of WORLD_CSS_DIRS) {
+  for (const file of walkCss(path.join(ROOT, d))) {
+    const rel = path.relative(ROOT, file).replaceAll("\\", "/");
+    fs.readFileSync(file, "utf8").split("\n").forEach((line, i) => {
+      for (const m of line.matchAll(FONT_SIZE_DECL)) {
+        const value = m[2].replace(/var\([^)]*\)/g, "");
+        for (const n of value.matchAll(/(\d+(?:\.\d+)?)(px|rem)/g)) {
+          const px = Number(n[1]) * (n[2] === "rem" ? 16 : 1);
+          if (px < WORLD_CSS_FLOOR_PX) findings.push(`${rel}:${i + 1} — ${m[1]} ${n[0]} (world CSS floor is ${WORLD_CSS_FLOOR_PX}px)`);
+        }
+      }
+    });
+  }
+}
+
 if (findings.length) {
   console.error(`type-scale check FAILED — ${findings.length} size(s) below the readable floor:`);
   for (const f of findings) console.error("  " + f);
   console.error("Use text-content (readable content) or text-label (secondary short labels) — see app/globals.css.");
   process.exit(1);
 }
-console.log(`type scale OK — nothing below text-label (${FLOOR_REM}rem) in app/ or components/.`);
+console.log(`type scale OK — nothing below text-label (${FLOOR_REM}rem) in app/ or components/; world CSS at its ${WORLD_CSS_FLOOR_PX}px floor.`);

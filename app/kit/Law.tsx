@@ -1,4 +1,4 @@
-// VOICE AND LAW — twelve rules and where each is held. A table: the rule, and the
+// VOICE AND LAW — the rules and where each is held. A table: the rule, and the
 // gate or part that carries it. The reasoning lives in CLAUDE.md and
 // components/ui/signal/README.md; this sheet is the checklist a builder holds a
 // diff against.

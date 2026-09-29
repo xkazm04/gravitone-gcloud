@@ -20,7 +20,7 @@ export function DocSection({ label, children }: { label: string; children: React
   );
 }
 
-/** Prose in the work's own voice: display italic. */
+/** Prose in the work's own voice: the display voice. */
 export function Rule({ children }: { children: React.ReactNode }) {
   return <p className="k-rule">{children}</p>;
 }
