@@ -413,7 +413,7 @@
 .left { display: flex; flex-direction: column; }
 .brand { display: flex; align-items: center; gap: 12px; color: var(--al-white); }
 .brand .mk { width: clamp(30px, 2.6vw, 40px); height: auto; overflow: visible; }
-.brand .wm { height: clamp(14px, 1.25vw, 19px); width: auto; overflow: visible; }
+.brand .wm { font-size: clamp(20px, 1.7vw, 28px); }
 .nav { display: flex; align-items: center; gap: 14px; margin-top: 10px; min-height: 28px; }
 .back {
   display: none;

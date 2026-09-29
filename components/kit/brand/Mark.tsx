@@ -8,9 +8,9 @@ import { ASTERISM_PATH, ASTERISM_STARS } from "./asterism";
 export interface MarkProps {
   /** Rendered width in CSS px; height follows. Omit to size from CSS. */
   size?: number;
-  /** Stroke weight in construction units (radius is 10). 0.62 reads at 30-40px. */
+  /** Stroke weight in construction units (radius is 10). 2.1 holds down to 24px; the first mark's 0.62 was too thin. */
   strokeWidth?: number;
-  /** Draws the dashed construction circle behind the G. */
+  /** Draws the dashed construction circle behind the G (the construction sheet only). */
   construction?: boolean;
   /** Accessible name. Without it the mark is decorative (aria-hidden). */
   title?: string;
@@ -18,8 +18,10 @@ export interface MarkProps {
 }
 
 const GOLD = "var(--al-gold, currentColor)";
+// Stars are drawn larger than the construction radii so they survive at 24px.
+const STAR = 1.45;
 
-export function Mark({ size, strokeWidth = 0.62, construction = true, title, className }: MarkProps) {
+export function Mark({ size, strokeWidth = 2.1, construction = false, title, className }: MarkProps) {
   const sw = strokeWidth;
   return (
     <svg
@@ -45,11 +47,11 @@ export function Mark({ size, strokeWidth = 0.62, construction = true, title, cla
       <path d={ASTERISM_PATH} fill="none" style={{ stroke: GOLD }} strokeWidth={sw} strokeLinecap="round" />
       {ASTERISM_STARS.map((g) => (
         <g key={g.step}>
-          <circle cx={g.x} cy={g.y} r={g.r + sw * 0.9} style={{ fill: "var(--al-night, transparent)" }} />
+          <circle cx={g.x} cy={g.y} r={g.r * STAR + sw * 0.7} style={{ fill: "var(--al-night, transparent)" }} />
           <circle
             cx={g.x}
             cy={g.y}
-            r={g.r}
+            r={g.r * STAR}
             style={{ fill: g.step === "Cut" ? "var(--al-ald, currentColor)" : "var(--al-white, currentColor)" }}
           />
         </g>

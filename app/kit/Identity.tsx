@@ -107,7 +107,7 @@ function Logo() {
             ["Circle", <code key="c">r = 10</code>],
             ["Stars", "Research 315° · Script 200° · Frames 120° · Score 10°"],
             ["Cut", "inside the circle, on the crossbar; the only red"],
-            ["Line", "four arcs and the bar, stroke 0.62 at 40px"],
+            ["Line", "four arcs and the bar, stroke 2.1 of 10"],
           ]}
         />
         <div className="kr-wm">
@@ -117,7 +117,7 @@ function Logo() {
           <Wordmark height={14} />
           <Wordmark height={24} />
           <Wordmark height={40} />
-          <span className="k-caps k-muted">cap height 10 · tracking 4.4</span>
+          <span className="k-caps k-muted">Hanken Grotesk 700 · tracking 0.16em · the O carries the Cut star</span>
         </div>
       </div>
     </div>
