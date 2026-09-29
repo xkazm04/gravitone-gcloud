@@ -15,13 +15,6 @@ export interface Cam { cx: number; cy: number; S: number; ax: number; ay: number
 
 interface Bg { a: number; r: number; s: number; al: number; col: 0 | 1 | 2; ig: number }
 
-const hexToRgb = (v: string, fallback: string): string => {
-  const m = /^#?([0-9a-f]{6})$/i.exec(v.trim());
-  if (!m) return fallback;
-  const n = parseInt(m[1], 16);
-  return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
-};
-
 export interface Sky {
   draw(cam: Cam, ignite: number): void;
 }
@@ -38,10 +31,11 @@ export function createSky(
   canvas.height = Math.round(vh * dpr);
 
   const cs = getComputedStyle(root);
-  const white = hexToRgb(cs.getPropertyValue("--al-white"), "243,238,223");
-  const warm = hexToRgb(cs.getPropertyValue("--al-gold"), "217,178,106");
-  const cool = hexToRgb(cs.getPropertyValue("--al-ash"), "140,147,179");
-  const COLS = [white, warm, cool];
+  // Solid token colours; per-star alpha rides on globalAlpha, so no colour
+  // literal is ever spelled here (canvas cannot take var(), but it can take
+  // the resolved token).
+  const tok = (n: string): string => cs.getPropertyValue(n).trim() || cs.color;
+  const COLS = [tok("--al-white"), tok("--al-gold"), tok("--al-ash")];
 
   // The stars live on a sphere seen from an off-chart pole: angle and radius
   // about it, so the graticule's arcs and the star field agree.
@@ -77,6 +71,7 @@ export function createSky(
     draw(cam, ig) {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, vw, vh);
+      ctx.globalAlpha = 1;
       // The field moves at a third of the chart's zoom: parallax, so a flight
       // into a constellation has depth.
       const f = 0.35;
@@ -93,14 +88,15 @@ export function createSky(
           al *= k;
         }
         const col = COLS[s.col];
-        ctx.fillStyle = `rgba(${col},${al.toFixed(3)})`;
+        ctx.fillStyle = col;
+        ctx.globalAlpha = al;
         if (s.s < 0.9) ctx.fillRect(x - s.s / 2, y - s.s / 2, s.s, s.s);
         else {
           ctx.beginPath();
           ctx.arc(x, y, s.s, 0, 6.283);
           ctx.fill();
           if (s.s > 1.75) {
-            ctx.fillStyle = `rgba(${col},${(al * 0.35).toFixed(3)})`;
+            ctx.globalAlpha = al * 0.35;
             ctx.fillRect(x - s.s * 4, y - 0.25, s.s * 8, 0.5);
             ctx.fillRect(x - 0.25, y - s.s * 4, 0.5, s.s * 8);
           }
