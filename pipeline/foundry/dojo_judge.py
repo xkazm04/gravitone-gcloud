@@ -146,7 +146,9 @@ def park(cdir, choke_path):
         pid = w["id"]
         cj = unblind(choke[pid]["pick"], w["choke_A"])
         skipped = "skipped" in gem.get(pid, {})
-        gj = None if skipped else unblind(gem[pid].get("pick", "tie"), w["gem_A"])
+        # a failed judge call is its own state: a tie is an opinion, an error is an outage
+        errored = not skipped and "pick" not in gem.get(pid, {})
+        gj = None if (skipped or errored) else unblind(gem[pid]["pick"], w["gem_A"])
         ch += cj == "challenger"
         gch += gj == "challenger"
         if gj is not None and cj != "tie" and gj != "tie":
@@ -158,7 +160,10 @@ def park(cdir, choke_path):
                "judge_pick": cj, "reason": choke[pid]["reason"]}
         if gj is not None:
             row["gemini_pick"] = gj
-            row["gemini_reason"] = gem[pid].get("reason", gem[pid].get("error", ""))
+            row["gemini_model"] = gem[pid].get("model")  # the ladder can change the judge per pair
+            row["gemini_reason"] = gem[pid].get("reason", "")
+        elif errored:
+            row["gemini_error"] = gem[pid].get("error", "no pick")
         pairs.append(row)
         print(f"  {pid:28s} choke={cj:10s} gemini={gj}", flush=True)
     rate = ch / len(pairs) if pairs else 0.0

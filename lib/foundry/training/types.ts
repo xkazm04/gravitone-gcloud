@@ -29,7 +29,11 @@ export interface PairResult {
   judge_pick: "baseline" | "challenger" | "tie";
   reason: string;
   gemini_pick?: "baseline" | "challenger" | "tie";
+  /** The judge model that made the pick; the retry ladder can change it per pair. */
+  gemini_model?: string;
   gemini_reason?: string;
+  /** A failed judge call: an outage, never a pick (absent gemini_pick keeps it out of agreement). */
+  gemini_error?: string;
 }
 
 /** One claimed improvement the human gates. `standard` names the registry
