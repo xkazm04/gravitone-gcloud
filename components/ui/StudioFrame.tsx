@@ -7,6 +7,10 @@ import UserMenu from "./UserMenu";
 import NotificationBell from "./NotificationBell";
 import { DEV_AUTH } from "@/lib/devAuth";
 import { LOCAL_MODE } from "@/lib/localMode";
+import { Bar } from "@/components/kit/Bar";
+import { Crumbs, type Crumb } from "@/components/kit/Crumbs";
+import { Mark, Wordmark as BrandWordmark } from "@/components/kit/brand";
+import { WorldRoot } from "@/components/kit/WorldRoot";
 
 // The module list for this app. Projects is the shelf; the studio is opened
 // from a row on it and therefore has no context-free link of its own — /studio
@@ -49,7 +53,19 @@ export const MODULES = [
  *  used to promise now exists — it is <AuthGate>, mounted per route (see
  *  app/projects/page.tsx and app/studio/page.tsx) rather than here, because the
  *  landing page uses no frame and every framed route is gated anyway. */
-export default function StudioFrame({ children }: { children: React.ReactNode }) {
+export default function StudioFrame({
+  children,
+  world = "obsidian",
+  crumbs,
+}: {
+  children: React.ReactNode;
+  /** `almanac` re-draws the shell in the Almanac world (components/kit): the sky,
+   *  a top bar carrying the same places, bell and account menu, and `crumbs`
+   *  where the page is. The routes, the module list and the dev-auth banner are
+   *  this component's own in both worlds. */
+  world?: "obsidian" | "almanac";
+  crumbs?: Crumb[];
+}) {
   // WHERE YOU ARE, MARKED IN THE ONE PLACE THAT IS ALWAYS ON SCREEN.
   //
   // The nav drew four identical links and no current state, so every module
@@ -72,6 +88,39 @@ export default function StudioFrame({ children }: { children: React.ReactNode })
   // page is drawn this way.
   const pathname = usePathname();
   const isActive = (href: string) => pathname === href || pathname.startsWith(`${href}/`);
+
+  if (world === "almanac") {
+    return (
+      <WorldRoot>
+        <Bar
+          brand={
+            <Link href="/projects" className="k-brand" aria-label="Gravitone: projects" style={{ gap: 11 }}>
+              <Mark size={30} />
+              <BrandWordmark height={14} />
+            </Link>
+          }
+          crumbs={crumbs && <Crumbs items={crumbs} />}
+          nav={MODULES.map((m) => (
+            <Link key={m.href} href={m.href} aria-current={isActive(m.href) ? "page" : undefined}>
+              {m.label}
+            </Link>
+          ))}
+          right={
+            <>
+              <NotificationBell />
+              <UserMenu />
+            </>
+          }
+        />
+        {DEV_AUTH && (
+          <div data-testid="dev-auth-banner" className="k-devbanner k-caps">
+            dev auth bypass active — signed in as a fixture, not a real account
+          </div>
+        )}
+        <div className="k-wrap">{children}</div>
+      </WorldRoot>
+    );
+  }
 
   return (
     <div className="font-hanken relative min-h-screen overflow-hidden bg-[var(--gt-ink)] text-slate-200 grain">

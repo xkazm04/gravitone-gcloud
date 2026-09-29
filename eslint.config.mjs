@@ -31,6 +31,9 @@ const config = [
     // them would grade code this repo does not author.
     ignores: [
       "node_modules/**",
+      // Contest and kit scratch: arena entries are throwaway prototypes, not product code.
+      ".contest/**",
+      ".kit/**",
       // UAT L2 SCRIPT FRAGMENTS. `uat/runs/<id>/l2/*.js` are not modules: the
       // driver concatenates `_prelude.js` + `<character>.js` and evaluates the
       // result as ONE async function body (uat/driver/drive-script.mjs), so each

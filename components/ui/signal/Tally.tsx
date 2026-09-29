@@ -27,6 +27,8 @@
 // The repo's pills (Eyebrow, the Deck rail, Segmented) are a different object:
 // they are CONTROLS or headings. A tally is a stamp.
 
+import { useWorld } from "../world";
+
 export type TallyTone = "neutral" | "cyan" | "emerald" | "amber" | "rose";
 
 /**
@@ -43,6 +45,20 @@ export const TALLY_TONE: Record<TallyTone, string> = {
   emerald: "border-emerald-400/25 bg-emerald-400/[0.07] text-emerald-200/90",
   amber: "border-amber-400/30 bg-amber-400/[0.08] text-amber-200/90",
   rose: "border-rose-400/30 bg-rose-400/[0.08] text-rose-200/90",
+};
+
+/**
+ * The Almanac skin (components/kit/kit.css `.k-tally*`). Tones are roles there,
+ * not hues: `amber` is "live, or waiting on a person" (gold, with a lit dot),
+ * `emerald` is a pick (Aldebaran), `rose` an error (Antares), the rest are an
+ * inventory. Same `TallyTone` vocabulary, so a caller never learns a second one.
+ */
+const ALMANAC_TONE: Record<TallyTone, string> = {
+  neutral: "k-tally",
+  cyan: "k-tally",
+  emerald: "k-tally k-tally--pick",
+  amber: "k-tally k-tally--live",
+  rose: "k-tally k-tally--err",
 };
 
 /**
@@ -74,9 +90,10 @@ export function Tally({
   hint?: React.ReactNode;
   className?: string;
 }) {
+  const almanac = useWorld() === "almanac";
   const spoken = `${label ? `${label} ` : ""}${of === undefined ? `${value}` : `${value} of ${of}`}`;
   return (
-    <span className={`${CHIP_CLASS} ${TALLY_TONE[tone]} ${className}`} title={title}>
+    <span className={`${almanac ? ALMANAC_TONE[tone] : `${CHIP_CLASS} ${TALLY_TONE[tone]}`} ${className}`} title={title}>
       {label && (
         <span aria-hidden className="uppercase opacity-55">
           {label}

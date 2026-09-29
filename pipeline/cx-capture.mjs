@@ -60,6 +60,10 @@ const SCREENS = {
   "library-animations": { url: "/library", tab: "Animations" },
   playground: { url: "/playground" },
   foundry: { url: "/foundry" },
+  kit: { url: "/kit" },
+  "kit-law": { url: "/kit", tab: "Law" },
+  "kit-parts": { url: "/kit", tab: "Parts" },
+  "kit-migration": { url: "/kit", tab: "Migration" },
 };
 
 const [id, out, ...rest] = process.argv.slice(2);

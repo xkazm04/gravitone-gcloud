@@ -57,6 +57,8 @@ import { useCallback, useEffect, useId, useRef, useState } from "react";
 
 import { AlertTriangle, Info, Keyboard, Lock } from "lucide-react";
 
+import { useWorld } from "../world";
+
 export type HintVariant = "info" | "lock" | "warn" | "keys";
 export type HintTone = "inherit" | "cyan" | "amber" | "rose";
 
@@ -180,12 +182,15 @@ export function HintPopover({
   d: HintDisclosure;
   children: React.ReactNode;
 }) {
+  const almanac = useWorld() === "almanac";
   return (
     <span
       id={d.hintId}
       role="tooltip"
       className={
-        d.open
+        d.open && almanac
+          ? `k-pop absolute z-50 w-max max-w-[34ch] text-left text-label leading-snug ${SIDE[d.pos.side]} ${ALIGN[d.pos.align]}`
+          : d.open
           ? `glass-panel gt-float absolute z-50 w-max max-w-[34ch] rounded-xl px-3 py-2 text-left text-label leading-snug font-normal tracking-normal whitespace-normal text-white/85 normal-case ${SIDE[d.pos.side]} ${ALIGN[d.pos.align]}`
           : "sr-only"
       }
@@ -243,6 +248,7 @@ export function Hint({
 }) {
   const d = useHint();
   const Glyph = GLYPH[variant];
+  const almanac = useWorld() === "almanac";
   return (
     <span {...d.rootProps} className={`${hintRootClass} ${className}`}>
       <button
@@ -250,7 +256,7 @@ export function Hint({
         {...d.triggerProps}
         aria-label={label ?? DEFAULT_LABEL[variant]}
         onClick={d.toggle}
-        className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 ${TONE[tone]}`}
+        className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 ${almanac ? "k-hint" : TONE[tone]}`}
       >
         <Glyph className="h-3.5 w-3.5" aria-hidden />
       </button>

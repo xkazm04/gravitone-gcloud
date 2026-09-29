@@ -44,6 +44,7 @@ import { useRef } from "react";
 
 import { Lock } from "lucide-react";
 
+import { useWorld } from "../world";
 import { HintPopover, hintRootClass, useHint } from "./Hint";
 import { Tally, type TallyTone } from "./Tally";
 
@@ -106,6 +107,7 @@ export function TabRail<T extends string>({
   className?: string;
 }) {
   const listRef = useRef<HTMLDivElement | null>(null);
+  const almanac = useWorld() === "almanac";
 
   /** Roving focus, read off the DOM rather than off a ref per tab — one ref,
    *  read inside an event handler, which is also what keeps this clear of the
@@ -145,9 +147,11 @@ export function TabRail<T extends string>({
       ref={listRef}
       role="tablist"
       aria-label={label}
-      className={`flex flex-wrap items-center gap-2 ${
-        trailing ? "grow" : `border-b border-white/8 pb-3 ${className}`
-      }`}
+      className={
+        almanac
+          ? `k-tabs ${trailing ? "grow" : `k-tabs-row ${className}`}`
+          : `flex flex-wrap items-center gap-2 ${trailing ? "grow" : `border-b border-white/8 pb-3 ${className}`}`
+      }
     >
       {tabs.map((t, i) => (
         <TabButton
@@ -165,7 +169,7 @@ export function TabRail<T extends string>({
 
   return (
     <div
-      className={`flex flex-wrap items-center gap-2 border-b border-white/8 pb-3 ${className}`}
+      className={almanac ? `k-tabs-row ${className}` : `flex flex-wrap items-center gap-2 border-b border-white/8 pb-3 ${className}`}
     >
       {rail}
       {trailing}
@@ -185,6 +189,7 @@ function TabButton<T extends string>({
   onKeyDown: (e: React.KeyboardEvent) => void;
 }) {
   const d = useHint();
+  const almanac = useWorld() === "almanac";
   const reason = tab.disabled ? tab.disabledReason : undefined;
   const shape =
     "font-jetbrains inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-label transition focus-visible:outline-2 focus-visible:outline-offset-2";
@@ -217,7 +222,7 @@ function TabButton<T extends string>({
         onClick={() => {
           if (!tab.disabled) onSelect(tab.id);
         }}
-        className={`${shape} ${skin}`}
+        className={almanac ? `k-tab${tab.disabled ? " k-tab--locked" : ""}` : `${shape} ${skin}`}
       >
         {tab.disabled && <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />}
         {tab.label}

@@ -1,6 +1,7 @@
 "use client";
 
 import { SURFACE } from "./tokens";
+import { useWorld } from "./world";
 import { EqBars, usePauseOffscreen, type BarColor } from "./Equalizer";
 
 /** The eyebrow pill's class list. Module-local: it was exported for a
@@ -33,12 +34,28 @@ export function Panel({
   return <Tag className={`${SURFACE} rounded-2xl ${className}`}>{children}</Tag>;
 }
 
+/** `danger`, `keep` and `reject` are the destructive-confirm and verdict
+ *  actions; in the Obsidian world they fall back to a rose hairline / the ghost.
+ *  In the Almanac world (components/ui/world.tsx) `primary` is the gold-leaf
+ *  button, `ghost` the ruled one, `keep` Aldebaran, `reject` ash, `danger`
+ *  Antares — colours live in components/kit/kit.css off `--al-*`. */
 type BtnProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: "primary" | "ghost";
+  variant?: "primary" | "ghost" | "danger" | "keep" | "reject";
+  /** `sm` is the compact control that sits inside a strip or beside a row. */
+  size?: "md" | "sm";
 };
 
 /** Primary = cyan glow; ghost = mono hairline. */
-export function Button({ variant = "primary", className = "", children, ...rest }: BtnProps) {
+export function Button({ variant = "primary", size = "md", className = "", children, ...rest }: BtnProps) {
+  const almanac = useWorld() === "almanac";
+  if (almanac) {
+    const v = variant === "primary" ? "gold" : variant === "ghost" ? "line" : variant;
+    return (
+      <button type="button" className={`k-btn k-btn--${v}${size === "sm" ? " k-btn--sm" : ""} ${className}`} {...rest}>
+        {children}
+      </button>
+    );
+  }
   // The focus ring is explicit here rather than left to the `@layer base`
   // `:focus-visible` default in globals.css: this is the shared CTA, it sits on
   // its own cyan glow, and the 2px offset is what keeps the ring legible
@@ -55,7 +72,9 @@ export function Button({ variant = "primary", className = "", children, ...rest 
   const styles =
     variant === "primary"
       ? "gt-glow bg-gradient-to-r from-cyan-300 to-cyan-200 text-slate-950 hover:brightness-110"
-      : "font-jetbrains border border-white/15 text-white/85 hover:bg-white/5";
+      : variant === "danger"
+        ? "font-jetbrains border border-rose-400/40 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20"
+        : "font-jetbrains border border-white/15 text-white/85 hover:bg-white/5";
   // `type="button"` FIRST, so it is a default a caller can still override with
   // `type="submit"` through `...rest`. A <button> with no type is a SUBMIT
   // button, which makes the shared CTA of this design system a form-submitter
@@ -64,7 +83,7 @@ export function Button({ variant = "primary", className = "", children, ...rest 
   // writes type="button" on its raw style pills. A primitive should carry that,
   // not each call site.
   return (
-    <button type="button" className={`${base} ${styles} ${className}`} {...rest}>
+    <button type="button" className={`${base} ${styles} ${size === "sm" ? "px-3 py-1" : ""} ${className}`} {...rest}>
       {children}
     </button>
   );

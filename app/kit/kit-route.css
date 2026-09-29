@@ -1,0 +1,110 @@
+/* THE /kit ROUTE — layout of the guidelines page only.
+ *
+ * Parts are drawn by components/kit/kit.css. This file arranges them on a sheet:
+ * the specimen card, the frame that tames the parts that pin themselves to the
+ * viewport (Bar, Dock, Sky, TabRail), the construction drawing, the palette table.
+ * Same two rules as kit.css: colour only as var(--al-*) / color-mix, and no text
+ * under 1rem.
+ */
+
+[data-world="almanac"] .kr-page { padding-bottom: 56px; }
+[data-world="almanac"] .kr-section { margin-top: 44px; }
+[data-world="almanac"] .kr-section > h2 {
+  margin: 0 0 14px; font-family: var(--k-serif); font-style: italic; font-weight: 400;
+  font-size: clamp(30px, 2.6vw, 42px); line-height: 1.1;
+}
+[data-world="almanac"] .kr-section > h2 small { font-family: var(--k-sans); font-style: normal; margin-left: 14px; color: var(--al-vellum); }
+[data-world="almanac"] .kr-sub { display: flex; align-items: baseline; gap: 12px; margin: 30px 0 12px; color: var(--al-gold); }
+[data-world="almanac"] .kr-sub::after { content: ""; flex: 1; height: 1px; background: var(--al-line); }
+
+/* ---------- construction drawing ---------- */
+[data-world="almanac"] .kr-ident { display: grid; grid-template-columns: minmax(280px, 560px) minmax(0, 1fr); gap: clamp(20px, 3vw, 56px); align-items: start; }
+[data-world="almanac"] .kr-cons { position: relative; width: 100%; aspect-ratio: 1; }
+[data-world="almanac"] .kr-cons svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+[data-world="almanac"] .kr-cons__l { position: absolute; transform: translate(-50%, -50%); white-space: nowrap; color: var(--al-white); line-height: 1.2; text-align: center; }
+[data-world="almanac"] .kr-cons__l--cut { color: var(--al-ald); }
+[data-world="almanac"] .kr-cons__r { position: absolute; color: var(--al-vellum); font-family: var(--k-serif); font-style: italic; transform: translate(-50%, -50%); }
+[data-world="almanac"] .kr-lockups { display: flex; align-items: flex-end; gap: 28px; flex-wrap: wrap; padding: 18px 0; }
+[data-world="almanac"] .kr-lockups figure { margin: 0; display: grid; gap: 8px; justify-items: start; color: var(--al-vellum); }
+[data-world="almanac"] .kr-wm { padding: 26px 0 12px; overflow-x: auto; }
+[data-world="almanac"] .kr-wm svg { display: block; max-width: 100%; }
+
+/* ---------- palette ---------- */
+[data-world="almanac"] .kr-sw { display: block; width: 56px; height: 34px; border-radius: 3px; border: 1px solid var(--al-line-strong); }
+[data-world="almanac"] .kr-tier { font-family: var(--k-mono); font-size: var(--k-fs); white-space: nowrap; }
+[data-world="almanac"] .kr-tier b { font-weight: 400; color: var(--al-white); }
+[data-world="almanac"] .kr-tier i { font-style: normal; color: var(--al-vellum); margin-left: 8px; }
+[data-world="almanac"] .kr-rowflag { color: var(--al-ant); }
+[data-world="almanac"] .kr-one { display: flex; flex-wrap: wrap; gap: 24px; align-items: center; padding: 14px 18px; border: 1px solid var(--al-line); border-radius: 3px; background: var(--k-panel); }
+[data-world="almanac"] .kr-one > div { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; min-width: 0; }
+[data-world="almanac"] .kr-star { width: 26px; height: 26px; flex: none; }
+[data-world="almanac"] .kr-figs { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px; }
+[data-world="almanac"] .kr-figs figure { margin: 0; border: 1px solid var(--al-line); border-radius: 3px; padding: 12px; background: var(--k-panel); }
+[data-world="almanac"] .kr-figs svg { width: 100%; height: 120px; display: block; }
+[data-world="almanac"] .kr-figs figcaption { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; }
+
+/* ---------- type ---------- */
+[data-world="almanac"] .kr-t-display { font-family: var(--k-serif); font-style: italic; font-size: clamp(44px, 4.4vw, 76px); line-height: 1; letter-spacing: -0.01em; }
+[data-world="almanac"] .kr-t-name { font-family: var(--k-serif); font-style: italic; font-size: 28px; line-height: 1.1; }
+[data-world="almanac"] .kr-t-body { font-family: var(--k-sans); font-size: var(--k-fs-c); line-height: 1.5; }
+[data-world="almanac"] .kr-t-label { font-family: var(--k-sans); font-size: var(--k-fs); text-transform: uppercase; letter-spacing: 0.14em; font-variant-numeric: tabular-nums lining-nums; }
+[data-world="almanac"] .kr-t-mono { font-family: var(--k-mono); font-size: var(--k-fs); color: var(--al-gold); }
+[data-world="almanac"] .kr-measured { font-family: var(--k-mono); color: var(--al-vellum); white-space: nowrap; }
+
+/* ---------- the marks board ---------- */
+[data-world="almanac"] .kr-marks { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+[data-world="almanac"] .kr-mark { display: grid; justify-items: center; gap: 10px; padding: 18px 8px 12px; border: 1px solid var(--al-line); border-radius: 3px; background: var(--k-panel); text-align: center; }
+[data-world="almanac"] .kr-mark .k-gl { width: 34px; height: 34px; }
+[data-world="almanac"] .kr-mark .k-mag { width: 26px; height: 26px; }
+[data-world="almanac"] .kr-mark svg { overflow: visible; }
+[data-world="almanac"] .kr-mark__n { color: var(--al-white); }
+[data-world="almanac"] .kr-mark__w { color: var(--al-vellum); }
+[data-world="almanac"] .kr-cut svg { width: 100%; height: 90px; }
+
+/* ---------- specimen sheet ---------- */
+[data-world="almanac"] .kr-jump { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px; }
+[data-world="almanac"] .kr-jump a { color: var(--al-vellum); border: 1px solid var(--k-hair); border-radius: 3px; padding: 1px 10px; text-decoration: none; }
+[data-world="almanac"] .kr-jump a:hover { color: var(--al-gold); border-color: var(--al-gold); }
+[data-world="almanac"] .kr-specs { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 420px), 1fr)); gap: 16px; align-items: start; }
+[data-world="almanac"] .kr-spec {
+  border: 1px solid var(--al-line); border-radius: 3px; background: var(--k-panel); min-width: 0;
+  display: flex; flex-direction: column;
+}
+[data-world="almanac"] .kr-spec--wide { grid-column: 1 / -1; }
+[data-world="almanac"] .kr-spec > header { padding: 12px 16px; border-bottom: 1px solid var(--al-line); display: grid; gap: 2px; }
+[data-world="almanac"] .kr-spec > header code { font-size: var(--k-fs-c); }
+[data-world="almanac"] .kr-api { color: var(--al-vellum); font-family: var(--k-mono); font-size: var(--k-fs); overflow-wrap: anywhere; }
+[data-world="almanac"] .kr-spec__body { padding: 16px; display: grid; gap: 14px; min-width: 0; }
+[data-world="almanac"] .kr-state { display: grid; gap: 6px; min-width: 0; }
+[data-world="almanac"] .kr-state > .k-caps { color: var(--al-vellum); }
+[data-world="almanac"] .kr-row { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center; }
+[data-world="almanac"] .kr-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr)); gap: 12px; }
+[data-world="almanac"] .kr-tiles--wide { grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); }
+[data-world="almanac"] .kr-tiles > .kr-state > .k-tile { width: 100%; }
+[data-world="almanac"] .kr-cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-top: 10px; }
+[data-world="almanac"] .kr-out { font-family: var(--k-mono); color: var(--al-vellum); }
+[data-world="almanac"] .kr-out b { font-weight: 400; color: var(--al-white); }
+
+/* A frame lets a part that pins itself to the viewport sit inside a card. */
+[data-world="almanac"] .kr-frame { position: relative; overflow: hidden; border: 1px dashed var(--k-hair); border-radius: 3px; background: var(--al-night); }
+[data-world="almanac"] .kr-frame--sky { height: 150px; }
+[data-world="almanac"] .kr-frame .k-sky { position: absolute; }
+[data-world="almanac"] .kr-frame .k-bar { position: relative; }
+[data-world="almanac"] .kr-frame .k-dock { position: static; }
+[data-world="almanac"] .kr-frame .k-tabs-row { position: static; margin: 0; padding: 0; }
+[data-world="almanac"] .kr-frame .k-side { position: static; }
+[data-world="almanac"] .kr-frame .k-scene__aside { position: static; }
+[data-world="almanac"] .kr-frame .k-world { min-height: 0; padding: 14px; }
+[data-world="almanac"] .kr-frame--pad { padding: 14px; }
+
+/* ---------- migration ---------- */
+[data-world="almanac"] .kr-gaps { display: flex; flex-wrap: wrap; gap: 6px; }
+[data-world="almanac"] .kr-parts { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--al-vellum); font-family: var(--k-mono); font-size: var(--k-fs); }
+[data-world="almanac"] .kr-parts span { white-space: nowrap; }
+[data-world="almanac"] .kr-gap { color: var(--al-gold); border: 1px solid var(--al-line-strong); border-radius: 3px; padding: 0 8px; font-family: var(--k-mono); font-size: var(--k-fs); white-space: nowrap; }
+[data-world="almanac"] .kr-path { font-family: var(--k-mono); font-size: var(--k-fs); color: var(--al-vellum); }
+
+@media (max-width: 860px) {
+  [data-world="almanac"] .kr-ident { grid-template-columns: minmax(0, 1fr); }
+  [data-world="almanac"] .kr-cons { max-width: 440px; }
+}

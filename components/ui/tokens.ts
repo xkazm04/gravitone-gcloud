@@ -192,6 +192,39 @@ export const CSS_TOKENS: Record<string, string> = {
 };
 
 /**
+ * THE ALMANAC WORLD (v2), scoped. Chosen 2026-09-29 from contest
+ * landing-nextgen-brand-r2, variant A/2: the studio as a star atlas. A route
+ * opts in with `data-world="almanac"` on its root; everything else stays
+ * Obsidian until it is migrated, so the redesign can land one surface at a time.
+ *
+ * Roles, not hues: `gold` is the line of the cut and the ring of focus,
+ * `ald` (Aldebaran) is the single red that means "a person kept this",
+ * `ant` (Antares) is errors and what a commit deletes and appears on working
+ * surfaces only. Sizes and families are Tailwind/@theme business (globals.css).
+ */
+export const WORLD_ALMANAC: Record<string, string> = {
+  "--al-night": "#0A1230",
+  "--al-deep": "#060A1C",
+  "--al-field": "#121C44",
+  "--al-gold": "#D9B26A",
+  "--al-white": "#F3EEDF",
+  "--al-vellum": "#B9B4A4",
+  "--al-ash": "#8C93B3",
+  "--al-ald": "#E2704F",
+  "--al-ant": "#EE6A8C",
+  // the four constellations' own hues (door tints, chosen with the design)
+  "--al-tint-templates": "#9A86F0",
+  "--al-tint-bracket": "#E8C27A",
+  "--al-tint-disciplines": "#6FA8E8",
+  "--al-tint-engines": "#6FD3A2",
+  "--al-line": "rgba(217,178,106,0.2)",
+  "--al-line-strong": "rgba(217,178,106,0.42)",
+  "--al-sky":
+    "radial-gradient(120% 70% at 50% -12%, #16225A 0%, #0E1738 30%, #0A1230 55%, #070C23 100%)",
+  "--al-ease": "cubic-bezier(0.2, 0.7, 0.1, 1)",
+};
+
+/**
  * Signal Layer channel defaults (contract C4). Declared on :root so every
  * reader resolves even when no AudioBus is mounted or no source is registered —
  * at these values every reader is a no-op, which is what preserves the idle
@@ -219,7 +252,10 @@ export function tokensCss(): string {
   ]
     .map(([k, v]) => `${k}:${v};`)
     .join("");
-  return `:root{${decls}}`;
+  const world = Object.entries(WORLD_ALMANAC)
+    .map(([k, v]) => `${k}:${v};`)
+    .join("");
+  return `:root{${decls}}[data-world="almanac"]{${world}}`;
 }
 
 // ── TYPE SCALE, BY REFERENCE ────────────────────────────────────────────────

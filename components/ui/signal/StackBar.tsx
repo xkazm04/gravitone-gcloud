@@ -26,6 +26,8 @@
 // A bar chart with no textual equivalent is the same failure as an unlabelled
 // glyph, and this replaces text that everyone could read.
 
+import { useWorld } from "../world";
+
 export type StackTone = "cyan" | "emerald" | "amber" | "rose" | "neutral";
 
 export interface StackSegment {
@@ -65,6 +67,16 @@ const DOT: Record<StackTone, string> = {
   neutral: "bg-white/25",
 };
 
+/** The Almanac world: a pick is Aldebaran, a rejection is ash, and what nobody
+ *  chose is a hollow rail (kit.css `.k-rail`). Tones stay the same words. */
+const A_FILL: Record<StackTone, string> = {
+  cyan: "k-rail__kp",
+  emerald: "k-rail__kp",
+  amber: "k-rail__kp",
+  rose: "k-rail__rj",
+  neutral: "k-rail__ne",
+};
+
 /** 45° stripes at 6px pitch, painted from the element's own text colour. */
 const HATCH = "repeating-linear-gradient(45deg, currentColor 0 2px, transparent 2px 6px)";
 
@@ -91,6 +103,33 @@ export function StackBar({
   className?: string;
 }) {
   const total = segments.reduce((a, s) => a + s.n, 0);
+  const almanac = useWorld() === "almanac";
+  if (almanac) {
+    return (
+      <div className={className}>
+        <div aria-hidden className="k-rail">
+          {total > 0 &&
+            segments.map((s, i) =>
+              s.n === 0 ? null : (
+                <i
+                  key={`${s.label}-${i}`}
+                  className={`${A_FILL[s.tone]}${s.hatched ? " k-rail__hatch" : ""}`}
+                  style={{ flexGrow: s.n }}
+                />
+              ),
+            )}
+        </div>
+        <ul aria-label={label} className={showCounts ? "k-raill" : "sr-only"}>
+          {segments.map((s, i) => (
+            <li key={`${s.label}-${i}`}>
+              <i aria-hidden className={`k-sw ${A_FILL[s.tone]}${s.hatched ? " k-rail__hatch" : ""}`} />
+              <b>{s.n}</b> {s.label}
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
   return (
     <div className={className}>
       <div

@@ -17,23 +17,49 @@
 // decision across its sources, replicas and transfer. Same discipline as the
 // Cull tab: immediate, idempotent, applied from a ref, debounced save, and a
 // committed run is read-only.
+//
+// Drawn from the kit (components/kit), like the rest of /foundry: what is left
+// here is the drive loop, the verdict state and the upload form.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ImagePlus } from "lucide-react";
-
-import Modal from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Primitives";
-import { Ghost, Hint, Keycaps, StackBar } from "@/components/ui/signal";
+import {
+  Button,
+  CheckField,
+  Chip,
+  ConfirmDialog,
+  Count,
+  Dock,
+  DockAction,
+  Dropzone,
+  ErrorBox,
+  FieldRow,
+  Final,
+  Ghost,
+  Hint,
+  KeyRow,
+  Kicker,
+  Loading,
+  LockNote,
+  NumberField,
+  PanelBox,
+  Report,
+  SaveState,
+  SideItem,
+  SideList,
+  StatusGlyph,
+  StatusStrip,
+  TextField,
+} from "@/components/kit";
 import { foreignLease, hasFailures } from "@/lib/foundry/extract/engine";
 import type { ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
 import { usePolling } from "@/lib/usePolling";
 
 import { ExtractBoard } from "./ExtractBoard";
 import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, saveExtractVerdicts, stepExtractRun } from "./extractClient";
-import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD } from "./parts";
+import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD, extractKind } from "./parts";
 
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveKind = "idle" | "saving" | "saved" | "error";
 
 export function ExtractView() {
   const [runs, setRuns] = useState<ExtractSummary[] | null>(null);
@@ -41,7 +67,7 @@ export function ExtractView() {
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<ExtractDetail | null>(null);
   const [verdicts, setVerdicts] = useState<ExtractVerdicts>({});
-  const [save, setSave] = useState<SaveState>("idle");
+  const [save, setSave] = useState<SaveKind>("idle");
   const [focused, setFocused] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   /** WHICH IMAGE THE SHRINK PASS IS ON, while `creating` is true.
@@ -313,51 +339,64 @@ export function ExtractView() {
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-        <aside>
-          <button
-            onClick={() => selectRun(null)}
-            className={`font-jetbrains w-full cursor-pointer rounded-lg border px-3 py-2 text-left text-label transition ${
-              selected === null ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/70 hover:bg-white/[0.03]"
-            }`}
-          >
-            + new extraction
-          </button>
-          <div className="font-jetbrains mt-4 text-label tracking-[0.14em] text-white/60 uppercase">runs</div>
-          {runsError && <p className="font-jetbrains mt-2 text-content text-rose-200">{runsError}</p>}
-          {runs && runs.length === 0 && <Ghost className="mt-2" shape="row" count={2} label="no extractions yet" />}
-          <ul className="mt-2 flex flex-col gap-1">
-            {runs?.map((r) => (
-              <li key={r.id}>
-                <button
-                  onClick={() => selectRun(r.id)}
-                  className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-left transition ${
-                    r.id === selected ? "border-cyan-400/40 bg-cyan-400/10" : "border-white/8 hover:bg-white/[0.03]"
-                  }`}
+      <div className="k-two">
+        <SideList
+          label="Extraction runs"
+          heading="Runs"
+          pinned={<SideItem glyph={<StatusGlyph kind="undecided" decorative />} title="+ new extraction" current={selected === null} onSelect={() => selectRun(null)} />}
+          aside={
+            <>
+              {runsError && (
+                <ErrorBox
+                  action={
+                    <Button variant="ghost" size="sm" onClick={loadRuns}>
+                      Retry
+                    </Button>
+                  }
                 >
-                  <div className="font-jetbrains truncate text-label text-white/90">{r.id}</div>
-                  <div className="font-jetbrains mt-0.5 text-label text-white/60">
-                    {EXTRACT_STATUS_WORD[r.status]}
-                    {EXTRACT_LIVE.includes(r.status) && r.progress.total > 0 ? ` ${r.progress.done}/${r.progress.total}` : ""}
-                    {" · "}
-                    {r.sources} src · {r.styles} styles · {r.kept} kept
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
+                  {runsError}
+                </ErrorBox>
+              )}
+              {runs && runs.length === 0 && <Ghost shape="row" count={2} label="no extractions yet" />}
+            </>
+          }
+        >
+          {runs?.map((r) => (
+            <SideItem
+              key={r.id}
+              glyph={<StatusGlyph kind={extractKind(r.status)} decorative />}
+              title={r.id}
+              current={r.id === selected}
+              onSelect={() => selectRun(r.id)}
+              meta={
+                <>
+                  {EXTRACT_STATUS_WORD[r.status]}
+                  {EXTRACT_LIVE.includes(r.status) && r.progress.total > 0 ? (
+                    <>
+                      {" "}
+                      <b className="k-num">
+                        {r.progress.done}/{r.progress.total}
+                      </b>
+                    </>
+                  ) : null}
+                  {" · "}
+                  {r.sources} src · {r.styles} styles · <b className="k-num">{r.kept}</b> kept
+                </>
+              }
+            />
+          ))}
+        </SideList>
 
         <div>
           {selected === null && <NewRun busy={creating} shrinking={shrinking} onStart={startRun} />}
-          {selected && !run && <p className="font-jetbrains text-content text-white/60">loading…</p>}
+          {selected && !run && <Loading />}
           {run && (
             <>
-              <StatusStrip run={run} now={loadedAt} driving={driving} driveError={driveError} onResume={() => drive(run.id)} onRetry={() => drive(run.id, true)} onPause={pause} />
+              <RunStrip run={run} now={loadedAt} driving={driving} driveError={driveError} onResume={() => drive(run.id)} onRetry={() => drive(run.id, true)} onPause={pause} />
               {result && (
-                <div className="font-jetbrains mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-4 py-2 text-label text-emerald-200">
+                <Report>
                   committed · {result.written.join(", ")} → pipeline/foundry/styles.json · {result.rejected.length} rejected
-                </div>
+                </Report>
               )}
               <div className="mt-5">
                 <ExtractBoard
@@ -377,56 +416,42 @@ export function ExtractView() {
       </div>
 
       {run && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
-          <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-3 px-2 py-3">
-            <div className="font-jetbrains flex flex-wrap gap-4 text-label text-white/60">
-              <span>
-                <span className="text-emerald-200">{counts.kept}</span> kept
-              </span>
-              <span>
-                <span className="text-rose-200">{counts.rejected}</span> rejected
-              </span>
-              <span>
-                <span className="text-white/90">{counts.undecided}</span> undecided
-              </span>
-              <span className={save === "error" ? "text-rose-200" : "text-white/55"}>
-                {readOnly ? "committed · verdicts are final" : save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
-              </span>
-              {!readOnly && (
-                <Keycaps
-                  label="Board shortcuts"
-                  map={[
-                    { keys: ["↑", "↓"], does: "move" },
-                    { keys: ["K"], does: "keep" },
-                    { keys: ["X"], does: "reject" },
-                    { keys: ["U"], does: "clear" },
-                    { keys: ["Enter"], does: "inspect" },
-                  ]}
-                />
-              )}
-            </div>
+        <Dock label="Decisions">
+          <Count kind="keep" n={counts.kept} label="kept" />
+          <Count kind="reject" n={counts.rejected} label="rejected" />
+          <Count kind="undecided" n={counts.undecided} label="undecided" />
+          <SaveState state={save} final={readOnly} />
+          {!readOnly && (
+            <KeyRow
+              label="Board shortcuts"
+              map={[
+                { keys: ["↑", "↓"], does: "move" },
+                { keys: ["K"], does: "keep" },
+                { keys: ["X"], does: "reject" },
+                { keys: ["U"], does: "clear" },
+                { keys: ["Enter"], does: "inspect" },
+              ]}
+            />
+          )}
+          <DockAction>
             {readOnly ? (
-              <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">committed</span>
+              <Final>committed</Final>
             ) : (
               // The reason a disabled control will not go, in one clause,
               // beside it — not three sentences behind a hover. The status
               // pill on the strip above already names the run's state.
-              <span className="flex items-center gap-2">
-                {blocked && (
-                  <Hint variant="lock" tone="amber" label="Why Commit is unavailable">
-                    {blocked}
-                  </Hint>
-                )}
-                <Button disabled={Boolean(blocked)} onClick={() => setConfirm(true)} className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed">
+              <>
+                {blocked && <LockNote>{blocked}</LockNote>}
+                <Button disabled={Boolean(blocked)} onClick={() => setConfirm(true)}>
                   Commit the kept styles
                 </Button>
-              </span>
+              </>
             )}
-          </div>
-        </div>
+          </DockAction>
+        </Dock>
       )}
 
-      <Modal
+      <ConfirmDialog
         open={confirm}
         onClose={() => {
           if (committing) return;
@@ -434,47 +459,44 @@ export function ExtractView() {
           setCommitError(null);
         }}
         title="Commit the kept styles?"
-        className="max-w-md"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={() => setConfirm(false)} disabled={committing}>
-              Not yet
-            </Button>
-            <Button onClick={doCommit} disabled={committing} className="cursor-pointer px-5 py-2 text-label">
-              {committing ? "committing…" : `Commit ${counts.kept}, reject ${counts.rejected + counts.undecided}`}
-            </Button>
-          </div>
+        eyebrow={<Kicker>{selected}</Kicker>}
+        railLabel="commit"
+        // "Undecided counts as thrown" was prose describing a rail: kept on
+        // one side, thrown on the other, undecided hatched into the thrown
+        // side because it is not a third outcome. What stays is the
+        // destination and the one irreversible fact.
+        rail={[
+          { n: counts.kept, tone: "emerald", label: "kept" },
+          { n: counts.rejected, tone: "rose", label: "thrown" },
+          { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+        ]}
+        consequence={
+          <>
+            The kept styles join <code>pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. Nothing is deleted, but the verdicts are final.
+          </>
         }
+        tone="gold"
+        busy={committing}
+        confirmLabel={`Commit ${counts.kept}, reject ${counts.rejected + counts.undecided}`}
+        onConfirm={doCommit}
+        onCancel={() => {
+          setConfirm(false);
+          setCommitError(null);
+        }}
       >
-        {/* "Undecided counts as thrown" was prose describing a rail: kept on
-            one side, thrown on the other, undecided hatched into the thrown
-            side because it is not a third outcome. What stays is the
-            destination and the one irreversible fact. */}
-        <StackBar
-          label="commit"
-          segments={[
-            { n: counts.kept, tone: "emerald", label: "kept" },
-            { n: counts.rejected, tone: "rose", label: "thrown" },
-            { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
-          ]}
-        />
-        <p className="font-hanken mt-3 text-content text-slate-300">
-          The kept styles join <code className="font-jetbrains text-label text-white/70">pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers
-          as exemplars. Nothing is deleted, but the verdicts are final.
-        </p>
         {commitError && (
-          <p role="alert" className="font-jetbrains mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-content text-rose-200">
-            The commit failed and no style was written: {commitError}
-          </p>
+          <div className="mt-3">
+            <ErrorBox role="alert">The commit failed and no style was written: {commitError}</ErrorBox>
+          </div>
         )}
-      </Modal>
+      </ConfirmDialog>
     </>
   );
 }
 
 /* ── Pieces ───────────────────────────────────────────────────────────────── */
 
-function StatusStrip({
+function RunStrip({
   run,
   now,
   driving,
@@ -495,70 +517,48 @@ function StatusStrip({
   const other = foreignLease(run, "app", now);
   const retryable = !driving && !other && (run.status === "failed" || (run.status === "done" && hasFailures(run)));
   const last = run.log[run.log.length - 1];
-  const pct = run.progress.total ? Math.round((100 * run.progress.done) / run.progress.total) : 0;
+  const engines = [run.engines.vision && `eyes ${run.engines.vision}`, run.engines.generator && `pixels ${run.engines.generator}`, run.engines.reasoner && `words ${run.engines.reasoner}`]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-2.5">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <span
-          className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.14em] uppercase ${
-            run.status === "committed"
-              ? "border-emerald-400/40 text-emerald-200"
-              : run.status === "failed"
-                ? "border-rose-400/40 text-rose-200"
-                : live
-                  ? "border-amber-400/40 text-amber-200"
-                  : "border-cyan-400/40 text-cyan-200"
-          }`}
-        >
-          {EXTRACT_STATUS_WORD[run.status]}
-          {live && run.progress.total > 0 ? ` ${run.progress.done}/${run.progress.total}` : ""}
-        </span>
-        <span className="font-jetbrains text-label text-white/65">
-          {run.sources.length} source{run.sources.length === 1 ? "" : "s"} · {run.styles.length} style{run.styles.length === 1 ? "" : "s"} · {run.options.replicas}×{run.options.rounds} rounds ·{" "}
+    <StatusStrip
+      kind={extractKind(run.status)}
+      word={EXTRACT_STATUS_WORD[run.status]}
+      progress={live ? run.progress : undefined}
+      facts={
+        <>
+          <b>{run.sources.length}</b> source{run.sources.length === 1 ? "" : "s"} · <b>{run.styles.length}</b> style{run.styles.length === 1 ? "" : "s"} · {run.options.replicas}×{run.options.rounds} rounds ·{" "}
           {run.options.transfers} transfer{run.options.transfers === 1 ? "" : "s"}
-        </span>
-        {(run.engines.vision || run.engines.generator || run.engines.reasoner) && (
-          <span className="font-jetbrains text-label text-white/55">
-            {[run.engines.vision && `eyes ${run.engines.vision}`, run.engines.generator && `pixels ${run.engines.generator}`, run.engines.reasoner && `words ${run.engines.reasoner}`]
-              .filter(Boolean)
-              .join(" · ")}
-          </span>
-        )}
-        {run.error && <span className="font-jetbrains text-label text-rose-200">{run.error}</span>}
-        {retryable && (
-          <span className="ml-auto flex items-center gap-2">
-            {driveError && <span className="font-jetbrains text-label text-rose-200">{driveError}</span>}
-            <Button className="cursor-pointer px-3 py-1 text-label" onClick={onRetry} title="Prune every failed unit and take it again">
+          {engines && <> · {engines}</>}
+        </>
+      }
+      error={run.error}
+      log={live && last ? last.msg : null}
+      actions={
+        <>
+          {driveError && (live || retryable) && <span className="k-err">{driveError}</span>}
+          {retryable && (
+            <Button variant="ghost" size="sm" onClick={onRetry} title="Prune every failed unit and take it again">
               retry failed
             </Button>
-          </span>
-        )}
-        {live && (
-          <span className="ml-auto flex items-center gap-2">
-            {driveError && <span className="font-jetbrains text-label text-rose-200">{driveError}</span>}
-            {other ? (
-              <span className="font-jetbrains rounded-full border border-amber-400/30 px-3 py-1 text-label tracking-[0.14em] text-amber-200 uppercase" title={`lease stamped ${other.at}`}>
-                driven by the {other.owner}
+          )}
+          {live &&
+            (other ? (
+              <span title={`lease stamped ${other.at}`}>
+                <Chip tone="gold">driven by the {other.owner}</Chip>
               </span>
             ) : driving ? (
-              <Button variant="ghost" className="cursor-pointer px-3 py-1 text-label" onClick={onPause}>
+              <Button variant="ghost" size="sm" onClick={onPause}>
                 pause
               </Button>
             ) : (
-              <Button className="cursor-pointer px-3 py-1 text-label" onClick={onResume}>
+              <Button size="sm" onClick={onResume}>
                 {driveError ? "retry" : run.progress.done ? "resume" : "start"}
               </Button>
-            )}
-          </span>
-        )}
-      </div>
-      {live && (
-        <div className="mt-2 h-1 overflow-hidden rounded-full bg-white/8">
-          <div className="h-full rounded-full bg-cyan-300/70 transition-[width] duration-500" style={{ width: `${pct}%` }} />
-        </div>
-      )}
-      {live && last && <p className="font-jetbrains mt-1.5 truncate text-content text-white/55">{last.msg}</p>}
-    </div>
+            ))}
+        </>
+      }
+    />
   );
 }
 
@@ -577,8 +577,6 @@ function NewRun({
   const [replicas, setReplicas] = useState(2);
   const [transfers, setTransfers] = useState(1);
   const [singletons, setSingletons] = useState(false);
-  const [dragging, setDragging] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const accept = (list: FileList | File[] | null) => {
     if (!list) return;
@@ -593,117 +591,69 @@ function NewRun({
   const ready = slug.trim().length > 0 && files.length > 0 && !busy;
 
   return (
-    <div className="rounded-2xl border border-white/8 bg-white/[0.02] p-5">
-      <div
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault();
-          setDragging(false);
-          accept(e.dataTransfer.files);
-        }}
-        onClick={() => inputRef.current?.click()}
-        data-testid="extract-dropzone"
-        // A DASHED BOX SAYS "DROP HERE" — the sentence that said it too went.
-        // The name is on the control for anyone who cannot see the box; what
-        // is left visible is the constraint set, which no shape can draw.
-        aria-label="Drop images here, or click to choose"
-        className={`cursor-pointer rounded-xl border border-dashed px-6 py-10 text-center transition ${
-          dragging ? "border-cyan-300/60 bg-cyan-400/5" : "border-white/15 hover:border-white/30"
-        }`}
-      >
-        <input ref={inputRef} type="file" accept="image/png,image/jpeg,image/webp" multiple className="hidden" onChange={(e) => accept(e.target.files)} />
-        <ImagePlus className="mx-auto h-7 w-7 text-white/35" aria-hidden />
-        <p className="font-jetbrains mt-2 text-content text-white/60">PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload</p>
-      </div>
+    <PanelBox>
+      {/* A DASHED BOX SAYS "DROP HERE" — the sentence that said it too went.
+          The name is on the control for anyone who cannot see the box; what
+          is left visible is the constraint set, which no shape can draw. */}
+      <Dropzone
+        testId="extract-dropzone"
+        label="Drop images here, or click to choose"
+        accept="image/png,image/jpeg,image/webp"
+        constraints="PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload"
+        onFiles={accept}
+      />
 
       {previews.length > 0 && (
-        <div className="mt-4 grid grid-cols-4 gap-1.5 sm:grid-cols-6 md:grid-cols-8">
+        <div className="k-prev">
           {previews.map((p, i) => (
-            <button
-              key={`${p.f.name}-${i}`}
-              onClick={() => setFiles((fs) => fs.filter((_, k) => k !== i))}
-              title={`${p.f.name} — click to remove`}
-              className="group relative aspect-video overflow-hidden rounded-md border border-white/10"
-            >
+            <button key={`${p.f.name}-${i}`} type="button" onClick={() => setFiles((fs) => fs.filter((_, k) => k !== i))} aria-label={`Remove ${p.f.name}`}>
               {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
-              <img src={p.url} alt={p.f.name} className="h-full w-full object-cover" />
-              <span className="font-jetbrains absolute inset-0 hidden items-center justify-center bg-black/60 text-label text-rose-200 group-hover:flex">remove</span>
+              <img src={p.url} alt="" />
+              <span aria-hidden="true">remove</span>
             </button>
           ))}
         </div>
       )}
 
-      <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto_auto_auto]">
-        <label className="flex flex-col gap-1">
-          <span className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">slug</span>
-          <input
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            placeholder="my-gallery"
-            className="font-jetbrains rounded-lg border border-white/10 bg-transparent px-3 py-2 text-label text-white/90 outline-none focus:border-cyan-400/40"
-          />
-        </label>
-        <Num label="rounds" value={rounds} min={1} max={4} onChange={setRounds} hint="self-critique rounds per replica" />
-        <Num label="replicas" value={replicas} min={1} max={4} onChange={setReplicas} hint="sources replicated per style" />
-        <Num label="transfers" value={transfers} min={0} max={4} onChange={setTransfers} hint="neutral scenes per style" />
-      </div>
+      <FieldRow>
+        <TextField label="slug" value={slug} onChange={setSlug} placeholder="my-gallery" />
+        <NumberField label="rounds" value={rounds} min={1} max={4} onChange={setRounds} hint="self-critique rounds per replica" />
+        <NumberField label="replicas" value={replicas} min={1} max={4} onChange={setReplicas} hint="sources replicated per style" />
+        <NumberField label="transfers" value={transfers} min={0} max={4} onChange={setTransfers} hint="neutral scenes per style" />
+      </FieldRow>
 
       {/* THE DIFFERENTIATOR IS THE ARITHMETIC, not three sentences of `title=`.
           `N img → 1 style` against `1 img → 1 style` is what the checkbox
           changes; the ≈ chips on the board are what report the overlap after
           the fact, and they carry their own hint there. */}
-      <div className="mt-4 flex items-center gap-2">
-        <label className="flex cursor-pointer items-center gap-2">
-          <input type="checkbox" checked={singletons} onChange={(e) => setSingletons(e.target.checked)} className="accent-cyan-300" />
-          <span className="font-jetbrains text-label text-white/70">one style per image — no grouping</span>
-        </label>
-        <span aria-hidden className="font-jetbrains rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-label text-white/55">
-          {singletons ? "1 img → 1 style" : "N img → 1 style"}
+      <div className="mt-4 flex flex-wrap items-center gap-3">
+        <CheckField label="one style per image — no grouping" checked={singletons} onChange={setSingletons} />
+        <span aria-hidden="true">
+          <Chip>{singletons ? "1 img → 1 style" : "N img → 1 style"}</Chip>
         </span>
         <Hint>each recipe is written with its own image in view</Hint>
       </div>
 
+      {/* The cost, as arithmetic: one recognition per source, and per style up to
+          replicas × rounds + transfers generations. Leaving the tab pauses the run. */}
       <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p className="font-hanken max-w-lg text-content text-slate-400">
-          Each source costs one recognition; each style costs up to replicas × rounds + transfers generations, each read back once. The run pauses if you leave this tab and resumes where it
-          stopped.
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Chip name="reads">{files.length}</Chip>
+          <Chip name="generations per style">up to {replicas * rounds + transfers}</Chip>
+          <Hint>leaving this tab pauses the run</Hint>
+        </div>
         <div className="flex items-center gap-3">
           {/* The live region is rendered THROUGHOUT, empty when idle: a region
               inserted at the same moment it gains text is one a screen reader
               has no prior state to compare against, and announces nothing. */}
-          <span aria-live="polite" className="font-jetbrains text-label text-cyan-200/80">
+          <span aria-live="polite" className="k-muted">
             {shrinking ? `shrinking ${Math.min(shrinking.done + 1, shrinking.total)} of ${shrinking.total}` : ""}
           </span>
-          <Button
-            disabled={!ready}
-            onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}
-            className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-          >
+          <Button disabled={!ready} onClick={() => onStart(slug.trim(), files, { rounds, replicas, transfers, ...(singletons ? { grouping: "none" as const } : {}) })}>
             {busy ? "uploading…" : `Extract from ${files.length} image${files.length === 1 ? "" : "s"}`}
           </Button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function Num({ label, value, min, max, onChange, hint }: { label: string; value: number; min: number; max: number; onChange: (n: number) => void; hint: string }) {
-  return (
-    <label className="flex flex-col gap-1" title={hint}>
-      <span className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">{label}</span>
-      <input
-        type="number"
-        min={min}
-        max={max}
-        value={value}
-        onChange={(e) => onChange(Math.min(max, Math.max(min, Number(e.target.value) || min)))}
-        className="font-jetbrains w-20 rounded-lg border border-white/10 bg-transparent px-3 py-2 text-label text-white/90 outline-none focus:border-cyan-400/40"
-      />
-    </label>
+    </PanelBox>
   );
 }

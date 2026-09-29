@@ -26,24 +26,60 @@
 // the (debounced) save leaves. A COMMITTED run is read-only: its rejected
 // files are gone and its rows are in the ledger, so the controls are removed
 // rather than left to fail quietly.
+//
+// THE PAGE IS DRAWN IN THE ALMANAC WORLD, from the kit alone (components/kit):
+// the shell, the header and its figure, the run list, the strip, the matrix, the
+// dock, the confirm and the two full-screen sheets are all kit parts. What is
+// left in this file is state: which run, which candidate, which verdicts, and
+// when a save leaves.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import Modal from "@/components/ui/Modal";
-import { Button, Eyebrow } from "@/components/ui/Primitives";
+import {
+  Button,
+  ConfirmDialog,
+  Command,
+  Count,
+  Doc,
+  DocLede,
+  DocSection,
+  Dock,
+  DockAction,
+  ErrorBox,
+  Final,
+  Ghost,
+  KeyRow,
+  Kicker,
+  Loading,
+  LockNote,
+  OpenLink,
+  PageHead,
+  Report,
+  SaveState,
+  Sheet,
+  SideItem,
+  SideList,
+  StatusGlyph,
+  StatusStrip,
+  Tag,
+  TabRail,
+  Verbatim,
+  type Crumb,
+  type TabDef,
+} from "@/components/kit";
 import StudioFrame from "@/components/ui/StudioFrame";
-import { Hint, Keycaps, StackBar, TabRail, type TabDef } from "@/components/ui/signal";
 import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
 
 import { CullGrid } from "./CullGrid";
 import { DojoView } from "./DojoView";
 import { ExtractView } from "./ExtractView";
+import { Fornax } from "./Fornax";
 import { Lightbox } from "./Lightbox";
 import { StylesShelf } from "./StylesShelf";
 import { fetchExtractRuns } from "./extractClient";
 import { commitRun, fetchCatalogue, fetchRun, fetchRuns, fetchTrainingCycles, saveVerdicts } from "./foundryClient";
-import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
+import { COMMITTABLE, LIVE, STATUS_WORD, runKind } from "./parts";
 
 // THE TABS CARRIED A BLURB AND SO THE BLURB GOT WRITTEN — up to 45 words per
 // tab, printed as a paragraph under the row. <TabRail> has no slot for one, on
@@ -62,6 +98,8 @@ import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
 // commit deletes decided media keeping one thumbnail per approved improvement
 // (the Dojo dialog). Each is a consequence stated at the moment it is ordered.
 type Tab = "cull" | "extract" | "styles" | "dojo";
+
+const TAB_LABEL: Record<Tab, string> = { cull: "Cull", extract: "Extract", styles: "Styles", dojo: "Dojo" };
 
 /** The three counts the rail cannot derive from this component's own state.
  *
@@ -89,7 +127,7 @@ function useShelfCounts() {
   return counts;
 }
 
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveKind = "idle" | "saving" | "saved" | "error";
 
 export default function FoundryView() {
   const [tab, setTab] = useState<Tab>("cull");
@@ -99,12 +137,13 @@ export default function FoundryView() {
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<RunDetail | null>(null);
   const [verdicts, setVerdicts] = useState<Verdicts>({});
-  const [save, setSave] = useState<SaveState>("idle");
+  const [save, setSave] = useState<SaveKind>("idle");
   const [focused, setFocused] = useState<string | null>(null);
   const [open, setOpen] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
+  const [findingsOpen, setFindingsOpen] = useState(false);
   /** A commit that FAILED, shown inside the dialog that asked for it.
    *
    *  The catch used to write `runsError`, which renders beside the run list —
@@ -186,6 +225,7 @@ export default function FoundryView() {
       setResult(null);
       setFocused(null);
       setOpen(null);
+      setFindingsOpen(false);
       setSave("idle");
       loadDetail(id, false);
     },
@@ -315,16 +355,45 @@ export default function FoundryView() {
     { id: "dojo", label: "Dojo", testId: "foundry-tab-dojo", tally: tally(shelf.parked, shelf.parked ? "amber" : "neutral") },
   ];
 
-  return (
-    <StudioFrame>
-      <main className="pb-24">
-        <header className="pt-6">
-          <Eyebrow>foundry</Eyebrow>
-          <h1 className="font-instrument mt-3 text-4xl text-white">Foundry</h1>
-          <TabRail label="foundry modules" tabs={tabs} active={tab} onSelect={setTab} className="mt-5" />
-        </header>
+  // WHERE THE READER IS, as a path. Each level but the last steps back: to the
+  // module, or out of the candidate / the findings to the run beneath.
+  const openCandidate = open && run ? run.candidates.find((c) => c.id === open) : null;
+  const closeLevels = () => {
+    setOpen(null);
+    setFindingsOpen(false);
+  };
+  const crumbs: Crumb[] = [
+    { label: "Door", href: "/" },
+    { label: "Foundry", onSelect: closeLevels },
+    { label: TAB_LABEL[tab], onSelect: closeLevels },
+  ];
+  if (tab === "cull" && selected) crumbs.push({ label: selected, onSelect: closeLevels });
+  if (tab === "cull" && openCandidate && run)
+    crumbs.push({ label: `${run.styles[openCandidate.style]?.name ?? openCandidate.style} · ${openCandidate.mechanism}` });
+  if (tab === "cull" && findingsOpen) crumbs.push({ label: "findings.md" });
 
-        <section className="mt-6">
+  const selectTab = (t: Tab) => {
+    closeLevels();
+    setTab(t);
+  };
+
+  return (
+    <StudioFrame world="almanac" crumbs={crumbs}>
+      <main tabIndex={-1}>
+        <PageHead
+          eyebrow="Working surface"
+          title="Foundry"
+          figure={<Fornax active={tab} onSelect={selectTab} />}
+          caption={
+            <>
+              <span>Fornax · the furnace</span>
+              <Tag>stylised</Tag>
+            </>
+          }
+        />
+        <TabRail label="foundry modules" tabs={tabs} active={tab} onSelect={selectTab} />
+
+        <section>
           {tab === "styles" ? (
             <StylesShelf />
           ) : tab === "extract" ? (
@@ -332,40 +401,90 @@ export default function FoundryView() {
           ) : tab === "dojo" ? (
             <DojoView />
           ) : (
-            <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-              <aside>
-                <div className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">runs</div>
-                {runsError && <p className="font-jetbrains mt-2 text-content text-rose-200">{runsError}</p>}
-                {runs && runs.length === 0 && <ForgeHint />}
-                <ul className="mt-2 flex flex-col gap-1">
-                  {runs?.map((r) => (
-                    <li key={r.id}>
-                      <button
-                        onClick={() => selectRun(r.id)}
-                        className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-left transition ${
-                          r.id === selected ? "border-cyan-400/40 bg-cyan-400/10" : "border-white/8 hover:bg-white/[0.03]"
-                        }`}
+            <div className="k-two">
+              <SideList
+                label="Forge runs"
+                heading="Runs"
+                aside={
+                  <>
+                    {runsError && (
+                      <ErrorBox
+                        action={
+                          <Button variant="ghost" size="sm" onClick={loadRuns}>
+                            Retry
+                          </Button>
+                        }
                       >
-                        <div className="font-jetbrains truncate text-label text-white/90">{r.id}</div>
-                        <div className="font-jetbrains mt-0.5 text-label text-white/60">
-                          {STATUS_WORD[r.status]}
-                          {LIVE.includes(r.status) && r.progress.total > 0 ? ` ${r.progress.done}/${r.progress.total}` : ""}
-                          {" · "}
-                          {r.kept}/{r.candidates} kept
-                        </div>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              </aside>
+                        {runsError}
+                      </ErrorBox>
+                    )}
+                    {runs && runs.length === 0 && (
+                      <>
+                        <Command label="none yet — forge one">{`cd pipeline/foundry\npython forge.py plans/dry-run.json`}</Command>
+                        <Ghost className="mt-3" shape="row" count={3} label="no runs yet" />
+                      </>
+                    )}
+                  </>
+                }
+              >
+                {runs?.map((r) => (
+                  <SideItem
+                    key={r.id}
+                    glyph={<StatusGlyph kind={runKind(r.status)} decorative />}
+                    title={r.id}
+                    current={r.id === selected}
+                    onSelect={() => selectRun(r.id)}
+                    meta={
+                      <>
+                        {STATUS_WORD[r.status]}
+                        {LIVE.includes(r.status) && r.progress.total > 0 ? (
+                          <>
+                            {" "}
+                            <b className="k-num">
+                              {r.progress.done}/{r.progress.total}
+                            </b>
+                          </>
+                        ) : null}
+                        {" · "}
+                        <b className="k-num">
+                          {r.kept}/{r.candidates}
+                        </b>{" "}
+                        kept
+                      </>
+                    }
+                  />
+                ))}
+              </SideList>
 
               <div>
-                {!run && selected && <p className="font-jetbrains text-content text-white/60">loading…</p>}
+                {!run && selected && <Loading />}
                 {run && (
                   <>
-                    <StatusStrip run={run} />
-                    {result && <CommitReport result={result} />}
-                    <div className="mt-5">
+                    <StatusStrip
+                      kind={runKind(run.status)}
+                      word={STATUS_WORD[run.status]}
+                      progress={LIVE.includes(run.status) ? run.progress : undefined}
+                      facts={
+                        <>
+                          <b>{run.scenes.length}</b> scene{run.scenes.length === 1 ? "" : "s"} · <b>{run.plan.styles.length}</b> styles · <b>{run.plan.mechanisms.length}</b> mechanisms ·{" "}
+                          <b>{run.candidates.length}</b> candidates
+                          {run.committed && (
+                            <>
+                              {" "}
+                              · committed: <b>{run.committed.kept}</b> kept, <b>{run.committed.deleted}</b> deleted
+                            </>
+                          )}
+                        </>
+                      }
+                      error={run.error}
+                      log={LIVE.includes(run.status) ? run.log[run.log.length - 1]?.msg : null}
+                    />
+                    {result && (
+                      <Report action={<OpenLink onClick={() => setFindingsOpen(true)}>Read findings.md →</OpenLink>}>
+                        committed · {result.kept} kept · {result.deleted} deleted · findings.md written
+                      </Report>
+                    )}
+                    <div className="mt-2">
                       <CullGrid
                         run={run}
                         verdicts={verdicts}
@@ -374,7 +493,7 @@ export default function FoundryView() {
                         onFocus={setFocused}
                         onVerdict={setVerdict}
                         onOpen={setOpen}
-                        keysEnabled={!open && !confirm}
+                        keysEnabled={!open && !confirm && !findingsOpen}
                       />
                     </div>
                   </>
@@ -385,61 +504,41 @@ export default function FoundryView() {
         </section>
 
         {run && tab === "cull" && (
-          <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
-            <div className="mx-auto flex max-w-shell flex-wrap items-center justify-between gap-3 px-2 py-3">
-              <div className="font-jetbrains flex flex-wrap gap-4 text-label text-white/60">
-                <span>
-                  <span className="text-emerald-200">{counts.kept}</span> kept
-                </span>
-                <span>
-                  <span className="text-rose-200">{counts.rejected}</span> rejected
-                </span>
-                <span>
-                  <span className="text-white/90">{counts.undecided}</span> undecided
-                </span>
-                <span className={save === "error" ? "text-rose-200" : "text-white/55"}>
-                  {readOnly ? "committed · verdicts are final" : save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
-                </span>
-                {!readOnly && (
-                  <Keycaps
-                    label="Cull shortcuts"
-                    map={[
-                      { keys: ["←", "→", "↑", "↓"], does: "move" },
-                      { keys: ["K"], does: "keep" },
-                      { keys: ["X"], does: "reject" },
-                      { keys: ["U"], does: "clear" },
-                      { keys: ["Enter"], does: "compare" },
-                    ]}
-                  />
-                )}
-              </div>
+          <Dock label="Decisions">
+            <Count kind="keep" n={counts.kept} label="kept" />
+            <Count kind="reject" n={counts.rejected} label="rejected" />
+            <Count kind="undecided" n={counts.undecided} label="undecided" />
+            <SaveState state={save} final={readOnly} />
+            {!readOnly && (
+              <KeyRow
+                label="Cull shortcuts"
+                map={[
+                  { keys: ["←", "→", "↑", "↓"], does: "move" },
+                  { keys: ["K"], does: "keep" },
+                  { keys: ["X"], does: "reject" },
+                  { keys: ["U"], does: "clear" },
+                  { keys: ["Enter"], does: "compare" },
+                ]}
+              />
+            )}
+            <DockAction>
               {readOnly ? (
-                <span className="font-jetbrains rounded-full border border-emerald-400/30 px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">
-                  committed
-                </span>
+                <Final>committed</Final>
               ) : (
                 // A DISABLED BUTTON'S REASON IS NOT A HOVER ESSAY. It used to be
                 // three sentences of `title=` re-teaching what a failed or
                 // incomplete run is — which the status pill on the strip above
                 // already says in one word. What is left is the one clause the
                 // reader cannot see anywhere else: why THIS button will not go.
-                <span className="flex items-center gap-2">
-                  {blocked && (
-                    <Hint variant="lock" tone="amber" label="Why Commit is unavailable">
-                      {blocked}
-                    </Hint>
-                  )}
-                  <Button
-                    disabled={Boolean(blocked)}
-                    onClick={() => setConfirm(true)}
-                    className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-                  >
+                <>
+                  {blocked && <LockNote>{blocked}</LockNote>}
+                  <Button disabled={Boolean(blocked)} onClick={() => setConfirm(true)}>
                     Commit the cull
                   </Button>
-                </span>
+                </>
               )}
-            </div>
-          </div>
+            </DockAction>
+          </Dock>
         )}
 
         {run && (
@@ -451,10 +550,26 @@ export default function FoundryView() {
             onClose={() => setOpen(null)}
             onVerdict={(v) => open && setVerdict(open, v)}
             onStep={stepOpen}
+            index={open ? order.indexOf(open) : 0}
+            count={order.length}
           />
         )}
 
-        <Modal
+        <Sheet open={findingsOpen && Boolean(result)} onClose={() => setFindingsOpen(false)} title="Findings" eyebrow={<Kicker>{selected}</Kicker>}>
+          {result && (
+            <Doc>
+              <DocLede>
+                <StatusGlyph kind="committed" decorative />
+                {result.kept} kept · {result.deleted} deleted
+              </DocLede>
+              <DocSection label="findings.md">
+                <Verbatim>{result.findings}</Verbatim>
+              </DocSection>
+            </Doc>
+          )}
+        </Sheet>
+
+        <ConfirmDialog
           open={confirm}
           onClose={() => {
             if (committing) return;
@@ -462,105 +577,39 @@ export default function FoundryView() {
             setCommitError(null);
           }}
           title="Commit the cull?"
-          className="max-w-md"
-          footer={
-            <div className="flex justify-end gap-2">
-              <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={() => setConfirm(false)} disabled={committing}>
-                Not yet
-              </Button>
-              <button
-                onClick={doCommit}
-                disabled={committing}
-                className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20 disabled:opacity-50"
-              >
-                {committing ? "committing…" : `Delete ${counts.rejected + counts.undecided}, keep ${counts.kept}`}
-              </button>
-            </div>
+          eyebrow={<Kicker>{selected}</Kicker>}
+          railLabel="commit"
+          // THE RAIL IS THE SENTENCE. "undecided counts as rejected: the cull
+          // is what you chose, not what you skipped" was the app explaining a
+          // picture — kept on one side, rejected on the other, and undecided
+          // hatched into the rejected side because it is not a third outcome.
+          // What stays in prose is the consequence a destructive confirm is
+          // entitled to state, and the path the judgement is written to.
+          rail={[
+            { n: counts.kept, tone: "emerald", label: "kept" },
+            { n: counts.rejected, tone: "rose", label: "rejected" },
+            { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+          ]}
+          consequence={
+            <>
+              Everything not kept is deleted from disk. Every decided candidate is written to <code>pipeline/foundry/ledger.json</code> and the style catalogue. This cannot be undone.
+            </>
           }
+          busy={committing}
+          confirmLabel={`Delete ${counts.rejected + counts.undecided}, keep ${counts.kept}`}
+          onConfirm={doCommit}
+          onCancel={() => {
+            setConfirm(false);
+            setCommitError(null);
+          }}
         >
-          {/* THE RAIL IS THE SENTENCE. "undecided counts as rejected: the cull
-              is what you chose, not what you skipped" was the app explaining a
-              picture — kept on one side, rejected on the other, and undecided
-              hatched into the rejected side because it is not a third outcome.
-              What stays in prose is the consequence a destructive confirm is
-              entitled to state, and the path the judgement is written to. */}
-          <StackBar
-            label="commit"
-            segments={[
-              { n: counts.kept, tone: "emerald", label: "kept" },
-              { n: counts.rejected, tone: "rose", label: "rejected" },
-              { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
-            ]}
-          />
-          <p className="font-hanken mt-3 text-content text-slate-300">
-            Everything not kept is deleted from disk. Every decided candidate is written to{" "}
-            <code className="font-jetbrains text-label text-white/70">pipeline/foundry/ledger.json</code> and the style catalogue. This cannot be undone.
-          </p>
           {commitError && (
-            <p role="alert" className="font-jetbrains mt-3 rounded-lg border border-rose-400/30 bg-rose-400/10 px-3 py-2 text-content text-rose-200">
-              The commit failed and nothing was deleted: {commitError}
-            </p>
+            <div className="mt-3">
+              <ErrorBox role="alert">The commit failed and nothing was deleted: {commitError}</ErrorBox>
+            </div>
           )}
-        </Modal>
+        </ConfirmDialog>
       </main>
     </StudioFrame>
-  );
-}
-
-function StatusStrip({ run }: { run: RunDetail["run"] }) {
-  const live = LIVE.includes(run.status);
-  const last = run.log[run.log.length - 1];
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-2.5">
-      <span
-        className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.14em] uppercase ${
-          run.status === "committed"
-            ? "border-emerald-400/40 text-emerald-200"
-            : run.status === "failed"
-              ? "border-rose-400/40 text-rose-200"
-              : run.status === "incomplete"
-                ? "border-amber-400/40 text-amber-200"
-                : live
-                ? "border-amber-400/40 text-amber-200"
-                : "border-cyan-400/40 text-cyan-200"
-        }`}
-      >
-        {STATUS_WORD[run.status]}
-        {live && run.progress.total > 0 ? ` ${run.progress.done}/${run.progress.total}` : ""}
-      </span>
-      <span className="font-jetbrains text-label text-white/65">
-        {run.scenes.length} scene{run.scenes.length === 1 ? "" : "s"} · {run.plan.styles.length} styles · {run.plan.mechanisms.length} mechanisms · {run.candidates.length} candidates
-      </span>
-      {run.committed && (
-        <span className="font-jetbrains text-label text-white/65">
-          committed: {run.committed.kept} kept, {run.committed.deleted} deleted
-        </span>
-      )}
-      {run.error && <span className="font-jetbrains text-label text-rose-200">{run.error}</span>}
-      {live && last && <span className="font-jetbrains ml-auto truncate text-label text-white/55">{last.msg}</span>}
-    </div>
-  );
-}
-
-function CommitReport({ result }: { result: CommitResult }) {
-  return (
-    <details open className="mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04]">
-      <summary className="font-jetbrains cursor-pointer px-4 py-2 text-label tracking-[0.14em] text-emerald-200 uppercase">
-        committed · {result.kept} kept · {result.deleted} deleted · findings.md written
-      </summary>
-      <pre className="font-jetbrains max-h-96 overflow-auto px-4 pb-4 text-content leading-relaxed whitespace-pre-wrap text-slate-300">{result.findings}</pre>
-    </details>
-  );
-}
-
-/** No runs. The command IS the answer, so the sentence introducing it was the
- *  only part worth deleting — the shelf label says the state. */
-function ForgeHint() {
-  return (
-    <div className="mt-2 rounded-lg border border-white/8 bg-white/[0.02] p-3">
-      <div className="font-jetbrains text-label tracking-[0.14em] text-white/50 uppercase">none yet — forge one</div>
-      <pre className="font-jetbrains mt-2 text-content leading-relaxed whitespace-pre-wrap text-white/60">{`cd pipeline/foundry
-python forge.py plans/dry-run.json`}</pre>
-    </div>
   );
 }
