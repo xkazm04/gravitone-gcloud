@@ -39,6 +39,7 @@ interface Counts {
   styles?: number;
   locked?: number;
   assets?: number;
+  audio?: number;
 }
 
 export default function LibraryView() {
@@ -113,6 +114,7 @@ export default function LibraryView() {
                 testId: "module-audio",
                 label: "Audio",
                 panelId: "library-panel",
+                ...(counts.audio === undefined ? {} : { tally: { value: counts.audio } }),
               },
             ]}
           />
@@ -132,7 +134,9 @@ export default function LibraryView() {
               }}
             />
           ) : module === "audio" ? (
-            <AudioWorkbench />
+            <AudioWorkbench
+              onCount={(audio) => setCounts((c) => (c.audio === audio ? c : { ...c, audio }))}
+            />
           ) : (
             <LibraryAtelier
               initialSelectedId={focusStyle}

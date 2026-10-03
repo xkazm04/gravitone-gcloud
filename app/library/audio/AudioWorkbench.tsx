@@ -9,13 +9,28 @@
 // second consumer to justify it. `StudioFrame` (the shell this page renders
 // inside) keeps its own hardcoded world untouched — this component's
 // `WorldProvider` only reaches the signal components THIS page mounts below
-// its own header strip.
+// its own header strip. The root also carries `data-world` itself (not just
+// context) when the switcher picks Almanac, because `kit/Table`'s colour comes
+// from `--al-*` custom properties that only resolve under that attribute
+// (components/ui/tokens.ts) — context alone re-skins the shared Primitives/
+// signal components, not a raw CSS variable read.
 //
-// This is WP1's shell only: VocabSpine, Ledger and Inspector land in WP2/WP3.
+// WP2 lands the real content: VocabSpine (left) and Ledger (center), wired to
+// the real `lib/assets.ts` shelf. The right column is reserved for WP3's
+// Inspector — see the explicit slot below.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
+import { listAssets, type Asset } from "@/lib/assets";
+import { useAuth } from "@/lib/useAuth";
 import { WorldProvider, useWorld, type World } from "@/components/ui/world";
+
+import Ledger, { type AudioAsset } from "./Ledger";
+import VocabSpine from "./VocabSpine";
+
+import "./audio-workbench.css";
+
+const isAudioAsset = (a: Asset): a is AudioAsset => a.kind === "audio";
 
 function WorldSwitch({ onChange }: { onChange: (w: World) => void }) {
   const active = useWorld();
@@ -37,17 +52,66 @@ function WorldSwitch({ onChange }: { onChange: (w: World) => void }) {
   );
 }
 
-export default function AudioWorkbench() {
+export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => void }) {
   const [world, setWorld] = useState<World>("obsidian");
+  const { user } = useAuth();
+  const [assets, setAssets] = useState<AudioAsset[]>([]);
+
+  // The single expanded Ledger row, lifted HERE rather than kept inside
+  // <Ledger>: WP3's <Inspector/> (the reserved slot below) needs to know which
+  // take's Take+Recipe to show, and the Ledger's own accordion selection is
+  // the only "current row" concept this page has. One piece of state feeding
+  // both the inline expansion and the future right panel, rather than a
+  // second "selected" state that could drift from the first.
+  const [expandedId, setExpandedId] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    const uid = user?.uid;
+    if (!uid) return;
+    let cancelled = false;
+    listAssets(uid).then((rows) => {
+      if (cancelled) return;
+      const audio = rows.filter(isAudioAsset);
+      setAssets(audio);
+      onCount?.(audio.length);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // `onCount` in deps, same as LibraryAtelier's `onCounts` (LibraryAtelier.tsx
+    // :118): LibraryView passes a fresh closure most renders, so this re-runs
+    // more than strictly necessary, but each run's `setCounts` call is a
+    // no-op once the count has not changed (LibraryView.tsx's own equality
+    // check), which is what makes re-fetching idempotent rather than unsafe.
+  }, [user?.uid, onCount]);
 
   return (
     <WorldProvider world={world}>
-      <div>
+      <div className="aw" data-world={world === "almanac" ? "almanac" : undefined}>
         <header className="flex items-center justify-between pb-4">
           <h2 className="sr-only">Audio</h2>
           <WorldSwitch onChange={setWorld} />
         </header>
-        <div>Audio Workbench — WP2/WP3 pending</div>
+        <div className="aw__cols">
+          <div className="aw__col">
+            <VocabSpine assets={assets} />
+          </div>
+          <div className="aw__col">
+            <Ledger
+              assets={assets}
+              expandedId={expandedId}
+              onExpand={(id) => setExpandedId(id ?? undefined)}
+              renderExpansion={(row) => (
+                <div className="p-4 text-label text-white/45">
+                  Variations · Composer · Drafts for &ldquo;{row.name}&rdquo; land in WP3.
+                </div>
+              )}
+            />
+          </div>
+          <div className="aw__col">
+            {/* WP3: <Inspector asset={assets.find((a) => a.id === expandedId) ?? null} /> mounts here. */}
+          </div>
+        </div>
       </div>
     </WorldProvider>
   );
