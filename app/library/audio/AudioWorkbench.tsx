@@ -15,17 +15,20 @@
 // (components/ui/tokens.ts) — context alone re-skins the shared Primitives/
 // signal components, not a raw CSS variable read.
 //
-// WP2 lands the real content: VocabSpine (left) and Ledger (center), wired to
-// the real `lib/assets.ts` shelf. The right column is reserved for WP3's
-// Inspector — see the explicit slot below.
+// WP2 landed VocabSpine (left) and Ledger (center), wired to the real
+// `lib/assets.ts` shelf. WP3 lands the right column (Inspector: Take+Recipe)
+// and the Ledger's row expansion (TakeExpansion: Variations+Composer+Drafts),
+// plus the one write path both of them need (`patchMeta` below).
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { listAssets, type Asset } from "@/lib/assets";
+import { listAssets, updateAssetMeta, type Asset, type AudioMeta } from "@/lib/assets";
 import { useAuth } from "@/lib/useAuth";
 import { WorldProvider, useWorld, type World } from "@/components/ui/world";
 
+import Inspector from "./Inspector";
 import Ledger, { type AudioAsset } from "./Ledger";
+import TakeExpansion from "./TakeExpansion";
 import VocabSpine from "./VocabSpine";
 
 import "./audio-workbench.css";
@@ -58,11 +61,11 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
   const [assets, setAssets] = useState<AudioAsset[]>([]);
 
   // The single expanded Ledger row, lifted HERE rather than kept inside
-  // <Ledger>: WP3's <Inspector/> (the reserved slot below) needs to know which
-  // take's Take+Recipe to show, and the Ledger's own accordion selection is
-  // the only "current row" concept this page has. One piece of state feeding
-  // both the inline expansion and the future right panel, rather than a
-  // second "selected" state that could drift from the first.
+  // <Ledger>: <Inspector/> needs to know which take's Take+Recipe to show, and
+  // the Ledger's own accordion selection is the only "current row" concept
+  // this page has. One piece of state feeding both the inline expansion and
+  // the right panel, rather than a second "selected" state that could drift
+  // from the first.
   const [expandedId, setExpandedId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
@@ -85,6 +88,20 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
     // check), which is what makes re-fetching idempotent rather than unsafe.
   }, [user?.uid, onCount]);
 
+  // WP3's one write path: `lib/assets.ts#updateAssetMeta` persists the patch,
+  // then the local `assets` snapshot is updated optimistically so the Ledger
+  // and the Inspector read the same post-write state without a refetch — two
+  // components reading `assets.find(...)` and `assets` itself must never
+  // disagree about a take's verdict. `Ledger.tsx` reported no existing write
+  // path (WP2 was a read-only pass over the shelf); this is that gap closed,
+  // not a silent one left for the Director (see the WP3 report).
+  const patchMeta = useCallback((id: string, patch: Partial<AudioMeta>) => {
+    void updateAssetMeta(id, patch as Record<string, unknown>);
+    setAssets((prev) =>
+      prev.map((a) => (a.id === id ? { ...a, meta: { ...(a.meta ?? {}), ...patch } } : a)),
+    );
+  }, []);
+
   return (
     <WorldProvider world={world}>
       <div className="aw" data-world={world === "almanac" ? "almanac" : undefined}>
@@ -101,15 +118,11 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
               assets={assets}
               expandedId={expandedId}
               onExpand={(id) => setExpandedId(id ?? undefined)}
-              renderExpansion={(row) => (
-                <div className="p-4 text-label text-white/45">
-                  Variations · Composer · Drafts for &ldquo;{row.name}&rdquo; land in WP3.
-                </div>
-              )}
+              renderExpansion={(row) => <TakeExpansion asset={row} />}
             />
           </div>
           <div className="aw__col">
-            {/* WP3: <Inspector asset={assets.find((a) => a.id === expandedId) ?? null} /> mounts here. */}
+            <Inspector asset={assets.find((a) => a.id === expandedId) ?? null} onPatchMeta={patchMeta} />
           </div>
         </div>
       </div>

@@ -259,3 +259,183 @@
   color: var(--al-white);
 }
 .aw__term-detail input:focus { outline: 2px solid var(--al-gold); outline-offset: 1px; }
+
+/* ── Inspector (WP3) — Take + Recipe only. ── */
+.aw__insp { display: flex; flex-direction: column; gap: 10px; }
+.aw__insp-title {
+  font-size: var(--text-content);
+  font-weight: 600;
+  color: var(--al-white);
+  margin: 0;
+}
+.aw__panel { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--al-line); }
+.aw__panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--al-vellum);
+}
+
+.aw__rubric { display: flex; flex-direction: column; gap: 6px; }
+.aw__rub { display: grid; grid-template-columns: 32px 1fr 24px; align-items: center; gap: 6px; }
+.aw__rub-l { font-family: var(--k-mono); font-size: var(--text-label); color: var(--al-ash); }
+.aw__rub-scale { display: flex; gap: 2px; flex-wrap: wrap; }
+.aw__rub-n {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--al-line);
+  background: none;
+  color: var(--al-ash);
+  font-family: var(--k-mono);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.aw__rub-n:hover:not(:disabled) { border-color: var(--al-line-strong); color: var(--al-white); }
+.aw__rub-n.is-fill { background: color-mix(in srgb, var(--al-gold) 24%, transparent); color: var(--al-white); border-color: var(--al-gold); }
+.aw__rub-n.is-at { background: var(--al-gold); color: var(--k-ink); border-color: var(--al-gold); }
+.aw__rub-n:disabled { opacity: 0.3; cursor: not-allowed; }
+.aw__rub-v { font-family: var(--k-mono); font-size: var(--text-label); color: var(--al-vellum); text-align: right; }
+
+.aw__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.aw__btn {
+  border-radius: 6px;
+  border: 1px solid var(--al-line);
+  background: none;
+  color: var(--al-vellum);
+  padding: 4px 10px;
+  font-size: var(--text-label);
+  cursor: pointer;
+}
+.aw__btn:hover { border-color: var(--al-line-strong); color: var(--al-white); }
+.aw__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.aw__btn--keep[aria-pressed="true"] { border-color: var(--al-ald); color: var(--al-ald); }
+.aw__btn--rej { border-color: transparent; }
+.aw__btn--rej:hover { border-color: var(--al-ant); color: var(--al-ant); }
+.aw__btn--solid { background: var(--al-gold); color: var(--k-ink); border-color: var(--al-gold); font-weight: 600; }
+
+.aw__rejbox { display: flex; gap: 6px; }
+.aw__rejbox input {
+  flex: 1;
+  border: 1px solid var(--al-line);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--al-white);
+  font-size: var(--text-label);
+}
+.aw__quote { font-style: italic; color: var(--al-vellum); font-size: var(--text-label); margin: 0; }
+
+.aw__facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; font-size: var(--text-label); }
+.aw__facts dt { color: var(--al-ash); }
+.aw__facts dd { margin: 0; color: var(--al-vellum); }
+
+.aw__recipe { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.aw__recipe li { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 2px solid var(--al-line); font-size: var(--text-label); }
+.aw__recipe--here { border-left-color: var(--al-gold); }
+.aw__recipe--ghost { opacity: 0.5; }
+.aw__recipe-k { display: flex; align-items: center; gap: 6px; color: var(--al-ash); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
+.aw__recipe-v { color: var(--al-white); }
+.aw__recipe-pre { margin: 2px 0 0; white-space: pre-wrap; font-family: var(--k-mono); font-size: var(--text-label); color: var(--al-vellum); }
+.aw__chip-src { font-family: var(--k-mono); font-size: 9px; text-transform: none; letter-spacing: 0; color: var(--al-ash); }
+.aw__chip-src.is-retired { color: var(--al-ant); }
+.aw__tag-retired {
+  margin-left: 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--al-ant);
+  border: 1px solid var(--al-ant);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.aw__chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  border: 1px solid var(--al-line);
+  padding: 0 5px;
+  font-size: 10px;
+  color: var(--al-vellum);
+}
+
+/* ── TakeExpansion (WP3) — Variations + Composer + Drafts, one unit. ── */
+.aw__expansion { display: flex; flex-direction: column; gap: 14px; padding: 10px 2px; }
+.aw__composer { gap: 10px; }
+.aw__facet { display: flex; flex-direction: column; gap: 4px; }
+.aw__facet-l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--al-ash); }
+.aw__tchips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.aw__tchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  border: 1px solid var(--al-line);
+  padding: 2px 6px;
+  font-size: var(--text-label);
+  color: var(--al-vellum);
+}
+.aw__tchip button { border: 0; background: none; color: var(--al-ash); cursor: pointer; padding: 0; line-height: 1; }
+.aw__tchip button:hover { color: var(--al-ant); }
+.aw__addterm {
+  border: 1px dashed var(--al-line);
+  background: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: var(--text-label);
+  color: var(--al-white);
+  min-width: 90px;
+}
+.aw__tk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.aw__tk input[type="number"],
+.aw__tk input[type="text"],
+.aw__tk input:not([type]) {
+  width: 72px;
+  border: 1px solid var(--al-line);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--al-white);
+  font-family: var(--k-mono);
+  font-size: var(--text-label);
+}
+.aw__seg { display: inline-flex; gap: 4px; margin-left: auto; }
+.aw__seg button {
+  border: 1px solid var(--al-line);
+  background: none;
+  color: var(--al-vellum);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: var(--text-label);
+  cursor: pointer;
+}
+.aw__seg button[aria-pressed="true"] { background: var(--al-gold); color: var(--k-ink); border-color: var(--al-gold); }
+.aw__prompt {
+  margin: 0;
+  white-space: pre-wrap;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--al-line);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--k-mono);
+  font-size: var(--text-label);
+  color: var(--al-white);
+  max-height: 220px;
+  overflow: auto;
+}
+.aw__composer-actions { display: flex; align-items: center; gap: 8px; }
+.aw__dim { color: var(--al-ash); font-size: var(--text-label); }
+.aw__grow { flex: 1; }
+
+.aw__drafts { display: flex; flex-direction: column; gap: 8px; }
+.aw__draft { border: 1px solid var(--al-line); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.aw__draft--await { border-style: dashed; }
+.aw__draft-h { display: flex; align-items: center; gap: 6px; }
+.aw__draft-t { font-family: var(--k-mono); font-size: var(--text-label); color: var(--al-vellum); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aw__await-chip { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--al-gold); }
