@@ -1,0 +1,441 @@
+/* THE AUDIO WORKBENCH — the Obsidian-scoped parts the shared kit has none for
+ * yet, plus this page's own layout and vocabulary-spine shapes.
+ *
+ * Scope: everything here lives under `.aw`, this page's own root class
+ * (AudioWorkbench.tsx). The Obsidian half is further gated
+ * `.aw:not([data-world="almanac"])` so it never reaches the rest of the app
+ * and never fights Almanac's own `[data-world="almanac"]`-scoped rules
+ * (components/kit/kit.css, workbench.css) when this page's own switcher flips
+ * its root to `data-world="almanac"`.
+ *
+ * WHY A VARIABLE REMAP, NOT A SECOND STYLESHEET: `kit/Table`, `kit/Pager`,
+ * `kit/StatusPill` and `kit/StatusGlyph` draw entirely off `--al-*`/`--k-*`
+ * custom properties, and those are declared ONLY under `[data-world="almanac"]`
+ * (components/ui/tokens.ts, WORLD_ALMANAC) — outside that attribute they are
+ * undefined, so the shared parts' COLOUR silently drops out while their shape
+ * stays (confirmed by reading kit.css/workbench.css directly: every rule that
+ * reads `--al-*` is a bare selector with no Obsidian fallback; `.k-tbl` and
+ * `.k-pager` are additionally gated behind the attribute itself). This page is
+ * the kit's first real Obsidian consumer — every existing use
+ * (app/kit/PartsWorkbench.tsx and friends) sits inside `<WorldRoot>`, which is
+ * hardcoded to almanac. Rather than fork a second copy of Table/Pager/
+ * StatusPill here, Obsidian gets its OWN values for the same variable names,
+ * scoped to this page only, so the shared parts render exactly the structure
+ * they always draw — first-class, not a fallback skin — with Obsidian's own
+ * palette underneath.
+ */
+
+.aw:not([data-world="almanac"]) {
+  --al-white: #f3f6fb;
+  --al-vellum: rgba(243, 246, 251, 0.72);
+  --al-ash: rgba(243, 246, 251, 0.45);
+  --al-gold: var(--gt-accent-cyan);
+  --al-ald: var(--gt-accent-emerald);
+  --al-ant: #fb7185;
+  --al-field: rgba(255, 255, 255, 0.07);
+  --al-deep: var(--gt-ink);
+  --al-line: var(--gt-hairline);
+  --al-line-strong: rgba(255, 255, 255, 0.22);
+
+  --k-sans: var(--font-hanken), system-ui, sans-serif;
+  --k-mono: var(--font-jetbrains), ui-monospace, monospace;
+  --k-fs: var(--text-label);
+  --k-gold-06: color-mix(in srgb, var(--gt-accent-cyan) 6%, transparent);
+  --k-gold-10: color-mix(in srgb, var(--gt-accent-cyan) 10%, transparent);
+  --k-gold-16: color-mix(in srgb, var(--gt-accent-cyan) 16%, transparent);
+  --k-gold-24: color-mix(in srgb, var(--gt-accent-cyan) 24%, transparent);
+  --k-ink: var(--al-white);
+  --k-hair: var(--gt-hairline);
+  --k-hair-2: rgba(255, 255, 255, 0.18);
+  --k-panel: rgba(255, 255, 255, 0.03);
+  --k-ald-14: color-mix(in srgb, var(--gt-accent-emerald) 14%, transparent);
+  --k-ald-solid: color-mix(in srgb, var(--gt-accent-emerald) 40%, var(--gt-ink));
+  --k-ant-16: color-mix(in srgb, #fb7185 16%, transparent);
+  --k-ash-solid: color-mix(in srgb, rgba(243, 246, 251, 0.45) 32%, var(--gt-ink));
+}
+
+/* ── Table & Pager: the almanac rules from workbench.css, same bodies, this
+ *    page's own selector and palette underneath. ── */
+.aw:not([data-world="almanac"]) .k-tbl {
+  overflow-x: auto;
+  border: 1px solid var(--al-line);
+  border-radius: 8px;
+  background: var(--k-panel);
+}
+.aw:not([data-world="almanac"]) .k-tbl--sticky { overflow: auto; }
+.aw:not([data-world="almanac"]) .k-tbl table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+.aw:not([data-world="almanac"]) .k-tbl th {
+  text-align: left;
+  padding: 0;
+  font-weight: 500;
+  color: var(--al-ash);
+  border-bottom: 1px solid var(--al-line);
+  background: rgba(8, 10, 16, 0.92);
+}
+.aw:not([data-world="almanac"]) .k-tbl--sticky th { position: sticky; top: 0; z-index: 2; }
+.aw:not([data-world="almanac"]) .k-tbl th.k-tbl__on { color: var(--al-white); box-shadow: inset 0 -2px 0 var(--al-gold); }
+.aw:not([data-world="almanac"]) .k-tbl th button {
+  all: unset;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  width: 100%;
+  padding: 8px 10px;
+  cursor: pointer;
+  color: inherit;
+}
+.aw:not([data-world="almanac"]) .k-tbl th button:hover { color: var(--al-white); }
+.aw:not([data-world="almanac"]) .k-tbl__caret { width: 8px; height: 11px; flex: none; }
+.aw:not([data-world="almanac"]) .k-tbl__caret path { fill: var(--al-ash); opacity: 0.4; }
+.aw:not([data-world="almanac"]) .k-tbl__caret[data-dir="asc"] .k-tbl__up,
+.aw:not([data-world="almanac"]) .k-tbl__caret[data-dir="desc"] .k-tbl__dn { fill: var(--al-gold); opacity: 1; }
+.aw:not([data-world="almanac"]) .k-tbl td {
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  vertical-align: middle;
+  color: var(--k-ink);
+}
+.aw:not([data-world="almanac"]) .k-tbl tbody tr:last-child td { border-bottom: 0; }
+.aw:not([data-world="almanac"]) .k-tbl tbody tr:hover td { background: rgba(255, 255, 255, 0.03); }
+.aw:not([data-world="almanac"]) .k-tbl__num { text-align: right; }
+.aw:not([data-world="almanac"]) .k-tbl__open { cursor: pointer; }
+.aw:not([data-world="almanac"]) .k-tbl__open:focus-visible { outline: 2px solid var(--al-gold); outline-offset: -2px; }
+.aw:not([data-world="almanac"]) .k-tbl-empty { border: 1px dashed var(--k-hair-2); border-radius: 8px; padding: 14px; }
+
+.aw:not([data-world="almanac"]) .k-pager {
+  display: grid;
+  grid-template-columns: minmax(80px, 1fr) auto auto;
+  align-items: center;
+  gap: 8px 16px;
+  padding: 10px 2px 4px;
+}
+.aw:not([data-world="almanac"]) .k-pager__rule {
+  position: relative;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.aw:not([data-world="almanac"]) .k-pager__rule i { display: block; height: 100%; background: var(--al-gold); }
+.aw:not([data-world="almanac"]) .k-pager__n { color: var(--al-vellum); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.aw:not([data-world="almanac"]) .k-pager__n b { color: var(--al-white); font-weight: 600; }
+.aw:not([data-world="almanac"]) .k-pager__acts { display: inline-flex; gap: 8px; }
+
+/* Verdict pill kinds StatusGlyph/StatusPill define (`keep`/`reject`/
+ * `undecided`) but kit.css never gave a colour, in EITHER world — confirmed by
+ * grepping components/kit/*.css for `.k-pill--keep` et al. and finding
+ * nothing. Scoped to `.aw` (both worlds; `--al-ald`/`--al-ant`/`--al-ash`
+ * resolve to the real almanac tokens there and to this file's remap above in
+ * Obsidian), not gated by world, since neither world had an answer to add to. */
+.aw .k-pill--keep { border-color: var(--al-ald); color: var(--al-ald); }
+.aw .k-pill--reject { border-color: var(--al-ant); color: var(--al-ant); }
+.aw .k-pill--undecided { border-color: var(--al-ash); color: var(--al-ash); border-style: dashed; }
+
+/* ── Layout: spine / ledger / the WP3 inspector slot. ── */
+.aw__cols {
+  display: grid;
+  grid-template-columns: minmax(240px, 22%) minmax(0, 1fr) minmax(0, 26%);
+  gap: 0;
+  align-items: start;
+}
+.aw__col { min-width: 0; }
+.aw__col + .aw__col { border-left: 1px solid var(--al-line); padding-left: 16px; margin-left: 16px; }
+@media (max-width: 1100px) {
+  .aw__cols { grid-template-columns: minmax(220px, 1fr) minmax(0, 2fr); }
+  /* The WP3 Inspector slot. Narrow-layout treatment (drawer, stack, …) is that
+   * package's call once there is something real to lay out. */
+  .aw__col:nth-child(3) { display: none; }
+}
+
+/* ── Vocabulary spine — caveat 3's 2-row term. ── */
+.aw__section-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 2px;
+  border: 0;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: inherit;
+}
+.aw__section-head:hover { color: var(--al-white); }
+
+.aw__term {
+  display: grid;
+  grid-template-columns: 22px 22px minmax(0, 1fr) auto;
+  grid-template-rows: auto auto;
+  column-gap: 6px;
+  row-gap: 3px;
+  padding: 6px 4px;
+  border-top: 1px solid var(--al-line);
+}
+.aw__term:first-child { border-top: 0; }
+.aw__term:hover { background: var(--k-gold-06); }
+.aw__term--on { background: color-mix(in srgb, var(--al-gold) 10%, transparent); }
+
+.aw__stance {
+  grid-row: 1;
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--al-ash);
+  padding: 0;
+  font-size: 0.875rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.aw__stance:hover { border-color: var(--al-line-strong); color: var(--al-white); }
+.aw__stance[aria-pressed="true"].aw__stance--prefer { color: var(--k-ink); background: var(--al-gold); }
+.aw__stance[aria-pressed="true"].aw__stance--avoid { color: var(--k-ink); background: var(--al-ant); }
+
+.aw__term-name {
+  grid-column: 3;
+  grid-row: 1;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font-size: var(--text-content);
+  color: var(--al-white);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.aw__term-name:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+.aw__term-nums {
+  grid-column: 4;
+  grid-row: 1;
+  font-family: var(--k-mono);
+  font-size: var(--text-label);
+  color: var(--al-vellum);
+  white-space: nowrap;
+}
+.aw__term-nums b { color: var(--al-white); font-weight: 600; }
+
+/* Caveat 3's whole point: half the source's 6px bar — 3px, full stop. */
+.aw__term-bar {
+  grid-column: 3 / 5;
+  grid-row: 2;
+  height: 3px;
+  display: flex;
+  border-radius: 2px;
+  overflow: hidden;
+  background: rgba(255, 255, 255, 0.05);
+}
+.aw__term-bar > i { display: block; height: 100%; }
+
+/* The relocated phrase editor — opens on `.aw__term-name` click, in the same
+ * row list the stance toggles live in, never a third CSS grid row. */
+.aw__term-detail {
+  grid-column: 1 / 5;
+  margin-top: 4px;
+  padding: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--al-line);
+  background: var(--k-panel);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.aw__term-detail input {
+  border: 1px solid var(--al-line);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 4px;
+  padding: 3px 8px;
+  font-family: var(--k-mono);
+  font-size: var(--text-label);
+  color: var(--al-white);
+}
+.aw__term-detail input:focus { outline: 2px solid var(--al-gold); outline-offset: 1px; }
+
+/* ── Inspector (WP3) — Take + Recipe only. ── */
+.aw__insp { display: flex; flex-direction: column; gap: 10px; }
+.aw__insp-title {
+  font-size: var(--text-content);
+  font-weight: 600;
+  color: var(--al-white);
+  margin: 0;
+}
+.aw__panel { display: flex; flex-direction: column; gap: 8px; padding-top: 10px; border-top: 1px solid var(--al-line); }
+.aw__panel h3 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--al-vellum);
+}
+
+.aw__rubric { display: flex; flex-direction: column; gap: 6px; }
+.aw__rub { display: grid; grid-template-columns: 32px 1fr 24px; align-items: center; gap: 6px; }
+.aw__rub-l { font-family: var(--k-mono); font-size: var(--text-label); color: var(--al-ash); }
+.aw__rub-scale { display: flex; gap: 2px; flex-wrap: wrap; }
+.aw__rub-n {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  border: 1px solid var(--al-line);
+  background: none;
+  color: var(--al-ash);
+  font-family: var(--k-mono);
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+.aw__rub-n:hover:not(:disabled) { border-color: var(--al-line-strong); color: var(--al-white); }
+.aw__rub-n.is-fill { background: color-mix(in srgb, var(--al-gold) 24%, transparent); color: var(--al-white); border-color: var(--al-gold); }
+.aw__rub-n.is-at { background: var(--al-gold); color: var(--k-ink); border-color: var(--al-gold); }
+.aw__rub-n:disabled { opacity: 0.3; cursor: not-allowed; }
+.aw__rub-v { font-family: var(--k-mono); font-size: var(--text-label); color: var(--al-vellum); text-align: right; }
+
+.aw__actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.aw__btn {
+  border-radius: 6px;
+  border: 1px solid var(--al-line);
+  background: none;
+  color: var(--al-vellum);
+  padding: 4px 10px;
+  font-size: var(--text-label);
+  cursor: pointer;
+}
+.aw__btn:hover { border-color: var(--al-line-strong); color: var(--al-white); }
+.aw__btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.aw__btn--keep[aria-pressed="true"] { border-color: var(--al-ald); color: var(--al-ald); }
+.aw__btn--rej { border-color: transparent; }
+.aw__btn--rej:hover { border-color: var(--al-ant); color: var(--al-ant); }
+.aw__btn--solid { background: var(--al-gold); color: var(--k-ink); border-color: var(--al-gold); font-weight: 600; }
+
+.aw__rejbox { display: flex; gap: 6px; }
+.aw__rejbox input {
+  flex: 1;
+  border: 1px solid var(--al-line);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--al-white);
+  font-size: var(--text-label);
+}
+.aw__quote { font-style: italic; color: var(--al-vellum); font-size: var(--text-label); margin: 0; }
+
+.aw__facts { display: grid; grid-template-columns: auto 1fr; gap: 4px 10px; margin: 0; font-size: var(--text-label); }
+.aw__facts dt { color: var(--al-ash); }
+.aw__facts dd { margin: 0; color: var(--al-vellum); }
+
+.aw__recipe { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.aw__recipe li { display: flex; flex-direction: column; gap: 2px; padding-left: 10px; border-left: 2px solid var(--al-line); font-size: var(--text-label); }
+.aw__recipe--here { border-left-color: var(--al-gold); }
+.aw__recipe--ghost { opacity: 0.5; }
+.aw__recipe-k { display: flex; align-items: center; gap: 6px; color: var(--al-ash); text-transform: uppercase; letter-spacing: 0.06em; font-size: 10px; }
+.aw__recipe-v { color: var(--al-white); }
+.aw__recipe-pre { margin: 2px 0 0; white-space: pre-wrap; font-family: var(--k-mono); font-size: var(--text-label); color: var(--al-vellum); }
+.aw__chip-src { font-family: var(--k-mono); font-size: 9px; text-transform: none; letter-spacing: 0; color: var(--al-ash); }
+.aw__chip-src.is-retired { color: var(--al-ant); }
+.aw__tag-retired {
+  margin-left: 4px;
+  font-size: 9px;
+  text-transform: uppercase;
+  color: var(--al-ant);
+  border: 1px solid var(--al-ant);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.aw__chip {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 4px;
+  border: 1px solid var(--al-line);
+  padding: 0 5px;
+  font-size: 10px;
+  color: var(--al-vellum);
+}
+
+/* ── TakeExpansion (WP3) — Variations + Composer + Drafts, one unit. ── */
+.aw__expansion { display: flex; flex-direction: column; gap: 14px; padding: 10px 2px; }
+.aw__composer { gap: 10px; }
+.aw__facet { display: flex; flex-direction: column; gap: 4px; }
+.aw__facet-l { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--al-ash); }
+.aw__tchips { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.aw__tchip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border-radius: 4px;
+  border: 1px solid var(--al-line);
+  padding: 2px 6px;
+  font-size: var(--text-label);
+  color: var(--al-vellum);
+}
+.aw__tchip button { border: 0; background: none; color: var(--al-ash); cursor: pointer; padding: 0; line-height: 1; }
+.aw__tchip button:hover { color: var(--al-ant); }
+.aw__addterm {
+  border: 1px dashed var(--al-line);
+  background: none;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: var(--text-label);
+  color: var(--al-white);
+  min-width: 90px;
+}
+.aw__tk { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.aw__tk input[type="number"],
+.aw__tk input[type="text"],
+.aw__tk input:not([type]) {
+  width: 72px;
+  border: 1px solid var(--al-line);
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  padding: 4px 8px;
+  color: var(--al-white);
+  font-family: var(--k-mono);
+  font-size: var(--text-label);
+}
+.aw__seg { display: inline-flex; gap: 4px; margin-left: auto; }
+.aw__seg button {
+  border: 1px solid var(--al-line);
+  background: none;
+  color: var(--al-vellum);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: var(--text-label);
+  cursor: pointer;
+}
+.aw__seg button[aria-pressed="true"] { background: var(--al-gold); color: var(--k-ink); border-color: var(--al-gold); }
+.aw__prompt {
+  margin: 0;
+  white-space: pre-wrap;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--al-line);
+  border-radius: 8px;
+  padding: 10px;
+  font-family: var(--k-mono);
+  font-size: var(--text-label);
+  color: var(--al-white);
+  max-height: 220px;
+  overflow: auto;
+}
+.aw__composer-actions { display: flex; align-items: center; gap: 8px; }
+.aw__dim { color: var(--al-ash); font-size: var(--text-label); }
+.aw__grow { flex: 1; }
+
+.aw__drafts { display: flex; flex-direction: column; gap: 8px; }
+.aw__draft { border: 1px solid var(--al-line); border-radius: 8px; padding: 8px; display: flex; flex-direction: column; gap: 6px; }
+.aw__draft--await { border-style: dashed; }
+.aw__draft-h { display: flex; align-items: center; gap: 6px; }
+.aw__draft-t { font-family: var(--k-mono); font-size: var(--text-label); color: var(--al-vellum); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aw__await-chip { font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--al-gold); }

@@ -29,7 +29,37 @@ import {
 } from "./studioDb";
 import type { Proof, StyleBlock, Theme } from "./themes";
 
-export type AssetKind = "image";
+export type AssetKind = "image" | "audio";
+
+/** The ledger an audio take carries in `Asset.meta` — ratings, verdict, recipe
+ *  lineage. `meta` itself stays `Record<string, unknown>` (the contest-winning
+ *  variant's own accepted cost: an untyped bag, full-table-scan queries), so
+ *  this type is a cast/guard at read sites, not a schema IndexedDB enforces. */
+export interface AudioMeta {
+  ratings?: { melody: number | null; instrument_choice: number; instrument_quality: number };
+  verdict: "unjudged" | "kept" | "proven" | "rejected";
+  reject_reason?: string;
+  vendor?: "suno" | "elevenlabs";
+  genre_tags?: string[];
+  mood_tags?: string[];
+  instrumentation?: string[];
+  tempo_bpm?: number;
+  key?: string;
+  duration_s: number;
+  sfx_category?: string;
+  loopable?: boolean;
+  reference_track_id?: string;
+  prompt_round?: string;
+  draft_id?: string;
+  parent_id?: string;
+  /** The composed prompt text a draft was sent with — WP3 finding: the
+   *  contest-winning variant's `lineageHTML()` shows this in the Recipe chain
+   *  (`it.prompt_text`), but WP1's `AudioMeta` had no field for it. Added here
+   *  rather than reported as a silent gap, same cast/guard discipline as the
+   *  rest of this bag — absent for a take composed before this field existed,
+   *  never a guess dressed as data. */
+  prompt_text?: string;
+}
 
 export interface Asset {
   id: string;
@@ -512,6 +542,35 @@ export async function renameAsset(id: string, name: string): Promise<void> {
       req.onsuccess = () => {
         const row = req.result as Asset | undefined;
         if (row) store.put({ ...row, name });
+      };
+    });
+  } finally {
+    db?.close();
+  }
+}
+
+/**
+ * Patch one row's `meta` — WP3's write path for the audio ledger (ratings,
+ * verdict, reject_reason). Read-modify-write in one transaction, same
+ * discipline as `renameAsset` just above: a `store.put` built from a
+ * caller-supplied `meta` risks overwriting a hydrated `src`, so this reads the
+ * STORED row and only ever merges `patch` onto its STORED `meta`.
+ *
+ * Shallow merge: `patch.ratings` replaces the whole `ratings` object rather
+ * than merging into it, so a caller that only wants to change one dimension
+ * reads the current `AudioMeta.ratings` first and spreads it into the patch —
+ * same convention the rest of this untyped bag already lives by (see the
+ * `AudioMeta` doc comment above).
+ */
+export async function updateAssetMeta(id: string, patch: Record<string, unknown>): Promise<void> {
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    await runTx(db, ASSETS_STORE, "readwrite", (store) => {
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const row = req.result as Asset | undefined;
+        if (row) store.put({ ...row, meta: { ...(row.meta ?? {}), ...patch } });
       };
     });
   } finally {
