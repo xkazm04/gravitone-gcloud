@@ -77,6 +77,7 @@ const PROJECT_COLUMNS: readonly TableColumn<ProjectRow>[] = [
 
 export function TableDemo() {
   const [opened, setOpened] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<string | null>(null);
   const long = useMemo<ProjectRow[]>(
     () =>
       Array.from({ length: 18 }, (_, i) => ({
@@ -98,6 +99,16 @@ export function TableDemo() {
       <S name="rows that open">
         <Table label="Specimen projects, openable" columns={PROJECT_COLUMNS.slice(0, 4)} rows={PROJECTS.slice(0, 3)} onOpenRow={(r) => setOpened(r.title)} />
         {opened && <span className="kr-out">opened <b>{opened}</b></span>}
+      </S>
+      <S name="a row that expands, one at a time">
+        <Table
+          label="Specimen projects, expandable"
+          columns={PROJECT_COLUMNS.slice(0, 4)}
+          rows={PROJECTS.slice(0, 3)}
+          expandedId={expanded ?? undefined}
+          onExpand={setExpanded}
+          renderExpansion={(r) => <span className="kr-out">expansion for <b>{r.title}</b></span>}
+        />
       </S>
       <S name="empty">
         <Table label="Specimen, no projects" columns={PROJECT_COLUMNS.slice(0, 3)} rows={[]} empty="no projects yet" />

@@ -29,7 +29,30 @@ import {
 } from "./studioDb";
 import type { Proof, StyleBlock, Theme } from "./themes";
 
-export type AssetKind = "image";
+export type AssetKind = "image" | "audio";
+
+/** The ledger an audio take carries in `Asset.meta` — ratings, verdict, recipe
+ *  lineage. `meta` itself stays `Record<string, unknown>` (the contest-winning
+ *  variant's own accepted cost: an untyped bag, full-table-scan queries), so
+ *  this type is a cast/guard at read sites, not a schema IndexedDB enforces. */
+export interface AudioMeta {
+  ratings?: { melody: number | null; instrument_choice: number; instrument_quality: number };
+  verdict: "unjudged" | "kept" | "proven" | "rejected";
+  reject_reason?: string;
+  vendor?: "suno" | "elevenlabs";
+  genre_tags?: string[];
+  mood_tags?: string[];
+  instrumentation?: string[];
+  tempo_bpm?: number;
+  key?: string;
+  duration_s: number;
+  sfx_category?: string;
+  loopable?: boolean;
+  reference_track_id?: string;
+  prompt_round?: string;
+  draft_id?: string;
+  parent_id?: string;
+}
 
 export interface Asset {
   id: string;

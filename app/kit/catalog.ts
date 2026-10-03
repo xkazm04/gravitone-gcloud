@@ -247,7 +247,7 @@ export const KIT_GROUPS = [
     title: "Sortable table",
     for: "rows that are worked: sortable heads, a head that sticks",
     parts: [
-      { name: "Table", api: "<Table label columns=[{id,head,cell,sortBy?,num?}] rows sort? defaultSort? onSort? maxHeight? onOpenRow?/>" },
+      { name: "Table", api: "<Table label columns=[{id,head,cell,sortBy?,num?}] rows sort? defaultSort? onSort? maxHeight? onOpenRow? expandedId? onExpand? renderExpansion?/>" },
     ],
   },
   {

@@ -26,8 +26,9 @@ import { TabRail } from "@/components/ui/signal";
 
 import AssetsBrowser from "./AssetsBrowser";
 import LibraryAtelier from "./LibraryAtelier";
+import AudioWorkbench from "./audio/AudioWorkbench";
 
-type ModuleId = "styles" | "assets" | "animations";
+type ModuleId = "styles" | "assets" | "animations" | "audio";
 
 /** What each tab's blurb was reaching for: the count. Reported UP by whichever
  *  pane holds the live array, rather than read a third time from IndexedDB
@@ -107,6 +108,12 @@ export default function LibraryView() {
                 disabled: true,
                 disabledReason: "no engine yet",
               },
+              {
+                id: "audio",
+                testId: "module-audio",
+                label: "Audio",
+                panelId: "library-panel",
+              },
             ]}
           />
         </header>
@@ -124,6 +131,8 @@ export default function LibraryView() {
                 setModule("styles");
               }}
             />
+          ) : module === "audio" ? (
+            <AudioWorkbench />
           ) : (
             <LibraryAtelier
               initialSelectedId={focusStyle}

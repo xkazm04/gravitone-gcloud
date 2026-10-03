@@ -15,7 +15,7 @@
 // (null / undefined) sort last in both directions; a row with nothing to say about
 // a column is never the "largest".
 
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 
 import { Ghost } from "@/components/ui/signal";
 
@@ -47,6 +47,9 @@ export function Table<R extends { id: string }>({
   maxHeight,
   empty = "no rows",
   onOpenRow,
+  expandedId,
+  onExpand,
+  renderExpansion,
 }: {
   /** The table's accessible name. Required: a page can hold several. */
   label: string;
@@ -62,6 +65,16 @@ export function Table<R extends { id: string }>({
   empty?: string;
   /** A row that opens (Enter / click). Rows become focusable buttons of their own. */
   onOpenRow?: (row: R) => void;
+  /** The id of the row currently expanded. One at a time — an accordion, not a
+   *  set, so scroll position stays sane at "masses of items" scale. */
+  expandedId?: string;
+  /** Fires when a row is clicked to toggle its expansion; `null` collapses.
+   *  Shares the row's click with `onOpenRow` rather than double-handling it —
+   *  pass one or the other, not both, for a given table. */
+  onExpand?: (id: string | null) => void;
+  /** Drawn in a full-width row directly under the expanded row. Omit to leave
+   *  `expandedId` purely cosmetic (no row opens). */
+  renderExpansion?: (row: R) => React.ReactNode;
 }) {
   const [own, setOwn] = useState<TableSort | null>(defaultSort ?? null);
   const active = sort !== undefined ? sort : own;
@@ -144,27 +157,38 @@ export function Table<R extends { id: string }>({
           </tr>
         </thead>
         <tbody>
-          {sorted.map((r) => (
-            <tr
-              key={r.id}
-              tabIndex={onOpenRow ? 0 : undefined}
-              className={onOpenRow ? "k-tbl__open" : undefined}
-              onClick={onOpenRow ? () => onOpenRow(r) : undefined}
-              onKeyDown={
-                onOpenRow
-                  ? (e) => {
-                      if (e.key === "Enter" && e.target === e.currentTarget) onOpenRow(r);
-                    }
-                  : undefined
-              }
-            >
-              {columns.map((c) => (
-                <td key={c.id} className={c.num ? "k-tbl__num" : undefined}>
-                  {c.cell(r)}
-                </td>
-              ))}
-            </tr>
-          ))}
+          {sorted.map((r) => {
+            const open = onOpenRow ?? (onExpand ? () => onExpand(expandedId === r.id ? null : r.id) : undefined);
+            const expanded = expandedId !== undefined && expandedId === r.id;
+            return (
+              <Fragment key={r.id}>
+                <tr
+                  tabIndex={open ? 0 : undefined}
+                  className={open ? "k-tbl__open" : undefined}
+                  aria-expanded={renderExpansion ? expanded : undefined}
+                  onClick={open ? () => open(r) : undefined}
+                  onKeyDown={
+                    open
+                      ? (e) => {
+                          if (e.key === "Enter" && e.target === e.currentTarget) open(r);
+                        }
+                      : undefined
+                  }
+                >
+                  {columns.map((c) => (
+                    <td key={c.id} className={c.num ? "k-tbl__num" : undefined}>
+                      {c.cell(r)}
+                    </td>
+                  ))}
+                </tr>
+                {expanded && renderExpansion && (
+                  <tr className="k-tbl__expansion">
+                    <td colSpan={columns.length}>{renderExpansion(r)}</td>
+                  </tr>
+                )}
+              </Fragment>
+            );
+          })}
         </tbody>
       </table>
     </div>
