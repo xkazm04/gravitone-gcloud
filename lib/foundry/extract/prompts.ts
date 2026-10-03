@@ -11,6 +11,14 @@ import { OBSERVABLE_FIELDS } from "./types";
 export const NO_TEXT =
   "No text, no letters, no numbers, no logos, no captions, no signature and no watermark anywhere in the image.";
 
+/** The palette clause of a recipe is written as ROLES, never as a colour
+ *  list. Dojo cycle 2026-08-30-noir-colour-roles (image-prompt-composition /
+ *  assigned-colour-roles): the same duotone recipe rewritten as ground /
+ *  figure / accent was picked by the human gate over the listed-tint form;
+ *  a listed palette is re-cast per generation, the assignment is the look. */
+export const PALETTE_AS_ROLES =
+  "The palette is written as ASSIGNED ROLES, never as a list of colours: name which colour is the GROUND (air, sky, walls, every midtone), which is the FIGURE (subjects, wardrobe, silhouettes), and the single ACCENT (one small light or material) — then say what is forbidden as a second accent. 'Navy, cream and cyan' is re-cast on every generation; 'cyan ground, near-black figure, one pale accent, no warm second colour' is a look.";
+
 /** The neutral scene roster a style is transferred onto. None of these is a
  *  subject any gallery is likely to contain, which is the point: a recipe
  *  that survives here carried the LOOK, not the content. Staging is spelled
@@ -46,6 +54,7 @@ export function singletonInstruction(): string {
     "Additionally, write this image's STYLE ENTRY, from what you see:",
     "`style_name`: 2–4 words, Title Case, naming the LOOK (never the subject).",
     "`recipe`: 60–110 words a text-to-image generator obeys to reproduce this look on any other subject. The FIRST clause names the medium. Then surfaces, light, palette, blacks, edges, finish, particles, focus — concrete and visual, so a generator given this recipe and a different scene lands back on THIS look.",
+    PALETTE_AS_ROLES,
     "`negative`: a comma-separated list of what the look must not contain; always include text, watermark.",
   ].join("\n");
 }
@@ -93,6 +102,7 @@ export function synthesisPrompt(
     "- The recipe's FIRST clause names the medium in the generator's own words ('a 2D digital painting with airbrushed shading', 'a photoreal 3D render', 'a graphite pencil drawing on paper'). A recipe that leaves the medium implicit gets a 3D render back whatever the source was (measured 2026-08-27).",
     "- Each recipe STATES its fidelity axes in words the generator obeys — 'no floating particles, deep focus throughout, pristine surfaces' or 'air thick with drifting embers, weathered gritty surfaces' — especially where they are what separates this style from a sibling.",
     "- `recipe`: 60–110 words the generator obeys — render mode, surfaces, light, palette, blacks, edges, finish. Style first. No subject matter, no names, no franchises, no titles.",
+    "- " + PALETTE_AS_ROLES,
     "- `negative`: a comma-separated list of what the look must not contain; always include `text, watermark`.",
     "- `id`: kebab-case, 2–4 words, describing the look (e.g. `painted-neon-noir`, `soft-cel-anime`). `name`: the same in Title Case.",
     "- Observables per style: choose the value that best describes the whole group, from the allowed values only.",

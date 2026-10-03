@@ -13,6 +13,7 @@
 import { test, expect } from "@playwright/test";
 
 import { doneUnits, totalUnits, BREAKER_LIMIT, hasFailures, newManifest, next, pruneFailures, runToEnd, settleReason, step, type EngineIO } from "@/lib/foundry/extract/engine";
+import { PALETTE_AS_ROLES, singletonInstruction, synthesisPrompt } from "@/lib/foundry/extract/prompts";
 import { CRITIQUE_SCHEMA, deriveFamily, nearDuplicates, partition, styleScore, usableFix, validateSynthesis } from "@/lib/foundry/extract/vocabulary";
 import type { ExtractManifest, ExtractSource, Observables, Readback, ReplicaRound } from "@/lib/foundry/extract/types";
 
@@ -474,4 +475,19 @@ test("deriveFamily: every medium/render combination lands in a browse bucket; si
   m.options.grouping = "none";
   await runToEnd(m, fakeIO(m, { roundScore: () => painterly, singleton: true }, []));
   expect(m.styles.map((s) => s.family)).toEqual(["painterly", "painterly", "illustration"]);
+});
+
+test("reflection control: the palette-as-roles rule rides on BOTH recipe specs (dojo 2026-08-30-noir-colour-roles)", () => {
+  // The human gate approved assigned-colour-roles over a listed palette. The
+  // rule lives in one constant so the two recipe specs cannot drift apart;
+  // this asserts each spec still carries it, and that it is the ROLE form.
+  expect(PALETTE_AS_ROLES).toMatch(/GROUND/);
+  expect(PALETTE_AS_ROLES).toMatch(/FIGURE/);
+  expect(PALETTE_AS_ROLES).toMatch(/ACCENT/);
+  expect(singletonInstruction()).toContain(PALETTE_AS_ROLES);
+  const synth = synthesisPrompt(
+    [{ id: "s01", readback: { ...painterly, has_text: false, dominant_colours: ["slate", "amber"], look: "x", depiction: "y" } as Readback }],
+    [["s01"]],
+  );
+  expect(synth).toContain(PALETTE_AS_ROLES);
 });
