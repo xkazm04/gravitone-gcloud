@@ -215,6 +215,39 @@ export interface ScoreStepData {
   savedAt?: number;
 }
 
+/** THE MUSIC-VIDEO DISCIPLINE'S WHOLE RESEARCH OUTPUT, under phase key
+ *  `"music-video-source"` — a sibling of `research`/`research-beats`/etc.,
+ *  not a new phase (PHASES stays exactly five, see lib/projects.ts).
+ *
+ *  Written once by Research (the mp3 upload pointer, the style line, and the
+ *  baked `AudioEnvelope` — `lib/audioEnvelope.ts`, computed once and never
+ *  re-derived live), then GROWN by later work packages rather than replaced:
+ *  `posterAssetId` is Frames' (WP3) to fill once the poster generates, `seed`
+ *  and `effectParams` are the effects-studio's (also WP3) determinism inputs.
+ *  All three stay `undefined` here — absence, never a placeholder — exactly
+ *  the convention `Asset.meta` already uses elsewhere in this file.
+ *
+ *  `sourceAssetId` points at the Asset row `assetFromUpload` wrote (kind
+ *  `"audio"`); the bytes themselves live in `UPLOADS_STORE` behind that
+ *  asset's `upload:` pointer (lib/assets.ts) and are never duplicated here. */
+export interface MusicVideoSourceStepData {
+  /** The attached track's Asset id, or absent if none has been attached yet. */
+  sourceAssetId?: string;
+  /** The optional one-line style/direction text typed alongside the upload. */
+  style?: string;
+  /** The baked analysis — see `lib/audioEnvelope.ts`. Absent until a track has
+   *  been attached and successfully decoded. */
+  envelope?: import("@/lib/audioEnvelope").AudioEnvelope;
+  /** Frames' (WP3) poster Asset id — not this package's to fill. */
+  posterAssetId?: string;
+  /** The effects-studio's (WP3) determinism seed — not this package's to fill. */
+  seed?: number;
+  /** The effects-studio's (WP3) compositor parameters — not this package's to
+   *  fill. */
+  effectParams?: Record<string, unknown>;
+  savedAt?: number;
+}
+
 /* ────────────────────────────── what went wrong ──────────────────────────── */
 
 /** WHY the operation failed. Five storage destinations that used to be one

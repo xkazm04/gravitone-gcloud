@@ -35,6 +35,7 @@ const DISCIPLINE_TONE: Record<Discipline, string> = {
   educational: "from-cyan-400/30 via-sky-400/10 to-transparent",
   trailer: "from-violet-400/30 via-fuchsia-400/10 to-transparent",
   free: "from-emerald-400/30 via-teal-300/10 to-transparent",
+  "music-video": "from-pink-400/30 via-rose-400/10 to-transparent",
 };
 
 // Exhaustive on TemplateId on purpose — a template appended to the catalogue
@@ -48,6 +49,7 @@ const TEMPLATE_TONE: Record<TemplateId, string> = {
   trailer: "from-violet-400/30 via-purple-400/10 to-transparent",
   cinematic: "from-rose-400/25 via-violet-400/15 to-transparent",
   "free-form": "from-emerald-400/25 via-teal-300/10 to-transparent",
+  "music-video": "from-pink-400/25 via-rose-400/10 to-transparent",
 };
 
 /* ── Card builders ────────────────────────────────────────────────────────── */
@@ -245,6 +247,7 @@ const LOGLINE_PLACEHOLDER: Record<Discipline, string> = {
   educational: "The claim this one argues — one sentence.",
   trailer: "The debt this cut opens — one sentence.",
   free: "What this one is about — one sentence.",
+  "music-video": "What the track is about — one sentence.",
 };
 
 /** How many characters are left, or `null` while the cap is still none of the

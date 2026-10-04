@@ -38,6 +38,7 @@ import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/
 import { CONCLUSIONS } from "../_shared/notebook/conclusions";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
 import { loadStep, type BeatPicksStepData } from "../_shared/stepStore";
+import Notice from "../_shared/ui/Notice";
 import { usePhaseReport } from "../_shared/usePhaseReport";
 import { useScope } from "../research/useScope";
 
@@ -121,6 +122,7 @@ interface Asked {
 type Route =
   | { id: string; kind: "explainer"; asked: Asked }
   | { id: string; kind: "trailer"; discipline: Discipline; title: string; asked: Asked }
+  | { id: string; kind: "music-video" }
   | { id: string; kind: "missing" };
 
 export default function ScriptStep({ projectId }: { projectId: string }) {
@@ -140,9 +142,11 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
         discipline === "trailer" || (discipline === "free" && picks?.mode === "beats");
       const asked: Asked = { targetS: p.targetS, template: p.template, discipline };
       setRoute(
-        trailer
-          ? { id: projectId, kind: "trailer", discipline, title: p.title, asked }
-          : { id: projectId, kind: "explainer", asked },
+        discipline === "music-video"
+          ? { id: projectId, kind: "music-video" }
+          : trailer
+            ? { id: projectId, kind: "trailer", discipline, title: p.title, asked }
+            : { id: projectId, kind: "explainer", asked },
       );
     });
     return () => { alive = false; };
@@ -164,7 +168,46 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
         targetS={current.asked.targetS}
       />
     );
+  if (current.kind === "music-video") return <MusicVideoScript projectId={projectId} />;
   return <ExplainerScript projectId={projectId} asked={current.asked} />;
+}
+
+/** NOTHING TO WRITE — a music video has no notebook to write candidates
+ *  against, so this half carries no content of its own (per the idea note's
+ *  locked decision, "Skip both, auto-mark done"). Gated exactly like the
+ *  explainer half's own `!researched` branch below — WP2's Research record is
+ *  what opens this, not a bypass of it — and auto-reports `"done"` the moment
+ *  that gate is open, with no user action. */
+function MusicVideoScript({ projectId }: { projectId: string }) {
+  const [researched, setResearched] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void loadStep(projectId, "research").then((saved) => {
+      if (alive) setResearched(!!saved?.researched);
+    });
+    return () => { alive = false; };
+  }, [projectId]);
+
+  usePhaseReport(projectId, "script", researched ? "done" : null);
+
+  if (researched === null) return <Skeleton />;
+
+  if (!researched)
+    return (
+      <UpstreamBreak
+        blockedAt="research"
+        current="script"
+        done={[]}
+        action={{ label: "Open Research", href: `/studio/${projectId}?step=research` }}
+      />
+    );
+
+  return (
+    <Notice severity="info" title="nothing to write here">
+      <p>Carried from Research — a music video has no notebook to write candidates against.</p>
+    </Notice>
+  );
 }
 
 /** The explainer half, exactly as it was — every tab and testid intact. */

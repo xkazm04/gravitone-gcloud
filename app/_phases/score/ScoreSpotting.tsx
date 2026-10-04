@@ -74,6 +74,8 @@ import type { MusicProvenance } from "@/lib/music/types";
 
 import { readStep, type StorageTrouble } from "../_shared/stepStore";
 import { useLoadFor } from "../_shared/useLoadFor";
+import Notice from "../_shared/ui/Notice";
+import { usePhaseReport } from "../_shared/usePhaseReport";
 import type { Frame } from "../frames/frames";
 import type { FramesStepData } from "../frames/useFrames";
 import { pictureFromFrames } from "./picture";
@@ -353,7 +355,43 @@ function OriginLine({
   );
 }
 
+/** THE ROUTER. A music video carries no spotting session of its own — Script
+ *  and Score both auto-pass-through per the idea note's locked decision
+ *  (`.vault/Spark/ideas/music-video-project-type.md`, "Skip both, auto-mark
+ *  done") — so the discipline is read before any of the frames/picture
+ *  machinery below mounts, the same shape `ScriptStep.tsx` already uses to
+ *  route a trailer project away from the explainer half. Not folded into
+ *  `StandardScore` itself: that component's hooks read a frames record this
+ *  discipline does not depend on. */
 export default function ScoreSpotting({ projectId }: { projectId: string }) {
+  const [discipline, setDiscipline] = useState<Discipline | undefined>(undefined);
+  const hydrated = useLoadFor(
+    projectId,
+    (id) => getProject(id),
+    (p) => setDiscipline(p?.discipline ?? "educational"),
+  );
+
+  if (!hydrated) return <EmptyLanes busy />;
+  if (discipline === "music-video") return <MusicVideoScore projectId={projectId} />;
+  return <StandardScore projectId={projectId} />;
+}
+
+/** NOTHING TO SPOT — a music video has no cut and no movements to propose a
+ *  session from, so there is nothing here to render beyond saying so. Auto-
+ *  reports `"done"` the moment it mounts (the gate is the discipline itself,
+ *  not an upstream record — Score does not depend on Frames for any
+ *  discipline today, so this branch invents no new dependency). */
+function MusicVideoScore({ projectId }: { projectId: string }) {
+  usePhaseReport(projectId, "score", "done");
+
+  return (
+    <Notice severity="info" title="nothing to score here">
+      <p>Carried from Research — a music video has no spotting session.</p>
+    </Notice>
+  );
+}
+
+function StandardScore({ projectId }: { projectId: string }) {
   /** THIS PROJECT'S PICTURE, as far as the frames step has written one.
    *
    *  `null` means the read has not landed — which is NOT the same as an empty

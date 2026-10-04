@@ -58,13 +58,25 @@ const book = (usd: number | undefined, at?: number) =>
     at,
   });
 
-keepEnv([BUDGET_VAR, WINDOW_VAR, FLOOR_VAR]);
+keepEnv([BUDGET_VAR, WINDOW_VAR, FLOOR_VAR, "LOCAL_BINARIES"]);
 
 test.beforeEach(() => {
   __resetBudget();
   delete process.env[BUDGET_VAR];
   delete process.env[WINDOW_VAR];
   delete process.env[FLOOR_VAR];
+  // This probe's "google" plan-top expectations predate the "agy" provider
+  // (lib/imaging/providers/agy.ts), which is gated by presence — a live
+  // `agy --version` spawn — not an env-var key the KEY_VARS loops below can
+  // clear. Left unforced, every assertion in this file about which provider
+  // is "top" would silently depend on whether `agy` happens to be installed
+  // on the machine running the suite: green in CI, red on an operator's own
+  // box with agy on PATH (measured — this is exactly how the regression was
+  // found). Forcing LOCAL_BINARIES=off makes `canSpawnLocalBinaries()` false
+  // for every provider this file is not explicitly testing the spawn gate
+  // of, which restores the google-is-top behaviour this file was written
+  // against, deterministically, on any machine.
+  process.env.LOCAL_BINARIES = "off";
 });
 
 test("estimate: pending cost is the dearest declared per-image rate, times count", () => {
@@ -382,14 +394,19 @@ function thriftyWindow(): void {
   });
 }
 
-/** The window a healthy run leaves behind: real spend, the plan's top served. */
+/** The window a healthy run leaves behind: real spend, the plan's top served.
+ *  "The plan's top" is "agy" now (lib/imaging/router.ts's dev PLAN.generate,
+ *  the music-video spark) — this helper's own doc comment is the spec, so it
+ *  books against whichever provider that actually is rather than a frozen
+ *  "google", which `unreachedPlanTops` (arm B, below) would then correctly
+ *  report as the plan's top going UNSERVED even in the "healthy" window. */
 function healthyWindow(): void {
   __resetBudget();
   for (let i = 0; i < 40; i++) {
     recordSpend({
       usd: 0.045,
       cap: "generate",
-      provider: "google",
+      provider: "agy",
       model: "probe-model",
       outcome: "served",
       basis: "vendor",
@@ -440,7 +457,12 @@ test("thrifty run, arm B: the floor and the unreached plan top separate them", (
   expect(thriftyUnreached).toHaveLength(1);
   expect(thriftyUnreached[0]).toMatchObject({
     cap: "generate",
-    top: "google",
+    // PLAN.dev.generate's literal first entry — "agy" since the music-video
+    // spark put it there (lib/imaging/router.ts), ahead of "google". This is
+    // PLAN[0] read directly, unaffected by this file's LOCAL_BINARIES=off
+    // (that only governs whether agy is REACHABLE, i.e. whether it could
+    // appear in servedBy — not which provider the plan names as its top).
+    top: "agy",
     servedBy: ["leonardo"],
   });
 
@@ -497,7 +519,9 @@ test("reach is per capability, and a failed call did not serve", () => {
   const unreached = unreachedPlanTops(Date.now(), "dev");
   expect(unreached).toEqual([
     { cap: "recognize", top: "ollama", servedBy: ["google"] },
-    { cap: "generate", top: "google", servedBy: ["leonardo"] },
+    // "agy", not "google" — see the note on the other unreachedPlanTops
+    // assertion in this file.
+    { cap: "generate", top: "agy", servedBy: ["leonardo"] },
   ]);
   expect(spendByAxis().byProvider.google).toBeCloseTo(0.05, 6);
 });

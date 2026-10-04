@@ -68,6 +68,7 @@ import { useBeatPicks } from "./beats/useBeatPicks";
 import GuidedResearch, { FaceSwitch, type Face } from "./guided/GuidedResearch";
 import { ArtifactPills } from "./guided/RunStage";
 import { useEducationalResearch } from "./guided/useEducationalResearch";
+import MusicVideoResearch from "./MusicVideoResearch";
 
 export default function ResearchStep({ projectId }: { projectId: string }) {
   // The project record, read the way StudioView reads it (`getProject` in an
@@ -102,6 +103,12 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
   // series after `getProject`, and held the whole step behind "opening the
   // project…" for it. Two round trips to show a notebook that needs one.
   if (discipline === "educational") return <EducationalResearch projectId={projectId} />;
+  // THE MUSIC-VIDEO DISCIPLINE (WP2, 2026-10-04). No notebook and no beat
+  // board — the research IS the attached track, so it gets its own branch
+  // rather than being squeezed into BeatsResearch's picks shape, which has
+  // nothing a music video would ever pick. See MusicVideoResearch.tsx /
+  // useMusicVideoSource.ts for the record this writes and the gate it marks.
+  if (discipline === "music-video") return <MusicVideoResearch projectId={projectId} />;
   return <BeatsResearch projectId={projectId} discipline={discipline} />;
 }
 
@@ -112,7 +119,7 @@ function BeatsResearch({
   discipline,
 }: {
   projectId: string;
-  discipline: Exclude<Discipline, "educational">;
+  discipline: Exclude<Discipline, "educational" | "music-video">;
 }) {
   const beats = useBeatPicks(projectId);
 

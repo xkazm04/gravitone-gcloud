@@ -40,6 +40,8 @@ const EXEMPT: Record<string, string> = {
     "DEVTOOLS SKIN - dev-only chrome for the inspect overlay, deliberately fixed so that debugging the theme cannot be broken BY the theme. Never in a production bundle. Its own header also claims it renders where <GravitoneTokens> does not; that half is wrong (it mounts inside the root layout) and the exemption stands on debug-independence alone.",
   "app/global-error.tsx":
     "The App Router boundary that REPLACES the root layout, so <GravitoneTokens> never renders and a var(--gt-ink) there resolves to nothing. The one file that must not read tokens.ts.",
+  "app/_phases/frames/music-video/compositor.ts":
+    "The music-video effects studio's particle/bloom colours — what a GENERATED VIDEO's overlay effects look like, not this app's own chrome. Same distinction as the style-preset exemption above, for video instead of a still image; deliberately not drawn from ACCENT.cyan so the rendered output never shifts if this app's own brand accent does.",
 };
 
 /** A CSS colour literal: 3, 4, 6 or 8 hex digits, or an rgb()/rgba() call.
@@ -73,7 +75,7 @@ function chromeSources(): string[] {
   );
 }
 
-test("no file draws chrome from a colour literal, except the five that may", () => {
+test("no file draws chrome from a colour literal, except the six that may", () => {
   const files = chromeSources();
 
   // A walk that reads nothing reports compliance in a voice indistinguishable

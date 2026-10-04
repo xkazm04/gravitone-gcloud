@@ -169,6 +169,21 @@ export const PRICES: readonly ModelPrice[] = [
     source: "Per-token, rate unchecked — see the qwen3.8-max row.",
     checked: "2026-08-14",
   },
+  // agy — a general agentic CLI, not a per-call API. It is billed against the
+  // operator's own plan "AI credits" quota, which is not a USD figure we hold
+  // — no rate card has been checked, and the quota is separate from every
+  // other vendor's billing in this table. Unpriced rather than guessed.
+  {
+    provider: "agy",
+    model: "agy-image-generator",
+    bills: "per-image",
+    source:
+      "Billed against the operator's own `agy` CLI plan quota (its own \"AI credits\" balance), not a " +
+      "per-call USD figure — no rate card has been checked against it. This is also this operator's " +
+      "personal install, not a repo dependency (see providers/agy.ts), so a price here would describe " +
+      "one machine's plan, not a cost this app can generally claim.",
+    checked: "2026-10-04",
+  },
 ];
 
 const rowFor = (provider: ProviderId, model: string): ModelPrice | undefined =>
