@@ -40,7 +40,17 @@
     ".next-live/types/**/*.ts",
     ".next-live/dev/types/**/*.ts",
     ".next-inspect/types/**/*.ts",
-    ".next-inspect/dev/types/**/*.ts"
+    ".next-inspect/dev/types/**/*.ts",
+    ".next-cx/types/**/*.ts",
+    ".next-cx/dev/types/**/*.ts",
+    ".next-cx-type/types/**/*.ts",
+    ".next-cx-type/dev/types/**/*.ts",
+    ".next-cx-g2/types/**/*.ts",
+    ".next-cx-g2/dev/types/**/*.ts",
+    ".next-cx-g1/types/**/*.ts",
+    ".next-cx-g1/dev/types/**/*.ts",
+    ".next-cx-g3/types/**/*.ts",
+    ".next-cx-g3/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",
