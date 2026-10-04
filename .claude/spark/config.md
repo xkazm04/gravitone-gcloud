@@ -28,11 +28,21 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 - `builder:` `npm run typecheck`; a builder that changed a rendered surface must also drive it on a
   dev server of its own (`next dev -p 31xx`) and report what it saw. Builders NEVER stage and NEVER stash - only the
   Director touches the index. Smoke via a prod build on 31xx (a second `next dev` is refused while :3000 is held).
+  **Any `next dev`/`next build` run auto-appends `.next-<name>/types/**` entries to `tsconfig.json`
+  as a side effect** - a builder claiming it reverted this needs it verified by the Director reading
+  the actual committed diff, not trusted from the report (seen twice: 2026-09-05 as a bare lesson,
+  2026-10-03 as a real leaked commit the Director caught and amended out).
 
 ## Rituals
 
 - Phase 0: read `.vault/active-runs.md`, add an entry under `## Active` with declared paths, in the
   same bash invocation (never edit-then-commit across sessions). Always `git status` first.
+  **Check BOTH directions of divergence before cutting a worktree**: `rev-list --count
+  main..origin/main` AND `rev-list --count origin/main..main`. This repo routinely carries dozens
+  of unpushed local commits (measured 2026-10-03: local 53 ahead, origin 3 ahead, both nonzero) -
+  checking only the "behind" direction found real work (a whole theme system) sitting on the wrong
+  side of a worktree cut, discovered only after two scouts ran against it and one had to
+  self-correct mid-report.
 - Phase 5: if files under `app/` or `components/` were added/moved/deleted, refresh the context map
   per CLAUDE.md (bridge probe 17400..17410; else append to `.vault/map-drift.md`).
 - Phase 6: move the ledger entry to `## Recently completed` with the SHA and declared/not-touched

@@ -179,3 +179,25 @@ __pycache__/
 .contest/
 
 .kit/
+
+# Raw audio — reference tracks, generated takes, anything a vendor (Suno,
+# ElevenLabs) or a local analysis pass writes to disk. Same doctrine as every
+# other third-party/generated media rule above: the FINDING gets committed
+# (a prompt, a rating, a ledger row), never the bytes behind it. No audio file
+# is committed anywhere in this repo today — this rule is here so the first
+# one never is either, once the Library's Audio Workbench starts writing real
+# files instead of IndexedDB pointers.
+*.mp3
+*.wav
+*.m4a
+*.flac
+*.ogg
+*.aac
+
+# Throwaway verification scripts a session drives a dev server with, then is
+# supposed to delete before committing (several builders this session did
+# exactly that by hand; this is the backstop for the one that forgets).
+# Playwright's own run artifacts are /test-results/ above.
+/smoke-*.mjs
+/smoke-*.cjs
+/smoke-*.ts
