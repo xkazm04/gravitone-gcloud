@@ -16,11 +16,14 @@
 import { useState } from "react";
 
 import { TabRail } from "@/components/ui/signal";
+import { getProject, type Discipline } from "@/lib/projects";
 
 import Notice from "../_shared/ui/Notice";
+import { useLoadFor } from "../_shared/useLoadFor";
 
 import AlternativesView from "./alternatives/AlternativesView";
 import FramesAssembly from "./FramesAssembly";
+import MusicVideoFrames from "./music-video/MusicVideoFrames";
 import ShotSheet from "./ShotSheet";
 import { useFrames } from "./useFrames";
 
@@ -35,7 +38,35 @@ import { useFrames } from "./useFrames";
 const VIEWS = ["assembly", "alternatives", "shots"] as const;
 type ViewId = (typeof VIEWS)[number];
 
+/** THE ROUTER — the FIRST top-level discipline branch this file has had.
+ *
+ *  Every other discipline's variation lives INSIDE `useFrames`/`framesLane`
+ *  (the header above says so), because they are all still "derive plates from
+ *  a script" with different derivations. A music video is not that at all: it
+ *  has no script, no beats, no shot ledger — one generated poster and an
+ *  effects studio that animates it against WP2's baked envelope. Routing it
+ *  away HERE, before `useFrames` ever mounts, is the same shape
+ *  `ScriptStep.tsx` and `ScoreSpotting.tsx` already use to keep a music-video
+ *  project off hooks that read records it does not have. */
 export default function FramesStep({ projectId }: { projectId: string }) {
+  const [discipline, setDiscipline] = useState<Discipline | undefined>(undefined);
+  const hydrated = useLoadFor(
+    projectId,
+    (id) => getProject(id),
+    (p) => setDiscipline(p?.discipline ?? "educational"),
+  );
+
+  if (!hydrated)
+    return (
+      <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
+        reading the cut…
+      </p>
+    );
+  if (discipline === "music-video") return <MusicVideoFrames projectId={projectId} />;
+  return <StandardFrames projectId={projectId} />;
+}
+
+function StandardFrames({ projectId }: { projectId: string }) {
   const ctl = useFrames(projectId);
   const [chosen, setView] = useState<ViewId>("assembly");
 
