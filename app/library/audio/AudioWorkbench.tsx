@@ -46,7 +46,7 @@ function WorldSwitch({ onChange }: { onChange: (w: World) => void }) {
           aria-pressed={active === w}
           onClick={() => onChange(w)}
           className="rounded border border-white/20 px-2 py-1 text-label capitalize"
-          style={active === w ? { background: "var(--gt-accent, #8884)" } : undefined}
+          style={active === w ? { background: "color-mix(in srgb, var(--gt-accent-cyan) 20%, transparent)" } : undefined}
         >
           {w}
         </button>

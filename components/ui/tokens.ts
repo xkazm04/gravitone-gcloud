@@ -83,10 +83,22 @@ export const ACCENT = {
   cyan: "#67e8f9",
   violet: "#a78bfa",
   emerald: "#6ee7b7",
+  /** Reserved/avoid semantic (the Library Audio Workbench's "ant"/exclude
+   *  chips) — Tailwind's rose-400, spelled here rather than left as a
+   *  `border-rose-400/30` utility class because the Obsidian remap in
+   *  app/library/audio/audio-workbench.css needs it as a raw CSS custom
+   *  property, not a class on an element. */
+  rose: "#fb7185",
 } as const;
 
 /** Page ink — the studio background. */
 export const INK = "#080a10";
+
+/** Bright ink — readable text/foreground on the dark studio background.
+ *  Reader: app/library/audio/audio-workbench.css's Obsidian token remap
+ *  (`--gt-ink-bright`), the kit's first real Obsidian consumer; Almanac's
+ *  own `--al-white` is its equivalent for that world. */
+export const INK_BRIGHT = "#f3f6fb";
 
 /**
  * The canonical glass surface, as a class list. The one export of this file
@@ -130,7 +142,9 @@ export const CSS_TOKENS: Record<string, string> = {
   "--gt-accent-cyan": ACCENT.cyan,
   "--gt-accent-violet": ACCENT.violet,
   "--gt-accent-emerald": ACCENT.emerald,
+  "--gt-accent-rose": ACCENT.rose,
   "--gt-ink": INK,
+  "--gt-ink-bright": INK_BRIGHT,
 
   // glass surface (.glass-panel / SURFACE)
   "--gt-surface-top": "rgba(255,255,255,0.05)",
