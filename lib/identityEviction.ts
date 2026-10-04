@@ -164,6 +164,7 @@ export function userScopedLocalKeys(uid: string): string[] {
   return [
     `gravitone.seeded.${uid}`, // lib/useProjects.ts — "this account's shelf was seeded"
     `gravitone.assets.seeded.${uid}`, // lib/useAssets.ts — same, for the library
+    `gravitone.audio-seeded.${uid}`, // app/library/audio/AudioWorkbench.tsx — same, for the audio module
     JOBS_KEY, // lib/jobs.tsx — profile-wide, cleared wholesale (see above)
   ];
 }

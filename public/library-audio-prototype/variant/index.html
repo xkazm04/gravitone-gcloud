@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Library · Audio — Recipe Book</title>
+<link rel="stylesheet" href="core.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app" id="app">
+  <header class="top">
+    <div class="top__row">
+      <nav class="crumbs" aria-label="Breadcrumb"><span>Library</span><span aria-hidden="true">/</span><b>Audio</b></nav>
+      <div class="census" id="census"></div>
+      <div class="bigbar" id="bigbar" role="group" aria-label="Verdicts across the corpus"></div>
+    </div>
+    <div class="top__row">
+      <button class="btn only-narrow" id="termsBtn" type="button" aria-controls="colLeft">Terms</button>
+      <div class="seg" id="typeSeg" role="group" aria-label="Type"></div>
+      <div class="census" id="verdictChips" role="group" aria-label="Verdict filter"></div>
+      <input class="search" id="search" type="search" placeholder="Search title, tag, reason" aria-label="Search">
+      <span id="activeFilters" class="census"></span>
+      <span style="flex:1"></span>
+      <div id="storage"></div>
+      <button class="btn only-narrow" id="drawerBtn" type="button" aria-controls="colRight">Inspector</button>
+    </div>
+  </header>
+  <div class="cols">
+    <aside class="col col--left" id="colLeft" aria-label="Terms"></aside>
+    <main class="col col--mid" id="colMid" aria-label="Ledger"></main>
+    <aside class="col col--right" id="colRight" aria-label="Inspector and composer"></aside>
+  </div>
+  <div class="scrim" id="scrim"></div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script src="../data/audio-items.js"></script>
+<script src="refdata.js"></script>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -153,6 +153,15 @@
   .aw__col:nth-child(3) { display: none; }
 }
 
+/* ── The ported contest entry, mounted for comparison. ── */
+.aw__prototype-frame {
+  width: 100%;
+  height: calc(100vh - 220px);
+  min-height: 480px;
+  border: 1px solid var(--al-line);
+  border-radius: 8px;
+}
+
 /* ── Vocabulary spine — caveat 3's 2-row term. ── */
 .aw__section-head {
   display: flex;
