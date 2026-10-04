@@ -504,6 +504,67 @@
       ]
     },
     {
+      "api_surface": "Calls plate-generation and clip-generation endpoints via useFrames; music-video branch calls poster-generate job route",
+      "business_feature": "Frames Production Step",
+      "category": "ui",
+      "cross_refs": [
+        "script-phase"
+      ],
+      "db_tables": [],
+      "description": "Implements Step 3 of the production pipeline, translating script beats into composed frames — each frame carrying a generated plate, vector elements, and text layer. Provides an Assembly ledger view for batch plate generation, an Alternatives contact-sheet for plate selection, a ShotSheet for read-only shot inspection, and a Music Video branch that replaces the standard beat-driven flow with a single poster plus an effects studio. State flows through useFrames, which coordinates frame generation, layer editing, and clip status across all three views.",
+      "entry_points": [
+        "app/_phases/frames/FramesStep.tsx",
+        "app/_phases/frames/useFrames.ts",
+        "app/_phases/frames/frames.ts"
+      ],
+      "file_paths": [
+        "app/_phases/frames/FramesStep.tsx",
+        "app/_phases/frames/FramesAssembly.tsx",
+        "app/_phases/frames/LayerPanel.tsx",
+        "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/frames/frames.ts",
+        "app/_phases/frames/parts.tsx",
+        "app/_phases/frames/sceneSpec.ts",
+        "app/_phases/frames/shotPrompt.ts",
+        "app/_phases/frames/shotReview.ts",
+        "app/_phases/frames/shots.ts",
+        "app/_phases/frames/useFrames.ts",
+        "app/_phases/frames/alternatives/AlternativesView.tsx",
+        "app/_phases/frames/alternatives/VariantContactSheet.tsx",
+        "app/_phases/frames/alternatives/alts.ts",
+        "app/_phases/frames/alternatives/useAlternatives.ts",
+        "app/_phases/frames/music-video/EffectsStudio.tsx",
+        "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/frames/music-video/compositor.ts",
+        "app/_phases/frames/music-video/useMusicVideoComposition.ts"
+      ],
+      "group": "Production Pipeline",
+      "group_id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
+      "id": "fb7019fe-fc71-463f-8fa8-9dcab877274a",
+      "keywords": [
+        "frames",
+        "plates",
+        "shots",
+        "layers",
+        "assembly",
+        "alternatives",
+        "effects-studio",
+        "music-video",
+        "poster",
+        "clip",
+        "scene",
+        "beat"
+      ],
+      "last_written_at": "2026-10-04T14:41:25.997362400+00:00",
+      "name": "frames-phase",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js",
+        "React",
+        "TypeScript"
+      ]
+    },
+    {
       "api_surface": "POST /api/frames",
       "business_feature": "Frames, Score & Cut Phases",
       "category": "ui",
@@ -682,47 +743,47 @@
       ]
     },
     {
-      "api_surface": "",
-      "business_feature": "Asset Shelf Browser",
+      "api_surface": "GET /kit (hash-addressed: /kit#identity | /kit#law | /kit#parts | /kit#migration)",
+      "business_feature": "Kit Design Guidelines Viewer",
       "category": "ui",
-      "cross_refs": [
-        "library-atelier"
-      ],
+      "cross_refs": [],
       "db_tables": [],
-      "description": "The reusable-asset shelf that organises promoted proof plates into a folder tree users can browse, refile, rename and delete. Assets are pointers into the imaging store rather than copies; the browser manages drag-and-drop refiling, a context menu, a plate viewer, and a move dialog. Depends on useAssets, lib/assets, and IndexedDB.",
+      "description": "The /kit route is the Almanac world's live design guideline viewer — a four-tab surface covering Identity (palette, type, motion, brand marks), Law (the 16 design rules and their gates), Parts (specimen sheet for every export of components/kit), and Migration (gaps between what the kit currently offers and what each studio phase will need). It is the authoritative reference document builders read to understand what components exist, what rules govern their use, and what is still missing. Data is declared in catalog.ts and migrationMap.ts; the four tab modules render it without additional data fetching.",
       "entry_points": [
-        "app/library/AssetsBrowser.tsx",
-        "app/library/assets/useShelf.ts"
+        "app/kit/KitView.tsx",
+        "app/kit/catalog.ts"
       ],
       "file_paths": [
-        "app/library/AssetsBrowser.tsx",
-        "app/library/FolderTree.tsx",
-        "app/library/MoveDialog.tsx",
-        "app/library/ContextMenu.tsx",
-        "app/library/assets/EmptyShelf.tsx",
-        "app/library/assets/shelf.ts",
-        "app/library/assets/ShelfDialogs.tsx",
-        "app/library/assets/ShelfGallery.tsx",
-        "app/library/assets/Tile.tsx",
-        "app/library/assets/useShelf.ts"
+        "app/kit/page.tsx",
+        "app/kit/KitView.tsx",
+        "app/kit/catalog.ts",
+        "app/kit/contrast.ts",
+        "app/kit/Law.tsx",
+        "app/kit/kit-route.css",
+        "app/kit/Parts.tsx",
+        "app/kit/migrationMap.ts",
+        "app/kit/GrowG3Demos.tsx",
+        "app/kit/Identity.tsx",
+        "app/kit/PartsWorkbench.tsx",
+        "app/kit/Migration.tsx"
       ],
-      "group": "Asset Management",
-      "group_id": "dbf64836-e57a-49bd-885a-eeab7ed06182",
-      "id": "bb43e25c-f710-4c40-a3a1-11942a3b8d68",
+      "group": "Design System",
+      "group_id": "b59e5896-a7fb-4a80-82d0-9d8c10283f24",
+      "id": "4a92f572-9c92-4b18-9b94-9dd38d123911",
       "keywords": [
-        "shelf",
-        "asset",
-        "folder",
-        "tile",
-        "gallery",
-        "drag-drop",
-        "refile",
-        "plate",
-        "promotion",
-        "browser"
+        "design-system",
+        "specimen",
+        "kit",
+        "almanac",
+        "design-tokens",
+        "typography",
+        "color-palette",
+        "migration",
+        "component-catalog",
+        "design-rules"
       ],
-      "last_written_at": "2026-09-21T20:37:03.048942500+00:00",
-      "name": "library-assets-browser",
+      "last_written_at": "2026-10-04T14:35:23.949130+00:00",
+      "name": "kit-specimen-route",
       "pinned": false,
       "tech_stack": [
         "Next.js",
@@ -731,16 +792,73 @@
       ]
     },
     {
-      "api_surface": "consumes POST /api/imaging/generate",
-      "business_feature": "Style Atelier",
+      "api_surface": "reads/writes lib/assets IndexedDB shelf; audio takes consumed from lib/assets",
+      "business_feature": "Asset Shelf and Audio Workbench",
       "category": "ui",
       "cross_refs": [
-        "library-assets-browser"
+        "library-styles-atelier"
       ],
       "db_tables": [],
-      "description": "The visual-identity studio where users create, proof, and lock styles that all projects are built from. Users start from a preset, iterate proof images against the style block via the imaging API, judge each proof, and lock the style when it is ready. Depends on useThemes, useAssets, imagingClient, and the IndexedDB asset store.",
+      "description": "The reusable-assets shelf and the audio workbench, both living under the Library's tab rail. The shelf organises promoted image plates into a folder tree with drag-and-drop, right-click actions, and bulk operations backed by lib/assets IndexedDB. The audio workbench provides a take ledger, vocabulary spine, inspector, and composer column for reviewing generated music takes.",
       "entry_points": [
-        "app/library/LibraryView.tsx",
+        "app/library/AssetsBrowser.tsx",
+        "app/library/audio/AudioWorkbench.tsx"
+      ],
+      "file_paths": [
+        "app/library/AssetsBrowser.tsx",
+        "app/library/AssetLightbox.tsx",
+        "app/library/assetMeta.ts",
+        "app/library/ContextMenu.tsx",
+        "app/library/FolderTree.tsx",
+        "app/library/MoveDialog.tsx",
+        "app/library/assets/EmptyShelf.tsx",
+        "app/library/assets/shelf.ts",
+        "app/library/assets/ShelfDialogs.tsx",
+        "app/library/assets/ShelfGallery.tsx",
+        "app/library/assets/Tile.tsx",
+        "app/library/assets/useShelf.ts",
+        "app/library/audio/audio-workbench.css",
+        "app/library/audio/AudioWorkbench.tsx",
+        "app/library/audio/Inspector.tsx",
+        "app/library/audio/Ledger.tsx",
+        "app/library/audio/TakeExpansion.tsx",
+        "app/library/audio/VocabSpine.tsx"
+      ],
+      "group": "Asset Management",
+      "group_id": "dbf64836-e57a-49bd-885a-eeab7ed06182",
+      "id": "f7e5dc11-14d3-42db-a616-65bd5f36490d",
+      "keywords": [
+        "shelf",
+        "asset",
+        "folder",
+        "tile",
+        "audio",
+        "take",
+        "ledger",
+        "inspector",
+        "drag-drop",
+        "promote"
+      ],
+      "last_written_at": "2026-10-04T14:40:05.728749300+00:00",
+      "name": "library-assets-audio",
+      "pinned": false,
+      "tech_stack": [
+        "Next.js 15",
+        "React 19",
+        "TypeScript"
+      ]
+    },
+    {
+      "api_surface": "consumes POST /api/imaging/generate; reads IndexedDB for proof storage",
+      "business_feature": "Visual Style Atelier",
+      "category": "ui",
+      "cross_refs": [
+        "library-assets-audio"
+      ],
+      "db_tables": [],
+      "description": "The visual-identity studio inside the Library: users compare six preset styles on a showcase wall, run a five-beat trial to test a chosen style, and lock it once its proof sheet passes. Houses the atelier layout, preset definitions, trial beat catalogue, spec editor, and the playground that renders live proofs from /api/imaging/generate into IndexedDB.",
+      "entry_points": [
+        "app/library/page.tsx",
         "app/library/LibraryAtelier.tsx"
       ],
       "file_paths": [
@@ -749,35 +867,33 @@
         "app/library/LibraryAtelier.tsx",
         "app/library/parts.tsx",
         "app/library/presets.ts",
+        "app/library/trials.ts",
+        "app/library/Playground.tsx",
         "app/library/PresetRail.tsx",
         "app/library/PresetShowcase.tsx",
-        "app/library/SpecEditor.tsx",
-        "app/library/Playground.tsx",
-        "app/library/assetMeta.ts",
-        "app/library/AssetLightbox.tsx",
-        "app/library/trials.ts"
+        "app/library/SpecEditor.tsx"
       ],
       "group": "Asset Management",
       "group_id": "dbf64836-e57a-49bd-885a-eeab7ed06182",
-      "id": "5bf3aa6a-c33f-4a41-bf75-43975f9152d5",
+      "id": "6500fa35-fdd7-4fda-82df-b5e6685efd55",
       "keywords": [
         "style",
         "preset",
         "proof",
-        "lock",
+        "trial",
         "atelier",
-        "theme",
+        "lock",
+        "visual-identity",
         "palette",
-        "discipline",
-        "dossier",
-        "visual-identity"
+        "spec",
+        "showcase"
       ],
-      "last_written_at": "2026-09-21T20:37:03.047560600+00:00",
-      "name": "library-atelier",
+      "last_written_at": "2026-10-04T14:40:05.730249700+00:00",
+      "name": "library-styles-atelier",
       "pinned": false,
       "tech_stack": [
-        "Next.js",
-        "React",
+        "Next.js 15",
+        "React 19",
         "TypeScript"
       ]
     },
@@ -1162,8 +1278,7 @@
         "app/_projects/ProjectDialog.tsx",
         "app/_projects/wizard/CreateWizard.tsx",
         "app/_projects/wizard/stages.tsx",
-        "app/_landing/parts.tsx",
-        "app/_landing/GateContactSheet.tsx"
+        "app/_landing/parts.tsx"
       ],
       "group": "Studio Hub",
       "group_id": "ad97aa70-ad85-48ca-a945-1eb105bcc2ad",
@@ -1180,7 +1295,7 @@
         "create",
         "delete"
       ],
-      "last_written_at": "2026-09-08T16:37:53.327097500+00:00",
+      "last_written_at": "2026-10-04T14:35:23.766124800+00:00",
       "name": "project-shelf",
       "pinned": false,
       "tech_stack": [
@@ -1192,107 +1307,112 @@
     },
     {
       "api_surface": "",
-      "business_feature": "Research Run Engine & Beat Selection",
-      "category": "lib",
+      "business_feature": "Research Run Engine",
+      "category": "ui",
       "cross_refs": [
-        "research-scope-ui"
+        "research-scope-board"
       ],
       "db_tables": [],
-      "description": "The research run engine, trace model, and beat-variant selection board for the Research step. Drives a multi-phase Claude CLI process that produces a research notebook, models its 15-step trace with typed outcomes, and provides a separate beat-picker board for trailer/promotional disciplines that have no notebook to research. Depends on trailer spine types and studio fixture data.",
+      "description": "Drives the background research job for educational projects — a 15-step trace that runs as a persistent background job so navigating away does not cancel it. The guided wizard (GuidedResearch) and live trace view (RunTrace/LiveResult) are the two surfaces over a single run-wiring hook (useResearchRun/useEducationalResearch). The engine settles the job's outcome and feeds the triage board via the shared scope record.",
       "entry_points": [
-        "app/_phases/research/run/useResearchRun.ts",
-        "app/_phases/research/beats/beats.ts"
+        "app/_phases/research/guided/useEducationalResearch.ts",
+        "app/_phases/research/guided/GuidedResearch.tsx",
+        "app/_phases/research/run/useResearchRun.ts"
       ],
       "file_paths": [
-        "app/_phases/research/run/controls.tsx",
-        "app/_phases/research/run/RunTrace.tsx",
-        "app/_phases/research/run/trace.ts",
         "app/_phases/research/run/types.ts",
+        "app/_phases/research/run/live.ts",
         "app/_phases/research/run/useResearchRun.ts",
-        "app/_phases/research/beats/beats.ts",
-        "app/_phases/research/beats/BeatVariantBoard.tsx",
-        "app/_phases/research/beats/ModeChooser.tsx",
-        "app/_phases/research/beats/SlotColumn.tsx",
-        "app/_phases/research/beats/useBeatPicks.ts",
-        "app/_phases/research/beats/VariantTile.tsx"
+        "app/_phases/research/run/trace.ts",
+        "app/_phases/research/run/RunTrace.tsx",
+        "app/_phases/research/run/LiveResult.tsx",
+        "app/_phases/research/run/controls.tsx",
+        "app/_phases/research/guided/passes.tsx",
+        "app/_phases/research/guided/useEducationalResearch.ts",
+        "app/_phases/research/guided/GuidedResearch.tsx",
+        "app/_phases/research/guided/RunStage.tsx"
       ],
       "group": "Production Pipeline",
       "group_id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
-      "id": "70f0f930-f089-4116-bfaa-034421ee77c6",
+      "id": "7e7c24d0-60e7-42bb-b7b2-e540cb5f2b65",
       "keywords": [
-        "run",
+        "research run",
+        "background job",
+        "guided wizard",
         "trace",
-        "Claude CLI",
-        "beats",
-        "variants",
-        "spine",
-        "tension",
         "notebook",
-        "outcome",
-        "trailer"
+        "educational",
+        "live result",
+        "run engine",
+        "passes",
+        "step"
       ],
-      "last_written_at": "2026-09-08T17:39:52.069241600+00:00",
+      "last_written_at": "2026-10-04T14:44:09.828985900+00:00",
       "name": "research-run-engine",
       "pinned": false,
       "tech_stack": [
-        "Next.js",
-        "React",
+        "Next.js 15.3",
+        "React 19.1",
         "TypeScript"
       ]
     },
     {
       "api_surface": "",
-      "business_feature": "Research Scope & Triage",
+      "business_feature": "Research Scope & Triage Board",
       "category": "ui",
       "cross_refs": [
         "research-run-engine"
       ],
       "db_tables": [],
-      "description": "The Research step's scope-management and triage surfaces. Creators review notebook findings, keep or cut cards, confirm a scope, and queue follow-up questions; the guided wizard and expert triage board are two faces over one scope record. Key dependencies are the shared stepStore, deck UI primitives, and the signal component vocabulary.",
+      "description": "Manages the creator's scope decisions over a research notebook — kept, descoped, liked, and deepen signals — and renders the triage board, follow-up queue, and scope checkpoint UI. Also owns the beats-picking surface for trailer and free-form projects (BeatVariantBoard/SlotColumn) and the music-video discipline branch (MusicVideoResearch/useMusicVideoSource). The entry point ResearchStep branches on project discipline to deliver the correct research surface.",
       "entry_points": [
         "app/_phases/research/ResearchStep.tsx",
-        "app/_phases/research/useScope.ts"
+        "app/_phases/research/scope.ts",
+        "app/_phases/research/beats/useBeatPicks.ts"
       ],
       "file_paths": [
         "app/_phases/research/ResearchStep.tsx",
         "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/_phases/research/MusicVideoResearch.tsx",
+        "app/_phases/research/useMusicVideoSource.ts",
         "app/_phases/research/scope.ts",
         "app/_phases/research/useScope.ts",
-        "app/_phases/research/followup.ts",
         "app/_phases/research/useFollowUps.ts",
-        "app/_phases/research/_parts/CardActions.tsx",
-        "app/_phases/research/_parts/CardTile.tsx",
-        "app/_phases/research/_parts/FollowUpQueue.tsx",
-        "app/_phases/research/_parts/FollowUpResult.tsx",
+        "app/_phases/research/followup.ts",
         "app/_phases/research/_parts/ScopeBar.tsx",
         "app/_phases/research/_parts/ScopeGate.tsx",
-        "app/_phases/research/guided/GuidedResearch.tsx",
-        "app/_phases/research/guided/passes.tsx",
-        "app/_phases/research/guided/RunStage.tsx",
-        "app/_phases/research/guided/useEducationalResearch.ts"
+        "app/_phases/research/_parts/FollowUpResult.tsx",
+        "app/_phases/research/_parts/FollowUpQueue.tsx",
+        "app/_phases/research/_parts/CardActions.tsx",
+        "app/_phases/research/_parts/CardTile.tsx",
+        "app/_phases/research/beats/beats.ts",
+        "app/_phases/research/beats/useBeatPicks.ts",
+        "app/_phases/research/beats/VariantTile.tsx",
+        "app/_phases/research/beats/ModeChooser.tsx",
+        "app/_phases/research/beats/BeatVariantBoard.tsx",
+        "app/_phases/research/beats/SlotColumn.tsx"
       ],
       "group": "Production Pipeline",
       "group_id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
-      "id": "ae20c3b8-5a40-4760-927e-15dc08f4f9ee",
+      "id": "3f0df589-9680-4aed-86a6-d6e913ddf1f1",
       "keywords": [
-        "research",
         "scope",
         "triage",
-        "notebook",
+        "beats",
         "follow-up",
-        "guided",
-        "wizard",
-        "cards",
-        "keep",
-        "cut",
-        "checkpoint"
+        "notebook",
+        "descoped",
+        "music-video",
+        "trailer",
+        "card",
+        "discipline"
       ],
-      "last_written_at": "2026-09-09T09:16:51.757937400+00:00",
-      "name": "research-scope-ui",
+      "last_written_at": "2026-10-04T14:44:09.836524400+00:00",
+      "name": "research-scope-board",
       "pinned": false,
       "tech_stack": [
-        "Next.js",
-        "React",
+        "Next.js 15.3",
+        "React 19.1",
         "TypeScript"
       ]
     },
@@ -1931,7 +2051,7 @@
       ]
     }
   ],
-  "generated_at": "2026-09-21T20:38:46.082678500+00:00",
+  "generated_at": "2026-10-04T14:44:12.538702200+00:00",
   "generator": "personas-context-scan",
   "groups": [
     {
@@ -1943,7 +2063,7 @@
     },
     {
       "color": "blue",
-      "context_count": 9,
+      "context_count": 10,
       "domain": "feature",
       "id": "9b5dca59-5fa7-4b56-80cc-2a9c1e488dc1",
       "name": "Production Pipeline"
@@ -1971,7 +2091,7 @@
     },
     {
       "color": "indigo",
-      "context_count": 3,
+      "context_count": 4,
       "domain": "shared",
       "id": "b59e5896-a7fb-4a80-82d0-9d8c10283f24",
       "name": "Design System"
@@ -1994,15 +2114,15 @@
   "project": {
     "id": "d57f858b-b917-4fd7-b5f4-ee7df0f989a0",
     "name": "gravitone-gcloud",
-    "root": "C:\\Users\\kazda\\kiro\\gravitone-gcloud"
+    "root": "C:/Users/kazda/kiro/gravitone-gcloud"
   },
   "provenance": {
-    "git_commit": "773f4d83dd927d8fab9686dce8fdf66c27087957",
-    "git_commit_count": 602
+    "git_commit": "bae4e5d8c1c5a3baafb5f41af396444c3f577305",
+    "git_commit_count": 665
   },
   "stats": {
-    "contexts": 34,
-    "files": 500,
+    "contexts": 36,
+    "files": 540,
     "groups": 8,
     "use_cases": 0
   },
