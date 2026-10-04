@@ -120,13 +120,14 @@ export const PHASE_STATE_WORD: Record<PhaseState, string> = {
  *  contracts (see the note on the promotional formats below), and `free` is
  *  the honest third answer — a video the craft library has no template for,
  *  where the studio only keeps time. */
-export const DISCIPLINES = ["educational", "trailer", "free"] as const;
+export const DISCIPLINES = ["educational", "trailer", "free", "music-video"] as const;
 export type Discipline = (typeof DISCIPLINES)[number];
 
 export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   educational: "Educational video",
   trailer: "Movie · game trailer",
   free: "Any video",
+  "music-video": "Music video",
 };
 
 /** The one line the create dialog shows under each discipline pill. */
@@ -134,6 +135,7 @@ export const DISCIPLINE_NOTE: Record<Discipline, string> = {
   educational: "an argument explained well — the craft library measured these",
   trailer: "a promotional cut that opens a debt another artifact pays",
   free: "no craft template — your own discipline; the studio only keeps time",
+  "music-video": "one track, one poster brought to life — beat-driven, not hand-animated",
 };
 
 /* ── Templates (knowledge/templates/*) ────────────────────────────────────── */
@@ -231,6 +233,20 @@ export const TEMPLATES = [
     range: [15, 600] as const,
     note: "no craft template — your own discipline; the studio only keeps time",
   },
+
+  // ── The music-video discipline ────────────────────────────────────────────
+  //
+  // ONE ID, APPENDED LAST. The runtime is the attached track's real decoded
+  // duration (lib/audioEnvelope.ts, WP2), never a user-typed target — `range`
+  // is the band a single-poster piece stays watchable in, not a measurement
+  // from knowledge/, which this template does not have one of either.
+  {
+    id: "music-video",
+    label: "Music video",
+    defaultS: 120,
+    range: [60, 240] as const,
+    note: "one track, one poster animated to it — length follows the mp3",
+  },
 ] as const;
 
 export type TemplateId = (typeof TEMPLATES)[number]["id"];
@@ -245,6 +261,7 @@ export const TEMPLATE_FAMILY: Record<TemplateId, Discipline> = {
   trailer: "trailer",
   cinematic: "trailer",
   "free-form": "free",
+  "music-video": "music-video",
 };
 
 /** The templates a discipline offers, in catalogue order. Never empty — every

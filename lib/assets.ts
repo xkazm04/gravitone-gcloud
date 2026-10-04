@@ -268,6 +268,7 @@ export function assetFromUpload(
   uid: string,
   file: File,
   path: string[],
+  kind: AssetKind = "image",
 ): { asset: Asset; upload: UploadRecord } {
   const id = `up-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
   return {
@@ -280,7 +281,7 @@ export function assetFromUpload(
       // extension is already said by the mime.
       name: file.name.replace(/\.[^.]+$/, "") || file.name,
       src: uploadPointer(id),
-      kind: "image",
+      kind,
       meta: { upload: true, uploadId: id, mime: file.type, bytes: file.size, fileName: file.name },
       createdAt: Date.now(),
     },

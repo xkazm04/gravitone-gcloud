@@ -32,6 +32,7 @@ import {
 } from "./budget";
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
+import { agyProvider } from "./providers/agy";
 import { googleProvider } from "./providers/google";
 import { leonardoProvider } from "./providers/leonardo";
 import { ollamaProvider } from "./providers/ollama";
@@ -76,7 +77,13 @@ const PLAN: Record<ImagingEnv, Record<Capability, ProviderId[]>> = {
     // Leonardo drew the countable mechanism 0 times out of 6; Nano Banana drew
     // it 4. So the cheaper render was the more expensive plate, and Leonardo
     // stays in the chain as a fallback rather than as the default.
-    generate: ["google", "leonardo"],
+    // "agy" leads: the operator's own CLI, verified live this spark (see
+    // providers/agy.ts header). It never costs a slot when unavailable — the
+    // SAME no-key skip that already governs leonardo/google here handles it,
+    // via `isConfigured("agy")`'s presence probe (env.ts) — so a clone of this
+    // repo without `agy` installed falls straight through to google/leonardo,
+    // the chain that already existed, with nothing new to fail.
+    generate: ["agy", "google", "leonardo"],
     // Leonardo is absent on purpose: its only adjustment surface is background
     // removal, not instruction-driven editing, so even in dev an edit is a
     // Nano Banana call.
@@ -103,6 +110,7 @@ const PROVIDERS: Record<ProviderId, () => ImagingProvider> = {
   google: googleProvider,
   qwen: qwenProvider,
   ollama: ollamaProvider,
+  agy: agyProvider,
 };
 
 /** Who would answer this capability right now, in order. Exported so the

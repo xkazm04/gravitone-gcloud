@@ -45,7 +45,18 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
-export type JobKind = "research" | "followup" | "recalibrate";
+// "poster-generate" and "video-export" are the music-video discipline's two
+// long-running calls (WP1 of the music-video spark: lib/imaging/providers/agy.ts
+// measured ~57s for one poster; export is a headless Playwright frame-capture
+// muxed with ffmpeg, minutes for a real track). Neither route exists yet — WP3
+// and WP5 build them — but the job-kind constants and the `Job` shape below are
+// committed here so both packages build against a stable, compiling contract
+// rather than sharing a file with this one later. Both are driven, like
+// "recalibrate" — a real process backs them from day one, never a mocked
+// clock — and both are listed in SERIALISED below for the same reason
+// "recalibrate" is: a second poster/export run for the same project would be a
+// second real spend racing the first one's result.
+export type JobKind = "research" | "followup" | "recalibrate" | "poster-generate" | "video-export";
 export type JobStatus = "running" | "done" | "failed" | "interrupted";
 
 export interface Job {
@@ -143,7 +154,20 @@ const Ctx = createContext<JobsApi | null>(null);
 // Adding a mocked kind means adding a clock for it, deliberately.
 
 /** Kinds limited to one in flight per project. Research is deliberately absent. */
-const SERIALISED = new Set<JobKind>(["followup", "recalibrate"]);
+const SERIALISED = new Set<JobKind>(["followup", "recalibrate", "poster-generate", "video-export"]);
+
+/** The noun a bell event's title opens with — "<noun> returned/failed/was
+ *  interrupted". Exhaustive on `JobKind` on purpose: this used to be a ternary
+ *  chain that defaulted anything it did not recognise to "Follow-up", which
+ *  would have mislabelled a poster/export notification silently instead of
+ *  failing to compile the way an appended kind with no row here now does. */
+const JOB_NOUN: Record<JobKind, string> = {
+  research: "Research",
+  followup: "Follow-up",
+  recalibrate: "Recalibration",
+  "poster-generate": "Poster generation",
+  "video-export": "Export",
+};
 
 /** Where the record lives across reloads. Jobs are LONG — minutes for a real
  *  research run — and a refresh mid-run used to lose the whole thing silently,
@@ -501,7 +525,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
           projectId: job.projectId,
           kind: job.kind,
           ok,
-          title: `${job.kind === "research" ? "Research" : job.kind === "recalibrate" ? "Recalibration" : "Follow-up"} ${
+          title: `${JOB_NOUN[job.kind]} ${
             ok ? "returned" : outcome === "interrupted" ? "was interrupted" : "failed"
           }`,
           detail,
@@ -524,9 +548,14 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
 
   const start = useCallback<JobsApi["start"]>(
     (kind, projectId, label, opts) => {
-      // Recalibrate has a real process behind it, so it is driven by nature —
-      // a caller cannot opt it back onto a clock that would lie about it.
-      const driven = kind === "recalibrate" || opts?.driven === true;
+      // Recalibrate, poster-generate and video-export all have a real process
+      // behind them, so each is driven by nature — a caller cannot opt one
+      // back onto a clock that would lie about it.
+      const driven =
+        kind === "recalibrate" ||
+        kind === "poster-generate" ||
+        kind === "video-export" ||
+        opts?.driven === true;
       const slot = `${projectId}:${kind}`;
 
       // THE REFUSAL, in three checks that get progressively wider. Stated as a

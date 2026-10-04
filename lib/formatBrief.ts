@@ -242,6 +242,37 @@ export const FORMAT_BRIEFS: Record<TemplateId, FormatBrief> = {
       "(there is no knowledge/templates/free-form/ document), so nothing here is a rule.",
     direction: [],
   },
+
+  // ── THE MUSIC-VIDEO DISCIPLINE ────────────────────────────────────────────
+  //
+  // One poster, animated to a baked audio envelope — no scene-by-scene shot
+  // list, so this brief does not direct beats the way the five formats above
+  // do (there is no `rationale`-per-scene surface on this discipline's phases;
+  // Research/Script/Score auto-pass-through, see the idea note). It exists so
+  // the exhaustive `FORMAT_BRIEFS` table stays exhaustive, and so a future
+  // consumer that DOES prompt a model about this discipline (frame-direction on
+  // the poster, or the effects studio's own composition) has one real citation
+  // to build from rather than nothing. The corpus is n=0 here, same honesty as
+  // the three promotional formats above: nothing in this repo has measured a
+  // music video, and the registry carries no music-video subject either
+  // (idea note, "Corpus gaps, confirmed absent").
+  "music-video": {
+    name: "a music video",
+    what:
+      "One attached track, one generated poster, animated to a once-baked beat/onset envelope — never " +
+      "a live analyser, never a per-scene shot list. (knowledge/templates/music-video/TEMPLATE.md)",
+    direction: [
+      "**The picture is a pure function of the track, not a scene plan.** Every visible change must " +
+        "trace to `(frameIndex, envelope, seed)` and nothing else — no wall-clock time, no live audio " +
+        "state. A frame that cannot be re-derived from those three values is not reproducible " +
+        "(ASSUMED · design decision, not measured anywhere in this repo).",
+      "**Titles and lyrics, if any, are a drawn layer — never lettered by the image model.** The poster " +
+        "is one generated still; text baked into that still cannot be re-timed to the beat.",
+      "**The poster's native resolution is well under 1080p.** Anything claiming 4K here is an upscale " +
+        "of that source, not a native render (OBSERVED · agy provider, ~1376×768 ceiling, this spark's " +
+        "own verification) — state that honestly rather than implying a sharper source exists.",
+    ],
+  },
 };
 
 /** The table as a plain lookup, so an id off the wire can be tested against it

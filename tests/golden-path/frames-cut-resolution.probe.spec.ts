@@ -64,6 +64,14 @@ test("the lane comes from the project record, and every discipline has an answer
     // whatever Step 1 chose. This is the rule ScriptStep routes on, and the two
     // steps reading it from one function is why they cannot disagree.
     free: { facts: "explainer", beats: "trailer" },
+    // Music-video does not use this trailer/explainer shot lane at all — Frames
+    // is a single generated poster, not a shot decomposition (see the music-video
+    // spark's design brief). `framesLane` has no branch for it, so it falls to
+    // the same default an unrecognised discipline gets: "explainer". Nothing in
+    // this discipline's Frames step reads that value; it is recorded here only
+    // to keep this total table — and therefore `npm run typecheck` — honest
+    // about a fourth discipline existing.
+    "music-video": { facts: "explainer", beats: "explainer" },
   };
   for (const d of DISCIPLINES) {
     expect(framesLane(d, "facts"), `${d} + facts`).toBe(expected[d].facts);

@@ -14,6 +14,7 @@
 // stale absence for the life of the process.
 
 import { noKey } from "./errors";
+import { agyAvailable } from "./providers/agy";
 import type { ProviderId } from "./types";
 
 export type ImagingEnv = "dev" | "prod";
@@ -33,9 +34,20 @@ export const KEY_VAR: Record<ProviderId, string> = {
   // opted in; unset = the router skips it with a no-key trail entry, which is
   // exactly right on boxes that run no daemon.
   ollama: "OLLAMA_HOST",
+  // No env var: there is no key to hold. Availability is
+  // `canSpawnLocalBinaries()` AND a live `agy --version` presence probe
+  // (providers/agy.ts#agyAvailable) — both `keyFor` and `isConfigured` below
+  // special-case "agy" rather than reading this string as a variable name.
+  // The entry exists only so this Record stays exhaustive.
+  agy: "agy (presence-checked, not an env var)",
 };
 
 export function keyFor(provider: ProviderId): string {
+  if (provider === "agy") {
+    if (!agyAvailable())
+      throw noKey("agy", "the `agy` CLI (not installed, not authenticated, or LOCAL_BINARIES=off)");
+    return "agy-cli";
+  }
   const v = process.env[KEY_VAR[provider]];
   if (!v || !v.trim()) throw noKey(provider, KEY_VAR[provider]);
   return v.trim();
@@ -44,6 +56,7 @@ export function keyFor(provider: ProviderId): string {
 /** Is this provider usable at all right now? The router asks before it
  *  re-routes, so a fallback never turns a real vendor error into "no key". */
 export function isConfigured(provider: ProviderId): boolean {
+  if (provider === "agy") return agyAvailable();
   const v = process.env[KEY_VAR[provider]];
   return Boolean(v && v.trim());
 }
