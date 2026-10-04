@@ -25,8 +25,13 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 - `when app/_phases/script/** or the notebook schema changed:` `npm run check:notebook`,
   `npm run check:trailer-structure`.
 - `when routing/layout/server code changed:` `npm run build` - once per spark, on the spark branch.
-- `test:` `npm test` (Playwright golden-path probes; offline, no vendor billed). `npm run test:live`
-  starts its own `next dev` on 3187 - never port 3000.
+- `test:` `npm test` (Playwright golden-path probes; offline, no vendor billed) - run the FULL
+  suite before any push, not a single spec. `npm run test:live` starts its own `next dev` on 3187 -
+  never port 3000. 2026-10-04: a Director ran only `kit-catalog.probe.spec.ts` at each work package
+  and before merge; the pre-push hook's full run caught a chrome-colour-literals failure
+  (`app/library/audio/audio-workbench.css` spelling hex/rgba instead of declaring tokens in
+  `components/ui/tokens.ts`) that a full local run would have caught the same day it was written,
+  not at push time two fix-commits later.
 - `builder:` `npm run typecheck`; a builder that changed a rendered surface must also drive it on a
   dev server of its own (`next dev -p 31xx`) and report what it saw. Builders NEVER stage and NEVER stash - only the
   Director touches the index. Smoke via a prod build on 31xx (a second `next dev` is refused while :3000 is held).
