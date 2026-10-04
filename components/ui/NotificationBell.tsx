@@ -27,6 +27,8 @@ import {
 } from "@/app/_phases/_shared/stepStore";
 import { elapsed, useJobs } from "@/lib/jobs";
 import { politenessFor, useAnnounce } from "@/lib/announcer";
+import { Ghost } from "@/components/ui/signal";
+import { useWorld } from "@/components/ui/world";
 
 /** What each failure MEANS FOR THE USER, in the user's terms. studioDb and
  *  stepStore classify; this is the only place that has to say what to do about
@@ -85,15 +87,21 @@ export function troubleAnnouncement(kind: StorageFailure, phase: string, message
   return `Not saved: ${what[kind]}. ${phase} was not written. Open notifications for what to do.`;
 }
 
-export default function NotificationBell() {
+/** The bell, and the tray under it. In the Almanac world (`useWorld`) it wears the kit's
+ *  skin (`k-acct`, `k-tray`, `k-tcard` in components/kit/account.css); every behaviour,
+ *  every test id and every announcement is the same in both worlds. `defaultOpen` exists
+ *  so the /kit specimen can show the tray without a click. */
+export default function NotificationBell({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
+  const al = useWorld() === "almanac";
   const { unread, jobs, markRead, markAllRead } = useJobs();
   const trouble = useStorageTrouble();
   const announce = useAnnounce();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
   const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
+  const seeded = useRef(defaultOpen);
 
   const running = jobs.filter((j) => j.status === "running");
   // Work that was live when the page reloaded. Not running, not finished, and
@@ -158,7 +166,8 @@ export default function NotificationBell() {
     // the trigger says so, and a tray you can Tab out of is the RIGHT shape for
     // a notification list. What it owes a keyboard user is a way in, a way out,
     // and a visible ring at every stop — which it now has.
-    panelRef.current?.focus();
+    // A tray seeded open (the /kit specimen) must not steal focus and scroll the page to itself.
+    if (!seeded.current) panelRef.current?.focus();
     const onDoc = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
@@ -182,13 +191,27 @@ export default function NotificationBell() {
   // keys off `count`: trouble has its own card and is not an event.
   const badge = count + (trouble ? 1 : 0);
 
+  /** WHICH empty the tray is, drawn rather than narrated. The tone matches the
+   *  card the reader is looking at directly above the ghost; the label is the
+   *  spoken form and is the only place the branch is words. */
+  const empty = trouble
+    ? { tone: al ? "text-[var(--al-ant-t)]" : "text-rose-200/45", label: "Nothing unread. The failure above is the storage layer." }
+    : running.length
+      ? { tone: al ? "text-[var(--al-gold)]" : "text-cyan-200/45", label: "Nothing unread. Work is still running." }
+      : interrupted.length
+        ? { tone: al ? "text-[var(--al-gold)]" : "text-amber-200/45", label: "Nothing unread. A run above was interrupted." }
+        : { tone: al ? "text-[var(--al-vellum)]" : "text-white/25", label: "Nothing unread." };
+
   return (
     <div ref={ref} className="relative">
       <button
         type="button"
         ref={triggerRef}
         data-testid="bell"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => {
+          seeded.current = false;
+          setOpen((v) => !v);
+        }}
         aria-label={
           badge ? `${badge} unread notification${badge === 1 ? "" : "s"}` : "Notifications"
         }
@@ -198,7 +221,7 @@ export default function NotificationBell() {
         // arrow-key contract that was dropped on purpose.
         aria-expanded={open}
         aria-controls={open ? panelId : undefined}
-        className="relative grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/60 transition hover:border-white/25 hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2"
+        className={al ? "k-acct" : "relative grid h-9 w-9 place-items-center rounded-full border border-white/10 text-white/60 transition hover:border-white/25 hover:text-white/90 focus-visible:outline-2 focus-visible:outline-offset-2"}
       >
         <Bell className="h-4 w-4" />
         {badge > 0 && (
@@ -207,16 +230,20 @@ export default function NotificationBell() {
             // Rose when the store is failing: an unread result and "your work is
             // not being saved" are not the same news, and the badge is the only
             // thing on screen before the panel opens.
-            className={`font-jetbrains absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-label font-semibold ${
-              trouble ? "bg-rose-400 text-slate-950" : "bg-cyan-300 text-slate-950"
-            }`}
+            className={
+              al
+                ? `k-acct__badge${trouble ? " k-acct__badge--bad" : ""}`
+                : `font-jetbrains absolute -top-0.5 -right-0.5 grid h-4 min-w-4 place-items-center rounded-full px-1 text-label font-semibold ${
+                    trouble ? "bg-rose-400 text-slate-950" : "bg-cyan-300 text-slate-950"
+                  }`
+            }
           >
             {badge > 9 ? "9+" : badge}
           </span>
         )}
         {/* running work gets a quiet pulse, distinct from the unread badge */}
         {(running.length > 0 || interrupted.length > 0) && badge === 0 && (
-          <span className="absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-cyan-300/70" />
+          <span className={al ? "k-acct__pulse" : "absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-cyan-300/70"} />
         )}
       </button>
 
@@ -237,10 +264,10 @@ export default function NotificationBell() {
           // at 320px, 56px. Modal.tsx already treats a phone as a real target
           // (it becomes a bottom sheet under `sm:`) — this is the same app owing
           // the same viewport the same answer.
-          className="gt-float absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl focus-visible:outline-2 focus-visible:outline-offset-2"
+          className={al ? "k-tray" : "gt-float absolute right-0 z-50 mt-2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-white/12 bg-[var(--gt-ink)]/95 p-3 backdrop-blur-xl focus-visible:outline-2 focus-visible:outline-offset-2"}
         >
-          <div className="flex items-center justify-between px-1 pb-2">
-            <p className="font-jetbrains text-content tracking-[0.16em] text-white/45 uppercase">
+          <div className={al ? "k-tray__h" : "flex items-center justify-between px-1 pb-2"}>
+            <p className={al ? "k-caps" : "font-jetbrains text-content tracking-[0.16em] text-white/45 uppercase"}>
               notifications
             </p>
             {count > 0 && (
@@ -248,7 +275,7 @@ export default function NotificationBell() {
                 type="button"
                 data-testid="bell-mark-all"
                 onClick={markAllRead}
-                className="font-jetbrains text-label text-white/55 transition hover:text-white/85"
+                className={al ? "k-tray__btn" : "font-jetbrains text-label text-white/55 transition hover:text-white/85"}
               >
                 mark all read
               </button>
@@ -260,48 +287,48 @@ export default function NotificationBell() {
           {trouble && (
             <div
               data-testid="bell-storage-trouble"
-              className="mb-2 rounded-xl border border-rose-400/35 bg-rose-400/[0.07] px-3 py-2"
+              className={al ? "k-tcard k-tcard--bad" : "mb-2 rounded-xl border border-rose-400/35 bg-rose-400/[0.07] px-3 py-2"}
             >
-              <div className="flex items-start justify-between gap-2">
-                <p className="font-jetbrains text-content tracking-[0.12em] text-rose-200 uppercase">
+              <div className={al ? "k-tcard__h" : "flex items-start justify-between gap-2"}>
+                <p className={al ? "k-caps k-tcard__k" : "font-jetbrains text-content tracking-[0.12em] text-rose-200 uppercase"}>
                   {isStorage(trouble.kind) ? `storage ${trouble.op} failed` : "background task failed"}
                 </p>
                 <button
                   type="button"
                   onClick={clearStorageTrouble}
-                  className="font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"
+                  className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
                 >
                   dismiss
                 </button>
               </div>
-              <p className="mt-1 text-content leading-snug text-rose-100/90">
+              <p className={al ? "k-tcard__t" : "mt-1 text-content leading-snug text-rose-100/90"}>
                 {TROUBLE_WORD[trouble.kind]}
               </p>
               {/* WHERE it happened, and what the browser actually said. The step
                   is the difference between "a notebook did not save" and "a
                   theme sheet did not save", and the raw message is the only
                   thing that survives from studioDb's own classification. */}
-              <p className="font-jetbrains mt-1 truncate text-content text-white/50">
+              <p className={al ? "k-tcard__m" : "font-jetbrains mt-1 truncate text-content text-white/50"}>
                 {trouble.phase} · {trouble.message}
               </p>
             </div>
           )}
 
           {running.length > 0 && (
-            <div className="mb-2 space-y-1.5">
+            <div className={al ? "k-tray__grp" : "mb-2 space-y-1.5"}>
               {running.map((j) => (
                 <div
                   key={j.id}
                   data-testid={`bell-running-${j.kind}`}
-                  className="rounded-xl border border-cyan-400/20 bg-cyan-400/[0.04] px-3 py-2"
+                  className={al ? "k-tcard k-tcard--run" : "rounded-xl border border-cyan-400/20 bg-cyan-400/[0.04] px-3 py-2"}
                 >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="font-jetbrains text-label tracking-[0.12em] text-cyan-200 uppercase">
+                  <div className={al ? "k-tcard__h" : "flex items-center justify-between gap-2"}>
+                    <span className={al ? "k-caps k-tcard__k" : "font-jetbrains text-label tracking-[0.12em] text-cyan-200 uppercase"}>
                       {j.kind} running
                     </span>
-                    <span className="font-jetbrains text-label text-white/50">{elapsed(j)}</span>
+                    <span className={al ? "k-num k-tcard__m" : "font-jetbrains text-label text-white/50"}>{elapsed(j)}</span>
                   </div>
-                  <p className="mt-1 truncate text-content text-slate-300">{j.label}</p>
+                  <p className={al ? "k-tcard__t k-tcard__t--one" : "mt-1 truncate text-content text-slate-300"}>{j.label}</p>
                   {/* A DRIVEN job has no progress fraction — nobody knows how far
                       along a minutes-long model call is, and `j.progress` sits at
                       0. Drawing a determinate track off that number would report
@@ -310,14 +337,14 @@ export default function NotificationBell() {
                       side. `measured` is the jobs store's own word for "progress
                       means something"; unmeasured work gets a shimmer that says
                       running without claiming a position. */}
-                  <div className="mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/10">
+                  <div className={al ? "k-tcard__bar" : "mt-1.5 h-0.5 overflow-hidden rounded-full bg-white/10"}>
                     {j.measured ? (
                       <span
-                        className="block h-full rounded-full bg-cyan-300/70 transition-[width] duration-200"
+                        className={al ? "k-tcard__fill" : "block h-full rounded-full bg-cyan-300/70 transition-[width] duration-200"}
                         style={{ width: `${Math.round(j.progress * 100)}%` }}
                       />
                     ) : (
-                      <span className="gt-indeterminate block h-full w-1/3 rounded-full bg-cyan-300/70" />
+                      <span className={al ? "gt-indeterminate k-tcard__fill k-tcard__fill--ind" : "gt-indeterminate block h-full w-1/3 rounded-full bg-cyan-300/70"} />
                     )}
                   </div>
                 </div>
@@ -326,18 +353,18 @@ export default function NotificationBell() {
           )}
 
           {interrupted.length > 0 && (
-            <div className="mb-2 space-y-1.5">
+            <div className={al ? "k-tray__grp" : "mb-2 space-y-1.5"}>
               {interrupted.map((j) => (
                 <div
                   key={j.id}
                   data-testid="bell-interrupted"
-                  className="rounded-xl border border-amber-400/30 bg-amber-400/[0.05] px-3 py-2"
+                  className={al ? "k-tcard k-tcard--int" : "rounded-xl border border-amber-400/30 bg-amber-400/[0.05] px-3 py-2"}
                 >
-                  <p className="font-jetbrains text-content tracking-[0.12em] text-amber-200 uppercase">
+                  <p className={al ? "k-caps k-tcard__k" : "font-jetbrains text-content tracking-[0.12em] text-amber-200 uppercase"}>
                     {j.kind} interrupted
                   </p>
-                  <p className="mt-1 truncate text-content text-slate-300">{j.label}</p>
-                  <p className="font-jetbrains mt-1 text-content leading-snug text-white/45">
+                  <p className={al ? "k-tcard__t k-tcard__t--one" : "mt-1 truncate text-content text-slate-300"}>{j.label}</p>
+                  <p className={al ? "k-tcard__m" : "font-jetbrains mt-1 text-content leading-snug text-white/45"}>
                     The page reloaded while it was running — start it again.
                   </p>
                 </div>
@@ -346,49 +373,66 @@ export default function NotificationBell() {
           )}
 
           {count === 0 ? (
-            <p className="px-1 py-3 text-content text-white/50">
-              {trouble
-                ? "No run has reported anything — the failure above is the storage layer itself."
-                : running.length
-                  ? "Nothing to report yet — work is still running."
-                  : interrupted.length
-                    ? "Nothing unread. The interrupted run above did not finish."
-                    : "Nothing unread. Finished runs stay in the step's own log."}
-            </p>
+            // FOUR SENTENCES FOR ONE EMPTY PANEL, replaced by the shape of the
+            // row that will fill it. Every branch said "nothing" and then
+            // explained, in prose, a state the reader can already see standing
+            // above it: the rose storage card, the cyan running card, the amber
+            // interrupted one. So the branch survives as TONE on the glyph —
+            // the same colour as the card it refers to — and the words that
+            // carried it go.
+            //
+            // Not for a screen reader, which reads nothing off a tint: <Ghost>
+            // renders `label` sr-only, and that is where the distinction stays
+            // in words. Same floor the whole signal vocabulary is held to.
+            <div className={al ? "k-tray__empty" : "px-1 py-3"}>
+              <Ghost
+                shape="row"
+                glyph={<Bell className={`h-5 w-5 ${empty.tone}`} />}
+                label={empty.label}
+              />
+            </div>
           ) : (
-            <ul className="max-h-[19rem] space-y-1.5 overflow-y-auto scroll-y">
+            <ul className={al ? "k-tray__list" : "max-h-[19rem] space-y-1.5 overflow-y-auto scroll-y"}>
               {unread.map((e) => (
                 <li
                   key={e.id}
                   data-testid={`bell-event-${e.ok ? "ok" : "fail"}`}
-                  className={`rounded-xl border px-3 py-2 ${
-                    e.ok
-                      ? "border-white/10 bg-white/[0.03]"
-                      : "border-rose-400/30 bg-rose-400/[0.05]"
-                  }`}
+                  className={
+                    al
+                      ? `k-tcard${e.ok ? "" : " k-tcard--bad"}`
+                      : `rounded-xl border px-3 py-2 ${
+                          e.ok
+                            ? "border-white/10 bg-white/[0.03]"
+                            : "border-rose-400/30 bg-rose-400/[0.05]"
+                        }`
+                  }
                 >
-                  <div className="flex items-start justify-between gap-2">
+                  <div className={al ? "k-tcard__h" : "flex items-start justify-between gap-2"}>
                     <p
-                      className={`font-jetbrains text-label tracking-[0.12em] uppercase ${
-                        e.ok ? "text-cyan-200" : "text-rose-200"
-                      }`}
+                      className={
+                        al
+                          ? "k-caps k-tcard__k"
+                          : `font-jetbrains text-label tracking-[0.12em] uppercase ${
+                              e.ok ? "text-cyan-200" : "text-rose-200"
+                            }`
+                      }
                     >
                       {e.title}
                     </p>
                     <button
                       type="button"
                       onClick={() => markRead(e.id)}
-                      className="font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"
+                      className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
                     >
                       dismiss
                     </button>
                   </div>
-                  <p className="mt-1 text-content leading-snug text-slate-300">{e.detail}</p>
+                  <p className={al ? "k-tcard__t" : "mt-1 text-content leading-snug text-slate-300"}>{e.detail}</p>
                   {/* What the user asked for, in their own words. Two dead
                       ternaries used to sit in front of this — both branches
                       `""`, on a live component — so all they ever did was cost
                       a reader the time to work out that they did nothing. */}
-                  <p className="font-jetbrains mt-1 truncate text-content text-white/50">
+                  <p className={al ? "k-tcard__m" : "font-jetbrains mt-1 truncate text-content text-white/50"}>
                     {`“${eventLabel(e.jobId, jobs)}”`}
                   </p>
                 </li>

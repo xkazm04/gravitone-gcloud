@@ -34,6 +34,7 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+from palette_measure import measure_frames, pick_evenly  # noqa: E402
 from probe import (GEMINI_BASE, OLLAMA, extract_json, load_env,  # noqa: E402
                    post)
 
@@ -158,14 +159,18 @@ def main():
     for slug, paths in sorted(by_source.items()):
         # Spread the sample across the runtime, so a single sequence cannot
         # stand in for the whole production's look.
-        n = min(args.frames_per_source, len(paths))
-        step = len(paths) / n
-        picked = [paths[int(i * step)] for i in range(n)]
+        idx, sampling = pick_evenly(len(paths), args.frames_per_source)
+        picked = [paths[i] for i in idx]
         b64s = [base64.b64encode(p.read_bytes()).decode("ascii") for p in picked]
+        # Measured once per source, over exactly the frames the readers see. The
+        # readers still answer palette_strategy; this is what settles it when
+        # they disagree, which on 2026-09-14 was six sources out of six.
+        measured = measure_frames(picked)
 
         for model in args.models:
             t0 = time.time()
             row = {"source": slug, "model": model, "frames": len(b64s),
+                   "sampling": sampling, "measured_palette": measured,
                    "frame_names": [p.name for p in picked]}
             try:
                 if model.startswith("gemini"):

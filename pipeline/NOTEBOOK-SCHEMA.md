@@ -226,7 +226,7 @@ restriction on herself. The render gate checks an obligation was discharged the 
 to smuggle a must-say through the deny-list.
 
 ### `engine_fit[]`
-`{engine, fit, why, recommended?, hazard?}` — assessed against `knowledge/ENGINES.md` from the
+`{engine, fit, why, recommended?, hazard}` — assessed against `knowledge/ENGINES.md` from the
 *material*, not from taste. Recording poor fits matters: it stops the next session re-litigating.
 
 `hazard` is what a **wrong render through this engine costs**. `fit` is one scalar and answers only
@@ -235,6 +235,10 @@ unrepresentable: an anchor ladder whose rungs are concepts is a gift and the sam
 are cohorts of people lands on a joke; a mechanism engine on an attack chain renders a tutorial. Both
 score `good`, honestly. Anti-shape: demoting `fit` to carry the warning — that hides the engine from
 the person selecting it instead of arming them.
+
+`hazard` is required for new notebooks, and an empty string means *assessed, none found*. A missing
+key means the axis was never asked. The app draws that as "hazard not assessed" rather than as
+nothing, because a blank that renders as nothing reads as clean.
 
 ### `currency`
 `{half_life, why, expires_first[], durable[], advice}` — `advice` should usually contain a phrasing

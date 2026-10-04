@@ -24,18 +24,25 @@ const page = await browser.newPage({ viewport: { width: 1500, height: 1000 } });
 const errors = [];
 page.on("pageerror", (e) => errors.push(e.message));
 
+// The module rail is a real tablist now (components/ui/signal/TabRail), and a
+// tab's accessible name carries its count — "Assets 30", not "Assets". Every
+// `getByRole("button", {name, exact:true})` here matched the rail's old
+// <button>s and matches nothing today. One helper, so the next rail change
+// breaks one line rather than five.
+const moduleTab = (label) => page.getByTestId(`module-${label.toLowerCase()}`);
+
 await page.goto(`${BASE}/library`, { waitUntil: "domcontentloaded" });
 // Wait for the client component to hydrate rather than guessing a duration —
 // a fixed 1500ms passed locally and failed under a cold Turbopack compile.
-await page.getByRole("button", { name: "Styles", exact: true }).waitFor({ timeout: 30_000 });
+await moduleTab("Styles").waitFor({ timeout: 30_000 });
 
 check("dev-auth reached /library", new URL(page.url()).pathname === "/library", page.url());
 
 // --- the module tabs
 for (const label of ["Styles", "Assets", "Animations"])
-  check(`module tab "${label}" exists`, await page.getByRole("button", { name: label, exact: true }).isVisible());
+  check(`module tab "${label}" exists`, await moduleTab(label).isVisible());
 
-await page.getByRole("button", { name: "Assets", exact: true }).click();
+await moduleTab("Assets").click();
 await page.waitForTimeout(2500); // seed = fetch + IndexedDB write
 
 // --- the seed
@@ -90,8 +97,8 @@ const afterRemove = await page.locator("figure").count();
 check("removal drops the tile", afterRemove === 4, `${afterRemove} tiles`);
 
 await page.reload({ waitUntil: "domcontentloaded" });
-await page.getByRole("button", { name: "Assets", exact: true }).waitFor({ timeout: 30_000 });
-await page.getByRole("button", { name: "Assets", exact: true }).click();
+await moduleTab("Assets").waitFor({ timeout: 30_000 });
+await moduleTab("Assets").click();
 await page.waitForTimeout(2000);
 const afterReload = await page.locator("figure").count();
 check("removal survives a reload", afterReload === 29, `${afterReload} tiles`);

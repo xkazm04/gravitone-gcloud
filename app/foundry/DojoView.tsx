@@ -16,49 +16,68 @@
 // map, debounced 400ms to disk; a committed cycle is read-only — the controls
 // are removed rather than left to fail quietly. The loop's live statuses are
 // only WATCHED here, on the same 4s visible-tab poll the other tabs use.
+//
+// Drawn from the kit (components/kit), like the rest of /foundry.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import Modal from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Primitives";
-import type { CycleManifest, CycleStatus, Improvement, MediaRef, PairResult, TrainingCommitResult, TrainingCycleSummary, TrainingVerdict, TrainingVerdicts } from "@/lib/foundry/training/types";
+import {
+  Button,
+  ConfirmDialog,
+  Count,
+  Dock,
+  DockAction,
+  Duo,
+  Entry,
+  ErrorBox,
+  Ghost,
+  KeyRow,
+  Kicker,
+  Loading,
+  LockNote,
+  Prose,
+  Report,
+  SaveState,
+  SideItem,
+  SideList,
+  StatusGlyph,
+  StatusStrip,
+  VerdictKeys,
+  VerdictMark,
+  ScoreChip,
+} from "@/components/kit";
+import type { CycleManifest, CycleStatus, Improvement, PairResult, TrainingCommitResult, TrainingCycleSummary, TrainingVerdict, TrainingVerdicts } from "@/lib/foundry/training/types";
 import { usePolling } from "@/lib/usePolling";
 
 import { fetchTrainingCycle, fetchTrainingCycles, saveTrainingVerdicts, commitTrainingCycle, fileUrl } from "./foundryClient";
-
-const DOJO_STATUS_WORD: Record<CycleStatus, string> = {
-  planning: "planning",
-  generating: "generating",
-  judging: "judging",
-  "awaiting-gate": "awaiting your gate",
-  committed: "committed",
-  failed: "failed",
-};
+import { DOJO_STATUS_WORD, cycleKind } from "./parts";
 
 /** Statuses the loop is still working — the page only watches these. */
 const DOJO_LIVE: CycleStatus[] = ["planning", "generating", "judging"];
 /** Statuses a commit is allowed from — see commitCycle in the store. */
 const GATEABLE: CycleStatus[] = ["awaiting-gate", "failed"];
 
-type SaveState = "idle" | "saving" | "saved" | "error";
-
-const pct = (x: number) => `${Math.round(100 * x)}%`;
+type SaveKind = "idle" | "saving" | "saved" | "error";
 
 /** Fraction of an improvement's pairs where the chokepoint picked the
  *  challenger. Mirror of the store's judgePickRate — the numbers on the card
  *  must be the numbers the ledger row will carry. */
 function judgePickRate(imp: Improvement): number {
-  if (!imp.pairs.length) return 0;
-  return imp.pairs.filter((p) => p.judge_pick === "challenger").length / imp.pairs.length;
+  if (!(imp.pairs ?? []).length) return 0;
+  return (imp.pairs ?? []).filter((p) => p.judge_pick === "challenger").length / (imp.pairs ?? []).length;
 }
 
 /** Fraction of Gemini-judged pairs where Gemini agreed with the chokepoint;
  *  undefined when Gemini judged none. Mirror of the store's geminiAgreement. */
 function geminiAgreement(imp: Improvement): number | undefined {
-  const judged = imp.pairs.filter((p) => p.gemini_pick !== undefined);
+  const judged = (imp.pairs ?? []).filter((p) => p.gemini_pick !== undefined);
   if (!judged.length) return undefined;
   return judged.filter((p) => p.gemini_pick === p.judge_pick).length / judged.length;
 }
+
+/** The Dojo's verdict words are approve/reject; the kit's are keep/reject. */
+const toKit = (v: TrainingVerdict | null | undefined) => (v === "approve" ? "keep" : v === "reject" ? "reject" : null);
+const fromKit = (v: "keep" | "reject" | null): TrainingVerdict | null => (v === "keep" ? "approve" : v);
 
 export function DojoView() {
   const [cycles, setCycles] = useState<TrainingCycleSummary[] | null>(null);
@@ -66,11 +85,15 @@ export function DojoView() {
   const [selected, setSelected] = useState<string | null>(null);
   const [detail, setDetail] = useState<CycleManifest | null>(null);
   const [verdicts, setVerdicts] = useState<TrainingVerdicts>({});
-  const [save, setSave] = useState<SaveState>("idle");
+  const [save, setSave] = useState<SaveKind>("idle");
   const [focused, setFocused] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [result, setResult] = useState<TrainingCommitResult | null>(null);
+  /** A commit that FAILED, shown inside the dialog that asked for it — the same
+   *  rule as the Cull and Extract dialogs: aria-modal hides the page behind it,
+   *  so a failure written beside the list would land where nobody can see it. */
+  const [commitError, setCommitError] = useState<string | null>(null);
   const saveTimer = useRef<number | null>(null);
   /** The latest verdict map, readable synchronously — same law as the Cull
    *  tab: a burst of keystrokes must never read a stale map. */
@@ -219,13 +242,15 @@ export function DojoView() {
 
   const counts = useMemo(() => {
     const ids = detail?.improvements.map((i) => i.id) ?? [];
-    const decided = ids.filter((id) => verdicts[id] === "approve" || verdicts[id] === "reject").length;
-    return { total: ids.length, decided };
+    const approved = ids.filter((id) => verdicts[id] === "approve").length;
+    const rejected = ids.filter((id) => verdicts[id] === "reject").length;
+    return { total: ids.length, decided: approved + rejected, approved, rejected, undecided: ids.length - approved - rejected };
   }, [detail, verdicts]);
 
   const doCommit = async () => {
     if (!selected) return;
     setCommitting(true);
+    setCommitError(null);
     try {
       const r = await commitTrainingCycle(selected);
       setResult(r);
@@ -233,7 +258,7 @@ export function DojoView() {
       loadDetail(selected, false);
       loadCycles();
     } catch (e) {
-      setListError(e instanceof Error ? e.message : "commit failed");
+      setCommitError(e instanceof Error ? e.message : "commit failed");
     } finally {
       setCommitting(false);
     }
@@ -241,55 +266,72 @@ export function DojoView() {
 
   return (
     <>
-      <div className="grid gap-6 lg:grid-cols-[220px_1fr]">
-        <aside>
-          <div className="font-jetbrains text-label tracking-[0.14em] text-white/45 uppercase">cycles</div>
-          {listError && <p className="font-jetbrains mt-2 text-label text-rose-200">{listError}</p>}
-          {cycles && cycles.length === 0 && (
-            <p className="font-hanken mt-2 text-label text-slate-400">No cycles yet — the dojo trains while you&rsquo;re away.</p>
-          )}
-          <ul className="mt-2 flex flex-col gap-1">
-            {cycles?.map((c) => (
-              <li key={c.id}>
-                <button
-                  onClick={() => selectCycle(c.id)}
-                  className={`w-full cursor-pointer rounded-lg border px-3 py-2 text-left transition ${
-                    c.id === selected ? "border-cyan-400/40 bg-cyan-400/10" : "border-white/8 hover:bg-white/[0.03]"
-                  }`}
+      <div className="k-two">
+        <SideList
+          label="Training cycles"
+          heading="Cycles"
+          aside={
+            <>
+              {listError && (
+                <ErrorBox
+                  action={
+                    <Button variant="ghost" size="sm" onClick={loadCycles}>
+                      Retry
+                    </Button>
+                  }
                 >
-                  <div className="font-jetbrains truncate text-label text-white/90">{c.id}</div>
-                  <div className="font-jetbrains mt-0.5 text-label text-white/45">
-                    {c.dimension} · {c.subject}
-                  </div>
-                  <div className="font-jetbrains mt-0.5 text-label text-white/45">
-                    {DOJO_STATUS_WORD[c.status]} · {c.media} · {c.decided}/{c.improvements} decided
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </aside>
+                  {listError}
+                </ErrorBox>
+              )}
+              {cycles && cycles.length === 0 && <Ghost shape="row" count={3} label="no cycles yet" />}
+            </>
+          }
+        >
+          {cycles?.map((c) => (
+            <SideItem
+              key={c.id}
+              glyph={<StatusGlyph kind={cycleKind(c.status)} decorative />}
+              title={c.id}
+              current={c.id === selected}
+              onSelect={() => selectCycle(c.id)}
+              meta={
+                <>
+                  {c.dimension} · {c.subject}
+                  <br />
+                  {DOJO_STATUS_WORD[c.status]} · {c.media} · <b className="k-num">{c.decided}/{c.improvements}</b> decided
+                </>
+              }
+            />
+          ))}
+        </SideList>
 
         <div>
-          {!detail && selected && <p className="font-jetbrains text-label text-white/40">loading…</p>}
-          {!selected && cycles && cycles.length > 0 && (
-            <p className="font-hanken text-content text-slate-400">Pick a cycle to gate.</p>
-          )}
+          {!detail && selected && <Loading />}
+          {!selected && cycles && cycles.length > 0 && <Ghost shape="card" label="pick a cycle" />}
           {detail && (
             <>
-              <CycleStrip cycle={detail} />
+              <StatusStrip
+                kind={cycleKind(detail.status)}
+                word={DOJO_STATUS_WORD[detail.status]}
+                facts={
+                  <>
+                    {detail.dimension} · {detail.subject} · {detail.media} · <b>{detail.improvements.length}</b> improvement{detail.improvements.length === 1 ? "" : "s"}
+                    {typeof detail.costUsd === "number" && <> · ${detail.costUsd.toFixed(2)}</>}
+                    {detail.fail_streak > 0 && <> · fail streak {detail.fail_streak}</>}
+                  </>
+                }
+                log={DOJO_LIVE.includes(detail.status) ? detail.log[detail.log.length - 1]?.msg : null}
+              />
               {result && (
-                <div className="font-jetbrains mt-4 rounded-xl border border-emerald-400/20 bg-emerald-400/[0.04] px-4 py-2 text-label text-emerald-200">
-                  committed · {result.deleted} media file{result.deleted === 1 ? "" : "s"} deleted · {result.thumbs.length} thumb{result.thumbs.length === 1 ? "" : "s"} kept in git ·{" "}
-                  {result.ledger_rows} ledger row{result.ledger_rows === 1 ? "" : "s"}
-                </div>
+                <Report>
+                  committed · {result.deleted} media file{result.deleted === 1 ? "" : "s"} deleted · {result.thumbs.length} thumb{result.thumbs.length === 1 ? "" : "s"} kept in git · {result.ledger_rows} ledger row
+                  {result.ledger_rows === 1 ? "" : "s"}
+                </Report>
               )}
-              <div className="mt-5 flex flex-col gap-6">
-                {detail.improvements.length === 0 && (
-                  <p className="font-hanken text-content text-slate-400">This cycle claims no improvements yet.</p>
-                )}
+              <div className="k-stack mt-5">
+                {detail.improvements.length === 0 && <Ghost shape="slot" label="no improvements claimed yet" />}
                 {detail.improvements.map((imp) => (
-                  <ImprovementCard
+                  <ImprovementEntry
                     key={imp.id}
                     cycleId={detail.id}
                     imp={imp}
@@ -310,92 +352,76 @@ export function DojoView() {
       </div>
 
       {detail && gateable && (
-        <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[var(--gt-ink)]/90 backdrop-blur">
-          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-6 py-3">
-            <div className="font-jetbrains flex flex-wrap items-center gap-4 text-label text-white/60">
-              <span>
-                <span className="text-white/90">{counts.decided}</span>/{counts.total} decided
-              </span>
-              <span className={save === "error" ? "text-rose-200" : "text-white/35"}>
-                {save === "saving" ? "saving…" : save === "saved" ? "saved" : save === "error" ? "save failed — retry a verdict" : ""}
-              </span>
-              <span className="text-amber-200/80">Commit deletes decided media; one thumbnail per approved improvement survives in git.</span>
-              <span className="hidden text-white/30 md:inline">↑↓ cards · K approve · X reject · U clear</span>
-            </div>
-            <Button
-              disabled={counts.decided === 0}
-              onClick={() => setConfirm(true)}
-              className="cursor-pointer px-5 py-2 text-label disabled:cursor-not-allowed"
-              title={counts.decided === 0 ? "Decide at least one improvement first" : "Delete the decided media and write the ledger"}
-            >
+        <Dock label="Decisions">
+          <Count n={counts.decided} of={counts.total} label="decided" />
+          <Count kind="keep" n={counts.approved} label="approved" />
+          <Count kind="reject" n={counts.rejected} label="rejected" />
+          <SaveState state={save} />
+          <KeyRow
+            label="Gate shortcuts"
+            map={[
+              { keys: ["↑", "↓"], does: "cards" },
+              { keys: ["K"], does: "approve" },
+              { keys: ["X"], does: "reject" },
+              { keys: ["U"], does: "clear" },
+            ]}
+          />
+          <DockAction>
+            {counts.decided === 0 && <LockNote>decide one improvement first</LockNote>}
+            <Button disabled={counts.decided === 0} onClick={() => setConfirm(true)}>
               Commit the gate
             </Button>
-          </div>
-        </div>
+          </DockAction>
+        </Dock>
       )}
 
-      <Modal
+      <ConfirmDialog
         open={confirm}
-        onClose={() => !committing && setConfirm(false)}
+        onClose={() => {
+          if (committing) return;
+          setConfirm(false);
+          setCommitError(null);
+        }}
         title="Commit the gate?"
-        className="max-w-md"
-        footer={
-          <div className="flex justify-end gap-2">
-            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={() => setConfirm(false)} disabled={committing}>
-              Not yet
-            </Button>
-            <button
-              onClick={doCommit}
-              disabled={committing}
-              className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20 disabled:opacity-50"
-            >
-              {committing ? "committing…" : `Commit ${counts.decided} decided`}
-            </button>
-          </div>
+        eyebrow={<Kicker>{selected}</Kicker>}
+        railLabel="gate"
+        // THE RAIL, and here undecided is genuinely a THIRD outcome rather
+        // than a hatch on the rejected side: a Dojo commit leaves undecided
+        // media alone and writes no ledger row for it, so drawing it as a
+        // stand-in for "rejected" — the way the Cull and Extract dialogs
+        // do — would be a lie about what the button is going to do.
+        rail={[
+          { n: counts.approved, tone: "emerald", label: "approved" },
+          { n: counts.rejected, tone: "rose", label: "rejected" },
+          { n: counts.undecided, tone: "neutral", label: "untouched" },
+        ]}
+        consequence={
+          <>
+            Every decided improvement&rsquo;s media — both arms of every pair, posters included — is deleted from this machine. One thumbnail per approved improvement is copied into git, and one
+            row per decided improvement joins <code>pipeline/foundry/training-ledger.json</code>. This cannot be undone.
+          </>
         }
+        busy={committing}
+        confirmLabel={`Commit ${counts.decided} decided`}
+        onConfirm={doCommit}
+        onCancel={() => {
+          setConfirm(false);
+          setCommitError(null);
+        }}
       >
-        <p className="font-hanken text-sm text-slate-300">
-          Every decided improvement&rsquo;s media — both arms of every pair, posters included — is deleted from this machine. One thumbnail per approved
-          improvement is copied into git, and one row per decided improvement joins{" "}
-          <code className="font-jetbrains text-label text-white/70">pipeline/foundry/training-ledger.json</code> for the loop to reflect. Undecided
-          improvements keep their media. This cannot be undone.
-        </p>
-      </Modal>
+        {commitError && (
+          <div className="mt-3">
+            <ErrorBox role="alert">The commit failed and nothing was deleted: {commitError}</ErrorBox>
+          </div>
+        )}
+      </ConfirmDialog>
     </>
   );
 }
 
 /* ── Pieces ───────────────────────────────────────────────────────────────── */
 
-function CycleStrip({ cycle }: { cycle: CycleManifest }) {
-  const live = DOJO_LIVE.includes(cycle.status);
-  const last = cycle.log[cycle.log.length - 1];
-  return (
-    <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl border border-white/8 bg-white/[0.02] px-4 py-2.5">
-      <span
-        className={`font-jetbrains rounded-full border px-2 py-0.5 text-label tracking-[0.14em] uppercase ${
-          cycle.status === "committed"
-            ? "border-emerald-400/40 text-emerald-200"
-            : cycle.status === "failed"
-              ? "border-rose-400/40 text-rose-200"
-              : live
-                ? "border-amber-400/40 text-amber-200"
-                : "border-cyan-400/40 text-cyan-200"
-        }`}
-      >
-        {DOJO_STATUS_WORD[cycle.status]}
-      </span>
-      <span className="font-jetbrains text-label text-white/50">
-        {cycle.dimension} · {cycle.subject} · {cycle.media} · {cycle.improvements.length} improvement{cycle.improvements.length === 1 ? "" : "s"}
-      </span>
-      {typeof cycle.costUsd === "number" && <span className="font-jetbrains text-label text-white/50">${cycle.costUsd.toFixed(2)}</span>}
-      {cycle.fail_streak > 0 && <span className="font-jetbrains text-label text-rose-200/80">fail streak {cycle.fail_streak}</span>}
-      {live && last && <span className="font-jetbrains ml-auto truncate text-label text-white/35">{last.msg}</span>}
-    </div>
-  );
-}
-
-function ImprovementCard({
+function ImprovementEntry({
   cycleId,
   imp,
   verdict,
@@ -414,146 +440,60 @@ function ImprovementCard({
 }) {
   const rate = judgePickRate(imp);
   const gem = geminiAgreement(imp);
-  const challengerPicks = imp.pairs.filter((p) => p.judge_pick === "challenger").length;
-  const ring = verdict === "approve" ? "border-emerald-300/50" : verdict === "reject" ? "border-rose-400/40 opacity-70" : "border-white/10";
+  const challengerPicks = (imp.pairs ?? []).filter((p) => p.judge_pick === "challenger").length;
+  const kit = toKit(verdict);
   return (
-    <section
+    <Entry
       id={`imp-${imp.id.replace(/[^A-Za-z0-9_-]/g, "_")}`}
-      onClick={onFocus}
-      className={`rounded-2xl border bg-white/[0.02] p-4 transition ${ring} ${focused ? "ring-2 ring-cyan-300/70" : ""}`}
+      label={imp.technique}
+      focused={focused}
+      verdict={kit}
+      onFocus={onFocus}
+      title={imp.technique}
+      lede={
+        <>
+          <div className="mt-2">
+            <Prose ink>{imp.claim}</Prose>
+          </div>
+          <div className="k-muted mt-1">challenges: {imp.standard}</div>
+        </>
+      }
+      aside={
+        <>
+          <ScoreChip label={`judge ${challengerPicks}/${(imp.pairs ?? []).length}`} value={rate} />
+          {gem !== undefined && <ScoreChip label="gemini agrees" value={gem} />}
+          {kit && <VerdictMark verdict={kit} keepWord="APPROVED" />}
+          {!readOnly && <VerdictKeys value={kit} keepWord="Approve" subject={imp.technique} clear onVerdict={(v) => onVerdict(fromKit(v))} />}
+        </>
+      }
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="font-jetbrains text-content text-white/90">{imp.technique}</div>
-          <p className="font-hanken mt-1 max-w-2xl text-content leading-snug text-slate-300">{imp.claim}</p>
-          <p className="font-jetbrains mt-1 text-label text-white/40">challenges: {imp.standard}</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-1.5">
-          <span
-            className={`font-jetbrains rounded border bg-black/50 px-1.5 py-0.5 text-label tracking-wide ${
-              rate >= 0.75 ? "border-emerald-400/30 text-emerald-200" : rate >= 0.5 ? "border-white/15 text-white/70" : "border-rose-400/30 text-rose-200/90"
-            }`}
-            title={`Judge picked the challenger on ${challengerPicks} of ${imp.pairs.length} pair(s)`}
-          >
-            judge {challengerPicks}/{imp.pairs.length} · {pct(rate)}
-          </span>
-          {gem !== undefined && (
-            <span
-              className={`font-jetbrains rounded border bg-black/50 px-1.5 py-0.5 text-label tracking-wide ${
-                gem >= 0.75 ? "border-emerald-400/30 text-emerald-200" : "border-amber-400/30 text-amber-200/90"
-              }`}
-              title="How often Gemini agreed with the chokepoint judge"
-            >
-              gemini agrees {pct(gem)}
-            </span>
-          )}
-          {verdict && (
-            <span
-              className={`font-jetbrains rounded px-1.5 py-0.5 text-label font-semibold text-slate-950 ${
-                verdict === "approve" ? "bg-emerald-300/90" : "bg-rose-400/90"
-              }`}
-            >
-              {verdict === "approve" ? "APPROVED" : "REJECTED"}
-            </span>
-          )}
-          {!readOnly && (
-            <div className="flex gap-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onVerdict("approve");
-                }}
-                title="Approve (K)"
-                className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-label font-semibold transition ${
-                  verdict === "approve" ? "bg-emerald-300 text-slate-950 ring-2 ring-emerald-200/70" : "bg-emerald-300/80 text-slate-950 hover:bg-emerald-300"
-                }`}
-              >
-                K
-              </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onVerdict("reject");
-                }}
-                title="Reject (X)"
-                className={`font-jetbrains cursor-pointer rounded px-1.5 py-0.5 text-label font-semibold transition ${
-                  verdict === "reject" ? "bg-rose-400 text-slate-950 ring-2 ring-rose-200/70" : "bg-rose-400/80 text-slate-950 hover:bg-rose-400"
-                }`}
-              >
-                X
-              </button>
-              {verdict && (
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onVerdict(null);
-                  }}
-                  title="Clear (U)"
-                  className="font-jetbrains cursor-pointer rounded border border-white/15 px-1.5 py-0.5 text-label text-white/60 transition hover:text-white/90"
-                >
-                  U
-                </button>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* The pair wall — the evidence, one seed-matched duo per pair. */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {imp.pairs.map((pair) => (
+      <div className="k-pwall">
+        {(imp.pairs ?? []).map((pair) => (
           <PairDuo key={pair.id} cycleId={cycleId} pair={pair} />
         ))}
       </div>
-    </section>
+    </Entry>
   );
 }
 
 function PairDuo({ cycleId, pair }: { cycleId: string; pair: PairResult }) {
   const disagrees = pair.gemini_pick !== undefined && pair.gemini_pick !== pair.judge_pick;
+  const arm = (name: "baseline" | "challenger", ref_: PairResult["baseline"]) => ({
+    name,
+    alt: `${name} · ${ref_.file}`,
+    // Honest absence: the commit unlinked this file; the record stays.
+    src: ref_.deleted ? undefined : fileUrl(cycleId, ref_.poster ?? ref_.file, "training"),
+    picked: pair.judge_pick === name,
+    video: ref_.kind === "video",
+  });
   return (
-    <div className="rounded-xl border border-white/8 bg-black/30 p-2">
-      <div className="font-jetbrains mb-1.5 flex items-center gap-2 text-label text-white/45">
-        <span className="truncate">{pair.scene}</span>
-        <span className="ml-auto shrink-0">seed {pair.seed}</span>
-      </div>
-      <div className="grid grid-cols-2 gap-1.5">
-        <PairArm cycleId={cycleId} arm="baseline" ref_={pair.baseline} picked={pair.judge_pick === "baseline"} />
-        <PairArm cycleId={cycleId} arm="challenger" ref_={pair.challenger} picked={pair.judge_pick === "challenger"} />
-      </div>
-      <p className="font-hanken mt-1.5 text-label leading-snug text-slate-400">
-        <span className={pair.judge_pick === "tie" ? "text-white/60" : "text-cyan-200/90"}>
-          judge: {pair.judge_pick}
-        </span>{" "}
-        — {pair.reason}
-      </p>
-      {disagrees && (
-        <p className="font-hanken mt-1 text-label leading-snug text-amber-200/80">
-          gemini disagrees: {pair.gemini_pick}
-          {pair.gemini_reason ? ` — ${pair.gemini_reason}` : ""}
-        </p>
-      )}
-    </div>
-  );
-}
-
-function PairArm({ cycleId, arm, ref_, picked }: { cycleId: string; arm: "baseline" | "challenger"; ref_: MediaRef; picked: boolean }) {
-  return (
-    <div className={`relative overflow-hidden rounded-lg border ${picked ? "border-cyan-300/60" : "border-white/10"}`}>
-      {ref_.deleted ? (
-        // Honest absence: the commit unlinked this file; the record stays.
-        <div className="font-jetbrains flex aspect-video items-center justify-center bg-black/40 text-label text-white/35">culled</div>
-      ) : (
-        // eslint-disable-next-line @next/next/no-img-element -- local disk through the file seam
-        <img src={fileUrl(cycleId, ref_.poster ?? ref_.file, "training")} alt={`${arm} · ${ref_.file}`} className="aspect-video w-full object-cover" loading="lazy" />
-      )}
-      <span className="font-jetbrains pointer-events-none absolute bottom-1 left-1 rounded bg-black/70 px-1 py-0.5 text-label text-white/70">{arm}</span>
-      {ref_.kind === "video" && (
-        <span className="font-jetbrains pointer-events-none absolute top-1 right-1 rounded bg-black/70 px-1 py-0.5 text-label text-white/60">video · poster</span>
-      )}
-      {picked && (
-        <span className="font-jetbrains pointer-events-none absolute top-1 left-1 rounded bg-cyan-300/90 px-1 py-0.5 text-label font-semibold text-slate-950">PICK</span>
-      )}
-    </div>
+    <Duo
+      scene={pair.scene}
+      seed={pair.seed}
+      arms={[arm("baseline", pair.baseline), arm("challenger", pair.challenger)]}
+      judge={{ pick: pair.judge_pick, reason: pair.reason }}
+      dissent={disagrees ? { who: "gemini", pick: String(pair.gemini_pick), reason: pair.gemini_reason } : undefined}
+    />
   );
 }

@@ -16,6 +16,8 @@
 // doing different jobs, and the second one should not have to scroll past four
 // mechanisms to reach the fact table.
 
+import { Tally } from "@/components/ui/signal";
+
 import FactRow from "./FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "./notebook";
 import { CurrencyBody, SourcesBody } from "./sections/Shared";
@@ -39,28 +41,33 @@ export default function EvidenceLog() {
           }
           tone={NOTEBOOK_COUNTS.flagged > 0 ? "bad" : undefined}
         />
-        <Tile label="half-life" value={n.currency.halfLife} note="then the numbers date" tone="warn" />
+        {/* No note: "then the numbers date" is what a half-life IS. */}
+        <Tile label="half-life" value={n.currency.halfLife} tone="warn" />
       </section>
 
       <section className="space-y-2">
-        <Head>constraints — what the script may not say</Head>
+        <Head>constraints · {open.length}</Head>
         {open.map((u) => (
           <div key={u.id} data-testid={`evidence-constraint-${u.id}`} className="rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
             <p className="text-content text-slate-200">{u.what}</p>
             <p className="font-jetbrains mt-1.5 text-content text-amber-200/90">{u.impact}</p>
           </div>
         ))}
+        {/* WHY A LIFTED CONSTRAINT IS KEPT rather than deleted: a script
+            written under the old rule can then be spotted as over-hedged, and
+            deleting one is what shifted every index in the constraint ledger
+            and crashed the Script step. That was printed here as a paragraph
+            explaining the design; it is a count and a tone now, and the
+            resolved rows carry their own emerald styling. */}
         {resolved.length > 0 && (
-          <p className="font-jetbrains pt-1 text-content leading-relaxed text-emerald-200/70">
-            {resolved.length} further constraint{resolved.length === 1 ? " was" : "s were"} lifted by
-            follow-up research — kept in the notebook so a script written under the old rule can be
-            spotted as over-hedged.
+          <p className="pt-1">
+            <Tally value={resolved.length} label="lifted" tone="emerald" />
           </p>
         )}
       </section>
 
       <section className="space-y-2">
-        <Head>every claim, dated and rated</Head>
+        <Head>claims · {NOTEBOOK_COUNTS.facts}</Head>
         <ul className="space-y-2">
           {n.facts.map((f) => (
             <FactRow key={f.id} f={f} />
@@ -69,7 +76,7 @@ export default function EvidenceLog() {
       </section>
 
       <section className="space-y-1.5">
-        <Head>how long this stays true</Head>
+        <Head>currency</Head>
         {/* No half-life here — the stat tile at the top of this page already
             gives it, and printing it twice is how a number starts disagreeing
             with itself. */}
@@ -77,16 +84,13 @@ export default function EvidenceLog() {
       </section>
 
       <section className="space-y-1.5">
-        {/* This header used to read bare "sources · 11", which a reader of a
-            page whose own opening line claims "every claim dated, sourced and
-            rated" reasonably takes as "every source this notebook has". It is
-            not: 11 is NOTEBOOK.sources, the hand-written bibliography. The 21
-            facts above cite 20 DISTINCT source strings between them
-            (`factSourceStrings`) that this list does not enumerate and that no
-            code reconciles against it — see the comment on NOTEBOOK_COUNTS in
-            notebook.ts for why a reconciliation is not being built. "cited
-            bibliography" names the population instead of implying totality. */}
-        <Head>cited bibliography · {NOTEBOOK_COUNTS.sources}</Head>
+        {/* "bibliography", never bare "sources": 11 is NOTEBOOK.sources, the
+            hand-written document bibliography, while the 21 facts above cite 20
+            DISTINCT source strings between them (`factSourceStrings`) that this
+            list does not enumerate and that no code reconciles against it — see
+            NOTEBOOK_COUNTS in notebook.ts. Same wording as the notebook's own
+            heading and rail pill (SECTION_LABEL in sections/H.tsx). */}
+        <Head>bibliography · {NOTEBOOK_COUNTS.sources}</Head>
         <SourcesBody />
         {/* The gap is READ, not retyped. The count beside it was already
             computed, and the sentence describing it was a literal about run 1
@@ -123,7 +127,7 @@ function Tile({
 }: {
   label: string;
   value: string;
-  note: string;
+  note?: string;
   tone?: "bad" | "warn";
 }) {
   return (
@@ -136,7 +140,7 @@ function Tile({
       >
         {value}
       </p>
-      <p className="font-jetbrains mt-0.5 text-content text-white/40">{note}</p>
+      {note && <p className="font-jetbrains mt-0.5 text-content text-white/40">{note}</p>}
     </div>
   );
 }

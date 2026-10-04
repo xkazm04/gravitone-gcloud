@@ -1,21 +1,9 @@
 "use client";
 
-// Shared leaves for the wordless landing variants.
-//
-// The brief for this page is one line: no copy, one CTA, and an image that says
-// what the app is. So the only string on the door is the verb on the button —
-// everything else has to be carried by the drawing. The two exceptions are
-// failure states (a sign-in that did not work has to be sayable) and the
-// accessible name on the art, which is for screen readers and costs no pixels.
-//
-// Motion is entrance-only and hover-gated, per the repo's animation austerity
-// rule: nothing here is still running once you have looked at it. All of it is
-// CSS, so globals.css's prefers-reduced-motion block already switches it off.
-//
-// The two keyframes the door's art uses — `gt-rise` (the app's shared entrance,
-// at this surface's own weight) and `gt-bloom` (a scale, the one entrance in
-// the app that is genuinely a different shape) — are declared in globals.css
-// with every other entrance, rather than being injected here by a <style> tag.
+// The door's one control. Everything else on the page is a picture; this is the
+// verb. The only strings the door carries are this button's label, the names of
+// the things drawn (constellations, pictures) and failure states — a sign-in
+// that did not work has to be sayable.
 
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
@@ -23,58 +11,53 @@ import { ArrowRight } from "lucide-react";
 import { useAuth } from "@/lib/useAuth";
 
 /**
- * The door. Signed out it opens Google's popup (lib/useAuth falls back to a
- * full-page redirect when the popup is blocked); signed in it is simply the way
- * through, because a returning user should not have to prove anything twice.
+ * Signed out it opens Google's popup (lib/useAuth falls back to a full-page
+ * redirect when the popup is blocked); signed in it is simply the way through,
+ * because a returning user should not have to prove anything twice.
+ *
+ * THE TWO STATES DO NOT SHARE A WORD (2026-09-08). Signed in it is a link to
+ * /projects, signed out it hands you to Google, and a first-time visitor — the
+ * only kind this page has, everything else being gated — used to click a word
+ * meaning "go in" and get an account chooser nobody had mentioned. The label
+ * names the thing that is about to happen. It stays one string and one verb
+ * phrase, so the wordless brief holds. Sign-in is a detour, not the doorway, so
+ * it carries the Google mark and not the arrow.
+ *
+ * It sits top right and is the only gold-filled thing on the page, so it is
+ * findable at a glance at every size; on phones it is the same pill, smaller.
  */
 export function EnterButton({ className = "" }: { className?: string }) {
   const { user, loading, signIn, error } = useAuth();
 
   const shell =
-    "font-jetbrains inline-flex items-center gap-3 rounded-full px-8 py-4 text-label tracking-[0.18em] uppercase " +
-    "bg-gradient-to-r from-cyan-300 to-cyan-200 text-slate-950 font-semibold transition hover:brightness-110 " +
-    "cta-glow disabled:opacity-40";
+    "font-hanken inline-flex items-center gap-2.5 rounded-full whitespace-nowrap font-semibold tracking-[0.02em] " +
+    "bg-[var(--al-gold)] text-[var(--al-night)] transition duration-300 hover:-translate-y-px hover:brightness-110 " +
+    "shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--al-white)_35%,transparent),0_8px_34px_color-mix(in_srgb,var(--al-gold)_28%,transparent)] " +
+    "px-4 py-2.5 text-[clamp(14px,1vw,14px)] min-[761px]:pl-[1.2em] min-[761px]:pr-[1.45em] min-[761px]:py-[0.8em] min-[761px]:text-[clamp(15px,0.78vw,19px)] " +
+    "disabled:opacity-40";
 
   return (
-    <div className={`flex flex-col items-center gap-3 ${className}`}>
+    <div className={`flex flex-col items-end gap-2 ${className}`}>
       {user ? (
         <Link href="/projects" className={shell}>
           Enter
-          <ArrowRight className="h-4 w-4" />
+          <ArrowRight className="h-[1.05em] w-[1.05em]" aria-hidden />
         </Link>
       ) : (
         <button onClick={() => void signIn()} disabled={loading} className={`cursor-pointer ${shell}`}>
-          Enter
-          <ArrowRight className="h-4 w-4" />
+          <svg viewBox="-10 -10 20 20" aria-hidden="true" className="h-[1.05em] w-[1.05em] max-[760px]:hidden">
+            <path d="M5.3-5.3A7.5 7.5 0 1 0 7.4 1.3L2.4 1.3" fill="none" stroke="currentColor" strokeWidth="1.4" />
+            <circle cx="5.3" cy="-5.3" r="1.7" fill="currentColor" />
+            <circle cx="2.4" cy="1.3" r="2" fill="currentColor" />
+          </svg>
+          Sign in with Google
         </button>
       )}
       {error && (
-        <p className="font-jetbrains max-w-xs text-center text-content text-rose-300/90">{error}</p>
+        <p role="alert" className="font-hanken max-w-[240px] text-right text-label text-[var(--al-ant-t)]">
+          {error}
+        </p>
       )}
-    </div>
-  );
-}
-
-/** The page the art hangs in: ink, aurora, grain, nothing else. */
-export function LandingShell({
-  label,
-  children,
-}: {
-  /** Accessible name for the illustration — the page has no heading to be. */
-  label: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-[var(--gt-ink)] grain">
-      <div className="pointer-events-none absolute inset-0 aurora" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-cyan-400/40 to-transparent" />
-      <main
-        role="img"
-        aria-label={label}
-        className="relative grid min-h-screen place-items-center px-6 py-20"
-      >
-        {children}
-      </main>
     </div>
   );
 }

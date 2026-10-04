@@ -1,25 +1,41 @@
 "use client";
 
-// THE COMPARISON — source beside candidate, and under them the reason the
-// grader gave. The per-field table is the audit handle: when the score looks
-// wrong, the source→candidate pair on one row says whether the grader misread
+// THE COMPARISON — source beside candidate at full width, and under them the
+// reason the grader gave. The per-field table is the audit handle: when the score
+// looks wrong, the source→candidate pair on one row says whether the grader misread
 // the image or the brief.
 //
-// A verdict pressed here shows on the candidate itself — stamp and border —
-// before anything else happens, and the buttons are idempotent: Reject
-// rejects, Keep keeps, Clear clears. On a committed run the footer says so
-// and offers nothing.
+// A verdict pressed here shows on the candidate itself — the ring and the stamp —
+// before anything else happens, and the buttons are idempotent: Reject rejects,
+// Keep keeps, Clear clears. On a committed run the footer says so and offers
+// nothing. The surface is a full-screen sheet (components/kit/Sheet): ← and → step
+// through the run in place, and the candidate is one level below its run in the
+// breadcrumb.
 
 import { useEffect } from "react";
 
-import Modal from "@/components/ui/Modal";
-import { Button } from "@/components/ui/Primitives";
+import { Button, Chip, Chips, Credit, DataTable, KeyRow, Kicker, Magnitude, Plate, Sheet, StatusGlyph, gradeOf, pct } from "@/components/kit";
 import type { Candidate, RunManifest, Verdict } from "@/lib/foundry/types";
 
 import { fileUrl } from "./foundryClient";
-import { VerdictStamp, creditTone, pct } from "./parts";
 
 const STYLE_FIELDS = ["render_mode", "palette_strategy", "edge_treatment", "black_handling"];
+
+/** A section's whole verdict as one mark. The thresholds are ScoreChip's (kit),
+ *  so a panel header and the chips inside it cannot disagree about what a number
+ *  means, and the per-field diff below stays exactly where the audit happens. */
+function GradeMark({ what, score }: { what: string; score: number | null | undefined }) {
+  const g = gradeOf(score);
+  const word = g === "held" ? "held" : g === "partial" ? "partly held" : g === "missed" ? "did not hold" : "not graded";
+  return (
+    <>
+      <Magnitude value={score} />
+      <span className="sr-only">
+        {what}: {word}
+      </span>
+    </>
+  );
+}
 
 export function Lightbox({
   run,
@@ -29,6 +45,8 @@ export function Lightbox({
   onClose,
   onVerdict,
   onStep,
+  index,
+  count,
 }: {
   run: RunManifest;
   candidate: Candidate | null;
@@ -37,6 +55,9 @@ export function Lightbox({
   onClose: () => void;
   onVerdict: (v: Verdict | null) => void;
   onStep: (d: 1 | -1) => void;
+  /** Position of the open candidate in the run, for the ends of the arrows. */
+  index: number;
+  count: number;
 }) {
   useEffect(() => {
     if (!candidate) return;
@@ -73,155 +94,169 @@ export function Lightbox({
   const g = candidate?.grade;
 
   return (
-    <Modal
+    <Sheet
       open={Boolean(candidate)}
       onClose={onClose}
       title={candidate ? `${style?.name ?? candidate.style} · ${candidate.mechanism}` : ""}
-      eyebrow={candidate?.id}
-      className="max-w-[1440px]"
+      eyebrow={candidate ? <Kicker>{candidate.id}</Kicker> : undefined}
+      onPrev={index > 0 ? () => onStep(-1) : undefined}
+      onNext={index < count - 1 ? () => onStep(1) : undefined}
+      prevLabel="Previous candidate"
+      nextLabel="Next candidate"
       footer={
-        <div className="flex items-center justify-between gap-3">
-          <div className="font-jetbrains text-label text-white/60">
-            {readOnly ? "this run is committed — verdicts are final" : "← → step · K keep · X reject · U clear · Esc close"}
-          </div>
+        <>
+          {readOnly ? (
+            <span className="k-vword">committed · verdicts are final</span>
+          ) : (
+            <KeyRow
+              label="Comparison shortcuts"
+              map={[
+                { keys: ["←", "→"], does: "step" },
+                { keys: ["K"], does: "keep" },
+                { keys: ["X"], does: "reject" },
+                { keys: ["U"], does: "clear" },
+                { keys: ["Esc"], does: "close" },
+              ]}
+            />
+          )}
           {!readOnly && (
-            <div className="flex items-center gap-2">
-              <span
-                className={`font-jetbrains mr-2 text-label ${
-                  verdict === "keep" ? "text-emerald-200" : verdict === "reject" ? "text-rose-200" : "text-white/55"
-                }`}
-              >
+            <span className="k-dock__r">
+              <span className={`k-vword${verdict === "keep" ? " k-vword--k" : verdict === "reject" ? " k-vword--x" : ""}`}>
                 {verdict === "keep" ? "kept" : verdict === "reject" ? "rejected" : "undecided"}
               </span>
               {verdict && (
-                <button
-                  onClick={() => onVerdict(null)}
-                  className="font-jetbrains cursor-pointer rounded-full border border-white/15 px-4 py-2 text-label text-white/70 transition hover:bg-white/5"
-                >
+                <Button variant="ghost" onClick={() => onVerdict(null)}>
                   Clear
-                </button>
+                </Button>
               )}
-              <button
-                onClick={() => onVerdict("reject")}
-                className={`font-jetbrains cursor-pointer rounded-full border px-5 py-2 text-label transition ${
-                  verdict === "reject"
-                    ? "border-rose-300 bg-rose-400/30 text-rose-50 ring-2 ring-rose-300/40"
-                    : "border-rose-400/40 bg-rose-400/10 text-rose-200 hover:bg-rose-400/20"
-                }`}
-              >
+              <Button variant="reject" aria-pressed={verdict === "reject"} onClick={() => onVerdict("reject")}>
                 {verdict === "reject" ? "Rejected ✓" : "Reject"}
-              </button>
-              <Button
-                onClick={() => onVerdict("keep")}
-                className={`cursor-pointer px-5 py-2 ${verdict === "keep" ? "ring-2 ring-emerald-200/60" : "opacity-80"}`}
-              >
+              </Button>
+              <Button variant="keep" aria-pressed={verdict === "keep"} onClick={() => onVerdict("keep")}>
                 {verdict === "keep" ? "Kept ✓" : "Keep"}
               </Button>
-            </div>
+            </span>
           )}
-        </div>
+        </>
       }
     >
       {candidate && scene && (
-        <div className="flex flex-col gap-5">
-          <div className="grid gap-2 md:grid-cols-2">
-            <figure className="overflow-hidden rounded-lg border border-white/10 bg-black/50">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={fileUrl(run.id, scene.source)} alt="source" className="w-full" />
-              <figcaption className="font-jetbrains px-3 py-1.5 text-label tracking-[0.14em] text-white/65 uppercase">source · {scene.id}</figcaption>
+        <div className="k-pbody">
+          <div className="k-pairs">
+            <figure className="k-pfig">
+              <Plate>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src={fileUrl(run.id, scene.source)} alt="source" />
+              </Plate>
+              <figcaption>
+                <span className="k-caps">source · {scene.id}</span>
+              </figcaption>
             </figure>
-            <figure
-              className={`relative overflow-hidden rounded-lg border-2 bg-black/50 transition ${
-                verdict === "keep" ? "border-emerald-300/80" : verdict === "reject" ? "border-rose-400/80" : "border-white/10"
-              }`}
-            >
-              {candidate.deleted ? (
-                <div className="font-jetbrains flex aspect-video items-center justify-center text-white/60">deleted</div>
-              ) : (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img src={fileUrl(run.id, candidate.file)} alt={candidate.id} className={`w-full transition ${verdict === "reject" ? "opacity-50" : ""}`} />
-              )}
-              <VerdictStamp verdict={verdict} />
-              <figcaption className="font-jetbrains px-3 py-1.5 text-label tracking-[0.14em] text-white/65 uppercase">
-                candidate · {candidate.mechanism} · seed {candidate.seed}
-                {candidate.timings?.generate_s ? ` · ${candidate.timings.generate_s}s` : ""}
+            <figure className="k-pfig">
+              <Plate>
+                <div className={`k-cand${verdict ? ` k-cand--${verdict}` : ""}`}>
+                  {candidate.deleted ? (
+                    <div className="k-noimg k-caps">
+                      <StatusGlyph kind="reject" decorative size={44} />
+                      deleted
+                    </div>
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={fileUrl(run.id, candidate.file)} alt={candidate.id} style={{ display: "block", width: "100%" }} />
+                  )}
+                </div>
+              </Plate>
+              <figcaption>
+                <span className="k-caps">
+                  candidate · {candidate.mechanism} · seed {candidate.seed}
+                </span>
+                <span>
+                  {verdict && <StatusGlyph kind={verdict} label={verdict === "keep" ? "kept" : "rejected"} />}
+                  {candidate.timings?.generate_s ? ` ${candidate.timings.generate_s}s` : ""}
+                </span>
               </figcaption>
             </figure>
           </div>
 
           {g ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
-                <div className="flex items-baseline justify-between">
-                  <div className="font-jetbrains text-label tracking-[0.14em] text-cyan-300 uppercase">craft fidelity</div>
-                  <div className="font-jetbrains text-label text-white">{pct(g.craft?.score)}</div>
+            <div className="k-grades">
+              <div className="k-gp">
+                <div className="k-gph">
+                  <span className="k-caps">shot · craft fidelity</span>
+                  <span className="k-gph__v">
+                    <GradeMark what="craft fidelity" score={g.craft?.score} />
+                    {pct(g.craft?.score)}
+                  </span>
                 </div>
-                <p className="font-hanken mt-1 text-content text-slate-500">Did the shot survive? Source annotation → candidate re-annotation, per field.</p>
-                <table className="mt-3 w-full text-label">
-                  <tbody>
-                    {Object.entries(g.craft?.per_field ?? {}).map(([f, v]) => (
-                      <tr key={f} className="border-t border-white/6">
-                        <td className="font-jetbrains py-1 pr-2 text-white/65">{f.replace(/_/g, " ")}</td>
-                        <td className="font-jetbrains py-1 pr-2 text-white/80">{String(scene.annotation?.[f] ?? "—")}</td>
-                        <td className={`font-jetbrains py-1 ${creditTone(v)}`}>{String(g.craft?.annotation?.[f] ?? "—")}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <DataTable
+                  head={["field", "source", "candidate"]}
+                  rows={Object.entries(g.craft?.per_field ?? {}).map(([f, v]) => [
+                    f.replace(/_/g, " "),
+                    String(scene.annotation?.[f] ?? "—"),
+                    <Credit key={f} value={v}>
+                      {String(g.craft?.annotation?.[f] ?? "—")}
+                    </Credit>,
+                  ])}
+                />
               </div>
 
-              <div className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
-                <div className="flex items-baseline justify-between">
-                  <div className="font-jetbrains text-label tracking-[0.14em] text-violet-300 uppercase">style adherence</div>
-                  <div className="font-jetbrains text-label text-white">{pct(g.style?.score)}</div>
+              <div className="k-gp">
+                <div className="k-gph">
+                  <span className="k-caps">look · style adherence</span>
+                  <span className="k-gph__v">
+                    <GradeMark what="style adherence" score={g.style?.score} />
+                    {pct(g.style?.score)}
+                  </span>
                 </div>
-                <p className="font-hanken mt-1 text-content text-slate-500">Did the look arrive? Target observables → what the grader read back.</p>
-                <table className="mt-3 w-full text-label">
-                  <tbody>
-                    {STYLE_FIELDS.map((f) => {
+                <DataTable
+                  head={["field", "wanted", "candidate"]}
+                  rows={[
+                    ...STYLE_FIELDS.map((f) => {
                       const want = style?.observables[f];
                       const got = g.style?.readback?.[f as keyof typeof g.style.readback];
-                      return (
-                        <tr key={f} className="border-t border-white/6">
-                          <td className="font-jetbrains py-1 pr-2 text-white/65">{f.replace(/_/g, " ")}</td>
-                          <td className="font-jetbrains py-1 pr-2 text-white/80">{want ?? "—"}</td>
-                          <td className={`font-jetbrains py-1 ${creditTone(g.style?.per_field?.[f])}`}>{String(got ?? "—")}</td>
-                        </tr>
-                      );
-                    })}
-                    <tr className="border-t border-white/6">
-                      <td className="font-jetbrains py-1 pr-2 text-white/65">text present</td>
-                      <td />
-                      <td className={`font-jetbrains py-1 ${g.veto?.has_text ? "text-rose-300" : "text-emerald-300"}`}>{g.veto ? String(g.veto.has_text) : "—"}</td>
-                    </tr>
-                    <tr className="border-t border-white/6">
-                      <td className="font-jetbrains py-1 pr-2 text-white/65">colours</td>
-                      <td />
-                      <td className="font-jetbrains py-1 text-white/80">{g.style?.readback?.dominant_colours?.join(", ") ?? "—"}</td>
-                    </tr>
-                  </tbody>
-                </table>
-                {g.style?.readback?.depiction && (
-                  <p className="font-hanken mt-3 text-content text-slate-300">“{g.style.readback.depiction}”</p>
-                )}
+                      return [
+                        f.replace(/_/g, " "),
+                        want ?? "—",
+                        <Credit key={f} value={g.style?.per_field?.[f]}>
+                          {String(got ?? "—")}
+                        </Credit>,
+                      ];
+                    }),
+                    [
+                      "text present",
+                      "",
+                      <Credit key="text" value={g.veto ? (g.veto.has_text ? 0 : 1) : undefined}>
+                        {g.veto ? String(g.veto.has_text) : "—"}
+                      </Credit>,
+                    ],
+                    ["colours", "", g.style?.readback?.dominant_colours?.join(", ") ?? "—"],
+                  ]}
+                />
+                {g.style?.readback?.depiction && <p className="k-quote">“{g.style.readback.depiction}”</p>}
                 {g.unmeasured.length > 0 && (
-                  <p className="font-jetbrains mt-2 text-content text-amber-200/80">unmeasured: {g.unmeasured.join(" · ")}</p>
+                  <Chips>
+                    <Chip tone="gold" wrap>
+                      unmeasured: {g.unmeasured.join(" · ")}
+                    </Chip>
+                  </Chips>
                 )}
-                <p className="font-jetbrains mt-2 text-content text-white/55">graded by {g.grader}</p>
+                <p className="k-small">graded by {g.grader}</p>
               </div>
             </div>
           ) : (
-            <p className="font-jetbrains text-content text-amber-200/80">Not graded yet.</p>
+            <p className="k-small">
+              <Chip tone="gold">not graded</Chip>
+            </p>
           )}
 
           {candidate.prompt && (
-            <details className="rounded-xl border border-white/8 bg-white/[0.02]">
-              <summary className="font-jetbrains cursor-pointer px-4 py-2 text-label tracking-[0.14em] text-white/65 uppercase">prompt</summary>
-              <pre className="font-jetbrains px-4 pb-4 text-content leading-relaxed whitespace-pre-wrap text-slate-400">{candidate.prompt}</pre>
+            <details className="k-fold">
+              <summary className="k-caps">prompt</summary>
+              <pre>{candidate.prompt}</pre>
             </details>
           )}
         </div>
       )}
-    </Modal>
+    </Sheet>
   );
 }

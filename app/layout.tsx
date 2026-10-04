@@ -13,12 +13,12 @@ import { AnnouncerProvider } from "@/lib/announcer";
 import HarnessBridge from "@/components/ui/HarnessBridge";
 import DevInspector from "@/app/_dev-inspector/DevInspector";
 
-const instrument = Instrument_Serif({ weight: "400", subsets: ["latin"], variable: "--font-instrument", display: "swap" });
+const instrument = Instrument_Serif({ weight: "400", style: ["normal", "italic"], subsets: ["latin"], variable: "--font-instrument", display: "swap" });
 const hanken = Hanken_Grotesk({ subsets: ["latin"], variable: "--font-hanken", display: "swap" });
 const jetbrains = JetBrains_Mono({ subsets: ["latin"], variable: "--font-jetbrains", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Gravitone — a content studio",
+  title: "Gravitone: a content studio",
   description:
     "A content creation studio: one production walked through five steps — research, script, frames, score, cut — over a library that knows where every asset came from.",
 };

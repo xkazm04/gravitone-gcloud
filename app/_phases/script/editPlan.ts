@@ -63,7 +63,7 @@ export const EDIT_PLAN_SCHEMA = {
           seconds: { type: "integer", description: "retime/insert — how long the beat holds" },
           text: { type: "string", description: "rewrite/insert — the spoken line" },
           label: { type: "string", description: "insert — the beat's craft label" },
-          connector: { type: "string", enum: ["BUT", "THEREFORE"], description: "insert — link to the previous beat" },
+          connector: { type: "string", enum: ["BUT", "THEREFORE"], description: "insert — link to the previous beat. Required on an insert; a plan without it is rejected" },
           cards: {
             type: "array",
             items: { type: "string" },
@@ -189,7 +189,9 @@ export function applyEdits(
           at: "pending",
           kind: "movement",
           label: e.label ?? "inserted",
-          connector: (e.connector ?? "THEREFORE") as Connector,
+          // Undeclared stays undeclared. A default here was a THEREFORE nobody
+          // asserted; `parseEditPlan` refuses the missing word for model output.
+          connector: e.connector ?? null,
           text: e.text ?? "",
         },
         seconds: holds(e.seconds ?? 8),
@@ -357,6 +359,17 @@ export function parseEditPlan(raw: string): EditPlan {
       throw new PlanError(`${where} is a ${op} with no \`cards\` — a beat must declare the notebook ids it rests on.`);
     if (typeof e.why !== "string" || !e.why.trim())
       throw new PlanError(`${where} has no \`why\`.`);
+    // An insert is the one edit that authors a NEW relation to the beat in front
+    // of it, so its connector is declared or the plan fails. The schema asks and
+    // cannot require; `applyEdits` used to fill the gap with THEREFORE, which is
+    // a causal claim nobody made, and passed AND THEN or any other word through
+    // into the chain. The trailer's `checkConnectors` already reads undeclared as
+    // unmeasured, never as causal — this is the same rule at the explainer's door.
+    if (op === "insert" && e.connector !== "BUT" && e.connector !== "THEREFORE")
+      throw new PlanError(
+        `${where} is an insert whose connector is ${e.connector === undefined ? "missing" : `"${String(e.connector)}"`}. ` +
+          `Name the relation to the beat before it: BUT or THEREFORE. If the only honest connector is AND THEN, the beat is a list item, not a link.`,
+      );
 
     // A MARK THAT NAMES NO BEAT FAILS THE PLAN, because the alternative is that
     // it fails silently. `applyEdits` resolves marks with `findIndex`, and -1

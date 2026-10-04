@@ -51,6 +51,153 @@
       "thumb": "pipeline/foundry/training/thumbs/2026-08-31-study-light-layers--imp-1.png",
       "reflected": "1dfce8f",
       "at": "2026-08-31T18:10:59.738Z"
+    },
+    {
+      "cycle": "2026-09-01-serial-visual-only",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "scene-grammar-progression",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0,
+      "reflected": false,
+      "at": "2026-09-09T15:02:02.221Z"
+    },
+    {
+      "cycle": "2026-09-01-nb-counted-beats",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "performance-direction",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 0.75,
+      "thumb": "pipeline/foundry/training/thumbs/2026-09-01-nb-counted-beats--imp-1.png",
+      "reflected": false,
+      "at": "2026-09-09T15:02:26.214Z"
+    },
+    {
+      "cycle": "2026-09-01-nb-what-stays-dark",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "lighting-as-dramatic-instrument",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 0.75,
+      "thumb": "pipeline/foundry/training/thumbs/2026-09-01-nb-what-stays-dark--imp-1.png",
+      "reflected": false,
+      "at": "2026-09-09T15:02:49.620Z"
+    },
+    {
+      "cycle": "2026-09-02-serial-3seeds",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "scene-grammar-progression",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0.5,
+      "reflected": false,
+      "at": "2026-09-09T15:03:09.618Z"
+    },
+    {
+      "cycle": "2026-09-02-setup-eye-level",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "camera-position-semantics:beat-gated",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0.6666666666666666,
+      "reflected": false,
+      "at": "2026-09-09T15:03:24.114Z"
+    },
+    {
+      "cycle": "2026-09-03-serial-ref2va",
+      "dimension": "media-generation",
+      "subject": "character-identity-continuity",
+      "technique": "reference-shows-only-invariants:ref2va-lane",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 1,
+      "reflected": false,
+      "at": "2026-09-09T15:04:33.011Z"
+    },
+    {
+      "cycle": "2026-09-04-dialect-probe",
+      "dimension": "media-generation",
+      "subject": "image-prompt-composition",
+      "technique": "prompt-dialect-matching",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0.5,
+      "reflected": false,
+      "at": "2026-09-09T15:06:17.525Z"
+    },
+    {
+      "cycle": "2026-09-04-accent-emphasis",
+      "dimension": "media-generation",
+      "subject": "image-prompt-composition",
+      "technique": "prompt-dialect-matching:portable-emphasis",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0.25,
+      "reflected": false,
+      "at": "2026-09-09T15:06:30.539Z"
+    },
+    {
+      "cycle": "2026-09-05-visual-function",
+      "dimension": "media-generation",
+      "subject": "frame-direction",
+      "technique": "visual-function-vocabulary",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0.25,
+      "reflected": false,
+      "at": "2026-09-09T15:06:52.079Z"
+    },
+    {
+      "cycle": "2026-09-05-join-at-ten",
+      "dimension": "media-generation",
+      "subject": "character-identity-continuity",
+      "technique": "reference-admitted-late:join-sweep",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0.5,
+      "reflected": false,
+      "at": "2026-09-09T15:07:12.281Z"
+    },
+    {
+      "cycle": "2026-09-05-reference-sheet",
+      "dimension": "media-generation",
+      "subject": "visual-style-locking",
+      "technique": "approved-reference-sheet",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 0.25,
+      "thumb": "pipeline/foundry/training/thumbs/2026-09-05-reference-sheet--imp-1.png",
+      "reflected": false,
+      "at": "2026-09-09T15:07:43.000Z"
+    },
+    {
+      "cycle": "2026-09-05-build-key-flip",
+      "dimension": "media-generation",
+      "subject": "cinematic-language",
+      "technique": "lighting-as-dramatic-instrument:build-key-flip",
+      "human": "approve",
+      "verdict": "better",
+      "judge_pick_rate": 1,
+      "thumb": "pipeline/foundry/training/thumbs/2026-09-05-build-key-flip--imp-1.png",
+      "reflected": false,
+      "at": "2026-09-09T15:08:01.019Z"
+    },
+    {
+      "cycle": "2026-09-05-text-zone-shape",
+      "dimension": "media-generation",
+      "subject": "frame-direction",
+      "technique": "plate-elements-text-split:text-zone-as-shape",
+      "human": "reject",
+      "verdict": "not-better",
+      "judge_pick_rate": 0.75,
+      "reflected": false,
+      "at": "2026-09-09T15:08:09.663Z"
     }
   ]
 }

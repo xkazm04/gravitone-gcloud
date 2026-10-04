@@ -4,7 +4,9 @@
 // the honest caption block, provenance as a walkable chain, and the step
 // status dot. AssetDrawer composes these in its own file.
 
-import { AudioLines, Clapperboard, FileText, Image as ImageIcon, Sparkles } from "lucide-react";
+import { AudioLines, Clapperboard, FileText, Image as ImageIcon, Sparkles, Upload } from "lucide-react";
+
+import { Provenance } from "@/components/ui/signal";
 
 import type { Asset, AssetKind, StepStatus } from "./types";
 import { assetById } from "./assets";
@@ -76,12 +78,26 @@ export function MockPreview({ asset, className = "" }: { asset: Asset; className
 export function CaptionBlock({ asset }: { asset: Asset }) {
   if (asset.captionStatus === "written")
     return <p className="text-content leading-relaxed text-slate-300">{asset.caption}</p>;
+  // A CAPTION THAT IS COMING IS DRAWN WHERE IT WILL LAND. The sentence here
+  // ("the library is watching this clip; search will find it once the caption
+  // lands") described the app's own plumbing in the space the caption itself
+  // will occupy. A shimmering bar of caption-shaped ground says the same thing
+  // without a word, and `gt-indeterminate` is a CSS animation, so the blanket
+  // prefers-reduced-motion rule at the foot of app/globals.css stills it.
   if (asset.captionStatus === "pending")
     return (
-      <p className="text-content text-slate-400">
-        <span className="text-cyan-300">Caption in flight</span> — the library is watching this
-        clip; search will find it once the caption lands.
-      </p>
+      <div className="space-y-1.5" role="status" aria-label="Caption in flight">
+        <span className="sr-only">Caption in flight</span>
+        {["w-full", "w-3/5"].map((w) => (
+          <span
+            key={w}
+            aria-hidden
+            className={`block h-3 overflow-hidden rounded-full bg-white/[0.06] ${w}`}
+          >
+            <span className="gt-indeterminate block h-full w-1/3 rounded-full bg-cyan-300/30" />
+          </span>
+        ))}
+      </div>
     );
   return (
     <p className="rounded-lg border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-content text-amber-200/90">
@@ -102,17 +118,20 @@ export function ProvenanceBlock({
   return (
     <div className="space-y-2">
       <p className="font-jetbrains text-content tracking-[0.14em] text-white/40 uppercase">provenance</p>
-      <p className="text-content text-slate-300">
-        {p.source === "upload" ? (
-          "Uploaded by you."
-        ) : (
-          <>
-            Made by <span className="text-white">{p.model}</span> in run{" "}
-            <span className="font-jetbrains text-cyan-300">{p.runId}</span>, step{" "}
-            <span className="font-jetbrains text-cyan-300">{p.stepId}</span>.
-          </>
-        )}
-      </p>
+      {/* "Made by X in run R, step S." was three facts wearing an English
+          sentence — two of them already styled mono, because the sentence could
+          not carry them. <Provenance> is the same three as chips, in a fixed
+          order so no two surfaces disagree about which comes first, and the
+          values verbatim: a model id and a run id are what somebody pastes into
+          a search box. */}
+      {p.source === "upload" ? (
+        <p className="flex items-center gap-1.5 text-content text-slate-300">
+          <Upload className="h-3.5 w-3.5 shrink-0 text-white/50" aria-hidden />
+          uploaded
+        </p>
+      ) : (
+        <Provenance model={p.model} run={p.runId} step={p.stepId} />
+      )}
       {p.prompt && (
         <p className="font-jetbrains rounded-lg border border-white/8 bg-white/[0.03] px-3 py-2 text-content text-slate-400">
           “{p.prompt}”

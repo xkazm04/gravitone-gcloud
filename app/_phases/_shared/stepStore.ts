@@ -31,12 +31,55 @@
 import { useSyncExternalStore } from "react";
 
 import { STEPS_STORE, openDb, runTx } from "@/lib/studioDb";
+import { seededResearchTopic } from "@/app/_studio/projectSeed";
 
+import type { ScoreSpot } from "../score/spots";
 import type { TrailerCut, WithholdingBudget } from "../script/trailer/types";
 
 export interface ResearchStepData {
   topic: string;
   researched: boolean;
+  savedAt?: number;
+}
+
+/** THE NOTEBOOK A REAL RUN PRODUCED, under phase key `"research-notebook"`.
+ *
+ *  Its own record, and its own key, for the cadence reason every type in this
+ *  file gives — but here there is a second and stronger reason. `ResearchStepData`
+ *  above is the SIMULATED path's record: `researched: true` there means "this
+ *  project shows the saved 2026-08-11 Bitcoin run", which is what the seed writes
+ *  and what four harness scripts drive. Folding a real notebook into that boolean
+ *  would make the one bit downstream reads mean two different things — a replayed
+ *  fixture and a creator's own reasoned notebook — which is the exact
+ *  indistinguishability app/_phases/research/guided/RunStage.tsx's `StandInNote`
+ *  exists to prevent.
+ *
+ *  So the two paths write two records, and WHICH RECORD A NOTEBOOK CAME FROM IS
+ *  ITS PROVENANCE. A reader that finds this key knows the notebook was reasoned
+ *  by an engine for `topic`; a reader that finds only `research` knows it is the
+ *  replay. Nothing has to be inferred from content.
+ *
+ *  `engine` is the run's receipt (`/api/research`'s `engine` block), kept ON the
+ *  record rather than beside it so that what a notebook cost, which rung served
+ *  it, and — the field no other receipt in this app has — whether the engine
+ *  could search, all survive the reload with the work they describe.
+ *
+ *  `notebook: null` is the CLEARED state and is distinct from no record at all:
+ *  the creator discarded a notebook here, and re-adopting one on the next mount
+ *  would silently undo their clear.
+ *
+ *  Typed loosely on purpose. `Notebook` lives in `_shared/notebook/types.ts` and
+ *  importing it here would put the whole fixture-adjacent type graph into every
+ *  module that touches the step store, including five that never see a notebook.
+ *  The one consumer (`research/run/live.ts`) casts at its own boundary, which is
+ *  also the boundary where `lib/notebook/validate.ts` has already checked it. */
+export interface ResearchNotebookStepData {
+  /** The topic as the creator typed it — the authority on what was asked. */
+  topic: string;
+  /** A validated notebook, or `null` for "cleared here". */
+  notebook: unknown | null;
+  /** The run's receipt, or `null` alongside a cleared notebook. */
+  engine: unknown | null;
   savedAt?: number;
 }
 
@@ -139,6 +182,36 @@ export interface TrailerCutStepData {
  *  creator has actually nudged appear in this map. */
 export interface CutStepData {
   offsets: Record<string, number>;
+  savedAt?: number;
+}
+
+/** THE SPOTTING SESSION — where the cues go, and what each one is for.
+ *
+ *  The other half of the paragraph above, and it lands here on the same terms.
+ *  A spot is a title, a scene range, a purpose sentence and (once somebody
+ *  chooses one) a tempo: plain data, a few dozen bytes a row. A TAKE is still
+ *  an object URL over megabytes of decoded audio that no `blob:` string
+ *  survives a reload to reach, and this record does not carry one, does not
+ *  have a field for one, and must not grow one without answering the question
+ *  .vault/Architect/decisions/2026-08-29-score-take-persistence.md leaves open.
+ *  Spots survive a reload; takes do not, and the surface says so rather than
+ *  implying otherwise.
+ *
+ *  WHY IT IS THE WHOLE LIST AND NOT A DIFF AGAINST THE PROPOSAL. Spots are
+ *  seeded once — proposed from the script's movements the first time this step
+ *  meets a project with a picture (app/_phases/score/spots.ts), saved, and
+ *  after that they are the creator's. A record that stored only the edits would
+ *  have to re-derive the proposal on every load to know what the edits were
+ *  against, which makes a change upstream silently rewrite work downstream. The
+ *  same rule `useTrailerCut` composes a cut under: composed once from the
+ *  confirmed spine, then owned.
+ *
+ *  An EMPTY array is a decision — every spot deleted — and is distinct from no
+ *  record at all, which means this step has never been opened with a picture in
+ *  front of it. The seeder writes nothing in the second case, so re-opening the
+ *  step after composing a spine still proposes. */
+export interface ScoreStepData {
+  spots: ScoreSpot[];
   savedAt?: number;
 }
 
@@ -544,14 +617,24 @@ export async function saveStep<T>(
   return wrote ? { ok: true } : { ok: true, superseded: true };
 }
 
-/** The Bitcoin project ships researched.
+/** A seeded project ships with the research its own seed row claims.
  *
- *  Its notebook is the real 2026-08-11 run, so the honest starting state for that
- *  project is "already has a notebook" — not an empty topic field the user would
- *  have to re-run to see anything. Every other project starts empty, which is
- *  also honest: nothing has been researched for them. */
+ *  THE MATCH USED TO BE `/bitcoin/i` (fixed 2026-09-09). The reasoning was
+ *  sound for the project it named — the shipped notebook is the real 2026-08-11
+ *  Bitcoin run, so that project's honest starting state is "already has a
+ *  notebook" rather than an empty field — but the test was the project's NAME,
+ *  and three other seed rows declare `progress.research: "done"` without having
+ *  it in theirs. Those three printed "locked" on the shelf and then opened Step
+ *  1 on an empty topic field with the guided wizard parked at stage 1 and every
+ *  later stage unreachable. The shelf and the step contradicted each other about
+ *  the same project, and the step was the one telling the truth.
+ *
+ *  It asks the seed itself now (`seededResearchTopic`), so the two cannot
+ *  disagree again: a row that claims done gets a record, a row that does not,
+ *  does not. A project the USER made still starts empty, which is honest —
+ *  nothing has been researched for it. */
 function seededFor(projectId: string, phase: string): ResearchStepData | undefined {
   if (phase !== "research") return undefined;
-  if (!/bitcoin/i.test(projectId)) return undefined;
-  return { topic: "Why Bitcoin price does not rise", researched: true };
+  const topic = seededResearchTopic(projectId);
+  return topic ? { topic, researched: true } : undefined;
 }

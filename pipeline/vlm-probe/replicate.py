@@ -45,8 +45,8 @@ HERE = Path(__file__).parent
 FRAMES_DIR = HERE / "frames"
 REPLICA_DIR = HERE / "replicas"
 OUT_ROOT = HERE.parent.parent / "vlm-probe-out"
-COMFY = "http://127.0.0.1:8188"
-COMFY_OUT = Path(r"C:\Users\kazda\ComfyUI\output")
+COMFY = guard.COMFY
+COMFY_OUT = Path(guard.COMFY_DIR) / "output"
 
 ANNOTATOR = "qwen3.8:27b"
 

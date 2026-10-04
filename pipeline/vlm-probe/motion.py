@@ -57,7 +57,7 @@ from consistency import CHARACTER, LOCATION, SEED, generate, stage_reference  # 
 HERE = Path(__file__).parent
 SHOTS = HERE / "shots"
 CLIPS = HERE / "clips"
-COMFY_OUT = Path(r"C:\Users\kazda\ComfyUI\output")
+COMFY_OUT = Path(guard.COMFY_DIR) / "output"
 
 REF2VA = "minimax_h3_ref2va_pruned_fp8_scaled.safetensors"
 FL2VA = "minimax_h3_fl2va_pruned_fp8_scaled.safetensors"

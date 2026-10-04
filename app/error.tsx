@@ -82,9 +82,15 @@ export default function Error({
         <h1 className="font-instrument mt-3 text-2xl text-white">
           This screen failed to render.
         </h1>
+        {/* A claim about the user's WORK — it survived, and where. The two
+            sentences that used to follow it ("Try this screen again, or reload
+            the app") named the two buttons twelve pixels below, which is the
+            app operating itself out loud. The buttons say it, and they say it
+            in the one place where saying it does something. The ANNOUNCEMENT
+            keeps its own copy: it arrives with no card and no buttons beside
+            it, and a spoken message that names no way out is a dead end. */}
         <p className="mt-2 text-content leading-relaxed text-white/55">
-          The rest of the studio is unaffected — your saved work is on disk. Try
-          this screen again, or reload the app.
+          The rest of the studio is unaffected — your saved work is on disk.
         </p>
         {error.digest && (
           <p className="font-jetbrains mt-3 truncate text-content text-white/30">

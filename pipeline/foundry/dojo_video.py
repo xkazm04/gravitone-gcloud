@@ -171,12 +171,24 @@ def main():
                 except Exception as e:  # noqa: BLE001
                     one["craft_error"] = str(e)[:200]
                 entry[tag] = one
+            # An entry that produced no craft at all is NOT a readback, and caching it is
+            # worse than failing: `key not in readbacks` is the resume guard, so an error
+            # entry satisfies it forever and the clip is never read again. Observed
+            # 2026-09-20 with the annotator down -- all three tags of all four clips held
+            # only `craft_error`, the file was written, and the run still printed
+            # "4/4 read back". Persist only what actually read; leave the rest for the
+            # next run. `failure-not-empty-success`.
+            if not any("craft" in one for one in entry.values()):
+                print(f"  readback [{n}/{len(need)}] {key} FAILED -- not cached, will retry", flush=True)
+                continue
             readbacks[key] = entry
             rb_path.write_text(json.dumps(readbacks, indent=1, ensure_ascii=False), encoding="utf-8")
             print(f"  readback [{n}/{len(need)}] {key}", flush=True)
 
     rendered = sum(1 for p, arm in units if (pairs_dir / f"{p['id']}--{arm}.webm").exists())
-    print(f"dojo_video: done -- {rendered}/{len(units)} clip(s), {len(readbacks)}/{len(units)} read back", flush=True)
+    # Count what was READ, not what is keyed: the two diverge exactly when it matters.
+    read_back = sum(1 for v in readbacks.values() if any("craft" in one for one in v.values()))
+    print(f"dojo_video: done -- {rendered}/{len(units)} clip(s), {read_back}/{len(units)} read back", flush=True)
 
 
 if __name__ == "__main__":

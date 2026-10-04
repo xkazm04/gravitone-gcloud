@@ -119,9 +119,13 @@ __pycache__/
 /.claude/skills/dojo
 /.claude/skills/motionize
 /.claude/skills/spark
+/.claude/skills/cx
+/.claude/skills/native-copy
 /.claude/rules/ai-registry-access.md
 /.claude/rules/ai-registry-software-engineering.md
 /.claude/rules/ai-registry-media-generation.md
+/.claude/rules/ai-registry-localization.md
+/.ai/skill-runs.local.jsonl
 # END ai-registry linked skills
 
 # Foundry runs (pipeline/foundry/forge.py) — generated candidates, their
@@ -143,3 +147,57 @@ __pycache__/
 /pipeline/vlm-probe/clips/**/*.png
 /pipeline/vlm-probe/clips/**/*.jpg
 /pipeline/vlm-probe/clips/**/*.mp4
+
+# Personas' per-machine project marker. It carries the project id from THIS
+# machine's Personas database, and it must never be shared: a committed marker
+# makes every other checkout claim an id that does not exist in its own app.
+# That is not hypothetical — CLAUDE.md's context-map section hardcodes
+# `PID=91d8170c…` and a `C:/Users/mkdol/...` root_path from a different machine,
+# and the map could not be refreshed on this machine at all because of it.
+#
+# Only the marker. The rest of .personas/ is deliberately tracked and shared
+# (backlog-digest.json, skill-registry.json), so this must not be `/.personas/`
+# — a directory rule here would shadow two files the repo means to carry.
+/.personas/project.json
+
+# Raw preset clip renders (pipeline/video/render_preset_clips.py) — 1-2MB each,
+# minutes of GPU apiece, and NOT what ships. The committed artefacts are what
+# pipeline/build-preset-clips.mts squeezes out of them, under public/clips/,
+# where pipeline/check-clips.mjs weighs them. Keeping the raws would put the
+# expensive, machine-specific half of the pipeline in every clone.
+/pipeline/runs/preset-clips/
+
+# /consult log. Installation-local, and the reason is arithmetic rather than
+# taste: scripts/signals-collect.mjs in the ai-registry SUMS these lines into
+# per-subject consult and deviation counts with no identity key, so a row that
+# survives into a second checkout is counted as a second observation. The lane
+# is "one file per contributing installation" (docs/signals-lane.md) and this is
+# where that rule is kept. Its sibling .ai/registry-leads.jsonl is the opposite
+# case and stays tracked: leads-collect.mjs dedupes on (ts, bundle, claim), so
+# the same lead seen twice is recognised, not double-counted.
+/.ai/consults.jsonl
+.contest/
+
+.kit/
+
+# Raw audio — reference tracks, generated takes, anything a vendor (Suno,
+# ElevenLabs) or a local analysis pass writes to disk. Same doctrine as every
+# other third-party/generated media rule above: the FINDING gets committed
+# (a prompt, a rating, a ledger row), never the bytes behind it. No audio file
+# is committed anywhere in this repo today — this rule is here so the first
+# one never is either, once the Library's Audio Workbench starts writing real
+# files instead of IndexedDB pointers.
+*.mp3
+*.wav
+*.m4a
+*.flac
+*.ogg
+*.aac
+
+# Throwaway verification scripts a session drives a dev server with, then is
+# supposed to delete before committing (several builders this session did
+# exactly that by hand; this is the backstop for the one that forgets).
+# Playwright's own run artifacts are /test-results/ above.
+/smoke-*.mjs
+/smoke-*.cjs
+/smoke-*.ts

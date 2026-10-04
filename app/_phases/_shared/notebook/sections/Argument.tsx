@@ -13,7 +13,7 @@ export default function ArgumentSections() {
   return (
     <>
       <section className="space-y-2">
-        <H id="tension">tension — the load-bearing field</H>
+        <H id="tension" />
         <div className="grid gap-3 sm:grid-cols-2">
           <p className="rounded-xl border border-white/8 bg-white/[0.02] p-3 text-content leading-relaxed text-slate-300">
             <span className="font-jetbrains block text-label tracking-[0.14em] text-white/35 uppercase">expectation</span>
@@ -29,7 +29,7 @@ export default function ArgumentSections() {
       </section>
 
       <section className="space-y-3">
-        <H id="mechanisms">mechanisms — the beat chain, pre-authored</H>
+        <H id="mechanisms" />
         {n.mechanisms.map((m) => (
           <div key={m.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
             <p className="text-content font-medium text-white">{m.name}</p>
@@ -57,9 +57,12 @@ export default function ArgumentSections() {
                       ) : (
                         /* The point of the typed form is that a step can be cut
                            out from underneath. One that cites nothing cannot be,
-                           and says so rather than looking supported. */
+                           and says so rather than looking supported — as an
+                           empty ring where the citations go, not as a sentence
+                           about the absence. */
                         <span className="font-jetbrains text-label text-amber-200/60">
-                          no evidence on this step
+                          <span aria-hidden>evidence ○</span>
+                          <span className="sr-only">no evidence on this step</span>
                         </span>
                       )}
                     </li>
@@ -80,7 +83,7 @@ export default function ArgumentSections() {
       </section>
 
       <section className="space-y-3">
-        <H id="reversals">reversals — the turns, pre-computed</H>
+        <H id="reversals" />
         {n.reversals.map((r) => (
           <div key={r.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
             <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">
@@ -102,7 +105,7 @@ export default function ArgumentSections() {
       </section>
 
       <section className="space-y-2">
-        <H id="steelman">steel-man — mandatory, not optional</H>
+        <H id="steelman" />
         <p className="text-content leading-relaxed text-slate-200">{n.steelMan.statement}</p>
         <p className="text-content leading-relaxed text-white/50">{n.steelMan.whyInclude}</p>
         <p className="font-jetbrains text-content text-white/30">evidence: {n.steelMan.evidence.join(", ")}</p>
@@ -124,18 +127,25 @@ export default function ArgumentSections() {
           renders its holder. */}
       {sectionRenders(n, "counters") && (
         <section className="space-y-2">
-          <H id="counters">counter-positions — held against the verdict</H>
+          <H id="counters" />
           <ul className="space-y-2">
             {n.counterPositions.map((c, i) =>
               typeof c === "string" ? (
                 <li key={`legacy-${i}`} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
                   <p className="text-sm leading-relaxed text-slate-300">{c}</p>
                   {/* The legacy form names no holder and cites no fact, so it
-                      cannot downgrade a tension. Saying so is the finding — see
-                      CounterPosition in types.ts. */}
-                  <p className="font-jetbrains mt-1.5 text-label text-white/30">
-                    no holder named, no evidence cited — this position cannot bear on the tension
-                    until it has both
+                      cannot downgrade a tension — see CounterPosition in
+                      types.ts. Two empty rings where the holder and the
+                      evidence go, in the same vocabulary as an uncited chain
+                      step above; the schema lament that used to spell out the
+                      consequence is gone. */}
+                  <p className="font-jetbrains mt-1.5 flex items-baseline gap-2 text-label text-amber-200/60">
+                    <span aria-hidden>holder ○</span>
+                    <span aria-hidden className="text-white/25">
+                      ·
+                    </span>
+                    <span aria-hidden>evidence ○</span>
+                    <span className="sr-only">no holder named and no evidence cited</span>
                   </p>
                 </li>
               ) : (

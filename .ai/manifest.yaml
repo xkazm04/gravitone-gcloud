@@ -155,7 +155,7 @@ registry:
   machine: secondary
   contributor: mkdol-dev-box
 knowledge:
-  domains: [software-engineering, media-generation]
+  domains: [software-engineering, media-generation, localization]
 
 # Shared skills this project uses, from the registry's skills/ lane. The LINK is machine
 # state (gitignored); THIS list is the reviewable declaration. A skill not listed here is
@@ -175,6 +175,8 @@ skills:
   - dojo
   - motionize
   - spark
+  - cx
+  - native-copy
 
 # Scope - what this project does and deliberately does not do. Read by the registry's
 # scripts/build-fleet-map.mjs to classify subjects this project has NO context for: an

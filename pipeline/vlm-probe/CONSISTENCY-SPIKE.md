@@ -39,8 +39,11 @@ earlier session and is not obvious from the repo:
   downloaded. Anchors a clip to a supplied first frame; proven working (the
   "duel" test: environment retention excellent, choreography credible).
 - **H3 Ref2VA** — a reference-conditioned checkpoint accepting **up to 9
-  reference images**. *Not downloaded.* This is the most directly relevant
-  asset for the spike and should be the first thing checked.
+  reference images**. *Downloaded 2026-08-26* by `fetch_ref2va.py` (21 GB
+  checkpoint + 2 GB turbo LoRA; `python fetch_ref2va.py --check` reports
+  both OK). It was not on the disk when this brief was written, and it turned
+  out to be the most directly relevant asset for the spike — see the motion
+  section of `CONSISTENCY-FINDINGS.md`.
 - 8-step turbo LoRA for H3, both VAEs, RTX 4090 (24 GB), 63 GB RAM.
 - `guard.py` — engine recycling and commit-charge headroom checks. **Use it.**
   Flux and H3 cannot co-reside; see the ops notes below.

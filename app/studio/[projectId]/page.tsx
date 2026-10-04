@@ -17,7 +17,7 @@ import StudioView from "./StudioView";
 // projects called "Why Bitcoin" would fight over one URL, and renaming a project
 // would silently break every link to it.
 export const metadata = {
-  title: "Studio — Gravitone",
+  title: "Studio | Gravitone",
 };
 
 export default async function Page({ params }: { params: Promise<{ projectId: string }> }) {

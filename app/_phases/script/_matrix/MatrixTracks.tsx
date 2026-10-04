@@ -34,7 +34,7 @@ import type { ScopeApi } from "../../research/useScope";
 import { stateOf } from "../../research/scope";
 import { coverageIn, usageIn, type Version } from "../versions";
 import { NoteHandle } from "../_notes/NotesContext";
-import { MatrixFootnotes, RENDERS, ScopePip, secs } from "./shared";
+import { MatrixFootnotes, RENDERS, ScopePip, SecondsHint, secs } from "./shared";
 
 /** A beat mark as seconds, or null when the mark is not a position.
  *
@@ -64,12 +64,9 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
 
   return (
     <div data-testid="matrix-tracks">
-      <p className="font-hanken max-w-2xl text-content text-slate-400">
-        Each script as its own track, in running order. A card’s position is where in the video it
-        lands; its height is how long it holds. Hover a card to light it up wherever else it appears.
-      </p>
-
-      <div className="mt-4 grid gap-3 lg:grid-cols-3">
+      {/* No intro paragraph: position IS the running order and the cross-track
+          glow teaches the hover by doing it. */}
+      <div className="grid gap-3 lg:grid-cols-3">
         {RENDERS.map((r) => {
           const cov = coverageIn(version, r.id, ids);
           // Running order: first beat that states the card.
@@ -89,8 +86,9 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
                 <p className="font-jetbrains text-content tracking-[0.14em] text-white/70 uppercase">
                   {r.engineLabel}
                 </p>
-                <p className="font-jetbrains mt-0.5 text-content text-white/35">
+                <p className="font-jetbrains mt-0.5 flex items-center gap-1 text-content text-white/35">
                   {secs(r.durationS)} · {cov.spoken} cards · {secs(cov.unattributedS)} unattributed
+                  <SecondsHint />
                 </p>
               </header>
 
@@ -156,9 +154,6 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
           <h4 className="font-jetbrains text-label tracking-[0.16em] text-amber-200/90 uppercase">
             in no track · {unused.length} of {api.cards.length}
           </h4>
-          <p className="font-jetbrains mt-1 text-content text-white/35">
-            Researched, scoped, and never spoken. One gutter instead of {unused.length * 3} empty cells.
-          </p>
           <ul className="mt-2 flex flex-wrap gap-1.5">
             {unused.map((c) => (
               <UnusedChip key={c.id} card={c} api={api} />

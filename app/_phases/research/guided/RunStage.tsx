@@ -18,20 +18,30 @@
 
 import { useState } from "react";
 
+import { Bell } from "lucide-react";
+
 import { Button } from "@/components/ui/Primitives";
+import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
-import { LocalProcessNote, OutcomePicker, RunStatus, TopicField } from "../run/controls";
+import { RealRunControl, RunStatus, TopicField } from "../run/controls";
+import LiveResult from "../run/LiveResult";
 import RunTrace from "../run/RunTrace";
 import type { EducationalResearchApi } from "./useEducationalResearch";
 
-/** The expert face's artifact pills, same words and testids — only one face is
- *  ever mounted, so the ids stay unique on the page. */
+/** The three things you can do to a notebook that exists: read the argument,
+ *  audit the claims under it, throw it away.
+ *
+ *  ONE DEFINITION, BOTH FACES (2026-09-08). It used to be a copy of the expert
+ *  Topic tab's row — "same words and testids" by hand. The Topic tab is gone and
+ *  the expert face is the triage board, which needs the identical row in its
+ *  header, so ResearchStep imports this rather than writing a third spelling.
+ *  Only one face is ever mounted, so the testids stay unique on the page. */
 const PILL =
   "font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/75 transition hover:bg-white/5";
 
-function ArtifactPills({
+export function ArtifactPills({
   onOpenNotebook,
   onOpenEvidence,
   onClear,
@@ -62,21 +72,44 @@ function ArtifactPills({
   );
 }
 
-/** THE ONE SENTENCE THE PROTOTYPE OWES BEFORE A DECISION. Every research
- *  surface says the process is replayed; none said the SUBJECT is fixed — so a
+/** THE ONE FACT THE PROTOTYPE OWES BEFORE A DECISION — the SUBJECT is fixed.
+ *  Every research surface says the process is replayed; none said this, so a
  *  creator typed their own topic, ran, and scoped cards about Bitcoin under
- *  their own heading. Shown before the run (what will happen) and after it
- *  (what did), in the creator's words, not the engine's. */
-export function StandInNote({ topic, landed = false }: { topic: string; landed?: boolean }) {
+ *  their own heading.
+ *
+ *  IT IS DRAWN NOW RATHER THAN NARRATED. The substitution is two topics, one of
+ *  which is not in force, so the picture is the typed topic struck through
+ *  beside the notebook's own — which is the same information the three
+ *  branches of prose carried and does not have to be read to be seen. `landed`
+ *  is gone with them: the notebook's topic is the notebook's topic before the
+ *  run and after it, and the branch existed only to re-word the sentence. */
+export function StandInNote({ topic }: { topic: string }) {
   const own = topic.trim() && topic.trim() !== NOTEBOOK.topic;
   return (
-    <p data-testid="stand-in-note" className="font-jetbrains mt-2 text-label leading-snug text-amber-200/85">
-      {landed
-        ? own
-          ? `prototype · this notebook is the saved ${NOTEBOOK.researched} Bitcoin run, not research on “${topic.trim()}” — every card below is about Bitcoin`
-          : `prototype · this notebook is the saved ${NOTEBOOK.researched} Bitcoin run`
-        : `prototype · whatever topic you type, the run replays the saved ${NOTEBOOK.researched} Bitcoin notebook — the cards you scope next will be about Bitcoin, not your topic`}
-    </p>
+    <span data-testid="stand-in-note" className="flex flex-wrap items-center gap-1.5">
+      {own && (
+        // TRUNCATED, and that is a fix rather than a style. The typed topic is
+        // whatever the creator typed, and this span rendered it whole: a pasted
+        // paragraph ran straight off the right edge of the page and took the
+        // body's horizontal scroll with it (measured 2026-09-08 with a
+        // 400-character topic, driving the real-run path). `title` keeps the
+        // whole string reachable, which is what a struck-through label owes.
+        <span
+          title={topic.trim()}
+          className="font-jetbrains max-w-[32ch] truncate text-label text-white/35 line-through decoration-amber-300/50"
+        >
+          {topic.trim()}
+        </span>
+      )}
+      <span className={`${CHIP_CLASS} ${TALLY_TONE.amber}`}>
+        <span aria-hidden className="opacity-60">stand-in</span>
+        <span className="sr-only">the notebook this run replays:</span>
+        {NOTEBOOK.topic}
+      </span>
+      <Hint variant="warn" tone="amber" label="Why the notebook names another topic">
+        every card is from the saved {NOTEBOOK.researched} Bitcoin run
+      </Hint>
+    </span>
   );
 }
 
@@ -91,7 +124,20 @@ export default function RunStage({
   onOpenEvidence: () => void;
   onClear: () => void;
 }) {
-  const { run, topic, setTopic, ready, running, startResearch, abortResearch } = research;
+  const {
+    run,
+    topic,
+    setTopic,
+    ready,
+    running,
+    startResearch,
+    abortResearch,
+    live,
+    liveRunning,
+    preflight,
+    startLiveResearch,
+    abortLiveResearch,
+  } = research;
 
   // Whether a notebook already existed when this stage was DEALT — not whether
   // one exists now. A run that lands while you watch keeps its trace on the
@@ -102,7 +148,29 @@ export default function RunStage({
 
   if (openedReady && run.state.status === "done") {
     return (
-      <div className="gt-rise mx-auto w-full max-w-2xl space-y-4">
+      // THE DEAD BAND UNDER THIS CARD IS NOT FIXABLE FROM HERE, and the attempt
+      // is recorded rather than left as CSS that looks like it works.
+      //
+      // Measured at 1920×1080 on 2026-09-08: Deck's stage-content div
+      // (`mt-8 grow`) is 625px tall, this card is 312px, and all 313px of slack
+      // sits underneath it. `min-h-full justify-center` on this wrapper was
+      // tried and measured at zero effect — a percentage min-height cannot
+      // resolve against a parent whose height comes from `flex-grow` rather than
+      // from a specified height, so the flex container collapsed to its content
+      // and `justify-center` had nothing to centre in.
+      //
+      // The fix is one class on components/ui/deck/Deck.tsx (`flex flex-col` on
+      // that div, then `my-auto` here) and it is NOT made: that div is the stage
+      // slot for four other surfaces — the create wizard's three card stages,
+      // the script duel and the passes deck — and turning it into a flex
+      // container stops margin collapsing for all of them. That is a change to
+      // the deck, on a page whose redesign is already the operator's; it is in
+      // the report rather than in this diff.
+      //
+      // WHAT IS DONE HERE IS SPACING: a roomier card (p-6), a wider gap between
+      // the card and what follows it, and — in the states that matter — more IN
+      // the band, because a real run now draws its own result underneath.
+      <div className="gt-rise mx-auto w-full max-w-3xl space-y-5">
         <div className="overflow-hidden rounded-2xl border border-cyan-400/20 bg-cyan-400/[0.03]">
           <div
             aria-hidden
@@ -126,8 +194,10 @@ export default function RunStage({
               {NOTEBOOK_COUNTS.facts} facts · {NOTEBOOK_COUNTS.mechanisms} mechanisms ·{" "}
               {NOTEBOOK_COUNTS.reversals} reversals · researched {NOTEBOOK.researched}
             </p>
-            <StandInNote topic={topic} landed />
-            <div className="mt-4 flex flex-wrap items-center gap-2.5">
+            <div className="mt-2">
+              <StandInNote topic={topic} />
+            </div>
+            <div className="mt-5 flex flex-wrap items-center gap-2.5">
               <ArtifactPills
                 onOpenNotebook={onOpenNotebook}
                 onOpenEvidence={onOpenEvidence}
@@ -136,32 +206,27 @@ export default function RunStage({
             </div>
           </div>
         </div>
-        <OutcomePicker
-          outcome={run.outcome}
-          setOutcome={run.setOutcome}
-          disabled={running}
-          onLoad={run.load}
-          loaded={ready}
-        />
+
+        {/* The creator's own notebook, if one has been reasoned for this
+            project. It sits BESIDE the replay rather than replacing it: they are
+            two different objects and the surface says which is which. */}
+        <LiveResult state={live.state} />
       </div>
     );
   }
 
   return (
+    // Roomier, not re-laid-out — see the compact branch above for the
+    // measurement of the dead band, why it cannot be closed from this file, and
+    // what was deliberately left for the redesign.
     <div className="mx-auto w-full max-w-3xl space-y-5">
-      <div className="rounded-2xl border border-white/8 bg-white/[0.015] p-5">
-        <OutcomePicker
-          outcome={run.outcome}
-          setOutcome={run.setOutcome}
-          disabled={running}
-          onLoad={run.load}
-          loaded={ready}
-        />
-        <div className="mt-4 flex flex-wrap items-center gap-3">
+      <div className="rounded-2xl border border-white/8 bg-white/[0.015] p-6">
+        <div className="flex flex-wrap items-center gap-3">
           <TopicField
             topic={topic}
             setTopic={setTopic}
-            disabled={running}
+            disabled={running || liveRunning}
+            maxLength={preflight?.maxTopicChars}
             className="min-w-[16rem] flex-1"
           />
           {running ? (
@@ -172,15 +237,43 @@ export default function RunStage({
             <Button
               data-testid="run-research"
               onClick={startResearch}
-              disabled={!topic.trim()}
+              disabled={!topic.trim() || liveRunning}
               className="shrink-0"
             >
               Research this
             </Button>
           )}
         </div>
-        <LocalProcessNote className="mt-3" />
+        {/* NO ROW OF CHIPS UNDER THE FIELD (operator, 2026-09-09). It carried
+            `StandInNote` and `LocalProcessNote` — the substitution and the
+            replay factor — before anything had been run, which made it a
+            pre-emptive footnote about a button rather than a statement about
+            any work.
+
+            THE DISCLOSURE IS NOT DELETED, and check here before moving it
+            again: `StandInNote` still renders at the two moments it actually
+            bites — on the "a notebook exists" card and under a landed run
+            (both below) — where there IS a typed topic to strike through and a
+            notebook to name. Said then, it is about something; said here, it
+            was about nothing yet.
+
+            What went with the row is `LocalProcessNote`'s `replay 8×` chip. Its
+            one irreducible fact — that a real run is a local Claude Code
+            process, minutes rather than milliseconds — moved onto the real-run
+            control below, which is the button that starts one (run/controls.tsx). */}
+        <div className="mt-4 border-t border-white/8 pt-4">
+          <RealRunControl
+            preflight={preflight}
+            onStart={startLiveResearch}
+            onAbort={abortLiveResearch}
+            running={liveRunning}
+            disabled={!topic.trim() || running}
+          />
+        </div>
       </div>
+
+      {/* What a real run is doing, or produced, or failed to produce. */}
+      <LiveResult state={live.state} />
 
       {run.state.status !== "idle" && (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
@@ -196,9 +289,20 @@ export default function RunStage({
               </p>
               <RunStatus state={run.state} />
             </div>
+            {/* THE BACKGROUND-JOB FACT, ONCE. It was three statements of one
+                thing on one screen — the panel's opening paragraph, the deck
+                stage's `sub`, and this. What is left is the half a reader
+                cannot deduce (they may leave, and the bell will find them),
+                carried by the glyph that will do the finding. The testid stays:
+                tests/live/golden-path.live.spec.ts and two pipeline drivers
+                assert on it. */}
             {running && (
-              <p data-testid="running-note" className="font-jetbrains mt-1.5 text-label text-white/35">
-                running in the background — you can leave this step, and the bell reports the result.
+              <p
+                data-testid="running-note"
+                className="font-jetbrains mt-1.5 flex items-center gap-1.5 text-label text-white/40"
+              >
+                <Bell className="h-3.5 w-3.5 shrink-0 animate-pulse text-cyan-300/70" aria-hidden />
+                in the background — the bell reports the result
               </p>
             )}
             <div className="mt-3">
@@ -240,7 +344,7 @@ export default function RunStage({
             )}
             {run.state.status === "done" && (
               <div className="mt-3">
-                <StandInNote topic={topic} landed />
+                <StandInNote topic={topic} />
               </div>
             )}
             {run.state.status === "done" && (
@@ -259,12 +363,12 @@ export default function RunStage({
         </div>
       )}
 
-      {run.state.status === "idle" && (
-        <Notice severity="info" title="no notebook yet">
-          <p>Run the research, or load the saved Bitcoin run, and the next stages unlock.</p>
-          <StandInNote topic={topic} />
-        </Notice>
-      )}
+      {/* NO "no notebook yet" NOTICE. An empty state that says the stage is
+          empty, on the stage whose entire content is the control that fills it,
+          is the app describing the screen the reader is looking at. The deck's
+          own Next is disabled and carries `blockedHint` (Deck#blockedHint,
+          GuidedResearch's run stage) — a gate that names what opens it, in the
+          place the reader is trying to press. */}
     </div>
   );
 }

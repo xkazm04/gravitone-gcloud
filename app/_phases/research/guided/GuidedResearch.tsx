@@ -25,7 +25,6 @@ import { useMemo, useState } from "react";
 import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
 import DeckCard from "@/components/ui/deck/DeckCard";
 import DeckStage from "@/components/ui/deck/DeckStage";
-import { Eyebrow } from "@/components/ui/Primitives";
 
 import type { GuidedModeStepData } from "../../_shared/stepStore";
 import { ConfirmScope } from "../_parts/ScopeGate";
@@ -142,12 +141,37 @@ export default function GuidedResearch({
   const s = api.summary;
   const drifted = api.diverged.length;
 
+  // NO STAGE CARRIES A `sub`, AND THAT IS THE POINT. All four did, and each was
+  // a manual for the cards directly beneath it — the run stage re-explained the
+  // background job the run log states while it is running; the takes stage
+  // explained a lock the steel-man card already wears as a chip ("locked in
+  // scope — always travels") with `requiredWhy` as its footnote; the
+  // conclusions stage explained a default the cards themselves draw ("not
+  // taken" vs "taken", passes.tsx::specOf); the review stage explained the
+  // arithmetic that IS the panel below it. Deck#sub's own doc says a stage
+  // needing one usually needs a better headline instead — these four had good
+  // headlines and a paragraph anyway, because the slot was there.
+  //
+  // What the run stage's `sub` was doing that nothing else did — telling a
+  // reader why Next will not move — is `blockedHint`, which draws it beside the
+  // disabled button rather than three screens above it.
   const stages: DeckStageDef[] = [
     {
       id: "run",
       label: "run",
       headline: "What should the research investigate?",
-      sub: "A topic in, a notebook out. The run is a background job — leave this step and the bell reports the result. The stages after this one deal the notebook's decisions as cards.",
+      // NAMES ONLY WHAT THE READER CAN SEE. It used to read "run the research,
+      // or load the saved run" — and "load the saved run" is an evaluation
+      // control that no longer renders in a production build (run/controls.tsx),
+      // so for a user the hint named a button that is not there. A gate that
+      // points at a missing control is worse than one that says nothing.
+      //
+      // AND IT IS THE SIMULATED RUN IT MEANS, deliberately. `done` here is the
+      // replay landing, not a real run: everything after this stage — the
+      // takes, the conclusions, the scope arithmetic — is dealt from the shipped
+      // fixture, so a reasoned notebook must not unlock a board that would then
+      // show somebody else's cards under the creator's topic.
+      blockedHint: "run the research to deal the takes",
       done: ready,
       summary: ready ? "notebook ready" : undefined,
       content: (
@@ -163,7 +187,6 @@ export default function GuidedResearch({
       id: "takes",
       label: "the takes",
       headline: "The takes that need your eyes first",
-      sub: "The steel-man always travels — the library forbids cutting it, so it has no pick target. The hottest take is yours: picking the card takes it into the script, picking again puts it back. Nothing here is final; the board and every later stage read the same record.",
       // READ decisions with an honest default — met as soon as the cards exist.
       // Not `true` outright: a fresh step would draw ✓ and a summary for cards
       // that do not exist yet, which is a checkmark over nothing.
@@ -175,7 +198,6 @@ export default function GuidedResearch({
       id: "conclusions",
       label: "conclusions",
       headline: "Which conclusions travel with the script?",
-      sub: "A conclusion is a leap past the evidence, so every one starts OUT of scope — picking a card takes it, and an unpicked card simply stays not taken. That default is the board's own rule, not this wizard's.",
       done: ready,
       summary: `${taken}/${picks.length} taken`,
       content: <ChoiceDeck cards={picks} api={api} />,
@@ -184,7 +206,6 @@ export default function GuidedResearch({
       id: "review",
       label: "review",
       headline: "What did your scope decisions cost?",
-      sub: "The notebook is a graph — cutting a card can quietly disarm a turn three beats away. This is the arithmetic, and the checkpoint the board's gate takes.",
       done: ready,
       summary: api.confirmed
         ? drifted
@@ -205,7 +226,15 @@ export default function GuidedResearch({
 
   return (
     <Deck
-      eyebrow={<Eyebrow>step 1 · research · guided</Eyebrow>}
+      // NO EYEBROW (operator, 2026-09-09) — the same ruling that took `create`
+      // off the project wizard, applied to the tag this face drew in the same
+      // slot. It read `step 1 · research · guided`, on its own row above the
+      // stage rail, and every third of it was already on screen: the studio's
+      // own stepper marks step 1 Research as current (app/studio/[projectId]/
+      // phases.tsx), and which FACE you are on is what the FaceSwitch in the
+      // footer below says and is the control that changes it. Deck's `eyebrow`
+      // stays optional and its rail's top margin is conditional on it, so the
+      // row leaves no gap behind.
       stages={stages}
       active={active}
       onNavigate={setActive}

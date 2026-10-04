@@ -1,0 +1,40 @@
+# DECLARED MAP EXCLUSIONS — source the context map deliberately does not own.
+#
+# Read by the gate in CLAUDE.md ("Keeping the context map true"). A path listed
+# here is subtracted from DRIFT and reported on its own line, so a decision
+# somebody made stops arriving every session disguised as a finding nobody has
+# looked at.
+#
+# THE BAR FOR ADDING A LINE. Not "the scan missed it" — that is drift, and the
+# remedy is a scoped subtree scan. A line belongs here only when BOTH hold:
+#
+#   1. no permitted scan can map it (see the granularity rule: under ~8 source
+#      files a subtree scan merges rather than splits and may duplicate, and
+#      the parent scope is too large for one session to emit), AND
+#   2. an operator has decided the map is better off without it.
+#
+# Format: one path or directory prefix, then `#` and the reason. The reason is
+# the point — a bare path here is an exclusion nobody can audit.
+
+app/_dev-inspector/   # The dev-only inspect overlay (`npm run dev:inspect`).
+                      # 4 source files: under the 8-file floor, so a subtree
+                      # scan of it would merge into a sibling and may duplicate
+                      # — the corruption that produced two `production-phases`
+                      # contexts on 2026-08-11 and, at 69 files, doubled the
+                      # ownership of `lib/` on 2026-09-08. Its only parent is
+                      # the 204-file `app/`, which is the scope a delta scan
+                      # returned 0% coverage on. So no permitted scan reaches
+                      # it, and it will not become reachable by waiting.
+                      #
+                      # Excluding it is also the right answer on the merits:
+                      # app/layout.tsx mounts it behind a `NODE_ENV` literal
+                      # Next inlines, and next.config.ts keeps the client
+                      # reference out of the build, so it is in no production
+                      # bundle. The map exists to scope edits to shipping code.
+                      #
+                      # THE ONE THING A READER STILL NEEDS is already written
+                      # down elsewhere and does not depend on the map:
+                      # devInspectorUi.tsx is one of the two documented
+                      # exemptions to the colour-literal rule, and
+                      # components/ui/tokens.ts states that at length, in the
+                      # file anyone changing the theme is already reading.

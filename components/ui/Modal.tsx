@@ -29,6 +29,8 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
+import { WorldProvider, useWorld } from "./world";
+
 /**
  * Hand focus back when the dialog closes: to the opener while it is still in the
  * document, and to the surface's own <main> when it is not.
@@ -91,6 +93,8 @@ export default function Modal({
   eyebrow,
   subtitle,
   footer,
+  actions,
+  variant = "panel",
   children,
   className = "max-w-4xl",
 }: {
@@ -98,11 +102,34 @@ export default function Modal({
   onClose: () => void;
   title: string;
   eyebrow?: React.ReactNode;
+  /**
+   * One line under the title — A FACT ABOUT THE SUBJECT, never a description of
+   * the dialog. The shape of a container is a prompt (Deck#sub says the same
+   * about its own slot, and components/ui/signal/README.md says why: prose was
+   * the only primitive available, so every paragraph slot got a paragraph), and
+   * this one is currently clean — its three consumers pass a style's proven /
+   * candidate status, a plate's current folder, an asset's origin line. All
+   * three are the WORK. A sentence starting "This dialog lets you…" is the app
+   * narrating itself; delete it rather than moving it here.
+   */
   subtitle?: React.ReactNode;
   footer?: React.ReactNode;
+  /** Controls that sit beside the close button in the header — a sheet's
+   *  previous / next, never prose. */
+  actions?: React.ReactNode;
+  /** `sheet` fills the window: the full-screen comparison and document
+   *  surfaces of the Almanac world. It is the same dialog — same focus trap,
+   *  same Escape, same scroll lock — at a different size. */
+  variant?: "panel" | "sheet";
   children: React.ReactNode;
   className?: string;
 }) {
+  // A portal leaves the route's `data-world` subtree, so the CSS variables do
+  // not follow it; the world is re-declared on the overlay's own root and the
+  // React context (which does cross a portal) supplies the skin.
+  const world = useWorld();
+  const almanac = world === "almanac";
+  const sheet = variant === "sheet";
   const [mounted, setMounted] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<Element | null>(null);
@@ -195,6 +222,41 @@ export default function Modal({
   }, [open, mounted]);
 
   if (!mounted || !open) return null;
+
+  if (almanac) {
+    return createPortal(
+      <WorldProvider world="almanac">
+        <div data-world="almanac" className={sheet ? "k-ov k-ov--sheet" : "k-ov"}>
+          <div aria-hidden="true" onClick={onClose} className="k-scrim" />
+          <div
+            ref={panelRef}
+            role="dialog"
+            aria-modal="true"
+            aria-label={title}
+            tabIndex={-1}
+            className={sheet ? "k-sheet" : `k-panel${/max-w-(4xl|5xl|\[)/.test(className) ? " k-panel--wide" : ""}`}
+          >
+            <header className={sheet ? "k-sheet__head" : "k-panel__head"}>
+              <div className="min-w-0">
+                {eyebrow}
+                <h2 className="k-h2">{title}</h2>
+                {subtitle && <div className="k-sub">{subtitle}</div>}
+              </div>
+              <div className="k-actions">
+                {actions}
+                <button type="button" onClick={onClose} aria-label="Close" className="k-x">
+                  <X className="h-5 w-5" aria-hidden />
+                </button>
+              </div>
+            </header>
+            <div className={sheet ? "k-sheet__body" : "k-panel__body scroll-y"}>{children}</div>
+            {footer && <footer className={sheet ? "k-sheet__foot" : "k-panel__foot"}>{footer}</footer>}
+          </div>
+        </div>
+      </WorldProvider>,
+      document.body,
+    );
+  }
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">

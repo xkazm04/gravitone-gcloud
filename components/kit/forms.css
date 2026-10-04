@@ -1,0 +1,91 @@
+/* FORMS, EXTENDED: the Almanac skin of components/ui/Field.tsx (Field, TextInput,
+ * TextArea, Select, NumberInput, Segmented), then Callout and the Toast tray.
+ * Scoped to the world like kit.css. Text is white or vellum; state is an edge
+ * (gold focus ring, dashed disabled), never a dimmer colour. */
+
+[data-world="almanac"] .k-fld { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+[data-world="almanac"] .k-fld__l { color: var(--al-vellum); font-weight: 500; }
+[data-world="almanac"] .k-fld__hint { margin: 0; color: var(--al-vellum); font-size: var(--k-fs); line-height: 1.45; }
+
+[data-world="almanac"] .k-ctl {
+  width: 100%; box-sizing: border-box; background: color-mix(in srgb, var(--al-deep) 60%, transparent);
+  border: 1px solid var(--al-line-strong); border-radius: 3px; color: var(--al-white);
+  font-family: var(--k-sans); font-size: var(--k-fs-c); line-height: 1.4; letter-spacing: 0;
+  text-transform: none; padding: 8px 10px; transition: border-color 0.2s, background 0.2s;
+}
+[data-world="almanac"] .k-ctl::placeholder { color: var(--al-vellum); opacity: 1; }
+[data-world="almanac"] .k-ctl:hover:not(:disabled) { border-color: var(--al-gold); }
+[data-world="almanac"] .k-ctl:focus-visible { outline: 2px solid var(--al-gold); outline-offset: 1px; }
+[data-world="almanac"] .k-ctl:disabled { border-style: dashed; border-color: var(--al-ash); cursor: not-allowed; }
+[data-world="almanac"] .k-ctl[aria-invalid="true"] { border-color: var(--al-ant); }
+[data-world="almanac"] .k-ctl--area { min-height: 112px; resize: vertical; line-height: 1.5; }
+
+[data-world="almanac"] .k-sel { position: relative; display: block; }
+[data-world="almanac"] .k-ctl--select { appearance: none; padding-right: 40px; cursor: pointer; color-scheme: dark; }
+[data-world="almanac"] .k-ctl--select option { background: var(--al-deep); color: var(--al-white); }
+[data-world="almanac"] .k-sel__chev {
+  position: absolute; right: 16px; top: 50%; width: 8px; height: 8px; pointer-events: none;
+  border-right: 2px solid var(--al-gold); border-bottom: 2px solid var(--al-gold); transform: translateY(-70%) rotate(45deg);
+}
+
+[data-world="almanac"] .k-num-in { position: relative; }
+[data-world="almanac"] .k-ctl--num { font-family: var(--k-mono); padding-right: 52px; font-variant-numeric: tabular-nums lining-nums; }
+[data-world="almanac"] .k-num-in__u {
+  position: absolute; inset: 0 12px 0 auto; display: grid; place-items: center; pointer-events: none;
+  font-family: var(--k-mono); font-size: var(--k-fs); color: var(--al-vellum);
+}
+
+[data-world="almanac"] .k-seg { border: 0; margin: 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+[data-world="almanac"] .k-seg legend { padding: 0; margin-bottom: 6px; }
+[data-world="almanac"] .k-seg__row { display: flex; flex-wrap: wrap; gap: 8px; }
+[data-world="almanac"] .k-seg__opt {
+  position: relative; cursor: pointer; border: 1px solid var(--al-line-strong); border-radius: 999px;
+  padding: 6px 16px; color: var(--al-vellum); font-size: var(--k-fs); font-weight: 500; letter-spacing: 0.02em;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+[data-world="almanac"] .k-seg__opt input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+[data-world="almanac"] .k-seg__opt:hover { border-color: var(--al-gold); color: var(--al-white); }
+[data-world="almanac"] .k-seg__opt[data-on] { background: var(--k-gold-16); border-color: var(--al-gold); color: var(--al-white); }
+[data-world="almanac"] .k-seg__opt:has(:focus-visible) { outline: 2px solid var(--al-gold); outline-offset: 2px; }
+[data-world="almanac"] .k-seg__opt:has(:disabled) { border-style: dashed; border-color: var(--al-ash); cursor: not-allowed; }
+
+/* ---------- callout ---------- */
+[data-world="almanac"] .k-callout { --k-co: var(--al-gold); margin: 0; padding: 4px 0 4px 20px; border-left: 3px solid var(--k-co); }
+[data-world="almanac"] .k-callout--ant { --k-co: var(--al-ant); }
+[data-world="almanac"] .k-callout--ald { --k-co: var(--al-ald); }
+[data-world="almanac"] .k-callout--dashed { border-left-style: dashed; }
+[data-world="almanac"] .k-callout blockquote {
+  margin: 0; font-family: var(--k-serif); font-style: normal; font-size: clamp(1.375rem, 1.8vw, 1.75rem);
+  line-height: 1.4; color: var(--al-white); max-width: 62ch;
+}
+[data-world="almanac"] .k-callout--sm blockquote { font-family: var(--k-sans); font-size: var(--k-fs-c); line-height: 1.5; }
+[data-world="almanac"] .k-callout figcaption { margin-top: 8px; color: var(--al-vellum); }
+
+/* ---------- toast tray ---------- */
+[data-world="almanac"] .k-toasts {
+  position: fixed; right: var(--k-pad, 24px); bottom: 96px; z-index: 60; display: flex; flex-direction: column; gap: 10px;
+  margin: 0; padding: 0; list-style: none; width: min(420px, calc(100vw - 32px));
+}
+[data-world="almanac"] .k-toasts--inline { position: static; width: 100%; max-width: 460px; }
+[data-world="almanac"] .k-toast {
+  --k-to: var(--al-line-strong); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start;
+  padding: 12px 12px 12px 14px; border: 1px solid var(--k-to); border-left-width: 3px; border-radius: 3px;
+  background: color-mix(in srgb, var(--al-deep) 94%, var(--al-white)); color: var(--al-white);
+  box-shadow: 0 10px 32px color-mix(in srgb, var(--al-deep) 70%, transparent);
+}
+[data-world="almanac"] .k-toast--ok { --k-to: var(--al-ald); }
+[data-world="almanac"] .k-toast--failed { --k-to: var(--al-ant); }
+[data-world="almanac"] .k-toast--info { --k-to: var(--al-gold); }
+[data-world="almanac"] .k-toast__mark { padding-top: 2px; }
+[data-world="almanac"] .k-toast__body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+[data-world="almanac"] .k-toast__text { margin: 0; font-size: var(--k-fs-c); line-height: 1.4; overflow-wrap: anywhere; }
+[data-world="almanac"] .k-toast--failed .k-toast__text { color: var(--al-ant-t); font-weight: 500; }
+[data-world="almanac"] .k-toast__act { display: flex; gap: 8px; }
+[data-world="almanac"] .k-toast__x {
+  background: none; border: 1px solid transparent; border-radius: 3px; color: var(--al-white); cursor: pointer;
+  width: 32px; height: 32px; display: grid; place-items: center; font-size: 1.125rem; line-height: 1;
+}
+[data-world="almanac"] .k-toast__x:hover { border-color: var(--al-gold); }
+
+/* specimen layout on /kit */
+[data-world="almanac"] .kr-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 18px; }

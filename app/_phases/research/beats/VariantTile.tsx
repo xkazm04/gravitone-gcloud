@@ -72,7 +72,7 @@ export default function VariantTile({
         ) : null}
       </div>
 
-      <p className="font-instrument mt-2 text-[15px] leading-snug text-slate-100">{b.label}</p>
+      <p className="font-instrument mt-2 text-[17px] leading-snug text-slate-100">{b.label}</p>
       <p className="mt-1.5 text-content leading-relaxed text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
         {b.text}
       </p>

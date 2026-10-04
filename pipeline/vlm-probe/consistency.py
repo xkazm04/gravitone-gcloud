@@ -52,8 +52,8 @@ import guard  # noqa: E402
 
 HERE = Path(__file__).parent
 SHOTS = HERE / "shots"
-COMFY = "http://127.0.0.1:8188"
-COMFY_DIR = Path(r"C:\Users\kazda\ComfyUI")
+COMFY = guard.COMFY
+COMFY_DIR = Path(guard.COMFY_DIR)
 COMFY_OUT = COMFY_DIR / "output"
 COMFY_IN = COMFY_DIR / "input"
 
@@ -191,6 +191,14 @@ def generate(workflow, timeout=900):
             with urllib.request.urlopen(f"{COMFY}/history/{pid}", timeout=30) as r:
                 hist = json.loads(r.read())
         except Exception:
+            # A poll that fails is expected while the server is busy. A poll
+            # that fails because the PROCESS is gone is not: the job died with
+            # it, and waiting out the budget (900 s here, 7200 s per clip from
+            # motion.py) reports it as a timeout two hours after the fact.
+            if not guard.comfy_process_ids():
+                raise RuntimeError(
+                    f"comfyui process vanished while {pid} was queued -- the job died "
+                    f"with it. Read its stderr; guard.start_comfy() brings it back.")
             continue
         if pid not in hist:
             continue

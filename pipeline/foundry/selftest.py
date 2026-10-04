@@ -251,7 +251,46 @@ def test_an_unparseable_readback_is_kept_on_disk():
               rows[0].get("raw", "").startswith('{"signature"'), True)
 
 
+def test_frozen_is_a_number_not_a_poster_impression():
+    """The 2026-08-31 v1-reset-still clip obeyed "almost still" and the
+    poster-reading judge called it frozen. motion_energy.summarize() is the
+    ruler that tells those apart; this pins its three verdicts."""
+    M = load("motion_energy")
+    check("a looped still measures frozen", M.summarize([0.0] * 118)["frozen"], True)
+    near = M.summarize([0.21] * 118)
+    check("a directed near-still clip is NOT frozen", near["frozen"], False)
+    check("...and carries the number the judge did not have", round(near["mean"], 3), 0.21)
+    check("an unreadable clip is unmeasured, never frozen", M.summarize([])["frozen"], None)
+
+
+def test_palette_is_measured_and_the_sample_is_declared():
+    """On 2026-09-14 the two style readers gave different palette_strategy
+    answers for all six sources they shared. palette_measure puts the number
+    beside the enum, and declares which published frames the readers skipped."""
+    spec = importlib.util.spec_from_file_location(
+        "palette_measure", HERE.parent / "vlm-probe" / "palette_measure.py")
+    P = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(P)
+
+    idx, s = P.pick_evenly(36, 8)
+    check("the pick is the one style.py always made", idx, [int(i * 36 / 8) for i in range(8)])
+    check("...and an uneven stride is declared, not implied", (s["kept"], s["available"], s["stride"], s["gaps"]),
+          (8, 36, None, [4, 5]))
+    check("an even pick names its stride", P.pick_evenly(17, 8)[1]["stride"], 2)
+
+    one_hue = P.palette_stats([(0, 128, 0)] * 50)
+    check("one hue family concentrates fully", one_hue["hue_concentration_60deg"], 1.0)
+    split = P.palette_stats([(0, 128, 128)] * 50 + [(255, 140, 0)] * 50)
+    check("a teal/orange split is half in any 60-degree window", split["hue_concentration_60deg"], 0.5)
+    check("...and names both families", sorted(d for d, _ in split["top_hue_families_deg"]), [30, 180])
+    dark = P.palette_stats([(5, 5, 5)] * 50)
+    check("a frame of shadow is unmeasured hue, never an even spread",
+          (dark["hue_concentration_60deg"], dark["near_black_share"]), (None, 1.0))
+
+
 TESTS = [
+    test_palette_is_measured_and_the_sample_is_declared,
+    test_frozen_is_a_number_not_a_poster_impression,
     test_ungradable_candidate_does_not_kill_the_run,
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,

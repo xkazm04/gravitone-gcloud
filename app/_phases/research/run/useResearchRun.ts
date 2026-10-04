@@ -32,16 +32,17 @@ export const SPEED = 8;
 /** The run's own mocked wall time — the sum of the trace, not the time you wait. */
 export const TOTAL_MS = TRACE.reduce((n, s) => n + s.ms, 0);
 
-/** Shown next to the load control. The honesty requirement: a surface that
- *  fakes a completed run must say that is what it did. */
-export const LOAD_NOTE =
-  "Loads the real 2026-08-11 Bitcoin notebook and its three renders, without the simulated run. Same data the run produces — the research already happened; only the waiting is skipped.";
-
 export const STOPPED =
   "Stopped by you at this step. Everything the run had written is on disk; the notebook is incomplete and cannot be rendered from.";
 
-/** Where each outcome stops. This table is the whole reason the picker can be
- *  truthful: all three endings are positions in one real trace. */
+/** Where each outcome stops — all three endings as positions in one real trace.
+ *
+ *  NOTHING SETS `outcome` ANY MORE (2026-09-08). The picker that did was a
+ *  development affordance and was deleted with the rest of the evaluation panel,
+ *  so every simulated run walks to `notebook` and `no-tension` is unreachable
+ *  from the UI. The table stays whole rather than collapsing to one number: the
+ *  endings are a property of the engine, not of the control that used to choose
+ *  between them, and `failed` is still reached every time somebody aborts. */
 const STOP_AT: Record<RunOutcome, number> = {
   notebook: TRACE.length,
   "no-tension": 7, // the six searches plus the tension judgement
@@ -50,6 +51,8 @@ const STOP_AT: Record<RunOutcome, number> = {
 
 interface Run {
   state: RunState;
+  /** Where this run stops. Written once, at `IDLE` — the picker that used to
+   *  change it was a development control and is gone (see STOP_AT). */
   outcome: RunOutcome;
   /** THE JOB THIS RUN IS REPORTING TO, held where the clock is.
    *
@@ -154,19 +157,11 @@ export function useResearchRun(projectId: string) {
     () => IDLE,
   );
 
-  const setOutcome = useCallback((o: RunOutcome) => {
-    const cur = read(projectId);
-    if (cur.state.status === "running") return;
-    write(projectId, { ...cur, outcome: o });
-  }, [projectId]);
-
   /** Start the run and own it until it lands. Returns false if one is already
    *  live here, so the caller never opens a job nothing will settle.
    *
-   *  The ending is frozen at click time along with the outcome: the picker
-   *  chooses where a run stops, and a live run's ending is not something that
-   *  changes underneath it. `jobId` is frozen with them, and for the same
-   *  reason — it has to still be here when the step is not. */
+   *  `jobId` is frozen at click time rather than read off state later — it has
+   *  to still be here when the step is not. */
   const start = useCallback((jobId: string, onEnd: Ending) => {
     const cur = read(projectId);
     if (cur.state.status === "running") return false;
@@ -188,16 +183,16 @@ export function useResearchRun(projectId: string) {
 
   const reset = useCallback(() => finish(projectId, { status: "idle" }, false), [projectId]);
 
-  /** Jump straight to the finished notebook, skipping the simulated run.
+  /** Adopt a notebook this project already has, without replaying the run.
    *
-   *  The trace is 41s of mocked process time, which is ~5s of real waiting at
-   *  SPEED×. That is the right cost when you are reviewing the RUNNING state; it
-   *  is pure friction when you are reviewing everything downstream of it, which
-   *  is most of the surface and all of the layout. This is an evaluation
-   *  affordance, not a product one — see LOAD_NOTE.
+   *  IT IS NO LONGER AN EVALUATION AFFORDANCE. The "load saved run" button that
+   *  also called this was deleted on 2026-09-08 with the rest of the development
+   *  panel; the ONE caller left is hydration (guided/useEducationalResearch.ts —
+   *  `if (saved?.researched) run.load()`), which is a product path: a project
+   *  whose record says it was researched opens on its notebook rather than on an
+   *  empty field pretending nothing happened.
    *
-   *  Refuses mid-run: this is also the path a remount takes when the project's
-   *  saved state says a notebook exists, and adopting a saved result over a live
+   *  Refuses mid-run for that exact reason — adopting a saved result over a live
    *  run would throw the run away. */
   const load = useCallback(() => {
     if (read(projectId).state.status === "running") return;
@@ -224,11 +219,9 @@ export function useResearchRun(projectId: string) {
 
   return {
     state: run.state,
-    outcome: run.outcome,
     /** The job a LIVE run is reporting to, for the caller that has to cancel
      *  it. Survives leaving the step, which is the whole point. */
     jobId: run.jobId,
-    setOutcome,
     start,
     stop,
     reset,

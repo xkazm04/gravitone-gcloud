@@ -52,18 +52,26 @@ export default function VersionBar({
   showing: "baseline" | "candidate";
   setShowing: (v: "baseline" | "candidate") => void;
 }) {
-  if (!api.candidate)
+  // NOTHING TO SWITCH BETWEEN, so no switch — and no tutorial in its place. The
+  // bar used to explain how to make a candidate ("stack notes on a track id,
+  // then recalibrate"); the note handles and the Recalibrate button are the
+  // affordance, and a control that is absent should be absent, not narrated.
+  // An ACCEPTED baseline still has provenance, and provenance is the work.
+  if (!api.candidate) {
+    if (api.accepted.length === 0 && !receiptOf(api.baseline) && !overrideLineOf(api.baseline)) return null;
     return (
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-        <p className="font-jetbrains text-content text-white/35">
-          {api.accepted.length > 0
-            ? `Showing ${api.baseline.label} — accepted from ${api.baseline.notes.length} note${api.baseline.notes.length === 1 ? "" : "s"}.`
-            : "Showing the baseline. Stack notes on a track id, then recalibrate to get something to compare."}
-        </p>
+        {api.accepted.length > 0 && (
+          <p className="font-jetbrains text-content text-white/35">
+            {api.baseline.label} · accepted from {api.baseline.notes.length} note
+            {api.baseline.notes.length === 1 ? "" : "s"}
+          </p>
+        )}
         <Receipt v={api.baseline} />
         <Override v={api.baseline} />
       </div>
     );
+  }
 
   const shown = showing === "candidate" ? api.candidate : api.baseline;
 
@@ -96,11 +104,9 @@ export default function VersionBar({
           {v.label}
         </button>
       ))}
-      <span className="font-jetbrains text-label text-white/35">
-        {showing === "candidate"
-          ? "deltas are against the baseline · nothing is committed until you accept"
-          : "switch to the candidate to see what your notes did"}
-      </span>
+      {/* No hint line here: the DeltaTags and the cyan candidate tint already say
+          "deltas are against the baseline", and nothing commits until Accept is
+          pressed — which is the button, not a sentence beside it. */}
       {(receiptOf(shown) || overrideLineOf(shown)) && (
         <>
           <span className="basis-full" />

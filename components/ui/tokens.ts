@@ -83,10 +83,22 @@ export const ACCENT = {
   cyan: "#67e8f9",
   violet: "#a78bfa",
   emerald: "#6ee7b7",
+  /** Reserved/avoid semantic (the Library Audio Workbench's "ant"/exclude
+   *  chips) — Tailwind's rose-400, spelled here rather than left as a
+   *  `border-rose-400/30` utility class because the Obsidian remap in
+   *  app/library/audio/audio-workbench.css needs it as a raw CSS custom
+   *  property, not a class on an element. */
+  rose: "#fb7185",
 } as const;
 
 /** Page ink — the studio background. */
 export const INK = "#080a10";
+
+/** Bright ink — readable text/foreground on the dark studio background.
+ *  Reader: app/library/audio/audio-workbench.css's Obsidian token remap
+ *  (`--gt-ink-bright`), the kit's first real Obsidian consumer; Almanac's
+ *  own `--al-white` is its equivalent for that world. */
+export const INK_BRIGHT = "#f3f6fb";
 
 /**
  * The canonical glass surface, as a class list. The one export of this file
@@ -130,7 +142,9 @@ export const CSS_TOKENS: Record<string, string> = {
   "--gt-accent-cyan": ACCENT.cyan,
   "--gt-accent-violet": ACCENT.violet,
   "--gt-accent-emerald": ACCENT.emerald,
+  "--gt-accent-rose": ACCENT.rose,
   "--gt-ink": INK,
+  "--gt-ink-bright": INK_BRIGHT,
 
   // glass surface (.glass-panel / SURFACE)
   "--gt-surface-top": "rgba(255,255,255,0.05)",
@@ -192,6 +206,50 @@ export const CSS_TOKENS: Record<string, string> = {
 };
 
 /**
+ * THE ALMANAC WORLD (v2), scoped. Chosen 2026-09-29 from contest
+ * landing-nextgen-brand-r2, variant A/2: the studio as a star atlas. A route
+ * opts in with `data-world="almanac"` on its root; everything else stays
+ * Obsidian until it is migrated, so the redesign can land one surface at a time.
+ *
+ * Roles, not hues: `gold` is the line of the cut and the ring of focus,
+ * `ald` (Aldebaran) is the single red that means "a person kept this",
+ * `ant` (Antares) is errors and what a commit deletes and appears on working
+ * surfaces only. Sizes and families are Tailwind/@theme business (globals.css).
+ *
+ * TEXT HAS TWO LEVELS, `white` and `vellum`, and nothing else: both clear 11:1 on
+ * night and deep. `ash` is NOT a text colour (6.1:1 on night, read as grey on this
+ * ground); it draws rings, rules and the rejected disc. A hue used as text is
+ * lightened toward white by mixing, never dimmed with opacity: `--al-ald-t` and
+ * `--al-ant-t` are the text spellings of the two reds (>= 7:1 on night, deep and
+ * field), and a constellation tint as text is `color-mix(in srgb, <tint> 70%,
+ * var(--al-white))`. Values that are a colour-mix over other tokens stay here so
+ * /kit can resolve and measure them.
+ */
+export const WORLD_ALMANAC: Record<string, string> = {
+  "--al-night": "#0A1230",
+  "--al-deep": "#060A1C",
+  "--al-field": "#121C44",
+  "--al-gold": "#D9B26A",
+  "--al-white": "#F3EEDF",
+  "--al-vellum": "#D6D0BE",
+  "--al-ash": "#8C93B3",
+  "--al-ald": "#E2704F",
+  "--al-ant": "#EE6A8C",
+  "--al-ald-t": "color-mix(in srgb, var(--al-ald) 65%, var(--al-white))",
+  "--al-ant-t": "color-mix(in srgb, var(--al-ant) 70%, var(--al-white))",
+  // the four constellations' own hues (door tints, chosen with the design)
+  "--al-tint-templates": "#9A86F0",
+  "--al-tint-bracket": "#E8C27A",
+  "--al-tint-disciplines": "#6FA8E8",
+  "--al-tint-engines": "#6FD3A2",
+  "--al-line": "rgba(217,178,106,0.2)",
+  "--al-line-strong": "rgba(217,178,106,0.42)",
+  "--al-sky":
+    "radial-gradient(120% 70% at 50% -12%, #16225A 0%, #0E1738 30%, #0A1230 55%, #070C23 100%)",
+  "--al-ease": "cubic-bezier(0.2, 0.7, 0.1, 1)",
+};
+
+/**
  * Signal Layer channel defaults (contract C4). Declared on :root so every
  * reader resolves even when no AudioBus is mounted or no source is registered —
  * at these values every reader is a no-op, which is what preserves the idle
@@ -219,7 +277,10 @@ export function tokensCss(): string {
   ]
     .map(([k, v]) => `${k}:${v};`)
     .join("");
-  return `:root{${decls}}`;
+  const world = Object.entries(WORLD_ALMANAC)
+    .map(([k, v]) => `${k}:${v};`)
+    .join("");
+  return `:root{${decls}}[data-world="almanac"]{${world}}`;
 }
 
 // ── TYPE SCALE, BY REFERENCE ────────────────────────────────────────────────

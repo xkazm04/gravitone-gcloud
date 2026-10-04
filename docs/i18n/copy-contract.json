@@ -1,0 +1,28 @@
+{
+  "_notes": [
+    "Adopted 2026-09-14 (native-copy 1.0.0). Operator decisions, fleet-wide, 2026-09-14: US English; em dash banned in product copy; the pre-push gate blocks only NEW error findings (debt in .ai/copy-baseline.json).",
+    "Coverage at adoption: 8 strings (7 fragments) in 10 files from 3 sources. The landing is wordless by brief: one button label, one sr-only h1, one accessible name, plus page metadata.",
+    "Spelling: US forms 0, UK forms 0. No variant-marked word exists yet; US is the operator decision, not a measurement.",
+    "Em dashes: 5 in the extracted strings (layout title and its sr-only h1 copy, 2 in the layout description, New project tab title). 5 more sit in the Foundry/Library/Playground/Projects/Studio tab titles, which the extractor does not read (short 'Name - Brand' titles); they are outside the gate's coverage, not in the baseline.",
+    "Quotes and ellipsis: 0 occurrences of either form, so both stay undeclared (any).",
+    "Case: 0 of 3 judgeable heading-class strings Title Case -> sentence. The button's uppercase rendering is CSS (tracking + uppercase), not string case.",
+    "Out of scope: the signed-in studio (app/_phases, app/_studio, app/_library, components), app/_dev-inspector (development only), pipeline/ and docs/."
+  ],
+  "variant": "US",
+  "sources": [
+    { "path": "app/**/page.tsx", "kind": "jsx" },
+    { "path": "app/_landing/*.tsx", "kind": "jsx" },
+    { "path": "app/layout.tsx", "kind": "jsx" }
+  ],
+  "exclude": ["**/*.test.tsx", "**/*.spec.tsx"],
+  "dash": { "emDash": "ban" },
+  "quotes": "any",
+  "ellipsis": "any",
+  "case": { "style": "sentence" },
+  "terms": {
+    "accept": ["Gravitone", "Google", "Foundry", "Playground"],
+    "reject": []
+  },
+  "rules": {},
+  "baseline": ".ai/copy-baseline.json"
+}

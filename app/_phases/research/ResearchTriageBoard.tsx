@@ -11,7 +11,10 @@
 
 import { useState } from "react";
 
+import { CircleSlash } from "lucide-react";
+
 import { Eyebrow } from "@/components/ui/Primitives";
+import { Hint, Tally } from "@/components/ui/signal";
 import type { ScopeApi } from "./useScope";
 import { stateOf } from "./scope";
 import {
@@ -54,18 +57,13 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
   return (
     <div className="space-y-5">
       <header className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Eyebrow>triage board</Eyebrow>
-          {/* The count is read off the columns rather than typed. It said "six"
-              against seven for as long as it was a literal, and the untagged
-              bucket makes the number conditional as well as wrong. */}
-          <p className="font-hanken mt-2 max-w-2xl text-content text-slate-400">
-            Every card the run produced, in the {columns.length - (hasUntagged ? 1 : 0)} domains the
-            research brief requires
-            {hasUntagged ? ", plus the queue of cards nobody filed" : ""}. Sweep the columns, cut
-            what you do not want, and watch what it costs.
-          </p>
-        </div>
+        {/* THE COUNT RIDES ON THE FILTER CHIP, NOT A PARAGRAPH. It was prose —
+            "in the six domains the research brief requires" — and it said six
+            against seven for as long as it was a literal, with the untagged
+            bucket making the number conditional as well as wrong. `all N`
+            below is read off `columns`, so it cannot say the wrong number, and
+            the grid IS the domains. */}
+        <Eyebrow>triage board</Eyebrow>
         <ScopeBar api={api} />
       </header>
 
@@ -158,18 +156,27 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
                 {/* Title carries the section's identity — Conclusions in the app
                     accent, everything else plain white. Cheaper and clearer than
                     wrapping a whole column in a coloured border. */}
+                {/* The column's PURPOSE is the research brief's own definition
+                    of the domain — the work, not narration — but it was printed
+                    under every one of seven headers, so the board read as seven
+                    explanatory paragraphs. It moves behind the header's own
+                    disclosure: one glyph, reachable by keyboard and announced
+                    on focus. */}
                 <h3
-                  className={`font-jetbrains text-label tracking-[0.16em] uppercase ${
+                  className={`font-jetbrains flex items-center gap-1 text-label tracking-[0.16em] uppercase ${
                     d.id === "conclusions" ? "text-cyan-300" : orphan ? "text-amber-200" : "text-white"
                   }`}
                 >
                   {d.label}
+                  {d.purpose && <Hint label={`What ${d.label} is for`}>{d.purpose}</Hint>}
                 </h3>
-                <span className="font-jetbrains text-label text-white/30">
-                  {n.kept}/{n.total}
-                </span>
+                <Tally
+                  value={n.kept}
+                  of={n.total}
+                  tone={empty || orphan ? "amber" : "neutral"}
+                  label="kept"
+                />
               </div>
-              <p className="mt-1.5 text-content leading-relaxed text-white/40">{d.purpose}</p>
 
               {/* A card lands here because CARD_DIMENSION has no row for its id.
                   Saying so names the fix instead of leaving the reviewer to
@@ -195,22 +202,31 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
                   and then names the innocent reading rather than picking one it
                   has no way to know. */}
               {empty ? (
-                <>
-                  <p className="font-jetbrains mt-3 text-content leading-relaxed text-amber-200/85">
-                    the run produced nothing here — {emptyMeansOf(d)}
-                  </p>
-                  <p className="font-jetbrains mt-1.5 text-content leading-relaxed text-white/40">
-                    unless that is correct for this topic: {d.notApplicable}
-                  </p>
-                </>
+                <div className="mt-3 flex items-center gap-2">
+                  <CircleSlash className="h-4 w-4 shrink-0 text-amber-300/80" aria-hidden />
+                  <span className="font-jetbrains text-label tracking-[0.12em] text-amber-200/85">
+                    nothing here
+                  </span>
+                  <Hint variant="warn" tone="amber" label={`What an empty ${d.label} column means`}>
+                    <span className="block">omission — {emptyMeansOf(d)}</span>
+                    <span className="mt-1.5 block text-white/60">
+                      not applicable — {d.notApplicable}
+                    </span>
+                  </Hint>
+                </div>
               ) : (
                 <>
                   {noneKept && !orphan && (
-                    <p className="font-jetbrains mt-3 text-content leading-relaxed text-amber-200/85">
-                      {d.id === "conclusions"
-                        ? "none taken — conclusions are reasoned, not researched, so they stay out until you take one"
-                        : `nothing in scope — ${emptyMeansOf(d)}`}
-                    </p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span className="font-jetbrains text-label tracking-[0.12em] text-amber-200/85">
+                        {d.id === "conclusions" ? "none taken" : "nothing in scope"}
+                      </span>
+                      <Hint variant="warn" tone="amber" label={`Why ${d.label} has nothing in scope`}>
+                        {d.id === "conclusions"
+                          ? "conclusions are reasoned, not researched — they stay out until you take one"
+                          : emptyMeansOf(d)}
+                      </Hint>
+                    </div>
                   )}
                   <ul className="mt-3 space-y-2.5">
                     {cards.map((c) => (

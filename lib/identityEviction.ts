@@ -66,14 +66,19 @@
 //
 // The identity-INDEPENDENT state is the enumerated exception, and it is held in
 // `IDENTITY_INDEPENDENT_LOCAL_KEYS` below so a probe can walk every module that
-// writes localStorage and demand each key be on ONE of the two lists:
-//   · `gravitone.deck.art` — components/ui/deck/useArtVariant.ts. Which art
-//     variant the deck cards draw with: a per-browser display preference that
-//     says nothing about who is signed in and holds nothing they made. It was
-//     written before this paragraph knew it existed ("nothing yet", until
-//     2026-09-05), which is exactly the accident the list is here to prevent.
-//   There is still no theme switch, no language preference and no "seen this
-//   once" flag. If one is added, it is listed HERE with its reason.
+// writes localStorage and demand each key be on ONE of the two lists.
+//
+// That list is EMPTY again as of 2026-09-08. Its one member was
+// `gravitone.deck.art` (components/ui/deck/useArtVariant.ts) — which art variant
+// the deck cards drew with, a per-browser display preference that said nothing
+// about who was signed in. The operator ordered the art switcher removed from
+// the codebase, so the store and its key went with it and the exception has
+// nothing left to name. That the entry existed at all is still the lesson: it
+// was written before this paragraph knew it existed ("nothing yet", until
+// 2026-09-05), which is exactly the accident the list is here to prevent.
+//
+// So: no theme switch, no language preference and no "seen this once" flag. If
+// one is added, it is listed HERE with its reason.
 
 import {
   ASSETS_STORE,
@@ -170,7 +175,9 @@ export function userScopedLocalKeys(uid: string): string[] {
  * that holds `userScopedLocalKeys` against the writers.
  */
 export const IDENTITY_INDEPENDENT_LOCAL_KEYS: readonly string[] = [
-  "gravitone.deck.art", // components/ui/deck/useArtVariant.ts — a display preference
+  // Empty since 2026-09-08 — see the header. Empty is a legitimate state, not a
+  // stub: the probe's job is that every WRITER is accounted for, and today all
+  // three writers are user-scoped.
 ];
 
 /**

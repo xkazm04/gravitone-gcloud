@@ -10,6 +10,8 @@
 
 import { useState } from "react";
 
+import { Ghost } from "@/components/ui/signal";
+
 import type { TrailerBeat, TrailerCut } from "./types";
 
 export default function PromiseLedger({
@@ -43,14 +45,17 @@ export default function PromiseLedger({
       </p>
 
       {rows.length === 0 ? (
-        <p className="font-jetbrains mt-3 text-label text-white/40">
-          no promise declared on any beat — the ledger is empty, which is not the same as the cut promising nothing
-        </p>
+        // An EMPTY ledger, drawn as the row that is missing. "Which is not the
+        // same as the cut promising nothing" is true and is the app arguing with
+        // its own zero; the amber 0 says it.
+        <div className="mt-3">
+          <Ghost shape="row" count={2} label="no promise declared on any beat" />
+        </div>
       ) : (
         <ul className="mt-3 space-y-2.5">
           {rows.map(({ beat, p }) => (
             <li key={p.id} data-testid={`promise-${p.id}`} className="text-label leading-snug">
-              <p className="font-hanken text-[14px] text-slate-200">{p.sentence}</p>
+              <p className="font-hanken text-label text-slate-200">{p.sentence}</p>
               <p className="font-jetbrains mt-0.5 text-label tracking-[0.1em] text-white/30">
                 by {p.source} · on “{beat.label}” @{beat.at}
                 {p.grade && <span className="ml-2 text-white/45">graded {p.grade}</span>}
@@ -65,7 +70,7 @@ export default function PromiseLedger({
                   defaultValue={p.payer ?? ""}
                   onBlur={(e) => onPayer(beat.id, p.id, e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && onPayer(beat.id, p.id, e.currentTarget.value)}
-                  placeholder="the moment in the work that pays this"
+                  placeholder="payer"
                   className="font-hanken min-w-0 flex-1 rounded-lg border border-white/12 bg-white/[0.03] px-2 py-1 text-label text-slate-200 placeholder:text-white/25"
                 />
                 <span

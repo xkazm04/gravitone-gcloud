@@ -50,12 +50,21 @@ if (n > 0) {
 /* ------------------------------------------------------ 3 · the tab split */
 check("Topic tab present", (await page.getByTestId("tab-topic").count()) > 0);
 const board = page.getByTestId("tab-board");
-const locked = await board.isDisabled().catch(() => true);
+// The lock is `aria-disabled` since the row became a <TabRail>: a locked tab
+// stays in the tab order so the reason behind its Hint can be READ, which a
+// `disabled` attribute would have put behind a mouse. Playwright's own
+// `isDisabled()` already folds `aria-disabled` in for `role="tab"`, but this
+// driver ASSERTS the lock rather than merely branching on it, so it reads the
+// attribute itself — a check that silently stops seeing the lock is a check
+// that passes for the wrong reason forever.
+const boardLocked = async () =>
+  (await board.getAttribute("aria-disabled")) === "true" || (await board.isDisabled());
+const locked = await boardLocked().catch(() => true);
 if (locked) {
   check("board is locked before a notebook exists", true);
   await page.getByTestId("load-saved-run").click();
   await page.waitForTimeout(900);
-  check("board unlocks after a notebook arrives", !(await board.isDisabled()));
+  check("board unlocks after a notebook arrives", !(await boardLocked()));
 } else {
   check("board already unlocked (project ships researched)", true);
 }

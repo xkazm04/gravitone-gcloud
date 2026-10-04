@@ -20,8 +20,10 @@ export function ConnectorChip({ connector }: { connector: Connector }) {
             ? "border border-violet-400/30 bg-violet-400/10 text-violet-200"
             : "border border-white/10 bg-white/[0.04] text-white/55"
       }`}
-      title={defect ? "AND THEN is the wiki-timeline defect — these beats have no causal relationship" : undefined}
     >
+      {/* No tooltip on the defect. The rose border and the ✕ ARE the statement
+          — "AND THEN is the wiki-timeline defect" was the chip reading its own
+          colour back to the reader. types.ts holds the rule. */}
       {defect && <span aria-hidden>✕</span>}
       {connector}
     </span>
@@ -51,11 +53,12 @@ export function ChainConnectorChip({ connector }: { connector: ChainConnector | 
             ? "border border-cyan-400/25 bg-cyan-400/[0.07] text-cyan-200/90"
             : "border border-white/10 bg-white/[0.04] text-white/55"
       }`}
-      title={
-        connector === "TRANSFER"
-          ? "A typed non-causal step — a deduction, a hand-off, a recognition. Notebook vocabulary only; the script layer does not accept it."
-          : undefined
-      }
+      // A definition of a closed vocabulary word, the same register as the six
+      // EvidenceClass glosses below — not a description of this surface. The
+      // clause that WAS about the surface ("notebook vocabulary only; the
+      // script layer does not accept it") lives in the doc comment above,
+      // where the reader who needs it is.
+      title={connector === "TRANSFER" ? "A typed non-causal step — a deduction, a hand-off, a recognition." : undefined}
     >
       {connector}
     </span>
@@ -130,6 +133,31 @@ export function ConfidenceChip({ c }: { c: Confidence }) {
   return (
     <span className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.12em] ${CONF[c]}`}>
       {c}
+    </span>
+  );
+}
+
+/** The second axis of engine fit, drawn beside the first where an engine is
+ *  chosen. `hazard` was stored from the start and read by nothing, so the
+ *  warning the research wrote stopped at the notebook and `fit: good` reached
+ *  the person adopting the engine alone. The gauntlet's 2026-08-12 notebooks
+ *  carried "REFUSE" and "HIGH FIT, HIGH HAZARD" on `good` rows; a surface that
+ *  shows only `fit` renders those as a recommendation.
+ *
+ *  Three states, and the two blanks are NOT the same reading:
+ *    · text      — the cost of a wrong render, shown as a warning;
+ *    · ""        — assessed, none found (NOTEBOOK-SCHEMA.md);
+ *    · undefined — never asked. Drawn as such, because an unasked axis that
+ *                  renders as nothing reads as clean. */
+export function HazardLine({ hazard }: { hazard: string | undefined }) {
+  if (hazard === undefined)
+    return <span className="font-jetbrains block text-label tracking-[0.12em] text-white/30">hazard not assessed</span>;
+  if (hazard.trim() === "")
+    return <span className="font-jetbrains block text-label tracking-[0.12em] text-white/35">hazard: none found</span>;
+  return (
+    <span className="block text-amber-200/80">
+      <span className="font-jetbrains mr-1.5 text-label tracking-[0.12em] text-amber-300/90">hazard</span>
+      {hazard}
     </span>
   );
 }

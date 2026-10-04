@@ -3,10 +3,17 @@
 // Measurement leaves. Script-owned: a band and a craft check are things only a
 // render is scored against.
 
+import { Hint } from "@/components/ui/signal";
+
 import type { CheckRow, CheckState } from "../types";
 
 /** A measured value against a library band. Out-of-band is not an error — it is
- *  a thing the writer must defend, so it renders amber and keeps the number. */
+ *  a thing the writer must defend, so it renders amber and keeps the number.
+ *
+ *  `belowNote` / `aboveNote` say WHY the band has that edge — a craft rule, not
+ *  a reading of the picture. They used to print as a sentence under a meter
+ *  that already draws the band and paints the marker amber, so they ride the
+ *  disclosure on the value instead. */
 export function BandMeter({
   label,
   value,
@@ -30,9 +37,14 @@ export function BandMeter({
     <div>
       <div className="font-jetbrains flex items-baseline justify-between text-label">
         <span className="text-white/45">{label}</span>
-        <span className={inBand ? "text-cyan-200" : "text-amber-200"}>
+        <span className={`inline-flex items-baseline gap-1 ${inBand ? "text-cyan-200" : "text-amber-200"}`}>
           {value}
           {unit} <span className="text-white/30">/ band {lo}–{hi}</span>
+          {note && (
+            <Hint tone="amber" label={`Why ${label} is out of band`}>
+              {note}
+            </Hint>
+          )}
         </span>
       </div>
       <div className="relative mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.06]">
@@ -45,7 +57,6 @@ export function BandMeter({
           style={{ left: `calc(${(value / span) * 100}% - 1.5px)` }}
         />
       </div>
-      {note && <p className="font-jetbrains mt-1 text-content text-amber-200/80">{note}</p>}
     </div>
   );
 }

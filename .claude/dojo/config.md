@@ -319,3 +319,89 @@ tracking the human better, and record the decision here):
   image-recognition eye is qwen3.8:27b, period: enum readback for grading,
   DEEP-READ-PROMPT.md for seeing. The colibri evaluation survives only as
   registry knowledge and the taught prompt.
+- 2026-09-04 — evening window, two image-prompt-composition cycles parked on the
+  LOCAL stack (16 renders, 1 ComfyUI 900s hang with no foreign job and the card
+  at 3% — the hang race, not contention; the fill pass took 138s). Demand was
+  THIS repo's `.ai/conform-detail.json` (prompt-dialect-matching is a live
+  deviation in imaging-providers), not the librarian's fleet points.
+  dialect-probe: the technique's own step 1 (one probe pair, tags vs prose)
+  run on Flux 2 for the first time — 0.50 with a tie, i.e. the tag dialect did
+  NOT lose: Flux 2 reads dialect-indifferent on contract adherence at ~1k
+  chars. Two eye-level facts for the gate: the prose arm lost SHOT SIZE on
+  setup-ews ("silhouetted form occupying one third" became a medium-shot
+  figure), and the tag arm turned "crosshair composition" into a literally
+  drawn reticle plus amber on three elements — a tag-dialect text-magnet
+  (shape-language-over-nouns applies to composition words too). REJECT keeps
+  prose as the compiler's only rendering with the honest note that Flux 2 gave
+  no evidence it is better; APPROVE = the compiler owes the tag serialization.
+  accent-emphasis: repetition + dominance prose on the accent-role clause was
+  NULL (0.25, two ties; the non-ties split on seed-level element choice). Two
+  same-subject cycles is the ceiling — the next window should leave
+  image-prompt-composition alone until these are gated. Instrument fix: the
+  park's consult line hardcoded `deviations: 0`; it now reads this repo's
+  conform-detail count (2 for image-prompt-composition), so Phase 1's demand
+  signal stops erasing itself. Nine parked cycles now await the gate; the
+  08-30 batch of nine committed cycles has NO ledger rows (only 4 rows exist
+  while 8 thumbs do) — their rules already landed in FRAMES-SCENE-PROMPT.md
+  rules 7–10, so nothing is owed, but the ledger is not the record it claims
+  to be for that batch; likely committed from a worktree checkout.
+- 2026-09-05 — operator-ordered window of FIVE consecutive cycles (40 renders,
+  ~2h05 GPU wall, $0, one ComfyUI vanish race filled in 97s), one subject each
+  across the allowed set, all parked; 16 cycles now await the gate. What the
+  next window inherits: (1) MEASURED PRE-FILTERS exist - `dojo_measure.py`
+  gives the chokepoint judge a number where the enum readback is blind
+  (lower-third edge density; FaceNet-to-hero on identity.py's calibrated
+  ruler), mapped blind through the worksheet before the pick; (2) the pair
+  runner has a `late` arm field (reference-admitted-late's join dial,
+  `forge.flux_workflow(late=)`), exclusive with `window`; (3) on Flux 2's
+  ReferenceLatent an EARLY-window reference is a CONTENT reference - the gated
+  what-stays-dark thumb came back as the subject in 3/4 challengers - so
+  visual-style-locking's sheet is not testable as a style amplifier on the
+  local lane; (4) the join sweep put 0.10 nearer the hero than 0.25 in 4/4
+  with no camera cost, but the extreme wide collapses to a medium at BOTH
+  joins - the dial does not return the wide; (5) the build key flip works on
+  the wide squad shot and draws a ceiling panel on the MCU - approve as a
+  wide-only, beat-gated rule if approved at all; (6) the text-zone shape
+  clause empties the caption zone by pulling the camera back. Blind spot
+  named: a still cannot perform the REVEAL function for either arm. Rendering
+  rhythm: the second arm of a duo renders in ~44s when its text encode is
+  cached from the first (join-at-ten), else 100-180s.
+- 2026-09-06 — window STOPPED at one cycle, `2026-09-06-state-coupling` failed on
+  the breaker (7/24 rendered, units 9-11 consecutive). Four things the next
+  session inherits. (1) THE ENGINE, NOT THE JOB: `guard.foreign_job()` was null
+  before launch and throughout and the queue was empty, so this was not
+  contention — the box recycled ComfyUI after EVERY SINGLE render (commit
+  147-152/164 GB, RAM floor ~6 GB) and units 9-11 then died within ~60s of a
+  fresh recycle that had just freed 38-40 GB. Free RAM at the moment of death
+  is NOT the proximate cause and chasing it will waste a window; the 64 GB
+  standing constraint shows up as recycle-per-unit, and the vanish race is
+  downstream of that. Budget ~170-190s/unit on this box, not the 110s the
+  09-05 note measured, whenever the recycle line appears between every render.
+  (2) The 2026-09-01 lesson about capturing ComfyUI's output HAD NEVER BEEN
+  APPLIED — `start_comfy` still launched it `-WindowStyle Hidden` with no
+  redirection while the runner told you to "read its stderr". Fixed on branch
+  `dojo/instrument-2026-09-06`; comfy now writes
+  `pipeline/foundry/logs/comfy-<ts>.log[.err]`. A lesson in this log is not a
+  landed change — check the code before assuming a past session's fix exists.
+  (3) DO NOT PARK A PARTIAL ROSTER. 3 of 12 duos were complete, but what died
+  was exactly the extremes (gaze-down entirely, backlit entirely, alarm half),
+  and the coupling probe's three branches turn on whether the extremes land.
+  A partial answer in the cross-machine ledger is worse than a failed cycle.
+  (4) THE GATE IS THE BOTTLENECK, and it is now the loop's binding constraint:
+  16 cycles await a human, none gated since 08-31, and `dojo/reflect-2026-08-30`
+  (f33275c, assigned-colour-roles → palette-as-roles) has sat unmerged 7 days
+  while its ledger row reads `reflected: f33275c` as though it were live. Also
+  audited: 9 of 13 committed cycles have no ledger row; five landed as
+  FRAMES-SCENE-PROMPT rules 7-10 + shotPrompt, two were honest nulls owing no
+  edit (clause-position, order-control), and TWO — `invariants-only`,
+  `sample-to-block` — were committed with `human: null`, so no verdict was ever
+  recorded for them anywhere. `invariants-only` matters: it already claimed the
+  hard-coupled half ("a reference sets the state channel whether or not it was
+  supplied for state") and its result is lost.
+- 2026-09-06 — Phase 2 method note: the banked "Open leads" sections really are
+  cheaper than a scan. `character-identity-continuity` carries an explicitly
+  OWED, fleet-wide-unrun objective (the coupling probe), pre-scoped and costed,
+  and it shaped a better cycle than any librarian points ranking would have —
+  the probe and the A/B collapse into ONE experiment when the baseline arm is
+  "what the pipeline does today" (neutral reference + prose state) and the
+  challenger just removes the typed input. Read the leads before the scan.

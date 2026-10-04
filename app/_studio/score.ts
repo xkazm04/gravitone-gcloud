@@ -29,7 +29,12 @@ import type { Cue, Scene, TimelineClip, TrackId } from "./projectTypes";
  * own rule that a field with no reader either goes or says why it stays —
  * flagged for its owner rather than edited from here.)
  */
-export type SpottingCue = Omit<Cue, "model"> & {
+export type SpottingCue = Omit<Cue, "model" | "bpm" | "status"> & {
+  /** See `CueSpot.bpm` — absent means nobody has chosen a tempo, and no
+   *  surface may print one. */
+  bpm?: number;
+  /** See `CueSpot.status` — absent means no take has ever been asked for. */
+  status?: Cue["status"];
   /**
    * Why a `failed` cue failed, in the ONE vocabulary this codebase can actually
    * produce: `MusicErrorKind` (lib/music/errors.ts). Prose could attribute a
@@ -76,10 +81,36 @@ export type SpottingCue = Omit<Cue, "model"> & {
 export interface CueSpot {
   id: string;
   title: string;
-  bpm: number;
+  /**
+   * The tempo — ABSENT until a human has chosen one.
+   *
+   * Optional since 2026-09-08, when spots stopped being three hand-typed
+   * fixtures and started being proposed from the script's movements
+   * (app/_phases/score/spots.ts). A `Movement` carries a role, an ordinal, a
+   * label and the cue section it sits on. It carries no tempo, and neither does
+   * `TrailerCut.cue` — so a proposed spot has nowhere honest to get one.
+   *
+   * `knowledge/templates/trailer/steps/03-score/PATTERNS.md` §8 says exactly
+   * this about the two literals still sitting in `SPOTS` below: "CANNOT
+   * REPLACE… No source gives a trailer tempo, and none should — tempo is chosen
+   * from the picture by bar math." So the field is absent rather than defaulted,
+   * the surface says so where the number would have gone, and the render button
+   * stays shut until somebody supplies one. A plausible default here would be
+   * four significant digits of pure authority on a delivery gate
+   * (03-score/OPEN-QUESTIONS.md `s1`).
+   */
+  bpm?: number;
   /** The scenes this cue plays under, in order. The spotting itself. */
   sceneIds: string[];
-  status: Cue["status"];
+  /**
+   * What a TAKE did — ABSENT until one has been asked for.
+   *
+   * `CueStatus` is `"rendered" | "failed"` and neither is true of a spot a
+   * creator made a minute ago. It was required while every spot in this file
+   * was a fixture carrying a take's history; a spot proposed from a movement
+   * has no history, and picking either word for it would be inventing one.
+   */
+  status?: Cue["status"];
   note: string;
   failure?: MusicErrorKind;
   declaredNotPerformed?: string;
@@ -153,17 +184,48 @@ export function sceneClock(scenes: Scene[] = SCENES): { scene: Scene; startS: nu
   });
 }
 
+/**
+ * WHOSE FILM THIS IS — the global narrative context every cue brief carries.
+ *
+ * A PARAMETER since 2026-09-08, and it is the same defect `scenes` was: these
+ * two fields were read straight off `PROJECT`, the Glass Harbor fixture, and
+ * stamped onto the `CuePicture` of every cue this module built. `cueToPlan`
+ * puts them in `positiveGlobalStyles` — `lib/music/plan.ts`, pinned by
+ * tests/golden-path/music-cue-brief.probe.spec.ts, which asserts the plan
+ * contains "Glass Harbor" — so they are sent to the vendor verbatim as the
+ * story the music is for.
+ *
+ * It was unreachable only because every spot was unspottable against a real
+ * project's scenes: no picture, no cue, no brief. The moment a spot could be
+ * placed (this commit), the first render of somebody else's film would have
+ * bought music briefed with Glass Harbor's title and its logline. The scenes
+ * would have been the creator's and the story a stranger's, which is worse than
+ * either mistake alone — nothing on the surface would have looked wrong.
+ *
+ * Defaulted to `PROJECT` for the same reason `scenes` defaults to `SCENES`: the
+ * fixture path (`CUES`, the two probes, the Cut step's timeline) is unchanged
+ * byte for byte, and only a caller that HAS a project record passes one.
+ */
+export interface CueProject {
+  title: string;
+  logline: string;
+}
+
 /** A spot's scenes, in the engine's vocabulary. `null` when the project has no
  *  picture for it — see `cuesFrom`. */
-export function pictureFor(spot: CueSpot, scenes: Scene[] = SCENES): CuePicture | null {
+export function pictureFor(
+  spot: CueSpot,
+  scenes: Scene[] = SCENES,
+  project: CueProject = PROJECT,
+): CuePicture | null {
   const clock = sceneClock(scenes);
   const found = spot.sceneIds
     .map((id) => clock.find((c) => c.scene.id === id))
     .filter((c): c is { scene: Scene; startS: number } => Boolean(c));
   if (found.length !== spot.sceneIds.length || !found.length) return null;
   return {
-    projectTitle: PROJECT.title,
-    logline: PROJECT.logline,
+    projectTitle: project.title,
+    logline: project.logline,
     scenes: found.map(({ scene, startS }) => ({
       index: scene.index,
       slug: scene.slug,
@@ -189,11 +251,14 @@ export function pictureFor(spot: CueSpot, scenes: Scene[] = SCENES): CuePicture 
 export function cuesFrom(
   spots: CueSpot[] = SPOTS,
   scenes: Scene[] = SCENES,
+  /** Whose film. See `CueProject` — this reaches the vendor as the brief's only
+   *  global narrative context, so it must be the project the scenes came from. */
+  project: CueProject = PROJECT,
 ): { cues: SpottingCue[]; unspottable: { spot: CueSpot; why: string }[] } {
   const cues: SpottingCue[] = [];
   const unspottable: { spot: CueSpot; why: string }[] = [];
   for (const spot of spots) {
-    const picture = pictureFor(spot, scenes);
+    const picture = pictureFor(spot, scenes, project);
     if (!picture) {
       unspottable.push({
         spot,

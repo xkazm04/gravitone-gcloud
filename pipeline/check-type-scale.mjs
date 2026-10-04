@@ -1,19 +1,30 @@
 // THE TYPE-SCALE GUARD — nothing below the readable floor.
 //
-// The scale is two tokens (globals.css @theme): `text-content` (1rem) for
-// anything the user reads, `text-label` (0.875rem) for secondary short
+// The scale is two tokens (globals.css @theme): `text-content` (1.125rem) for
+// anything the user reads, `text-label` (1rem) for secondary short
 // labels. This check exists because the drift it guards against was measured,
 // not imagined: on 2026-08-28 the app held 631 arbitrary sizes between 8 and
 // 13px across 81 files, and every one of them had once looked reasonable in
 // its own diff. A floor that is not enforced is a suggestion.
 //
+// THE FLOOR MOVED 14px → 16px on 2026-09-08, with the scale itself: the whole
+// app read undersized, so both rungs went up 2px and this number is the label
+// rung, by definition. It is derived from ONE constant below — if the scale
+// moves again, move FLOOR_PX and nothing else here.
+//
 // Fails on, in app/**/*.tsx and components/**/*.tsx:
-//   · text-xs, or any arbitrary text-[Npx] with N < 14   (className floor)
-//   · an inline style fontSize below 14px / 0.875rem      (global-error.tsx
+//   · text-xs, or any arbitrary text-[Npx] with N < 16   (className floor)
+//   · an inline style fontSize below 16px / 1rem          (global-error.tsx
 //     brings its own styles by design, so it is checked too, not exempted)
 //
-// Arbitrary sizes ≥14px pass — they are legible — but prefer the tokens:
+// Arbitrary sizes ≥16px pass — they are legible — but prefer the tokens:
 // a named size is a decision the next reader can see.
+//
+// N IS PARSED, NOT PATTERN-MATCHED. The first version of this check spelled the
+// class floor as `text-\[(?:[0-9]|1[0-3])px\]`, which cannot see a decimal —
+// `text-[12.5px]` sat in app/_phases/script/candidates/CandidatesDuel.tsx from
+// the day the floor was introduced and passed every run of this gate. A number
+// compared as a number cannot have that blind spot.
 
 import fs from "node:fs";
 import path from "node:path";
@@ -28,23 +39,62 @@ function* walk(dir) {
   }
 }
 
-const CLASS_VIOLATION = /\btext-xs\b|\btext-\[(?:[0-9]|1[0-3])px\]/;
-const INLINE_PX = /fontSize:\s*["'](\d+(?:\.\d+)?)px["']/g;
-const INLINE_REM = /fontSize:\s*["']((?:0?\.\d+))rem["']/g;
+const FLOOR_PX = 16;
+const FLOOR_REM = FLOOR_PX / 16;
 
+const CLASS_XS = /\btext-xs\b/;
+const CLASS_ARBITRARY = /\btext-\[(\d+(?:\.\d+)?)px\]/g;
+const INLINE_PX = /fontSize:\s*["'](\d+(?:\.\d+)?)px["']/g;
+const INLINE_REM = /fontSize:\s*["'](\d+(?:\.\d+)?)rem["']/g;
 const findings = [];
 for (const dir of ["app", "components"]) {
   for (const file of walk(path.join(ROOT, dir))) {
     const rel = path.relative(ROOT, file).replaceAll("\\", "/");
     const lines = fs.readFileSync(file, "utf8").split("\n");
     lines.forEach((line, i) => {
-      const m = line.match(CLASS_VIOLATION);
-      if (m) findings.push(`${rel}:${i + 1} — ${m[0]} (floor is text-label, 0.875rem)`);
+      const xs = line.match(CLASS_XS);
+      if (xs) findings.push(`${rel}:${i + 1} — ${xs[0]} (floor is text-label, ${FLOOR_REM}rem)`);
+      for (const cls of line.matchAll(CLASS_ARBITRARY)) {
+        if (Number(cls[1]) < FLOOR_PX) findings.push(`${rel}:${i + 1} — ${cls[0]} (floor is text-label, ${FLOOR_PX}px)`);
+      }
       for (const px of line.matchAll(INLINE_PX)) {
-        if (Number(px[1]) < 14) findings.push(`${rel}:${i + 1} — inline fontSize ${px[1]}px (floor is 14px)`);
+        if (Number(px[1]) < FLOOR_PX) findings.push(`${rel}:${i + 1} — inline fontSize ${px[1]}px (floor is ${FLOOR_PX}px)`);
       }
       for (const rem of line.matchAll(INLINE_REM)) {
-        if (Number(rem[1]) < 0.875) findings.push(`${rel}:${i + 1} — inline fontSize ${rem[1]}rem (floor is 0.875rem)`);
+        if (Number(rem[1]) < FLOOR_REM) findings.push(`${rel}:${i + 1} — inline fontSize ${rem[1]}rem (floor is ${FLOOR_REM}rem)`);
+      }
+    });
+  }
+}
+
+// SCOPED FLOOR FOR THE ALMANAC WORLD'S STYLESHEETS (2026-09-29, owner: "lets scope
+// the check"). The tsx floor above cannot see a .css file, so the door's chart
+// labels and the kit's caps labels were unchecked, not compliant. World CSS is
+// now read, at its OWN floor: 14px, the smallest a chart label or caps label may
+// be. Body and content sizes are 16px and up by their tokens; this floor exists
+// so a stylesheet cannot slip a 12px label in beside them. Numbers inside var()
+// are tokens and are checked where they are declared.
+const WORLD_CSS_FLOOR_PX = 14;
+const WORLD_CSS_DIRS = ["components/kit", "app/kit", "app/foundry", "app/_landing"];
+const FONT_SIZE_DECL = /(?:^|[\s{;])(font-size|--k-fs[\w-]*)\s*:\s*([^;}]+)/g;
+function* walkCss(dir) {
+  if (!fs.existsSync(dir)) return;
+  for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, e.name);
+    if (e.isDirectory()) yield* walkCss(p);
+    else if (e.name.endsWith(".css")) yield p;
+  }
+}
+for (const d of WORLD_CSS_DIRS) {
+  for (const file of walkCss(path.join(ROOT, d))) {
+    const rel = path.relative(ROOT, file).replaceAll("\\", "/");
+    fs.readFileSync(file, "utf8").split("\n").forEach((line, i) => {
+      for (const m of line.matchAll(FONT_SIZE_DECL)) {
+        const value = m[2].replace(/var\([^)]*\)/g, "");
+        for (const n of value.matchAll(/(\d+(?:\.\d+)?)(px|rem)\b/g)) {
+          const px = Number(n[1]) * (n[2] === "rem" ? 16 : 1);
+          if (px < WORLD_CSS_FLOOR_PX) findings.push(`${rel}:${i + 1} — ${m[1]} ${n[0]} (world CSS floor is ${WORLD_CSS_FLOOR_PX}px)`);
+        }
       }
     });
   }
@@ -56,4 +106,4 @@ if (findings.length) {
   console.error("Use text-content (readable content) or text-label (secondary short labels) — see app/globals.css.");
   process.exit(1);
 }
-console.log("type scale OK — nothing below text-label (0.875rem) in app/ or components/.");
+console.log(`type scale OK — nothing below text-label (${FLOOR_REM}rem) in app/ or components/; world CSS at its ${WORLD_CSS_FLOOR_PX}px floor.`);

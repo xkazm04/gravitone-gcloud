@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(*--no-verify*)",
+      "Bash(git push*--force*)",
+      "Bash(git push* -f *)",
+      "Bash(*GRAVITONE_SKIP_GATE=1*)"
+    ]
+  }
+}

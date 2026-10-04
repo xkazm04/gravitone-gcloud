@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "checker": "native-copy/copy-check 1.1.0",
+  "generatedAt": "2026-09-14T10:43:57.415Z",
+  "count": 1,
+  "fingerprints": [
+    "EN-DASH|app/layout.tsx|metadata.description|a35aa427b94f4778323b891092b649b42d506dc5"
+  ]
+}

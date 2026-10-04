@@ -60,6 +60,15 @@ before matching, the population walked off the filesystem rather than listed, an
   These are rows written before the 2026-08-29 ingest fix and they stay NULL until a scan
   re-emits the context, which never happens for a context that has not changed. Assigning
   them is a Dev Tools → Context Ledger action, not something a scan will fix.
+- **2026-09-04 — pipeline-scripts round (optimize).** The three gate scripts resolve their input
+  from their own location, so seeding one means editing the REAL file (`lint-baseline.json`,
+  `.ai/manifest.yaml`, a fingerprint literal) and reverting with `git checkout --` or a scratch copy;
+  the red-BEFORE figure comes from `git show HEAD:pipeline/<script> > scratch` run under the same
+  seed. `check:bundle` runs fine against a stale `.next` for fingerprint work (26 chunks). The
+  vlm-probe Python stack imports on this box (torch 2.13 cpu, facenet, transformers) and
+  `python identity.py` calibration takes ~1 min - it is the honest gate for that file. `.ai/registry-map.json`
+  and the linked skill text both moved under the session (28 lenses by the end, 23 at the pick):
+  count lenses from `references/lenses.md` at emit time.
 - **2026-09-05 - the `| tail && git commit` trap bit this round even with the clause freshly read**: 67a9c73 landed over a red suite. The shape that held for the next nine commits: `npm test > "$TEMP/npmtest.log" 2>&1; S=$?; grep summary; test $S -eq 0 && git add <paths> && git commit`. Also: `fake-indexeddb/auto` makes the IDB half of `evictIdentity` probe-able in the Node lane (tests/golden-path/identity-eviction-idb.probe.spec.ts). And the map gate found 3 NEW lib/ drift files (foundry/training/{store,types}.ts, imaging/providers/ollama.ts) beside the 2 standing ones; a long bash heredoc carrying JSON with apostrophes failed to parse under Git Bash - write ledger scripts to a file and run them.
 - **2026-09-05 — this repo is polyglot and the outbox finding-count grep is whitespace-sensitive.**
   Two things for the next round. (1) `pipeline/` holds ~965 lines of Python in

@@ -2,6 +2,8 @@
 
 // One render, scored against the limits the research declared.
 
+import { Hint } from "@/components/ui/signal";
+
 import { ledgerFor, type EffectiveState } from "../constraints";
 
 /** The word beside the glyph, because the glyph and its colour are otherwise the
@@ -41,14 +43,12 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
         )}
       </p>
 
-      {stale && (
-        <p className="font-jetbrains mt-1 text-content leading-snug text-amber-200/70">
-          hand-written about the original chain. It has no probe, so it cannot follow a rewrite — read
-          the computed gate below instead.
-        </p>
-      )}
+      {/* The header's "not re-scored" is the whole statement. The paragraph
+          under it explained that the ledger has no probe and told the reader to
+          read the computed gate instead — the gate is the next thing on the
+          page, and the rows now fade to the treatment BeatList gives a cut. */}
 
-      <ul className="mt-2 space-y-1.5">
+      <ul className={`mt-2 space-y-1.5 ${stale ? "opacity-45" : ""}`}>
         {rows.map((r) => {
           const m = MARK[r.effective];
           return (
@@ -59,10 +59,14 @@ export default function ConstraintLedger({ renderId, stale }: { renderId: string
               <span className="sr-only">{m.label}: </span>
               <span className="text-white/45">{r.unknown.impact}</span>
               <span className="block pl-4 text-white/35">{r.how}</span>
+              {/* A superseded limit is a chip, not a sentence: the ~ glyph and
+                  its spoken "superseded" already name the state, and the reason
+                  the render is now over-cautious is one clause behind it. */}
               {r.effective === "superseded" && (
-                <span className="block pl-4 text-cyan-200/70">
-                  this limit has since been lifted — the render is more cautious than the notebook now
-                  requires
+                <span className="ml-1.5 inline-flex items-baseline">
+                  <Hint label="Why superseded">
+                    this limit was lifted — the render is more cautious than the notebook now requires
+                  </Hint>
                 </span>
               )}
             </li>

@@ -43,7 +43,26 @@ try {
   ]);
 }
 const expected = baseline.warnings ?? {};
-const filesFloor = Number(baseline.filesFloor ?? 0);
+const filesFloor = Number(baseline.filesFloor);
+
+// The floor is the instrument assertion below. It used to default to 0 when
+// the key was missing or misspelled, and `results.length < 0` is never true —
+// so a baseline without a floor silently disarmed the one check that tells a
+// moved directory from a clean codebase. A baseline that cannot say how many
+// files it was measured over is not a baseline this gate can run against.
+if (!Number.isInteger(filesFloor) || filesFloor <= 0) {
+  die(2, "COULD NOT RUN: lint-baseline.json has no usable `filesFloor`.", [
+    `found: ${JSON.stringify(baseline.filesFloor)} — expected a positive integer`,
+    "Without it the short-walk assertion can never fire, and a broken glob",
+    "would read as a clean tree. Set it to the file count of the last honest run.",
+  ]);
+}
+if (!baseline.warnings || typeof baseline.warnings !== "object") {
+  die(2, "COULD NOT RUN: lint-baseline.json has no `warnings` block.", [
+    "Every bucket would read as baseline 0 and every warning as a RISE —",
+    "a verdict about the file's shape, not about the code.",
+  ]);
+}
 
 // --- run the instrument ------------------------------------------------------
 let results;

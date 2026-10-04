@@ -1,10 +1,12 @@
-"use client";
+// Small shared pieces of the /foundry surface: the status words, the mapping from
+// each module's lifecycle to the kit's status marks, and the commit gates. The
+// score chips, verdict stamps and credit marks that used to live here are the
+// kit's now (components/kit); nothing here draws and nothing here fetches.
 
-// Small shared pieces of the /foundry surface: score chips, verdict stamps,
-// the status word for a run. Nothing here fetches.
-
+import type { StatusKind } from "@/components/kit";
 import type { ExtractStatus } from "@/lib/foundry/extract/types";
-import type { Candidate, RunStatus, Verdict } from "@/lib/foundry/types";
+import type { CycleStatus } from "@/lib/foundry/training/types";
+import type { RunStatus } from "@/lib/foundry/types";
 
 export const STATUS_WORD: Record<RunStatus, string> = {
   created: "queued",
@@ -52,67 +54,24 @@ export const EXTRACT_STATUS_WORD: Record<ExtractStatus, string> = {
 
 export const EXTRACT_LIVE: ExtractStatus[] = ["created", "reading", "grouping", "replicating", "transferring"];
 
-export function pct(x: number | null | undefined): string {
-  return typeof x === "number" ? `${Math.round(100 * x)}%` : "—";
-}
-
-/** Craft / style score as a chip. Colour is a reading aid, not a verdict:
- *  the registry is explicit that an automatic grade points at where to look. */
-export function ScoreChip({ label, value }: { label: string; value: number | null | undefined }) {
-  const tone =
-    typeof value !== "number"
-      ? "border-amber-400/30 text-amber-200/80"
-      : value >= 0.75
-        ? "border-emerald-400/30 text-emerald-200"
-        : value >= 0.5
-          ? "border-white/15 text-white/70"
-          : "border-rose-400/30 text-rose-200/90";
-  return (
-    <span className={`font-jetbrains rounded border bg-black/50 px-1 py-0.5 text-label tracking-wide ${tone}`}>
-      {label} {pct(value)}
-    </span>
-  );
-}
-
-export function VetoChip({ candidate }: { candidate: Candidate }) {
-  if (candidate.grade?.veto?.has_text)
-    return (
-      <span className="font-jetbrains rounded border border-rose-400/50 bg-rose-400/20 px-1 py-0.5 text-label font-semibold tracking-wide text-rose-100">
-        TEXT
-      </span>
-    );
-  if (candidate.status === "unmeasured")
-    return (
-      <span className="font-jetbrains rounded border border-amber-400/40 bg-amber-400/15 px-1 py-0.5 text-label tracking-wide text-amber-100">
-        unmeasured
-      </span>
-    );
-  return null;
-}
-
-export function VerdictStamp({ verdict }: { verdict: Verdict | undefined }) {
-  if (!verdict) return null;
-  return verdict === "keep" ? (
-    <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-emerald-300/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
-      KEPT
-    </span>
-  ) : (
-    <span className="font-jetbrains pointer-events-none absolute top-1 left-1.5 rounded bg-rose-400/90 px-1.5 py-0.5 text-label font-semibold text-slate-950">
-      REJECTED
-    </span>
-  );
-}
-
-export const VERDICT_RING: Record<Verdict | "none", string> = {
-  keep: "border-emerald-300/60",
-  reject: "border-rose-400/40 opacity-45",
-  none: "border-white/10",
+export const DOJO_STATUS_WORD: Record<CycleStatus, string> = {
+  planning: "planning",
+  generating: "generating",
+  judging: "judging",
+  "awaiting-gate": "awaiting your gate",
+  committed: "committed",
+  failed: "failed",
 };
 
-/** Credit → colour, the same three-way reading the vlm-probe gallery uses. */
-export function creditTone(v: number | undefined): string {
-  if (v === 1) return "text-emerald-300";
-  if (v === 0.5) return "text-amber-300";
-  if (v === 0) return "text-rose-300";
-  return "text-white/60";
+/** The forge run's state as a kit mark. */
+export function runKind(s: RunStatus): StatusKind {
+  return LIVE.includes(s) ? "live" : s === "done" ? "ready" : s === "incomplete" ? "inc" : s === "failed" ? "failed" : "committed";
+}
+
+export function extractKind(s: ExtractStatus): StatusKind {
+  return EXTRACT_LIVE.includes(s) ? "live" : s === "done" ? "ready" : s === "failed" ? "failed" : "committed";
+}
+
+export function cycleKind(s: CycleStatus): StatusKind {
+  return s === "awaiting-gate" ? "gate" : s === "failed" ? "failed" : s === "committed" ? "committed" : "live";
 }

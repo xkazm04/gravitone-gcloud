@@ -20,6 +20,33 @@ import { emptyProgress, type Project } from "@/lib/projects";
 
 const DAY = 24 * 60 * 60 * 1000;
 
+/** The prefix every id below carries. Those ids were already load-bearing —
+ *  `addProjects` relies on them being stable and content-addressed so a lost
+ *  seed race writes nothing — and the prefix is now also what makes a demo row
+ *  RECOGNISABLE on the shelf. A new seed row must keep it. */
+const SEED_ID = "seed-";
+
+/**
+ * Was this row handed to the account by the seed below, rather than made by the
+ * user? The shelf tags these so a stranger's first screen does not present six
+ * fictional productions exactly the way it presents their own work.
+ *
+ * DERIVED FROM THE ID, not a stored flag, and deliberately:
+ *  · a flag would be absent from every row already sitting in every existing
+ *    account's IndexedDB, so the shelves that most need the tag are the ones
+ *    that would never show it — and `migrateProject` could only backfill it by
+ *    reading the id, which is this function with an extra write;
+ *  · a flag is writable. `putProject` copies whole records so an edit would
+ *    carry it, but any future path that rebuilds a record field-by-field could
+ *    drop it and let a demo row claim to be the user's own work.
+ * The id is minted once and no surface edits it, and `newProject` mints user
+ * projects under `p-`, so this answer cannot drift from the truth — a demo the
+ * user renames is still a demo, which is the honest reading.
+ */
+export function isSeeded(p: { id: string }): boolean {
+  return p.id.startsWith(SEED_ID);
+}
+
 /** Seeded relative to `now` so a fresh account never shows 1970 timestamps. */
 export function seedProjects(uid: string, now: number = Date.now()): Project[] {
   return [
@@ -136,4 +163,50 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
       },
     },
   ];
+}
+
+/* ── What a seeded project has already RESEARCHED ─────────────────────────── */
+
+/** The topic each seeded project's Step 1 was run on.
+ *
+ *  THE FIXTURE WAS HALF-WRITTEN, and the half that was missing was the half the
+ *  shelf was advertising (operator, 2026-09-09). Four of the rows above declare
+ *  `progress.research: "done"`, and /projects prints that word — but the only
+ *  project that shipped an actual research RECORD was the Bitcoin one, because
+ *  `stepStore#seededFor` matched on `/bitcoin/i`. So opening Glass Harbor's
+ *  Step 1 showed an empty topic field with the wizard parked on stage 1 and
+ *  every later stage unreachable, under a rail that had just said Research was
+ *  locked. The shelf and the step disagreed about the same project.
+ *
+ *  A topic per project rather than one shared string: the field is what the
+ *  creator typed, and four demo projects that all claim to have researched
+ *  Bitcoin would be a worse fiction than the one being fixed.
+ *
+ *  WHAT THIS DOES NOT CLAIM. The notebook itself is still the single shipped
+ *  2026-08-11 Bitcoin run — there is one fixture notebook and these projects
+ *  replay it. That substitution is disclosed where it happens, by `StandInNote`
+ *  (research/guided/RunStage.tsx): the typed topic is struck through and the
+ *  notebook's own topic is named beside it. Seeding a topic here makes that
+ *  disclosure TRUE for these projects rather than vacuous — before, there was
+ *  no typed topic for it to strike through.
+ *
+ *  Keyed by id and exported so `seededFor` reads it rather than pattern-matching
+ *  a name, which is what let the other three rows fall through the gap. */
+export const SEEDED_RESEARCH_TOPIC: Record<string, string> = {
+  "seed-glass-harbor": "How a city's unlocked doors get chosen",
+  "seed-why-bitcoin": "Why Bitcoin price does not rise",
+  "seed-the-quiet-tariff": "Who actually pays an import tariff",
+  "seed-two-hundred-days": "How a city budgets for weather it cannot predict",
+};
+
+/** True when a seed row DECLARES its research done, read off the seed itself.
+ *
+ *  The uid is irrelevant to `progress`, so this asks the same array the shelf is
+ *  built from rather than keeping a second list beside it — the two cannot drift
+ *  into disagreeing, which is the defect this whole block exists to close. */
+export function seededResearchTopic(projectId: string): string | undefined {
+  const topic = SEEDED_RESEARCH_TOPIC[projectId];
+  if (!topic) return undefined;
+  const row = seedProjects("").find((p) => p.id === projectId);
+  return row?.progress.research === "done" ? topic : undefined;
 }

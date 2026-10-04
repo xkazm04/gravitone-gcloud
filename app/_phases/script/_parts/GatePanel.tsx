@@ -113,12 +113,13 @@ export default function GatePanel({
         })}
       </ul>
 
-      {report.unmeasured > 0 && (
-        <p className="font-jetbrains mt-2 text-content leading-snug text-amber-200/70">
-          Amber rows were not tested. They are not passes — a constraint with no probe is a rule
-          nobody is enforcing, and the ledger above will happily call it honoured.
-        </p>
-      )}
+      {/* NO LEGEND FOR THE AMBER. Every unmeasured row already says "not
+          checked" beside its own glyph and the headline already counts them, so
+          a paragraph restating that an untested rule is not a pass was the
+          third telling. The design rule it defends — amber is LOUDER than a
+          violation here, because a constraint with no probe is a rule nobody is
+          enforcing and the hand-written ledger above will happily call it
+          honoured — lives in this file's header. */}
     </div>
   );
 }

@@ -20,7 +20,7 @@ import { stateOf } from "../../research/scope";
 import { NoteHandle } from "../_notes/NotesContext";
 import { RENDER_BY_ID } from "../renders";
 import { coverageIn, totalIn, usageIn, type Version } from "../versions";
-import { DeltaTag, MatrixFootnotes, RENDERS, ScopePip, secs } from "./shared";
+import { DeltaTag, MatrixFootnotes, RENDERS, ScopePip, SecondsHint, secs } from "./shared";
 
 const SEG = ["bg-cyan-400/70", "bg-violet-400/70", "bg-emerald-400/70"];
 
@@ -50,11 +50,8 @@ export default function MatrixSpend({
 
   return (
     <div data-testid="matrix-spend">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <p className="font-hanken max-w-xl text-content text-slate-400">
-          Every card as a share of the runtime it was given, on one scale. Cards no render used sit
-          at zero rather than being hidden — an empty channel is still a decision.
-        </p>
+      {/* No intro paragraph: an empty channel at 0s is the statement, drawn. */}
+      <div className="flex flex-wrap items-end justify-end gap-3">
         {comparing && (
           <button
             data-testid="sort-change"
@@ -85,6 +82,7 @@ export default function MatrixSpend({
             </span>
           );
         })}
+        <SecondsHint />
       </div>
 
       <ul className="mt-2">
