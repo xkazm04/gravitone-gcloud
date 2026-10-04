@@ -18,8 +18,10 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 
 ## Gates
 
-- `always:` `npm run typecheck` (`tsc --noEmit`) and `npm run lint` (eslint - ratcheted, see
-  `npm run lint:ratchet`).
+- `always:` `npm run typecheck` (`tsc --noEmit`), `npm run lint` (eslint - ratcheted, see
+  `npm run lint:ratchet`), and `npm run check:type` (readable-floor check: nothing under
+  `text-label`/1rem in `app/` or `components/`). Missing from this list until 2026-10-04 - the
+  pre-push hook caught a real `text-xs` violation this list would have caught earlier.
 - `when app/_phases/script/** or the notebook schema changed:` `npm run check:notebook`,
   `npm run check:trailer-structure`.
 - `when routing/layout/server code changed:` `npm run build` - once per spark, on the spark branch.
