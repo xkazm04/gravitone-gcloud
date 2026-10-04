@@ -35,6 +35,12 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
 - `builder:` `npm run typecheck`; a builder that changed a rendered surface must also drive it on a
   dev server of its own (`next dev -p 31xx`) and report what it saw. Builders NEVER stage and NEVER stash - only the
   Director touches the index. Smoke via a prod build on 31xx (a second `next dev` is refused while :3000 is held).
+  **"Never stash" has now been violated twice** (2026-08-27, 2026-10-04 - the second a `git stash
+  push -u` run WHILE a parallel builder was actively writing files in the same shared worktree,
+  caught and recovered by the builder itself, no corruption found on Director verification - but
+  "recovered cleanly" is not evidence the rule is optional). State it as an absolute in every builder
+  brief's Rules section, not just the overlay: "never git stash, for any reason, even to diff against
+  a clean baseline - a parallel package may be writing files in this same worktree right now."
   **Any `next dev`/`next build` run auto-appends `.next-<name>/types/**` entries to `tsconfig.json`
   as a side effect** - a builder claiming it reverted this needs it verified by the Director reading
   the actual committed diff, not trusted from the report (seen twice: 2026-09-05 as a bare lesson,
