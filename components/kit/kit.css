@@ -18,13 +18,20 @@
  * edge or a rule, not a lower opacity. Text hues are lightened toward white, never
  * faded. See tokens.ts and the Law tab of /kit.
  *
- * Scope: every rule is under `[data-world="almanac"]` (WorldRoot, and the root of a
- * portalled Modal). Nothing here reaches an Obsidian surface.
+ * Scope: every rule is under `:is([data-world="almanac"], [data-world="obsidian"])`
+ * (WorldRoot, and the root of a portalled Modal) — TWO worlds since 2026-10-04
+ * (Foundry's legacy-palette revert), not one. The rule bodies never changed: they
+ * always read `--al-*`/`--k-*` custom properties, never a literal, and
+ * `components/ui/tokens.ts`'s `WORLD_OBSIDIAN_KIT` defines the same variable names
+ * against Obsidian's own tokens (`var(--gt-*)`, never a new hex) — so a route that
+ * opts into `WorldRoot world="obsidian"` gets these exact components in this app's
+ * original palette, and a route that never sets `data-world` at all reaches none of
+ * this, same as before.
  *
  * A part's class is `k-<part>`; a variant is `k-<part>--<variant>`.
  */
 
-[data-world="almanac"] {
+:is([data-world="almanac"], [data-world="obsidian"]) {
   --k-fs: 1rem;
   --k-fs-c: 1.125rem;
   --k-serif: var(--font-instrument), Georgia, serif;
@@ -63,29 +70,29 @@
   padding-bottom: 96px;
   -webkit-font-smoothing: antialiased;
 }
-[data-world="almanac"] :focus-visible {
+:is([data-world="almanac"], [data-world="obsidian"]) :focus-visible {
   outline: 2px solid var(--al-gold);
   outline-offset: 3px;
 }
-[data-world="almanac"] .k-caps {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-caps {
   text-transform: uppercase;
   letter-spacing: 0.1em;
   font-weight: 500;
   font-size: var(--k-fs);
   font-variant-numeric: tabular-nums lining-nums;
 }
-[data-world="almanac"] .k-it {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-it {
   font-family: var(--k-serif);
   font-weight: 400;
 }
-[data-world="almanac"] .k-num { font-variant-numeric: tabular-nums lining-nums; }
-[data-world="almanac"] .k-muted { color: var(--al-vellum); }
-[data-world="almanac"] code {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-num { font-variant-numeric: tabular-nums lining-nums; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-muted { color: var(--al-vellum); }
+:is([data-world="almanac"], [data-world="obsidian"]) code {
   font-family: var(--k-mono);
   font-size: var(--k-fs);
   color: var(--al-gold);
 }
-[data-world="almanac"] kbd {
+:is([data-world="almanac"], [data-world="obsidian"]) kbd {
   font-family: var(--k-sans);
   font-size: var(--k-fs);
   border: 1px solid var(--k-hair-2);
@@ -644,7 +651,7 @@
   .k-panel__head, .k-panel__body, .k-panel__foot { padding-left: 18px; padding-right: 18px; }
 }
 @media (prefers-reduced-motion: reduce) {
-  [data-world="almanac"] *, [data-world="almanac"] *::before, [data-world="almanac"] *::after {
+  :is([data-world="almanac"], [data-world="obsidian"]) *, :is([data-world="almanac"], [data-world="obsidian"]) *::before, :is([data-world="almanac"], [data-world="obsidian"]) *::after {
     animation: none !important; transition-duration: 0.2s !important; transition-delay: 0s !important;
   }
 }
@@ -676,6 +683,6 @@
 /* Body copy sits at 450 (Hanken is a variable face); anything that sets its own
  * weight wins, form controls inherit rather than snapping back to 400. */
 .k-world, .k-ov { font-weight: 450; }
-:where([data-world="almanac"]) :is(button, input, select, textarea) { font-weight: inherit; }
+:where(:is([data-world="almanac"], [data-world="obsidian"])) :is(button, input, select, textarea) { font-weight: inherit; }
 /* Every tracked-caps label is medium weight at 0.1em: thin wide-set caps were the reading failure. */
-[data-world="almanac"] :is(.k-tag, .k-pill, .k-stt, .k-vword, .k-noimg, .k-field, .k-card__what, .k-arm__al, .k-arm__gone, .k-deflist dt, .k-star, .k-dhead__stl) { font-weight: 500; }
+:is([data-world="almanac"], [data-world="obsidian"]) :is(.k-tag, .k-pill, .k-stt, .k-vword, .k-noimg, .k-field, .k-card__what, .k-arm__al, .k-arm__gone, .k-deflist dt, .k-star, .k-dhead__stl) { font-weight: 500; }

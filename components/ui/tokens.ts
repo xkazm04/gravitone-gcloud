@@ -260,6 +260,45 @@ export const WORLD_ALMANAC: Record<string, string> = {
 };
 
 /**
+ * The SAME `--al-*`/`--k-*` names the kit's CSS (components/kit/kit.css,
+ * workbench.css) already reads, redefined for Obsidian rather than Almanac —
+ * what lets a route render the kit's components (Table, Pager, PageHead, Dock,
+ * SideList, StatusStrip, Doc, Sheet, ...) in this app's ORIGINAL palette
+ * instead of the Almanac one. Emitted under `[data-world="obsidian"]`
+ * (`tokensCss` below), the explicit value `WorldRoot`'s `world` prop sets when
+ * a route opts in — never the ABSENCE of `data-world="almanac"`, which would
+ * silently re-skin anything the attribute selector matched by coincidence.
+ *
+ * NO NEW LITERAL. Every value here is a `var(--gt-*)` reference into this
+ * file's own existing Obsidian tokens, reused by name — `--al-gold` IS
+ * `--gt-accent-cyan`, not a second cyan that could drift from it. `--al-white`
+ * reads `--gt-ink-bright` (declared above, for this exact purpose — "the
+ * kit's first real Obsidian consumer"). `--al-ald`/`--al-ant` map onto the
+ * emerald/rose accents by the same positive/negative role Almanac's own
+ * warm-orange/rose pair carries in the kit's CSS (kept vs. avoided, proven vs.
+ * rejected). `--al-sky` has no Obsidian starfield to recreate — Foundry's
+ * "legacy palette" has no sky, so `.k-world`'s `background: var(--al-sky)
+ * fixed` resolves to a flat ink instead of a gradient.
+ */
+export const WORLD_OBSIDIAN_KIT: Record<string, string> = {
+  "--al-night": "var(--gt-ink)",
+  "--al-deep": "var(--gt-ink)",
+  "--al-field": "color-mix(in srgb, white 7%, transparent)",
+  "--al-gold": "var(--gt-accent-cyan)",
+  "--al-white": "var(--gt-ink-bright)",
+  "--al-vellum": "color-mix(in srgb, var(--gt-ink-bright) 72%, transparent)",
+  "--al-ash": "color-mix(in srgb, var(--gt-ink-bright) 45%, transparent)",
+  "--al-ald": "var(--gt-accent-emerald)",
+  "--al-ant": "var(--gt-accent-rose)",
+  "--al-ald-t": "color-mix(in srgb, var(--al-ald) 65%, var(--al-white))",
+  "--al-ant-t": "color-mix(in srgb, var(--al-ant) 70%, var(--al-white))",
+  "--al-line": "color-mix(in srgb, var(--gt-accent-cyan) 20%, transparent)",
+  "--al-line-strong": "color-mix(in srgb, var(--gt-accent-cyan) 42%, transparent)",
+  "--al-sky": "var(--gt-ink)",
+  "--al-ease": "var(--gt-ease)",
+};
+
+/**
  * Signal Layer channel defaults (contract C4). Declared on :root so every
  * reader resolves even when no AudioBus is mounted or no source is registered —
  * at these values every reader is a no-op, which is what preserves the idle
@@ -290,7 +329,10 @@ export function tokensCss(): string {
   const world = Object.entries(WORLD_ALMANAC)
     .map(([k, v]) => `${k}:${v};`)
     .join("");
-  return `:root{${decls}}[data-world="almanac"]{${world}}`;
+  const obsidianKit = Object.entries(WORLD_OBSIDIAN_KIT)
+    .map(([k, v]) => `${k}:${v};`)
+    .join("");
+  return `:root{${decls}}[data-world="almanac"]{${world}}[data-world="obsidian"]{${obsidianKit}}`;
 }
 
 // ── TYPE SCALE, BY REFERENCE ────────────────────────────────────────────────

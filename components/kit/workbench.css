@@ -10,168 +10,168 @@
  */
 
 /* ---------- table: sortable heads, sticky head ---------- */
-[data-world="almanac"] .k-tbl { overflow-x: auto; border: 1px solid var(--al-line); border-radius: 3px; background: var(--k-panel); }
-[data-world="almanac"] .k-tbl--sticky { overflow: auto; }
-[data-world="almanac"] .k-tbl table { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
-[data-world="almanac"] .k-tbl th {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl { overflow-x: auto; border: 1px solid var(--al-line); border-radius: 3px; background: var(--k-panel); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl--sticky { overflow: auto; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl table { width: 100%; border-collapse: separate; border-spacing: 0; font-variant-numeric: tabular-nums; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl th {
   text-align: left; padding: 11px 16px 9px; white-space: nowrap; font-weight: 600; color: var(--al-vellum);
   background: var(--al-night); border-bottom: 1px solid var(--al-line-strong);
 }
-[data-world="almanac"] .k-tbl--sticky th { position: sticky; top: 0; z-index: 2; }
-[data-world="almanac"] .k-tbl th.k-tbl__on { color: var(--al-white); box-shadow: inset 0 -2px 0 var(--al-gold); }
-[data-world="almanac"] .k-tbl th button {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl--sticky th { position: sticky; top: 0; z-index: 2; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl th.k-tbl__on { color: var(--al-white); box-shadow: inset 0 -2px 0 var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl th button {
   display: inline-flex; align-items: center; gap: 8px; padding: 0; border: 0; background: none; cursor: pointer;
   color: inherit; font: inherit; letter-spacing: inherit; text-transform: inherit;
 }
-[data-world="almanac"] .k-tbl th button:hover { color: var(--al-white); }
-[data-world="almanac"] .k-tbl__caret { width: 10px; height: 14px; flex: none; overflow: visible; }
-[data-world="almanac"] .k-tbl__caret path { fill: var(--al-ash); stroke: none; }
-[data-world="almanac"] .k-tbl__caret[data-dir="asc"] .k-tbl__up,
-[data-world="almanac"] .k-tbl__caret[data-dir="desc"] .k-tbl__dn { fill: var(--al-gold); }
-[data-world="almanac"] .k-tbl td { padding: 11px 16px; border-bottom: 1px dotted var(--k-gold-24); vertical-align: top; color: var(--k-ink); }
-[data-world="almanac"] .k-tbl tbody tr:last-child td { border-bottom: 0; }
-[data-world="almanac"] .k-tbl tbody tr:hover td { background: var(--k-gold-06); }
-[data-world="almanac"] .k-tbl__num { text-align: right; }
-[data-world="almanac"] .k-tbl__open { cursor: pointer; }
-[data-world="almanac"] .k-tbl__open:focus-visible { outline-offset: -2px; }
-[data-world="almanac"] .k-tbl-empty { border: 1px dashed var(--k-hair-2); border-radius: 3px; padding: 14px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl th button:hover { color: var(--al-white); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl__caret { width: 10px; height: 14px; flex: none; overflow: visible; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl__caret path { fill: var(--al-ash); stroke: none; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl__caret[data-dir="asc"] .k-tbl__up,
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl__caret[data-dir="desc"] .k-tbl__dn { fill: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl td { padding: 11px 16px; border-bottom: 1px dotted var(--k-gold-24); vertical-align: top; color: var(--k-ink); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl tbody tr:last-child td { border-bottom: 0; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl tbody tr:hover td { background: var(--k-gold-06); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl__num { text-align: right; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl__open { cursor: pointer; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl__open:focus-visible { outline-offset: -2px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tbl-empty { border: 1px dashed var(--k-hair-2); border-radius: 3px; padding: 14px; }
 
 /* ---------- pager: how much lies beyond, as a length ---------- */
-[data-world="almanac"] .k-pager { display: grid; grid-template-columns: minmax(80px, 1fr) auto auto; align-items: center; gap: 8px 16px; padding: 14px 2px 4px; }
-[data-world="almanac"] .k-pager__rule { position: relative; height: 12px; }
-[data-world="almanac"] .k-pager__rule::before {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager { display: grid; grid-template-columns: minmax(80px, 1fr) auto auto; align-items: center; gap: 8px 16px; padding: 14px 2px 4px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager__rule { position: relative; height: 12px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager__rule::before {
   content: ""; position: absolute; left: 0; right: 0; top: 5px; height: 2px;
   background: radial-gradient(circle, color-mix(in srgb, var(--al-gold) 40%, transparent) 0.9px, transparent 1.3px) 0 50% / 7px 2px repeat-x;
 }
-[data-world="almanac"] .k-pager__rule i {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager__rule i {
   position: absolute; left: 0; top: 4px; height: 4px; border-radius: 2px; transition: width 0.5s var(--al-ease);
   background: linear-gradient(90deg, color-mix(in srgb, var(--al-gold) 40%, transparent), var(--al-gold));
 }
-[data-world="almanac"] .k-pager__rule i::after {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager__rule i::after {
   content: ""; position: absolute; right: -4px; top: -3px; width: 10px; height: 10px; border-radius: 50%;
   background: var(--al-white); box-shadow: 0 0 10px 3px color-mix(in srgb, var(--al-gold) 60%, transparent);
 }
-[data-world="almanac"] .k-pager--done .k-pager__rule i { border-radius: 2px; }
-[data-world="almanac"] .k-pager--done .k-pager__rule i::after { display: none; }
-[data-world="almanac"] .k-pager__n { color: var(--al-vellum); white-space: nowrap; }
-[data-world="almanac"] .k-pager__n b { color: var(--al-white); font-weight: 600; }
-[data-world="almanac"] .k-pager__acts { display: inline-flex; gap: 8px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager--done .k-pager__rule i { border-radius: 2px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager--done .k-pager__rule i::after { display: none; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager__n { color: var(--al-vellum); white-space: nowrap; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager__n b { color: var(--al-white); font-weight: 600; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-pager__acts { display: inline-flex; gap: 8px; }
 
 /* ---------- steps: the five, as a meridian ---------- */
-[data-world="almanac"] .k-s-deep { stroke: var(--al-deep); }
-[data-world="almanac"] .k-steps {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-s-deep { stroke: var(--al-deep); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-steps {
   list-style: none; margin: 0; padding: 0; display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr);
 }
-[data-world="almanac"] .k-step { position: relative; min-width: 0; }
-[data-world="almanac"] .k-step::before, [data-world="almanac"] .k-step::after {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step { position: relative; min-width: 0; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step::before, :is([data-world="almanac"], [data-world="obsidian"]) .k-step::after {
   content: ""; position: absolute; top: 19px; height: 2px;
   background: radial-gradient(circle, color-mix(in srgb, var(--al-gold) 45%, transparent) 0.9px, transparent 1.3px) 0 50% / 7px 2px repeat-x;
 }
-[data-world="almanac"] .k-step::before { left: 0; right: 50%; }
-[data-world="almanac"] .k-step::after { left: 50%; right: 0; }
-[data-world="almanac"] .k-step:first-child::before, [data-world="almanac"] .k-step:last-child::after { display: none; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step::before { left: 0; right: 50%; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step::after { left: 50%; right: 0; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step:first-child::before, :is([data-world="almanac"], [data-world="obsidian"]) .k-step:last-child::after { display: none; }
 /* Inked to the current step: both halves before it, the near half of it. */
-[data-world="almanac"] .k-step--past::before, [data-world="almanac"] .k-step--past::after, [data-world="almanac"] .k-step--on::before { background: var(--al-gold); }
-[data-world="almanac"] .k-step button {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step--past::before, :is([data-world="almanac"], [data-world="obsidian"]) .k-step--past::after, :is([data-world="almanac"], [data-world="obsidian"]) .k-step--on::before { background: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step button {
   position: relative; z-index: 1; width: 100%; display: flex; flex-direction: column; align-items: center; gap: 8px;
   padding: 0 6px 6px; border: 0; background: none; color: var(--al-vellum); cursor: pointer; font: inherit;
 }
-[data-world="almanac"] .k-step button:hover { color: var(--al-white); }
-[data-world="almanac"] .k-step__node {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step button:hover { color: var(--al-white); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step__node {
   display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--al-night);
   border: 1.5px solid transparent; transition: border-color 0.4s var(--al-ease), box-shadow 0.4s var(--al-ease);
 }
-[data-world="almanac"] .k-step__star { width: 30px; height: 30px; overflow: visible; }
-[data-world="almanac"] .k-step--on .k-step__node { border-color: var(--al-gold); box-shadow: 0 0 0 5px var(--k-gold-16); }
-[data-world="almanac"] .k-step--on button, [data-world="almanac"] .k-step--on .k-step__name { color: var(--al-white); }
-[data-world="almanac"] .k-step__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-world="almanac"] .k-step--locked button { cursor: not-allowed; }
-[data-world="almanac"] .k-step--locked .k-step__node { border: 1.5px dashed var(--al-ash); }
-[data-world="almanac"] .k-step--locked.k-step--on .k-step__node { border-color: var(--al-gold); }
-[data-world="almanac"] .k-step--locked .k-step__name { text-decoration: underline dashed var(--al-ash); text-decoration-thickness: 2px; text-underline-offset: 0.3em; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step__star { width: 30px; height: 30px; overflow: visible; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step--on .k-step__node { border-color: var(--al-gold); box-shadow: 0 0 0 5px var(--k-gold-16); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step--on button, :is([data-world="almanac"], [data-world="obsidian"]) .k-step--on .k-step__name { color: var(--al-white); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step__name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step--locked button { cursor: not-allowed; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step--locked .k-step__node { border: 1.5px dashed var(--al-ash); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step--locked.k-step--on .k-step__node { border-color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-step--locked .k-step__name { text-decoration: underline dashed var(--al-ash); text-decoration-thickness: 2px; text-underline-offset: 0.3em; }
 
 /* ---------- roving focus on a tile: the same corners a focused candidate wears ---------- */
-[data-world="almanac"] .k-tile:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--al-gold), 0 0 0 5px var(--k-gold-16); }
-[data-world="almanac"] .k-tile:focus-visible::before { border-color: var(--al-gold); }
-[data-world="almanac"] .k-tile:focus-visible .k-cn { opacity: 1; transform: none; }
-[data-world="almanac"] .k-tile:focus-visible .k-tile__vb { opacity: 1; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tile:focus-visible { outline: none; box-shadow: 0 0 0 1px var(--al-gold), 0 0 0 5px var(--k-gold-16); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tile:focus-visible::before { border-color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tile:focus-visible .k-cn { opacity: 1; transform: none; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tile:focus-visible .k-tile__vb { opacity: 1; }
 
 /* ---------- account: the bell, the user menu ---------- */
-[data-world="almanac"] .k-acct {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct {
   position: relative; display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px;
   border-radius: 50%; border: 1px solid var(--al-line-strong); background: none; color: var(--al-white); cursor: pointer;
   font: inherit; transition: border-color 0.25s, background 0.25s;
 }
-[data-world="almanac"] .k-acct:hover { border-color: var(--al-gold); background: var(--k-gold-10); }
-[data-world="almanac"] .k-acct[aria-expanded="true"] { border-color: var(--al-gold); background: var(--k-gold-16); }
-[data-world="almanac"] .k-acct > svg:first-child { width: 18px; height: 18px; }
-[data-world="almanac"] .k-acct--user { width: auto; gap: 10px; padding: 0 16px 0 4px; }
-[data-world="almanac"] .k-acct__av { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; }
-[data-world="almanac"] .k-acct__av--initial { display: grid; place-items: center; background: var(--al-gold); color: var(--al-night); font-weight: 600; }
-[data-world="almanac"] .k-acct__name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--k-fs); }
-[data-world="almanac"] .k-acct__badge {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct:hover { border-color: var(--al-gold); background: var(--k-gold-10); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct[aria-expanded="true"] { border-color: var(--al-gold); background: var(--k-gold-16); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct > svg:first-child { width: 18px; height: 18px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct--user { width: auto; gap: 10px; padding: 0 16px 0 4px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct__av { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; flex: none; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct__av--initial { display: grid; place-items: center; background: var(--al-gold); color: var(--al-night); font-weight: 600; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct__name { max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--k-fs); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct__badge {
   position: absolute; top: -6px; right: -6px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; text-align: center;
   background: var(--al-gold); color: var(--al-night); font-size: var(--k-fs); font-weight: 600; line-height: 22px; font-variant-numeric: tabular-nums;
 }
 /* Antares itself cannot carry text at 7:1 (deep on it is 6.6), so the failure badge is inked, not filled. */
-[data-world="almanac"] .k-acct__badge--bad { background: var(--al-deep); color: var(--al-ant-t); box-shadow: inset 0 0 0 1.5px var(--al-ant); }
-[data-world="almanac"] .k-acct__pulse {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct__badge--bad { background: var(--al-deep); color: var(--al-ant-t); box-shadow: inset 0 0 0 1.5px var(--al-ant); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-acct__pulse {
   position: absolute; top: -2px; right: -2px; width: 10px; height: 10px; border-radius: 50%; background: var(--al-gold);
   box-shadow: 0 0 8px 2px color-mix(in srgb, var(--al-gold) 60%, transparent); animation: k-tw 2.4s ease-in-out infinite;
 }
-[data-world="almanac"] .k-tray {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray {
   position: absolute; right: 0; top: calc(100% + 10px); z-index: 50; width: min(24rem, calc(100vw - 2rem)); padding: 14px;
   background: linear-gradient(var(--al-field), var(--al-night)); border: 1px solid var(--al-line-strong); border-radius: 3px;
   box-shadow: 0 18px 50px color-mix(in srgb, var(--al-deep) 70%, transparent); color: var(--al-white);
   font-family: var(--k-sans); font-size: var(--k-fs); line-height: 1.45; text-align: left;
 }
 /* The bar is its own stacking context (z 40); a tray hanging out of it must clear the dev banner (z 45). */
-[data-world="almanac"] .k-bar:has(.k-tray) { z-index: 50; }
-[data-world="almanac"] .k-tray--menu { width: min(19rem, calc(100vw - 2rem)); padding: 8px; }
-[data-world="almanac"] .k-tray__h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; color: var(--al-gold); }
-[data-world="almanac"] .k-tray__btn {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-bar:has(.k-tray) { z-index: 50; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray--menu { width: min(19rem, calc(100vw - 2rem)); padding: 8px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__h { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-bottom: 10px; color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__btn {
   flex: none; padding: 0; border: 0; border-bottom: 1px solid transparent; background: none; color: var(--al-gold); cursor: pointer; font: inherit;
 }
-[data-world="almanac"] .k-tray__btn:hover { border-bottom-color: var(--al-gold); }
-[data-world="almanac"] .k-tray__grp { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
-[data-world="almanac"] .k-tray__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 19rem; overflow-y: auto; }
-[data-world="almanac"] .k-tray__empty { padding: 10px 2px 4px; }
-[data-world="almanac"] .k-tcard { margin-bottom: 8px; border: 1px solid var(--al-line-strong); border-radius: 3px; background: var(--k-panel); padding: 10px 12px; }
-[data-world="almanac"] .k-tray__list .k-tcard, [data-world="almanac"] .k-tray__grp .k-tcard { margin-bottom: 0; }
-[data-world="almanac"] .k-tcard--bad { border-color: var(--al-ant); background: var(--k-ant-10); }
-[data-world="almanac"] .k-tcard--run { border-color: var(--al-gold); }
-[data-world="almanac"] .k-tcard--int { border-style: dashed; border-color: var(--al-gold); }
-[data-world="almanac"] .k-tcard__h { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
-[data-world="almanac"] .k-tcard__k { color: var(--al-white); font-weight: 600; }
-[data-world="almanac"] .k-tcard--bad .k-tcard__k { color: var(--al-ant-t); }
-[data-world="almanac"] .k-tcard--run .k-tcard__k, [data-world="almanac"] .k-tcard--int .k-tcard__k { color: var(--al-gold); }
-[data-world="almanac"] .k-tcard__t { margin: 6px 0 0; color: var(--al-white); line-height: 1.45; }
-[data-world="almanac"] .k-tcard__t--one, [data-world="almanac"] .k-tcard__m { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-world="almanac"] .k-tcard__m { margin: 6px 0 0; color: var(--al-vellum); }
-[data-world="almanac"] .k-tcard__h .k-tcard__m { margin: 0; }
-[data-world="almanac"] .k-tcard__bar { margin-top: 8px; height: 3px; overflow: hidden; border-radius: 2px; background: var(--k-gold-16); }
-[data-world="almanac"] .k-tcard__fill { display: block; height: 100%; background: var(--al-gold); transition: width 0.2s; }
-[data-world="almanac"] .k-tcard__fill--ind { width: 33%; }
-[data-world="almanac"] .k-tray__who { padding: 4px 8px 8px; min-width: 0; }
-[data-world="almanac"] .k-tray__nm { color: var(--al-white); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-world="almanac"] .k-tray__em { color: var(--al-vellum); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-[data-world="almanac"] .k-tray__rule { height: 1px; margin: 4px 0 6px; background: var(--al-line); }
-[data-world="almanac"] .k-tray__note { margin: 0; padding: 6px 8px; color: var(--al-vellum); }
-[data-world="almanac"] .k-tray__item {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__btn:hover { border-bottom-color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__grp { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; max-height: 19rem; overflow-y: auto; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__empty { padding: 10px 2px 4px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard { margin-bottom: 8px; border: 1px solid var(--al-line-strong); border-radius: 3px; background: var(--k-panel); padding: 10px 12px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__list .k-tcard, :is([data-world="almanac"], [data-world="obsidian"]) .k-tray__grp .k-tcard { margin-bottom: 0; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard--bad { border-color: var(--al-ant); background: var(--k-ant-10); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard--run { border-color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard--int { border-style: dashed; border-color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__h { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__k { color: var(--al-white); font-weight: 600; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard--bad .k-tcard__k { color: var(--al-ant-t); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard--run .k-tcard__k, :is([data-world="almanac"], [data-world="obsidian"]) .k-tcard--int .k-tcard__k { color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__t { margin: 6px 0 0; color: var(--al-white); line-height: 1.45; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__t--one, :is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__m { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__m { margin: 6px 0 0; color: var(--al-vellum); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__h .k-tcard__m { margin: 0; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__bar { margin-top: 8px; height: 3px; overflow: hidden; border-radius: 2px; background: var(--k-gold-16); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__fill { display: block; height: 100%; background: var(--al-gold); transition: width 0.2s; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tcard__fill--ind { width: 33%; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__who { padding: 4px 8px 8px; min-width: 0; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__nm { color: var(--al-white); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__em { color: var(--al-vellum); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__rule { height: 1px; margin: 4px 0 6px; background: var(--al-line); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__note { margin: 0; padding: 6px 8px; color: var(--al-vellum); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__item {
   display: block; width: 100%; padding: 9px 10px; border: 1px solid transparent; border-radius: 3px; background: none;
   color: var(--al-white); cursor: pointer; font: inherit; text-align: left;
 }
-[data-world="almanac"] .k-tray__item:hover { background: var(--k-gold-10); border-color: var(--al-line); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-tray__item:hover { background: var(--k-gold-10); border-color: var(--al-line); }
 
 @media (max-width: 860px) {
-  [data-world="almanac"] .k-steps { grid-auto-columns: minmax(104px, 1fr); overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
-  [data-world="almanac"] .k-steps::-webkit-scrollbar { display: none; }
+  :is([data-world="almanac"], [data-world="obsidian"]) .k-steps { grid-auto-columns: minmax(104px, 1fr); overflow-x: auto; padding-bottom: 4px; scrollbar-width: none; }
+  :is([data-world="almanac"], [data-world="obsidian"]) .k-steps::-webkit-scrollbar { display: none; }
 }
 @media (max-width: 560px) {
-  [data-world="almanac"] .k-pager { grid-template-columns: minmax(0, 1fr) auto; }
-  [data-world="almanac"] .k-pager__rule { grid-column: 1 / -1; }
-  [data-world="almanac"] .k-acct__name { display: none; }
-  [data-world="almanac"] .k-acct--user { padding-right: 4px; }
+  :is([data-world="almanac"], [data-world="obsidian"]) .k-pager { grid-template-columns: minmax(0, 1fr) auto; }
+  :is([data-world="almanac"], [data-world="obsidian"]) .k-pager__rule { grid-column: 1 / -1; }
+  :is([data-world="almanac"], [data-world="obsidian"]) .k-acct__name { display: none; }
+  :is([data-world="almanac"], [data-world="obsidian"]) .k-acct--user { padding-right: 4px; }
   /* A tray hangs from the bar's edge, not from the control: the bell sits mid-bar on a phone. */
-  [data-world="almanac"] .k-tray { position: fixed; left: 12px; right: 12px; top: calc(var(--k-bar) + 8px); width: auto; }
+  :is([data-world="almanac"], [data-world="obsidian"]) .k-tray { position: fixed; left: 12px; right: 12px; top: calc(var(--k-bar) + 8px); width: auto; }
 }

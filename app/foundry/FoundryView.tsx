@@ -27,11 +27,19 @@
 // files are gone and its rows are in the ledger, so the controls are removed
 // rather than left to fail quietly.
 //
-// THE PAGE IS DRAWN IN THE ALMANAC WORLD, from the kit alone (components/kit):
-// the shell, the header and its figure, the run list, the strip, the matrix, the
-// dock, the confirm and the two full-screen sheets are all kit parts. What is
-// left in this file is state: which run, which candidate, which verdicts, and
-// when a save leaves.
+// THE PAGE IS DRAWN FROM THE KIT ALONE (components/kit): the header and its
+// figure, the run list, the strip, the matrix, the dock, the confirm and the
+// two full-screen sheets are all kit parts. What is left in this file is
+// state: which run, which candidate, which verdicts, and when a save leaves.
+//
+// OBSIDIAN, NOT ALMANAC (2026-10-04 revert). StudioFrame keeps its plain,
+// default Obsidian header; only the kit-built BODY opts into a `WorldRoot`
+// (`world="obsidian"`, not the default "almanac") so the same kit parts above
+// render in this app's legacy palette instead — `components/ui/tokens.ts`'s
+// `WORLD_OBSIDIAN_KIT` and `kit.css`'s widened selectors are what make that
+// true. The landing page and /kit's own docs stay Almanac; this route was the
+// pilot for recomposing a route from the kit, and it still is — just no
+// longer the pilot for the Almanac SKIN specifically.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
@@ -64,6 +72,7 @@ import {
   Tag,
   TabRail,
   Verbatim,
+  WorldRoot,
   type Crumb,
   type TabDef,
 } from "@/components/kit";
@@ -378,7 +387,8 @@ export default function FoundryView() {
   };
 
   return (
-    <StudioFrame world="almanac" crumbs={crumbs}>
+    <StudioFrame crumbs={crumbs}>
+      <WorldRoot world="obsidian">
       <main tabIndex={-1}>
         <PageHead
           eyebrow="Working surface"
@@ -610,6 +620,7 @@ export default function FoundryView() {
           )}
         </ConfirmDialog>
       </main>
+      </WorldRoot>
     </StudioFrame>
   );
 }
