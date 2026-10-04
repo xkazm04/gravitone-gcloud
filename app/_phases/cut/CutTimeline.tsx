@@ -29,9 +29,39 @@ import { TIMELINE, TRACKS } from "../../_studio/score";
 import { PROJECT, SCENES } from "../../_studio/scenes";
 import type { TimelineClip } from "../../_studio/projectTypes";
 import { saveStep, type CutStepData } from "../_shared/stepStore";
-import { useStepFor } from "../_shared/useLoadFor";
+import { useLoadFor, useStepFor } from "../_shared/useLoadFor";
 import { LANE_GUTTER, TimeRuler, spanStyle } from "../../_studio/projectParts";
 import { Tally } from "@/components/ui/signal";
+import { getProject, type Discipline } from "@/lib/projects";
+
+import MusicVideoExport from "./music-video/MusicVideoExport";
+
+/** THE ROUTER — the FIRST top-level discipline branch this file has had,
+ *  mirroring `FramesStep.tsx`'s own (WP3): route away BEFORE any of the
+ *  fixture-reading code below runs. A music-video project has no TIMELINE, no
+ *  TRACKS and no SCENES — one baked envelope driving one poster — so mounting
+ *  the standard timeline for it would draw the fixed `app/_studio/score.ts`
+ *  fixture under a project it has nothing to do with, the same
+ *  wrong-content-under-a-foreign-project failure `ScriptStep.tsx`/
+ *  `ScoreSpotting.tsx`/`FramesStep.tsx` already route away from for this
+ *  discipline. */
+export default function CutTimeline({ projectId }: { projectId: string }) {
+  const [discipline, setDiscipline] = useState<Discipline | undefined>(undefined);
+  const hydrated = useLoadFor(
+    projectId,
+    (id) => getProject(id),
+    (p) => setDiscipline(p?.discipline ?? "educational"),
+  );
+
+  if (!hydrated)
+    return (
+      <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
+        reading the cut…
+      </p>
+    );
+  if (discipline === "music-video") return <MusicVideoExport projectId={projectId} />;
+  return <StandardCutTimeline projectId={projectId} />;
+}
 
 /** Where the act-two turn lands, and it is a real boundary rather than a number
  *  somebody remembered: the reversal is the scene whose mood names it (see
@@ -80,7 +110,7 @@ export function nudgeOffsets(o: Offsets, c: TimelineClip, ms: number): Offsets {
  *  the reason `research-scope` and `research-beats` are separate keys too. */
 const PHASE = "cut";
 
-export default function CutTimeline({ projectId }: { projectId: string }) {
+function StandardCutTimeline({ projectId }: { projectId: string }) {
   /** The drift the user has dialled in, per clip, over what the fixture holds.
    *  Seeded from `offsetMs` on read rather than copied on mount — a clip nobody
    *  has touched reports exactly what the cut says about it.
