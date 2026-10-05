@@ -12,7 +12,7 @@
 import { useEffect, useState } from "react";
 
 import { CHIP_CLASS, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
-import { elapsed, useJobs, type Job } from "@/lib/jobs";
+import { useElapsed, useJobs, type Job } from "@/lib/jobs";
 import { useAuth } from "@/lib/useAuth";
 
 import { type MusicVideoSourceStepData } from "../../_shared/stepStore";
@@ -26,9 +26,11 @@ import { loadPosterAsset, useMusicVideoComposition } from "./useMusicVideoCompos
  *  WP1 measured for `agy` serving the call; the cloud fallback can be faster,
  *  so this names the number it has without claiming it always applies. */
 function PosterProgress({ job }: { job: Job }) {
+  const clock = useElapsed(job);
   return (
-    <p className="font-jetbrains text-label text-cyan-200/80" role="status" data-testid="music-video-poster-progress">
-      generating the poster… {elapsed(job)} elapsed (agy measures ~57s; the cloud fallback can be quicker)
+    <p className="font-jetbrains text-label text-cyan-200/80" data-testid="music-video-poster-progress">
+      <span role="status">generating the poster…</span>{" "}
+      <span aria-hidden="true">{clock} elapsed</span> (agy measures ~57s; the cloud fallback can be quicker)
     </p>
   );
 }
