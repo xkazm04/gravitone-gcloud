@@ -12,6 +12,13 @@
 // one. A class nobody books against is a declared ceiling that enforces
 // nothing, so a class is added in the same change as its first adapter.
 //
+// `video-usd` (2026-10-06, spark ads-project-type WP3) is the second, and it
+// arrived that way: lib/imaging/video/budget.ts books every hosted
+// image-to-video clip against it, and the clip route reserves before the
+// vendor is called. Its own vars rather than imaging's: a clip costs dollars
+// where a plate costs cents, and one ceiling over both would let a single
+// clip starve a whole storyboard of plates (or the other way round).
+//
 // ENV IS READ PER CALL, never cached at import: a probe or an operator changes a
 // ceiling after the module loaded and the next call must see it.
 //
@@ -19,7 +26,7 @@
 // default, never an open tab ("budget-defaults-unlimited"). `0` is a valid
 // ceiling meaning "spend nothing", not "disabled".
 
-export type SpendClass = "imaging-usd";
+export type SpendClass = "imaging-usd" | "video-usd";
 
 export type SpendUnit = "usd";
 
@@ -57,6 +64,26 @@ export const SPEND_CLASSES: Readonly<Record<SpendClass, SpendClassDef>> = {
     // line describe one call in one vocabulary.
     axes: ["cap", "provider", "model"],
     attributionAxis: "cap",
+  },
+  "video-usd": {
+    id: "video-usd",
+    unit: "usd",
+    ceilingVar: "VIDEO_BUDGET_USD_PER_WINDOW",
+    windowVar: "VIDEO_BUDGET_WINDOW_MS",
+    floorVar: "VIDEO_BUDGET_FLOOR_USD",
+    // $15 an hour. Sized against the gate's per-clip hold, not a guess at a
+    // bill: an unpriced clip holds $0.75/s (lib/imaging/video/pricing.ts), so
+    // this admits four 5 s clips in flight at once, or two 10 s ones, and
+    // refuses the fifth before the vendor is called. Settled rows replace the
+    // holds with what the vendor reported, which is normally far less.
+    defaultCeiling: 15,
+    defaultWindowMs: 3_600_000, // one hour, as imaging
+    defaultFloor: 0,
+    // `project` leads because a clip is requested BY a project (the wire type
+    // carries projectId "for spend attribution"); a row without one is the
+    // honesty field, as `cap` is for imaging.
+    axes: ["project", "provider", "model"],
+    attributionAxis: "project",
   },
 };
 

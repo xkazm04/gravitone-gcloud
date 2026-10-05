@@ -117,6 +117,44 @@ authoring rule already protects this.
   for results; `FrameClip` render path in `useFrames` (render, poll,
   adopt); spend and refusal surfaces. Contract tests in the
   `integration-imaging.mts` idiom.
+
+  **Status 2026-10-06 (spark `ads-project-type`, WP3) — built for the ads
+  discipline, not yet for `FrameClip`:**
+  - *Types* — built as a governed sibling, not a fourth `Capability`:
+    `lib/imaging/video/types.ts` (`VideoClipRequest`, `ClipRecord`,
+    `VideoCapability`; `VIDEO_MODELS` = kling-2-5 · hailuo-03 · veo-3,
+    `CLIP_DURATIONS` = 5 · 10).
+  - *One cloud adapter* — built: `lib/imaging/video/leonardo.ts`, Leonardo
+    v2 image-to-video, every request shape lifted from
+    `pipeline/video/leonardo_reference.py` (v1 init-image upload, named
+    model, `prompt_enhance: OFF`, `audio: false`, poll, browser-ish
+    download). The start POST is never retried. Moderation at start or as
+    a terminal job status is `refused` with the vendor's words. Only
+    856×480 is measured; 9:16 is that size turned, unmeasured; 1:1 and 4:5
+    are refused.
+  - *API route* — built: `POST/GET /api/video/clips` (202 + id; capability),
+    `GET /api/video/clips/[id]` (the poll), `GET …/[id]/file` (mp4, `k=`,
+    single Range). The run is detached and handed to `after()`.
+  - *Blob store* — built as local disk, not object storage:
+    `foundry-out/clips/<clipId>.{json,mp4}` (`CLIP_STORE_DIR`), atomic
+    writes. IndexedDB keeps only `ClipRef` pointers. Object storage is
+    still open.
+  - *Spend* — built: class `video-usd` (`VIDEO_BUDGET_USD_PER_WINDOW`,
+    default $15/h) on the shared meter, reserved BEFORE the adapter.
+    Pricing is UNPRICED for every model: no Leonardo per-clip credit
+    figure had a source on 2026-10-06; the vendor's start-reply charge is
+    booked instead (credits × 0.00257, `estimated`). The gate holds
+    $0.75/s per unpriced clip so a ceiling of 0 still refuses.
+  - *Render, poll, adopt* — built in `app/_phases/frames/ads/` (takes →
+    adopt → Animate → poll → adopt clip), not in `useFrames`.
+  - *Contract tests* — `tests/golden-path/video-clips.probe.spec.ts`
+    (fake adapter + the real adapter against a scripted vendor; no
+    network). No paid clip has been bought through this seam yet; the
+    first real run is the measurement that fills the price table.
+  - *Not built*: `FrameClip` render path for explainers, audio
+    keep/demote override (clips are requested silent), generation
+    cleanup in the vendor's gallery (the image adapter deletes; this one
+    does not yet — no verified delete endpoint for v2 generations).
 - **P1 — the local provider.** The ComfyUI bridge as a second adapter
   behind the same types (the `pipeline/vlm-probe/motion.py` stack, made a
   server-callable worker). Routing rules: probes local by default,
