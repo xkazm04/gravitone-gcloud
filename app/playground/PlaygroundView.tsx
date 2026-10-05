@@ -45,6 +45,8 @@ const MODULES: readonly ModuleId[] = ["triage", "arrange", "hunt"];
 const KINDS: readonly SoundKind[] = ["music", "sfx"];
 
 interface Tallies {
+  /** The kind these counts were read for; null before any read lands. */
+  kind: SoundKind | null;
   unjudged: number | null;
   finalized: number | null;
   hunts: number | null;
@@ -59,6 +61,7 @@ async function readTallies(kind: SoundKind): Promise<Tallies> {
     listHunts(kind),
   ]);
   return {
+    kind,
     unjudged: u.ok ? u.data.takes.length : null,
     finalized: f.ok ? f.data.takes.length : null,
     hunts: h.ok ? h.data.hunts.length : null,
@@ -85,8 +88,13 @@ export default function PlaygroundView() {
   );
 
   const [version, setVersion] = useState(0);
-  const [tallies, setTallies] = useState<Tallies>({ unjudged: null, finalized: null, hunts: null });
+  const [tallies, setTallies] = useState<Tallies>({ kind: null, unjudged: null, finalized: null, hunts: null });
   useLoadFor(`${kind}:${version}`, () => readTallies(kind), setTallies);
+  // useLoadFor applies on resolve only, so after a kind switch `tallies` still
+  // holds the previous kind's counts. They are drawn only for the kind they
+  // were read for; a same-kind refresh (version++) keeps its numbers, no blink.
+  const here: Tallies =
+    tallies.kind === kind ? tallies : { kind: null, unjudged: null, finalized: null, hunts: null };
 
   const [flash, say] = useFlash();
   const shell: SoundLabShell = useMemo(
@@ -100,25 +108,25 @@ export default function PlaygroundView() {
       label: "Triage",
       panelId: "sound-lab-panel",
       testId: "lab-triage",
-      ...(tallies.unjudged == null
+      ...(here.unjudged == null
         ? {}
-        : { tally: { value: tallies.unjudged, label: "to judge", tone: tallies.unjudged ? ("amber" as const) : ("neutral" as const) } }),
+        : { tally: { value: here.unjudged, label: "to judge", tone: here.unjudged ? ("amber" as const) : ("neutral" as const) } }),
     },
     {
       id: "arrange",
       label: "Arrange",
       panelId: "sound-lab-panel",
       testId: "lab-arrange",
-      ...(tallies.finalized == null
+      ...(here.finalized == null
         ? {}
-        : { tally: { value: tallies.finalized, label: "final", tone: tallies.finalized ? ("emerald" as const) : ("neutral" as const) } }),
+        : { tally: { value: here.finalized, label: "final", tone: here.finalized ? ("emerald" as const) : ("neutral" as const) } }),
     },
     {
       id: "hunt",
       label: "Hunt",
       panelId: "sound-lab-panel",
       testId: "lab-hunt",
-      ...(tallies.hunts == null ? {} : { tally: { value: tallies.hunts, label: "hunts", tone: "neutral" as const } }),
+      ...(here.hunts == null ? {} : { tally: { value: here.hunts, label: "hunts", tone: "neutral" as const } }),
     },
   ];
 
