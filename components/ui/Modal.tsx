@@ -29,7 +29,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
-import { WorldProvider, useWorld } from "./world";
+import { WorldProvider, portalWorld, useWorld, useWorldScoped } from "./world";
 
 /**
  * Hand focus back when the dialog closes: to the opener while it is still in the
@@ -128,6 +128,7 @@ export default function Modal({
   // not follow it; the world is re-declared on the overlay's own root and the
   // React context (which does cross a portal) supplies the skin.
   const world = useWorld();
+  const scoped = useWorldScoped();
   const almanac = world === "almanac";
   const sheet = variant === "sheet";
   const [mounted, setMounted] = useState(false);
@@ -264,7 +265,7 @@ export default function Modal({
   }
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
+    <div data-world={portalWorld(world, scoped)} className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-6">
       {/* Backdrop. A DIV, not a button: it used to be `<button aria-hidden
           tabIndex={-1}>`, which is an ARIA violation — aria-hidden on a
           focusable element hides from assistive tech something the browser will
