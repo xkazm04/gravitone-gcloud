@@ -19,13 +19,14 @@
 //   · the bottom of the ladder: with every candidate blocked, the refusal names
 //     each one and why, and carries the kind of the engine we MEANT to use.
 //
-// WHAT IT CANNOT REACH, stated rather than left for the next reader: a
-// SUCCESSFUL serve, and therefore the rung labelling, `reroutedFrom` and the
-// schemaEnforcement downgrade. `PROVIDERS` is a module-private const, so there
-// is no seam to hand this file a fake the way lib/foundry/extract/engine.ts takes
-// its `EngineIO` — which is exactly why that engine's state machine is covered
-// and this ladder's is not. Closing that needs an injection point in production
-// code and is filed as its own item; nothing here pretends to cover it.
+// WHAT IT DOES NOT REACH, and where that lives now: a SUCCESSFUL serve, and
+// therefore the rung labelling, `reroutedFrom` and the schemaEnforcement
+// downgrade. `PROVIDERS` is a module-private const, so there is no seam to hand
+// this file a fake — and none was added. engine-door.probe.spec.ts reaches all
+// three WITHOUT one: `withFakeEngine` puts a stand-in `claude` first on PATH,
+// so the router's real first rung serves (preferred, "prompted", no
+// `reroutedFrom`), refuses to descend after a dispatched failure, and descends
+// with `reroutedFrom: claude-cli` when nothing is on PATH (CIP-A).
 //
 // NO VENDOR, NO SPAWN, NO SPEND: every case forces a posture in which the local
 // transport is blocked BEFORE its probe would spawn anything, and leaves the

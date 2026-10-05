@@ -1,11 +1,14 @@
 // Shared fixtures for the golden-path dynamic probes.
-import { mkdtempSync, rmSync } from "node:fs";
+import { chmodSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
 import { test } from "@playwright/test";
 
+import { cliArgs, probeClaude, USES_SHELL } from "@/lib/claudeCli";
 import { PHASES, type PhaseKey, type PhaseState, type Project } from "@/lib/projects";
+
+import { fingerprintOf, sha256 } from "../_engine/marker.mjs";
 
 /**
  * Snapshot `vars` before each test and put them back after it.
@@ -196,4 +199,175 @@ export function probeFoundryDir(): () => string {
     dir = "";
   });
   return () => dir;
+}
+
+/* ── the engine stand-in lane (CIP-A) ────────────────────────────────────── */
+
+/** The variables `withFakeEngine` writes. A probe that uses it registers these
+ *  with `keepEnv` at file scope, on top of the helper's own `finally`, so a
+ *  throw anywhere between the two still cannot leave the stand-in on PATH for
+ *  every later file in this serial, single-process lane. */
+export const FAKE_ENGINE_ENV = ["PATH", "FAKE_CLAUDE_CASSETTE", "FAKE_CLAUDE_LOG"] as const;
+
+export const CASSETTE_DIR = path.join(process.cwd(), "tests", "_engine", "cassettes");
+const FAKE_CLAUDE = path.join(process.cwd(), "tests", "_engine", "fake-claude.mjs");
+/** What tests/_engine/fake-claude.mjs answers to `--version`. */
+const FAKE_VERSION = "0.0.0-fake";
+
+/**
+ * How old a cassette may be before it is refused.
+ *
+ * The envelope is the CLI's contract, not ours, and it moves with CLI releases;
+ * a cassette that is never re-checked is a claim about a binary nobody runs any
+ * more. Past this window the probe fails with "re-record" rather than passing
+ * against a shape that may no longer exist. A hand-written cassette is re-dated
+ * by hand, after checking its envelope against one real
+ * `claude -p --output-format json` answer.
+ */
+export const CASSETTE_MAX_AGE_DAYS = 180;
+
+/** One scripted answer. `match` fields that are absent match anything. */
+export interface CassetteTurn {
+  match?: { heading?: string | null; schemaSha256?: string | null };
+  /** The prompt this envelope was recorded against — a hash and a length,
+   *  never the text. `null` on a hand-written turn, which had no prompt. */
+  prompt: { sha256: string; chars: number } | null;
+  mode?: "ok" | "is_error" | "not-json" | "login-stderr" | "slow" | `exit:${number}`;
+  slowMs?: number;
+  stderr?: string;
+  envelope?: {
+    type?: string;
+    subtype?: string;
+    is_error?: boolean;
+    result?: string;
+    session_id?: string;
+    total_cost_usd?: number;
+    duration_ms?: number;
+    [k: string]: unknown;
+  };
+  /** Serialised into `envelope.result` by the stand-in. */
+  resultJson?: unknown;
+}
+
+export interface Cassette {
+  name: string;
+  source: "hand-written" | "recorded";
+  /** YYYY-MM-DD. */
+  recordedAt: string;
+  cliVersion: string;
+  /** `cliArgsFingerprint()` when the cassette was made. */
+  cliArgsFingerprint: string;
+  turns: CassetteTurn[];
+}
+
+/** One invocation of the stand-in, as it recorded itself. Variable NAMES only. */
+export interface FakeCall {
+  kind: "version" | "turn";
+  argv: string[];
+  envKeys: string[];
+  promptChars?: number;
+  promptSha256?: string;
+  heading?: string | null;
+  schemaSha256?: string | null;
+  /** The cassette turn that answered, or null when none matched. */
+  turn?: number | null;
+  mode?: string | null;
+}
+
+/** The sha256 the stand-in computes for a schema the router appended, so a
+ *  cassette's `match.schemaSha256` can be checked against the live schema. */
+export const schemaSha256 = (schema: unknown): string => sha256(JSON.stringify(schema));
+
+/** The argv the door sends, platform-neutral (the off-shell form). The model id
+ *  is in it, so a model change, a flag change or a sandbox change all make
+ *  every cassette refuse until it is re-recorded against the new door. */
+export function cliArgsFingerprint(): string {
+  return fingerprintOf(cliArgs(false));
+}
+
+export function loadCassette(name: string): Cassette {
+  return JSON.parse(readFileSync(path.join(CASSETTE_DIR, `${name}.json`), "utf8")) as Cassette;
+}
+
+/** Why this cassette may not be played, or `null` when it may. */
+export function cassetteStaleness(c: Cassette, now: number = Date.now()): string | null {
+  const fp = cliArgsFingerprint();
+  if (c.cliArgsFingerprint !== fp)
+    return `cassette ${c.name} was made against cliArgs() ${c.cliArgsFingerprint}, and the door now sends ${fp} - re-record it.`;
+  const at = Date.parse(`${c.recordedAt}T00:00:00Z`);
+  if (!Number.isFinite(at)) return `cassette ${c.name} has no readable recordedAt (${c.recordedAt}) - re-record it.`;
+  const days = Math.floor((now - at) / 86_400_000);
+  if (days > CASSETTE_MAX_AGE_DAYS)
+    return `cassette ${c.name} is ${days} days old, past the ${CASSETTE_MAX_AGE_DAYS}-day window - re-record it.`;
+  return null;
+}
+
+/**
+ * Run `fn` with the stand-in `claude` first on PATH, answering from `cassette`
+ * (a name under tests/_engine/cassettes/, or an inline Cassette).
+ *
+ * Writes a platform shim into a fresh temp dir — `claude.cmd` where the door
+ * spawns through cmd.exe (`USES_SHELL`), an executable `claude` elsewhere —
+ * prepends that dir to PATH, and points the stand-in at the cassette and at a
+ * side log `engine.calls()` reads back. Everything is put back in `finally`.
+ *
+ * TWO REFUSALS BEFORE `fn` RUNS, both loud:
+ *   · a stale cassette (`cassetteStaleness`) throws "re-record";
+ *   · `claude --version` must answer as the stand-in. This machine may have a
+ *     real, logged-in `claude`; if the shim were ever not the one the shell
+ *     resolved, the next turn would spend real money from a test. The check
+ *     goes through `probeClaude`, i.e. the same spawn shape and environment
+ *     the door uses.
+ */
+export async function withFakeEngine<T>(
+  cassette: string | Cassette,
+  fn: (engine: { calls: () => FakeCall[]; turns: () => FakeCall[] }) => Promise<T>,
+): Promise<T> {
+  const c = typeof cassette === "string" ? loadCassette(cassette) : cassette;
+  const stale = cassetteStaleness(c);
+  if (stale) throw new Error(stale);
+
+  const dir = mkdtempSync(path.join(tmpdir(), "gravitone-engine-"));
+  const cassetteFile = path.join(dir, "cassette.json");
+  const log = path.join(dir, "calls.jsonl");
+  writeFileSync(cassetteFile, JSON.stringify(c));
+  if (USES_SHELL) {
+    writeFileSync(
+      path.join(dir, "claude.cmd"),
+      ["@echo off", `"${process.execPath}" "${FAKE_CLAUDE}" %*`, "exit /b %ERRORLEVEL%", ""].join("\r\n"),
+    );
+  } else {
+    const sh = path.join(dir, "claude");
+    writeFileSync(sh, `#!/bin/sh\nexec "${process.execPath}" "${FAKE_CLAUDE}" "$@"\n`);
+    chmodSync(sh, 0o755);
+  }
+
+  const saved = Object.fromEntries(FAKE_ENGINE_ENV.map((v) => [v, process.env[v]]));
+  const calls = (): FakeCall[] =>
+    existsSync(log)
+      ? readFileSync(log, "utf8")
+          .split("\n")
+          .filter(Boolean)
+          .map((l) => JSON.parse(l) as FakeCall)
+      : [];
+  try {
+    process.env.PATH = `${dir}${path.delimiter}${saved.PATH ?? ""}`;
+    process.env.FAKE_CLAUDE_CASSETTE = cassetteFile;
+    process.env.FAKE_CLAUDE_LOG = log;
+
+    const p = await probeClaude();
+    if (!p.ok || p.version !== FAKE_VERSION)
+      throw new Error(
+        `withFakeEngine: \`claude --version\` answered ${JSON.stringify(p.version ?? p.detail)}, not the stand-in - ` +
+          `refusing to send a turn that could reach a real engine.`,
+      );
+
+    return await fn({ calls, turns: () => calls().filter((x) => x.kind === "turn") });
+  } finally {
+    for (const v of FAKE_ENGINE_ENV) {
+      if (saved[v] === undefined) delete process.env[v];
+      else process.env[v] = saved[v];
+    }
+    rmSync(dir, { recursive: true, force: true });
+  }
 }

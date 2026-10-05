@@ -1,0 +1,48 @@
+{
+  "name": "recalibrate-ok",
+  "source": "hand-written",
+  "recordedAt": "2026-10-05",
+  "cliVersion": "2.1.289",
+  "cliArgsFingerprint": "9bffdfc1075733e3",
+  "turns": [
+    {
+      "match": {
+        "heading": "# RECALIBRATE-PROMPT",
+        "schemaSha256": "532bdd5adc8891da4411a6b6c1c958d4f4133a6b77d7643edac091b676c4d6d5"
+      },
+      "prompt": null,
+      "mode": "ok",
+      "envelope": {
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "duration_ms": 81342,
+        "duration_api_ms": 80911,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-000000000001",
+        "total_cost_usd": 0.41873,
+        "usage": {
+          "input_tokens": 11873,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 1904
+        },
+        "permission_denials": []
+      },
+      "resultJson": {
+        "edits": [
+          {
+            "renderId": "adjudication",
+            "op": "retime",
+            "beatAt": "2:50",
+            "seconds": 30,
+            "why": "Less weight on the macro cause: the beat holds 30s and the time returns to the ETF evidence before it."
+          }
+        ],
+        "refusals": [],
+        "unchanged": ["reversal-chain", "derived-short"],
+        "summary": "One retime on adjudication: the macro-cause beat holds 30s."
+      }
+    }
+  ]
+}

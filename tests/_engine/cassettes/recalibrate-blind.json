@@ -1,0 +1,49 @@
+{
+  "name": "recalibrate-blind",
+  "source": "hand-written",
+  "recordedAt": "2026-10-05",
+  "cliVersion": "2.1.289",
+  "cliArgsFingerprint": "9bffdfc1075733e3",
+  "turns": [
+    {
+      "match": {
+        "heading": "# RECALIBRATE-PROMPT",
+        "schemaSha256": "532bdd5adc8891da4411a6b6c1c958d4f4133a6b77d7643edac091b676c4d6d5"
+      },
+      "prompt": null,
+      "mode": "ok",
+      "envelope": {
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "duration_ms": 88407,
+        "duration_api_ms": 88012,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-000000000003",
+        "total_cost_usd": 0.44211,
+        "usage": {
+          "input_tokens": 11873,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 2240
+        },
+        "permission_denials": []
+      },
+      "resultJson": {
+        "edits": [
+          {
+            "renderId": "adjudication",
+            "op": "rewrite",
+            "beatAt": "2:50",
+            "text": "The yields moved first; the correlation followed, and it was a one-time re-rating.",
+            "cards": ["f-macro-cause", "c-one-time-rerating"],
+            "why": "Tightens the macro beat around the re-rating conclusion."
+          }
+        ],
+        "refusals": [],
+        "unchanged": ["reversal-chain", "derived-short"],
+        "summary": "One rewrite on adjudication, resting on a conclusion listed under CONCLUSIONS NOT SENT."
+      }
+    }
+  ]
+}
