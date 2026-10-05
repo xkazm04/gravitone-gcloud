@@ -3,45 +3,23 @@
 // THE CUT, AS A SEQUENCER — the non-music-video branch of ./CutTimeline.
 //
 // One data model (./useCut), one clock (./clock), the takes slaved to it
-// (./useTakeAudio), and three directional layouts over them behind `?v=`
-// (components/ui/VariantSwitch — prototype-only, deleted at consolidation):
-//
-//   1 · Control room   inspector left, monitor centre, finish line right,
-//                      lanes along the bottom — StatReel's ControlRoom grid.
-//   2 · Timeline       tall lanes with plates and waveforms in them, the
-//                      monitor floating small in a corner.
-//   3 · Storyboard     the shots as a strip with the needle across it, a
-//                      music/voice coverage lane, the finish line beside.
-//
-// `useVariant` reads search params, so this subtree sits under its own
-// <Suspense> — the rule Next 16 enforces for `useSearchParams` in a client
-// component. The studio's own `?step=` rides along untouched: VariantSwitch
-// edits only `v`.
+// (./useTakeAudio), laid out as the Control room (./ControlRoom): inspector
+// left, monitor centre, finish line right, lanes along the bottom —
+// StatReel's ControlRoom grid. It won a three-way prototype round on
+// 2026-10-05 against a timeline-first layout (tall lanes, floating monitor)
+// and a storyboard (shot strip with the needle across it); both are deleted.
 
-import { Suspense, useMemo, useState } from "react";
-
-import { VariantSwitch, useVariant } from "@/components/ui/VariantSwitch";
+import { useMemo, useState } from "react";
 
 import { useCutClock } from "./clock";
 import { drawnStart } from "./offsets";
 import { useTransportKeys } from "./parts/Transport";
 import { CutContext, useCut, type CutCtx, type CutModel } from "./useCut";
 import { useTakeAudio, type TakeSpan } from "./useTakeAudio";
-import ControlRoom from "./variants/ControlRoom";
-import Storyboard from "./variants/Storyboard";
-import TimelineFirst from "./variants/TimelineFirst";
+import ControlRoom from "./ControlRoom";
 
 export default function CutWorkbench({ projectId }: { projectId: string }) {
-  return (
-    <Suspense fallback={null}>
-      <Bench projectId={projectId} />
-    </Suspense>
-  );
-}
-
-function Bench({ projectId }: { projectId: string }) {
   const model = useCut(projectId);
-  const [v] = useVariant();
 
   if (model.trouble)
     return (
@@ -56,10 +34,10 @@ function Bench({ projectId }: { projectId: string }) {
         reading the cut…
       </p>
     );
-  return <Loaded model={model} v={v} />;
+  return <Loaded model={model} />;
 }
 
-function Loaded({ model, v }: { model: CutModel; v: 1 | 2 | 3 }) {
+function Loaded({ model }: { model: CutModel }) {
   const cut = model.cut!;
   const clock = useCutClock(cut.totalS);
   const [muted, setMuted] = useState(false);
@@ -79,11 +57,9 @@ function Loaded({ model, v }: { model: CutModel; v: 1 | 2 | 3 }) {
 
   return (
     <CutContext.Provider value={ctx}>
-      {/* Bottom room so the last row scrolls clear of the variant chip. */}
-      <div data-testid="cut-workbench" data-variant={v} data-origin={cut.origin} className="pb-16">
-        {v === 1 ? <ControlRoom /> : v === 2 ? <TimelineFirst /> : <Storyboard />}
+      <div data-testid="cut-workbench" data-origin={cut.origin}>
+        <ControlRoom />
       </div>
-      <VariantSwitch labels={["Control room", "Timeline", "Storyboard"]} />
     </CutContext.Provider>
   );
 }

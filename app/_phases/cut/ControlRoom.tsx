@@ -1,16 +1,16 @@
 "use client";
 
-// V1 · CONTROL ROOM — StatReel's room grid (ControlRoom.tsx): what you are
+// THE CONTROL ROOM — StatReel's room grid (ControlRoom.tsx): what you are
 // working on at the left, the picture in the middle, what stands between it
 // and a render at the right, the tracks along the bottom; a stage bar across
 // the top with the one next action.
 
-import { FinishLine, NextAction } from "../parts/FinishLine";
-import { Inspector } from "../parts/Inspector";
-import { Lanes } from "../parts/Lanes";
-import { Monitor } from "../parts/Monitor";
-import { SyncBench } from "../parts/SyncBench";
-import { OriginChip, Transport } from "../parts/Transport";
+import { FinishLine, NextAction } from "./parts/FinishLine";
+import { Inspector } from "./parts/Inspector";
+import { Lanes } from "./parts/Lanes";
+import { Monitor } from "./parts/Monitor";
+import { SyncBench } from "./parts/SyncBench";
+import { OriginChip, Transport } from "./parts/Transport";
 
 export default function ControlRoom() {
   return (
