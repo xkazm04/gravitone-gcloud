@@ -568,6 +568,20 @@ function RunStrip({
   );
 }
 
+const IMAGE_TYPE = /^image\/(png|jpeg|webp)$/;
+
+/** What the gallery well takes, and the names of what it will not: a file that is not
+ *  PNG / JPEG / WebP, and everything past the cap. */
+export function acceptGallery(prev: File[], incoming: File[], cap = 60): { files: File[]; refused: string[] } {
+  const refused: string[] = [];
+  const files = [...prev];
+  for (const f of incoming) {
+    if (!IMAGE_TYPE.test(f.type) || files.length >= cap) refused.push(f.name);
+    else files.push(f);
+  }
+  return { files, refused };
+}
+
 function NewRun({
   busy,
   shrinking,
@@ -586,11 +600,16 @@ function NewRun({
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
+  const [refused, setRefused] = useState<string[]>([]);
+
   const accept = (list: FileList | File[] | null) => {
     if (!list) return;
-    const imgs = [...list].filter((f) => /^image\/(png|jpeg|webp)$/.test(f.type));
-    setFiles((prev) => [...prev, ...imgs].slice(0, 60));
-    if (!slug && imgs[0]) setSlug(imgs[0].name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase().slice(0, 24));
+    const incoming = [...list];
+    const next = acceptGallery(files, incoming);
+    setFiles(next.files);
+    setRefused(next.refused);
+    const first = incoming.find((f) => IMAGE_TYPE.test(f.type));
+    if (!slug && first) setSlug(first.name.replace(/\.[^.]+$/, "").replace(/[^a-z0-9]+/gi, "-").toLowerCase().slice(0, 24));
   };
 
   const previews = useMemo(() => files.map((f) => ({ f, url: URL.createObjectURL(f) })), [files]);
@@ -631,13 +650,25 @@ function NewRun({
           dragging ? "border-cyan-300/60 bg-cyan-400/[0.08] shadow-[var(--gt-shadow-glow)]" : "border-white/10 bg-black/25 hover:border-white/20 hover:bg-white/[0.03]"
         }`}
       >
-        <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => e.target.files && accept(e.target.files)} />
+        <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" multiple hidden onChange={(e) => {
+            // Copied out first: clearing the value empties the live FileList. Cleared so
+            // choosing the SAME file again, after removing it below, fires change again.
+            accept(e.target.files ? [...e.target.files] : null);
+            e.target.value = "";
+          }}
+        />
         <span aria-hidden className={`grid h-14 w-14 place-items-center rounded-2xl border transition ${dragging ? "border-cyan-300/50 bg-cyan-300/15 text-cyan-200" : "border-white/12 bg-white/[0.04] text-white/60 group-hover:text-white/85"}`}>
           <ImagePlus className="h-6 w-6" />
         </span>
         <span className="font-instrument text-2xl text-white/90">Drop a gallery</span>
         <span className="font-jetbrains text-label text-white/40">PNG · JPEG · WebP · up to 60 · shrunk to 1280px before upload</span>
       </div>
+
+      {refused.length > 0 && (
+        <p className="font-jetbrains rounded-xl border border-amber-400/25 bg-amber-400/5 px-3 py-2 text-label break-words text-amber-200/90">
+          Not added — {refused.join(" / ")}
+        </p>
+      )}
 
       {previews.length > 0 && (
         <div className="grid grid-cols-4 gap-2 sm:grid-cols-6 lg:grid-cols-8">
