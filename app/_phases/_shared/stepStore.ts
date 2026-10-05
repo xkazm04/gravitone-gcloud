@@ -486,6 +486,39 @@ export function __resetSaveSlots(): void {
   ticketSeq = 0;
 }
 
+/* ───────────────────────── issue order (added 2026-10-05) ──────────────────
+ *
+ * The ticket above decides which of two WHOLE-RECORD saves may land. It cannot
+ * order a PATCH, because a patch is not superseded by a later write — it carries
+ * a field nobody else is writing, and abandoning it loses that field. That is
+ * the bug the four copied read-merge-writes had: each claimed a ticket, so the
+ * first of two patches issued in one tick abandoned and its field was gone.
+ *
+ * So every write to a key — whole save or patch — runs in ISSUE order through
+ * one chain per key. `openDb()` is awaited before a transaction exists, so
+ * without the chain a later call can create its transaction first; IndexedDB
+ * then serialises them in the wrong order. With it, a save issued before a
+ * patch lands before it, and the patch merges onto what the save wrote.
+ *
+ * A link never rejects (`withStore` resolves every failure to an outcome), and
+ * the chain is dropped once it drains, so the map holds only keys with a write
+ * in flight. */
+const writeChains = new Map<string, Promise<void>>();
+
+function inIssueOrder<T>(k: string, run: () => Promise<T>): Promise<T> {
+  const prev = writeChains.get(k) ?? Promise.resolve();
+  const next = prev.then(run, run);
+  const tail = next.then(
+    () => undefined,
+    () => undefined,
+  );
+  writeChains.set(k, tail);
+  void tail.then(() => {
+    if (writeChains.get(k) === tail) writeChains.delete(k);
+  });
+  return next;
+}
+
 /** The steps store is created lazily rather than in the projects upgrade path,
  *  so an existing browser DB does not need a version bump to gain it.
  *
@@ -605,22 +638,22 @@ export async function loadStep<T = ResearchStepData>(
  *   4. Migrations are pure vN→vN+1 functions applied at the read seam, and each
  *      one ships in the same commit as the shape change that needs it.
  *
- *  Rules 3 and 4 are NOT built yet, deliberately: there is one version in
- *  existence, so the chain would hold zero functions and the refusal branch would
- *  be unreachable — untestable machinery whose first real use would also be its
- *  first execution. The stamp ships alone because it is the irreversible half. A
- *  v2 reader can only tell v1 from v2 if v1 records were being marked BEFORE v2
- *  existed, so every day without it is another day of records identifiable only
- *  by guessing.
+ *  Rules 3 and 4 are built at the RECORD seam, not here (2026-10-05):
+ *  `app/_phases/_shared/records/registry.ts` reads `v` (absent = 1), refuses a
+ *  record from the future, chains a def's migrations, and parses. A record with
+ *  a def is written with ITS version through the `v` option below; this constant
+ *  stays the stamp for every write that has no def yet, and both are 1 today.
  *
- *  Nothing reads this yet. That is intended, and it is not dead weight — deleting
- *  it as unused would silently restore the ambiguity it exists to end. */
+ *  Deleting it as unused would silently restore the ambiguity it exists to end. */
 export const SCHEMA_VERSION = 1;
 
 export async function saveStep<T>(
   projectId: string,
   phase: string,
   data: T,
+  /** `v`: the record version to stamp — a record def's own (records/patch.ts).
+   *  Absent means `SCHEMA_VERSION`, which is every caller without a def. */
+  opts?: { v?: number },
 ): Promise<SaveOutcome> {
   // Ticket taken HERE — at call time, in issue order — not inside the write,
   // which would be the same race one layer down. See the block above.
@@ -631,23 +664,95 @@ export async function saveStep<T>(
   // cannot be raced.
   if (!slot.stillNewest()) return { ok: true, superseded: true };
 
-  let wrote = false;
-  const r = await withStore("write", projectId, phase, (db) =>
-    runTx(db, STEPS_STORE, "readwrite", (store) => {
-      // The check and the put are in ONE synchronous block, so no later save can
-      // be issued between them.
-      if (!slot.stillNewest()) return;
-      wrote = true;
-      store.put({
-        id: key(projectId, phase),
-        projectId,
-        phase,
-        data: { ...data, savedAt: Date.now(), v: SCHEMA_VERSION },
-      });
-    }),
-  );
-  if (!r.ok) return r;
-  return wrote ? { ok: true } : { ok: true, superseded: true };
+  return inIssueOrder(key(projectId, phase), async () => {
+    let wrote = false;
+    const r = await withStore("write", projectId, phase, (db) =>
+      runTx(db, STEPS_STORE, "readwrite", (store) => {
+        // The check and the put are in ONE synchronous block, so no later save can
+        // be issued between them.
+        if (!slot.stillNewest()) return;
+        wrote = true;
+        store.put({
+          id: key(projectId, phase),
+          projectId,
+          phase,
+          data: { ...data, savedAt: Date.now(), v: opts?.v ?? SCHEMA_VERSION },
+        });
+      }),
+    );
+    if (!r.ok) return r;
+    return wrote ? { ok: true } : { ok: true, superseded: true };
+  });
+}
+
+/** What a patch decided, having read the stored record inside its own
+ *  transaction: write this, or write nothing and say why. */
+export type StepDecision = { put: object } | { skip: unknown };
+
+export type PatchStepOutcome =
+  | { ok: true; wrote: true }
+  | { ok: true; wrote: false; skip: unknown }
+  | { ok: false; trouble: StorageTrouble };
+
+/**
+ * Read a record and write its successor in ONE readwrite transaction.
+ *
+ * The read-merge-write this replaces was `loadStep` then `saveStep`: two
+ * transactions, so a write could land between them, and a read that FAILED came
+ * back as `{}` — after which the "merge" wrote one field over the whole record.
+ * Here the read and the put share a transaction: a failed read aborts it and
+ * nothing is written, and no other write to this key can interleave (IndexedDB
+ * serialises readwrite transactions on a store, and `inIssueOrder` makes their
+ * order the order they were issued in).
+ *
+ * `decide` is synchronous on purpose — the transaction would auto-commit across
+ * an `await`. It receives the stored data exactly as written (with its `v`), or
+ * the seeded default when nothing is stored, and a throw from it aborts the
+ * transaction and reports as a write failure.
+ *
+ * Exported for `records/patch.ts`, which supplies the version check and the
+ * parse; a call site wants `patchRecord`, not this.
+ */
+export function patchStep(
+  projectId: string,
+  phase: string,
+  decide: (stored: unknown) => StepDecision,
+  opts?: { v?: number },
+): Promise<PatchStepOutcome> {
+  return inIssueOrder(key(projectId, phase), async () => {
+    // A holder rather than two `let`s: assignments inside the request callback
+    // are invisible to control-flow narrowing after the await.
+    const seen: { decided?: StepDecision; thrown?: unknown } = {};
+    const r = await withStore("write", projectId, phase, (db) =>
+      runTx(db, STEPS_STORE, "readwrite", (store, tx) => {
+        const req = store.get(key(projectId, phase));
+        req.onsuccess = () => {
+          let d: StepDecision;
+          try {
+            d = decide(req.result?.data ?? seededFor(projectId, phase));
+          } catch (e) {
+            seen.thrown = e;
+            tx.abort();
+            return;
+          }
+          seen.decided = d;
+          if ("put" in d)
+            store.put({
+              id: key(projectId, phase),
+              projectId,
+              phase,
+              data: { ...d.put, savedAt: Date.now(), v: opts?.v ?? SCHEMA_VERSION },
+            });
+        };
+      }).catch((e: unknown) => {
+        throw seen.thrown ?? e;
+      }),
+    );
+    if (!r.ok) return r;
+    const d = seen.decided;
+    if (d && "put" in d) return { ok: true, wrote: true };
+    return { ok: true, wrote: false, skip: d && "skip" in d ? d.skip : undefined };
+  });
 }
 
 /** A seeded project ships with the research its own seed row claims.

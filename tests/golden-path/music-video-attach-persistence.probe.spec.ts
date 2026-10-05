@@ -16,6 +16,9 @@ test("attach guards putUploads and reads the save outcomes before drawing succes
   expect(src).toMatch(/try\s*\{\s*await putUploads\(\[pair\]\);\s*\}\s*catch/);
   expect(src).not.toMatch(/^\s*await write\(/m);
   expect(src).not.toMatch(/^\s*await markResearched\(/m);
-  expect(src).toMatch(/Promise<SaveOutcome>/);
+  // The writes return an outcome the attach reads. `RecordWriteOutcome` since
+  // the writes became record patches (phase-shared-A): SaveOutcome plus the
+  // refusals, and `.ok` still decides.
+  expect(src).toMatch(/Promise<(SaveOutcome|RecordWriteOutcome)>/);
   expect(src.indexOf("setEnvelope(env)")).toBeGreaterThan(src.indexOf("await markResearched()"));
 });

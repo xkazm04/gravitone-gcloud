@@ -178,8 +178,6 @@ const OWN_LOAD_GUARD: Record<string, string> = {
     "loads the project record rather than a step record, and applies it across three pieces of local state; useStepFor's single-apply shape does not fit and useLoadFor alone would buy only the flag.",
   "app/_phases/script/ScriptStep.tsx":
     "two loads in one component against different keys, one of them the project record; the same reason as ResearchStep.tsx above.",
-  "app/_phases/frames/alternatives/useAlternatives.ts":
-    "guards an imaging call, not a store read — the result is a paid generation and the guard is about not applying it, which useLoadFor's read-shaped signature does not describe.",
   "app/_projects/ProjectDialog.tsx":
     "a dialog's own open/close lifecycle rather than a keyed load; the key here is the dialog being open, not a project id.",
   "app/studio/[projectId]/StudioView.tsx":

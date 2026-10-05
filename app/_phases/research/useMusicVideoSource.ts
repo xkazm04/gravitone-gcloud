@@ -26,17 +26,10 @@ import { useCallback, useState } from "react";
 import { assetFromUpload, putUploads } from "@/lib/assets";
 import { analyzeAudioEnvelope, AudioDecodeError, type AudioEnvelope } from "@/lib/audioEnvelope";
 
-import {
-  claimSaveSlot,
-  loadStep,
-  saveStep,
-  type MusicVideoSourceStepData,
-  type ResearchStepData,
-  type SaveOutcome,
-} from "../_shared/stepStore";
-import { useStepFor } from "../_shared/useLoadFor";
-
-const PHASE = "music-video-source";
+import { patchRecord, type RecordWriteOutcome } from "../_shared/records/patch";
+import { useRecord } from "../_shared/records/useRecord";
+import type { MusicVideoSourceStepData } from "../_shared/stepStore";
+import { MUSIC_VIDEO_SOURCE, RESEARCH } from "./records";
 
 export type AttachStatus = "idle" | "decoding" | "error";
 
@@ -48,38 +41,36 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
   const [status, setStatus] = useState<AttachStatus>("idle");
   const [error, setError] = useState<string | null>(null);
 
-  const hydrated = useStepFor<MusicVideoSourceStepData>(projectId, PHASE, (saved) => {
+  const { hydrated, patch } = useRecord(MUSIC_VIDEO_SOURCE, projectId, (saved) => {
     setSourceAssetId(saved?.sourceAssetId);
     setStyleState(saved?.style ?? "");
     setEnvelope(saved?.envelope);
   });
 
-  /** Everything this hook has written so far — read before every write so a
-   *  later save never clobbers a field a LATER work package (Frames' poster,
-   *  the effects-studio's seed) has already filled in. */
+  /** A merge into the shared record, so a save never clobbers a field a LATER
+   *  work package (Frames' poster, the effects-studio's seed) has filled in.
+   *  Atomic (`patchRecord`): this was `loadStep` + `saveStep`, and a failed
+   *  read came back as `{}` and was "merged" — one field written over the
+   *  envelope, the poster and the seed. */
   const write = useCallback(
-    async (patch: Partial<MusicVideoSourceStepData>): Promise<SaveOutcome> => {
-      const slot = claimSaveSlot(projectId, PHASE);
-      const current = (await loadStep<MusicVideoSourceStepData>(projectId, PHASE)) ?? {};
-      if (!slot.stillNewest()) return { ok: true, superseded: true };
-      return saveStep<MusicVideoSourceStepData>(projectId, PHASE, { ...current, ...patch });
-    },
-    [projectId],
+    (fields: Partial<MusicVideoSourceStepData>): Promise<RecordWriteOutcome> =>
+      patch((current) => ({ ...current, ...fields })),
+    [patch],
   );
 
   /** Mark the project researched — the one write Script's gate actually reads.
-   *  Reads the existing record first so a project that already has a topic
-   *  (unlikely for this discipline, but the same discipline against a
-   *  re-attach) does not lose it. */
-  const markResearched = useCallback(async (): Promise<SaveOutcome> => {
-    const slot = claimSaveSlot(projectId, "research");
-    const current = await loadStep<ResearchStepData>(projectId, "research");
-    if (!slot.stillNewest()) return { ok: true, superseded: true };
-    return saveStep<ResearchStepData>(projectId, "research", {
-      topic: current?.topic ?? "",
-      researched: true,
-    });
-  }, [projectId]);
+   *  A merge for the same reason: a project that already has a topic (unlikely
+   *  for this discipline, but the same discipline against a re-attach) keeps
+   *  it. */
+  const markResearched = useCallback(
+    (): Promise<RecordWriteOutcome> =>
+      patchRecord(RESEARCH, projectId, (current) => ({
+        ...current,
+        topic: current?.topic ?? "",
+        researched: true,
+      })),
+    [projectId],
+  );
 
   const setStyle = useCallback(
     (text: string) => {
