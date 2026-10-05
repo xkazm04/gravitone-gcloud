@@ -65,7 +65,7 @@ const TITLE_PROSE_CHARS = 45;
  * commit message, which sentence earned the exemption and why <Hint> was wrong
  * for it.
  */
-const TITLE_BUDGET = 6;
+const TITLE_BUDGET = 5;
 
 /**
  * Words allowed inside a <Hint>. The README's number.
