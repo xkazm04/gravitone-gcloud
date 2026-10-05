@@ -11,7 +11,8 @@ export type BoardSourceId =
   | "adoption"
   | "alternative"
   | "triage"
-  | "publish";
+  | "publish"
+  | "articles";
 
 /** `null` = undecided. */
 export type BoardVerdict = "approve" | "reject" | null;

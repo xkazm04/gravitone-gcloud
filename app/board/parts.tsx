@@ -67,6 +67,7 @@ const TEXT_WASH: Partial<Record<BoardSourceId, string>> = {
   triage: "from-violet-400/[0.16] via-white/[0.03] to-cyan-400/[0.08]",
   publish: "from-amber-400/[0.14] via-white/[0.03] to-rose-400/[0.08]",
   adoption: "from-emerald-400/[0.12] via-white/[0.03] to-cyan-400/[0.08]",
+  articles: "from-cyan-400/[0.12] via-white/[0.03] to-amber-400/[0.08]",
 };
 
 /**

@@ -43,6 +43,11 @@ export const MODULES = [
   // Publishing: the schedule, the channels a headless agent can post to, and
   // what came back from them.
   { label: "Calendar", href: "/calendar" },
+  // Technical posts from a registry topic: research, outline, draft and a
+  // deterministic check, stopping at a human gate whose approval opens a PR in
+  // ai-registry (lib/articles/, docs/articles.md). Beside the Calendar because
+  // both are publishing; separate because a post is words, not a video slot.
+  { label: "Articles", href: "/articles" },
   // The Sound lab: an experimental studio for finding the right track and
   // polishing it — ElevenLabs live, Suno by manual round trip, a local lane
   // declared. No longer a temporary bench: since 2026-10-05 every render it

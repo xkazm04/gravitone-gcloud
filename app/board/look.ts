@@ -19,6 +19,7 @@ import {
   Flag,
   Layers,
   ListChecks,
+  Newspaper,
   Pipette,
   Quote,
   Repeat2,
@@ -43,6 +44,7 @@ export const SOURCE_ICON: Record<BoardSourceId, LucideIcon> = {
   alternative: Layers,
   triage: ListChecks,
   publish: CalendarClock,
+  articles: Newspaper,
 };
 
 /** A research card's kind (app/_phases/_shared/notebook/cards.ts CardKind). */

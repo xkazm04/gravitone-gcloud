@@ -46,6 +46,9 @@ import { POST as musicVideoExportPOST } from "@/app/api/music-video/export/route
 import { POST as soundGeneratePOST } from "@/app/api/sound/generate/route";
 import { POST as soundHuntsPOST } from "@/app/api/sound/hunts/route";
 import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/route";
+import { POST as articlesCreatePOST } from "@/app/api/articles/route";
+import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
+import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
 
 const SECRET = "probe-secret-value";
 
@@ -106,6 +109,22 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
     "sound/hunts/lesson",
     "/api/sound/hunts/[id]/lesson",
     (r: Request) => soundHuntLessonPOST(r, { params: Promise.resolve({ id: "no-such-hunt" }) }),
+  ],
+  // The article pipeline (WP4). Create spends a research turn on the operator's
+  // Claude seat; approve pushes a branch and opens a PR in ai-registry; resume
+  // re-runs a step. An empty body is a 400 from create's topic check; the run
+  // id names no run, so approve and resume are the store's 404 — read-only,
+  // checked BEFORE the store's write lock, which would create the directory.
+  ["articles/create", "/api/articles", articlesCreatePOST],
+  [
+    "articles/approve",
+    "/api/articles/[runId]/approve",
+    (r: Request) => articlesApprovePOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
+  ],
+  [
+    "articles/resume",
+    "/api/articles/[runId]/resume",
+    (r: Request) => articlesResumePOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
   ],
 ];
 

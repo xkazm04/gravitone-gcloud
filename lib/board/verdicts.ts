@@ -12,6 +12,7 @@ import type { ExtractVerdictRecord } from "@/lib/foundry/extract/types";
 import type { TrainingVerdict } from "@/lib/foundry/training/types";
 import type { ProofState } from "@/lib/themes";
 import type { SlotStatus } from "@/lib/publish/types";
+import type { ArticleStatus } from "@/lib/articles/types";
 
 import type { BoardVerdict } from "./types";
 
@@ -186,3 +187,25 @@ export function fromSlot(s: SlotLike): BoardVerdict | undefined {
 
 /** One hour from `now`: where an approved missed slot is put back. */
 export const rescheduleAt = (now: Date = new Date()): string => new Date(now.getTime() + 60 * 60 * 1000).toISOString();
+
+/* ── articles: the run's own status is the verdict ────────────────────────── */
+// lib/articles/store.ts TRANSITIONS: `awaiting-approval` is the gate;
+// `approved` is reachable only from it (or from a landing failure, which keeps
+// the approval), and `rejected` is terminal. So a run carrying `approval` was
+// approved whatever its status now says (approved, landing, landed, or failed
+// while landing), and nothing else about a run is a human's verdict. Approve
+// writes POST /approve {patches}; reject writes POST /reject {note}; neither
+// has an inverse, so a decided run never returns to undecided.
+
+export interface ArticleLike {
+  status: ArticleStatus;
+  approval?: unknown;
+}
+
+/** `undefined` = this run has not reached the gate: not a Board item. */
+export function fromArticle(r: ArticleLike): BoardVerdict | undefined {
+  if (r.status === "awaiting-approval") return null;
+  if (r.status === "rejected") return "reject";
+  if (r.approval) return "approve";
+  return undefined;
+}

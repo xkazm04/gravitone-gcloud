@@ -34,6 +34,7 @@ const LOADERS: Record<BoardSourceId, Loader> = {
   alternative: (ctx) => import("./sources/alternative").then((m) => m.makeAlternativeSource(ctx)),
   triage: (ctx) => import("./sources/triage").then((m) => m.makeTriageSource(ctx)),
   publish: () => import("./sources/publish").then((m) => m.makePublishSource()),
+  articles: () => import("./sources/articles").then((m) => m.makeArticlesSource()),
 };
 
 /** Labels without loading a module — the rail draws before any source answers. */
@@ -46,6 +47,7 @@ export const SOURCE_LABEL: Record<BoardSourceId, string> = {
   alternative: "Alternatives",
   triage: "Triage",
   publish: "Publish",
+  articles: "Articles",
 };
 
 export type SourceState =
