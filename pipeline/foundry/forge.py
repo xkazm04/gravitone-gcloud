@@ -389,8 +389,11 @@ def stage_grade(manifest, run_dir, model):
     for n, c in enumerate(todo, 1):
         t0 = time.time()
         b64 = base64.b64encode((run_dir / c["file"]).read_bytes()).decode("ascii")
-        g = {"grader": model, "at": now(), "craft": None, "style": None,
-             "veto": None, "unmeasured": []}
+        # `grader_digest`: the model alone does not name the instrument -- a
+        # change to grade.py's prompts or schemas is a new grader, and the
+        # calibration (lib/foundry/calibration.ts) keeps each its own series.
+        g = {"grader": model, "grader_digest": grade.GRADER_DIGEST, "at": now(),
+             "craft": None, "style": None, "veto": None, "unmeasured": []}
         try:
             text, _ = run_ollama(model, b64, "image/png")
             redo = grade.parse(text)

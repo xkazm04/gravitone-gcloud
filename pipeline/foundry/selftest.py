@@ -187,6 +187,29 @@ def test_a_run_that_gave_up_mid_generation_does_not_report_done():
     check("a run that gave up mid-generation does not report done", status, "incomplete")
 
 
+def test_a_grade_names_the_grader_version_not_just_the_model():
+    """A grade recorded the grader's model id and nothing else, so a change to
+    grade.py's schema or prompts could not be told apart from the grader
+    drifting -- and lib/foundry/calibration.ts measures the grader against the
+    human PER GRADER, so rows from two instruments would pool into one number.
+    forge.py now stamps grade.py's digest on every grade."""
+    F = load("forge")
+    m = manifest_with(candidate("stamped", "generated"))
+    run_dir = staged_run(m)
+    fake_graders(F, craft={"shot_size": "full shot"})
+    F.stage_grade(m, run_dir, "fake")
+    g = m["candidates"][0]["grade"]
+    G = F.grade
+    check("a grade carries grade.py's digest", g.get("grader_digest"), G.GRADER_DIGEST)
+    check("...a 16-hex-digit digest", len(G.GRADER_DIGEST) == 16 and all(ch in "0123456789abcdef" for ch in G.GRADER_DIGEST), True)
+    check("...stable across calls", G.grader_digest(), G.GRADER_DIGEST)
+    parts = G.grader_parts()
+    check("...over both prompts and both schemas",
+          sorted(parts), ["craft_fields", "craft_prompt", "craft_schema", "ordinal", "style_enums", "style_prompt", "style_schema"])
+    moved = dict(parts, style_prompt=parts["style_prompt"] + " ")
+    check("...and one character of prompt is a new grader", G.grader_digest(moved) != G.GRADER_DIGEST, True)
+
+
 # ── acquire: the readback catalogue ─────────────────────────────────────────
 
 def readback_row(source, **over):
@@ -735,6 +758,7 @@ TESTS = [
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,
     test_a_run_that_gave_up_mid_generation_does_not_report_done,
+    test_a_grade_names_the_grader_version_not_just_the_model,
     test_list_survives_a_row_from_another_schema,
     test_an_unparseable_readback_is_kept_on_disk,
     test_frame_manifest_v2_schema_write_and_read_v1_normalization,

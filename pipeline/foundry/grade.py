@@ -21,6 +21,7 @@ Every grade records who graded it. A candidate that could not be graded is
 `unmeasured`, never a pass -- the ledger counts those separately.
 """
 
+import hashlib
 import json
 import sys
 from pathlib import Path
@@ -32,6 +33,9 @@ sys.path.insert(0, str(PROBE))
 import style as style_mod  # noqa: E402
 from probe import OLLAMA, post  # noqa: E402
 from replicate import CRAFT_FIELDS, credit  # noqa: E402
+from schema import ORDINAL  # noqa: E402
+from schema import PROMPT as CRAFT_PROMPT  # noqa: E402
+from schema import json_schema as craft_schema  # noqa: E402
 
 # The observables a single image can answer. `motion_treatment` and
 # `consistency_across_frames` are set-level questions and are left out.
@@ -65,6 +69,33 @@ numbers, logos or watermark marks and answer TRUE if any exist."""
 def style_schema():
     return {"type": "object", "properties": STYLE_FIELDS, "required": STYLE_REQUIRED,
             "additionalProperties": False}
+
+
+def grader_parts():
+    """Everything that decides what a grade MEANS apart from the model: both
+    prompts, both schemas, the craft fields scored and the partial-credit scale.
+
+    A grade used to record the model id alone, so a change here could not be
+    told apart from the grader drifting. lib/foundry/calibration.ts measures
+    the grader against the human per grader series (model @ this digest);
+    without it, rows from two instruments pool into one number and a grader
+    change hides inside the drift the calibration exists to detect."""
+    return {
+        "craft_prompt": CRAFT_PROMPT,
+        "craft_schema": craft_schema(),
+        "craft_fields": [f for f in CRAFT_FIELDS if f != "texture"],
+        "ordinal": ORDINAL,
+        "style_prompt": STYLE_PROMPT,
+        "style_schema": style_schema(),
+        "style_enums": STYLE_ENUMS,
+    }
+
+
+def grader_digest(parts=None):
+    """sha256 over the canonical JSON of grader_parts(), first 16 hex digits."""
+    body = json.dumps(grader_parts() if parts is None else parts,
+                      sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
 
 
 def run_style_readback(model, b64):
@@ -145,3 +176,8 @@ def parse(text):
         if start >= 0 and end > start:
             return json.loads(text[start:end + 1])
         raise
+
+
+# Computed once at import, after every part it covers exists: forge.py stamps
+# it on every grade.
+GRADER_DIGEST = grader_digest()
