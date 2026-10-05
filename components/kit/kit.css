@@ -70,6 +70,18 @@
   padding-bottom: 96px;
   -webkit-font-smoothing: antialiased;
 }
+/* OBSIDIAN LETS THE AURORA THROUGH. The almanac world is a page of its own
+ * (its Sky, its night ground); an obsidian route is a body inside StudioFrame,
+ * whose aurora IS the ground. --al-sky/--al-deep both resolve to --gt-ink there,
+ * so the rule above painted an opaque ink slab over the frame's atmosphere —
+ * the "wireframe" look Board, Calendar and Foundry shipped with (2026-10-05),
+ * against Projects and Library, which never opted in and sit on the aurora.
+ * app/library/audio/audio-workbench.css's `.ab-world` was already undoing it
+ * by hand for the one route that noticed. */
+.k-world[data-world="obsidian"] {
+  background: none;
+  min-height: 0;
+}
 :is([data-world="almanac"], [data-world="obsidian"]) :focus-visible {
   outline: 2px solid var(--al-gold);
   outline-offset: 3px;
