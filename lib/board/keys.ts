@@ -42,7 +42,12 @@ export function typing(target: EventTarget | null): boolean {
   if (el.isContentEditable) return true;
   const tag = (el.tagName ?? "").toUpperCase();
   if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return true;
-  return typeof el.closest === "function" && Boolean(el.closest("input, textarea, select, [contenteditable='true']"));
+  // An OPEN combobox (components/ui/Select) takes printable keys as type-ahead,
+  // so a verdict key pressed while its list is open is typing, not a decision.
+  return (
+    typeof el.closest === "function" &&
+    Boolean(el.closest("input, textarea, select, [contenteditable='true'], [role='combobox'][aria-expanded='true']"))
+  );
 }
 
 /** Marks the Board's own loupe; an aria-modal containing it does not block. */

@@ -172,7 +172,16 @@ export function useBoard(): BoardApi {
 
   const visible = useMemo(() => inView.filter((e) => inFilter(e.item, query.st)), [inView, query.st]);
   const rejected = useMemo(() => inView.filter((e) => e.item.verdict === "reject"), [inView]);
-  const selected = useMemo(() => visible.find((e) => e.item.id === query.i) ?? visible[0] ?? null, [visible, query.i]);
+  // A NAMED item that is not in view selects NOTHING; only an unnamed
+  // selection defaults to the head of the queue. Falling back to visible[0]
+  // for a stale ?i= handed the next keypress an item the user never opened —
+  // measured 2026-10-05, when a verification run's X landed on another run's
+  // frame. Every path that changes the view (source, filter, advancePast)
+  // sets `i` itself, so a stale one only arrives by URL.
+  const selected = useMemo(
+    () => (query.i ? (visible.find((e) => e.item.id === query.i) ?? null) : (visible[0] ?? null)),
+    [visible, query.i],
+  );
 
   const select = useCallback((id: string | null) => setQuery({ i: id }), [setQuery]);
   const move = useCallback(
