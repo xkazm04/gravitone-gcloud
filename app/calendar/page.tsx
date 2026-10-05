@@ -1,17 +1,24 @@
+import { Suspense } from "react";
+
 import AuthGate from "@/components/ui/AuthGate";
 import StudioFrame from "@/components/ui/StudioFrame";
+
+import CalendarView from "./CalendarView";
 
 export const metadata = {
   title: "Calendar | Gravitone",
 };
 
-// Stub from the platform-consolidation spark's foundations commit; the
-// surface lands in its own work package.
+// The Suspense boundary is required, not decorative: CalendarView reads
+// `useSearchParams` (the tab and the prototype variant live in the URL), and a
+// client component that does so needs a boundary above it in Next 16.
 export default function Page() {
   return (
     <AuthGate>
       <StudioFrame>
-        <div />
+        <Suspense>
+          <CalendarView />
+        </Suspense>
       </StudioFrame>
     </AuthGate>
   );
