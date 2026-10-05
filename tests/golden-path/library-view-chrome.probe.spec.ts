@@ -38,3 +38,9 @@ test("destructive library buttons are the shared danger Button, not hand-rolled 
 test("a failed or refused trial render is announced", () => {
   expect(read("app/library/Playground.tsx")).toContain('role="alert"');
 });
+
+test("Playground prose is not carried in expression-bound title= (the narration gate cannot see it)", () => {
+  const src = read("app/library/Playground.tsx");
+  expect(src).not.toMatch(/title=\{/);
+  expect(src).toMatch(/import \{[^}]*\bHint\b[^}]*\} from "@\/components\/ui\/signal"/);
+});

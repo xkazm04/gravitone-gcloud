@@ -14,9 +14,10 @@
 // how the theme eventually locks. The playground is not a toy bolted to the
 // side; it is the only route to a locked style.
 
-import { useEffect, useState } from "react";
+import { useEffect, useId, useState } from "react";
 import { Loader2, Sparkles } from "lucide-react";
 
+import { Hint } from "@/components/ui/signal";
 import { imgSrc, generateImage, ImagingRequestError, type GenerateResult } from "@/lib/imagingClient";
 import { compilePrompt, NEGATIVE_PROMPT, PROMPT_CHAR_LIMIT } from "@/lib/stylePrompt";
 import { SEND_REFS, type StyleBlock } from "@/lib/themes";
@@ -108,20 +109,16 @@ function costLine(usd: number | undefined, basis: string | undefined): string {
  * and the table declaring no rate for a per-image render. None of them may
  * render as $0.000 — an unknown price is unknown, and a zero is a claim.
  */
-function priceLabel(price: PreClickPrice | "unknown" | null): { text: string; title: string } {
-  if (price === null)
-    return { text: "checking the price…", title: "Asking /api/imaging/pricing what a render costs." };
-  if (price === "unknown")
-    return {
-      text: "price unknown",
-      title:
-        "The price table could not be reached, so this render's cost is not known in advance. " +
-        "Whatever it actually costs is reported under the image afterwards.",
-    };
-  if (price.usd === undefined) return { text: "price not declared", title: price.note };
+function priceLabel(price: PreClickPrice | "unknown" | null): { text: string; hint?: string; unreachable?: boolean } {
+  // "checking" carries no disclosure: it described the app's own fetch, not the work.
+  if (price === null) return { text: "checking the price…" };
+  // The long caveat ("whatever it costs is reported under the image") is the
+  // render's provenance line doing its job; the Hint keeps only the fact.
+  if (price === "unknown") return { text: "price unknown", hint: "pricing unreachable · cost shows after the render", unreachable: true };
+  if (price.usd === undefined) return { text: "price not declared", hint: price.note };
   return {
     text: `est. $${(price.usd * IMAGES_PER_RUN).toFixed(3)} · ${IMAGES_PER_RUN} image${IMAGES_PER_RUN > 1 ? "s" : ""}`,
-    title: price.note,
+    hint: price.note,
   };
 }
 
@@ -193,6 +190,7 @@ export default function Playground({
     };
   }, [usdPerImage]);
 
+  const uid = useId();
   const estimate = priceLabel(price);
   const refs = references.slice(0, SEND_REFS);
   const conditioned = useRefs && refs.length > 0;
@@ -260,7 +258,7 @@ export default function Playground({
             type="button"
             aria-pressed={subject === t.subject}
             onClick={() => setSubject(t.subject)}
-            title={`${t.problem} · ${t.beat}`}
+            aria-describedby={`${uid}-trial-${t.id}`}
             className={`font-jetbrains rounded-full border px-2.5 py-1 text-label transition ${
               subject === t.subject
                 ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
@@ -268,6 +266,9 @@ export default function Playground({
             }`}
           >
             {t.label}
+            <span id={`${uid}-trial-${t.id}`} className="sr-only">
+              {t.problem} · {t.beat}
+            </span>
           </button>
         ))}
       </div>
@@ -299,7 +300,6 @@ export default function Playground({
             declaration the server bills against rather than a copy of it. */}
         <span
           className={`font-jetbrains text-label ${price === "unknown" ? "text-amber-300/70" : "text-white/40"}`}
-          title={estimate.title}
         >
           {estimate.text}
           {spend.runs > 0 && (
@@ -310,6 +310,11 @@ export default function Playground({
             </span>
           )}
         </span>
+        {estimate.hint && (
+          <Hint variant={estimate.unreachable ? "warn" : "info"} tone={estimate.unreachable ? "amber" : "inherit"}>
+            {estimate.hint}
+          </Hint>
+        )}
         {/* THE COUNTER IS THE WARNING. It used to sit here in white/30 while a
             separate sentence below said "This block compiles to N characters and
             Leonardo accepts M. Shorten the technique or finish line." — the same
