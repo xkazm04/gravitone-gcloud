@@ -23,11 +23,11 @@ import { generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient"
 import { compilePrompt, NEGATIVE_PROMPT } from "@/lib/stylePrompt";
 import type { StyleBlock } from "@/lib/themes";
 
-import { loadStep, saveStep } from "../../_shared/stepStore";
+import { useRecord } from "../../_shared/records/useRecord";
 import { subjectFor, type Frame, type Plate } from "../frames";
-import { altId, canRemoveAlt, isSynthetic, SYNTH_MARK, type AltsColumn, type AltsCtl, type AltsStepData, type SceneAlts } from "./alts";
+import { FRAMES_ALTS } from "../records";
+import { altId, canRemoveAlt, isSynthetic, SYNTH_MARK, type AltsColumn, type AltsCtl, type SceneAlts } from "./alts";
 
-const PHASE = "frames-alts";
 const STRESS_FACTOR = 7;
 
 export function useAlternatives({
@@ -46,24 +46,20 @@ export function useAlternatives({
   onAdopt: (frameId: string, plate: Plate) => void;
 }): AltsCtl {
   const [byFrame, setByFrame] = useState<Record<string, SceneAlts>>({});
-  const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
   const [stress, setStress] = useState(false);
 
   /* ── load, then seed from the frames the cut already composed ───────────── */
-  useEffect(() => {
-    let alive = true;
-    void (async () => {
-      const stored = await loadStep<AltsStepData>(projectId, PHASE);
-      if (!alive) return;
-      setByFrame(stored?.byFrame ?? {});
-      setLoaded(true);
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [projectId]);
+  // `loaded` is true only once THIS project's record was read and accepted. It
+  // used to be set after `loadStep`, which answers a FAILED read with nothing —
+  // so a transient failure marked the step loaded, the seed below filled it,
+  // and the save 600ms later wrote seeds alone over every kept alternative.
+  // A failed or refused read now leaves it false, and both effects below are
+  // gated on it, so nothing is seeded and nothing is written.
+  const { hydrated: loaded, save } = useRecord(FRAMES_ALTS, projectId, (stored) => {
+    setByFrame(stored?.byFrame ?? {});
+  });
 
   // Seed AFTER load, and only for frames this store has never met. Runs again
   // as plates land in the assembly view — a newly composed frame gains its
@@ -98,12 +94,12 @@ export function useAlternatives({
     timer.current = setTimeout(() => {
       const real: Record<string, SceneAlts> = {};
       for (const [k, v] of Object.entries(byFrame)) if (!isSynthetic(k)) real[k] = v;
-      void saveStep<AltsStepData>(projectId, PHASE, { byFrame: real, savedAt: Date.now() });
+      void save({ byFrame: real, savedAt: Date.now() });
     }, 600);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [byFrame, loaded, projectId]);
+  }, [byFrame, loaded, save]);
 
   /* ── columns: the real cut, times seven under stress ────────────────────── */
   const columns = useMemo<AltsColumn[]>(() => {

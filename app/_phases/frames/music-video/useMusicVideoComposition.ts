@@ -2,10 +2,10 @@
 
 // THE MUSIC-VIDEO DISCIPLINE'S FRAMES STEP — poster generation and the
 // determinism inputs (seed, effectParams) the effects studio reads. Shaped
-// like `research/useMusicVideoSource.ts`: hydrate once per project, read
-// before every write (the read-merge-write pattern that hook's `write`
-// establishes, copied verbatim here), and never clobber a sibling field a
-// different work package owns.
+// like `research/useMusicVideoSource.ts`: hydrate once per project through
+// the record def Research owns (`research/records.ts`), patch every write
+// atomically (`patchRecord`), and never clobber a sibling field a different
+// work package owns.
 //
 // POSTER GENERATION IS AN ASYNC JOB (WP1's "poster-generate" kind), not a
 // synchronous request — `lib/jobs.tsx`'s own header measures the real call at
@@ -31,16 +31,10 @@ import { assetFromUpload, getAsset, getUploadBlobs, putUploads, readUploadPointe
 import { generateImage } from "@/lib/imagingClient";
 import type { useJobs } from "@/lib/jobs";
 
-import {
-  claimSaveSlot,
-  loadStep,
-  saveStep,
-  type MusicVideoSourceStepData,
-} from "../../_shared/stepStore";
-import { useStepFor } from "../../_shared/useLoadFor";
+import { useRecord } from "../../_shared/records/useRecord";
+import type { MusicVideoSourceStepData } from "../../_shared/stepStore";
+import { MUSIC_VIDEO_SOURCE } from "../../research/records";
 import { DEFAULT_EFFECT_PARAMS, type EffectParams } from "./compositor";
-
-const PHASE = "music-video-source";
 
 export type PosterStatus = "idle" | "generating" | "error";
 
@@ -91,25 +85,22 @@ export function useMusicVideoComposition(
   const [error, setError] = useState<string | null>(null);
   const [provider, setProvider] = useState<string | null>(null);
 
-  const hydrated = useStepFor<MusicVideoSourceStepData>(projectId, PHASE, (saved) => {
+  const { hydrated, patch } = useRecord(MUSIC_VIDEO_SOURCE, projectId, (saved) => {
     setStyle(saved?.style ?? "");
     setPosterAssetId(saved?.posterAssetId);
     setSeed(saved?.seed);
     setEffectParams((saved?.effectParams as EffectParams | undefined) ?? undefined);
   });
 
-  /** Read-merge-write — copied from `useMusicVideoSource.ts`'s `write`
-   *  verbatim: a later work package (or a concurrent save from this same
-   *  hook) may have written a sibling field since the last hydrate, and this
-   *  must not stomp it. */
+  /** A merge into the shared record, never a replacement: Research owns the
+   *  track and its envelope, and either step may have written since this one
+   *  hydrated. `patchRecord` reads and writes in one transaction — this used to
+   *  be a copied `loadStep` + `saveStep`, which wrote `{ style }` alone over the
+   *  envelope and the poster whenever the read failed, and dropped the first of
+   *  two patches issued in one tick. */
   const write = useCallback(
-    async (patch: Partial<MusicVideoSourceStepData>) => {
-      const slot = claimSaveSlot(projectId, PHASE);
-      const current = (await loadStep<MusicVideoSourceStepData>(projectId, PHASE)) ?? {};
-      if (!slot.stillNewest()) return;
-      await saveStep<MusicVideoSourceStepData>(projectId, PHASE, { ...current, ...patch });
-    },
-    [projectId],
+    (fields: Partial<MusicVideoSourceStepData>) => patch((current) => ({ ...current, ...fields })),
+    [patch],
   );
 
   const generatePoster = useCallback(async () => {
