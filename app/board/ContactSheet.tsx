@@ -1,13 +1,12 @@
 "use client";
 
-// V3 · CONTACT SHEET — everything in view at once, the way a photographer
+// THE CONTACT SHEET — everything in view at once, the way a photographer
 // reads a roll: frames in order, numbered, grouped by the run (or project) that
 // made them, and marked in batches. Click a frame to point at it; tick it — or
 // Shift-click a range — to gather a batch. With a batch gathered, A / X / U act
 // on the whole batch and Z puts the whole batch back (one undo entry,
-// ./useBoard.ts decideMany). With none, the keys act on the pointed frame like
-// every other variant, and Enter puts it in the loupe, where its reject reasons
-// live.
+// ./useBoard.ts decideMany). With none, the keys act on the pointed frame,
+// and Enter puts it in the loupe, where its reject reasons live.
 //
 // Uniform cells, not a justified wall: a contact sheet is a grid so that the
 // eye compares like with like, and the frame number under each cell is how a
@@ -24,11 +23,14 @@ import type { BoardSourceId } from "@/lib/board/types";
 
 import { captionOf, SOURCE_ICON } from "./look";
 import { Art, CommitLine, EmptyShape, SourceAbsence, VerdictBar, VerdictDot } from "./parts";
-import { BoardBar, defaultHandlers, scopeOf, SourceSelect, type VariantProps } from "./shared";
+import { BoardBar, defaultHandlers, scopeOf, SourceSelect, type SheetProps } from "./shared";
 import type { BoardApi } from "./useBoard";
 import { useBoardKeys } from "./useBoardKeys";
 
 const PER_GROUP = 48;
+/** A roll this short shares its row with the next one. */
+const SHORT_ROLL = 3;
+const CELLS = "grid-cols-[repeat(auto-fill,minmax(13.5rem,14.75rem))]";
 
 interface Roll {
   key: string;
@@ -37,7 +39,7 @@ interface Roll {
   entries: BoardEntry[];
 }
 
-export default function SheetVariant(props: VariantProps) {
+export default function ContactSheet(props: SheetProps) {
   const { api } = props;
   const [batch, setBatch] = useState<Set<string>>(new Set());
   const [anchor, setAnchor] = useState<string | null>(null);
@@ -131,12 +133,17 @@ export default function SheetVariant(props: VariantProps) {
         </div>
       )}
 
-      <div className="flex flex-col gap-8">
+      {/* A short roll — an adoption pick is three engines — takes half the
+          row, so two of them sit side by side instead of each leaving a
+          strip of empty ground beside three frames. The cells keep one size
+          across every roll (a capped track, not 1fr): a frame that grows
+          because its roll is short is no longer compared like with like. */}
+      <div className="grid gap-x-10 gap-y-8 lg:grid-cols-2">
         {rolls.map((roll, ri) => {
           const limit = open[roll.key] ?? PER_GROUP;
           const shown = roll.entries.slice(0, limit);
           return (
-            <section key={roll.key} aria-label={`${SOURCE_LABEL[roll.source]}${roll.group ? ` · ${roll.group}` : ""}`} className="gt-rise" style={{ ["--gt-rise-delay" as string]: `${Math.min(ri, 6) * 40}ms` }}>
+            <section key={roll.key} aria-label={`${SOURCE_LABEL[roll.source]}${roll.group ? ` · ${roll.group}` : ""}`} className={`gt-rise min-w-0 ${roll.entries.length > SHORT_ROLL ? "lg:col-span-2" : ""}`} style={{ ["--gt-rise-delay" as string]: `${Math.min(ri, 6) * 40}ms` }}>
               <RollHeader api={api} roll={roll} batch={batch} live={live} onPickAll={(ids, on) => setBatch((prev) => {
                 const next = new Set(prev);
                 for (const id of ids) {
@@ -145,7 +152,7 @@ export default function SheetVariant(props: VariantProps) {
                 }
                 return next;
               })} />
-              <ol className="grid grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))] gap-3">
+              <ol className={`grid ${CELLS} gap-3`}>
                 {shown.map((e) => (
                   <Frame
                     key={e.item.id}
@@ -182,7 +189,7 @@ export default function SheetVariant(props: VariantProps) {
       </div>
 
       {settling && !api.visible.length && (
-        <div aria-hidden className="grid grid-cols-[repeat(auto-fill,minmax(13.5rem,1fr))] gap-3">
+        <div aria-hidden className={`grid ${CELLS} gap-3`}>
           {Array.from({ length: 12 }, (_, i) => (
             <div key={i} className="aspect-[4/3] animate-pulse rounded-xl border border-white/6 bg-white/[0.035]" style={{ opacity: 1 - i * 0.06 }} />
           ))}
@@ -270,17 +277,20 @@ function RollHeader({
   const ids = roll.entries.map((e) => e.item.id);
   const allIn = ids.every((id) => batch.has(id));
   return (
-    <header className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/6 pb-3">
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-violet-400/15 via-white/[0.03] to-cyan-400/10">
+    <header className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/6 pb-3 lg:flex-nowrap">
+      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-gradient-to-br from-violet-400/15 via-white/[0.03] to-cyan-400/10">
         <Icon aria-hidden className="h-5 w-5 text-white/75" strokeWidth={1.75} />
       </span>
-      <div className="min-w-0">
+      {/* The source is the heading; the run or project under it is a name
+          to read, so it is set in the body face and gives way first when a
+          half-width roll runs short of room. */}
+      <div className="min-w-0 shrink">
         <h2 className="font-instrument text-2xl leading-tight text-white">{SOURCE_LABEL[roll.source]}</h2>
-        {roll.group && <p className="font-jetbrains max-w-[40rem] truncate text-label text-white/45">{roll.group}</p>}
+        {roll.group && <p className="font-hanken max-w-[40rem] truncate text-label text-white/55">{roll.group}</p>}
       </div>
-      <Tally value={roll.entries.length} label="frames" />
+      <Tally value={roll.entries.length} label="frames" className="shrink-0" />
       <StackBar
-        className="w-40"
+        className="w-32 shrink-0"
         showCounts={false}
         label={`${SOURCE_LABEL[roll.source]} decisions`}
         segments={[
@@ -294,7 +304,7 @@ function RollHeader({
         <button
           type="button"
           onClick={() => onPickAll(ids, !allIn)}
-          className="font-jetbrains ml-auto inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-label text-white/60 transition hover:border-white/25 hover:text-white"
+          className="font-jetbrains ml-auto inline-flex shrink-0 items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-label whitespace-nowrap text-white/60 transition hover:border-white/25 hover:text-white"
         >
           {allIn ? <CheckSquare aria-hidden className="h-4 w-4 text-cyan-300" /> : <Square aria-hidden className="h-4 w-4" />}
           {allIn ? "Deselect roll" : "Select roll"}
@@ -354,6 +364,10 @@ function Frame({
       >
         <Art entry={entry} className={`aspect-[4/3] w-full transition duration-300 ${item.verdict === "reject" ? "opacity-40 grayscale" : "group-hover:brightness-110"}`} />
         <span className="flex items-center gap-2 px-2.5 py-2">
+          {/* The verdict sits beside the frame number, not on the art: on a
+              words-only card the art's top-left corner is the card's own kind
+              glyph, and a dot pinned there covered it. */}
+          {item.verdict && <VerdictDot verdict={item.verdict} className="-my-1 -ml-0.5" />}
           <span className="font-jetbrains shrink-0 text-label tabular-nums text-white/35">{String(n).padStart(2, "0")}</span>
           <span className={`font-hanken min-w-0 flex-1 truncate text-label ${item.verdict === "reject" ? "text-white/45 line-through decoration-rose-300/40" : "text-white/80"}`}>{caption}</span>
           {item.reasons.length > 0 && <span className="font-jetbrains shrink-0 text-label text-rose-200/70">{item.reasons.join("·")}</span>}
@@ -375,8 +389,6 @@ function Frame({
           </span>
         )}
       </button>
-
-      {item.verdict && <VerdictDot verdict={item.verdict} className="pointer-events-none absolute top-2 left-2 shadow-lg" />}
 
       {live && (
         <button
@@ -401,7 +413,9 @@ function Frame({
       )}
 
       {live && (
-        <span className={`absolute right-2 bottom-12 transition ${focused ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}`}>
+        <span
+          className={`absolute right-2 bottom-12 rounded-full bg-[var(--gt-ink)]/70 p-1 backdrop-blur-md transition ${focused ? "opacity-100" : "opacity-0 group-hover:opacity-100 group-focus-within:opacity-100"}`}
+        >
           <VerdictBar entry={entry} api={api} size="icon" />
         </span>
       )}

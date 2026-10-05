@@ -1,9 +1,9 @@
 "use client";
 
-// The one key handler every variant mounts. The rules — what each key means,
+// The one key handler the Board mounts. The rules — what each key means,
 // and when the Board must leave a key alone — are pure and live in
 // lib/board/keys.ts, where the node lane asserts them; this file only binds
-// them to `window` and to the variant's handlers.
+// them to `window` and to the sheet's handlers.
 
 import { useEffect, useRef } from "react";
 

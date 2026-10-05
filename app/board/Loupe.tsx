@@ -1,7 +1,7 @@
 "use client";
 
 // THE LOUPE — one item, as large as the screen, decided where it is seen.
-// Enter opens it from any variant, Esc closes it, J/K walk the queue inside it,
+// Enter opens it from the sheet, Esc closes it, J/K walk the queue inside it,
 // and the decision keys KEEP WORKING: it is an aria-modal dialog, which the
 // Board's key guard treats as an overlay that owns the keyboard, so the dialog
 // carries the loupe mark (lib/board/keys.ts LOUPE_MARK) that exempts this one
@@ -79,7 +79,7 @@ export function Loupe({ api, entry, onClose }: { api: BoardApi; entry: BoardEntr
             {item.group ? ` · ${item.group}` : ""}
             {kicker ? ` · ${kicker}` : ""}
           </p>
-          <h2 className={plateOwnsTitle(item) ? "sr-only" : "font-instrument mt-0.5 line-clamp-2 text-3xl leading-tight text-white"}>{title}</h2>
+          <h2 className={plateOwnsTitle(item) ? "sr-only" : "font-hanken mt-1 line-clamp-2 text-2xl leading-snug font-medium text-white"}>{title}</h2>
         </div>
         <span className="font-jetbrains shrink-0 pt-2 text-label tabular-nums text-white/45">
           {at + 1} / {api.visible.length}

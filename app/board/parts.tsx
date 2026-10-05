@@ -1,10 +1,10 @@
 "use client";
 
-// The pieces all three variants draw the same way: an item's art, its verdict
-// control, its reject reasons, the sealed machine pick, a source's state, the
-// per-run commit line, the read-only rejected stamp, the toasts. A variant that
-// needs a different SHAPE of one of these is a finding against this file, not
-// a licence for a second spelling.
+// The pieces the sheet and the loupe draw the same way: an item's art, its
+// verdict control, its reject reasons, the sealed machine pick, a source's
+// state, the per-run commit line, the read-only rejected stamp, the toasts. A
+// surface that needs a different SHAPE of one of these is a finding against
+// this file, not a licence for a second spelling.
 //
 // Drawn in the app's own idiom (app/_projects/parts.tsx, app/library/parts.tsx):
 // glass, `rounded-xl` nested in `rounded-2xl`, white/8 hairlines, cyan for
@@ -74,17 +74,7 @@ const TEXT_WASH: Partial<Record<BoardSourceId, string>> = {
  * typographic card when it is words — the research card's kind and claim, a
  * slot's channel and status. Never a grey box with a letter in it.
  */
-export function Art({
-  entry,
-  size = "tile",
-  className = "",
-}: {
-  entry: BoardEntry;
-  /** `glyph` is a thumb that sits beside its own title (a queue card): a
-   *  words-only item then shows its kind, not its first words twice. */
-  size?: "thumb" | "glyph" | "tile";
-  className?: string;
-}) {
+export function Art({ entry, className = "" }: { entry: BoardEntry; className?: string }) {
   const { item } = entry;
   const cover = coverOf(item);
   if (cover)
@@ -99,22 +89,6 @@ export function Art({
     );
   const Icon = item.source === "triage" ? (KIND_ICON[fact(entry, "kind") ?? ""] ?? SOURCE_ICON.triage) : SOURCE_ICON[item.source];
   const wash = TEXT_WASH[item.source] ?? "from-cyan-400/[0.10] via-white/[0.03] to-violet-400/[0.08]";
-  if (size === "glyph")
-    return (
-      <span className={`relative flex items-center justify-center overflow-hidden bg-gradient-to-br ${wash} ${className}`} aria-hidden="true">
-        <Icon className="h-6 w-6 text-white/60" strokeWidth={1.5} />
-      </span>
-    );
-  if (size === "thumb")
-    // The claim's first words, set small in the display face: a strip of
-    // research cards is then a strip of different cards, not one glyph
-    // repeated forty times.
-    return (
-      <span className={`relative flex flex-col overflow-hidden bg-gradient-to-br ${wash} px-2 py-1.5 ${className}`} aria-hidden="true">
-        <Icon className="absolute -right-1.5 -bottom-1.5 h-9 w-9 text-white/[0.07]" strokeWidth={1.25} />
-        <span className="font-instrument line-clamp-3 text-label leading-[1.15] text-white/80">{item.title}</span>
-      </span>
-    );
   const kind = item.source === "triage" ? fact(entry, "kind") : item.source === "publish" ? fact(entry, "status") : SOURCE_LABEL[item.source];
   const status = item.source === "publish" ? fact(entry, "status") : null;
   return (
@@ -127,7 +101,11 @@ export function Art({
         <span className="font-jetbrains truncate text-label tracking-[0.14em] text-white/55 uppercase">{kind}</span>
         {item.source === "triage" && <Confidence entry={entry} />}
       </span>
-      <span className="font-instrument mt-2.5 line-clamp-3 text-xl leading-snug text-white/90">{item.title}</span>
+      {/* A claim is READ, so it is set in the body face. The display face
+          (font-instrument) stays on the headings that name a place — a roll,
+          an empty sheet — where a condensed serif is a signature, not a
+          paragraph to get through (the operator's call, 2026-10-05). */}
+      <span className="font-hanken mt-2.5 line-clamp-4 text-content leading-snug font-medium text-white/90">{item.title}</span>
     </span>
   );
 }
@@ -149,13 +127,10 @@ export function Confidence({ entry, className = "" }: { entry: BoardEntry; class
 export function TextPlate({
   entry,
   withTitle = false,
-  big = false,
   className = "",
 }: {
   entry: BoardEntry;
   withTitle?: boolean;
-  /** The Spotlight's size: one card is the whole stage. */
-  big?: boolean;
   className?: string;
 }) {
   const { item } = entry;
@@ -182,10 +157,10 @@ export function TextPlate({
         )}
         {words.map((t, i) => (
           <blockquote key={i} className="relative max-w-[62ch] pl-10">
-            <span aria-hidden className="font-instrument absolute top-[-0.35em] left-0 text-6xl leading-none text-emerald-300/40">
+            <span aria-hidden className="font-instrument absolute top-[-0.1em] left-0 text-5xl leading-none text-emerald-300/40">
               “
             </span>
-            <p className="font-instrument text-2xl leading-snug text-white/90">{t}</p>
+            <p className="font-hanken text-xl leading-relaxed text-white/90">{t}</p>
           </blockquote>
         ))}
       </div>
@@ -195,7 +170,7 @@ export function TextPlate({
   const failing = item.source === "publish" && (status === "failed" || status === "missed");
   return (
     <div
-      className={`relative flex min-h-0 flex-col justify-center overflow-hidden rounded-xl bg-gradient-to-br ${TEXT_WASH[item.source] ?? "from-cyan-400/[0.08] via-white/[0.02] to-violet-400/[0.06]"} ring-1 ring-white/8 ${big ? "px-12 py-12" : "px-8 py-8"} ${className}`}
+      className={`relative flex min-h-0 flex-col justify-center overflow-hidden rounded-xl bg-gradient-to-br ${TEXT_WASH[item.source] ?? "from-cyan-400/[0.08] via-white/[0.02] to-violet-400/[0.06]"} ring-1 ring-white/8 px-8 py-8 ${className}`}
     >
       <Icon aria-hidden className="absolute -right-6 -bottom-8 h-56 w-56 text-white/[0.04]" strokeWidth={1} />
       <div className="relative flex flex-wrap items-center gap-3">
@@ -207,7 +182,7 @@ export function TextPlate({
         </span>
         {item.source === "triage" && <Confidence entry={entry} />}
       </div>
-      {withTitle && <p className={`font-instrument relative mt-6 leading-tight text-white ${big ? "text-5xl" : "text-4xl"}`}>{item.title}</p>}
+      {withTitle && <p className="font-hanken relative mt-6 max-w-[48ch] text-2xl leading-snug font-medium text-white">{item.title}</p>}
       {words.map((t, i) =>
         failing && i === 0 ? (
           <p key={i} role="status" className="relative mt-6 max-w-[64ch] rounded-xl border border-rose-400/25 bg-rose-400/[0.07] px-4 py-3 font-hanken text-content leading-relaxed text-rose-100/90">
@@ -255,7 +230,7 @@ export function VerdictDot({ verdict, className = "" }: { verdict: BoardVerdict;
   );
 }
 
-type VerdictSize = "lg" | "md" | "icon";
+type VerdictSize = "lg" | "icon";
 
 const KEY_CAP = "font-jetbrains rounded-md border px-1.5 text-label leading-snug";
 
@@ -266,7 +241,7 @@ const KEY_CAP = "font-jetbrains rounded-md border px-1.5 text-label leading-snug
  * reason beside it (lib/board/source.ts `refuse`), never hidden: a missing
  * Reject button reads as a bug, a locked one reads as a rule.
  */
-export function VerdictBar({ entry, api, size = "md", className = "" }: { entry: BoardEntry; api: BoardApi; size?: VerdictSize; className?: string }) {
+export function VerdictBar({ entry, api, size = "lg", className = "" }: { entry: BoardEntry; api: BoardApi; size?: VerdictSize; className?: string }) {
   const { item, refuse } = entry;
   const busy = api.busy.has(item.id);
   const v = item.verdict;
@@ -281,10 +256,8 @@ export function VerdictBar({ entry, api, size = "md", className = "" }: { entry:
       </span>
     );
 
-  const lg = size === "lg";
-  const base = `group inline-flex items-center gap-3 rounded-2xl border font-hanken transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed ${
-    lg ? "h-14 flex-1 px-5 text-content" : "h-11 px-4 text-content"
-  }`;
+  const base =
+    "group inline-flex h-14 flex-1 items-center gap-3 rounded-2xl border px-5 font-hanken text-content transition focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed";
   const approveCls =
     v === "approve"
       ? "border-emerald-300/70 bg-emerald-400/20 text-white ring-2 ring-emerald-300/25 shadow-lg shadow-emerald-500/10"
@@ -297,7 +270,7 @@ export function VerdictBar({ entry, api, size = "md", className = "" }: { entry:
   const clearable = v !== null && !refuse.clear;
 
   return (
-    <div className={`flex items-center gap-2.5 ${lg ? "w-full" : ""} ${className}`} role="group" aria-label={`Verdict on ${item.title}`} aria-busy={busy}>
+    <div className={`flex w-full items-center gap-2.5 ${className}`} role="group" aria-label={`Verdict on ${item.title}`} aria-busy={busy}>
       <button
         type="button"
         aria-pressed={v === "approve"}
@@ -339,9 +312,7 @@ export function VerdictBar({ entry, api, size = "md", className = "" }: { entry:
         aria-label={refuse.clear ? `Clear is refused: ${refuse.clear}` : `Clear the verdict on ${item.title} (U)`}
         disabled={busy || !clearable}
         onClick={() => go(null)}
-        className={`inline-flex shrink-0 items-center justify-center rounded-full border border-white/10 text-white/55 transition hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35 ${
-          lg ? "h-14 w-14" : "h-11 w-11"
-        }`}
+        className="inline-flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-white/10 text-white/55 transition hover:border-white/25 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed disabled:opacity-35"
       >
         <RotateCcw aria-hidden className="h-4 w-4" />
       </button>
@@ -542,27 +513,6 @@ export function pendingWord(state: SourceState): string {
   }
 }
 
-/** The one-line state of a source in words of the work. */
-export function sourceLine(state: SourceState): string {
-  switch (state.kind) {
-    case "idle":
-    case "loading":
-      return "reading…";
-    case "counted":
-    case "loaded": {
-      const { pending, decided, total } = state.count;
-      if (pending === 0) return `all ${total ?? "—"} decided`;
-      return `${decided === null ? "—" : decided}/${total === null ? "—" : total} decided`;
-    }
-    case "empty":
-      return "nothing here";
-    case "unavailable":
-      return state.reason;
-    case "error":
-      return state.message;
-  }
-}
-
 /**
  * What a source shows where its items would be when it has none — composed,
  * never a blank dashed box. Unreadable: the reason verbatim, Retry, and the
@@ -614,34 +564,6 @@ export function SourceAbsence({ id, state, api, compact = false }: { id: BoardSo
       <span className={`font-jetbrains max-w-[48ch] text-label break-words ${err ? "text-rose-200/85" : "text-white/55"}`}>{words}</span>
       {actions}
     </EmptyShape>
-  );
-}
-
-/** The unreadable source as one pill, for a surface whose stage is busy
- *  showing an item: name, reason, Retry. */
-export function AbsencePill({ id, state, api }: { id: BoardSourceId; state: SourceState; api: BoardApi }) {
-  if (state.kind !== "unavailable" && state.kind !== "error") return null;
-  const err = state.kind === "error";
-  const Icon = SOURCE_ICON[id];
-  return (
-    <span
-      role={err ? "alert" : "status"}
-      className={`font-jetbrains inline-flex max-w-full items-center gap-2 rounded-full border py-0.5 pr-0.5 pl-3 text-label ${
-        err ? "border-rose-400/30 bg-rose-400/[0.06] text-rose-100/85" : "border-amber-300/25 bg-amber-300/[0.05] text-white/65"
-      }`}
-    >
-      <Icon aria-hidden className="h-3.5 w-3.5 shrink-0" />
-      <span className="shrink-0 text-white/85">{SOURCE_LABEL[id]}</span>
-      <span className="min-w-0 truncate">{err ? state.message : state.reason}</span>
-      <button
-        type="button"
-        onClick={() => api.reload(id)}
-        aria-label={`Retry ${SOURCE_LABEL[id]}`}
-        className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-white/60 transition hover:bg-white/10 hover:text-white"
-      >
-        <RotateCw aria-hidden className="h-3.5 w-3.5" />
-      </button>
-    </span>
   );
 }
 

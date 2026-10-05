@@ -9,7 +9,7 @@ export const metadata = {
   title: "Board | Gravitone",
 };
 
-// The view reads `?v=&src=&st=&i=` through useSearchParams, which needs a
+// The view reads `?src=&st=&i=` through useSearchParams, which needs a
 // Suspense boundary above it in this Next (AGENTS.md; builder rules).
 export default function Page() {
   return (

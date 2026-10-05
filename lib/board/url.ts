@@ -1,6 +1,5 @@
-// The Board's view state in the URL: `?src=&st=&i=&v=`. A pick of source,
-// filter and item can be linked and survives a reload, which is the same
-// reason components/ui/VariantSwitch.tsx keeps `v` there.
+// The Board's view state in the URL: `?src=&st=&i=`. A pick of source,
+// filter and item can be linked and survives a reload.
 //
 //   src  one source id, or absent for every source
 //   st   pending (default) | decided | rejected
@@ -29,7 +28,7 @@ export function parseQuery(params: { get(name: string): string | null }): BoardQ
   return { src, st, i };
 }
 
-/** Write a query over existing params, keeping anything that is not ours (`v`). */
+/** Write a query over existing params, keeping anything that is not ours. */
 export function writeQuery(current: string, q: BoardQuery): string {
   const p = new URLSearchParams(current);
   if (q.src) p.set("src", q.src);

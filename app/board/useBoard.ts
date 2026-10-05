@@ -1,7 +1,7 @@
 "use client";
 
-// THE BOARD'S STATE — one hook, three variants. The variants compete on
-// layout and navigation, never on plumbing (the same split
+// THE BOARD'S STATE — one hook under the contact sheet. Layout and navigation
+// live in the view, never the plumbing (the same split
 // app/_phases/frames/alternatives/useAlternatives.ts makes for its views).
 //
 // What lives here: which sources have answered and how (lib/board/registry.ts

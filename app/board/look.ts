@@ -1,7 +1,7 @@
 // THE BOARD'S LOOK, AS DATA — which glyph a source wears, which picture an
-// item is shown by, and the facts a card reads by name. Pure lookups the three
-// variants share, so a triage card cannot wear one icon in the desk and
-// another on the contact sheet.
+// item is shown by, and the facts a card reads by name. Pure lookups the sheet
+// and the loupe share, so a triage card cannot wear one icon on a frame and
+// another in the loupe.
 //
 // THE COVER IS THE WORK'S OWN PICTURE, never a decoration. An item with an
 // image or a video is shown by its first one. An ADOPTION item has no picture
@@ -106,13 +106,4 @@ export function captionOf(entry: BoardEntry): string {
   if (item.source === "triage") return fact(entry, "source") ?? fact(entry, "kind") ?? item.title;
   if (item.source === "publish") return [fact(entry, "channel"), fact(entry, "publish at")].filter(Boolean).join(" · ") || item.title;
   return item.title;
-}
-
-/** The second line of a queue card: the one fact that tells an item from its
- *  neighbours in the same run or project. */
-export function metaOf(entry: BoardEntry): string {
-  const { kicker } = splitTitle(entry.item);
-  if (kicker) return kicker;
-  const pick = { cull: "scene", extract: "family", dojo: "subject", proof: "model", alternative: "model", triage: "kind", publish: "status", adoption: null }[entry.item.source];
-  return (pick && fact(entry, pick)) || entry.item.group || entry.item.source;
 }

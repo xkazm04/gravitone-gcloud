@@ -1,9 +1,9 @@
 "use client";
 
-// What the three variants share beyond ./parts.tsx: their props, the default
-// key bindings, the one compact bar above every variant (filter · progress ·
-// undo · keys), the source dropdown V2 and V3 draw (V1 has the full rail), and
-// the "what is in view, and what could not be read" arithmetic.
+// The contact sheet's frame beyond ./parts.tsx: its props, the default key
+// bindings, the one compact bar above it (filter · source · progress · undo ·
+// keys), the source dropdown, and the "what is in view, and what could not be
+// read" arithmetic.
 //
 // THE BAR IS ONE ROW. /projects and /library open on content within ~150px of
 // the nav (r2-baseline/projects.png); round 1 opened the Board on a 90px serif
@@ -23,7 +23,7 @@ import { BoardKeymap, pendingWord, toneOf, TONE_DOT } from "./parts";
 import type { BoardApi } from "./useBoard";
 import type { BoardKeyHandlers } from "./useBoardKeys";
 
-export interface VariantProps {
+export interface SheetProps {
   api: BoardApi;
   openLoupe: () => void;
   loupeOpen: boolean;
@@ -33,7 +33,7 @@ export interface VariantProps {
 /** A, X, U on the selected item; J/K through the queue; Enter, Esc, Z.
  *  Under the Rejected filter the lane is read-only: the verdict keys do
  *  nothing there and Z is the way back. */
-export function defaultHandlers({ api, openLoupe, closeLoupe }: VariantProps): BoardKeyHandlers {
+export function defaultHandlers({ api, openLoupe, closeLoupe }: SheetProps): BoardKeyHandlers {
   const sel = api.selected;
   const live = api.query.st !== "rejected";
   return {
@@ -145,8 +145,8 @@ export function UndoButton({ api }: { api: BoardApi }) {
   );
 }
 
-/** The one row above every variant. `lead` and `tail` are the variant's own
- *  controls (a source dropdown, a position, a batch toggle). */
+/** The one row above the sheet. `lead` and `tail` are the sheet's own
+ *  controls (the source dropdown, the select-all toggle). */
 export function BoardBar({ api, lead, tail }: { api: BoardApi; lead?: React.ReactNode; tail?: React.ReactNode }) {
   return (
     <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-2">
@@ -163,8 +163,8 @@ export function BoardBar({ api, lead, tail }: { api: BoardApi; lead?: React.Reac
 /* ── the source dropdown ──────────────────────────────────────────────────── */
 
 /**
- * The source picker for V2 and V3: every source with its pending figure and
- * its state's dot. The app's own Select (components/ui/Select.tsx), never a
+ * The source picker: every source with its pending figure and its state's
+ * dot. The app's own Select (components/ui/Select.tsx), never a
  * native one.
  *
  * KEY ISOLATION. The Board binds bare letters on `window`, and the Select's
