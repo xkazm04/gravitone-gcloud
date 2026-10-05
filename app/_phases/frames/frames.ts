@@ -116,12 +116,9 @@ export const emptyClip = (): FrameClip => ({ status: "not-started", motion: "" }
 export const isAuthoredClip = (f: Frame) => Boolean(f.clip?.motion.trim());
 export const authoredClipCount = (fs: Frame[]) => fs.filter(isAuthoredClip).length;
 
-/** Cuts stored before the clip layer existed have no `clip` key at all, and a
- *  renderer meeting `undefined` there is a crash rather than a blank row. Fill
- *  it on read — the store is IndexedDB on the user's own machine and there is no
- *  migration seam to hang this off. */
-export const withClips = (fs: Frame[]): Frame[] =>
-  fs.map((f) => (f.clip ? f : { ...f, clip: emptyClip() }));
+// Cuts stored before the clip layer existed have no `clip` key at all. That
+// used to be filled here, by hand, at every read (`withClips`); it is now a
+// step of the frames record's v1 → v2 migration (./picture/migrate.ts).
 
 /* ── The frame ────────────────────────────────────────────────────────────── */
 
@@ -395,6 +392,11 @@ export function absentTrailerRender(opts: {
  * what gets generated, so deriving frames from trailer beats would be building
  * the trailer's plate generation by accident. This slice gets the beats to the
  * shot lane; what Frames renders from them is the next one.
+ *
+ * THESE ARE SEEDS, NOT THE STEP'S FRAMES. Their ids are positional (`fr-${i}`)
+ * and a position is not an identity — it is the same `fr-3` under every render.
+ * The step derives through `unitsFromRender` (./picture/unit.ts), which takes
+ * these seeds verbatim and names each one by its render and beat instead.
  */
 export function framesFor(source: FramesRender, fixture: ScriptRender): Frame[] {
   return source.origin === "explainer-fixture" ? framesFromRender(fixture) : [];

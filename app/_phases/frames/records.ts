@@ -1,14 +1,29 @@
-// THE FRAMES STEP'S RECORDS — declared by their owner. Only the alternatives
-// record so far; the frames record itself (and the `withClips` hand migration
-// that belongs on its def) is a later stage of the same card.
+// THE FRAMES STEP'S RECORDS — declared by their owner.
 
 import { defineRecord, isPlainObject, malformed } from "../_shared/records/registry";
 import type { AltsStepData } from "./alternatives/alts";
+import { framesV1ToV2, parseFramesRecord } from "./picture/migrate";
+import type { FramesStepData } from "./useFrames";
+
+/** The cut itself: picture units (v2) with a `frames` shadow for the readers
+ *  that have not moved to units. v1 is the positional frame list, walked up at
+ *  the read seam by `framesV1ToV2` — see ./picture/migrate.ts. */
+export const FRAMES_RECORD = defineRecord<FramesStepData>({
+  key: "frames",
+  owner: "frames",
+  version: 2,
+  migrate: { 1: framesV1ToV2 },
+  parse: parseFramesRecord,
+});
 
 /** Every alternative kept per scene — paid plates, ≈1.5MB a scene. Its
  *  writer saves the whole record from memory, so a record it cannot read must
  *  never reach that writer: a scene that is not `{ activeId, alts: [] }`
- *  refuses the record instead of being dropped by the next save. */
+ *  refuses the record instead of being dropped by the next save.
+ *
+ *  Keyed by the frame's id, which is its PICTURE UNIT id (./picture/unit.ts):
+ *  derived from the render and the beat, so a different render's scenes can
+ *  never be handed this render's kept plates. */
 export const FRAMES_ALTS = defineRecord<AltsStepData>({
   key: "frames-alts",
   owner: "frames",
