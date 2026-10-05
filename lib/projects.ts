@@ -341,6 +341,14 @@ export interface Project {
    * and stays `empty` until a step has something real to report.
    */
   progress: Record<PhaseKey, PhaseState>;
+  /**
+   * Human sign-off timestamps per step.
+   *
+   * Distinct from automated progress: a human explicitly locks a step.
+   * When present, `stateOf(p, phase)` reads 'done' unless the step reports
+   * 'blocked' (blocked beats lock).
+   */
+  signedOff?: Partial<Record<PhaseKey, number>>;
 }
 
 /** What the create/edit dialog collects. Everything else is derived. */
@@ -373,24 +381,39 @@ export function newProject(uid: string, draft: ProjectDraft): Project {
 
 /* ── Derived facts the list surfaces read ─────────────────────────────────── */
 
-/** Steps locked, out of five. The one number every variant shows. */
-export function doneCount(p: Project): number {
-  return PHASES.filter((k) => p.progress[k] === "done").length;
+/**
+ * Effective state of a step, reconciling automated progress with human sign-off.
+ *
+ * Rules:
+ * 1. If automated progress is 'blocked', return 'blocked' (worst news beats lock).
+ * 2. Else if the step was signed off, return 'done' (human lock holds).
+ * 3. Else return the step's own automated progress.
+ */
+export function stateOf(p: Project, phase: PhaseKey): PhaseState {
+  if (p.progress[phase] === "blocked") return "blocked";
+  if (p.signedOff?.[phase]) return "done";
+  return p.progress[phase];
 }
 
-// `openStep(p)` used to live here — "the first step that is not `done`" — with
-// no consumers, and it is gone rather than wired up. Nothing in this app can
-// LOCK a step: `done` is a human act of sign-off and there is no sign-off
-// control on any of the five surfaces (see `reportPhase` below, and the note in
-// app/_phases/frames/useFrames.ts on why the Frames reporter stops at
-// `working`/`review`). So the function was guaranteed to answer "research" for
-// every project a user creates, forever. An exported helper that can only ever
-// be wrong is worse than no helper — `project.phase` answers "where is this
-// project" honestly, and that is what the studio reads.
+/** Effective states across all five phases. */
+export function phaseStates(p: Project): Record<PhaseKey, PhaseState> {
+  return {
+    research: stateOf(p, "research"),
+    script: stateOf(p, "script"),
+    frames: stateOf(p, "frames"),
+    score: stateOf(p, "score"),
+    cut: stateOf(p, "cut"),
+  };
+}
+
+/** Steps locked, out of five. The one number every variant shows. */
+export function doneCount(p: Project): number {
+  return PHASES.filter((k) => stateOf(p, k) === "done").length;
+}
 
 /** A project is blocked if any step is. Sorting and grouping both read this. */
 export function isBlocked(p: Project): boolean {
-  return PHASES.some((k) => p.progress[k] === "blocked");
+  return PHASES.some((k) => stateOf(p, k) === "blocked");
 }
 
 export type ProjectState = "blocked" | "review" | "working" | "delivered" | "draft";
@@ -399,8 +422,9 @@ export type ProjectState = "blocked" | "review" | "working" | "delivered" | "dra
 export function projectState(p: Project): ProjectState {
   if (isBlocked(p)) return "blocked";
   if (doneCount(p) === PHASES.length) return "delivered";
-  if (PHASES.some((k) => p.progress[k] === "review")) return "review";
-  if (PHASES.some((k) => p.progress[k] === "working" || p.progress[k] === "done")) return "working";
+  const states = phaseStates(p);
+  if (PHASES.some((k) => states[k] === "review")) return "review";
+  if (PHASES.some((k) => states[k] === "working" || states[k] === "done")) return "working";
   return "draft";
 }
 
@@ -536,7 +560,7 @@ export async function addProjects(rows: Project[]): Promise<void> {
  */
 export async function patchProject(
   id: string,
-  mutate: (p: Project) => void,
+  mutate: (p: Project) => void | boolean,
   opts?: { touch?: boolean },
 ): Promise<Project | null> {
   let db: IDBDatabase | null = null;
@@ -549,8 +573,16 @@ export async function patchProject(
         const row = req.result as Project | undefined;
         if (!row) return;
         const migrated = migrateProject(row);
-        const p: Project = { ...migrated, progress: { ...migrated.progress } };
-        mutate(p);
+        const p: Project = {
+          ...migrated,
+          progress: { ...migrated.progress },
+          signedOff: migrated.signedOff ? { ...migrated.signedOff } : undefined,
+        };
+        const result = mutate(p);
+        if (result === false) {
+          updated = migrated;
+          return;
+        }
         if (opts?.touch) p.updatedAt = Date.now();
         store.put(p);
         updated = p;
@@ -624,6 +656,52 @@ export async function editProject(
       if (d.description !== undefined) (p as unknown as Record<string, unknown>).description = d.description;
       if (d.theme !== undefined) (p as unknown as Record<string, unknown>).theme = d.theme;
       if (d.outputCount !== undefined) (p as unknown as Record<string, unknown>).outputCount = d.outputCount;
+    },
+    { touch: true },
+  );
+}
+
+/**
+ * Why a step cannot be signed off, or null if sign-off is permitted.
+ *
+ * A step cannot be signed off if it is blocked, or if nothing has been started on it.
+ */
+export function signOffBlocker(p: Project, phase: PhaseKey): string | null {
+  if (p.progress[phase] === "blocked") return "Step is blocked and cannot be signed off";
+  if (p.progress[phase] === "empty") return "Nothing has been started on this step yet";
+  return null;
+}
+
+/**
+ * Sign off (lock) a step.
+ *
+ * Explicit human milestone. Refuses if signOffBlocker returns a reason.
+ * Sets p.signedOff[phase] = Date.now().
+ * Stamps updatedAt to mark the project as touched.
+ */
+export async function signOff(id: string, phase: PhaseKey): Promise<Project | null> {
+  return patchProject(
+    id,
+    (p) => {
+      if (signOffBlocker(p, phase)) return false;
+      p.signedOff = { ...p.signedOff, [phase]: Date.now() };
+    },
+    { touch: true },
+  );
+}
+
+/**
+ * Reopen a signed-off step.
+ *
+ * Removes human sign-off lock for this phase.
+ * If nothing was signed off, does not touch updatedAt or write to store.
+ */
+export async function reopen(id: string, phase: PhaseKey): Promise<Project | null> {
+  return patchProject(
+    id,
+    (p) => {
+      if (!p.signedOff?.[phase]) return false;
+      delete p.signedOff[phase];
     },
     { touch: true },
   );

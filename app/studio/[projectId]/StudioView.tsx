@@ -43,7 +43,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
-import { Boxes, FileQuestion, X } from "lucide-react";
+import { Boxes, FileQuestion, Lock, LockOpen, X } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
@@ -54,6 +54,9 @@ import {
   disciplineOf,
   getProject,
   parkAt,
+  reopen,
+  signOff,
+  signOffBlocker,
   templateOf,
   type PhaseKey,
   type Project,
@@ -239,6 +242,29 @@ export default function StudioView({ projectId }: { projectId: string }) {
   }, [wanted, door.kind, id, user]);
 
   const step = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
+  const isLocked = Boolean(project?.signedOff?.[phaseKey]);
+  const blocker = project ? signOffBlocker(project, phaseKey) : null;
+
+  const handleSignOff = async () => {
+    if (!project || blocker) return;
+    try {
+      const updated = await signOff(project.id, phaseKey);
+      if (updated) setProject(updated);
+    } catch (e) {
+      reportStorageTrouble("write", project.id, "signOff", e);
+    }
+  };
+
+  const handleReopen = async () => {
+    if (!project) return;
+    try {
+      const updated = await reopen(project.id, phaseKey);
+      if (updated) setProject(updated);
+    } catch (e) {
+      reportStorageTrouble("write", project.id, "reopen", e);
+    }
+  };
+
   // The headline is the project's name when there is one. When there is not, it
   // says which of the three doors this is rather than sitting on "opening…"
   // forever, which is what a caught failure used to look like for the instant
@@ -323,31 +349,55 @@ export default function StudioView({ projectId }: { projectId: string }) {
                 Only when the door is open: an absent or unreadable project has
                 no shelves, and the toggle used to render (and open!) over both. */}
             {door.kind === "open" && project && (
-              <button
-                type="button"
-                data-testid="studio-outputs"
-                aria-pressed={outputsOpen}
-                onClick={() => setOutputsOpen((open) => !open)}
-                className={`font-jetbrains flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-label transition ${
-                  outputsOpen
-                    ? "border-cyan-400/45 bg-cyan-400/10 text-cyan-200"
-                    : "border-white/12 text-white/60 hover:border-white/25 hover:text-white/90"
-                }`}
-              >
-                {outputsOpen ? (
-                  <X className="h-4 w-4" aria-hidden />
-                ) : (
-                  <Boxes className="h-4 w-4" aria-hidden />
-                )}
-                Outputs
-                <span
-                  className={`rounded-full px-1.5 text-label ${
-                    outputsOpen ? "bg-cyan-400/15 text-cyan-100/80" : "bg-white/8 text-white/45"
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  data-testid="studio-step-signoff"
+                  disabled={!isLocked && Boolean(blocker)}
+                  title={!isLocked && blocker ? blocker : isLocked ? "Reopen this step" : "Lock this step"}
+                  onClick={isLocked ? handleReopen : handleSignOff}
+                  className={`font-jetbrains flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-label transition ${
+                    isLocked
+                      ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-200 hover:bg-emerald-400/20"
+                      : blocker
+                        ? "cursor-not-allowed border-white/10 bg-white/[0.02] text-white/30"
+                        : "border-white/12 text-white/70 hover:border-white/25 hover:text-white"
                   }`}
                 >
-                  {ASSETS.length}
-                </span>
-              </button>
+                  {isLocked ? (
+                    <LockOpen className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <Lock className="h-4 w-4" aria-hidden />
+                  )}
+                  {isLocked ? "Reopen" : "Lock step"}
+                </button>
+
+                <button
+                  type="button"
+                  data-testid="studio-outputs"
+                  aria-pressed={outputsOpen}
+                  onClick={() => setOutputsOpen((open) => !open)}
+                  className={`font-jetbrains flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-label transition ${
+                    outputsOpen
+                      ? "border-cyan-400/45 bg-cyan-400/10 text-cyan-200"
+                      : "border-white/12 text-white/60 hover:border-white/25 hover:text-white/90"
+                  }`}
+                >
+                  {outputsOpen ? (
+                    <X className="h-4 w-4" aria-hidden />
+                  ) : (
+                    <Boxes className="h-4 w-4" aria-hidden />
+                  )}
+                  Outputs
+                  <span
+                    className={`rounded-full px-1.5 text-label ${
+                      outputsOpen ? "bg-cyan-400/15 text-cyan-100/80" : "bg-white/8 text-white/45"
+                    }`}
+                  >
+                    {ASSETS.length}
+                  </span>
+                </button>
+              </div>
             )}
           </div>
         </header>
@@ -405,7 +455,7 @@ export default function StudioView({ projectId }: { projectId: string }) {
                 also why the shelf never became a route. */}
             {project && (
               <div className="mt-6">
-                <Stepper active={phaseKey} progress={project.progress} onPick={pick} />
+                <Stepper active={phaseKey} project={project} progress={project.progress} onPick={pick} />
               </div>
             )}
             {/* LibraryShelves brings its own mt-8, so the section adds none

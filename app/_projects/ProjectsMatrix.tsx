@@ -27,6 +27,7 @@ import {
   PHASE_TITLE,
   disciplineOf,
   projectState,
+  stateOf,
   templateOf,
   type PhaseState,
 } from "@/lib/projects";
@@ -160,27 +161,30 @@ export default function ProjectsMatrix({
               {isSeeded(p) && <DemoTag />}
             </div>
 
-            {PHASES.map((k) => (
-              <span key={k} className="flex justify-center">
-                {/* The cell is the affordance. Reading DOWN a column is what this
-                    surface is for, so the natural next move — "open THAT project
-                    at THAT step" — has to be one click from the cell you are
-                    already looking at, not a trip through the project's default
-                    step. */}
-                <button
-                  data-testid={`cell-${p.id}-${k}`}
-                  onClick={(e) => { e.stopPropagation(); onOpen(p, k); }}
-                  // `· open here` used to close this tooltip. The cell grows a
-                  // cyan ring under the pointer that is already over it — the
-                  // hover state IS the sentence, and the aria-label below says
-                  // "Open …" for anyone the ring cannot reach. What the tooltip
-                  // owes is the two facts the colour alone cannot carry.
-                  title={`${PHASE_TITLE[k]} — ${PHASE_STATE_WORD[p.progress[k]]}`}
-                  aria-label={`Open ${p.title} at ${PHASE_TITLE[k]} (${PHASE_STATE_WORD[p.progress[k]]})`}
-                  className={`h-3 w-full rounded-[3px] transition hover:ring-2 hover:ring-cyan-300/50 focus-visible:outline-2 focus-visible:outline-offset-2 ${CELL[p.progress[k]]}`}
-                />
-              </span>
-            ))}
+            {PHASES.map((k) => {
+              const state = stateOf(p, k);
+              return (
+                <span key={k} className="flex justify-center">
+                  {/* The cell is the affordance. Reading DOWN a column is what this
+                      surface is for, so the natural next move — "open THAT project
+                      at THAT step" — has to be one click from the cell you are
+                      already looking at, not a trip through the project's default
+                      step. */}
+                  <button
+                    data-testid={`cell-${p.id}-${k}`}
+                    onClick={(e) => { e.stopPropagation(); onOpen(p, k); }}
+                    // `· open here` used to close this tooltip. The cell grows a
+                    // cyan ring under the pointer that is already over it — the
+                    // hover state IS the sentence, and the aria-label below says
+                    // "Open …" for anyone the ring cannot reach. What the tooltip
+                    // owes is the two facts the colour alone cannot carry.
+                    title={`${PHASE_TITLE[k]} — ${PHASE_STATE_WORD[state]}`}
+                    aria-label={`Open ${p.title} at ${PHASE_TITLE[k]} (${PHASE_STATE_WORD[state]})`}
+                    className={`h-3 w-full rounded-[3px] transition hover:ring-2 hover:ring-cyan-300/50 focus-visible:outline-2 focus-visible:outline-offset-2 ${CELL[state]}`}
+                  />
+                </span>
+              );
+            })}
 
             <span className="font-jetbrains text-right text-label text-white/45">
               {fmtDur(p.targetS)}
@@ -211,8 +215,8 @@ export default function ProjectsMatrix({
             <span aria-hidden className="h-1.5 w-1.5 rounded-full bg-rose-300/80" />
           </span>
           {PHASES.map((k) => {
-            const done = rows.filter((p) => p.progress[k] === "done").length;
-            const stuck = rows.filter((p) => p.progress[k] === "blocked").length;
+            const done = rows.filter((p) => stateOf(p, k) === "done").length;
+            const stuck = rows.filter((p) => stateOf(p, k) === "blocked").length;
             return (
               <span key={k} className="text-center whitespace-nowrap">
                 <span className={done ? "text-emerald-200/80" : "text-white/20"}>{done}</span>

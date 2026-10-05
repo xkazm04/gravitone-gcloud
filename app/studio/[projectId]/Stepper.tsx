@@ -37,7 +37,13 @@
 
 import { Check } from "lucide-react";
 
-import { PHASE_STATE_WORD, type PhaseKey, type PhaseState } from "@/lib/projects";
+import {
+  PHASE_STATE_WORD,
+  phaseStates,
+  type PhaseKey,
+  type PhaseState,
+  type Project,
+} from "@/lib/projects";
 
 import { STEPS } from "./phases";
 
@@ -73,18 +79,21 @@ function StateMark({ state }: { state: PhaseState }) {
 
 export default function Stepper({
   active,
+  project,
   progress,
   onPick,
 }: {
   active: PhaseKey;
-  progress: Record<PhaseKey, PhaseState>;
+  project?: Project;
+  progress?: Record<PhaseKey, PhaseState>;
   onPick: (key: PhaseKey) => void;
 }) {
+  const states = project ? phaseStates(project) : (progress ?? ({} as Record<PhaseKey, PhaseState>));
   return (
     <ol className="scroll-x flex overflow-hidden rounded-xl border border-white/8 bg-white/[0.02]">
       {STEPS.map((s, i) => {
         const on = s.key === active;
-        const state = progress[s.key];
+        const state = states[s.key] ?? "empty";
         return (
           <li key={s.key} className={`min-w-0 flex-1 ${i > 0 ? "border-l border-white/8" : ""}`}>
             <button
