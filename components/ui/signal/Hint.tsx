@@ -36,7 +36,7 @@
 // sites above pass it after a trim; two do not and should simply go.
 //
 // ── Behaviour ──────────────────────────────────────────────────────────────
-// Opens on hover, on focus, and on click/tap (so a touch device and a keyboard
+// Opens on hover, on focus, and on click/tap, and a click pins it open (so a touch device and a keyboard
 // reach the same content a mouse does). Closes on Escape, on blur out of the
 // group, and on a pointer down outside it. The popover is the glass surface,
 // capped at ~34ch, and flips from above to below when the trigger sits near the
@@ -113,8 +113,25 @@ export function useHint() {
     setOpen(true);
   }, []);
 
-  const hide = useCallback(() => setOpen(false), []);
-  const toggle = useCallback(() => (open ? hide() : show()), [open, hide, show]);
+  /** True once a CLICK (or Enter/Space) has opened or confirmed the popover.
+   *  Hover and focus open it first on every pointer gesture (mouseover -> focus
+   *  -> click), so a click that toggled on `open` closed what the same gesture
+   *  had just opened: a tap never showed the disclosure. A click now PINS a
+   *  passively-opened popover; only a click on a pinned one closes it. */
+  const pinned = useRef(false);
+
+  const hide = useCallback(() => {
+    pinned.current = false;
+    setOpen(false);
+  }, []);
+  const toggle = useCallback(() => {
+    if (pinned.current) {
+      hide();
+      return;
+    }
+    pinned.current = true;
+    show();
+  }, [hide, show]);
 
   // Outside pointer-down. Only mounted while open, so a page full of hints
   // costs one listener between them all rather than one each.
@@ -122,26 +139,28 @@ export function useHint() {
     if (!open) return;
     const onDown = (e: PointerEvent) => {
       const root = rootRef.current;
-      if (root && e.target instanceof Node && !root.contains(e.target)) setOpen(false);
+      if (root && e.target instanceof Node && !root.contains(e.target)) hide();
     };
     document.addEventListener("pointerdown", onDown, true);
     return () => document.removeEventListener("pointerdown", onDown, true);
-  }, [open]);
+  }, [open, hide]);
 
   /** Spread on the positioning wrapper. It must be `relative` and `inline-flex`;
    *  `hintRootClass` is that, so callers do not re-derive it. */
   const rootProps = {
     ref: rootRef,
     onMouseEnter: show,
-    onMouseLeave: hide,
+    onMouseLeave: () => {
+      if (!pinned.current) hide();
+    },
     onFocus: show,
     onBlur: (e: React.FocusEvent) => {
-      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setOpen(false);
+      if (!e.currentTarget.contains(e.relatedTarget as Node | null)) hide();
     },
     onKeyDown: (e: React.KeyboardEvent) => {
       if (e.key === "Escape" && open) {
         e.stopPropagation();
-        setOpen(false);
+        hide();
       }
     },
   };
