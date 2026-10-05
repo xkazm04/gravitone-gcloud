@@ -163,7 +163,7 @@ export default function MoveDialog({
             placeholder="keepers"
             aria-invalid={Boolean(newName.trim()) && !slug}
             aria-describedby={Boolean(newName.trim()) && !slug ? "move-new-folder-bad" : undefined}
-            className={`font-hanken w-full rounded-lg border bg-white/[0.03] px-3 py-2 text-content text-white/90 outline-none transition placeholder:text-white/25 ${
+            className={`font-hanken w-full rounded-lg border bg-white/[0.03] px-3 py-2 text-content text-white/90 transition placeholder:text-white/25 ${
               Boolean(newName.trim()) && !slug
                 ? "border-amber-400/60 focus:border-amber-400/70"
                 : "border-white/10 focus:border-cyan-400/40"

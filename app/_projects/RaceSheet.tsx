@@ -563,7 +563,7 @@ export function Lane({
       onFocus={(e) => e.target === e.currentTarget && onFocus()}
       onClick={() => onOpen(p, next.step)}
       aria-label={`${p.title}, ${STATE_TONE[state].word}, next: ${next.verb}`}
-      className={`${GRID} group h-16 cursor-pointer overflow-hidden border-b border-white/[0.045] px-4 transition-colors outline-none hover:bg-white/[0.03] focus-visible:bg-cyan-400/[0.06] ${
+      className={`${GRID} group h-16 cursor-pointer overflow-hidden border-b border-white/[0.045] px-4 transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 hover:bg-white/[0.03] focus-visible:bg-cyan-400/[0.06] ${
         active ? "bg-white/[0.04] shadow-[inset_2px_0_0_var(--gt-accent-cyan)]" : ""
       }`}
     >

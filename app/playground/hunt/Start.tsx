@@ -61,7 +61,7 @@ export function Start({
             }}
             rows={2}
             placeholder={IDEA_EXAMPLE[kind]}
-            className="w-full resize-none bg-transparent font-instrument text-3xl leading-snug text-white placeholder:text-white/25 focus:outline-none disabled:text-white/60"
+            className="w-full resize-none bg-transparent font-instrument text-3xl leading-snug text-white placeholder:text-white/25 disabled:text-white/60"
           />
         </label>
         <div className="flex flex-wrap items-center gap-3 border-t border-white/6 pt-4">

@@ -62,7 +62,7 @@ export function LabelPrompt({
         onChange={(e) => setV(e.target.value)}
         aria-label="Library label"
         maxLength={80}
-        className="mt-2 w-full rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 font-hanken text-label text-white placeholder:text-white/25 focus:border-emerald-300/50 focus:outline-none"
+        className="mt-2 w-full rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 font-hanken text-label text-white placeholder:text-white/25 focus:border-emerald-300/50"
       />
       <div className="mt-2 flex items-center justify-end gap-2">
         <button

@@ -420,7 +420,7 @@ function CandidateTile({
       aria-roledescription="candidate"
       aria-label={`${label}${v ? (v === "keep" ? ", kept" : ", rejected") : ""}${state !== "ready" ? `, ${state}` : ""}`}
       onClick={onFocus}
-      className={`group relative min-w-0 cursor-pointer self-start rounded-xl transition duration-200 focus-visible:outline-none ${
+      className={`group relative min-w-0 cursor-pointer self-start rounded-xl transition duration-200 focus-visible:outline-2 focus-visible:outline-offset-4 ${
         focused ? "outline-2 outline-offset-4 outline-cyan-300" : ""
       } ${v === "reject" ? "opacity-60 hover:opacity-90" : ""}`}
     >

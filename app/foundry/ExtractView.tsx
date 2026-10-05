@@ -697,7 +697,7 @@ function NewRun({
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
             placeholder="my-gallery"
-            className="font-hanken h-10 rounded-xl border border-white/8 bg-white/[0.03] px-3 text-content text-white/90 placeholder:text-white/30 focus:border-cyan-400/40 focus:outline-none"
+            className="font-hanken h-10 rounded-xl border border-white/8 bg-white/[0.03] px-3 text-content text-white/90 placeholder:text-white/30 focus:border-cyan-400/40"
           />
         </label>
         <Stepper label="rounds" value={rounds} min={1} max={4} onChange={setRounds} />

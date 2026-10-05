@@ -92,35 +92,20 @@ body { margin: 0; }
    nothing to follow. This is the floor: every focusable element gets the accent
    ring unless it asks for something else.
 
-   AND NOTHING OPTS OUT — true now, rather than aspirational. Ten places carried
-   `focus:outline-none`: three with no replacement indicator at all (the style
-   rename field, the fact-binding <select> in frames, and the right-click menu,
-   which then moved focus onto the very element it had blinded), and seven with
-   only a `focus:` border tint. All ten are gone. `focus:outline-none` no longer
-   appears anywhere in app/ or components/, and if you are about to type it, you
-   are deleting the only thing telling someone where they are. Tint the border
-   as well by all means — do not tint it instead.
+   AND NOTHING OPTS OUT — held by tests/golden-path/focus-ring-floor.probe.spec.ts,
+   not by this comment. `outline-none` / `focus:outline-none` /
+   `focus-visible:outline-none` sit in `@layer utilities`, which outranks the
+   base ring below, so each one deletes the only thing telling someone where
+   they are. The probe walks app/ and components/ and fails on any such removal
+   whose tag does not name a `focus-visible:` outline, ring or shadow (or is a
+   `tabIndex={-1}` programmatic target). Tint the border as well by all means —
+   do not tint it instead.
 
    Deliberately inside `@layer base`, NOT unlayered like the .aurora/.glass-panel
-   rules below. Tailwind utilities live in `@layer utilities`, which outranks
-   base — so a component that declares its own `focus-visible:outline-*` keeps
+   rules below. A component that declares its own `focus-visible:outline-*` keeps
    its bespoke width and offset and inherits only `outline-color` from here,
    since `outline-2` sets width alone and would otherwise fall back to
-   currentColor.
-
-   Eight files do that today, and they are the whole list (this comment used to
-   name eight components — Region, Track, TakePlayer, NarrationDock,
-   FeedbackDock, ScriptScore, TakeTimeline, voices/new — none of which has ever
-   existed in this repo; the list was carried over from the app this design
-   system was ported from):
-     components/ui/Primitives.tsx  · Button
-     components/ui/Field.tsx       · CONTROL, and Segmented via has-[:focus-visible]
-     components/ui/NotificationBell.tsx · the bell, and its tray (which takes
-       focus on open, so it needs a ring of its own to show it)
-     components/ui/Select.tsx      · the dropdown trigger
-     app/_projects/{ShelfHeader,parts}.tsx
-     app/_phases/research/_parts/CardTile.tsx
-     app/_phases/research/_parts/FollowUpQueue.tsx
+   currentColor. `grep -rl focus-visible:outline app components` is the live list.
 
    Contrast: #67e8f9 on #080a10 is ~13.7:1 — far past the 3:1 WCAG 2.2 (1.4.11 /
    2.4.11) floor for a non-text focus indicator, and it holds on the glass

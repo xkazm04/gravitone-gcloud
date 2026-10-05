@@ -406,7 +406,7 @@ function RowHead({ a, row, n }: { a: Arrange; row: Row; n: number }) {
             onBlur={() => setEditing(false)}
             aria-label={`Rename ${row.name}`}
             maxLength={40}
-            className="w-full rounded-lg border border-cyan-300/40 bg-white/[0.04] px-2 py-1 font-instrument text-xl text-white focus:outline-none"
+            className="w-full rounded-lg border border-cyan-300/40 bg-white/[0.04] px-2 py-1 font-instrument text-xl text-white"
           />
         </form>
       ) : (
@@ -505,7 +505,7 @@ export function NewRow({ a }: { a: Arrange }) {
         aria-label="New row name"
         placeholder="group"
         maxLength={40}
-        className="w-44 rounded-full border border-cyan-300/40 bg-white/[0.04] px-3 py-1.5 font-hanken text-label text-white placeholder:text-white/30 focus:outline-none"
+        className="w-44 rounded-full border border-cyan-300/40 bg-white/[0.04] px-3 py-1.5 font-hanken text-label text-white placeholder:text-white/30"
       />
       <button type="submit" disabled={!v.trim()} className="cursor-pointer rounded-full border border-cyan-300/40 bg-cyan-300/10 px-3 py-1.5 font-jetbrains text-label text-cyan-100 disabled:opacity-40">
         add
