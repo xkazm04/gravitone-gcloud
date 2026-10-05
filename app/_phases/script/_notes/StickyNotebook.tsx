@@ -11,6 +11,7 @@
 
 import { useState } from "react";
 
+import { Tally } from "@/components/ui/signal";
 import { NotesProvider, useNotes } from "./NotesContext";
 import NoteComposer, { NoteList } from "./NoteComposer";
 import RecalibrateControl from "./RecalibrateControl";
@@ -57,6 +58,15 @@ function Pad({
 }) {
   const [open, setOpen] = useState(true);
   const ctx = useNotes();
+  // A handle click on a collapsed pad must show its composer: the pad
+  // opens whenever a card becomes active. Synced during render (not an effect)
+  // so the composer is in the same paint as the tint.
+  const [seenActive, setSeenActive] = useState<string | null>(null);
+  const active = ctx?.active ?? null;
+  if (active !== seenActive) {
+    setSeenActive(active);
+    if (active) setOpen(true);
+  }
   const notedCardIds = [...new Set(api.notes.map((n) => n.cardId))];
 
   return (
@@ -73,7 +83,15 @@ function Pad({
           onClick={() => setOpen((v) => !v)}
           className="font-jetbrains flex w-full items-center justify-between text-label tracking-[0.16em] text-amber-200/90 uppercase"
         >
-          <span>notes · {api.notes.length}</span>
+          <span className="flex items-center gap-2">
+            <span>notes · {api.notes.length}</span>
+            {!open && api.running && (
+              <Tally label="recalibrating" value={api.notes.length} tone="amber" />
+            )}
+            {!open && !api.running && api.candidate && (
+              <Tally label="candidate" value={api.candidate.notes.length} tone="cyan" />
+            )}
+          </span>
           <span aria-hidden className="text-white/35">{open ? "▾" : "▸"}</span>
         </button>
 
@@ -94,7 +112,7 @@ function Pad({
 
             {ctx?.active && (
               <div className="mt-2.5">
-                <NoteComposer cardId={ctx.active} />
+                <NoteComposer key={ctx.active} cardId={ctx.active} />
               </div>
             )}
 
