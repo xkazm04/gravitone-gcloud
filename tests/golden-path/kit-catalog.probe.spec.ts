@@ -16,7 +16,7 @@
 // by the compiler instead: app/kit/Parts.tsx types its demo table as
 // Record<PartName, …>, so a catalog entry without a specimen does not typecheck.
 
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
@@ -91,4 +91,18 @@ test.describe("kit catalog", () => {
       expect(unknownGaps, `${m.module} names gaps that are not defined`).toEqual([]);
     }
   });
+});
+
+// The page that says "a local duplicate of a kit part is a finding" must not write
+// the k-btn / k-chip class strings by hand where <Button>, <Chip> and <Chips> exist.
+test("the specimen files use the kit's Button, Chip and Chips", () => {
+  const dir = join(ROOT, "app", "kit");
+  const files = readdirSync(dir).filter((f) => f.endsWith(".tsx"));
+  expect(files.length, "walked no app/kit/*.tsx").toBeGreaterThan(0);
+  const hits: string[] = [];
+  for (const f of files) {
+    const src = stripComments(readFileSync(join(dir, f), "utf8"));
+    for (const m of src.matchAll(/className="k-btn\b|className="k-chips?"/g)) hits.push(`${f}: ${m[0]}`);
+  }
+  expect(hits).toEqual([]);
 });

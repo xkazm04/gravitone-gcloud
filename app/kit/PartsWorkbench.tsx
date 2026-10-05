@@ -9,6 +9,7 @@ import { useMemo, useState, type ReactNode } from "react";
 
 import {
   Bar,
+  Button,
   Chip,
   Crumbs,
   NotificationBell,
@@ -171,9 +172,9 @@ export function WindowDemo() {
       <div>useWindow(46 items, size 5, step 10)</div>
       <div>shown <b>{w.shown}</b> · remaining <b>{w.remaining}</b> · total <b>{w.total}</b></div>
       <div className="kr-row" style={{ marginTop: 8 }}>
-        <button type="button" className="k-btn k-btn--line k-btn--sm" onClick={w.more}>more()</button>
-        <button type="button" className="k-btn k-btn--line k-btn--sm" onClick={w.all}>all()</button>
-        <button type="button" className="k-btn k-btn--line k-btn--sm" onClick={w.reset}>reset()</button>
+        <Button variant="ghost" size="sm" onClick={w.more}>more()</Button>
+        <Button variant="ghost" size="sm" onClick={w.all}>all()</Button>
+        <Button variant="ghost" size="sm" onClick={w.reset}>reset()</Button>
       </div>
     </div>
   );
@@ -235,7 +236,7 @@ export function RovingDemo() {
   return (
     <>
       <div className="kr-row">
-        <button type="button" className="k-btn k-btn--line k-btn--sm">Tab lands here first</button>
+        <Button variant="ghost" size="sm">Tab lands here first</Button>
       </div>
       <div className="kr-tiles" role="group" aria-label="Specimen candidates, arrows move" {...r.containerProps}>
         {Array.from({ length: 8 }, (_, i) => (
@@ -251,7 +252,7 @@ export function RovingDemo() {
         ))}
       </div>
       <div className="kr-row">
-        <button type="button" className="k-btn k-btn--line k-btn--sm">Tab leaves here next</button>
+        <Button variant="ghost" size="sm">Tab leaves here next</Button>
         <span className="kr-out">active <b>{r.active + 1}</b> of 8{opened !== null && <> · opened <b>{opened + 1}</b></>}</span>
       </div>
     </>

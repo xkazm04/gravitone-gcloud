@@ -10,6 +10,8 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import {
   Button,
+  Chip,
+  Chips,
   ContextMenu,
   Deck,
   DeckCard,
@@ -214,9 +216,11 @@ export function ContextMenuDemo() {
         setAt({ x: e.clientX - r.left, y: e.clientY - r.top });
       }}
     >
-      <div className="k-chips" style={{ marginBottom: 10 }}>
-        <span className="k-chip">right-click anywhere here</span>
-        <span className="k-chip"><b>{said}</b></span>
+      <div style={{ marginBottom: 10 }}>
+        <Chips>
+          <Chip>right-click anywhere here</Chip>
+          <Chip><b>{said}</b></Chip>
+        </Chips>
       </div>
       <Button size="sm" variant="ghost" onClick={() => setAt({ x: 210, y: 46 })}>
         Open at row
@@ -279,11 +283,13 @@ export function FolderTreeDemo() {
     });
   return (
     <div style={{ position: "relative", maxWidth: 380 }}>
-      <div className="k-chips" style={{ marginBottom: 10 }}>
-        <Button size="sm" variant="ghost" aria-pressed={drag} onClick={() => { setDrag((d) => !d); setOver(null); }}>
-          {drag ? "Stop the drag" : "Start a drag"}
-        </Button>
-        {dropped && <span className="k-chip">dropped on <b>{dropped}</b></span>}
+      <div style={{ marginBottom: 10 }}>
+        <Chips>
+          <Button size="sm" variant="ghost" aria-pressed={drag} onClick={() => { setDrag((d) => !d); setOver(null); }}>
+            {drag ? "Stop the drag" : "Start a drag"}
+          </Button>
+          {dropped && <Chip>dropped on <b>{dropped}</b></Chip>}
+        </Chips>
       </div>
       <FolderTree
         label="Asset folders"
@@ -443,11 +449,11 @@ export function PlayerDemo() {
 
 export function ClockDemo() {
   return (
-    <div className="k-chips">
+    <Chips>
       {[7, 72, 754, 3723].map((s) => (
-        <span key={s} className="k-chip"><b>{s}</b> {clock(s)}</span>
+        <Chip key={s}><b>{s}</b> {clock(s)}</Chip>
       ))}
-    </div>
+    </Chips>
   );
 }
 
