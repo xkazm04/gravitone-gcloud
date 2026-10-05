@@ -47,8 +47,8 @@ import {
 
 import { STEPS } from "./phases";
 
-/** The tone each state is drawn in — applied to the mark AND the title, so the
- *  two read as one statement about one step rather than a chip beside a word. */
+/** The tone each state's mark is drawn in. Applied to the mark only; selection,
+ *  not state, sets the title's weight. */
 const TONE: Record<PhaseState, string> = {
   done: "text-emerald-300/90",
   review: "text-amber-300/90",

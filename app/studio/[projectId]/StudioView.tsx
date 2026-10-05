@@ -9,7 +9,7 @@
 //    this is where that name is for
 //  · the descriptive paragraph under it is gone. It described the fixture, not
 //    the project, and it cost the fold
-//  · the step rail is one row of numbers and titles (see Stepper.tsx)
+//  · the step rail is one row of titles, each with its state mark (see Stepper.tsx)
 //
 // Still mocked below the rail: every step surface renders app/_studio's Glass
 // Harbor fixture whatever project is open. The pill in the header says so.
