@@ -288,6 +288,170 @@ def test_palette_is_measured_and_the_sample_is_declared():
           (dark["hue_concentration_60deg"], dark["near_black_share"]), (None, 1.0))
 
 
+
+def load_vlm(mod):
+    spec = importlib.util.spec_from_file_location(mod, HERE.parent / "vlm-probe" / f"{mod}.py")
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Cannot load module {mod}")
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    return m
+
+
+def test_frame_manifest_v2_schema_write_and_read_v1_normalization():
+    FM = load_vlm("frame_manifest")
+    tmp = Path(tempfile.mkdtemp()) / "test-manifest.json"
+    frames = [{"frame": "f1.jpg", "source": "test-slug", "t_seconds": 1.5}]
+    FM.write(tmp, "test-slug", 42.0, "scene", 0.3, [10.0, 20.0], frames)
+    data = json.loads(tmp.read_text(encoding="utf-8"))
+    check("frame_manifest.write schema is frame-manifest/2", data.get("schema"), "frame-manifest/2")
+    check("frame_manifest.write preserves slug", data.get("slug"), "test-slug")
+    check("frame_manifest.write preserves duration_s", data.get("duration_s"), 42.0)
+    check("frame_manifest.write preserves strategy", data.get("strategy"), "scene")
+    check("frame_manifest.write preserves threshold", data.get("threshold"), 0.3)
+    check("frame_manifest.write preserves cuts", data.get("cuts"), [10.0, 20.0])
+    check("frame_manifest.write preserves frames", data.get("frames"), frames)
+
+    v1_tmp = Path(tempfile.mkdtemp()) / "v1.json"
+    v1_data = [{"frame": "f1.jpg", "source": "s1", "t_seconds": 2.5}]
+    v1_tmp.write_text(json.dumps(v1_data), encoding="utf-8")
+    norm = FM.read(v1_tmp)
+    check("frame_manifest.read normalizes v1 schema", norm.get("schema"), "frame-manifest/1")
+    check("frame_manifest.read v1 has duration_s=None", norm.get("duration_s"), None)
+    check("frame_manifest.read v1 has cuts=[]", norm.get("cuts"), [])
+    check("frame_manifest.read v1 preserves frames", norm.get("frames"), v1_data)
+
+
+def test_shot_index_and_beat_of_mapping():
+    FM = load_vlm("frame_manifest")
+    cuts = [10.0, 20.0, 30.0]
+    check("shot_index 0 before first cut", FM.shot_index(0.0, cuts), 0)
+    check("shot_index 0 mid first shot", FM.shot_index(5.0, cuts), 0)
+    check("shot_index 1 at first cut", FM.shot_index(10.0, cuts), 1)
+    check("shot_index 1 in second shot", FM.shot_index(15.0, cuts), 1)
+    check("shot_index 2 at second cut", FM.shot_index(20.0, cuts), 2)
+    check("shot_index 2 before third cut", FM.shot_index(29.9, cuts), 2)
+    check("shot_index 3 at third cut", FM.shot_index(30.0, cuts), 3)
+    check("shot_index with empty cuts is 0", FM.shot_index(5.0, []), 0)
+
+    dur = 100.0
+    check("beat_of setup at 0%", FM.beat_of(0.0, dur), "setup(0-25%)")
+    check("beat_of setup at 24.9%", FM.beat_of(24.9, dur), "setup(0-25%)")
+    check("beat_of build at 25%", FM.beat_of(25.0, dur), "build(25-55%)")
+    check("beat_of build at 54.9%", FM.beat_of(54.9, dur), "build(25-55%)")
+    check("beat_of peak at 55%", FM.beat_of(55.0, dur), "peak(55-85%)")
+    check("beat_of peak at 84.9%", FM.beat_of(84.9, dur), "peak(55-85%)")
+    check("beat_of tail at 85%", FM.beat_of(85.0, dur), "tail(85-100%)")
+    check("beat_of tail at 100%", FM.beat_of(100.0, dur), "tail(85-100%)")
+
+
+def test_frame_manifest_upgrade_preserves_backup():
+    FM = load_vlm("frame_manifest")
+    tmp = Path(tempfile.mkdtemp())
+    mf = tmp / "demo-manifest.json"
+    v1_frames = [{"frame": "demo-001.jpg", "source": "demo", "t_seconds": 5.0}]
+    mf.write_text(json.dumps(v1_frames), encoding="utf-8")
+
+    rhythm_file = tmp / "demo-rhythm.json"
+    rhythm_file.write_text(json.dumps({"duration_s": 88.5}), encoding="utf-8")
+
+    cuts_file = tmp / "demo-cuts.json"
+    cuts_file.write_text(json.dumps([12.5, 35.0]), encoding="utf-8")
+
+    FM.upgrade(mf, rhythm_file, cuts_file)
+
+    backup = tmp / "demo-manifest.v1.json"
+    check("upgrade preserves backup .v1.json", backup.exists(), True)
+    if backup.exists():
+        check("backup holds original v1 data", json.loads(backup.read_text(encoding="utf-8")), v1_frames)
+
+    upgraded = json.loads(mf.read_text(encoding="utf-8"))
+    check("upgraded schema is frame-manifest/2", upgraded.get("schema"), "frame-manifest/2")
+    check("upgraded duration_s is set", upgraded.get("duration_s"), 88.5)
+    check("upgraded cuts is set", upgraded.get("cuts"), [12.5, 35.0])
+    check("upgraded frames matches v1 frames", upgraded.get("frames"), v1_frames)
+
+
+def test_dojo_study_beat_map_runtime_and_none_handling():
+    FM = load_vlm("frame_manifest")
+    DS = load("dojo_study")
+    tmp = Path(tempfile.mkdtemp())
+
+    # Source 1: has duration_s = 100.0
+    s1_frames = [
+        {"frame": "s1-001.jpg", "source": "s1", "t_seconds": 10.0},
+        {"frame": "s1-002.jpg", "source": "s1", "t_seconds": 70.0},
+    ]
+    FM.write(tmp / "s1-manifest.json", "s1", 100.0, "scene", 0.3, [], s1_frames)
+
+    # Source 2: has duration_s = None (v1 manifest)
+    s2_frames = [
+        {"frame": "s2-001.jpg", "source": "s2", "t_seconds": 10.0},
+        {"frame": "s2-002.jpg", "source": "s2", "t_seconds": 70.0},
+    ]
+    (tmp / "s2-manifest.json").write_text(json.dumps(s2_frames), encoding="utf-8")
+
+    per_source = {
+        "s1": {"s1-001.jpg": {"shot_size": "close"}, "s1-002.jpg": {"shot_size": "wide"}},
+        "s2": {"s2-001.jpg": {"shot_size": "close"}, "s2-002.jpg": {"shot_size": "wide"}},
+    }
+    bm = DS.beat_map(per_source, frames_dir=tmp)
+
+    check("s1 runtime beat binning includes setup", "setup(0-25%)" in bm.get("s1", {}), True)
+    check("s1 runtime beat binning includes peak", "peak(55-85%)" in bm.get("s1", {}), True)
+    check("s1 close frame in setup", bm.get("s1", {}).get("setup(0-25%)", {}).get("shot_size", {}).get("close"), 1)
+    check("s1 wide frame in peak", bm.get("s1", {}).get("peak(55-85%)", {}).get("shot_size", {}).get("wide"), 1)
+
+    s2_entry = bm.get("s2", {})
+    check("s2 with duration_s=None is flagged or skipped", bool(s2_entry.get("_skipped") or s2_entry.get("_flag") or "setup(0-25%)" not in s2_entry), True)
+
+
+def test_dojo_study_beat_binning_153_frames_discrepancy():
+    FM = load_vlm("frame_manifest")
+    DS = load("dojo_study")
+
+    manifests = list((HERE.parent / "vlm-probe" / "frames").glob("*-manifest.json"))
+    manifest_data = {}
+    for m in manifests:
+        manifest_data[m.stem.replace("-manifest", "")] = FM.read(m)
+
+    rhythms = {}
+    for p in (HERE.parent / "vlm-probe" / ".ingest").glob("*-rhythm.json"):
+        rhythms[p.stem.replace("-rhythm", "")] = json.loads(p.read_text("utf-8"))
+
+    slugs = list(manifest_data.keys())
+    per_source = DS.load(slugs)
+
+    diff_count = 0
+    total_checked = 0
+    runtime_misbinned = 0
+
+    for src, frames in per_source.items():
+        m = manifest_data.get(src)
+        if not m:
+            continue
+        m_frames = {item["frame"]: item["t_seconds"] for item in m.get("frames", [])}
+        dur = m.get("duration_s") or rhythms.get(src, {}).get("duration_s")
+        if not dur:
+            continue
+        seq = sorted([f for f in frames.keys() if f in m_frames])
+        for i, f in enumerate(seq):
+            total_checked += 1
+            idx_f = i / max(len(seq) - 1, 1)
+            b_idx = DS.BEATS[0] if idx_f < .25 else DS.BEATS[1] if idx_f < .55 else DS.BEATS[2] if idx_f < .85 else DS.BEATS[3]
+
+            t = m_frames[f]
+            b_rt = FM.beat_of(t, dur)
+            if b_idx != b_rt:
+                diff_count += 1
+            if b_rt != FM.beat_of(t, dur):
+                runtime_misbinned += 1
+
+    check("153 frames checked from sources with manifests", total_checked, 153)
+    check("49 frames mis-binned by index", diff_count, 49)
+    check("0 frames mis-binned by runtime", runtime_misbinned, 0)
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -297,6 +461,11 @@ TESTS = [
     test_a_run_that_gave_up_mid_generation_does_not_report_done,
     test_list_survives_a_row_from_another_schema,
     test_an_unparseable_readback_is_kept_on_disk,
+    test_frame_manifest_v2_schema_write_and_read_v1_normalization,
+    test_shot_index_and_beat_of_mapping,
+    test_frame_manifest_upgrade_preserves_backup,
+    test_dojo_study_beat_map_runtime_and_none_handling,
+    test_dojo_study_beat_binning_153_frames_discrepancy,
 ]
 
 
