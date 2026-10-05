@@ -84,7 +84,7 @@ export function BandTrack({
           <span
             aria-hidden
             className={`absolute inset-y-0 rounded-full ${
-              hatchBand ? "text-cyan-300/45" : "bg-cyan-400/25"
+              hatchBand ? "text-cyan-300/45" : "bg-cyan-400/50"
             }`}
             style={{
               left: `${left}%`,
@@ -104,7 +104,7 @@ export function BandTrack({
       {band && showBounds && (
         <div
           aria-hidden
-          className="font-jetbrains mt-1 flex justify-between text-label text-white/35"
+          className="font-jetbrains mt-1 flex justify-between text-label text-white/55"
         >
           <span>
             {band[0]}
