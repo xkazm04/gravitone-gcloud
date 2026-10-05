@@ -351,7 +351,10 @@ export default function Playground({
       </span>
 
       {error && (
-        <p className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-3 py-2 text-content leading-snug text-rose-200">
+        <p
+          role="alert"
+          className="rounded-xl border border-rose-400/30 bg-rose-400/5 px-3 py-2 text-content leading-snug text-rose-200"
+        >
           {error}
         </p>
       )}

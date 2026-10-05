@@ -34,3 +34,7 @@ test("destructive library buttons are the shared danger Button, not hand-rolled 
     expect(src).toContain('variant="danger"');
   }
 });
+
+test("a failed or refused trial render is announced", () => {
+  expect(read("app/library/Playground.tsx")).toContain('role="alert"');
+});
