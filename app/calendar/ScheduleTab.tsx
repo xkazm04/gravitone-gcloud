@@ -2,112 +2,98 @@
 
 // The Schedule tab: three directional variants over ONE data hook
 // (useCalendar), behind `?v=1|2|3` (components/ui/VariantSwitch — prototype
-// only, deleted when the round's winner is consolidated). The form and the slot
-// panel are the same components in all three; only the arrangement differs.
+// only, deleted when the round's winner is consolidated). The composer and the
+// slot sheet are the same components in all three; the variants differ in how
+// a week is LAID OUT and where those two live.
+//
+//   1 · Broadcast week   a time grid, drag to move, the composer beside it
+//   2 · Channel runway   one lane per channel along weeks, a drawer for detail
+//   3 · Editorial agenda the ready exports as a poster shelf, slots as a feed
 
 import { useState } from "react";
 
-import { Loading } from "@/components/kit";
-import { Ghost } from "@/components/ui/signal";
 import { useVariant } from "@/components/ui/VariantSwitch";
-import type { ScheduleSlot } from "@/lib/publish/types";
-import type { PushToast } from "@/components/kit";
+import type { Publication, ScheduleSlot } from "@/lib/publish/types";
 
-import { Agenda } from "./Agenda";
-import { ChannelLanes } from "./ChannelLanes";
+import { BroadcastWeek } from "./BroadcastWeek";
 import { CHANNEL_NAME, dateTimeLabel } from "./calendarModel";
-import { FetchFailure } from "./parts";
+import { ChannelRunway } from "./ChannelRunway";
+import type { Preset } from "./Composer";
+import { EditorialAgenda } from "./EditorialAgenda";
 import type { Fetched } from "./publishClient";
-import { ScheduleForm } from "./ScheduleForm";
-import { SlotPanel } from "./SlotPanel";
-import { useProjectChoices, type Calendar } from "./useCalendar";
-import { WeekGrid } from "./WeekGrid";
+import { FailureCard, type PushToast } from "./ui";
+import { useProjectChoices, type Calendar, type ProjectChoice } from "./useCalendar";
 
-export function ScheduleTab({ cal, now, push }: { cal: Calendar; now: number | null; push: (t: PushToast) => void }) {
+/** What every schedule variant is handed. */
+export interface ScheduleProps {
+  cal: Calendar;
+  slots: ScheduleSlot[];
+  now: number;
+  projects: ProjectChoice[] | null;
+  selectedId: string | null;
+  select: (id: string | null) => void;
+  preset: Preset | undefined;
+  prefill: (p: Omit<Preset, "nonce">) => void;
+  move: (s: ScheduleSlot, at: string) => Promise<Fetched<{ slot: ScheduleSlot }>>;
+  cancel: (s: ScheduleSlot) => Promise<Fetched<{ slot: ScheduleSlot }>>;
+  created: (s: ScheduleSlot) => void;
+  publicationOf: (s: ScheduleSlot) => Publication | null;
+}
+
+export function ScheduleTab({ cal, now, push }: { cal: Calendar; now: number | null; push: PushToast }) {
   const [v] = useVariant();
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [preset, setPreset] = useState<Preset | undefined>(undefined);
   const projects = useProjectChoices();
 
-  if (!cal.schedule || now === null) return <Loading />;
-  if (!cal.schedule.ok) return <FetchFailure r={cal.schedule} onRetry={cal.reload} />;
+  if (!cal.schedule || now === null) return <ScheduleLoading />;
+  if (!cal.schedule.ok) return <FailureCard r={cal.schedule} onRetry={cal.reload} />;
 
   const slots = cal.schedule.data.slots;
-  const selected = slots.find((s) => s.id === selectedId) ?? null;
+  const pubs = cal.metrics?.ok ? cal.metrics.data.publications : [];
 
   const report = (verb: string, r: Fetched<{ slot: ScheduleSlot }>) => {
     if (r.ok)
       push({
-        kind: "ok",
+        tone: "ok",
         text: `${verb} · ${r.data.slot.title} · ${CHANNEL_NAME[r.data.slot.channelId]} · ${dateTimeLabel(r.data.slot.publishAt)}`,
       });
-    else push({ kind: "failed", text: `${verb} refused · ${r.status || "network"} · ${r.error}`, ttl: null });
+    else push({ tone: "failed", text: `${verb} refused · ${r.status || "network"} · ${r.error}`, sticky: true });
     return r;
   };
-  const move = async (s: ScheduleSlot, at: string) => report("moved", await cal.move(s, at));
-  const cancel = async (s: ScheduleSlot) => report("cancelled", await cal.cancel(s));
-  const created = (s: ScheduleSlot) => {
-    setSelectedId(s.id);
-    push({ kind: "ok", text: `scheduled · ${s.title} · ${CHANNEL_NAME[s.channelId]} · ${dateTimeLabel(s.publishAt)}` });
+
+  const props: ScheduleProps = {
+    cal,
+    slots,
+    now,
+    projects,
+    selectedId: slots.some((s) => s.id === selectedId) ? selectedId : null,
+    select: setSelectedId,
+    preset,
+    prefill: (p) => setPreset((cur) => ({ ...p, nonce: (cur?.nonce ?? 0) + 1 })),
+    move: async (s, at) => report("moved", await cal.move(s, at)),
+    cancel: async (s) => report("cancelled", await cal.cancel(s)),
+    created: (s) => {
+      setSelectedId(s.id);
+      push({ tone: "ok", text: `scheduled · ${s.title} · ${CHANNEL_NAME[s.channelId]} · ${dateTimeLabel(s.publishAt)}` });
+    },
+    publicationOf: (s) => (s.publicationId ? (pubs.find((p) => p.id === s.publicationId) ?? null) : null),
   };
 
-  const panel = selected && (
-    <SlotPanel key={selected.id} slot={selected} now={now} onMove={move} onCancel={cancel} onClose={() => setSelectedId(null)} />
-  );
-  const form = (
-    <ScheduleForm exports={cal.exports} channels={cal.channels} slots={slots} now={now} projects={projects} onCreate={cal.create} onDone={created} />
-  );
-  const exportsFailed = cal.exports && !cal.exports.ok ? <FetchFailure r={cal.exports} onRetry={cal.reload} /> : null;
-
-  if (v === 3) {
-    return (
-      <>
-        {exportsFailed}
-        <Agenda
-          slots={slots}
-          exports={cal.exports}
-          channels={cal.channels}
-          now={now}
-          projects={projects}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-          onMove={move}
-          onCancel={cancel}
-          onCreate={cal.create}
-          onCreated={created}
-        />
-      </>
-    );
-  }
-
-  if (v === 2) {
-    return (
-      <div className="space-y-6">
-        <ChannelLanes
-          slots={slots}
-          channels={cal.channels?.ok ? cal.channels.data.channels : null}
-          now={now}
-          selectedId={selectedId}
-          onSelect={setSelectedId}
-        />
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div>{panel ?? <Ghost shape="card" label="no slot selected" />}</div>
-          <div className="space-y-3">
-            {exportsFailed}
-            {form}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_26rem]">
-      <WeekGrid slots={slots} now={now} selectedId={selectedId} onSelect={setSelectedId} onMove={(s, at) => void move(s, at)} />
-      <aside className="space-y-6" aria-label="Slot and schedule">
-        {panel}
-        {exportsFailed}
-        {form}
-      </aside>
+    <div className="space-y-4">
+      {cal.exports && !cal.exports.ok && <FailureCard r={cal.exports} onRetry={cal.reload} />}
+      {v === 3 ? <EditorialAgenda {...props} /> : v === 2 ? <ChannelRunway {...props} /> : <BroadcastWeek {...props} />}
+    </div>
+  );
+}
+
+/** First read in flight: the page's shape, breathing. */
+function ScheduleLoading() {
+  return (
+    <div aria-busy="true" aria-label="Loading schedule" className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_25rem]">
+      <div className="h-[44rem] animate-pulse rounded-2xl border border-white/8 bg-gradient-to-b from-white/[0.04] to-white/[0.01]" />
+      <div className="h-[44rem] animate-pulse rounded-2xl border border-white/8 bg-gradient-to-b from-white/[0.04] to-white/[0.01]" />
     </div>
   );
 }

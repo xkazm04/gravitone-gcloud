@@ -36,6 +36,7 @@ import {
   weekStart,
 } from "@/app/calendar/calendarModel";
 import { createSlot, getSchedule } from "@/app/calendar/publishClient";
+import { activeSlotOf, atFraction, atMinute, exportName, onDay, packLanes } from "@/app/calendar/view";
 import { dailySeries, groupSums, publicationTotals, snapshotsOf } from "@/lib/publish/metrics";
 import type { MetricSnapshot, Publication, ScheduleSlot, SlotStatus } from "@/lib/publish/types";
 
@@ -250,4 +251,61 @@ test.describe("publishClient: a missing route, a refusal and a network failure a
     expect(await getSchedule()).toMatchObject({ ok: false, kind: "refused", status: 0 });
   });
 
+});
+
+// app/calendar/view.ts is the drawing arithmetic the three schedule variants
+// share: where a drag lands, how slots that share an afternoon split a column,
+// what an export is called. A wrong snap here moves a slot to a time nobody
+// asked for, so the landing is pinned as hard as the bucketing above.
+test.describe("drawing arithmetic: lanes, snaps, names", () => {
+  test("packLanes: overlapping items take separate lanes and learn their cluster's width", () => {
+    const at = (x: { t: number }) => x.t;
+    const placed = packLanes([{ t: 0 }, { t: 30 }, { t: 60 }, { t: 200 }], at, 90);
+    const by = new Map(placed.map((p) => [p.item.t, p]));
+    // 0..90, 30..120 and 60..150 all overlap: three lanes, each knowing it is one of three
+    expect(by.get(0)).toMatchObject({ lane: 0, lanes: 3 });
+    expect(by.get(30)).toMatchObject({ lane: 1, lanes: 3 });
+    expect(by.get(60)).toMatchObject({ lane: 2, lanes: 3 });
+    // a slot clear of the cluster stands alone, full width
+    expect(by.get(200)).toMatchObject({ lane: 0, lanes: 1 });
+    // two that only touch do not collide: 0..90 and 90..180
+    const touching = packLanes([{ t: 0 }, { t: 90 }], at, 90);
+    expect(touching.map((p) => p.lanes)).toEqual([1, 1]);
+  });
+
+  test("atMinute snaps to the step inside the local day; atFraction snaps in local wall time", () => {
+    const day = new Date(2026, 9, 7);
+    const iso = atMinute(day, 14 * 60 + 37, 15);
+    expect(new Date(iso).getHours()).toBe(14);
+    expect(new Date(iso).getMinutes()).toBe(30);
+    // a drag past midnight is held inside the day, never rolled into the next
+    expect(new Date(atMinute(day, 25 * 60, 15)).getDate()).toBe(7);
+    expect(new Date(atMinute(day, -40, 15)).getHours()).toBe(0);
+    const start = new Date(2026, 9, 5);
+    const half = new Date(atFraction(start, 7, 0.5, 60)); // Thu 8 Oct 12:00 local
+    expect(half.getDate()).toBe(8);
+    expect(half.getHours()).toBe(12);
+    expect(half.getMinutes()).toBe(0);
+  });
+
+  test("onDay keeps the local time of day; activeSlotOf ignores what can no longer fire", () => {
+    const moved = new Date(onDay(new Date(2026, 9, 6, 19, 30).toISOString(), new Date(2026, 9, 9)));
+    expect([moved.getDate(), moved.getHours(), moved.getMinutes()]).toEqual([9, 19, 30]);
+    const slots = [
+      { ...slot("m", iso(2026, 10, 5), "missed"), exportId: "x" },
+      { ...slot("c", iso(2026, 10, 5), "cancelled"), exportId: "x" },
+    ];
+    expect(activeSlotOf(slots, "x")).toBeUndefined();
+    const booked = [...slots, { ...slot("s", iso(2026, 10, 9), "scheduled"), exportId: "x" }];
+    expect(activeSlotOf(booked, "x", "youtube")?.id).toBe("s");
+    expect(activeSlotOf(booked, "x", "tiktok")).toBeUndefined();
+  });
+
+  test("exportName: the project's title when known, the id's handle when not — never a guess", () => {
+    const projects = [{ id: "p1", title: "Glass Harbor" }];
+    expect(exportName({ id: "1a44a311-988a", projectId: "p1" }, projects)).toBe("Glass Harbor");
+    expect(exportName({ id: "1a44a311-988a", projectId: "p9" }, projects)).toBe("export 1a44a311");
+    expect(exportName({ id: "1a44a311-988a", projectId: null }, null)).toBe("export 1a44a311");
+    expect(exportName(null, projects)).toBe("—");
+  });
 });
