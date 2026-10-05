@@ -112,6 +112,9 @@ const BASE = process.env.GOOGLE_TEXT_BASE_URL?.trim() || "https://generativelang
  */
 const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   "edit-plan": process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
+  // The PRO model: composing is engine arbitration plus whole beat chains
+  // held to a notebook, which is the judgement work `edit-plan` is priced for.
+  compose: process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
   "scene-direction": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   "style-synthesis": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   // The PRO model, like `edit-plan` and unlike the other two. A notebook is nine

@@ -1,0 +1,98 @@
+{
+  "name": "compose-ok",
+  "source": "hand-written",
+  "recordedAt": "2026-10-05",
+  "cliVersion": "2.1.289",
+  "cliArgsFingerprint": "9bffdfc1075733e3",
+  "turns": [
+    {
+      "match": {
+        "heading": "# SCRIPT-PROMPT",
+        "schemaSha256": "1321d131a5ae3f65dcecb97e2a991465359a9e1ac2dbd723672b3f70d9fdf040"
+      },
+      "prompt": null,
+      "mode": "ok",
+      "envelope": {
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "duration_ms": 142118,
+        "duration_api_ms": 141560,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-000000000021",
+        "total_cost_usd": 0.92114,
+        "usage": {
+          "input_tokens": 21544,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 3402
+        },
+        "permission_denials": []
+      },
+      "resultJson": {
+        "renders": [
+          {
+            "id": "rc-own-clock",
+            "engine": "reversal-chain",
+            "title": "Why Bitcoin Got Everything and Still Fell",
+            "pleasure": "being corrected",
+            "promiseForm": "topics",
+            "feelsLike": "an argument",
+            "bestFor": "an audience that already holds the wrong model",
+            "weakness": "can read as contrarian if the steel-man is cut",
+            "wordBudget": 950,
+            "beats": [
+              { "kind": "hook", "label": "SCQA · situation", "text": "Last October, Bitcoin set the highest price in its history.", "seconds": 12, "cards": ["f-ath"] },
+              { "kind": "hook", "label": "the wish list, delivered", "connector": "THEREFORE", "text": "Then it received almost everything it had asked for: a Strategic Bitcoin Reserve, friendly regulators, retirement accounts.", "seconds": 18, "cards": ["f-sbr", "f-genius"] },
+              { "kind": "hook", "label": "the complication", "connector": "BUT", "text": "And in the same months it lost roughly half its value.", "seconds": 10, "cards": ["f-drawdown"] },
+              { "kind": "question", "label": "the question aloud", "connector": "THEREFORE", "text": "What went wrong?", "seconds": 5, "cards": [] },
+              { "kind": "answer", "label": "the answer, stated early", "connector": "BUT", "text": "Nothing went wrong. Getting what it asked for is the reason the price stopped rising.", "seconds": 15, "cards": ["m-institutionalisation"] },
+              { "kind": "promise", "label": "three topics, one breath", "connector": "THEREFORE", "text": "To see why: where the fund money went, what happened to the buyers who would never sell, and why approval did not matter.", "seconds": 10, "cards": [] },
+              { "kind": "movement", "label": "M1 · where the money went", "connector": "THEREFORE", "text": "The fund inflows were real. More demand against a fixed supply should lift a price. That is the model almost everyone used.", "seconds": 30, "cards": ["f-etf-absorbed"] },
+              { "kind": "turn", "label": "TURN 1 · an inflow is not a purchase", "connector": "BUT", "text": "Authorised participants often create and short fund shares before they buy any bitcoin. The inflow is a booking, not a purchase.", "seconds": 30, "cards": ["f-etf-lag", "r1"] },
+              { "kind": "movement", "label": "M2 · the buyers who would never sell", "connector": "THEREFORE", "text": "A treasury company could issue shares and buy more bitcoin while the market valued it above its holdings.", "seconds": 40, "cards": ["m-treasury-flywheel"] },
+              { "kind": "turn", "label": "TURN 2 · the machine only turns one way", "connector": "BUT", "text": "When that premium fell below one, the buying stopped, and Strategy sold for the first time.", "seconds": 35, "cards": ["f-mnav", "f-mstr-sold", "r2"] },
+              { "kind": "steelman", "label": "the script attacks its own argument", "connector": "BUT", "text": "These are not forced sellers. Strategy holds a cash reserve for years of payments, and long-term holders bought again after the crash.", "seconds": 25, "cards": ["f-mstr-defence", "f-supply-2pct", "steel-man"] },
+              { "kind": "movement", "label": "M3 · why Washington did not matter", "connector": "THEREFORE", "text": "The reserve order should have ended the argument about legitimacy.", "seconds": 20, "cards": ["f-sbr"] },
+              { "kind": "turn", "label": "TURN 3 · the reserve that was never built", "connector": "BUT", "text": "It still is not built, and agencies cannot agree how much bitcoin the government owns.", "seconds": 20, "cards": ["f-sbr-unbuilt", "r3"] },
+              { "kind": "close", "label": "reframe, not summary", "connector": "THEREFORE", "text": "Adoption succeeded, and the prize for winning was being absorbed into the system it set out to escape. The price is not broken. The story is.", "seconds": 30, "cards": ["m-institutionalisation", "r4"] }
+            ],
+            "cutFacts": [
+              { "factId": "f-mstr-drop", "why": "the share-price fall restates the premium collapse the mNAV beat already carries" }
+            ],
+            "deviations": [],
+            "selfChecks": [
+              { "label": "but/therefore between adjacent beats", "detail": "every adjacency declared" },
+              { "label": "steel-man present", "detail": "3:20" }
+            ]
+          },
+          {
+            "id": "adj-own-clock",
+            "engine": "adjudication",
+            "title": "Three Answers to a Falling Bitcoin",
+            "pleasure": "watching a question get settled",
+            "promiseForm": "numbered_candidates",
+            "feelsLike": "a trial",
+            "bestFor": "an audience that has heard every explanation and believes none",
+            "weakness": "the candidates can blur if the verdict comes late",
+            "wordBudget": 900,
+            "beats": [
+              { "kind": "hook", "label": "the puzzle", "text": "Bitcoin got the policy wins it wanted and still lost roughly half its value.", "seconds": 15, "cards": ["f-drawdown", "f-genius"] },
+              { "kind": "question", "label": "the question aloud", "connector": "THEREFORE", "text": "Why did the price not rise?", "seconds": 10, "cards": [] },
+              { "kind": "promise", "label": "three candidates", "connector": "THEREFORE", "text": "Three answers compete: the fund plumbing, the treasury companies, and the macro weather.", "seconds": 15, "cards": [] },
+              { "kind": "candidate", "label": "candidate one · plumbing", "connector": "THEREFORE", "text": "Fund inflows are not immediate spot demand, and sellers absorbed the buying that did arrive.", "seconds": 45, "cards": ["f-etf-lag", "f-etf-absorbed", "m-etf-plumbing"] },
+              { "kind": "candidate", "label": "candidate two · the flywheel stalls", "connector": "BUT", "text": "The treasury flywheel only works while the market pays a premium, and that premium is gone.", "seconds": 50, "cards": ["m-treasury-flywheel", "f-mnav"] },
+              { "kind": "candidate", "label": "candidate three · macro", "connector": "BUT", "text": "Analysts point to the dollar, tariffs and central bank policy outweighing regulatory progress.", "seconds": 45, "cards": ["f-macro-cause"] },
+              { "kind": "steelman", "label": "against the verdict", "connector": "BUT", "text": "Long-term holders kept accumulating after the drawdown, which is not what a capitulation looks like.", "seconds": 30, "cards": ["f-supply-2pct", "steel-man"] },
+              { "kind": "verdict", "label": "the verdict", "connector": "THEREFORE", "text": "The candidates are one story: bitcoin now trades as a risk asset inside portfolios, moving with stocks rather than against them.", "seconds": 50, "cards": ["f-correlation", "m-institutionalisation"] },
+              { "kind": "close", "label": "reframe", "connector": "THEREFORE", "text": "It won the argument for legitimacy, and legitimacy made it ordinary.", "seconds": 30, "cards": ["m-institutionalisation"] }
+            ],
+            "cutFacts": [],
+            "deviations": ["Digression disabled for adjudication per the template; none taken."],
+            "selfChecks": []
+          }
+        ]
+      }
+    }
+  ]
+}

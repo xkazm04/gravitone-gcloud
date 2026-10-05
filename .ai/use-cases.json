@@ -15,6 +15,16 @@
       "owner": "gravity"
     },
     {
+      "key": "text.compose",
+      "name": "Compose candidate scripts from a creator's notebook",
+      "description": "Turns a notebook, the creator's kept cards, the template and the target runtime into up to three candidate renders on the engines the notebook rates good or better (pipeline/SCRIPT-PROMPT.md); validated by lib/script/validate.ts::parseDraft and gated per candidate, or refused as no-engine-fits.",
+      "kind": "generation",
+      "status": "active",
+      "component": "app/api/script/route.ts -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.1-pro-preview"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.scene-direction",
       "name": "Direct scene specs from a script and notebook",
       "description": "Turns a script and notebook into per-render scene/art-direction specs for the frames pipeline.",

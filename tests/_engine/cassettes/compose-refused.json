@@ -1,0 +1,39 @@
+{
+  "name": "compose-refused",
+  "source": "hand-written",
+  "recordedAt": "2026-10-05",
+  "cliVersion": "2.1.289",
+  "cliArgsFingerprint": "9bffdfc1075733e3",
+  "turns": [
+    {
+      "match": {
+        "heading": "# SCRIPT-PROMPT",
+        "schemaSha256": "1321d131a5ae3f65dcecb97e2a991465359a9e1ac2dbd723672b3f70d9fdf040"
+      },
+      "prompt": null,
+      "mode": "ok",
+      "envelope": {
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "duration_ms": 40311,
+        "duration_api_ms": 40002,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-000000000023",
+        "total_cost_usd": 0.21877,
+        "usage": {
+          "input_tokens": 21544,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 211
+        },
+        "permission_denials": []
+      },
+      "resultJson": {
+        "renders": [],
+        "refused": "no-engine-fits",
+        "why": "Every engine the notebook rates good or better carries a hazard I would not defend on air for this subject: the adjudication and paradox-teaser renders would assert a culpable seller the notebook only correlated. Not a video yet."
+      }
+    }
+  ]
+}

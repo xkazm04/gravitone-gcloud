@@ -110,9 +110,19 @@ export type TextCapability = "reason";
  *                        could not say which one a team actually leans on. The
  *                        draft is never stored by the model — a human confirms
  *                        it (lib/sound/ledger.ts appendLesson).
+ *   · `compose`          /api/script — a notebook, a scope, a template and a
+ *                        clock in, up to three candidate renders out. Prompt:
+ *                        pipeline/SCRIPT-PROMPT.md. A sibling of `edit-plan`
+ *                        rather than a use of it: an edit plan may only touch
+ *                        renders that exist, and this turn is the one that
+ *                        writes them — a different job, a larger answer, and a
+ *                        spend line a team needs to see apart. Validated by
+ *                        lib/script/validate.ts::parseDraft and gated per
+ *                        candidate before anything is returned.
  */
 export type TurnClass =
   | "edit-plan"
+  | "compose"
   | "scene-direction"
   | "style-synthesis"
   | "research"
