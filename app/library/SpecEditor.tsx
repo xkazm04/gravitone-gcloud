@@ -103,6 +103,7 @@ function Slot({
       ) : (
         <textarea
           value={value}
+          aria-label={`Style ${label}`}
           onChange={(e) => onChange(e.target.value)}
           rows={2}
           className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-cyan-400/40"

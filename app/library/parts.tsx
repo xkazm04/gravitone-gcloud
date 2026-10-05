@@ -8,13 +8,14 @@ import { Check, Library, Lock, LockOpen, X } from "lucide-react";
 
 import Modal from "@/components/ui/Modal";
 import { Panel, Button } from "@/components/ui/Primitives";
-import { CHIP_CLASS, TALLY_TONE } from "@/components/ui/signal";
+import { CHIP_CLASS, PipRow, TALLY_TONE } from "@/components/ui/signal";
 import { promotedId } from "@/lib/assets";
 import type { GenerateResult } from "@/lib/imagingClient";
 import type { PaletteColor, Proof, ProofState, StyleBlock, Theme, ThemeStatus } from "@/lib/themes";
 import {
   approvedProofs,
   lockedOnly,
+  PROOF_CAP,
   sheetFull,
   sheetSpend,
   STATUS_WORD,
@@ -234,6 +235,16 @@ export function StyleSheet({
       {note && <p className="font-jetbrains text-content text-white/45">{note}</p>}
 
       <div className="border-t border-white/8 pt-4">
+        {/* The reason the render button greys out once the reference window is
+            full: shown as a shape, no sentence. */}
+        {!locked && (
+          <PipRow
+            className="mb-3"
+            states={approved.map(() => "filled" as const)}
+            max={PROOF_CAP}
+            label={`${approved.length} of ${PROOF_CAP} reference slots approved`}
+          />
+        )}
         <Playground
           block={theme.block}
           onBlockChange={locked ? undefined : onBlockChange}
@@ -253,8 +264,8 @@ export function StyleSheet({
         {/* Nothing is written here any more. "Locked — the sheet is final.
             Trials still render…" restated the lock chip in SpecEditor and the
             StatusStamp two rows up, in a third spelling; the absent keep button
-            is the rest of it. The full-window sentence became the pip row in the
-            header. */}
+            is the rest of it. The full-window sentence is the pip row above the
+            playground. */}
       </div>
     </Panel>
   );

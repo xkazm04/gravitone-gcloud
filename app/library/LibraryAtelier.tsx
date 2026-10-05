@@ -114,8 +114,9 @@ export default function LibraryAtelier({
 
   useEffect(() => {
     if (themes === null) return; // still reading — an unknown count is not 0
+    if (error && !themes.length) return; // a failed read is not 0 either
     onCounts?.({ styles: rows.length, locked: lockedOnly(rows).length, assets: (assets ?? []).length });
-  }, [onCounts, themes, rows, assets]);
+  }, [onCounts, themes, rows, assets, error]);
 
   const startFrom = async (p: Preset) => {
     setBusy(true);
@@ -242,13 +243,17 @@ export default function LibraryAtelier({
             reading the wall…
           </p>
         ) : !rows.length ? (
-          <EmptyWall />
+          // Under an error the alert above is the whole message: the read
+          // failed, so the styles may well exist.
+          error ? null : <EmptyWall />
         ) : (
           <>
             <div className="flex flex-wrap gap-2">
               {shown.map((t) => (
                 <button
                   key={t.id}
+                  type="button"
+                  aria-pressed={t.id === selected?.id}
                   onClick={() => setSelectedId(t.id)}
                   className={`font-jetbrains flex items-center gap-2 rounded-full border px-3 py-1.5 text-label transition ${
                     t.id === selected?.id
@@ -281,7 +286,7 @@ export default function LibraryAtelier({
       <aside className="space-y-4">
         <div className="flex items-center justify-between gap-2">
           <p className="font-jetbrains text-content tracking-[0.18em] text-white/40 uppercase">dossier</p>
-          <GateChip themes={rows} />
+          {!(error && !rows.length) && <GateChip themes={rows} />}
         </div>
         {selected ? (
           <>

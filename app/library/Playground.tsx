@@ -257,6 +257,8 @@ export default function Playground({
         {TRIALS.map((t) => (
           <button
             key={t.id}
+            type="button"
+            aria-pressed={subject === t.subject}
             onClick={() => setSubject(t.subject)}
             title={`${t.problem} · ${t.beat}`}
             className={`font-jetbrains rounded-full border px-2.5 py-1 text-label transition ${
@@ -328,7 +330,7 @@ export default function Playground({
               onChange={(e) => setUseRefs(e.target.checked)}
               className="accent-cyan-300"
             />
-            style-locked on {refs.length} proof{refs.length > 1 ? "s" : ""}
+            referencing {refs.length} proof{refs.length > 1 ? "s" : ""}
           </label>
         )}
       </div>
