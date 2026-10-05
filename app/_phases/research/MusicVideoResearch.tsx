@@ -31,14 +31,20 @@ export default function MusicVideoResearch({ projectId }: { projectId: string })
 
   return (
     <div className="space-y-5">
+      {/* The kit's `--al-gold` (frame, plate glyph, hover tint) is declared
+          only under `[data-world]`, and the studio's obsidian frame sets none —
+          without this scope the drop target draws as bare constraint text. The
+          Library audio workbench gets the same scope from its WorldRoot. */}
       {!mv.envelope && (
-        <Dropzone
-          accept="audio/*"
-          constraints="mp3 · wav · m4a — one track, analyzed once on drop"
-          label="Attach the track this video is cut to"
-          onFiles={mv.attach}
-          testId="music-video-dropzone"
-        />
+        <div data-world="obsidian">
+          <Dropzone
+            accept="audio/*"
+            constraints="mp3 · wav · m4a — one track, analyzed once on drop"
+            label="Attach the track this video is cut to"
+            onFiles={mv.attach}
+            testId="music-video-dropzone"
+          />
+        </div>
       )}
 
       {mv.status === "decoding" && (
