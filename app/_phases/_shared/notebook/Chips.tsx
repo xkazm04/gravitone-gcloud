@@ -4,6 +4,7 @@
 // between two claims, and how much a claim can be trusted. Both are read by the
 // Research step and the Script step, so both live with the notebook contract.
 
+import { HintPopover, hintRootClass, useHint } from "@/components/ui/signal/Hint";
 import type { ChainConnector, Confidence, Connector, EvidenceClass } from "./types";
 
 /** BUT / THEREFORE between adjacent beats — and AND THEN drawn as the defect
@@ -42,10 +43,34 @@ export function ConnectorChip({ connector }: { connector: Connector }) {
  *  There is no defect state here: this alphabet has no AND THEN in it. A chain
  *  that needs one has run out of vocabulary, and the answer is a TRANSFER or a
  *  missing link, not a red chip. */
+/** A chip that owns its definition. The chip itself is the trigger (the same
+ *  shape TabRail uses), so the definition opens on hover, focus AND tap and is
+ *  wired by aria-describedby; a native `title` was none of those. */
+function GlossedChip({
+  gloss,
+  className,
+  children,
+}: {
+  gloss: string | undefined;
+  className: string;
+  children: React.ReactNode;
+}) {
+  const d = useHint();
+  if (!gloss) return <span className={className}>{children}</span>;
+  return (
+    <span {...d.rootProps} className={hintRootClass}>
+      <button type="button" {...d.triggerProps} onClick={d.toggle} className={`${className} cursor-help focus-visible:outline-2 focus-visible:outline-offset-2`}>
+        {children}
+      </button>
+      <HintPopover d={d}>{gloss}</HintPopover>
+    </span>
+  );
+}
+
 export function ChainConnectorChip({ connector }: { connector: ChainConnector | undefined }) {
   if (!connector) return null;
   return (
-    <span
+    <GlossedChip
       className={`font-jetbrains inline-flex items-center rounded px-1.5 py-0.5 text-label tracking-[0.16em] ${
         connector === "BUT"
           ? "border border-violet-400/30 bg-violet-400/10 text-violet-200"
@@ -58,10 +83,10 @@ export function ChainConnectorChip({ connector }: { connector: ChainConnector | 
       // clause that WAS about the surface ("notebook vocabulary only; the
       // script layer does not accept it") lives in the doc comment above,
       // where the reader who needs it is.
-      title={connector === "TRANSFER" ? "A typed non-causal step — a deduction, a hand-off, a recognition." : undefined}
+      gloss={connector === "TRANSFER" ? "A typed non-causal step — a deduction, a hand-off, a recognition." : undefined}
     >
       {connector}
-    </span>
+    </GlossedChip>
   );
 }
 
@@ -110,16 +135,17 @@ const EVIDENCE: Record<EvidenceClass, { tone: string; why: string }> = {
 export function EvidenceClassChip({ c, interested }: { c: EvidenceClass; interested?: boolean }) {
   const e = EVIDENCE[c];
   return (
-    <span
+    <GlossedChip
       // Interest is recorded as a FLAG on the source, never as a confidence
       // demotion — types.ts is explicit that conflating them is how the ladder
-      // demoted a regulator's own number.
-      title={interested ? `${e.why} Flagged interested: a party with a stake in the answer.` : e.why}
+      // demoted a regulator's own number. The suffix is short because the chip
+      // already reads "interested"; with it, vendor stays under the 25-word cap.
+      gloss={interested ? `${e.why} Has a stake in the answer.` : e.why}
       className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.12em] ${e.tone}`}
     >
       {c}
       {interested && <span className="ml-1 opacity-70">· interested</span>}
-    </span>
+    </GlossedChip>
   );
 }
 
