@@ -50,6 +50,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Keycaps } from "@/components/ui/signal";
+import { calibrate, seriesKey } from "@/lib/foundry/calibration";
 import type { CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
 
@@ -327,6 +328,16 @@ export default function FoundryView() {
 
   const run = detail?.run ?? null;
 
+  // THE GRADER, MEASURED AGAINST THE HUMAN. The catalogue's ledger holds every
+  // decided candidate beside its automatic grade; the run's own grader picks
+  // the series (a grade from another grader version is another instrument).
+  // Keyed on the series STRING, so the 4s poll of a live run does not re-run
+  // the bootstrap.
+  const firstGrade = run?.candidates.find((c) => c.grade)?.grade;
+  const series = seriesKey({ grader: firstGrade?.grader, grader_digest: firstGrade?.grader_digest });
+  const ledger = plant.catalogue?.ledger;
+  const calibration = useMemo(() => (ledger ? calibrate(ledger, { series }) : null), [ledger, series]);
+
   /** Why Commit will not go, in one clause — null when it will. The status
    *  half is read from COMMITTABLE, never from an inline status comparison:
    *  tests/golden-path/commit-gate-parity.probe.spec.ts holds that constant
@@ -370,6 +381,7 @@ export default function FoundryView() {
       onVerdict={setVerdict}
       onOpen={setOpen}
       keysEnabled={!open && !confirm && !findingsOpen}
+      calibration={calibration}
     />
   );
   const noRuns = runs !== null && runs.length === 0;
@@ -454,6 +466,7 @@ export default function FoundryView() {
             onStep={stepOpen}
             index={open ? order.indexOf(open) : 0}
             count={order.length}
+            calibration={calibration}
           />
         )}
 
