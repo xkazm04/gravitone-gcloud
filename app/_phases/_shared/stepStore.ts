@@ -248,6 +248,24 @@ export interface MusicVideoSourceStepData {
   savedAt?: number;
 }
 
+/** A NEW TRACK REPLACING THE ATTACHED ONE. The fields keyed to the old track
+ *  (Frames' poster, the effects-studio's locked seed and compositor parameters)
+ *  are dropped, not carried: a poster, a "locked once set" seed and parameters
+ *  made for another song would survive against this one with nothing marking
+ *  them. Frames reads their absence as "not generated yet", so it needs no
+ *  change. The style line is the creator's own direction and stays; any key
+ *  this build does not know stays too. The result has no `undefined` keys. */
+export function withTrack(
+  current: MusicVideoSourceStepData | undefined,
+  track: { sourceAssetId: string; envelope: import("@/lib/audioEnvelope").AudioEnvelope },
+): MusicVideoSourceStepData {
+  const { posterAssetId: _poster, seed: _seed, effectParams: _params, ...kept } = current ?? {};
+  void _poster;
+  void _seed;
+  void _params;
+  return { ...kept, ...track };
+}
+
 /* ────────────────────────────── what went wrong ──────────────────────────── */
 
 /** WHY the operation failed. Five storage destinations that used to be one

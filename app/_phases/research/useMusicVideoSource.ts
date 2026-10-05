@@ -23,12 +23,12 @@
 
 import { useCallback, useState } from "react";
 
-import { assetFromUpload, putUploads } from "@/lib/assets";
+import { assetFromUpload, getAsset, putUploads } from "@/lib/assets";
 import { analyzeAudioEnvelope, AudioDecodeError, type AudioEnvelope } from "@/lib/audioEnvelope";
 
 import { patchRecord, type RecordWriteOutcome } from "../_shared/records/patch";
 import { useRecord } from "../_shared/records/useRecord";
-import type { MusicVideoSourceStepData } from "../_shared/stepStore";
+import { withTrack, type MusicVideoSourceStepData } from "../_shared/stepStore";
 import { MUSIC_VIDEO_SOURCE, RESEARCH } from "./records";
 
 export type AttachStatus = "idle" | "decoding" | "error";
@@ -45,6 +45,18 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
     setSourceAssetId(saved?.sourceAssetId);
     setStyleState(saved?.style ?? "");
     setEnvelope(saved?.envelope);
+    // The name is not stored on the record: the Asset row `sourceAssetId`
+    // points at already carries what the creator called the file, so an old
+    // record with no name field resolves the same way and a missing row just
+    // draws no name.
+    setFileName(undefined);
+    if (saved?.sourceAssetId)
+      void getAsset(saved.sourceAssetId)
+        .then((a) => {
+          const named = typeof a?.meta?.fileName === "string" ? a.meta.fileName : a?.name;
+          if (named) setFileName((cur) => cur ?? named);
+        })
+        .catch(() => {});
   });
 
   /** A merge into the shared record, so a save never clobbers a field a LATER
@@ -123,7 +135,10 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
         return;
       }
 
-      const saved = await write({ sourceAssetId: pair.asset.id, envelope: env });
+      // A replacement drops what was keyed to the old track (`withTrack`).
+      const saved = await patch((current) =>
+        withTrack(current, { sourceAssetId: pair.asset.id, envelope: env }),
+      );
       if (!saved.ok) {
         failed("the track's analysis could not be saved");
         return;
@@ -138,7 +153,7 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
       setEnvelope(env);
       setStatus("idle");
     },
-    [uid, write, markResearched],
+    [uid, patch, markResearched],
   );
 
   const clearError = useCallback(() => {
@@ -151,6 +166,7 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
     sourceAssetId,
     style,
     envelope,
+    trackName: fileName,
     fileName,
     status,
     error,

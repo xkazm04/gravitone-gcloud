@@ -6,7 +6,7 @@
 // project researched); this file is drawing only.
 
 import { Dropzone } from "@/components/kit";
-import { Tally } from "@/components/ui/signal";
+import { CHIP_CLASS, TALLY_TONE, Tally } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 
 import { usePhaseReport } from "../_shared/usePhaseReport";
@@ -35,17 +35,15 @@ export default function MusicVideoResearch({ projectId }: { projectId: string })
           only under `[data-world]`, and the studio's obsidian frame sets none —
           without this scope the drop target draws as bare constraint text. The
           Library audio workbench gets the same scope from its WorldRoot. */}
-      {!mv.envelope && (
-        <div data-world="obsidian">
-          <Dropzone
-            accept="audio/*"
-            constraints="mp3 · wav · m4a — one track, analyzed once on drop"
-            label="Attach the track this video is cut to"
-            onFiles={mv.attach}
-            testId="music-video-dropzone"
-          />
-        </div>
-      )}
+      <div data-world="obsidian">
+        <Dropzone
+          accept="audio/*"
+          constraints="mp3 · wav · m4a — one track, analyzed once on drop"
+          label={mv.envelope ? "Replace the track this video is cut to" : "Attach the track this video is cut to"}
+          onFiles={mv.attach}
+          testId="music-video-dropzone"
+        />
+      </div>
 
       {mv.status === "decoding" && (
         <p className="font-jetbrains text-label text-cyan-200/80" role="status" data-testid="music-video-decoding">
@@ -65,6 +63,11 @@ export default function MusicVideoResearch({ projectId }: { projectId: string })
 
       {mv.envelope && (
         <div className="flex flex-wrap items-center gap-2" data-testid="music-video-envelope-summary">
+          {mv.trackName && (
+            <span className={`${CHIP_CLASS} ${TALLY_TONE.cyan}`} data-testid="music-video-track-name">
+              {mv.trackName}
+            </span>
+          )}
           <Tally label="duration" value={Math.round(mv.envelope.durationS)} tone="neutral" title="seconds" />
           <Tally label="frames" value={mv.envelope.frameCount} tone="neutral" />
           <Tally label="fps" value={mv.envelope.fps} tone="neutral" />
