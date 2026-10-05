@@ -65,16 +65,18 @@ export default function KitView() {
         active={tab}
         onSelect={select}
         tabs={[
-          { id: "identity", label: "Identity" },
-          { id: "law", label: "Law", tally: { value: RULES.length } },
-          { id: "parts", label: "Parts", tally: { value: PART_COUNT } },
-          { id: "migration", label: "Migration", tally: { value: GAPS.length, tone: GAPS.length ? "amber" : "neutral" } },
+          { id: "identity", label: "Identity", panelId: "kit-panel" },
+          { id: "law", label: "Law", panelId: "kit-panel", tally: { value: RULES.length } },
+          { id: "parts", label: "Parts", panelId: "kit-panel", tally: { value: PART_COUNT } },
+          { id: "migration", label: "Migration", panelId: "kit-panel", tally: { value: GAPS.length, tone: GAPS.length ? "amber" : "neutral" } },
         ]}
       />
-      {tab === "identity" && <Identity />}
-      {tab === "law" && <Law />}
-      {tab === "parts" && <Parts />}
-      {tab === "migration" && <Migration />}
+      <div id="kit-panel" role="tabpanel" aria-label={tab}>
+        {tab === "identity" && <Identity />}
+        {tab === "law" && <Law />}
+        {tab === "parts" && <Parts />}
+        {tab === "migration" && <Migration />}
+      </div>
     </StudioFrame>
   );
 }
