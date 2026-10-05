@@ -65,6 +65,9 @@ uat/runs/*/captures/
 # Both are per-session artifacts. Ignore the dirs; revert the tsconfig edit.
 .next-*/
 
+# The last `npm run verify` verdicts (pipeline/run-gates.mts). Per-machine, per-run.
+/.gate-report.json
+
 # Driven UI captures. Regenerable from the drive suites; heavy in git.
 pipeline/runs/*/captures/
 
