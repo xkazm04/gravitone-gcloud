@@ -187,7 +187,7 @@ export default function CueTakes({
                 onChange={(e) => setNote(e.target.value)}
                 aria-label={`note on ${sections[section]?.name ?? "this section"}`}
                 maxLength={300}
-                className="font-jetbrains min-w-0 flex-1 rounded-md border border-amber-300/30 bg-transparent px-2 py-1 text-label text-white/85 outline-none focus:border-amber-300/60"
+                className="font-jetbrains min-w-0 flex-1 rounded-md border border-amber-300/30 bg-transparent px-2 py-1 text-label text-white/85 focus:border-amber-300/60"
               />
               {busy && <Loader2 className="h-4 w-4 animate-spin text-amber-200/70" aria-label="revising" />}
             </form>
@@ -217,7 +217,7 @@ export default function CueTakes({
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               aria-label="finalized take label"
-              className="font-jetbrains w-full rounded-md border border-white/10 bg-transparent px-2 py-1 text-label text-white/85 outline-none focus:border-cyan-300/50"
+              className="font-jetbrains w-full rounded-md border border-white/10 bg-transparent px-2 py-1 text-label text-white/85 focus:border-cyan-300/50"
             />
             {pickable.length === 0 ? (
               <Ghost shape="row" label="no finalized take matches" />
