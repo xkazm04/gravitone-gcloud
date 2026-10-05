@@ -30,7 +30,11 @@
 // The import below has a SIDE EFFECT and must come first — it installs the
 // storage engine on globalThis before any module under test reads `indexedDB`.
 import "fake-indexeddb/auto";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { test, expect } from "@playwright/test";
+
+import { stripComments } from "./_helpers";
 import * as React from "react";
 
 import { useTrailerCut } from "@/app/_phases/script/trailer/useTrailerCut";
@@ -346,4 +350,44 @@ test("a FAILED read of a saved cut is trouble, never a seed", async () => {
   expect(after.ok && after.data?.cut?.beats[0].label, "nothing was written over the edit").toBe(
     "AN EDIT NOBODY MAY DISCARD",
   );
+});
+
+/* ── 6 · a rebuild is a new generation ──────────────────────────────────────── */
+
+test("recompose bumps the generation", async () => {
+  const slots = slotsFor("trailer");
+  const picks = Object.fromEntries(slots.map((s) => [s.id, s.variants[0].id]));
+  const composed = composeCut({ projectId: "p-gen", title: "Glass Harbor — trailer", picks, slots, cue: GLASS_HARBOR_CUE });
+  await saveStep<TrailerCutStepData>("p-gen", "script-trailer", {
+    cut: composed,
+    budget: GLASS_HARBOR_BUDGET,
+    spine: picks,
+  });
+  // One slot now confirms a different variant, so the board has moved past the cut.
+  const moved = slots.find((s) => s.variants.length > 1);
+  expect(moved, "the fixture needs a slot with two variants").toBeTruthy();
+  const confirmed = { ...picks, [moved!.id]: moved!.variants[1].id };
+  await saveStep("p-gen", "research-beats", { mode: "beats", picks: confirmed, confirmed });
+
+  const h = drive("p-gen");
+  const first = await h.settleUp();
+  expect(first.staleSpine).toBe(true);
+  const before = (first as { generation?: number }).generation;
+  first.recompose();
+  const second = await h.settleUp();
+  expect(typeof before, "the hook must expose a generation counter").toBe("number");
+  expect((second as { generation?: number }).generation).toBe(before! + 1);
+  h.unmount();
+});
+
+test("a rebuild remounts every field that holds local state, and the ledger validates its beat", () => {
+  const root = process.cwd();
+  const script = stripComments(readFileSync(join(root, "app/_phases/script/trailer/TrailerScript.tsx"), "utf8"));
+  const ledger = stripComments(readFileSync(join(root, "app/_phases/script/trailer/PromiseLedger.tsx"), "utf8"));
+  expect(script.length).toBeGreaterThan(0);
+  expect(ledger.length).toBeGreaterThan(0);
+  expect(script).toMatch(/<PromiseLedger[^>]*key=\{[^}]*generation/);
+  expect(script).toMatch(/<WithholdingPanel[^>]*key=\{[^}]*generation/);
+  expect(script).toMatch(/<div[^>]*key=\{[^}]*generation[^>]*>\{sections\}/);
+  expect(ledger).toContain("cut.beats.some(");
 });

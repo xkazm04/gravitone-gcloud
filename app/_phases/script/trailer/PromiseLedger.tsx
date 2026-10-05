@@ -23,7 +23,10 @@ export default function PromiseLedger({
   onPayer: (beatId: string, promiseId: string, payer: string) => void;
   onAdd: (beatId: string, sentence: string) => void;
 }) {
-  const [beatId, setBeatId] = useState<string>(cut.beats[0]?.id ?? "");
+  const [picked, setBeatId] = useState<string>(cut.beats[0]?.id ?? "");
+  // The selection is checked against the cut on screen: a beat that was swapped
+  // out would make `add` clear the sentence and add nothing.
+  const beatId = cut.beats.some((b) => b.id === picked) ? picked : (cut.beats[0]?.id ?? "");
   const [sentence, setSentence] = useState("");
 
   const rows = cut.beats.flatMap((b) => (b.promises ?? []).map((p) => ({ beat: b, p })));

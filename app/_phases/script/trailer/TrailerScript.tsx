@@ -245,11 +245,11 @@ export default function TrailerScript({
         <EnergyCurve cut={cut} />
       </div>
 
-      <div className="mt-4 space-y-3">{sections}</div>
+      <div key={api.generation} className="mt-4 space-y-3">{sections}</div>
 
       <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        <PromiseLedger cut={cut} onPayer={api.setPayer} onAdd={api.addPromise} />
-        <WithholdingPanel budget={budget} onAllowance={api.setAllowance} />
+        <PromiseLedger key={api.generation} cut={cut} onPayer={api.setPayer} onAdd={api.addPromise} />
+        <WithholdingPanel key={api.generation} budget={budget} onAllowance={api.setAllowance} />
       </div>
 
       <div className="mt-4">

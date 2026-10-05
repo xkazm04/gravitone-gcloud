@@ -56,6 +56,11 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
    *  cut is on disk and out of reach, and composing over it would let the save
    *  effect below overwrite the edits. Same rule as useFrames' read of this
    *  record. */
+  /** Bumped by every rebuild. Children that seed local state from the cut (the
+   *  beat editors, the payer and trade inputs, the ledger's beat picker) key on
+   *  it, because a rebuild keeps unchanged beat ids and so would otherwise
+   *  leave the "discarded" edits on screen and let a blur write them back. */
+  const [generation, setGeneration] = useState(0);
   const [loadTrouble, setLoadTrouble] = useState<StorageTrouble | null>(null);
 
   useEffect(() => {
@@ -153,6 +158,7 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
     );
     setBudget((b) => b ?? GLASS_HARBOR_BUDGET);
     setComposedSpine(boardSpine);
+    setGeneration((g) => g + 1);
   }, [boardSpine, projectId, title, discipline]);
 
   const report: StructureReport | null = useMemo(
@@ -173,7 +179,7 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
     setBudget((b) => (b ? withAllowance(b, assetId, allowance, trade) : b));
   }, []);
 
-  return { hydrated, loadTrouble, cut, budget, report, staleSpine, spineReopened, recompose, setBeat, setPayer, addPromise, setAllowance };
+  return { hydrated, loadTrouble, generation, cut, budget, report, staleSpine, spineReopened, recompose, setBeat, setPayer, addPromise, setAllowance };
 }
 
 export type TrailerCutApi = ReturnType<typeof useTrailerCut>;
