@@ -19,12 +19,12 @@
 // Step 2 reads too, so they live with the contract in
 // _shared/notebook/cards.ts.
 
-import { CONCLUSIONS } from "../_shared/notebook/conclusions";
 import { buildCards, type Card } from "../_shared/notebook/cards";
 import { DIMENSIONS } from "../_shared/notebook/dimensions";
+import { fixtureSource, type NotebookSource } from "../_shared/notebook/source";
 
 export { buildCards, DIMENSIONS };
-export type { Card };
+export type { Card, NotebookSource };
 export type { Dimension, DimensionId } from "../_shared/notebook/dimensions";
 
 /* ----------------------------------------------------------- scope state */
@@ -36,14 +36,29 @@ export const EMPTY: CardState = { descoped: false, liked: false, deepen: false }
 /** Opt-in cards (conclusions) read as descoped until the creator takes them. */
 export const OPT_IN_DEFAULT: CardState = { descoped: true, liked: false, deepen: false };
 
-export function stateOf(s: Scope, id: string): CardState {
-  const explicit = s[id];
-  if (explicit) return explicit;
-  return OPT_IN_IDS.has(id) ? OPT_IN_DEFAULT : EMPTY;
+/** Ids that default to OUT of scope: the source's conclusions, and nothing else.
+ *  It used to be a module-load constant built from the fixture's CONCLUSIONS,
+ *  which made every notebook's opt-in rule Bitcoin's. One set per source,
+ *  memoised, because `stateOf` asks it once per card per render. */
+const optInBySource = new WeakMap<NotebookSource, ReadonlySet<string>>();
+export function optInIds(source: NotebookSource = fixtureSource()): ReadonlySet<string> {
+  let ids = optInBySource.get(source);
+  if (!ids) optInBySource.set(source, (ids = new Set(source.conclusions.map((c) => c.id))));
+  return ids;
 }
 
-/** Ids that default to OUT of scope. Computed once from the conclusion set. */
-export const OPT_IN_IDS = new Set(CONCLUSIONS.map((c) => c.id));
+/** @deprecated The fixture's opt-in set — `optInIds(fixtureSource())`. Kept for
+ *  readers that have not taken a source yet (lib/board/sources/triage.ts, the
+ *  scope-decisions probe). New code passes the source's set to `stateOf`. */
+export const OPT_IN_IDS: ReadonlySet<string> = optInIds();
+
+/** A card's state: the explicit decision, else the default for its kind. `optIn`
+ *  is the dealt source's opt-in set; omitted, the fixture's. */
+export function stateOf(s: Scope, id: string, optIn: ReadonlySet<string> = OPT_IN_IDS): CardState {
+  const explicit = s[id];
+  if (explicit) return explicit;
+  return optIn.has(id) ? OPT_IN_DEFAULT : EMPTY;
+}
 
 /** A card that is descoped, or whose support has been descoped out from under it. */
 export interface Wound {
@@ -56,8 +71,8 @@ export interface Wound {
 /** What the scope decisions actually cost. This is the whole reason the step
  *  exists as a review rather than a checkbox list: the notebook is a graph, and
  *  removing a fact can silently disarm a turn three beats away. */
-export function woundsOf(cards: Card[], scope: Scope): Wound[] {
-  const gone = new Set(cards.filter((c) => stateOf(scope, c.id).descoped).map((c) => c.id));
+export function woundsOf(cards: Card[], scope: Scope, optIn: ReadonlySet<string> = OPT_IN_IDS): Wound[] {
+  const gone = new Set(cards.filter((c) => stateOf(scope, c.id, optIn).descoped).map((c) => c.id));
   const out: Wound[] = [];
   for (const c of cards) {
     if (gone.has(c.id) || !c.dependsOn.length) continue;
@@ -78,8 +93,8 @@ export function woundsOf(cards: Card[], scope: Scope): Wound[] {
  *  `deepen` routes to the NEXT run rather than into this script. Diffing them
  *  would report movement that costs the script nothing, and a divergence
  *  warning that fires on a harmless click is one nobody reads. */
-export function scopeDiffs(cards: Card[], a: Scope, b: Scope): string[] {
-  return cards.filter((c) => stateOf(a, c.id).descoped !== stateOf(b, c.id).descoped).map((c) => c.id);
+export function scopeDiffs(cards: Card[], a: Scope, b: Scope, optIn: ReadonlySet<string> = OPT_IN_IDS): string[] {
+  return cards.filter((c) => stateOf(a, c.id, optIn).descoped !== stateOf(b, c.id, optIn).descoped).map((c) => c.id);
 }
 
 /** Rollup for the header and for the Script step's gate.
@@ -95,13 +110,19 @@ export function scopeDiffs(cards: Card[], a: Scope, b: Scope): string[] {
  *  The test is the card's own `optIn`, which is exactly the test CardTile's
  *  ScopeChip already applies to word itself "not taken" rather than "descoped".
  *  The two surfaces now cannot disagree. `kept` and the gate are unchanged:
- *  neither kind goes to the Script step. */
-export function scopeSummary(cards: Card[], scope: Scope) {
-  const kept = cards.filter((c) => !stateOf(scope, c.id).descoped);
-  const out = cards.filter((c) => stateOf(scope, c.id).descoped);
-  const wounds = woundsOf(cards, scope);
-  const requiredGone = cards.filter((c) => c.required && stateOf(scope, c.id).descoped);
-  const byDim = DIMENSIONS.map((d) => ({
+ *  neither kind goes to the Script step.
+ *
+ *  `source` is the notebook the cards were dealt from: its opt-in set decides
+ *  the defaults and its columns are what `byDim` rolls up by. Omitted, the
+ *  fixture, which is what every caller got before sources existed. */
+export function scopeSummary(cards: Card[], scope: Scope, source: NotebookSource = fixtureSource()) {
+  const optIn = optInIds(source);
+  const st = (id: string) => stateOf(scope, id, optIn);
+  const kept = cards.filter((c) => !st(c.id).descoped);
+  const out = cards.filter((c) => st(c.id).descoped);
+  const wounds = woundsOf(cards, scope, optIn);
+  const requiredGone = cards.filter((c) => c.required && st(c.id).descoped);
+  const byDim = source.dimensions.map((d) => ({
     ...d,
     total: cards.filter((c) => c.dimension === d.id).length,
     kept: kept.filter((c) => c.dimension === d.id).length,
@@ -115,8 +136,8 @@ export function scopeSummary(cards: Card[], scope: Scope) {
     notTaken: out.filter((c) => c.optIn).length,
     /** Everything the Script step will not see, however it got that way. */
     outOfScope: out.length,
-    liked: cards.filter((c) => stateOf(scope, c.id).liked).length,
-    deepen: cards.filter((c) => stateOf(scope, c.id).deepen).length,
+    liked: cards.filter((c) => st(c.id).liked).length,
+    deepen: cards.filter((c) => st(c.id).deepen).length,
     wounds,
     broken: wounds.filter((w) => w.severity === "broken").length,
     requiredGone,
