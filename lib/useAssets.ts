@@ -13,6 +13,7 @@
 // the user deleting every seeded asset, or "remove" stops meaning remove and an
 // emptied shelf silently refills on the next reload.
 
+import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
@@ -135,6 +136,20 @@ async function hydrateProofs(uid: string, rows: Asset[]): Promise<Asset[]> {
   return hydrateProofSrcs(rows, await listThemes(uid));
 }
 
+/** A storage failure is CLASSIFIED and published to the shared channel the bell
+ *  reads (same five kinds as useProjects), and the raw sentence stays in `error`
+ *  for the page's own banner. Without this a failed read of the assets came back
+ *  as an empty list and was indistinguishable from "you have none". */
+function failed(
+  setError: (m: string) => void,
+  op: "read" | "write",
+  e: unknown,
+  fallback: string,
+): void {
+  reportStorageTrouble(op, "", "assets", e);
+  setError(e instanceof Error ? e.message : fallback);
+}
+
 /**
  * @param seed  Whether this mount may hand a first-time account the trial grid.
  *   The atelier passes false: it reads the shelf to know what is already on it
@@ -213,7 +228,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
       setError(null);
     } catch (e) {
       setAssets([]);
-      setError(e instanceof Error ? e.message : "could not read your assets");
+      failed(setError, "read", e, "could not read your assets");
     }
   }, [uid, seed, hydrateUploads]);
 
@@ -231,7 +246,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
       setAssets((as) => (as ?? []).filter((a) => a.id !== id));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "could not remove the asset");
+      failed(setError, "write", e, "could not remove the asset");
     }
   }, []);
 
@@ -272,7 +287,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
         setError(null);
         return asset;
       } catch (e) {
-        setError(e instanceof Error ? e.message : "could not put it on the shelf");
+        failed(setError, "write", e, "could not put it on the shelf");
         return null;
       }
     },
@@ -297,7 +312,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
       setError(null);
       return ids.length;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "could not refile it");
+      failed(setError, "write", e, "could not refile it");
       return 0;
     }
   }, []);
@@ -337,7 +352,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
         setError(null);
         return { added: pairs.length, rejected };
       } catch (e) {
-        setError(e instanceof Error ? e.message : "could not add those files");
+        failed(setError, "write", e, "could not add those files");
         return { added: 0, rejected };
       }
     },
@@ -359,7 +374,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
       setError(null);
       return true;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "could not rename it");
+      failed(setError, "write", e, "could not rename it");
       return false;
     }
   }, []);
@@ -386,7 +401,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
         setError(null);
         return entries.length;
       } catch (e) {
-        setError(e instanceof Error ? e.message : "could not rename the folder");
+        failed(setError, "write", e, "could not rename the folder");
         return 0;
       }
     },
@@ -408,7 +423,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
         setAssets((as) => (as ?? []).filter((a) => !ids.has(a.id)));
         setError(null);
       } catch (e) {
-        setError(e instanceof Error ? e.message : "could not clear the promoted plates");
+        failed(setError, "write", e, "could not clear the promoted plates");
       }
     },
     [uid],

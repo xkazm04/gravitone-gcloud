@@ -12,6 +12,7 @@
 // and pre-filling it would be putting words in their mouth. The empty state
 // says "start from a preset", which is the correct first move anyway.
 
+import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useCallback, useEffect, useState } from "react";
 
 import {
@@ -28,6 +29,20 @@ import {
 
 /** Accounts whose abandoned blanks have already been swept this session. */
 const purged = new Set<string>();
+
+/** A storage failure is CLASSIFIED and published to the shared channel the bell
+ *  reads (same five kinds as useProjects), and the raw sentence stays in `error`
+ *  for the page's own banner. Without this a failed read of the themes came back
+ *  as an empty list and was indistinguishable from "you have none". */
+function failed(
+  setError: (m: string) => void,
+  op: "read" | "write",
+  e: unknown,
+  fallback: string,
+): void {
+  reportStorageTrouble(op, "", "themes", e);
+  setError(e instanceof Error ? e.message : fallback);
+}
 
 export function useThemes(uid: string | null) {
   const [themes, setThemes] = useState<Theme[] | null>(null);
@@ -48,7 +63,7 @@ export function useThemes(uid: string | null) {
       setError(null);
     } catch (e) {
       setThemes([]);
-      setError(e instanceof Error ? e.message : "could not read your styles");
+      failed(setError, "read", e, "could not read your styles");
     }
   }, [uid]);
 
@@ -71,7 +86,7 @@ export function useThemes(uid: string | null) {
       setError(null);
       return stored;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "could not save the style");
+      failed(setError, "write", e, "could not save the style");
       return null;
     }
   }, []);
@@ -140,7 +155,7 @@ export function useThemes(uid: string | null) {
       setThemes((ts) => (ts ?? []).filter((t) => t.id !== id));
       setError(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "could not delete the style");
+      failed(setError, "write", e, "could not delete the style");
     }
   }, []);
 
