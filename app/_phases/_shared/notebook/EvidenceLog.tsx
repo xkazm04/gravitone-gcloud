@@ -99,11 +99,11 @@ export default function EvidenceLog() {
             Same scar ResearchTriageBoard.tsx carries a comment about: its
             column count "said six against seven for as long as it was a
             literal". One gap is quoted because this is the summary line; the
-            notebook's own gaps section lists them all. */}
+            notebook's own gaps section lists them all (no pointer to it: this
+            modal has no control that opens the notebook). */}
         {NOTEBOOK_COUNTS.gaps > 0 && (
           <p className="font-jetbrains pt-1 text-content leading-relaxed text-amber-200/70">
             {NOTEBOOK_COUNTS.gaps} declared gap{NOTEBOOK_COUNTS.gaps === 1 ? "" : "s"} — {n.researchGaps[0]}
-            {NOTEBOOK_COUNTS.gaps > 1 ? " See the notebook for the rest." : " See the notebook."}
           </p>
         )}
       </section>

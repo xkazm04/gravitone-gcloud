@@ -304,3 +304,9 @@ test("connections: every unclosed exemption still describes a file that leaks", 
     ).toBe(false);
   }
 });
+
+test("evidence log: the gaps line quotes the gap and points at no dialog it cannot open", () => {
+  const src = stripComments(readFileSync(join(ROOT, "app/_phases/_shared/notebook/EvidenceLog.tsx"), "utf8"));
+  expect(src, "a pointer to the notebook with no control to reach it").not.toMatch(/See the notebook/);
+  expect(src, "the gap count and the first gap stay rendered").toMatch(/NOTEBOOK_COUNTS\.gaps[\s\S]{0,200}researchGaps\[0\]/);
+});
