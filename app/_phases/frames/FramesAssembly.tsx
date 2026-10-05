@@ -55,6 +55,18 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
 
   const missing = frames.filter((f) => !isComposed(f));
 
+  const plan = planRender({
+    missing: missing.length,
+    quote: missing.length > 0 ? (budgetQuoteResult?.quote ?? null) : null,
+  });
+
+  // A blocked or partial quote carries the moment the budget window rolls over.
+  // The quote is only fetched when the missing count changes, which a blocked
+  // batch cannot do, so the button would stay dead until a reload; the timer
+  // bumps `requote` at resumeAt to ask again. State is set only inside the
+  // timer and promise callbacks, never synchronously in the effect.
+  const [requote, setRequote] = useState(0);
+
   useEffect(() => {
     let mounted = true;
     if (missing.length === 0) return;
@@ -66,12 +78,16 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
     return () => {
       mounted = false;
     };
-  }, [missing.length]);
+  }, [missing.length, requote]);
 
-  const plan = planRender({
-    missing: missing.length,
-    quote: missing.length > 0 ? (budgetQuoteResult?.quote ?? null) : null,
-  });
+  useEffect(() => {
+    if (plan.resumeAt === null) return;
+    const wait = plan.resumeAt - Date.now();
+    // Past or absurdly far (setTimeout wraps at 2^31 ms): do not arm.
+    if (wait <= 0 || wait > 2_147_483_647) return;
+    const timer = setTimeout(() => setRequote((n) => n + 1), wait);
+    return () => clearTimeout(timer);
+  }, [plan.resumeAt]);
 
   /** Serial, not parallel: the vendor's rate ceiling is unpublished and a
    *  sixteen-wide burst is exactly how you find it.
@@ -171,7 +187,9 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
               ? `paused until ${new Date(pausedUntil).toLocaleTimeString()} (${stoppedWith ?? missing.length} left)`
               : stoppedWith !== null
                 ? `retry ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`
-                : plan.label}
+                : plan.resumeAt !== null
+                  ? `${plan.label} · resumes ${new Date(plan.resumeAt).toLocaleTimeString()}`
+                  : plan.label}
           {/* WHAT THE STOPPED BATCH GOT THROUGH, on the button that ran it. A
               paragraph used to stand under this row saying "The batch stopped
               after a failure that was about the run rather than one plate — N
