@@ -1,114 +1,176 @@
 "use client";
 
-// THE SOUND LAB (/playground) — an experimental studio for finding the right
-// track and polishing it, with the engines this studio knows.
+// THE SOUND LAB (/playground) — three modules over one file-backed sound store
+// (foundry-out/sound/, behind /api/sound/*; lib/sound/client.ts), each with its
+// own job (round 4, platform-consolidation, 2026-10-05; the operator's words
+// are in .vault/Spark/briefs/platform-consolidation/30-r4-sound-lab.md):
 //
-// It replaces the music playground (2026-08 → 2026-10), a single-column bench
-// of four panels — quick take, plan lab, section edit, SFX — whose renders were
-// session-only blob URLs. Every render it made was paid for and none survived a
-// reload, and none could be judged: judging lived only in the Library's audio
-// module. The lab closes that split. Every render, and every file returned from
-// Suno, is a TAKE in the Library's own store (./useLab.ts), scored on the
-// Library's rubric, and the recipe vocabulary it composes from is the Library's,
-// with each term's keep-rate beside it.
+//   triage   ./triage   judge everything generated — mostly by agents through
+//                       pipeline/sound.mts — and learn from it: which prompt
+//                       techniques, genres and instruments each provider is
+//                       good at. Lessons go to the ledger and knowledge/audio.
+//   arrange  ./arrange  kept takes on a board: stages across, groups down;
+//                       finalized takes carry the label agents select by.
+//   hunt     ./hunt     one idea drafted into a map of variants, rendered,
+//                       auditioned, the winner kept with a lesson.
 //
-// The bench's lessons are kept, not its layout: the coin on every button that
-// spends and the price under it (lib/musicClient.ts#costLabel), "free" on the
-// one that does not, seams drawn where sections meet, the keep/condition ramp
-// as a shape, capability gating with ABSENCE_REASON verbatim. They now live in
-// ./parts.tsx and ./labModel.ts.
+// Round 3 shipped these as three competing prototypes behind a VariantSwitch;
+// the operator kept all three as modules, so the switch became this rail. The
+// shell owns only the rail, the kind and three tallies; each module owns
+// everything below the rail (app/playground/shared/README.md is the contract
+// the modules share).
 //
-// THREE DIRECTIONS, one data layer (prototype round 3, platform-consolidation):
-//
-//   1 · Workbench    ./Workbench.tsx    recipe + engine, a takes rack, an
-//                                      inspector: generate → listen → judge →
-//                                      vary, on the keys.
-//   2 · Arrangement  ./Arrangement.tsx  polish first: the plan's sections as a
-//                                      timeline, edit modes inline, versions
-//                                      stacked as lanes, A/B on one clock.
-//   3 · Hunt         ./Hunt.tsx         search first: one seed fanned out one
-//                                      change at a time across engines,
-//                                      auditioned fast, knocked out to a winner.
-//
-// The recipe and the selected take live HERE, so flipping direction keeps both.
+// Music first; SFX is the same three jobs with shorter takes, a loop flag and
+// its own rubric, so the kind is one switch at the top rather than a module.
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 
-import { useVariant, VariantSwitch } from "@/components/ui/VariantSwitch";
-import { Ghost } from "@/components/ui/signal";
-import { seedOf, type Seed, type Take } from "@/app/library/audio/book";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
-import Arrangement from "./Arrangement";
-import Hunt from "./Hunt";
-import { startingSeed } from "./labModel";
-import { ErrorLine, FlashLine } from "./parts";
-import { useLab } from "./useLab";
-import Workbench from "./Workbench";
-import type { EngineId } from "./engines";
+import { useLoadFor } from "@/app/_phases/_shared/useLoadFor";
+import { TabRail, type TabDef } from "@/components/ui/signal";
+import { listHunts, listTakes } from "@/lib/sound/client";
+import type { SoundKind } from "@/lib/sound/types";
 
-/** The working recipe, shared by the three directions. */
-export interface Recipe {
-  seed: Seed;
-  /** The take it was loaded from, if any — the parent of what it renders. */
-  parentId: string | null;
-  lengthS: number;
-  /** A prompt typed by hand. Null means "composed from the seed". */
-  prompt: string | null;
+// Explicit `/index`: on a case-insensitive disk `./hunt` resolved to the
+// round-3 `./Hunt.tsx` while that file existed (TS1261, 2026-10-05) — and a
+// file named like a module directory can come back.
+import ArrangeModule from "./arrange/index";
+import HuntModule from "./hunt/index";
+import { FlashLine, SoundLabContext, useFlash, type SoundLabShell } from "./shared/shell";
+import TriageModule from "./triage/index";
+
+type ModuleId = "triage" | "arrange" | "hunt";
+const MODULES: readonly ModuleId[] = ["triage", "arrange", "hunt"];
+const KINDS: readonly SoundKind[] = ["music", "sfx"];
+
+interface Tallies {
+  unjudged: number | null;
+  finalized: number | null;
+  hunts: number | null;
 }
 
-export interface LabState {
-  recipe: Recipe;
-  setRecipe: (r: Recipe) => void;
-  /** Load a take's recipe as the working one. */
-  loadFrom: (t: Take, seed?: Seed) => void;
-  selected: string | null;
-  select: (id: string | null) => void;
-  engineId: EngineId;
-  setEngineId: (e: EngineId) => void;
-  goto: (v: 1 | 2 | 3, takeId?: string) => void;
+/** The three numbers the rail carries. A count the store could not answer is
+ *  null and its tally is not drawn — never a 0 standing in for "unknown". */
+async function readTallies(kind: SoundKind): Promise<Tallies> {
+  const [u, f, h] = await Promise.all([
+    listTakes({ kind, verdict: "unjudged" }),
+    listTakes({ kind, stage: "finalized" }),
+    listHunts(kind),
+  ]);
+  return {
+    unjudged: u.ok ? u.data.takes.length : null,
+    finalized: f.ok ? f.data.takes.length : null,
+    hunts: h.ok ? h.data.hunts.length : null,
+  };
 }
 
 export default function PlaygroundView() {
-  const lab = useLab();
-  const [v, setV] = useVariant();
-  const [recipe, setRecipe] = useState<Recipe | null>(null);
-  const [selected, select] = useState<string | null>(null);
-  const [engineId, setEngineId] = useState<EngineId>("elevenlabs");
+  const params = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+  const rawM = params.get("m") as ModuleId | null;
+  const active: ModuleId = rawM && MODULES.includes(rawM) ? rawM : "triage";
+  const kind: SoundKind = params.get("kind") === "sfx" ? "sfx" : "music";
 
-  const start = useMemo(() => startingSeed(lab.takes), [lab.takes]);
-  const r: Recipe = recipe ?? { seed: start.seed, parentId: start.from?.id ?? null, lengthS: 30, prompt: null };
-
-  const state: LabState = {
-    recipe: r,
-    setRecipe,
-    loadFrom: (t, seed) => setRecipe({ ...r, seed: seed ?? seedOf(t), parentId: t.id, prompt: null }),
-    selected,
-    select,
-    engineId,
-    setEngineId,
-    goto: (to, takeId) => {
-      if (takeId) select(takeId);
-      setV(to);
+  const setParam = useCallback(
+    (key: "m" | "kind", value: string, dflt: string) => {
+      const p = new URLSearchParams(params.toString());
+      if (value === dflt) p.delete(key);
+      else p.set(key, value);
+      const qs = p.toString();
+      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     },
-  };
+    [params, pathname, router],
+  );
+
+  const [version, setVersion] = useState(0);
+  const [tallies, setTallies] = useState<Tallies>({ unjudged: null, finalized: null, hunts: null });
+  useLoadFor(`${kind}:${version}`, () => readTallies(kind), setTallies);
+
+  const [flash, say] = useFlash();
+  const shell: SoundLabShell = useMemo(
+    () => ({ kind, version, refresh: () => setVersion((v) => v + 1), say }),
+    [kind, version, say],
+  );
+
+  const tabs: TabDef<ModuleId>[] = [
+    {
+      id: "triage",
+      label: "Triage",
+      panelId: "sound-lab-panel",
+      testId: "lab-triage",
+      ...(tallies.unjudged == null
+        ? {}
+        : { tally: { value: tallies.unjudged, label: "to judge", tone: tallies.unjudged ? ("amber" as const) : ("neutral" as const) } }),
+    },
+    {
+      id: "arrange",
+      label: "Arrange",
+      panelId: "sound-lab-panel",
+      testId: "lab-arrange",
+      ...(tallies.finalized == null
+        ? {}
+        : { tally: { value: tallies.finalized, label: "final", tone: tallies.finalized ? ("emerald" as const) : ("neutral" as const) } }),
+    },
+    {
+      id: "hunt",
+      label: "Hunt",
+      panelId: "sound-lab-panel",
+      testId: "lab-hunt",
+      ...(tallies.hunts == null ? {} : { tally: { value: tallies.hunts, label: "hunts", tone: "neutral" as const } }),
+    },
+  ];
 
   return (
-    <main className="pb-24 pt-1">
-      <h1 className="sr-only">Sound lab</h1>
-      <div className="mb-3 empty:hidden">
-        <ErrorLine text={lab.error} />
-      </div>
-      {!lab.ready ? (
-        <Ghost shape="card" count={2} label="Reading the audio shelf" />
-      ) : v === 1 ? (
-        <Workbench lab={lab} state={state} />
-      ) : v === 2 ? (
-        <Arrangement lab={lab} state={state} />
-      ) : (
-        <Hunt lab={lab} state={state} />
-      )}
-      <FlashLine flash={lab.flash} />
-      <VariantSwitch labels={["Workbench", "Arrangement", "Hunt"]} />
-    </main>
+    <SoundLabContext.Provider value={shell}>
+      <main tabIndex={-1} className="pb-24 pt-6">
+        <h1 className="sr-only">Sound lab</h1>
+        <TabRail
+          label="sound lab modules"
+          tabs={tabs}
+          active={active}
+          onSelect={(id) => setParam("m", id, "triage")}
+          trailing={<KindSwitch kind={kind} onKind={(k) => setParam("kind", k, "music")} />}
+        />
+        <div id="sound-lab-panel" role="tabpanel" aria-label={active} className="mt-5">
+          {active === "triage" ? (
+            <TriageModule key={kind} kind={kind} />
+          ) : active === "arrange" ? (
+            <ArrangeModule key={kind} kind={kind} />
+          ) : (
+            <HuntModule key={kind} kind={kind} />
+          )}
+        </div>
+        <FlashLine flash={flash} />
+      </main>
+    </SoundLabContext.Provider>
+  );
+}
+
+/** music | sfx — a segmented pair, not a tab: it filters every module rather
+ *  than choosing one, so it sits in the rail's `trailing` slot. */
+function KindSwitch({ kind, onKind }: { kind: SoundKind; onKind: (k: SoundKind) => void }) {
+  return (
+    <div role="radiogroup" aria-label="sound kind" className="ml-auto inline-flex rounded-full border border-white/10 bg-white/[0.03] p-0.5">
+      {KINDS.map((k) => {
+        const on = k === kind;
+        return (
+          <button
+            key={k}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            data-testid={`kind-${k}`}
+            onClick={() => onKind(k)}
+            className={`cursor-pointer rounded-full px-4 py-1 font-jetbrains text-label transition ${
+              on ? "bg-cyan-400/15 text-cyan-100 shadow-[0_0_12px] shadow-cyan-400/15" : "text-white/50 hover:text-white/80"
+            }`}
+          >
+            {k === "music" ? "music" : "sfx"}
+          </button>
+        );
+      })}
+    </div>
   );
 }
