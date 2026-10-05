@@ -1,9 +1,12 @@
 // Small shared pieces of the /foundry surface: the status words, the mapping from
-// each module's lifecycle to the kit's status marks, and the commit gates. The
-// score chips, verdict stamps and credit marks that used to live here are the
-// kit's now (components/kit); nothing here draws and nothing here fetches.
+// each module's lifecycle to one of six plant states, and the commit gates.
+// Nothing here draws and nothing here fetches — the drawing is ./ui.tsx, which
+// reads `PlantState` to pick a tone.
 
-import type { StatusKind } from "@/components/kit";
+/** Where a run, an extraction or a cycle stands, as the plant reads it. Six
+ *  words because the page has six things to say: working, waiting on a cull,
+ *  stopped short, broken, finished, and waiting on a gate. */
+export type PlantState = "live" | "ready" | "inc" | "failed" | "committed" | "gate";
 import type { ExtractStatus } from "@/lib/foundry/extract/types";
 import type { CycleStatus } from "@/lib/foundry/training/types";
 import type { RunStatus } from "@/lib/foundry/types";
@@ -63,15 +66,15 @@ export const DOJO_STATUS_WORD: Record<CycleStatus, string> = {
   failed: "failed",
 };
 
-/** The forge run's state as a kit mark. */
-export function runKind(s: RunStatus): StatusKind {
+/** The forge run's state as a plant state. */
+export function runKind(s: RunStatus): PlantState {
   return LIVE.includes(s) ? "live" : s === "done" ? "ready" : s === "incomplete" ? "inc" : s === "failed" ? "failed" : "committed";
 }
 
-export function extractKind(s: ExtractStatus): StatusKind {
+export function extractKind(s: ExtractStatus): PlantState {
   return EXTRACT_LIVE.includes(s) ? "live" : s === "done" ? "ready" : s === "failed" ? "failed" : "committed";
 }
 
-export function cycleKind(s: CycleStatus): StatusKind {
+export function cycleKind(s: CycleStatus): PlantState {
   return s === "awaiting-gate" ? "gate" : s === "failed" ? "failed" : s === "committed" ? "committed" : "live";
 }

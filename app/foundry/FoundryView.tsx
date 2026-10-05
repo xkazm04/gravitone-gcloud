@@ -27,75 +27,58 @@
 // files are gone and its rows are in the ledger, so the controls are removed
 // rather than left to fail quietly.
 //
-// THE PAGE IS DRAWN FROM THE KIT ALONE (components/kit): the header and its
-// figure, the run list, the strip, the matrix, the dock, the confirm and the
-// two full-screen sheets are all kit parts. What is left in this file is
-// state: which run, which candidate, which verdicts, and when a save leaves.
-//
-// OBSIDIAN, NOT ALMANAC (2026-10-04 revert). StudioFrame keeps its plain,
-// default Obsidian header; only the kit-built BODY opts into a `WorldRoot`
-// (`world="obsidian"`, not the default "almanac") so the same kit parts above
-// render in this app's legacy palette instead — `components/ui/tokens.ts`'s
-// `WORLD_OBSIDIAN_KIT` and `kit.css`'s widened selectors are what make that
-// true. The landing page and /kit's own docs stay Almanac; this route was the
-// pilot for recomposing a route from the kit, and it still is — just no
-// longer the pilot for the Almanac SKIN specifically.
+// THE PAGE IS A PLANT, NOT A DOCUMENT (2026-10-05, round-2 UI pass). It was
+// drawn from the kit (components/kit) inside a `WorldRoot`: a giant serif
+// "Foundry", the Fornax constellation as a hero, then flat lists — the Almanac
+// print idiom on an Obsidian ground, which the operator read as wireframes.
+// What replaces it is the /projects and /library idiom (glass, rounded-2xl,
+// real pictures large, the state tones) and a header that IS the plant's
+// state: which engine runs, which waits on a human. Three directions behind
+// `?v=1|2|3` (components/ui/VariantSwitch.tsx) until the operator picks one;
+// every one of them reads and writes exactly what the kit page did — this file
+// still owns the cull's whole state, and nothing below it fetches on its own
+// except the header's read-only previews (./plant.tsx).
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  Button,
-  ConfirmDialog,
-  Command,
-  Count,
-  Doc,
-  DocLede,
-  DocSection,
-  Dock,
-  DockAction,
-  ErrorBox,
-  Final,
-  Ghost,
-  KeyRow,
-  Kicker,
-  Loading,
-  LockNote,
-  OpenLink,
-  PageHead,
-  Report,
-  SaveState,
-  Sheet,
-  SideItem,
-  SideList,
-  StatusGlyph,
-  StatusStrip,
-  Tag,
-  TabRail,
-  Verbatim,
-  WorldRoot,
-  type Crumb,
-  type TabDef,
-} from "@/components/kit";
+import Modal from "@/components/ui/Modal";
 import StudioFrame from "@/components/ui/StudioFrame";
+import { VariantSwitch, useVariant } from "@/components/ui/VariantSwitch";
+import { Keycaps } from "@/components/ui/signal";
 import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
 
-import { CullGrid } from "./CullGrid";
+import { CullGrid, type CullLayout } from "./CullGrid";
 import { DojoView } from "./DojoView";
 import { ExtractView } from "./ExtractView";
-import { Fornax } from "./Fornax";
 import { Lightbox } from "./Lightbox";
+import { ControlHeader, GalleryHeader, PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
+import { EnginePanel, ForgeEmpty, RunHeader, RunPicker, RunRail, RunStrip } from "./RunCards";
 import { StylesShelf } from "./StylesShelf";
-import { fetchExtractRuns } from "./extractClient";
-import { commitRun, fetchCatalogue, fetchRun, fetchRuns, fetchTrainingCycles, saveVerdicts } from "./foundryClient";
-import { COMMITTABLE, LIVE, STATUS_WORD, runKind } from "./parts";
+import { commitRun, fetchRun, fetchRuns, saveVerdicts } from "./foundryClient";
+import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
+import {
+  BarCount,
+  CommitDialog,
+  ErrorNote,
+  Glass,
+  Label,
+  Loading,
+  LockNote,
+  PrimaryAction,
+  Rise,
+  SaveNote,
+  StatusChip,
+  DecisionBar,
+  type SaveKind,
+} from "./ui";
 
 // THE TABS CARRIED A BLURB AND SO THE BLURB GOT WRITTEN — up to 45 words per
-// tab, printed as a paragraph under the row. <TabRail> has no slot for one, on
-// purpose (components/ui/signal/README.md). What each blurb was reaching for
-// was the STATE behind its tab, and that rides as a <Tally> on the tab itself:
+// tab, printed as a paragraph under the row. None of the three headers has a
+// slot for one, on purpose (components/ui/signal/README.md). What each blurb
+// was reaching for was the STATE behind its tab, and that rides on the tab:
 //
-//   Cull    how many forge runs there are to read
+//   Cull    how many forge runs there are to read, and whether one is live
 //   Extract how many extraction runs exist
 //   Styles  how big the catalogue is
 //   Dojo    how many cycles are parked waiting for a human verdict
@@ -106,41 +89,21 @@ import { COMMITTABLE, LIVE, STATUS_WORD, runKind } from "./parts";
 // styles join pipeline/foundry/styles.json (the Extract dialog), and a Dojo
 // commit deletes decided media keeping one thumbnail per approved improvement
 // (the Dojo dialog). Each is a consequence stated at the moment it is ordered.
-type Tab = "cull" | "extract" | "styles" | "dojo";
 
-const TAB_LABEL: Record<Tab, string> = { cull: "Cull", extract: "Extract", styles: "Styles", dojo: "Dojo" };
+const LAYOUT: Record<1 | 2 | 3, CullLayout> = { 1: "matrix", 2: "film", 3: "sheet" };
 
-/** The three counts the rail cannot derive from this component's own state.
- *
- *  Each tab's view loads its own list when it opens; this asks for the same
- *  three lists once, at mount, so the rail is honest before anything is
- *  clicked. A list that cannot be read leaves its tally OFF rather than
- *  showing a zero — a zero meaning "we could not ask" is worse than no chip,
- *  and the failure already has a home in each view's own error line. */
-function useShelfCounts() {
-  const [counts, setCounts] = useState<{ extract?: number; styles?: number; parked?: number }>({});
-  useEffect(() => {
-    // NO `alive` GUARD, deliberately. Each list is asked for exactly once for
-    // the life of the page, so there is no newer response for a late one to
-    // overwrite — the race app/_phases/_shared/useLoadFor.ts exists to close
-    // cannot arise, and a setState after unmount is a no-op. A REJECTION
-    // handler there must be: an unhandled one is picked up by
-    // GlobalErrorBridge and announced as the user's work failing to save (the
-    // same reasoning as `loadDetail` below).
-    const put = (patch: { extract?: number; styles?: number; parked?: number }) => setCounts((c) => ({ ...c, ...patch }));
-    const drop = () => undefined;
-    fetchExtractRuns().then((r) => put({ extract: r.length }), drop);
-    fetchCatalogue().then((c) => put({ styles: c.styles.length }), drop);
-    fetchTrainingCycles().then((c) => put({ parked: c.filter((x) => x.status === "awaiting-gate").length }), drop);
-  }, []);
-  return counts;
-}
-
-type SaveKind = "idle" | "saving" | "saved" | "error";
+const CULL_KEYS = [
+  { keys: ["←", "→", "↑", "↓"], does: "move" },
+  { keys: ["K"], does: "keep" },
+  { keys: ["X"], does: "reject" },
+  { keys: ["U"], does: "clear" },
+  { keys: ["Enter"], does: "compare" },
+];
 
 export default function FoundryView() {
+  const [variant] = useVariant();
   const [tab, setTab] = useState<Tab>("cull");
-  const shelf = useShelfCounts();
+  const plant = usePlant();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [runsError, setRunsError] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
@@ -156,12 +119,12 @@ export default function FoundryView() {
   /** A commit that FAILED, shown inside the dialog that asked for it.
    *
    *  The catch used to write `runsError`, which renders beside the run list —
-   *  and the confirm dialog is `fixed inset-0 z-50` over a backdrop at 80%
-   *  with a blur, carrying `aria-modal="true"`. So the message landed
-   *  somewhere the reader could not see it and a screen reader would not
-   *  reach: aria-modal removes the rest of the page from the accessibility
-   *  tree. The dialog meanwhile went from "committing…" back to its button,
-   *  which is indistinguishable from a click that never registered.
+   *  and the confirm dialog is a fixed overlay over a blurred backdrop,
+   *  carrying `aria-modal="true"`. So the message landed somewhere the reader
+   *  could not see it and a screen reader would not reach: aria-modal removes
+   *  the rest of the page from the accessibility tree. The dialog meanwhile
+   *  went from "committing…" back to its button, which is indistinguishable
+   *  from a click that never registered.
    *
    *  This repo has already written the rule down, in
    *  tests/golden-path/dialog-closes-on-success.probe.spec.ts: "closing a
@@ -172,6 +135,7 @@ export default function FoundryView() {
   const saveTimer = useRef<number | null>(null);
   /** The latest verdict map, readable synchronously — see the header. */
   const verdictsRef = useRef<Verdicts>({});
+  const previews = useRunPreviews(runs);
 
   const adoptVerdicts = useCallback((v: Verdicts) => {
     verdictsRef.current = v;
@@ -349,206 +313,153 @@ export default function FoundryView() {
     : !COMMITTABLE.includes(run.status)
       ? `run is ${STATUS_WORD[run.status]}`
       : counts.kept === 0
-        ? "keep at least one candidate first"
+        ? "keep one first"
         : null;
 
-  // A tally is left OFF while its count is unknown; `undefined` is not zero.
-  // The tone is news, not decoration: amber where something is running or
-  // waiting on the human, neutral where it is only an inventory.
-  const anyLive = Boolean(runs?.some((r) => LIVE.includes(r.status)));
-  const tally = (value: number | undefined, tone: "neutral" | "amber") => (value === undefined ? undefined : { value, tone });
-  const tabs: TabDef<Tab>[] = [
-    { id: "cull", label: "Cull", testId: "foundry-tab-cull", tally: tally(runs?.length, anyLive ? "amber" : "neutral") },
-    { id: "extract", label: "Extract", testId: "foundry-tab-extract", tally: tally(shelf.extract, "neutral") },
-    { id: "styles", label: "Styles", testId: "foundry-tab-styles", tally: tally(shelf.styles, "neutral") },
-    { id: "dojo", label: "Dojo", testId: "foundry-tab-dojo", tally: tally(shelf.parked, shelf.parked ? "amber" : "neutral") },
-  ];
-
-  // WHERE THE READER IS, as a path. Each level but the last steps back: to the
-  // module, or out of the candidate / the findings to the run beneath.
-  const openCandidate = open && run ? run.candidates.find((c) => c.id === open) : null;
   const closeLevels = () => {
     setOpen(null);
     setFindingsOpen(false);
   };
-  const crumbs: Crumb[] = [
-    { label: "Door", href: "/" },
-    { label: "Foundry", onSelect: closeLevels },
-    { label: TAB_LABEL[tab], onSelect: closeLevels },
-  ];
-  if (tab === "cull" && selected) crumbs.push({ label: selected, onSelect: closeLevels });
-  if (tab === "cull" && openCandidate && run)
-    crumbs.push({ label: `${run.styles[openCandidate.style]?.name ?? openCandidate.style} · ${openCandidate.mechanism}` });
-  if (tab === "cull" && findingsOpen) crumbs.push({ label: "findings.md" });
-
   const selectTab = (t: Tab) => {
     closeLevels();
     setTab(t);
   };
 
-  return (
-    <StudioFrame crumbs={crumbs}>
-      <WorldRoot world="obsidian">
-      <main tabIndex={-1}>
-        <PageHead
-          eyebrow="Working surface"
-          title="Foundry"
-          figure={<Fornax active={tab} onSelect={selectTab} />}
-          caption={
-            <>
-              <span>Fornax · the furnace</span>
-              <Tag>stylised</Tag>
-            </>
-          }
-        />
-        <TabRail label="foundry modules" tabs={tabs} active={tab} onSelect={selectTab} />
+  const layout = LAYOUT[variant];
+  const committedReport = result && (
+    <Rise>
+      <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] px-4 py-3">
+        <span className="font-jetbrains text-label text-emerald-100/90">
+          committed · {result.kept} kept · {result.deleted} deleted · findings.md written
+        </span>
+        <button type="button" onClick={() => setFindingsOpen(true)} className="font-jetbrains cursor-pointer text-label text-emerald-200 underline-offset-4 hover:underline">
+          Read findings.md →
+        </button>
+      </div>
+    </Rise>
+  );
+  const grid = run && (
+    <CullGrid
+      run={run}
+      verdicts={verdicts}
+      focused={focused}
+      readOnly={readOnly}
+      onFocus={setFocused}
+      onVerdict={setVerdict}
+      onOpen={setOpen}
+      keysEnabled={!open && !confirm && !findingsOpen}
+      layout={layout}
+    />
+  );
+  const noRuns = runs !== null && runs.length === 0;
+  const pending = !run && selected ? <Loading label="reading the run" /> : null;
 
-        <section>
+  let cull: React.ReactNode;
+  if (noRuns) {
+    cull = (
+      <>
+        {runsError && <ErrorNote>{runsError}</ErrorNote>}
+        <ForgeEmpty />
+      </>
+    );
+  } else if (variant === 2) {
+    cull = (
+      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
+        <div className="flex min-w-0 flex-col gap-6">
+          <div className="flex flex-wrap items-center gap-3">
+            {runs && <RunPicker runs={runs} selected={selected} onSelect={selectRun} />}
+            {run && run.committed && <StatusChip kind="committed" word={`committed · ${run.committed.kept} kept`} />}
+          </div>
+          {runsError && <ErrorNote action={<RetryButton onClick={loadRuns} />}>{runsError}</ErrorNote>}
+          {committedReport}
+          {pending}
+          {grid}
+        </div>
+        <div className="xl:sticky xl:top-6 xl:self-start">
+          <EnginePanel run={run} />
+        </div>
+      </div>
+    );
+  } else if (variant === 3) {
+    cull = (
+      <div className="flex flex-col gap-5">
+        <RunStrip runs={runs} previews={previews} selected={selected} onSelect={selectRun} error={runsError} onRetry={loadRuns} />
+        {run && <RunHeader run={run} size="md" progress={false} />}
+        {committedReport}
+        {pending}
+        {grid}
+      </div>
+    );
+  } else {
+    cull = (
+      <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <div className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:pr-1 scroll-y">
+          <RunRail runs={runs} previews={previews} selected={selected} onSelect={selectRun} error={runsError} onRetry={loadRuns} />
+        </div>
+        <div className="flex min-w-0 flex-col gap-6">
+          {run && <RunHeader run={run} />}
+          {committedReport}
+          {pending}
+          {grid}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <StudioFrame>
+      {/* tabIndex={-1}: the landmark a closing dialog hands focus to when the
+          control it was opened from did not survive it (components/ui/Modal.tsx
+          #restoreFocus). pb clears the floating decision bar. */}
+      <main tabIndex={-1} className="pb-36">
+        <h1 className="sr-only">Foundry</h1>
+        <header className="pt-4">
+          {variant === 1 ? (
+            <ControlHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} previews={previews} />
+          ) : variant === 2 ? (
+            <GalleryHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} />
+          ) : (
+            <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} previews={previews} />
+          )}
+        </header>
+
+        <section role="tabpanel" aria-label={tab} className={variant === 3 ? "mt-5" : "mt-6"}>
           {tab === "styles" ? (
-            <StylesShelf />
+            <StylesShelf layout={variant === 1 ? "grid" : variant === 2 ? "gallery" : "shelves"} />
           ) : tab === "extract" ? (
             <ExtractView />
           ) : tab === "dojo" ? (
             <DojoView />
           ) : (
-            <div className="k-two">
-              <SideList
-                label="Forge runs"
-                heading="Runs"
-                aside={
-                  <>
-                    {runsError && (
-                      <ErrorBox
-                        action={
-                          <Button variant="ghost" size="sm" onClick={loadRuns}>
-                            Retry
-                          </Button>
-                        }
-                      >
-                        {runsError}
-                      </ErrorBox>
-                    )}
-                    {runs && runs.length === 0 && (
-                      <>
-                        <Command label="none yet — forge one">{`cd pipeline/foundry\npython forge.py plans/dry-run.json`}</Command>
-                        <Ghost className="mt-3" shape="row" count={3} label="no runs yet" />
-                      </>
-                    )}
-                  </>
-                }
-              >
-                {runs?.map((r) => (
-                  <SideItem
-                    key={r.id}
-                    glyph={<StatusGlyph kind={runKind(r.status)} decorative />}
-                    title={r.id}
-                    current={r.id === selected}
-                    onSelect={() => selectRun(r.id)}
-                    meta={
-                      <>
-                        {STATUS_WORD[r.status]}
-                        {LIVE.includes(r.status) && r.progress.total > 0 ? (
-                          <>
-                            {" "}
-                            <b className="k-num">
-                              {r.progress.done}/{r.progress.total}
-                            </b>
-                          </>
-                        ) : null}
-                        {" · "}
-                        <b className="k-num">
-                          {r.kept}/{r.candidates}
-                        </b>{" "}
-                        kept
-                      </>
-                    }
-                  />
-                ))}
-              </SideList>
-
-              <div>
-                {!run && selected && <Loading />}
-                {run && (
-                  <>
-                    <StatusStrip
-                      kind={runKind(run.status)}
-                      word={STATUS_WORD[run.status]}
-                      progress={LIVE.includes(run.status) ? run.progress : undefined}
-                      facts={
-                        <>
-                          <b>{run.scenes.length}</b> scene{run.scenes.length === 1 ? "" : "s"} · <b>{run.plan.styles.length}</b> styles · <b>{run.plan.mechanisms.length}</b> mechanisms ·{" "}
-                          <b>{run.candidates.length}</b> candidates
-                          {run.committed && (
-                            <>
-                              {" "}
-                              · committed: <b>{run.committed.kept}</b> kept, <b>{run.committed.deleted}</b> deleted
-                            </>
-                          )}
-                        </>
-                      }
-                      error={run.error}
-                      log={LIVE.includes(run.status) ? run.log[run.log.length - 1]?.msg : null}
-                    />
-                    {result && (
-                      <Report action={<OpenLink onClick={() => setFindingsOpen(true)}>Read findings.md →</OpenLink>}>
-                        committed · {result.kept} kept · {result.deleted} deleted · findings.md written
-                      </Report>
-                    )}
-                    <div className="mt-2">
-                      <CullGrid
-                        run={run}
-                        verdicts={verdicts}
-                        focused={focused}
-                        readOnly={readOnly}
-                        onFocus={setFocused}
-                        onVerdict={setVerdict}
-                        onOpen={setOpen}
-                        keysEnabled={!open && !confirm && !findingsOpen}
-                      />
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
+            cull
           )}
         </section>
 
         {run && tab === "cull" && (
-          <Dock label="Decisions">
-            <Count kind="keep" n={counts.kept} label="kept" />
-            <Count kind="reject" n={counts.rejected} label="rejected" />
-            <Count kind="undecided" n={counts.undecided} label="undecided" />
-            <SaveState state={save} final={readOnly} />
-            {!readOnly && (
-              <KeyRow
-                label="Cull shortcuts"
-                map={[
-                  { keys: ["←", "→", "↑", "↓"], does: "move" },
-                  { keys: ["K"], does: "keep" },
-                  { keys: ["X"], does: "reject" },
-                  { keys: ["U"], does: "clear" },
-                  { keys: ["Enter"], does: "compare" },
-                ]}
-              />
-            )}
-            <DockAction>
+          <DecisionBar label="Decisions">
+            <BarCount tone="emerald" n={counts.kept} label="kept" />
+            <BarCount tone="rose" n={counts.rejected} label="rejected" />
+            <BarCount tone="neutral" n={counts.undecided} label="undecided" />
+            <SaveNote state={save} final={readOnly} />
+            {!readOnly && <Keycaps label="Cull shortcuts" map={CULL_KEYS} />}
+            <span className="ml-auto flex items-center gap-3">
               {readOnly ? (
-                <Final>committed</Final>
+                <StatusChip kind="committed" word="committed" />
               ) : (
                 // A DISABLED BUTTON'S REASON IS NOT A HOVER ESSAY. It used to be
                 // three sentences of `title=` re-teaching what a failed or
-                // incomplete run is — which the status pill on the strip above
-                // already says in one word. What is left is the one clause the
-                // reader cannot see anywhere else: why THIS button will not go.
+                // incomplete run is — which the status chip above already says
+                // in one word. What is left is the one clause the reader cannot
+                // see anywhere else: why THIS button will not go.
                 <>
                   {blocked && <LockNote>{blocked}</LockNote>}
-                  <Button disabled={Boolean(blocked)} onClick={() => setConfirm(true)}>
+                  <PrimaryAction disabled={Boolean(blocked)} onClick={() => setConfirm(true)}>
                     Commit the cull
-                  </Button>
+                  </PrimaryAction>
                 </>
               )}
-            </DockAction>
-          </Dock>
+            </span>
+          </DecisionBar>
         )}
 
         {run && (
@@ -565,21 +476,26 @@ export default function FoundryView() {
           />
         )}
 
-        <Sheet open={findingsOpen && Boolean(result)} onClose={() => setFindingsOpen(false)} title="Findings" eyebrow={<Kicker>{selected}</Kicker>}>
+        <Modal
+          open={findingsOpen && Boolean(result)}
+          onClose={() => setFindingsOpen(false)}
+          title="findings.md"
+          eyebrow={<Label>{selected}</Label>}
+          className="max-w-3xl"
+        >
           {result && (
-            <Doc>
-              <DocLede>
-                <StatusGlyph kind="committed" decorative />
-                {result.kept} kept · {result.deleted} deleted
-              </DocLede>
-              <DocSection label="findings.md">
-                <Verbatim>{result.findings}</Verbatim>
-              </DocSection>
-            </Doc>
+            <div className="flex flex-col gap-4">
+              <div className="flex gap-2">
+                <StatusChip kind="committed" word={`${result.kept} kept · ${result.deleted} deleted`} />
+              </div>
+              <Glass className="p-4">
+                <pre className="font-jetbrains text-label leading-7 whitespace-pre-wrap text-white/80">{result.findings}</pre>
+              </Glass>
+            </div>
           )}
-        </Sheet>
+        </Modal>
 
-        <ConfirmDialog
+        <CommitDialog
           open={confirm}
           onClose={() => {
             if (committing) return;
@@ -587,7 +503,7 @@ export default function FoundryView() {
             setCommitError(null);
           }}
           title="Commit the cull?"
-          eyebrow={<Kicker>{selected}</Kicker>}
+          eyebrow={<Label>{selected}</Label>}
           railLabel="commit"
           // THE RAIL IS THE SENTENCE. "undecided counts as rejected: the cull
           // is what you chose, not what you skipped" was the app explaining a
@@ -614,13 +530,21 @@ export default function FoundryView() {
           }}
         >
           {commitError && (
-            <div className="mt-3">
-              <ErrorBox role="alert">The commit failed and nothing was deleted: {commitError}</ErrorBox>
+            <div className="mt-4">
+              <ErrorNote role="alert">The commit failed and nothing was deleted: {commitError}</ErrorNote>
             </div>
           )}
-        </ConfirmDialog>
+        </CommitDialog>
       </main>
-      </WorldRoot>
+      <VariantSwitch labels={["Control room", "Gallery", "Pipeline"]} />
     </StudioFrame>
+  );
+}
+
+function RetryButton({ onClick }: { onClick: () => void }) {
+  return (
+    <button type="button" onClick={onClick} className="font-jetbrains shrink-0 cursor-pointer rounded-md border border-rose-300/30 px-2 py-0.5 text-label text-rose-100 hover:bg-rose-400/15">
+      retry
+    </button>
   );
 }

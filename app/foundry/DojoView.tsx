@@ -17,47 +17,24 @@
 // are removed rather than left to fail quietly. The loop's live statuses are
 // only WATCHED here, on the same 4s visible-tab poll the other tabs use.
 //
-// Drawn from the kit (components/kit), like the rest of /foundry.
+// Drawn in the app's own idiom (./ui.tsx) since the round-2 UI pass
+// (2026-10-05), restyled once for all three prototype variants.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  Button,
-  ConfirmDialog,
-  Count,
-  Dock,
-  DockAction,
-  Duo,
-  Entry,
-  ErrorBox,
-  Ghost,
-  KeyRow,
-  Kicker,
-  Loading,
-  LockNote,
-  Prose,
-  Report,
-  SaveState,
-  SideItem,
-  SideList,
-  StatusGlyph,
-  StatusStrip,
-  VerdictKeys,
-  VerdictMark,
-  ScoreChip,
-} from "@/components/kit";
+import { Keycaps, Tally } from "@/components/ui/signal";
 import type { CycleManifest, CycleStatus, Improvement, PairResult, TrainingCommitResult, TrainingCycleSummary, TrainingVerdict, TrainingVerdicts } from "@/lib/foundry/training/types";
 import { usePolling } from "@/lib/usePolling";
 
+import { RailFrame, RailItem, Wash } from "./RunCards";
 import { fetchTrainingCycle, fetchTrainingCycles, saveTrainingVerdicts, commitTrainingCycle, fileUrl } from "./foundryClient";
 import { DOJO_STATUS_WORD, cycleKind } from "./parts";
+import { Art, BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PrimaryAction, SaveNote, StatusChip, VerdictButtons, VerdictStamp, ScorePill, type SaveKind } from "./ui";
 
 /** Statuses the loop is still working — the page only watches these. */
 const DOJO_LIVE: CycleStatus[] = ["planning", "generating", "judging"];
 /** Statuses a commit is allowed from — see commitCycle in the store. */
 const GATEABLE: CycleStatus[] = ["awaiting-gate", "failed"];
-
-type SaveKind = "idle" | "saving" | "saved" | "error";
 
 /** Fraction of an improvement's pairs where the chokepoint picked the
  *  challenger. Mirror of the store's judgePickRate — the numbers on the card
@@ -75,7 +52,7 @@ function geminiAgreement(imp: Improvement): number | undefined {
   return judged.filter((p) => p.gemini_pick === p.judge_pick).length / judged.length;
 }
 
-/** The Dojo's verdict words are approve/reject; the kit's are keep/reject. */
+/** The Dojo's verdict words are approve/reject; the verdict buttons' are keep/reject. */
 const toKit = (v: TrainingVerdict | null | undefined) => (v === "approve" ? "keep" : v === "reject" ? "reject" : null);
 const fromKit = (v: "keep" | "reject" | null): TrainingVerdict | null => (v === "keep" ? "approve" : v);
 
@@ -264,100 +241,92 @@ export function DojoView() {
     }
   };
 
+  if (cycles && cycles.length === 0 && !listError) return <DojoEmpty />;
+
   return (
     <>
-      <div className="k-two">
-        <SideList
-          label="Training cycles"
-          heading="Cycles"
-          aside={
-            <>
-              {listError && (
-                <ErrorBox
-                  action={
-                    <Button variant="ghost" size="sm" onClick={loadCycles}>
-                      Retry
-                    </Button>
-                  }
-                >
-                  {listError}
-                </ErrorBox>
-              )}
-              {cycles && cycles.length === 0 && <Ghost shape="row" count={3} label="no cycles yet" />}
-            </>
-          }
-        >
+      <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <RailFrame label="Cycles" count={cycles?.length} error={listError} onRetry={loadCycles}>
           {cycles?.map((c) => (
-            <SideItem
+            <RailItem
               key={c.id}
-              glyph={<StatusGlyph kind={cycleKind(c.status)} decorative />}
+              kind={cycleKind(c.status)}
+              word={DOJO_STATUS_WORD[c.status]}
               title={c.id}
               current={c.id === selected}
               onSelect={() => selectCycle(c.id)}
               meta={
-                <>
-                  {c.dimension} · {c.subject}
-                  <br />
-                  {DOJO_STATUS_WORD[c.status]} · {c.media} · <b className="k-num">{c.decided}/{c.improvements}</b> decided
-                </>
+                <span className="flex flex-col gap-0.5">
+                  <span className="truncate text-white/60">
+                    {c.dimension} · {c.subject}
+                  </span>
+                  <span>
+                    {c.media} · <span className="text-white/80 tabular-nums">{c.decided}/{c.improvements}</span> decided
+                  </span>
+                </span>
               }
             />
           ))}
-        </SideList>
+        </RailFrame>
 
-        <div>
-          {!detail && selected && <Loading />}
-          {!selected && cycles && cycles.length > 0 && <Ghost shape="card" label="pick a cycle" />}
+        <div className="flex min-w-0 flex-col gap-5">
+          {!detail && selected && <Loading label="reading the cycle" />}
+          {!selected && cycles && cycles.length > 0 && <PickACycle cycles={cycles} onPick={selectCycle} />}
           {detail && (
             <>
-              <StatusStrip
-                kind={cycleKind(detail.status)}
-                word={DOJO_STATUS_WORD[detail.status]}
-                facts={
-                  <>
-                    {detail.dimension} · {detail.subject} · {detail.media} · <b>{detail.improvements.length}</b> improvement{detail.improvements.length === 1 ? "" : "s"}
-                    {typeof detail.costUsd === "number" && <> · ${detail.costUsd.toFixed(2)}</>}
-                    {detail.fail_streak > 0 && <> · fail streak {detail.fail_streak}</>}
-                  </>
-                }
-                log={DOJO_LIVE.includes(detail.status) ? detail.log[detail.log.length - 1]?.msg : null}
-              />
+              <Glass className="p-5">
+                <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+                  <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
+                    <h2 className="font-instrument truncate text-3xl text-white">{detail.id}</h2>
+                    <StatusChip kind={cycleKind(detail.status)} word={DOJO_STATUS_WORD[detail.status]} />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-jetbrains rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-label text-white/70">
+                      {detail.dimension} · {detail.subject}
+                    </span>
+                    <Tally label={detail.media} value={detail.improvements.length} />
+                    {typeof detail.costUsd === "number" && <span className="font-jetbrains rounded border border-white/10 bg-white/[0.04] px-1.5 py-0.5 text-label text-white/70">${detail.costUsd.toFixed(2)}</span>}
+                    {detail.fail_streak > 0 && <Tally label="fail streak" value={detail.fail_streak} tone="rose" />}
+                  </div>
+                </div>
+                {DOJO_LIVE.includes(detail.status) && detail.log.length > 0 && (
+                  <p className="font-jetbrains mt-3 truncate text-label text-white/45">{detail.log[detail.log.length - 1]?.msg}</p>
+                )}
+              </Glass>
               {result && (
-                <Report>
+                <div role="status" className="font-jetbrains rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] px-4 py-3 text-label text-emerald-100/90">
                   committed · {result.deleted} media file{result.deleted === 1 ? "" : "s"} deleted · {result.thumbs.length} thumb{result.thumbs.length === 1 ? "" : "s"} kept in git · {result.ledger_rows} ledger row
                   {result.ledger_rows === 1 ? "" : "s"}
-                </Report>
+                </div>
               )}
-              <div className="k-stack mt-5">
-                {detail.improvements.length === 0 && <Ghost shape="slot" label="no improvements claimed yet" />}
-                {detail.improvements.map((imp) => (
-                  <ImprovementEntry
-                    key={imp.id}
-                    cycleId={detail.id}
-                    imp={imp}
-                    verdict={verdicts[imp.id] ?? null}
-                    focused={focused === imp.id}
-                    readOnly={readOnly}
-                    onFocus={() => setFocused(imp.id)}
-                    onVerdict={(v) => {
-                      setFocused(imp.id);
-                      setVerdict(imp.id, v);
-                    }}
-                  />
-                ))}
-              </div>
+              {detail.improvements.length === 0 && <Art alt="no improvements claimed yet" state="queued" className="aspect-[5/1]" />}
+              {detail.improvements.map((imp) => (
+                <ImprovementEntry
+                  key={imp.id}
+                  cycleId={detail.id}
+                  imp={imp}
+                  verdict={verdicts[imp.id] ?? null}
+                  focused={focused === imp.id}
+                  readOnly={readOnly}
+                  onFocus={() => setFocused(imp.id)}
+                  onVerdict={(v) => {
+                    setFocused(imp.id);
+                    setVerdict(imp.id, v);
+                  }}
+                />
+              ))}
             </>
           )}
         </div>
       </div>
 
       {detail && gateable && (
-        <Dock label="Decisions">
-          <Count n={counts.decided} of={counts.total} label="decided" />
-          <Count kind="keep" n={counts.approved} label="approved" />
-          <Count kind="reject" n={counts.rejected} label="rejected" />
-          <SaveState state={save} />
-          <KeyRow
+        <DecisionBar label="Decisions">
+          <BarCount tone="neutral" n={counts.decided} of={counts.total} label="decided" />
+          <BarCount tone="emerald" n={counts.approved} label="approved" />
+          <BarCount tone="rose" n={counts.rejected} label="rejected" />
+          <SaveNote state={save} />
+          <Keycaps
             label="Gate shortcuts"
             map={[
               { keys: ["↑", "↓"], does: "cards" },
@@ -366,16 +335,16 @@ export function DojoView() {
               { keys: ["U"], does: "clear" },
             ]}
           />
-          <DockAction>
-            {counts.decided === 0 && <LockNote>decide one improvement first</LockNote>}
-            <Button disabled={counts.decided === 0} onClick={() => setConfirm(true)}>
+          <span className="ml-auto flex items-center gap-3">
+            {counts.decided === 0 && <LockNote>decide one first</LockNote>}
+            <PrimaryAction disabled={counts.decided === 0} onClick={() => setConfirm(true)}>
               Commit the gate
-            </Button>
-          </DockAction>
-        </Dock>
+            </PrimaryAction>
+          </span>
+        </DecisionBar>
       )}
 
-      <ConfirmDialog
+      <CommitDialog
         open={confirm}
         onClose={() => {
           if (committing) return;
@@ -383,7 +352,7 @@ export function DojoView() {
           setCommitError(null);
         }}
         title="Commit the gate?"
-        eyebrow={<Kicker>{selected}</Kicker>}
+        eyebrow={<Label>{selected}</Label>}
         railLabel="gate"
         // THE RAIL, and here undecided is genuinely a THIRD outcome rather
         // than a hatch on the rejected side: a Dojo commit leaves undecided
@@ -410,16 +379,91 @@ export function DojoView() {
         }}
       >
         {commitError && (
-          <div className="mt-3">
-            <ErrorBox role="alert">The commit failed and nothing was deleted: {commitError}</ErrorBox>
+          <div className="mt-4">
+            <ErrorNote role="alert">The commit failed and nothing was deleted: {commitError}</ErrorNote>
           </div>
         )}
-      </ConfirmDialog>
+      </CommitDialog>
     </>
   );
 }
 
 /* ── Pieces ───────────────────────────────────────────────────────────────── */
+
+/** No cycles at all: the shape a gate takes — a claim over a wall of
+ *  seed-matched pairs, one arm picked — washed in under the one true sentence.
+ *  No command is offered: a cycle is planned by the training loop on the GPU
+ *  machine, not by anything this page could hand the reader to paste. */
+function DojoEmpty() {
+  return (
+    <Glass className="overflow-hidden">
+      <div className="grid lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.4fr)]">
+        <div className="flex flex-col justify-center gap-4 p-8">
+          <Label>dojo</Label>
+          <h2 className="font-instrument text-4xl leading-tight text-white">No cycles yet</h2>
+          <div className="flex flex-wrap gap-1.5" aria-hidden>
+            <span className="font-jetbrains rounded-full border border-white/10 px-2.5 py-0.5 text-label text-white/45">foundry-out/training</span>
+            <span className="font-jetbrains rounded-full border border-white/10 px-2.5 py-0.5 text-label text-white/45">training-ledger.json</span>
+          </div>
+        </div>
+        <div aria-hidden className="flex flex-col gap-4 border-t border-white/6 bg-black/20 p-8 lg:border-t-0 lg:border-l">
+          <div className="flex items-center justify-between gap-4">
+            <span className="flex w-1/2 flex-col gap-2">
+              <span className="h-3 w-3/4 rounded-full bg-white/12" />
+              <span className="h-2 w-full rounded-full bg-white/[0.07]" />
+            </span>
+            <span className="flex gap-1.5">
+              <span className="h-7 w-7 rounded-full border border-emerald-300/30" />
+              <span className="h-7 w-7 rounded-full border border-rose-300/30" />
+            </span>
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            {[0, 1, 2].map((i) => (
+              <span key={i} className="flex flex-col gap-2 rounded-xl border border-white/8 bg-black/20 p-2.5">
+                <span className="grid grid-cols-2 gap-1.5">
+                  <Wash className={`aspect-video ${i === 2 ? "ring-1 ring-cyan-300/50" : ""}`} />
+                  <Wash className={`aspect-video ${i !== 2 ? "ring-1 ring-cyan-300/50" : ""}`} />
+                </span>
+                <span className="h-2 w-4/5 rounded-full bg-white/[0.07]" />
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+      <p className="sr-only">No training cycles yet.</p>
+    </Glass>
+  );
+}
+
+/** No cycle chosen yet: the parked ones, large, as the way in. A "pick a
+ *  cycle" ghost was the old drawing — absence where the work was one click
+ *  away. */
+function PickACycle({ cycles, onPick }: { cycles: TrainingCycleSummary[]; onPick: (id: string) => void }) {
+  const first = cycles.filter((c) => c.status === "awaiting-gate").concat(cycles.filter((c) => c.status !== "awaiting-gate")).slice(0, 4);
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      {first.map((c) => (
+        <button
+          key={c.id}
+          type="button"
+          onClick={() => onPick(c.id)}
+          className="flex cursor-pointer flex-col gap-3 rounded-2xl border border-white/8 bg-gradient-to-b from-white/[0.05] to-white/[0.015] p-5 text-left backdrop-blur-[14px] transition hover:border-cyan-400/35"
+        >
+          <span className="flex items-center justify-between gap-3">
+            <span className="font-instrument truncate text-2xl text-white">{c.id}</span>
+            <StatusChip kind={cycleKind(c.status)} word={DOJO_STATUS_WORD[c.status]} />
+          </span>
+          <span className="font-jetbrains text-label text-white/50">
+            {c.dimension} · {c.subject} · {c.media}
+          </span>
+          <span className="font-jetbrains text-label text-white/45">
+            <span className="text-white/85 tabular-nums">{c.decided}</span>/{c.improvements} decided
+          </span>
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function ImprovementEntry({
   cycleId,
@@ -443,57 +487,82 @@ function ImprovementEntry({
   const challengerPicks = (imp.pairs ?? []).filter((p) => p.judge_pick === "challenger").length;
   const kit = toKit(verdict);
   return (
-    <Entry
+    <section
       id={`imp-${imp.id.replace(/[^A-Za-z0-9_-]/g, "_")}`}
-      label={imp.technique}
-      focused={focused}
-      verdict={kit}
-      onFocus={onFocus}
-      title={imp.technique}
-      lede={
-        <>
-          <div className="mt-2">
-            <Prose ink>{imp.claim}</Prose>
-          </div>
-          <div className="k-muted mt-1">challenges: {imp.standard}</div>
-        </>
-      }
-      aside={
-        <>
-          <ScoreChip label={`judge ${challengerPicks}/${(imp.pairs ?? []).length}`} value={rate} />
-          {gem !== undefined && <ScoreChip label="gemini agrees" value={gem} />}
-          {kit && <VerdictMark verdict={kit} keepWord="APPROVED" />}
-          {!readOnly && <VerdictKeys value={kit} keepWord="Approve" subject={imp.technique} clear onVerdict={(v) => onVerdict(fromKit(v))} />}
-        </>
-      }
+      aria-label={`${imp.technique}${kit ? (kit === "keep" ? ", approved" : ", rejected") : ""}`}
+      onClick={onFocus}
+      className={`rounded-2xl border bg-gradient-to-b from-white/[0.05] to-white/[0.015] p-5 backdrop-blur-[14px] transition ${
+        focused ? "border-cyan-400/45 shadow-[0_0_0_1px_var(--gt-ring-cyan)]" : kit === "keep" ? "border-emerald-400/30" : kit === "reject" ? "border-rose-400/25" : "border-white/8 hover:border-white/15"
+      }`}
     >
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 flex-col gap-2">
+          <div className="flex flex-wrap items-center gap-3">
+            <h3 className="font-instrument text-3xl text-white">{imp.technique}</h3>
+            {kit && <VerdictStamp verdict={kit} keepWord="approved" />}
+          </div>
+          <p className="font-hanken max-w-[80ch] text-content leading-relaxed text-white/85">{imp.claim}</p>
+          <span className="font-jetbrains text-label text-white/40">challenges · {imp.standard}</span>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <ScorePill label={`judge ${challengerPicks}/${(imp.pairs ?? []).length}`} value={rate} />
+          {gem !== undefined && <ScorePill label="gemini agrees" value={gem} />}
+          {!readOnly && <VerdictButtons value={kit} keepWord="Approve" subject={imp.technique} clear onVerdict={(v) => onVerdict(fromKit(v))} />}
+        </div>
+      </div>
       {/* The pair wall — the evidence, one seed-matched duo per pair. */}
-      <div className="k-pwall">
+      <div className="mt-5 grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
         {(imp.pairs ?? []).map((pair) => (
           <PairDuo key={pair.id} cycleId={cycleId} pair={pair} />
         ))}
       </div>
-    </Entry>
+    </section>
   );
 }
 
 function PairDuo({ cycleId, pair }: { cycleId: string; pair: PairResult }) {
   const disagrees = pair.gemini_pick !== undefined && pair.gemini_pick !== pair.judge_pick;
-  const arm = (name: "baseline" | "challenger", ref_: PairResult["baseline"]) => ({
-    name,
-    alt: `${name} · ${ref_.file}`,
+  const arm = (name: "baseline" | "challenger", ref_: PairResult["baseline"]) => {
+    const picked = pair.judge_pick === name;
     // Honest absence: the commit unlinked this file; the record stays.
-    src: ref_.deleted ? undefined : fileUrl(cycleId, ref_.poster ?? ref_.file, "training"),
-    picked: pair.judge_pick === name,
-    video: ref_.kind === "video",
-  });
+    const src = ref_.deleted ? undefined : fileUrl(cycleId, ref_.poster ?? ref_.file, "training");
+    return (
+      <figure key={name} className="flex min-w-0 flex-col gap-1.5">
+        <div className={`rounded-xl ${picked ? "ring-2 ring-cyan-300/70" : "ring-1 ring-white/10"}`}>
+          <Art src={src} state={ref_.deleted ? "deleted" : "ready"} alt={`${name} · ${ref_.file}`} className="aspect-video">
+            {picked && (
+              <span className="font-jetbrains pointer-events-none absolute top-2 left-2 rounded-md bg-cyan-300/95 px-1.5 py-0.5 text-label font-semibold tracking-[0.12em] text-slate-950 uppercase">
+                pick
+              </span>
+            )}
+            {ref_.kind === "video" && (
+              <span className="font-jetbrains pointer-events-none absolute top-2 right-2 rounded-md bg-black/60 px-1.5 py-0.5 text-label text-white/80">video · poster</span>
+            )}
+          </Art>
+        </div>
+        <figcaption className={`font-jetbrains px-0.5 text-label ${picked ? "text-cyan-200" : "text-white/45"}`}>{name}</figcaption>
+      </figure>
+    );
+  };
   return (
-    <Duo
-      scene={pair.scene}
-      seed={pair.seed}
-      arms={[arm("baseline", pair.baseline), arm("challenger", pair.challenger)]}
-      judge={{ pick: pair.judge_pick, reason: pair.reason }}
-      dissent={disagrees ? { who: "gemini", pick: String(pair.gemini_pick), reason: pair.gemini_reason } : undefined}
-    />
+    <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-white/8 bg-black/20 p-3">
+      <div className="font-jetbrains flex items-center justify-between gap-3 text-label text-white/45">
+        <span className="truncate">{pair.scene}</span>
+        <span className="shrink-0">seed {pair.seed}</span>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
+        {arm("baseline", pair.baseline)}
+        {arm("challenger", pair.challenger)}
+      </div>
+      <p className="font-hanken text-label leading-snug text-white/70">
+        <span className={`font-jetbrains ${pair.judge_pick === "tie" ? "text-white/55" : "text-cyan-200"}`}>judge: {pair.judge_pick}</span> — {pair.reason}
+      </p>
+      {disagrees && (
+        <p className="font-hanken rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-2.5 py-1.5 text-label leading-snug text-amber-100/90">
+          <span className="font-jetbrains">gemini disagrees: {String(pair.gemini_pick)}</span>
+          {pair.gemini_reason ? ` — ${pair.gemini_reason}` : ""}
+        </p>
+      )}
+    </div>
   );
 }
