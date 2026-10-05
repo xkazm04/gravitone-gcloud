@@ -616,7 +616,7 @@ export default function FoundryView() {
             <>
               Everything not kept is deleted from disk. Every decided candidate is written to <code>pipeline/foundry/ledger.json</code> and the style catalogue. This cannot be undone.
               {commitPlan && commitPlan.promotions.length > 0 && (
-                <div className="mt-2 text-xs">
+                <div className="mt-2 text-label">
                   Promoted to proven: <b>{commitPlan.promotions.join(", ")}</b>
                 </div>
               )}

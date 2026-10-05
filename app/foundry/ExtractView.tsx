@@ -488,7 +488,7 @@ export function ExtractView() {
           <>
             The kept styles join <code>pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. Nothing is deleted, but the verdicts are final.
             {commitPlan && commitPlan.written.some((w) => w.from !== w.to) && (
-              <div className="mt-2 text-xs">
+              <div className="mt-2 text-label">
                 Renamed on catalogue collision:{" "}
                 <b>
                   {commitPlan.written
@@ -500,7 +500,7 @@ export function ExtractView() {
             )}
             {commitPlan &&
               Object.keys(commitPlan.similar).some((k) => commitPlan.similar[k].length > 0) && (
-                <div className="mt-2 text-xs">
+                <div className="mt-2 text-label">
                   Near duplicates in catalogue:{" "}
                   <b>
                     {Object.entries(commitPlan.similar)
