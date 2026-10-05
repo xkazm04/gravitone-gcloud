@@ -9,7 +9,7 @@
 import { useState } from "react";
 
 import { Tally } from "@/components/ui/signal";
-import { elapsed, useJobs, type Job } from "@/lib/jobs";
+import { useElapsed, useJobs, type Job } from "@/lib/jobs";
 
 import { type MusicVideoSourceStepData } from "../../_shared/stepStore";
 import { useStepFor } from "../../_shared/useLoadFor";
@@ -35,9 +35,11 @@ function downloadHref(url: string): string {
  *  header), and a surface that invented one would be the "fake progress bar"
  *  the WP5 brief explicitly asks not to build. */
 function ExportProgress({ job }: { job: Job }) {
+  const clock = useElapsed(job);
   return (
-    <p className="font-jetbrains text-label text-cyan-200/80" role="status" data-testid="music-video-export-progress">
-      rendering frame-by-frame, then muxing… {elapsed(job)} elapsed (no per-frame progress — the whole
+    <p className="font-jetbrains text-label text-cyan-200/80" data-testid="music-video-export-progress">
+      <span role="status">rendering frame-by-frame, then muxing…</span>{" "}
+      <span aria-hidden="true">{clock} elapsed</span> (no per-frame progress — the whole
       call is one request, not a stream)
     </p>
   );

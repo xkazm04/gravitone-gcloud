@@ -43,6 +43,7 @@
 // carry it between them, and `start` reads it synchronously before it claims a
 // slot. See `claimedElsewhere` for the window that is left.
 
+import { usePolling } from "./usePolling";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 // "poster-generate" and "video-export" are the music-video discipline's two
@@ -700,5 +701,25 @@ export function useJobs(): JobsApi {
   return v;
 }
 
-export const elapsed = (j: Job) =>
-  `${Math.round(((j.endedAt ?? Date.now()) - j.startedAt) / 1000)}s`;
+/** m:ss from a minute up (the repo's duration convention, `fmtDur`), bare
+ *  seconds below it. */
+export function formatElapsed(ms: number): string {
+  const total = Math.max(0, Math.round(ms / 1000));
+  if (total < 60) return `${total}s`;
+  return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+}
+
+/** A driven job's record does not change between start and settle, so nothing
+ *  re-renders a surface that prints its elapsed time. The clock lives here and
+ *  runs only while the job is running (and the tab is visible, via usePolling):
+ *  a settled job freezes at its endedAt and holds no interval. */
+export function useElapsed(j: Job): string {
+  const [now, setNow] = useState(() => Date.now());
+  usePolling(() => setNow(Date.now()), 1000, j.status === "running");
+  return formatElapsed((j.endedAt ?? now) - j.startedAt);
+}
+
+/** The count as a node, for call sites that map over jobs and cannot call a hook. */
+export function JobElapsed({ job }: { job: Job }) {
+  return <>{useElapsed(job)}</>;
+}

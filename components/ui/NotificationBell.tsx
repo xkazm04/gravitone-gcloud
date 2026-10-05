@@ -25,7 +25,7 @@ import {
   useStorageTrouble,
   type StorageFailure,
 } from "@/app/_phases/_shared/stepStore";
-import { elapsed, jobNoun, useJobs } from "@/lib/jobs";
+import { JobElapsed, jobNoun, useJobs } from "@/lib/jobs";
 import { trayModel } from "@/lib/jobLinks";
 import { politenessFor, useAnnounce } from "@/lib/announcer";
 import { Ghost } from "@/components/ui/signal";
@@ -338,7 +338,7 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                       {jobNoun(j.kind)} running
                     </span>
                     <div className="flex items-center gap-2">
-                      <span className={al ? "k-num k-tcard__m" : "font-jetbrains text-label text-white/50"}>{elapsed(j)}</span>
+                      <span className={al ? "k-num k-tcard__m" : "font-jetbrains text-label text-white/50"}><JobElapsed job={j} /></span>
                       {j.actions.map((act) =>
                         act.kind === "open" ? (
                           <a
