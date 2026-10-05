@@ -132,7 +132,7 @@ function Tile({
 }) {
   return (
     <div className="rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3">
-      <p className="font-jetbrains text-content tracking-[0.16em] text-white/35 uppercase">{label}</p>
+      <p className="font-jetbrains text-content tracking-[0.16em] text-white/60 uppercase">{label}</p>
       <p
         className={`font-instrument mt-0.5 text-2xl ${
           tone === "bad" ? "text-rose-300" : tone === "warn" ? "text-amber-200" : "text-white"
@@ -140,7 +140,7 @@ function Tile({
       >
         {value}
       </p>
-      {note && <p className="font-jetbrains mt-0.5 text-content text-white/40">{note}</p>}
+      {note && <p className="font-jetbrains mt-0.5 text-content text-white/65">{note}</p>}
     </div>
   );
 }

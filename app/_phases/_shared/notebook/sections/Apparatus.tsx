@@ -32,7 +32,7 @@ export default function ApparatusSections() {
           {n.scaleConversions.map((s) => (
             <li key={s.raw} className="text-content leading-relaxed">
               <span className="font-jetbrains text-white/45">{s.raw}</span>
-              <span className="text-white/25"> → </span>
+              <span aria-hidden className="text-white/25"> → </span>
               <span className="text-slate-300">{s.felt}</span>
             </li>
           ))}
@@ -40,7 +40,7 @@ export default function ApparatusSections() {
         <ul className="mt-2 space-y-2">
           {n.analogyCandidates.map((a) => (
             <li key={a.for} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
-              <p className="font-jetbrains text-content tracking-[0.14em] text-white/35">
+              <p className="font-jetbrains text-content tracking-[0.14em] text-white/60">
                 for {a.for} · {a.quality}
               </p>
               <p className="mt-1 text-content leading-relaxed text-slate-300">{a.analogy}</p>
@@ -64,7 +64,7 @@ export default function ApparatusSections() {
               }`}
             >
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-jetbrains text-label tracking-[0.12em] text-white/30">{u.id}</span>
+                <span className="font-jetbrains text-label tracking-[0.12em] text-white/55">{u.id}</span>
                 {resolved && (
                   <span className="font-jetbrains rounded border border-emerald-400/30 bg-emerald-400/[0.07] px-1.5 py-0.5 text-label tracking-[0.1em] text-emerald-200">
                     resolved
@@ -75,7 +75,7 @@ export default function ApparatusSections() {
               <p className="mt-1 text-content text-white/45">{u.why}</p>
               <p
                 className={`font-jetbrains mt-1.5 text-label ${
-                  resolved ? "text-white/35 line-through" : "text-amber-200/90"
+                  resolved ? "text-white/60 line-through" : "text-amber-200/90"
                 }`}
               >
                 impact — {u.impact}
@@ -118,7 +118,7 @@ export default function ApparatusSections() {
           <div key={e.engine} className="flex gap-3 text-content leading-relaxed">
             <span
               className={`font-jetbrains mt-px w-20 shrink-0 text-label tracking-[0.1em] ${
-                e.fit === "excellent" ? "text-emerald-300" : e.fit === "good" ? "text-cyan-300/80" : "text-white/30"
+                e.fit === "excellent" ? "text-emerald-300" : e.fit === "good" ? "text-cyan-300/80" : "text-white/55"
               }`}
             >
               {e.fit}

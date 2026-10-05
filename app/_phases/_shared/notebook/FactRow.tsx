@@ -40,14 +40,14 @@ export default function FactRow({ f }: { f: Fact }) {
       }`}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <span className="font-jetbrains text-label tracking-[0.12em] text-white/35">{f.id}</span>
+        <span className="font-jetbrains text-label tracking-[0.12em] text-white/60">{f.id}</span>
         {f.loadBearing && (
           <span className="font-jetbrains rounded border border-cyan-400/30 bg-cyan-400/[0.07] px-1.5 py-0.5 text-label tracking-[0.12em] text-cyan-200">
             load-bearing
           </span>
         )}
         <ConfidenceChip c={f.confidence} />
-        <span className="font-jetbrains ml-auto text-label text-white/30">as of {f.asOf}</span>
+        <span className="font-jetbrains ml-auto text-label text-white/55">as of {f.asOf}</span>
       </div>
       <p className="mt-1.5 text-content leading-relaxed text-slate-300">{f.claim}</p>
 
@@ -76,17 +76,17 @@ export default function FactRow({ f }: { f: Fact }) {
               {/* "A source a reader cannot navigate to is a name, not a source."
                   Absent is drawn as absent rather than omitted — an unlocatable
                   source should look unlocatable. */}
-              <span className="font-jetbrains text-label text-white/25">
+              <span className="font-jetbrains text-label text-white/55">
                 {s.locator ?? "no locator"}
               </span>
             </li>
           ))}
           {f.confidenceNote && (
-            <li className="font-jetbrains text-label text-white/35">{f.confidenceNote}</li>
+            <li className="font-jetbrains text-label text-white/60">{f.confidenceNote}</li>
           )}
         </ul>
       ) : (
-        <p className="font-jetbrains mt-1.5 text-content text-white/35">
+        <p className="font-jetbrains mt-1.5 text-content text-white/60">
           {f.source}
           {f.confidenceNote ? ` — ${f.confidenceNote}` : ""}
         </p>

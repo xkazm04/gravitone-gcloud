@@ -34,7 +34,7 @@ export function CurrencyBody({ withHalfLife = false }: { withHalfLife?: boolean 
         )}
         {c.why}
       </p>
-      <p className="font-jetbrains text-label text-white/40">
+      <p className="font-jetbrains text-label text-white/65">
         expires first: {c.expiresFirst.join(", ")} · durable: {c.durable.join(", ")}
       </p>
       <p className="text-content text-cyan-200/80">{c.advice}</p>

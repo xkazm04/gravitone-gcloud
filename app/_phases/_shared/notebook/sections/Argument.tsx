@@ -16,7 +16,7 @@ export default function ArgumentSections() {
         <H id="tension" />
         <div className="grid gap-3 sm:grid-cols-2">
           <p className="rounded-xl border border-white/8 bg-white/[0.02] p-3 text-content leading-relaxed text-slate-300">
-            <span className="font-jetbrains block text-label tracking-[0.14em] text-white/35 uppercase">expectation</span>
+            <span className="font-jetbrains block text-label tracking-[0.14em] text-white/60 uppercase">expectation</span>
             {n.tension.expectation}
           </p>
           <p className="rounded-xl border border-violet-400/25 bg-violet-400/[0.05] p-3 text-content leading-relaxed text-slate-200">
@@ -33,7 +33,7 @@ export default function ArgumentSections() {
         {n.mechanisms.map((m) => (
           <div key={m.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
             <p className="text-content font-medium text-white">{m.name}</p>
-            <p className="font-jetbrains text-content text-white/40">
+            <p className="font-jetbrains text-content text-white/65">
               {m.id} · explains: {m.explains}
               {m.needsAnalogy ? " · needs an analogy" : ""}
             </p>
@@ -51,7 +51,7 @@ export default function ArgumentSections() {
                       <ChainConnectorChip connector={step.connector} />
                       <span className="text-slate-300">{step.text}</span>
                       {step.evidence?.length ? (
-                        <span className="font-jetbrains text-label text-white/30">
+                        <span className="font-jetbrains text-label text-white/55">
                           {step.evidence.join(", ")}
                         </span>
                       ) : (
@@ -86,7 +86,7 @@ export default function ArgumentSections() {
         <H id="reversals" />
         {n.reversals.map((r) => (
           <div key={r.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
-            <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">
+            <p className="font-jetbrains text-content tracking-[0.14em] text-white/60 uppercase">
               {r.id} · obvious reading, stated generously
             </p>
             <p className="mt-1 text-content text-slate-300">“{r.obviousReading}”</p>
@@ -95,7 +95,7 @@ export default function ArgumentSections() {
               {r.whyWrong}
             </p>
             <p className="mt-2 text-content text-white/55">escalation — {r.escalation}</p>
-            <p className="font-jetbrains mt-2 text-content text-white/30">
+            <p className="font-jetbrains mt-2 text-content text-white/55">
               evidence: {r.evidence.join(", ")}
               {r.mechanismId ? ` · via ${r.mechanismId}` : " · no mechanism — argued from evidence alone"}
             </p>
@@ -108,7 +108,7 @@ export default function ArgumentSections() {
         <H id="steelman" />
         <p className="text-content leading-relaxed text-slate-200">{n.steelMan.statement}</p>
         <p className="text-content leading-relaxed text-white/50">{n.steelMan.whyInclude}</p>
-        <p className="font-jetbrains text-content text-white/30">evidence: {n.steelMan.evidence.join(", ")}</p>
+        <p className="font-jetbrains text-content text-white/55">evidence: {n.steelMan.evidence.join(", ")}</p>
       </section>
 
       {/* THE POSITIONS THIS MODAL USED TO SWALLOW. NotebookBody promises
@@ -150,7 +150,7 @@ export default function ArgumentSections() {
                 </li>
               ) : (
                 <li key={`${c.holder}-${i}`} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
-                  <p className="font-jetbrains text-label tracking-[0.14em] text-white/35 uppercase">
+                  <p className="font-jetbrains text-label tracking-[0.14em] text-white/60 uppercase">
                     {c.holder}
                     {c.locator ? ` · ${c.locator}` : ""}
                   </p>
@@ -161,7 +161,7 @@ export default function ArgumentSections() {
                     </p>
                   )}
                   {c.evidence.length > 0 && (
-                    <p className="font-jetbrains mt-1.5 text-label text-white/30">
+                    <p className="font-jetbrains mt-1.5 text-label text-white/55">
                       evidence: {c.evidence.join(", ")}
                     </p>
                   )}

@@ -151,9 +151,9 @@ export function ConfidenceChip({ c }: { c: Confidence }) {
  *                  renders as nothing reads as clean. */
 export function HazardLine({ hazard }: { hazard: string | undefined }) {
   if (hazard === undefined)
-    return <span className="font-jetbrains block text-label tracking-[0.12em] text-white/30">hazard not assessed</span>;
+    return <span className="font-jetbrains block text-label tracking-[0.12em] text-white/55">hazard not assessed</span>;
   if (hazard.trim() === "")
-    return <span className="font-jetbrains block text-label tracking-[0.12em] text-white/35">hazard: none found</span>;
+    return <span className="font-jetbrains block text-label tracking-[0.12em] text-white/60">hazard: none found</span>;
   return (
     <span className="block text-amber-200/80">
       <span className="font-jetbrains mr-1.5 text-label tracking-[0.12em] text-amber-300/90">hazard</span>

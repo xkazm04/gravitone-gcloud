@@ -112,7 +112,7 @@ export default function NotebookBody() {
           <span className="font-jetbrains text-label tracking-[0.14em] text-cyan-300/80 uppercase">verdict </span>
           {n.verdict}
         </p>
-        <p className="font-jetbrains text-content text-white/35">
+        <p className="font-jetbrains text-content text-white/60">
           researched {n.researched} · {n.researcher} · intent {n.templateIntent} ·{" "}
           {n.subjectDomain.join(" / ")}
         </p>
