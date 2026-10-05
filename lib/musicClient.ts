@@ -158,26 +158,28 @@ export function costLabel(
   price: MusicQuote | "unknown" | null,
   seconds: number,
 ): { text: string; title: string } {
-  if (price === null)
-    return { text: "checking the price…", title: "Asking /api/music/pricing what a render costs." };
+  // Titles are built from this render's own figures, never from `price.note`:
+  // that note is written for agents reading /api/music/pricing (it names
+  // lib/music/pricing.ts, instructs an operator how to measure a rate, and
+  // quotes ONE second), and forwarded here it ran 121 words under a label that
+  // said 13s. The note stays where it belongs, in the pricing JSON.
+  if (price === null) return { text: "checking the price…", title: "" };
   if (price === "unknown")
-    return {
-      text: `${seconds}s of audio · price unknown`,
-      title:
-        "The price table could not be reached, so this render's cost is not known in advance. " +
-        "The seconds are still exact — they are the length of picture this cue covers.",
-    };
-  if (price.basis === "free") return { text: "free", title: price.note };
+    return { text: `${seconds}s of audio · price unknown`, title: "price table unreachable" };
+  if (price.basis === "free") return { text: "free", title: "declared free" };
   if (typeof price.usd === "number")
-    return { text: `est. $${(price.usd * seconds).toFixed(3)}`, title: price.note };
+    return {
+      text: `est. $${(price.usd * seconds).toFixed(3)}`,
+      title: `${seconds}s at $${price.usd}/s, ${price.basis}`,
+    };
   if (typeof price.credits === "number")
     return {
       text: `est. ${(price.credits * seconds).toFixed(1)} credits`,
-      title: `${price.note} Credits are the vendor's unit; no USD conversion is declared in this repo.`,
+      title: `${seconds}s at ${price.credits} credits/s · no USD conversion is declared`,
     };
   // UNPRICED. Never "$0.00", never a blank.
   return {
     text: `${seconds}s of audio · unpriced`,
-    title: price.note,
+    title: `${seconds}s · billed in credits · rate not measured`,
   };
 }

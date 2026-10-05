@@ -358,3 +358,29 @@ test("surface: a DECLARED-free call says free; credits print as credits", () => 
   expect(withRate.text).not.toContain("$");
   expect(withRate.title).toContain("no USD conversion is declared");
 });
+
+// ── A cost tooltip states the price facts of THIS render ────────────────────
+//
+// `price.note` is written for agents reading /api/music/pricing (it names
+// lib/music/pricing.ts and instructs an operator how to measure a rate), and it
+// quotes ONE second. Forwarded as a native title it read "1s of audio..." under
+// a label reading 13s, and ran 121 words. check:narration cannot see a runtime
+// title, so this walks every branch.
+test("surface: every cost title is short, states this render's seconds, and addresses no operator", () => {
+  const fixtures: Array<[string, Parameters<typeof costLabel>[0]]> = [
+    ["checking", null],
+    ["unknown", "unknown"],
+    ["unpriced", priceCall({ op: "generate", model: "music_v2", seconds: 13 })],
+    ["free", priceCall({ op: "plan", model: "music_v2", seconds: 0 })],
+    ["credits", { seconds: 1, credits: 2, basis: "estimated", note: "hypothetical rate" }],
+    ["usd", { seconds: 1, usd: 0.01, basis: "estimated", note: "hypothetical rate" }],
+  ];
+  for (const [name, q] of fixtures) {
+    const { title } = costLabel(q, 13);
+    const words = title.trim().split(/\s+/).filter(Boolean).length;
+    console.log(`[music-budget] title(${name}) ${words}w -> ${title}`);
+    expect(words, `${name}: ${title}`).toBeLessThanOrEqual(25);
+    expect(title, name).not.toMatch(/\/api\/|lib\/|this repo|do not/i);
+    for (const m of title.matchAll(/(\d+(?:\.\d+)?)s\b/g)) expect(Number(m[1]), name).toBe(13);
+  }
+});
