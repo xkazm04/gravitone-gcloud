@@ -37,6 +37,16 @@ if [ "$GRAVITONE_SKIP_GATE" = "1" ]; then
   exit 0
 fi
 
+# Git hands a hook the variables that locate ITS repository (GIT_DIR always, from
+# a worktree an absolute path to this checkout), and every process below inherits
+# them. A test that runs `git init --bare` or `git config user.*` in a temp dir
+# then writes to THIS repository instead: on 2026-10-05 one pre-push turned the
+# checkout bare and set its committer to a test fixture's. Nothing below needs
+# them - each git call finds its repository from its own working directory - so
+# the gate runs without them (list: lib/gitEnv.ts).
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_COMMON_DIR GIT_OBJECT_DIRECTORY \
+  GIT_ALTERNATE_OBJECT_DIRECTORIES GIT_NAMESPACE GIT_PREFIX
+
 # The English copy gate (docs/i18n/style-en.md, docs/i18n/copy-contract.json). It blocks only
 # NEW error-level findings; today's debt is in .ai/copy-baseline.json. The checker is the
 # registry's native-copy skill, a gitignored link that CI and a fresh clone do not have, so it
