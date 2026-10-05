@@ -81,6 +81,13 @@ or `/explorer`). They need no direction call.
 | Q7 | Hard-coded home-directory paths of another machine (`C:\Users\kazda\…`). They are non-portable on this checkout (`mkdol`). | `pipeline/video/leonardo_reference.py:52`, `pipeline/vlm-probe/probe.py:33`, `pipeline/vlm-probe/guard.py:41`, `pipeline/vlm-probe/clips/{chain,ref2va}/lane.json:10` | vlm / video |
 | Q8 | `Modal` stamps `data-world` on its portal only for Almanac. Under `WorldRoot world="obsidian"`, kit rules (`.k-confirm`, `.k-acts`) resolve outside their scope. This is the same class as the toast-scope fix ffaf025. | `components/ui/Modal.tsx:231-235` (almanac branch) vs `:266` (default branch, no `data-world`) | ui-shell |
 
+**All eight landed 2026-10-05**, each with an instrument that was red before its fix:
+Q1 `b74599a` · Q2 `528fd1c` · Q3 `a5add96` (all five foundry key handlers, not only the cull) ·
+Q4 `e052187` · Q5 `3d5bb19` · Q6 `9d97950` · Q7 `be6f800` · Q8 `e098071` (latent: no Modal opens
+under an Obsidian-kit root yet). Found while doing them: a test fixture run under a pre-push hook
+inherited `GIT_DIR` and turned this checkout bare. Fixed in `3c43ae7` (article fixture and landing
+code) and `7572284` (the hook no longer hands `GIT_DIR` to `verify`).
+
 ## Map drift the scouts reported (operator's call; this session ran no scan)
 
 - `project-shelf` still lists `app/_projects/ProjectsMatrix.tsx` (gone). The live shelf
