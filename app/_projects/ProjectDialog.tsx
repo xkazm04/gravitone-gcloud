@@ -54,6 +54,7 @@ export default function ProjectDialog({
   themes,
   onClose,
   onSubmit,
+  error,
 }: {
   open: boolean;
   /** Absent = create. Present = edit that record. */
@@ -68,6 +69,9 @@ export default function ProjectDialog({
   /** Resolves once the write has landed. The dialog stays open until it does,
    *  so a failed save keeps the draft the user typed — see `submit` below. */
   onSubmit: (draft: ProjectDraft) => void | Promise<unknown>;
+  /** The machine's own message for a write from THIS dialog that failed. The
+   *  shelf's banner renders in <main>, under this modal's scrim. */
+  error?: string | null;
 }) {
   const [draft, setDraft] = useState<ProjectDraft>(blank);
   // Whether the user has taken ownership of the runtime. Until they do,
@@ -183,18 +187,25 @@ export default function ProjectDialog({
       // the nav; where it opens is the second word of the button. The arrow
       // does the one thing the words could not: draw the leaving.
       footer={
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose} disabled={busy}>
-            Cancel
-          </Button>
-          <Button
-            className="inline-flex cursor-pointer items-center gap-1.5 px-5 py-2"
-            disabled={!valid || busy}
-            onClick={() => void submit()}
-          >
-            {busy ? "Saving…" : project ? "Save" : "Create & open"}
-            {!busy && !project && <ArrowUpRight aria-hidden className="h-4 w-4" />}
-          </Button>
+        <div className="grid gap-3">
+          {error && (
+            <p role="alert" className="font-hanken text-content text-rose-200">
+              {error}
+            </p>
+          )}
+          <div className="flex items-center justify-end gap-2">
+            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose} disabled={busy}>
+              Cancel
+            </Button>
+            <Button
+              className="inline-flex cursor-pointer items-center gap-1.5 px-5 py-2"
+              disabled={!valid || busy}
+              onClick={() => void submit()}
+            >
+              {busy ? "Saving…" : project ? "Save" : "Create & open"}
+              {!busy && !project && <ArrowUpRight aria-hidden className="h-4 w-4" />}
+            </Button>
+          </div>
         </div>
       }
     >
@@ -382,12 +393,26 @@ export function ConfirmDelete({
   project,
   onClose,
   onConfirm,
+  error,
 }: {
   project: Project | null;
   onClose: () => void;
-  onConfirm: () => void;
+  /** Resolves once the delete is answered; Delete stays latched until then. */
+  onConfirm: () => void | Promise<unknown>;
+  /** The machine's own message for a delete that failed (see ProjectDialog). */
+  error?: string | null;
 }) {
   const [holds, setHolds] = useState<ProjectContents | null>(null);
+  const [busy, setBusy] = useState(false);
+  const confirm = async () => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      await onConfirm();
+    } finally {
+      setBusy(false);
+    }
+  };
   const id = project?.id ?? null;
 
   useEffect(() => {
@@ -418,18 +443,25 @@ export function ConfirmDelete({
       title={project ? `Delete “${project.title}”?` : ""}
       className="max-w-md"
       footer={
+        <div className="grid gap-3">
+        {error && (
+          <p role="alert" className="font-hanken text-content text-rose-200">
+            {error}
+          </p>
+        )}
         <div className="flex justify-end gap-2">
           <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose}>
             Keep it
           </Button>
           <button
-            onClick={onConfirm}
-            disabled={!holds}
+            onClick={() => void confirm()}
+            disabled={!holds || busy}
             data-testid="confirm-delete"
             className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/30"
           >
             {holds ? "Delete" : "reading…"}
           </button>
+        </div>
         </div>
       }
     >

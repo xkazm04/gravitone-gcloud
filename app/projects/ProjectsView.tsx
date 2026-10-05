@@ -112,6 +112,10 @@ export default function ProjectsView() {
     project: null,
   });
   const [doomed, setDoomed] = useState<Project | null>(null);
+  // A write from a dialog failed. Set only after that dialog's own write
+  // resolves null and cleared whenever a dialog opens, so a stale read error
+  // never leaks into a fresh one. The banner above sits under the Modal scrim.
+  const [writeFailed, setWriteFailed] = useState(false);
 
   /* ── The demo shelf, said out loud ──────────────────────────────────────
    *
@@ -168,10 +172,12 @@ export default function ProjectsView() {
       // Edit delegates through useProjects.update to atomic in-transaction editProject;
       // passes draft cleanly without clobbering background phase or progress writes.
       const saved = await update(editing.id, draft);
+      setWriteFailed(!saved);
       if (saved) setDialog({ open: false, project: null });
       return;
     }
     const made = await create(draft);
+    setWriteFailed(!made);
     if (!made) return;
     setDialog({ open: false, project: null });
     router.push(`/studio/${made.id}`);
@@ -228,8 +234,14 @@ export default function ProjectsView() {
                 // rather than 404ing a URL someone sent a colleague.
                 router.push(`/studio/${p.id}${step ? `?step=${step}` : ""}`)
               }
-              onEdit={(p) => setDialog({ open: true, project: p })}
-              onDelete={(p) => setDoomed(p)}
+              onEdit={(p) => {
+                setWriteFailed(false);
+                setDialog({ open: true, project: p });
+              }}
+              onDelete={(p) => {
+                setWriteFailed(false);
+                setDoomed(p);
+              }}
               // Always the wizard: its style stage offers presets (minted into
               // a locked theme at create) and an honest empty state that
               // routes, so there is no account state in which sending the user
@@ -261,7 +273,10 @@ export default function ProjectsView() {
                   {demos.length > 0 && <DemoChip count={demos.length} busy={wiping} onClear={clearExamples} />}
                   <button
                     type="button"
-                    onClick={() => setDialog({ open: true, project: null })}
+                    onClick={() => {
+                      setWriteFailed(false);
+                      setDialog({ open: true, project: null });
+                    }}
                     aria-label="Quick create"
                     title="Quick create"
                     className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/12 text-white/45 transition hover:border-white/25 hover:text-white/75"
@@ -337,10 +352,12 @@ export default function ProjectsView() {
         themes={allThemes}
         onClose={() => setDialog({ open: false, project: null })}
         onSubmit={submit}
+        error={writeFailed ? error : null}
       />
       <ConfirmDelete
         project={doomed}
         onClose={() => setDoomed(null)}
+        error={writeFailed ? error : null}
         /**
          * AWAIT THE REMOVAL, THEN CLOSE — because the ORDER decides where a
          * keyboard user's focus lands, and this used to lose that race.
@@ -364,6 +381,7 @@ export default function ProjectsView() {
         onConfirm={async () => {
           if (!doomed) return;
           const took = await remove(doomed.id);
+          setWriteFailed(!took);
           if (took) setDoomed(null);
         }}
       />

@@ -90,3 +90,29 @@ test("holding the dialog open does not buy a double submit", () => {
     /await onSubmit\(/,
   );
 });
+
+test("a failed write is rendered inside the dialog, not under its scrim", () => {
+  // The shelf's rose banner lives in <main>; Modal paints a fixed 80%-ink
+  // blurred layer over it, so a sighted user saw the button return to idle and
+  // nothing else. Each dialog takes the machine's own message and draws it in
+  // its footer.
+  const dialog = code(DIALOG);
+  const footers = dialog.match(/footer=\{[\s\S]*?\n {6}\}/g) ?? [];
+  expect(footers.length, "expected the footers of ProjectDialog and ConfirmDelete").toBe(2);
+  for (const f of footers) {
+    expect(f, "a dialog footer does not render its `error`").toMatch(/\{error\b/);
+  }
+  expect(dialog.match(/^ {2}error,\r?$/gm)?.length, "both dialogs must accept an `error` prop").toBe(2);
+
+  const view = code(VIEW);
+  expect(view, "the view does not track whether a dialog write failed").toContain("setWriteFailed(");
+  expect(view.match(/error=\{writeFailed \? error : null\}/g)?.length, "both dialogs get the error only after a failed write").toBe(2);
+});
+
+test("ConfirmDelete latches while the delete is in flight", () => {
+  const dialog = code(DIALOG);
+  const del = dialog.slice(dialog.indexOf("export function ConfirmDelete"));
+  expect(del, "ConfirmDelete does not track an in-flight delete").toContain("setBusy(");
+  expect(del, "Delete is not disabled while the delete runs").toMatch(/disabled=\{!holds \|\| busy\}/);
+  expect(del, "the confirm does not await the caller").toMatch(/await onConfirm\(/);
+});
