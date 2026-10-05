@@ -14,24 +14,33 @@ import { Mark } from "@/components/kit/brand";
 import StudioFrame from "@/components/ui/StudioFrame";
 
 import { GAPS } from "./migrationMap";
-import { PART_COUNT, RULES } from "./catalog";
+import { PART_COUNT, RULES, kitModuleForHash, type KitModuleId } from "./catalog";
 import { Identity } from "./Identity";
 import { Law } from "./Law";
 import { Migration } from "./Migration";
 import { Parts } from "./Parts";
 import "./kit-route.css";
 
-type Module = "identity" | "law" | "parts" | "migration";
-const MODULES: Module[] = ["identity", "law", "parts", "migration"];
+type Module = KitModuleId;
 
 export default function KitView() {
   const [tab, setTab] = useState<Module>("identity");
 
-  // A module is addressable: /kit#parts opens the specimen sheet.
+  // A module is addressable: /kit#parts opens the specimen sheet, and so does a
+  // part-group jump link (/kit#g-forms), which then scrolls to its group once the
+  // Parts tab has mounted.
   useEffect(() => {
     const fromHash = () => {
-      const h = window.location.hash.replace("#", "") as Module;
-      if (MODULES.includes(h)) setTab(h);
+      const m = kitModuleForHash(window.location.hash);
+      if (!m) return;
+      setTab(m);
+      const h = window.location.hash.replace("#", "");
+      if (h !== m) {
+        // Two frames: the first lets React commit the tab, the second finds the anchor.
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => document.getElementById(h)?.scrollIntoView()),
+        );
+      }
     };
     fromHash();
     window.addEventListener("hashchange", fromHash);

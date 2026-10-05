@@ -457,3 +457,13 @@ export const WHEN_TO_USE: readonly { situation: string; use: string; never: stri
   { situation: "An empty list", use: "Ghost; unreachable: ErrorBox + retry", never: "\"nothing here yet\"" },
   { situation: "Counts on a module", use: "Tally on the TabRail tab", never: "a blurb under the tabs" },
 ];
+
+/** The module a location hash addresses. A module id names itself; `g-<id>` is a
+ *  Parts group jump link and so names Parts. Anything else addresses nothing. */
+export type KitModuleId = "identity" | "law" | "parts" | "migration";
+export function kitModuleForHash(hash: string): KitModuleId | null {
+  const h = hash.replace(/^#/, "");
+  if (h === "identity" || h === "law" || h === "parts" || h === "migration") return h;
+  if (h.startsWith("g-") && KIT_GROUPS.some((g) => g.id === h.slice(2))) return "parts";
+  return null;
+}
