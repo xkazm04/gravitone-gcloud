@@ -201,6 +201,13 @@ def main():
     if args.acquire:
         if args.no_readback:
             sys.exit("--acquire needs the readback")
+        # The catalogue write goes through acquire.py, which takes
+        # pipeline/foundry/.catalogue.lock (catalogue_lock.py) around its read
+        # AND its save, journals the change and bumps styles.json `_rev` -- the
+        # same fence the app's commits hold. intake must NOT take the lock
+        # itself around this call: the lock is not re-entrant across
+        # processes, so the child would wait on its parent until the bound and
+        # fail. One writer, one path.
         cmd = [sys.executable, str(HERE / "acquire.py"), "--source", args.slug,
                "--id", args.slug, "--name", args.name or args.slug,
                "--family", args.family, "--model", args.model]

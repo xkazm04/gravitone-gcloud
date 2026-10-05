@@ -33,6 +33,8 @@ import sys
 import time
 from pathlib import Path
 
+from catalogue_lock import LOCK_NAME, CatalogueLocked, catalogue_lock, holds_lock, journal_intent
+
 HERE = Path(__file__).parent
 STYLES = HERE / "styles.json"
 READBACKS = HERE.parent.parent / "vlm-probe-out" / "style" / "style.jsonl"
@@ -43,8 +45,17 @@ OBSERVABLE_FIELDS = ["render_mode", "detail_density", "surface_realism", "atmosp
 DEFAULT_NEGATIVE = "text, watermark, logo, caption, border"
 
 
-def save_catalogue(cat):
-    """Write the catalogue ATOMICALLY, the way forge.py writes a run manifest.
+def save_catalogue(cat, source, ids):
+    """Journal, revision and write the catalogue -- with the catalogue lock held.
+
+    The lock (catalogue_lock.py) is the caller's: it has to cover the READ the
+    new catalogue was computed from, not only this write. What this adds is
+    the transaction's record: one catalogue-journal.jsonl line, written ahead
+    of the file, and styles.json `_rev` set to its revision -- the same
+    sequence the app's commits advance, so GET /api/foundry/styles sees an
+    acquire as the catalogue moving.
+
+    Then the write itself, ATOMICALLY, the way forge.py writes a run manifest.
 
     styles.json is polled, not just read: the /foundry page fetches it through
     GET /api/foundry/styles on every load and on its own interval, and forge.py
@@ -59,6 +70,10 @@ def save_catalogue(cat):
     thing being polled. Write beside it, then rename: os.replace is atomic, so
     a reader sees the old catalogue or the new one and never half of either.
     """
+    if not holds_lock(STYLES.parent):
+        raise RuntimeError(f"save_catalogue called without the catalogue lock ({STYLES.parent / LOCK_NAME}); "
+                           "wrap the read and the save in catalogue_lock()")
+    cat["_rev"] = journal_intent(STYLES.parent, cat, "acquire", source, ids, by="acquire.py")
     tmp = STYLES.with_suffix(".json.tmp")
     tmp.write_text(json.dumps(cat, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     # AND THE REPLACE IS RETRIED, because on Windows it is not unconditional:
@@ -135,6 +150,24 @@ def main():
         sys.exit(f"the {args.model} readback of {args.source} carries no `imitable_recipe` -- "
                  "re-read the source with ../vlm-probe/style.py before acquiring it")
 
+    # THE READ AND THE WRITE SIT INSIDE ONE LOCK. The app's three commits
+    # read-modify-write this same file under pipeline/foundry/.catalogue.lock
+    # (lib/foundry/catalogue.ts); reading outside it would let a commit land
+    # between our read and our save and be erased by it. sys.exit inside the
+    # `with` still releases the lock (the context manager's finally).
+    try:
+        with catalogue_lock(STYLES.parent, by="acquire.py"):
+            entry = acquire_entry(args, p)
+    except CatalogueLocked as e:
+        sys.exit(str(e))
+    print(f"acquired {args.id} from {args.source} ({args.model}) as candidate")
+    print(f"  observables: {entry['observables']}")
+    print(f"  recipe: {entry['recipe']}")
+    print("  edit the recipe in styles.json before forging -- the readback is a hypothesis")
+
+
+def acquire_entry(args, p):
+    """Read, decide and save the catalogue. Call with the catalogue lock held."""
     cat = json.loads(STYLES.read_text(encoding="utf-8"))
     existing = next((s for s in cat["styles"] if s["id"] == args.id), None)
     if existing:
@@ -157,11 +190,8 @@ def main():
         "evidence": [],
     }
     cat["styles"].append(entry)
-    save_catalogue(cat)
-    print(f"acquired {args.id} from {args.source} ({args.model}) as candidate")
-    print(f"  observables: {entry['observables']}")
-    print(f"  recipe: {entry['recipe']}")
-    print("  edit the recipe in styles.json before forging -- the readback is a hypothesis")
+    save_catalogue(cat, args.source, [args.id])
+    return entry
 
 
 if __name__ == "__main__":

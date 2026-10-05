@@ -204,6 +204,10 @@ export interface CommitResult {
 export interface Catalogue {
   styles: StyleDef[];
   ledger: LedgerRow[];
+  /** The catalogue revision (lib/foundry/catalogue.ts): one per committed
+   *  transaction. GET /api/foundry/styles carries it; absent on a value built
+   *  in memory, 0 on disk for a catalogue that predates it. */
+  _rev?: number;
 }
 
 export interface ForgeCommitCounts {

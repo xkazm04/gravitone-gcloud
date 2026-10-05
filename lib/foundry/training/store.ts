@@ -28,6 +28,7 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
+import { withCatalogue } from "../catalogue";
 import { foundryFs } from "../fsPort";
 
 import {
@@ -47,7 +48,6 @@ import type {
   TrainingCommitResult,
   TrainingCycleDetail,
   TrainingCycleSummary,
-  TrainingLedgerRow,
   TrainingVerdicts,
 } from "./types";
 
@@ -182,89 +182,105 @@ function mediaFiles(ref: MediaRef): string[] {
 
 /** Copy the approved keepers into git, delete the decided media, append the
  *  ledger rows. DESTRUCTIVE and one-way — undecided improvements are the only
- *  ones whose media survives on this machine. */
+ *  ones whose media survives on this machine.
+ *
+ *  One catalogue transaction (lib/foundry/catalogue.ts): training-ledger.json
+ *  is the cross-machine sync channel, and two gates committing at once used
+ *  to lose a row — the lock makes the read and the write one step. */
 export async function commitCycle(id: string): Promise<TrainingCommitResult> {
   const dir = cycleDir(id);
-  // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
-  const fs = foundryFs();
-  const cycle = await readCycle(id);
-  if (cycle.status === "committed") throw new FoundryError("This cycle is already committed.", 409);
-  if (!["awaiting-gate", "failed"].includes(cycle.status)) throw new FoundryError("The loop is still running this cycle.", 409);
-  const verdicts = await readTrainingVerdicts(id);
-  const at = new Date().toISOString();
+  return withCatalogue({ op: "dojo-commit", run: id }, async (tx) => {
+    // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
+    const fs = foundryFs();
+    const cycle = await readCycle(id);
+    if (cycle.status === "committed") throw new FoundryError("This cycle is already committed.", 409);
+    if (!["awaiting-gate", "failed"].includes(cycle.status)) throw new FoundryError("The loop is still running this cycle.", 409);
+    const verdicts = await readTrainingVerdicts(id);
+    const at = new Date().toISOString();
 
-  const decided = cycle.improvements.filter((i) => verdicts[i.id] === "approve" || verdicts[i.id] === "reject");
+    const decided = cycle.improvements.filter((i) => verdicts[i.id] === "approve" || verdicts[i.id] === "reject");
 
-  // (1) Keepers first: copy keeper thumbnail to thumbs destination (if destination doesn't already exist).
-  const thumbsDir = foundryFile(path.join("training", "thumbs"));
-  await fs.mkdir(thumbsDir);
-  const thumbs: string[] = [];
-  const trackedThumb = new Map<string, string>();
-  for (const imp of decided) {
-    if (verdicts[imp.id] !== "approve" || !imp.thumbnail) continue;
-    const fileName = `${id}--${imp.id}${path.extname(imp.thumbnail).toLowerCase()}`;
-    const rel = `${THUMBS_REL}/${fileName}`;
-    const dst = path.join(thumbsDir, fileName);
-    // existsSync's semantics: any stat failure reads as "absent".
-    const present = await fs.stat(dst).then(
-      () => true,
-      () => false,
-    );
-    if (!present) {
-      const src = resolveInCycle(id, imp.thumbnail);
-      await fs.copyFile(src, dst);
+    // (1) Keepers first: copy keeper thumbnail to thumbs destination (if destination doesn't already exist).
+    const thumbsDir = foundryFile(path.join("training", "thumbs"));
+    await fs.mkdir(thumbsDir);
+    const thumbs: string[] = [];
+    const trackedThumb = new Map<string, string>();
+    for (const imp of decided) {
+      if (verdicts[imp.id] !== "approve" || !imp.thumbnail) continue;
+      const fileName = `${id}--${imp.id}${path.extname(imp.thumbnail).toLowerCase()}`;
+      const rel = `${THUMBS_REL}/${fileName}`;
+      const dst = path.join(thumbsDir, fileName);
+      // existsSync's semantics: any stat failure reads as "absent".
+      const present = await fs.stat(dst).then(
+        () => true,
+        () => false,
+      );
+      if (!present) {
+        const src = resolveInCycle(id, imp.thumbnail);
+        await fs.copyFile(src, dst);
+      }
+      trackedThumb.set(imp.id, rel);
+      thumbs.push(rel);
     }
-    trackedThumb.set(imp.id, rel);
-    thumbs.push(rel);
-  }
 
-  // (2) The versioned index: read existing ledger, replace existing row for this cycle if present (or append), write atomically.
-  const ledgerPath = foundryFile("training-ledger.json");
-  const ledger = await fs.readJson<{ rows: TrainingLedgerRow[] }>(ledgerPath, { rows: [] });
-  ledger.rows = (ledger.rows ?? []).filter((r) => r.cycle !== id);
-  for (const imp of decided) {
-    const human = verdicts[imp.id] as "approve" | "reject";
-    const gem = geminiAgreement(imp);
-    ledger.rows.push({
-      cycle: id,
-      dimension: cycle.dimension,
-      subject: cycle.subject,
-      technique: imp.technique,
-      human,
-      verdict: human === "approve" ? "better" : "not-better",
-      judge_pick_rate: judgePickRate(imp),
-      ...(gem !== undefined ? { gemini_agreement: gem } : {}),
-      ...(trackedThumb.has(imp.id) ? { thumb: trackedThumb.get(imp.id) } : {}),
-      reflected: false,
-      at,
-    });
-  }
-  await fs.writeJsonAtomic(ledgerPath, ledger);
+    // (2) The versioned index: read existing ledger, replace existing row for this cycle if present (or append), write atomically.
+    //     The journal line leads the write; styles.json carries the revision.
+    const ledger = await tx.read("training-ledger.json");
+    await tx.begin(decided.map((i) => i.id));
+    ledger.rows = (ledger.rows ?? []).filter((r) => r.cycle !== id);
+    for (const imp of decided) {
+      const human = verdicts[imp.id] as "approve" | "reject";
+      const gem = geminiAgreement(imp);
+      ledger.rows.push({
+        cycle: id,
+        dimension: cycle.dimension,
+        subject: cycle.subject,
+        technique: imp.technique,
+        human,
+        verdict: human === "approve" ? "better" : "not-better",
+        judge_pick_rate: judgePickRate(imp),
+        ...(gem !== undefined ? { gemini_agreement: gem } : {}),
+        ...(trackedThumb.has(imp.id) ? { thumb: trackedThumb.get(imp.id) } : {}),
+        reflected: false,
+        at,
+      });
+    }
+    await tx.write("training-ledger.json");
+    await tx.stamp();
 
-  // (3) Cull: delete run media / thumbs only AFTER ledger write succeeded!
-  let deleted = 0;
-  for (const imp of decided) {
-    for (const pair of imp.pairs) {
-      for (const ref of [pair.baseline, pair.challenger]) {
-        if (ref.deleted) continue;
-        for (const rel of mediaFiles(ref)) {
-          try {
-            await fs.unlink(containedInCycle(id, rel));
+    // (3) Cull: delete run media / thumbs only AFTER ledger write succeeded!
+    //
+    // A file already ABSENT counts as deleted by this commit. The ref is not
+    // marked `deleted` (that would be on cycle.json, which is written last), so
+    // nothing but this commit — an attempt of it that died before step (4) —
+    // removed it. Counting only successful unlinks made a retry after such a
+    // crash report "0 files deleted" for a cull that deleted every one of them
+    // (found by the effect-log crash enumerator, 2026-10-05). The forge's
+    // commitRun has always counted this way.
+    let deleted = 0;
+    for (const imp of decided) {
+      for (const pair of imp.pairs) {
+        for (const ref of [pair.baseline, pair.challenger]) {
+          if (ref.deleted) continue;
+          for (const rel of mediaFiles(ref)) {
+            try {
+              await fs.unlink(containedInCycle(id, rel));
+            } catch (e) {
+              if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+            }
             deleted++;
-          } catch (e) {
-            if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
           }
+          ref.deleted = true;
         }
-        ref.deleted = true;
       }
     }
-  }
 
-  // (4) Mark cycle committed.
-  await fs.writeFile(path.join(dir, "findings.md"), findingsMarkdown(cycle, verdicts, decided));
-  cycle.status = "committed";
-  cycle.log.push({ at, msg: `committed: ${decided.length} decided, ${deleted} files deleted, ${thumbs.length} thumb(s) kept` });
-  await fs.writeJsonAtomic(path.join(dir, "cycle.json"), cycle);
+    // (4) Mark cycle committed.
+    await fs.writeFile(path.join(dir, "findings.md"), findingsMarkdown(cycle, verdicts, decided));
+    cycle.status = "committed";
+    cycle.log.push({ at, msg: `committed: ${decided.length} decided, ${deleted} files deleted, ${thumbs.length} thumb(s) kept` });
+    await fs.writeJsonAtomic(path.join(dir, "cycle.json"), cycle);
 
-  return { deleted, thumbs, ledger_rows: decided.length };
+    return { deleted, thumbs, ledger_rows: decided.length };
+  });
 }
