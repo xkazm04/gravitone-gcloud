@@ -1,6 +1,6 @@
 "use client";
 
-// V1 · BROADCAST WEEK — seven local days down a twenty-four-hour axis, StatReel's
+// THE BROADCAST WEEK — seven local days down a twenty-four-hour axis, StatReel's
 // week (apps/studio/src/routes/Calendar.tsx WeekView :614-697) drawn as a
 // broadcast schedule: every slot a card with its film's own frame on it, a
 // now-line across today, the hours already gone washed back.
@@ -10,10 +10,15 @@
 // moves it at once and snaps it back if the engine refuses. A press opens the
 // slot sheet beside the grid — the keyboard path to the same move. A press on
 // an empty hour hands that hour to the composer.
+//
+// Slots that share an hour STACK (./view.ts stackClusters): one card at full
+// width — the one opened, else the one waiting on a decision, else the
+// earliest — with the rest drawn as the edges of the cards behind it and
+// counted on a `+N` that lists them.
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { usePrefersReducedMotion } from "@/components/ui/motionPreference";
 import { Panel } from "@/components/ui/Primitives";
@@ -29,6 +34,7 @@ import {
   dayKey,
   dayLabel,
   daysFrom,
+  needsDecision,
   rangeLabel,
   timeLabel,
   toLocalInput,
@@ -40,7 +46,7 @@ import type { ScheduleProps } from "./ScheduleTab";
 import { SlotSheet } from "./SlotSheet";
 import { ChannelGlyph, IconButton, LOOK, StatusDot, TONE_RULE, lookOf } from "./ui";
 import { usePointerDrag } from "./useDrag";
-import { atMinute, minuteOfDay, packLanes } from "./view";
+import { atMinute, minuteOfDay, stackClusters } from "./view";
 import { whenWords } from "./WhenPicker";
 
 const HOUR_H = 48;
@@ -60,6 +66,8 @@ export function BroadcastWeek(p: ScheduleProps) {
   const { slots, now, selectedId, select, prefill } = p;
   const reduced = usePrefersReducedMotion();
   const [offset, setOffset] = useState(0);
+  /** the stack whose `+N` list is open: `${dayKey}:${first slot id}` */
+  const [opened, setOpened] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement | null>(null);
   const cols = useRef<HTMLDivElement | null>(null);
 
@@ -213,7 +221,7 @@ export function BroadcastWeek(p: ScheduleProps) {
                 const isToday = k === todayKey;
                 const pastDay = k < todayKey;
                 const weekend = d.getDay() === 0 || d.getDay() === 6;
-                const placed = packLanes(byDay.get(k) ?? [], (s) => minuteOfDay(s.publishAt) ?? 0, SPAN_MIN);
+                const stacks = stackClusters(byDay.get(k) ?? [], (s) => minuteOfDay(s.publishAt) ?? 0, SPAN_MIN);
                 return (
                   <div
                     key={k}
@@ -247,25 +255,43 @@ export function BroadcastWeek(p: ScheduleProps) {
                       ),
                     )}
 
-                    {placed.map(({ item: s, lane, lanes }, i) => (
-                      <SlotCard
-                        key={s.id}
-                        slot={s}
-                        index={i + col}
-                        reduced={reduced}
-                        top={((minuteOfDay(s.publishAt) ?? 0) / 60) * HOUR_H}
-                        left={`calc(${(lane / lanes) * 100}% + 4px)`}
-                        width={`calc(${100 / lanes}% - 8px)`}
-                        narrow={lanes > 1}
-                        selected={s.id === selectedId}
-                        dragging={drag?.item.id === s.id}
-                        handlers={bind(s)}
-                        onPress={() => {
-                          if (endedDrag()) return;
-                          select(s.id === selectedId ? null : s.id);
-                        }}
-                      />
-                    ))}
+                    {stacks.map((stack, i) => {
+                      const s = stack.find((x) => x.id === selectedId) ?? stack.find(needsDecision) ?? stack[0];
+                      const top = ((minuteOfDay(s.publishAt) ?? 0) / 60) * HOUR_H;
+                      const key = `${k}:${stack[0].id}`;
+                      return (
+                        <div key={key}>
+                          {stack.length > 1 && <StackEdges top={top} n={stack.length - 1} />}
+                          <SlotCard
+                            slot={s}
+                            index={i + col}
+                            reduced={reduced}
+                            top={top}
+                            selected={s.id === selectedId}
+                            dragging={drag?.item.id === s.id}
+                            handlers={bind(s)}
+                            onPress={() => {
+                              if (endedDrag()) return;
+                              select(s.id === selectedId ? null : s.id);
+                            }}
+                          />
+                          {stack.length > 1 && (
+                            <StackMore
+                              stack={stack}
+                              front={s}
+                              top={top}
+                              alignRight={col >= 5}
+                              open={opened === key}
+                              onToggle={(on) => setOpened(on ? key : null)}
+                              onPick={(id) => {
+                                setOpened(null);
+                                select(id);
+                              }}
+                            />
+                          )}
+                        </div>
+                      );
+                    })}
 
                     {drag?.at && drag.at.col === col && <LandingCard slot={drag.item} at={drag.at} />}
                   </div>
@@ -338,21 +364,15 @@ function SlotCard({
   index,
   reduced,
   top,
-  left,
-  width,
-  narrow,
   selected,
   dragging,
   handlers,
   onPress,
 }: {
   slot: ScheduleSlot;
-  narrow: boolean;
   index: number;
   reduced: boolean;
   top: number;
-  left: string;
-  width: string;
   selected: boolean;
   dragging: boolean;
   handlers: ReturnType<ReturnType<typeof usePointerDrag<ScheduleSlot, Landing>>["bind"]>;
@@ -382,22 +402,131 @@ function SlotCard({
       className={`group absolute z-[5] touch-none overflow-hidden rounded-xl border text-left transition-[border-color,box-shadow] ${ring} ${
         movable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
       } ${s.status === "cancelled" ? "opacity-60" : ""}`}
-      style={{ top: top + 2, left, width, height: CARD_H - 4 }}
+      style={{ top: top + 2, left: 4, right: 4, height: CARD_H - 4 }}
     >
       <Poster exportId={s.exportId} dim={s.status === "cancelled"} className="absolute inset-0 transition-transform duration-500 group-hover:scale-[1.04]" />
       <span aria-hidden className="absolute inset-0 bg-gradient-to-t from-[var(--gt-ink)]/95 from-15% via-[var(--gt-ink)]/55 via-55% to-transparent" />
       <span aria-hidden className={`absolute inset-y-0 left-0 w-[3px] ${TONE_RULE[l.tone]}`} />
-      {!narrow && <StatusDot slot={s} className="absolute top-1.5 right-1.5" />}
+      <StatusDot slot={s} className="absolute top-1.5 right-1.5" />
       <span className="absolute inset-x-2.5 bottom-1.5 flex flex-col gap-0.5">
         <span className="font-jetbrains flex items-center gap-1.5 text-label leading-none text-white/90">
           <ChannelGlyph id={s.channelId} className="h-3.5 w-3.5 shrink-0" />
           {timeLabel(s.publishAt)}
         </span>
-        <span className={`font-hanken text-label leading-tight text-white ${narrow ? "truncate" : "line-clamp-2"} ${s.status === "cancelled" ? "line-through" : ""}`}>
+        <span className={`font-hanken line-clamp-2 text-label leading-tight text-white ${s.status === "cancelled" ? "line-through" : ""}`}>
           {s.title || s.id}
         </span>
       </span>
     </motion.button>
+  );
+}
+
+/** The cards behind a stack's front one: their top edges, one rule per card
+ *  up to two, so a stack reads as a stack before its count is read. */
+function StackEdges({ top, n }: { top: number; n: number }) {
+  return (
+    <>
+      {Array.from({ length: Math.min(n, 2) }, (_, i) => (
+        <span
+          key={i}
+          aria-hidden
+          className="pointer-events-none absolute z-[4] rounded-xl border border-white/12 bg-gradient-to-b from-white/[0.08] to-white/[0.02]"
+          style={{ top: top + 2 - 5 * (i + 1), left: 4 + 6 * (i + 1), right: 4 + 6 * (i + 1), height: CARD_H - 4 }}
+        />
+      ))}
+    </>
+  );
+}
+
+/** `+N` on a stack, and the list it opens: every slot in the stack, the front
+ *  one marked; a press opens that slot's sheet and brings it to the front. */
+function StackMore({
+  stack,
+  front,
+  top,
+  alignRight,
+  open,
+  onToggle,
+  onPick,
+}: {
+  stack: ScheduleSlot[];
+  front: ScheduleSlot;
+  top: number;
+  alignRight: boolean;
+  open: boolean;
+  onToggle: (open: boolean) => void;
+  onPick: (id: string) => void;
+}) {
+  const id = useId();
+  const box = useRef<HTMLDivElement | null>(null);
+  // A press anywhere else closes the list; so does Esc, from inside it.
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => {
+      if (!box.current?.contains(e.target as Node)) onToggle(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [open, onToggle]);
+  const rest = stack.length - 1;
+  return (
+    <div
+      ref={box}
+      className="absolute z-[6]"
+      style={{ top: top + 7, right: 36 }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && open) {
+          e.stopPropagation();
+          onToggle(false);
+        }
+      }}
+    >
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-controls={id}
+        aria-label={`${rest} more ${rest === 1 ? "slot" : "slots"} at this hour`}
+        onClick={() => onToggle(!open)}
+        data-testid={`calendar-week-stack-${stack[0].id}`}
+        className={`font-jetbrains inline-flex h-6 items-center rounded-full border px-2 text-label leading-none tabular-nums backdrop-blur transition ${
+          open ? "border-cyan-200/70 bg-cyan-300 text-slate-950" : "border-white/25 bg-[var(--gt-ink)]/80 text-white/85 hover:border-white/50 hover:text-white"
+        }`}
+      >
+        +{rest}
+      </button>
+      {open && (
+        <ul
+          id={id}
+          aria-label="Slots at this hour"
+          className="gt-rise absolute top-8 z-30 w-[17rem] space-y-1 rounded-2xl border border-white/10 bg-[var(--gt-ink)]/95 p-1.5 shadow-[0_24px_60px_-20px_var(--gt-glow-cyan)] backdrop-blur-xl"
+          style={alignRight ? { right: -32 } : { left: -110 }}
+        >
+          {stack.map((s) => {
+            const on = s.id === front.id;
+            return (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  aria-current={on || undefined}
+                  onClick={() => onPick(s.id)}
+                  data-testid={`calendar-week-stack-pick-${s.id}`}
+                  className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left transition ${
+                    on ? "bg-cyan-400/10 ring-1 ring-cyan-300/30" : "hover:bg-white/[0.05]"
+                  }`}
+                >
+                  <ChannelGlyph id={s.channelId} className="h-4 w-4 shrink-0 text-white/75" />
+                  <span className="font-jetbrains shrink-0 text-label text-white/70 tabular-nums">{timeLabel(s.publishAt)}</span>
+                  <span className={`font-hanken min-w-0 flex-1 truncate text-label text-white/90 ${s.status === "cancelled" ? "line-through opacity-60" : ""}`}>
+                    {s.title || s.id}
+                  </span>
+                  <StatusDot slot={s} className="shrink-0" />
+                </button>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
   );
 }
 

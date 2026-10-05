@@ -234,41 +234,6 @@ export function IconButton({
   );
 }
 
-/** A pill group: one choice of a few, drawn like the Projects shelf's chips. */
-export function Pills<T extends string>({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (v: T) => void;
-}) {
-  return (
-    <div role="radiogroup" aria-label={label} className="inline-flex items-center gap-1 rounded-full border border-white/8 bg-white/[0.02] p-1">
-      {options.map((o) => {
-        const on = o.value === value;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={on}
-            onClick={() => onChange(o.value)}
-            className={`font-jetbrains rounded-full px-3 py-1 text-label transition ${
-              on ? "bg-cyan-400/12 text-cyan-100 shadow-[inset_0_0_0_1px_var(--gt-ring-cyan)]" : "text-white/55 hover:text-white/85"
-            }`}
-          >
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 /** Copy one line to the clipboard; the glyph answers. */
 export function CopyButton({ text, label }: { text: string; label: string }) {
   const [state, setState] = useState<"idle" | "copied" | "failed">("idle");

@@ -1,8 +1,8 @@
 "use client";
 
 // /calendar — publishing: the schedule, the channels a headless agent can post
-// to, and what came back from them. The tab lives in the URL (`?tab=`), beside
-// the prototype variant (`?v=`), so a link opens the same screen.
+// to, and what came back from them. The tab lives in the URL (`?tab=`), so a
+// link opens the same screen.
 //
 // Drawn in the Projects/Library idiom, NOT the kit's: round 1 wrapped this page
 // in `WorldRoot world="obsidian"` and built it from components/kit parts — the
@@ -14,7 +14,6 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
 import { TabRail, type TabDef } from "@/components/ui/signal";
-import { VariantSwitch } from "@/components/ui/VariantSwitch";
 
 import { needsDecision } from "./calendarModel";
 import { ChannelsTab } from "./ChannelsTab";
@@ -96,7 +95,6 @@ export default function CalendarView() {
           )}
         </div>
       </main>
-      {tab === "schedule" && <VariantSwitch labels={["Broadcast week", "Channel runway", "Editorial agenda"]} />}
       <ToastTray toasts={toasts} onDismiss={dismiss} />
     </>
   );

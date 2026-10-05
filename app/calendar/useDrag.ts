@@ -5,10 +5,10 @@
 //
 // Not HTML5 drag-and-drop: its drag image is a translucent screenshot the page
 // cannot style, and its drop target is a cell, so a time grid could only land
-// on whole hours. A pointer drag lets the variant draw its own landing card at
+// on whole hours. A pointer drag lets the week draw its own landing card at
 // the snapped minute and name the time it will land on before the drop.
 //
-// The variant's `resolve` turns a pointer into a landing (a time, a column) in
+// The caller's `resolve` turns a pointer into a landing (a time, a column) in
 // the MOVE HANDLER, never during render: the geometry it needs is a DOM read,
 // and a DOM read during render is the impurity the React Compiler rules refuse.
 //

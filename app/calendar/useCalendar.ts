@@ -1,9 +1,8 @@
 "use client";
 
-// The calendar's data: four reads, four writes, one clock. Every tab and every
-// schedule variant draws from this one hook, so a slot moved in the week grid is
-// the same slot the lanes and the agenda show — there is no second copy to
-// drift.
+// The calendar's data: four reads, four writes, one clock. Every tab draws
+// from this one hook, so a slot moved in the week grid is the same slot the
+// Metrics tab counts — there is no second copy to drift.
 //
 // LINT SHAPE, deliberately: every setState below runs in a promise callback or
 // an event handler, never synchronously in an effect body. lint-baseline.json

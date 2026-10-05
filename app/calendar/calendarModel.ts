@@ -21,7 +21,6 @@
 import type { ChannelId, ScheduleSlot, SlotStatus } from "@/lib/publish/types";
 
 const p2 = (n: number): string => String(n).padStart(2, "0");
-const DAY_MS = 86_400_000;
 
 export const CHANNEL_IDS: readonly ChannelId[] = ["youtube", "tiktok", "instagram"];
 export const CHANNEL_NAME: Record<ChannelId, string> = { youtube: "YouTube", tiktok: "TikTok", instagram: "Instagram" };
@@ -89,14 +88,6 @@ function byTime(a: Pick<ScheduleSlot, "id" | "publishAt">, b: Pick<ScheduleSlot,
   return a.publishAt.localeCompare(b.publishAt) || a.id.localeCompare(b.id);
 }
 
-/** Where an instant falls along `days` days from `start`, as 0..1; null outside. */
-export function laneFraction(iso: string, start: Date, days = 28): number | null {
-  const t = new Date(iso).getTime();
-  if (Number.isNaN(t)) return null;
-  const f = (t - start.getTime()) / (days * DAY_MS);
-  return f >= 0 && f < 1 ? f : null;
-}
-
 /** The instant a slot dropped on (day, hour) moves to: that local hour, keeping
  *  the slot's own minutes so a 14:30 slot dragged one day later is still :30. */
 export function dropTarget(slot: Pick<ScheduleSlot, "publishAt">, day: Date, hour: number): string {
@@ -113,8 +104,6 @@ export function dropTarget(slot: Pick<ScheduleSlot, "publishAt">, day: Date, hou
  *  channel stopped being wired). StatReel's needsDecision counted drift too. */
 export const needsDecision = (s: Pick<ScheduleSlot, "status" | "error">): boolean =>
   s.status === "missed" || s.status === "failed" || (s.status === "scheduled" && s.error !== null);
-export const isUpcoming = (s: Pick<ScheduleSlot, "status">): boolean =>
-  s.status === "scheduled" || s.status === "publishing";
 /** PATCH accepts a new time on a scheduled slot, and on a missed one with the
  *  status reset (the HTTP contract: "reschedule a missed slot = status scheduled
  *  + new publishAt"). A failed slot is offered the same retry; the engine may
@@ -131,36 +120,6 @@ export function movePatch(
   publishAt: string,
 ): { publishAt: string; status?: "scheduled" } {
   return s.status === "scheduled" ? { publishAt } : { publishAt, status: "scheduled" };
-}
-
-export type SlotGroupKey = "decide" | "upcoming" | "history";
-export interface SlotGroup<T> {
-  key: SlotGroupKey;
-  label: string;
-  slots: T[];
-}
-const GROUP_LABEL: Record<SlotGroupKey, string> = {
-  decide: "Needs decision",
-  upcoming: "Upcoming",
-  history: "History",
-};
-
-/** The agenda's three groups. Needs-decision and Upcoming read soonest first;
- *  History newest first. Every group is returned, empty or not, so a variant can
- *  draw an honest empty group rather than a missing one. */
-export function slotGroups<T extends Pick<ScheduleSlot, "id" | "publishAt" | "status" | "error">>(
-  slots: readonly T[],
-): SlotGroup<T>[] {
-  const asc = [...slots].sort(byTime);
-  return [
-    { key: "decide", label: GROUP_LABEL.decide, slots: asc.filter(needsDecision) },
-    { key: "upcoming", label: GROUP_LABEL.upcoming, slots: asc.filter((s) => isUpcoming(s) && !needsDecision(s)) },
-    {
-      key: "history",
-      label: GROUP_LABEL.history,
-      slots: asc.filter((s) => !needsDecision(s) && !isUpcoming(s)).reverse(),
-    },
-  ];
 }
 
 /** One word per status, for the slot's own label (never colour alone). */
@@ -244,14 +203,6 @@ export function relWhen(iso: string, now: number): string {
   const h = Math.round(a / 3600);
   const v = m < 60 ? `${m} min` : h < 24 ? `${h} h` : `${Math.round(a / 86400)} d`;
   return d > 0 ? `in ${v}` : `${v} ago`;
-}
-
-export function fmtBytes(n: number): string {
-  if (!Number.isFinite(n) || n < 0) return "—";
-  if (n < 1024) return `${n} B`;
-  if (n < 1024 ** 2) return `${(n / 1024).toFixed(0)} KB`;
-  if (n < 1024 ** 3) return `${(n / 1024 ** 2).toFixed(1)} MB`;
-  return `${(n / 1024 ** 3).toFixed(2)} GB`;
 }
 
 /* ── metrics: null is unmeasured, a partial sum is a lower bound ─────────── */

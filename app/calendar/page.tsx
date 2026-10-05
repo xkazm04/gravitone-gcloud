@@ -10,7 +10,7 @@ export const metadata = {
 };
 
 // The Suspense boundary is required, not decorative: CalendarView reads
-// `useSearchParams` (the tab and the prototype variant live in the URL), and a
+// `useSearchParams` (the tab lives in the URL), and a
 // client component that does so needs a boundary above it in Next 16.
 export default function Page() {
   return (

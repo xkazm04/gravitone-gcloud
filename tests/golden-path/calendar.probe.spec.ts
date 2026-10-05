@@ -1,9 +1,10 @@
 // LANE — THE CALENDAR'S ARITHMETIC (dynamic).
 //
 // app/calendar/calendarModel.ts is the one place /calendar decides which day a
-// slot sits on, which group it waits in, where a drag lands, and how a missing
-// number is spelled. Every schedule variant draws from it, so a wrong bucket
-// here is wrong three times on screen. And app/calendar/publishClient.ts decides
+// slot sits on, whether it waits on a person, where a drag lands, and how a
+// missing number is spelled. The week grid, the slot sheet and the tab's count
+// all draw from it, so a wrong bucket here is wrong everywhere on screen. And
+// app/calendar/publishClient.ts decides
 // how an engine answer is told apart from a route that does not exist.
 //
 // All dates are built with LOCAL constructors, so the probe holds in any
@@ -26,17 +27,16 @@ import {
   fmtSigned,
   fmtWatch,
   fromLocalInput,
-  laneFraction,
   moveDefault,
   movePatch,
-  slotGroups,
+  needsDecision,
   speakFigure,
   splitTags,
   toLocalInput,
   weekStart,
 } from "@/app/calendar/calendarModel";
 import { createSlot, getSchedule } from "@/app/calendar/publishClient";
-import { activeSlotOf, atFraction, atMinute, exportName, onDay, packLanes } from "@/app/calendar/view";
+import { activeSlotOf, atMinute, exportName, stackClusters } from "@/app/calendar/view";
 import { dailySeries, groupSums, publicationTotals, snapshotsOf } from "@/lib/publish/metrics";
 import type { MetricSnapshot, Publication, ScheduleSlot, SlotStatus } from "@/lib/publish/types";
 
@@ -100,32 +100,16 @@ test.describe("week bucketing", () => {
     expect(new Date(to).getMinutes()).toBe(30);
   });
 
-  test("laneFraction: 0 at the window start, null outside it", () => {
-    const start = new Date(2026, 9, 5);
-    expect(laneFraction(start.toISOString(), start, 28)).toBe(0);
-    expect(laneFraction(iso(2026, 10, 19, 0), start, 28)).toBeCloseTo(0.5, 2);
-    expect(laneFraction(iso(2026, 11, 2, 0), start, 28)).toBeNull();
-    expect(laneFraction(iso(2026, 10, 4, 23), start, 28)).toBeNull();
-  });
 });
 
-test.describe("slot grouping and moves", () => {
-  test("slotGroups: decide = missed|failed|drifted, upcoming soonest first, history newest first, empty groups kept", () => {
-    const g = slotGroups([
-      slot("up2", iso(2026, 10, 9), "scheduled"),
-      slot("up1", iso(2026, 10, 8), "publishing"),
-      slot("miss", iso(2026, 10, 4), "missed"),
-      slot("fail", iso(2026, 10, 3), "failed"),
-      slot("old", iso(2026, 10, 1), "published"),
-      slot("new", iso(2026, 10, 2), "cancelled"),
-      { ...slot("drift", iso(2026, 10, 10), "scheduled"), error: "the export this slot publishes no longer exists" },
-    ]);
-    expect(g.map((x) => x.key)).toEqual(["decide", "upcoming", "history"]);
+test.describe("what waits on a person, and moves", () => {
+  test("needsDecision: missed, failed and drifted wait on a person; the rest do not", () => {
+    const at = iso(2026, 10, 9);
+    expect(needsDecision(slot("m", at, "missed"))).toBe(true);
+    expect(needsDecision(slot("f", at, "failed"))).toBe(true);
     // a drifted slot is still `scheduled`, but it will not fire: it waits on a person
-    expect(g[0].slots.map((s) => s.id)).toEqual(["fail", "miss", "drift"]);
-    expect(g[1].slots.map((s) => s.id)).toEqual(["up1", "up2"]);
-    expect(g[2].slots.map((s) => s.id)).toEqual(["new", "old"]);
-    expect(slotGroups([]).map((x) => x.slots.length)).toEqual([0, 0, 0]);
+    expect(needsDecision({ ...slot("d", at, "scheduled"), error: "the export this slot publishes no longer exists" })).toBe(true);
+    for (const st of ["scheduled", "publishing", "published", "cancelled"] as const) expect(needsDecision(slot(st, at, st))).toBe(false);
   });
 
   test("movePatch resets a missed or failed slot to scheduled; a scheduled one only moves", () => {
@@ -253,27 +237,26 @@ test.describe("publishClient: a missing route, a refusal and a network failure a
 
 });
 
-// app/calendar/view.ts is the drawing arithmetic the three schedule variants
-// share: where a drag lands, how slots that share an afternoon split a column,
-// what an export is called. A wrong snap here moves a slot to a time nobody
+// app/calendar/view.ts is the week grid's drawing arithmetic: where a drag
+// lands, which slots that share an afternoon stack into one card, what an
+// export is called. A wrong snap here moves a slot to a time nobody
 // asked for, so the landing is pinned as hard as the bucketing above.
-test.describe("drawing arithmetic: lanes, snaps, names", () => {
-  test("packLanes: overlapping items take separate lanes and learn their cluster's width", () => {
+test.describe("drawing arithmetic: stacks, snaps, names", () => {
+  test("stackClusters: overlapping items stack, earliest first; a clear one stands alone", () => {
     const at = (x: { t: number }) => x.t;
-    const placed = packLanes([{ t: 0 }, { t: 30 }, { t: 60 }, { t: 200 }], at, 90);
-    const by = new Map(placed.map((p) => [p.item.t, p]));
-    // 0..90, 30..120 and 60..150 all overlap: three lanes, each knowing it is one of three
-    expect(by.get(0)).toMatchObject({ lane: 0, lanes: 3 });
-    expect(by.get(30)).toMatchObject({ lane: 1, lanes: 3 });
-    expect(by.get(60)).toMatchObject({ lane: 2, lanes: 3 });
-    // a slot clear of the cluster stands alone, full width
-    expect(by.get(200)).toMatchObject({ lane: 0, lanes: 1 });
-    // two that only touch do not collide: 0..90 and 90..180
-    const touching = packLanes([{ t: 0 }, { t: 90 }], at, 90);
-    expect(touching.map((p) => p.lanes)).toEqual([1, 1]);
+    // given out of order on purpose: the stack reads in time order
+    const stacks = stackClusters([{ t: 60 }, { t: 200 }, { t: 0 }, { t: 30 }], at, 90);
+    // 0..90, 30..120 and 60..150 all overlap: one stack of three
+    expect(stacks.map((s) => s.map((x) => x.t))).toEqual([[0, 30, 60], [200]]);
+    // a chain joins one stack even where its ends do not overlap: 0..90 and
+    // 150..240 meet only through 80..170
+    expect(stackClusters([{ t: 0 }, { t: 80 }, { t: 150 }], at, 90).map((s) => s.length)).toEqual([3]);
+    // two that only touch do not stack: 0..90 and 90..180
+    expect(stackClusters([{ t: 0 }, { t: 90 }], at, 90).map((s) => s.length)).toEqual([1, 1]);
+    expect(stackClusters([], at, 90)).toEqual([]);
   });
 
-  test("atMinute snaps to the step inside the local day; atFraction snaps in local wall time", () => {
+  test("atMinute snaps to the step inside the local day", () => {
     const day = new Date(2026, 9, 7);
     const iso = atMinute(day, 14 * 60 + 37, 15);
     expect(new Date(iso).getHours()).toBe(14);
@@ -281,16 +264,9 @@ test.describe("drawing arithmetic: lanes, snaps, names", () => {
     // a drag past midnight is held inside the day, never rolled into the next
     expect(new Date(atMinute(day, 25 * 60, 15)).getDate()).toBe(7);
     expect(new Date(atMinute(day, -40, 15)).getHours()).toBe(0);
-    const start = new Date(2026, 9, 5);
-    const half = new Date(atFraction(start, 7, 0.5, 60)); // Thu 8 Oct 12:00 local
-    expect(half.getDate()).toBe(8);
-    expect(half.getHours()).toBe(12);
-    expect(half.getMinutes()).toBe(0);
   });
 
-  test("onDay keeps the local time of day; activeSlotOf ignores what can no longer fire", () => {
-    const moved = new Date(onDay(new Date(2026, 9, 6, 19, 30).toISOString(), new Date(2026, 9, 9)));
-    expect([moved.getDate(), moved.getHours(), moved.getMinutes()]).toEqual([9, 19, 30]);
+  test("activeSlotOf ignores what can no longer fire", () => {
     const slots = [
       { ...slot("m", iso(2026, 10, 5), "missed"), exportId: "x" },
       { ...slot("c", iso(2026, 10, 5), "cancelled"), exportId: "x" },

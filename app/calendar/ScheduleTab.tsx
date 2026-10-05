@@ -1,30 +1,25 @@
 "use client";
 
-// The Schedule tab: three directional variants over ONE data hook
-// (useCalendar), behind `?v=1|2|3` (components/ui/VariantSwitch — prototype
-// only, deleted when the round's winner is consolidated). The composer and the
-// slot sheet are the same components in all three; the variants differ in how
-// a week is LAID OUT and where those two live.
-//
-//   1 · Broadcast week   a time grid, drag to move, the composer beside it
-//   2 · Channel runway   one lane per channel along weeks, a drawer for detail
-//   3 · Editorial agenda the ready exports as a poster shelf, slots as a feed
+// The Schedule tab: the broadcast week (./BroadcastWeek.tsx) over ONE data
+// hook (useCalendar) — a time grid, drag to move, the composer and the slot
+// sheet beside it. The week won round 2 over a channel runway and an editorial
+// agenda (the operator's pick, 2026-10-05,
+// .vault/Spark/briefs/platform-consolidation/); this file keeps what the
+// prototypes shared — the toasts a move or cancel answers with, the preset an
+// empty hour hands the composer — so the week stays layout.
 
 import { useState } from "react";
 
-import { useVariant } from "@/components/ui/VariantSwitch";
 import type { Publication, ScheduleSlot } from "@/lib/publish/types";
 
 import { BroadcastWeek } from "./BroadcastWeek";
 import { CHANNEL_NAME, dateTimeLabel } from "./calendarModel";
-import { ChannelRunway } from "./ChannelRunway";
 import type { Preset } from "./Composer";
-import { EditorialAgenda } from "./EditorialAgenda";
 import type { Fetched } from "./publishClient";
 import { FailureCard, type PushToast } from "./ui";
 import { useProjectChoices, type Calendar, type ProjectChoice } from "./useCalendar";
 
-/** What every schedule variant is handed. */
+/** What the week is handed. */
 export interface ScheduleProps {
   cal: Calendar;
   slots: ScheduleSlot[];
@@ -41,7 +36,6 @@ export interface ScheduleProps {
 }
 
 export function ScheduleTab({ cal, now, push }: { cal: Calendar; now: number | null; push: PushToast }) {
-  const [v] = useVariant();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [preset, setPreset] = useState<Preset | undefined>(undefined);
   const projects = useProjectChoices();
@@ -83,7 +77,7 @@ export function ScheduleTab({ cal, now, push }: { cal: Calendar; now: number | n
   return (
     <div className="space-y-4">
       {cal.exports && !cal.exports.ok && <FailureCard r={cal.exports} onRetry={cal.reload} />}
-      {v === 3 ? <EditorialAgenda {...props} /> : v === 2 ? <ChannelRunway {...props} /> : <BroadcastWeek {...props} />}
+      <BroadcastWeek {...props} />
     </div>
   );
 }

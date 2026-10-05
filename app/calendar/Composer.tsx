@@ -1,14 +1,14 @@
 "use client";
 
-// THE ONE SCHEDULE FORM, shared by all three schedule variants: an export, a
-// channel, an instant, and the words the platform shows. The engine is the
+// THE SCHEDULE FORM, beside the broadcast week: an export, a channel, an
+// instant, and the words the platform shows. The engine is the
 // authority (it 409s a not_wired channel or an unknown export, and its refusal
 // is shown verbatim); the form only blocks what cannot be sent at all and warns
 // about what the engine will decide — a past time, a same-minute clash
 // (StatReel calendar.ts `checkSchedule`, one validation door).
 //
-// A variant can hand it a PRESET — an export picked off a shelf, a channel and
-// an hour clicked on a lane — as `{ nonce, ... }`. A new nonce resets the
+// The week can hand it a PRESET — an hour clicked on the grid — as
+// `{ nonce, ... }`. A new nonce resets the
 // fields to that preset; the same nonce leaves the person's edits alone.
 
 import { Lock, Plus } from "lucide-react";
@@ -20,8 +20,8 @@ import { Select } from "@/components/ui/Select";
 import { CHIP_CLASS, TALLY_TONE } from "@/components/ui/signal";
 import type { ChannelId, ExportRef, ScheduleSlot } from "@/lib/publish/types";
 
-import { dayKey, fmtBytes, fromLocalInput, nextFullHour, splitTags, timeLabel, toLocalInput } from "./calendarModel";
-import { Poster, aspectWord, usePoster } from "./poster";
+import { dayKey, fromLocalInput, nextFullHour, splitTags, timeLabel, toLocalInput } from "./calendarModel";
+import { Poster } from "./poster";
 import type { ChannelList, ExportList, Fetched, NewSlot } from "./publishClient";
 import { CHANNEL_STATUS_WORD, ChannelGlyph, CutAnExport, Refusal } from "./ui";
 import type { Load, ProjectChoice } from "./useCalendar";
@@ -43,11 +43,8 @@ export function Composer(props: {
   now: number | null;
   projects: ProjectChoice[] | null;
   preset?: Preset;
-  /** the shelf above already picks the export (V3): draw it, do not re-offer it */
-  exportPicker?: "strip" | "header";
   onCreate: (body: NewSlot) => Promise<Fetched<{ slot: ScheduleSlot }>>;
   onDone: (slot: ScheduleSlot) => void;
-  align?: "left" | "right";
 }) {
   // keyed by the preset's nonce: a new preset is a fresh form
   return <ComposerForm key={props.preset?.nonce ?? 0} {...props} />;
@@ -60,10 +57,8 @@ function ComposerForm({
   now,
   projects,
   preset,
-  exportPicker = "strip",
   onCreate,
   onDone,
-  align = "right",
 }: Parameters<typeof Composer>[0]) {
   const id = useId();
   const [exportPick, setExportPick] = useState<string | null>(preset?.exportId ?? null);
@@ -165,27 +160,23 @@ function ComposerForm({
 
   return (
     <form onSubmit={submit} aria-label="Schedule a slot" className="space-y-5" data-testid="calendar-schedule-form">
-      {exportPicker === "strip" ? (
-        <fieldset className="min-w-0 space-y-2">
-          <legend className="font-jetbrains mb-2 text-label tracking-[0.18em] text-white/45 uppercase">
-            Export <span className="tracking-normal text-white/30">{list.length}</span>
-          </legend>
-          <div role="radiogroup" aria-label="Export" className="scroll-x -mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pt-1 pb-2">
-            {list.map((x) => (
-              <ExportPick
-                key={x.id}
-                exp={x}
-                on={x.id === exportId}
-                busy={activeSlotOf(slots, x.id)}
-                projects={projects}
-                onPick={() => edited(setExportPick)(x.id)}
-              />
-            ))}
-          </div>
-        </fieldset>
-      ) : (
-        exp && <ExportHeader exp={exp} projects={projects} />
-      )}
+      <fieldset className="min-w-0 space-y-2">
+        <legend className="font-jetbrains mb-2 text-label tracking-[0.18em] text-white/45 uppercase">
+          Export <span className="tracking-normal text-white/30">{list.length}</span>
+        </legend>
+        <div role="radiogroup" aria-label="Export" className="scroll-x -mx-1 flex snap-x gap-2.5 overflow-x-auto px-1 pt-1 pb-2">
+          {list.map((x) => (
+            <ExportPick
+              key={x.id}
+              exp={x}
+              on={x.id === exportId}
+              busy={activeSlotOf(slots, x.id)}
+              projects={projects}
+              onPick={() => edited(setExportPick)(x.id)}
+            />
+          ))}
+        </div>
+      </fieldset>
 
       {exp && !exp.projectId && (
         <div>
@@ -243,7 +234,7 @@ function ComposerForm({
           onChange={edited(setWhen)}
           now={now}
           marks={marks}
-          align={align}
+          align="right"
           testId="calendar-schedule-when"
           describedBy={past || clash || taken ? warnId : undefined}
         />
@@ -268,7 +259,19 @@ function ComposerForm({
         <TextInput id={`${id}-t`} value={titleValue} onChange={(e) => edited(setTitle)(e.target.value)} maxLength={100} />
       </Field>
       <Field label="Description" htmlFor={`${id}-d`}>
-        <TextArea id={`${id}-d`} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={5000} />
+        {/* One line until it is written in, then as tall as its words up to a
+            cap: a three-row empty box was the tallest thing in the form and
+            pushed Schedule below the fold, for the one field most slots leave
+            empty. `field-sizing` grows it; `rows` is the floor where that
+            property is not supported. */}
+        <TextArea
+          id={`${id}-d`}
+          rows={1}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          maxLength={5000}
+          className="max-h-48 min-h-0 [field-sizing:content]"
+        />
       </Field>
       <div>
         <Field label="Tags" htmlFor={`${id}-tg`}>
@@ -347,24 +350,6 @@ function ExportPick({
       <span className={`font-hanken block truncate px-2.5 pt-1.5 text-label ${on ? "text-white" : "text-white/75 group-hover:text-white"}`}>{name}</span>
       <span className="font-jetbrains block px-2.5 pb-2 text-label text-white/35">{shortId(exp.id)}</span>
     </button>
-  );
-}
-
-/** The export a shelf already picked, drawn as the form's masthead. */
-function ExportHeader({ exp, projects }: { exp: ExportRef; projects: ProjectChoice[] | null }) {
-  const p = usePoster(exp.id);
-  const aspect = aspectWord(p);
-  return (
-    <div className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-2">
-      <Poster exportId={exp.id} fit="contain" className="aspect-video w-32 shrink-0 rounded-lg" />
-      <div className="min-w-0">
-        <p className="font-instrument truncate text-xl leading-tight text-white">{exportName(exp, projects)}</p>
-        <p className="font-jetbrains truncate text-label text-white/45">
-          {shortId(exp.id)} · {fmtBytes(exp.bytes)}
-          {aspect && ` · ${aspect}`}
-        </p>
-      </div>
-    </div>
   );
 }
 

@@ -1,16 +1,13 @@
 // THE CALENDAR'S DRAWING ARITHMETIC — pure, beside calendarModel.ts rather than
 // inside it. calendarModel decides what a slot IS (its day, its group, its
 // move); this file decides where a slot is DRAWN: how three slots in one
-// afternoon share a column, where a pointer lands on a time axis, what an
+// afternoon stack in a column, where a pointer lands on a time axis, what an
 // export is called on screen. None of it changes what goes over the wire, so
 // none of it belongs in the file the probe pins as the calendar's truth.
 
 import type { ExportRef, ScheduleSlot } from "@/lib/publish/types";
 
 import type { ProjectChoice } from "./useCalendar";
-
-const MIN_MS = 60_000;
-const DAY_MS = 86_400_000;
 
 /* ── naming an export ─────────────────────────────────────────────────── */
 
@@ -32,43 +29,32 @@ export function exportName(exp: Pick<ExportRef, "id" | "projectId"> | null, proj
 
 /* ── slots that share time ────────────────────────────────────────────── */
 
-export interface Placed<T> {
-  item: T;
-  /** column inside its cluster, 0-based */
-  lane: number;
-  /** how many columns its cluster needs */
-  lanes: number;
-}
-
-/** Greedy interval packing. Items are drawn `span` units long from `at(item)`;
- *  two that overlap take separate lanes, and every member of an overlapping
- *  cluster learns the cluster's width so the cards split it evenly. Used for
- *  the week grid (minutes) and the runway (pixels). */
-export function packLanes<T>(items: readonly T[], at: (t: T) => number, span: number): Placed<T>[] {
+/**
+ * Items drawn `span` units long from `at(item)`, gathered into the runs that
+ * overlap: each run is one STACK on the week grid, earliest first, and an item
+ * clear of its neighbours is a stack of one.
+ *
+ * A stack, not lanes. The round-2 week split an overlapping run into side-by-
+ * side lanes, and a day column is ~170px at 1920 — three slots at one evening
+ * hour drew as three 50px slivers reading "18 T…". One card at full width with
+ * the rest behind it, counted (`+2`), keeps every card legible; the others are
+ * a press away. Two that only touch (one ends as the next begins) do not
+ * stack.
+ */
+export function stackClusters<T>(items: readonly T[], at: (t: T) => number, span: number): T[][] {
   const sorted = [...items].sort((a, b) => at(a) - at(b));
-  const out: Placed<T>[] = [];
-  let cluster: Placed<T>[] = [];
-  let ends: number[] = [];
-  let clusterEnd = -Infinity;
-  const flush = () => {
-    const n = Math.max(1, ends.length);
-    for (const p of cluster) p.lanes = n;
-    out.push(...cluster);
-    cluster = [];
-    ends = [];
-  };
+  const out: T[][] = [];
+  let end = -Infinity;
   for (const item of sorted) {
     const start = at(item);
-    if (start >= clusterEnd) flush();
-    let lane = ends.findIndex((e) => e <= start);
-    if (lane < 0) {
-      lane = ends.length;
-      ends.push(start + span);
-    } else ends[lane] = start + span;
-    cluster.push({ item, lane, lanes: 1 });
-    clusterEnd = Math.max(clusterEnd, start + span);
+    if (start >= end) {
+      out.push([item]);
+      end = start + span;
+    } else {
+      out[out.length - 1].push(item);
+      end = Math.max(end, start + span);
+    }
   }
-  flush();
   return out;
 }
 
@@ -85,25 +71,6 @@ export function minuteOfDay(iso: string): number | null {
 export function atMinute(day: Date, minutes: number, step = 15): string {
   const m = Math.max(0, Math.min(24 * 60 - step, Math.round(minutes / step) * step));
   return new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, m, 0, 0).toISOString();
-}
-
-/** An instant along a window `days` long from `start`, from a 0..1 fraction,
- *  snapped to `stepMin` minutes. */
-export function atFraction(start: Date, days: number, f: number, stepMin: number): string {
-  const raw = start.getTime() + Math.max(0, Math.min(0.9999, f)) * days * DAY_MS;
-  const step = stepMin * MIN_MS;
-  // snap in LOCAL wall time: a 60-minute step should land on :00 in the
-  // viewer's zone, not on :00 UTC (which is :30 in half-hour zones)
-  const off = new Date(raw).getTimezoneOffset() * MIN_MS;
-  return new Date(Math.round((raw - off) / step) * step + off).toISOString();
-}
-
-/** Keep an instant's local time of day, move it to another local day. */
-export function onDay(iso: string, day: Date): string {
-  const t = new Date(iso);
-  const h = Number.isNaN(t.getTime()) ? 18 : t.getHours();
-  const m = Number.isNaN(t.getTime()) ? 0 : t.getMinutes();
-  return new Date(day.getFullYear(), day.getMonth(), day.getDate(), h, m, 0, 0).toISOString();
 }
 
 /** The active slot an export already holds on a channel (lib/publish/schedule.ts
