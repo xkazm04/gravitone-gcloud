@@ -7,8 +7,11 @@
 // alternative writes its plate back onto the frame, which is how the final
 // track is composed from choices rather than from last-write-wins.
 //
-// The store is keyed by frame id and persisted under its own phase key
-// (`frames-alts`), NOT inside the frames record: the two are written on
+// The store is keyed by frame id — the frame's PICTURE UNIT id since
+// frames-phase-A (../picture/unit.ts), derived from the render and the beat
+// rather than the position, so the kept plates of one render's third beat are
+// never offered under another render's third beat — and persisted under its
+// own phase key (`frames-alts`), NOT inside the frames record: the two are written on
 // different cadences, and plates are big — a scene with five kept alternatives
 // is ~1.5MB, and the frames record must stay readable without hauling every
 // rejected picture along.

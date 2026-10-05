@@ -31,10 +31,11 @@ import { useThemes } from "@/lib/useThemes";
 import { useAuth } from "@/lib/useAuth";
 
 import { PRESETS } from "@/app/library/presets";
+import { readRecord } from "../_shared/records/registry";
+import { saveRecord } from "../_shared/records/patch";
 import {
   readStep,
   reportStorageTrouble,
-  saveStep,
   type BeatPicksStepData,
   type ScriptAdoptionStepData,
   type StorageTrouble,
@@ -48,20 +49,22 @@ import {
   composedCount,
   emptyClip,
   explainerRender,
-  framesFor,
   framesLane,
   subjectFor,
   trailerRender,
-  withClips,
   type DirectionSpend,
   type Frame,
   type FrameElement,
   type FramesRender,
   type FrameText,
 } from "./frames";
+import { framesFromUnits, unitsFromFrames, unitsFromRender, type PictureUnit } from "./picture/unit";
+import { FRAMES_RECORD } from "./records";
 import { applySceneSpecs, reviewSceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
 
-const PHASE = "frames";
+/** This step's phase key — what it reports its progress under. Its record is
+ *  `FRAMES_RECORD` (./records), read and written only through the def. */
+const PHASE = FRAMES_RECORD.owner;
 /** Step 1's record — read here for ONE field, `mode`, and only for a `free`
  *  project, which is the single case the project record alone cannot route. */
 const PICKS_PHASE = "research-beats";
@@ -112,8 +115,17 @@ export interface PlateResult {
  *  at the reader, which is the only thing that keeps the two in step — a second
  *  hand-written copy of a persisted shape drifts the moment a field is added.
  *  Nothing but this hook WRITES it; a downstream step that seeded an upstream
- *  step's record would be inventing the artifact it exists to read. */
+ *  step's record would be inventing the artifact it exists to read.
+ *
+ *  v2 (frames-phase-A): the cut is `units` — picture units with an identity
+ *  and a place on the film (./picture/unit.ts). `frames` is their read-only
+ *  SHADOW, rebuilt from the units on every read and written beside them on
+ *  every save, for the readers that have not moved to units yet (Score, Cut,
+ *  the board). Read and written through `FRAMES_RECORD` (./records), whose
+ *  migration walks a v1 record up at the read seam. */
 export interface FramesStepData {
+  units: PictureUnit[];
+  /** Shadow of `units`' beat units. Read it; never write it on its own. */
   frames: Frame[];
   /** Which script render the frames were derived from. A different render is a
    *  different cut, so the frames are stale rather than merely out of date. */
@@ -124,6 +136,13 @@ export interface FramesStepData {
   direction?: DirectionSpend;
   savedAt?: number;
 }
+
+/** The frames a chain derives, named as picture units: the fixture is
+ *  re-resolved from the source's OWN id (for an explainer, the adopted render),
+ *  and a trailer source derives no FRAMES — its units are shots, which this
+ *  step does not draw as frames yet (stage 3 of frames-phase-A). */
+const derive = (source: FramesRender): Frame[] =>
+  framesFromUnits(unitsFromRender(source, resolveExplainerRender(source.id)));
 
 export function useFrames(projectId: string) {
   const { user } = useAuth();
@@ -273,17 +292,33 @@ export function useFrames(projectId: string) {
     };
   }, [projectId]);
 
+  /** The cut exactly as it was READ — the same array and spend objects handed
+   *  to state — or null when what is on screen was derived rather than read.
+   *  While both are still identical (`===`) nothing has been edited, and the
+   *  save below writes nothing: a stored record is rewritten when somebody
+   *  changes it, never because somebody opened it. That is what lets a v1
+   *  record sit on disk as v1 until its first edit (./picture/migrate.ts). */
+  const asRead = useRef<{ frames: Frame[]; direction: DirectionSpend | null } | null>(null);
+
   useEffect(() => {
     if (!source) return;
     let alive = true;
     void (async () => {
-      const read = await readStep<FramesStepData>(projectId, PHASE);
+      // Through the def: a v1 record arrives as v2 (migrated in memory, not on
+      // disk), and a record this build cannot read is REFUSED rather than cast.
+      const read = await readRecord(FRAMES_RECORD, projectId);
       if (!alive) return;
       if (!read.ok) {
         // Nothing is derived and nothing is armed — see the save effect's gate.
         // The step says it cannot read rather than showing an empty ledger,
-        // which would read as "this project has no frames".
-        setLoadTrouble(read.trouble);
+        // which would read as "this project has no frames". A REFUSED record
+        // (a newer build's, or one that does not parse) is the same situation
+        // with a different cause: on disk, not ours to draw or to overwrite.
+        setLoadTrouble(
+          "refused" in read
+            ? { kind: "failed", op: "read", projectId, phase: PHASE, message: read.detail, at: Date.now() }
+            : read.trouble,
+        );
         setStepLoaded(true);
         return;
       }
@@ -293,22 +328,17 @@ export function useFrames(projectId: string) {
       // what retires the explainer frames a TRAILER project accumulated while
       // this step handed every project `RENDERS[0]`: the chain id changed, so
       // they read as stale, which is exactly what they are.
-      const sameCut = Boolean(stored?.frames?.length && stored.renderId === source.id);
-      setFrames(
-        sameCut && stored
-          ? // A cut stored before Frames inherited the clip has no clip on it.
-            withClips(stored.frames)
-          : // The fixture is re-resolved from the source's OWN id: for an
-            // explainer, `source.id` is the adopted render's id, so the frames
-            // derive from the chain the adoption points at rather than the
-            // positional default. A trailer source derives no frames and the
-            // argument is unread on that branch.
-            framesFor(source, resolveExplainerRender(source.id)),
-      );
+      const sameCut = Boolean(stored?.units?.length && stored.renderId === source.id);
+      // The units' beat projection; a v1 record's missing clips were filled by
+      // its migration on the way in.
+      const next = sameCut && stored ? framesFromUnits(stored.units) : derive(source);
       // The spend belongs to the cut it directed. A different render throws the
       // frames away, and carrying its bill onto the new ones would be the same
       // lie as omitting it — a figure that describes work not on screen.
-      setDirection(sameCut ? (stored?.direction ?? null) : null);
+      const spend = sameCut ? (stored?.direction ?? null) : null;
+      asRead.current = sameCut ? { frames: next, direction: spend } : null;
+      setFrames(next);
+      setDirection(spend);
       setStepLoaded(true);
     })();
     return () => {
@@ -329,9 +359,15 @@ export function useFrames(projectId: string) {
     // memory — nothing — and writing that to the key would replace a stored cut
     // we could not read with one we invented.
     if (loadTrouble) return;
+    // AND not while the cut is still exactly what was read — see `asRead`.
+    if (asRead.current && frames === asRead.current.frames && direction === asRead.current.direction) return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
-      void saveStep<FramesStepData>(projectId, PHASE, {
+      void saveRecord(FRAMES_RECORD, projectId, {
+        // Units are the record; `frames` is their shadow for the readers that
+        // have not moved yet. The units keep each frame's id — see
+        // `unitsFromFrames` for why an id is never re-minted on save.
+        units: unitsFromFrames(frames, { sourceId: source.id, totalS: source.durationS }),
         frames,
         renderId: source.id,
         ...(direction ? { direction } : {}),
@@ -531,7 +567,7 @@ export function useFrames(projectId: string) {
   const reset = useCallback(() => {
     // Nothing to reset to until the chain is known — and re-deriving against
     // `UNRESOLVED` would empty the ledger over a cut that is merely still loading.
-    if (source) setFrames(framesFor(source, resolveExplainerRender(source.id)));
+    if (source) setFrames(derive(source));
   }, [source]);
 
   /* ── authoring ──────────────────────────────────────────────────────────── */
