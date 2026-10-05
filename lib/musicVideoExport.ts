@@ -41,29 +41,35 @@
 // by ffmpeg's own `-i frame_%06d.png` glob, is the boring and correct choice;
 // the directory is removed in a `finally` whether the mux succeeds or not.
 
-import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
-import { tmpdir } from "node:os";
 import path from "node:path";
-import { promisify } from "node:util";
 
 import ts from "typescript";
-import { chromium, type Browser, type Page } from "playwright";
+import type { Browser, Page } from "playwright";
 
-import { canSpawnLocalBinaries, describePosture, localPosture } from "./deployment";
+import {
+  ExportError,
+  assertCanSpawn,
+  cleanUpExport,
+  landExport,
+  launchHeadless,
+  makeWorkDir,
+  partialPath,
+  run,
+  videoArgs,
+  withEncoderFallback,
+  type Encoder,
+} from "./export/headless";
 import type { AudioEnvelope } from "./audioEnvelope";
 import type { EffectParams } from "@/app/_phases/frames/music-video/compositor";
 
-const run = promisify(execFile);
-
-export class ExportError extends Error {
-  constructor(message: string, readonly code: string) {
-    super(message);
-    this.name = "ExportError";
-  }
-}
+// The browser launch, scratch dir, encoder fallback, atomic landing and sidecar
+// live in the shared kernel (lib/export/headless.ts) since the Cut's animatic
+// export needed the same five. `ExportError` is re-exported so every caller
+// that catches it from here keeps catching the one class.
+export { ExportError };
 
 /** `resolution-as-stage-property` (the registry law the idea note cites): the
  *  ladder varies SIZE, never shape. Every tier keeps the poster's own aspect by
@@ -98,7 +104,7 @@ export interface ExportRequest {
 
 export interface ExportResult {
   id: string;
-  encoder: "h264_nvenc" | "libx264";
+  encoder: Encoder;
   width: number;
   height: number;
   frameCount: number;
@@ -263,13 +269,9 @@ async function setUpRenderPage(page: Page, req: ExportRequest, width: number, he
  *  buffers ffmpeg's stderr in memory, and `-loglevel error` keeps that small
  *  regardless, but a bad mux can still print a lot on the way out. */
 async function muxOnce(opts: {
-  framesDir: string; fps: number; audioPath: string; outPath: string; encoder: "h264_nvenc" | "libx264";
+  framesDir: string; fps: number; audioPath: string; outPath: string; encoder: Encoder;
 }): Promise<void> {
   const { framesDir, fps, audioPath, outPath, encoder } = opts;
-  const videoArgs =
-    encoder === "h264_nvenc"
-      ? ["-c:v", "h264_nvenc", "-preset", "p5", "-rc", "vbr", "-cq", "19", "-b:v", "0"]
-      : ["-c:v", "libx264", "-preset", "medium", "-crf", "18"];
   await run(
     "ffmpeg",
     [
@@ -277,7 +279,7 @@ async function muxOnce(opts: {
       "-framerate", String(fps),
       "-i", path.join(framesDir, "f%06d.png"),
       "-i", audioPath,
-      ...videoArgs,
+      ...videoArgs(encoder),
       "-pix_fmt", "yuv420p",
       "-c:a", "aac", "-b:a", "384k", "-ar", "48000",
       // SINGLE-PASS loudnorm, not two-pass. Two-pass measures the real input
@@ -306,32 +308,19 @@ async function muxOnce(opts: {
  * failure) is left to wrap into a generic 500 by the route.
  */
 export async function runExport(req: ExportRequest): Promise<ExportResult> {
-  if (!canSpawnLocalBinaries()) {
-    throw new ExportError(
-      `Export needs to spawn a headless browser and ffmpeg on this machine, and it cannot: ${describePosture(localPosture())}.`,
-      "local-binaries-forbidden",
-    );
-  }
+  assertCanSpawn("Export needs to spawn a headless browser and ffmpeg on this machine");
 
   const { width, height } = EXPORT_RESOLUTIONS[req.resolution];
   const id = randomUUID();
   const t0 = Date.now();
-  const workDir = await mkdtemp(path.join(tmpdir(), "mv-export-"));
+  const workDir = await makeWorkDir("mv-export-");
   const framesDir = path.join(workDir, "frames");
   let browser: Browser | undefined;
 
   try {
     await mkdir(framesDir, { recursive: true });
 
-    try {
-      browser = await chromium.launch({ headless: true });
-    } catch (e) {
-      throw new ExportError(
-        `Headless Chromium failed to launch: ${e instanceof Error ? e.message : String(e)}. ` +
-          `Run "npx playwright install chromium" on this machine.`,
-        "playwright-launch-failed",
-      );
-    }
+    browser = await launchHeadless();
 
     const page = await browser.newPage({ viewport: { width, height } });
     await setUpRenderPage(page, req, width, height);
@@ -356,31 +345,22 @@ export async function runExport(req: ExportRequest): Promise<ExportResult> {
     // being written must not carry that name. `<uuid>.partial.mp4` fails the
     // listing's id pattern and keeps the extension ffmpeg infers the container
     // from; the rename within one directory is atomic.
-    const outPath = path.join(OUT_ROOT, `${id}.partial.mp4`);
+    const outPath = partialPath(OUT_ROOT, id);
 
     const muxStart = Date.now();
-    let encoder: "h264_nvenc" | "libx264" = "h264_nvenc";
-    try {
-      await muxOnce({ framesDir, fps: req.envelope.fps, audioPath, outPath, encoder });
-    } catch (e) {
-      // NVENC can fail to init for reasons that have nothing to do with the
-      // encode itself (driver mismatch, another process holding the session
-      // the consumer-grade NVENC concurrency cap allows) — fall back to the
-      // software encoder rather than failing the whole export, and SAY which
-      // one actually ran (the brief's own requirement). The original failure
-      // still goes to the server log — a silent fallback would hide a real
-      // driver regression behind "it worked anyway".
-      console.warn("[music-video/export] h264_nvenc failed, falling back to libx264:", e instanceof Error ? e.message : e);
-      encoder = "libx264";
-      await muxOnce({ framesDir, fps: req.envelope.fps, audioPath, outPath, encoder });
-    }
+    // NVENC first, libx264 once if NVENC cannot start; the kernel logs the
+    // NVENC failure and the result SAYS which encoder actually ran.
+    const encoder = await withEncoderFallback("music-video/export", (enc) =>
+      muxOnce({ framesDir, fps: req.envelope.fps, audioPath, outPath, encoder: enc }),
+    );
     const muxMs = Date.now() - muxStart;
 
-    if (req.projectId) {
-      await writeFile(path.join(OUT_ROOT, `${id}.json`), JSON.stringify({ projectId: req.projectId }, null, 2));
-    }
-    await rename(outPath, finalPath);
-    const st = await stat(finalPath);
+    const { sizeBytes } = await landExport({
+      root: OUT_ROOT,
+      id,
+      finalPath,
+      ...(req.projectId ? { sidecar: { projectId: req.projectId } } : {}),
+    });
     return {
       id,
       encoder,
@@ -392,13 +372,11 @@ export async function runExport(req: ExportRequest): Promise<ExportResult> {
       wallMs: Date.now() - t0,
       captureMs,
       muxMs,
-      sizeBytes: st.size,
+      sizeBytes,
     };
   } finally {
-    await browser?.close().catch(() => {});
-    await rm(workDir, { recursive: true, force: true }).catch(() => {});
     // a mux that died leaves its partial file; after a successful rename this is a no-op
-    await rm(path.join(OUT_ROOT, `${id}.partial.mp4`), { force: true }).catch(() => {});
+    await cleanUpExport({ browser, workDir, root: OUT_ROOT, id });
   }
 }
 
