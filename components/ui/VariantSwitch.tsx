@@ -51,7 +51,7 @@ export function VariantSwitch({ labels }: { labels: [string, string, string] }) 
             aria-checked={on}
             onClick={() => set(n)}
             className={`rounded-full px-3 py-1 transition-colors ${
-              on ? "bg-[var(--gt-wash)] text-[var(--gt-ink-bright)]" : "text-[var(--gt-ink)] hover:text-[var(--gt-ink-bright)]"
+              on ? "bg-[var(--gt-wash)] text-[var(--gt-ink-bright)]" : "text-[var(--gt-ink-bright)]/60 hover:text-[var(--gt-ink-bright)]"
             }`}
           >
             {n} · {label}

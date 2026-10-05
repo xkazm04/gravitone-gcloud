@@ -62,30 +62,30 @@
 [data-world="almanac"] .k-callout figcaption { margin-top: 8px; color: var(--al-vellum); }
 
 /* ---------- toast tray ---------- */
-[data-world="almanac"] .k-toasts {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toasts {
   position: fixed; right: var(--k-pad, 24px); bottom: 96px; z-index: 60; display: flex; flex-direction: column; gap: 10px;
   margin: 0; padding: 0; list-style: none; width: min(420px, calc(100vw - 32px));
 }
-[data-world="almanac"] .k-toasts--inline { position: static; width: 100%; max-width: 460px; }
-[data-world="almanac"] .k-toast {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toasts--inline { position: static; width: 100%; max-width: 460px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast {
   --k-to: var(--al-line-strong); display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: start;
   padding: 12px 12px 12px 14px; border: 1px solid var(--k-to); border-left-width: 3px; border-radius: 3px;
   background: color-mix(in srgb, var(--al-deep) 94%, var(--al-white)); color: var(--al-white);
   box-shadow: 0 10px 32px color-mix(in srgb, var(--al-deep) 70%, transparent);
 }
-[data-world="almanac"] .k-toast--ok { --k-to: var(--al-ald); }
-[data-world="almanac"] .k-toast--failed { --k-to: var(--al-ant); }
-[data-world="almanac"] .k-toast--info { --k-to: var(--al-gold); }
-[data-world="almanac"] .k-toast__mark { padding-top: 2px; }
-[data-world="almanac"] .k-toast__body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
-[data-world="almanac"] .k-toast__text { margin: 0; font-size: var(--k-fs-c); line-height: 1.4; overflow-wrap: anywhere; }
-[data-world="almanac"] .k-toast--failed .k-toast__text { color: var(--al-ant-t); font-weight: 500; }
-[data-world="almanac"] .k-toast__act { display: flex; gap: 8px; }
-[data-world="almanac"] .k-toast__x {
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast--ok { --k-to: var(--al-ald); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast--failed { --k-to: var(--al-ant); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast--info { --k-to: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast__mark { padding-top: 2px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast__body { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast__text { margin: 0; font-size: var(--k-fs-c); line-height: 1.4; overflow-wrap: anywhere; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast--failed .k-toast__text { color: var(--al-ant-t); font-weight: 500; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast__act { display: flex; gap: 8px; }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast__x {
   background: none; border: 1px solid transparent; border-radius: 3px; color: var(--al-white); cursor: pointer;
   width: 32px; height: 32px; display: grid; place-items: center; font-size: 1.125rem; line-height: 1;
 }
-[data-world="almanac"] .k-toast__x:hover { border-color: var(--al-gold); }
+:is([data-world="almanac"], [data-world="obsidian"]) .k-toast__x:hover { border-color: var(--al-gold); }
 
 /* specimen layout on /kit */
 [data-world="almanac"] .kr-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 260px), 1fr)); gap: 18px; }
