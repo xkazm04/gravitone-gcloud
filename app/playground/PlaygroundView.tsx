@@ -23,7 +23,7 @@
 // Music first; SFX is the same three jobs with shorter takes, a loop flag and
 // its own rubric, so the kind is one switch at the top rather than a module.
 
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useId, useMemo, useState } from "react";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -157,28 +157,36 @@ export default function PlaygroundView() {
 }
 
 /** music | sfx — a segmented pair, not a tab: it filters every module rather
- *  than choosing one, so it sits in the rail's `trailing` slot. */
+ *  than choosing one, so it sits in the rail's `trailing` slot. Native radios
+ *  (sr-only inside the pill labels) so the arrow keys and the single tab stop
+ *  are the browser's; `role="radio"` on buttons promised both and did neither.
+ *  The test id sits on the label: it is the visible, clickable target. */
 function KindSwitch({ kind, onKind }: { kind: SoundKind; onKind: (k: SoundKind) => void }) {
+  const name = useId();
   return (
-    <div role="radiogroup" aria-label="sound kind" className="ml-auto inline-flex rounded-full border border-white/10 bg-white/[0.03] p-0.5">
+    <fieldset aria-label="sound kind" className="ml-auto inline-flex rounded-full border border-white/10 bg-white/[0.03] p-0.5">
       {KINDS.map((k) => {
         const on = k === kind;
         return (
-          <button
+          <label
             key={k}
-            type="button"
-            role="radio"
-            aria-checked={on}
             data-testid={`kind-${k}`}
-            onClick={() => onKind(k)}
-            className={`cursor-pointer rounded-full px-4 py-1 font-jetbrains text-label transition ${
+            className={`cursor-pointer rounded-full px-4 py-1 font-jetbrains text-label transition has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 ${
               on ? "bg-cyan-400/15 text-cyan-100 shadow-[0_0_12px] shadow-cyan-400/15" : "text-white/50 hover:text-white/80"
             }`}
           >
-            {k === "music" ? "music" : "sfx"}
-          </button>
+            <input
+              type="radio"
+              name={name}
+              value={k}
+              checked={on}
+              onChange={() => onKind(k)}
+              className="sr-only"
+            />
+            {k}
+          </label>
         );
       })}
-    </div>
+    </fieldset>
   );
 }
