@@ -38,6 +38,8 @@
 //   login-stderr  a login complaint on stderr, exit 1
 //   exit:N        the turn's `stderr` (if any) on stderr, exit N
 //   slow          waits `slowMs` (default 2000), then as `ok`
+//   stream        the turn's `stream` events as stream-json lines, exit 0 —
+//                 the retrieval door's output (waits `slowMs` first if set)
 //
 // A turn may carry `resultJson` instead of a string `envelope.result`; it is
 // serialised here, so a hand-written cassette does not have to hold JSON
@@ -146,6 +148,21 @@ async function main() {
   const mode = String(turn.mode ?? "ok");
 
   if (mode === "slow") await new Promise((r) => setTimeout(r, Number(turn.slowMs ?? 2000)));
+  if (mode === "stream") {
+    // The retrieval door's shape (research-run-engine-B): stream-json, one
+    // event per line. `slowMs` holds the stream back so a cancel can land
+    // while a run is in flight.
+    if (turn.slowMs) await new Promise((r) => setTimeout(r, Number(turn.slowMs)));
+    const events = Array.isArray(turn.stream) ? turn.stream : [];
+    const lines = events.map((e) =>
+      JSON.stringify(
+        e && e.type === "result" && e.result === undefined && turn.resultJson !== undefined
+          ? { ...e, result: JSON.stringify(turn.resultJson) }
+          : e,
+      ),
+    );
+    return finish(process.stdout, lines.join(NL) + NL, 0);
+  }
   if (mode === "ok" || mode === "slow" || mode === "is_error")
     return finish(process.stdout, envelopeOf(turn, mode === "is_error"), 0);
   if (mode === "not-json")

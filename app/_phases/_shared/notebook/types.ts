@@ -66,6 +66,11 @@ export interface FactSource {
   locator?: string;
   /** Interest is NOT unreliability. A disclosure is self-published AND authoritative. */
   interested?: boolean;
+  /** The address a RETRIEVAL run fetched this source at (research-run-engine-B).
+   *  Checked against the run's receipts by lib/notebook/validate.ts::
+   *  crossCheckRetrieval: a `high` fact citing a URL nobody fetched is
+   *  downgraded. Absent on reasoned notebooks and on the run-1 fixture. */
+  url?: string;
 }
 
 /** A dated, sourced, one-line claim. `loadBearing` + `low` confidence is the
