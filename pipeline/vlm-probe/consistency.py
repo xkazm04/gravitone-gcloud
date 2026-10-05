@@ -49,6 +49,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import guard  # noqa: E402
+import lane_record  # noqa: E402
 
 HERE = Path(__file__).parent
 SHOTS = HERE / "shots"
@@ -244,6 +245,19 @@ def stage_reference(path):
 def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full", late=0.0, tag=""):
     out = SHOTS / (lane + ("-zoom" if zoom else "") + tag)
     out.mkdir(parents=True, exist_ok=True)
+    lane_json_path = out / "lane.json"
+    if lane_json_path.exists():
+        lane_record.check_resume(lane_json_path, {
+            "lane": lane, "steps": steps, "seed": seed, "zoom": zoom,
+            "ref_crop": ref_crop, "reference_joins_at": late, "tag": tag
+        })
+    else:
+        lane_record.record_stills(
+            out_dir=out, lane=lane, seed=seed, steps=steps, refs=[],
+            ref_crop=ref_crop, late=late, zoom=zoom, tag=tag,
+            character=CHARACTER, location=LOCATION
+        )
+
     if not guard.start_comfy():
         raise RuntimeError("comfyui would not come up")
 
@@ -266,29 +280,33 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full"
         refs = [stage_reference(hero_path)] * max(1, ref_count)
         print(f"  referencing {len(refs)} copy/copies of the hero still")
 
-    for name, clause in (ZOOM_SPEC if zoom else SHOTS_SPEC):
+    spec = ZOOM_SPEC if zoom else SHOTS_SPEC
+    for name, clause in spec:
         dest = out / f"{name}.png"
+        prompt = prompt_for(clause)
         if dest.exists():
             print(f"  {name}: already generated, skipping")
             continue
         if not guard.headroom_ok():
             guard.recycle_comfy("headroom dropped mid-lane")
         t = time.time()
-        src = generate(flux_workflow(prompt_for(clause), seed, refs=refs,
+        src = generate(flux_workflow(prompt, seed, refs=refs,
                                      steps=steps, prefix=f"{lane}-{name}", late=late))
         shutil.copyfile(src, dest)
+        lane_record.write_shot(out, name, dest, prompt,
+                               steps=steps, seed=seed, late=late, prefix=f"{lane}-{name}")
         print(f"  {name}: {time.time() - t:.0f}s -> {dest}")
 
-    (out / "lane.json").write_text(json.dumps({
-        "lane": lane, "seed": seed, "steps": steps, "references": refs,
-        "ref_crop": ref_crop, "reference_joins_at": late,
-        "character": CHARACTER, "location": LOCATION,
-        "shots": {n: prompt_for(c) for n, c in (ZOOM_SPEC if zoom else SHOTS_SPEC)},
-    }, indent=2), encoding="utf-8")
+    rec = lane_record.read(out) if lane_json_path.exists() else {}
+    lane_record.record_stills(
+        out_dir=out, lane=lane, seed=seed, steps=steps, refs=refs,
+        ref_crop=ref_crop, late=late, zoom=zoom, tag=tag,
+        character=CHARACTER, location=LOCATION, shots=rec.get("shots", {})
+    )
     print(f"\n  lane written to {out}\n  now score it:  python identity.py --set shots/{lane}")
 
 
-def main():
+def build_arg_parser():
     ap = argparse.ArgumentParser()
     ap.add_argument("--lane", required=True, choices=["baseline", "reference"])
     ap.add_argument("--refs", type=int, default=1, help="how many copies of the hero to chain")
@@ -299,6 +317,11 @@ def main():
     ap.add_argument("--late", type=float, default=0.0,
                     help="fraction of denoising the text gets alone before the reference joins")
     ap.add_argument("--tag", default="", help="suffix for the output directory")
+    return ap
+
+
+def main():
+    ap = build_arg_parser()
     args = ap.parse_args()
     run_lane(args.lane, ref_count=args.refs, steps=args.steps, seed=args.seed,
              zoom=args.zoom, ref_crop=args.ref_crop, late=args.late, tag=args.tag)

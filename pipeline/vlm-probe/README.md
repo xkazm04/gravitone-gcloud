@@ -73,6 +73,10 @@ python probe.py --repeat 3                          # also measure self-consiste
 
 # 3. judge
 python score.py --run <run-id> --show-disagreements
+
+# 4. replay or verify a lane
+python lane_record.py replay shots/reference-face-e25   # print exact invocation
+python lane_record.py check shots/reference-face-e25    # verify pixel checksums
 ```
 
 Local models are pulled with `ollama pull <tag>` and must be vision-capable.
