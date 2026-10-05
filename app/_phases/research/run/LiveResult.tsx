@@ -32,8 +32,8 @@
 //
 // ── WHAT THIS CARD DOES NOT DO ─────────────────────────────────────────────
 //
-// It does not unlock the triage board, and the line at its foot says so. The
-// board, the conclusions deck and the scope arithmetic are all built from the
+// It does not feed the downstream cards, and the line at its foot says so. The
+// triage board (expert face), the takes (guided face), the conclusions deck and the scope arithmetic are all built from the
 // SHIPPED FIXTURE (`_shared/notebook/cards.ts`), so dealing them under a
 // creator's own topic would put Bitcoin cards behind their heading — the exact
 // substitution this step already fights. Wiring the board onto a live notebook
@@ -43,6 +43,7 @@ import { useEffect, useState } from "react";
 
 import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
+import { NOTEBOOK } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
 import type { EngineReceipt, LiveState } from "./live";
 import { secs } from "./useResearchRun";
@@ -234,7 +235,7 @@ export default function LiveResult({ state }: { state: LiveState }) {
               built from the shipped fixture, and pretending otherwise would be
               the substitution this step exists to refuse. */}
           <p className="font-jetbrains mt-1.5 text-label text-white/30">
-            saved with this project · the triage board below still reads the saved 2026-08-11 run
+            saved with this project · the takes deal from the {NOTEBOOK.researched} stand-in
           </p>
         </div>
       </div>
