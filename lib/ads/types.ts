@@ -61,7 +61,13 @@ export const EMPTY_BRIEF: AdBrief = {
 
 /* ── Round 1: ideas ───────────────────────────────────────────────────────── */
 
+// `analogy` (pictorial analogy) is the most frequent creativity template among
+// award-winning ads — registry ad-concept-ideation/angle-template-seeding. More
+// angles than ideas on purpose: the generator assigns AD_IDEA_COUNT distinct
+// angles per run, and `problem-solution` (the category default) only when the
+// problem is shown at an extreme or by analogy.
 export const AD_ANGLES = [
+  "analogy",
   "twist",
   "exaggeration",
   "demo",
