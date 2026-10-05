@@ -45,7 +45,7 @@
 import { NOTEBOOK, UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
 import { conclusionIssues } from "../_shared/notebook/conclusions";
 import type { Conclusion } from "../_shared/notebook/conclusions";
-import type { Fact, Unknown } from "../_shared/notebook/types";
+import type { Fact, ScaleConversion, Unknown } from "../_shared/notebook/types";
 import type { Beat } from "./types";
 
 /* ───────────────────────────── what the gate reads ──────────────────────────
@@ -342,9 +342,12 @@ const PERSON_WORDS = /\b(people|person|investors?|believers?|holders who|familie
  *  conclusion about "people who believed in it". Three hops, no flag. The step
  *  built to make a number felt is also a laundering path from measured data to
  *  imputed human intent. */
-export function checkScalePromotion(r: GateSubject): GateFinding[] {
+export function checkScalePromotion(
+  r: GateSubject,
+  scaleConversions: readonly ScaleConversion[] = NOTEBOOK.scaleConversions ?? [],
+): GateFinding[] {
   const out: GateFinding[] = [];
-  for (const sc of NOTEBOOK.scaleConversions ?? []) {
+  for (const sc of scaleConversions) {
     const rawIsHuman = PERSON_WORDS.test(sc.raw);
     const feltIsHuman = PERSON_WORDS.test(sc.felt);
     if (feltIsHuman && !rawIsHuman) {
@@ -395,9 +398,13 @@ export function checkConclusions(
 /** Every figure a viewer hears should exist somewhere in the notebook. This is
  *  the weakest check here and it is honest about that: it matches digits, so a
  *  spelled-out number is reported `unmeasured` rather than passed. */
-export function checkTraceability(r: GateSubject, facts: Fact[]): GateFinding[] {
+export function checkTraceability(
+  r: GateSubject,
+  facts: Fact[],
+  scaleConversions: readonly ScaleConversion[] = NOTEBOOK.scaleConversions ?? [],
+): GateFinding[] {
   const corpus = facts.map((f) => f.claim).join(" ") +
-    " " + (NOTEBOOK.scaleConversions ?? []).map((s) => `${s.raw} ${s.felt}`).join(" ");
+    " " + scaleConversions.map((s) => `${s.raw} ${s.felt}`).join(" ");
   const out: GateFinding[] = [];
   const seen = new Set<string>();
 
@@ -432,6 +439,64 @@ export function checkTraceability(r: GateSubject, facts: Fact[]): GateFinding[] 
   return out;
 }
 
+/* ─────────────────── 7 · connectors — AND THEN must be zero ─────────────────
+   The one law (knowledge/CRAFT-BASELINE.md § 1), on the explainer's chain. The
+   trailer has carried its own spelling since trailer/structure.ts; the
+   explainer gate never read `Beat.connector` at all, because every chain it saw
+   was transcribed by hand and its self-check row said "pass". A COMPOSED chain
+   is written by a model, so the law has to be a function — and it is this one,
+   called by lib/script/validate.ts::parseDraft on the way in and by runGate on
+   the way out, so the door and the boundary cannot disagree about a beat.
+
+   Same verdicts as the trailer's: AND THEN (or any word that is not a
+   connector) is a violation; an undeclared link past the first beat is
+   UNMEASURED, never assumed causal; a connector on the opener names a beat
+   that does not exist. */
+
+export function checkConnectors(r: GateSubject): GateFinding[] {
+  const out: GateFinding[] = [];
+  let cleared = 0;
+  r.beats.forEach((b, i) => {
+    const c = b.connector as string | null;
+    if (i === 0) {
+      if (c !== null && c !== undefined)
+        out.push({
+          rule: "connector", subject: b.at, verdict: "violation", at: b.at, quote: b.text.slice(0, 140),
+          detail: `The opening beat declares "${c}" — a relation to a beat that does not exist.`,
+        });
+      return;
+    }
+    const prev = r.beats[i - 1];
+    if (c === null || c === undefined) {
+      out.push({
+        rule: "connector", subject: b.at, verdict: "unmeasured", at: b.at,
+        detail: `No connector declared to "${prev.label}". The relation was never named, so it cannot be tested — which is not the same as it being causal.`,
+      });
+      return;
+    }
+    if (c !== "BUT" && c !== "THEREFORE") {
+      out.push({
+        rule: "connector", subject: b.at, verdict: "violation", at: b.at, quote: b.text.slice(0, 140),
+        detail:
+          c === "AND THEN"
+            ? `"${prev.label}" AND THEN "${b.label}" — the only honest connector is a sequence, so this is a list, not a chain. Merge, reorder, or find the missing beat that makes one cause the other.`
+            : `"${c}" is not a connector. Between "${prev.label}" and "${b.label}" the relation is BUT or THEREFORE, or the beats are a list.`,
+      });
+      return;
+    }
+    cleared++;
+  });
+  // A `pass` is earned only by an adjacency actually declared and cleared.
+  out.push(
+    cleared > 0
+      ? { rule: "connector", subject: "adjacencies", verdict: "pass",
+          detail: `${cleared} of ${Math.max(r.beats.length - 1, 0)} adjacencies carry a declared BUT/THEREFORE.` }
+      : { rule: "connector", subject: "adjacencies", verdict: "not-engaged",
+          detail: "No adjacency carries a declared connector, so nothing was tested." },
+  );
+  return out;
+}
+
 /* ────────────────────────────── the gate itself ──────────────────────────── */
 
 export interface GateReport {
@@ -455,21 +520,32 @@ export function runGate(
     facts?: Fact[];
     unknowns?: Unknown[];
     probes?: Record<string, Probe>;
-    conclusions?: Conclusion[];
+    conclusions?: readonly Conclusion[];
     filedOrAdmitted?: ReadonlySet<string>;
+    /** The notebook's own felt conversions. Absent = the fixture's, which is
+     *  right only for the fixture notebook — a composed render is gated against
+     *  the notebook it was written from (`/api/script`). */
+    scaleConversions?: readonly ScaleConversion[];
+    /** Run the connector law (`checkConnectors`). Opt-in so the fixture chains'
+     *  pinned figures (pipeline/gate-regression.mts, the script probes) do not
+     *  move under a check their transcribed self-checks already claim; every
+     *  composed chain is gated with it on. */
+    connectors?: boolean;
   } = {},
 ): GateReport {
   const facts = opts.facts ?? NOTEBOOK.facts;
   const unknowns = opts.unknowns ?? Object.values(UNKNOWN_BY_ID);
   const probes = opts.probes ?? PROBES;
+  const scaleConversions = opts.scaleConversions ?? NOTEBOOK.scaleConversions ?? [];
 
   const findings = [
     ...checkConstraints(r, unknowns, probes),
     ...checkQualifiers(r, facts),
     ...checkUtterances(r, facts),
-    ...checkScalePromotion(r),
-    ...checkTraceability(r, facts),
-    ...(opts.conclusions ? checkConclusions(r, opts.conclusions, opts.filedOrAdmitted) : []),
+    ...checkScalePromotion(r, scaleConversions),
+    ...checkTraceability(r, facts, scaleConversions),
+    ...(opts.conclusions ? checkConclusions(r, [...opts.conclusions], opts.filedOrAdmitted) : []),
+    ...(opts.connectors ? checkConnectors(r) : []),
   ];
 
   const count = (v: Verdict) => findings.filter((f) => f.verdict === v).length;
@@ -525,6 +601,30 @@ export function gateChains(
     blocked: reports.some((r) => r.blocked),
     blocking: reports.filter((r) => r.blocked).map((r) => r.renderId),
   };
+}
+
+/* ──────────────── the gate over a composed draft (server-safe) ──────────────
+   /api/script's entry, and the reason the opts above grew `scaleConversions`
+   and `connectors`. Every rule reads the notebook the renders were WRITTEN
+   FROM — its facts, its unknowns, its felt conversions, its conclusions —
+   rather than the fixture each default names, and the connector law runs.
+   Probes resolve as everywhere else (`probesFor`): the draft's own, else the
+   fixture table's by unknown id, else the unknown is reported unmeasured. */
+
+export function gateDraft(
+  renders: readonly GateSubject[],
+  source: { notebook: { facts: Fact[]; unknowns: Unknown[]; scaleConversions?: ScaleConversion[] }; conclusions: readonly Conclusion[] },
+  draft?: { probes?: Record<string, SerializableProbe> },
+): GateRollup {
+  const nb = source.notebook;
+  return gateChains(Object.fromEntries(renders.map((r) => [r.id, r.beats])), {
+    facts: nb.facts,
+    unknowns: nb.unknowns,
+    probes: probesFor(nb.unknowns, draft),
+    conclusions: source.conclusions,
+    scaleConversions: nb.scaleConversions ?? [],
+    connectors: true,
+  });
 }
 
 /* ───────────────────── probes for the incumbent notebook ─────────────────── */
