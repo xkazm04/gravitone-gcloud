@@ -433,6 +433,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/_shared/notebook/Chips.tsx",
         "app/_phases/research/beats/ModeChooser.tsx"
       ]
     },
@@ -1129,6 +1130,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/_shared/notebook/Chips.tsx",
         "app/_phases/research/beats/ModeChooser.tsx"
       ]
     },
@@ -1145,6 +1147,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/_shared/notebook/Chips.tsx",
         "app/_phases/research/beats/ModeChooser.tsx"
       ]
     },
@@ -1244,22 +1247,21 @@
     "app/_phases/_shared": {
       "files": 23,
       "kitImports": 0,
-      "signalImports": 1,
+      "signalImports": 2,
       "parts": [
-        "Tally"
+        "HintPopover",
+        "Tally",
+        "hintRootClass",
+        "useHint"
       ],
       "suspects": {
         "tab": 0,
         "select": 0,
         "media": 0,
-        "title": 2,
+        "title": 0,
         "typing": 0
       },
-      "suspectFiles": {
-        "app/_phases/_shared/notebook/Chips.tsx": {
-          "title": 2
-        }
-      }
+      "suspectFiles": {}
     },
     "app/_phases/cut": {
       "files": 18,
