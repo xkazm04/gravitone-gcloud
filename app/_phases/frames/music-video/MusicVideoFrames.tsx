@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Tally } from "@/components/ui/signal";
+import { CHIP_CLASS, TALLY_TONE, Tally } from "@/components/ui/signal";
 import { elapsed, useJobs, type Job } from "@/lib/jobs";
 import { useAuth } from "@/lib/useAuth";
 
@@ -55,6 +55,10 @@ export default function MusicVideoFrames({ projectId }: { projectId: string }) {
   // component owns and must revoke — `lib/assets.ts#hydrateUploadSrcs`'s own
   // discipline, applied by hand because this is one asset, not a gallery.
   const [posterUrl, setPosterUrl] = useState<string | null>(null);
+  // A poster id whose bytes did not resolve (asset evicted, upload blob gone,
+  // IndexedDB read rejected). Set only inside the promise callbacks, and
+  // cleared in the cleanup, so an id change starts from "loading" again.
+  const [posterMissing, setPosterMissing] = useState(false);
   useEffect(() => {
     // No poster yet: nothing to load, and `posterUrl` already starts `null` —
     // a project never regains "no poster" after generating one, so there is
@@ -70,13 +74,16 @@ export default function MusicVideoFrames({ projectId }: { projectId: string }) {
       if (r) {
         ownUrl = r.url;
         setPosterUrl(r.url);
-      }
+      } else setPosterMissing(true);
+    }).catch(() => {
+      if (alive) setPosterMissing(true);
     });
     // The revoke runs on unmount/id-change either way; clearing the pointer
     // happens HERE, in the cleanup, rather than as a synchronous write at the
     // top of the effect body.
     return () => {
       alive = false;
+      setPosterMissing(false);
       if (ownUrl) {
         URL.revokeObjectURL(ownUrl);
         setPosterUrl((cur) => (cur === ownUrl ? null : cur));
@@ -100,6 +107,14 @@ export default function MusicVideoFrames({ projectId }: { projectId: string }) {
       </p>
     );
 
+  // RENDERABLE = everything the studio needs is in hand. When the poster id
+  // exists but its bytes are still loading the step waits rather than offering
+  // a regenerate that would race the read; once the load settles, anything
+  // short of renderable shows the generate control again.
+  const renderable = Boolean(comp.posterAssetId && comp.seed !== undefined && comp.effectParams && posterUrl);
+  const loadSettled = !comp.posterAssetId || posterUrl !== null || posterMissing;
+  const incomplete = Boolean(comp.posterAssetId && (!comp.effectParams || comp.seed === undefined));
+
   if (!envelope)
     return (
       <p className="font-jetbrains text-label text-amber-200/85" data-testid="music-video-no-envelope">
@@ -115,7 +130,22 @@ export default function MusicVideoFrames({ projectId }: { projectId: string }) {
         {comp.seed !== undefined && <Tally label="seed" value={comp.seed} tone="cyan" title="locked once set — reused on every render" />}
       </div>
 
-      {!comp.posterAssetId && (
+      {(posterMissing || incomplete) && (
+        <div className="flex flex-wrap items-center gap-3">
+          {posterMissing && (
+            <span data-testid="music-video-poster-missing">
+              <span className={`${CHIP_CLASS} ${TALLY_TONE.amber}`}>poster unreadable</span>
+            </span>
+          )}
+          {incomplete && (
+            <span data-testid="music-video-composition-incomplete">
+              <span className={`${CHIP_CLASS} ${TALLY_TONE.amber}`}>composition: no seed or effect parameters</span>
+            </span>
+          )}
+        </div>
+      )}
+
+      {loadSettled && !renderable && (
         <div className="space-y-2">
           <label className="block space-y-1.5">
             <span className="font-jetbrains text-label uppercase tracking-[0.14em] text-white/45">
@@ -157,12 +187,6 @@ export default function MusicVideoFrames({ projectId }: { projectId: string }) {
             </p>
           )}
         </div>
-      )}
-
-      {comp.posterAssetId && (!comp.effectParams || comp.seed === undefined) && (
-        <p className="font-jetbrains text-label text-amber-200/85" data-testid="music-video-composition-incomplete">
-          this composition is missing its seed or effect parameters — re-generate the poster.
-        </p>
       )}
     </div>
   );
