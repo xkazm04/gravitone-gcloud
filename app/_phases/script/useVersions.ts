@@ -26,7 +26,7 @@ import { useJobs } from "@/lib/jobs";
 import { loadStep, saveStep } from "../_shared/stepStore";
 import { recalibrate, recalibrateFromPlan } from "./recalibrate";
 import { NOTEBOOK } from "../_shared/notebook/notebook";
-import { RENDERS } from "./renders";
+import { renderPayloadFor } from "./chainBase";
 import { BASELINE, engineRunOf, type GateOverride, type Note, type NoteKind, type Version } from "./versions";
 import type { Card } from "../_shared/notebook/cards";
 import type { Scope } from "../research/scope";
@@ -201,7 +201,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             notebook: NOTEBOOK,
-            renders: RENDERS,
+            renders: renderPayloadFor(base),
             scope: ctx.scope,
             notes: runNotes,
           }),

@@ -49,10 +49,11 @@ Your output is a list of edits, not a script.
    as *this exists and you have not read it*, never as *this does not exist*.
 4. **The current renders** — each with its beats, every beat carrying `at`,
    `label`, `connector`, `text`, and `cards`: the notebook ids **this app's own
-   attribution** records that beat as resting on. `cards: null` means the app has
-   **no record** for that beat — usually a hook, a question, a promise or a close
-   that states no notebook claim, but the table is hand-authored and its silence
-   is not a guarantee. Read `null` as *unknown*, never as "rests on nothing".
+   attribution** records that beat as resting on (carried from the baseline or
+   prior accepted recalibrations). `cards: null` means the app has **no record**
+   for that beat — usually a hook, a question, a promise or a close that states no
+   notebook claim, but silence is not a guarantee. Read `null` as *unknown*,
+   never as "rests on nothing".
 5. **The scope** — which cards the creator has taken out. Descoped material may
    not be spoken.
 6. **The notes** — the creator's feedback, each attached to one card.

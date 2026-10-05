@@ -86,9 +86,12 @@ export interface Version {
    *  editing a string. A label you delete when you believe the wiring is done is
    *  a label that lies the first time the wiring falls back. */
   engine: "model" | "simulated";
-  /** Set on `engine: "model"` — the beats the edit plan produced, per render.
-   *  Absent on a simulated version, which re-weights without rewriting text. */
+  /** Set on `engine: "model"` (or preserved when simulated falls back from a model version)
+   *  — the beats the edit plan produced, per render. */
   beats?: Record<string, import("./types").Beat[]>;
+  /** Set on `engine: "model"` (or preserved when simulated falls back from a model version)
+   *  — beat mark → card ids per render. */
+  attribution?: Record<string, Record<string, string[]>>;
   /** The model's own account of what it did and would not do. */
   summary?: string;
   modelRefusals?: { note: string; why: string }[];
