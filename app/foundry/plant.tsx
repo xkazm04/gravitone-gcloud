@@ -42,6 +42,9 @@ export interface Plant {
   extract?: ExtractSummary[];
   catalogue?: Catalogue;
   cycles?: TrainingCycleSummary[];
+  /** The list reads that were refused: their stations draw no figure, which is
+   *  not the same as the ellipsis a read still in flight draws. */
+  failed?: Partial<Record<"extract" | "catalogue" | "cycles", true>>;
   /** The newest extract run's pictures and the newest cycle's challengers. */
   extractArt: string[];
   dojoArt: string[];
@@ -64,7 +67,11 @@ export function usePlant(): Plant {
   const [p, setP] = useState<Omit<Plant, "extractArt" | "dojoArt"> & { extractArt?: string[]; dojoArt?: string[] }>({});
   useEffect(() => {
     const put = (patch: Partial<Plant>) => setP((c) => ({ ...c, ...patch }));
+    // Pictures are decoration: a refused one is dropped. A refused LIST is recorded,
+    // so its station draws no figure rather than a loading ellipsis for the life of
+    // the page.
     const drop = () => undefined;
+    const fail = (k: "extract" | "catalogue" | "cycles") => () => setP((c) => ({ ...c, failed: { ...c.failed, [k]: true } }));
     fetchExtractRuns().then((r) => {
       put({ extract: r });
       // The newest run's pictures, for the station that shows "what Extract
@@ -75,8 +82,8 @@ export function usePlant(): Plant {
           const files = [...d.run.styles.flatMap((s) => s.transfers.map((t) => t.file)), ...d.run.sources.map((s) => s.file)].filter((f): f is string => Boolean(f));
           put({ extractArt: files.slice(0, 3).map((f) => extractFileUrl(d.run.id, f)) });
         }, drop);
-    }, drop);
-    fetchCatalogue().then((c) => put({ catalogue: c }), drop);
+    }, fail("extract"));
+    fetchCatalogue().then((c) => put({ catalogue: c }), fail("catalogue"));
     fetchTrainingCycles().then((c) => {
       put({ cycles: c });
       const newest = c[0];
@@ -85,7 +92,7 @@ export function usePlant(): Plant {
           const files = d.cycle.improvements.flatMap((i) => (i.pairs ?? []).filter((x) => !x.challenger.deleted).map((x) => x.challenger.poster ?? x.challenger.file));
           put({ dojoArt: files.filter((f) => /\.(png|jpe?g)$/i.test(f)).slice(0, 3).map((f) => fileUrl(d.cycle.id, f, "training")) });
         }, drop);
-    }, drop);
+    }, fail("cycles"));
   }, []);
   return { ...p, extractArt: p.extractArt ?? [], dojoArt: p.dojoArt ?? [] };
 }
@@ -247,7 +254,9 @@ export function PipelineHeader({
   const styleArt = art.styles;
   const forgeArt = art.cull;
 
-  const station = (t: Tab, figures: { n: number | undefined; label: string; tone?: Tone }[], art: string[]) => {
+  const station = (t: Tab, allFigures: { n: number | undefined; label: string; tone?: Tone }[], art: string[], failed = false) => {
+    // A list that could not be read draws no figure (see usePlant), never a bare `…`.
+    const figures = failed ? [] : allFigures;
     const on = t === tab;
     const E = ENGINE[t];
     const l = ln[t];
@@ -323,9 +332,10 @@ export function PipelineHeader({
           { n: found, label: plural(found, "style") + " found" },
         ],
         plant.extractArt,
+        plant.failed?.extract,
       )}
       {arrow}
-      {station("styles", [{ n: cat?.styles.length, label: plural(cat?.styles.length, "style") }, { n: proven, label: "proven", tone: proven ? "emerald" : undefined }], styleArt)}
+      {station("styles", [{ n: cat?.styles.length, label: plural(cat?.styles.length, "style") }, { n: proven, label: "proven", tone: proven ? "emerald" : undefined }], styleArt, plant.failed?.catalogue)}
       {arrow}
       {station(
         "cull",
@@ -337,7 +347,7 @@ export function PipelineHeader({
         forgeArt,
       )}
       <span aria-hidden className="mx-1 hidden w-px self-stretch bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
-      {station("dojo", [{ n: plant.cycles?.length, label: plural(plant.cycles?.length, "cycle") }, { n: parked, label: "at the gate", tone: parked ? "amber" : undefined }], plant.dojoArt)}
+      {station("dojo", [{ n: plant.cycles?.length, label: plural(plant.cycles?.length, "cycle") }, { n: parked, label: "at the gate", tone: parked ? "amber" : undefined }], plant.dojoArt, plant.failed?.cycles)}
     </div>
   );
 }
