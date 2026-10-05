@@ -302,7 +302,7 @@ export default function CardTile({ card, api, wound }: { card: Card; api: ScopeA
           data-testid={`scope-toggle-${card.id}`}
           onClick={() => api.toggle(card.id, "descoped")}
           aria-pressed={!s.descoped}
-          aria-label={`${s.descoped ? "Include" : "Exclude"}: ${card.title}`}
+          aria-label={`In scope: ${card.title}`}
           // "Click to descope. Reversible." restated the control it was hung
           // on: `aria-pressed` says the state, the aria-label says the action
           // and names the claim, and the border says which way it went. What

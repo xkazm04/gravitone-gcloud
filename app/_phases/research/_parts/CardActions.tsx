@@ -86,7 +86,7 @@ export default function CardActions({ card, api, compact }: { card: Card; api: S
         onToggle={() => api.toggle(card.id, "liked")}
         Icon={Heart}
         filled
-        name={s.liked ? `Liked: ${card.title}` : `Like: ${card.title}`}
+        name={`Like: ${card.title}`}
         // The half a reader cannot guess from a heart.
         title="changes nothing in this script — it trains your tone profile"
         tone={{
@@ -101,7 +101,7 @@ export default function CardActions({ card, api, compact }: { card: Card; api: S
         on={s.deepen}
         onToggle={() => api.toggle(card.id, "deepen")}
         Icon={s.deepen ? ListChecks : ListPlus}
-        name={s.deepen ? `Queued for deeper research: ${card.title}` : `Deepen: ${card.title}`}
+        name={`Deepen: ${card.title}`}
         title="routes to the next research run, not into this script"
         tone={{
           on: "border-cyan-400/45 bg-cyan-400/10 text-cyan-200",
