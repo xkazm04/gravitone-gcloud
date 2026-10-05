@@ -142,6 +142,42 @@ export function ScorePill({ label, value, className = "" }: { label: string; val
   );
 }
 
+/**
+ * Several scores as meters on a shared baseline — label, bar, figure — so a
+ * tile's craft and style read as one small chart rather than two chips that
+ * wrap whichever way the tile's width falls. Side by side when the strip has
+ * the room (a size container, like ScorePill's meter), stacked when it does
+ * not: the contact sheet's two-scene tiles are ~200px, and two bordered pills
+ * need ~210.
+ */
+export function ScoreMeters({ rows, className = "" }: { rows: { label: string; value: number | null | undefined }[]; className?: string }) {
+  return (
+    <div className={`@container w-full ${className}`}>
+      <div className="grid grid-cols-1 gap-x-4 gap-y-1 @min-[19rem]:grid-cols-2">
+        {rows.map((r) => {
+          const g = gradeOf(r.value);
+          return (
+            <span key={r.label} className="font-jetbrains flex min-w-0 items-center gap-2 text-label">
+              <span aria-hidden className="w-[3.25rem] shrink-0 text-white/45">
+                {r.label}
+              </span>
+              <span aria-hidden className="relative h-1.5 min-w-4 flex-1 overflow-hidden rounded-full bg-white/10">
+                <span className={`absolute inset-y-0 left-0 rounded-full ${GRADE_FILL[g]}`} style={{ width: `${Math.round((r.value ?? 0) * 100)}%` }} />
+              </span>
+              <span aria-hidden className={`w-[2.6rem] shrink-0 text-right tabular-nums ${g === "ungraded" ? "text-white/35" : TONE_TEXT[GRADE_TONE[g]]}`}>
+                {pct(r.value)}
+              </span>
+              <span className="sr-only">
+                {r.label} {pct(r.value)}, {GRADE_SPOKEN[g]}
+              </span>
+            </span>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /** The two flags a grade can carry beside its scores. */
 export function FlagPill({ kind }: { kind: "text" | "unmeasured" }) {
   return kind === "text" ? (
@@ -339,18 +375,16 @@ export function Art({
 /* ── Progress, save, loading, errors ──────────────────────────────────────── */
 
 /** done/total as a thin rail with its figure. */
-export function ProgressRail({ done, total, tone = "cyan", className = "", showFigure = true }: { done: number; total: number; tone?: Tone; className?: string; showFigure?: boolean }) {
+export function ProgressRail({ done, total, tone = "cyan", className = "" }: { done: number; total: number; tone?: Tone; className?: string }) {
   const p = total > 0 ? Math.min(1, done / total) : 0;
   return (
     <div className={`flex items-center gap-3 ${className}`}>
       <div aria-hidden className="relative h-1.5 flex-1 overflow-hidden rounded-full bg-white/[0.07]">
         <span className={`absolute inset-y-0 left-0 rounded-full ${DOT[tone]} opacity-80`} style={{ width: `${p * 100}%` }} />
       </div>
-      {showFigure && (
-        <span className="font-jetbrains text-label tabular-nums text-white/60">
-          {done}/{total}
-        </span>
-      )}
+      <span aria-hidden className="font-jetbrains text-label tabular-nums text-white/60">
+        {done}/{total}
+      </span>
       <span className="sr-only">
         {done} of {total}
       </span>
@@ -597,6 +631,6 @@ export function CommandCard({ lines, label, className = "" }: { lines: string[];
   );
 }
 
-/** The forge's command — one definition, because three variants show it and a
- *  path drawn three times is a path that gets fixed twice. */
+/** The forge's command — one definition, so the path is fixed in one place
+ *  whichever surface shows it next. */
 export const FORGE_COMMAND = ["cd pipeline/foundry", "python forge.py plans/dry-run.json"];

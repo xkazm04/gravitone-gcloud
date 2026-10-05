@@ -1,22 +1,17 @@
 "use client";
 
 // THE PLANT'S STATE — what each engine of the foundry is doing, read once, and
-// the three ways the round-2 prototypes draw it in place of the page title.
+// drawn in place of the page title as the plant itself.
 //
 // /foundry used to open on a 90px serif "Foundry" and the Fornax constellation
 // — a decorative figure whose four stars were the four tabs — and then a flat
 // tab row. StudioFrame's nav already names the place; what the top of a plant's
 // page owes the reader is the plant: which engine is running, which one is
 // waiting on a human, what each last produced. So the header IS the navigation
-// and it carries that state:
-//
-//   1 · Control room   one glass bar of four engine segments, each with its
-//                      live status line
-//   2 · Gallery        the Library's own TabRail with a tally per module, the
-//                      forge's live state riding quietly on the same row
-//   3 · Pipeline       the plant as a flow — Extract → Styles → Forge · Cull —
-//                      with the Dojo loop beside it, each station a glass card
-//                      carrying its counts and its latest output
+// and it carries that state, as a flow — Extract → Styles → Forge · Cull — with
+// the Dojo loop beside it, each station a glass card carrying its counts and
+// its latest output. (Round 2 drew it three ways; the operator picked this one
+// and round 3 deleted the control-room bar and the gallery tab rail.)
 //
 // THE FLOW'S ORDER IS THE DATA'S, not the tab row's. The suggested reading was
 // Forge → Cull → Extract → Styles → Dojo; the code says otherwise. Extract
@@ -29,7 +24,6 @@
 import { Flame, Palette, Pipette, Swords } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
-import { TabRail } from "@/components/ui/signal";
 import type { ExtractSummary } from "@/lib/foundry/extract/types";
 import type { TrainingCycleSummary } from "@/lib/foundry/training/types";
 import type { Catalogue, RunSummary } from "@/lib/foundry/types";
@@ -38,7 +32,7 @@ import { extractFileUrl, fetchExtractRun, fetchExtractRuns } from "./extractClie
 import { fetchCatalogue, fetchRun, fetchTrainingCycle, fetchTrainingCycles, fileUrl } from "./foundryClient";
 import { EXTRACT_LIVE, LIVE, STATUS_WORD, runKind } from "./parts";
 import { heroOf, keptRows } from "./styleArt";
-import { Art, Dot, StatusChip, TONE_TEXT, type Tone } from "./ui";
+import { Art, Dot, TONE_TEXT, type Tone } from "./ui";
 
 export type Tab = "cull" | "extract" | "styles" | "dojo";
 
@@ -139,8 +133,8 @@ export function useRunPreviews(runs: RunSummary[] | null, limit = 8): Record<str
   return map;
 }
 
-/** The latest output of each engine, as up to three picture URLs — what the
- *  Control room's segments and the Pipeline's stations show of each. */
+/** The latest output of each engine, as up to three picture URLs — what each
+ *  station shows of its engine. */
 export function useEngineArt(runs: RunSummary[] | null, plant: Plant, previews: Record<string, RunPreview>): Record<Tab, string[]> {
   const cat = plant.catalogue;
   const styles = useMemo(() => {
@@ -226,101 +220,13 @@ function tabKeys(e: React.KeyboardEvent<HTMLElement>) {
   tabs[(to + tabs.length) % tabs.length]?.focus();
 }
 
-/* ── 1 · Control room ─────────────────────────────────────────────────────── */
+/* ── The stations ─────────────────────────────────────────────────────────── */
 
-export function ControlHeader({
-  tab,
-  onSelect,
-  runs,
-  plant,
-  previews,
-}: {
-  tab: Tab;
-  onSelect: (t: Tab) => void;
-  runs: RunSummary[] | null;
-  plant: Plant;
-  previews: Record<string, RunPreview>;
-}) {
-  const ln = lines(runs, plant);
-  const art = useEngineArt(runs, plant, previews);
-  return (
-    <div role="tablist" aria-label="foundry engines" className="grid grid-cols-2 gap-2 rounded-2xl border border-white/8 bg-gradient-to-b from-white/[0.05] to-white/[0.015] p-2 backdrop-blur-[14px] lg:grid-cols-4">
-      {(Object.keys(ENGINE) as Tab[]).map((t) => {
-        const on = t === tab;
-        const E = ENGINE[t];
-        const l = ln[t];
-        return (
-          <button
-            key={t}
-            type="button"
-            role="tab"
-            aria-selected={on}
-            tabIndex={on ? 0 : -1}
-            data-testid={`foundry-tab-${t}`}
-            onClick={() => onSelect(t)}
-            onKeyDown={tabKeys}
-            className={`group flex min-w-0 cursor-pointer items-center gap-3.5 rounded-xl border px-3.5 py-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
-              on ? "border-cyan-400/40 bg-cyan-400/[0.09] shadow-[0_0_0_1px_var(--gt-ring-cyan)]" : "border-transparent hover:border-white/12 hover:bg-white/[0.04]"
-            }`}
-          >
-            <span
-              aria-hidden
-              className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl border transition ${
-                on ? "border-cyan-300/40 bg-cyan-300/15 text-cyan-200" : "border-white/10 bg-white/[0.04] text-white/55 group-hover:text-white/80"
-              }`}
-            >
-              <E.icon className="h-[18px] w-[18px]" />
-            </span>
-            <span className="flex min-w-0 flex-col">
-              <span className={`font-hanken text-content ${on ? "text-white" : "text-white/80"}`}>{E.name}</span>
-              <span className="font-jetbrains flex min-w-0 items-center gap-2 text-label">
-                {l ? (
-                  <>
-                    <Dot tone={l.tone} pulse={l.pulse} />
-                    <span className={`truncate ${l.tone === "neutral" ? "text-white/45" : TONE_TEXT[l.tone]}`}>{l.text}</span>
-                  </>
-                ) : (
-                  <span className="text-white/30">…</span>
-                )}
-              </span>
-            </span>
-            {/* The engine's latest output, as a monitor would show it. */}
-            <span aria-hidden className="ml-auto hidden shrink-0 gap-1 xl:flex">
-              {art[t].slice(0, 2).map((u) => (
-                <Art key={u} src={u} alt="" className={`h-9 w-14 transition ${on ? "opacity-100" : "opacity-60 group-hover:opacity-90"}`} rounded="rounded-md" />
-              ))}
-            </span>
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
-/* ── 2 · Gallery ──────────────────────────────────────────────────────────── */
-
-export function GalleryHeader({ tab, onSelect, runs, plant }: { tab: Tab; onSelect: (t: Tab) => void; runs: RunSummary[] | null; plant: Plant }) {
-  const live = runs?.find((r) => LIVE.includes(r.status));
-  const parked = plant.cycles?.filter((c) => c.status === "awaiting-gate").length;
-  const anyLive = Boolean(live);
-  const tally = (value: number | undefined, tone: "neutral" | "amber") => (value === undefined ? undefined : { value, tone });
-  return (
-    <TabRail
-      label="foundry modules"
-      active={tab}
-      onSelect={onSelect}
-      tabs={[
-        { id: "cull", label: "Cull", testId: "foundry-tab-cull", tally: tally(runs?.length, anyLive ? "amber" : "neutral") },
-        { id: "extract", label: "Extract", testId: "foundry-tab-extract", tally: tally(plant.extract?.length, "neutral") },
-        { id: "styles", label: "Styles", testId: "foundry-tab-styles", tally: tally(plant.catalogue?.styles.length, "neutral") },
-        { id: "dojo", label: "Dojo", testId: "foundry-tab-dojo", tally: tally(parked, parked ? "amber" : "neutral") },
-      ]}
-      trailing={live ? <StatusChip kind="live" word={`forge · ${STATUS_WORD[live.status]} ${live.progress.done}/${live.progress.total}`} className="ml-auto" /> : undefined}
-    />
-  );
-}
-
-/* ── 3 · Pipeline ─────────────────────────────────────────────────────────── */
+// ONE ROW TALL (round 3). A station was a column — name, a strip of three 16:9
+// thumbnails, figures — and the four of them stood ~180px over a cull whose
+// whole point is the grid below. The pictures stay (they are why the operator
+// picked this direction) as a fanned tray beside the figures rather than a
+// band across them: the same three outputs, a third of the height.
 
 export function PipelineHeader({
   tab,
@@ -355,35 +261,41 @@ export function PipelineHeader({
         data-testid={`foundry-tab-${t}`}
         onClick={() => onSelect(t)}
         onKeyDown={tabKeys}
-        className={`group relative flex min-w-0 flex-1 cursor-pointer flex-col gap-3 rounded-2xl border p-3.5 text-left backdrop-blur-[14px] transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+        className={`group relative flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-3 text-left backdrop-blur-[14px] transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
           on
             ? "border-cyan-400/45 bg-gradient-to-b from-cyan-400/[0.10] to-cyan-400/[0.02] shadow-[0_0_0_1px_var(--gt-ring-cyan),var(--gt-shadow-glow)]"
             : "border-white/8 bg-gradient-to-b from-white/[0.05] to-white/[0.015] hover:border-white/15"
         }`}
       >
-        <span className="flex items-center justify-between gap-2">
+        <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex min-w-0 items-center gap-2.5">
             <E.icon aria-hidden className={`h-4 w-4 shrink-0 ${on ? "text-cyan-200" : "text-white/50"}`} />
             <span className={`font-instrument truncate text-xl ${on ? "text-white" : "text-white/85"}`}>{E.name}</span>
+            {l && <Dot tone={l.tone} pulse={l.pulse} />}
           </span>
-          {l && <Dot tone={l.tone} pulse={l.pulse} />}
+          <span className="font-jetbrains flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-label">
+            {figures.map((f) => (
+              <span key={f.label} className="text-white/45">
+                <span className={`tabular-nums ${f.tone ? TONE_TEXT[f.tone] : "text-white/85"}`}>{f.n ?? "…"}</span> {f.label}
+              </span>
+            ))}
+            {/* The engine's line only when it says something the figures do
+                not: a run in motion. A parked count is already a figure. */}
+            {l?.pulse && <span className={`truncate ${TONE_TEXT[l.tone]}`}>{l.text}</span>}
+          </span>
         </span>
-        <span aria-hidden className="grid grid-cols-3 gap-1.5">
+        <span aria-hidden className="flex shrink-0 items-center pr-1">
           {[0, 1, 2].map((i) => (
-            <Art key={i} src={art[i]} alt="" state={art[i] ? "ready" : "blank"} className="aspect-video" rounded="rounded-lg">
-            </Art>
+            <Art
+              key={i}
+              src={art[i]}
+              alt=""
+              state={art[i] ? "ready" : "blank"}
+              rounded="rounded-md"
+              className={`aspect-video w-16 shadow-[var(--gt-shadow-float)] ring-1 ring-black/50 transition duration-200 ${i ? "-ml-8 group-hover:-ml-5" : ""} ${on ? "" : "opacity-75 group-hover:opacity-100"}`}
+            />
           ))}
         </span>
-        <span className="font-jetbrains flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-label">
-          {figures.map((f) => (
-            <span key={f.label} className="text-white/45">
-              <span className={`tabular-nums ${f.tone ? TONE_TEXT[f.tone] : "text-white/85"}`}>{f.n ?? "…"}</span> {f.label}
-            </span>
-          ))}
-        </span>
-        {/* The engine's line only when it says something the figures do not:
-            a run in motion. A parked count is already a figure, in amber. */}
-        {l?.pulse && <span className={`font-jetbrains truncate text-label ${TONE_TEXT[l.tone]}`}>{l.text}</span>}
       </button>
     );
   };

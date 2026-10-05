@@ -18,9 +18,11 @@
 // only WATCHED here, on the same 4s visible-tab poll the other tabs use.
 //
 // Drawn in the app's own idiom (./ui.tsx) since the round-2 UI pass
-// (2026-10-05), restyled once for all three prototype variants.
+// (2026-10-05). Round 3 drew what the loop writes and the gate had never
+// shown: the recipe edit itself (RecipeDiff), each judge's agreement with the
+// human, and the second judge's model and failures per pair.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Keycaps, Tally } from "@/components/ui/signal";
 import type { CycleManifest, CycleStatus, Improvement, PairResult, TrainingCommitResult, TrainingCycleSummary, TrainingVerdict, TrainingVerdicts } from "@/lib/foundry/training/types";
@@ -289,6 +291,18 @@ export function DojoView() {
                     {detail.fail_streak > 0 && <Tally label="fail streak" value={detail.fail_streak} tone="rose" />}
                   </div>
                 </div>
+                {/* HOW FAR EACH JUDGE CAN BE TRUSTED, measured against this
+                    human's past gates — the loop writes it, no surface read it.
+                    It is the one number that says whether "judge 4/5" on the
+                    cards below is evidence or noise. Absent until the loop has
+                    gates to measure against, and then left off, not zeroed. */}
+                {detail.judge_agreement && (detail.judge_agreement.chokepoint_vs_human !== undefined || detail.judge_agreement.gemini_vs_human !== undefined) && (
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <Label>agreement with human</Label>
+                    {detail.judge_agreement.chokepoint_vs_human !== undefined && <ScorePill label="chokepoint" value={detail.judge_agreement.chokepoint_vs_human} />}
+                    {detail.judge_agreement.gemini_vs_human !== undefined && <ScorePill label="gemini" value={detail.judge_agreement.gemini_vs_human} />}
+                  </div>
+                )}
                 {DOJO_LIVE.includes(detail.status) && detail.log.length > 0 && (
                   <p className="font-jetbrains mt-3 truncate text-label text-white/45">{detail.log[detail.log.length - 1]?.msg}</p>
                 )}
@@ -503,6 +517,7 @@ function ImprovementEntry({
           </div>
           <p className="font-hanken max-w-[80ch] text-content leading-relaxed text-white/85">{imp.claim}</p>
           <span className="font-jetbrains text-label text-white/40">challenges · {imp.standard}</span>
+          <RecipeDiff baseline={imp.baseline_recipe} challenger={imp.challenger_recipe} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <ScorePill label={`judge ${challengerPicks}/${(imp.pairs ?? []).length}`} value={rate} />
@@ -557,12 +572,107 @@ function PairDuo({ cycleId, pair }: { cycleId: string; pair: PairResult }) {
       <p className="font-hanken text-label leading-snug text-white/70">
         <span className={`font-jetbrains ${pair.judge_pick === "tie" ? "text-white/55" : "text-cyan-200"}`}>judge: {pair.judge_pick}</span> — {pair.reason}
       </p>
-      {disagrees && (
+      {/* THE SECOND JUDGE, all three of its outcomes. Round 2 drew only a
+          disagreement, so an agreeing Gemini and an absent one read the same,
+          and a FAILED call — an outage, which the type keeps out of agreement
+          on purpose — was invisible: the reader could not tell "Gemini saw
+          this and concurred" from "Gemini never saw it". The model rides on
+          each, because the retry ladder can change it from pair to pair. */}
+      {pair.gemini_error ? (
+        <p className="font-hanken rounded-lg border border-rose-400/25 bg-rose-400/[0.06] px-2.5 py-1.5 text-label leading-snug text-rose-100/90">
+          <span className="font-jetbrains">gemini failed{pair.gemini_model ? ` · ${pair.gemini_model}` : ""}</span> — {pair.gemini_error}
+        </p>
+      ) : disagrees ? (
         <p className="font-hanken rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-2.5 py-1.5 text-label leading-snug text-amber-100/90">
-          <span className="font-jetbrains">gemini disagrees: {String(pair.gemini_pick)}</span>
+          <span className="font-jetbrains">
+            gemini disagrees: {String(pair.gemini_pick)}
+            {pair.gemini_model ? ` · ${pair.gemini_model}` : ""}
+          </span>
           {pair.gemini_reason ? ` — ${pair.gemini_reason}` : ""}
         </p>
-      )}
+      ) : pair.gemini_pick !== undefined ? (
+        <p className="font-jetbrains text-label text-white/40">
+          gemini agrees{pair.gemini_model ? ` · ${pair.gemini_model}` : ""}
+        </p>
+      ) : null}
     </div>
+  );
+}
+
+/* ── The recipe change ────────────────────────────────────────────────────── */
+
+type Run = { op: "same" | "del" | "add"; text: string };
+
+/** A word-level diff, longest common subsequence over whitespace tokens.
+ *  Recipes are 60–110 words (lib/foundry/extract/types.ts names the class), so
+ *  the quadratic table is a few thousand cells — no library earns its weight
+ *  here. Adjacent tokens of one kind are merged into a single run. */
+export function wordDiff(a: string, b: string): Run[] {
+  const x = a.split(/\s+/).filter(Boolean);
+  const y = b.split(/\s+/).filter(Boolean);
+  const n = x.length;
+  const m = y.length;
+  const L: number[][] = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+  for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) L[i][j] = x[i] === y[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const out: Run[] = [];
+  const push = (op: Run["op"], t: string) => {
+    const last = out[out.length - 1];
+    if (last && last.op === op) last.text += ` ${t}`;
+    else out.push({ op, text: t });
+  };
+  let i = 0;
+  let j = 0;
+  while (i < n && j < m) {
+    if (x[i] === y[j]) {
+      push("same", x[i]);
+      i++;
+      j++;
+    } else if (L[i + 1][j] >= L[i][j + 1]) push("del", x[i++]);
+    else push("add", y[j++]);
+  }
+  while (i < n) push("del", x[i++]);
+  while (j < m) push("add", y[j++]);
+  return out;
+}
+
+/**
+ * WHAT IS BEING APPROVED. A gate approves a CLAIM, and the claim is a recipe
+ * edit: `baseline_recipe` → `challenger_recipe` is the change that lands in the
+ * prompt surface if this is approved. Neither had ever been drawn — the human
+ * gated a sentence about a change and a wall of its results, never the change.
+ *
+ * One paragraph, the challenger as it reads, with what it dropped struck in
+ * rose and what it added in emerald: the edit in place, where a two-column
+ * before/after would make the reader find it themselves. The colour is never
+ * the only signal — `del` and `ins` carry it to a screen reader, and the
+ * strike-through and underline to a sighted one.
+ */
+function RecipeDiff({ baseline, challenger }: { baseline?: string; challenger?: string }) {
+  const runs = useMemo(() => (baseline && challenger ? wordDiff(baseline, challenger) : []), [baseline, challenger]);
+  if (!baseline && !challenger) return null;
+  const changed = runs.some((r) => r.op !== "same");
+  return (
+    <section aria-label="Recipe change" className="mt-1 max-w-[80ch] rounded-xl border border-white/8 bg-black/20 px-4 py-3">
+      <div className="mb-1.5 flex items-center gap-3">
+        <Label as="h4">recipe</Label>
+        {baseline && challenger && !changed && <span className="font-jetbrains text-label text-amber-200/80">unchanged from baseline</span>}
+        {(!baseline || !challenger) && <span className="font-jetbrains text-label text-amber-200/80">{baseline ? "no challenger recipe" : "no baseline recipe"}</span>}
+      </div>
+      <p className="font-hanken text-content leading-relaxed text-white/75">
+        {runs.length
+          ? runs.map((r, k) => (
+              <Fragment key={k}>
+                {r.op === "same" ? (
+                  r.text
+                ) : r.op === "del" ? (
+                  <del className="rounded bg-rose-400/[0.10] px-0.5 text-rose-200/80 decoration-rose-300/70">{r.text}</del>
+                ) : (
+                  <ins className="rounded bg-emerald-400/[0.12] px-0.5 text-emerald-100 decoration-emerald-300/70">{r.text}</ins>
+                )}{" "}
+              </Fragment>
+            ))
+          : (challenger ?? baseline)}
+      </p>
+    </section>
   );
 }

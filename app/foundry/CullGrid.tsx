@@ -13,22 +13,27 @@
 // it is open. Each style row also carries its own K/X, because "this style
 // failed this scene" is one decision, not two or six.
 //
-// THREE ARRANGEMENTS, ONE READING ORDER (2026-10-05, the round-2 UI pass). The
-// prototype variants draw this grid three ways — `matrix` pins the source
-// beside a column-headed grid, `film` leads with the source as a showcase and
-// lets each style's row run large, `sheet` is a dense contact sheet — but every
-// one of them is a row per style and a column per mechanism × seed. That is
-// what keeps the keys identical across all three: ↓ is always "the next style",
-// `columns.length` candidates further on in `order`, whatever the drawing.
+// THE CONTACT SHEET (round 3, the operator's pick of three round-2
+// arrangements): each scene a glass section — its source frame small, its
+// note and craft annotation in full beside it — over a dense grid, a row per
+// style and a column per mechanism × seed. That shape is what keeps the keys
+// honest: ↓ is always "the next style", `columns.length` candidates further on
+// in `order`. Two scenes sit side by side on a wide screen.
+//
+// EVERY TILE CARRIES BOTH SCORES. Round 2's sheet dropped the style score to
+// fit its narrower tiles (`!compact &&`), which left the curator judging craft
+// by number and look by eye alone — and the cull is a judgement of both: a
+// frame can hold the shot and lose the style. They are meters now, which stack
+// on a narrow tile instead of dropping one.
 
 import { Maximize2 } from "lucide-react";
-import { useEffect, useMemo } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 
 import { useRoving } from "@/components/kit/useRoving";
 import type { Candidate, RunManifest, Verdict, Verdicts } from "@/lib/foundry/types";
 
 import { fileUrl } from "./foundryClient";
-import { Art, FlagPill, Label, ScorePill, VerdictButtons, VerdictStamp, verdictRing, type ArtState } from "./ui";
+import { Art, FlagPill, ScoreMeters, VerdictButtons, VerdictStamp, verdictRing, type ArtState } from "./ui";
 
 /** Elements the browser ACTIVATES on Enter.
  *
@@ -59,8 +64,6 @@ export function activatesOnEnter(t: { tagName?: string; getAttribute?: (n: strin
 
 const CRAFT_SUMMARY = ["shot_size", "camera_angle", "composition", "lighting_key", "lighting_direction", "depth_of_field"];
 
-export type CullLayout = "matrix" | "film" | "sheet";
-
 export function CullGrid({
   run,
   verdicts,
@@ -70,7 +73,6 @@ export function CullGrid({
   onVerdict,
   onOpen,
   keysEnabled,
-  layout = "matrix",
 }: {
   run: RunManifest;
   verdicts: Verdicts;
@@ -81,7 +83,6 @@ export function CullGrid({
   onVerdict: (ids: string | string[], v: Verdict | null) => void;
   onOpen: (id: string) => void;
   keysEnabled: boolean;
-  layout?: CullLayout;
 }) {
   const columns = useMemo(
     () => run.plan.mechanisms.flatMap((m) => run.plan.seeds.map((seed) => ({ mechanism: m, seed }))),
@@ -187,23 +188,43 @@ export function CullGrid({
 
   return (
     <div
-      className={layout === "sheet" ? `grid items-start gap-5 ${run.scenes.length > 1 ? "2xl:grid-cols-2" : ""}` : "flex flex-col gap-8"}
+      className={`grid items-start gap-5 ${run.scenes.length > 1 ? "2xl:grid-cols-2" : ""}`}
       {...roving.containerProps}
     >
       {run.scenes.map((scene) => {
-        const source = <Art src={fileUrl(run.id, scene.source)} alt={scene.note || scene.id} className="aspect-video" />;
+        // The craft annotation as one wrapped line of field/value pairs. It
+        // was a row of bordered chips, three rows deep in a half-width scene;
+        // the pairs are a description of the frame, and read as one.
+        const craft = CRAFT_SUMMARY.flatMap((f) => {
+          const v = scene.annotation?.[f];
+          return typeof v === "string" ? [[f, v] as const] : [];
+        });
         const chips = (
-          <div className="flex flex-wrap gap-1.5">
-            {CRAFT_SUMMARY.map((f) => {
-              const v = scene.annotation?.[f];
-              return typeof v === "string" ? (
-                <span key={f} className="font-jetbrains inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/[0.03] px-2.5 py-0.5 text-label text-white/75">
-                  <span className="text-white/40">{f.replace(/_/g, " ")}</span>
-                  {v}
+          <p className="font-jetbrains text-label leading-relaxed">
+            {craft.map(([f, v], i) => (
+              <Fragment key={f}>
+                <span className="whitespace-nowrap">
+                  <span className="text-white/40">{f.replace(/_/g, " ")}</span> <span className="text-white/85">{v}</span>
                 </span>
-              ) : null;
-            })}
-          </div>
+                {i < craft.length - 1 && (
+                  <span aria-hidden className="px-1.5 text-white/20">
+                    ·
+                  </span>
+                )}{" "}
+              </Fragment>
+            ))}
+            {!scene.annotation && <span className="text-amber-200/70">not annotated</span>}
+            {/* WHICH MODEL READ THE SOURCE. The pairs are a VLM's reading of
+                the frame, and every craft score below is measured against
+                them — so a wrong pair is a wrong grade, and the reader needs
+                to know whose reading it was (forge.py writes a vlm-probe-out
+                path for a cached probe, "<model> @ <time>" for a fresh one). */}
+            {scene.annotation_from && (
+              <span className="mt-1 block text-white/35">
+                read by <span className="text-white/55">{scene.annotation_from}</span>
+              </span>
+            )}
+          </p>
         );
 
         const rows = run.plan.styles.map((sid) => {
@@ -237,8 +258,6 @@ export function CullGrid({
                 candidate={c}
                 working={working === id}
                 label={`${name}, ${c?.mechanism ?? columns[ci].mechanism.id}, seed ${c?.seed ?? columns[ci].seed}`}
-                caption={layout === "film" ? colHead(columns[ci]).id : undefined}
-                compact={layout === "sheet"}
                 verdict={verdicts[id]?.verdict}
                 focused={focused === id}
                 rovingProps={indexOf.has(id) ? roving.itemProps(indexOf.get(id)!) : undefined}
@@ -254,107 +273,38 @@ export function CullGrid({
 
         const grid = `minmax(0,1fr) `.repeat(columns.length).trim();
 
-        if (layout === "film") {
-          return (
-            <section key={scene.id} aria-label={`Scene ${scene.id}`} className="flex flex-col gap-6">
-              <div className="flex flex-col gap-5 rounded-2xl border border-white/8 bg-white/[0.02] p-3 lg:flex-row">
-                <div className="w-full shrink-0 lg:w-[48%] lg:max-w-[620px]">{source}</div>
-                <div className="flex min-w-0 flex-col justify-center gap-3 lg:pr-4">
-                  <span className="flex items-baseline gap-2">
-                    <Label>source</Label>
-                    <span className="font-jetbrains truncate text-label text-white/35">{scene.frame}</span>
-                  </span>
-                  <h3 className="font-instrument text-3xl leading-tight text-white">{scene.id}</h3>
-                  {scene.note && <p className="font-hanken text-content leading-snug text-slate-400">{scene.note}</p>}
-                  {chips}
-                  {scene.annotation_from && <span className="font-jetbrains text-label text-white/35">annotation · {scene.annotation_from}</span>}
-                </div>
-              </div>
-              {rows.map((r) => (
-                <div key={r.sid} role="group" aria-label={`${r.name} on ${scene.id}`}>
-                  <div className="mb-2.5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-1">
-                    <div className="flex min-w-0 items-baseline gap-3">
-                      <h4 className="font-instrument truncate text-2xl text-white">{r.name}</h4>
-                      <span className="font-jetbrains truncate text-label text-white/40">{r.meta}</span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {r.decided > 0 && (
-                        <span className="font-jetbrains text-label text-white/45">
-                          <span className="text-emerald-200/90">{r.kept}</span> kept · {r.decided}/{r.total}
-                        </span>
-                      )}
-                      {r.rowKeys}
-                    </div>
-                  </div>
-                  <div className="grid gap-3" style={{ gridTemplateColumns: grid }}>
-                    {r.cells}
-                  </div>
-                </div>
-              ))}
-            </section>
-          );
-        }
-
-        if (layout === "sheet") {
-          return (
-            <section key={scene.id} aria-label={`Scene ${scene.id}`} className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
-              <div className="mb-4 flex flex-wrap items-center gap-4 border-b border-white/6 pb-4">
-                <div className="w-44 shrink-0">
-                  <Art src={fileUrl(run.id, scene.source)} alt={scene.note || scene.id} className="aspect-video" rounded="rounded-lg" />
-                </div>
-                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <h3 className="font-instrument text-2xl text-white">{scene.id}</h3>
-                  {scene.note && <span className="font-hanken line-clamp-2 text-content leading-snug text-slate-400">{scene.note}</span>}
-                </div>
-                <div className="w-full">{chips}</div>
-              </div>
-              <div className="grid items-center gap-x-3 gap-y-3" style={{ gridTemplateColumns: `minmax(130px,180px) ${grid}` }}>
-                <span />
-                {columns.map((col) => {
-                  const h = colHead(col);
-                  return (
-                    <div key={`${h.id}-${col.seed}`} className="min-w-0 px-0.5">
-                      <div className="font-jetbrains text-label text-white/80">{h.id}</div>
-                      <div className="font-jetbrains truncate text-label text-white/35">{h.sub}</div>
-                    </div>
-                  );
-                })}
-                {rows.map((r) => (
-                  <RowFragment key={r.sid} name={r.name} meta={r.meta} keys={r.rowKeys} compact>
-                    {r.cells}
-                  </RowFragment>
-                ))}
-              </div>
-            </section>
-          );
-        }
-
-        // matrix
         return (
-          <section key={scene.id} aria-label={`Scene ${scene.id}`} className="grid gap-6 xl:grid-cols-[minmax(300px,380px)_1fr]">
-            <aside className="flex flex-col gap-3 self-start xl:sticky xl:top-6">
-              {source}
-              <div className="flex items-baseline justify-between gap-3">
-                <h3 className="font-instrument text-2xl text-white">{scene.id}</h3>
-                <Label>source</Label>
+          <section key={scene.id} aria-label={`Scene ${scene.id}`} className="rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+            <div className="mb-4 flex items-start gap-4 border-b border-white/6 pb-4">
+              <div className="w-48 shrink-0">
+                <Art src={fileUrl(run.id, scene.source)} alt={scene.note || scene.id} className="aspect-video" rounded="rounded-lg" />
               </div>
-              {scene.note && <p className="font-hanken text-content leading-snug text-slate-400">{scene.note}</p>}
-              {chips}
-              {scene.annotation_from && <span className="font-jetbrains text-label text-white/35">annotation · {scene.annotation_from}</span>}
-            </aside>
-            <div className="grid items-center gap-x-3 gap-y-4" style={{ gridTemplateColumns: `minmax(150px,210px) ${grid}` }}>
+              {/* The note IN FULL. It is the brief every candidate in this
+                  section is judged against ("close-up, low angle, carved bust
+                  against fog"), and round 2 clamped it to two lines — the
+                  part of the brief that fell off was the part nobody saw. */}
+              <div className="flex min-w-0 flex-1 flex-col gap-2">
+                <div className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                  <h3 className="font-instrument text-2xl text-white">{scene.id}</h3>
+                  <span className="font-jetbrains truncate text-label text-white/35">{scene.frame}</span>
+                </div>
+                {scene.note && <p className="font-hanken text-content leading-snug text-slate-300/90">{scene.note}</p>}
+                {chips}
+              </div>
+            </div>
+            <div className="grid items-center gap-x-3 gap-y-3" style={{ gridTemplateColumns: `minmax(130px,180px) ${grid}` }}>
               <span />
               {columns.map((col) => {
                 const h = colHead(col);
                 return (
-                  <div key={`${h.id}-${col.seed}`} className="min-w-0 border-b border-white/8 pb-2">
-                    <div className="font-jetbrains text-label text-cyan-200/90">{h.id}</div>
-                    <div className="font-jetbrains truncate text-label text-white/40">{h.sub}</div>
+                  <div key={`${h.id}-${col.seed}`} className="min-w-0 self-end px-0.5">
+                    <div className="font-jetbrains text-label text-white/80">{h.id}</div>
+                    <div className="font-jetbrains text-label leading-snug text-white/35">{h.sub}</div>
                   </div>
                 );
               })}
               {rows.map((r) => (
-                <RowFragment key={r.sid} name={r.name} meta={r.meta} keys={r.rowKeys}>
+                <RowFragment key={r.sid} name={r.name} meta={r.meta} keys={r.rowKeys} kept={r.kept} decided={r.decided} total={r.total}>
                   {r.cells}
                 </RowFragment>
               ))}
@@ -366,13 +316,36 @@ export function CullGrid({
   );
 }
 
-/** A row head and its cells, as grid children of the parent grid. */
-function RowFragment({ name, meta, keys, compact = false, children }: { name: string; meta: string; keys: React.ReactNode; compact?: boolean; children: React.ReactNode }) {
+/** A row head and its cells, as grid children of the parent grid. The row's
+ *  own tally — kept, and how much of it is decided — is what makes "this style
+ *  failed this scene" readable before the cells are. */
+function RowFragment({
+  name,
+  meta,
+  keys,
+  kept,
+  decided,
+  total,
+  children,
+}: {
+  name: string;
+  meta: string;
+  keys: React.ReactNode;
+  kept: number;
+  decided: number;
+  total: number;
+  children: React.ReactNode;
+}) {
   return (
     <>
-      <div role="rowheader" className="flex min-w-0 flex-col gap-1.5 self-center pr-2">
-        <span className={`truncate ${compact ? "font-hanken text-content text-white/90" : "font-instrument text-xl text-white"}`}>{name}</span>
-        <span className="font-jetbrains truncate text-label text-white/40">{meta}</span>
+      <div role="rowheader" className="flex min-w-0 flex-col gap-1 self-center pr-2">
+        <span className="font-hanken truncate text-content text-white/90">{name}</span>
+        <span className="font-jetbrains text-label leading-snug text-white/40">{meta}</span>
+        {decided > 0 && (
+          <span className="font-jetbrains text-label text-white/40 tabular-nums">
+            <span className={kept ? "text-emerald-200/90" : "text-white/60"}>{kept}</span> kept · {decided}/{total}
+          </span>
+        )}
         {keys && <div className="mt-1">{keys}</div>}
       </div>
       {children}
@@ -390,8 +363,6 @@ function CandidateTile({
   candidate,
   working,
   label,
-  caption,
-  compact,
   verdict,
   focused,
   rovingProps,
@@ -405,9 +376,6 @@ function CandidateTile({
   candidate: Candidate | undefined;
   working: boolean;
   label: string;
-  /** The mechanism, written on the tile when no column head is drawn. */
-  caption?: string;
-  compact: boolean;
   verdict: Verdict | undefined;
   focused: boolean;
   rovingProps?: { tabIndex: 0 | -1; "data-roving": number };
@@ -429,7 +397,7 @@ function CandidateTile({
       aria-roledescription="candidate"
       aria-label={`${label}${v ? (v === "keep" ? ", kept" : ", rejected") : ""}${state !== "ready" ? `, ${state}` : ""}`}
       onClick={onFocus}
-      className={`group relative min-w-0 cursor-pointer rounded-xl transition duration-200 focus-visible:outline-none ${
+      className={`group relative min-w-0 cursor-pointer self-start rounded-xl transition duration-200 focus-visible:outline-none ${
         focused ? "outline-2 outline-offset-4 outline-cyan-300" : ""
       } ${v === "reject" ? "opacity-60 hover:opacity-90" : ""}`}
     >
@@ -453,11 +421,13 @@ function CandidateTile({
           />
         )}
         {v && <VerdictStamp verdict={v} className="absolute top-2 left-2" />}
+        {flag && (
+          <span className="pointer-events-none absolute bottom-2 left-2 rounded-full bg-black/55 backdrop-blur-sm">
+            <FlagPill kind={flag} />
+          </span>
+        )}
         {state === "failed" && candidate?.error && (
           <span className="font-jetbrains absolute inset-x-2 bottom-2 line-clamp-2 text-center text-label text-rose-200/80">{candidate.error}</span>
-        )}
-        {caption && state === "ready" && (
-          <span className="font-jetbrains pointer-events-none absolute top-2 right-2 rounded-md bg-black/55 px-1.5 py-0.5 text-label text-white/80 backdrop-blur-sm">{caption}</span>
         )}
         {ready && !readOnly && (
           <span
@@ -476,26 +446,27 @@ function CandidateTile({
             />
           </span>
         )}
-        {ready && focused && !caption && (
+        {ready && focused && (
           <span aria-hidden className="pointer-events-none absolute top-2 right-2 rounded-md bg-black/55 p-1 text-white/80 backdrop-blur-sm">
             <Maximize2 className="h-3.5 w-3.5" />
           </span>
         )}
       </Art>
       {/* THE SCORES UNDER THE PICTURE, not on it. Laid over the art they
-          fought the stamp, the flags and the verdict buttons for the same
-          corners of a 260px tile, and covered the part of the frame a craft
-          judgement is about. The strip is a size container, so a narrow tile
-          drops each pill's meter before it drops a number. */}
-      {/* Drawn on every tile, empty when there is nothing to score, so a
-          queued tile is the same height as its row. */}
-      <div className="@container mt-1.5 flex min-h-7 items-center gap-1 px-0.5">
+          fought the stamp and the verdict buttons for the same corners of a
+          260px tile, and covered the part of the frame a craft judgement is
+          about. Both of them, as meters (./ui.tsx ScoreMeters) — the flag,
+          the one thing short enough to share a corner, rides on the picture.
+          The tile is `self-start` so a queued tile's empty strip can never
+          shift its picture off its row's line. */}
+      <div className="mt-1.5 min-h-7 px-0.5">
         {ready && g && (
-          <>
-            <ScorePill label="craft" value={g.craft?.score} />
-            {!compact && <ScorePill label="style" value={g.style?.score} />}
-            {flag && <FlagPill kind={flag} />}
-          </>
+          <ScoreMeters
+            rows={[
+              { label: "craft", value: g.craft?.score },
+              { label: "style", value: g.style?.score },
+            ]}
+          />
         )}
       </div>
     </div>

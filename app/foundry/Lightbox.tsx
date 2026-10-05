@@ -13,6 +13,13 @@
 // Drawn on the app's own Modal (components/ui/Modal.tsx) at near-full width, in
 // the round-2 idiom: the two pictures large and rounded, the two grade panels as
 // glass cards whose per-field rows carry a dot for matched / missed.
+//
+// AND THE RECORD BEHIND EACH JUDGEMENT (round 3), which no version of this
+// surface had drawn: when the human's verdict was made and the note it carries
+// (VerdictRecord — the store keeps `note`, lib/foundry/store.ts), when the
+// grader graded, and every timing the forge wrote rather than the first one
+// (forge.py writes `generate_s`, then `grade_s` beside it). A slow candidate is
+// a different question from a bad one, and both are answered here or nowhere.
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect } from "react";
@@ -20,8 +27,9 @@ import { useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
 import { Keycaps } from "@/components/ui/signal";
-import type { Candidate, RunManifest, Verdict } from "@/lib/foundry/types";
+import type { Candidate, RunManifest, Verdict, VerdictRecord } from "@/lib/foundry/types";
 
+import { when } from "./RunCards";
 import { fileUrl } from "./foundryClient";
 import { Art, FlagPill, Label, ScorePill, StatusChip, VerdictButtons, VerdictStamp, gradeOf, pct, verdictRing } from "./ui";
 
@@ -67,10 +75,15 @@ function GradeTable({ head, rows }: { head: [string, string, string]; rows: [str
   );
 }
 
+/** "generate_s" → "generate", the unit moved onto the figure. */
+function timingLabel(k: string): string {
+  return k.replace(/_s$/, "").replace(/_/g, " ");
+}
+
 export function Lightbox({
   run,
   candidate,
-  verdict,
+  verdict: record,
   readOnly,
   onClose,
   onVerdict,
@@ -80,7 +93,7 @@ export function Lightbox({
 }: {
   run: RunManifest;
   candidate: Candidate | null;
-  verdict: Verdict | undefined;
+  verdict: VerdictRecord | undefined;
   readOnly: boolean;
   onClose: () => void;
   onVerdict: (v: Verdict | null) => void;
@@ -119,6 +132,7 @@ export function Lightbox({
     return () => window.removeEventListener("keydown", onKey);
   }, [candidate, readOnly, onVerdict, onStep]);
 
+  const verdict: Verdict | undefined = record?.verdict;
   const scene = candidate ? run.scenes.find((s) => s.id === candidate.scene) : null;
   const style = candidate ? run.styles[candidate.style] : null;
   const g = candidate?.grade;
@@ -191,9 +205,9 @@ export function Lightbox({
           <div className="grid gap-4 md:grid-cols-2">
             <figure className="flex flex-col gap-2">
               <Art src={fileUrl(run.id, scene.source)} alt={`source, ${scene.id}`} className="aspect-video" />
-              <figcaption className="flex items-center justify-between gap-2 px-1">
+              <figcaption className="flex flex-col gap-1 px-1">
                 <Label>source · {scene.id}</Label>
-                <span className="font-hanken truncate text-label text-white/45">{scene.note}</span>
+                {scene.note && <span className="font-hanken text-content leading-snug text-white/60">{scene.note}</span>}
               </figcaption>
             </figure>
             <figure className="flex flex-col gap-2">
@@ -207,11 +221,29 @@ export function Lightbox({
                   {verdict && <VerdictStamp verdict={verdict} className="absolute top-3 left-3" />}
                 </Art>
               </div>
-              <figcaption className="flex items-center justify-between gap-2 px-1">
-                <Label>
-                  candidate · {candidate.mechanism} · seed {candidate.seed}
-                </Label>
-                {candidate.timings?.generate_s ? <span className="font-jetbrains text-label text-white/40">{candidate.timings.generate_s}s</span> : null}
+              <figcaption className="flex flex-col gap-1 px-1">
+                <span className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                  <Label>
+                    candidate · {candidate.mechanism} · seed {candidate.seed}
+                  </Label>
+                  {candidate.timings && Object.keys(candidate.timings).length > 0 && (
+                    <span className="font-jetbrains flex shrink-0 items-baseline gap-3 text-label text-white/40">
+                      {Object.entries(candidate.timings).map(([k, v]) => (
+                        <span key={k}>
+                          {timingLabel(k)} <span className="text-white/70 tabular-nums">{v}s</span>
+                        </span>
+                      ))}
+                    </span>
+                  )}
+                </span>
+                {record && (
+                  <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    <span className={`font-jetbrains shrink-0 text-label ${record.verdict === "keep" ? "text-emerald-200/90" : "text-rose-200/90"}`}>
+                      {record.verdict === "keep" ? "kept" : "rejected"} {when(record.at)}
+                    </span>
+                    {record.note && <span className="font-hanken text-content leading-snug text-white/75">“{record.note}”</span>}
+                  </span>
+                )}
               </figcaption>
             </figure>
           </div>
@@ -273,7 +305,9 @@ export function Lightbox({
                       unmeasured: {g.unmeasured.join(" · ")}
                     </span>
                   )}
-                  <span className="font-jetbrains text-label text-white/35">graded by {g.grader}</span>
+                  <span className="font-jetbrains text-label text-white/35">
+                    graded by {g.grader} · {when(g.at)}
+                  </span>
                   <span className="sr-only">overall {gradeOf(g.style?.score)}</span>
                 </div>
               </section>

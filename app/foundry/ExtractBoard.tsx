@@ -14,13 +14,24 @@
 // A row is a glass section, a picture is ./ui.tsx's Art behind a button, the
 // zoom is the app's Modal (round-2 UI pass, 2026-10-05). What this file owns is
 // the reading order and the keys.
+//
+// WHY EACH REPLICA STOPPED, and WHO MADE EACH PICTURE (round 3). The engine
+// has said why a critique loop ended since `settleReason` stopped throwing the
+// reason away (lib/foundry/extract/engine.ts) — and two of the four reasons are
+// the loop GIVING UP, which makes a replica a near miss rather than evidence
+// the recipe holds. No surface showed it, so the curator kept a style on a
+// replica the loop had abandoned without being able to know. Each replica's
+// line now carries the reason, and the zoom names the generator and the vision
+// model that made and read the image (a round's are its own; the run's engines
+// line is only what served last).
 
 import { useEffect, useMemo, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
 import { Hint } from "@/components/ui/signal";
-import type { ExtractManifest, ExtractVerdict, ExtractVerdicts, ExtractedStyle, ReplicaRound, Transfer } from "@/lib/foundry/extract/types";
-import { OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
+import { settleReason } from "@/lib/foundry/extract/engine";
+import type { ExtractManifest, ExtractVerdict, ExtractVerdicts, ExtractedStyle, ReplicaRound, SettleReason, Transfer } from "@/lib/foundry/extract/types";
+import { ABANDONED_SETTLES, OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
 
 import { activatesOnEnter } from "./CullGrid";
 import { extractFileUrl } from "./extractClient";
@@ -31,6 +42,27 @@ interface Zoom {
   file: string;
   words: { label: string; text: string }[];
   perField?: Partial<Record<string, number>>;
+  /** Who made the image and who read it back — null where the step failed. */
+  models?: { generator: string | null; vision: string | null };
+}
+
+/** A settle reason in the work's own words, and its tone: the two outcomes
+ *  quiet, the two abandonments in the colour of a call the human must make. */
+const SETTLE: Record<SettleReason, { word: string; tone: string }> = {
+  "target-met": { word: "target met", tone: "border-emerald-400/30 bg-emerald-400/[0.07] text-emerald-100" },
+  "round-cap": { word: "round cap", tone: "border-white/12 bg-white/[0.03] text-white/60" },
+  "no-usable-fix": { word: "gave up · no usable fix", tone: "border-amber-400/30 bg-amber-400/[0.08] text-amber-100" },
+  "generation-failed": { word: "gave up · generation failed", tone: "border-rose-400/30 bg-rose-400/[0.08] text-rose-100" },
+};
+
+function SettleChip({ reason }: { reason: SettleReason }) {
+  const s = SETTLE[reason];
+  return (
+    <span className={`font-jetbrains inline-flex items-center rounded-full border px-2 py-0.5 text-label ${s.tone}`}>
+      {s.word}
+      {ABANDONED_SETTLES.includes(reason) && <span className="sr-only"> — the loop abandoned this replica</span>}
+    </span>
+  );
 }
 
 /* The three tile inspections, shared by click and by the Enter key. */
@@ -41,6 +73,7 @@ function roundZoom(style: ExtractedStyle, round: ReplicaRound, source: string): 
     title: `${style.name} · replica of ${source} · round ${round.n} · ${pct(round.score)}`,
     file: round.file,
     perField: round.per_field,
+    models: { generator: round.generator, vision: round.vision },
     words: [
       { label: "critique", text: round.critique?.critique || (round.error ?? "—") },
       { label: "recipe used", text: round.recipe },
@@ -56,6 +89,7 @@ function transferZoom(style: ExtractedStyle, transfer: Transfer): Zoom | null {
     title: `${style.name} · transfer · scene ${transfer.scene + 1} · ${pct(transfer.score)}`,
     file: transfer.file,
     perField: transfer.per_field,
+    models: { generator: transfer.generator, vision: transfer.vision },
     words: [
       { label: "scene", text: transfer.brief },
       { label: "readback", text: transfer.readback ? OBSERVABLE_FIELDS.map((f) => `${f}=${transfer.readback![f]}`).join("  ") : (transfer.error ?? "—") },
@@ -297,16 +331,22 @@ export function ExtractBoard({
 
               <Column label={`replicas · words only · ${run.options.rounds} round${run.options.rounds === 1 ? "" : "s"}`}>
                 <div className="flex flex-col gap-3">
-                  {st.replicas.map((rep) => (
-                    <div key={rep.source} className="flex flex-col gap-1.5">
-                      <span className="font-jetbrains text-label text-white/40">{rep.source}</span>
-                      <div className="grid grid-cols-2 gap-2">
-                        {rep.rounds.map((r) => (
-                          <RoundThumb key={r.n} run={run.id} style={st} round={r} source={rep.source} onZoom={setZoom} />
-                        ))}
+                  {st.replicas.map((rep) => {
+                    const settled = settleReason(run, rep.rounds);
+                    return (
+                      <div key={rep.source} className="flex flex-col gap-1.5">
+                        <span className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="font-jetbrains text-label text-white/40">{rep.source}</span>
+                          {settled && <SettleChip reason={settled} />}
+                        </span>
+                        <div className="grid grid-cols-2 gap-2">
+                          {rep.rounds.map((r) => (
+                            <RoundThumb key={r.n} run={run.id} style={st} round={r} source={rep.source} onZoom={setZoom} />
+                          ))}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                   {!st.replicas.length && <Art alt="waiting for replicas" state="queued" className="aspect-video" />}
                 </div>
               </Column>
@@ -328,6 +368,16 @@ export function ExtractBoard({
         {zoom && (
           <div className="flex flex-col gap-5">
             <Art src={extractFileUrl(run.id, zoom.file)} alt={zoom.title} className="aspect-video" fit="contain" />
+            {zoom.models && (
+              <dl className="font-jetbrains flex flex-wrap gap-x-6 gap-y-1 text-label">
+                {(["generator", "vision"] as const).map((k) => (
+                  <div key={k} className="flex items-baseline gap-2">
+                    <dt className="text-white/40">{k}</dt>
+                    <dd className={zoom.models![k] ? "text-white/80" : "text-white/35"}>{zoom.models![k] ?? "—"}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
             {zoom.perField && (
               <div className="flex flex-wrap gap-1.5">
                 {Object.entries(zoom.perField).map(([f, hit]) => (

@@ -1,13 +1,16 @@
 "use client";
 
-// THE FORGE'S RUNS, drawn three ways — and the run that has not happened yet.
+// THE FORGE'S RUNS — the strip along the top of the cull, the bar that sticks
+// over the grid, and the run that has not happened yet.
 //
-//   RunRail     (Control room) a column of rich cards: a mosaic of what the run
-//               made, its state, its progress, its tally
-//   RunPicker   (Gallery)      the app's own Select, because the gallery spends
-//               its width on pictures, not on a list
-//   RunStrip    (Pipeline)     the same cards laid along the top of the station
-//               workspace, scrolling sideways
+//   RunStrip    one card per run, scrolling sideways: its best frame, its
+//               name, its state, its live figure
+//   RunBar      the selected run, sticky: where the reader is (run ›
+//               candidate), its state, its facts, and the live progress
+//
+// Round 2 drew the runs three ways, one per prototype direction (a rail of
+// mosaic cards, a Select, this strip); round 3 kept the operator's pick and
+// deleted the other two with their direction.
 //
 // And `ForgeEmpty`: the state the operator photographed as "a dashed box and
 // a command". Absence here is not a hole — it is the command, copyable, beside
@@ -15,15 +18,12 @@
 // styles by mechanisms. Washed, not dashed, and silent to a screen reader
 // except for what is actually true ("no forge runs yet").
 
-import { Plus } from "lucide-react";
-
-import { Select } from "@/components/ui/Select";
 import { Tally } from "@/components/ui/signal";
-import type { RunManifest, RunSummary } from "@/lib/foundry/types";
+import type { Candidate, RunManifest, RunSummary } from "@/lib/foundry/types";
 
 import { LIVE, STATUS_WORD, runKind, type PlantState } from "./parts";
 import type { RunPreview } from "./plant";
-import { Art, CommandCard, ErrorNote, FORGE_COMMAND, Glass, Label, ProgressRail, Rise, STATE_TONE, StatusChip } from "./ui";
+import { Art, CommandCard, ErrorNote, FORGE_COMMAND, Glass, Label, ProgressRail, STATE_TONE, StatusChip } from "./ui";
 
 /** "2026-10-05T09:12…" → "5 Oct, 09:12". Coarse on purpose: a run list is
  *  read by order, not by the minute. */
@@ -33,46 +33,9 @@ export function when(iso: string): string {
   return `${d.toLocaleDateString(undefined, { day: "numeric", month: "short" })}, ${d.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })}`;
 }
 
-function Mosaic({ preview, n = 3, className = "" }: { preview?: RunPreview; n?: number; className?: string }) {
-  const t = preview?.thumbs ?? [];
-  return (
-    <span aria-hidden className={`grid gap-1 ${className}`} style={{ gridTemplateColumns: `repeat(${n}, minmax(0,1fr))` }}>
-      {Array.from({ length: n }, (_, i) => (
-        <Art key={i} src={t[i]} alt="" state={t[i] ? "ready" : "blank"} className="aspect-video" rounded="rounded-md">
-        </Art>
-      ))}
-    </span>
-  );
-}
-
-function RunCard({ r, preview, current, onSelect }: { r: RunSummary; preview?: RunPreview; current: boolean; onSelect: () => void }) {
-  const kind = runKind(r.status);
-  const live = LIVE.includes(r.status);
-  return (
-    <button
-      type="button"
-      aria-current={current ? "true" : undefined}
-      onClick={onSelect}
-      className={`group flex w-full min-w-0 cursor-pointer flex-col gap-3 rounded-xl border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 ${current ? "border-cyan-400/45 bg-cyan-400/[0.07] shadow-[0_0_0_1px_var(--gt-ring-cyan)]" : "border-white/8 bg-white/[0.02] hover:border-white/15 hover:bg-white/[0.04]"}`}
-    >
-      <Mosaic preview={preview} />
-      <span className="flex min-w-0 flex-col gap-0.5">
-        <span className={`font-hanken min-w-0 truncate text-content ${current ? "text-white" : "text-white/85"}`}>{r.id}</span>
-        <span className="font-jetbrains truncate text-label text-white/35">{when(r.created)}</span>
-      </span>
-      <span className="flex flex-wrap items-center justify-between gap-2">
-        <StatusChip kind={kind} word={STATUS_WORD[r.status]} />
-        <span className="font-jetbrains text-label text-white/45 tabular-nums">
-          <span className={r.kept ? "text-emerald-200/90" : "text-white/75"}>{r.kept}</span>/{r.candidates} kept
-        </span>
-      </span>
-      {live && r.progress.total > 0 && <ProgressRail done={r.progress.done} total={r.progress.total} tone={STATE_TONE[kind]} />}
-    </button>
-  );
-}
-
-/** The Pipeline's run, on one line: the run's best frame, its name, its state.
- *  A strip that scrolls sideways has no height to spend on a mosaic. */
+/** One run, on one line: the run's best frame, its name, its state, and —
+ *  while the forge is on it — done/total. A strip that scrolls sideways has no
+ *  height to spend on a mosaic. */
 function StripCard({ r, preview, current, onSelect }: { r: RunSummary; preview?: RunPreview; current: boolean; onSelect: () => void }) {
   const kind = runKind(r.status);
   const live = LIVE.includes(r.status);
@@ -88,7 +51,7 @@ function StripCard({ r, preview, current, onSelect }: { r: RunSummary; preview?:
       <Art src={preview?.thumbs[0]} alt="" state={preview?.thumbs[0] ? "ready" : "blank"} className="aspect-video w-24 shrink-0" rounded="rounded-lg" />
       <span className="flex min-w-0 flex-1 flex-col gap-1.5">
         <span className={`font-hanken truncate text-content ${current ? "text-white" : "text-white/85"}`}>{r.id}</span>
-        {live && r.progress.total > 0 && <ProgressRail done={r.progress.done} total={r.progress.total} showFigure={false} />}
+        {live && r.progress.total > 0 && <ProgressRail done={r.progress.done} total={r.progress.total} tone={STATE_TONE[kind]} />}
         <span className="flex items-center justify-between gap-2">
           <StatusChip kind={kind} word={STATUS_WORD[r.status]} />
           <span className="font-jetbrains shrink-0 text-label text-white/45 tabular-nums">
@@ -97,37 +60,6 @@ function StripCard({ r, preview, current, onSelect }: { r: RunSummary; preview?:
         </span>
       </span>
     </button>
-  );
-}
-
-export function RunRail({
-  runs,
-  previews,
-  selected,
-  onSelect,
-  error,
-  onRetry,
-}: {
-  runs: RunSummary[] | null;
-  previews: Record<string, RunPreview>;
-  selected: string | null;
-  onSelect: (id: string) => void;
-  error: string | null;
-  onRetry: () => void;
-}) {
-  return (
-    <nav aria-label="Forge runs" className="flex min-w-0 flex-col gap-3">
-      <div className="flex items-baseline justify-between px-1">
-        <Label as="h2">Runs</Label>
-        {runs && <span className="font-jetbrains text-label text-white/35 tabular-nums">{runs.length}</span>}
-      </div>
-      {error && <RunsError error={error} onRetry={onRetry} />}
-      {runs?.map((r, i) => (
-        <Rise key={r.id} delay={Math.min(i, 6) * 0.03}>
-          <RunCard r={r} preview={previews[r.id]} current={r.id === selected} onSelect={() => onSelect(r.id)} />
-        </Rise>
-      ))}
-    </nav>
   );
 }
 
@@ -155,25 +87,6 @@ export function RunStrip({
         ))}
       </div>
     </nav>
-  );
-}
-
-export function RunPicker({ runs, selected, onSelect }: { runs: RunSummary[]; selected: string | null; onSelect: (id: string) => void }) {
-  return (
-    <Select
-      label="run"
-      value={selected ?? ""}
-      placeholder="choose a run"
-      onChange={onSelect}
-      minWidth={420}
-      className="w-[min(100%,440px)]"
-      options={runs.map((r) => ({
-        value: r.id,
-        label: r.id,
-        meta: STATUS_WORD[r.status],
-        dot: { cyan: "bg-cyan-300", amber: "bg-amber-300", rose: "bg-rose-400", emerald: "bg-emerald-300", neutral: "bg-white/40" }[STATE_TONE[runKind(r.status)]],
-      }))}
-    />
   );
 }
 
@@ -210,74 +123,74 @@ export function RunFacts({ run }: { run: RunManifest }) {
   );
 }
 
-/** The selected run, as a header over its grid. */
-export function RunHeader({ run, size = "lg", aside, progress = true }: { run: RunManifest; size?: "lg" | "md"; aside?: React.ReactNode; progress?: boolean }) {
+/**
+ * The selected run, as a bar that sticks over its grid.
+ *
+ * WHERE THE READER IS, which the page lost in round 2. The kit page passed
+ * StudioFrame a crumb trail (Door › Foundry › Cull › run › candidate); the
+ * Obsidian frame draws no crumbs at all, so the trail went with the kit and a
+ * reader three screens into a sheet had nothing on screen naming the run, let
+ * alone the tile the keys were on. The trail is here now, on the one surface
+ * that is still in view while the grid scrolls: the run, and the candidate the
+ * cull's keys will act on (`focused`, which arrows move — the same id K/X/U and
+ * Enter read in ./CullGrid.tsx).
+ *
+ * THE LIVE FIGURE, which round 2 dropped twice (`showFigure={false}` on the
+ * strip, `progress={false}` here). A forge run is hours of GPU; done/total is
+ * the one number that says whether to wait or come back tomorrow.
+ *
+ * Opaque enough to read over pictures — `--gt-ink` at 80% under the blur — and
+ * no taller when stuck than when not: nothing in it changes on scroll.
+ */
+export function RunBar({ run, focused }: { run: RunManifest; focused: Candidate | null }) {
   const kind = runKind(run.status);
   const live = LIVE.includes(run.status);
   const last = run.log[run.log.length - 1]?.msg;
+  const at = focused ? `${run.styles[focused.style]?.name ?? focused.style} · ${focused.mechanism} · seed ${focused.seed}` : null;
   return (
-    <Glass className={size === "lg" ? "p-5" : "p-4"}>
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
-          <h2 className={`font-instrument truncate text-white ${size === "lg" ? "text-3xl" : "text-2xl"}`}>{run.id}</h2>
+    <div className="sticky top-2 z-30 rounded-2xl border border-white/10 gt-float bg-[var(--gt-ink)]/80 px-4 py-3 backdrop-blur-xl">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
+        <nav aria-label="Location" className="min-w-0">
+          <ol className="flex min-w-0 items-baseline gap-2.5">
+            <li className="shrink-0">
+              <Label>cull</Label>
+            </li>
+            <li aria-hidden className="text-white/25">
+              ›
+            </li>
+            <li aria-current={at ? undefined : "location"} className="min-w-0 shrink-0">
+              <h2 className="font-instrument truncate text-2xl text-white">{run.id}</h2>
+            </li>
+            {at && (
+              <>
+                <li aria-hidden className="text-white/25">
+                  ›
+                </li>
+                <li aria-current="location" className="font-hanken min-w-0 truncate text-content text-cyan-100">
+                  {at}
+                </li>
+              </>
+            )}
+          </ol>
+        </nav>
+        <div className="flex flex-wrap items-center gap-3">
           <StatusChip kind={kind} word={STATUS_WORD[run.status]} />
           <span className="font-jetbrains text-label text-white/35">{when(run.created)}</span>
-        </div>
-        <div className="flex flex-wrap items-center gap-3">
           <RunFacts run={run} />
-          {aside}
         </div>
       </div>
       {live && (
-        <div className={`flex flex-col gap-2 ${progress ? "mt-4" : "mt-2"}`}>
-          {progress && <ProgressRail done={run.progress.done} total={run.progress.total} />}
+        <div className="mt-2.5 grid items-center gap-x-5 gap-y-1.5 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+          <ProgressRail done={run.progress.done} total={run.progress.total} tone={STATE_TONE[kind]} />
           {last && <span className="font-jetbrains truncate text-label text-white/45">{last}</span>}
         </div>
       )}
       {run.error && (
-        <div className="mt-4">
+        <div className="mt-2.5">
           <ErrorNote>{run.error}</ErrorNote>
         </div>
       )}
-    </Glass>
-  );
-}
-
-/** The Gallery's quiet side panel: the engine behind the pictures. */
-export function EnginePanel({ run }: { run: RunManifest | null }) {
-  const live = run ? LIVE.includes(run.status) : false;
-  const tail = run ? run.log.slice(-4).reverse() : [];
-  return (
-    <aside aria-label="Forge" className="flex flex-col gap-4">
-      {run && (
-        <Glass className="flex flex-col gap-4 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <Label as="h2">Forge</Label>
-            <StatusChip kind={runKind(run.status)} word={STATUS_WORD[run.status]} />
-          </div>
-          {live && <ProgressRail done={run.progress.done} total={run.progress.total} />}
-          <RunFacts run={run} />
-          {run.error && <ErrorNote>{run.error}</ErrorNote>}
-          {tail.length > 0 && (
-            <ol className="flex flex-col gap-1.5 border-t border-white/6 pt-3">
-              {tail.map((l, i) => (
-                <li key={`${l.at}-${i}`} className={`font-jetbrains text-label break-words ${i === 0 ? "text-white/70" : "text-white/35"}`}>
-                  {l.msg}
-                </li>
-              ))}
-            </ol>
-          )}
-        </Glass>
-      )}
-      <div className="flex flex-col gap-2">
-        <Label as="h2" className="px-1">
-          <span className="inline-flex items-center gap-1.5">
-            <Plus aria-hidden className="h-3.5 w-3.5" /> new run
-          </span>
-        </Label>
-        <CommandCard lines={FORGE_COMMAND} label="forge a run" />
-      </div>
-    </aside>
+    </div>
   );
 }
 
@@ -358,10 +271,9 @@ export function ForgeEmpty() {
 
 /* ── The compact rail the Extract and Dojo tabs share ─────────────────────── */
 
-/** One row of a side rail: state, name, a line of figures. Restyled once for
- *  the two tabs that were not re-composed per variant (Extract, Dojo) — the
- *  Control room's run card without its mosaic, because neither summary carries
- *  a file to show. */
+/** One row of a side rail: state, name, a line of figures. Shared by the
+ *  two tabs whose summaries carry no file to show (Extract, Dojo), so a run
+ *  card without a picture. */
 export function RailItem({
   kind,
   word,

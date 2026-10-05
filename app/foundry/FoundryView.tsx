@@ -33,27 +33,32 @@
 // print idiom on an Obsidian ground, which the operator read as wireframes.
 // What replaces it is the /projects and /library idiom (glass, rounded-2xl,
 // real pictures large, the state tones) and a header that IS the plant's
-// state: which engine runs, which waits on a human. Three directions behind
-// `?v=1|2|3` (components/ui/VariantSwitch.tsx) until the operator picks one;
-// every one of them reads and writes exactly what the kit page did — this file
-// still owns the cull's whole state, and nothing below it fetches on its own
-// except the header's read-only previews (./plant.tsx).
+// state: the Pipeline stations of ./plant.tsx, the operator's pick of three
+// round-2 directions (round 3 deleted the other two, and the `?v=` switch with
+// them). This file still owns the cull's whole state, and nothing below it
+// fetches on its own except the header's read-only previews (./plant.tsx).
+//
+// THE CHROME IS SPENT ONCE (round 3). Stations, run strip, run header and the
+// scene's own header stood ~560px tall before the first candidate; the strip
+// and stations now scroll away and the run bar (./RunCards.tsx RunBar) sticks,
+// carrying what the old crumbs carried — which run, which candidate — plus the
+// live figure, because a sticky bar is the one place a reader deep in a cull of
+// hundreds can still see both.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
 import StudioFrame from "@/components/ui/StudioFrame";
-import { VariantSwitch, useVariant } from "@/components/ui/VariantSwitch";
 import { Keycaps } from "@/components/ui/signal";
 import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
 
-import { CullGrid, type CullLayout } from "./CullGrid";
+import { CullGrid } from "./CullGrid";
 import { DojoView } from "./DojoView";
 import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
-import { ControlHeader, GalleryHeader, PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
-import { EnginePanel, ForgeEmpty, RunHeader, RunPicker, RunRail, RunStrip } from "./RunCards";
+import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
+import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
 import { StylesShelf } from "./StylesShelf";
 import { commitRun, fetchRun, fetchRuns, saveVerdicts } from "./foundryClient";
 import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
@@ -90,8 +95,6 @@ import {
 // commit deletes decided media keeping one thumbnail per approved improvement
 // (the Dojo dialog). Each is a consequence stated at the moment it is ordered.
 
-const LAYOUT: Record<1 | 2 | 3, CullLayout> = { 1: "matrix", 2: "film", 3: "sheet" };
-
 const CULL_KEYS = [
   { keys: ["←", "→", "↑", "↓"], does: "move" },
   { keys: ["K"], does: "keep" },
@@ -101,7 +104,6 @@ const CULL_KEYS = [
 ];
 
 export default function FoundryView() {
-  const [variant] = useVariant();
   const [tab, setTab] = useState<Tab>("cull");
   const plant = usePlant();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
@@ -325,7 +327,6 @@ export default function FoundryView() {
     setTab(t);
   };
 
-  const layout = LAYOUT[variant];
   const committedReport = result && (
     <Rise>
       <div role="status" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-emerald-400/25 bg-emerald-400/[0.06] px-4 py-3">
@@ -348,63 +349,27 @@ export default function FoundryView() {
       onVerdict={setVerdict}
       onOpen={setOpen}
       keysEnabled={!open && !confirm && !findingsOpen}
-      layout={layout}
     />
   );
   const noRuns = runs !== null && runs.length === 0;
   const pending = !run && selected ? <Loading label="reading the run" /> : null;
 
-  let cull: React.ReactNode;
-  if (noRuns) {
-    cull = (
-      <>
-        {runsError && <ErrorNote>{runsError}</ErrorNote>}
-        <ForgeEmpty />
-      </>
-    );
-  } else if (variant === 2) {
-    cull = (
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <div className="flex flex-wrap items-center gap-3">
-            {runs && <RunPicker runs={runs} selected={selected} onSelect={selectRun} />}
-            {run && run.committed && <StatusChip kind="committed" word={`committed · ${run.committed.kept} kept`} />}
-          </div>
-          {runsError && <ErrorNote action={<RetryButton onClick={loadRuns} />}>{runsError}</ErrorNote>}
-          {committedReport}
-          {pending}
-          {grid}
-        </div>
-        <div className="xl:sticky xl:top-6 xl:self-start">
-          <EnginePanel run={run} />
-        </div>
-      </div>
-    );
-  } else if (variant === 3) {
-    cull = (
-      <div className="flex flex-col gap-5">
-        <RunStrip runs={runs} previews={previews} selected={selected} onSelect={selectRun} error={runsError} onRetry={loadRuns} />
-        {run && <RunHeader run={run} size="md" progress={false} />}
-        {committedReport}
-        {pending}
-        {grid}
-      </div>
-    );
-  } else {
-    cull = (
-      <div className="grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]">
-        <div className="lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto lg:pr-1 scroll-y">
-          <RunRail runs={runs} previews={previews} selected={selected} onSelect={selectRun} error={runsError} onRetry={loadRuns} />
-        </div>
-        <div className="flex min-w-0 flex-col gap-6">
-          {run && <RunHeader run={run} />}
-          {committedReport}
-          {pending}
-          {grid}
-        </div>
-      </div>
-    );
-  }
+  const focusedCandidate = run && focused ? (run.candidates.find((c) => c.id === focused) ?? null) : null;
+
+  const cull = noRuns ? (
+    <>
+      {runsError && <ErrorNote>{runsError}</ErrorNote>}
+      <ForgeEmpty />
+    </>
+  ) : (
+    <div className="flex flex-col gap-4">
+      <RunStrip runs={runs} previews={previews} selected={selected} onSelect={selectRun} error={runsError} onRetry={loadRuns} />
+      {run && <RunBar run={run} focused={focusedCandidate} />}
+      {committedReport}
+      {pending}
+      {grid}
+    </div>
+  );
 
   return (
     <StudioFrame>
@@ -413,19 +378,13 @@ export default function FoundryView() {
           #restoreFocus). pb clears the floating decision bar. */}
       <main tabIndex={-1} className="pb-36">
         <h1 className="sr-only">Foundry</h1>
-        <header className="pt-4">
-          {variant === 1 ? (
-            <ControlHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} previews={previews} />
-          ) : variant === 2 ? (
-            <GalleryHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} />
-          ) : (
-            <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} previews={previews} />
-          )}
+        <header className="pt-2">
+          <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} previews={previews} />
         </header>
 
-        <section role="tabpanel" aria-label={tab} className={variant === 3 ? "mt-5" : "mt-6"}>
+        <section role="tabpanel" aria-label={tab} className="mt-4">
           {tab === "styles" ? (
-            <StylesShelf layout={variant === 1 ? "grid" : variant === 2 ? "gallery" : "shelves"} />
+            <StylesShelf />
           ) : tab === "extract" ? (
             <ExtractView />
           ) : tab === "dojo" ? (
@@ -466,7 +425,7 @@ export default function FoundryView() {
           <Lightbox
             run={run}
             candidate={open ? (run.candidates.find((c) => c.id === open) ?? null) : null}
-            verdict={open ? verdicts[open]?.verdict : undefined}
+            verdict={open ? verdicts[open] : undefined}
             readOnly={readOnly}
             onClose={() => setOpen(null)}
             onVerdict={(v) => open && setVerdict(open, v)}
@@ -536,15 +495,7 @@ export default function FoundryView() {
           )}
         </CommitDialog>
       </main>
-      <VariantSwitch labels={["Control room", "Gallery", "Pipeline"]} />
     </StudioFrame>
   );
 }
 
-function RetryButton({ onClick }: { onClick: () => void }) {
-  return (
-    <button type="button" onClick={onClick} className="font-jetbrains shrink-0 cursor-pointer rounded-md border border-rose-300/30 px-2 py-0.5 text-label text-rose-100 hover:bg-rose-400/15">
-      retry
-    </button>
-  );
-}
