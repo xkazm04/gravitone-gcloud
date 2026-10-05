@@ -143,7 +143,9 @@ const METERED_AUTH_VARS = [
   "ANTHROPIC_CUSTOM_HEADERS",
 ] as const;
 
-function seatOnlyEnv(): NodeJS.ProcessEnv {
+// Exported for lib/agent/cliSeam.ts, the second spawn door (the agentic one):
+// it must strip exactly this list, and importing it is how it cannot drift.
+export function seatOnlyEnv(): NodeJS.ProcessEnv {
   const env = { ...process.env };
   for (const v of METERED_AUTH_VARS) delete env[v];
   return env;

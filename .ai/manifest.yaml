@@ -100,6 +100,14 @@ capabilities:
   # nothing. Run 2026-10-05: channels exit 0; schedule -> list -> tick -> a dry publication with its
   # plan file on disk, exit 0 throughout; a TikTok schedule refused with exit 1.
   publish: { command: "npx tsx pipeline/publish.mts channels", verified: true }
+  # The article pipeline's headless surface (lib/articles): run · status · approve · reject · resume,
+  # each with --json. `status` is the read-only verb listed here; `run` spends the operator's Claude
+  # seat (three agent sessions, research with web tools) and `approve` pushes a branch and opens a PR
+  # in ai-registry, so neither is a capability an agent invokes on its own (.claude/skills/article-run
+  # wraps run and status only). Run 2026-10-05 against a throwaway registry with the stub agent
+  # (ARTICLES_AGENT_BIN): run -> awaiting-approval exit 0; approve -> landed with a PR from a stub gh,
+  # exit 0; status exit 0. No real agent turn was run. See docs/articles.md.
+  article: { command: "npx tsx pipeline/article.mts status", verified: true }
   # THE AGGREGATE CHAIN — every gate below in one ordered command, and the order is load-bearing:
   # typecheck && lint:ratchet && check:manifest && check:notebook && check:trailer-structure && test
   # && build && check:bundle. check:bundle in particular reads BUILT chunks, so build must run first;
@@ -197,6 +205,8 @@ scope:
   does:
     - research, script, frames, score, cut - a content studio over a governed multi-vendor imaging chokepoint
     - captioned asset library; server-side music seam
+    # added 2026-10-05 with lib/articles (docs/articles.md)
+    - technical articles - registry topic in, live-web research, outline, draft and a deterministic check to a human gate; on approval a registry publication PR and a paste-ready Medium package (nothing is sent to Medium)
   does_not:
     - shipping anywhere - no deployment target, no auth, no multi-tenant
     - agent fleets, companions, orchestration

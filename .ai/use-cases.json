@@ -55,6 +55,26 @@
       "owner": "gravity"
     },
     {
+      "key": "text.article-research",
+      "name": "Research a technical blog post on the live web",
+      "description": "An agent turn with WebSearch/WebFetch/Read/Write/Edit in an isolated workspace: a topic and the registry's post standard in, numbered dated sources and claims out (pipeline/ARTICLE-POST-PROMPT.md, research section). Validated in lib/articles/engine.ts before anything is kept.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/articles/engine.ts::agentStep(research) -> lib/agent/cliSeam.ts::runAgent()",
+      "expected_models": ["claude-opus-5"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.article-draft",
+      "name": "Outline and draft a technical blog post",
+      "description": "Two agent turns with Read/Write/Edit only (no web): the research in, an outline, then the post as a self-contained page, Medium-ready Markdown, SVG figures and optional registry patch proposals out (pipeline/ARTICLE-POST-PROMPT.md, outline and draft sections). Checked deterministically by lib/articles/checks.ts; a human approves before anything reaches the registry.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/articles/engine.ts::agentStep(outline|draft) -> lib/agent/cliSeam.ts::runAgent()",
+      "expected_models": ["claude-opus-5"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.probe",
       "name": "Text engine availability probe",
       "description": "Zero-token health check that walks the text engine's provider chain to report which one would serve a given turn, without generating anything.",

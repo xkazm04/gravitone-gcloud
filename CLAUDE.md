@@ -456,6 +456,14 @@ mouse user can read is a regression, not a fix. Never delete a11y text to lower 
 - **`<Keycaps>`.** A keymap is a table, not prose: every row is a key and a verb, and its length is a
   function of how many keys the surface binds.
 
+## The article pipeline
+
+`lib/articles/` (CLI `pipeline/article.mts`, skill `article-run`) writes a technical post from a
+registry topic and, on a human's approval, opens a PR in ai-registry. Read `docs/articles.md` first.
+Two rules an agent session must keep: a `run` spends the operator's Claude seat (use the stub agent,
+`ARTICLES_AGENT_BIN`, for anything that is not the real thing), and `approve` is never an agent's
+act: it pushes a branch and opens a PR in another repository.
+
 ## Git policy (harness-enforced)
 
 **Commit on the current branch; never push.** The owner pushes after reading the log. Do not push, force-push, or open a pull request unless this session's prompt asks for it. This line exists because the harness's own default for an unattended session is to push and open a draft PR when the file says nothing (measured 2026-09-08: without such a line the agent pushed; with it the agent stopped at the commit). The gate bypass is denied to agents at the permission layer (`.claude/settings.json` `permissions.deny`: `--no-verify`, force-push, `GRAVITONE_SKIP_GATE=1`) - do not work around it; if a gate is red, fix the tree.
