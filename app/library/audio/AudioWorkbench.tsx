@@ -25,7 +25,7 @@
 // above already says Library · Audio), and the printed keymap (behind a
 // <Keycaps> glyph on the ledger, per components/ui/signal/Keycaps.tsx).
 
-import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
 import { DemoChip } from "@/app/_projects/parts";
 import { ToastTray, WorldRoot, useToast } from "@/components/kit";
@@ -134,6 +134,25 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
   const rootRef = useRef<HTMLDivElement>(null);
   const midRef = useRef<HTMLDivElement>(null);
   const rightRef = useRef<HTMLDivElement>(null);
+  const termsToggleRef = useRef<HTMLButtonElement>(null);
+  const inspectorToggleRef = useRef<HTMLButtonElement>(null);
+  // A column that is an off-canvas drawer at this width and is not open is
+  // inert: transform-only hiding left ~40 invisible Tab stops in the Inspector.
+  // The breakpoints are the ones audio-workbench.css moves the columns at.
+  const narrowRight = useMedia("(max-width: 999px)");
+  const narrowLeft = useMedia("(max-width: 720px)");
+  const lastDrawer = useRef<"inspector" | "terms" | null>(null);
+  useEffect(() => {
+    // Focus goes back to the toggle that opened the drawer, but only when it
+    // would otherwise be lost (inside the closing column, or on the page).
+    const prev = lastDrawer.current;
+    lastDrawer.current = drawer;
+    if (drawer !== null || prev === null) return;
+    const toggle = prev === "terms" ? termsToggleRef.current : inspectorToggleRef.current;
+    const active = document.activeElement;
+    const column = prev === "terms" ? ".ab-col--left" : ".ab-col--right";
+    if (!active || active === document.body || active.closest(column)) toggle?.focus();
+  }, [drawer]);
   const searchRef = useRef<HTMLInputElement>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** One-shot DOM moves requested by a handler and performed after the render
@@ -600,6 +619,7 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
           <div className="ab-top__row">
             <button
               type="button"
+              ref={termsToggleRef}
               className="btn only-narrow"
               aria-expanded={drawer === "terms"}
               onClick={() => setDrawer((d) => (d === "terms" ? null : "terms"))}
@@ -696,6 +716,7 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
             )}
             <button
               type="button"
+              ref={inspectorToggleRef}
               className="btn only-narrow"
               aria-expanded={drawer === "inspector"}
               onClick={() => setDrawer((d) => (d === "inspector" ? null : "inspector"))}
@@ -706,7 +727,7 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
         </header>
 
         <div className="ab-cols">
-          <aside className="ab-col ab-col--left" aria-label="Terms">
+          <aside className="ab-col ab-col--left" aria-label="Terms" inert={narrowLeft && drawer !== "terms"}>
             <Terms
               sections={[
                 {
@@ -809,7 +830,12 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
             )}
           </main>
 
-          <aside ref={rightRef} className="ab-col ab-col--right" aria-label="Inspector and composer">
+          <aside
+            ref={rightRef}
+            className="ab-col ab-col--right"
+            aria-label="Inspector and composer"
+            inert={narrowRight && drawer !== "inspector"}
+          >
             <div className="colhead">
               <div className="tabs" role="tablist" aria-label="Inspector">
                 <button type="button" role="tab" aria-selected={tab === "take"} onClick={() => setTab("take")}>
@@ -946,6 +972,20 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
       </div>
       <ToastTray toasts={toasts} onDismiss={dismiss} />
     </WorldRoot>
+  );
+}
+
+/** A CSS media query as state, so a column can be inert exactly where the
+ *  stylesheet makes it a drawer. False on the server and before hydration. */
+function useMedia(query: string): boolean {
+  return useSyncExternalStore(
+    (notify) => {
+      const mq = matchMedia(query);
+      mq.addEventListener("change", notify);
+      return () => mq.removeEventListener("change", notify);
+    },
+    () => matchMedia(query).matches,
+    () => false,
   );
 }
 
