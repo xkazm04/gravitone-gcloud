@@ -54,7 +54,7 @@ export function Provenance({
     <div className={`flex flex-wrap items-center gap-1.5 ${className}`}>
       {present.map((k) => (
         <span key={k} className={`${CHIP_CLASS} ${TALLY_TONE.neutral}`}>
-          <span aria-hidden className="uppercase opacity-50">
+          <span aria-hidden className="uppercase opacity-80">
             {k}
           </span>
           <span className="sr-only">{k}:</span>
