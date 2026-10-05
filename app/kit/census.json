@@ -798,6 +798,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_landing/parts.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/score/CueTakes.tsx",
         "app/_phases/script/_parts/BaselineOnlyNote.tsx",
@@ -1220,9 +1221,10 @@
     "app/_landing": {
       "files": 5,
       "kitImports": 1,
-      "signalImports": 0,
+      "signalImports": 1,
       "parts": [
         "Mark",
+        "StaleBadge",
         "Wordmark"
       ],
       "suspects": {
