@@ -81,6 +81,12 @@ See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
   spell a server-only env var NAME, not even in a dev fixture or a label (`check:bundle`; a dynamic
   import behind an inline NODE_ENV test did NOT keep the chunk out). All three surfaced only at the
   Director's verify on 2026-10-05, after six builders reported green.
+- **A new Obsidian surface is built in the Projects/Library idiom, NOT from `components/kit`.** The kit is
+  the Almanac print idiom (square corners, dashed absence, flat fields) remapped to obsidian colours;
+  round 1 of platform-consolidation briefed six builders to "reuse components/kit" and the operator's
+  verdict on every kit-built page was "like looking at wireframes" (2026-10-05). Reuse targets:
+  `components/ui/{Primitives,Select,tokens}`, `components/ui/signal/*`, and the baseline pages
+  `app/_projects/*`, `app/library/*`. Dropdowns are `components/ui/Select`, never a native `<select>`.
 - Prompts live in `pipeline/*-PROMPT.md` and are read by the code (`app/_phases/**/run/*`); a prompt
   change is a code change and its regression control (`pipeline/*-regression.mts`) runs.
 
