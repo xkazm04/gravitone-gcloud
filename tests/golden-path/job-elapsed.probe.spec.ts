@@ -22,7 +22,8 @@ test("formatElapsed uses the repo's m:ss convention from a minute up", async () 
 test("useElapsed ticks via usePolling, enabled only while the job is running", () => {
   const s = read("lib/jobs.tsx");
   expect(s.length).toBeGreaterThan(0);
-  const m = /export function useElapsed[^]*?\n}\n/.exec(s);
+  // \r? because a Windows checkout with core.autocrlf=true hands the file over CRLF.
+  const m = /export function useElapsed[^]*?\r?\n}\r?\n/.exec(s);
   expect(m, "useElapsed exists").not.toBeNull();
   expect(m![0]).toMatch(/usePolling\([^]*?,\s*1000,\s*j\.status === "running"\)/);
   expect(m![0]).not.toMatch(/setInterval/);
