@@ -109,6 +109,7 @@ export async function POST(req: Request) {
       envelope: asEnvelope(body.envelope),
       seed: asSeed(body.seed),
       effectParams: asEffectParams(body.effectParams),
+      projectId: typeof body.projectId === "string" && body.projectId.trim() ? body.projectId : null,
     };
 
     const result = await runExport(exportReq);

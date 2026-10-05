@@ -127,6 +127,7 @@ export function useMusicVideoExport(projectId: string, jobs: ReturnType<typeof u
             envelope: comp.envelope,
             seed: comp.seed,
             effectParams: comp.effectParams,
+            projectId,
           }),
         });
         const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;

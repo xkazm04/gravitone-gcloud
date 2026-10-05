@@ -43,7 +43,7 @@
 
 import { execFile } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import { readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
@@ -90,6 +90,10 @@ export interface ExportRequest {
   envelope: AudioEnvelope;
   seed: number;
   effectParams: EffectParams;
+  /** The project the export came from, written to a `<id>.json` sidecar so the
+   *  publishing calendar (lib/publish/exports.ts) can say which project an mp4
+   *  belongs to. Optional: an export with no project is still an export. */
+  projectId?: string | null;
 }
 
 export interface ExportResult {
@@ -345,7 +349,14 @@ export async function runExport(req: ExportRequest): Promise<ExportResult> {
     await writeFile(audioPath, Buffer.from(req.audioBase64, "base64"));
 
     await mkdir(OUT_ROOT, { recursive: true });
-    const outPath = exportFilePath(id);
+    const finalPath = exportFilePath(id);
+    // MUXED UNDER A NAME NO LISTING ACCEPTS, THEN RENAMED. ffmpeg writes the
+    // mp4 progressively, and lib/publish/exports.ts lists every `<uuid>.mp4`
+    // in this directory as a finished export a slot may pin — so a file still
+    // being written must not carry that name. `<uuid>.partial.mp4` fails the
+    // listing's id pattern and keeps the extension ffmpeg infers the container
+    // from; the rename within one directory is atomic.
+    const outPath = path.join(OUT_ROOT, `${id}.partial.mp4`);
 
     const muxStart = Date.now();
     let encoder: "h264_nvenc" | "libx264" = "h264_nvenc";
@@ -365,7 +376,11 @@ export async function runExport(req: ExportRequest): Promise<ExportResult> {
     }
     const muxMs = Date.now() - muxStart;
 
-    const st = await stat(outPath);
+    if (req.projectId) {
+      await writeFile(path.join(OUT_ROOT, `${id}.json`), JSON.stringify({ projectId: req.projectId }, null, 2));
+    }
+    await rename(outPath, finalPath);
+    const st = await stat(finalPath);
     return {
       id,
       encoder,
@@ -382,6 +397,8 @@ export async function runExport(req: ExportRequest): Promise<ExportResult> {
   } finally {
     await browser?.close().catch(() => {});
     await rm(workDir, { recursive: true, force: true }).catch(() => {});
+    // a mux that died leaves its partial file; after a successful rename this is a no-op
+    await rm(path.join(OUT_ROOT, `${id}.partial.mp4`), { force: true }).catch(() => {});
   }
 }
 
