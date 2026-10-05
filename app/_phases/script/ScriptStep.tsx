@@ -322,13 +322,20 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   // WHAT EACH TAB HOLDS — the state its caption was reaching for. Read off the
   // version on screen, and only once the records are on disk: a "0 conflicts"
   // drawn over an unread scope is a claim, not a count.
+  //
+  // EACH COUNT READS THE VERSION ITS OWN TAB DRAWS, not whichever the ACTIVE tab
+  // draws: `shown` falls back to baseline while Coverage/Spend are inactive, so
+  // a chip counted from it changed value when a different tab was clicked.
+  // Coverage and Spend draw the candidate whenever one is staged and selected;
+  // Tracks always draws the baseline.
   const cardIds = scope.cards.map((c) => c.id);
+  const weighed = versions.candidate && showing === "candidate" ? versions.candidate : versions.baseline;
   const state = ready
     ? {
-        conflicts: conflictsIn(shown, scope.cards, scope.scope).length,
-        overrun: RENDERS.filter((r) => coverageIn(shown, r.id, cardIds).overrunS > 0).length,
+        conflicts: conflictsIn(weighed, scope.cards, scope.scope).length,
+        overrun: RENDERS.filter((r) => coverageIn(weighed, r.id, cardIds).overrunS > 0).length,
         unused: scope.cards.filter((c) =>
-          RENDERS.every((r) => usageIn(shown, r.id, c.id).kind === "unused"),
+          RENDERS.every((r) => usageIn(versions.baseline, r.id, c.id).kind === "unused"),
         ).length,
       }
     : null;
