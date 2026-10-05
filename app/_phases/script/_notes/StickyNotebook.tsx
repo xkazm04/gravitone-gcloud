@@ -14,12 +14,16 @@ import { useState } from "react";
 import { NotesProvider, useNotes } from "./NotesContext";
 import NoteComposer, { NoteList } from "./NoteComposer";
 import RecalibrateControl from "./RecalibrateControl";
+import type { Card } from "../../_shared/notebook/cards";
+import type { Scope } from "../../research/scope";
 import type { GateRollup } from "../gate";
 import type { VersionsApi } from "../useVersions";
 
 export default function StickyNotebook({
   api,
   gate,
+  cards,
+  scope,
   children,
 }: {
   api: VersionsApi;
@@ -28,20 +32,32 @@ export default function StickyNotebook({
    *  verdict, and a second `gateChains` call is a second answer waiting to
    *  disagree with the first. */
   gate?: GateRollup;
+  cards?: Card[];
+  scope?: Scope;
   children: React.ReactNode;
 }) {
   return (
     <NotesProvider api={api}>
       {children}
-      <Pad api={api} gate={gate} />
+      <Pad api={api} gate={gate} cards={cards} scope={scope} />
     </NotesProvider>
   );
 }
 
-function Pad({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
+function Pad({
+  api,
+  gate,
+  cards,
+  scope,
+}: {
+  api: VersionsApi;
+  gate?: GateRollup;
+  cards?: Card[];
+  scope?: Scope;
+}) {
   const [open, setOpen] = useState(true);
   const ctx = useNotes();
-  const cards = [...new Set(api.notes.map((n) => n.cardId))];
+  const notedCardIds = [...new Set(api.notes.map((n) => n.cardId))];
 
   return (
     <div
@@ -64,10 +80,10 @@ function Pad({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
         {open && (
           <>
             <div className="mt-2 max-h-[17rem] space-y-2 overflow-y-auto scroll-y">
-              {cards.length === 0 ? (
+              {notedCardIds.length === 0 ? (
                 <p className="font-jetbrains text-content text-white/30">no notes yet</p>
               ) : (
-                cards.map((id) => (
+                notedCardIds.map((id) => (
                   <div key={id}>
                     <p className="font-jetbrains text-content text-white/45">{id}</p>
                     <NoteList cardId={id} compact />
@@ -83,7 +99,7 @@ function Pad({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
             )}
 
             <div className="mt-2.5 border-t border-white/10 pt-2.5">
-              <RecalibrateControl api={api} gate={gate} />
+              <RecalibrateControl api={api} gate={gate} cards={cards} scope={scope} />
             </div>
           </>
         )}

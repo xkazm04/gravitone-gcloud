@@ -15,7 +15,7 @@ import { useState } from "react";
 
 import type { Card } from "../../_shared/notebook/cards";
 import type { ScopeApi } from "../../research/useScope";
-import { NoteHandle } from "../_notes/NotesContext";
+import { NoteHandle, useNotes } from "../_notes/NotesContext";
 import { UNTAGGED_DIMENSION_ID, columnsFor } from "../../_shared/notebook/dimensions";
 import { coverageIn, totalIn, usageIn, type Version } from "../versions";
 import {
@@ -150,6 +150,11 @@ function Row({
   const baseTotal = totalIn(baseline, card.id);
   const moved = comparing && total !== baseTotal;
 
+  const notesCtx = useNotes();
+  const existingNotes = notesCtx?.api.notes ?? [];
+  const alreadyDescope = existingNotes.some((n) => n.cardId === card.id && n.kind === "descope");
+  const disabled = !notesCtx || notesCtx.api.running || card.required || alreadyDescope;
+
   return (
     <li
       data-testid={`row-${card.id}`}
@@ -164,15 +169,27 @@ function Row({
           <NoteHandle cardId={card.id} />
           {moved && <DeltaTag d={total - baseTotal} />}
           {conflict.length > 0 && (
-            // THE MARKER. Scope says out; a render says spoken. Named on the row
-            // so it cannot be read as ordinary seconds.
-            <span
+            // THE MARKER. Scope says out; a render says spoken. Click to stage a descope note.
+            <button
+              type="button"
               data-testid={`conflict-${card.id}`}
-              className="font-jetbrains rounded border border-rose-400/40 bg-rose-400/[0.08] px-1.5 py-0.5 text-label text-rose-200"
+              onClick={() => {
+                if (disabled) return;
+                notesCtx.api.addNote(card.id, "descope");
+              }}
+              disabled={disabled}
+              title={
+                card.required
+                  ? card.requiredWhy
+                  : alreadyDescope
+                    ? "Descope note already staged for this card"
+                    : "Click to stage a descope note"
+              }
+              className="font-jetbrains rounded border border-rose-400/40 bg-rose-400/[0.08] px-1.5 py-0.5 text-left text-label text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-75"
             >
               {out === "descoped" ? "cut" : "not taken"} · still spoken{" "}
               {conflict.map((c) => `${secs(c.seconds)} by ${c.label}`).join(", ")}
-            </span>
+            </button>
           )}
         </span>
         {RENDERS.map((r) => {
