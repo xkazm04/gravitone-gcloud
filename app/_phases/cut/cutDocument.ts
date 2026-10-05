@@ -33,9 +33,14 @@
 // at every depth and `cutDocumentHash` is over that form, so two compiles of
 // one cut are equal however their inputs' keys were ordered, and a version of
 // a cut is a document you can diff.
+//
+// SERVER-SAFE BY ITS IMPORTS. lib/cutExport.ts hashes the document it renders
+// with this module's own `cutDocumentHash`, so nothing here may pull in a
+// browser module (lib/sound/client → lib/imagingClient is "use client"). That
+// is why a session take is recognised by the URL the BROWSER minted for it
+// (`blob:`/`data:`) rather than by comparing against `takeFileUrl`.
 
 import type { FrameElement, FrameText } from "../frames/frames";
-import { takeFileUrl } from "@/lib/sound/client";
 
 import type { CutClip, CutOrigin, DerivedCut } from "./deriveTimeline";
 import { finishLine, type FinishCheck } from "./finishLine";
@@ -92,9 +97,10 @@ export interface CutDocument {
 
 const ms = (s: number) => Math.round(s * 1000) / 1000;
 
-/** The store's own path for a take, without the `k=` query a browser adds.
- *  Derived from `takeFileUrl` rather than retyped, so the two cannot drift. */
-const storePath = (takeId: string) => takeFileUrl(takeId).split("?")[0];
+/** A URL only the tab that minted it can read: a file dropped into this
+ *  session (useCut's SessionTake). deriveTimeline lets one override the spot's
+ *  stored take, because it is what is playing now. */
+const browserOnly = (src: string) => /^(blob|data):/i.test(src);
 
 function picture(cut: DerivedCut): PictureSegment[] {
   const byRef = new Map(cut.clips.filter((c) => c.track === "video").map((c) => [c.ref, c]));
@@ -132,7 +138,7 @@ function audioOf(c: CutClip, offsets: Offsets, takes: Readonly<Record<string, st
   };
   if (c.status === "missing" || !c.src) return { ...base, kind: "gap", why: c.why ?? "no take in hand" };
   const takeId = c.track === "music" ? takes[c.ref] : undefined;
-  if (takeId && c.src.split("?")[0] === storePath(takeId)) return { ...base, kind: "take", takeId };
+  if (takeId && !browserOnly(c.src)) return { ...base, kind: "take", takeId };
   return { ...base, kind: "gap", why: "session file, not in the sound store" };
 }
 

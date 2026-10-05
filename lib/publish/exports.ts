@@ -1,22 +1,22 @@
 // FINISHED EXPORTS — what there is to publish. Server-only.
 //
-// The only producer today is the Cut step's music-video export
-// (lib/musicVideoExport.ts), which writes `<uuid>.mp4` under
-// `foundry-out/music-video-exports/` (its OUT_ROOT, :111, and exportFilePath,
-// :124). The export id IS that uuid, so an ExportRef's id round-trips to the
-// file through the same convention the download route already uses.
+// Two producers write here. The Cut step's music-video export
+// (lib/musicVideoExport.ts) writes `<uuid>.mp4` under
+// `foundry-out/music-video-exports/` (its OUT_ROOT and exportFilePath). The
+// Cut's animatic export (lib/cutExport.ts) writes to `exportsRoot()` below, so
+// it lands wherever this lister reads, and its `<id>.json` sidecar carries the
+// projectId plus the finish line's verdicts at export time. The export id IS
+// the uuid, so an ExportRef's id round-trips to the file through the same
+// convention the download routes use.
 //
-// projectId IS null, AND THAT IS THE TRUTH RATHER THAN A GAP PAPERED OVER. The
-// export request carries no project id (ExportRequest, musicVideoExport.ts:85)
-// and the module writes nothing beside the mp4, so nothing on disk says which
-// project an export came from. If a `<id>.json` sidecar with a string
-// `projectId` ever appears, it is read; until then the scheduler asks the
-// caller for the project instead of inventing one.
+// projectId IS null WHEN NO SIDECAR SAYS OTHERWISE, AND THAT IS THE TRUTH
+// RATHER THAN A GAP PAPERED OVER. A `<id>.json` sidecar with a string
+// `projectId` is read; without one the scheduler asks the caller for the
+// project instead of inventing one.
 //
-// A mux in progress is indistinguishable from a finished file here — ffmpeg
-// writes straight to the final path (musicVideoExport.ts:353). Reported as a
-// request to that module's owner (mux to a tmp name, rename on success) rather
-// than guessed at with an mtime heuristic.
+// A mux in progress never carries a listed name: both producers encode to
+// `<id>.partial.mp4`, which fails ID_RE below, and rename on success
+// (lib/export/headless.ts, landExport).
 
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";

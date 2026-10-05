@@ -10,9 +10,20 @@
 //
 // Held here on synthetic step data, no browser, no ffmpeg: the render itself
 // is a live-lane case (an exported MP4's ffprobe duration), never this lane's.
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
 import { test, expect } from "@playwright/test";
 
+import { keepEnv } from "./_helpers";
+import { POST as cutExportPOST } from "@/app/api/cut/export/route";
 import { compileCut, cutDocumentHash, cutDocumentJson } from "@/app/_phases/cut/cutDocument";
+import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
+import { cutExportArgs, cutSidecar, runCutExport, CUT_FPS } from "@/lib/cutExport";
+import { describePosture } from "@/lib/deployment";
+import { ExportError, landExport, partialPath } from "@/lib/export/headless";
+import { listExports } from "@/lib/publish/exports";
 import { deriveTimeline } from "@/app/_phases/cut/deriveTimeline";
 import { finishLine } from "@/app/_phases/cut/finishLine";
 import { emptyClip, type Frame } from "@/app/_phases/frames/frames";
@@ -140,4 +151,126 @@ test("case 3 · same inputs twice give identical JSON and an equal hash, whateve
   // And it is a real identity: one millisecond of offset is a different cut.
   const c = compileCut(derive(), { "mus-a": 251, "mus-b": -40 }, { a: "st_x" });
   expect(cutDocumentHash(c)).not.toBe(cutDocumentHash(a));
+});
+
+/* ── the export: posture, sidecar, the ffmpeg plan (no ffmpeg runs here) ─── */
+
+keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", "LOCAL_BINARIES", "PUBLISH_EXPORTS_DIR"]);
+
+const SECRET = "cut-export-probe-secret";
+let shelf = "";
+
+test.beforeEach(() => {
+  shelf = mkdtempSync(join(tmpdir(), "cut-export-probe-"));
+  // A shelf directory that does not exist yet: "no file lands" then also
+  // means the export never so much as created its directory.
+  process.env.PUBLISH_EXPORTS_DIR = join(shelf, "exports");
+  process.env[ACCESS_SECRET_VAR] = SECRET;
+  delete process.env.NEXT_PUBLIC_DEV_AUTH;
+});
+test.afterEach(() => {
+  rmSync(shelf, { recursive: true, force: true });
+});
+
+const post = (body: unknown, ip: string) =>
+  cutExportPOST(
+    new Request("http://localhost/api/cut/export", {
+      method: "POST",
+      headers: { "content-type": "application/json", authorization: `Bearer ${SECRET}`, "x-forwarded-for": ip },
+      body: JSON.stringify(body),
+    }),
+  );
+
+test("case 4 · a posture that forbids local binaries refuses with a 4xx naming it, and no file lands", async () => {
+  process.env.LOCAL_BINARIES = "off";
+  const document = compileCut(derive(), { "mus-a": 250 }, POINTERS);
+
+  const res = await post({ document, projectId: "p-doc" }, "10.9.0.1");
+  expect(res.status).toBeGreaterThanOrEqual(400);
+  expect(res.status).toBeLessThan(500);
+  const body = (await res.json()) as { detail: string; code: string };
+  expect(body.code).toBe("local-binaries-forbidden");
+  expect(body.detail).toContain(describePosture("policy-forbidden"));
+  expect(existsSync(process.env.PUBLISH_EXPORTS_DIR!)).toBe(false);
+
+  // The module refuses on its own too, before it touches the disk: the route's
+  // gate is defence in depth, not the only door.
+  await expect(runCutExport({ document, projectId: "p-doc" })).rejects.toMatchObject({
+    code: "local-binaries-forbidden",
+  });
+  expect(existsSync(process.env.PUBLISH_EXPORTS_DIR!)).toBe(false);
+});
+
+test("the route refuses a body that is not a compiled cut, before anything spawns", async () => {
+  process.env.LOCAL_BINARIES = "on";
+  const empty = { ...compileCut(derive(), {}, POINTERS), totalS: 0, picture: [] };
+  const bodies: unknown[] = [{}, { document: { v: 2 } }, { document: empty }];
+  for (const [i, body] of bodies.entries()) {
+    const res = await post(body, `10.9.1.${i}`);
+    expect(res.status, JSON.stringify(body).slice(0, 80)).toBe(400);
+  }
+  expect(existsSync(process.env.PUBLISH_EXPORTS_DIR!)).toBe(false);
+});
+
+test("case 6 · the sidecar carries the projectId and the finish-line verdicts, and the shelf reads it", async () => {
+  const document = compileCut(derive(), { "mus-a": 250 }, POINTERS);
+  const sidecar = cutSidecar(document, "p-doc");
+  expect(sidecar.projectId).toBe("p-doc");
+  expect(sidecar.finish).toEqual(document.finish);
+  expect(sidecar.finish.map((f) => f.verdict)).toContain("fail");
+  expect(sidecar.document).toBe(cutDocumentHash(document));
+  expect(sidecar.gaps).toEqual({
+    picture: document.picture.filter((p) => p.kind === "gap").length,
+    audio: document.audio.filter((a) => a.kind === "gap").length,
+  });
+
+  // Landed through the kernel's own landing, the publish shelf names the
+  // project — the same reader the calendar uses.
+  const root = process.env.PUBLISH_EXPORTS_DIR!;
+  mkdirSync(root, { recursive: true });
+  const id = "0f0f0f0f-0000-4000-8000-000000000001";
+  writeFileSync(partialPath(root, id), "not really an mp4");
+  await landExport({ root, id, finalPath: join(root, `${id}.mp4`), sidecar });
+  expect(readdirSync(root).sort()).toEqual([`${id}.json`, `${id}.mp4`]);
+  expect((await listExports()).map((e) => [e.id, e.projectId])).toEqual([[id, "p-doc"]]);
+});
+
+test("the ffmpeg plan: one input per picture segment for its hold, a gap is black, a take plays at its offset", () => {
+  const document = compileCut(derive(), { "mus-a": 250 }, POINTERS);
+  const args = cutExportArgs(
+    document,
+    { stills: { f1: "/w/f1.jpg", f3: "/w/f3.jpg" }, takes: { st_x: "/s/st_x.mp3" } },
+    "/out/x.partial.mp4",
+    "libx264",
+  );
+  const inputs: string[][] = [];
+  for (let i = 0; i < args.length; i++) if (args[i] === "-i") inputs.push(args.slice(Math.max(0, i - 6), i + 2));
+  const black = `color=c=black:s=1920x1080:r=${CUT_FPS}`;
+
+  // Picture first, in order, each held for its own duration.
+  expect(inputs[0].slice(-4)).toEqual(["-t", "6", "-i", "/w/f1.jpg"]);
+  expect(inputs[1].slice(-4)).toEqual(["-t", "8", "-i", black]);
+  expect(inputs[2].slice(-4)).toEqual(["-t", "6", "-i", "/w/f3.jpg"]);
+  // Then the one take the store answers for; the voice gaps add no input.
+  expect(inputs[3].slice(-2)).toEqual(["-i", "/s/st_x.mp3"]);
+  expect(inputs).toHaveLength(4);
+
+  const graph = args[args.indexOf("-filter_complex") + 1];
+  expect(graph).toContain("concat=n=3:v=1:a=0");
+  expect(graph).toContain("adelay=250:all=1");
+  // The output is held to the ruler, not to whichever stream runs longest.
+  expect(args.slice(args.lastIndexOf("-t"), args.lastIndexOf("-t") + 2)).toEqual(["-t", "20"]);
+  expect(args[args.length - 1]).toBe("/out/x.partial.mp4");
+
+  // A plate the server could not resolve renders black, and with no take in
+  // hand the soundtrack is silence for the whole cut, never a shorter file.
+  const bare = cutExportArgs(document, { stills: {}, takes: {} }, "/out/y.partial.mp4", "libx264");
+  expect(bare.filter((a) => a === black)).toHaveLength(3);
+  expect(bare).toContain("anullsrc=r=48000:cl=stereo");
+  expect(bare.join(" ")).not.toContain("adelay");
+});
+
+test("ExportError stays one class across the music-video export and the kernel", async () => {
+  const mv = await import("@/lib/musicVideoExport");
+  expect(mv.ExportError).toBe(ExportError);
 });
