@@ -22,6 +22,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { accessHeader } from "@/lib/imagingClient";
 import { useJobs } from "@/lib/jobs";
 import { loadStep, saveStep } from "../_shared/stepStore";
 import { recalibrate, recalibrateFromPlan } from "./recalibrate";
@@ -198,7 +199,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       try {
         const res = await fetch("/api/recalibrate", {
           method: "POST",
-          headers: { "content-type": "application/json" },
+          headers: { "content-type": "application/json", ...accessHeader() },
           body: JSON.stringify({
             notebook: NOTEBOOK,
             renders: renderPayloadFor(base),
