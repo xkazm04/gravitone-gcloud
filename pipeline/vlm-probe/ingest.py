@@ -31,6 +31,9 @@ import sys
 from collections import Counter
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+import frame_manifest  # noqa: E402
+
 import numpy as np
 from PIL import Image
 
@@ -238,7 +241,15 @@ def main():
                              "t_seconds": round(ts, 2), "std": round(m["std"], 1),
                              "edge": round(m["edge"], 2)})
         mf = FRAMES_DIR / f"{prefix}-manifest.json"
-        mf.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+        frame_manifest.write(
+            mf,
+            slug=prefix,
+            dur=duration,
+            strat=args.strategy,
+            thres=args.threshold,
+            cuts=cut_times if args.strategy == "scene" else [],
+            frames=manifest,
+        )
         print(f"published {len(manifest)} frames -> {FRAMES_DIR}")
         print(f"provenance -> {mf}")
 

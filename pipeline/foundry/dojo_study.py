@@ -26,10 +26,15 @@ cross over (the repo's standing acquisition rule).
 import argparse
 import collections
 import json
+import sys
 from pathlib import Path
 
 HERE = Path(__file__).parent
+FRAMES_DIR = HERE.parent / "vlm-probe" / "frames"
 PROBE_OUT = HERE.parent.parent / "vlm-probe-out"
+
+sys.path.insert(0, str(HERE.parent / "vlm-probe"))
+import frame_manifest  # noqa: E402
 
 SIZE_ORDER = ["extreme-wide", "wide", "full", "medium-full", "medium", "medium-close", "close", "extreme-close"]
 FIELDS = ["shot_size", "camera_angle", "composition", "exposure", "depth_of_field",
@@ -101,17 +106,31 @@ def analyze(per_source):
 BEATS = ["setup(0-25%)", "build(25-55%)", "peak(55-85%)", "tail(85-100%)"]
 
 
-def beat_map(per_source):
+def beat_map(per_source, frames_dir=None):
     """Yield lane 2: WHICH technique at WHICH position in the cut. A study that
     returns one clause has under-delivered (operator finding, 2026-08-31); the
     beat map is the lesson dozens of frames actually carry."""
+    frames_path = Path(frames_dir) if frames_dir is not None else FRAMES_DIR
     out = {}
     for src, frames in per_source.items():
-        seq = [frames[f] for f in sorted(frames)]
+        manifest_file = frames_path / f"{src}-manifest.json"
+        manifest = frame_manifest.read(manifest_file) if manifest_file.exists() else None
+        duration_s = manifest.get("duration_s") if manifest else None
+
+        if duration_s is None or duration_s <= 0:
+            # Manifest with duration_s = None is flagged / skipped from runtime beat binning
+            # rather than silently using filename index.
+            out[src] = {"_skipped": True, "_flag": "missing_duration", "reason": "manifest duration_s is None"}
+            continue
+
+        frame_times = {item["frame"]: item["t_seconds"] for item in manifest.get("frames", []) if "t_seconds" in item}
         t = collections.defaultdict(lambda: collections.defaultdict(collections.Counter))
-        for i, a in enumerate(seq):
-            f = i / max(len(seq) - 1, 1)
-            b = BEATS[0] if f < .25 else BEATS[1] if f < .55 else BEATS[2] if f < .85 else BEATS[3]
+        for f in sorted(frames):
+            if f not in frame_times:
+                continue
+            a = frames[f]
+            t_sec = frame_times[f]
+            b = frame_manifest.beat_of(t_sec, duration_s)
             for fld in ("shot_size", "camera_angle", "composition", "lighting_key", "depth_of_field", "exposure"):
                 t[b][fld][str(a.get(fld))] += 1
         out[src] = {b: {fld: dict(c.most_common(3)) for fld, c in flds.items()} for b, flds in t.items()}

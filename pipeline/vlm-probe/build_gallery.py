@@ -24,6 +24,9 @@ import sys
 from html import escape
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+import frame_manifest  # noqa: E402
+
 HERE = Path(__file__).parent
 FRAMES_DIR = HERE / "frames"
 REPLICA_DIR = HERE / "replicas"
@@ -83,7 +86,8 @@ def main():
 
     manifest = {}
     for mf in FRAMES_DIR.glob("*-manifest.json"):
-        for e in json.loads(mf.read_text(encoding="utf-8")):
+        data = frame_manifest.read(mf)
+        for e in data.get("frames", []):
             manifest[e["frame"]] = e
 
     if GALLERY.exists():

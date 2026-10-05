@@ -32,6 +32,7 @@ from collections import Counter
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import frame_manifest  # noqa: E402
 from ingest import FRAMES_DIR, download, extract, keep_or_throw, probe_duration  # noqa: E402
 
 HERE = Path(__file__).parent
@@ -132,8 +133,15 @@ def main():
                 shutil.copy2(path, dest)
                 manifest.append({"frame": dest.name, "source": slug,
                                  "t_seconds": round(ts, 2)})
-            (FRAMES_DIR / f"{slug}-manifest.json").write_text(
-                json.dumps(manifest, indent=2), encoding="utf-8")
+            frame_manifest.write(
+                FRAMES_DIR / f"{slug}-manifest.json",
+                slug=slug,
+                dur=dur,
+                strat="scene",
+                thres=args.threshold,
+                cuts=cuts,
+                frames=manifest,
+            )
             print(f"  published {len(manifest)} frames")
 
         (WORK / f"{slug}-rhythm.json").write_text(json.dumps(r, indent=2), encoding="utf-8")
