@@ -33,7 +33,6 @@
 //     and the draft round trip keep working. Requested of the Director as
 //     contract fields; until then they are this browser's.
 
-import { accessHeader } from "@/lib/imagingClient";
 import type { Asset, AudioMeta, LabEditMode, MeasuredAudio } from "@/lib/assets";
 import { takeFileUrl } from "@/lib/sound/client";
 import { DEFECTS, RUBRIC, type DefectCode, type SoundKind, type SoundTake, type TakeOrigin, type TakePatch } from "@/lib/sound/types";
@@ -58,14 +57,10 @@ export type AnnexMap = Record<string, Annex>;
 
 const ANNEX_KEYS = ["reference_track_id", "prompt_round", "draft_id", "variation", "edit_modes", "fileName"] as const;
 
-/** The URL an <audio> element plays a take from. The access secret rides as
- *  `k=` because an element cannot carry a header (the file route accepts it,
- *  app/api/sound/takes/[id]/file/route.ts). Read off lib/imagingClient's
- *  header rather than the variable, so this module names no environment. */
+/** The URL an <audio> element plays a take from — takeFileUrl carries the
+ *  access key as `k=` itself now (lib/sound/client.ts). */
 export function playUrl(id: string): string {
-  const auth = accessHeader().authorization;
-  const k = auth ? auth.replace(/^Bearer\s+/i, "") : "";
-  return k ? `${takeFileUrl(id)}?k=${encodeURIComponent(k)}` : takeFileUrl(id);
+  return takeFileUrl(id);
 }
 
 const isDefect = (s: string): s is DefectCode => (DEFECTS as readonly string[]).includes(s);

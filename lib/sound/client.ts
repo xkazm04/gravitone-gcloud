@@ -58,8 +58,17 @@ export interface TakeQuery {
   fixtures?: boolean;
 }
 
-/** The file URL for a take's bytes — usable directly as an <audio src>. */
-export const takeFileUrl = (id: string) => `/api/sound/takes/${encodeURIComponent(id)}/file`;
+/** The file URL for a take's bytes — usable directly as an <audio src>.
+ *  An <audio> element cannot send the Authorization header accessHeader()
+ *  adds, so the access key rides as `k=` (the file route accepts it, and it is
+ *  read off accessHeader() so this module names no environment). Without it every lab
+ *  and Library player 401s once the secret is set. */
+export const takeFileUrl = (id: string) => {
+  const base = `/api/sound/takes/${encodeURIComponent(id)}/file`;
+  const auth = accessHeader().authorization;
+  const k = auth ? auth.replace(/^Bearer\s+/i, "") : "";
+  return k ? `${base}?k=${encodeURIComponent(k)}` : base;
+};
 
 export const listTakes = (f: TakeQuery = {}) =>
   call<{ takes: SoundTake[] }>(
