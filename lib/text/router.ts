@@ -54,12 +54,13 @@
 // nothing can quietly claim otherwise.
 
 import { canSpawnLocalBinaries, describePosture, localPosture } from "../deployment";
-import { currentTextEnv, isConfigured, KEY_VAR, type TextEnv } from "./env";
+import { currentTextEnv, isConfigured, KEY_VAR, RETRIEVE_FLAG, retrievalEnabled, type TextEnv } from "./env";
 import { noAlternative, noEngine, TextError, unsupported } from "./errors";
 import { parseAgainstSchema, schemaInstruction } from "./json";
 import { logTurn, type TurnLog } from "./log";
 import { emitLightTrack } from "./lighttrack";
 import { claudeCliProvider } from "./providers/claudeCli";
+import { claudeCliRetrieveProvider } from "./providers/claudeCliRetrieve";
 import { googleProvider } from "./providers/google";
 import type {
   LadderRung,
@@ -114,7 +115,49 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
 const PROVIDERS: Record<TextProviderId, () => TextProvider> = {
   "claude-cli": claudeCliProvider,
   google: googleProvider,
+  "claude-cli-retrieve": claudeCliRetrieveProvider,
 };
+
+/**
+ * WHO MAY SEARCH AND FETCH FOR WHICH TURN — the `retrieve` capability's plan,
+ * kept apart from PLAN above on purpose (research-run-engine-B).
+ *
+ * A separate table because it is a separate seam (types.ts::TextCapability): a
+ * retrieval candidate in PLAN would be walked by `reason()`, which would either
+ * refuse it as `unsupported` or — worse — serve a reasoning turn through a
+ * tool-carrying argv. Nothing in PLAN changes, so with TEXT_RETRIEVE off every
+ * reasoning turn walks exactly the chain it walked before this table existed.
+ *
+ * `cloud` is empty for now: the Google rung's grounding (its grounding metadata
+ * mapped onto the same SourceReceipt) is the card's later work, and an empty row
+ * is an honest "no retrieval engine here", which the caller answers by falling
+ * back to `reason`. ROLLBACK is deleting the `research` row: every run is
+ * `reason` again, byte for byte.
+ */
+const RETRIEVE_PLAN: Record<TextEnv, Partial<Record<TurnClass, TextProviderId[]>>> = {
+  local: { research: ["claude-cli-retrieve"] },
+  cloud: {},
+};
+
+/** The retrieval chain for this turn — empty where nothing may retrieve. */
+export function retrievePlanFor(turn: TurnClass, env: TextEnv = currentTextEnv()): TextProviderId[] {
+  return RETRIEVE_PLAN[env][turn] ?? [];
+}
+
+/** The operator's gate on a retrieval candidate, or `null` when it is open.
+ *  `policy-forbidden` in the taxonomy's own word, with ITS remedy — the flag —
+ *  rather than blockError's, which names LOCAL_BINARIES: two policies, two
+ *  remedies, and errors.ts's header is explicit that conflating remedies is how
+ *  the wrong flag gets deleted. */
+function retrievalBlock(id: TextProviderId): TextError | null {
+  if (retrievalEnabled() || !PROVIDERS[id]().capabilities.includes("retrieve")) return null;
+  return new TextError(
+    `Web retrieval is off for this engine by policy: ${RETRIEVE_FLAG}=1 in .env.local lets a research run search ` +
+      `and fetch (WebSearch and WebFetch only) — see .env.example. Off, the run is reasoned, not retrieved.`,
+    "policy-forbidden",
+    id,
+  );
+}
 
 /** Per-turn wall-clock ceilings. The application's, always — no tool in this
  *  class ships one, and a cloud endpoint's own timeout is its business. These
@@ -385,6 +428,142 @@ export async function reason(req: TextRequest): Promise<TextResult> {
   }
 }
 
+/**
+ * RUN ONE RETRIEVAL TURN — a turn that may search and fetch, and comes back
+ * with a receipt per page fetched (research-run-engine-B).
+ *
+ * The second entry point, not a mode of the first: `reason()` is untouched and
+ * cannot reach a retrieval adapter. The walk keeps reason()'s invariant word for
+ * word — no elimination is silent — and its gates in its order (cancel, the
+ * capability, the cheap gate, the probe), with ONE gate in front of the cheap
+ * one: the operator's flag (`retrievalBlock`). Off, the turn is refused
+ * `policy-forbidden` before anything is probed or spawned.
+ *
+ * A refusal carries the trail in `detail.trail`, because the caller this exists
+ * for (/api/research) falls back to `reason()` when no retrieval engine can
+ * serve, and the receipt it then returns should still say which retrieval
+ * candidates dropped out and why.
+ */
+export async function retrieve(req: TextRequest): Promise<TextResult> {
+  const started = Date.now();
+  const env = currentTextEnv();
+  const timeoutMs = resolveTimeout(req);
+  const steer = { prefer: req.prefer, avoid: req.avoid };
+  const trail: RerouteStep[] = [];
+
+  try {
+    const out = await walk();
+    const l: TurnLog = {
+      turn: req.turn,
+      env,
+      ms: Date.now() - started,
+      promptChars: out.provenance.promptChars,
+      steer,
+      tried: trail,
+      provider: out.provenance.provider,
+      model: out.provenance.model,
+      rung: out.provenance.rung,
+      costUsd: out.provenance.costUsd,
+      schema: out.provenance.schemaEnforcement,
+    };
+    logTurn(l);
+    emitLightTrack(l);
+    return out;
+  } catch (e) {
+    const err = e instanceof TextError ? e : null;
+    const l: TurnLog = {
+      turn: req.turn,
+      env,
+      ms: Date.now() - started,
+      promptChars: req.prompt.length,
+      steer,
+      tried: trail,
+      kind: err?.kind ?? "failed",
+      provider: err?.provider,
+      message: err?.message ?? String(e),
+    };
+    logTurn(l);
+    emitLightTrack(l);
+    throw e;
+  }
+
+  async function walk(): Promise<TextResult> {
+    const chain = retrievePlanFor(req.turn, env).filter((id) => id !== req.avoid);
+    let first: TextError | null = null;
+
+    for (let i = 0; i < chain.length; i++) {
+      const id = chain[i];
+      if (req.signal?.aborted)
+        throw new TextError(`The ${req.turn} retrieval was cancelled before ${id} was asked.`, "cancelled", id);
+      const provider = PROVIDERS[id]();
+
+      if (!provider.capabilities.includes("retrieve") || !provider.retrieve) {
+        first ??= unsupported(id, "retrieve");
+        trail.push({ provider: id, why: "unsupported" });
+        continue;
+      }
+      const gated = retrievalBlock(id);
+      if (gated) {
+        first ??= gated;
+        trail.push({ provider: id, why: "policy-forbidden" });
+        continue;
+      }
+      const blocked = cheapBlock(id);
+      if (blocked) {
+        first ??= blockError(id, blocked);
+        trail.push({ provider: id, why: blocked });
+        continue;
+      }
+      if (!KEY_VAR[id]) {
+        const p = await provider.probe();
+        if (!p.ok) {
+          const why = p.why ?? "not-installed";
+          first ??= new TextError(p.detail, why === "no-key" ? "no-key" : why, id);
+          trail.push({ provider: id, why });
+          continue;
+        }
+      }
+
+      const prompt =
+        req.schema && !provider.enforcesSchema ? `${req.prompt}\n${schemaInstruction(req.schema)}` : req.prompt;
+      try {
+        const served = await provider.retrieve({ ...req, prompt }, timeoutMs);
+        const json = req.schema ? parseAgainstSchema(id, served.text, req.schema) : undefined;
+        return {
+          ...served,
+          json,
+          // A retrieval answer ALWAYS carries its receipts, even when there are
+          // none — "fetched nothing" is a finding, not an absence of one.
+          receipts: served.receipts ?? [],
+          provenance: {
+            ...served.provenance,
+            rung: i === 0 ? "preferred" : "alternate",
+            ...(trail.length ? { reroutedFrom: [...trail] } : {}),
+            schemaEnforcement:
+              req.schema && !provider.enforcesSchema ? "prompted" : served.provenance.schemaEnforcement,
+          },
+        };
+      } catch (e) {
+        const err = e instanceof TextError ? e : new TextError(String(e), "failed", id);
+        first ??= err;
+        trail.push({ provider: id, why: trailReason(err) });
+        if (!err.reroutable) throw err;
+      }
+    }
+
+    const why = trail.map((t) => `${t.provider} (${t.why})`).join(", ") || "no candidates were planned";
+    throw new TextError(
+      `No retrieval engine could serve this ${req.turn} turn. Tried: ${why}. ` +
+        (first ? first.message : `Nothing may retrieve for a ${req.turn} turn in ${env} posture.`),
+      // The engine we meant to use, as in reason(); `unsupported` when the
+      // plan named nobody, which is the cloud posture today.
+      first?.kind ?? "unsupported",
+      first?.provider,
+      { trail: [...trail] },
+    );
+  }
+}
+
 /** The error for a candidate blocked before it was called. Written once so a
  *  trail entry and the message a caller reads cannot disagree. */
 function blockError(id: TextProviderId, why: RerouteStep["why"]): TextError {
@@ -450,7 +629,16 @@ export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
   const candidates: { provider: TextProviderId; ok: boolean; detail: string }[] = [];
   let serving: TextProviderId | null = null;
 
-  for (const id of planFor(turn, env)) {
+  // The retrieval candidates first, because when one is open it is what a run
+  // of this turn would use (/api/research tries it before reasoning). Off, it is
+  // reported `policy-forbidden` with the flag that opens it, and every other
+  // row is exactly what it was (research-run-engine-B).
+  for (const id of [...retrievePlanFor(turn, env), ...planFor(turn, env)]) {
+    const gated = retrievalBlock(id);
+    if (gated) {
+      candidates.push({ provider: id, ok: false, detail: gated.message });
+      continue;
+    }
     const blocked = cheapBlock(id);
     if (blocked) {
       candidates.push({ provider: id, ok: false, detail: blockError(id, blocked).message });

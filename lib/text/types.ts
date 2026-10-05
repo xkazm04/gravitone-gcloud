@@ -27,7 +27,7 @@
 
 /** Every text provider this app knows how to reach. A closed union so a typo is
  *  a type error rather than a silent skip in the plan table. */
-export const TEXT_PROVIDER_IDS = ["claude-cli", "google"] as const;
+export const TEXT_PROVIDER_IDS = ["claude-cli", "google", "claude-cli-retrieve"] as const;
 export type TextProviderId = (typeof TEXT_PROVIDER_IDS)[number];
 
 /**
@@ -44,8 +44,44 @@ export type TextProviderId = (typeof TEXT_PROVIDER_IDS)[number];
  * registry's agent-cli-transport golden path is explicit about why: folding a
  * neutral generate path and a workspace-touching path into one function with a
  * mode flag "would make 'which mode am I in?' a bug that type-checks."
+ *
+ * `retrieve` IS THAT SECOND MEMBER, scoped to the web and nothing else
+ * (research-run-engine-B). A retrieval run may SEARCH and FETCH — exactly
+ * `WebSearch,WebFetch`, never a tool that reads, writes or runs anything on this
+ * machine — and every page it fetched comes back as a `SourceReceipt`. It is a
+ * separate seam all the way down, as the paragraph above requires: its own
+ * adapter (providers/claudeCliRetrieve.ts, its own provider id), its own router
+ * entry point (router.ts::retrieve, never a flag on `reason()`), its own plan
+ * table, and an operator flag (`TEXT_RETRIEVE`, off by default) without which
+ * the rung is `policy-forbidden` and nothing about `reason` changes.
  */
-export type TextCapability = "reason";
+export type TextCapability = "reason" | "retrieve";
+
+/**
+ * ONE PAGE THE ENGINE ACTUALLY FETCHED in this run — the evidence "researched"
+ * is derived from (research-run-engine-B).
+ *
+ * Built by the retrieval adapter from a `WebFetch` tool_use / tool_result pair
+ * in the CLI's stream, never from anything the model wrote about its sources:
+ * a citation is a claim, a receipt is a record. A fetch that failed is not a
+ * receipt. A URL that appeared only in a search result list is not a receipt
+ * either — nothing was read.
+ */
+export interface SourceReceipt {
+  /** The address as the engine asked for it. */
+  url: string;
+  /** The search whose result list surfaced this URL, or `null` when the engine
+   *  went to the address directly. */
+  query: string | null;
+  /** When this process observed the result arrive (ISO 8601). */
+  fetchedAt: string;
+  /** The CLI's own byte count for the page where it reports one; otherwise the
+   *  UTF-8 size of the excerpt the model was handed. */
+  bytes: number;
+  /** sha256 (hex) of the text the MODEL READ — the tool result — so two runs
+   *  that saw different text at the same address can be told apart. */
+  excerptHash: string;
+}
 
 /**
  * WHAT KIND OF TURN THIS IS. A closed vocabulary, per the registry's
@@ -91,7 +127,10 @@ export type TextCapability = "reason";
  *                        engine and the surface says so to the creator. Do not
  *                        quietly promote this turn to a tool-using one: that is
  *                        a second capability and a separate seam, per the note
- *                        on `TextCapability` above.
+ *                        on `TextCapability` above. (That seam now exists —
+ *                        `retrieve`, behind TEXT_RETRIEVE — and a `research`
+ *                        turn served by it is a different turn on a different
+ *                        door; this one is unchanged.)
  *
  *   · `sound-hunt`       /api/sound/hunts — an operator's musical (or sound-
  *                        effect) problem in, a MAP of variants out: axes of
@@ -303,6 +342,10 @@ export interface TextResult {
    *  enforced. */
   json?: unknown;
   provenance: TextProvenance;
+  /** Set by a `retrieve` turn only: every page fetched, in the order fetched.
+   *  An empty array is a retrieval run that fetched nothing — a different fact
+   *  from a `reason` turn, which has no receipts at all. */
+  receipts?: readonly SourceReceipt[];
 }
 
 /** What a probe found. Zero-token where the transport allows it. */
@@ -341,4 +384,7 @@ export interface TextProvider {
   readonly enforcesSchema: boolean;
   probe(): Promise<ProbeResult>;
   reason(req: TextRequest, timeoutMs: number): Promise<TextResult>;
+  /** A `retrieve` turn. Present only on an adapter whose `capabilities` says
+   *  so, and reached only through router.ts::retrieve. */
+  retrieve?(req: TextRequest, timeoutMs: number): Promise<TextResult>;
 }

@@ -70,7 +70,35 @@ export function currentTextEnv(): TextEnv {
 export const KEY_VAR: Record<TextProviderId, string | null> = {
   "claude-cli": null,
   google: "GOOGLE_AI_API_KEY",
+  // The same binary and the same seat as `claude-cli` — see that row. It is a
+  // separate id because it is a separate door (providers/claudeCliRetrieve.ts),
+  // not because it holds a different credential.
+  "claude-cli-retrieve": null,
 };
+
+/**
+ * THE RETRIEVAL FLAG (research-run-engine-B). OFF unless the operator says
+ * otherwise, and that default is the policy, not a placeholder.
+ *
+ * A retrieval run hands the engine WebSearch and WebFetch, and a fetched page is
+ * untrusted text read by a model that can be talked into things — the one new
+ * risk this capability brings (prompt injection), which the operator accepted
+ * on the condition that it is opt-in. So:
+ *
+ *   · only an explicit `1`, `on` or `true` turns it on. Anything else — unset,
+ *     empty, `0`, a typo — is OFF: a misspelling must never widen what an
+ *     engine can reach, the same direction TEXT_ENV's garbage rule takes for
+ *     spend;
+ *   · off, the retrieval candidate is reported `policy-forbidden` by the
+ *     pre-flight and by router.ts::retrieve, and /api/research takes today's
+ *     path byte for byte.
+ */
+export const RETRIEVE_FLAG = "TEXT_RETRIEVE";
+
+export function retrievalEnabled(): boolean {
+  const raw = process.env[RETRIEVE_FLAG]?.trim().toLowerCase();
+  return raw === "1" || raw === "on" || raw === "true";
+}
 
 export function keyFor(provider: TextProviderId): string {
   const name = KEY_VAR[provider];

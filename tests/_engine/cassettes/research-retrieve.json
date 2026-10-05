@@ -1,0 +1,277 @@
+{
+  "name": "research-retrieve",
+  "source": "hand-written",
+  "door": "retrieve",
+  "recordedAt": "2026-10-06",
+  "cliVersion": "2.1.289",
+  "cliArgsFingerprint": "e976b2bcb7cb9484",
+  "turns": [
+    {
+      "prompt": null,
+      "mode": "stream",
+      "stream": [
+        {
+          "type": "system",
+          "subtype": "init",
+          "session_id": "00000000-fake-4000-8000-0000000000r1",
+          "tools": ["WebSearch", "WebFetch"],
+          "mcp_servers": [],
+          "model": "claude-opus-stand-in",
+          "permissionMode": "dontAsk",
+          "apiKeySource": "none"
+        },
+        {
+          "type": "assistant",
+          "message": {
+            "id": "msg_fake_01",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              { "type": "tool_use", "id": "toolu_fake_s1", "name": "WebSearch", "input": { "query": "harbour dredging cost per cubic metre 2026" } }
+            ],
+            "stop_reason": "tool_use"
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1"
+        },
+        {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "tool_use_id": "toolu_fake_s1",
+                "type": "tool_result",
+                "content": "Web search results for query: \"harbour dredging cost per cubic metre 2026\"\n\nLinks: [{\"title\":\"Port authority dredging ledger\",\"url\":\"https://example.org/one\"},{\"title\":\"Contractor rate card\",\"url\":\"https://www.example.net/two/\"}]"
+              }
+            ]
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1",
+          "tool_use_result": {
+            "query": "harbour dredging cost per cubic metre 2026",
+            "results": [
+              {
+                "tool_use_id": "srvtoolu_fake_1",
+                "content": [
+                  { "title": "Port authority dredging ledger", "url": "https://example.org/one" },
+                  { "title": "Contractor rate card", "url": "https://www.example.net/two/" }
+                ]
+              }
+            ],
+            "durationSeconds": 1.4
+          }
+        },
+        {
+          "type": "assistant",
+          "message": {
+            "id": "msg_fake_02",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              { "type": "tool_use", "id": "toolu_fake_f1", "name": "WebFetch", "input": { "url": "https://example.org/one", "prompt": "the dredging volumes and the year they cover" } }
+            ],
+            "stop_reason": "tool_use"
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1"
+        },
+        {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": [
+              { "tool_use_id": "toolu_fake_f1", "type": "tool_result", "content": "The ledger reports 1.2 million cubic metres dredged in the 2025 season." }
+            ]
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1",
+          "tool_use_result": { "bytes": 48211, "code": 200, "codeText": "OK", "result": "The ledger reports 1.2 million cubic metres dredged in the 2025 season.", "durationMs": 812, "url": "https://example.org/one" }
+        },
+        {
+          "type": "assistant",
+          "message": {
+            "id": "msg_fake_03",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              { "type": "tool_use", "id": "toolu_fake_f2", "name": "WebFetch", "input": { "url": "https://www.example.net/two/", "prompt": "the contractor's quoted rate per cubic metre" } }
+            ],
+            "stop_reason": "tool_use"
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1"
+        },
+        {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": [
+              {
+                "tool_use_id": "toolu_fake_f2",
+                "type": "tool_result",
+                "content": [{ "type": "text", "text": "Quoted rate: 14 to 19 per cubic metre, mobilisation excluded." }]
+              }
+            ]
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1",
+          "tool_use_result": { "bytes": 20977, "code": 200, "codeText": "OK", "result": "Quoted rate: 14 to 19 per cubic metre, mobilisation excluded.", "durationMs": 640, "url": "https://www.example.net/two/" }
+        },
+        {
+          "type": "assistant",
+          "message": {
+            "id": "msg_fake_04",
+            "type": "message",
+            "role": "assistant",
+            "content": [
+              { "type": "text", "text": "Checking the counter-case directly." },
+              { "type": "tool_use", "id": "toolu_fake_f3", "name": "WebFetch", "input": { "url": "https://example.org/counter-case", "prompt": "the strongest argument that the cost is not unusual" } }
+            ],
+            "stop_reason": "tool_use"
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1"
+        },
+        {
+          "type": "user",
+          "message": {
+            "role": "user",
+            "content": [
+              { "tool_use_id": "toolu_fake_f3", "type": "tool_result", "content": "Regional averages sit within ten percent of this harbour's figure." }
+            ]
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1",
+          "tool_use_result": { "bytes": 9314, "code": 200, "codeText": "OK", "result": "Regional averages sit within ten percent of this harbour's figure.", "durationMs": 505, "url": "https://example.org/counter-case" }
+        },
+        {
+          "type": "assistant",
+          "message": {
+            "id": "msg_fake_05",
+            "type": "message",
+            "role": "assistant",
+            "content": [{ "type": "text", "text": "Notebook follows." }],
+            "stop_reason": "end_turn"
+          },
+          "parent_tool_use_id": null,
+          "session_id": "00000000-fake-4000-8000-0000000000r1"
+        },
+        {
+          "type": "result",
+          "subtype": "success",
+          "is_error": false,
+          "duration_ms": 96210,
+          "duration_api_ms": 88114,
+          "num_turns": 5,
+          "session_id": "00000000-fake-4000-8000-0000000000r1",
+          "total_cost_usd": 0.4127,
+          "usage": { "input_tokens": 61204, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "output_tokens": 4410 },
+          "permission_denials": []
+        }
+      ],
+      "resultJson": {
+        "topic": "harbour dredging costs",
+        "question": "Why does dredging this harbour cost what it does?",
+        "verdict": "The volume, not the rate, drives the bill",
+        "tension": {
+          "expectation": "the contractor's rate is the expensive part",
+          "reality": "the rate is ordinary and the volume is not",
+          "whyItIsATension": "the bill is blamed on the one input that is normal",
+          "strength": "moderate"
+        },
+        "facts": [
+          {
+            "id": "f-volume",
+            "claim": "1.2 million cubic metres were dredged in the 2025 season",
+            "loadBearing": true,
+            "kind": "found",
+            "confidence": "high",
+            "confidenceNote": "read off the port authority's own ledger in this run",
+            "asOf": "2026-10-06",
+            "sources": [{ "name": "Port authority dredging ledger", "evidenceClass": "primary", "url": "https://example.org/one" }]
+          },
+          {
+            "id": "f-rate",
+            "claim": "The quoted rate is 14 to 19 per cubic metre",
+            "loadBearing": true,
+            "kind": "found",
+            "confidence": "high",
+            "confidenceNote": "the contractor's own rate card, fetched in this run",
+            "asOf": "2026-10-06",
+            "sources": [{ "name": "Contractor rate card", "evidenceClass": "vendor", "interested": true, "url": "https://example.net/two" }]
+          },
+          {
+            "id": "f-recalled",
+            "claim": "A 2019 audit put the harbour's silt load at twice the regional mean",
+            "loadBearing": true,
+            "kind": "found",
+            "confidence": "high",
+            "confidenceNote": "the audit is well known",
+            "asOf": "2026-10-06",
+            "sources": [{ "name": "Harbour silt audit", "evidenceClass": "primary", "url": "https://example.com/silt-audit-2019" }]
+          },
+          {
+            "id": "f-regional",
+            "claim": "Regional averages sit within ten percent of this harbour's figure",
+            "loadBearing": false,
+            "kind": "found",
+            "confidence": "medium",
+            "asOf": "2026-10-06",
+            "sources": [{ "name": "Regional cost survey", "evidenceClass": "secondary", "url": "https://example.org/counter-case" }]
+          },
+          {
+            "id": "f-unfetched-low",
+            "claim": "Two neighbouring ports deferred dredging in 2024",
+            "loadBearing": false,
+            "kind": "found",
+            "confidence": "low",
+            "asOf": "2026-10-06",
+            "sources": [{ "name": "Trade press", "evidenceClass": "aggregator", "locator": "https://example.com/trade-press" }]
+          }
+        ],
+        "mechanisms": [
+          {
+            "id": "m-volume",
+            "name": "volume drives the bill",
+            "chain": ["The harbour silts fast", "THEREFORE each season moves more material", "BUT the rate per cubic metre is ordinary"],
+            "evidence": ["f-volume", "f-rate"],
+            "explains": "why the total is high while the rate is not",
+            "needsAnalogy": false
+          }
+        ],
+        "reversals": [
+          {
+            "id": "r-rate",
+            "obviousReading": "a contractor charging over the odds would explain a high bill",
+            "whyWrong": "the rate sits inside the regional band",
+            "mechanismId": "m-volume",
+            "evidence": ["f-rate", "f-regional"],
+            "escalation": "the cost is a property of the harbour, not of the contract"
+          }
+        ],
+        "steelMan": {
+          "claim": "the cost is not unusual at all",
+          "evidence": ["f-regional"],
+          "statement": "Regional averages sit within ten percent; there is nothing here to explain.",
+          "whyInclude": "it is the honest null hypothesis",
+          "provenance": "found"
+        },
+        "unknowns": [
+          { "id": "u-season", "what": "whether 2025 was a typical season", "why": "one season was read", "impact": "the script may not call the volume normal", "about": ["f-volume"] }
+        ],
+        "engineFit": [
+          { "engine": "explainer", "label": "Explainer", "fit": "good", "why": "one mechanism and one reversal", "hazard": "" }
+        ],
+        "currency": {
+          "halfLife": "one dredging season",
+          "why": "volumes are reported per season",
+          "expiresFirst": ["f-volume"],
+          "durable": ["f-rate"],
+          "advice": "say a recent season rather than naming the year"
+        },
+        "researchGaps": ["Only one season of the ledger was read; earlier seasons were not fetched"]
+      }
+    }
+  ]
+}

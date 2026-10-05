@@ -38,6 +38,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 
 import { accessHeader } from "@/lib/imagingClient";
+import type { SourceReceipt } from "@/lib/text/types";
 import type { Notebook } from "../../_shared/notebook/types";
 import { saveStep, type ResearchNotebookStepData } from "../../_shared/stepStore";
 
@@ -65,8 +66,16 @@ export interface EngineReceipt {
   costBasis: "vendor-reported" | "estimated" | "unpriced";
   durationMs: number;
   promptChars: number;
-  /** Did the engine have web search? No, on both rungs — see the route header. */
+  /** Did the engine fetch anything? `false` on every reasoned run. On the
+   *  retrieval rung (TEXT_RETRIEVE, research-run-engine-B) it is DERIVED by the
+   *  route from `sources` — `sources.length > 0` — never set by hand. */
   searched: boolean;
+  /** Retrieval runs only: one receipt per page the engine fetched. Absent on a
+   *  reasoned run, which fetched nothing and has nothing to show. */
+  sources?: SourceReceipt[];
+  /** Retrieval runs only: one line per fact the cross-check downgraded
+   *  ("cited, not fetched"). */
+  crossCheck?: string[];
 }
 
 /* ───────────────────────────────── the state ─────────────────────────────── */

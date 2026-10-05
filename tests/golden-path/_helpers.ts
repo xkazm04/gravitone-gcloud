@@ -6,6 +6,7 @@ import path from "node:path";
 import { test } from "@playwright/test";
 
 import { cliArgs, probeClaude, USES_SHELL } from "@/lib/claudeCli";
+import { retrieveArgs } from "@/lib/text/providers/claudeCliRetrieve";
 import { PHASES, type PhaseKey, type PhaseState, type Project } from "@/lib/projects";
 
 import { fingerprintOf, sha256 } from "../_engine/marker.mjs";
@@ -232,8 +233,12 @@ export interface CassetteTurn {
   /** The prompt this envelope was recorded against — a hash and a length,
    *  never the text. `null` on a hand-written turn, which had no prompt. */
   prompt: { sha256: string; chars: number } | null;
-  mode?: "ok" | "is_error" | "not-json" | "login-stderr" | "slow" | `exit:${number}`;
+  mode?: "ok" | "is_error" | "not-json" | "login-stderr" | "slow" | "stream" | `exit:${number}`;
   slowMs?: number;
+  /** `mode: "stream"` only — the stream-json events written one per line, as
+   *  the retrieval door reads them. `resultJson` fills the result event's
+   *  `result` when it carries none. */
+  stream?: Record<string, unknown>[];
   stderr?: string;
   envelope?: {
     type?: string;
@@ -252,10 +257,15 @@ export interface CassetteTurn {
 export interface Cassette {
   name: string;
   source: "hand-written" | "recorded";
+  /** Which door's argv this cassette was made against: the reasoning door
+   *  (`cliArgs`, the default) or the retrieval rung's (`retrieveArgs`,
+   *  research-run-engine-B). The fingerprint below is checked against THAT
+   *  door, so a change to either argv refuses only its own cassettes. */
+  door?: "reason" | "retrieve";
   /** YYYY-MM-DD. */
   recordedAt: string;
   cliVersion: string;
-  /** `cliArgsFingerprint()` when the cassette was made. */
+  /** `cliArgsFingerprint(door)` when the cassette was made. */
   cliArgsFingerprint: string;
   turns: CassetteTurn[];
 }
@@ -283,8 +293,8 @@ export const schemaSha256 = (schema: unknown): string => sha256(JSON.stringify(s
 /** The argv the door sends, platform-neutral (the off-shell form). The model id
  *  is in it, so a model change, a flag change or a sandbox change all make
  *  every cassette refuse until it is re-recorded against the new door. */
-export function cliArgsFingerprint(): string {
-  return fingerprintOf(cliArgs(false));
+export function cliArgsFingerprint(door: Cassette["door"] = "reason"): string {
+  return fingerprintOf(door === "retrieve" ? retrieveArgs(false) : cliArgs(false));
 }
 
 export function loadCassette(name: string): Cassette {
@@ -293,9 +303,9 @@ export function loadCassette(name: string): Cassette {
 
 /** Why this cassette may not be played, or `null` when it may. */
 export function cassetteStaleness(c: Cassette, now: number = Date.now()): string | null {
-  const fp = cliArgsFingerprint();
+  const fp = cliArgsFingerprint(c.door);
   if (c.cliArgsFingerprint !== fp)
-    return `cassette ${c.name} was made against cliArgs() ${c.cliArgsFingerprint}, and the door now sends ${fp} - re-record it.`;
+    return `cassette ${c.name} was made against ${c.door === "retrieve" ? "retrieveArgs()" : "cliArgs()"} ${c.cliArgsFingerprint}, and the door now sends ${fp} - re-record it.`;
   const at = Date.parse(`${c.recordedAt}T00:00:00Z`);
   if (!Number.isFinite(at)) return `cassette ${c.name} has no readable recordedAt (${c.recordedAt}) - re-record it.`;
   const days = Math.floor((now - at) / 86_400_000);

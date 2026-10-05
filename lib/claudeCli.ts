@@ -313,11 +313,58 @@ function cancelled(spawned: boolean): CliError {
   return e;
 }
 
+/** The reasoning door's envelope: one JSON object on stdout. Throws a CliError
+ *  for anything else, which `spawnTurn` passes through as the verdict. */
+function settleEnvelope(out: string): CliResult {
+  let j: { is_error?: boolean; subtype?: string; result?: unknown; session_id?: string; total_cost_usd?: number; duration_ms?: number };
+  try {
+    j = JSON.parse(out);
+  } catch {
+    throw new CliError("The local Claude process returned output that was not JSON.", "failed");
+  }
+  if (j.is_error || j.subtype !== "success")
+    throw new CliError((j.result as string) || `The run ended as ${j.subtype}.`, "failed");
+  return {
+    text: String(j.result ?? ""),
+    sessionId: j.session_id,
+    costUsd: j.total_cost_usd,
+    durationMs: j.duration_ms,
+  };
+}
+
 /** Run one headless turn and return its text.
  *
  *  The second argument is still accepted as a bare timeout, which is what
  *  pipeline/direct-frames.mts and the probes pass. */
 export function runClaude(prompt: string, opts: number | RunOptions = {}): Promise<CliResult> {
+  return spawnTurn(prompt, cliArgs(), opts, settleEnvelope);
+}
+
+/**
+ * THE DOOR ITSELF — one spawn of `claude` with a given argv, everything this
+ * header promises applied to it: the seat-only environment, the floored
+ * ceiling, the tree kill on timeout and on cancel, the shared exit verdict, the
+ * guarded stdin.
+ *
+ * Exported for the second argv this module serves, the retrieval rung's
+ * (lib/text/providers/claudeCliRetrieve.ts, research-run-engine-B). It is a
+ * different ARGV through the same door, not a second door: a tool-using run
+ * that spawned through its own copy of this function would be one more place
+ * the metered-key strip or the tree kill could be forgotten.
+ *
+ * `settle` turns the finished stdout into the answer, and throws a CliError to
+ * refuse it. `onChunk` sees stdout as it arrives; a CliError it throws ENDS THE
+ * RUN at once (the tree is killed, the promise rejects with it) — the hook a
+ * stream reader uses to stop an engine that has stepped outside its fence
+ * rather than letting it finish.
+ */
+export function spawnTurn<T>(
+  prompt: string,
+  args: readonly string[],
+  opts: number | RunOptions,
+  settle: (stdout: string) => T,
+  onChunk?: (chunk: Buffer) => void,
+): Promise<T> {
   const { timeoutMs = 600_000, signal } = typeof opts === "number" ? { timeoutMs: opts } : opts;
   // Floored, never taken literally: a zero or a garbage value here would kill
   // every turn in milliseconds and route the whole product to its fallback with
@@ -326,7 +373,7 @@ export function runClaude(prompt: string, opts: number | RunOptions = {}): Promi
   // Already cancelled: nothing is spawned, so nothing is spent.
   if (signal?.aborted) return Promise.reject(cancelled(false));
   return new Promise((resolve, reject) => {
-    const child = spawn("claude", cliArgs(), {
+    const child = spawn("claude", [...args], {
       stdio: ["pipe", "pipe", "pipe"],
       shell: USES_SHELL,
       // The seat, never a metered key. See seatOnlyEnv — this is the single
@@ -355,7 +402,20 @@ export function runClaude(prompt: string, opts: number | RunOptions = {}): Promi
     }
     signal?.addEventListener("abort", onAbort, { once: true });
 
-    child.stdout.on("data", (c) => (out += c));
+    child.stdout.on("data", (c: Buffer) => {
+      out += c;
+      if (!onChunk) return;
+      try {
+        onChunk(c);
+      } catch (e) {
+        // The reader refused what it saw. Same order as a cancel: the tree
+        // first, then the verdict.
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", onAbort);
+        killTree(child);
+        reject(e instanceof CliError ? e : new CliError(String(e), "failed"));
+      }
+    });
     child.stderr.on("data", (c) => (err += c));
     child.on("error", () => {
       clearTimeout(timer);
@@ -372,17 +432,9 @@ export function runClaude(prompt: string, opts: number | RunOptions = {}): Promi
       // doors cannot disagree about what a missing binary looks like.
       if (code !== 0) return reject(classifyExit(code, err));
       try {
-        const j = JSON.parse(out);
-        if (j.is_error || j.subtype !== "success")
-          return reject(new CliError(j.result || `The run ended as ${j.subtype}.`, "failed"));
-        resolve({
-          text: String(j.result ?? ""),
-          sessionId: j.session_id,
-          costUsd: j.total_cost_usd,
-          durationMs: j.duration_ms,
-        });
-      } catch {
-        reject(new CliError("The local Claude process returned output that was not JSON.", "failed"));
+        resolve(settle(out));
+      } catch (e) {
+        reject(e instanceof CliError ? e : new CliError("The local Claude process returned output that was not JSON.", "failed"));
       }
     });
 
