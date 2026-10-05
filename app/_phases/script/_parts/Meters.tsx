@@ -71,7 +71,7 @@ const CHECK: Record<CheckState, { mark: string; cls: string; label: string }> = 
   pass: { mark: "✓", cls: "text-emerald-300", label: "pass" },
   declared: { mark: "!", cls: "text-amber-300", label: "declared deviation" },
   fail: { mark: "✕", cls: "text-rose-300", label: "fail" },
-  unmeasured: { mark: "—", cls: "text-white/35", label: "not measured" },
+  unmeasured: { mark: "?", cls: "text-amber-300", label: "not checked" },
 };
 
 export function CheckList({ rows }: { rows: CheckRow[] }) {
