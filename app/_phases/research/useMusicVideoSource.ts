@@ -32,6 +32,7 @@ import {
   saveStep,
   type MusicVideoSourceStepData,
   type ResearchStepData,
+  type SaveOutcome,
 } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
 
@@ -57,11 +58,11 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
    *  later save never clobbers a field a LATER work package (Frames' poster,
    *  the effects-studio's seed) has already filled in. */
   const write = useCallback(
-    async (patch: Partial<MusicVideoSourceStepData>) => {
+    async (patch: Partial<MusicVideoSourceStepData>): Promise<SaveOutcome> => {
       const slot = claimSaveSlot(projectId, PHASE);
       const current = (await loadStep<MusicVideoSourceStepData>(projectId, PHASE)) ?? {};
-      if (!slot.stillNewest()) return;
-      await saveStep<MusicVideoSourceStepData>(projectId, PHASE, { ...current, ...patch });
+      if (!slot.stillNewest()) return { ok: true, superseded: true };
+      return saveStep<MusicVideoSourceStepData>(projectId, PHASE, { ...current, ...patch });
     },
     [projectId],
   );
@@ -70,11 +71,11 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
    *  Reads the existing record first so a project that already has a topic
    *  (unlikely for this discipline, but the same discipline against a
    *  re-attach) does not lose it. */
-  const markResearched = useCallback(async () => {
+  const markResearched = useCallback(async (): Promise<SaveOutcome> => {
     const slot = claimSaveSlot(projectId, "research");
     const current = await loadStep<ResearchStepData>(projectId, "research");
-    if (!slot.stillNewest()) return;
-    await saveStep<ResearchStepData>(projectId, "research", {
+    if (!slot.stillNewest()) return { ok: true, superseded: true };
+    return saveStep<ResearchStepData>(projectId, "research", {
       topic: current?.topic ?? "",
       researched: true,
     });
@@ -114,14 +115,37 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
         return;
       }
 
+      // Persistence is part of the attach: the surface says "done" only once
+      // the upload, the source record and the research gate are all on disk.
+      // `putUploads` REJECTS on a storage failure; `saveStep` RETURNS
+      // `{ok:false}` — both land on the same error state, and the envelope is
+      // drawn only after they succeed.
+      const failed = (why: string) => {
+        setStatus("error");
+        setError(`"${file.name}" was not attached — ${why}`);
+      };
       const pair = assetFromUpload(uid, file, ["music-video", "source"], "audio");
-      await putUploads([pair]);
+      try {
+        await putUploads([pair]);
+      } catch (e) {
+        failed(`the browser could not store the file (${e instanceof Error ? e.message : String(e)})`);
+        return;
+      }
+
+      const saved = await write({ sourceAssetId: pair.asset.id, envelope: env });
+      if (!saved.ok) {
+        failed("the track's analysis could not be saved");
+        return;
+      }
+      const gated = await markResearched();
+      if (!gated.ok) {
+        failed("the project could not be marked researched");
+        return;
+      }
 
       setSourceAssetId(pair.asset.id);
       setEnvelope(env);
       setStatus("idle");
-      await write({ sourceAssetId: pair.asset.id, envelope: env });
-      await markResearched();
     },
     [uid, write, markResearched],
   );
