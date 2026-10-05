@@ -4,7 +4,7 @@
 
 import { Hint } from "@/components/ui/signal";
 
-import { ledgerFor, type EffectiveState } from "../constraints";
+import { handLedgerFor, type EffectiveState } from "../constraints";
 
 /** The word beside the glyph, because the glyph and its colour are otherwise the
  *  only thing separating "honoured" from "at risk" — and `~` for superseded is
@@ -26,7 +26,7 @@ const MARK: Record<EffectiveState, { glyph: string; cls: string; label: string }
  *  built to answer. So it says it was not re-scored, and the computed gate below
  *  it carries the verdict instead. */
 export default function ConstraintLedger({ renderId, stale }: { renderId: string; stale?: boolean }) {
-  const { rows, dangling, atRisk, superseded } = ledgerFor(renderId);
+  const { rows, dangling, atRisk, superseded } = handLedgerFor(renderId);
 
   return (
     <div className="mt-3 border-t border-white/8 pt-3" data-testid={`ledger-${renderId}`}>

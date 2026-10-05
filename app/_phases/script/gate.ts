@@ -81,6 +81,50 @@ export interface Probe {
   tests: string;
 }
 
+/** A `Probe` that can travel through JSON and through a model: every RegExp is
+ *  `{source, flags}`. `JSON.stringify(/x/)` is `{}`, so a probe stored in a
+ *  draft or authored by a research run as a bare RegExp would arrive as a
+ *  forbid entry that matches nothing — a prohibition that silently lapsed. */
+export interface SerializablePattern {
+  source: string;
+  flags?: string;
+}
+export interface SerializableProbe extends Omit<Probe, "forbid"> {
+  forbid?: (string | SerializablePattern)[];
+}
+
+export function serializeProbe(p: Probe): SerializableProbe {
+  const { forbid, ...rest } = p;
+  if (!forbid) return rest;
+  return { ...rest, forbid: forbid.map((f) => (typeof f === "string" ? f : { source: f.source, flags: f.flags })) };
+}
+
+/** Throws (a SyntaxError from `new RegExp`) on a pattern that does not compile —
+ *  a probe that cannot run must not be mistaken for one that found nothing. */
+export function compileProbe(p: SerializableProbe): Probe {
+  const { forbid, ...rest } = p;
+  const out: Probe = { ...rest };
+  if (forbid) out.forbid = forbid.map((f) => (typeof f === "string" ? f : new RegExp(f.source, f.flags ?? "")));
+  return out;
+}
+
+/** The probe each unknown is enforced by: the draft's own, else the fixture
+ *  table's. (`unknown.probe` joins the front of this order once the notebook
+ *  schema carries it — script-phase-A, session 2.) An unknown neither answers
+ *  is left out, and `checkConstraints` reports it `unmeasured`. */
+export function probesFor(
+  unknowns: readonly Unknown[],
+  draft?: { probes?: Record<string, SerializableProbe> },
+): Record<string, Probe> {
+  const out: Record<string, Probe> = {};
+  for (const u of unknowns) {
+    const own = draft?.probes?.[u.id];
+    const probe = own ? compileProbe(own) : PROBES[u.id];
+    if (probe) out[u.id] = probe;
+  }
+  return out;
+}
+
 export type Verdict = "pass" | "violation" | "not-engaged" | "unmeasured";
 
 export interface GateFinding {

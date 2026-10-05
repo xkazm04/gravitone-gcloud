@@ -25,9 +25,10 @@
 // the finding, not an oversight.
 
 import { RENDERS, RENDER_BY_ID } from "./renders";
+import type { ScriptRender } from "./types";
 
 /** beat mark → the card ids that beat states. */
-type Attribution = Record<string, string[]>;
+export type Attribution = Record<string, string[]>;
 
 export const ATTRIBUTION: Record<string, Attribution> = {
   "reversal-chain": {
@@ -67,9 +68,13 @@ const toS = (mark: string) => {
   return m * 60 + s;
 };
 
+/** What the usage arithmetic reads off a render — its beats, its runtime and
+ *  its declared cuts. A fixture `ScriptRender` and a `DraftRender` both satisfy
+ *  it, which is the point: the numbers come from whichever script is handed in. */
+export type UsageSubject = Pick<ScriptRender, "beats" | "durationS" | "cutFacts">;
+
 /** How long each beat is on screen, from the marks themselves. */
-function beatSeconds(renderId: string): Record<string, number> {
-  const r = RENDER_BY_ID[renderId];
+function beatSeconds(r: UsageSubject): Record<string, number> {
   const out: Record<string, number> = {};
   r.beats.forEach((b, i) => {
     const next = i + 1 < r.beats.length ? toS(r.beats[i + 1].at) : r.durationS;
@@ -114,13 +119,13 @@ export interface Usage {
   why?: string;
 }
 
-/** renderId → cardId → usage. Built once. */
-export const IMPACT: Record<string, Record<string, Usage>> = {};
-
-for (const r of RENDERS) {
-  const secs = beatSeconds(r.id);
+/** cardId → usage for ONE render, from its beats and the attribution handed in.
+ *  The one kernel: `draft.ts::impactOf` maps it over a draft's renders, and the
+ *  fixture `IMPACT` below is the same call over the fixture's. */
+export function usageMapOf(r: UsageSubject, attribution: Attribution): Record<string, Usage> {
+  const secs = beatSeconds(r);
   const map: Record<string, Usage> = {};
-  for (const [mark, ids] of Object.entries(ATTRIBUTION[r.id] ?? {})) {
+  for (const [mark, ids] of Object.entries(attribution)) {
     const shares = splitAcross(secs[mark] ?? 0, ids.length);
     ids.forEach((id, i) => {
       const prev = map[id];
@@ -137,8 +142,22 @@ for (const r of RENDERS) {
     // wrong, so let the cut win loudly rather than merge the two.
     map[c.factId] = { kind: "cut", seconds: 0, beats: [], why: c.why };
   }
-  IMPACT[r.id] = map;
+  return map;
 }
+
+/** renderId → cardId → usage, for the FIXTURE renders. Built once.
+ *
+ *  A shim since script-phase-A: the per-project answer is
+ *  `impactOf(draft)` (draft.ts), and this is that answer for the fixture draft —
+ *  the same kernel over the same tables, pinned equal by
+ *  tests/golden-path/script-draft.probe.spec.ts. It stays a constant because
+ *  versions.ts, the matrix and pipeline/ read it at import; it is not built
+ *  through `fixtureDraft()` because draft.ts reads ATTRIBUTION from here, and
+ *  a module cycle that evaluates at load is a TDZ error waiting for an import
+ *  order to change. */
+export const IMPACT: Record<string, Record<string, Usage>> = Object.fromEntries(
+  RENDERS.map((r) => [r.id, usageMapOf(r, ATTRIBUTION[r.id] ?? {})]),
+);
 
 export function usageOf(renderId: string, cardId: string): Usage {
   return IMPACT[renderId]?.[cardId] ?? { kind: "unused", seconds: 0, beats: [] };

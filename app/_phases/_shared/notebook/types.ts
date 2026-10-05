@@ -285,7 +285,7 @@ export interface Unknown {
    *  render-agnostic — it cannot know whether the render in front of it was
    *  written before or after the resolution — so it applies the strict reading,
    *  and supersession is recorded PER RENDER where that is knowable:
-   *  `script/constraints.ts:90-94` downgrades `honoured` to `superseded` when
+   *  `script/constraints.ts::ledgerFor` downgrades `honoured` to `superseded` when
    *  the unknown carries this field. Skipping resolved unknowns in the gate
    *  would silently drop them from the `enforced` denominator, which is the
    *  measure that exists to stop a conscientious-in-prose gate scoring itself.
