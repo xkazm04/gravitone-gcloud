@@ -236,13 +236,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
-    # `npm run verify` (package.json) mirrors this job's blocking steps after
-    # install, in the same order: typecheck, lint:ratchet, check:manifest,
-    # check:notebook, check:type, check:narration, check:clips,
-    # check:trailer-structure, check:gate, check:frames-prompt, check:style-refs,
-    # test, build, check:bundle. The pre-push hook runs it before any push to main.
-    # If a step is added, removed, or reordered here, change `verify` in the
-    # same commit — the two must not drift.
+    # THE GATE LIST IS NOT WRITTEN HERE. It is declared once, in
+    # pipeline/gates.mts; `npm run verify` runs it through pipeline/run-gates.mts,
+    # and the pre-push hook prints it with `run-gates.mts --list`. This job keeps
+    # one step per blocking gate so a red step names itself, and
+    # tests/golden-path/verify-ci-parity.probe.spec.ts fails unless the `run: npm`
+    # steps below (install excluded) equal the registry's blocking set, in order.
+    # Adding a gate: an entry in gates.mts, its npm script, its step here.
     steps:
       - uses: actions/checkout@v4
 
@@ -340,6 +340,12 @@ jobs:
       # a full sheet in the reference window.
       - name: style refs
         run: npm run check:style-refs
+
+      # BLOCKING, and new here on 2026-10-05. Pure function over lib/assets.ts: a
+      # parent folder totals and shows its whole subtree. It passed for weeks and
+      # ran nowhere; the registry's liveness check is what found it.
+      - name: assets tree
+        run: npm run check:assets-tree
 
       # BLOCKING. Node-context probes. Not skipped when earlier steps are
       # green-but-uninteresting: this is the rung that refuses.

@@ -4,10 +4,14 @@
 // reached CI, so a gate the hook blocked on was a courtesy on every other path
 // (moonshot backlog Q5, 2026-10-05).
 //
-// This holds the two to the same steps in the same order. Both lists are read
-// from the files themselves - package.json's `verify` chain and the gates job's
-// `run: npm ...` steps (install excluded) - so a step added to one side only is
-// red here.
+// Since pipeline-scripts-A the rule is written ONCE, in pipeline/gates.mts, and
+// `verify` runs it through pipeline/run-gates.mts. CI keeps one step per gate (a
+// failed step names itself in the Actions UI), so this holds the gates job to
+// the registry's blocking set, step for step and in order. The registry is read
+// through the runner's own `--list --json`, the CI steps from gates.yml's
+// `run: npm ...` lines (install excluded) - never a hand copy. `verify:serial`,
+// the old `&&` chain kept as the rollback, is held to the same list.
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 
@@ -17,9 +21,21 @@ const ROOT = path.resolve(__dirname, "../..");
 
 const norm = (cmd: string) => cmd.trim().replace(/^npm test$/, "npm run test");
 
-function verifyChain(): string[] {
+function registryChain(): string[] {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/^npm_/i.test(k))) as NodeJS.ProcessEnv;
+  const r = spawnSync(process.execPath, [path.join(ROOT, "pipeline", "run-gates.mts"), "--list", "--json"], {
+    cwd: ROOT,
+    env,
+    encoding: "utf8",
+  });
+  expect(r.status, `${r.stdout}${r.stderr}`).toBe(0);
+  const gates = JSON.parse(r.stdout) as { npmScript: string; class: string }[];
+  return gates.filter((g) => g.class === "blocking").map((g) => `npm run ${g.npmScript}`);
+}
+
+function serialChain(): string[] {
   const pkg = JSON.parse(readFileSync(path.join(ROOT, "package.json"), "utf8")) as { scripts: Record<string, string> };
-  return pkg.scripts.verify.split("&&").map(norm);
+  return (pkg.scripts["verify:serial"] ?? "").split("&&").map(norm).filter(Boolean);
 }
 
 function ciChain(): string[] {
@@ -33,8 +49,12 @@ function ciChain(): string[] {
   return [...job.matchAll(/^\s+run:\s*(npm .+)$/gm)].map((m) => norm(m[1])).filter((c) => c !== "npm ci");
 }
 
-test("the gates job and `npm run verify` run the same blocking steps, in the same order", () => {
-  const verify = verifyChain();
-  expect(verify.length, "the verify chain parsed to almost nothing").toBeGreaterThan(5);
-  expect(ciChain()).toEqual(verify);
+test("the gates job runs the registry's blocking gates, step for step, in order", () => {
+  const registry = registryChain();
+  expect(registry.length, "the registry's blocking set parsed to almost nothing").toBeGreaterThan(5);
+  expect(ciChain()).toEqual(registry);
+});
+
+test("verify:serial (the rollback chain) is the same blocking set, in order", () => {
+  expect(serialChain()).toEqual(registryChain());
 });

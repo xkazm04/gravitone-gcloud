@@ -3,10 +3,11 @@
 #
 # This repo deploys nowhere — CI is verification only — so a red main is not a
 # broken site, it is a broken CONTRACT: the next reader of the tree cannot tell
-# their own mistake from the standing one. This hook runs `npm run verify` (the
-# exact blocking set of the `gates` CI job, see .github/workflows/gates.yml)
-# before any push that updates refs/heads/main. Other branches push freely;
-# CI covers them.
+# their own mistake from the standing one. This hook runs `npm run verify` -
+# pipeline/run-gates.mts over the blocking gates declared in pipeline/gates.mts,
+# the same list the `gates` CI job runs step for step (a probe holds the two
+# equal) - before any push that updates refs/heads/main. Other branches push
+# freely; CI covers them.
 #
 # Wired via `git config core.hooksPath .githooks` (the `prepare` script does it
 # on every install). Zero dependencies — POSIX sh and npm only.
@@ -28,9 +29,11 @@ done
 
 if [ "$GRAVITONE_SKIP_GATE" = "1" ]; then
   echo "==================================================================" >&2
-  echo "pre-push: GRAVITONE_SKIP_GATE=1 — SKIPPING THE FULL GATE ON MAIN:" >&2
-  echo "  npm run verify (every step of the CI gates job; package.json lists" >&2
-  echo "  them) will NOT run before this push." >&2
+  echo "pre-push: GRAVITONE_SKIP_GATE=1 — SKIPPING THE FULL GATE ON MAIN." >&2
+  echo "These blocking gates (pipeline/gates.mts) will NOT run before this push:" >&2
+  # Printed from the registry, never typed here: a hand list in this banner
+  # named 6 of 13 gates by the time anyone checked it.
+  node pipeline/run-gates.mts --list >&2 || echo "  (the gate list could not be printed - see pipeline/gates.mts)" >&2
   echo "Record the reason in the commit message or in docs/DEPLOYMENT.md's" >&2
   echo "skip log. CI will still render the real verdict — watch it." >&2
   echo "==================================================================" >&2
@@ -65,6 +68,7 @@ echo "pre-push: push targets main — running the full gate (npm run verify)..."
 npm run verify || {
   echo "" >&2
   echo "pre-push: verify FAILED — push to main blocked." >&2
+  echo "  Every gate's verdict is in the table above and in .gate-report.json." >&2
   echo "  The gate is the same blocking set CI runs (see docs/DEPLOYMENT.md)." >&2
   echo "  Fix the failure, or in a genuine emergency:" >&2
   echo "    GRAVITONE_SKIP_GATE=1 git push  (and record why)" >&2

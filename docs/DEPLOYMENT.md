@@ -15,17 +15,28 @@ here is about the *tree*, not a running service.
 
 - **Topology: direct push to main.** No release branches, no environments.
   What lands on `main` is the product.
-- **`npm run verify` is the full blocking gate.** It mirrors the `gates` CI
-  job exactly — the same npm scripts, in the same order, after install:
-  `typecheck` → `lint:ratchet` → `check:manifest` → `test` → `build` →
-  `check:bundle`. There is no CI-only definition of any check to drift
-  against; if a step is added, removed, or reordered in `gates.yml`, `verify`
-  changes in the same commit (a comment at the job's `steps:` says so).
+- **`npm run verify` is the full blocking gate.** The gate list is declared
+  once, in `pipeline/gates.mts` (id, npm script, blocking/advisory, `needs`,
+  exit-code protocol, rationale). `verify` is `node pipeline/run-gates.mts`:
+  it runs every blocking gate in registry order, reports EVERY verdict rather
+  than stopping at the first, keeps exit 2 (could-not-run) apart from a fail,
+  never starts `check:bundle` unless `build` passed, and writes
+  `.gate-report.json`. `node pipeline/run-gates.mts --list` prints the set.
+  The `gates` CI job keeps one step per gate, and
+  `tests/golden-path/verify-ci-parity.probe.spec.ts` fails unless those steps
+  equal the registry's blocking set in order. Adding a gate = a registry entry,
+  its npm script, its `gates.yml` step; the probe is red until all three exist.
+  A `pipeline/*-regression.mts` or `pipeline/check-*` that no gate runs fails
+  the run (gate liveness) unless `UNREGISTERED` in `gates.mts` says why.
+  `--parallel` is opt-in (on Windows `npm test` and `build` contend);
+  `npm run verify:serial` is the old `&&` chain, kept as the rollback and held
+  to the same list by the same probe.
 - **The pre-push hook enforces it on main.** `.githooks/pre-push` (wired via
   `core.hooksPath`, set by the `prepare` script on every install) runs
   `npm run verify` before any push that updates `refs/heads/main`. Other
   branches push freely; CI covers them.
-- **Escape hatch:** `GRAVITONE_SKIP_GATE=1 git push` skips the local gate.
+- **Escape hatch:** `GRAVITONE_SKIP_GATE=1 git push` skips the local gate,
+  and the hook prints the skipped gates from `run-gates.mts --list`.
   Emergencies only, and the reason gets recorded — in the commit message or in
   the skip log below. CI still renders the real verdict either way.
 - **A red main is an outage.** With no deploy to roll back, the tree itself is
