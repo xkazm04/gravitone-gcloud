@@ -221,18 +221,26 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
   const keep = (id: string) => patch(id, { verdict: "kept", reject_reason: undefined });
   const reject = (id: string, reason: string) => patch(id, { verdict: "rejected", reject_reason: reason });
   const clearVerdict = (id: string) => patch(id, { verdict: "unjudged", reject_reason: undefined });
+  // Three dimension keys pressed faster than the shelf round-trips merged
+  // each onto the STALE row and kept only the last score (found in the Sound
+  // lab, 2026-10-05; app/playground/useLab.ts carries the same fix). What was
+  // just written is held here until the shelf hands back fresh rows.
+  const lastRatings = useRef(new Map<string, NonNullable<Take["ratings"]>>());
+  useEffect(() => {
+    lastRatings.current.clear();
+  }, [shelf.assets]);
   const rate = (id: string, key: RatingKey, v: number) => {
     const t = byId.get(id);
     if (!t) return;
-    patch(id, {
-      ratings: {
-        melody: null,
-        instrument_choice: null,
-        instrument_quality: null,
-        ...(t.ratings ?? {}),
-        [key]: v,
-      },
-    });
+    const next = {
+      melody: null,
+      instrument_choice: null,
+      instrument_quality: null,
+      ...(lastRatings.current.get(id) ?? t.ratings ?? {}),
+      [key]: v,
+    };
+    lastRatings.current.set(id, next);
+    patch(id, { ratings: next });
   };
   const setHand = (id: string, h: Hand) =>
     updateBook((b) => ({
