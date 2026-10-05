@@ -4,9 +4,9 @@
 // uses the same list as its rows. Two steps disagreeing about what "a card" is
 // would make the matrix unreadable against the board that produced it.
 
-import { CONCLUSIONS, falsifierOf, falsifierText, type ConclusionSubject, type Falsifier, type Leap } from "./conclusions";
-import { CARD_DIMENSION, UNTAGGED_DIMENSION_ID, type DimensionId } from "./dimensions";
-import { NOTEBOOK } from "./notebook";
+import { falsifierOf, falsifierText, type ConclusionSubject, type Falsifier, type Leap } from "./conclusions";
+import { UNTAGGED_DIMENSION_ID, type DimensionId } from "./dimensions";
+import { asSource, fixtureSource, type NotebookSource } from "./source";
 import type { FactSource, Notebook } from "./types";
 
 export type CardKind = "fact" | "mechanism" | "reversal" | "steel-man" | "conclusion";
@@ -61,13 +61,21 @@ export interface Card {
 }
 
 /** Flatten the notebook into reviewable cards, carrying the dependency graph
- *  the fixture already encodes (reversals cite fact ids and a mechanism). */
-export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
+ *  the fixture already encodes (reversals cite fact ids and a mechanism).
+ *
+ *  THE SOURCE DECIDES WHAT IS DEALT (source.ts). Its conclusions are the only
+ *  conclusion cards, and its tags file every card. This used to append the
+ *  fixture's CONCLUSIONS to whatever notebook it was handed. A bare Notebook
+ *  still means that (`asSource`), because lib/notebook/validate.ts and the graph
+ *  probes call it that way. No argument means the fixture source. */
+export function buildCards(input: NotebookSource | Notebook = fixtureSource()): Card[] {
+  const src = asSource(input);
+  const nb = src.notebook;
   const cards: Card[] = [];
 
   for (const f of nb.facts) {
     cards.push({
-      id: f.id, kind: "fact", dimension: CARD_DIMENSION[f.id] ?? UNTAGGED_DIMENSION_ID,
+      id: f.id, kind: "fact", dimension: src.tagOf(f.id),
       title: f.claim, detail: f.note, loadBearing: f.loadBearing,
       confidence: f.confidence, source: f.source, sources: f.sources, asOf: f.asOf, dependsOn: [],
     });
@@ -92,19 +100,19 @@ export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
   // one that has no edge to read.
   for (const m of nb.mechanisms) {
     cards.push({
-      id: m.id, kind: "mechanism", dimension: CARD_DIMENSION[m.id] ?? UNTAGGED_DIMENSION_ID,
+      id: m.id, kind: "mechanism", dimension: src.tagOf(m.id),
       title: m.name, detail: m.explains,
       dependsOn: [...new Set([...(m.evidence ?? []), ...(m.steps ?? []).flatMap((s) => s.evidence ?? [])])],
     });
   }
   for (const r of nb.reversals) {
     cards.push({
-      id: r.id, kind: "reversal", dimension: CARD_DIMENSION[r.id] ?? UNTAGGED_DIMENSION_ID,
+      id: r.id, kind: "reversal", dimension: src.tagOf(r.id),
       title: r.obviousReading, detail: r.whyWrong,
       dependsOn: [...r.evidence, ...(r.mechanismId ? [r.mechanismId] : [])],
     });
   }
-  for (const c of CONCLUSIONS) {
+  for (const c of src.conclusions) {
     cards.push({
       id: c.id, kind: "conclusion", dimension: "conclusions",
       title: c.claim, detail: c.reasoning,
@@ -126,7 +134,8 @@ export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
   return cards;
 }
 
-/** Notebook ids with no entry in CARD_DIMENSION. They used to land in
+/** Notebook ids the source did not tag — for the fixture, ids with no entry in
+ *  CARD_DIMENSION, which is the fixture source's `tags`. They used to land in
  *  DEFAULT_DIMENSION — the price column — where they were both invisible to the
  *  reviewer who needed them and load-bearing enough to keep that column
  *  permanently non-empty, so its `emptyMeans` alarm could never fire. They now
@@ -139,13 +148,15 @@ export function buildCards(nb: Notebook = NOTEBOOK): Card[] {
  *  `columnsFor()` off the same card set, so an untagged card appears on both or
  *  neither; it can no longer be visible on one surface and invisible on the
  *  other. */
-export function untaggedIds(nb: Notebook = NOTEBOOK): string[] {
+export function untaggedIds(input: NotebookSource | Notebook = fixtureSource()): string[] {
+  const src = asSource(input);
+  const nb = src.notebook;
   const ids = [
     ...nb.facts.map((f) => f.id),
     ...nb.mechanisms.map((m) => m.id),
     ...nb.reversals.map((r) => r.id),
   ];
-  return ids.filter((id) => !CARD_DIMENSION[id]);
+  return ids.filter((id) => !src.tags[id]);
 }
 
 /* ──────────────── the graph is checked, and was assumed ──────────────────── */
@@ -170,7 +181,9 @@ export interface GraphIssue {
   detail: string;
 }
 
-export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
+export function notebookIssues(input: NotebookSource | Notebook = fixtureSource()): GraphIssue[] {
+  const src = asSource(input);
+  const nb = src.notebook;
   const issues: GraphIssue[] = [];
   const add = (kind: GraphIssueKind, from: string, ref: string, detail: string) =>
     issues.push({ kind, from, ref, detail });
@@ -190,11 +203,11 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
   nb.reversals.forEach((r) => claim(r.id, "reversals[]"));
   nb.unknowns.forEach((u) => claim(u.id, "unknowns[]"));
   (nb.obligations ?? []).forEach((o) => claim(o.id, "obligations[]"));
-  CONCLUSIONS.forEach((c) => claim(c.id, "conclusions[]"));
+  src.conclusions.forEach((c) => claim(c.id, "conclusions[]"));
   claim("steel-man", "steelMan");
 
   const factIds = new Set(nb.facts.map((f) => f.id));
-  const cards = buildCards(nb);
+  const cards = buildCards(src);
   const cardIds = new Set(cards.map((c) => c.id));
 
   const edge = (
@@ -231,7 +244,7 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
   edge("steelMan", "restsOnAbsence", [nb.steelMan.restsOnAbsence], factIds, "fact");
   for (const u of nb.unknowns) edge(u.id, "about", u.about, factIds, "fact");
   for (const o of nb.obligations ?? []) edge(o.id, "about", o.about, factIds, "fact");
-  for (const c of CONCLUSIONS) edge(c.id, "licensedBy", [c.licensedBy], factIds, "fact");
+  for (const c of src.conclusions) edge(c.id, "licensedBy", [c.licensedBy], factIds, "fact");
   nb.scaleConversions.forEach((s, i) => edge(`scaleConversions[${i}]`, "for", [s.for], factIds, "fact"));
   nb.analogyCandidates.forEach((a, i) => edge(`analogyCandidates[${i}]`, "for", [a.for], cardIds, "card"));
   // AN ABSENT LINK IS NOT A HEALTHY ONE, and the pass above cannot tell them
@@ -255,10 +268,10 @@ export function notebookIssues(nb: Notebook = NOTEBOOK): GraphIssue[] {
   edge("currency", "expiresFirst", nb.currency.expiresFirst, cardIds, "card");
   edge("currency", "durable", nb.currency.durable, cardIds, "card");
 
-  for (const id of Object.keys(CARD_DIMENSION))
+  for (const id of Object.keys(src.tags))
     if (!cardIds.has(id))
       add("stale-tag", "CARD_DIMENSION", id, `tags an id this notebook does not have. If the card was renamed, the tag is dead AND the card is now untagged.`);
-  for (const id of untaggedIds(nb))
+  for (const id of untaggedIds(src))
     add("untagged", "CARD_DIMENSION", id, `has no dimension. It carries "${UNTAGGED_DIMENSION_ID}" and renders in the Untagged column on both boards — a queue awaiting a domain, not a domain. Tag it in dimensions.ts::CARD_DIMENSION.`);
 
   return issues;

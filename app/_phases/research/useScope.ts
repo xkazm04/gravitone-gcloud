@@ -2,9 +2,10 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { fixtureSource, type NotebookSource } from "../_shared/notebook/source";
 import { saveStep, type ScopeStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
-import { buildCards, scopeDiffs, scopeSummary, stateOf, type Card, type Scope } from "./scope";
+import { buildCards, optInIds, scopeDiffs, scopeSummary, stateOf, type Card, type Scope } from "./scope";
 
 const PHASE = "research-scope";
 
@@ -34,9 +35,14 @@ const PHASE = "research-scope";
  *  which meant Step 2 mounting its own copy would have shown an empty scope
  *  while Step 1 showed the real one — and any scope control in Step 2 would have
  *  been writing to a document nobody else could see. A decision the creator made
- *  on the triage board has to still be true when they open the matrix. */
-export function useScope(projectId: string) {
-  const cards = useMemo(() => buildCards(), []);
+ *  on the triage board has to still be true when they open the matrix.
+ *
+ *  THE CARDS ARE DEALT FROM `source` (_shared/notebook/source.ts), which every
+ *  caller leaves at the fixture today. Pass a referentially stable source: the
+ *  board is re-dealt when it changes. */
+export function useScope(projectId: string, source: NotebookSource = fixtureSource()) {
+  const cards = useMemo(() => buildCards(source), [source]);
+  const optIn = optInIds(source);
   const [scope, setScope] = useState<Scope>({});
   const [confirmed, setConfirmed] = useState<Scope | null>(null);
 
@@ -60,28 +66,30 @@ export function useScope(projectId: string) {
 
   const patch = useCallback(
     (id: string, p: Partial<{ descoped: boolean; liked: boolean; deepen: boolean }>) =>
-      setScope((s) => ({ ...s, [id]: { ...stateOf(s, id), ...p } })),
-    [],
+      setScope((s) => ({ ...s, [id]: { ...stateOf(s, id, optIn), ...p } })),
+    [optIn],
   );
 
   const toggle = useCallback(
     (id: string, key: "descoped" | "liked" | "deepen") =>
-      setScope((s) => ({ ...s, [id]: { ...stateOf(s, id), [key]: !stateOf(s, id)[key] } })),
-    [],
+      setScope((s) => ({ ...s, [id]: { ...stateOf(s, id, optIn), [key]: !stateOf(s, id, optIn)[key] } })),
+    [optIn],
   );
 
   const reset = useCallback(() => { setScope({}); setConfirmed(null); }, []);
 
-  const summary = useMemo(() => scopeSummary(cards, scope), [cards, scope]);
+  const summary = useMemo(() => scopeSummary(cards, scope, source), [cards, scope, source]);
 
   /** Cards whose kept-or-cut has moved since the scope was confirmed. Empty
    *  when nothing is confirmed — there is no checkpoint to have drifted from. */
   const diverged = useMemo(
-    () => (confirmed ? scopeDiffs(cards, scope, confirmed) : []),
-    [cards, scope, confirmed],
+    () => (confirmed ? scopeDiffs(cards, scope, confirmed, optIn) : []),
+    [cards, scope, confirmed, optIn],
   );
 
   return {
+    source,
+    optIn,
     cards,
     scope,
     diverged,
