@@ -50,3 +50,26 @@ export function commonPath(assets: Asset[]): string[] {
 /** What a press on a tile meant. The tile reports the gesture; the shelf owns
  *  what each one does, because only it knows the selection. */
 export type Activation = "open" | "toggle" | "range";
+
+/**
+ * What the gallery body is. useAssets answers a failed read with `assets = []`
+ * beside `error`, so zero rows alone cannot tell "nothing here" from "could not
+ * look": a failure with nothing loaded is its own state, drawn by the alert and
+ * its retry and by nothing that claims the shelf is empty.
+ */
+export function galleryState(a: {
+  error: string | null;
+  total: number;
+  shown: number;
+}): "failed" | "empty" | "grid" {
+  if (a.error && a.total === 0) return "failed";
+  return a.shown === 0 ? "empty" : "grid";
+}
+
+/** The Assets tally for the tab rail. Unknown while reading, and unknown after
+ *  a failed read with nothing loaded — an unknown count is not 0. */
+export function shelfCount(a: { loaded: boolean; error: string | null; total: number }): number | undefined {
+  if (!a.loaded) return undefined;
+  if (a.error && a.total === 0) return undefined;
+  return a.total;
+}

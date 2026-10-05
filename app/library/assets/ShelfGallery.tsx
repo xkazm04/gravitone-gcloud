@@ -10,6 +10,7 @@ import { RotateCw } from "lucide-react";
 import { Keycaps } from "@/components/ui/signal";
 
 import EmptyShelf from "./EmptyShelf";
+import { galleryState } from "./shelf";
 import Tile from "./Tile";
 import type { Shelf } from "./useShelf";
 
@@ -163,7 +164,7 @@ export default function ShelfGallery({
           </div>
         )}
 
-        {shown.length === 0 ? (
+        {galleryState({ error, total: rows.length, shown: shown.length }) === "failed" ? null : shown.length === 0 ? (
           <EmptyShelf hasAny={rows.length > 0} onOpenStyles={onOpenStyles} />
         ) : (
           <div ref={gridRef} tabIndex={-1} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">

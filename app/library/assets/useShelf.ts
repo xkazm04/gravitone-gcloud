@@ -22,7 +22,7 @@ import { useThemes } from "@/lib/useThemes";
 import { assetsUnder, buildTree, pathKey, type Asset } from "@/lib/assets";
 
 import { readAssetFacts } from "../assetMeta";
-import { DEFAULT_UPLOAD_PATH, SIBLING_CAP, foldersWithChildren } from "./shelf";
+import { DEFAULT_UPLOAD_PATH, SIBLING_CAP, foldersWithChildren, shelfCount } from "./shelf";
 
 export interface ShelfProps {
   /** Switch the library to Styles, optionally landing on one. */
@@ -96,9 +96,10 @@ export function useShelf({ onOpenStyles, onCount }: ShelfProps) {
   const shown = useMemo(() => assetsUnder(rows, selected), [rows, selected]);
 
   useEffect(() => {
-    if (assets === null) return; // still reading — an unknown count is not 0
-    onCount?.(rows.length);
-  }, [onCount, assets, rows]);
+    // Still reading, or the read failed: an unknown count is not 0.
+    const count = shelfCount({ loaded: assets !== null, error, total: rows.length });
+    if (count !== undefined) onCount?.(count);
+  }, [onCount, assets, rows, error]);
 
   const openIndex = openId ? shown.findIndex((a) => a.id === openId) : -1;
   const openAsset = openIndex === -1 ? null : shown[openIndex];
