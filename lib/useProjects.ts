@@ -29,6 +29,7 @@ import { seedProjects } from "@/app/_studio/projectSeed";
 import {
   addProjects,
   deleteProject as dbDelete,
+  editProject,
   listProjects,
   newProject,
   putProject,
@@ -153,24 +154,24 @@ export function useProjects(uid: string | null) {
 
   /** Patch an existing record — the dialog's edit path. */
   const update = useCallback(
-    async (id: string, patch: Partial<Project>): Promise<Project | null> => {
-      const current = projects?.find((p) => p.id === id);
-      if (!current) return null;
+    async (id: string, patch: Partial<ProjectDraft>): Promise<Project | null> => {
       try {
-        const stored = await putProject({ ...current, ...patch });
-        setProjects((ps) =>
-          (ps ?? [])
-            .map((p) => (p.id === id ? stored : p))
-            .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id)),
-        );
-        ok();
+        const stored = await editProject(id, patch);
+        if (stored) {
+          setProjects((ps) =>
+            (ps ?? [])
+              .map((p) => (p.id === id ? stored : p))
+              .sort((a, b) => b.updatedAt - a.updatedAt || a.id.localeCompare(b.id)),
+          );
+          ok();
+        }
         return stored;
       } catch (e) {
         failed("write", id, e, "could not save the project");
         return null;
       }
     },
-    [projects, ok, failed],
+    [ok, failed],
   );
 
   /** Delete the project AND everything it owned. Resolves to what actually went

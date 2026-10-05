@@ -18,19 +18,30 @@
 // eyes and pixels, lib/text for the one reasoning turn. Nothing here names a
 // vendor. Which one served is on the manifest's `engines` block.
 
-import { mkdir, readFile, readdir, rename, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { generate, recognize } from "@/lib/imaging/router";
 import type { ImageRef } from "@/lib/imaging/types";
 import { reason } from "@/lib/text/router";
 
-import { FoundryError, foundryFile } from "../store";
+import {
+  FoundryError,
+  containedIn,
+  foundryFile,
+  listManifests,
+  readJson,
+  readManifestFile,
+  runRoot,
+  writeJsonAtomic,
+} from "../runStore";
 import type { Exemplar, StyleDef } from "../types";
 import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
+import { planExtractCommit } from "../commitPlan";
 import type {
+  ExtractCommitPlan,
   ExtractCommitResult,
   ExtractDetail,
   ExtractManifest,
@@ -44,8 +55,6 @@ import type {
 
 export const EXTRACT_ROOT = path.join(process.cwd(), "foundry-out", "extract");
 
-const RUN_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
-const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json"]);
 const EXT: Record<ExtractUpload["mime"], string> = { "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp" };
 
 /** Largest single upload the store accepts, decoded. The vendors take ~20 MB
@@ -54,48 +63,15 @@ export const MAX_SOURCE_BYTES = 12 * 1024 * 1024;
 export const MAX_SOURCES = 60;
 
 function runDir(id: string): string {
-  if (!RUN_ID.test(id)) throw new FoundryError("That is not an extract run id.", 400);
-  return path.join(EXTRACT_ROOT, id);
+  return runRoot(EXTRACT_ROOT, id, "extract run");
 }
 
 export function resolveInExtract(id: string, rel: string): string {
-  const dir = runDir(id);
-  const abs = path.resolve(dir, rel);
-  if (abs !== dir && !abs.startsWith(dir + path.sep)) throw new FoundryError("Path is outside the run.", 400);
-  if (!SERVABLE.has(path.extname(abs).toLowerCase())) throw new FoundryError("Not a servable file.", 400);
-  return abs;
-}
-
-async function readJson<T>(file: string, fallback: T): Promise<T> {
-  try {
-    return JSON.parse(await readFile(file, "utf8")) as T;
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return fallback;
-    throw e;
-  }
-}
-
-async function writeJsonAtomic(file: string, value: unknown): Promise<void> {
-  await mkdir(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
-  await writeFile(tmp, JSON.stringify(value, null, 2), "utf8");
-  await rename(tmp, file);
-}
-
-/** Same three answers as lib/foundry/store.ts: present, absent (`null`), or
- *  there-but-not-JSON (`undefined`) — a manifest mid-rewrite by the other
- *  driver, or damaged. */
-async function readManifestFile<T>(file: string): Promise<T | null | undefined> {
-  try {
-    return await readJson<T | null>(file, null);
-  } catch (e) {
-    if (e instanceof SyntaxError) return undefined;
-    throw e;
-  }
+  return containedIn(runDir(id), rel, true, "run");
 }
 
 async function readManifest(id: string): Promise<ExtractManifest> {
-  const m = await readManifestFile<ExtractManifest>(path.join(runDir(id), "run.json"));
+  const m = await readManifestFile<ExtractManifest>(path.join(runDir(id), "run.json"), id, "extract run");
   if (m === undefined)
     throw new FoundryError(`The manifest of extract run ${id} is unreadable — a driver may be mid-write, or the file is damaged. Try again; if it persists, inspect foundry-out/extract/${id}/run.json.`, 503);
   if (!m) throw new FoundryError(`No extract run called ${id}.`, 404);
@@ -178,26 +154,9 @@ export async function createRun(slug: string, uploads: ExtractUpload[], options:
 /* ── Reads ────────────────────────────────────────────────────────────────── */
 
 export async function listExtractRuns(): Promise<ExtractSummary[]> {
-  let names: string[];
-  try {
-    names = await readdir(EXTRACT_ROOT);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e;
-  }
-  const out: ExtractSummary[] = [];
-  for (const name of names) {
-    if (!RUN_ID.test(name)) continue;
-    // One unreadable manifest is skipped and named, never allowed to 500 the
-    // whole list — see lib/foundry/store.ts#listRuns for the measured case.
-    const m = await readManifestFile<ExtractManifest>(path.join(EXTRACT_ROOT, name, "run.json"));
-    if (m === undefined) {
-      console.warn(`[foundry] extract run ${name}: run.json is unreadable — skipped from the list`);
-      continue;
-    }
-    if (!m) continue;
+  const { items } = await listManifests<ExtractManifest, ExtractSummary>(EXTRACT_ROOT, "run.json", async (name, m) => {
     const v = await readJson<ExtractVerdicts>(path.join(EXTRACT_ROOT, name, "verdicts.json"), {});
-    out.push({
+    return {
       id: m.id,
       slug: m.slug,
       created: m.created,
@@ -207,9 +166,9 @@ export async function listExtractRuns(): Promise<ExtractSummary[]> {
       styles: m.styles.length,
       decided: Object.keys(v).length,
       kept: Object.values(v).filter((r) => r.verdict === "keep").length,
-    });
-  }
-  return out.sort((a, b) => (a.created < b.created ? 1 : -1));
+    };
+  });
+  return items.sort((a, b) => (a.created < b.created ? 1 : -1));
 }
 
 export async function getExtractRun(id: string): Promise<ExtractDetail> {
@@ -349,21 +308,61 @@ export async function putExtractVerdicts(id: string, verdicts: ExtractVerdicts):
   await writeJsonAtomic(path.join(runDir(id), "verdicts.json"), clean);
 }
 
+/** Preview what an extract commit will do without writing to styles.json. */
+export async function previewExtractCommit(id: string): Promise<ExtractCommitPlan> {
+  const [run, verdicts, catalogue] = await Promise.all([
+    readManifest(id),
+    readVerdicts(id),
+    readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }),
+  ]);
+  return planExtractCommit(run, verdicts, catalogue);
+}
+
+export type CommitExtractOptions = { verdicts?: ExtractVerdicts; token?: string };
+
 /** Write every KEPT style into the catalogue as a `candidate`, with its
  *  exemplars. Rejected styles are recorded on the run and nothing else. */
-export async function commitExtractRun(id: string, verdictsIn?: ExtractVerdicts): Promise<ExtractCommitResult> {
+export async function commitExtractRun(
+  id: string,
+  verdictsOrOptions?: ExtractVerdicts | CommitExtractOptions | string,
+  tokenArg?: string,
+): Promise<ExtractCommitResult> {
+  let verdictsIn: ExtractVerdicts | undefined;
+  let token: string | undefined;
+
+  if (typeof verdictsOrOptions === "string") {
+    token = verdictsOrOptions;
+  } else if (verdictsOrOptions && typeof verdictsOrOptions === "object") {
+    if ("token" in verdictsOrOptions || "verdicts" in verdictsOrOptions) {
+      const opts = verdictsOrOptions as { verdicts?: ExtractVerdicts; token?: string };
+      verdictsIn = opts.verdicts;
+      token = opts.token;
+    } else {
+      verdictsIn = verdictsOrOptions as ExtractVerdicts;
+    }
+  }
+  if (tokenArg) token = tokenArg;
+
   const run = await readManifest(id);
   if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
   if (run.status !== "done") throw new FoundryError("The run is not finished.", 409);
   if (verdictsIn) await putExtractVerdicts(id, verdictsIn);
   const verdicts = await readVerdicts(id);
+
+  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
+  const plan = planExtractCommit(run, verdicts, catalogue);
+  if (token !== undefined && token !== plan.token) {
+    throw new FoundryError("The run state changed since the preview was generated.", 409);
+  }
+
   const at = new Date().toISOString();
 
   const kept = run.styles.filter((s) => verdicts[s.id]?.verdict === "keep");
   const rejected = run.styles.filter((s) => verdicts[s.id]?.verdict === "reject");
   if (!kept.length) throw new FoundryError("Keep at least one style first.", 400);
 
-  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
+  // Replace styles where origin.source === id on retry rather than colliding with own suffix
+  catalogue.styles = catalogue.styles.filter((s) => s.origin?.source !== id);
   const taken = new Set(catalogue.styles.map((s) => s.id));
   const written: string[] = [];
   const models = [run.engines.vision, run.engines.reasoner, run.engines.generator].filter((x): x is string => !!x);

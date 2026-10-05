@@ -52,6 +52,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import guard  # noqa: E402
+import lane_record  # noqa: E402
 from consistency import CHARACTER, LOCATION, SEED, generate, stage_reference  # noqa: E402
 
 HERE = Path(__file__).parent
@@ -191,6 +192,19 @@ def collect(prefix, dest, length):
 def run(lane, width, height, length, steps, lora, hero, timeout=7200):
     out = CLIPS / lane
     out.mkdir(parents=True, exist_ok=True)
+    lane_json_path = out / "lane.json"
+    if lane_json_path.exists():
+        lane_record.check_resume(lane_json_path, {
+            "lane": lane, "width": width, "height": height, "length": length,
+            "steps": steps, "lora": lora, "hero": hero
+        })
+    else:
+        lane_record.record_clip(
+            out_dir=out, lane=lane, seed=SEED, steps=steps, lora=lora,
+            width=width, height=height, length=length, fps=FPS, hero=hero,
+            character=CHARACTER, location=LOCATION
+        )
+
     # Flux 2 and H3 cannot co-reside. Start from a clean engine rather than
     # discovering it the slow way, as a stalled queue with no exception.
     guard.recycle_comfy("switching from Flux 2 to H3")
@@ -229,15 +243,21 @@ def run(lane, width, height, length, steps, lora, hero, timeout=7200):
         generate(wf, timeout=timeout)
         got = collect(prefix, out, length)
         prev_last = got.get("c-last")
+        if prev_last and Path(prev_last).exists():
+            lane_record.write_shot(
+                out, f"{name}_c-last", prev_last,
+                prompt_for(beat, ref_tag=(lane == "ref2va")),
+                width=width, height=height, length=length, steps=steps, lora=lora
+            )
         print(f"  {name}: {time.time() - t:.0f}s -> {len(got)} frames"
               f"{' + video' if any(out.glob(prefix + '*.mp4')) else ''}")
 
-    (out / "lane.json").write_text(json.dumps({
-        "lane": lane, "seed": SEED, "steps": steps, "lora": lora,
-        "width": width, "height": height, "length": length, "fps": FPS,
-        "hero": str(hero), "character": CHARACTER, "location": LOCATION,
-        "beats": {n: prompt_for(b, ref_tag=(lane == "ref2va")) for n, b in BEATS},
-    }, indent=2), encoding="utf-8")
+    rec = lane_record.read(out) if lane_json_path.exists() else {}
+    lane_record.record_clip(
+        out_dir=out, lane=lane, seed=SEED, steps=steps, lora=lora,
+        width=width, height=height, length=length, fps=FPS, hero=hero,
+        character=CHARACTER, location=LOCATION, beats=rec.get("beats", {})
+    )
     print(f"\n  lane written to {out}\n  now score it:  python identity.py --set clips/{lane}")
 
 

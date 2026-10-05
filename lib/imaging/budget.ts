@@ -141,6 +141,27 @@ export interface SpendRow {
 let ledger: SpendRow[] = [];
 
 /**
+ * A reservation of estimated spend held while a request is in flight.
+ */
+export interface Hold {
+  id: string;
+  amountUsd: number;
+  createdAt: number;
+}
+
+const activeHolds: Map<string, Hold> = new Map();
+let holdSeq = 0;
+
+/** Total currently reserved across all active holds. */
+export function heldUsd(): number {
+  let total = 0;
+  for (const h of activeHolds.values()) {
+    total += h.amountUsd;
+  }
+  return total;
+}
+
+/**
  * What the meter has done to itself. Every field is a COUNT of an event the
  * gate would otherwise have performed silently; none of them is read by
  * `assertWithinBudget`, so none of them can change who gets refused.
@@ -238,6 +259,7 @@ export function budgetStats(now: number = Date.now()): {
   floorUsd: number;
   underFloor: boolean;
   spentUsd: number;
+  heldUsd: number;
   remainingUsd: number;
   windowMs: number;
   windowStart: number;
@@ -246,6 +268,7 @@ export function budgetStats(now: number = Date.now()): {
   counters: BudgetCounters;
 } {
   const spentUsd = currentSpendUsd(now); // prunes first, so the counters are current
+  const held = heldUsd();
   const ceilingUsd = budgetCeilingUsd();
   const floorUsd = budgetFloorUsd();
   const windowMs = budgetWindowMs();
@@ -257,7 +280,8 @@ export function budgetStats(now: number = Date.now()): {
     // an empty meter as under-floor would make the signal worthless.
     underFloor: floorUsd > 0 && ledger.length > 0 && spentUsd < floorUsd,
     spentUsd,
-    remainingUsd: Math.max(ceilingUsd - spentUsd, 0),
+    heldUsd: held,
+    remainingUsd: Math.max(ceilingUsd - spentUsd - held, 0),
     windowMs,
     windowStart: now - windowMs,
     windowEnd: now,
@@ -305,32 +329,60 @@ export function estimatePendingUsd(images: number = 1): number {
 }
 
 /**
- * Refuse if spending `pendingUsd` now would exceed the window ceiling.
- * Throws an `over-budget` ImagingError; returns nothing when the call may
- * proceed. `now` is injectable so window-reset is testable.
+ * Reserve estimated spend before dispatching a request to vendors.
+ *
+ * Refuses if spending `amountUsd` now would exceed the window ceiling
+ * (taking into account already-booked spend and active holds).
+ * Throws an `over-budget` ImagingError; returns a Hold on success.
  */
-export function assertWithinBudget(pendingUsd: number, now: number = Date.now()): void {
+export function reserve(amountUsd: number, now: number = Date.now()): Hold {
   const ceiling = budgetCeilingUsd();
   const spent = currentSpendUsd(now);
-  if (spent + pendingUsd > ceiling) {
+  const held = heldUsd();
+  if (spent + held + amountUsd > ceiling) {
     // Counted BEFORE the throw, so a refusal cannot escape unrecorded down the
     // one path that leaves this function without returning. The count is the
     // difference between "the ceiling is working" and "the ceiling is
     // strangling something", and neither is legible without it.
     counters.refusals++;
-    counters.refusedUsd += pendingUsd;
+    counters.refusedUsd += amountUsd;
     note(
-      `refused est=$${pendingUsd.toFixed(4)} spent=$${spent.toFixed(4)} ` +
+      `refused est=$${amountUsd.toFixed(4)} spent=$${spent.toFixed(4)} held=$${held.toFixed(4)} ` +
         `ceiling=$${ceiling.toFixed(2)} windowMs=${budgetWindowMs()} refusals=${counters.refusals}`,
     );
     const windowMin = Math.round(budgetWindowMs() / 60000);
+    const effectiveSpent = spent + held;
     throw overBudget(
-      `Imaging spend ceiling reached: this call is estimated at $${pendingUsd.toFixed(4)} and ` +
-        `$${spent.toFixed(4)} has already been spent in the last ~${windowMin} min, which would ` +
+      `Imaging spend ceiling reached: this call is estimated at $${amountUsd.toFixed(4)} and ` +
+        `$${effectiveSpent.toFixed(4)} has already been spent in the last ~${windowMin} min, which would ` +
         `exceed the $${ceiling.toFixed(2)} ceiling (${BUDGET_VAR}). Refused before any vendor was ` +
         `called; wait for the window to roll over or raise the ceiling.`,
     );
   }
+  const hold: Hold = {
+    id: `hold-${++holdSeq}-${now}`,
+    amountUsd,
+    createdAt: now,
+  };
+  activeHolds.set(hold.id, hold);
+  return hold;
+}
+
+/**
+ * Release a hold without recording spend (e.g. on unbilled failure or cancellation).
+ */
+export function release(hold: Hold): void {
+  activeHolds.delete(hold.id);
+}
+
+/**
+ * Refuse if spending `pendingUsd` now would exceed the window ceiling.
+ * Throws an `over-budget` ImagingError; returns nothing when the call may
+ * proceed. Kept as a reserve + release wrapper so existing callers continue to pass.
+ */
+export function assertWithinBudget(pendingUsd: number, now: number = Date.now()): void {
+  const hold = reserve(pendingUsd, now);
+  release(hold);
 }
 
 /** What a caller hands `recordSpend`. `at` defaults to now. */
@@ -342,6 +394,17 @@ export interface SpendEntry {
   outcome: SpendOutcome;
   basis: SpendBasis;
   at?: number;
+}
+
+/**
+ * Settle a hold by removing the reservation and recording the actual spend.
+ */
+export function settle(hold: Hold, entries: SpendEntry | SpendEntry[]): void {
+  activeHolds.delete(hold.id);
+  const list = Array.isArray(entries) ? entries : [entries];
+  for (const entry of list) {
+    recordSpend(entry);
+  }
 }
 
 /**
@@ -437,4 +500,5 @@ export function spendRows(now: number = Date.now()): readonly SpendRow[] {
 export function __resetBudget(): void {
   ledger = [];
   counters = zeroCounters();
+  activeHolds.clear();
 }

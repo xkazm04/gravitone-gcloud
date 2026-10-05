@@ -52,38 +52,10 @@
 // stages and the candidates duel pass `discipline-*` / `template-*` /
 // `engine-*` keys), and an emblem's `emblemId` IS a manifest key by convention.
 
-import type { DeckArtFamily } from "@/app/_studio/deckArt";
-
 import type { DeckArt } from "./DeckCard";
-import { DeckEmblem, emblemToneClass, hasEmblem } from "./emblems";
+import { DeckEmblem, emblemToneClass } from "./emblems";
 import { DeckSceneArt, hasScene } from "./scenes";
-
-/** THE FACE EACH FAMILY DRAWS — the settled answer, per family, in one place.
- *
- *  Typed `Record<DeckArtFamily, "emblem">` rather than a wider union on purpose:
- *  today the answer is uniform, and the type says so. The day a family is ruled
- *  onto a different face, this annotation stops compiling and whoever widens it
- *  has to add the branch in `DeckArtView` in the same edit — which is the
- *  failure mode a `string` here would hide. */
-const FAMILY_FACE: Record<DeckArtFamily, "emblem"> = {
-  discipline: "emblem", // 2026-08-30, re-ruled permanent 2026-09-08
-  template: "emblem", // 2026-08-30, the same ruling
-  engine: "emblem", // 2026-09-08 — the last open comparison, closed above
-};
-
-/** Which deck-art/emblem key this art names, or undefined — never a guess. */
-function manifestKeyOf(art: DeckArt): string | undefined {
-  if (art.kind === "gradient") return art.manifestKey;
-  if (art.kind === "emblem") return art.emblemId;
-  return undefined;
-}
-
-/** The family a manifest key belongs to (`<family>-<id>`), or undefined for a
- *  key naming no family this deck draws. */
-function familyOf(key: string): DeckArtFamily | undefined {
-  const head = key.slice(0, key.indexOf("-"));
-  return head in FAMILY_FACE ? (head as DeckArtFamily) : undefined;
-}
+import { manifestKeyOf, familyOf, groundOf, faceOf } from "./cardModel";
 
 /** The neutral ground for a card whose data brought no tone of its own. */
 const DEFAULT_TONE = "from-cyan-400/20 via-white/[0.04] to-transparent";
@@ -105,18 +77,6 @@ function GradientArt({ tone, hexes }: { tone?: string; hexes?: string[] }) {
     );
   }
   return <div aria-hidden className={`absolute inset-0 bg-gradient-to-br ${tone || DEFAULT_TONE}`} />;
-}
-
-/** What the emblem stands on, whatever the art's kind. */
-function groundOf(art: DeckArt): { tone?: string; hexes?: string[] } {
-  switch (art.kind) {
-    case "gradient":
-      return { tone: art.tone, hexes: art.hexes };
-    case "image":
-      return art.fallback ?? {};
-    case "emblem":
-      return { tone: art.tone };
-  }
 }
 
 /** THE SECOND DENSITY OF THE SAME MARK (2026-09-09).
@@ -150,34 +110,28 @@ export function DeckSceneView({ art, sceneKey }: { art: DeckArt; sceneKey: strin
 }
 
 export function DeckArtView({ art }: { art: DeckArt }) {
-  const key = manifestKeyOf(art);
+  const face = faceOf(art);
 
-  // A real picture is the card's face whatever the family rule says — the
-  // ground stands beneath while the file streams, and if it never arrives.
-  if (art.kind === "image") {
+  if (face.face === "image") {
     return (
       <>
-        <GradientArt {...groundOf(art)} />
+        <GradientArt {...face.ground} />
         {/* eslint-disable-next-line @next/next/no-img-element -- a data: URL out of an IndexedDB proof sheet or a committed /presets file; next/image has nothing to fetch, optimise or cache */}
-        <img src={art.src} alt={art.alt ?? ""} className="absolute inset-0 h-full w-full object-cover" />
+        <img src={face.src} alt={face.alt ?? ""} className="absolute inset-0 h-full w-full object-cover" />
       </>
     );
   }
 
-  // ONE fallback, not two. A key naming no family, and a key whose family draws
-  // emblems but which has no motif drawn for it, both land on the gradient —
-  // the honest face for "this card was never given art", rather than a big
-  // initial glyph duplicating the title printed directly underneath it.
-  if (key && familyOf(key) && hasEmblem(key)) {
+  if (face.face === "emblem") {
     return (
       <>
-        <GradientArt {...groundOf(art)} />
-        <span aria-hidden className={`absolute inset-0 grid place-items-center ${emblemToneClass(key)}`}>
-          <DeckEmblem emblemKey={key} className="h-16 w-16" />
+        <GradientArt {...face.ground} />
+        <span aria-hidden className={`absolute inset-0 grid place-items-center ${emblemToneClass(face.key)}`}>
+          <DeckEmblem emblemKey={face.key} className="h-16 w-16" />
         </span>
       </>
     );
   }
 
-  return <GradientArt {...groundOf(art)} />;
+  return <GradientArt {...face.ground} />;
 }

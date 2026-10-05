@@ -112,12 +112,8 @@ const CHIP_TONE: Record<NonNullable<NonNullable<DeckCardSpec["chips"]>[number]["
 
 /* ── Springs — the deck's two gestures ────────────────────────────────────── */
 
-/** The deal: rise + settle from ~0.9 scale. Firm but not bouncy. Exported so
- *  a surface that mirrors the deal (a card dealt outside DeckCard) shares the
- *  numbers instead of copying them. */
-export const DEAL_SPRING = { type: "spring", stiffness: 240, damping: 26, mass: 0.9 } as const;
-/** The lift: quicker, so hover feels like the card answering the cursor. */
-export const LIFT_SPRING = { type: "spring", stiffness: 340, damping: 24 } as const;
+export { DEAL_SPRING, LIFT_SPRING } from "./cardModel";
+import { LIFT_SPRING, dealTransition, pickTarget } from "./cardModel";
 
 export default function DeckCard({
   spec,
@@ -147,6 +143,7 @@ export default function DeckCard({
   const interactive = !spec.disabled && pickable;
   const dense = spec.density === "dense";
   const hero = spec.density === "hero";
+  const target = pickTarget(spec, { picked, noUnpick });
   /** A hero card whose family has a full-bleed scene drawn for it — the art
    *  covers the card and the title is laid over it, instead of a 40% band with
    *  a caption below (artVariants#sceneKeyOf, scenes.tsx). Undefined for every
@@ -189,11 +186,7 @@ export default function DeckCard({
       data-testid={`deck-card-${spec.id}`}
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: 26, scale: 0.9 }}
       animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-      transition={
-        reduced
-          ? { duration: 0.2 }
-          : { ...DEAL_SPRING, delay: dealDelay, opacity: { duration: 0.35, delay: dealDelay } }
-      }
+      transition={dealTransition({ reduced, delay: dealDelay })}
       whileHover={
         reduced || !interactive
           ? undefined
@@ -439,13 +432,13 @@ export default function DeckCard({
           its own — the frame's ring and tint are the visual. A card that is
           not pickable (the steel-man) gets NO target at all: disabled would
           announce a choice that is switched off, and there is no choice. */}
-      {pickable && (
+      {target && (
         <button
           type="button"
           disabled={spec.disabled}
-          onClick={() => onPick(picked && !noUnpick ? null : spec.id)}
-          aria-pressed={picked}
-          aria-label={`${picked && !noUnpick ? "Unpick" : "Pick"}: ${spec.title}`}
+          onClick={() => onPick(target.next)}
+          aria-pressed={target.pressed}
+          aria-label={target.label}
           className="absolute inset-0 z-10 cursor-pointer rounded-2xl focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-not-allowed"
         />
       )}

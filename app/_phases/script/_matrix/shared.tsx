@@ -9,12 +9,19 @@ import { Hint } from "@/components/ui/signal";
 import { DIMENSIONS } from "../../_shared/notebook/dimensions";
 import type { Card } from "../../_shared/notebook/cards";
 import type { ScopeApi } from "../../research/useScope";
-import { stateOf, type Scope } from "../../research/scope";
+import type { Scope } from "../../research/scope";
 import { orphanedCuts, type Usage } from "../impact";
 import { RENDERS } from "../renders";
 import { usageIn, type Version } from "../versions";
+import { useNotes } from "../_notes/NotesContext";
+import {
+  conflictsIn,
+  outWord,
+  resolutionPlan,
+  stillSpoken,
+} from "../scopeConflicts";
 
-export { DIMENSIONS, RENDERS };
+export { DIMENSIONS, RENDERS, outWord, stillSpoken };
 
 export const secs = (s: number) => (s >= 60 ? `${Math.floor(s / 60)}m${String(s % 60).padStart(2, "0")}` : `${s}s`);
 
@@ -43,15 +50,7 @@ export const TONE: Record<Usage["kind"], { cell: string; text: string; mark: str
   unused: { cell: "border-white/6", text: "text-white/25", mark: "0s" },
 };
 
-/** "not taken" is a DEFAULT, "descoped" is a DECISION — the same two words the
- *  Research chips and ScopeBar use (scope.ts::OPT_IN_DEFAULT). Coverage used to
- *  fold both into "Out of scope" (uat 2026-09-05, HA-L1-5: "I keep those apart on
- *  purpose"). */
-export function outWord(card: Card, scope: Scope): "in" | "not-taken" | "descoped" {
-  const s = stateOf(scope, card.id);
-  if (!s.descoped) return "in";
-  return card.optIn ? "not-taken" : "descoped";
-}
+
 
 /** The scope control. Descoping here writes the record the triage board reads —
  *  this is not a Step 2 shadow copy. */
@@ -95,25 +94,27 @@ export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi
   );
 }
 
-/** THE CONFLICT — a card the creator took OUT that a render still SPEAKS. The
- *  scope is the creator's decision; the script is what a render said; here is
- *  the one place they meet, and until 2026-09-05 they disagreed silently
- *  (PR-L1-2: "the workflow I said I would refuse"). Returns the renders that
- *  still speak the card, with seconds, or an empty list. */
-export function stillSpoken(version: Version, card: Card, scope: Scope): { renderId: string; label: string; seconds: number }[] {
-  if (outWord(card, scope) === "in") return [];
-  return RENDERS.flatMap((r) => {
-    const u = usageIn(version, r.id, card.id);
-    return u.kind === "spoken" ? [{ renderId: r.id, label: r.engineLabel, seconds: u.seconds }] : [];
-  });
-}
+
 
 export function MatrixFootnotes({ cards, version, scope }: { cards: Card[]; version: Version; scope?: Scope }) {
   const ids = new Set(cards.map((c) => c.id));
   const orphans = orphanedCuts(ids);
-  const conflicts = scope ? cards.filter((c) => stillSpoken(version, c, scope).length > 0) : [];
+  const conflictIds = scope ? conflictsIn(version, cards, scope) : [];
   const untouched = cards.filter((c) => RENDERS.every((r) => usageIn(version, r.id, c.id).kind === "unused"));
   const conclusions = untouched.filter((c) => c.kind === "conclusion").length;
+
+  const notesCtx = useNotes();
+  const existingNotes = notesCtx?.api.notes ?? [];
+  const plan = scope
+    ? resolutionPlan(version, cards, scope, existingNotes)
+    : { stage: [], skipped: [], contested: [] };
+
+  const handleResolveConflicts = () => {
+    if (!notesCtx || notesCtx.api.running) return;
+    for (const item of plan.stage) {
+      notesCtx.api.addNote(item.cardId, item.kind);
+    }
+  };
 
   return (
     <div className="mt-4 space-y-1.5 border-t border-white/8 pt-3">
@@ -128,13 +129,28 @@ export function MatrixFootnotes({ cards, version, scope }: { cards: Card[]; vers
         </span>
         {conclusions > 0 && <Hint>reasoned after these {RENDERS.length} scripts were written</Hint>}
       </p>
-      {conflicts.length > 0 && (
-        <p data-testid="matrix-scope-conflicts" className="font-jetbrains text-content leading-relaxed text-rose-300/90">
-          {conflicts.length} card{conflicts.length === 1 ? "" : "s"} out of scope {conflicts.length === 1 ? "is" : "are"}{" "}
-          still spoken by a render ({conflicts.map((c) => c.id).join(", ")}) — the scope and these scripts
-          disagree. These scripts were written against the full notebook; only a recalibration re-attributes
-          them, and the gate does not check exclusions yet.
-        </p>
+      {conflictIds.length > 0 && (
+        <div className="space-y-2">
+          <p data-testid="matrix-scope-conflicts" className="font-jetbrains text-content leading-relaxed text-rose-300/90">
+            {conflictIds.length} card{conflictIds.length === 1 ? "" : "s"} out of scope {conflictIds.length === 1 ? "is" : "are"}{" "}
+            still spoken by a render ({conflictIds.join(", ")}) — the scope and these scripts
+            disagree. These scripts were written against the full notebook; only a recalibration re-attributes
+            them, and the gate does not check exclusions yet.
+          </p>
+          <div>
+            <button
+              type="button"
+              data-testid="resolve-scope-conflicts"
+              onClick={handleResolveConflicts}
+              disabled={!notesCtx || notesCtx.api.running || plan.stage.length === 0}
+              className="font-jetbrains rounded border border-rose-400/40 bg-rose-400/10 px-2.5 py-1 text-label text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              {plan.stage.length > 0
+                ? `Stage ${plan.stage.length} descope note${plan.stage.length === 1 ? "" : "s"}`
+                : "Scope conflicts staged"}
+            </button>
+          </div>
+        </div>
       )}
       {orphans.length > 0 && (
         <p data-testid="matrix-orphan-cuts" className="font-jetbrains text-content leading-relaxed text-rose-300/90">

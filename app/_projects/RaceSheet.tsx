@@ -39,6 +39,7 @@ import {
   PHASE_STATE_WORD,
   PHASE_TITLE,
   projectState,
+  stateOf,
   templateOf,
   type PhaseState,
   type Project,
@@ -401,7 +402,7 @@ function UpNext({ p, onOpen }: { p: Project | null; onOpen: SurfaceProps["onOpen
           <button
             type="button"
             onClick={() => onOpen(p, next.step)}
-            className={`font-jetbrains inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-0.5 text-label transition ${CTA[p.progress[next.step]]}`}
+            className={`font-jetbrains inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-3 py-0.5 text-label transition ${CTA[stateOf(p, next.step)]}`}
           >
             {next.verb}
             <ArrowRight aria-hidden className="h-3.5 w-3.5" />
@@ -571,7 +572,7 @@ export function Lane({
       {/* The track. Rail across, trail over the unbroken run of locked steps,
           a gate per step in its reported state, a ring where the next move is,
           and the finish line past Cut. */}
-      <div role="cell" className="relative h-full" aria-label={`${PHASE_TITLE[next.step]}: ${PHASE_STATE_WORD[p.progress[next.step]]}`}>
+      <div role="cell" className="relative h-full" aria-label={`${PHASE_TITLE[next.step]}: ${PHASE_STATE_WORD[stateOf(p, next.step)]}`}>
         <span aria-hidden className="absolute top-1/2 right-0 left-0 h-px -translate-y-1/2 bg-white/10" />
         {run >= 0 && (
           <span
@@ -590,15 +591,15 @@ export function Lane({
               e.stopPropagation();
               onOpen(p, k);
             }}
-            aria-label={`Open ${p.title} at ${PHASE_TITLE[k]} (${PHASE_STATE_WORD[p.progress[k]]})`}
-            className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border transition hover:ring-2 hover:ring-cyan-300/50 ${GATE[p.progress[k]]}`}
+            aria-label={`Open ${p.title} at ${PHASE_TITLE[k]} (${PHASE_STATE_WORD[stateOf(p, k)]})`}
+            className={`absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 cursor-pointer rounded-full border transition hover:ring-2 hover:ring-cyan-300/50 ${GATE[stateOf(p, k)]}`}
             style={{ left: `${GATE_POS(i)}%` }}
           />
         ))}
         {!done && (
           <span
             aria-hidden
-            className={`pointer-events-none absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${MARKER[p.progress[next.step]]}`}
+            className={`pointer-events-none absolute top-1/2 h-6 w-6 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 ${MARKER[stateOf(p, next.step)]}`}
             style={{ left: `${GATE_POS(at)}%` }}
           />
         )}
@@ -613,7 +614,7 @@ export function Lane({
             e.stopPropagation();
             onOpen(p, next.step);
           }}
-          className={`font-jetbrains inline-flex max-w-full cursor-pointer items-center gap-1.5 truncate rounded-full border px-3 py-1 text-label transition ${CTA[p.progress[next.step]]}`}
+          className={`font-jetbrains inline-flex max-w-full cursor-pointer items-center gap-1.5 truncate rounded-full border px-3 py-1 text-label transition ${CTA[stateOf(p, next.step)]}`}
         >
           <span className="truncate">{next.verb}</span>
           {!done && <ArrowRight aria-hidden className="h-3.5 w-3.5 shrink-0" />}

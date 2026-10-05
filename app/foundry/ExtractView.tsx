@@ -31,14 +31,14 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Button } from "@/components/ui/Primitives";
 import { Hint, Keycaps, Tally } from "@/components/ui/signal";
 import { foreignLease, hasFailures } from "@/lib/foundry/extract/engine";
-import type { ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
+import type { ExtractCommitPlan, ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
 import { usePolling } from "@/lib/usePolling";
 
 import { ExtractBoard } from "./ExtractBoard";
 import { RailFrame, RailItem } from "./RunCards";
-import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, saveExtractVerdicts, stepExtractRun } from "./extractClient";
+import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, previewExtractCommit, saveExtractVerdicts, stepExtractRun } from "./extractClient";
 import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD, extractKind } from "./parts";
-import { BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PrimaryAction, ProgressRail, SaveNote, StatusChip, type SaveKind } from "./ui";
+import { BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PlanFact, PrimaryAction, ProgressRail, SaveNote, StatusChip, useCommitPlan, type SaveKind } from "./ui";
 
 
 export function ExtractView() {
@@ -61,6 +61,10 @@ export function ExtractView() {
   const [driveError, setDriveError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
+  /** The server's plan for the commit, asked for when the confirm opens. */
+  const plan = useCommitPlan<ExtractCommitPlan>();
+  const commitPlan = plan.plan;
+  const clearPlan = plan.clear;
   const [result, setResult] = useState<ExtractCommitResult | null>(null);
   /** A commit that FAILED, shown inside the dialog that asked for it.
    *
@@ -165,11 +169,12 @@ export function ExtractView() {
       setSelected(id);
       setDetail(null);
       setResult(null);
+      clearPlan();
       setFocused(null);
       setSave("idle");
       if (id) loadDetail(id, false);
     },
-    [loadDetail],
+    [loadDetail, clearPlan],
   );
 
   /* ── The drive loop ───────────────────────────────────────────────────── */
@@ -287,14 +292,33 @@ export function ExtractView() {
     return { total: ids.length, kept, rejected, undecided: ids.length - kept - rejected };
   }, [detail, verdicts]);
 
+  const openConfirm = () => {
+    if (!selected) return;
+    const runId = selected;
+    setConfirm(true);
+    setCommitError(null);
+    plan.prepare(() => previewExtractCommit(runId));
+  };
+  // What the server's plan says the commit will do beyond the counts: a kept
+  // style whose id the catalogue already holds is written under a suffixed id,
+  // and one whose observables match a catalogued style is named beside it.
+  const renamed = commitPlan ? commitPlan.written.filter((w) => w.from !== w.to) : [];
+  const nearDupes = commitPlan ? Object.entries(commitPlan.similar).filter(([, dupes]) => dupes.length > 0) : [];
+  const closeConfirm = () => {
+    setConfirm(false);
+    setCommitError(null);
+    clearPlan();
+  };
+
   const doCommit = async () => {
     if (!selected) return;
     setCommitting(true);
     setCommitError(null);
     try {
-      const r = await commitExtractRun(selected);
+      const r = await commitExtractRun(selected, commitPlan?.token);
       setResult(r);
       setConfirm(false);
+      clearPlan();
       loadDetail(selected, false);
       loadRuns();
     } catch (e) {
@@ -403,7 +427,7 @@ export function ExtractView() {
               // chip on the strip above already names the run's state.
               <>
                 {blocked && <LockNote>{blocked}</LockNote>}
-                <PrimaryAction disabled={Boolean(blocked)} onClick={() => setConfirm(true)}>
+                <PrimaryAction disabled={Boolean(blocked)} onClick={openConfirm}>
                   Commit the kept styles
                 </PrimaryAction>
               </>
@@ -418,18 +442,15 @@ export function ExtractView() {
           if (committing) return;
           setConfirm(false);
           setCommitError(null);
+          clearPlan();
         }}
         title="Commit the kept styles?"
         eyebrow={<Label>{selected}</Label>}
         railLabel="commit"
-        // "Undecided counts as thrown" was prose describing a rail: kept on
-        // one side, thrown on the other, undecided hatched into the thrown
-        // side because it is not a third outcome. What stays is the
-        // destination and the one irreversible fact.
         rail={[
-          { n: counts.kept, tone: "emerald", label: "kept" },
-          { n: counts.rejected, tone: "rose", label: "thrown" },
-          { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+          { n: commitPlan ? commitPlan.counts.kept : counts.kept, tone: "emerald", label: "kept" },
+          { n: commitPlan ? commitPlan.counts.rejected : counts.rejected, tone: "rose", label: "thrown" },
+          { n: commitPlan ? commitPlan.counts.undecided : counts.undecided, tone: "rose", label: "undecided", hatched: true },
         ]}
         consequence={
           <>
@@ -438,13 +459,20 @@ export function ExtractView() {
         }
         danger={false}
         busy={committing}
-        confirmLabel={`Commit ${counts.kept}, reject ${counts.rejected + counts.undecided}`}
+        preparing={plan.loading}
+        confirmLabel={`Commit ${commitPlan ? commitPlan.counts.kept : counts.kept}, reject ${commitPlan ? commitPlan.counts.rejected + commitPlan.counts.undecided : counts.rejected + counts.undecided}`}
         onConfirm={doCommit}
-        onCancel={() => {
-          setConfirm(false);
-          setCommitError(null);
-        }}
+        onCancel={closeConfirm}
       >
+        {renamed.length > 0 && <PlanFact label="Renamed on catalogue collision">{renamed.map((w) => `${w.from} → ${w.to}`).join(", ")}</PlanFact>}
+        {nearDupes.length > 0 && (
+          <PlanFact label="Near duplicates in catalogue">{nearDupes.map(([sid, dupes]) => `${sid} ~ ${dupes.join(", ")}`).join("; ")}</PlanFact>
+        )}
+        {plan.error && (
+          <div className="mt-4">
+            <ErrorNote role="alert">Could not prepare the commit: {plan.error}</ErrorNote>
+          </div>
+        )}
         {commitError && (
           <div className="mt-4">
             <ErrorNote role="alert">The commit failed and no style was written: {commitError}</ErrorNote>

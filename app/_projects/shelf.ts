@@ -24,6 +24,7 @@ import {
   disciplineOf,
   doneCount,
   projectState,
+  stateOf,
   templateOf,
   type Discipline,
   type PhaseKey,
@@ -180,16 +181,18 @@ export interface NextAction {
  * would put "nothing for you to do" on a project that is waiting for exactly you.
  *
  * Precedence follows `projectState`: a stopped step outranks a call to make,
- * which outranks continuing, which outranks starting.
+ * which outranks continuing, which outranks starting. Every step is read
+ * through `stateOf` (lib/projects.ts), so a human sign-off locks it here too —
+ * and a step that reports `blocked` still beats the lock.
  */
 export function nextAction(p: Project): NextAction {
-  const blocked = PHASES.find((k) => p.progress[k] === "blocked");
+  const blocked = PHASES.find((k) => stateOf(p, k) === "blocked");
   if (blocked) return { verb: `Unblock ${PHASE_TITLE[blocked]}`, step: blocked, tone: "blocked" };
-  const review = PHASES.find((k) => p.progress[k] === "review");
+  const review = PHASES.find((k) => stateOf(p, k) === "review");
   if (review) return { verb: `Decide ${PHASE_TITLE[review]}`, step: review, tone: "you" };
-  const open = PHASES.find((k) => p.progress[k] !== "done");
+  const open = PHASES.find((k) => stateOf(p, k) !== "done");
   if (!open) return { verb: "Delivered", step: "cut", tone: "done" };
-  if (p.progress[open] === "working") return { verb: `Continue ${PHASE_TITLE[open]}`, step: open, tone: "you" };
+  if (stateOf(p, open) === "working") return { verb: `Continue ${PHASE_TITLE[open]}`, step: open, tone: "you" };
   return { verb: `Start ${PHASE_TITLE[open]}`, step: open, tone: "you" };
 }
 
@@ -236,9 +239,9 @@ function matchesText(p: Project, q: string): boolean {
 }
 
 function matchesPhase(p: Project, q: ShelfQuery): boolean {
-  if (q.phase && q.phaseState) return p.progress[q.phase] === q.phaseState;
-  if (q.phase) return p.progress[q.phase] !== "empty";
-  if (q.phaseState) return PHASES.some((k) => p.progress[k] === q.phaseState);
+  if (q.phase && q.phaseState) return stateOf(p, q.phase) === q.phaseState;
+  if (q.phase) return stateOf(p, q.phase) !== "empty";
+  if (q.phaseState) return PHASES.some((k) => stateOf(p, k) === q.phaseState);
   return true;
 }
 
@@ -357,7 +360,7 @@ export function facetCounts(projects: readonly Project[], q: ShelfQuery): FacetC
     }
     if (matchesExcept(p, q, "step")) {
       for (const k of PHASES) {
-        const st = p.progress[k];
+        const st = stateOf(p, k);
         steps[k][st] += 1;
         if (st !== "empty") steps[k].started += 1;
       }
@@ -518,6 +521,6 @@ export const GATE_POS = (i: number): number => ((i + 0.5) / PHASES.length) * 100
  *  steps from the start. -1 when Research itself is not locked. */
 export function lockedRun(p: Project): number {
   let i = -1;
-  while (i + 1 < PHASES.length && p.progress[PHASES[i + 1]] === "done") i++;
+  while (i + 1 < PHASES.length && stateOf(p, PHASES[i + 1]) === "done") i++;
   return i;
 }

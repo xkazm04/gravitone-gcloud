@@ -24,37 +24,25 @@
 import { useState } from "react";
 import { motion } from "motion/react";
 
-import { DeckEmblem, hasEmblem } from "./emblems";
+import { DeckEmblem } from "./emblems";
 import { useDeckReducedMotion } from "./motionGuard";
 import type { DeckArt, DeckCardSpec } from "./DeckCard";
+import { dealTransition, faceOf, pickTarget } from "./cardModel";
 
-const DEAL = { type: "spring", stiffness: 240, damping: 26, mass: 0.9 } as const;
-
-function emblemKeyOf(art: DeckArt): string | undefined {
-  if (art.kind === "gradient") return art.manifestKey;
-  if (art.kind === "emblem") return art.emblemId;
-  return undefined;
-}
-
-function Art({ art, title }: { art: DeckArt; title: string }) {
-  if (art.kind === "image") {
+function Art({ art }: { art: DeckArt }) {
+  const face = faceOf(art);
+  if (face.face === "image") {
     // eslint-disable-next-line @next/next/no-img-element -- a committed /presets or /deck-art file, or a data: URL out of a proof sheet
-    return <img src={art.src} alt={art.alt ?? ""} className="k-dcard__img" />;
+    return <img src={face.src} alt={face.alt ?? ""} className="k-dcard__img" />;
   }
-  const key = emblemKeyOf(art);
-  if (key && hasEmblem(key)) {
+  if (face.face === "emblem") {
     return (
       <span className="k-dcard__emblem">
-        <DeckEmblem emblemKey={key} />
+        <DeckEmblem emblemKey={face.key} />
       </span>
     );
   }
-  // No art was ever given: the deep field and the title's initial, an honest blank.
-  return (
-    <span className="k-dcard__emblem k-dcard__emblem--initial" aria-hidden>
-      {title.slice(0, 1)}
-    </span>
-  );
+  return null;
 }
 
 export default function DeckCardAlmanac({
@@ -90,22 +78,22 @@ export default function DeckCardAlmanac({
     </div>
   );
 
+  const target = pickTarget(spec, { picked, noUnpick });
+
   return (
     <motion.article
       data-testid={`deck-card-${spec.id}`}
       data-world-card="almanac"
       initial={reduced ? { opacity: 0 } : { opacity: 0, y: 22, scale: 0.94 }}
       animate={reduced ? { opacity: 1 } : { opacity: 1, y: 0, scale: 1 }}
-      transition={
-        reduced ? { duration: 0.2 } : { ...DEAL, delay: dealDelay, opacity: { duration: 0.35, delay: dealDelay } }
-      }
+      transition={dealTransition({ reduced, delay: dealDelay })}
       className={`k-dcard k-dcard--${density}${picked ? " is-picked" : ""}${spec.disabled ? " is-off" : ""}${
         interactive ? " is-live" : ""
       }`}
     >
       {!dense && (
         <div className="k-dcard__art">
-          <Art art={spec.art} title={spec.title} />
+          <Art art={spec.art} />
         </div>
       )}
 
@@ -157,13 +145,13 @@ export default function DeckCardAlmanac({
         </div>
       )}
 
-      {pickable && (
+      {target && (
         <button
           type="button"
           disabled={spec.disabled}
-          onClick={() => onPick(picked && !noUnpick ? null : spec.id)}
-          aria-pressed={picked}
-          aria-label={`${picked && !noUnpick ? "Unpick" : "Pick"}: ${spec.title}`}
+          onClick={() => onPick(target.next)}
+          aria-pressed={target.pressed}
+          aria-label={target.label}
           className="k-dcard__pick"
         />
       )}

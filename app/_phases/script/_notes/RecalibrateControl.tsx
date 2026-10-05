@@ -25,6 +25,9 @@ import { overrideFrom, overrideLineOf, receiptOf } from "../versions";
 import { inertNotes } from "../recalibrate";
 import { MODEL } from "@/lib/model";
 import DeclinedList, { declinedCount } from "./DeclinedList";
+import type { Card } from "../../_shared/notebook/cards";
+import type { Scope } from "../../research/scope";
+import { conflictDelta } from "../scopeConflicts";
 import type { GateRollup } from "../gate";
 import type { VersionsApi } from "../useVersions";
 
@@ -35,7 +38,17 @@ function elapsedSince(started: number, now: number) {
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
 }
 
-export default function RecalibrateControl({ api, gate }: { api: VersionsApi; gate?: GateRollup }) {
+export default function RecalibrateControl({
+  api,
+  gate,
+  cards,
+  scope,
+}: {
+  api: VersionsApi;
+  gate?: GateRollup;
+  cards?: Card[];
+  scope?: Scope;
+}) {
   // The clock only exists while something is running, so it is created and
   // destroyed with the run rather than reset inside an effect body.
   const [now, setNow] = useState(() => Date.now());
@@ -81,6 +94,7 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
 
   if (api.candidate) {
     const over = RENDERS.filter((r) => (api.candidate!.budget[r.id]?.overrunS ?? 0) > 0);
+    const conflictsDelta = cards && scope ? conflictDelta(api.baseline, api.candidate, cards, scope) : null;
     return (
       <div data-testid="candidate-bar" className="rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06] p-2.5">
         <p className="font-jetbrains text-content tracking-[0.14em] text-cyan-200 uppercase">
@@ -90,6 +104,14 @@ export default function RecalibrateControl({ api, gate }: { api: VersionsApi; ga
             <span className="ml-1.5 text-amber-300">· simulated</span>
           )}
         </p>
+        {conflictsDelta && conflictsDelta.before > 0 && (
+          <p
+            data-testid="scope-conflicts-delta"
+            className="font-jetbrains mt-1.5 text-content leading-snug text-emerald-300"
+          >
+            resolves {conflictsDelta.resolved.length} of {conflictsDelta.before} scope conflicts
+          </p>
+        )}
         {/* The reason for a fallback belongs BESIDE the fallback's result. It
             used to render only in the idle state, so it was invisible at exactly
             the moment the creator was looking at output it explains. */}

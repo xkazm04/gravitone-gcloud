@@ -4,6 +4,7 @@
 // three different opinions about what a refusal is, or three different words
 // for the same bad input. The routes stay thin enough to read in one screen.
 
+import { earliestExpiry } from "./budgetForecast";
 import { ImagingError, statusFor } from "./errors";
 import { logUnexpected, scrub } from "./log";
 import {
@@ -99,7 +100,7 @@ export async function readJson(req: Request): Promise<Record<string, unknown>> {
  *  router, which knows the whole attempt — capability, chain, timings — where
  *  this function sees one exception; logging it again would double every
  *  failure line. A BadRequest never reached a vendor at all. */
-export function errorResponse(e: unknown): Response {
+export function errorResponse(e: unknown, now: number = Date.now()): Response {
   // A BadRequest is ours end to end — this layer built the sentence from the
   // caller's own field names, and no vendor text can reach it.
   if (e instanceof BadRequest) return Response.json({ detail: e.message, code: "bad-request" }, { status: 400 });
@@ -119,11 +120,23 @@ export function errorResponse(e: unknown): Response {
   //
   // `e.detail` — up to 600 chars of raw vendor body, which can echo the user's
   // own prompt — has never been in this response and must not be added.
-  if (e instanceof ImagingError)
-    return Response.json(
-      { detail: scrub(e.message), code: e.kind, provider: e.provider },
-      { status: statusFor(e.kind) },
-    );
+  if (e instanceof ImagingError) {
+    const isOverBudget = e.kind === "over-budget" || (e.kind as string) === "budget";
+    const status = isOverBudget ? 402 : statusFor(e.kind);
+    const code = isOverBudget ? "over-budget" : e.kind;
+    const body: Record<string, unknown> = {
+      detail: scrub(e.message),
+      code,
+      provider: e.provider,
+    };
+    const headers: Record<string, string> = {};
+    if (status === 402) {
+      const retryAt = earliestExpiry(now);
+      body.retryAt = retryAt;
+      headers["Retry-After"] = String(Math.max(1, Math.ceil((retryAt - now) / 1000)));
+    }
+    return Response.json(body, { status, headers });
+  }
 
   // Not one of ours: a bug, not a vendor. `console.error(e)` printed the whole
   // object, `detail` and all — see log.ts on why that is not a log line.

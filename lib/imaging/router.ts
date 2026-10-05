@@ -25,10 +25,12 @@
 
 import { ImagingError, noAlternative, noKey, unsupported } from "./errors";
 import {
-  assertWithinBudget,
   estimatePendingUsd,
   reachByCapability,
-  recordSpend,
+  release,
+  reserve,
+  settle,
+  type Hold,
 } from "./budget";
 import { KEY_VAR, currentEnv, isConfigured, type ImagingEnv } from "./env";
 import { logCall } from "./log";
@@ -300,13 +302,14 @@ async function run<T extends { provenance: Provenance }>(
    */
   const standInUsd = (): number | undefined =>
     cap === "recognize" ? undefined : estimatePendingUsd(pendingImages);
+  let hold: Hold | undefined;
   try {
-    // SPEND CEILING (lib/imaging/budget.ts). Priced with the pre-call estimate
-    // and refused BEFORE any vendor is touched — once per request, not per
-    // candidate in the chain. An `over-budget` throw here lands in the same
-    // catch/log path as any other failure and never reroutes.
-    assertWithinBudget(estimatePendingUsd(pendingImages));
-    return await walk();
+    // SPEND CEILING (lib/imaging/budget.ts). Reserve a budget hold with the pre-call estimate
+    // BEFORE any vendor is touched — once per request, not per candidate in the chain.
+    // An `over-budget` throw here lands in the same catch/log path as any other failure
+    // and never reroutes.
+    hold = reserve(estimatePendingUsd(pendingImages));
+    return await walk(hold);
   } catch (e) {
     const err = e instanceof ImagingError ? e : null;
     logCall({
@@ -320,9 +323,11 @@ async function run<T extends { provenance: Provenance }>(
       message: err?.message ?? String(e),
     });
     throw e;
+  } finally {
+    if (hold) release(hold);
   }
 
-  async function walk(): Promise<T> {
+  async function walk(currentHold: Hold): Promise<T> {
     const chain = orderFor(cap, steer);
     /** The first thing that went wrong. It describes the vendor we MEANT to
      *  use, which is the honest headline when the whole chain comes up empty. */
@@ -372,10 +377,10 @@ async function run<T extends { provenance: Provenance }>(
         // The re-route is kept WITH the result, not only in the log: an asset
         // outlives the process that made it.
         if (trail.length) served.provenance = { ...served.provenance, reroutedFrom: [...trail] };
-        // Book the spend against the window. Prefer the figure the call actually
+        // Settle the budget hold against the window. Prefer the figure the call actually
         // carried (vendor-reported or estimated); fall back to the pre-call
         // estimate so an unreported cost still counts toward the next ceiling.
-        recordSpend({
+        settle(currentHold, {
           usd: served.provenance.costUsd ?? standInUsd(),
           cap,
           provider: served.provenance.provider,
@@ -421,7 +426,7 @@ async function run<T extends { provenance: Provenance }>(
         // process, and every one of the three is handled by a `continue` above
         // that does not reach this catch at all.
         if (billedOnFailure(err)) {
-          recordSpend({
+          settle(currentHold, {
             usd: standInUsd(),
             cap,
             provider: id,

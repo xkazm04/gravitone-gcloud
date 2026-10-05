@@ -87,6 +87,7 @@ export interface Job {
    *  nothing about the job. Absent on records written before this existed. */
   ownerTab?: string;
   error?: string;
+  clearedAt?: number;
 }
 
 export interface JobEvent {
@@ -124,6 +125,7 @@ interface JobsApi {
    *  mid-run already uses. */
   settle: (jobId: string, outcome: Exclude<JobStatus, "running">, detail: string) => void;
   cancel: (jobId: string) => void;
+  clear: (jobId: string) => void;
   /** True while this project already has a follow-up in flight. */
   followupBusy: (projectId: string) => boolean;
   /** True while this project already has a job of this kind in flight. */
@@ -283,7 +285,7 @@ function fresher(mine: Job, theirs: Job): Job {
   return theirs.progress > mine.progress ? theirs : mine;
 }
 
-function mergeJobs(mine: Job[], theirs: Job[]): Job[] {
+export function mergeJobs(mine: Job[], theirs: Job[]): Job[] {
   const byId = new Map<string, Job>();
   for (const j of mine) byId.set(j.id, j);
   for (const j of theirs) {
@@ -292,8 +294,18 @@ function mergeJobs(mine: Job[], theirs: Job[]): Job[] {
     // copy is at best stale, and at worst the mount-time interruption above
     // applied to a run that is very much alive — after which `settle` would
     // no-op on the real result and the work would land nowhere.
-    if (own?.ownerTab === TAB) continue;
-    byId.set(j.id, own ? fresher(own, j) : j);
+    if (own?.ownerTab === TAB) {
+      if (j.clearedAt && !own.clearedAt) {
+        byId.set(j.id, { ...own, clearedAt: j.clearedAt });
+      }
+      continue;
+    }
+    const merged = own ? fresher(own, j) : j;
+    const stickyClearedAt =
+      own?.clearedAt && j.clearedAt
+        ? Math.max(own.clearedAt, j.clearedAt)
+        : (own?.clearedAt ?? j.clearedAt);
+    byId.set(j.id, stickyClearedAt != null ? { ...merged, clearedAt: stickyClearedAt } : merged);
   }
   return [...byId.values()].sort((a, b) => b.startedAt - a.startedAt || a.id.localeCompare(b.id));
 }
@@ -395,6 +407,21 @@ export function applyCancel(jobs: Job[], jobId: string): Job[] {
       ? { ...j, status: "failed" as const, endedAt: Date.now(), error: "Stopped by you." }
       : j,
   );
+}
+
+/**
+ * The clear transition on interrupted jobs, as a pure function over the list.
+ *
+ * Sets an additive `clearedAt` timestamp tombstone. Only an interrupted job can
+ * be cleared. A running, done, or failed job is returned by reference (===).
+ * If the job is not found or is already cleared, the original array reference is returned.
+ */
+export function applyClear(jobs: Job[], jobId: string): Job[] {
+  const target = jobs.find((j) => j.id === jobId);
+  if (!target || target.status !== "interrupted" || target.clearedAt != null) {
+    return jobs;
+  }
+  return jobs.map((j) => (j.id === jobId ? { ...j, clearedAt: Date.now() } : j));
 }
 
 export function JobsProvider({ children }: { children: React.ReactNode }) {
@@ -626,6 +653,10 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
     setJobs((js) => applyCancel(js, jobId));
   }, []);
 
+  const clear = useCallback((jobId: string) => {
+    setJobs((js) => applyClear(js, jobId));
+  }, []);
+
   const value = useMemo<JobsApi>(
     () => ({
       jobs,
@@ -634,6 +665,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
       start,
       settle,
       cancel,
+      clear,
       followupBusy,
       busy,
       runningFor: (projectId, kind) =>
@@ -641,7 +673,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
       markRead: (id) => setEvents((es) => es.map((e) => (e.id === id ? { ...e, read: true } : e))),
       markAllRead: () => setEvents((es) => es.map((e) => ({ ...e, read: true }))),
     }),
-    [jobs, events, start, settle, cancel, followupBusy, busy],
+    [jobs, events, start, settle, cancel, clear, followupBusy, busy],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

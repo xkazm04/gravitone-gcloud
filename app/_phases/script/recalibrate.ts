@@ -25,7 +25,8 @@
 import type { Card } from "../_shared/notebook/cards";
 import type { Scope } from "../research/scope";
 import { stateOf } from "../research/scope";
-import { ATTRIBUTION_OF as baseAttributionOf, type Usage } from "./impact";
+import type { Usage } from "./impact";
+import { chainOf, attributionOf } from "./chainBase";
 import { applyEdits, impactFrom, type AppliedRender, type Edit, type EditPlan } from "./editPlan";
 import type { Beat } from "./types";
 import { RENDERS, RENDER_BY_ID } from "./renders";
@@ -177,6 +178,8 @@ export function recalibrate(
     conflicts,
     unsupported: unsupportedIn(impact, ctx),
     engine: "simulated",
+    ...(base.beats ? { beats: base.beats } : {}),
+    ...(base.attribution ? { attribution: base.attribution } : {}),
   };
 }
 
@@ -191,13 +194,13 @@ export function recalibrate(
    because marks are only re-laid once every edit in the plan has landed. */
 
 /** Every card the renders would still SPEAK if `edits` were applied. */
-function spokenAfter(edits: Edit[]): Set<string> {
+function spokenAfter(base: Version, edits: Edit[]): Set<string> {
   const out = new Set<string>();
   let inserted = 0;
   for (const r of RENDERS) {
-    const base = baseAttributionOf(r.id);
+    const baseAttr = attributionOf(base, r.id);
     const rows = new Map<string, string[]>();
-    for (const b of r.beats) rows.set(b.at, base[b.at] ?? []);
+    for (const b of chainOf(base, r.id)) rows.set(b.at, baseAttr[b.at] ?? []);
 
     for (const e of edits) {
       if (e.renderId !== r.id) continue;
@@ -220,10 +223,10 @@ function spokenAfter(edits: Edit[]): Set<string> {
 
 /** Does this edit take `cardId` off the beat that was carrying it? A `cut`
  *  always does; a `rewrite` does when its new card list drops it. */
-function removesCard(e: Edit, cardId: string): boolean {
+function removesCard(base: Version, e: Edit, cardId: string): boolean {
   if (e.op !== "cut" && e.op !== "rewrite") return false;
   if (!e.beatAt) return false;
-  if (!(baseAttributionOf(e.renderId)[e.beatAt] ?? []).includes(cardId)) return false;
+  if (!(attributionOf(base, e.renderId)[e.beatAt] ?? []).includes(cardId)) return false;
   return e.op === "cut" || !(e.cards ?? []).includes(cardId);
 }
 
@@ -287,8 +290,8 @@ export function recalibrateFromPlan(
 
   // GUARD 1, on the plan — required material may not be cut. Projected, so the
   // refusal lands before the beats and the matrix exist rather than beside them.
-  const spokenBefore = spokenAfter([]);
-  const wouldSpeak = spokenAfter(inScope);
+  const spokenBefore = spokenAfter(base, []);
+  const wouldSpeak = spokenAfter(base, inScope);
   const dropped = new Set<Edit>();
 
   for (const c of ctx.cards) {
@@ -306,7 +309,7 @@ export function recalibrateFromPlan(
       continue;
     }
 
-    const guilty = inScope.filter((e) => removesCard(e, c.id));
+    const guilty = inScope.filter((e) => removesCard(base, e, c.id));
     for (const e of guilty) dropped.add(e);
     refusals.push({
       cardId: c.id,
@@ -323,10 +326,14 @@ export function recalibrateFromPlan(
 
   const applied: Record<string, AppliedRender> = {};
   const beats: Record<string, Beat[]> = {};
+  const attribution: Record<string, Record<string, string[]>> = {};
   for (const r of RENDERS) {
-    const a = applyEdits(r, legal, baseAttributionOf(r.id));
+    const baseBeats = chainOf(base, r.id);
+    const baseAttr = attributionOf(base, r.id);
+    const a = applyEdits({ ...r, beats: baseBeats }, legal, baseAttr);
     applied[r.id] = a;
     beats[r.id] = a.beats;
+    attribution[r.id] = a.attribution;
   }
   const impact = impactFrom(applied);
 
@@ -378,6 +385,7 @@ export function recalibrateFromPlan(
     unsupported: unsupportedIn(impact, ctx),
     engine: "model",
     beats,
+    attribution,
     summary: plan.summary,
     modelRefusals: plan.refusals,
     // THE SEAMS THE PLAN BROKE, carried out instead of dropped. `applyEdits`

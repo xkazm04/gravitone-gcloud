@@ -49,7 +49,7 @@ import CandidatesDuel from "./candidates/CandidatesDuel";
 import { useAdoption } from "./candidates/useAdoption";
 import { useScriptFace } from "./candidates/useScriptFace";
 import HypothesisColumn from "./_parts/HypothesisColumn";
-import { stillSpoken } from "./_matrix/shared";
+import { conflictsIn } from "./scopeConflicts";
 import MatrixCoverage from "./_matrix/MatrixCoverage";
 import MatrixSpend from "./_matrix/MatrixSpend";
 import MatrixTracks from "./_matrix/MatrixTracks";
@@ -325,7 +325,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   const cardIds = scope.cards.map((c) => c.id);
   const state = ready
     ? {
-        conflicts: scope.cards.filter((c) => stillSpoken(shown, c, scope.scope).length > 0).length,
+        conflicts: conflictsIn(shown, scope.cards, scope.scope).length,
         overrun: RENDERS.filter((r) => coverageIn(shown, r.id, cardIds).overrunS > 0).length,
         unused: scope.cards.filter((c) =>
           RENDERS.every((r) => usageIn(shown, r.id, c.id).kind === "unused"),
@@ -426,7 +426,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
               to check what a note did. The pad is a fixed corner surface that
               belongs to the STEP, not to whichever grid happens to be under it,
               so it is mounted once and the tabs swap inside it. */}
-          <StickyNotebook api={versions} gate={gate}>
+          <StickyNotebook api={versions} gate={gate} cards={scope.cards} scope={scope.scope}>
             <>
               {tab === "candidates" && (
                 <>

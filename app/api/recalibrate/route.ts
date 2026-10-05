@@ -55,8 +55,8 @@ import { TextError, statusFor } from "@/lib/text/errors";
 import { reason } from "@/lib/text/router";
 import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
 import { EDIT_PLAN_SCHEMA, PlanError, parseEditPlan } from "@/app/_phases/script/editPlan";
+import { rendersInScope } from "@/app/_phases/script/chainBase";
 import { ATTRIBUTION } from "@/app/_phases/script/impact";
-import { RENDER_BY_ID } from "@/app/_phases/script/renders";
 
 export const runtime = "nodejs";
 /** A real run is minutes. Give the handler room rather than truncating it. */
@@ -149,7 +149,8 @@ function withAttribution(r: Loose): Loose {
     ...r,
     beats: beats.map((raw) => {
       const b = (raw ?? {}) as Loose;
-      return { ...b, cards: marks[String(b.at)] ?? null };
+      const cards = b.cards !== undefined ? b.cards : (marks[String(b.at)] ?? null);
+      return { ...b, cards };
     }),
   };
 }
@@ -249,44 +250,6 @@ function splitConclusions(
   return { whole, held };
 }
 
-/** Does this render's baseline say anything about this card? Either it speaks it
- *  in a beat, or it recorded a deliberate decision to cut it — a `more-focus`
- *  note can legitimately reverse the second. */
-function touches(renderId: string, cardId: string): boolean {
-  if (Object.values(ATTRIBUTION[renderId] ?? {}).some((ids) => ids.includes(cardId))) return true;
-  return (RENDER_BY_ID[renderId]?.cutFacts ?? []).some((c) => c.factId === cardId);
-}
-
-/** Which renders these notes can reach.
- *
- *  `less-focus`, `descope`, `move-earlier` and `move-later` all ask for a change
- *  to a beat that already carries the card. A render with no such beat has
- *  nothing to retime, cut or move — sending its whole chain buys prose the
- *  request cannot act on. `more-focus` reaches everything only when NO render
- *  carries the card, which is exactly what the note's own hint promises: "give
- *  it more of the runtime — or bring it in if no render uses it". `custom` is
- *  free text, read literally, so it reaches everything.
- *
- *  Fails open in every ambiguous case, and an empty result means "everything" —
- *  the saving is never worth a run that could not answer the note. */
-function rendersInScope(ids: string[], notes: unknown[]): Set<string> {
-  const all = new Set(ids);
-  const out = new Set<string>();
-  for (const raw of notes) {
-    const n = (raw ?? {}) as Loose;
-    const cardId = typeof n.cardId === "string" ? n.cardId : null;
-    const kind = typeof n.kind === "string" ? n.kind : "custom";
-    if (!cardId || kind === "custom") return all;
-    const hit = ids.filter((id) => touches(id, cardId));
-    if (!hit.length) {
-      if (kind === "more-focus") return all; // it could be brought into any of them
-      continue; // inert — there is no beat anywhere for it to change
-    }
-    for (const id of hit) out.add(id);
-  }
-  return out.size ? out : all;
-}
-
 export async function POST(req: Request) {
   // LOCAL-COMPUTE ROUTE - auth + rate limit before anything is read or spawned.
   //
@@ -314,8 +277,7 @@ export async function POST(req: Request) {
     return Response.json({ detail: "No notes were sent, so there is nothing to recalibrate." }, { status: 400 });
 
   const allRenders = Array.isArray(body.renders) ? (body.renders as Loose[]) : [];
-  const ids = allRenders.map((r) => String(r.id));
-  const inScope = rendersInScope(ids, body.notes);
+  const inScope = rendersInScope(allRenders, body.notes);
   const sent = allRenders
     .filter((r) => inScope.has(String(r.id)))
     .map((r) => withAttribution(without(r, RENDER_DROP) as Loose));
@@ -418,7 +380,7 @@ export async function POST(req: Request) {
     // authoritative: it checks more than a schema can (render ids against the
     // table, op vocabulary), and this app does not have two validators.
     const run = await reason({ prompt, turn: "edit-plan", schema: EDIT_PLAN_SCHEMA });
-    const plan = parseEditPlan(run.text);
+    const plan = parseEditPlan(run.text, { renders: allRenders });
 
     // A plan may only name material that was sent. `parseEditPlan` checks the
     // id against the render TABLE, which still holds all three — so the check

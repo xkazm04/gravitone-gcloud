@@ -205,3 +205,18 @@ export interface Catalogue {
   styles: StyleDef[];
   ledger: LedgerRow[];
 }
+
+export interface ForgeCommitCounts {
+  kept: number;
+  deleted: number;
+  undecided: number;
+}
+
+export interface ForgeCommitPlan {
+  counts: ForgeCommitCounts;
+  delete: string[];
+  ledgerRows: LedgerRow[];
+  evidence: Record<string, Evidence[]>;
+  promotions: string[];
+  token: string;
+}

@@ -11,8 +11,10 @@
 // that no longer matched its own numbers.
 
 import type { Beat, Connector, ScriptRender } from "./types";
-import { RENDERS, RENDER_BY_ID } from "./renders";
+import { RENDERS } from "./renders";
 import { splitAcross, type Usage } from "./impact";
+import { chainOf } from "./chainBase";
+import type { Version } from "./versions";
 
 export type EditOp = "retime" | "rewrite" | "cut" | "insert";
 
@@ -315,7 +317,7 @@ export class PlanError extends Error {}
  *  misunderstood the job, and quietly patching it produces edits nobody
  *  specified — the failure mode that is hardest to notice afterwards, because
  *  the result still looks like a plan. */
-export function parseEditPlan(raw: string): EditPlan {
+export function parseEditPlan(raw: string, opts?: { base?: Version; renders?: unknown[] }): EditPlan {
   const text = raw.trim();
   // Tolerate a ```json fence; tolerate nothing else.
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -335,10 +337,20 @@ export function parseEditPlan(raw: string): EditPlan {
 
   const renderIds = new Set(RENDERS.map((r) => r.id));
   const ops = new Set<EditOp>(["retime", "rewrite", "cut", "insert"]);
-  /** The marks an edit may name, per render. `applyEdits` resolves against the
-   *  ORIGINAL beats — marks are only re-laid once every edit has landed — so
-   *  the fixture's own chain is the right universe to check against. */
-  const marksOf = (renderId: string) => new Set(RENDER_BY_ID[renderId].beats.map((b) => b.at));
+  /** The marks an edit may name, per render. Resolved against base version beats
+   *  or payload renders when supplied, falling back to fixture beats. */
+  const marksOf = (renderId: string) => {
+    if (opts?.base) {
+      return new Set(chainOf(opts.base, renderId).map((b) => b.at));
+    }
+    if (Array.isArray(opts?.renders)) {
+      const match = (opts.renders as Record<string, unknown>[]).find((r) => String(r?.id) === renderId);
+      if (match && Array.isArray(match.beats)) {
+        return new Set((match.beats as { at: string }[]).map((b) => b.at));
+      }
+    }
+    return new Set(chainOf(undefined, renderId).map((b) => b.at));
+  };
 
   const edits: Edit[] = o.edits.map((raw, i) => {
     const e = raw as Record<string, unknown>;

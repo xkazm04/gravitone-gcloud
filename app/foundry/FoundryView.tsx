@@ -50,7 +50,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Keycaps } from "@/components/ui/signal";
-import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
+import type { CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
 
 import { CullGrid } from "./CullGrid";
@@ -60,7 +60,7 @@ import { Lightbox } from "./Lightbox";
 import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
 import { StylesShelf } from "./StylesShelf";
-import { commitRun, fetchRun, fetchRuns, saveVerdicts } from "./foundryClient";
+import { commitRun, fetchRun, fetchRuns, previewCommit, saveVerdicts } from "./foundryClient";
 import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
 import {
   BarCount,
@@ -70,11 +70,13 @@ import {
   Label,
   Loading,
   LockNote,
+  PlanFact,
   PrimaryAction,
   Rise,
   SaveNote,
   StatusChip,
   DecisionBar,
+  useCommitPlan,
   type SaveKind,
 } from "./ui";
 
@@ -116,6 +118,10 @@ export default function FoundryView() {
   const [open, setOpen] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
+  /** The server's plan for the cull, asked for when the confirm opens. */
+  const plan = useCommitPlan<ForgeCommitPlan>();
+  const commitPlan = plan.plan;
+  const clearPlan = plan.clear;
   const [result, setResult] = useState<CommitResult | null>(null);
   const [findingsOpen, setFindingsOpen] = useState(false);
   /** A commit that FAILED, shown inside the dialog that asked for it.
@@ -201,10 +207,11 @@ export default function FoundryView() {
       setFocused(null);
       setOpen(null);
       setFindingsOpen(false);
+      clearPlan();
       setSave("idle");
       loadDetail(id, false);
     },
-    [loadDetail],
+    [loadDetail, clearPlan],
   );
 
   const loadRuns = useCallback(() => {
@@ -286,14 +293,28 @@ export default function FoundryView() {
     return { total: cs.length, kept, rejected, undecided: cs.length - kept - rejected };
   }, [detail, verdicts]);
 
+  const openConfirm = () => {
+    if (!selected) return;
+    const runId = selected;
+    setConfirm(true);
+    setCommitError(null);
+    plan.prepare(() => previewCommit(runId, "reject"));
+  };
+  const closeConfirm = () => {
+    setConfirm(false);
+    setCommitError(null);
+    clearPlan();
+  };
+
   const doCommit = async () => {
     if (!selected) return;
     setCommitting(true);
     setCommitError(null);
     try {
-      const r = await commitRun(selected, "reject");
+      const r = await commitRun(selected, "reject", commitPlan?.token);
       setResult(r);
       setConfirm(false);
+      clearPlan();
       setOpen(null);
       loadDetail(selected, false);
       loadRuns();
@@ -412,7 +433,7 @@ export default function FoundryView() {
                 // see anywhere else: why THIS button will not go.
                 <>
                   {blocked && <LockNote>{blocked}</LockNote>}
-                  <PrimaryAction disabled={Boolean(blocked)} onClick={() => setConfirm(true)}>
+                  <PrimaryAction disabled={Boolean(blocked)} onClick={openConfirm}>
                     Commit the cull
                   </PrimaryAction>
                 </>
@@ -460,20 +481,15 @@ export default function FoundryView() {
             if (committing) return;
             setConfirm(false);
             setCommitError(null);
+            clearPlan();
           }}
           title="Commit the cull?"
           eyebrow={<Label>{selected}</Label>}
           railLabel="commit"
-          // THE RAIL IS THE SENTENCE. "undecided counts as rejected: the cull
-          // is what you chose, not what you skipped" was the app explaining a
-          // picture — kept on one side, rejected on the other, and undecided
-          // hatched into the rejected side because it is not a third outcome.
-          // What stays in prose is the consequence a destructive confirm is
-          // entitled to state, and the path the judgement is written to.
           rail={[
-            { n: counts.kept, tone: "emerald", label: "kept" },
-            { n: counts.rejected, tone: "rose", label: "rejected" },
-            { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+            { n: commitPlan ? commitPlan.counts.kept : counts.kept, tone: "emerald", label: "kept" },
+            { n: commitPlan ? commitPlan.counts.deleted : counts.rejected, tone: "rose", label: "rejected" },
+            { n: commitPlan ? commitPlan.counts.undecided : counts.undecided, tone: "rose", label: "undecided", hatched: true },
           ]}
           consequence={
             <>
@@ -481,13 +497,19 @@ export default function FoundryView() {
             </>
           }
           busy={committing}
-          confirmLabel={`Delete ${counts.rejected + counts.undecided}, keep ${counts.kept}`}
+          preparing={plan.loading}
+          confirmLabel={`Delete ${commitPlan ? commitPlan.counts.deleted + commitPlan.counts.undecided : counts.rejected + counts.undecided}, keep ${commitPlan ? commitPlan.counts.kept : counts.kept}`}
           onConfirm={doCommit}
-          onCancel={() => {
-            setConfirm(false);
-            setCommitError(null);
-          }}
+          onCancel={closeConfirm}
         >
+          {commitPlan && commitPlan.promotions.length > 0 && (
+            <PlanFact label="Promoted to proven">{commitPlan.promotions.join(", ")}</PlanFact>
+          )}
+          {plan.error && (
+            <div className="mt-4">
+              <ErrorNote role="alert">Could not prepare the commit: {plan.error}</ErrorNote>
+            </div>
+          )}
           {commitError && (
             <div className="mt-4">
               <ErrorNote role="alert">The commit failed and nothing was deleted: {commitError}</ErrorNote>
