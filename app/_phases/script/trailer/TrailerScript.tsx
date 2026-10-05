@@ -59,6 +59,33 @@ export default function TrailerScript({
   if (!api.hydrated)
     return <p className="font-jetbrains text-label text-white/35">opening the project’s cut…</p>;
 
+  // A read that failed is storage trouble, not an absent spine: the cut may be
+  // on disk and out of reach, and the hook has disarmed its save. The kind is
+  // titled in the reader's language, the store's own message follows verbatim.
+  if (api.loadTrouble)
+    return (
+      <Notice
+        title={
+          api.loadTrouble.kind === "quota"
+            ? "out of room"
+            : api.loadTrouble.kind === "blocked"
+              ? "another tab holds the database open"
+              : api.loadTrouble.kind === "unavailable"
+                ? "no storage in this browser session"
+                : api.loadTrouble.kind
+        }
+      >
+        <p className="font-jetbrains text-content text-white/45">{api.loadTrouble.message}</p>
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="font-jetbrains mt-2 rounded-lg border border-white/15 px-3 py-1.5 text-label text-white/70 transition hover:bg-white/5"
+        >
+          reload
+        </button>
+      </Notice>
+    );
+
   if (!api.cut || !api.budget || !api.report)
     return (
       <Notice severity="info" title="no spine composed for this project yet">

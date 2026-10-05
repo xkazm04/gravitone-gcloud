@@ -6,9 +6,10 @@ import type { Discipline } from "@/lib/projects";
 import { GLASS_HARBOR_BUDGET, GLASS_HARBOR_CUE } from "@/app/_studio/trailerFixtures";
 
 import {
-  loadStep,
+  readStep,
   saveStep,
   type BeatPicksStepData,
+  type StorageTrouble,
   type TrailerCutStepData,
 } from "../../_shared/stepStore";
 import { slotsFor } from "../../research/beats/beats";
@@ -49,6 +50,13 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
   // — see `staleSpine` below.
   const [composedSpine, setComposedSpine] = useState<Record<string, string> | null | undefined>(undefined);
   const [boardSpine, setBoardSpine] = useState<Record<string, string> | null>(null);
+  /** The read that did not happen, when one did not. the flattened store read flattens a
+   *  FAILED read and a never-written key to the same `undefined`; they mean
+   *  opposite things here — one composes a fresh cut, the other means an edited
+   *  cut is on disk and out of reach, and composing over it would let the save
+   *  effect below overwrite the edits. Same rule as useFrames' read of this
+   *  record. */
+  const [loadTrouble, setLoadTrouble] = useState<StorageTrouble | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -56,11 +64,24 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
       // Both records are read on every hydrate — the picks used to be read only
       // when no cut was saved, which is why a reopened-and-recomposed spine
       // never reached this step (uat 2026-09-05: four Characters found it).
-      const [saved, picks] = await Promise.all([
-        loadStep<TrailerCutStepData>(projectId, PHASE),
-        loadStep<BeatPicksStepData>(projectId, PICKS_PHASE),
+      const [savedRead, picksRead] = await Promise.all([
+        readStep<TrailerCutStepData>(projectId, PHASE),
+        readStep<BeatPicksStepData>(projectId, PICKS_PHASE),
       ]);
       if (!alive) return;
+      const failure = !savedRead.ok ? savedRead.trouble : !picksRead.ok ? picksRead.trouble : null;
+      if (failure) {
+        setLoadTrouble(failure);
+        setCut(null);
+        setBudget(null);
+        setComposedSpine(undefined);
+        setBoardSpine(null);
+        setHydratedFor(projectId);
+        return;
+      }
+      setLoadTrouble(null);
+      const saved = savedRead.ok ? savedRead.data : undefined;
+      const picks = picksRead.ok ? picksRead.data : undefined;
       const confirmed = picks?.confirmed ?? null;
       setBoardSpine(confirmed && Object.keys(confirmed).length > 0 ? confirmed : null);
       if (saved?.cut) {
@@ -96,13 +117,13 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
   // Saves on every change once hydrated — including the seed, which is the
   // "saves once" the header promises. A null cut is never written.
   useEffect(() => {
-    if (!hydrated || !cut || !budget) return;
+    if (!hydrated || loadTrouble || !cut || !budget) return;
     void saveStep<TrailerCutStepData>(projectId, PHASE, {
       cut,
       budget,
       ...(composedSpine ? { spine: composedSpine } : {}),
     });
-  }, [projectId, cut, budget, composedSpine, hydrated]);
+  }, [projectId, cut, budget, composedSpine, hydrated, loadTrouble]);
 
   /** Is the cut on screen older than the spine on the board?
    *  `true` — the board holds a confirmed spine that differs from the one this
@@ -152,7 +173,7 @@ export function useTrailerCut(opts: { projectId: string; discipline: Discipline;
     setBudget((b) => (b ? withAllowance(b, assetId, allowance, trade) : b));
   }, []);
 
-  return { hydrated, cut, budget, report, staleSpine, spineReopened, recompose, setBeat, setPayer, addPromise, setAllowance };
+  return { hydrated, loadTrouble, cut, budget, report, staleSpine, spineReopened, recompose, setBeat, setPayer, addPromise, setAllowance };
 }
 
 export type TrailerCutApi = ReturnType<typeof useTrailerCut>;

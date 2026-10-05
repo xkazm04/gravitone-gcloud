@@ -298,3 +298,52 @@ test("the cut the hook seeded reaches the shot lane — Step 2 to Step 3, end to
   expect(shots.length, "a saved trailer cut must decompose into shots").toBeGreaterThan(0);
   console.log(`[join] picks -> saved cut (${cut.beats.length} beats) -> ${shots.length} shots`);
 });
+
+/* ── 5 · a failed read is trouble, never a seed ─────────────────────────────── */
+
+test("a FAILED read of a saved cut is trouble, never a seed", async () => {
+  const slots = slotsFor("trailer");
+  const picks = Object.fromEntries(slots.map((s) => [s.id, s.variants[0].id]));
+  const composed = composeCut({
+    projectId: "p-failed",
+    title: "Glass Harbor — trailer",
+    picks,
+    slots,
+    cue: GLASS_HARBOR_CUE,
+  });
+  const edited = {
+    ...composed,
+    beats: composed.beats.map((b, i) => (i === 0 ? { ...b, label: "AN EDIT NOBODY MAY DISCARD" } : b)),
+  };
+  await saveStep<TrailerCutStepData>("p-failed", "script-trailer", { cut: edited, budget: GLASS_HARBOR_BUDGET });
+  await saveStep("p-failed", "research-beats", wholeSpinePicks());
+
+  // The first request on a `script-trailer` key fails, exactly once.
+  const proto = (globalThis as unknown as { IDBObjectStore: { prototype: { get: (k: unknown) => unknown } } })
+    .IDBObjectStore.prototype;
+  const realGet = proto.get;
+  let failed = 0;
+  proto.get = function (this: unknown, k: unknown) {
+    if (failed === 0 && typeof k === "string" && k.includes("script-trailer")) {
+      failed++;
+      const req: { onerror?: () => void; error: Error } = { error: new Error("simulated read failure") };
+      setTimeout(() => req.onerror?.(), 0);
+      return req;
+    }
+    return realGet.call(this, k);
+  };
+  try {
+    const h = drive("p-failed");
+    const api = await h.settleUp();
+    expect(failed, "the fault must have fired").toBe(1);
+    expect(api.cut, "a failed read is not a never-written key").toBe(null);
+    expect((api as { loadTrouble?: unknown }).loadTrouble, "the failure must surface").toBeTruthy();
+    h.unmount();
+  } finally {
+    proto.get = realGet;
+  }
+  const after = await readStep<TrailerCutStepData>("p-failed", "script-trailer");
+  expect(after.ok && after.data?.cut?.beats[0].label, "nothing was written over the edit").toBe(
+    "AN EDIT NOBODY MAY DISCARD",
+  );
+});
