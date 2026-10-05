@@ -20,8 +20,12 @@
 // A row that still cannot resolve is REPORTED, not dropped — a ledger that
 // quietly renders four rows as three is the same defect wearing a guard clause.
 
-import { UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
-import type { Unknown } from "../_shared/notebook/types";
+import { NOTEBOOK, UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
+import { asSource, type NotebookSource } from "../_shared/notebook/source";
+import type { Notebook, Unknown } from "../_shared/notebook/types";
+import type { ScriptDraft, DraftRender } from "./draft";
+import { checkConstraints, probesFor, type GateFinding, type GateSubject } from "./gate";
+import { RENDER_BY_ID } from "./renders";
 
 export type ConstraintState = "honoured" | "at-risk" | "not-applicable";
 
@@ -75,8 +79,14 @@ export interface ResolvedLedger {
   superseded: number;
 }
 
-/** Score one render against the notebook as it stands today. */
-export function ledgerFor(renderId: string): ResolvedLedger {
+/** The HAND ledger for one render, as the notebook stands today: typed states,
+ *  typed `how`. Superseded by `ledgerFor` below, which derives every state from
+ *  the gate; this survives only because the ConstraintLedger panel and
+ *  pipeline/drive-script-step.mjs ("the reversal chain still declares its
+ *  at-risk row") read it, and moving them is script-phase-A session 2. Measured
+ *  2026-10-05: it disagrees with the gate on reversal-chain · u-yield-causality
+ *  (typed at-risk; the render was corrected, and the gate passes it). */
+export function handLedgerFor(renderId: string): ResolvedLedger {
   const raw = CONSTRAINT_LEDGER[renderId] ?? [];
   const rows: ResolvedRow[] = [];
   const dangling: string[] = [];
@@ -100,5 +110,96 @@ export function ledgerFor(renderId: string): ResolvedLedger {
     dangling,
     atRisk: rows.filter((r) => r.effective === "at-risk").length,
     superseded: rows.filter((r) => r.effective === "superseded").length,
+  };
+}
+
+/* ───────────────────────── the ledger, derived from the gate ────────────────
+   script-phase-A. The table above is "a well-designed noun with no verb"
+   (gate.ts's header): a person typed `honoured` or `at-risk` and nothing ever
+   re-read the render. Two verdict sources for one question will disagree, and
+   on 2026-10-05 they do. So the STATE now comes from the gate's constraint
+   check, run against the render and the notebook handed in; a person's `how`
+   survives as an annotation beside it, and is never the verdict. */
+
+/** The gate's verdict, in the ledger's words. `not-engaged`: the probe's rule
+ *  never engaged because the render does not raise the subject. `unmeasured`:
+ *  the unknown has no probe, so nothing was checked — never scored honoured. */
+export type LedgerState = "honoured" | "at-risk" | "not-engaged" | "unmeasured";
+export type LedgerEffective = LedgerState | "superseded";
+
+export interface DerivedRow {
+  unknownId: string;
+  unknown: Unknown;
+  state: LedgerState;
+  effective: LedgerEffective;
+  /** The person's note when the draft carries one, else the gate's detail. */
+  how: string;
+  /** Where the violation sits, when it is locatable. */
+  at?: string;
+  quote?: string;
+}
+
+export interface DerivedLedger {
+  /** One row per notebook unknown, in notebook order. */
+  rows: DerivedRow[];
+  /** Notes naming an unknown this notebook does not have. */
+  dangling: string[];
+  atRisk: number;
+  superseded: number;
+  unmeasured: number;
+}
+
+const STATE: Record<GateFinding["verdict"], LedgerState> = {
+  pass: "honoured",
+  violation: "at-risk",
+  "not-engaged": "not-engaged",
+  unmeasured: "unmeasured",
+};
+
+/** Score one render against a notebook, through the gate.
+ *
+ *  `render` is an id (resolved in `opts.draft`, then the fixture) or the render
+ *  itself — any `GateSubject`, so an unaccepted rewrite can be scored. Probes
+ *  resolve through `probesFor(unknowns, draft)`. */
+export function ledgerFor(
+  render: string | GateSubject | DraftRender,
+  notebook: NotebookSource | Notebook = NOTEBOOK,
+  opts: { draft?: Pick<ScriptDraft, "renders" | "probes"> } = {},
+): DerivedLedger {
+  const subject: GateSubject | DraftRender | undefined =
+    typeof render === "string" ? (opts.draft?.renders.find((r) => r.id === render) ?? RENDER_BY_ID[render]) : render;
+  if (!subject) throw new Error(`ledgerFor: no render "${String(render)}" in the draft or the fixture.`);
+
+  const nb = asSource(notebook).notebook;
+  const own = (subject as Partial<DraftRender>).ledgerNotes;
+  const notes: Record<string, string> =
+    own ?? Object.fromEntries((CONSTRAINT_LEDGER[subject.id] ?? []).map((r) => [r.unknownId, r.how]));
+
+  const findings = checkConstraints(subject, nb.unknowns, probesFor(nb.unknowns, opts.draft));
+  const rows: DerivedRow[] = nb.unknowns.map((unknown) => {
+    const mine = findings.filter((f) => f.subject === unknown.id);
+    // A violation anywhere outranks every pass: one forbidden figure is the verdict.
+    const f = mine.find((x) => x.verdict === "violation") ?? mine[0];
+    const state: LedgerState = f ? STATE[f.verdict] : "unmeasured";
+    return {
+      unknownId: unknown.id,
+      unknown,
+      state,
+      // A resolved unknown no longer binds: honouring it is a render more
+      // cautious than its research now requires, not a pass.
+      effective: unknown.resolvedBy && state === "honoured" ? "superseded" : state,
+      how: notes[unknown.id] ?? f?.detail ?? "",
+      ...(f?.at ? { at: f.at } : {}),
+      ...(f?.quote ? { quote: f.quote } : {}),
+    };
+  });
+
+  const ids = new Set(nb.unknowns.map((u) => u.id));
+  return {
+    rows,
+    dangling: Object.keys(notes).filter((id) => !ids.has(id)),
+    atRisk: rows.filter((r) => r.effective === "at-risk").length,
+    superseded: rows.filter((r) => r.effective === "superseded").length,
+    unmeasured: rows.filter((r) => r.effective === "unmeasured").length,
   };
 }

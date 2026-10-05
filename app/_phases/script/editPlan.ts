@@ -15,6 +15,7 @@ import { RENDERS } from "./renders";
 import { splitAcross, type Usage } from "./impact";
 import { chainOf } from "./chainBase";
 import type { Version } from "./versions";
+import type { ScriptDraft } from "./draft";
 
 export type EditOp = "retime" | "rewrite" | "cut" | "insert";
 
@@ -49,49 +50,61 @@ export interface EditPlan {
  *  REQUEST, not a guarantee — which is exactly why `parseEditPlan` below exists.
  *  Trading structured outputs for subscription auth means the validation the
  *  server used to do has to happen here instead; that cost is real and is paid
- *  in one function rather than spread through the callers. */
-export const EDIT_PLAN_SCHEMA = {
-  type: "object",
-  properties: {
-    edits: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: {
-          renderId: { type: "string", enum: RENDERS.map((r) => r.id) },
-          op: { type: "string", enum: ["retime", "rewrite", "cut", "insert"] },
-          beatAt: { type: "string", description: "mm:ss of the beat being changed" },
-          afterBeatAt: { type: "string", description: "insert only — the beat to insert after" },
-          seconds: { type: "integer", description: "retime/insert — how long the beat holds" },
-          text: { type: "string", description: "rewrite/insert — the spoken line" },
-          label: { type: "string", description: "insert — the beat's craft label" },
-          connector: { type: "string", enum: ["BUT", "THEREFORE"], description: "insert — link to the previous beat. Required on an insert; a plan without it is rejected" },
-          cards: {
-            type: "array",
-            items: { type: "string" },
-            description: "rewrite/insert — notebook card ids this beat rests on. Required.",
+ *  in one function rather than spread through the callers.
+ *
+ *  A FUNCTION OF THE DRAFT (script-phase-A). The `renderId` enum used to be
+ *  `RENDERS.map(…)`, so the contract itself forbade the model from naming any
+ *  render that did not ship in the repo. Key order is part of the contract too:
+ *  the recalibrate cassettes are keyed by `sha256(JSON.stringify(schema))`, and
+ *  the fixture draft's schema is pinned byte-identical to the old constant. */
+export function editPlanSchema(draft: { renders: readonly { id: string }[] }) {
+  return {
+    type: "object",
+    properties: {
+      edits: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            renderId: { type: "string", enum: draft.renders.map((r) => r.id) },
+            op: { type: "string", enum: ["retime", "rewrite", "cut", "insert"] },
+            beatAt: { type: "string", description: "mm:ss of the beat being changed" },
+            afterBeatAt: { type: "string", description: "insert only — the beat to insert after" },
+            seconds: { type: "integer", description: "retime/insert — how long the beat holds" },
+            text: { type: "string", description: "rewrite/insert — the spoken line" },
+            label: { type: "string", description: "insert — the beat's craft label" },
+            connector: { type: "string", enum: ["BUT", "THEREFORE"], description: "insert — link to the previous beat. Required on an insert; a plan without it is rejected" },
+            cards: {
+              type: "array",
+              items: { type: "string" },
+              description: "rewrite/insert — notebook card ids this beat rests on. Required.",
+            },
+            why: { type: "string", description: "written for the person deciding whether to accept it" },
           },
-          why: { type: "string", description: "written for the person deciding whether to accept it" },
+          required: ["renderId", "op", "why"],
+          additionalProperties: false,
         },
-        required: ["renderId", "op", "why"],
-        additionalProperties: false,
       },
-    },
-    refusals: {
-      type: "array",
-      items: {
-        type: "object",
-        properties: { note: { type: "string" }, why: { type: "string" } },
-        required: ["note", "why"],
-        additionalProperties: false,
+      refusals: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: { note: { type: "string" }, why: { type: "string" } },
+          required: ["note", "why"],
+          additionalProperties: false,
+        },
       },
+      unchanged: { type: "array", items: { type: "string" } },
+      summary: { type: "string" },
     },
-    unchanged: { type: "array", items: { type: "string" } },
-    summary: { type: "string" },
-  },
-  required: ["edits", "refusals", "unchanged", "summary"],
-  additionalProperties: false,
-} as const;
+    required: ["edits", "refusals", "unchanged", "summary"],
+    additionalProperties: false,
+  } as const;
+}
+
+/** The fixture renders' schema. A shim for the route and the cassettes until
+ *  the route reads the project's draft (script-phase-A, session 2). */
+export const EDIT_PLAN_SCHEMA = editPlanSchema({ renders: RENDERS });
 
 /* ------------------------------------------------------------ application */
 
@@ -279,9 +292,12 @@ export function applyEdits(
  *  edit that gives a previously-cut fact a line is the model deliberately
  *  reinstating it, and letting a stale declaration erase that would discard the
  *  work and lie about the script. */
-export function impactFrom(applied: Record<string, AppliedRender>): Record<string, Record<string, Usage>> {
+export function impactFrom(
+  applied: Record<string, AppliedRender>,
+  draft?: Pick<ScriptDraft, "renders">,
+): Record<string, Record<string, Usage>> {
   const out: Record<string, Record<string, Usage>> = {};
-  for (const r of RENDERS) {
+  for (const r of draft?.renders ?? RENDERS) {
     const a = applied[r.id];
     const map: Record<string, Usage> = {};
     for (const c of r.cutFacts) map[c.factId] = { kind: "cut", seconds: 0, beats: [], why: c.why };
@@ -317,7 +333,10 @@ export class PlanError extends Error {}
  *  misunderstood the job, and quietly patching it produces edits nobody
  *  specified — the failure mode that is hardest to notice afterwards, because
  *  the result still looks like a plan. */
-export function parseEditPlan(raw: string, opts?: { base?: Version; renders?: unknown[] }): EditPlan {
+export function parseEditPlan(
+  raw: string,
+  opts?: { base?: Version; renders?: unknown[]; draft?: Pick<ScriptDraft, "renders"> },
+): EditPlan {
   const text = raw.trim();
   // Tolerate a ```json fence; tolerate nothing else.
   const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -335,13 +354,19 @@ export function parseEditPlan(raw: string, opts?: { base?: Version; renders?: un
   if (!Array.isArray(o.edits)) throw new PlanError("The plan has no `edits` array.");
   if (typeof o.summary !== "string") throw new PlanError("The plan has no `summary`.");
 
-  const renderIds = new Set(RENDERS.map((r) => r.id));
+  // The renders a plan may name are the DRAFT's when one is handed in — a fixture
+  // id against a draft that does not hold it is a render that does not exist.
+  const renders: readonly ScriptRender[] = opts?.draft?.renders ?? RENDERS;
+  const renderIds = new Set(renders.map((r) => r.id));
   const ops = new Set<EditOp>(["retime", "rewrite", "cut", "insert"]);
   /** The marks an edit may name, per render. Resolved against base version beats
-   *  or payload renders when supplied, falling back to fixture beats. */
+   *  or payload renders when supplied, else the draft's beats, falling back to
+   *  fixture beats. */
+  const draftBeats = (renderId: string) => opts?.draft?.renders.find((r) => r.id === renderId)?.beats;
   const marksOf = (renderId: string) => {
     if (opts?.base) {
-      return new Set(chainOf(opts.base, renderId).map((b) => b.at));
+      const beats = opts.base.beats?.[renderId] ?? draftBeats(renderId) ?? chainOf(undefined, renderId);
+      return new Set(beats.map((b) => b.at));
     }
     if (Array.isArray(opts?.renders)) {
       const match = (opts.renders as Record<string, unknown>[]).find((r) => String(r?.id) === renderId);
@@ -349,7 +374,7 @@ export function parseEditPlan(raw: string, opts?: { base?: Version; renders?: un
         return new Set((match.beats as { at: string }[]).map((b) => b.at));
       }
     }
-    return new Set(chainOf(undefined, renderId).map((b) => b.at));
+    return new Set((draftBeats(renderId) ?? chainOf(undefined, renderId)).map((b) => b.at));
   };
 
   const edits: Edit[] = o.edits.map((raw, i) => {
