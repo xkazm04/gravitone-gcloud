@@ -20,6 +20,7 @@ import { Tally } from "@/components/ui/signal";
 
 import FactRow from "./FactRow";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "./notebook";
+import { SECTION_LABEL } from "./sections/H";
 import { CurrencyBody, SourcesBody } from "./sections/Shared";
 
 export default function EvidenceLog() {
@@ -30,7 +31,7 @@ export default function EvidenceLog() {
   return (
     <div className="space-y-7">
       <section className="grid gap-2 sm:grid-cols-3">
-        <Tile label="claims" value={`${NOTEBOOK_COUNTS.facts}`} note={`${NOTEBOOK_COUNTS.loadBearing} load-bearing`} />
+        <Tile label="facts" value={`${NOTEBOOK_COUNTS.facts}`} note={`${NOTEBOOK_COUNTS.loadBearing} load-bearing`} />
         <Tile
           label="low confidence"
           value={`${NOTEBOOK_COUNTS.lowConfidence}`}
@@ -46,14 +47,14 @@ export default function EvidenceLog() {
       </section>
 
       <section className="space-y-2">
-        <Head>constraints · {open.length}</Head>
+        <Head>{SECTION_LABEL.unknowns}</Head>
         {open.map((u) => (
           <div key={u.id} data-testid={`evidence-constraint-${u.id}`} className="rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
             <p className="text-content text-slate-200">{u.what}</p>
             <p className="font-jetbrains mt-1.5 text-content text-amber-200/90">{u.impact}</p>
           </div>
         ))}
-        {/* WHY A LIFTED CONSTRAINT IS KEPT rather than deleted: a script
+        {/* WHY A RESOLVED UNKNOWN IS KEPT rather than deleted: a script
             written under the old rule can then be spotted as over-hedged, and
             deleting one is what shifted every index in the constraint ledger
             and crashed the Script step. That was printed here as a paragraph
@@ -61,13 +62,13 @@ export default function EvidenceLog() {
             resolved rows carry their own emerald styling. */}
         {resolved.length > 0 && (
           <p className="pt-1">
-            <Tally value={resolved.length} label="lifted" tone="emerald" />
+            <Tally value={resolved.length} label="resolved" tone="emerald" />
           </p>
         )}
       </section>
 
       <section className="space-y-2">
-        <Head>claims · {NOTEBOOK_COUNTS.facts}</Head>
+        <Head>{SECTION_LABEL.facts}</Head>
         <ul className="space-y-2">
           {n.facts.map((f) => (
             <FactRow key={f.id} f={f} />
@@ -90,7 +91,7 @@ export default function EvidenceLog() {
             list does not enumerate and that no code reconciles against it — see
             NOTEBOOK_COUNTS in notebook.ts. Same wording as the notebook's own
             heading and rail pill (SECTION_LABEL in sections/H.tsx). */}
-        <Head>bibliography · {NOTEBOOK_COUNTS.sources}</Head>
+        <Head>{SECTION_LABEL.sources}</Head>
         <SourcesBody />
         {/* The gap is READ, not retyped. The count beside it was already
             computed, and the sentence describing it was a literal about run 1
