@@ -46,6 +46,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Boxes, FileQuestion, Lock, LockOpen, X } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
+import { Button } from "@/components/ui/Primitives";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useAuth } from "@/lib/useAuth";
 import {
@@ -110,6 +111,10 @@ export default function StudioView({ projectId }: { projectId: string }) {
 
   const [project, setProject] = useState<Project | null>(null);
   const [door, setDoor] = useState<Door>({ kind: "opening" });
+  // Bumped by the storage door's "Try again": the open effect re-runs getProject
+  // in place, so a cleared condition (the other tab closed) does not cost a
+  // reload.
+  const [attempt, setAttempt] = useState(0);
   // Not a "view" any more, and not a route: a disclosure. Closed is the default
   // and is the studio doing its job; open is the creator glancing at what this
   // project has made so far.
@@ -156,7 +161,7 @@ export default function StudioView({ projectId }: { projectId: string }) {
     return () => {
       alive = false;
     };
-  }, [id, user, router]);
+  }, [id, user, router, attempt]);
 
   /**
    * Moving along the rail.
@@ -449,12 +454,24 @@ export default function StudioView({ projectId }: { projectId: string }) {
                 top of a real machine error. The headline says the project could
                 not be read; this says why. */}
             <p className="font-hanken text-content leading-snug text-rose-200">{door.message}</p>
-            <Link
-              href="/projects"
-              className="font-jetbrains mt-3 inline-block rounded-lg border border-rose-400/30 px-3 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/10"
-            >
-              back to your projects →
-            </Link>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  setDoor({ kind: "opening" });
+                  setAttempt((n) => n + 1);
+                }}
+              >
+                Try again
+              </Button>
+              <Link
+                href="/projects"
+                className="font-jetbrains inline-block rounded-lg border border-rose-400/30 px-3 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/10"
+              >
+                back to your projects →
+              </Link>
+            </div>
           </div>
         ) : (
           <>
