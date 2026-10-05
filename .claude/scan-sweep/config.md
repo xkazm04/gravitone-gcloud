@@ -208,3 +208,16 @@ before matching, the population walked off the filesystem rather than listed, an
   director promoted 7 such items, all 7 built green. Read every OUTSIDE path against the context's
   DIRECTORY before accepting a B. Also: the outbox stood at 246/200 lines before the run, so this
   run emitted nothing to it — the register row is the only record of the 9 Lane B cards.
+- **2026-10-06 — Lane B --ab-only over 9 UI cards: 9/9 better, two hazards the worktree contract
+  does not name.** (1) **`git stash` is shared by every worktree.** Three workers used it to take
+  arm A; one worker's `stash pop` applied a sibling's WIP into its own tree, and a second pop cascaded
+  it onward — one worker's source edits vanished from its worktree and survived only as a patch the
+  other worker saved to $TEMP. The worker brief now forbids stash outright; arm A comes from
+  `git show HEAD:<path> > tmp` or a hand-restored edit. Put it in the dispatch prompt from the
+  first wave, not after the first collision. (2) **A source-ratchet regex written in an LF worktree
+  goes red on the CRLF base checkout** (`core.autocrlf=true`): `job-elapsed` matched `\n}\n`, passed
+  in the worker's tree and failed on main after the merge. Every probe that matches across a line
+  break needs `\r?\n`; check probes for it at review, not at integration. Also: kit `census.json`
+  is a generated surface that EVERY UI merge moves — tell workers not to regenerate it and
+  regenerate once on the combined tree after the merges (`npx tsx pipeline/kit-census.mts`, no
+  `--raise`), or two branches' refreshes auto-merge into a stale file.
