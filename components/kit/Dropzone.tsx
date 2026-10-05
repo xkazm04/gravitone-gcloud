@@ -1,9 +1,11 @@
 "use client";
 
 // A DROP TARGET. A dashed frame with a drawn plate in it and the constraints in a
-// line (types, count, size); no sentence tells you to drop. The frame carries its
-// accessible name for anyone who cannot see the dashes. It owns the hidden file
-// input; the caller owns the files.
+// line (types, count, size); no sentence tells you to drop. The frame is a
+// button (focusable, Enter/Space open the picker) and carries its accessible
+// name for anyone who cannot see the dashes. It owns the hidden file input —
+// `hidden` is fine because the picker is opened by `.click()` from the frame,
+// never by focusing the input; the caller owns the files.
 
 import { useRef, useState } from "react";
 
@@ -37,6 +39,15 @@ export function Dropzone({
         onFiles(e.dataTransfer.files);
       }}
       onClick={() => input.current?.click()}
+      onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          input.current?.click();
+        }
+      }}
+      role="button"
+      tabIndex={0}
       data-testid={testId}
       aria-label={label}
       className={`k-drop${dragging ? " k-drop--on" : ""}`}

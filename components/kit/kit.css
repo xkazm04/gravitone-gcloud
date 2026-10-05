@@ -606,6 +606,7 @@
 .k-cmd { margin: 8px 0 0; font-family: var(--k-mono); font-size: var(--k-fs); line-height: 1.6; color: var(--al-white); background: color-mix(in srgb, var(--al-deep) 60%, transparent); border: 1px solid var(--al-line); padding: 10px 12px; border-radius: 3px; white-space: pre-wrap; }
 .k-drop { border: 1px dashed color-mix(in srgb, var(--al-gold) 45%, transparent); border-radius: 3px; padding: 34px 20px; text-align: center; color: var(--al-vellum); cursor: pointer; transition: background 0.3s, border-color 0.3s; }
 .k-drop:hover, .k-drop--on { background: color-mix(in srgb, var(--al-gold) 7%, transparent); border-color: var(--al-gold); }
+.k-drop:focus-visible { outline: 2px solid var(--al-gold); outline-offset: 3px; }
 .k-drop svg { width: 58px; height: 58px; display: block; margin: 0 auto 10px; overflow: visible; }
 .k-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 14px; margin-top: 16px; align-items: end; }
 .k-field { display: flex; flex-direction: column; gap: 5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--al-vellum); }
