@@ -29,7 +29,7 @@ import type { DefectCode, SoundKind, SoundTake } from "@/lib/sound/types";
 
 import { DefectChips, DefectPicker, OriginChip, ProviderChip, TechniqueChips, TermChips, VerdictChip } from "../shared/Chips";
 import { DEFECT_ORDER, ORIGIN_WORD, ago, askedFigures, dimsFor, dur, lengthWord, tempoOff } from "../shared/format";
-import { measuredLength, useMeasureOnOpen } from "../shared/measure";
+import { useMeasureOnOpen } from "../shared/measure";
 import { RubricControl, ScoreMeter } from "../shared/Rubric";
 import { transport, useFileLength, usePlayback } from "../shared/transport";
 import { CAPS, CARD, FIELD, BTN, BTN_KEEP, BTN_REJECT } from "../shared/ui";
@@ -379,7 +379,7 @@ function JudgePane({
   const reduce = useReducedMotion();
   const st = usePlayback(take.id);
   const fileLength = useFileLength(take.id);
-  const length = st?.duration || measuredLength(take.id) || fileLength || take.durationS;
+  const length = st?.duration || take.measured?.durationS || fileLength || take.durationS;
   const kept = take.verdict === "kept";
   const rejected = take.verdict === "rejected";
   return (
@@ -559,7 +559,7 @@ function Brief({
   }, [take.id, take.file]);
   const asked = askedFigures(take);
   const m = take.measured;
-  const length = measuredLength(take.id) ?? fileLength;
+  const length = m?.durationS ?? fileLength;
   const lengthOff = take.durationS != null && length != null && Math.abs(length - take.durationS) > Math.max(1, take.durationS * 0.1);
   const unmeasured = measuring ? "measuring" : measureError ? "unreadable" : take.file ? "—" : "no file";
   const rows: { k: string; asked: string | null; measured: string | null; off: boolean }[] =

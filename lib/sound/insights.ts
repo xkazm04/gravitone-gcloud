@@ -16,7 +16,7 @@
 // aggregate that silently dropped small cells would make a provider look
 // untested where it was tested once.
 
-import type { LedgerVerdict } from "./ledger";
+import { isVersionOnly, type LedgerVerdict } from "./ledger";
 import type { DefectCode, InsightCell, ProviderId, SoundKind } from "./types";
 
 type Facet = InsightCell["facet"];
@@ -62,6 +62,9 @@ export function computeInsights(rows: readonly LedgerVerdict[], kind?: SoundKind
     // Belt and braces: the ledger never holds a fixture (ledger.ts verdictRow),
     // but a hand-edited file could, and a fixture must not reach the map.
     if (r.origin === "fixture") continue;
+    // The same for a bare version (ledger.ts isVersionOnly): never written
+    // since the rule, but a row an older build left must not count as a keep.
+    if (isVersionOnly(r)) continue;
     judged++;
     for (const facet of FACETS_FOR[r.kind]) {
       const seen = new Set<string>();

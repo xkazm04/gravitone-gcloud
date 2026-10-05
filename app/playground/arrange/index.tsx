@@ -30,7 +30,7 @@ import { STAGES, type SoundKind } from "@/lib/sound/types";
 
 import { Board, NewRow } from "./Board";
 import { seedSuggestions, STAGE_WORD } from "./model";
-import { MONO_CAPS as CAPS } from "./parts";
+import { CAPS_BARE as CAPS } from "@/app/playground/shared/ui";
 import { useArrange, type Arrange } from "./useArrange";
 
 const KEYS = [

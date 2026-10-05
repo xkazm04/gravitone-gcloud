@@ -89,7 +89,13 @@ export interface SoundFile {
 export interface MeasuredSound {
   tempoBpm: number | null;
   key: string | null;
+  /** RMS of the analysed window, 0..1 (app/library/audio/analysis.ts). The
+   *  Library's band word (high / medium / low) is read off this number, never
+   *  stored beside it. */
   energy: number | null;
+  /** The decoded file's length in seconds — what the bytes ARE, beside the
+   *  take's `durationS` (what the brief asked for). Closeout r4, additive. */
+  durationS: number | null;
   /** Integrated loudness / true peak, when measured (ffprobe/ebur128 or browser). */
   lufs: number | null;
   truePeakDb: number | null;
@@ -131,13 +137,46 @@ export interface SoundTake {
   songId: string | null;
   /** The provider's composition plan, verbatim (lib/music WirePlan), when it gave one. */
   plan: unknown | null;
+  /* ── the Library's facts (closeout r4, additive) — once kept per browser in
+   *    app/library/audio/soundAnnex.ts (deleted), now on the take itself so
+   *    every reader on every machine sees the same links. ── */
+  /** The reference track (app/library/audio/audioRefs.ts id) the brief was anchored on. */
+  referenceTrackId: string | null;
+  /** The prompt round (app/library/audio/book.ts Round id) the take was drafted in. */
+  promptRound: string | null;
+  /** The Suno draft a returned file answers. */
+  draftId: string | null;
+  /** The one change a fan-out made to produce this take. */
+  variation: { axis: string; diff: string[] } | null;
+  /** A section edit's per-section modes, as the lab sent them. */
+  editModes: string[] | null;
+  /** The file's name as it arrived (an upload, a return), verbatim. */
+  fileName: string | null;
   createdAt: string;
   judgedAt: string | null;
   finalizedAt: string | null;
 }
 
 export type TakePatch = Partial<
-  Pick<SoundTake, "title" | "ratings" | "verdict" | "reasons" | "note" | "stage" | "group" | "label" | "peaks" | "measured">
+  Pick<
+    SoundTake,
+    | "title"
+    | "ratings"
+    | "verdict"
+    | "reasons"
+    | "note"
+    | "stage"
+    | "group"
+    | "label"
+    | "peaks"
+    | "measured"
+    | "referenceTrackId"
+    | "promptRound"
+    | "draftId"
+    | "variation"
+    | "editModes"
+    | "fileName"
+  >
 >;
 
 export interface GenerateRequest {
@@ -148,6 +187,9 @@ export interface GenerateRequest {
   negative: string | null;
   durationS: number;
   loop: boolean | null;
+  /** sfx only: the vendor's prompt_influence, 0..1 (low = fishing, high = to
+   *  the letter). null = the vendor's default. Closeout r4, additive. */
+  promptInfluence: number | null;
   technique: string[];
   terms: SoundTerms;
   tempoBpm: number | null;
@@ -205,6 +247,16 @@ export interface HuntNode {
   prompt: string;
   negative: string | null;
   durationS: number;
+  /* ── what the leaf asks for, as fields (closeout r4, additive) — drafted by
+   *    the sound-hunt turn so a render never re-reads its own prompt text.
+   *    A hunt stored before these existed reads them as null / empty. ── */
+  /** sfx: a seamless loop (true) or a one-shot (false); music: null. */
+  loop: boolean | null;
+  terms: SoundTerms;
+  /** music: the tempo the prompt locks; sfx: always null. */
+  tempoBpm: number | null;
+  /** music: the key the prompt names; sfx: always null. */
+  key: string | null;
   state: HuntNodeState;
   takeIds: string[];
   winner: boolean;

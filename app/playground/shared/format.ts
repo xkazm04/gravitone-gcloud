@@ -13,6 +13,12 @@ export function dur(s: number | null | undefined): string {
   return `${Math.floor(r / 60)}:${String(r % 60).padStart(2, "0")}`;
 }
 
+/** How long a take IS: the decoded file's length when it was measured
+ *  (MeasuredSound.durationS), else what the brief asked for, else null. A
+ *  Suno return asks for nothing — its length is only ever the measured one. */
+export const takeSeconds = (t: Pick<SoundTake, "durationS" | "measured">): number | null =>
+  t.measured?.durationS ?? t.durationS ?? null;
+
 /** A take's length in its kind's unit: an effect in tenths of a second
  *  ("2.5s" — a 2.5 s hit is not "0:03"), music as m:ss. */
 export function lengthWord(kind: SoundKind, s: number | null | undefined): string {

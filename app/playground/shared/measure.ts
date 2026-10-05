@@ -11,10 +11,10 @@
 // for MUSIC only: the analyser will name a key for a door slam, and a key on an
 // effect is a number with no property behind it. An effect gets its peaks.
 //
-// What MeasuredSound cannot hold is kept in session: the file's measured
-// LENGTH (MeasuredSound has no duration field — a contract request in the
-// triage report). It is read again for free off <audio> metadata, so nothing
-// is lost but a round trip.
+// Energy is the analysed window's RMS (0..1) and the decoded LENGTH is
+// `measured.durationS` — both on the take since the r4 closeout, so a version
+// card on Arrangement or a row in the Library shows the file's real length
+// without decoding it again.
 
 import { useEffect, useRef, useState } from "react";
 
@@ -30,11 +30,7 @@ export interface Measurement {
   lengthS: number;
 }
 
-const lengths = new Map<string, number>();
 const inFlight = new Map<string, Promise<{ take: SoundTake | null; error: string | null }>>();
-
-/** The decoded length of a take measured this session, if any. */
-export const measuredLength = (id: string): number | null => lengths.get(id) ?? null;
 
 /** Read the bytes and analyse them. Resolves to an error string, never throws. */
 export async function measureBytes(take: Pick<SoundTake, "id" | "title" | "kind">): Promise<Measurement | { error: string }> {
@@ -48,16 +44,13 @@ export async function measureBytes(take: Pick<SoundTake, "id" | "title" | "kind"
   }
   try {
     const a = await analyzeFile(new File([blob], take.title || take.id, { type: blob.type }), () => {});
-    lengths.set(take.id, a.duration);
     return {
       peaks: a.peaks.map((p) => Math.round(p * 1000) / 1000),
       measured: {
         tempoBpm: take.kind === "music" ? Math.round(a.tempo * 10) / 10 : null,
         key: take.kind === "music" ? a.key : null,
-        // The analyser reports energy as a band ("high" / "medium" / "low"),
-        // not a figure; MeasuredSound.energy is a number, and a band turned
-        // into a number is one nobody measured.
-        energy: null,
+        energy: a.rms,
+        durationS: Number.isFinite(a.duration) && a.duration > 0 ? Math.round(a.duration * 100) / 100 : null,
         lufs: null,
         truePeakDb: null,
       },
@@ -84,8 +77,11 @@ export function measureAndStore(take: SoundTake): Promise<{ take: SoundTake | nu
   return p;
 }
 
-/** A take wants measuring when it has bytes and no peaks yet. */
-export const needsMeasure = (t: Pick<SoundTake, "file" | "peaks">) => !!t.file && (!t.peaks || t.peaks.length === 0);
+/** A take wants measuring when it has bytes and no peaks yet — or was
+ *  measured before the store kept the decoded length (r4 closeout), so the
+ *  first open after it fills `measured.durationS` once. */
+export const needsMeasure = (t: Pick<SoundTake, "file" | "peaks" | "measured">) =>
+  !!t.file && (!t.peaks || t.peaks.length === 0 || t.measured?.durationS == null);
 
 /**
  * Measure `take` the first time it is opened, then hand the stored take to

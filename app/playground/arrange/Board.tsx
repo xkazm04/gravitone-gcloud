@@ -43,7 +43,8 @@ import {
   type Row,
   type Stack,
 } from "./model";
-import { CopyButton, MONO_CAPS as CAPS } from "./parts";
+import { CopyButton } from "./parts";
+import { CAPS as CAPS_TONED, CAPS_BARE as CAPS } from "@/app/playground/shared/ui";
 import { PROVIDER_NAME } from "@/app/playground/shared/format";
 import { transport } from "@/app/playground/shared/transport";
 import { TakeWave } from "@/app/playground/shared/Wave";
@@ -410,7 +411,7 @@ function RowHead({ a, row, n }: { a: Arrange; row: Row; n: number }) {
         </form>
       ) : (
         <div className="min-w-0">
-          <h3 className={`truncate ${row.name === null ? "font-jetbrains text-label uppercase tracking-[0.14em] text-white/40" : "font-instrument text-2xl leading-tight text-white/90"}`}>
+          <h3 className={`truncate ${row.name === null ? CAPS_TONED : "font-instrument text-2xl leading-tight text-white/90"}`}>
             {rowWord(row.name)}
           </h3>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">

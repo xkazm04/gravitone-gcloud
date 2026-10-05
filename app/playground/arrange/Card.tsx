@@ -17,13 +17,14 @@ import { STAGES, type SoundTake, type Stage } from "@/lib/sound/types";
 
 import { cellKey, cellOf, rowWord, sameCell, STAGE_WORD, versionNumber, type Cell, type Row, type Stack } from "./model";
 import { ProviderChip, TermChips } from "@/app/playground/shared/Chips";
-import { dur } from "@/app/playground/shared/format";
+import { lengthWord, takeSeconds } from "@/app/playground/shared/format";
 import { useMeasureOnOpen } from "@/app/playground/shared/measure";
 import { ScoreMeter } from "@/app/playground/shared/Rubric";
 import { transport, usePlayState } from "@/app/playground/shared/transport";
 import { PlayButton, TakeWave } from "@/app/playground/shared/Wave";
 
-import { MONO_CAPS as CAPS, when } from "./parts";
+import { when } from "./parts";
+import { CAPS_BARE as CAPS } from "@/app/playground/shared/ui";
 import { RoundTrip } from "./RoundTrip";
 
 export interface CardProps {
@@ -100,7 +101,7 @@ export function Card({
           <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-1">
             <ProviderChip provider={h.provider} />
             <ScoreMeter take={h} />
-            <span className="font-jetbrains text-label tabular-nums text-white/40">{dur(h.durationS)}</span>
+            <span className="font-jetbrains text-label tabular-nums text-white/40">{lengthWord(h.kind, takeSeconds(h))}</span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-1">
@@ -184,7 +185,9 @@ function Versions({ stack }: { stack: Stack }) {
             <span className="min-w-[7.5rem]">
               <span className={`font-jetbrains text-label ${v.id === stack.head.id ? "text-cyan-200" : "text-white/70"}`}>v{vn}</span>
               <span className="ml-2 font-jetbrains text-label text-white/40">{v.origin === "suno-return" ? "suno" : v.provider}</span>
-              <span className="block font-jetbrains text-label text-white/30">{when(v.createdAt)}</span>
+              <span className="block font-jetbrains text-label tabular-nums text-white/30">
+                {when(v.createdAt)} · {lengthWord(v.kind, takeSeconds(v))}
+              </span>
             </span>
             <TakeWave take={v} bars={36} height="h-7" />
           </li>

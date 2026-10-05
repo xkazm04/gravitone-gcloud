@@ -25,37 +25,27 @@
 //     An unknown vendor is filed as "local" (a file from this machine) and
 //     reads back as no vendor. Fixtures never reach the ledger, so this never
 //     reaches a strength claim either.
-//   · THE ANNEX. Seven Library facts have no field on SoundTake — the reference
-//     track, the prompt round, the Suno draft a return answers, the lab's
-//     variation and edit modes, the measured energy WORD and method, the
-//     original file name. They are kept per account in localStorage
-//     (./soundAnnex.ts) and laid back over the row here, so References, rounds
-//     and the draft round trip keep working. Requested of the Director as
-//     contract fields; until then they are this browser's.
+//   · THE LIBRARY'S OWN FACTS — the reference track, the prompt round, the
+//     Suno draft a return answers, the lab's variation and edit modes, the
+//     original file name — are SoundTake fields since the round-4 closeout
+//     (referenceTrackId, promptRound, draftId, variation, editModes,
+//     fileName). They used to ride in a per-browser localStorage annex
+//     (soundAnnex.ts, deleted); ./soundMigration.ts#migrateAnnex moves what an
+//     older browser still holds into the store, once.
+//   · ENERGY is stored as the analyser's RMS (0..1) and read back as the
+//     Library's band word through ./analysis.ts#energyBand — one threshold
+//     pair, so the lab and the Library name the same band. A band WORD with no
+//     number behind it (an old IndexedDB row) is not turned into a number.
 
 import type { Asset, AudioMeta, LabEditMode, MeasuredAudio } from "@/lib/assets";
 import { takeFileUrl } from "@/lib/sound/client";
 import { DEFECTS, RUBRIC, type DefectCode, type SoundKind, type SoundTake, type TakeOrigin, type TakePatch } from "@/lib/sound/types";
 
+import { energyBand } from "./analysis";
+
 /** The Library's three rubric slots, in order. */
 export const SLOTS = ["melody", "instrument_choice", "instrument_quality"] as const;
 type Slot = (typeof SLOTS)[number];
-
-/** What the store has no field for, per take. Every key optional: absent means
- *  "not known", exactly as in AudioMeta. */
-export interface Annex {
-  reference_track_id?: string;
-  prompt_round?: string;
-  draft_id?: string;
-  variation?: { axis: string; diff: string[] };
-  edit_modes?: LabEditMode[];
-  energy?: MeasuredAudio["energy"];
-  method?: string;
-  fileName?: string;
-}
-export type AnnexMap = Record<string, Annex>;
-
-const ANNEX_KEYS = ["reference_track_id", "prompt_round", "draft_id", "variation", "edit_modes", "fileName"] as const;
 
 /** The URL an <audio> element plays a take from — takeFileUrl carries the
  *  access key as `k=` itself now (lib/sound/client.ts). */
@@ -70,7 +60,7 @@ export const rubricKey = (kind: SoundKind, slot: Slot) => RUBRIC[kind][SLOTS.ind
 
 /* ── read: SoundTake -> Asset ─────────────────────────────────────────────── */
 
-export function assetFromSoundTake(t: SoundTake, uid: string, annex: Annex = {}): Asset {
+export function assetFromSoundTake(t: SoundTake, uid: string): Asset {
   const ratings =
     Object.keys(t.ratings).length === 0
       ? undefined
@@ -78,8 +68,16 @@ export function assetFromSoundTake(t: SoundTake, uid: string, annex: Annex = {})
   const reason = t.verdict === "rejected" ? [...t.reasons, ...(t.note ? [t.note] : [])].join(" · ") : "";
   const measured: MeasuredAudio | undefined =
     t.measured && t.measured.tempoBpm !== null && t.measured.key
-      ? { tempo_bpm: t.measured.tempoBpm, key: t.measured.key, energy: annex.energy ?? null, method: annex.method ?? "measured" }
+      ? {
+          tempo_bpm: t.measured.tempoBpm,
+          key: t.measured.key,
+          energy: t.measured.energy !== null ? energyBand(t.measured.energy) : null,
+          method: "measured",
+        }
       : undefined;
+  // How long the take IS when its bytes were measured, else what was asked
+  // (app/playground/shared/format.ts#takeSeconds reads it the same way).
+  const seconds = t.measured?.durationS ?? t.durationS;
   const meta: Record<string, unknown> = {
     verdict: t.verdict,
     ...(ratings ? { ratings } : {}),
@@ -90,7 +88,7 @@ export function assetFromSoundTake(t: SoundTake, uid: string, annex: Annex = {})
     instrumentation: t.terms.instrument,
     ...(t.tempoBpm !== null ? { tempo_bpm: t.tempoBpm } : {}),
     ...(t.key ? { key: t.key } : {}),
-    ...(t.durationS !== null ? { duration_s: t.durationS } : {}),
+    ...(seconds !== null ? { duration_s: seconds } : {}),
     // An effect with no category still reads as an effect (book.ts reads
     // `sound_kind` before it falls back to the category's presence).
     sound_kind: t.kind,
@@ -106,14 +104,18 @@ export function assetFromSoundTake(t: SoundTake, uid: string, annex: Annex = {})
     ...(t.huntId ? { hunt_id: t.huntId } : {}),
     // The bytes: a take with a file plays from the store; `uploadId` is the key
     // the Library's url map is read by (book.ts#takeFromAsset -> upload_id).
-    ...(t.file ? { uploadId: t.id, fileName: annex.fileName ?? t.file.path.split("/").pop() } : {}),
+    ...(t.file ? { uploadId: t.id, fileName: t.fileName ?? t.file.path.split("/").pop() } : {}),
     fixture: t.origin === "fixture",
     origin: t.origin,
     ...(t.stage ? { stage: t.stage } : {}),
     ...(t.group ? { group: t.group } : {}),
     ...(t.label ? { label: t.label } : {}),
+    ...(t.referenceTrackId ? { reference_track_id: t.referenceTrackId } : {}),
+    ...(t.promptRound ? { prompt_round: t.promptRound } : {}),
+    ...(t.draftId ? { draft_id: t.draftId } : {}),
+    ...(t.variation ? { variation: t.variation } : {}),
+    ...(t.editModes ? { edit_modes: t.editModes as LabEditMode[] } : {}),
   };
-  for (const k of ANNEX_KEYS) if (k !== "fileName" && annex[k] !== undefined) meta[k] = annex[k];
   return {
     id: t.id,
     uid,
@@ -126,13 +128,16 @@ export function assetFromSoundTake(t: SoundTake, uid: string, annex: Annex = {})
   };
 }
 
-/* ── write: an AudioMeta patch -> TakePatch + annex ───────────────────────── */
+/* ── write: an AudioMeta patch -> TakePatch ───────────────────────────────── */
 
-/** Split a Library patch into what the store records and what the annex keeps.
- *  `kind` decides which rubric the slots land on. */
-export function splitPatch(kind: SoundKind, p: Partial<AudioMeta>): { patch: TakePatch; annex: Annex } {
+/** "" and null clear a link; a string sets it; undefined leaves it alone. */
+const link = (v: unknown): string | null | undefined =>
+  v === undefined ? undefined : typeof v === "string" && v.trim() ? v.trim() : null;
+
+/** Map a Library patch onto the store's TakePatch. `kind` decides which rubric
+ *  the slots land on. */
+export function splitPatch(kind: SoundKind, p: Partial<AudioMeta>): { patch: TakePatch } {
   const patch: TakePatch = {};
-  const annex: Annex = {};
   if (p.verdict !== undefined) patch.verdict = p.verdict === "proven" ? "kept" : p.verdict;
   if ("reject_reason" in p) {
     const text = (p.reject_reason ?? "").trim();
@@ -151,14 +156,23 @@ export function splitPatch(kind: SoundKind, p: Partial<AudioMeta>): { patch: Tak
     patch.ratings = r;
   }
   if (p.peaks) patch.peaks = p.peaks;
+  // The Library's measurement carries an energy WORD; the store keeps an RMS.
+  // A word is not a number anybody measured, so energy stays unknown here.
   if (p.measured)
-    patch.measured = { tempoBpm: p.measured.tempo_bpm, key: p.measured.key, energy: null, lufs: null, truePeakDb: null };
-  if (p.measured) {
-    annex.energy = p.measured.energy;
-    annex.method = p.measured.method;
-  }
-  for (const k of ANNEX_KEYS) if (k !== "fileName" && (p as Record<string, unknown>)[k] !== undefined) (annex as Record<string, unknown>)[k] = (p as Record<string, unknown>)[k];
-  return { patch, annex };
+    patch.measured = { tempoBpm: p.measured.tempo_bpm, key: p.measured.key, energy: null, durationS: null, lufs: null, truePeakDb: null };
+  const ref = link(p.reference_track_id);
+  if (ref !== undefined) patch.referenceTrackId = ref;
+  const round = link(p.prompt_round);
+  if (round !== undefined) patch.promptRound = round;
+  const draft = link(p.draft_id);
+  if (draft !== undefined) patch.draftId = draft;
+  if (p.variation !== undefined)
+    patch.variation =
+      p.variation && typeof p.variation.axis === "string" && p.variation.axis.trim()
+        ? { axis: p.variation.axis.trim(), diff: Array.isArray(p.variation.diff) ? p.variation.diff.filter((x) => typeof x === "string") : [] }
+        : null;
+  if (p.edit_modes !== undefined) patch.editModes = Array.isArray(p.edit_modes) ? p.edit_modes.filter((x) => typeof x === "string") : null;
+  return { patch };
 }
 
 /** Apply a TakePatch to a take the way the server will, for the optimistic
@@ -172,7 +186,7 @@ export function applyLocally(t: SoundTake, p: TakePatch): SoundTake {
   return next;
 }
 
-/* ── migrate / file: an AudioMeta row -> uploadTake's meta + annex ─────────── */
+/* ── migrate / file: an AudioMeta row -> uploadTake's meta ──────────────── */
 
 /** Which origin a Library row migrates as. A fixture is a fixture; a lab render
  *  (it carries `lab_op`) is "lab"; a file returned against a Suno draft is a
@@ -187,16 +201,16 @@ export function originOf(meta: Record<string, unknown>): TakeOrigin {
 const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
 const numOr = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
-/** The upload meta for one Library row (or a fresh return), plus its annex.
- *  `id` and `createdAt` are passed for a migrated row so the move is
- *  idempotent and "newest first" means what it meant before. */
+/** The upload meta for one Library row (or a fresh return). `id` and
+ *  `createdAt` are passed for a migrated row so the move is idempotent and
+ *  "newest first" means what it meant before. */
 export function uploadMetaOf(
   metaIn: Partial<AudioMeta> & Record<string, unknown>,
   opts: { id?: string; title?: string; createdAt?: number; origin?: TakeOrigin; fileName?: string },
-): { meta: Partial<SoundTake>; annex: Annex } {
+): { meta: Partial<SoundTake> } {
   const m = metaIn as Record<string, unknown>;
   const kind: SoundKind = m.sound_kind === "sfx" || typeof m.sfx_category === "string" ? "sfx" : "music";
-  const { patch, annex } = splitPatch(kind, metaIn);
+  const { patch } = splitPatch(kind, metaIn);
   const verdict = patch.verdict ?? "unjudged";
   const opMap: Record<string, SoundTake["op"]> = { compose: "compose", plan: "plan", "section-edit": "section-edit", sfx: "sfx" };
   const meta: Partial<SoundTake> = {
@@ -231,8 +245,13 @@ export function uploadMetaOf(
     huntId: typeof m.hunt_id === "string" ? m.hunt_id : null,
     songId: typeof m.song_id === "string" ? m.song_id : null,
     plan: m.plan && typeof m.plan === "object" ? m.plan : null,
+    referenceTrackId: patch.referenceTrackId ?? null,
+    promptRound: patch.promptRound ?? null,
+    draftId: patch.draftId ?? null,
+    variation: patch.variation ?? null,
+    editModes: patch.editModes ?? null,
+    fileName: opts.fileName ?? null,
     ...(opts.createdAt ? { createdAt: new Date(opts.createdAt).toISOString() } : {}),
   };
-  if (opts.fileName) annex.fileName = opts.fileName;
-  return { meta, annex };
+  return { meta };
 }

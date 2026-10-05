@@ -12,9 +12,11 @@
 // always did. The mapping is ./soundAdapter.ts, in one place.
 //
 //   read     every take, fixtures included (the Library shows them, marked),
-//            mapped to Assets with this account's annex laid over.
+//            mapped to Assets.
 //   migrate  once per account, this browser's IndexedDB rows are pushed to the
-//            store (./soundMigration.ts) before the first read.
+//            store (./soundMigration.ts) before the first read, and the old
+//            per-browser annex (reference / round / draft links) is moved onto
+//            the takes it describes right after it.
 //   patch    a verdict, a score, a reject reason: applied to the local row
 //            first so the ledger and the inspector read one post-write state,
 //            then PATCHed; the server's derived fields (stage, label) are
@@ -29,9 +31,8 @@ import type { Asset, AudioMeta } from "@/lib/assets";
 import { clearFixtures, listTakes, patchTake, uploadTake } from "@/lib/sound/client";
 import type { SoundTake } from "@/lib/sound/types";
 
-import { loadAnnex, mergeAnnex } from "./soundAnnex";
-import { applyLocally, assetFromSoundTake, playUrl, splitPatch, uploadMetaOf, type AnnexMap } from "./soundAdapter";
-import { migrateShelf } from "./soundMigration";
+import { applyLocally, assetFromSoundTake, playUrl, splitPatch, uploadMetaOf } from "./soundAdapter";
+import { migrateAnnex, migrateShelf } from "./soundMigration";
 
 /** A returned file's length, read off its metadata. Null when the browser
  *  cannot say — the take is then stored with no length rather than a fake 0. */
@@ -54,7 +55,6 @@ function probeDuration(url: string): Promise<number | null> {
 
 export function useAudioShelf(uid: string | undefined) {
   const [takes, setTakes] = useState<SoundTake[] | null>(null);
-  const [annex, setAnnex] = useState<AnnexMap>({});
   const [error, setError] = useState<string | null>(null);
   /** The latest rows, for the writers below — a callback that closed over an
    *  older `takes` would map a patch onto a stale kind or a removed row. */
@@ -70,17 +70,21 @@ export function useAudioShelf(uid: string | undefined) {
       const moved = await migrateShelf(uid);
       const r = await listTakes({ fixtures: true });
       if (cancelled) return;
-      setAnnex(loadAnnex(uid));
       if (!r.ok) {
         setTakes([]);
         setError(`The audio shelf could not be read: ${r.error}`);
         return;
       }
-      setTakes(r.data.takes);
+      const annexed = await migrateAnnex(uid, r.data.takes);
+      if (cancelled) return;
+      const fresh = new Map(annexed.moved.map((t) => [t.id, t] as const));
+      setTakes(r.data.takes.map((t) => fresh.get(t.id) ?? t));
       setError(
         moved.failed.length
           ? `${moved.failed.length} of this browser's takes did not move to the studio shelf (${moved.failed[0].error}); a reload retries.`
-          : null,
+          : annexed.failed.length
+            ? `${annexed.failed.length} reference or draft link${annexed.failed.length === 1 ? "" : "s"} did not reach the studio shelf (${annexed.failed[0].error}); a reload retries.`
+            : null,
       );
     })();
     return () => {
@@ -89,8 +93,8 @@ export function useAudioShelf(uid: string | undefined) {
   }, [uid]);
 
   const assets = useMemo<Asset[] | null>(
-    () => (takes && uid ? takes.map((t) => assetFromSoundTake(t, uid, annex[t.id])) : takes ? [] : null),
-    [takes, annex, uid],
+    () => (takes && uid ? takes.map((t) => assetFromSoundTake(t, uid)) : takes ? [] : null),
+    [takes, uid],
   );
   /** take id -> the URL its bytes play from. Server URLs, so there is nothing
    *  to mint or revoke: the Library no longer owns object URLs for takes. */
@@ -103,12 +107,7 @@ export function useAudioShelf(uid: string | undefined) {
     (id: string, p: Partial<AudioMeta>) => {
       const t = latest.current?.find((x) => x.id === id);
       if (!t || !uid) return;
-      const { patch: tp, annex: ax } = splitPatch(t.kind, p);
-      if (Object.keys(ax).length) {
-        const err = mergeAnnex(uid, { [id]: ax });
-        setAnnex((m) => ({ ...m, [id]: { ...(m[id] ?? {}), ...ax } }));
-        if (err) setError(err);
-      }
+      const { patch: tp } = splitPatch(t.kind, p);
       if (!Object.keys(tp).length) return;
       setTakes((prev) => prev && prev.map((x) => (x.id === id ? applyLocally(x, tp) : x)));
       patchTake(id, tp).then((r) => {
@@ -143,7 +142,7 @@ export function useAudioShelf(uid: string | undefined) {
       const m = { ...(meta as Record<string, unknown>), ...(length != null ? { duration_s: length } : {}) };
       // A file the lab rendered keeps "lab"; anything else a person brought
       // back is a Suno return when it answers a Suno draft, else an import.
-      const { meta: up, annex: ax } = uploadMetaOf({ ...m, verdict: "unjudged" } as Partial<AudioMeta> & Record<string, unknown>, {
+      const { meta: up } = uploadMetaOf({ ...m, verdict: "unjudged" } as Partial<AudioMeta> & Record<string, unknown>, {
         title: file.name.replace(/\.[^.]+$/, "") || file.name,
         fileName: file.name,
       });
@@ -153,11 +152,9 @@ export function useAudioShelf(uid: string | undefined) {
         return null;
       }
       const take = r.data.take;
-      const err = mergeAnnex(uid, { [take.id]: ax });
-      setAnnex((a) => ({ ...a, [take.id]: { ...(a[take.id] ?? {}), ...ax } }));
       setTakes((prev) => [take, ...(prev ?? []).filter((x) => x.id !== take.id)]);
-      setError(err);
-      return assetFromSoundTake(take, uid, ax);
+      setError(null);
+      return assetFromSoundTake(take, uid);
     },
     [uid],
   );

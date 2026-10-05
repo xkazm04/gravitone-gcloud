@@ -35,7 +35,7 @@ import { DefectChips, ProviderChip, TechniqueChips, VerdictChip } from "../share
 import { PROVIDER_NAME, defectWord, meanScore } from "../shared/format";
 import { ScoreMeter } from "../shared/Rubric";
 import { useSoundLab } from "../shared/shell";
-import { BTN_CYAN, CAPS, CARD, FIELD, pill } from "../shared/ui";
+import { BTN_CYAN, CAPS, CAPS_BARE, CARD, FIELD, pill } from "../shared/ui";
 import { PlayButton } from "../shared/Wave";
 
 import {
@@ -264,7 +264,7 @@ function SortHead({
       <button
         type="button"
         onClick={onClick}
-        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 font-jetbrains text-label uppercase tracking-[0.14em] transition ${
+        className={`inline-flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 ${CAPS_BARE} transition ${
           on ? "text-cyan-200" : "text-white/40 hover:text-white/70"
         }`}
       >

@@ -23,7 +23,7 @@
 // temp dir per test (read lazily per call, lib/sound/store.ts), and the env is
 // restored afterwards — this lane is serial and shares one process.
 
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -686,4 +686,224 @@ test("migration shape: a Library row keeps its id, time and verdict; a rejection
   expect(created).toBe(true);
   expect(take).toMatchObject({ id: "seed-au-trk-0007", createdAt: "2026-09-20T10:00:00.000Z", verdict: "rejected", note: "mix is harsh above 4kHz", stage: null, file: null });
   expect((await readLedger()).verdicts.length, "a fixture's stored verdict is not a judgement").toBe(0);
+});
+
+/* ── round-4 closeout: the contract gaps the builders reported ───────────── */
+
+test("closeout · take facts: the Library's links are fields — accepted on upload and PATCH, cleared by null, read back on an old file as null", async () => {
+  const up = await upload({
+    origin: "import",
+    referenceTrackId: "ref-ratatat-breaking-away",
+    promptRound: "round-3",
+    draftId: "dr-1",
+    variation: { axis: "tempo", diff: ["92 -> 104"] },
+    editModes: ["keep", "high"],
+  });
+  expect(up.status).toBe(201);
+  expect(up.take).toMatchObject({
+    referenceTrackId: "ref-ratatat-breaking-away",
+    promptRound: "round-3",
+    draftId: "dr-1",
+    variation: { axis: "tempo", diff: ["92 -> 104"] },
+    editModes: ["keep", "high"],
+    // the name the file arrived under, when the meta names none
+    fileName: "take.mp3",
+  });
+  const p = await patch(up.take.id, { draftId: null, promptRound: "round-4", variation: { axis: "" }, fileName: "renamed.mp3" });
+  expect(p.status).toBe(200);
+  expect(p.take).toMatchObject({ draftId: null, promptRound: "round-4", variation: null, fileName: "renamed.mp3", referenceTrackId: "ref-ratatat-breaking-away" });
+  expect((await patch(up.take.id, { origin: "agent" })).status, "origin is still not patchable").toBe(400);
+
+  // A takes.json written before the fields: every one reads as null.
+  const file = path.join(process.env.SOUND_STORE_DIR!, "takes.json");
+  const raw = JSON.parse(readFileSync(file, "utf8")) as { takes: Record<string, unknown>[] };
+  for (const t of raw.takes) for (const k of ["referenceTrackId", "promptRound", "draftId", "variation", "editModes", "fileName"]) delete t[k];
+  raw.takes[0].measured = { tempoBpm: 90, key: "A minor", energy: null, lufs: null, truePeakDb: null };
+  writeFileSync(file, JSON.stringify(raw));
+  const old = (await readTakes()).takes[0];
+  expect(old).toMatchObject({ referenceTrackId: null, promptRound: null, draftId: null, variation: null, editModes: null, fileName: null });
+  expect(old.measured).toEqual({ tempoBpm: 90, key: "A minor", energy: null, durationS: null, lufs: null, truePeakDb: null });
+});
+
+test("closeout · measured: energy is an RMS 0..1 and durationS the decoded length; anything else is refused, not clamped", async () => {
+  const t = (await upload({ origin: "lab", kind: "sfx", durationS: 1.5 })).take;
+  const ok = await patch(t.id, { measured: { tempoBpm: null, key: null, energy: 0.13456, durationS: 1.4837, lufs: null, truePeakDb: null } });
+  expect(ok.status).toBe(200);
+  expect(ok.take!.measured).toEqual({ tempoBpm: null, key: null, energy: 0.1346, durationS: 1.48, lufs: null, truePeakDb: null });
+  expect((await patch(t.id, { measured: { energy: 3.2 } })).status, "an energy outside 0..1 is another unit").toBe(400);
+  expect((await patch(t.id, { measured: { durationS: 0 } })).status, "a zero length is not a measurement").toBe(400);
+});
+
+test("closeout · generate: promptInfluence reaches the sfx vendor call; null leaves the vendor default; music refuses it", async () => {
+  process.env.ELEVENLABS_API_KEY = "probe-key";
+  respond = elevenlabs;
+  const sfx = (over: Record<string, unknown>) =>
+    genReq({
+      kind: "sfx",
+      op: "sfx",
+      prompt: "event: door slam; space: hall; duration: 1.5s; loop: no",
+      durationS: 1.5,
+      loop: false,
+      technique: [],
+      terms: { genre: [], mood: [], instrument: [], sfxCategory: "impacts" },
+      tempoBpm: null,
+      ...over,
+    });
+  expect((await generatePOST(rq("/api/sound/generate", { method: "POST", json: sfx({ promptInfluence: 0.8 }) }))).status).toBe(201);
+  expect(calls[0].url).toBe("https://api.elevenlabs.io/v1/sound-generation");
+  expect(calls[0].body).toMatchObject({ prompt_influence: 0.8, duration_seconds: 1.5, loop: false });
+  expect((await generatePOST(rq("/api/sound/generate", { method: "POST", json: sfx({ promptInfluence: null }) }))).status).toBe(201);
+  expect(calls[1].body as Record<string, unknown>, "null is the vendor's default: the field is not sent").not.toHaveProperty("prompt_influence");
+  const bad = await generatePOST(rq("/api/sound/generate", { method: "POST", json: sfx({ promptInfluence: 1.5 }) }));
+  expect(bad.status).toBe(400);
+  const music = await generatePOST(rq("/api/sound/generate", { method: "POST", json: genReq({ promptInfluence: 0.5 }) }));
+  expect(music.status).toBe(400);
+  expect((await body<{ error: string }>(music)).error).toMatch(/sfx only/);
+  expect(calls.length, "a refused request sends nothing").toBe(2);
+});
+
+test("closeout · versions: a Suno return filed against a judged take is not a second keep — until somebody judges it", async () => {
+  const lofi = { genre: ["lo-fi"], mood: [], instrument: [], sfxCategory: null };
+  const parent = (await upload({ origin: "agent", provider: "elevenlabs", technique: ["tag-list"], terms: lofi })).take;
+  await patch(parent.id, { verdict: "kept", ratings: { melody: 8 } });
+  // Arrangement's round trip: the return lands kept, at the column it was dropped on.
+  const ver = await upload({ origin: "suno-return", provider: "suno", parentId: parent.id, verdict: "kept", stage: "remaster", technique: ["tag-list"], terms: lofi });
+  expect(ver.take).toMatchObject({ verdict: "kept", stage: "remaster", parentId: parent.id });
+  let ledger = await readLedger();
+  expect(ledger.verdicts.map((v) => v.takeId), "the version is not a verdict").toEqual([parent.id]);
+  const ins = await body<{ judged: number; cells: { provider: string; kept: number }[] }>(await insightsGET(rq("/api/sound/insights?kind=music")));
+  expect(ins.judged).toBe(1);
+  expect(ins.cells.filter((c) => c.provider === "suno"), "Suno is not credited with a keep it did not earn").toEqual([]);
+
+  // Moving the version on the board is still not a judgement.
+  await patch(ver.take.id, { stage: "edit" });
+  expect((await readLedger()).verdicts.length).toBe(1);
+
+  // Scored in its own right, it counts, as Suno's.
+  await patch(ver.take.id, { ratings: { melody: 9 } });
+  ledger = await readLedger();
+  expect(ledger.verdicts.map((v) => v.takeId).sort()).toEqual([parent.id, ver.take.id].sort());
+  expect(ledger.verdicts.find((v) => v.takeId === ver.take.id)).toMatchObject({ provider: "suno", parentId: parent.id, verdict: "kept" });
+  // A cleared score makes it a bare version again.
+  await patch(ver.take.id, { ratings: { melody: null } });
+  expect((await readLedger()).verdicts.map((v) => v.takeId)).toEqual([parent.id]);
+
+  // A return with NO parent answers a brief of its own (a Hunt's Suno leaf): it counts.
+  const leaf = await upload({ origin: "suno-return", provider: "suno", verdict: "kept" });
+  expect((await readLedger()).verdicts.map((v) => v.takeId)).toContain(leaf.take.id);
+
+  // An older ledger row for a bare version (written before the rule) is not counted either.
+  const stale = row({ origin: "suno-return", provider: "suno", parentId: "st-parent", terms: lofi });
+  const scored = row({ origin: "suno-return", provider: "suno", parentId: "st-parent", ratings: { melody: 7 }, score: 7, terms: lofi });
+  const counted = computeInsights([stale, scored], "music");
+  expect(counted.judged).toBe(1);
+  expect(counted.cells.find((c) => c.facet === "genre")).toMatchObject({ provider: "suno", n: 1, kept: 1 });
+});
+
+test("closeout · hunt leaves: terms, tempo, key and loop are drafted as fields, held to their kind; an old hunt loads with them absent", async () => {
+  const music = parseHuntMap(
+    {
+      branches: [
+        {
+          axis: "tempo",
+          leaves: [
+            {
+              label: "slow",
+              provider: "elevenlabs",
+              technique: ["duration-and-tempo-locking"],
+              prompt: "Instrumental lo-fi at 78 BPM in D minor",
+              durationS: 30,
+              terms: { genre: ["lo-fi", "lo-fi", " "], mood: ["calm"], instrument: ["rhodes"], sfxCategory: "impacts" },
+              tempoBpm: 78,
+              key: "D minor",
+              loop: true,
+            },
+            { label: "free", provider: "elevenlabs", technique: [], prompt: "Instrumental lo-fi", durationS: 30, tempoBpm: 0, key: "" },
+          ],
+        },
+      ],
+    },
+    "music",
+    "a bed",
+  );
+  const [slow, free] = music.filter((n) => n.prompt);
+  expect(slow).toMatchObject({ tempoBpm: 78, key: "D minor", loop: null, terms: { genre: ["lo-fi"], mood: ["calm"], instrument: ["rhodes"], sfxCategory: null } });
+  expect(free, "0 and an empty key are the drafter saying none").toMatchObject({ tempoBpm: null, key: null });
+  expect(music[0], "the root asks for nothing").toMatchObject({ loop: null, tempoBpm: null, key: null, terms: { genre: [], mood: [], instrument: [], sfxCategory: null } });
+
+  const sfx = parseHuntMap(
+    {
+      branches: [
+        {
+          axis: "space",
+          leaves: [
+            {
+              label: "tin roof",
+              provider: "elevenlabs",
+              technique: ["envelope-first-briefing", "loop-seam-acceptance"],
+              prompt: "event: rain on a tin roof; space: close; duration: 12s; loop: yes",
+              durationS: 12,
+              terms: { genre: ["ambient"], mood: ["cosy"], instrument: ["tin"], sfxCategory: "ambiences" },
+              tempoBpm: 90,
+              key: "C major",
+              loop: true,
+            },
+          ],
+        },
+      ],
+    },
+    "sfx",
+    "rain",
+  );
+  expect(sfx.find((n) => n.prompt), "an effect never carries a tempo or a key").toMatchObject({
+    loop: true,
+    tempoBpm: null,
+    key: null,
+    terms: { genre: [], mood: ["cosy"], instrument: [], sfxCategory: "ambiences" },
+  });
+
+  // The prompt asks for the fields, kind by kind.
+  const md = readFileSync(path.join(process.cwd(), "pipeline", "SOUND-HUNT-PROMPT.md"), "utf8");
+  expect(huntPrompt(sectionsOf(md), "sfx", "rain", null, [])).toContain("event: …; material: …; attack: …; body: …; tail: …; space: …; duration: …s; loop: yes|no");
+  expect(huntPrompt(sectionsOf(md), "music", "bed", null, [])).toMatch(/`tempoBpm` is the BPM the prompt states/);
+
+  // A hunts.json written before the fields: listed with them absent, and a
+  // PATCH of those nodes round-trips.
+  mkdirSync(process.env.SOUND_STORE_DIR!, { recursive: true });
+  const legacyNode = (id: string, parentId: string | null, prompt: string) => ({
+    id,
+    parentId,
+    axis: "tempo",
+    label: id,
+    rationale: "",
+    provider: "elevenlabs",
+    technique: [],
+    prompt,
+    negative: null,
+    durationS: prompt ? 30 : 0,
+    state: "idea",
+    takeIds: [],
+    winner: false,
+    error: null,
+  });
+  writeFileSync(
+    path.join(process.env.SOUND_STORE_DIR!, "hunts.json"),
+    JSON.stringify({
+      version: 1,
+      hunts: [
+        { id: "hn-old", kind: "music", idea: "old", createdAt: "2026-10-01T00:00:00.000Z", draftedBy: null, lessonId: null, nodes: [legacyNode("r", null, ""), legacyNode("l", "r", "lofi at 90 BPM")] },
+      ],
+    }),
+  );
+  const listed = await body<{ hunts: Hunt[] }>(await huntsGET(rq("/api/sound/hunts")));
+  expect(listed.hunts[0].nodes[1]).toMatchObject({ loop: null, tempoBpm: null, key: null, terms: { genre: [], mood: [], instrument: [], sfxCategory: null } });
+  const res = await huntPATCH(
+    rq("/api/sound/hunts/hn-old", {
+      method: "PATCH",
+      json: { nodes: [legacyNode("r", null, ""), { ...legacyNode("l", "r", "lofi at 90 BPM"), tempoBpm: 90, terms: { genre: ["lofi"] } }] },
+    }),
+    ctx("hn-old"),
+  );
+  expect(res.status).toBe(200);
+  expect((await body<{ hunt: Hunt }>(res)).hunt.nodes[1]).toMatchObject({ tempoBpm: 90, key: null, terms: { genre: ["lofi"], mood: [], instrument: [], sfxCategory: null } });
 });

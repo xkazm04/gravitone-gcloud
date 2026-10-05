@@ -21,7 +21,8 @@ import type { SoundKind, SoundTake, Stage } from "@/lib/sound/types";
 
 import { LabelPrompt } from "./LabelPrompt";
 import { nextStage, suggestLabel, type Stack } from "./model";
-import { CopyButton, MONO_CAPS as CAPS } from "./parts";
+import { CopyButton } from "./parts";
+import { CAPS_BARE as CAPS } from "@/app/playground/shared/ui";
 
 /** Suno's studio, as the operator walks it — one line per manual stage. An
  *  effect is seconds long and has no sections to replace, so its edit is the

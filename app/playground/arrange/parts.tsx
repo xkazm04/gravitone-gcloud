@@ -9,11 +9,6 @@ import { useState } from "react";
 
 import { Check, Copy } from "lucide-react";
 
-/** Mono caps WITHOUT a colour — shared/ui.ts#CAPS carries text-white/40, and a
- *  second text colour on the same element is decided by stylesheet order, not
- *  by which class was written last. */
-export const MONO_CAPS = "font-jetbrains text-label uppercase tracking-[0.14em]";
-
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** A stored ISO time as "5 Oct 14:02" — no clock read, so a render stays pure. */
 export const when = (iso: string | null) => {

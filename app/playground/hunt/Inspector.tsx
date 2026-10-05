@@ -19,6 +19,7 @@ import {
   DefectPicker,
   ProviderChip,
   TechniqueChips,
+  TermChips,
   VerdictChip,
 } from "../shared/Chips";
 import { SpendButton } from "../shared/price";
@@ -71,7 +72,12 @@ export function Inspector({
               {loopOf(node) ? "loop" : "one-shot"}
             </span>
           )}
+          {node.tempoBpm !== null && (
+            <span className="tabular-nums">{node.tempoBpm} BPM</span>
+          )}
+          {node.key && <span>{node.key}</span>}
         </span>
+        {node.prompt && <TermChips terms={node.terms} kind={hunt.kind} />}
       </div>
 
       {node.rationale && (

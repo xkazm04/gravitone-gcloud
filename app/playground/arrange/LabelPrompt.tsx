@@ -10,7 +10,7 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { Tag } from "lucide-react";
 
-import { MONO_CAPS as CAPS } from "./parts";
+import { CAPS_BARE as CAPS } from "@/app/playground/shared/ui";
 
 export function LabelPrompt({
   title,

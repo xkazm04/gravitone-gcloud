@@ -225,7 +225,8 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
   const clearVerdict = (id: string) => patch(id, { verdict: "unjudged", reject_reason: undefined });
   // Three dimension keys pressed faster than the shelf round-trips merged
   // each onto the STALE row and kept only the last score (found in the Sound
-  // lab, 2026-10-05; app/playground/useLab.ts carries the same fix). What was
+  // lab, 2026-10-05; app/playground/triage/useTriage.ts chains its writes per
+  // take for the same reason, and lib/sound/takes.ts#patchTakeTx merges). What was
   // just written is held here until the shelf hands back fresh rows.
   const lastRatings = useRef(new Map<string, NonNullable<Take["ratings"]>>());
   useEffect(() => {

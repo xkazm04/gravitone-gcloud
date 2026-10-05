@@ -115,6 +115,23 @@ export default function Batch({ kind, onMade }: { kind: SoundKind; onMade: (ts: 
                   </button>
                 </div>
               </div>
+              <label className="grid min-w-0 gap-1.5">
+                <span className={CAPS}>influence</span>
+                <span className="flex h-10 items-center gap-2 rounded-lg border border-white/10 bg-white/[0.03] px-3 focus-within:border-cyan-400/40">
+                  <input
+                    type="number"
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    value={f.promptInfluence ?? ""}
+                    placeholder="vendor default"
+                    aria-label="Prompt influence, 0 to 1; empty for the vendor default"
+                    onChange={(e) => set({ promptInfluence: e.target.value === "" ? null : Number(e.target.value) })}
+                    className="w-full min-w-0 bg-transparent font-jetbrains text-label text-white/90 tabular-nums placeholder:text-white/25"
+                  />
+                  <span className="shrink-0 whitespace-nowrap font-jetbrains text-label text-white/40">0–1</span>
+                </span>
+              </label>
             </>
           ) : (
             <>

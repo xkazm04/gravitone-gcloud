@@ -118,7 +118,8 @@ export function renderParams(ledger: LedgerFile): AudioParams {
     evidence_contract: {
       MEASURED: `Counted from ${LEDGER_REL} by \`${KNOWLEDGE_COMMAND}\`; n is beside every figure; only cells with n >= ${MIN_N}.`,
       INFERRED: "A lesson: one person's claim across judged takes, quoted verbatim with the evidence it was confirmed on.",
-      excluded: "Fixture takes (design samples) never enter the ledger, so nothing here counts them.",
+      excluded:
+        "Fixture takes (design samples) never enter the ledger, so nothing here counts them; nor does a Suno return filed as a version of an already-judged take with no score or defect of its own.",
     },
     kinds,
     lessons: ledger.lessons.map((l) => ({ ...l, evidenceLabel: "INFERRED" as const })),

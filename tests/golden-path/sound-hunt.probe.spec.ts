@@ -57,6 +57,10 @@ const node = (o: Partial<HuntNode> & { id: string }): HuntNode => ({
   prompt: "",
   negative: null,
   durationS: 30,
+  loop: null,
+  terms: { genre: [], mood: [], instrument: [], sfxCategory: null },
+  tempoBpm: null,
+  key: null,
   state: "idea",
   takeIds: [],
   winner: false,
@@ -68,8 +72,17 @@ const node = (o: Partial<HuntNode> & { id: string }): HuntNode => ({
 const ROOTED: HuntNode[] = [
   node({ id: "root", axis: "idea" }),
   node({ id: "tempo", parentId: "root", axis: "tempo" }),
-  node({ id: "t1", parentId: "tempo", axis: "tempo", prompt: "underscore at 78 BPM in D minor", technique: ["single-sentence"] }),
-  node({ id: "t2", parentId: "tempo", axis: "tempo", prompt: "104 bpm, A♭ major", durationS: 45 }),
+  node({
+    id: "t1",
+    parentId: "tempo",
+    axis: "tempo",
+    prompt: "underscore at 78 BPM in D minor",
+    technique: ["single-sentence"],
+    tempoBpm: 78,
+    key: "D minor",
+    terms: { genre: ["underscore"], mood: ["tense"], instrument: ["cello"], sfxCategory: null },
+  }),
+  node({ id: "t2", parentId: "tempo", axis: "tempo", prompt: "104 bpm, A♭ major", durationS: 45, tempoBpm: 104, key: "Ab major" }),
   node({ id: "pal", parentId: "root", axis: "palette" }),
   node({ id: "p1", parentId: "pal", axis: "palette", provider: "suno" }),
   node({ id: "p2", parentId: "pal", axis: "palette", provider: "local" }),
@@ -221,6 +234,13 @@ test("brief and lesson: the request a leaf makes, sfx anatomy, loop, reconcile, 
     title: "t1",
   });
   expect(generateRequestFor(hunt, ROOTED[3]).key).toBe("Ab major");
+  // The node's FIELDS are the request, never its prompt text: terms travel
+  // verbatim, and a prompt naming a tempo the node does not carry sends none
+  // (an old hunt read with null defaults).
+  expect(req.terms).toEqual({ genre: ["underscore"], mood: ["tense"], instrument: ["cello"], sfxCategory: null });
+  expect(req.promptInfluence, "a hunt varies the brief, not the knob").toBe(null);
+  const unfielded = node({ id: "old", prompt: "lofi at 90 BPM in C major" });
+  expect(generateRequestFor(hunt, unfielded)).toMatchObject({ tempoBpm: null, key: null, terms: { genre: [], mood: [], instrument: [], sfxCategory: null } });
 
   const tap = node({ id: "tap", prompt: "event: confirm tap; material: thin glass; attack: sharp; space: close, dry; duration: 0.6s; loop: no" });
   const hum = node({ id: "hum", prompt: "event: hum; loop: yes", durationS: 8 });
@@ -231,6 +251,16 @@ test("brief and lesson: the request a leaf makes, sfx anatomy, loop, reconcile, 
   expect(loopOf(node({ id: "x", technique: ["loop-seam-acceptance"] }))).toBe(true);
   const sfxReq = generateRequestFor({ id: "h2", kind: "sfx" }, tap);
   expect(sfxReq).toMatchObject({ op: "sfx", loop: false, tempoBpm: null, key: null });
+  // The node's own loop flag outranks the prompt's words; an sfx request
+  // never carries a tempo or key even if the node somehow does.
+  const flagged = node({ id: "fl", prompt: "event: hum; loop: no", loop: true, tempoBpm: 120, key: "C major", terms: { genre: [], mood: [], instrument: [], sfxCategory: "ambiences" } });
+  expect(loopOf(flagged)).toBe(true);
+  expect(generateRequestFor({ id: "h2", kind: "sfx" }, flagged)).toMatchObject({
+    loop: true,
+    tempoBpm: null,
+    key: null,
+    terms: { sfxCategory: "ambiences" },
+  });
 
   // A take filed against a node the list has not caught up with is attached;
   // a node stuck "rendering" with no take reads as interrupted.

@@ -17,6 +17,11 @@ import type { MusicQuote } from "@/lib/music/pricing";
 
 import { BTN_CYAN } from "./ui";
 
+/** The seconds a cost line prints: to a tenth under ten seconds (an effect is
+ *  1.5 s, and "2s" would be a length nobody asked for), whole seconds above. */
+export const priceSeconds = (seconds: number) =>
+  seconds < 10 ? Math.round(seconds * 10) / 10 : Math.round(seconds);
+
 /** `cost(seconds)` → `{ text, title }` per lib/musicClient.ts#costLabel. */
 export function useMusicPrice() {
   const [price, setPrice] = useState<MusicQuote | "unknown" | null>(null);
@@ -26,7 +31,7 @@ export function useMusicPrice() {
       () => setPrice("unknown"),
     );
   }, []);
-  return useCallback((seconds: number) => costLabel(price, Math.round(seconds)), [price]);
+  return useCallback((seconds: number) => costLabel(price, priceSeconds(seconds)), [price]);
 }
 
 /** A button that spends, with the coin on it and the price under the label. */

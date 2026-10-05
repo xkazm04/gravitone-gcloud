@@ -3,7 +3,7 @@
 //   npx tsx pipeline/sound.mts list [--kind music|sfx] [--verdict v] [--stage s] [--provider p] [--origin o] [--fixtures]
 //   npx tsx pipeline/sound.mts generate --kind music --prompt "..." --duration 30 [--technique a,b]
 //        [--op compose|plan|sfx] [--negative "..."] [--genre a,b] [--mood a,b] [--instrument a,b]
-//        [--category impacts] [--loop] [--tempo 92] [--key "A minor"] [--title "..."]
+//        [--category impacts] [--loop] [--influence 0.7] [--tempo 92] [--key "A minor"] [--title "..."]
 //   npx tsx pipeline/sound.mts judge <takeId> --verdict kept|rejected|unjudged [--score melody=8,instrument_choice=7]
 //        [--reasons off-brief,loop-seam] [--note "..."] [--stage pending|remaster|edit|finalized|none] [--group g] [--label l]
 //   npx tsx pipeline/sound.mts finalized [--kind music|sfx] [--group g] [--label text]

@@ -24,7 +24,7 @@ export const USAGE =
   "usage: npx tsx pipeline/sound.mts <list|generate|judge|finalized|lessons|knowledge> [--json]\n" +
   "  list [--kind] [--verdict] [--stage] [--provider] [--origin] [--fixtures]\n" +
   "  generate --kind music|sfx --prompt <p> --duration <s> [--op compose|plan|sfx] [--technique a,b] [--negative n]\n" +
-  "           [--genre a,b] [--mood a,b] [--instrument a,b] [--category c] [--loop] [--tempo n] [--key k] [--title t]\n" +
+  "           [--genre a,b] [--mood a,b] [--instrument a,b] [--category c] [--loop] [--influence 0..1] [--tempo n] [--key k] [--title t]\n" +
   "  judge <id> --verdict kept|rejected|unjudged [--score dim=n,...] [--reasons a,b] [--note t] [--stage s|none] [--group g] [--label l]\n" +
   "  finalized [--kind] [--group] [--label]      lessons [--kind]      knowledge [--check]";
 
@@ -103,6 +103,7 @@ export async function runSoundCli(argv: readonly string[], io: CliIO): Promise<n
           negative: flag("negative") ?? null,
           durationS: Number(duration),
           loop: kind === "sfx" ? has("loop") : null,
+          promptInfluence: flag("influence") !== undefined ? Number(flag("influence")) : null,
           technique: list("technique"),
           terms: { genre: list("genre"), mood: list("mood"), instrument: list("instrument"), sfxCategory: flag("category") ?? null },
           tempoBpm: flag("tempo") ? Number(flag("tempo")) : null,

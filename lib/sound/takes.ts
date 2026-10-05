@@ -146,8 +146,33 @@ function peaksOf(v: unknown): number[] | null {
 function measuredOf(v: unknown): MeasuredSound | null {
   if (!v || typeof v !== "object") return null;
   const m = v as Record<string, unknown>;
-  return { tempoBpm: num(m.tempoBpm), key: str(m.key, 40), energy: num(m.energy), lufs: num(m.lufs), truePeakDb: num(m.truePeakDb) };
+  // Energy is an RMS, 0..1 (app/library/audio/analysis.ts); a figure outside
+  // that range is a different unit somebody sent, refused rather than clamped
+  // into a number that looks measured.
+  const energy = num(m.energy);
+  if (energy !== null && (energy < 0 || energy > 1)) throw new SoundError(`measured.energy is an RMS, 0..1; got ${energy}`, 400);
+  const durationS = num(m.durationS);
+  if (durationS !== null && durationS <= 0) throw new SoundError(`measured.durationS must be a positive length; got ${durationS}`, 400);
+  return {
+    tempoBpm: num(m.tempoBpm),
+    key: str(m.key, 40),
+    energy: energy === null ? null : Math.round(energy * 10000) / 10000,
+    durationS: durationS === null ? null : Math.round(durationS * 100) / 100,
+    lufs: num(m.lufs),
+    truePeakDb: num(m.truePeakDb),
+  };
 }
+
+/** A fan-out's one change: an axis and what differed. Anything else is absent. */
+function variationOf(v: unknown): SoundTake["variation"] {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return null;
+  const o = v as Record<string, unknown>;
+  const axis = str(o.axis, 80);
+  return axis ? { axis, diff: strs(o.diff, 20) } : null;
+}
+
+/** A section edit's modes, verbatim as the lab sent them; null when none. */
+const editModesOf = (v: unknown): string[] | null => (Array.isArray(v) ? strs(v, 40) : null);
 
 function stageOf(v: unknown): Stage | null {
   if (v === null || v === undefined) return null;
@@ -301,6 +326,14 @@ export async function createTake(
       nodeId: str(meta.nodeId, 80),
       songId: str(meta.songId, 200),
       plan: meta.plan && typeof meta.plan === "object" ? meta.plan : null,
+      referenceTrackId: str(meta.referenceTrackId, 120),
+      promptRound: str(meta.promptRound, 120),
+      draftId: str(meta.draftId, 120),
+      variation: variationOf(meta.variation),
+      editModes: editModesOf(meta.editModes),
+      // The name the file arrived under, unless the caller states another (a
+      // migrated Library row keeps the name it was uploaded with).
+      fileName: str(meta.fileName, 255) ?? (hasBytes && file!.name ? file!.name.slice(0, 255) : null),
       // A migrated row keeps the time it was made, so "newest first" means the
       // same thing in the Library after the move as before it.
       createdAt: iso(meta.createdAt) ?? nowIso,
@@ -321,7 +354,24 @@ export async function createTake(
 
 /* ── patch ───────────────────────────────────────────────────────────────── */
 
-const PATCHABLE = new Set(["title", "ratings", "verdict", "reasons", "note", "stage", "group", "label", "peaks", "measured"]);
+const PATCHABLE = new Set([
+  "title",
+  "ratings",
+  "verdict",
+  "reasons",
+  "note",
+  "stage",
+  "group",
+  "label",
+  "peaks",
+  "measured",
+  "referenceTrackId",
+  "promptRound",
+  "draftId",
+  "variation",
+  "editModes",
+  "fileName",
+]);
 
 /** Hold a PATCH body to TakePatch. Unknown keys are refused by name: a client
  *  that thinks it can set `origin` or `file` should hear that it cannot. */
@@ -349,6 +399,14 @@ export function parseTakePatch(body: unknown): TakePatch {
   if ("label" in b) p.label = b.label === null ? null : str(b.label, 120);
   if ("peaks" in b) p.peaks = b.peaks === null ? null : peaksOf(b.peaks);
   if ("measured" in b) p.measured = b.measured === null ? null : measuredOf(b.measured);
+  // The Library's facts: a string set, null clears. An empty string is a clear
+  // too — the Library's own forms send "" for "no reference".
+  if ("referenceTrackId" in b) p.referenceTrackId = str(b.referenceTrackId, 120);
+  if ("promptRound" in b) p.promptRound = str(b.promptRound, 120);
+  if ("draftId" in b) p.draftId = str(b.draftId, 120);
+  if ("variation" in b) p.variation = variationOf(b.variation);
+  if ("editModes" in b) p.editModes = editModesOf(b.editModes);
+  if ("fileName" in b) p.fileName = str(b.fileName, 255);
   return p;
 }
 
@@ -365,8 +423,10 @@ export async function patchTakeTx(tx: StoreTx, id: string, patch: TakePatch, now
     ...patch,
     // Ratings MERGE: the rubric is scored one dimension per keypress, and a
     // replace would let two fast keys race each other out of the bag (the
-    // Library measured exactly that, app/playground/useLab.ts "the last
-    // ratings written"). A null clears one dimension.
+    // Library measured exactly that, 344cdbc — app/library/audio/
+    // AudioWorkbench.tsx `lastRatings`; Triage chains its writes per take for
+    // the same reason, app/playground/triage/useTriage.ts). A null clears one
+    // dimension.
     ratings: patch.ratings ? { ...prev.ratings, ...patch.ratings } : prev.ratings,
   };
   // Rejection reasons belong to a rejection; keeping a take drops them.

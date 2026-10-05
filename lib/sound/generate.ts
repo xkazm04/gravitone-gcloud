@@ -18,7 +18,8 @@
 //                      the meter) rendered at once.
 //   op "section-edit"  the source take's stored song + plan, kept sections by
 //                      reference (./editPlan.ts); its parent is the source.
-//   op "sfx"           text-to-SFX, 0.5–30 s, with the loop flag.
+//   op "sfx"           text-to-SFX, 0.5–30 s, with the loop flag and the
+//                      prompt influence (null = the vendor's default).
 //
 // A HUNT LEAF IS UPDATED HERE TOO. A render that names huntId + nodeId lands
 // on that node (takeIds, state rendered — or failed with the vendor's own
@@ -79,6 +80,16 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
     if (!editModes || !editModes.length) throw new SoundError('a section edit needs "editModes", one per section', 400);
     if (editModes.every((m) => m === "keep")) throw new SoundError("every section is kept — there is nothing to render", 400);
   }
+  // prompt_influence is the SFX endpoint's own knob (lib/music/elevenlabs.ts
+  // generateSfx: 0..1). On a music op it would be a field nothing reads, so it
+  // is refused there rather than silently dropped.
+  let promptInfluence: number | null = null;
+  if (b.promptInfluence !== null && b.promptInfluence !== undefined) {
+    if (kind !== "sfx") throw new SoundError('"promptInfluence" applies to sfx only', 400);
+    const pi = b.promptInfluence;
+    if (typeof pi !== "number" || !Number.isFinite(pi) || pi < 0 || pi > 1) throw new SoundError('"promptInfluence" must be 0..1, or null for the vendor default', 400);
+    promptInfluence = pi;
+  }
   const strs = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string" && !!x.trim()).map((x) => x.trim()) : []);
   const numOrNull = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
   const strOrNull = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
@@ -90,6 +101,7 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
     negative: strOrNull(b.negative),
     durationS: Number.isFinite(d) ? d : 0,
     loop: typeof b.loop === "boolean" ? b.loop : null,
+    promptInfluence,
     technique: strs(b.technique),
     terms: termsOf(b.terms),
     tempoBpm: numOrNull(b.tempoBpm),
@@ -162,7 +174,12 @@ async function render(req: GenerateRequest): Promise<Rendered> {
     }
     case "sfx": {
       const prompt = withNegative(req.prompt, req.negative);
-      const out = await generateSfx({ text: prompt, durationSeconds: req.durationS, loop: req.loop ?? undefined });
+      const out = await generateSfx({
+        text: prompt,
+        durationSeconds: req.durationS,
+        loop: req.loop ?? undefined,
+        promptInfluence: req.promptInfluence ?? undefined,
+      });
       return { b64: out.audio.b64, mime: out.audio.mime, songId: null, plan: null, durationS: req.durationS, parentId: null, prompt: req.prompt };
     }
   }
@@ -218,6 +235,7 @@ export async function generateTake(req: GenerateRequest, now = new Date()): Prom
       nodeId: req.nodeId,
       songId: r.songId,
       plan: r.plan,
+      editModes: req.op === "section-edit" ? req.editModes : null,
     },
     { bytes, mime: r.mime, name: `${req.op}.mp3` },
     now,

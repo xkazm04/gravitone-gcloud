@@ -266,6 +266,12 @@ export function useHunt(kind: SoundKind) {
         technique: n.technique,
         prompt: n.prompt,
         negative: n.negative,
+        // What the leaf asked for travels with the return, so its row in the
+        // ledger counts along the same terms as a rendered leaf's.
+        terms: n.terms,
+        tempoBpm: n.tempoBpm,
+        key: n.key,
+        loop: h.kind === "sfx" ? n.loop : null,
         huntId,
         nodeId,
       });

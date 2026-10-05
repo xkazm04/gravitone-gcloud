@@ -318,6 +318,8 @@ export interface BatchForm {
   space: string;
   sfxCategory: string;
   loop: boolean;
+  /** sfx: the vendor's prompt_influence, 0..1; null = the vendor's default. */
+  promptInfluence: number | null;
   durationS: number;
   count: number;
   tempoBpm: number | null;
@@ -336,6 +338,7 @@ export const blankBatch = (kind: SoundKind): BatchForm => ({
   space: "",
   sfxCategory: "",
   loop: false,
+  promptInfluence: null,
   durationS: kind === "sfx" ? 3 : 30,
   count: kind === "sfx" ? 3 : 2,
   tempoBpm: null,
@@ -384,6 +387,7 @@ export function batchProblem(kind: SoundKind, f: BatchForm): string | null {
   const d = DURATION[kind];
   if (!(f.durationS >= d.min && f.durationS <= d.max)) return `length ${d.min}–${d.max}s`;
   if (!(f.count >= 1 && f.count <= 6)) return "1–6 takes";
+  if (kind === "sfx" && f.promptInfluence !== null && !(f.promptInfluence >= 0 && f.promptInfluence <= 1)) return "influence 0–1";
   return null;
 }
 
@@ -400,6 +404,7 @@ export function batchRequests(kind: SoundKind, f: BatchForm): GenerateRequest[] 
     negative: f.negative.trim() || null,
     durationS: f.durationS,
     loop: kind === "sfx" ? f.loop : null,
+    promptInfluence: kind === "sfx" ? f.promptInfluence : null,
     technique: f.technique.filter((t) => TECHNIQUES[kind].includes(t)),
     terms: batchTerms(kind, f),
     tempoBpm: kind === "music" ? f.tempoBpm : null,

@@ -150,6 +150,22 @@ export const HUNT_SCHEMA: Record<string, unknown> = {
                 prompt: { type: "string" },
                 negative: { type: "string" },
                 durationS: { type: "number" },
+                // Closeout r4: what the leaf asks for, as fields, so a render
+                // never re-reads its own prompt text. Optional in the schema
+                // (an older drafter's answer still parses) and defaulted to
+                // absent in parseHuntMap; the prompt file asks for all four.
+                loop: { type: "boolean" },
+                terms: {
+                  type: "object",
+                  properties: {
+                    genre: { type: "array", items: { type: "string" } },
+                    mood: { type: "array", items: { type: "string" } },
+                    instrument: { type: "array", items: { type: "string" } },
+                    sfxCategory: { type: "string" },
+                  },
+                },
+                tempoBpm: { type: "number" },
+                key: { type: "string" },
               },
             },
           },
@@ -164,6 +180,50 @@ const MAX_LEAVES = 6;
 const RENDERABLE: readonly ProviderId[] = ["elevenlabs", "suno"];
 
 const s = (v: unknown, max: number) => (typeof v === "string" ? v.trim().slice(0, max) : "");
+
+/** The non-leaf nodes' (root, branch) "asks for nothing". */
+const noAsk = (): Pick<HuntNode, "loop" | "terms" | "tempoBpm" | "key"> => ({
+  loop: null,
+  terms: { genre: [], mood: [], instrument: [], sfxCategory: null },
+  tempoBpm: null,
+  key: null,
+});
+
+const words = (v: unknown, cap = 8): string[] =>
+  Array.isArray(v)
+    ? [...new Set(v.filter((x): x is string => typeof x === "string").map((x) => x.trim().slice(0, 60)).filter(Boolean))].slice(0, cap)
+    : [];
+
+/** "none" / "null" / "n/a" / "" are a drafter saying "no value", not a value. */
+const valueWord = (v: unknown, max: number): string | null => {
+  const t = s(v, max);
+  return t && !/^(none|null|n\/a|-|—)$/i.test(t) ? t : null;
+};
+
+/**
+ * What a leaf ASKS FOR, held to its kind. Music has terms, a tempo and a key,
+ * and no loop; an effect has a loop flag and a category, and NEVER a tempo or
+ * a key — the registry's "the tell is that the brief wants a key"
+ * (pipeline/SOUND-HUNT-PROMPT.md, sfx section), so a drafted one is dropped,
+ * not passed on. A tempo outside 30..260 BPM is no tempo.
+ */
+export function askOf(raw: Record<string, unknown>, kind: SoundKind): Pick<HuntNode, "loop" | "terms" | "tempoBpm" | "key"> {
+  const t = (raw.terms && typeof raw.terms === "object" && !Array.isArray(raw.terms) ? raw.terms : {}) as Record<string, unknown>;
+  if (kind === "sfx")
+    return {
+      loop: typeof raw.loop === "boolean" ? raw.loop : null,
+      terms: { genre: [], mood: words(t.mood), instrument: [], sfxCategory: valueWord(t.sfxCategory, 80) },
+      tempoBpm: null,
+      key: null,
+    };
+  const bpm = typeof raw.tempoBpm === "number" && Number.isFinite(raw.tempoBpm) ? Math.round(raw.tempoBpm * 10) / 10 : null;
+  return {
+    loop: null,
+    terms: { genre: words(t.genre), mood: words(t.mood), instrument: words(t.instrument), sfxCategory: null },
+    tempoBpm: bpm !== null && bpm >= 30 && bpm <= 260 ? bpm : null,
+    key: valueWord(raw.key, 40),
+  };
+}
 
 /**
  * The model's map as HuntNodes: one root (the idea), one node per branch, one
@@ -193,6 +253,7 @@ export function parseHuntMap(json: unknown, kind: SoundKind, idea: string, mint:
       prompt: "",
       negative: null,
       durationS: 0,
+      ...noAsk(),
       state: "idea",
       takeIds: [],
       winner: false,
@@ -228,6 +289,7 @@ export function parseHuntMap(json: unknown, kind: SoundKind, idea: string, mint:
         prompt,
         negative: negative && negative.toLowerCase() !== "null" ? negative : null,
         durationS: Math.round(Math.min(b.max, Math.max(b.min, d)) * 10) / 10,
+        ...askOf(l, kind),
         state: provider === "suno" ? "awaiting-return" : "idea",
         takeIds: [],
         winner: false,
@@ -246,6 +308,7 @@ export function parseHuntMap(json: unknown, kind: SoundKind, idea: string, mint:
       prompt: "",
       negative: null,
       durationS: 0,
+      ...noAsk(),
       state: "idea",
       takeIds: [],
       winner: false,
@@ -323,6 +386,9 @@ function nodeOf(v: unknown, kind: SoundKind): HuntNode {
     negative: typeof n.negative === "string" && n.negative.trim() ? n.negative.trim().slice(0, 600) : null,
     // 0 is the root's and a branch's "no length"; a leaf is held to the window.
     durationS: d === 0 ? 0 : Math.min(b.max, Math.max(b.min, d)),
+    // The operator's map comes back whole on every PATCH; a node sent without
+    // the closeout fields (a tab opened before them) keeps them absent.
+    ...askOf(n, kind),
     state,
     takeIds: strs(n.takeIds).filter((x) => /^[A-Za-z0-9_-]{1,80}$/.test(x)),
     winner: n.winner === true,

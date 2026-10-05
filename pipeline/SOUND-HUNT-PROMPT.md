@@ -34,6 +34,8 @@ Each leaf carries:
 - `prompt`: the full prompt, ready to send. Concrete vocabulary, never adjectives standing in for decisions.
 - `negative`: what must NOT appear, comma-separated, or null.
 - `durationS`: seconds, {{DURATION_MIN}} to {{DURATION_MAX}}.
+- `terms`: what the prompt names, as lists of plain words a person would file it under — `genre`, `mood`, `instrument` (each a list; empty when the prompt names none) and `sfxCategory` (one word for an effect's family, e.g. "impacts", "whooshes", "ambiences", "ui"; empty for music). Name only what the prompt itself says.
+- `tempoBpm`, `key`, `loop`: see the rules for this kind below. They state what the prompt asks for as fields, so they must agree with the prompt text exactly.
 
 What this studio has already measured about each provider (MEASURED rows only, each with its n; empty means nothing has cleared the evidence floor yet — then explore, do not pretend to know). Lean on a strength where it fits the problem, and put at least one leaf on the strongest measured choice when one applies; spend the other leaves exploring:
 {{STRENGTHS}}
@@ -53,6 +55,7 @@ MUSIC RULES (registry: music-prompt-composition):
 - A reference carries palette, energy and production character — never melody; name what to take from it in vocabulary (`reference-track-anchoring`), and never ask for "in the style of" a named commercial artist.
 - Lyrics only if the problem asks for a voice (`lyrics-for-singability`): syllable load must fit the tempo.
 - Durations: a sting or loop is 3–15 s, a bed 20–60 s, a cue or a full piece 60–180 s. Default to the shortest length that answers the problem: every second is metered.
+- Fields for every music leaf: `terms.genre`, `terms.mood` and `terms.instrument` carry the genre, mood and instrumentation words the prompt uses; `terms.sfxCategory` is empty. `tempoBpm` is the BPM the prompt states, or 0 when it states none; `key` is the key the prompt names ("D minor", "Ab major"), or "" when it names none. `loop` is false — a music leaf is never an effect loop.
 
 <!-- section: sfx -->
 SOUND EFFECT RULES (registry: sound-effect-generation). A sound effect "is not a small piece of music": it has no sections, no tempo, no key, no lyric — it has an ENVELOPE.
@@ -63,3 +66,5 @@ SOUND EFFECT RULES (registry: sound-effect-generation). A sound effect "is not a
 - A hit that must land on a picture event states its exact length and a dry tail (`picture-as-timing-brief`).
 - Never give an effect a key or a tempo — "the tell is that the brief wants a key"; that is music, not an effect.
 - `provider` for effects is `elevenlabs` unless the problem explicitly asks for a Suno round trip.
+- Write every effect prompt in LABELLED form, the fields in this order, separated by semicolons: `event: …; material: …; attack: …; body: …; tail: …; space: …; duration: …s; loop: yes|no`. Leave out a field that does not apply (a synthetic UI tone has no material), but always keep `event`, `space`, `duration` and `loop`. Example: "event: heavy iron door slams shut; material: iron, oak frame; attack: sharp; tail: dry stop; space: short stone corridor; duration: 1.5s; loop: no".
+- Fields for every effect leaf: `loop` is true exactly when the prompt says `loop: yes`; `terms.sfxCategory` is the effect's family in one word; `terms.mood` may carry a mood word the prompt uses; `terms.genre` and `terms.instrument` are empty; `tempoBpm` is 0 and `key` is "" — always.

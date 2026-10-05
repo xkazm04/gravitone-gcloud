@@ -36,7 +36,9 @@ import {
   sortRows,
   step,
 } from "@/app/playground/triage/model";
-import { dimsFor, meanScore, readVerdict, tempoOff } from "@/app/playground/shared/format";
+import { dimsFor, lengthWord, meanScore, readVerdict, takeSeconds, tempoOff } from "@/app/playground/shared/format";
+import { priceSeconds } from "@/app/playground/shared/price";
+import { costLabel } from "@/lib/musicClient";
 import type { InsightCell, SoundTake } from "@/lib/sound/types";
 
 function take(p: Partial<SoundTake> & { id: string }): SoundTake {
@@ -69,6 +71,12 @@ function take(p: Partial<SoundTake> & { id: string }): SoundTake {
     nodeId: null,
     songId: null,
     plan: null,
+    referenceTrackId: null,
+    promptRound: null,
+    draftId: null,
+    variation: null,
+    editModes: null,
+    fileName: null,
     createdAt: "2026-10-05T10:00:00.000Z",
     judgedAt: null,
     finalizedAt: null,
@@ -231,6 +239,22 @@ test("batch: N identical lab briefs, effects briefed envelope-first", () => {
   expect(batchProblem("sfx", blankBatch("sfx"))).toBe("name the event");
   expect(batchProblem("sfx", { ...s, durationS: 31 })).toBe("length 0.5–30s");
   expect(batchProblem("music", { ...f, count: 7 })).toBe("1–6 takes");
+
+  // Prompt influence (r4 closeout): an effect batch sends it, null is the
+  // vendor's default, music never carries it, and out of range is refused.
+  expect(sr.promptInfluence, "blank form = vendor default").toBe(null);
+  expect(batchRequests("sfx", { ...s, promptInfluence: 0.7 })[0].promptInfluence).toBe(0.7);
+  expect(batchRequests("music", { ...f, promptInfluence: 0.7 })[0].promptInfluence).toBe(null);
+  expect(batchProblem("sfx", { ...s, promptInfluence: 1.4 })).toBe("influence 0–1");
+});
+
+test("price: a sub-10s effect is priced at its tenth (1.5s, not 2s); longer lengths at the whole second", () => {
+  expect(priceSeconds(1.5)).toBe(1.5);
+  expect(priceSeconds(0.04 + 0.5)).toBe(0.5);
+  expect(priceSeconds(9.96)).toBe(10);
+  expect(priceSeconds(12.4)).toBe(12);
+  expect(costLabel({ seconds: 1, basis: "unpriced", note: "n" }, priceSeconds(1.5)).text).toBe("1.5s of audio · unpriced");
+  expect(costLabel({ seconds: 1, basis: "unpriced", note: "n" }, priceSeconds(30.4)).text).toBe("30s of audio · unpriced");
 });
 
 /* ── readings shared with arrange and hunt ────────────────────────────── */
@@ -250,4 +274,14 @@ test("readings: a one-shot effect is not scored on a seam; proven is a kept mean
   expect(tempoOff(120, 121)).toBe(false);
   expect(tempoOff(120, 98.5)).toBe(true);
   expect(tempoOff(null, 98.5)).toBe(false);
+});
+
+test("length: a measured take shows the length its bytes are; a Suno return with no ask shows its measured length, never a dash", () => {
+  const m = { tempoBpm: null, key: null, energy: 0.12, durationS: 154.3, lufs: null, truePeakDb: null };
+  expect(takeSeconds({ durationS: 150, measured: m })).toBe(154.3);
+  expect(takeSeconds({ durationS: null, measured: m })).toBe(154.3);
+  expect(takeSeconds({ durationS: 30, measured: null })).toBe(30);
+  expect(takeSeconds({ durationS: null, measured: { ...m, durationS: null } })).toBe(null);
+  expect(lengthWord("music", takeSeconds({ durationS: null, measured: m }))).toBe("2:34");
+  expect(lengthWord("sfx", takeSeconds({ durationS: null, measured: { ...m, durationS: 1.48 } }))).toBe("1.5s");
 });

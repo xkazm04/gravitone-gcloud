@@ -458,37 +458,21 @@ export const secondsOf = (nodes: readonly Pick<HuntNode, "durationS">[]) =>
 
 /* ── a leaf, briefed ───────────────────────────────────────────────────── */
 
-/** Tempo the prompt itself asks for ("… at 92 BPM"). What the brief ASKED for
- *  (lib/sound/types.ts#SoundTake.tempoBpm), so it is read off the words, never guessed. */
-export function bpmOf(prompt: string): number | null {
-  const m = /\b(\d{2,3})\s*bpm\b/i.exec(prompt);
-  const n = m ? Number(m[1]) : NaN;
-  return n >= 30 && n <= 260 ? n : null;
-}
-
-/** The key the prompt names ("in D minor", "A♭ major"). */
-export function keyOf(prompt: string): string | null {
-  const m = /\b([A-G])(#|♯|b|♭)?\s*(major|minor)\b/.exec(prompt);
-  if (!m) return null;
-  const acc =
-    m[2] === "#" || m[2] === "♯"
-      ? "#"
-      : m[2] === "b" || m[2] === "♭"
-        ? "b"
-        : "";
-  return `${m[1]}${acc} ${m[3].toLowerCase()}`;
-}
-
 /**
- * Whether an SFX leaf asks for a loop. The node carries no loop field (a
- * contract request is open for one); until it does, a labelled `loop:` field
- * in an envelope-first prompt decides — "loop: no" is a one-shot, which a bare
- * word match read as a loop (r2 capture: every UI tap drew the loop glyph) —
- * and only then the loop-seam technique or the prompt's own words.
+ * Whether an SFX leaf asks for a loop. The node's own `loop` decides
+ * (HuntNode.loop, drafted by the sound-hunt turn since the r4 closeout). A
+ * hunt stored before the field reads it as null, and only then is the prompt
+ * read: a labelled `loop:` field in an envelope-first prompt — "loop: no" is a
+ * one-shot, which a bare word match read as a loop (r2 capture: every UI tap
+ * drew the loop glyph) — then the loop-seam technique or the prompt's words.
+ * The glyph on the card and the flag the render sends are this one answer.
  */
 export function loopOf(
-  node: Pick<HuntNode, "technique" | "prompt" | "label">,
+  node: Pick<HuntNode, "technique" | "prompt" | "label"> & {
+    loop?: boolean | null;
+  },
 ): boolean {
+  if (typeof node.loop === "boolean") return node.loop;
   const field = sfxAnatomy(node.prompt).find((a) => a.part === "loop");
   if (field) return /^(yes|true|on|seamless|loop)/i.test(field.text);
   return (
@@ -531,8 +515,11 @@ export function sfxAnatomy(prompt: string): { part: SfxPart; text: string }[] {
   );
 }
 
-/** The generate request one leaf makes. Nothing is clamped: a duration the
- *  engine refuses comes back as the engine's own words on the leaf. */
+/** The generate request one leaf makes, from the leaf's own fields — terms,
+ *  tempo, key and loop are what the drafter stated beside the prompt, never
+ *  re-read from its text. Nothing is clamped: a duration the engine refuses
+ *  comes back as the engine's own words on the leaf. Prompt influence stays
+ *  the vendor's default (null): a hunt varies the brief, not the knob. */
 export function generateRequestFor(
   hunt: Pick<Hunt, "id" | "kind">,
   node: HuntNode,
@@ -546,10 +533,16 @@ export function generateRequestFor(
     negative: node.negative,
     durationS: node.durationS,
     loop: sfx ? loopOf(node) : null,
+    promptInfluence: null,
     technique: [...node.technique],
-    terms: { genre: [], mood: [], instrument: [], sfxCategory: null },
-    tempoBpm: sfx ? null : bpmOf(node.prompt),
-    key: sfx ? null : keyOf(node.prompt),
+    terms: {
+      genre: [...node.terms.genre],
+      mood: [...node.terms.mood],
+      instrument: [...node.terms.instrument],
+      sfxCategory: node.terms.sfxCategory,
+    },
+    tempoBpm: sfx ? null : node.tempoBpm,
+    key: sfx ? null : node.key,
     origin: "hunt",
     sourceTakeId: null,
     editModes: null,

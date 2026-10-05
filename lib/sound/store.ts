@@ -30,7 +30,7 @@
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { Hunt, Lesson, SoundGroups, SoundTake } from "./types";
+import type { Hunt, HuntNode, Lesson, SoundGroups, SoundTake } from "./types";
 import type { LedgerVerdict } from "./ledger";
 
 /** A failure with the HTTP status the routes answer it with. The message is
@@ -124,10 +124,59 @@ async function readKind<K extends Kind>(kind: K): Promise<Shape[K]> {
     const l = parsed as LedgerFile;
     l.verdicts = Array.isArray(l.verdicts) ? l.verdicts : [];
     l.lessons = Array.isArray(l.lessons) ? l.lessons : [];
-  } else if (kind === "takes") (parsed as TakesFile).takes ??= [];
-  else if (kind === "hunts") (parsed as HuntsFile).hunts ??= [];
+  } else if (kind === "takes") {
+    const f = parsed as TakesFile;
+    f.takes = Array.isArray(f.takes) ? f.takes.map(withTakeDefaults) : [];
+  } else if (kind === "hunts") {
+    const f = parsed as HuntsFile;
+    f.hunts = Array.isArray(f.hunts) ? f.hunts.map((h) => ({ ...h, nodes: Array.isArray(h.nodes) ? h.nodes.map(withNodeDefaults) : [] })) : [];
+  }
   else if (kind === "groups") (parsed as GroupsFile).groups ??= EMPTY.groups().groups;
   return parsed;
+}
+
+/* ── reading an older file ───────────────────────────────────────────────────
+ * The closeout of round 4 added fields to SoundTake (the Library's facts),
+ * MeasuredSound (durationS) and HuntNode (loop, terms, tempo, key). A file
+ * written before them is read with each one at its absent value — null, or an
+ * empty terms bag — so every reader (routes, CLI, probes) sees one shape and
+ * no consumer has to guard `undefined`. Nothing is rewritten on read; the next
+ * write of the row carries the full shape. */
+
+const EMPTY_TERMS = () => ({ genre: [], mood: [], instrument: [], sfxCategory: null });
+
+export function withTakeDefaults(t: SoundTake): SoundTake {
+  const o = t as Partial<SoundTake> & SoundTake;
+  return {
+    ...o,
+    measured: o.measured ? { ...o.measured, energy: o.measured.energy ?? null, durationS: o.measured.durationS ?? null } : (o.measured ?? null),
+    referenceTrackId: o.referenceTrackId ?? null,
+    promptRound: o.promptRound ?? null,
+    draftId: o.draftId ?? null,
+    variation: o.variation ?? null,
+    editModes: o.editModes ?? null,
+    fileName: o.fileName ?? null,
+  };
+}
+
+export function withNodeDefaults(n: HuntNode): HuntNode {
+  const o = n as Partial<HuntNode> & HuntNode;
+  const t = o.terms;
+  return {
+    ...o,
+    loop: typeof o.loop === "boolean" ? o.loop : null,
+    terms:
+      t && typeof t === "object"
+        ? {
+            genre: Array.isArray(t.genre) ? t.genre : [],
+            mood: Array.isArray(t.mood) ? t.mood : [],
+            instrument: Array.isArray(t.instrument) ? t.instrument : [],
+            sfxCategory: typeof t.sfxCategory === "string" ? t.sfxCategory : null,
+          }
+        : EMPTY_TERMS(),
+    tempoBpm: typeof o.tempoBpm === "number" && Number.isFinite(o.tempoBpm) ? o.tempoBpm : null,
+    key: typeof o.key === "string" && o.key ? o.key : null,
+  };
 }
 
 let tmpCounter = 0;

@@ -19,6 +19,9 @@ export interface Analysis {
   key: string;
   keyConfidence: number;
   energy: "high" | "medium" | "low";
+  /** The RMS the band is read off, 0..1 — the figure the sound store keeps
+   *  (lib/sound/types.ts MeasuredSound.energy); the band is `energyBand(rms)`. */
+  rms: number;
   centroidHz: number;
   brightness: "bright" | "balanced" | "dark";
   duration: number;
@@ -29,6 +32,13 @@ export interface Analysis {
 const NOTES = ["C", "C#", "D", "Eb", "E", "F", "F#", "G", "Ab", "A", "Bb", "B"];
 const MAJ = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
 const MIN = [6.33, 2.68, 3.52, 5.38, 2.6, 3.53, 2.54, 4.75, 3.98, 2.69, 3.34, 3.17];
+
+/** The Library's energy word for an RMS. One threshold pair, read by the
+ *  analyser and by the store adapter (./soundAdapter.ts), so a take measured
+ *  in the lab and one measured here name the same band. */
+export function energyBand(rms: number): "high" | "medium" | "low" {
+  return rms > 0.2 ? "high" : rms > 0.09 ? "medium" : "low";
+}
 
 function corr(a: number[], b: number[]): number {
   const ma = a.reduce((x, y) => x + y) / 12;
@@ -162,7 +172,8 @@ export async function analyzeFile(file: File, onStage: (s: Stage) => void): Prom
     tempo: bestBpm,
     key,
     keyConfidence: kv,
-    energy: rms > 0.2 ? "high" : rms > 0.09 ? "medium" : "low",
+    energy: energyBand(rms),
+    rms: Math.min(1, Math.round(rms * 10000) / 10000),
     centroidHz,
     brightness: centroidHz > 2600 ? "bright" : centroidHz > 1200 ? "balanced" : "dark",
     duration: buf.duration,

@@ -9,8 +9,13 @@
 
 import type { Verdict } from "@/lib/sound/types";
 
+/** Small mono caps WITHOUT a colour, for a label whose tone the call site
+ *  decides (a stage head, a cyan "label" tag). Two text colours on one element
+ *  are decided by stylesheet order, not by which class was written last, so a
+ *  tone is never added on top of CAPS — it goes on CAPS_BARE. */
+export const CAPS_BARE = "font-jetbrains text-label uppercase tracking-[0.14em]";
 /** Small mono caps label — the only place uppercase tracking is used. */
-export const CAPS = "font-jetbrains text-label uppercase tracking-[0.14em] text-white/40";
+export const CAPS = `${CAPS_BARE} text-white/40`;
 /** A nested card inside a <Panel>. */
 export const CARD = "rounded-xl border border-white/8 bg-white/[0.025]";
 /** A text field. */

@@ -14,8 +14,11 @@
 //      store is idempotent by id), and a move with the mark set does nothing.
 //   3. THE ROUND TRIP: what the Library reads back (takeFromAsset over the
 //      adapter) is the verdict, reason, scores, reference, round and draft link
-//      it held before — including the facts the store has no field for, which
-//      ride in the per-account annex.
+//      it held before — all of them on the take itself since the r4 closeout
+//      (no per-browser annex), so another browser reads the same links.
+//   4. THE ANNEX, MOVED ONCE: what an older browser still holds under the
+//      retired annex key is PATCHed onto the takes (the store's own values
+//      win) and the key is removed; a second load moves nothing.
 
 import "fake-indexeddb/auto";
 
@@ -31,9 +34,9 @@ import { readLedger, readTakes } from "@/lib/sound/store";
 import { seedAudioAssets } from "@/app/library/audio/audioSeed";
 import { takeFromAsset } from "@/app/library/audio/book";
 import { assetFromSoundTake, splitPatch, uploadMetaOf } from "@/app/library/audio/soundAdapter";
-import { loadAnnex } from "@/app/library/audio/soundAnnex";
-import { alreadyMigrated, migrateShelf } from "@/app/library/audio/soundMigration";
+import { alreadyMigrated, migrateAnnex, migrateShelf } from "@/app/library/audio/soundMigration";
 import { POST as takesPOST } from "@/app/api/sound/takes/route";
+import { PATCH as takePATCH } from "@/app/api/sound/takes/[id]/route";
 import { userScopedLocalKeys } from "@/lib/identityEviction";
 
 import { keepEnv } from "./_helpers";
@@ -45,6 +48,7 @@ let root = "";
 const realFetch = globalThis.fetch;
 const ls = new Map<string, string>();
 let posts = 0;
+let patches = 0;
 
 test.beforeEach(() => {
   root = mkdtempSync(path.join(tmpdir(), "sound-migration-"));
@@ -56,6 +60,7 @@ test.beforeEach(() => {
   __resetRateLimit();
   ls.clear();
   posts = 0;
+  patches = 0;
   (globalThis as { localStorage?: unknown }).localStorage = {
     getItem: (k: string) => (ls.has(k) ? ls.get(k)! : null),
     setItem: (k: string, v: string) => void ls.set(k, v),
@@ -67,6 +72,11 @@ test.beforeEach(() => {
     if (url === "/api/sound/takes" && init?.method === "POST") {
       posts++;
       return takesPOST(new Request(`http://localhost${url}`, init));
+    }
+    const one = /^\/api\/sound\/takes\/([^/?]+)$/.exec(url);
+    if (one && init?.method === "PATCH") {
+      patches++;
+      return takePATCH(new Request(`http://localhost${url}`, init), { params: Promise.resolve({ id: decodeURIComponent(one[1]) }) });
     }
     throw new Error(`probe: unexpected network call to ${url}`);
   }) as typeof fetch;
@@ -139,9 +149,9 @@ test("round trip: the Library reads back what it held — verdict, reason, score
 
   const before = { fx: takeFromAsset(withRef), ret: takeFromAsset(pair.asset) };
   expect((await migrateShelf(UID)).failed).toEqual([]);
-  const annex = loadAnnex(UID);
+  expect(ls.has(`gravitone.audio-annex.${UID}`), "nothing writes the retired annex").toBe(false);
   const { takes } = await readTakes();
-  const back = new Map(takes.map((t) => [t.id, takeFromAsset(assetFromSoundTake(t, UID, annex[t.id]))] as const));
+  const back = new Map(takes.map((t) => [t.id, takeFromAsset(assetFromSoundTake(t, UID))] as const));
 
   const fx = back.get(withRef.id)!;
   for (const k of ["title", "kind", "status", "ratings", "reject_reason", "genre_tags", "mood_tags", "instrumentation", "tempo_bpm", "key", "reference_track_id", "prompt_round", "sfx_category", "loopable"] as const)
@@ -155,6 +165,70 @@ test("round trip: the Library reads back what it held — verdict, reason, score
   expect(ret.stage, "a kept take is on the board").toBe("pending");
   expect(ret.fixture).toBe(false);
   console.log(`[migrate] round trip ok: fixture ref=${fx.reference_track_id} round=${fx.prompt_round}; return draft=${ret.draft_id}`);
+
+  // The facts are FIELDS now: on the stored take, not in this browser.
+  const stored = takes.find((t) => t.id === pair.asset.id)!;
+  expect(stored).toMatchObject({ draftId: "dr-x", fileName: "return.wav", parentId: withRef.id });
+  const fxStored = takes.find((t) => t.id === withRef.id)!;
+  expect(fxStored.referenceTrackId).toBe((withRef.meta as Record<string, unknown>).reference_track_id);
+  expect(fxStored.promptRound).toBe((withRef.meta as Record<string, unknown>).prompt_round);
+});
+
+test("annex: an older browser's annex moves onto the takes once — the store's own value wins — and the key goes", async () => {
+  const UID = "uid-migrate-annex";
+  ls.set(`gravitone.audio-seeded.v2.${UID}`, "1");
+  const a = assetFromUpload(UID, new File([new Uint8Array(1500).fill(2)], "a.mp3", { type: "audio/mpeg" }), ["audio"], "audio");
+  a.asset.meta = { ...(a.asset.meta ?? {}), verdict: "unjudged" };
+  const b = assetFromUpload(UID, new File([new Uint8Array(1500).fill(3)], "b.mp3", { type: "audio/mpeg" }), ["audio"], "audio");
+  b.asset.meta = { ...(b.asset.meta ?? {}), verdict: "unjudged", draft_id: "dr-store" };
+  await putUploads([a, b]);
+  expect((await migrateShelf(UID)).failed).toEqual([]);
+
+  // What the old build left behind: facts for a, a conflicting draft for b,
+  // and an entry for a take the store does not hold.
+  ls.set(
+    `gravitone.audio-annex.${UID}`,
+    JSON.stringify({
+      [a.asset.id]: {
+        reference_track_id: "ref-ratatat-breaking-away",
+        prompt_round: "round-2",
+        variation: { axis: "tempo", diff: ["92 -> 104"] },
+        edit_modes: ["keep", "high"],
+        fileName: "original name.mp3",
+        energy: "high",
+        method: "onset autocorr · goertzel chroma",
+      },
+      [b.asset.id]: { draft_id: "dr-annex" },
+      "st-gone": { draft_id: "dr-nobody" },
+    }),
+  );
+  const before = await readTakes();
+  const report = await migrateAnnex(UID, before.takes);
+  expect(report.failed).toEqual([]);
+  expect(report.moved.map((t) => t.id)).toEqual([a.asset.id]);
+  expect(patches, "b already had its draft: no PATCH; the gone take: no PATCH").toBe(1);
+  expect(ls.has(`gravitone.audio-annex.${UID}`), "the key is removed once everything landed").toBe(false);
+
+  const { takes } = await readTakes();
+  const ta = takes.find((t) => t.id === a.asset.id)!;
+  expect(ta).toMatchObject({
+    referenceTrackId: "ref-ratatat-breaking-away",
+    promptRound: "round-2",
+    variation: { axis: "tempo", diff: ["92 -> 104"] },
+    editModes: ["keep", "high"],
+    // The upload already named the file; the store's value wins.
+    fileName: "a.mp3",
+  });
+  // An energy WORD is not an RMS anybody measured: it does not become one.
+  expect(ta.measured).toBe(null);
+  expect(takes.find((t) => t.id === b.asset.id)!.draftId, "the store's own value wins").toBe("dr-store");
+  const back = takeFromAsset(assetFromSoundTake(ta, UID));
+  expect(back).toMatchObject({ reference_track_id: "ref-ratatat-breaking-away", prompt_round: "round-2" });
+
+  // A second load: no key, nothing moved, no write.
+  const again = await migrateAnnex(UID, takes);
+  expect(again).toEqual({ moved: [], failed: [] });
+  expect(patches).toBe(1);
 });
 
 test("fresh account: no IndexedDB rows and no old seed — the 160 examples go straight to the store", async () => {
@@ -182,7 +256,7 @@ test("adapter: an effect's three slots are its own rubric; a defect code is a co
   expect(meta).toMatchObject({ kind: "sfx", provider: "local", origin: "import", loop: true });
 });
 
-test("the two new per-account keys are on the eviction list", () => {
+test("the migration mark and the retired annex key are on the eviction list", () => {
   const keys = userScopedLocalKeys("uid-x");
   expect(keys).toContain("gravitone.sound-migrated.v1.uid-x");
   expect(keys).toContain("gravitone.audio-annex.uid-x");

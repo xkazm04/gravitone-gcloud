@@ -2,7 +2,8 @@
 //
 // pipeline/sound/ledger.json holds two lists and nothing else:
 //
-//   verdicts   one row per JUDGED, NON-FIXTURE take: what it was briefed with
+//   verdicts   one row per JUDGED, NON-FIXTURE take (a bare version is not
+//              one — see "A VERSION IS NOT A VERDICT"): what it was briefed with
 //              (provider, op, technique, terms, the prompt itself) and what the
 //              person decided (verdict, rubric, defect codes). Upserted every
 //              time a take is judged; removed if it is un-judged.
@@ -20,6 +21,18 @@
 // nobody gave (app/library/audio/audioSeed.ts: "NOTHING HERE IS A REAL TAKE"),
 // and a knowledge doc that learned from them would be measuring a fixture
 // generator. The exclusion is here, at the one write, rather than at every read.
+//
+// A VERSION IS NOT A VERDICT. A file brought back from Suno's studio against a
+// card on Arrangement's board (origin "suno-return", parentId = the card's
+// take) is filed `kept` because the board can only hold kept takes — not
+// because anybody judged it. Its parent was the judgement; counting the return
+// too would score one decision twice, and score it for Suno, which only
+// remastered what another provider made. THE RULE (isVersionOnly): a
+// suno-return WITH a parent and with no judgement of its own — no rubric score,
+// no defect code — gets no ledger row, whatever its verdict field says. The
+// moment a person scores it or names a defect on it, it is a judged take in its
+// own right and enters like any other. A return with no parent (a Hunt's Suno
+// leaf coming back) answers a brief of its own and always counts.
 //
 // Every write happens inside a store transaction (./store.ts withStore), so the
 // ledger and the take it describes cannot disagree after a crash.
@@ -45,7 +58,25 @@ export interface LedgerVerdict {
   score: number | null;
   reasons: DefectCode[];
   huntId: string | null;
+  /** The take this one is a version of (closeout r4, additive). Rows written
+   *  before the field read as null. */
+  parentId?: string | null;
   judgedAt: string;
+}
+
+/** True when a take is a version of an already-judged take and carries no
+ *  judgement of its own (the rule above). Pure, so the ledger write and the
+ *  insights read apply the SAME test — the second one to the rows a hand edit
+ *  or an older build may have left in the file. */
+export function isVersionOnly(t: {
+  origin: TakeOrigin;
+  parentId?: string | null;
+  ratings: Record<string, number | null> | null | undefined;
+  reasons: readonly DefectCode[] | null | undefined;
+}): boolean {
+  if (t.origin !== "suno-return" || !t.parentId) return false;
+  const scored = Object.values(t.ratings ?? {}).some((v) => typeof v === "number" && Number.isFinite(v));
+  return !scored && !(t.reasons ?? []).length;
 }
 
 /**
@@ -66,7 +97,7 @@ export function rubricMean(kind: SoundKind, ratings: Record<string, number | nul
 }
 
 export function verdictRow(t: SoundTake): LedgerVerdict | null {
-  if (t.origin === "fixture" || t.verdict === "unjudged") return null;
+  if (t.origin === "fixture" || t.verdict === "unjudged" || isVersionOnly(t)) return null;
   return {
     takeId: t.id,
     kind: t.kind,
@@ -88,6 +119,7 @@ export function verdictRow(t: SoundTake): LedgerVerdict | null {
     score: rubricMean(t.kind, t.ratings),
     reasons: [...t.reasons],
     huntId: t.huntId,
+    parentId: t.parentId,
     judgedAt: t.judgedAt ?? new Date().toISOString(),
   };
 }
