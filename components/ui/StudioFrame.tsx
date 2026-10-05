@@ -161,8 +161,11 @@ export default function StudioFrame({
           scale went up a rung and the width to carry it comes out of
           x-spacing, not out of the content — the operator's explicit trade. */}
       <div className="relative mx-auto max-w-shell px-2">
-        <nav className="flex items-center justify-between gap-4 py-6">
-          <div className="flex items-center gap-7">
+        <nav aria-label="Places" className="flex items-center justify-between gap-4 py-6">
+          {/* Below md the links drop to their own scrolling row inside this
+              group instead of vanishing (WCAG 1.4.10: a 1440px window at 200%
+              zoom is 720 CSS px). */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-7 gap-y-3 md:flex-nowrap">
             <Link href="/projects" aria-label="Projects">
               <Wordmark />
             </Link>
@@ -174,7 +177,7 @@ export default function StudioFrame({
                 local
               </span>
             )}
-            <div className="font-jetbrains hidden items-center gap-7 text-label text-white/70 md:flex">
+            <div className="font-jetbrains max-md:overflow-x-auto order-last flex w-full items-center gap-6 pb-1.5 text-label whitespace-nowrap text-white/70 md:order-none md:w-auto md:gap-7 md:pb-0">
               {MODULES.map((m) => {
                 const here = isActive(m.href);
                 return (
