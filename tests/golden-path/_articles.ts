@@ -11,6 +11,8 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
+import { REPO_LOCATING_GIT_VARS } from "@/lib/gitEnv";
+
 export const ROOT = path.resolve(__dirname, "../..");
 export const STUB_AGENT = path.join(ROOT, "tests", "fixtures", "articles", "stub-agent.mjs");
 export const STUB_GH = path.join(ROOT, "tests", "fixtures", "articles", "stub-gh.mjs");
@@ -38,6 +40,8 @@ export const ARTICLE_ENV = [
   "STUB_GH_LOG",
   "STUB_GH_FAIL",
   "ANTHROPIC_API_KEY",
+  // articleSandbox() deletes these; keepEnv puts a hook's values back after.
+  ...REPO_LOCATING_GIT_VARS,
 ] as const;
 
 /** The three non-claude reviewer engines, each pointed at the stub in its
@@ -58,6 +62,10 @@ export interface ArticleSandbox {
 
 /** A fresh registry clone and run store, with the env pointed at them. */
 export function articleSandbox(): ArticleSandbox {
+  // Under a git hook these name the hook's repository, and every git call the
+  // article code and these probes make would act on it instead of the sandbox
+  // (lib/gitEnv.ts). They are in ARTICLE_ENV, so keepEnv restores them.
+  for (const k of REPO_LOCATING_GIT_VARS) delete process.env[k];
   const dir = mkdtempSync(path.join(tmpdir(), "articles-probe-"));
   // A subprocess, not an import: the fixture is an ES module and this lane's
   // transform loads probes as CommonJS.

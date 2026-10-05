@@ -30,6 +30,8 @@ import { copyFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises"
 import os from "node:os";
 import path from "node:path";
 
+import { cwdBoundGitEnv } from "@/lib/gitEnv";
+
 import { citedNumbers, htmlProse, postWords, THRESHOLDS } from "./checks";
 import { readCritiqueDetail, registryCritique, type RegistryCritique } from "./critique";
 import { resolveRegistryDir, type RegistryLocation } from "./registryRead";
@@ -58,9 +60,12 @@ interface Ran {
   stderr: string;
 }
 
+// git and gh act on the repository `cwd` names and on no other: an inherited
+// GIT_DIR (a hook, a pre-push verify) would otherwise point this landing's
+// add / commit / push at whatever repository started us (lib/gitEnv.ts).
 function run(argv: string[], cwd: string, timeoutMs = 120_000): Promise<Ran> {
   return new Promise((resolve) => {
-    execFile(argv[0], argv.slice(1), { cwd, timeout: timeoutMs, maxBuffer: 32 * 1024 * 1024, windowsHide: true }, (err, stdout, stderr) => {
+    execFile(argv[0], argv.slice(1), { cwd, env: cwdBoundGitEnv(), timeout: timeoutMs, maxBuffer: 32 * 1024 * 1024, windowsHide: true }, (err, stdout, stderr) => {
       const code = err ? (typeof (err as NodeJS.ErrnoException & { code?: unknown }).code === "number" ? ((err as unknown as { code: number }).code) : 1) : 0;
       resolve({ code, stdout: String(stdout), stderr: String(stderr) || (err && !stdout && !stderr ? err.message : "") });
     });

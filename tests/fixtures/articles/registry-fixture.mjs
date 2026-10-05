@@ -27,7 +27,14 @@ const write = (root, rel, text) => {
   fs.mkdirSync(path.dirname(at), { recursive: true });
   fs.writeFileSync(at, text);
 };
-const git = (cwd, ...args) => execFileSync("git", args, { cwd, stdio: ["ignore", "pipe", "pipe"], windowsHide: true }).toString();
+// Git reads these before it looks at cwd, and a hook exports them: run under a
+// pre-push, this fixture's `init --bare` and `config user.*` once landed on the
+// checkout itself (2026-10-05). A copy of lib/gitEnv.ts's list, because this
+// module runs as a plain subprocess; articles-git-env.probe holds both.
+const REPO_LOCATING_GIT_VARS = ["GIT_DIR", "GIT_WORK_TREE", "GIT_INDEX_FILE", "GIT_COMMON_DIR", "GIT_OBJECT_DIRECTORY", "GIT_ALTERNATE_OBJECT_DIRECTORIES", "GIT_NAMESPACE", "GIT_PREFIX", "GIT_CEILING_DIRECTORIES", "GIT_DISCOVERY_ACROSS_FILESYSTEM"];
+const GIT_ENV = { ...process.env };
+for (const k of REPO_LOCATING_GIT_VARS) delete GIT_ENV[k];
+const git = (cwd, ...args) => execFileSync("git", args, { cwd, env: GIT_ENV, stdio: ["ignore", "pipe", "pipe"], windowsHide: true }).toString();
 
 const GATE = `#!/usr/bin/env node
 // Stub registry gate (tests/fixtures/articles/registry-fixture.mjs).
