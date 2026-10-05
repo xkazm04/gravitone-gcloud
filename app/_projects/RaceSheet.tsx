@@ -281,9 +281,10 @@ export default function RaceSheet({ projects, onOpen: leave, onEdit, onDelete, o
         <StateRule counts={counts} picked={query.states} />
         <div className="scroll-x">
           <UpNext p={up} onOpen={onOpen} />
-          <div role="table" aria-label="Projects by step" aria-rowcount={rows.length}>
+          <div role="table" aria-label="Projects by step" aria-rowcount={flat.length + 1}>
             <div
               role="row"
+              aria-rowindex={1}
               className={`${GRID} font-jetbrains overflow-hidden border-b border-white/[0.07] px-4 py-2 text-label text-white/35 [scrollbar-gutter:stable] [scrollbar-width:thin]`}
             >
               <span role="columnheader" className="tracking-[0.18em] uppercase">
@@ -338,6 +339,7 @@ export default function RaceSheet({ projects, onOpen: leave, onEdit, onDelete, o
                           collapsed={r.collapsed}
                           counts={groupCounts.get(r.key)}
                           onToggle={() => toggleGroup(r.key)}
+                          rowIndex={v.start + i + 2}
                           delay={enter ? Math.min(i, 8) * 0.012 : null}
                         />
                       ) : (
@@ -350,6 +352,7 @@ export default function RaceSheet({ projects, onOpen: leave, onEdit, onDelete, o
                           onOpen={onOpen}
                           onEdit={onEdit}
                           onDelete={onDelete}
+                          rowIndex={v.start + i + 2}
                           delay={enter ? Math.min(i, 8) * 0.012 : null}
                         />
                       ),
@@ -469,6 +472,7 @@ function Swimlane({
   collapsed,
   counts,
   onToggle,
+  rowIndex,
   delay,
 }: {
   label: string;
@@ -476,34 +480,44 @@ function Swimlane({
   collapsed: boolean;
   counts?: StateCounts;
   onToggle: () => void;
+  /** 1-based position in the whole table (header = 1): the list is windowed, so
+   *  the DOM position is not the real one. Optional for plain-function callers. */
+  rowIndex?: number;
   delay: number | null;
 }) {
   return (
     <motion.div
       role="row"
+      aria-rowindex={rowIndex}
       {...entrance(delay)}
       className="flex h-11 items-center gap-4 border-b border-white/[0.07] bg-white/[0.025] px-4"
     >
-      <button
-        type="button"
-        role="rowheader"
-        aria-expanded={!collapsed}
-        onClick={onToggle}
-        className="font-jetbrains flex shrink-0 cursor-pointer items-center gap-2 text-label tracking-[0.14em] text-white/70 uppercase transition hover:text-white"
-      >
-        <span aria-hidden className={`inline-block transition ${collapsed ? "-rotate-90" : ""}`}>
-          ▾
-        </span>
-        {label}
-        <span className="tracking-normal text-white/40">{count}</span>
-      </button>
+      {/* role=rowheader on the <button> itself would replace its button role,
+          so the toggle is announced as a heading cell and not as something
+          that can be pressed. The cell carries the role; the button stays one. */}
+      <span role="rowheader" className="shrink-0">
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          onClick={onToggle}
+          className="font-jetbrains flex shrink-0 cursor-pointer items-center gap-2 text-label tracking-[0.14em] text-white/70 uppercase transition hover:text-white"
+        >
+          <span aria-hidden className={`inline-block transition ${collapsed ? "-rotate-90" : ""}`}>
+            ▾
+          </span>
+          {label}
+          <span className="tracking-normal text-white/40">{count}</span>
+        </button>
+      </span>
       {counts && (
-        <StackBar
-          className="max-w-[16rem] flex-1"
-          showCounts={false}
-          label={`${label} by state`}
-          segments={STATE_ORDER.map((s) => ({ n: counts[s], tone: STATE_SIGNAL[s], label: STATE_TONE[s].word }))}
-        />
+        <div role="cell" className="max-w-[16rem] flex-1">
+          <StackBar
+            className="w-full"
+            showCounts={false}
+            label={`${label} by state`}
+            segments={STATE_ORDER.map((s) => ({ n: counts[s], tone: STATE_SIGNAL[s], label: STATE_TONE[s].word }))}
+          />
+        </div>
       )}
     </motion.div>
   );
@@ -519,6 +533,7 @@ export function Lane({
   onOpen,
   onEdit,
   onDelete,
+  rowIndex,
   delay = null,
 }: {
   p: Project;
@@ -528,6 +543,8 @@ export function Lane({
   onOpen: SurfaceProps["onOpen"];
   onEdit: SurfaceProps["onEdit"];
   onDelete: SurfaceProps["onDelete"];
+  /** 1-based position in the whole table (header = 1); see Swimlane. */
+  rowIndex?: number;
   delay?: number | null;
 }) {
   const state = projectState(p);
@@ -540,10 +557,11 @@ export function Lane({
     <motion.div
       role="row"
       data-shelf-id={p.id}
+      aria-rowindex={rowIndex}
       tabIndex={tabbable ? 0 : -1}
       {...entrance(delay)}
       onFocus={(e) => e.target === e.currentTarget && onFocus()}
-      onClick={() => onOpen(p)}
+      onClick={() => onOpen(p, next.step)}
       aria-label={`${p.title}, ${STATE_TONE[state].word}, next: ${next.verb}`}
       className={`${GRID} group h-16 cursor-pointer overflow-hidden border-b border-white/[0.045] px-4 transition-colors outline-none hover:bg-white/[0.03] focus-visible:bg-cyan-400/[0.06] ${
         active ? "bg-white/[0.04] shadow-[inset_2px_0_0_var(--gt-accent-cyan)]" : ""

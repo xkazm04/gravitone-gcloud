@@ -373,3 +373,35 @@ test("an unreadable shelf is not drawn as an empty one", () => {
   // The failure branch must come before the Shelf in the render, or EmptyShelf wins.
   expect(view.indexOf("readFailed &&")).toBeLessThan(view.indexOf("<Shelf"));
 });
+
+const SHEET = "app/_projects/RaceSheet.tsx";
+
+test("the swimlane toggle is a button inside a rowheader cell, and the table's counts are true", () => {
+  const sheet = src(SHEET);
+  expect(sheet.length, "walked nothing").toBeGreaterThan(0);
+  // An explicit role replaces the native one: a <button role="rowheader"> is
+  // announced as a row header, not as something that can be pressed.
+  expect(sheet, "a <button> carries role=rowheader, which replaces its button role").not.toMatch(
+    /<button[^>]*role="rowheader"/,
+  );
+  expect(sheet, "the toggle is not wrapped in a rowheader cell").toMatch(/<span role="rowheader"/);
+  // The windowed list mounts a slice, so rows must say where they really are.
+  expect(sheet, "aria-rowcount leaves out the header and swimlane rows").toContain(
+    "aria-rowcount={flat.length + 1}",
+  );
+  expect(sheet, "aria-rowcount is still the project count").not.toContain("aria-rowcount={rows.length}");
+  expect(sheet.match(/aria-rowindex=\{/g)?.length, "header, Swimlane and Lane each report their row index").toBe(3);
+  expect(sheet.match(/rowIndex=\{v\.start \+ i \+ 2\}/g)?.length, "windowed callers pass the real index").toBe(2);
+});
+
+test("a lane's body click opens the same step Enter does", () => {
+  // Enter runs open(id) -> onOpen(p, nextAction(p).step), the lane's own
+  // aria-label says "next: <verb>", and the click opened the bookmark instead.
+  const sheet = src(SHEET);
+  expect(sheet, "the lane body click opens the bookmarked step, not the next move").not.toMatch(
+    /onClick=\{\(\) => onOpen\(p\)\}/,
+  );
+  expect(sheet, "the lane body click does not route to the next move").toMatch(
+    /onClick=\{\(\) => onOpen\(p, next\.step\)\}/,
+  );
+});
