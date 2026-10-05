@@ -25,9 +25,10 @@
 // inside its cycle directory before it is read or unlinked. Cycle ids are
 // validated against a strict slug so a crafted id cannot walk anywhere.
 
-import { existsSync } from "node:fs";
-import { copyFile, mkdir, stat, unlink, writeFile } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
+
+import { foundryFs } from "../fsPort";
 
 import {
   FoundryError,
@@ -184,6 +185,8 @@ function mediaFiles(ref: MediaRef): string[] {
  *  ones whose media survives on this machine. */
 export async function commitCycle(id: string): Promise<TrainingCommitResult> {
   const dir = cycleDir(id);
+  // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
+  const fs = foundryFs();
   const cycle = await readCycle(id);
   if (cycle.status === "committed") throw new FoundryError("This cycle is already committed.", 409);
   if (!["awaiting-gate", "failed"].includes(cycle.status)) throw new FoundryError("The loop is still running this cycle.", 409);
@@ -194,7 +197,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
 
   // (1) Keepers first: copy keeper thumbnail to thumbs destination (if destination doesn't already exist).
   const thumbsDir = foundryFile(path.join("training", "thumbs"));
-  await mkdir(thumbsDir, { recursive: true });
+  await fs.mkdir(thumbsDir);
   const thumbs: string[] = [];
   const trackedThumb = new Map<string, string>();
   for (const imp of decided) {
@@ -202,9 +205,14 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     const fileName = `${id}--${imp.id}${path.extname(imp.thumbnail).toLowerCase()}`;
     const rel = `${THUMBS_REL}/${fileName}`;
     const dst = path.join(thumbsDir, fileName);
-    if (!existsSync(dst)) {
+    // existsSync's semantics: any stat failure reads as "absent".
+    const present = await fs.stat(dst).then(
+      () => true,
+      () => false,
+    );
+    if (!present) {
       const src = resolveInCycle(id, imp.thumbnail);
-      await copyFile(src, dst);
+      await fs.copyFile(src, dst);
     }
     trackedThumb.set(imp.id, rel);
     thumbs.push(rel);
@@ -212,7 +220,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
 
   // (2) The versioned index: read existing ledger, replace existing row for this cycle if present (or append), write atomically.
   const ledgerPath = foundryFile("training-ledger.json");
-  const ledger = await readJson<{ rows: TrainingLedgerRow[] }>(ledgerPath, { rows: [] });
+  const ledger = await fs.readJson<{ rows: TrainingLedgerRow[] }>(ledgerPath, { rows: [] });
   ledger.rows = (ledger.rows ?? []).filter((r) => r.cycle !== id);
   for (const imp of decided) {
     const human = verdicts[imp.id] as "approve" | "reject";
@@ -231,7 +239,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
       at,
     });
   }
-  await writeJsonAtomic(ledgerPath, ledger);
+  await fs.writeJsonAtomic(ledgerPath, ledger);
 
   // (3) Cull: delete run media / thumbs only AFTER ledger write succeeded!
   let deleted = 0;
@@ -241,7 +249,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
         if (ref.deleted) continue;
         for (const rel of mediaFiles(ref)) {
           try {
-            await unlink(containedInCycle(id, rel));
+            await fs.unlink(containedInCycle(id, rel));
             deleted++;
           } catch (e) {
             if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
@@ -253,10 +261,10 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
   }
 
   // (4) Mark cycle committed.
-  await writeFile(path.join(dir, "findings.md"), findingsMarkdown(cycle, verdicts, decided), "utf8");
+  await fs.writeFile(path.join(dir, "findings.md"), findingsMarkdown(cycle, verdicts, decided));
   cycle.status = "committed";
   cycle.log.push({ at, msg: `committed: ${decided.length} decided, ${deleted} files deleted, ${thumbs.length} thumb(s) kept` });
-  await writeJsonAtomic(path.join(dir, "cycle.json"), cycle);
+  await fs.writeJsonAtomic(path.join(dir, "cycle.json"), cycle);
 
   return { deleted, thumbs, ledger_rows: decided.length };
 }

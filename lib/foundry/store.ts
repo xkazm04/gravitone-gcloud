@@ -18,8 +18,10 @@
 // its run directory before it is read or unlinked. `run` ids are validated
 // against a strict slug so a crafted id cannot walk anywhere.
 
-import { stat, unlink, writeFile } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
+
+import { foundryFs } from "./fsPort";
 
 import {
   FoundryError,
@@ -99,9 +101,10 @@ export async function getRun(id: string): Promise<RunDetail> {
 }
 
 export async function getCatalogue(): Promise<Catalogue> {
+  const fs = foundryFs();
   const [styles, ledger] = await Promise.all([
-    readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }),
-    readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] }),
+    fs.readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }),
+    fs.readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] }),
   ]);
   return { styles: styles.styles, ledger: ledger.rows };
 }
@@ -205,6 +208,9 @@ export async function previewCommit(id: string, undecidedAs: "reject" | "leave" 
 /** Delete the rejected, index the decided, leave the kept untouched. */
 export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "reject", token?: string): Promise<CommitResult> {
   const dir = runDir(id);
+  // Every disk effect below goes through the port (lib/foundry/fsPort.ts) -
+  // the real fs unless a probe installed a recorder.
+  const fs = foundryFs();
   const run = await readManifest(id);
   if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
   // `incomplete` belongs here for the same reason `failed` does: the run stopped
@@ -238,7 +244,7 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
   // ledger or styles fails (e.g. disk full or styles.json is a directory),
   // no files have been deleted yet, keeping the banner "The commit failed
   // and nothing was deleted" honest.
-  const ledger = await readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] });
+  const ledger = await fs.readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] });
   ledger.rows = ledger.rows.filter((r) => r.run !== id);
   for (const c of decided) {
     ledger.rows.push({
@@ -254,9 +260,9 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
       at,
     });
   }
-  await writeJsonAtomic(foundryFile("ledger.json"), ledger);
+  await fs.writeJsonAtomic(foundryFile("ledger.json"), ledger);
 
-  const stylesDoc = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
+  const stylesDoc = await fs.readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
   for (const s of stylesDoc.styles) {
     // Same rule for the evidence list, and it matters more: `keptScenes`
     // below dedupes by run/scene, so doubled evidence promotes nothing and
@@ -269,7 +275,7 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     const keptScenes = new Set(s.evidence.filter((e) => e.verdict === "keep").map((e) => `${e.run}/${e.scene}`));
     if (keptScenes.size >= 2) s.status = "proven";
   }
-  await writeJsonAtomic(foundryFile("styles.json"), stylesDoc);
+  await fs.writeJsonAtomic(foundryFile("styles.json"), stylesDoc);
 
   // File deletions happen SECOND.
   let deleted = 0;
@@ -277,7 +283,7 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     if (verdicts[c.id].verdict !== "reject") continue;
     for (const rel of [c.file, c.sidecar]) {
       try {
-        await unlink(resolveInRun(id, rel));
+        await fs.unlink(resolveInRun(id, rel));
       } catch (e) {
         if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
       }
@@ -289,11 +295,11 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
 
   // Manifest, verdicts and findings updated THIRD.
   const findings = findingsMarkdown(run, verdicts, decided);
-  await writeFile(path.join(dir, "findings.md"), findings, "utf8");
-  await writeJsonAtomic(path.join(dir, "verdicts.json"), verdicts);
+  await fs.writeFile(path.join(dir, "findings.md"), findings);
+  await fs.writeJsonAtomic(path.join(dir, "verdicts.json"), verdicts);
   run.status = "committed";
   run.committed = { at, deleted, kept, undecided };
-  await writeJsonAtomic(path.join(dir, "run.json"), run);
+  await fs.writeJsonAtomic(path.join(dir, "run.json"), run);
 
   return { deleted, kept, undecided, findings };
 }

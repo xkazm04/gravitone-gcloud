@@ -40,6 +40,7 @@ import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
 import { planExtractCommit } from "../commitPlan";
+import { foundryFs } from "../fsPort";
 import type {
   ExtractCommitPlan,
   ExtractCommitResult,
@@ -305,7 +306,7 @@ export async function putExtractVerdicts(id: string, verdicts: ExtractVerdicts):
     if (rec.verdict !== "keep" && rec.verdict !== "reject") continue;
     clean[sid] = { verdict: rec.verdict, at: rec.at || new Date().toISOString() };
   }
-  await writeJsonAtomic(path.join(runDir(id), "verdicts.json"), clean);
+  await foundryFs().writeJsonAtomic(path.join(runDir(id), "verdicts.json"), clean);
 }
 
 /** Preview what an extract commit will do without writing to styles.json. */
@@ -313,7 +314,7 @@ export async function previewExtractCommit(id: string): Promise<ExtractCommitPla
   const [run, verdicts, catalogue] = await Promise.all([
     readManifest(id),
     readVerdicts(id),
-    readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }),
+    foundryFs().readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }),
   ]);
   return planExtractCommit(run, verdicts, catalogue);
 }
@@ -343,13 +344,15 @@ export async function commitExtractRun(
   }
   if (tokenArg) token = tokenArg;
 
+  // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
+  const fs = foundryFs();
   const run = await readManifest(id);
   if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
   if (run.status !== "done") throw new FoundryError("The run is not finished.", 409);
   if (verdictsIn) await putExtractVerdicts(id, verdictsIn);
   const verdicts = await readVerdicts(id);
 
-  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
+  const catalogue = await fs.readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
   const plan = planExtractCommit(run, verdicts, catalogue);
   if (token !== undefined && token !== plan.token) {
     throw new FoundryError("The run state changed since the preview was generated.", 409);
@@ -399,11 +402,11 @@ export async function commitExtractRun(
     });
     written.push(cid);
   }
-  await writeJsonAtomic(foundryFile("styles.json"), catalogue);
+  await fs.writeJsonAtomic(foundryFile("styles.json"), catalogue);
 
   run.status = "committed";
   run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
   run.log.push({ at, msg: `committed: ${written.join(", ")} → styles.json` });
-  await writeJsonAtomic(path.join(runDir(id), "run.json"), run);
+  await fs.writeJsonAtomic(path.join(runDir(id), "run.json"), run);
   return { kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
 }
