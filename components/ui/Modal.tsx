@@ -164,6 +164,11 @@ export default function Modal({
     openerRef.current = document.activeElement;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
+        // React hydrates on `document`, the same node as this listener, so a
+        // child's stopPropagation() (Hint popover, a rename field) cannot stop
+        // us - it only sets cancelBubble. Honour it: the innermost thing
+        // closes first, the dialog only when nothing else claimed the key.
+        if (e.cancelBubble || e.defaultPrevented) return;
         onCloseRef.current();
         return;
       }
