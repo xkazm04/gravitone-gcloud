@@ -139,7 +139,7 @@ export function ChannelsTab({ cal, now }: { cal: Calendar; now: number | null })
   return (
     <div className="space-y-8">
       <div className="flex items-center gap-2">
-        <span className="font-jetbrains text-label text-white/70">PUBLISH_MODE</span>
+        <span className="font-jetbrains text-label text-white/70">mode</span>
         <ModeBadge mode={mode} />
       </div>
       <div className="grid gap-4 md:grid-cols-3">

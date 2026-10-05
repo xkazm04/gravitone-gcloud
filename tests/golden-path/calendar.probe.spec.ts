@@ -4,8 +4,7 @@
 // slot sits on, which group it waits in, where a drag lands, and how a missing
 // number is spelled. Every schedule variant draws from it, so a wrong bucket
 // here is wrong three times on screen. And app/calendar/publishClient.ts decides
-// when the dev fixture may stand in for the engine — only for a route that does
-// not exist, never for one that refused.
+// how an engine answer is told apart from a route that does not exist.
 //
 // All dates are built with LOCAL constructors, so the probe holds in any
 // timezone: the model buckets in local time and so does every expectation.
@@ -213,7 +212,7 @@ test.describe("metrics display: null is unmeasured, a partial sum is a lower bou
   });
 });
 
-test.describe("publishClient: the fixture stands in for a missing route, never for a refusal", () => {
+test.describe("publishClient: a missing route, a refusal and a network failure are three different answers", () => {
   const realFetch = globalThis.fetch;
   test.afterEach(() => {
     globalThis.fetch = realFetch;
@@ -222,14 +221,9 @@ test.describe("publishClient: the fixture stands in for a missing route, never f
   const answer = (status: number, body: string, type = "application/json") =>
     (async () => new Response(body, { status, headers: { "content-type": type } })) as typeof fetch;
 
-  test("a route-missing 404 (HTML) falls back to the fixture outside production", async () => {
+  test("a route-missing 404 (HTML) is unavailable — no fixture stands in", async () => {
     globalThis.fetch = answer(404, "<!doctype html><title>404</title>", "text/html");
-    const r = await getSchedule();
-    expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.source).toBe("fixture");
-      expect(r.data.slots.length).toBeGreaterThan(0);
-    }
+    expect(await getSchedule()).toMatchObject({ ok: false, kind: "unavailable", status: 404 });
   });
 
   test("a 404 with an { error } body is the engine answering, not a missing route", async () => {
@@ -249,28 +243,11 @@ test.describe("publishClient: the fixture stands in for a missing route, never f
       description: "",
       tags: [],
     };
-    expect(await createSlot(body, "api")).toMatchObject({ ok: false, status: 409, error: "channel tiktok is not_wired" });
+    expect(await createSlot(body)).toMatchObject({ ok: false, status: 409, error: "channel tiktok is not_wired" });
     globalThis.fetch = (async () => {
       throw new TypeError("fetch failed");
     }) as typeof fetch;
     expect(await getSchedule()).toMatchObject({ ok: false, kind: "refused", status: 0 });
   });
 
-  test("an engine-sourced list never mutates through the fixture", async () => {
-    globalThis.fetch = answer(404, "<!doctype html>", "text/html");
-    const body = {
-      projectId: "p",
-      exportId: "exp-glass-harbor-v3",
-      channelId: "youtube" as const,
-      publishAt: iso(2026, 10, 9),
-      title: "t",
-      description: "",
-      tags: [],
-    };
-    // Source "api": the route is missing, and the fixture is NOT consulted.
-    expect(await createSlot(body, "api")).toMatchObject({ ok: false, status: 404 });
-    // Source "fixture": the fixture answers, and refuses a not_wired channel the way the contract does.
-    expect(await createSlot({ ...body, channelId: "tiktok" }, "fixture")).toMatchObject({ ok: false, status: 409 });
-    expect(await createSlot(body, "fixture")).toMatchObject({ ok: true, source: "fixture" });
-  });
 });

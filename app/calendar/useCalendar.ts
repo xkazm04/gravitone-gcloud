@@ -34,7 +34,6 @@ import {
   type NewSlot,
   type RefreshResult,
   type ScheduleList,
-  type Source,
 } from "./publishClient";
 
 /** null while the first read is in flight. */
@@ -84,16 +83,13 @@ export function useCalendar() {
 
   const reload = useCallback(() => setNonce((n) => n + 1), []);
 
-  /** Mutations go where the schedule came from (publishClient.ts `mutate`). */
-  const source: Source | null = schedule?.ok ? schedule.source : null;
-
   const create = useCallback(
     async (body: NewSlot): Promise<Fetched<{ slot: ScheduleSlot }>> => {
-      const r = await createSlot(body, source ?? "api");
+      const r = await createSlot(body);
       if (r.ok) setSchedule((cur) => replaceSlot(cur, r.data.slot));
       return r;
     },
-    [source],
+    [],
   );
 
   /** Optimistic: the slot moves on screen at once, and snaps back if the engine
@@ -103,29 +99,29 @@ export function useCalendar() {
     async (slot: ScheduleSlot, publishAt: string): Promise<Fetched<{ slot: ScheduleSlot }>> => {
       const body = movePatch(slot, publishAt);
       setSchedule((cur) => replaceSlot(cur, { ...slot, ...body }));
-      const r = await patchSlot(slot.id, body, source ?? "api");
+      const r = await patchSlot(slot.id, body);
       setSchedule((cur) => replaceSlot(cur, r.ok ? r.data.slot : slot));
       return r;
     },
-    [source],
+    [],
   );
 
   const cancel = useCallback(
     async (slot: ScheduleSlot): Promise<Fetched<{ slot: ScheduleSlot }>> => {
-      const r = await cancelSlot(slot.id, source ?? "api");
+      const r = await cancelSlot(slot.id);
       if (r.ok) setSchedule((cur) => replaceSlot(cur, r.data.slot));
       return r;
     },
-    [source],
+    [],
   );
 
   const refresh = useCallback(async (): Promise<Fetched<RefreshResult>> => {
-    const r = await refreshMetrics(metrics?.ok ? metrics.source : "api");
+    const r = await refreshMetrics();
     if (r.ok) void getMetrics().then(setMetrics);
     return r;
-  }, [metrics]);
+  }, []);
 
-  return { schedule, channels, exports, metrics, source, reload, create, move, cancel, refresh };
+  return { schedule, channels, exports, metrics, reload, create, move, cancel, refresh };
 }
 
 export type Calendar = ReturnType<typeof useCalendar>;

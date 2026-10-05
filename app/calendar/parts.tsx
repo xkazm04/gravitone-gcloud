@@ -9,29 +9,15 @@ import { useState } from "react";
 import { ErrorBox } from "@/components/kit";
 import { StatusGlyph, type StatusKind } from "@/components/kit/StatusGlyph";
 import { Button } from "@/components/ui/Primitives";
-import { CHIP_CLASS, Hint, TALLY_TONE, type TallyTone } from "@/components/ui/signal";
+import { CHIP_CLASS, TALLY_TONE, type TallyTone } from "@/components/ui/signal";
 import type { ChannelStatus, SlotStatus } from "@/lib/publish/types";
 
 import { STATUS_WORD } from "./calendarModel";
-import type { Fetched, Source } from "./publishClient";
+import type { Fetched } from "./publishClient";
 
 /** A word as a stamp, in the one chip spelling. */
 export function Badge({ tone = "neutral", children }: { tone?: TallyTone; children: React.ReactNode }) {
   return <span className={`${CHIP_CLASS} ${TALLY_TONE[tone]} uppercase`}>{children}</span>;
-}
-
-/** Marks a screen fed from ./fixtures.ts. Never absent when the source is a
- *  fixture: a fabricated slot must not pass for a scheduled one. */
-export function SourceBadge({ source }: { source: Source | null }) {
-  if (source !== "fixture") return null;
-  return (
-    <span className="inline-flex items-center gap-1" data-testid="calendar-fixture-badge">
-      <Badge tone="amber">fixture</Badge>
-      <Hint tone="amber" variant="warn" label="Why fixture data">
-        /api/publish/* answered 404 · dev fixture, in memory
-      </Hint>
-    </span>
-  );
 }
 
 export function ModeBadge({ mode }: { mode: "dry" | "live" | null }) {
