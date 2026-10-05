@@ -336,7 +336,7 @@ function FolderNameEditor({
           }
         }}
         aria-describedby={merges ? "folder-rename-merges" : undefined}
-        className={`font-hanken w-full rounded border bg-slate-950/80 px-2 py-0.5 text-content text-white outline-none ${
+        className={`font-hanken w-full rounded border bg-slate-950/80 px-2 py-0.5 text-content text-white ${
           merges ? "border-amber-400/70 ring-1 ring-amber-400/40" : "border-cyan-400/40"
         }`}
       />

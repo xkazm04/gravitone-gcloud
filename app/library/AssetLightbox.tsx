@@ -351,7 +351,7 @@ function NameEditor({ initial, onCommit }: { initial: string; onCommit: (name: s
           setValue(initial);
         }
       }}
-      className="font-hanken w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-content text-white/90 outline-none transition focus:border-cyan-400/40"
+      className="font-hanken w-full rounded-lg border border-white/10 bg-white/[0.03] px-3 py-2 text-content text-white/90 transition focus:border-cyan-400/40"
     />
   );
 }
