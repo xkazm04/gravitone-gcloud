@@ -14,6 +14,10 @@ export const KIND_STEP: Record<JobKind, PhaseKey> = {
   recalibrate: "script",
   "poster-generate": "frames",
   "video-export": "cut",
+  "ad-ideas": "research",
+  "ad-scenarios": "script",
+  "video-clip": "frames",
+  "ad-render": "cut",
 };
 
 export function studioHref(projectId: string, step: PhaseKey): string {

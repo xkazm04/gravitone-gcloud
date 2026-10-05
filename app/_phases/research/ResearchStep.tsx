@@ -68,6 +68,7 @@ import { useBeatPicks } from "./beats/useBeatPicks";
 import GuidedResearch, { FaceSwitch, type Face } from "./guided/GuidedResearch";
 import { ArtifactPills } from "./guided/RunStage";
 import { useEducationalResearch } from "./guided/useEducationalResearch";
+import AdsIdea from "./ads/AdsIdea";
 import MusicVideoResearch from "./MusicVideoResearch";
 
 export default function ResearchStep({ projectId }: { projectId: string }) {
@@ -109,6 +110,10 @@ export default function ResearchStep({ projectId }: { projectId: string }) {
   // nothing a music video would ever pick. See MusicVideoResearch.tsx /
   // useMusicVideoSource.ts for the record this writes and the gate it marks.
   if (discipline === "music-video") return <MusicVideoResearch projectId={projectId} />;
+  // THE ADS DISCIPLINE — a brief and two rounds of options (ideas, then
+  // scenarios), not a beat board. Routed before BeatsResearch, whose default
+  // would otherwise hand an ad the trailer fixture.
+  if (discipline === "ads") return <AdsIdea projectId={projectId} />;
   return <BeatsResearch projectId={projectId} discipline={discipline} />;
 }
 
@@ -119,7 +124,7 @@ function BeatsResearch({
   discipline,
 }: {
   projectId: string;
-  discipline: Exclude<Discipline, "educational" | "music-video">;
+  discipline: Exclude<Discipline, "educational" | "music-video" | "ads">;
 }) {
   const beats = useBeatPicks(projectId);
 

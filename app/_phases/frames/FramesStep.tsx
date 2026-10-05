@@ -23,6 +23,7 @@ import { useLoadFor } from "../_shared/useLoadFor";
 
 import AlternativesView from "./alternatives/AlternativesView";
 import FramesAssembly from "./FramesAssembly";
+import AdsFrames from "./ads/AdsFrames";
 import MusicVideoFrames from "./music-video/MusicVideoFrames";
 import ShotSheet from "./ShotSheet";
 import { useFrames } from "./useFrames";
@@ -63,6 +64,7 @@ export default function FramesStep({ projectId }: { projectId: string }) {
       </p>
     );
   if (discipline === "music-video") return <MusicVideoFrames projectId={projectId} />;
+  if (discipline === "ads") return <AdsFrames projectId={projectId} />;
   return <StandardFrames projectId={projectId} />;
 }
 

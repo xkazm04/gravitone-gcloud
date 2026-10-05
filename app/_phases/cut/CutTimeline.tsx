@@ -38,6 +38,7 @@ import { getProject, type Discipline } from "@/lib/projects";
 
 import { useLoadFor } from "../_shared/useLoadFor";
 import CutWorkbench from "./CutWorkbench";
+import AdsFinish from "./ads/AdsFinish";
 import MusicVideoExport from "./music-video/MusicVideoExport";
 
 export { nudgeOffsets, offsetFrom, type Offsets } from "./offsets";
@@ -66,5 +67,6 @@ export default function CutTimeline({ projectId }: { projectId: string }) {
       </p>
     );
   if (discipline === "music-video") return <MusicVideoExport projectId={projectId} />;
+  if (discipline === "ads") return <AdsFinish projectId={projectId} />;
   return <CutWorkbench projectId={projectId} />;
 }

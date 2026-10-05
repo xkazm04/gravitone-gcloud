@@ -138,7 +138,7 @@ export const PHASE_STATE_WORD: Record<PhaseState, string> = {
  *  contracts (see the note on the promotional formats below), and `free` is
  *  the honest third answer — a video the craft library has no template for,
  *  where the studio only keeps time. */
-export const DISCIPLINES = ["educational", "trailer", "free", "music-video"] as const;
+export const DISCIPLINES = ["educational", "trailer", "free", "music-video", "ads"] as const;
 export type Discipline = (typeof DISCIPLINES)[number];
 
 export const DISCIPLINE_LABEL: Record<Discipline, string> = {
@@ -146,6 +146,7 @@ export const DISCIPLINE_LABEL: Record<Discipline, string> = {
   trailer: "Movie · game trailer",
   free: "Any video",
   "music-video": "Music video",
+  ads: "Ad",
 };
 
 /** The one line the create dialog shows under each discipline pill. */
@@ -154,6 +155,7 @@ export const DISCIPLINE_NOTE: Record<Discipline, string> = {
   trailer: "a promotional cut that opens a debt another artifact pays",
   free: "no craft template — your own discipline; the studio only keeps time",
   "music-video": "one track, one poster brought to life — beat-driven, not hand-animated",
+  ads: "one idea that sells — picked from options, drawn as stills, then animated and finished",
 };
 
 /* ── Templates (knowledge/templates/*) ────────────────────────────────────── */
@@ -265,6 +267,28 @@ export const TEMPLATES = [
     range: [60, 240] as const,
     note: "one track, one poster animated to it — length follows the mp3",
   },
+
+  // ── The ads discipline ────────────────────────────────────────────────────
+  //
+  // TWO IDS, APPENDED LAST (positional fallback, see `templateOf`). An ad pays
+  // its own debt — unlike the promotional family above, whose product is a gap
+  // another artifact closes — so these are their own family, not trailer rungs.
+  // Both are n=0: the figures are doctrine quoted in
+  // knowledge/templates/<id>/TEMPLATE.md, never measured in this repo.
+  {
+    id: "ad-social-15",
+    label: "Social ad · 15s",
+    defaultS: 15,
+    range: [6, 20] as const,
+    note: "9:16, hook in the first second, sound-off first",
+  },
+  {
+    id: "ad-spot-30",
+    label: "Spot · 30s",
+    defaultS: 30,
+    range: [20, 45] as const,
+    note: "16:9 or 1:1 — room for a small arc and an end-card",
+  },
 ] as const;
 
 export type TemplateId = (typeof TEMPLATES)[number]["id"];
@@ -280,6 +304,8 @@ export const TEMPLATE_FAMILY: Record<TemplateId, Discipline> = {
   cinematic: "trailer",
   "free-form": "free",
   "music-video": "music-video",
+  "ad-social-15": "ads",
+  "ad-spot-30": "ads",
 };
 
 /** The templates a discipline offers, in catalogue order. Never empty — every

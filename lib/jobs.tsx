@@ -57,7 +57,16 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 // clock — and both are listed in SERIALISED below for the same reason
 // "recalibrate" is: a second poster/export run for the same project would be a
 // second real spend racing the first one's result.
-export type JobKind = "research" | "followup" | "recalibrate" | "poster-generate" | "video-export";
+export type JobKind =
+  | "research"
+  | "followup"
+  | "recalibrate"
+  | "poster-generate"
+  | "video-export"
+  | "ad-ideas"
+  | "ad-scenarios"
+  | "video-clip"
+  | "ad-render";
 export type JobStatus = "running" | "done" | "failed" | "interrupted";
 
 export interface Job {
@@ -170,6 +179,10 @@ const JOB_NOUN: Record<JobKind, string> = {
   recalibrate: "Recalibration",
   "poster-generate": "Poster generation",
   "video-export": "Export",
+  "ad-ideas": "Ad ideas",
+  "ad-scenarios": "Ad scenarios",
+  "video-clip": "Clip",
+  "ad-render": "Ad render",
 };
 
 /** The name a job goes by everywhere the bell shows it — running, interrupted

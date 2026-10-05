@@ -57,6 +57,7 @@ import VersionBar from "./_matrix/VersionBar";
 import StickyNotebook from "./_notes/StickyNotebook";
 import { mmss, RENDERS, RENDER_BY_ID } from "./renders";
 import BaselineOnlyNote from "./_parts/BaselineOnlyNote";
+import AdsScenario from "./ads/AdsScenario";
 import TrailerScript from "./trailer/TrailerScript";
 import { useVersions } from "./useVersions";
 
@@ -123,6 +124,7 @@ type Route =
   | { id: string; kind: "explainer"; asked: Asked }
   | { id: string; kind: "trailer"; discipline: Discipline; title: string; asked: Asked }
   | { id: string; kind: "music-video" }
+  | { id: string; kind: "ads" }
   | { id: string; kind: "missing" };
 
 export default function ScriptStep({ projectId }: { projectId: string }) {
@@ -144,7 +146,9 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
       setRoute(
         discipline === "music-video"
           ? { id: projectId, kind: "music-video" }
-          : trailer
+          : discipline === "ads"
+            ? { id: projectId, kind: "ads" }
+            : trailer
             ? { id: projectId, kind: "trailer", discipline, title: p.title, asked }
             : { id: projectId, kind: "explainer", asked },
       );
@@ -169,6 +173,7 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
       />
     );
   if (current.kind === "music-video") return <MusicVideoScript projectId={projectId} />;
+  if (current.kind === "ads") return <AdsScenario projectId={projectId} />;
   return <ExplainerScript projectId={projectId} asked={current.asked} />;
 }
 

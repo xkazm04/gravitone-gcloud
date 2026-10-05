@@ -76,6 +76,7 @@ import { capabilities } from "@/lib/capabilities";
 import { readStep, type StorageTrouble } from "../_shared/stepStore";
 import { useLoadFor } from "../_shared/useLoadFor";
 import Notice from "../_shared/ui/Notice";
+import AdsScore from "./ads/AdsScore";
 import { usePhaseReport } from "../_shared/usePhaseReport";
 import type { Frame } from "../frames/frames";
 import type { FramesStepData } from "../frames/useFrames";
@@ -384,6 +385,7 @@ export default function ScoreSpotting({ projectId }: { projectId: string }) {
 
   if (!hydrated) return <EmptyLanes busy />;
   if (discipline === "music-video") return <MusicVideoScore projectId={projectId} />;
+  if (discipline === "ads") return <AdsScore projectId={projectId} />;
   return <StandardScore projectId={projectId} />;
 }
 

@@ -18,7 +18,7 @@ import { test, expect } from "@playwright/test";
 
 import { stripComments } from "./_helpers";
 
-import { PHASES, emptyProgress, type PhaseKey, type PhaseState, type Project, type TemplateId } from "@/lib/projects";
+import { DISCIPLINES, PHASES, emptyProgress, type PhaseKey, type PhaseState, type Project, type TemplateId } from "@/lib/projects";
 import {
   ANY,
   DEFAULTS,
@@ -176,7 +176,7 @@ test("every dropdown counts its own facet: the other filters apply, its own does
   const query = q({ disciplines: ["trailer"], states: ["blocked"] });
   const f = facetCounts(SHELF, query);
   // Type's counts ignore Type but honour State: one blocked project, a trailer.
-  expect(f.disciplines).toEqual({ educational: 0, trailer: 1, free: 0, "music-video": 0 });
+  expect(f.disciplines).toEqual({ educational: 0, trailer: 1, free: 0, "music-video": 0, ads: 0 });
   expect(f.templates.teaser).toBe(1);
   // Step's counts honour both: only "b" survives, and its Script is blocked.
   expect(f.steps.script.blocked).toBe(1);
@@ -241,7 +241,7 @@ test("the Type menu: Discipline then Template, each in name order, counts as met
     const labels = g.options.map((o) => o.label);
     expect(labels, g.label).toEqual([...labels].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })));
   }
-  expect(groups[1].options).toHaveLength(4);
+  expect(groups[1].options).toHaveLength(DISCIPLINES.length);
   expect(groups[2].options.find((o) => o.value === "t:teaser")?.meta).toBe(1);
   expect(groups[1].options.find((o) => o.value === "d:educational")?.meta).toBe(3);
 });

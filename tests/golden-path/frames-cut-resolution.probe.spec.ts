@@ -72,6 +72,10 @@ test("the lane comes from the project record, and every discipline has an answer
     // to keep this total table — and therefore `npm run typecheck` — honest
     // about a fourth discipline existing.
     "music-video": { facts: "explainer", beats: "explainer" },
+    // Ads route Frames to their own surface (app/_phases/frames/ads/) before
+    // this lane is read; like music-video, the value is recorded only to keep
+    // the table total.
+    ads: { facts: "explainer", beats: "explainer" },
   };
   for (const d of DISCIPLINES) {
     expect(framesLane(d, "facts"), `${d} + facts`).toBe(expected[d].facts);

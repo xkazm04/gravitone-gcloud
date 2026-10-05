@@ -273,6 +273,39 @@ export const FORMAT_BRIEFS: Record<TemplateId, FormatBrief> = {
         "own verification) — state that honestly rather than implying a sharper source exists.",
     ],
   },
+
+  // ── THE ADS DISCIPLINE ────────────────────────────────────────────────────
+  //
+  // n=0 for both: the direction is doctrine from the registry's ad subjects,
+  // quoted in each template's TEMPLATE.md. Supers and the end-card are DRAWN at
+  // Finish, so a generated plate must never carry lettering.
+  "ad-social-15": {
+    name: "a vertical social ad",
+    what:
+      "One idea that sells one thing, 9:16, read sound-off in a feed, about fifteen seconds. " +
+      "(n=0 · knowledge/templates/ad-social-15/TEMPLATE.md)",
+    direction: [
+      "**The first shot is the hook.** A feed gives the first second or two before the thumb moves; an " +
+        "establishing shot spends it on nothing (ASSUMED · doctrine, n=0).",
+      "**Compose for 9:16 natively.** The subject sits in the vertical centre band, clear of the top and " +
+        "bottom interface bands; a landscape composition cropped later loses the product (ASSUMED · n=0).",
+      "**No lettering in any plate.** Supers and the CTA are drawn at Finish; text in a generated still " +
+        "cannot be edited or re-timed.",
+    ],
+  },
+  "ad-spot-30": {
+    name: "a thirty-second spot",
+    what:
+      "One idea with room for a small arc — setup, turn, payoff, end-card — 16:9 or 1:1, about thirty " +
+      "seconds. (n=0 · knowledge/templates/ad-spot-30/TEMPLATE.md)",
+    direction: [
+      "**One message, carried by every shot.** A shot that serves a second claim splits the spot into two " +
+        "weaker ads (ASSUMED · doctrine, n=0).",
+      "**The product is on screen before the end-card.** A spot whose brand arrives only on the last card " +
+        "asks the viewer to remember an ad they could not attribute (ASSUMED · n=0).",
+      "**No lettering in any plate.** Supers and the CTA are drawn at Finish.",
+    ],
+  },
 };
 
 /** The table as a plain lookup, so an id off the wire can be tested against it
