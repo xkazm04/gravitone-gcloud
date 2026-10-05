@@ -22,7 +22,8 @@ import { join, resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { KIT_GROUPS, TOKEN_ROLES } from "@/app/kit/catalog";
+import { KIT_GROUPS, RULES, TOKEN_ROLES } from "@/app/kit/catalog";
+import { contrast, resolve as resolveToken } from "@/app/kit/contrast";
 import { MODULES } from "@/app/kit/migrationMap";
 import { WORLD_ALMANAC } from "@/components/ui/tokens";
 
@@ -81,6 +82,26 @@ test.describe("kit catalog", () => {
     expect(bare, `WORLD_ALMANAC keys with no role in app/kit/catalog.ts: ${bare.join(", ")}`).toEqual([]);
     const gone = Object.keys(TOKEN_ROLES).filter((k) => !(k in WORLD_ALMANAC));
     expect(gone).toEqual([]);
+  });
+
+  test("law rule 12: white and vellum hold the floor the rule states, on every ground", () => {
+    const rule = RULES.find((r) => /muting level/i.test(r.rule));
+    expect(rule, "the muting-level rule exists").toBeTruthy();
+    const floor = Number(/(\d+(?:\.\d+)?):1/.exec(rule!.rule)?.[1]);
+    expect(floor, "the rule states a ratio").toBeGreaterThan(0);
+    const flat = (k: string) => resolveToken(WORLD_ALMANAC[k], WORLD_ALMANAC)!;
+    const below: string[] = [];
+    for (const t of ["--al-white", "--al-vellum"])
+      for (const g of ["--al-night", "--al-deep", "--al-field"]) {
+        const r = contrast(flat(t), flat(g))!;
+        if (r < floor) below.push(`${t} on ${g} = ${r.toFixed(2)} < ${floor}`);
+      }
+    expect(below, "tokens measured against the floor the Law tab states").toEqual([]);
+  });
+
+  test("the Palette table flags against that same floor, not a private threshold", () => {
+    const src = stripComments(read("app/kit/Identity.tsx"));
+    expect(src, "ratioCell flags a muting token below MUTING_FLOOR").toMatch(/MUTING_TOKENS\.includes\(a\)\s*&&\s*r\s*<\s*MUTING_FLOOR/);
   });
 
   test("the migration map names only parts and modules that exist", () => {
