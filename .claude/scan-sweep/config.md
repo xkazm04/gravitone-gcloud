@@ -191,3 +191,20 @@ before matching, the population walked off the filesystem rather than listed, an
   pre-existing red on main surfaced and is NOT the wave's: `tests/live` "a background run
   dispatched and forgotten actually lands" times out at 2.1m on main without any worker
   branch, at sibling commit 024cba6. It is a finding for the next round, not a merge blocker.
+- **2026-10-05 — all-contexts UI wave (11 scouts, 17 builder units, 5 waves): four things the
+  director must do that the method does not say.** (1) **A whole wave can stall on a toolchain
+  hole nobody owns.** `node_modules/typescript` and `node_modules/playwright` were emptied at
+  18:05 (empty dirs, `node_modules/.package-lock.json` still recording 6.0.3 / 1.62.1 — the same
+  junction-delete shape the 2026-09-06 entry warns about, from a sibling session), every builder's
+  `tsc` died with MODULE_NOT_FOUND and all four sat 10 min until the watchdog killed them. Repair
+  that touches nothing tracked: `npm pack <pkg>@<installed version>` into scratch and
+  `tar -xzf … --strip-components=1` into the empty dir; then RESUME each builder (its WIP survives).
+  The builder brief now says "never npm install; stop and report a missing module". (2) **`$$`
+  is not unique across Bash calls** — four builders wrote one `$TEMP/test-1.log` and one read
+  another's verdict. Name gate logs per context. (3) **Builders amend.** One used `--amend` in
+  the shared checkout; the reflog showed it amended its own commit, but forbid it in the brief.
+  (4) **A stale context map routes good A items to B.** Four scouts sent probe-able S items to
+  Lane B only because the file was unmapped (RaceSheet.tsx, plant.tsx, lib/useProjects.ts); the
+  director promoted 7 such items, all 7 built green. Read every OUTSIDE path against the context's
+  DIRECTORY before accepting a B. Also: the outbox stood at 246/200 lines before the run, so this
+  run emitted nothing to it — the register row is the only record of the 9 Lane B cards.
