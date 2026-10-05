@@ -17,10 +17,10 @@ import { energyPoints } from "./cut";
 import type { TrailerCut } from "./types";
 
 const W = 640;
-const H = 140;
+const H = 110;
 const PAD_X = 16;
 const PAD_TOP = 12;
-const PAD_BOTTOM = 34;
+const PAD_BOTTOM = 10;
 
 export default function EnergyCurve({ cut }: { cut: TrailerCut }) {
   const points = useMemo(() => energyPoints(cut), [cut]);
@@ -28,7 +28,9 @@ export default function EnergyCurve({ cut }: { cut: TrailerCut }) {
 
   const px = (x: number) => PAD_X + x * (W - PAD_X * 2);
   const py = (y: number) => PAD_TOP + (1 - y) * (H - PAD_TOP - PAD_BOTTOM);
-  const line = points.map((p) => `${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`).join(" ");
+  const line = points
+    .map((p) => `${px(p.x).toFixed(1)},${py(p.y).toFixed(1)}`)
+    .join(" ");
 
   // One label per movement, at the mean x of its beats. A label with a " · "
   // keeps only its tail ("escalation · rung 2" → "rung 2"): three full labels
@@ -44,57 +46,73 @@ export default function EnergyCurve({ cut }: { cut: TrailerCut }) {
     .filter((l): l is { id: string; x: number; label: string } => l !== null);
 
   return (
-    <figure data-testid="energy-curve" className="gt-rise rounded-2xl border border-white/8 bg-white/[0.02] p-4">
+    <figure
+      data-testid="energy-curve"
+      className="gt-rise rounded-2xl border border-white/8 bg-white/[0.02] p-4"
+    >
       <figcaption className="font-jetbrains flex items-baseline justify-between text-label tracking-[0.14em] uppercase">
         <span className="text-white/35">energy curve</span>
         <Hint>a shape read from the parts, not a measurement</Hint>
       </figcaption>
       <div className="mt-2 overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          role="img"
-          aria-label={`energy shape across ${points.length} beats: ${points.map((p) => p.y.toFixed(2)).join(", ")}`}
-          className="block h-auto w-full min-w-[420px] text-cyan-200"
-        >
-          <line x1={PAD_X} x2={W - PAD_X} y1={py(0)} y2={py(0)} stroke="currentColor" strokeOpacity={0.15} />
-          {points.length > 1 && (
-            // DASHED, because it is derived and not measured — the universal
-            // mark for it, and the reason the caption saying so could go.
-            <polyline
-              points={line}
-              fill="none"
+        <div className="min-w-[640px]">
+          <svg
+            viewBox={`0 0 ${W} ${H}`}
+            role="img"
+            aria-label={`energy shape across ${points.length} beats: ${points.map((p) => p.y.toFixed(2)).join(", ")}`}
+            className="block h-auto w-full text-cyan-200"
+          >
+            <line
+              x1={PAD_X}
+              x2={W - PAD_X}
+              y1={py(0)}
+              y2={py(0)}
               stroke="currentColor"
-              strokeWidth={1.5}
-              strokeDasharray="5 4"
-              strokeLinejoin="round"
-              strokeLinecap="round"
+              strokeOpacity={0.15}
             />
-          )}
-          {points.map((p) => (
-            <circle
-              key={p.beatId}
-              cx={px(p.x)}
-              cy={py(p.y)}
-              r={3}
-              fill="currentColor"
-              fillOpacity={cut.beats.find((b) => b.id === p.beatId)?.kind === "reset" ? 1 : 0.7}
-            />
-          ))}
-          {labels.map((l) => (
-            <text
-              key={l.id}
-              x={px(l.x)}
-              y={H - 10}
-              textAnchor="middle"
-              fill="currentColor"
-              fillOpacity={0.45}
-              className="font-jetbrains"
-              fontSize={9}
-            >
-              {l.label}
-            </text>
-          ))}
-        </svg>
+            {points.length > 1 && (
+              // DASHED, because it is derived and not measured — the universal
+              // mark for it, and the reason the caption saying so could go.
+              <polyline
+                points={line}
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={1.5}
+                strokeDasharray="5 4"
+                strokeLinejoin="round"
+                strokeLinecap="round"
+              />
+            )}
+            {points.map((p) => (
+              <circle
+                key={p.beatId}
+                cx={px(p.x)}
+                cy={py(p.y)}
+                r={3}
+                fill="currentColor"
+                fillOpacity={
+                  cut.beats.find((b) => b.id === p.beatId)?.kind === "reset"
+                    ? 1
+                    : 0.7
+                }
+              />
+            ))}
+          </svg>
+          {/* The movement names are the only names on the curve, so they are
+            HTML on the real type scale — as SVG text at fontSize 9 they
+            rendered at 5.9px at this width. Positioned by the same x. */}
+          <div className="relative mt-1 h-6" aria-hidden>
+            {labels.map((l) => (
+              <span
+                key={l.id}
+                style={{ left: `${(px(l.x) / W) * 100}%` }}
+                className="font-jetbrains absolute -translate-x-1/2 text-label whitespace-nowrap text-white/45"
+              >
+                {l.label}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
     </figure>
   );
