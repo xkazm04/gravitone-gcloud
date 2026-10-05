@@ -26,6 +26,7 @@ import {
   type StorageFailure,
 } from "@/app/_phases/_shared/stepStore";
 import { elapsed, useJobs } from "@/lib/jobs";
+import { trayModel } from "@/lib/jobLinks";
 import { politenessFor, useAnnounce } from "@/lib/announcer";
 import { Ghost } from "@/components/ui/signal";
 import { useWorld } from "@/components/ui/world";
@@ -93,7 +94,7 @@ export function troubleAnnouncement(kind: StorageFailure, phase: string, message
  *  so the /kit specimen can show the tray without a click. */
 export default function NotificationBell({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
   const al = useWorld() === "almanac";
-  const { unread, jobs, markRead, markAllRead } = useJobs();
+  const { unread, jobs, markRead, markAllRead, clear } = useJobs();
   const trouble = useStorageTrouble();
   const announce = useAnnounce();
   const [open, setOpen] = useState(defaultOpen);
@@ -103,11 +104,8 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
   const panelRef = useRef<HTMLDivElement>(null);
   const seeded = useRef(defaultOpen);
 
-  const running = jobs.filter((j) => j.status === "running");
-  // Work that was live when the page reloaded. Not running, not finished, and
-  // NOT something to hide: the user asked for research and is owed the truth
-  // that it did not complete.
-  const interrupted = jobs.filter((j) => j.status === "interrupted");
+  const { badge, pulse, emptyTone, runningCards, interruptedCards, eventCards } =
+    trayModel({ jobs, unread, trouble });
 
   // ── ANNOUNCE (added 2026-08-24) ─────────────────────────────────────────
   //
@@ -185,22 +183,29 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
   }, [open]);
 
   const count = unread.length;
-  // The badge counts storage trouble as one more unread thing, because that is
-  // exactly what it is — and because a failure the user has to OPEN the bell to
-  // discover is barely better than one nobody reports. The list below still
-  // keys off `count`: trouble has its own card and is not an event.
-  const badge = count + (trouble ? 1 : 0);
 
   /** WHICH empty the tray is, drawn rather than narrated. The tone matches the
    *  card the reader is looking at directly above the ghost; the label is the
    *  spoken form and is the only place the branch is words. */
-  const empty = trouble
-    ? { tone: al ? "text-[var(--al-ant-t)]" : "text-rose-200/45", label: "Nothing unread. The failure above is the storage layer." }
-    : running.length
-      ? { tone: al ? "text-[var(--al-gold)]" : "text-cyan-200/45", label: "Nothing unread. Work is still running." }
-      : interrupted.length
-        ? { tone: al ? "text-[var(--al-gold)]" : "text-amber-200/45", label: "Nothing unread. A run above was interrupted." }
-        : { tone: al ? "text-[var(--al-vellum)]" : "text-white/25", label: "Nothing unread." };
+  const EMPTY_TONE_INFO: Record<string, { tone: string; label: string }> = {
+    trouble: {
+      tone: al ? "text-[var(--al-ant-t)]" : "text-rose-200/45",
+      label: "Nothing unread. The failure above is the storage layer.",
+    },
+    running: {
+      tone: al ? "text-[var(--al-gold)]" : "text-cyan-200/45",
+      label: "Nothing unread. Work is still running.",
+    },
+    interrupted: {
+      tone: al ? "text-[var(--al-gold)]" : "text-amber-200/45",
+      label: "Nothing unread. A run above was interrupted.",
+    },
+    idle: {
+      tone: al ? "text-[var(--al-vellum)]" : "text-white/25",
+      label: "Nothing unread.",
+    },
+  };
+  const empty = EMPTY_TONE_INFO[emptyTone] ?? EMPTY_TONE_INFO.idle;
 
   return (
     <div ref={ref} className="relative">
@@ -242,7 +247,7 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
           </span>
         )}
         {/* running work gets a quiet pulse, distinct from the unread badge */}
-        {(running.length > 0 || interrupted.length > 0) && badge === 0 && (
+        {pulse && (
           <span className={al ? "k-acct__pulse" : "absolute -top-0.5 -right-0.5 h-2 w-2 rounded-full bg-cyan-300/70"} />
         )}
       </button>
@@ -314,9 +319,9 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
             </div>
           )}
 
-          {running.length > 0 && (
+          {runningCards.length > 0 && (
             <div className={al ? "k-tray__grp" : "mb-2 space-y-1.5"}>
-              {running.map((j) => (
+              {runningCards.map((j) => (
                 <div
                   key={j.id}
                   data-testid={`bell-running-${j.kind}`}
@@ -326,7 +331,22 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                     <span className={al ? "k-caps k-tcard__k" : "font-jetbrains text-label tracking-[0.12em] text-cyan-200 uppercase"}>
                       {j.kind} running
                     </span>
-                    <span className={al ? "k-num k-tcard__m" : "font-jetbrains text-label text-white/50"}>{elapsed(j)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className={al ? "k-num k-tcard__m" : "font-jetbrains text-label text-white/50"}>{elapsed(j)}</span>
+                      {j.actions.map((act) =>
+                        act.kind === "open" ? (
+                          <a
+                            key={act.kind}
+                            href={act.href}
+                            data-testid="bell-open"
+                            onClick={() => setOpen(false)}
+                            className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-cyan-300 transition hover:text-cyan-100"}
+                          >
+                            open
+                          </a>
+                        ) : null,
+                      )}
+                    </div>
                   </div>
                   <p className={al ? "k-tcard__t k-tcard__t--one" : "mt-1 truncate text-content text-slate-300"}>{j.label}</p>
                   {/* A DRIVEN job has no progress fraction — nobody knows how far
@@ -352,17 +372,50 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
             </div>
           )}
 
-          {interrupted.length > 0 && (
+          {interruptedCards.length > 0 && (
             <div className={al ? "k-tray__grp" : "mb-2 space-y-1.5"}>
-              {interrupted.map((j) => (
+              {interruptedCards.map((j) => (
                 <div
                   key={j.id}
                   data-testid="bell-interrupted"
                   className={al ? "k-tcard k-tcard--int" : "rounded-xl border border-amber-400/30 bg-amber-400/[0.05] px-3 py-2"}
                 >
-                  <p className={al ? "k-caps k-tcard__k" : "font-jetbrains text-content tracking-[0.12em] text-amber-200 uppercase"}>
-                    {j.kind} interrupted
-                  </p>
+                  <div className={al ? "k-tcard__h" : "flex items-start justify-between gap-2"}>
+                    <p className={al ? "k-caps k-tcard__k" : "font-jetbrains text-content tracking-[0.12em] text-amber-200 uppercase"}>
+                      {j.kind} interrupted
+                    </p>
+                    <div className="flex items-center gap-2">
+                      {j.actions.map((act) => {
+                        if (act.kind === "open") {
+                          return (
+                            <a
+                              key={act.kind}
+                              href={act.href}
+                              data-testid="bell-open"
+                              onClick={() => setOpen(false)}
+                              className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-amber-300 transition hover:text-amber-100"}
+                            >
+                              open
+                            </a>
+                          );
+                        }
+                        if (act.kind === "clear") {
+                          return (
+                            <button
+                              key={act.kind}
+                              type="button"
+                              data-testid="bell-interrupted-clear"
+                              onClick={() => clear(act.jobId)}
+                              className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
+                            >
+                              clear
+                            </button>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
+                  </div>
                   <p className={al ? "k-tcard__t k-tcard__t--one" : "mt-1 truncate text-content text-slate-300"}>{j.label}</p>
                   <p className={al ? "k-tcard__m" : "font-jetbrains mt-1 text-content leading-snug text-white/45"}>
                     The page reloaded while it was running — start it again.
@@ -393,7 +446,7 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
             </div>
           ) : (
             <ul className={al ? "k-tray__list" : "max-h-[19rem] space-y-1.5 overflow-y-auto scroll-y"}>
-              {unread.map((e) => (
+              {eventCards.map((e) => (
                 <li
                   key={e.id}
                   data-testid={`bell-event-${e.ok ? "ok" : "fail"}`}
@@ -419,13 +472,39 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                     >
                       {e.title}
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => markRead(e.id)}
-                      className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
-                    >
-                      dismiss
-                    </button>
+                    <div className="flex items-center gap-2">
+                      {e.actions.map((act) => {
+                        if (act.kind === "open") {
+                          return (
+                            <a
+                              key={act.kind}
+                              href={act.href}
+                              data-testid="bell-open"
+                              onClick={() => {
+                                if (act.marksRead) markRead(act.marksRead);
+                                setOpen(false);
+                              }}
+                              className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-cyan-300 transition hover:text-cyan-100"}
+                            >
+                              open
+                            </a>
+                          );
+                        }
+                        if (act.kind === "dismiss") {
+                          return (
+                            <button
+                              key={act.kind}
+                              type="button"
+                              onClick={() => markRead(act.eventId)}
+                              className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
+                            >
+                              dismiss
+                            </button>
+                          );
+                        }
+                        return null;
+                      })}
+                    </div>
                   </div>
                   <p className={al ? "k-tcard__t" : "mt-1 text-content leading-snug text-slate-300"}>{e.detail}</p>
                   {/* What the user asked for, in their own words. Two dead
