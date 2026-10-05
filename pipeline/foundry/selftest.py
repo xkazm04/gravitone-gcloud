@@ -452,6 +452,255 @@ def test_dojo_study_beat_binning_153_frames_discrepancy():
     check("0 frames mis-binned by runtime", runtime_misbinned, 0)
 
 
+def test_lane_record_replay_argv_and_consistency_kwargs():
+    LR = load_vlm("lane_record")
+    C = load_vlm("consistency")
+
+    rec = LR.read("pipeline/vlm-probe/shots/reference-face-e25")
+    argv = LR.replay_argv(rec)
+    want = ["consistency.py", "--lane", "reference", "--ref-crop", "face", "--late", "0.25", "--tag=-face-e25", "--steps", "20", "--seed", "770425"]
+    check("replay_argv for reference-face-e25", argv, want)
+
+    ap = C.argparse.ArgumentParser()
+    ap.add_argument("--lane", required=True, choices=["baseline", "reference"])
+    ap.add_argument("--refs", type=int, default=1)
+    ap.add_argument("--steps", type=int, default=20)
+    ap.add_argument("--seed", type=int, default=770425)
+    ap.add_argument("--zoom", action="store_true")
+    ap.add_argument("--ref-crop", choices=["full", "face"], default="full")
+    ap.add_argument("--late", type=float, default=0.0)
+    ap.add_argument("--tag", default="")
+
+    args = ap.parse_args(argv[1:])
+    check("parsed lane equals recorded", args.lane, rec["lane"])
+    check("parsed ref_crop equals recorded", args.ref_crop, rec["ref_crop"])
+    check("parsed late equals recorded", args.late, rec["reference_joins_at"])
+    check("parsed tag equals recorded", args.tag, rec["tag"])
+    check("parsed steps equals recorded", args.steps, rec["steps"])
+    check("parsed seed equals recorded", args.seed, rec["seed"])
+
+
+def test_lane_record_replay_argv_baseline_zoom():
+    LR = load_vlm("lane_record")
+    rec = LR.read("pipeline/vlm-probe/shots/baseline-zoom")
+    argv = LR.replay_argv(rec)
+    check("baseline-zoom replay_argv has --zoom", "--zoom" in argv, True)
+    check("baseline-zoom replay_argv lane is baseline", "--lane" in argv and argv[argv.index("--lane") + 1] == "baseline", True)
+    check("baseline-zoom replay_argv has no --tag", any(a.startswith("--tag") for a in argv), False)
+
+
+def test_lane_record_reads_all_8_tracked_lanes():
+    LR = load_vlm("lane_record")
+    paths = [
+        "pipeline/vlm-probe/shots/baseline",
+        "pipeline/vlm-probe/shots/baseline-zoom",
+        "pipeline/vlm-probe/shots/reference",
+        "pipeline/vlm-probe/shots/reference-face-e25",
+        "pipeline/vlm-probe/shots/reference-face-late",
+        "pipeline/vlm-probe/shots/reference-face-only",
+        "pipeline/vlm-probe/clips/chain",
+        "pipeline/vlm-probe/clips/ref2va",
+    ]
+    for p in paths:
+        rec = LR.read(p)
+        check(f"read({p}) is not None", rec is not None, True)
+        argv = LR.replay_argv(rec)
+        check(f"replay_argv({p}) is non-empty", isinstance(argv, list) and len(argv) > 0, True)
+
+
+def test_consistency_run_lane_refuses_drifted_resume():
+    C = load_vlm("consistency")
+    G = load_vlm("guard")
+
+    tmp = Path(tempfile.mkdtemp())
+    shots_dir = tmp / "shots" / "baseline"
+    shots_dir.mkdir(parents=True)
+    (shots_dir / "01-wide.png").write_bytes(b"dummy image")
+    lane_file = shots_dir / "lane.json"
+    initial_lane_json = {
+        "schema": "lane-record/2",
+        "lane": "baseline",
+        "steps": 20,
+        "seed": 770425,
+        "zoom": False,
+        "tag": "",
+        "shots": {"01-wide": "wide prompt"}
+    }
+    lane_file.write_text(json.dumps(initial_lane_json, indent=2), encoding="utf-8")
+    initial_bytes = lane_file.read_bytes()
+
+    old_shots = C.SHOTS
+    old_start = C.guard.start_comfy
+    old_headroom = C.guard.headroom_ok
+    old_gen = C.generate
+    C.SHOTS = tmp / "shots"
+    C.guard.start_comfy = lambda: True
+    C.guard.headroom_ok = lambda: True
+    generate_called = False
+    def fake_gen(*a, **k):
+        nonlocal generate_called
+        generate_called = True
+        return tmp / "out.png"
+    C.generate = fake_gen
+
+    refused = False
+    msg = ""
+    try:
+        C.run_lane("baseline", steps=30)
+    except SystemExit as e:
+        refused = True
+        msg = str(e)
+    finally:
+        C.SHOTS = old_shots
+        C.guard.start_comfy = old_start
+        C.guard.headroom_ok = old_headroom
+        C.generate = old_gen
+
+    check("run_lane raised SystemExit on steps 20 -> 30", refused, True)
+    check("SystemExit message names steps 20 -> 30", "steps 20 -> 30" in msg or "steps: 20 -> 30" in msg, True)
+    check("generate was never called", generate_called, False)
+    check("lane.json byte-identical after refusal", lane_file.read_bytes() == initial_bytes, True)
+
+
+def test_consistency_run_lane_writes_shot_record_per_shot():
+    C = load_vlm("consistency")
+    LR = load_vlm("lane_record")
+
+    tmp = Path(tempfile.mkdtemp())
+    old_shots = C.SHOTS
+    old_start = C.guard.start_comfy
+    old_headroom = C.guard.headroom_ok
+    old_gen = C.generate
+    C.SHOTS = tmp / "shots"
+    C.guard.start_comfy = lambda: True
+    C.guard.headroom_ok = lambda: True
+
+    call_count = 0
+    def fake_gen(*a, **k):
+        nonlocal call_count
+        call_count += 1
+        if call_count == 1:
+            f = tmp / "shot1.png"
+            f.write_bytes(b"pixel data shot 1")
+            return f
+        raise RuntimeError("generation failed on shot 2")
+    C.generate = fake_gen
+
+    failed = False
+    try:
+        C.run_lane("baseline", steps=20)
+    except RuntimeError as e:
+        failed = True
+    finally:
+        C.SHOTS = old_shots
+        C.guard.start_comfy = old_start
+        C.guard.headroom_ok = old_headroom
+        C.generate = old_gen
+
+    check("crashed on shot 2", failed, True)
+    lane_file = tmp / "shots" / "baseline" / "lane.json"
+    check("lane.json exists after shot 1", lane_file.exists(), True)
+    rec = LR.read(lane_file)
+    shots = rec.get("shots", {})
+    check("01-wide in shots after shot 1", "01-wide" in shots, True)
+    shot1 = shots.get("01-wide", {})
+    check("shot 1 has sha256", "sha256" in shot1, True)
+    check("shot 1 has params", "params" in shot1, True)
+    check("shots has exactly 1 entry", len(shots), 1)
+
+
+def test_lane_record_record_stills_and_replay_roundtrip():
+    LR = load_vlm("lane_record")
+    C = load_vlm("consistency")
+
+    tmp = Path(tempfile.mkdtemp()) / "lane.json"
+    rec = LR.record_stills(
+        out_dir=tmp.parent,
+        lane="reference",
+        tag="-face-e25",
+        zoom=False,
+        steps=20,
+        seed=770425,
+        ref_crop="face",
+        late=0.25,
+        refs=["ref1.png"]
+    )
+    check("stills tag preserved", rec["tag"], "-face-e25")
+    check("stills zoom False", rec["zoom"], False)
+    check("stills width 1280", rec["width"], 1280)
+    check("stills height 720", rec["height"], 720)
+    check("stills guidance 4.0", rec["guidance"], 4.0)
+    check("stills sampler euler", rec["sampler"], "euler")
+    models_str = str(rec["models"])
+    check("model unet recorded", "flux2_dev_fp8mixed.safetensors" in models_str, True)
+    check("model clip recorded", "mistral_3_small_flux2_fp8.safetensors" in models_str, True)
+    check("model vae recorded", "flux2-vae.safetensors" in models_str, True)
+
+    argv = LR.replay_argv(rec)
+    ap = C.argparse.ArgumentParser()
+    ap.add_argument("--lane", required=True, choices=["baseline", "reference"])
+    ap.add_argument("--refs", type=int, default=1)
+    ap.add_argument("--steps", type=int, default=20)
+    ap.add_argument("--seed", type=int, default=770425)
+    ap.add_argument("--zoom", action="store_true")
+    ap.add_argument("--ref-crop", choices=["full", "face"], default="full")
+    ap.add_argument("--late", type=float, default=0.0)
+    ap.add_argument("--tag", default="")
+
+    args = ap.parse_args(argv[1:])
+    check("roundtrip lane matches", args.lane, rec["lane"])
+    check("roundtrip ref_crop matches", args.ref_crop, rec["ref_crop"])
+    check("roundtrip late matches", args.late, rec["reference_joins_at"])
+    check("roundtrip tag matches", args.tag, rec["tag"])
+    check("roundtrip steps matches", args.steps, rec["steps"])
+    check("roundtrip seed matches", args.seed, rec["seed"])
+
+
+def test_lane_record_record_clip_hero_repo_relative():
+    LR = load_vlm("lane_record")
+    ROOT = LR.ROOT
+    hero_path = ROOT / "pipeline" / "vlm-probe" / "shots" / "reference" / "00-hero.png"
+
+    rec = LR.record_clip(
+        out_dir=Path(tempfile.mkdtemp()),
+        lane="chain",
+        seed=770425,
+        steps=4,
+        lora=True,
+        width=832,
+        height=480,
+        length=73,
+        fps=24,
+        hero=hero_path
+    )
+    check("motion record hero is repo-relative", rec["hero"], "pipeline/vlm-probe/shots/reference/00-hero.png")
+
+    chain_rec = LR.read("pipeline/vlm-probe/clips/chain")
+    resolved_hero = Path(chain_rec["hero"])
+    expected_hero = (ROOT / "pipeline" / "vlm-probe" / "shots" / "reference" / "00-hero.png").resolve()
+    check("legacy clips/chain hero resolves to checkout root", resolved_hero, expected_hero)
+
+
+def test_lane_record_check_detects_tampering():
+    LR = load_vlm("lane_record")
+    tmp = Path(tempfile.mkdtemp())
+    img1 = tmp / "01-wide.png"
+    img1.write_bytes(b"wide pixels")
+    img2 = tmp / "02-medium.png"
+    img2.write_bytes(b"medium pixels")
+
+    LR.record_stills(out_dir=tmp, lane="baseline", steps=20, seed=770425)
+    LR.write_shot(tmp, "01-wide", img1, "wide prompt")
+    LR.write_shot(tmp, "02-medium", img2, "medium prompt")
+
+    findings = LR.check(tmp)
+    check("initial check is clean", findings, [])
+
+    img2.write_bytes(b"tampered medium pixels")
+    findings = LR.check(tmp)
+    check("tampered image detected", findings, [("02-medium", "pixels changed since record")])
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -466,6 +715,14 @@ TESTS = [
     test_frame_manifest_upgrade_preserves_backup,
     test_dojo_study_beat_map_runtime_and_none_handling,
     test_dojo_study_beat_binning_153_frames_discrepancy,
+    test_lane_record_replay_argv_and_consistency_kwargs,
+    test_lane_record_replay_argv_baseline_zoom,
+    test_lane_record_reads_all_8_tracked_lanes,
+    test_consistency_run_lane_refuses_drifted_resume,
+    test_consistency_run_lane_writes_shot_record_per_shot,
+    test_lane_record_record_stills_and_replay_roundtrip,
+    test_lane_record_record_clip_hero_repo_relative,
+    test_lane_record_check_detects_tampering,
 ]
 
 
