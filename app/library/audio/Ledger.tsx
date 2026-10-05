@@ -1,350 +1,564 @@
 "use client";
 
-// THE LEDGER — the Audio Workbench's center table, ported from the contest
-// winner's `app.js` (`.contest/arena/library-audio-workbench/entries/
-// claude-claude-opus-5-5_high/variant-3/`, COLS at :94-107 and the grouping
-// logic at :69-73). Wraps `kit/Table` rather than hand-rolling a second one —
-// the kit governs that (components/kit/README.md).
+// THE LEDGER — the middle column. Every take as a row: play, title and length,
+// type, verdict, the three rubric scores, the mean, tags, vendor, source, age.
+// Grouped (by recipe, genre family or effect category) with each group's own
+// verdict bar and mean, sortable on any head, and worked from the keyboard —
+// the keys live on ./AudioWorkbench.tsx, which owns selection.
 //
-// Caveat 2 (`.vault/Spark/ideas/library-audio-workbench-port.md`): Variations +
-// Composer + Drafts move OFF the right panel and INTO a per-row expansion here.
-// `renderExpansion` is therefore a passthrough prop, not a local default — WP3
-// swaps it for the real `TakeExpansion` at the `<Ledger>` call site in
-// `AudioWorkbench.tsx` without touching this file.
+// A rejection needs a reason, and asks for it in a row that opens under the
+// take (app.js#rowHTML): the reasons already in use are one press away,
+// counted, so the vocabulary of failure converges instead of fragmenting.
+//
+// Not kit/Table: that part has no group rows, no per-cell keyboard focus and
+// no width-dropped columns, and the entry's design is all three. Reported as
+// a kit request rather than forked into components/kit from here.
 
-import { useMemo, useState } from "react";
+import { Fragment } from "react";
 
-import { Pager, Segmented, StatusPill, Table, useWindow } from "@/components/kit";
-import type { StatusKind, TableColumn, TableSort } from "@/components/kit";
-import { Tally } from "@/components/ui/signal";
-import type { Asset, AudioMeta } from "@/lib/assets";
+import { Keycaps } from "@/components/ui/signal";
 
-/** An `Asset` already narrowed to `kind: "audio"` — AudioWorkbench's filter,
- *  named so a reader does not have to re-derive what the narrowing means. */
-export type AudioAsset = Asset & { kind: "audio" };
+import RejectBox from "./RejectBox";
+import PlayButton from "./PlayButton";
+import {
+  VORDER,
+  counts,
+  dur,
+  ago,
+  roundOf,
+  score,
+  tagsOf,
+  verdict,
+  OPENED_AT,
+  type RatingKey,
+  type Take,
+} from "./book";
+import { refById } from "./audioRefs";
+import type { Engine } from "./engine";
 
-/**
- * Read `meta` as the ledger shape WP1 defined (`AudioMeta`, lib/assets.ts).
- * `meta` itself stays `Record<string, unknown>` — the contest-winning
- * variant's own accepted cost — so this is the cast/guard at the read site
- * WP1's risk note asks every reader to use. Absent fields fall back to the
- * least-committal reading (unjudged, zero duration), never a guess dressed as
- * data.
- */
-export function audioMetaOf(asset: Asset): AudioMeta {
-  const m = (asset.meta ?? {}) as Partial<AudioMeta>;
-  return { ...m, verdict: m.verdict ?? "unjudged", duration_s: m.duration_s ?? 0 };
+export type ColId =
+  | "play"
+  | "title"
+  | "type"
+  | "verdict"
+  | "melody"
+  | "instrument_choice"
+  | "instrument_quality"
+  | "score"
+  | "tags"
+  | "vendor"
+  | "src"
+  | "age";
+
+export interface Col {
+  id: ColId;
+  label: string;
+  cls: string;
+  plain?: boolean;
+  num?: boolean;
+  get?: (t: Take) => string | number | null;
 }
 
-/**
- * `AudioMeta.verdict` has four states; `StatusKind` (components/kit/
- * StatusGlyph.tsx) has three that fit a verdict at all — "proven" compresses
- * onto "keep" rather than inventing a fourth glyph kind for a distinction the
- * rest of this package does not otherwise draw.
- */
-const VERDICT_KIND: Record<AudioMeta["verdict"], StatusKind> = {
-  unjudged: "undecided",
-  kept: "keep",
-  proven: "keep",
-  rejected: "reject",
-};
-
-function scoreOf(meta: AudioMeta): number | null {
-  const vals = [meta.ratings?.melody, meta.ratings?.instrument_choice, meta.ratings?.instrument_quality].filter(
-    (v): v is number => typeof v === "number",
-  );
-  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
-}
-
-/** `AudioMeta` carries no explicit track/sfx discriminant (WP1's model has no
- *  `kind` sub-field) — `sfx_category` is only ever set on an effect, so its
- *  presence is read as the signal rather than left unhandled. */
-function isSfx(meta: AudioMeta): boolean {
-  return meta.sfx_category !== undefined;
-}
-
-function ago(ts: number): string {
-  const s = Math.max(0, Math.floor((Date.now() - ts) / 1000));
-  if (s < 60) return `${s}s`;
-  const m = Math.floor(s / 60);
-  if (m < 60) return `${m}m`;
-  const h = Math.floor(m / 60);
-  if (h < 24) return `${h}h`;
-  return `${Math.floor(h / 24)}d`;
-}
-
-/** A reduced copy of the source's `FAMILY` map (`app.js:21-27`) — enough
- *  genres to make "genre family" grouping legible without carrying every
- *  entry the prototype's fixture data happened to use. */
-const FAMILY: Record<string, string> = {
-  "nu-disco": "House & disco",
-  "80s french touch": "House & disco",
-  "deep house": "House & disco",
-  "melodic house": "House & disco",
-  "progressive house": "House & disco",
-  "organic house": "House & disco",
-  synthwave: "Synth & retro",
-  "retro electronic": "Synth & retro",
-  outrun: "Synth & retro",
-  "future bass": "Bass music",
-  "melodic dubstep": "Bass music",
-  chillstep: "Bass music",
-  "drum and bass": "Bass music",
-  "liquid dnb": "Bass music",
-  trap: "Bass music",
-  "dark trap": "Bass music",
-  "808-driven": "Bass music",
-  "boom bap": "Hip hop & downtempo",
-  "jazz rap": "Hip hop & downtempo",
-  "golden age hip hop": "Hip hop & downtempo",
-  "lo-fi hip hop": "Hip hop & downtempo",
-  "dusty sample": "Hip hop & downtempo",
-  "trip hop": "Hip hop & downtempo",
-  downtempo: "Hip hop & downtempo",
-  "ambient drone": "Ambient & cinematic",
-  textural: "Ambient & cinematic",
-  "cinematic ambient": "Ambient & cinematic",
-  "orchestral-electronic": "Ambient & cinematic",
-};
-
-function recipeOf(meta: AudioMeta): string {
-  if (isSfx(meta)) return meta.draft_id ? "Effects · drafted" : "Effects · no recipe";
-  if (meta.draft_id) return "Draft returns";
-  if (meta.reference_track_id) return `Ref · ${meta.reference_track_id}`;
-  if (meta.prompt_round) return `Round · ${meta.prompt_round}`;
-  return meta.parent_id ? "Returns" : "Hand prompt";
-}
-
-function familyOf(meta: AudioMeta): string {
-  if (isSfx(meta)) return "Effects";
-  return FAMILY[(meta.genre_tags ?? [])[0] ?? ""] ?? "Other";
-}
-
-export type GroupMode = "recipe" | "family" | "sfx";
-
-const GROUP_OPTIONS: ReadonlyArray<{ id: GroupMode; label: string }> = [
-  { id: "recipe", label: "recipe" },
-  { id: "family", label: "genre family" },
-  { id: "sfx", label: "sfx category" },
-];
-
-function groupOf(meta: AudioMeta, mode: GroupMode): string {
-  if (mode === "recipe") return recipeOf(meta);
-  if (mode === "family") return familyOf(meta);
-  return isSfx(meta) ? (meta.sfx_category ?? "uncategorized") : "Tracks";
-}
-
-function numCell(v: number | null | undefined, na = false) {
-  if (na) return <span className="text-white/30">n/a</span>;
-  if (v == null) return <span className="text-white/30">·</span>;
-  return <span className={v >= 7 ? "text-emerald-300" : v <= 4 ? "text-rose-300" : ""}>{v}</span>;
-}
-
-const COLUMNS: ReadonlyArray<TableColumn<AudioAsset>> = [
-  {
-    id: "play",
-    head: "",
-    cell: () => (
-      <span
-        aria-label="Playback lives in the Inspector (WP3)"
-        className="inline-grid h-6 w-6 place-items-center rounded-full border border-white/10 text-white/25"
-      >
-        <svg viewBox="0 0 24 24" width="10" height="10" aria-hidden="true">
-          <path d="M8 5.5v13l11-6.5z" fill="currentColor" />
-        </svg>
-      </span>
-    ),
-  },
+export const COLS: readonly Col[] = [
+  { id: "play", label: "", plain: true, cls: "play" },
   {
     id: "title",
-    head: "Title",
-    cell: (r) => (
-      <span className="flex items-center gap-2">
-        <span className="max-w-[220px] overflow-hidden text-ellipsis whitespace-nowrap">{r.name}</span>
-        <span className="text-label text-white/40">{Math.round(audioMetaOf(r).duration_s)}s</span>
-      </span>
-    ),
-    sortBy: (r) => r.name.toLowerCase(),
+    label: "Title",
+    cls: "title",
+    get: (t) => t.title.toLowerCase(),
   },
-  {
-    id: "type",
-    head: "Type",
-    cell: (r) => <span className="font-jetbrains text-label">{isSfx(audioMetaOf(r)) ? "FX" : "T"}</span>,
-    sortBy: (r) => (isSfx(audioMetaOf(r)) ? "fx" : "t"),
-  },
+  { id: "type", label: "Type", cls: "type", get: (t) => t.kind },
   {
     id: "verdict",
-    head: "Verdict",
-    cell: (r) => {
-      const v = audioMetaOf(r).verdict;
-      return <StatusPill kind={VERDICT_KIND[v]}>{v}</StatusPill>;
-    },
-    sortBy: (r) => audioMetaOf(r).verdict,
+    label: "Verdict",
+    cls: "verdict",
+    get: (t) => VORDER.indexOf(verdict(t)),
   },
   {
     id: "melody",
-    head: "Mel",
+    label: "Mel",
+    cls: "n3",
     num: true,
-    cell: (r) => {
-      const m = audioMetaOf(r);
-      return numCell(m.ratings?.melody ?? null, isSfx(m) && !!m.loopable);
-    },
-    sortBy: (r) => audioMetaOf(r).ratings?.melody ?? null,
+    get: (t) => t.ratings?.melody ?? null,
   },
   {
     id: "instrument_choice",
-    head: "Cho",
+    label: "Cho",
+    cls: "n3",
     num: true,
-    cell: (r) => numCell(audioMetaOf(r).ratings?.instrument_choice ?? null),
-    sortBy: (r) => audioMetaOf(r).ratings?.instrument_choice ?? null,
+    get: (t) => t.ratings?.instrument_choice ?? null,
   },
   {
     id: "instrument_quality",
-    head: "Qua",
+    label: "Qua",
+    cls: "n3",
     num: true,
-    cell: (r) => numCell(audioMetaOf(r).ratings?.instrument_quality ?? null),
-    sortBy: (r) => audioMetaOf(r).ratings?.instrument_quality ?? null,
+    get: (t) => t.ratings?.instrument_quality ?? null,
   },
   {
     id: "score",
-    head: "Score",
+    label: "Score",
+    cls: "score",
     num: true,
-    cell: (r) => {
-      const s = scoreOf(audioMetaOf(r));
-      return <span className="font-jetbrains font-semibold">{s == null ? "—" : s.toFixed(1)}</span>;
-    },
-    sortBy: (r) => scoreOf(audioMetaOf(r)),
+    get: (t) => score(t),
   },
-  {
-    id: "vendor",
-    head: "Vendor",
-    cell: (r) => audioMetaOf(r).vendor ?? <span className="text-white/30">—</span>,
-    sortBy: (r) => audioMetaOf(r).vendor ?? null,
-  },
+  { id: "tags", label: "Tags", plain: true, cls: "tags" },
+  { id: "vendor", label: "Vendor", cls: "vendor", get: (t) => t.vendor ?? "~" },
   {
     id: "src",
-    head: "Source",
-    cell: (r) => <span className="text-label">{recipeOf(audioMetaOf(r))}</span>,
-    sortBy: (r) => recipeOf(audioMetaOf(r)),
+    label: "Source",
+    cls: "src",
+    get: (t) => (t.reference_track_id ?? "") + (t.prompt_round ?? "~"),
   },
-  {
-    id: "age",
-    head: "Age",
-    num: true,
-    cell: (r) => <span className="text-white/40">{ago(r.createdAt)}</span>,
-    sortBy: (r) => r.createdAt,
-  },
+  { id: "age", label: "Age", cls: "age", num: true, get: (t) => t.created_at },
 ];
 
-/** The same stable sort `Table` runs internally (Table.tsx's `sorted` memo),
- *  duplicated here because grouping and pagination both need the shelf in
- *  FINAL order before it is sliced — `useWindow` must page across the sorted
- *  list, not the list's insertion order, and a bucket's membership has to be
- *  decided after that ordering, not before it. The per-bucket `<Table>`
- *  instances below re-run this same sort on their own subset (controlled by
- *  the same `sort` state), which is a no-op once the rows are already in
- *  order — accepted here rather than adding a second, Table-shaped way to
- *  read a pre-sorted list out of the component. */
-function sortRows(rows: readonly AudioAsset[], sort: TableSort): AudioAsset[] {
-  const col = COLUMNS.find((c) => c.id === sort.column);
-  if (!col?.sortBy) return [...rows];
-  const key = col.sortBy;
-  const sign = sort.dir === "asc" ? 1 : -1;
+/** Columns drop by width, least-worked first: the inspector repeats every one
+ *  of them (app.js#cols). `w` is the workbench's own width — the entry was a
+ *  whole window, this module is a pane inside the studio frame. */
+export function visibleCols(w: number): Col[] {
+  const drop = new Set<ColId>();
+  if (w < 2100) drop.add("tags");
+  if (w < 1600) drop.add("vendor");
+  if (w < 1440) {
+    drop.add("age");
+    drop.add("type");
+  }
+  if (w < 1280 && w >= 1000) drop.add("src");
+  if (w < 1000) {
+    drop.add("vendor");
+    drop.add("src");
+  }
+  if (w < 720) {
+    drop.add("age");
+    drop.add("type");
+  }
+  return COLS.filter((c) => !drop.has(c.id));
+}
+
+export interface Sort {
+  col: ColId;
+  dir: "asc" | "desc";
+}
+
+/** Stable, nulls last in both directions (app.js#sorted). */
+export function sortRows(rows: readonly Take[], s: Sort): Take[] {
+  const c = COLS.find((x) => x.id === s.col);
+  if (!c?.get) return rows.slice();
+  const get = c.get;
+  const d = s.dir === "asc" ? 1 : -1;
   return rows
-    .map((r, i) => ({ r, i, k: key(r) }))
+    .map((r, i) => [r, i] as const)
     .sort((a, b) => {
-      const an = a.k === null || a.k === undefined;
-      const bn = b.k === null || b.k === undefined;
-      if (an !== bn) return an ? 1 : -1;
-      if (!an && !bn) {
-        const d =
-          typeof a.k === "number" && typeof b.k === "number"
-            ? a.k - b.k
-            : String(a.k).localeCompare(String(b.k), undefined, { numeric: true });
-        if (d !== 0) return d * sign;
-      }
-      return a.r.id.localeCompare(b.r.id) || a.i - b.i;
+      const x = get(a[0]);
+      const y = get(b[0]);
+      if (x == null && y == null) return a[1] - b[1];
+      if (x == null) return 1;
+      if (y == null) return -1;
+      return (x < y ? -1 : x > y ? 1 : 0) * d || a[1] - b[1];
     })
-    .map((x) => x.r);
+    .map((p) => p[0]);
 }
 
-export interface LedgerProps {
-  /** The real audio shelf — `listAssets(uid)` filtered to `kind === "audio"`,
-   *  read by `AudioWorkbench`. No fixture rows ship: an empty array is the
-   *  real, intentional starting state, not a loading placeholder. */
-  assets: readonly AudioAsset[];
-  /** The single expanded row (an accordion, per `kit/Table`'s own doctrine).
-   *  Lifted to `AudioWorkbench` — see that file for why it is shared with the
-   *  WP3 Inspector slot rather than kept local to this component. */
-  expandedId?: string;
-  onExpand?: (id: string | null) => void;
-  /** WP3 swaps this for the real `TakeExpansion` at the `<Ledger>` call site;
-   *  this component only owns the seam, never a default for it. */
-  renderExpansion?: (row: AudioAsset) => React.ReactNode;
+const KEYMAP = [
+  { keys: ["↑", "↓"], does: "take" },
+  { keys: ["←", "→", "Tab"], does: "MEL · CHO · QUA" },
+  { keys: ["1", "–", "9", "0"], does: "score" },
+  { keys: ["↵"], does: "keep" },
+  { keys: ["X", "⌫"], does: "reject" },
+  { keys: ["U"], does: "clear" },
+  { keys: ["Space"], does: "play" },
+  { keys: ["/"], does: "search" },
+];
+
+const GROUPINGS = [
+  ["none", "none"],
+  ["recipe", "recipe"],
+  ["family", "genre family"],
+  ["sfx", "sfx category"],
+] as const;
+
+function Score({ t, k, on }: { t: Take; k: RatingKey; on: boolean }) {
+  const v = t.ratings?.[k] ?? null;
+  const na = t.kind === "sfx" && t.loopable && k === "melody";
+  const ring = on ? " dim-on" : "";
+  if (na) return <span className={`sc na${ring}`}>n/a</span>;
+  if (v == null) return <span className={`sc na${ring}`}>·</span>;
+  return <span className={`sc${v >= 7 ? " hi" : v <= 4 ? " lo" : ""}${ring}`}>{v}</span>;
 }
 
-export default function Ledger({ assets, expandedId, onExpand, renderExpansion }: LedgerProps) {
-  const [mode, setMode] = useState<GroupMode>("recipe");
-  const [sort, setSort] = useState<TableSort>({ column: "age", dir: "desc" });
-
-  const ordered = useMemo(() => sortRows(assets, sort), [assets, sort]);
-  const win = useWindow(ordered, { size: 24 });
-
-  // Grouping runs over the WINDOWED page, not the whole shelf: `kit/Table` has
-  // no group-header row of its own — a gap worth a kit proposal, not a WP2
-  // fork of Table — so grouping here is one `<Table>` per bucket rather than a
-  // second table implementation. "Masses of items" stays bounded because the
-  // window is taken first; the cost is that a bucket's count reflects what is
-  // currently paged in, not the whole shelf, which is the honest reading of a
-  // paginated grouped view and is stated here rather than silently approximated.
-  const groups = useMemo(() => {
-    const m = new Map<string, AudioAsset[]>();
-    for (const a of win.visible) {
-      const g = groupOf(audioMetaOf(a), mode);
-      if (!m.has(g)) m.set(g, []);
-      m.get(g)!.push(a);
-    }
-    return [...m.entries()].sort((a, b) => b[1].length - a[1].length);
-  }, [win.visible, mode]);
-
+function Caret({ dir }: { dir: "asc" | "desc" | null }) {
   return (
-    <div aria-label="Ledger">
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <Tally value={win.shown} of={win.total} label="shown" />
+    <svg viewBox="0 0 10 14" aria-hidden="true" className="ab-tbl__caret" data-dir={dir ?? "none"}>
+      <path className="up" d="M5 1 L9 6 H1 Z" />
+      <path className="dn" d="M5 13 L9 8 H1 Z" />
+    </svg>
+  );
+}
+
+export default function Ledger({
+  groups,
+  cols,
+  total,
+  corpus,
+  sort,
+  onSort,
+  grouping,
+  onGrouping,
+  collapsed,
+  onToggleGroup,
+  queue,
+  queueDone,
+  queueable,
+  onQueue,
+  onExitQueue,
+  sel,
+  dim,
+  kbd,
+  flash,
+  rejecting,
+  reasons,
+  onRowClick,
+  onRejectCommit,
+  onRejectCancel,
+  engine,
+  urlFor,
+  onPlay,
+  verdictOf,
+}: {
+  groups: { group: string | null; rows: Take[] }[];
+  cols: Col[];
+  total: number;
+  corpus: number;
+  sort: Sort;
+  onSort: (col: ColId) => void;
+  grouping: string;
+  onGrouping: (g: (typeof GROUPINGS)[number][0]) => void;
+  collapsed: ReadonlySet<string>;
+  onToggleGroup: (g: string) => void;
+  queue: string[] | null;
+  queueDone: number;
+  queueable: number;
+  onQueue: () => void;
+  onExitQueue: () => void;
+  sel: string | null;
+  dim: number;
+  kbd: boolean;
+  flash: string | null;
+  rejecting: string | null;
+  reasons: [string, number][];
+  onRowClick: (id: string) => void;
+  onRejectCommit: (id: string, reason: string) => void;
+  onRejectCancel: () => void;
+  engine: Engine;
+  urlFor: (t: Take) => string | null;
+  onPlay: (t: Take) => void;
+  verdictOf: (id: string) => ReturnType<typeof verdict> | null;
+}) {
+  return (
+    <>
+      <div className="colhead">
+        <h2>Ledger</h2>
+        <span className="tally">
+          <b>{total}</b>
+          <small>shown</small>
+        </span>
         <span className="grow" />
-        <Segmented label="Group" value={mode} onChange={setMode} options={GROUP_OPTIONS} />
+        <div className="ledger-tools">
+          <span className="caps">Group</span>
+          <div className="seg" role="group" aria-label="Group by">
+            {GROUPINGS.map(([k, l]) => (
+              <button
+                key={k}
+                type="button"
+                aria-pressed={grouping === k}
+                disabled={!!queue}
+                onClick={() => onGrouping(k)}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+          {!queue && (
+            <button
+              type="button"
+              className="btn btn--cyan"
+              disabled={!queueable}
+              onClick={onQueue}
+              data-testid="audio-queue"
+            >
+              Queue · {Math.min(20, queueable)} unjudged
+            </button>
+          )}
+          <Keycaps map={KEYMAP} label="Ledger keys" />
+        </div>
       </div>
-
-      {assets.length === 0 ? (
-        <Table label="Ledger" columns={COLUMNS} rows={[]} empty="no takes yet" />
-      ) : (
-        <div className="flex flex-col gap-6">
-          {groups.map(([group, rows]) => (
-            <div key={group}>
-              <div className="mb-1 flex items-center gap-2 text-label uppercase tracking-[0.08em] text-white/50">
-                <span>{group}</span>
-                <Tally value={rows.length} />
-              </div>
-              <Table
-                label={`Ledger — ${group}`}
-                columns={COLUMNS}
-                rows={rows}
-                sort={sort}
-                onSort={setSort}
-                expandedId={expandedId}
-                onExpand={onExpand}
-                renderExpansion={renderExpansion}
-              />
-            </div>
-          ))}
+      {queue && (
+        <div className="queue">
+          <span className="caps">Queue</span>
+          <span className="pips" role="img" aria-label={`${queueDone} of ${queue.length} judged`}>
+            {queue.map((id) => (
+              <i key={id} className={`seg-${verdictOf(id) ?? "unjudged"}${id === sel ? " cur" : ""}`} />
+            ))}
+          </span>
+          <span className="tally">
+            <b>
+              {queueDone}/{queue.length}
+            </b>
+          </span>
+          <span className="grow" />
+          <button type="button" className="btn" onClick={onExitQueue}>
+            Exit queue
+          </button>
         </div>
       )}
+      <table className="ab-tbl" aria-label="Audio takes">
+        <thead>
+          <tr>
+            {cols.map((c) => {
+              const cls = `${c.num ? "num " : ""}th-${c.cls}`;
+              if (c.plain)
+                return (
+                  <th key={c.id} className={cls} scope="col">
+                    <span className="plain">{c.label || <span className="sr-only">Play</span>}</span>
+                  </th>
+                );
+              const on = sort.col === c.id;
+              const dir = on ? sort.dir : null;
+              return (
+                <th
+                  key={c.id}
+                  className={`${cls}${on ? " is-on" : ""}`}
+                  scope="col"
+                  aria-sort={dir ? (dir === "asc" ? "ascending" : "descending") : "none"}
+                >
+                  <button type="button" onClick={() => onSort(c.id)}>
+                    {c.label}
+                    <Caret dir={dir} />
+                  </button>
+                </th>
+              );
+            })}
+          </tr>
+        </thead>
+        <tbody>
+          {groups.map((g) => {
+            const open = !g.group || !collapsed.has(g.group);
+            const c = counts(g.rows);
+            const scores = g.rows.map(score).filter((x): x is number => x != null);
+            const avg = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : "—";
+            return (
+              <Fragment key={g.group ?? "_all"}>
+                {g.group && (
+                  <tr className="grp">
+                    <td colSpan={cols.length}>
+                      <button type="button" aria-expanded={open} onClick={() => onToggleGroup(g.group!)}>
+                        <span className="caret" aria-hidden="true">
+                          ▾
+                        </span>
+                        <span className="g-name">{g.group}</span>
+                        {/round 3/.test(g.group) && <span className="tag-retired">retired path</span>}
+                        <span className="tally">
+                          <b>{g.rows.length}</b>
+                        </span>
+                        <span
+                          className="g-bar"
+                          role="img"
+                          aria-label={`${c.proven} proven, ${c.kept} kept, ${c.unjudged} unjudged, ${c.rejected} rejected`}
+                        >
+                          {VORDER.map((v) => (
+                            <i key={v} className={`seg-${v}`} style={{ flex: c[v] }} />
+                          ))}
+                        </span>
+                        <span className="g-t" aria-hidden="true">
+                          <span className="t-proven">{c.proven}</span> · <span className="t-kept">{c.kept}</span> ·{" "}
+                          <span className="t-unjudged">{c.unjudged}</span> ·{" "}
+                          <span className="t-rejected">{c.rejected}</span>
+                        </span>
+                        <span className="grow" />
+                        <span className="g-t dim">avg {avg}</span>
+                      </button>
+                    </td>
+                  </tr>
+                )}
+                {open &&
+                  g.rows.map((t) => (
+                    <Row
+                      key={t.id}
+                      t={t}
+                      cols={cols}
+                      sel={t.id === sel}
+                      dim={dim}
+                      kbd={kbd}
+                      flash={flash === t.id}
+                      rejecting={rejecting === t.id}
+                      reasons={reasons}
+                      onClick={() => onRowClick(t.id)}
+                      onRejectCommit={(r) => onRejectCommit(t.id, r)}
+                      onRejectCancel={onRejectCancel}
+                      engine={engine}
+                      playable={t.upload_id ? urlFor(t) !== null : true}
+                      onPlay={() => onPlay(t)}
+                    />
+                  ))}
+              </Fragment>
+            );
+          })}
+        </tbody>
+      </table>
+      {total === 0 && <div className="empty">0 / {corpus}</div>}
+    </>
+  );
+}
 
-      {assets.length > 0 && (
-        <div className="mt-4">
-          <Pager shown={win.shown} total={win.total} onMore={win.more} onAll={win.all} noun="takes" />
-        </div>
+function Row({
+  t,
+  cols,
+  sel,
+  dim,
+  kbd,
+  flash,
+  rejecting,
+  reasons,
+  onClick,
+  onRejectCommit,
+  onRejectCancel,
+  engine,
+  playable,
+  onPlay,
+}: {
+  t: Take;
+  cols: Col[];
+  sel: boolean;
+  dim: number;
+  kbd: boolean;
+  flash: boolean;
+  rejecting: boolean;
+  reasons: [string, number][];
+  onClick: () => void;
+  onRejectCommit: (reason: string) => void;
+  onRejectCancel: () => void;
+  engine: Engine;
+  playable: boolean;
+  onPlay: () => void;
+}) {
+  const v = verdict(t);
+  const s = score(t);
+  const tags = tagsOf(t);
+  const ref = refById(t.reference_track_id);
+  const on = (di: number) => sel && kbd && di === dim;
+  const cell = (id: ColId) => {
+    switch (id) {
+      case "play":
+        return (
+          <td key={id}>
+            <PlayButton engine={engine} take={t} disabled={!playable} onPlay={onPlay} />
+          </td>
+        );
+      case "title":
+        return (
+          <td key={id} className="c-title">
+            {t.title}
+            <small>{dur(t.duration_s)}</small>
+          </td>
+        );
+      case "type":
+        return (
+          <td key={id}>
+            <span className={`kind kind--${t.kind}`}>{t.kind === "track" ? "T" : "FX"}</span>
+          </td>
+        );
+      case "verdict":
+        return (
+          <td key={id}>
+            <span className={`pill t-${v}`}>{v}</span>
+          </td>
+        );
+      case "melody":
+        return (
+          <td key={id} className="num">
+            <Score t={t} k="melody" on={on(0)} />
+          </td>
+        );
+      case "instrument_choice":
+        return (
+          <td key={id} className="num">
+            <Score t={t} k="instrument_choice" on={on(1)} />
+          </td>
+        );
+      case "instrument_quality":
+        return (
+          <td key={id} className="num">
+            <Score t={t} k="instrument_quality" on={on(2)} />
+          </td>
+        );
+      case "score":
+        return (
+          <td key={id} className="num">
+            <span className="score">{s == null ? "—" : s.toFixed(1)}</span>
+          </td>
+        );
+      case "tags":
+        return (
+          <td key={id} className="c-tags">
+            {tags.slice(0, 3).map((x) => (
+              <span key={x} className="chip">
+                {x}
+              </span>
+            ))}
+            {tags.length > 3 && <span className="dim">+{tags.length - 3}</span>}
+          </td>
+        );
+      case "vendor":
+        return <td key={id}>{t.vendor ?? <span className="dim">—</span>}</td>;
+      case "src": {
+        const r = t.prompt_round ? roundOf(t.prompt_round) : null;
+        const ret = Boolean(t.draft_id || t.parent_id);
+        return (
+          <td key={id} className="c-src">
+            {t.reference_track_id ? (
+              <span className="chip chip--src chip--ref">ref·{ref?.title ?? "?"}</span>
+            ) : r ? (
+              <span className={`chip chip--src${r.retired ? " chip--retired" : ""}`}>{r.s}</span>
+            ) : null}
+            {ret && <span className="chip chip--src chip--ret">return</span>}
+            {!t.reference_track_id && !r && !ret && <span className="dim">—</span>}
+          </td>
+        );
+      }
+      case "age":
+        return (
+          <td key={id} className="num dim">
+            {ago(t.created_at, OPENED_AT)}
+          </td>
+        );
+    }
+  };
+  return (
+    <>
+      <tr
+        className={`row is-v-${v}${sel ? " is-sel" : ""}${flash ? " is-new" : ""}`}
+        data-id={t.id}
+        tabIndex={sel ? 0 : -1}
+        aria-selected={sel}
+        onClick={onClick}
+      >
+        {cols.map((c) => cell(c.id))}
+      </tr>
+      {rejecting && (
+        <tr className="rej">
+          <td colSpan={cols.length}>
+            <RejectBox
+              label={`Reject reason for ${t.title}`}
+              reasons={reasons.slice(0, 7)}
+              showCounts
+              cancellable
+              onCommit={onRejectCommit}
+              onCancel={onRejectCancel}
+            />
+          </td>
+        </tr>
       )}
-    </div>
+    </>
   );
 }

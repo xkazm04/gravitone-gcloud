@@ -36,7 +36,14 @@ export type AssetKind = "image" | "audio";
  *  variant's own accepted cost: an untyped bag, full-table-scan queries), so
  *  this type is a cast/guard at read sites, not a schema IndexedDB enforces. */
 export interface AudioMeta {
-  ratings?: { melody: number | null; instrument_choice: number; instrument_quality: number };
+  /** One score per rubric dimension, 1-10, each null until somebody scores
+   *  it: the audio ledger rates a take one dimension at a time
+   *  (app/library/audio/AudioWorkbench.tsx, keys 1-9 and 0), so a take with a
+   *  melody score and nothing else is a real state, not a partial write. */
+  ratings?: { melody: number | null; instrument_choice: number | null; instrument_quality: number | null };
+  /** The person's call. `"proven"` is NOT written any more: it is read off
+   *  the ratings (kept AND scoring 7+, app/library/audio/book.ts#verdict), and
+   *  a row the previous module stored as proven reads as kept. */
   verdict: "unjudged" | "kept" | "proven" | "rejected";
   reject_reason?: string;
   vendor?: "suno" | "elevenlabs";
@@ -45,7 +52,9 @@ export interface AudioMeta {
   instrumentation?: string[];
   tempo_bpm?: number;
   key?: string;
-  duration_s: number;
+  /** Seconds. Absent until measured: a returned file whose metadata never
+   *  loaded has no length, and a 0 would be a fake one. */
+  duration_s?: number;
   sfx_category?: string;
   loopable?: boolean;
   reference_track_id?: string;

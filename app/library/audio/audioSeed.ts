@@ -1,162 +1,236 @@
-// THE AUDIO SHELF'S DEMO ROWS — same seeded-once contract as
-// `lib/useProjects.ts`'s `seedProjects` (a fresh account gets a shelf to look
-// at instead of the gap found in Scout B's report: `/library/audio` renders
-// zero create affordance, and with no asset ever written, Ledger/VocabSpine/
-// Inspector have never been exercised against real data in this app).
+// THE AUDIO SHELF'S FIXTURE — 160 takes, converted from the contest entry this
+// module was ported from (the arena's data/audio-items.js, which says of itself
+// "generated": "fixture, not real"). Same seeded-once contract as
+// lib/useProjects.ts#seedProjects: a fresh account gets a shelf to judge rather
+// than an empty ledger with no create path.
 //
-// The rows are adapted from the `/contest` library-audio-workbench arena's own
-// fixture (`.contest/.../library-audio-workbench/judging/entries/B/data/
-// audio-items.json`, `"generated": "fixture, not real"` by its own header) —
-// a track's `genre_tags`/`mood_tags`/`instrumentation`/`tempo_bpm`/`key`/
-// `vendor`/`reference_track_id`/`prompt_round`/`ratings` map straight onto
-// `AudioMeta`; an effect is the same shape minus the music fields, plus
-// `sfx_category`/`loopable` — exactly the field `Ledger.tsx#isSfx` already
-// keys off (no `kind: "track"|"sfx"` field exists; presence of `sfx_category`
-// IS the distinction, so this seed never invents one).
+// NOTHING HERE IS A REAL TAKE. No row has bytes — a fixture row plays through
+// ./engine.ts's WebAudio sketch, seeded from the row's own tempo, key and genre,
+// and the contest did the same. The flag rides on every row as
+// `meta.fixture: true` so a reader of the store can tell the two apart without
+// knowing this file exists.
+//
+// Loaded by dynamic import from ./useAudioShelf.ts and only on the seeding path,
+// so the 160 rows cost a fetch once per account rather than a place in every
+// /library bundle.
+//
+// The contest's `kind` field is NOT carried into the store: AudioMeta has no
+// kind, and the presence of `sfx_category` is the distinction (./book.ts
+// #takeFromAsset), the same convention the previous seed lived by. Its
+// `status` becomes AudioMeta.verdict ("unrated" -> "unjudged"); "proven" is
+// never stored, it is read off the ratings.
 
 import type { Asset, AudioMeta } from "@/lib/assets";
 
-const track = (
-  id: string,
-  title: string,
-  meta: Omit<AudioMeta, "duration_s"> & { duration_s: number },
-  createdAt: number,
-): Asset => ({
-  id,
-  uid: "", // overwritten per-account by seedAudioAssets
-  path: ["audio"],
-  name: title,
-  src: "",
-  kind: "audio",
-  meta: meta as Record<string, unknown>,
-  createdAt,
-});
+interface FixtureRow {
+  id: string;
+  kind: "track" | "sfx";
+  title: string;
+  duration_s: number;
+  vendor?: "suno" | "elevenlabs";
+  status: "kept" | "rejected" | "unrated";
+  created_at: number;
+  ratings?: { melody: number | null; instrument_choice: number | null; instrument_quality: number | null };
+  reject_reason?: string;
+  genre_tags?: string[];
+  mood_tags?: string[];
+  instrumentation?: string[];
+  tempo_bpm?: number;
+  key?: string;
+  reference_track_id?: string;
+  prompt_round?: string;
+  sfx_category?: string;
+  loopable?: boolean;
+}
 
-/** Builds the demo shelf for one account. `uid` is stamped onto every row at
- *  call time (not baked into the literals below) so the same fixture serves
- *  any account that lands here first. */
-export function seedAudioAssets(uid: string): Asset[] {
-  const base = Date.now() - 1000 * 60 * 60 * 24 * 10; // ten days of backdated takes
-  const rows: Asset[] = [
-    track(
-      "seed-au-trk-0001",
-      "Future Bass sketch — held chord open",
-      {
-        verdict: "kept",
-        vendor: "suno",
-        genre_tags: ["future bass", "melodic dubstep"],
-        mood_tags: ["euphoric", "uplifting"],
-        instrumentation: ["walking bassline", "jazzy sampled keys", "vinyl crackle texture"],
-        tempo_bpm: 142,
-        key: "A minor",
-        duration_s: 153,
-        prompt_round: "round2-librosa",
-        ratings: { melody: 7, instrument_choice: 9, instrument_quality: 8 },
-      },
-      base + 1000 * 60 * 10,
-    ),
-    track(
-      "seed-au-trk-0002",
-      "Nu-Disco sketch — reference-anchored",
-      {
-        verdict: "unjudged",
-        vendor: "elevenlabs",
-        genre_tags: ["nu-disco", "synthwave", "80s french touch"],
-        mood_tags: ["serene", "dreamy"],
-        instrumentation: ["jazzy sampled keys", "808 kick", "sub bass synth", "soft piano"],
-        tempo_bpm: 108,
-        key: "F minor",
-        duration_s: 131,
-        reference_track_id: "ref-ratatat-breaking-away",
-        prompt_round: "round1-fft",
-      },
-      base + 1000 * 60 * 25,
-    ),
-    track(
-      "seed-au-trk-0003",
-      "Drum And Bass sketch — warm pass",
-      {
-        verdict: "rejected",
-        reject_reason: "tempo drifted past the half/double band on the back half",
-        vendor: "suno",
-        genre_tags: ["drum and bass", "liquid dnb"],
-        mood_tags: ["nostalgic", "warm"],
-        instrumentation: ["electric piano", "808 kick", "glitch percussion", "ambient pads"],
-        tempo_bpm: 150,
-        key: "A minor",
-        duration_s: 176,
-        prompt_round: "round2-librosa",
-        ratings: { melody: 3, instrument_choice: 5, instrument_quality: 6 },
-      },
-      base + 1000 * 60 * 40,
-    ),
-    track(
-      "seed-au-trk-0004",
-      "Synthwave sketch — proven for cut 2",
-      {
-        verdict: "proven",
-        vendor: "suno",
-        genre_tags: ["synthwave", "retrowave"],
-        mood_tags: ["driving", "nocturnal"],
-        instrumentation: ["arpeggiated synth", "gated reverb snare", "analog bass"],
-        tempo_bpm: 118,
-        key: "D minor",
-        duration_s: 164,
-        prompt_round: "round3-flavor",
-        prompt_text: "driving synthwave, gated reverb snare, analog bass, nocturnal highway mood",
-        ratings: { melody: 8, instrument_choice: 8, instrument_quality: 9 },
-      },
-      base + 1000 * 60 * 55,
-    ),
-    track(
-      "seed-au-trk-0005",
-      "Lo-fi sketch — unrated take",
-      {
-        verdict: "unjudged",
-        vendor: "elevenlabs",
-        genre_tags: ["lo-fi hip hop"],
-        mood_tags: ["cozy", "rainy"],
-        instrumentation: ["dusty piano loop", "tape hiss", "boom-bap drums"],
-        tempo_bpm: 84,
-        key: "C major",
-        duration_s: 142,
-        prompt_round: "round1-fft",
-      },
-      base + 1000 * 60 * 70,
-    ),
-    track(
-      "seed-au-sfx-0001",
-      "Weapon fire — single shot",
-      {
-        verdict: "kept",
-        sfx_category: "weapon-fire",
-        loopable: false,
-        duration_s: 1.1,
-      },
-      base + 1000 * 60 * 85,
-    ),
-    track(
-      "seed-au-sfx-0002",
-      "Footsteps — gravel loop",
-      {
-        verdict: "kept",
-        sfx_category: "footsteps",
-        loopable: true,
-        duration_s: 2.4,
-      },
-      base + 1000 * 60 * 90,
-    ),
-    track(
-      "seed-au-sfx-0003",
-      "UI confirm chime",
-      {
-        verdict: "unjudged",
-        sfx_category: "ui",
-        loopable: false,
-        duration_s: 0.6,
-      },
-      base + 1000 * 60 * 95,
-    ),
-  ];
-  return rows.map((r) => ({ ...r, uid }));
+/** The newest fixture timestamp. Rows are re-dated against the clock at seed
+ *  time so the newest reads an hour old, whatever day the account opens. */
+const NEWEST = 1791021180209;
+
+const ROWS: FixtureRow[] = [
+  {"id":"au-trk-0000","kind":"track","title":"Future Bass sketch 1","duration_s":153,"vendor":"suno","status":"kept","created_at":1790895692327,"ratings":{"melody":4,"instrument_choice":9,"instrument_quality":10},"genre_tags":["future bass","melodic dubstep"],"mood_tags":["euphoric","uplifting"],"instrumentation":["walking bassline","jazzy sampled keys","vinyl crackle texture"],"key":"A minor","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0001","kind":"track","title":"Nu-Disco sketch 2","duration_s":131,"vendor":"elevenlabs","status":"unrated","created_at":1790593208109,"genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["serene","dreamy"],"instrumentation":["jazzy sampled keys","808 kick","walking bassline","sub bass synth","boom-bap drums","soft piano"],"key":"F minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round1-fft"},
+  {"id":"au-trk-0002","kind":"track","title":"Drum And Bass sketch 3","duration_s":94,"vendor":"suno","status":"kept","created_at":1788006084906,"ratings":{"melody":5,"instrument_choice":2,"instrument_quality":4},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["nostalgic","warm"],"instrumentation":["electric piano","808 kick","glitch percussion","ambient pads","breathy wordless vocal"],"tempo_bpm":150,"key":"A minor","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0003","kind":"track","title":"Boom Bap sketch 4","duration_s":207,"vendor":"suno","status":"kept","created_at":1786002195737,"ratings":{"melody":8,"instrument_choice":7,"instrument_quality":5},"genre_tags":["boom bap","jazz rap","golden age hip hop"],"mood_tags":["hypnotic","minimal"],"instrumentation":["808 kick","soft piano","boom-bap drums","vinyl crackle texture","orchestral strings"],"key":"A minor","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0004","kind":"track","title":"Future Bass sketch 5","duration_s":212,"vendor":"elevenlabs","status":"unrated","created_at":1788888015977,"genre_tags":["future bass","melodic dubstep"],"mood_tags":["serene","dreamy"],"instrumentation":["electric piano","jazzy sampled keys","distorted guitar","arpeggios","breathy wordless vocal"],"tempo_bpm":142,"key":"D minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0005","kind":"track","title":"Chillstep sketch 6","duration_s":171,"status":"kept","created_at":1786346777666,"ratings":{"melody":3,"instrument_choice":3,"instrument_quality":7},"genre_tags":["chillstep","deep house"],"mood_tags":["tense","driving"],"instrumentation":["glitch percussion","distorted guitar","walking bassline","gated drum machine"],"key":"A minor","prompt_round":"round1-fft"},
+  {"id":"au-trk-0006","kind":"track","title":"Ambient Drone sketch 7","duration_s":209,"status":"unrated","created_at":1789571155371,"genre_tags":["ambient drone","textural"],"mood_tags":["euphoric","uplifting"],"instrumentation":["breathy wordless vocal","808 kick","orchestral strings","walking bassline","sub bass synth","arpeggios"],"tempo_bpm":138,"key":"F minor","reference_track_id":"ref-french79-4807"},
+  {"id":"au-trk-0007","kind":"track","title":"Melodic House sketch 8","duration_s":208,"status":"rejected","created_at":1790177881233,"ratings":{"melody":9,"instrument_choice":9,"instrument_quality":1},"reject_reason":"mix is harsh above 4kHz","genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["triumphant","soaring"],"instrumentation":["walking bassline","orchestral strings","boom-bap drums"],"tempo_bpm":150,"key":"F minor","reference_track_id":"ref-french79-4807","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0008","kind":"track","title":"Synthwave sketch 9","duration_s":232,"vendor":"suno","status":"unrated","created_at":1786439965138,"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["soft piano","synth plucks","jazzy sampled keys"],"reference_track_id":"ref-sappheiros-falling","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0009","kind":"track","title":"Melodic House sketch 10","duration_s":124,"status":"rejected","created_at":1789428369065,"ratings":{"melody":2,"instrument_choice":4,"instrument_quality":4},"reject_reason":"generic progression, no hook","genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["triumphant","soaring"],"instrumentation":["walking bassline","orchestral strings","gated drum machine","turntable scratches"],"key":"C major","reference_track_id":"ref-sappheiros-falling"},
+  {"id":"au-trk-0010","kind":"track","title":"Drum And Bass sketch 11","duration_s":129,"status":"kept","created_at":1786432900615,"ratings":{"melody":8,"instrument_choice":4,"instrument_quality":9},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["vinyl crackle texture","jazzy sampled keys","sub bass synth","analog synth bass"],"prompt_round":"round3-gemini"},
+  {"id":"au-trk-0011","kind":"track","title":"Melodic House sketch 12","duration_s":164,"vendor":"suno","status":"kept","created_at":1786504567156,"ratings":{"melody":7,"instrument_choice":6,"instrument_quality":2},"genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["triumphant","soaring"],"instrumentation":["hi-hats","gated drum machine","turntable scratches","ambient pads"],"tempo_bpm":115,"key":"G minor","prompt_round":"round1-fft"},
+  {"id":"au-trk-0012","kind":"track","title":"Cinematic Ambient sketch 13","duration_s":185,"vendor":"suno","status":"unrated","created_at":1790611683125,"genre_tags":["cinematic ambient","orchestral-electronic"],"mood_tags":["serene","dreamy"],"instrumentation":["glitch percussion","808 kick","field recordings","gated drum machine"],"key":"G minor","reference_track_id":"ref-sappheiros-falling","prompt_round":"round1-fft"},
+  {"id":"au-trk-0013","kind":"track","title":"Boom Bap sketch 14","duration_s":144,"vendor":"elevenlabs","status":"rejected","created_at":1789077951840,"ratings":{"melody":3,"instrument_choice":4,"instrument_quality":5},"reject_reason":"vocal texture too thin / robotic","genre_tags":["boom bap","jazz rap","golden age hip hop"],"mood_tags":["serene","dreamy"],"instrumentation":["gated drum machine","hi-hats","vinyl crackle texture","turntable scratches"],"tempo_bpm":91,"reference_track_id":"ref-ratatat-breaking-away"},
+  {"id":"au-trk-0014","kind":"track","title":"Nu-Disco sketch 15","duration_s":197,"vendor":"suno","status":"rejected","created_at":1786445340938,"ratings":{"melody":2,"instrument_choice":10,"instrument_quality":4},"reject_reason":"muddy low end, instruments masking each other","genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["electric piano","distorted guitar","hi-hats","orchestral strings","boom-bap drums"]},
+  {"id":"au-trk-0015","kind":"track","title":"Ambient Drone sketch 16","duration_s":78,"status":"kept","created_at":1789743720280,"ratings":{"melody":1,"instrument_choice":8,"instrument_quality":10},"genre_tags":["ambient drone","textural"],"mood_tags":["euphoric","uplifting"],"instrumentation":["vinyl crackle texture","distorted guitar","orchestral strings","arpeggios","walking bassline","ambient pads"],"tempo_bpm":100,"key":"G minor","reference_track_id":"ref-french79-4807","prompt_round":"round1-fft"},
+  {"id":"au-trk-0016","kind":"track","title":"Ambient Drone sketch 17","duration_s":139,"vendor":"elevenlabs","status":"unrated","created_at":1789808186376,"genre_tags":["ambient drone","textural"],"mood_tags":["euphoric","uplifting"],"instrumentation":["glitch percussion","turntable scratches","orchestral strings"],"key":"D minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0017","kind":"track","title":"Ambient Drone sketch 18","duration_s":98,"status":"kept","created_at":1787950077043,"ratings":{"melody":9,"instrument_choice":8,"instrument_quality":5},"genre_tags":["ambient drone","textural"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["ambient pads","field recordings","walking bassline","distorted guitar","orchestral strings"],"tempo_bpm":104,"key":"A minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0018","kind":"track","title":"Nu-Disco sketch 19","duration_s":47,"vendor":"elevenlabs","status":"unrated","created_at":1790551703250,"genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["euphoric","uplifting"],"instrumentation":["walking bassline","electric piano","sub bass synth","arpeggios","field recordings","orchestral strings"],"tempo_bpm":126,"key":"A minor","prompt_round":"round1-fft"},
+  {"id":"au-trk-0019","kind":"track","title":"Drum And Bass sketch 20","duration_s":188,"vendor":"elevenlabs","status":"unrated","created_at":1786073429085,"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["tense","driving"],"instrumentation":["field recordings","electric piano","synth plucks","soft piano","vinyl crackle texture","808 kick"],"key":"F major","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0020","kind":"track","title":"Melodic House sketch 21","duration_s":224,"status":"rejected","created_at":1790567930739,"ratings":{"melody":4,"instrument_choice":4,"instrument_quality":8},"reject_reason":"mix is harsh above 4kHz","genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["hypnotic","minimal"],"instrumentation":["boom-bap drums","arpeggios","gated drum machine"],"tempo_bpm":101,"key":"D minor"},
+  {"id":"au-trk-0021","kind":"track","title":"Chillstep sketch 22","duration_s":175,"vendor":"elevenlabs","status":"rejected","created_at":1788729168883,"ratings":{"melody":5,"instrument_choice":3,"instrument_quality":10},"reject_reason":"structure collapsed after the drop","genre_tags":["chillstep","deep house"],"mood_tags":["serene","dreamy"],"instrumentation":["sub bass synth","turntable scratches","breathy wordless vocal","arpeggios"],"tempo_bpm":105,"key":"C major","prompt_round":"round1-fft"},
+  {"id":"au-trk-0022","kind":"track","title":"Nu-Disco sketch 23","duration_s":178,"status":"unrated","created_at":1788151870423,"genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["euphoric","uplifting"],"instrumentation":["soft piano","arpeggios","gated drum machine","orchestral strings","ambient pads","turntable scratches"],"tempo_bpm":75,"reference_track_id":"ref-french79-4807"},
+  {"id":"au-trk-0023","kind":"track","title":"Boom Bap sketch 24","duration_s":152,"vendor":"elevenlabs","status":"kept","created_at":1785989788886,"ratings":{"melody":7,"instrument_choice":9,"instrument_quality":1},"genre_tags":["boom bap","jazz rap","golden age hip hop"],"mood_tags":["nostalgic","warm"],"instrumentation":["ambient pads","synth plucks","orchestral strings","vinyl crackle texture","gated drum machine"],"key":"D minor","reference_track_id":"ref-sappheiros-falling","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0024","kind":"track","title":"Chillstep sketch 25","duration_s":233,"vendor":"elevenlabs","status":"kept","created_at":1786008411637,"ratings":{"melody":9,"instrument_choice":10,"instrument_quality":6},"genre_tags":["chillstep","deep house"],"mood_tags":["aggressive","dark"],"instrumentation":["gated drum machine","vinyl crackle texture","arpeggios","808 kick"],"tempo_bpm":97,"key":"F minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0025","kind":"track","title":"Boom Bap sketch 26","duration_s":151,"vendor":"suno","status":"rejected","created_at":1788559710224,"ratings":{"melody":7,"instrument_choice":4,"instrument_quality":3},"reject_reason":"muddy low end, instruments masking each other","genre_tags":["boom bap","jazz rap","golden age hip hop"],"mood_tags":["serene","dreamy"],"instrumentation":["jazzy sampled keys","turntable scratches","field recordings","sub bass synth","electric piano"],"key":"G minor","reference_track_id":"ref-ratatat-breaking-away"},
+  {"id":"au-trk-0026","kind":"track","title":"Boom Bap sketch 27","duration_s":163,"status":"unrated","created_at":1788474749685,"genre_tags":["boom bap","jazz rap","golden age hip hop"],"mood_tags":["hypnotic","minimal"],"instrumentation":["boom-bap drums","orchestral strings","808 kick","electric piano"],"tempo_bpm":85,"key":"D minor","reference_track_id":"ref-ratatat-breaking-away"},
+  {"id":"au-trk-0027","kind":"track","title":"Trap sketch 28","duration_s":106,"status":"unrated","created_at":1789852810859,"genre_tags":["trap","dark trap","808-driven"],"mood_tags":["triumphant","soaring"],"instrumentation":["hi-hats","808 kick","walking bassline","jazzy sampled keys"],"tempo_bpm":136,"key":"C major","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0028","kind":"track","title":"Cinematic Ambient sketch 29","duration_s":151,"vendor":"suno","status":"kept","created_at":1789281571936,"ratings":{"melody":7,"instrument_choice":1,"instrument_quality":4},"genre_tags":["cinematic ambient","orchestral-electronic"],"mood_tags":["aggressive","dark"],"instrumentation":["arpeggios","glitch percussion","analog synth bass","field recordings","orchestral strings"],"reference_track_id":"ref-sappheiros-falling"},
+  {"id":"au-trk-0029","kind":"track","title":"Lo-Fi Hip Hop sketch 30","duration_s":152,"vendor":"suno","status":"rejected","created_at":1787176127540,"ratings":{"melody":5,"instrument_choice":7,"instrument_quality":8},"reject_reason":"muddy low end, instruments masking each other","genre_tags":["lo-fi hip hop","dusty sample"],"mood_tags":["hypnotic","minimal"],"instrumentation":["vinyl crackle texture","breathy wordless vocal","hi-hats"],"tempo_bpm":108,"key":"F minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0030","kind":"track","title":"Lo-Fi Hip Hop sketch 31","duration_s":163,"status":"kept","created_at":1790251677689,"ratings":{"melody":6,"instrument_choice":4,"instrument_quality":8},"genre_tags":["lo-fi hip hop","dusty sample"],"mood_tags":["nostalgic","warm"],"instrumentation":["boom-bap drums","808 kick","field recordings","sub bass synth","breathy wordless vocal","synth plucks"],"tempo_bpm":80,"key":"D minor","reference_track_id":"ref-french79-4807"},
+  {"id":"au-trk-0031","kind":"track","title":"Drum And Bass sketch 32","duration_s":62,"status":"kept","created_at":1788232932983,"ratings":{"melody":4,"instrument_choice":1,"instrument_quality":10},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["nostalgic","warm"],"instrumentation":["walking bassline","gated drum machine","distorted guitar","analog synth bass","hi-hats","sub bass synth"],"key":"C major","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0032","kind":"track","title":"Melodic House sketch 33","duration_s":200,"status":"unrated","created_at":1787946877086,"genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["serene","dreamy"],"instrumentation":["hi-hats","ambient pads","turntable scratches","808 kick"],"key":"A minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0033","kind":"track","title":"Boom Bap sketch 34","duration_s":223,"status":"kept","created_at":1787714417766,"ratings":{"melody":10,"instrument_choice":1,"instrument_quality":6},"genre_tags":["boom bap","jazz rap","golden age hip hop"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["vinyl crackle texture","breathy wordless vocal","distorted guitar","turntable scratches","analog synth bass"],"reference_track_id":"ref-sappheiros-falling","prompt_round":"round1-fft"},
+  {"id":"au-trk-0034","kind":"track","title":"Trap sketch 35","duration_s":84,"vendor":"elevenlabs","status":"unrated","created_at":1789161794864,"genre_tags":["trap","dark trap","808-driven"],"mood_tags":["hypnotic","minimal"],"instrumentation":["analog synth bass","orchestral strings","arpeggios","sub bass synth","gated drum machine"],"tempo_bpm":116,"key":"C major","reference_track_id":"ref-sappheiros-falling","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0035","kind":"track","title":"Ambient Drone sketch 36","duration_s":163,"vendor":"suno","status":"unrated","created_at":1788162350284,"genre_tags":["ambient drone","textural"],"mood_tags":["triumphant","soaring"],"instrumentation":["gated drum machine","vinyl crackle texture","walking bassline","arpeggios","jazzy sampled keys","distorted guitar"],"key":"F minor","reference_track_id":"ref-french79-4807","prompt_round":"round1-fft"},
+  {"id":"au-trk-0036","kind":"track","title":"Synthwave sketch 37","duration_s":47,"vendor":"elevenlabs","status":"unrated","created_at":1790211616808,"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["nostalgic","warm"],"instrumentation":["hi-hats","turntable scratches","soft piano","walking bassline"],"tempo_bpm":146,"key":"A minor"},
+  {"id":"au-trk-0037","kind":"track","title":"Synthwave sketch 38","duration_s":186,"vendor":"elevenlabs","status":"kept","created_at":1788751905573,"ratings":{"melody":6,"instrument_choice":8,"instrument_quality":5},"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["serene","dreamy"],"instrumentation":["hi-hats","808 kick","sub bass synth","analog synth bass","synth plucks","ambient pads"],"tempo_bpm":109,"key":"G minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0038","kind":"track","title":"Chillstep sketch 39","duration_s":100,"status":"kept","created_at":1787859915090,"ratings":{"melody":2,"instrument_choice":4,"instrument_quality":5},"genre_tags":["chillstep","deep house"],"mood_tags":["aggressive","dark"],"instrumentation":["ambient pads","turntable scratches","arpeggios","distorted guitar"],"key":"D minor","reference_track_id":"ref-french79-4807","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0039","kind":"track","title":"Cinematic Ambient sketch 40","duration_s":77,"vendor":"elevenlabs","status":"unrated","created_at":1787798980152,"genre_tags":["cinematic ambient","orchestral-electronic"],"mood_tags":["nostalgic","warm"],"instrumentation":["synth plucks","sub bass synth","glitch percussion","field recordings"],"tempo_bpm":76,"key":"C major","prompt_round":"round1-fft"},
+  {"id":"au-trk-0040","kind":"track","title":"Ambient Drone sketch 41","duration_s":63,"vendor":"elevenlabs","status":"unrated","created_at":1788083913216,"genre_tags":["ambient drone","textural"],"mood_tags":["aggressive","dark"],"instrumentation":["hi-hats","808 kick","arpeggios","boom-bap drums","electric piano","field recordings"],"tempo_bpm":78,"key":"G minor","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0041","kind":"track","title":"Ambient Drone sketch 42","duration_s":178,"vendor":"elevenlabs","status":"kept","created_at":1789398486721,"ratings":{"melody":10,"instrument_choice":7,"instrument_quality":5},"genre_tags":["ambient drone","textural"],"mood_tags":["aggressive","dark"],"instrumentation":["jazzy sampled keys","ambient pads","glitch percussion"],"key":"F minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0042","kind":"track","title":"Ambient Drone sketch 43","duration_s":64,"status":"unrated","created_at":1790359895424,"genre_tags":["ambient drone","textural"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["turntable scratches","distorted guitar","walking bassline"],"key":"A minor","reference_track_id":"ref-ratatat-breaking-away"},
+  {"id":"au-trk-0043","kind":"track","title":"Downtempo sketch 44","duration_s":74,"vendor":"suno","status":"kept","created_at":1788693320293,"ratings":{"melody":3,"instrument_choice":2,"instrument_quality":1},"genre_tags":["downtempo","trip hop"],"mood_tags":["triumphant","soaring"],"instrumentation":["electric piano","jazzy sampled keys","synth plucks","glitch percussion","808 kick"],"key":"G minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0044","kind":"track","title":"Melodic House sketch 45","duration_s":198,"vendor":"elevenlabs","status":"kept","created_at":1786566029854,"ratings":{"melody":10,"instrument_choice":5,"instrument_quality":1},"genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["aggressive","dark"],"instrumentation":["808 kick","ambient pads","distorted guitar","synth plucks","breathy wordless vocal"],"tempo_bpm":133,"reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0045","kind":"track","title":"Boom Bap sketch 46","duration_s":91,"vendor":"suno","status":"kept","created_at":1787535042494,"ratings":{"melody":6,"instrument_choice":7,"instrument_quality":6},"genre_tags":["boom bap","jazz rap","golden age hip hop"],"mood_tags":["serene","dreamy"],"instrumentation":["walking bassline","vinyl crackle texture","electric piano"],"tempo_bpm":153,"key":"F major"},
+  {"id":"au-trk-0046","kind":"track","title":"Drum And Bass sketch 47","duration_s":67,"status":"rejected","created_at":1789681357016,"ratings":{"melody":7,"instrument_choice":9,"instrument_quality":1},"reject_reason":"no dynamic contrast, flat throughout","genre_tags":["drum and bass","liquid dnb"],"mood_tags":["euphoric","uplifting"],"instrumentation":["arpeggios","gated drum machine","hi-hats","synth plucks"],"key":"G minor","reference_track_id":"ref-french79-4807","prompt_round":"round1-fft"},
+  {"id":"au-trk-0047","kind":"track","title":"Lo-Fi Hip Hop sketch 48","duration_s":157,"vendor":"suno","status":"unrated","created_at":1788950376589,"genre_tags":["lo-fi hip hop","dusty sample"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["orchestral strings","soft piano","hi-hats","808 kick"],"key":"F major","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0048","kind":"track","title":"Downtempo sketch 49","duration_s":210,"vendor":"suno","status":"rejected","created_at":1787458170177,"ratings":{"melody":9,"instrument_choice":5,"instrument_quality":7},"reject_reason":"no dynamic contrast, flat throughout","genre_tags":["downtempo","trip hop"],"mood_tags":["tense","driving"],"instrumentation":["glitch percussion","sub bass synth","distorted guitar","gated drum machine","analog synth bass"],"tempo_bpm":84,"reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0049","kind":"track","title":"Synthwave sketch 50","duration_s":174,"vendor":"suno","status":"unrated","created_at":1791021180209,"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["serene","dreamy"],"instrumentation":["glitch percussion","field recordings","breathy wordless vocal","turntable scratches","vinyl crackle texture","gated drum machine"],"tempo_bpm":123,"key":"F minor","reference_track_id":"ref-french79-4807"},
+  {"id":"au-trk-0050","kind":"track","title":"Melodic House sketch 51","duration_s":143,"vendor":"elevenlabs","status":"rejected","created_at":1787701259755,"ratings":{"melody":8,"instrument_choice":7,"instrument_quality":7},"reject_reason":"tempo drifted mid-section","genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["triumphant","soaring"],"instrumentation":["soft piano","arpeggios","glitch percussion","breathy wordless vocal","808 kick","hi-hats"],"key":"A minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0051","kind":"track","title":"Synthwave sketch 52","duration_s":81,"vendor":"elevenlabs","status":"unrated","created_at":1790369221515,"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["orchestral strings","vinyl crackle texture","arpeggios","ambient pads"],"key":"C major","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0052","kind":"track","title":"Drum And Bass sketch 53","duration_s":62,"vendor":"elevenlabs","status":"kept","created_at":1790644021629,"ratings":{"melody":8,"instrument_choice":3,"instrument_quality":5},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["hypnotic","minimal"],"instrumentation":["arpeggios","glitch percussion","breathy wordless vocal"],"key":"A minor","prompt_round":"round1-fft"},
+  {"id":"au-trk-0053","kind":"track","title":"Nu-Disco sketch 54","duration_s":89,"vendor":"suno","status":"unrated","created_at":1786398064145,"genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["electric piano","synth plucks","soft piano","glitch percussion","gated drum machine"],"key":"D minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0054","kind":"track","title":"Synthwave sketch 55","duration_s":184,"status":"unrated","created_at":1790353697767,"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["tense","driving"],"instrumentation":["808 kick","walking bassline","distorted guitar","vinyl crackle texture"],"tempo_bpm":129,"key":"C major","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0055","kind":"track","title":"Ambient Drone sketch 56","duration_s":120,"vendor":"elevenlabs","status":"unrated","created_at":1789764191466,"genre_tags":["ambient drone","textural"],"mood_tags":["aggressive","dark"],"instrumentation":["walking bassline","808 kick","synth plucks","turntable scratches","breathy wordless vocal","gated drum machine"],"tempo_bpm":118,"key":"A minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0056","kind":"track","title":"Nu-Disco sketch 57","duration_s":69,"vendor":"elevenlabs","status":"kept","created_at":1788256186121,"ratings":{"melody":1,"instrument_choice":10,"instrument_quality":6},"genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["synth plucks","jazzy sampled keys","soft piano","vinyl crackle texture","turntable scratches","distorted guitar"],"key":"C major","reference_track_id":"ref-french79-4807"},
+  {"id":"au-trk-0057","kind":"track","title":"Downtempo sketch 58","duration_s":173,"vendor":"suno","status":"unrated","created_at":1787108801232,"genre_tags":["downtempo","trip hop"],"mood_tags":["tense","driving"],"instrumentation":["synth plucks","arpeggios","gated drum machine"],"tempo_bpm":139,"key":"A minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0058","kind":"track","title":"Synthwave sketch 59","duration_s":146,"status":"kept","created_at":1790972417725,"ratings":{"melody":8,"instrument_choice":6,"instrument_quality":5},"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["aggressive","dark"],"instrumentation":["ambient pads","808 kick","analog synth bass","field recordings","jazzy sampled keys"],"tempo_bpm":120,"reference_track_id":"ref-sappheiros-falling","prompt_round":"round1-fft"},
+  {"id":"au-trk-0059","kind":"track","title":"Ambient Drone sketch 60","duration_s":122,"status":"unrated","created_at":1788243735714,"genre_tags":["ambient drone","textural"],"mood_tags":["hypnotic","minimal"],"instrumentation":["ambient pads","jazzy sampled keys","hi-hats","sub bass synth","arpeggios"],"tempo_bpm":78,"key":"C major","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0060","kind":"track","title":"Nu-Disco sketch 61","duration_s":235,"vendor":"elevenlabs","status":"kept","created_at":1787911478315,"ratings":{"melody":8,"instrument_choice":10,"instrument_quality":7},"genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["hi-hats","ambient pads","vinyl crackle texture","jazzy sampled keys","field recordings"],"tempo_bpm":155,"key":"A minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round1-fft"},
+  {"id":"au-trk-0061","kind":"track","title":"Chillstep sketch 62","duration_s":146,"vendor":"suno","status":"rejected","created_at":1789847296127,"ratings":{"melody":2,"instrument_choice":4,"instrument_quality":10},"reject_reason":"muddy low end, instruments masking each other","genre_tags":["chillstep","deep house"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["turntable scratches","808 kick","vinyl crackle texture","jazzy sampled keys","soft piano"],"tempo_bpm":117},
+  {"id":"au-trk-0062","kind":"track","title":"Nu-Disco sketch 63","duration_s":82,"status":"unrated","created_at":1788472476270,"genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["nostalgic","warm"],"instrumentation":["field recordings","vinyl crackle texture","turntable scratches","analog synth bass"],"key":"F major","reference_track_id":"ref-french79-4807","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0063","kind":"track","title":"Melodic House sketch 64","duration_s":89,"vendor":"elevenlabs","status":"rejected","created_at":1789892453124,"ratings":{"melody":9,"instrument_choice":2,"instrument_quality":2},"reject_reason":"no dynamic contrast, flat throughout","genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["aggressive","dark"],"instrumentation":["ambient pads","sub bass synth","field recordings","vinyl crackle texture"],"tempo_bpm":100},
+  {"id":"au-trk-0064","kind":"track","title":"Synthwave sketch 65","duration_s":209,"status":"unrated","created_at":1786891736975,"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["nostalgic","warm"],"instrumentation":["808 kick","orchestral strings","jazzy sampled keys"],"tempo_bpm":154,"key":"G minor"},
+  {"id":"au-trk-0065","kind":"track","title":"Lo-Fi Hip Hop sketch 66","duration_s":115,"vendor":"suno","status":"unrated","created_at":1787973524944,"genre_tags":["lo-fi hip hop","dusty sample"],"mood_tags":["hypnotic","minimal"],"instrumentation":["hi-hats","808 kick","analog synth bass"],"key":"D minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0066","kind":"track","title":"Synthwave sketch 67","duration_s":161,"vendor":"elevenlabs","status":"kept","created_at":1789319664817,"ratings":{"melody":7,"instrument_choice":6,"instrument_quality":5},"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["hypnotic","minimal"],"instrumentation":["ambient pads","glitch percussion","turntable scratches"],"tempo_bpm":99,"key":"F major","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0067","kind":"track","title":"Drum And Bass sketch 68","duration_s":188,"status":"kept","created_at":1788619786160,"ratings":{"melody":6,"instrument_choice":7,"instrument_quality":1},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["tense","driving"],"instrumentation":["analog synth bass","distorted guitar","vinyl crackle texture","glitch percussion","gated drum machine","electric piano"],"key":"A minor"},
+  {"id":"au-trk-0068","kind":"track","title":"Chillstep sketch 69","duration_s":187,"status":"kept","created_at":1789453535222,"ratings":{"melody":7,"instrument_choice":9,"instrument_quality":10},"genre_tags":["chillstep","deep house"],"mood_tags":["aggressive","dark"],"instrumentation":["ambient pads","vinyl crackle texture","orchestral strings","turntable scratches","field recordings"],"tempo_bpm":83,"key":"F minor","reference_track_id":"ref-french79-4807","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0069","kind":"track","title":"Ambient Drone sketch 70","duration_s":81,"vendor":"elevenlabs","status":"unrated","created_at":1786858304364,"genre_tags":["ambient drone","textural"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["sub bass synth","boom-bap drums","walking bassline","synth plucks","arpeggios"],"tempo_bpm":88,"prompt_round":"round2-librosa"},
+  {"id":"au-trk-0070","kind":"track","title":"Lo-Fi Hip Hop sketch 71","duration_s":238,"status":"kept","created_at":1788378603118,"ratings":{"melody":8,"instrument_choice":7,"instrument_quality":8},"genre_tags":["lo-fi hip hop","dusty sample"],"mood_tags":["hypnotic","minimal"],"instrumentation":["arpeggios","boom-bap drums","soft piano","synth plucks","distorted guitar","breathy wordless vocal"],"key":"D minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0071","kind":"track","title":"Ambient Drone sketch 72","duration_s":215,"vendor":"suno","status":"unrated","created_at":1789707546713,"genre_tags":["ambient drone","textural"],"mood_tags":["triumphant","soaring"],"instrumentation":["walking bassline","turntable scratches","orchestral strings","ambient pads","soft piano","vinyl crackle texture"],"tempo_bpm":156,"key":"A minor"},
+  {"id":"au-trk-0072","kind":"track","title":"Ambient Drone sketch 73","duration_s":46,"vendor":"suno","status":"rejected","created_at":1789182548704,"ratings":{"melody":9,"instrument_choice":4,"instrument_quality":9},"reject_reason":"mix is harsh above 4kHz","genre_tags":["ambient drone","textural"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["turntable scratches","synth plucks","distorted guitar"],"tempo_bpm":107},
+  {"id":"au-trk-0073","kind":"track","title":"Boom Bap sketch 74","duration_s":148,"vendor":"suno","status":"rejected","created_at":1789238216019,"ratings":{"melody":1,"instrument_choice":6,"instrument_quality":3},"reject_reason":"no dynamic contrast, flat throughout","genre_tags":["boom bap","jazz rap","golden age hip hop"],"mood_tags":["hypnotic","minimal"],"instrumentation":["gated drum machine","sub bass synth","808 kick"],"tempo_bpm":143,"key":"A minor"},
+  {"id":"au-trk-0074","kind":"track","title":"Downtempo sketch 75","duration_s":124,"vendor":"elevenlabs","status":"kept","created_at":1787828990564,"ratings":{"melody":3,"instrument_choice":2,"instrument_quality":9},"genre_tags":["downtempo","trip hop"],"mood_tags":["nostalgic","warm"],"instrumentation":["gated drum machine","ambient pads","jazzy sampled keys"],"key":"G minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0075","kind":"track","title":"Future Bass sketch 76","duration_s":84,"vendor":"suno","status":"unrated","created_at":1788216808126,"genre_tags":["future bass","melodic dubstep"],"mood_tags":["euphoric","uplifting"],"instrumentation":["soft piano","distorted guitar","field recordings","jazzy sampled keys"],"key":"A minor"},
+  {"id":"au-trk-0076","kind":"track","title":"Synthwave sketch 77","duration_s":174,"vendor":"elevenlabs","status":"kept","created_at":1790713551451,"ratings":{"melody":1,"instrument_choice":1,"instrument_quality":6},"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["triumphant","soaring"],"instrumentation":["arpeggios","field recordings","808 kick","analog synth bass","hi-hats"],"key":"F major","reference_track_id":"ref-ratatat-breaking-away"},
+  {"id":"au-trk-0077","kind":"track","title":"Chillstep sketch 78","duration_s":191,"vendor":"elevenlabs","status":"kept","created_at":1788232577346,"ratings":{"melody":9,"instrument_choice":3,"instrument_quality":1},"genre_tags":["chillstep","deep house"],"mood_tags":["euphoric","uplifting"],"instrumentation":["distorted guitar","orchestral strings","breathy wordless vocal"],"tempo_bpm":75,"key":"F minor","reference_track_id":"ref-french79-4807"},
+  {"id":"au-trk-0078","kind":"track","title":"Synthwave sketch 79","duration_s":140,"status":"kept","created_at":1787089689409,"ratings":{"melody":6,"instrument_choice":10,"instrument_quality":1},"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["euphoric","uplifting"],"instrumentation":["analog synth bass","orchestral strings","boom-bap drums","electric piano","jazzy sampled keys"],"key":"F major","reference_track_id":"ref-ratatat-breaking-away"},
+  {"id":"au-trk-0079","kind":"track","title":"Future Bass sketch 80","duration_s":65,"status":"kept","created_at":1786129800354,"ratings":{"melody":7,"instrument_choice":3,"instrument_quality":10},"genre_tags":["future bass","melodic dubstep"],"mood_tags":["nostalgic","warm"],"instrumentation":["arpeggios","ambient pads","glitch percussion"],"key":"F major","reference_track_id":"ref-french79-4807","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0080","kind":"track","title":"Downtempo sketch 81","duration_s":137,"status":"kept","created_at":1789705628222,"ratings":{"melody":8,"instrument_choice":4,"instrument_quality":4},"genre_tags":["downtempo","trip hop"],"mood_tags":["euphoric","uplifting"],"instrumentation":["glitch percussion","breathy wordless vocal","arpeggios","field recordings","analog synth bass"],"tempo_bpm":135,"prompt_round":"round3-gemini"},
+  {"id":"au-trk-0081","kind":"track","title":"Melodic House sketch 82","duration_s":131,"status":"rejected","created_at":1788377772960,"ratings":{"melody":3,"instrument_choice":3,"instrument_quality":3},"reject_reason":"tempo drifted mid-section","genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["tense","driving"],"instrumentation":["synth plucks","ambient pads","orchestral strings"],"key":"C major","reference_track_id":"ref-sappheiros-falling"},
+  {"id":"au-trk-0082","kind":"track","title":"Downtempo sketch 83","duration_s":106,"vendor":"elevenlabs","status":"kept","created_at":1787445413203,"ratings":{"melody":8,"instrument_choice":5,"instrument_quality":7},"genre_tags":["downtempo","trip hop"],"mood_tags":["triumphant","soaring"],"instrumentation":["gated drum machine","soft piano","jazzy sampled keys"],"key":"A minor","reference_track_id":"ref-french79-4807"},
+  {"id":"au-trk-0083","kind":"track","title":"Trap sketch 84","duration_s":177,"status":"kept","created_at":1787376467559,"ratings":{"melody":3,"instrument_choice":5,"instrument_quality":8},"genre_tags":["trap","dark trap","808-driven"],"mood_tags":["hypnotic","minimal"],"instrumentation":["turntable scratches","field recordings","walking bassline","electric piano"],"key":"C major","reference_track_id":"ref-french79-4807","prompt_round":"round1-fft"},
+  {"id":"au-trk-0084","kind":"track","title":"Trap sketch 85","duration_s":65,"vendor":"suno","status":"kept","created_at":1789421960235,"ratings":{"melody":2,"instrument_choice":6,"instrument_quality":3},"genre_tags":["trap","dark trap","808-driven"],"mood_tags":["tense","driving"],"instrumentation":["analog synth bass","jazzy sampled keys","808 kick","soft piano","sub bass synth","turntable scratches"],"key":"G minor","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0085","kind":"track","title":"Melodic House sketch 86","duration_s":231,"vendor":"suno","status":"unrated","created_at":1789214332551,"genre_tags":["melodic house","progressive house","organic house"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["hi-hats","field recordings","distorted guitar","808 kick","sub bass synth"],"key":"A minor","reference_track_id":"ref-french79-4807","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0086","kind":"track","title":"Chillstep sketch 87","duration_s":176,"vendor":"suno","status":"unrated","created_at":1788562387868,"genre_tags":["chillstep","deep house"],"mood_tags":["euphoric","uplifting"],"instrumentation":["jazzy sampled keys","gated drum machine","808 kick"],"key":"C major","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0087","kind":"track","title":"Lo-Fi Hip Hop sketch 88","duration_s":165,"status":"rejected","created_at":1786550251681,"ratings":{"melody":5,"instrument_choice":1,"instrument_quality":6},"reject_reason":"generic progression, no hook","genre_tags":["lo-fi hip hop","dusty sample"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["jazzy sampled keys","vinyl crackle texture","gated drum machine","boom-bap drums","analog synth bass"],"key":"G minor","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0088","kind":"track","title":"Drum And Bass sketch 89","duration_s":220,"vendor":"suno","status":"kept","created_at":1788045523807,"ratings":{"melody":2,"instrument_choice":8,"instrument_quality":1},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["serene","dreamy"],"instrumentation":["vinyl crackle texture","arpeggios","field recordings"],"key":"F minor","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0089","kind":"track","title":"Chillstep sketch 90","duration_s":54,"vendor":"elevenlabs","status":"kept","created_at":1790211414916,"ratings":{"melody":6,"instrument_choice":5,"instrument_quality":2},"genre_tags":["chillstep","deep house"],"mood_tags":["serene","dreamy"],"instrumentation":["turntable scratches","electric piano","arpeggios"],"tempo_bpm":139,"key":"F major","reference_track_id":"ref-french79-4807","prompt_round":"round1-fft"},
+  {"id":"au-trk-0090","kind":"track","title":"Drum And Bass sketch 91","duration_s":66,"vendor":"elevenlabs","status":"kept","created_at":1787909407413,"ratings":{"melody":10,"instrument_choice":3,"instrument_quality":9},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["hypnotic","minimal"],"instrumentation":["808 kick","breathy wordless vocal","arpeggios","boom-bap drums","hi-hats","soft piano"],"tempo_bpm":136,"key":"F minor"},
+  {"id":"au-trk-0091","kind":"track","title":"Chillstep sketch 92","duration_s":158,"vendor":"elevenlabs","status":"kept","created_at":1789522315102,"ratings":{"melody":10,"instrument_choice":7,"instrument_quality":5},"genre_tags":["chillstep","deep house"],"mood_tags":["nostalgic","warm"],"instrumentation":["analog synth bass","arpeggios","synth plucks"],"key":"C major","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0092","kind":"track","title":"Future Bass sketch 93","duration_s":200,"status":"kept","created_at":1789150259961,"ratings":{"melody":4,"instrument_choice":6,"instrument_quality":6},"genre_tags":["future bass","melodic dubstep"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["breathy wordless vocal","soft piano","orchestral strings"],"key":"F minor","prompt_round":"round1-fft"},
+  {"id":"au-trk-0093","kind":"track","title":"Lo-Fi Hip Hop sketch 94","duration_s":125,"vendor":"suno","status":"kept","created_at":1788242355774,"ratings":{"melody":1,"instrument_choice":3,"instrument_quality":8},"genre_tags":["lo-fi hip hop","dusty sample"],"mood_tags":["nocturnal","melancholic"],"instrumentation":["808 kick","soft piano","vinyl crackle texture","distorted guitar"],"tempo_bpm":137,"key":"G minor","prompt_round":"round1-fft"},
+  {"id":"au-trk-0094","kind":"track","title":"Trap sketch 95","duration_s":76,"vendor":"suno","status":"rejected","created_at":1786154281509,"ratings":{"melody":3,"instrument_choice":8,"instrument_quality":2},"reject_reason":"mix is harsh above 4kHz","genre_tags":["trap","dark trap","808-driven"],"mood_tags":["hypnotic","minimal"],"instrumentation":["walking bassline","distorted guitar","808 kick"],"tempo_bpm":106,"key":"D minor"},
+  {"id":"au-trk-0095","kind":"track","title":"Future Bass sketch 96","duration_s":137,"vendor":"elevenlabs","status":"rejected","created_at":1788847108627,"ratings":{"melody":3,"instrument_choice":4,"instrument_quality":8},"reject_reason":"muddy low end, instruments masking each other","genre_tags":["future bass","melodic dubstep"],"mood_tags":["nostalgic","warm"],"instrumentation":["glitch percussion","distorted guitar","synth plucks"],"key":"F minor","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0096","kind":"track","title":"Drum And Bass sketch 97","duration_s":149,"status":"kept","created_at":1790715441012,"ratings":{"melody":8,"instrument_choice":8,"instrument_quality":9},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["nostalgic","warm"],"instrumentation":["glitch percussion","field recordings","analog synth bass","distorted guitar","synth plucks","turntable scratches"],"tempo_bpm":137,"key":"F minor","reference_track_id":"ref-french79-4807","prompt_round":"round1-fft"},
+  {"id":"au-trk-0097","kind":"track","title":"Drum And Bass sketch 98","duration_s":127,"vendor":"suno","status":"kept","created_at":1790063810408,"ratings":{"melody":2,"instrument_choice":5,"instrument_quality":4},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["tense","driving"],"instrumentation":["field recordings","gated drum machine","orchestral strings","electric piano"],"key":"D minor","reference_track_id":"ref-sappheiros-falling","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0098","kind":"track","title":"Future Bass sketch 99","duration_s":213,"status":"unrated","created_at":1786560302438,"genre_tags":["future bass","melodic dubstep"],"mood_tags":["aggressive","dark"],"instrumentation":["synth plucks","glitch percussion","analog synth bass","orchestral strings"],"key":"D minor","prompt_round":"round1-fft"},
+  {"id":"au-trk-0099","kind":"track","title":"Nu-Disco sketch 100","duration_s":107,"status":"kept","created_at":1788090184659,"ratings":{"melody":2,"instrument_choice":1,"instrument_quality":3},"genre_tags":["nu-disco","synthwave","80s french touch"],"mood_tags":["aggressive","dark"],"instrumentation":["vinyl crackle texture","gated drum machine","sub bass synth","hi-hats"],"tempo_bpm":152,"key":"G minor","reference_track_id":"ref-french79-4807"},
+  {"id":"au-trk-0100","kind":"track","title":"Synthwave sketch 101","duration_s":239,"status":"unrated","created_at":1788619924314,"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["hypnotic","minimal"],"instrumentation":["808 kick","turntable scratches","arpeggios","field recordings","glitch percussion","gated drum machine"],"tempo_bpm":114,"key":"D minor","reference_track_id":"ref-french79-4807","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0101","kind":"track","title":"Synthwave sketch 102","duration_s":85,"vendor":"elevenlabs","status":"rejected","created_at":1787538337171,"ratings":{"melody":4,"instrument_choice":3,"instrument_quality":8},"reject_reason":"no dynamic contrast, flat throughout","genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["euphoric","uplifting"],"instrumentation":["808 kick","jazzy sampled keys","field recordings","ambient pads","electric piano"],"tempo_bpm":148,"key":"D minor","reference_track_id":"ref-sappheiros-falling","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0102","kind":"track","title":"Synthwave sketch 103","duration_s":171,"vendor":"suno","status":"kept","created_at":1788143743913,"ratings":{"melody":2,"instrument_choice":7,"instrument_quality":3},"genre_tags":["synthwave","retro electronic","outrun"],"mood_tags":["aggressive","dark"],"instrumentation":["sub bass synth","analog synth bass","breathy wordless vocal","orchestral strings","808 kick","ambient pads"],"key":"F major","reference_track_id":"ref-french79-4807","prompt_round":"round1-fft"},
+  {"id":"au-trk-0103","kind":"track","title":"Chillstep sketch 104","duration_s":185,"status":"unrated","created_at":1790521908466,"genre_tags":["chillstep","deep house"],"mood_tags":["nostalgic","warm"],"instrumentation":["soft piano","electric piano","breathy wordless vocal","vinyl crackle texture","turntable scratches","boom-bap drums"],"tempo_bpm":119,"key":"F minor"},
+  {"id":"au-trk-0104","kind":"track","title":"Drum And Bass sketch 105","duration_s":161,"vendor":"suno","status":"unrated","created_at":1786097535345,"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["nostalgic","warm"],"instrumentation":["field recordings","turntable scratches","orchestral strings","breathy wordless vocal","electric piano"],"tempo_bpm":112,"key":"A minor","reference_track_id":"ref-sappheiros-falling","prompt_round":"round2-librosa"},
+  {"id":"au-trk-0105","kind":"track","title":"Drum And Bass sketch 106","duration_s":49,"status":"kept","created_at":1789450113171,"ratings":{"melody":10,"instrument_choice":5,"instrument_quality":1},"genre_tags":["drum and bass","liquid dnb"],"mood_tags":["nostalgic","warm"],"instrumentation":["breathy wordless vocal","synth plucks","arpeggios","orchestral strings"],"tempo_bpm":160,"key":"G minor"},
+  {"id":"au-trk-0106","kind":"track","title":"Ambient Drone sketch 107","duration_s":219,"vendor":"suno","status":"kept","created_at":1789991971596,"ratings":{"melody":4,"instrument_choice":1,"instrument_quality":8},"genre_tags":["ambient drone","textural"],"mood_tags":["triumphant","soaring"],"instrumentation":["vinyl crackle texture","distorted guitar","jazzy sampled keys","electric piano","hi-hats"],"tempo_bpm":149,"key":"D minor","reference_track_id":"ref-sappheiros-falling","prompt_round":"round1-fft"},
+  {"id":"au-trk-0107","kind":"track","title":"Drum And Bass sketch 108","duration_s":98,"status":"rejected","created_at":1788623207573,"ratings":{"melody":6,"instrument_choice":3,"instrument_quality":8},"reject_reason":"mix is harsh above 4kHz","genre_tags":["drum and bass","liquid dnb"],"mood_tags":["hypnotic","minimal"],"instrumentation":["gated drum machine","turntable scratches","distorted guitar","orchestral strings"],"key":"A minor","reference_track_id":"ref-ratatat-breaking-away"},
+  {"id":"au-trk-0108","kind":"track","title":"Trap sketch 109","duration_s":98,"status":"unrated","created_at":1788931945666,"genre_tags":["trap","dark trap","808-driven"],"mood_tags":["nostalgic","warm"],"instrumentation":["distorted guitar","hi-hats","turntable scratches","jazzy sampled keys","walking bassline"],"tempo_bpm":108,"key":"C major","reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-trk-0109","kind":"track","title":"Trap sketch 110","duration_s":118,"vendor":"elevenlabs","status":"rejected","created_at":1790692769079,"ratings":{"melody":8,"instrument_choice":4,"instrument_quality":4},"reject_reason":"structure collapsed after the drop","genre_tags":["trap","dark trap","808-driven"],"mood_tags":["aggressive","dark"],"instrumentation":["ambient pads","vinyl crackle texture","glitch percussion","breathy wordless vocal","orchestral strings"],"tempo_bpm":88,"reference_track_id":"ref-ratatat-breaking-away","prompt_round":"round3-gemini"},
+  {"id":"au-sfx-0000","kind":"sfx","title":"Weapon Fire 1","duration_s":1.14,"status":"unrated","created_at":1790004489244,"sfx_category":"weapon-fire","loopable":false},
+  {"id":"au-sfx-0001","kind":"sfx","title":"Footstep 2","duration_s":2.04,"status":"rejected","created_at":1790032172501,"ratings":{"melody":2,"instrument_choice":7,"instrument_quality":6},"reject_reason":"no dynamic contrast, flat throughout","sfx_category":"footstep","loopable":false},
+  {"id":"au-sfx-0002","kind":"sfx","title":"Impact 3","duration_s":0.34,"status":"rejected","created_at":1787041745152,"ratings":{"melody":7,"instrument_choice":8,"instrument_quality":8},"reject_reason":"vocal texture too thin / robotic","sfx_category":"impact","loopable":false},
+  {"id":"au-sfx-0003","kind":"sfx","title":"Creature Growl 4","duration_s":5.27,"vendor":"elevenlabs","status":"unrated","created_at":1786352999770,"sfx_category":"creature-growl","loopable":false},
+  {"id":"au-sfx-0004","kind":"sfx","title":"Pickup Chime 5","duration_s":5.87,"vendor":"suno","status":"kept","created_at":1787009233532,"ratings":{"melody":3,"instrument_choice":7,"instrument_quality":3},"sfx_category":"pickup-chime","loopable":false},
+  {"id":"au-sfx-0005","kind":"sfx","title":"Footstep 6","duration_s":1.73,"vendor":"elevenlabs","status":"rejected","created_at":1790871281888,"ratings":{"melody":5,"instrument_choice":10,"instrument_quality":10},"reject_reason":"generic progression, no hook","sfx_category":"footstep","loopable":false},
+  {"id":"au-sfx-0006","kind":"sfx","title":"Whoosh 7","duration_s":5.24,"vendor":"elevenlabs","status":"kept","created_at":1788780266969,"ratings":{"melody":3,"instrument_choice":9,"instrument_quality":8},"sfx_category":"whoosh","loopable":false},
+  {"id":"au-sfx-0007","kind":"sfx","title":"Ambience Loop 8","duration_s":2.85,"vendor":"suno","status":"rejected","created_at":1787892064724,"ratings":{"melody":null,"instrument_choice":5,"instrument_quality":3},"reject_reason":"muddy low end, instruments masking each other","sfx_category":"ambience-loop","loopable":true},
+  {"id":"au-sfx-0008","kind":"sfx","title":"Environment Loop 9","duration_s":4.67,"vendor":"elevenlabs","status":"rejected","created_at":1787779693264,"ratings":{"melody":null,"instrument_choice":3,"instrument_quality":10},"reject_reason":"too close to a recognizable existing track","sfx_category":"environment-loop","loopable":true},
+  {"id":"au-sfx-0009","kind":"sfx","title":"Glass Break 10","duration_s":0.97,"vendor":"elevenlabs","status":"kept","created_at":1788157765893,"ratings":{"melody":3,"instrument_choice":3,"instrument_quality":8},"sfx_category":"glass-break","loopable":false},
+  {"id":"au-sfx-0010","kind":"sfx","title":"Whoosh 11","duration_s":3.25,"vendor":"suno","status":"unrated","created_at":1789616468019,"sfx_category":"whoosh","loopable":false},
+  {"id":"au-sfx-0011","kind":"sfx","title":"Pickup Chime 12","duration_s":2.31,"status":"kept","created_at":1790017286066,"ratings":{"melody":2,"instrument_choice":8,"instrument_quality":5},"sfx_category":"pickup-chime","loopable":false},
+  {"id":"au-sfx-0012","kind":"sfx","title":"Ui Click 13","duration_s":7.41,"vendor":"elevenlabs","status":"kept","created_at":1787725755778,"ratings":{"melody":2,"instrument_choice":5,"instrument_quality":6},"sfx_category":"ui-click","loopable":false},
+  {"id":"au-sfx-0013","kind":"sfx","title":"Pickup Chime 14","duration_s":1.33,"vendor":"suno","status":"unrated","created_at":1790374270920,"sfx_category":"pickup-chime","loopable":false},
+  {"id":"au-sfx-0014","kind":"sfx","title":"Environment Loop 15","duration_s":5.7,"status":"unrated","created_at":1787111765119,"sfx_category":"environment-loop","loopable":true},
+  {"id":"au-sfx-0015","kind":"sfx","title":"Creature Growl 16","duration_s":6.66,"status":"rejected","created_at":1787760035756,"ratings":{"melody":10,"instrument_choice":2,"instrument_quality":9},"reject_reason":"no dynamic contrast, flat throughout","sfx_category":"creature-growl","loopable":false},
+  {"id":"au-sfx-0016","kind":"sfx","title":"Weapon Fire 17","duration_s":7.36,"status":"unrated","created_at":1790550264800,"sfx_category":"weapon-fire","loopable":false},
+  {"id":"au-sfx-0017","kind":"sfx","title":"Glass Break 18","duration_s":1.86,"status":"rejected","created_at":1788727260076,"ratings":{"melody":3,"instrument_choice":6,"instrument_quality":9},"reject_reason":"no dynamic contrast, flat throughout","sfx_category":"glass-break","loopable":false},
+  {"id":"au-sfx-0018","kind":"sfx","title":"Impact 19","duration_s":4.79,"status":"unrated","created_at":1786346639251,"sfx_category":"impact","loopable":false},
+  {"id":"au-sfx-0019","kind":"sfx","title":"Weapon Fire 20","duration_s":3.79,"vendor":"elevenlabs","status":"rejected","created_at":1788827815223,"ratings":{"melody":8,"instrument_choice":10,"instrument_quality":1},"reject_reason":"no dynamic contrast, flat throughout","sfx_category":"weapon-fire","loopable":false},
+  {"id":"au-sfx-0020","kind":"sfx","title":"Notification 21","duration_s":3.35,"vendor":"elevenlabs","status":"kept","created_at":1787525558006,"ratings":{"melody":4,"instrument_choice":10,"instrument_quality":2},"sfx_category":"notification","loopable":false},
+  {"id":"au-sfx-0021","kind":"sfx","title":"Footstep 22","duration_s":0.79,"vendor":"elevenlabs","status":"unrated","created_at":1786762469304,"sfx_category":"footstep","loopable":false},
+  {"id":"au-sfx-0022","kind":"sfx","title":"Impact 23","duration_s":3.45,"vendor":"elevenlabs","status":"unrated","created_at":1787729488056,"sfx_category":"impact","loopable":false},
+  {"id":"au-sfx-0023","kind":"sfx","title":"Creature Growl 24","duration_s":5.27,"status":"rejected","created_at":1789226757118,"ratings":{"melody":7,"instrument_choice":8,"instrument_quality":7},"reject_reason":"too close to a recognizable existing track","sfx_category":"creature-growl","loopable":false},
+  {"id":"au-sfx-0024","kind":"sfx","title":"Impact 25","duration_s":7.03,"status":"rejected","created_at":1786166043761,"ratings":{"melody":6,"instrument_choice":2,"instrument_quality":3},"reject_reason":"too close to a recognizable existing track","sfx_category":"impact","loopable":false},
+  {"id":"au-sfx-0025","kind":"sfx","title":"Weapon Fire 26","duration_s":2.01,"vendor":"suno","status":"kept","created_at":1786722312948,"ratings":{"melody":1,"instrument_choice":5,"instrument_quality":8},"sfx_category":"weapon-fire","loopable":false},
+  {"id":"au-sfx-0026","kind":"sfx","title":"Notification 27","duration_s":4.4,"status":"kept","created_at":1787495891743,"ratings":{"melody":4,"instrument_choice":8,"instrument_quality":6},"sfx_category":"notification","loopable":false},
+  {"id":"au-sfx-0027","kind":"sfx","title":"Ui Click 28","duration_s":7.04,"vendor":"elevenlabs","status":"unrated","created_at":1787744443676,"sfx_category":"ui-click","loopable":false},
+  {"id":"au-sfx-0028","kind":"sfx","title":"Footstep 29","duration_s":6.2,"status":"kept","created_at":1790964999725,"ratings":{"melody":4,"instrument_choice":2,"instrument_quality":2},"sfx_category":"footstep","loopable":false},
+  {"id":"au-sfx-0029","kind":"sfx","title":"Pickup Chime 30","duration_s":5.47,"vendor":"suno","status":"kept","created_at":1787286074083,"ratings":{"melody":4,"instrument_choice":1,"instrument_quality":7},"sfx_category":"pickup-chime","loopable":false},
+  {"id":"au-sfx-0030","kind":"sfx","title":"Magic Spell 31","duration_s":6.11,"vendor":"suno","status":"kept","created_at":1787699030038,"ratings":{"melody":3,"instrument_choice":9,"instrument_quality":5},"sfx_category":"magic-spell","loopable":false},
+  {"id":"au-sfx-0031","kind":"sfx","title":"Door 32","duration_s":4.75,"status":"kept","created_at":1787517271881,"ratings":{"melody":4,"instrument_choice":5,"instrument_quality":3},"sfx_category":"door","loopable":false},
+  {"id":"au-sfx-0032","kind":"sfx","title":"Notification 33","duration_s":2.61,"status":"unrated","created_at":1786475419562,"sfx_category":"notification","loopable":false},
+  {"id":"au-sfx-0033","kind":"sfx","title":"Pickup Chime 34","duration_s":5.12,"status":"rejected","created_at":1788903522816,"ratings":{"melody":6,"instrument_choice":7,"instrument_quality":9},"reject_reason":"mix is harsh above 4kHz","sfx_category":"pickup-chime","loopable":false},
+  {"id":"au-sfx-0034","kind":"sfx","title":"Environment Loop 35","duration_s":2.61,"vendor":"elevenlabs","status":"kept","created_at":1785947476426,"ratings":{"melody":null,"instrument_choice":9,"instrument_quality":8},"sfx_category":"environment-loop","loopable":true},
+  {"id":"au-sfx-0035","kind":"sfx","title":"Door 36","duration_s":5.75,"vendor":"suno","status":"unrated","created_at":1787571415644,"sfx_category":"door","loopable":false},
+  {"id":"au-sfx-0036","kind":"sfx","title":"Footstep 37","duration_s":3.51,"status":"kept","created_at":1788755900404,"ratings":{"melody":7,"instrument_choice":4,"instrument_quality":5},"sfx_category":"footstep","loopable":false},
+  {"id":"au-sfx-0037","kind":"sfx","title":"Door 38","duration_s":7.4,"vendor":"elevenlabs","status":"kept","created_at":1787393787738,"ratings":{"melody":2,"instrument_choice":9,"instrument_quality":4},"sfx_category":"door","loopable":false},
+  {"id":"au-sfx-0038","kind":"sfx","title":"Footstep 39","duration_s":4.96,"vendor":"elevenlabs","status":"unrated","created_at":1786567375163,"sfx_category":"footstep","loopable":false},
+  {"id":"au-sfx-0039","kind":"sfx","title":"Impact 40","duration_s":4.82,"vendor":"suno","status":"rejected","created_at":1790100119050,"ratings":{"melody":4,"instrument_choice":6,"instrument_quality":5},"reject_reason":"muddy low end, instruments masking each other","sfx_category":"impact","loopable":false},
+  {"id":"au-sfx-0040","kind":"sfx","title":"Door 41","duration_s":1.2,"vendor":"suno","status":"rejected","created_at":1790153820646,"ratings":{"melody":4,"instrument_choice":9,"instrument_quality":6},"reject_reason":"structure collapsed after the drop","sfx_category":"door","loopable":false},
+  {"id":"au-sfx-0041","kind":"sfx","title":"Explosion 42","duration_s":3.07,"vendor":"elevenlabs","status":"kept","created_at":1789908799269,"ratings":{"melody":9,"instrument_choice":8,"instrument_quality":8},"sfx_category":"explosion","loopable":false},
+  {"id":"au-sfx-0042","kind":"sfx","title":"Impact 43","duration_s":6.77,"status":"kept","created_at":1787105178303,"ratings":{"melody":6,"instrument_choice":6,"instrument_quality":7},"sfx_category":"impact","loopable":false},
+  {"id":"au-sfx-0043","kind":"sfx","title":"Footstep 44","duration_s":6.01,"status":"rejected","created_at":1790962533969,"ratings":{"melody":9,"instrument_choice":10,"instrument_quality":10},"reject_reason":"too close to a recognizable existing track","sfx_category":"footstep","loopable":false},
+  {"id":"au-sfx-0044","kind":"sfx","title":"Ambience Loop 45","duration_s":2.07,"vendor":"suno","status":"unrated","created_at":1789976795543,"sfx_category":"ambience-loop","loopable":true},
+  {"id":"au-sfx-0045","kind":"sfx","title":"Weapon Fire 46","duration_s":2.9,"status":"rejected","created_at":1787855665494,"ratings":{"melody":8,"instrument_choice":3,"instrument_quality":6},"reject_reason":"tempo drifted mid-section","sfx_category":"weapon-fire","loopable":false},
+  {"id":"au-sfx-0046","kind":"sfx","title":"Ui Click 47","duration_s":1.72,"status":"kept","created_at":1786920896739,"ratings":{"melody":9,"instrument_choice":1,"instrument_quality":2},"sfx_category":"ui-click","loopable":false},
+  {"id":"au-sfx-0047","kind":"sfx","title":"Glass Break 48","duration_s":0.35,"status":"unrated","created_at":1786146709004,"sfx_category":"glass-break","loopable":false},
+  {"id":"au-sfx-0048","kind":"sfx","title":"Notification 49","duration_s":1.46,"vendor":"suno","status":"unrated","created_at":1789073651335,"sfx_category":"notification","loopable":false},
+  {"id":"au-sfx-0049","kind":"sfx","title":"Footstep 50","duration_s":7.49,"status":"kept","created_at":1787111960271,"ratings":{"melody":8,"instrument_choice":1,"instrument_quality":1},"sfx_category":"footstep","loopable":false},
+];
+
+/** One account's shelf. Ids are `seed-au-…`, content-addressed by the fixture
+ *  row, so two tabs seeding the same fresh account upsert the same 160 rows. */
+export function seedAudioAssets(uid: string, now = Date.now()): Asset[] {
+  const shift = now - NEWEST - 60 * 60 * 1000;
+  return ROWS.map((r) => {
+    const { id, kind, title, status, created_at, ...rest } = r;
+    void kind;
+    const meta: AudioMeta & { fixture: true } = {
+      ...rest,
+      verdict: status === "unrated" ? "unjudged" : status,
+      fixture: true,
+    };
+    return {
+      id: `seed-${id}`,
+      uid,
+      path: ["audio"],
+      name: title,
+      src: "",
+      kind: "audio",
+      meta: meta as unknown as Record<string, unknown>,
+      createdAt: created_at + shift,
+    };
+  });
 }
