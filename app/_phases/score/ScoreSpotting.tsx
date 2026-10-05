@@ -543,6 +543,11 @@ function StandardScore({ projectId }: { projectId: string }) {
   const cue =
     cues.find((c) => c.id === focus) ?? cues.find((c) => c.status === "failed") ?? cues[0];
   const take = cue ? takes[cue.id] : undefined;
+  // REFUSED, WHERE IT ACTUALLY HAPPENS. `cue.status` is absent by construction on
+  // a live cue (spots.ts), so the refusal the session really receives lives on
+  // the take. Both feed the same picture; an `error` take is a different state
+  // (retry, not rewrite) and keeps its own element below.
+  const refused = cue ? cue.status === "failed" || take?.state === "refused" : false;
 
   /** THE URLS THIS SURFACE OWNS, RELEASED WHEN IT GOES, keyed by the cue whose
    *  take they carry.
@@ -809,6 +814,7 @@ function StandardScore({ projectId }: { projectId: string }) {
                 point of marking it thrown away. */}
             {cues.map((c) => {
               const proposed = proposedIds.has(c.id);
+              const spanRefused = c.status === "failed" || takes[c.id]?.state === "refused";
               return (
                 <button
                   key={c.id}
@@ -824,7 +830,7 @@ function StandardScore({ projectId }: { projectId: string }) {
                      picture lane above has carried this class since it was
                      written; the music lane never did. */
                   className={`absolute inset-y-0 overflow-hidden rounded-md border px-2 text-left transition ${
-                    c.status === "failed"
+                    spanRefused
                       ? "border-dashed border-rose-400/40 bg-rose-400/[0.04]"
                       : proposed
                         ? "border-dashed border-amber-300/40 bg-amber-300/[0.06]"
@@ -833,7 +839,7 @@ function StandardScore({ projectId }: { projectId: string }) {
                 >
                   <span
                     className={`font-jetbrains block truncate text-label leading-[2.6] ${
-                      c.status === "failed"
+                      spanRefused
                         ? "text-rose-300/90"
                         : proposed
                           ? "text-amber-200/90"
@@ -931,7 +937,7 @@ function StandardScore({ projectId }: { projectId: string }) {
       {cue && (
       <div
         className={`mt-4 rounded-2xl border p-4 ${
-          cue.status === "failed" ? "border-rose-400/25 bg-rose-400/[0.03]" : "border-white/8 bg-white/[0.02]"
+          refused ? "border-rose-400/25 bg-rose-400/[0.03]" : "border-white/8 bg-white/[0.02]"
         }`}
       >
         <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -998,7 +1004,7 @@ function StandardScore({ projectId }: { projectId: string }) {
             about the hole where the sentence goes, which is now an amber glyph
             that puts the caret in the field that takes it. */}
         {cue.note ? (
-          <p className={`mt-1.5 text-content leading-snug ${cue.status === "failed" ? "text-rose-200/90" : "text-slate-400"}`}>
+          <p className={`mt-1.5 text-content leading-snug ${refused ? "text-rose-200/90" : "text-slate-400"}`}>
             {cue.note}
           </p>
         ) : (
@@ -1046,7 +1052,7 @@ function StandardScore({ projectId }: { projectId: string }) {
               ? "rendering…"
               : take?.state === "done"
                 ? "render another take"
-                : cue.status === "failed"
+                : refused
                   ? "re-ask the model"
                   : "render this cue"}
           </button>
@@ -1107,8 +1113,13 @@ function StandardScore({ projectId }: { projectId: string }) {
             </p>
           </>
         )}
-        {(take?.state === "refused" || take?.state === "error") && (
+        {take?.state === "refused" && (
           <p className="font-jetbrains mt-3 text-content leading-snug text-rose-200/70">{take.msg}</p>
+        )}
+        {take?.state === "error" && (
+          <p role="alert" className="font-jetbrains mt-3 text-content leading-snug text-amber-200/80">
+            {take.msg}
+          </p>
         )}
         {/* REFUSED SILENCE, DRAWN — a flatline where the player would be, in the
             slot the <audio> element takes when a take lands. It is a picture of
@@ -1116,7 +1127,7 @@ function StandardScore({ projectId }: { projectId: string }) {
             {clockS}s clock plays silent until a take lands…". Refused-silence is
             a state this cut renders rather than an error it hides, which is what
             the rail being drawn at all says. */}
-        {cue.status === "failed" && take?.state !== "done" && (
+        {refused && take?.state !== "done" && (
           <div
             role="img"
             aria-label={`${cue.durS} seconds silent — this cue was refused`}
