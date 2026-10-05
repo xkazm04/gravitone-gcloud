@@ -128,6 +128,16 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   // not the nine-phase reasoning that earns the pro model above.
   "sound-hunt": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   "sound-lesson": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  // THE PRO MODEL for the ideas round, like `research`: it is judgement — a
+  // product truth, six ideas pushed apart by mechanism, five yes/no gates per
+  // idea — and the ads discipline's whole bet is that the idea is most of the
+  // work (knowledge/templates/ad-social-15/TEMPLATE.md, "What makes this
+  // template hard" 1). Flash regresses toward the typical idea, which is the
+  // failure the round exists to resist.
+  "ad-ideas": process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
+  // Flash for scenarios: the idea is fixed, and the turn is arithmetic and
+  // shot-writing against a typed schema that lib/ads/validate.ts checks.
+  "ad-scenarios": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   probe: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
 };
 

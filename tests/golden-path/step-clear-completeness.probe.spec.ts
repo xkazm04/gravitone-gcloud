@@ -81,6 +81,17 @@ const STORES: Record<string, string> = {
   "app/_phases/research/run/live.ts": "live.reset()",
 };
 
+/** Stores in this step that the educational `doClear` does NOT own, each with
+ *  why. The ads discipline routes away from ResearchStep's educational branch
+ *  before `doClear` exists, and has no Clear of its own yet; its store exposes
+ *  `resetConceptRuns(projectId)` for the day it does. Listed so the ratchet
+ *  still asks the question of the NEXT store, rather than being dodged by a
+ *  rename. */
+const OUTSIDE_CLEAR: Record<string, string> = {
+  "app/_phases/research/ads/run.ts":
+    "the ads Idea step's in-flight concept runs; ads never mounts the educational branch that owns doClear, and resetConceptRuns is ready for an ads Clear",
+};
+
 test("every session-lived record the Research step owns is reachable by its Clear", () => {
   const files = stepSources();
   // A walk that reads nothing reports success in a voice indistinguishable from
@@ -96,7 +107,9 @@ test("every session-lived record the Research step owns is reachable by its Clea
   expect(
     found.sort(),
     "a session-lived record store was added to (or removed from) the Research step. Decide whether ResearchStep's doClear must reset it, wire it up, and list it in STORES here.",
-  ).toEqual(Object.keys(STORES).sort());
+  ).toEqual([...Object.keys(STORES), ...Object.keys(OUTSIDE_CLEAR)].sort());
+  for (const [file, why] of Object.entries(OUTSIDE_CLEAR))
+    expect(why.length, `${file} is exempted with no reason`).toBeGreaterThan(40);
 
   // And the calls themselves, in the body of doClear rather than merely present
   // somewhere in the file: `run.reset` also appears on the hook's own return.

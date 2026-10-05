@@ -158,6 +158,23 @@ export interface SourceReceipt {
  *                        spend line a team needs to see apart. Validated by
  *                        lib/script/validate.ts::parseDraft and gated per
  *                        candidate before anything is returned.
+ *   · `ad-ideas`         /api/ads/ideas — an ad brief in, AD_IDEA_COUNT ideas out,
+ *                        one per assigned angle, each with its gate verdicts in
+ *                        words and one specific risk. Prompt:
+ *                        pipeline/ADS-IDEAS-PROMPT.md; validated in
+ *                        lib/ads/validate.ts before anything is kept. The ads
+ *                        discipline's heart, and its own word rather than
+ *                        `research`'s for this type's reason: an ad concept round
+ *                        and a notebook are different spends started by different
+ *                        people, and a chart that merged them could not say which.
+ *                        A few KB of prompt and one schema-shaped answer.
+ *   · `ad-scenarios`     /api/ads/scenarios — the brief plus the ONE picked idea
+ *                        in, AD_SCENARIO_COUNT timed shot lists out. Prompt:
+ *                        pipeline/ADS-SCENARIOS-PROMPT.md, validated in
+ *                        lib/ads/validate.ts (the runtime arithmetic, the motion
+ *                        line's shape, the super's hold). A sibling of `ad-ideas`
+ *                        and not the same word: a round that invents and a round
+ *                        that times are different turns with different prompts.
  */
 export type TurnClass =
   | "edit-plan"
@@ -167,6 +184,8 @@ export type TurnClass =
   | "research"
   | "sound-hunt"
   | "sound-lesson"
+  | "ad-ideas"
+  | "ad-scenarios"
   | "probe";
 
 /**

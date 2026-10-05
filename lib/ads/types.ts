@@ -116,8 +116,8 @@ export interface AdIdea {
    *  (proposition-before-idea) and stamped on every idea so the scenario round
    *  receives it as a fixed field. */
   truth?: string;
-  /** The screening gates' verdicts IN WORDS, one line per gate ("swap test —
-   *  yes: …"). Never a score (idea-screening-gates). */
+  /** The screening gates' verdicts IN WORDS, one line per gate ("swap test:
+   *  yes — …"). Never a score (idea-screening-gates). */
   gateNotes?: string[];
   /** What the picture claims about the product, and why that is substantiated
    *  or plainly non-literal. Required on a `demo` idea, null where the idea

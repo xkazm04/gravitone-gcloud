@@ -45,6 +45,14 @@ import { POST as foundryExtractPOST } from "@/app/api/foundry/extract/route";
 import { POST as foundryStepPOST } from "@/app/api/foundry/extract/[id]/step/route";
 import { POST as musicVideoExportPOST } from "@/app/api/music-video/export/route";
 import { POST as cutExportPOST } from "@/app/api/cut/export/route";
+import { POST as adIdeasPOST } from "@/app/api/ads/ideas/route";
+import { POST as adScenariosPOST } from "@/app/api/ads/scenarios/route";
+import { POST as adRenderPOST } from "@/app/api/ads/render/route";
+import { GET as adRenderRecordGET } from "@/app/api/ads/render/[id]/route";
+import { GET as adRenderFileGET } from "@/app/api/ads/render/[id]/file/route";
+import { GET as videoCapabilityGET, POST as videoClipsPOST } from "@/app/api/video/clips/route";
+import { GET as videoClipGET } from "@/app/api/video/clips/[id]/route";
+import { GET as videoClipFileGET } from "@/app/api/video/clips/[id]/file/route";
 import { POST as soundGeneratePOST } from "@/app/api/sound/generate/route";
 import { POST as soundHuntsPOST } from "@/app/api/sound/hunts/route";
 import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/route";
@@ -110,6 +118,46 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   // The Cut's animatic (frames-score-cut-B). An empty body has no `document`,
   // so an authed call is the shape check's 400 before ffmpeg is spawned.
   ["cut/export", "/api/cut/export", cutExportPOST],
+  // The ads concept rounds (WP2): a reasoning turn each ("ad-ideas",
+  // "ad-scenarios"). An empty body is a 400 from lib/ads/concepts.ts's brief
+  // reader (`brief`) before the prompt is read or lib/text is reached.
+  ["ads/ideas", "/api/ads/ideas", adIdeasPOST],
+  ["ads/scenarios", "/api/ads/scenarios", adScenariosPOST],
+  // The ads Finish render (WP4). An empty body is a 400 from
+  // parseAdRenderRequest (`projectId`) before any clip is looked up or any
+  // ffmpeg / Chromium is spawned. Its two GETs gate through guardAccessOnly (a
+  // poll and a download, never rate-counted) and are driven anyway: the id is
+  // not an export id, so the authed case is a 400, read-only.
+  ["ads/render", "/api/ads/render", adRenderPOST],
+  [
+    "ads/render/record",
+    "/api/ads/render/[id]",
+    (r: Request) => adRenderRecordGET(r, { params: Promise.resolve({ id: "no-such-export" }) }),
+  ],
+  [
+    "ads/render/file",
+    "/api/ads/render/[id]/file",
+    (r: Request) => adRenderFileGET(r, { params: Promise.resolve({ id: "no-such-export" }) }),
+  ],
+  // The image-to-video hop (ads WP3). POST spends a hosted clip: an empty body
+  // is a 400 from parseClipRequest (`projectId`) before the key check, the
+  // spend hold or the adapter. Its GET (capability) discloses whether a vendor
+  // key is configured, so it gates too; the poll and the mp4 gate through
+  // guardAccessOnly. All four are driven: the id is not a clip id, so the authed
+  // GETs are a 404, read-only, and the capability GET is a read of constants
+  // and key presence — the one authed case here that answers 200, which is why
+  // it is driven as a 401 only (below the table), not in the 4xx case.
+  ["video/clips", "/api/video/clips", videoClipsPOST],
+  [
+    "video/clips/record",
+    "/api/video/clips/[id]",
+    (r: Request) => videoClipGET(r, { params: Promise.resolve({ id: "no-such-clip" }) }),
+  ],
+  [
+    "video/clips/file",
+    "/api/video/clips/[id]/file",
+    (r: Request) => videoClipFileGET(r, { params: Promise.resolve({ id: "no-such-clip" }) }),
+  ],
   // The Sound lab's three spending routes (round 4). An empty body is a 400
   // from each one's own validation — `kind` for generate and hunts — before
   // lib/music or lib/text is reached; the lesson route's id names no hunt, so
@@ -681,3 +729,15 @@ for (const [name, path, handler] of ROUTES) {
     expect(res.status).toBeLessThan(500);
   });
 }
+
+// The video capability GET: closed to a stranger (it says whether this server
+// holds a vendor key), open to the secret. Not in ROUTES because its authed
+// answer is a 200 by design — there is no body to be bad.
+test("route video/clips GET: 401 without auth, 200 with it", async () => {
+  const anon = await videoCapabilityGET(new Request("http://localhost/api/video/clips", { headers: { "x-forwarded-for": "172.16.2.1" } }));
+  expect(anon.status).toBe(401);
+  const authed = await videoCapabilityGET(
+    new Request("http://localhost/api/video/clips", { headers: { authorization: `Bearer ${SECRET}`, "x-forwarded-for": "172.16.2.2" } }),
+  );
+  expect(authed.status).toBe(200);
+});

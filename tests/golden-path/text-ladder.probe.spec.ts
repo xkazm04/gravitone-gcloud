@@ -39,7 +39,15 @@ import type { TurnClass } from "@/lib/text/types";
 
 import { keepEnv } from "./_helpers";
 
-const REAL_TURNS: TurnClass[] = ["edit-plan", "scene-direction", "style-synthesis", "sound-hunt", "sound-lesson"];
+const REAL_TURNS: TurnClass[] = [
+  "edit-plan",
+  "scene-direction",
+  "style-synthesis",
+  "sound-hunt",
+  "sound-lesson",
+  "ad-ideas",
+  "ad-scenarios",
+];
 
 keepEnv(["TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY"]);
 

@@ -98,6 +98,8 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     research: ["claude-cli", "google"],
     "sound-hunt": ["claude-cli", "google"],
     "sound-lesson": ["claude-cli", "google"],
+    "ad-ideas": ["claude-cli", "google"],
+    "ad-scenarios": ["claude-cli", "google"],
     probe: ["claude-cli"],
   },
   cloud: {
@@ -108,6 +110,8 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     research: ["google"],
     "sound-hunt": ["google"],
     "sound-lesson": ["google"],
+    "ad-ideas": ["google"],
+    "ad-scenarios": ["google"],
     probe: ["google"],
   },
 };
@@ -182,6 +186,13 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // up before the platform does.
   "sound-hunt": 300_000,
   "sound-lesson": 300_000,
+  // The two ads concept rounds: a brief (and, for scenarios, one picked idea)
+  // in, one schema-shaped answer out — staged generation and gate screening
+  // inside the one turn, so longer than a sound map and far shorter than a
+  // notebook. Under app/api/ads/{ideas,scenarios}'s own maxDuration (320s) so
+  // the engine gives up first and the creator gets a sentence.
+  "ad-ideas": 300_000,
+  "ad-scenarios": 300_000,
   probe: 30_000,
 };
 
