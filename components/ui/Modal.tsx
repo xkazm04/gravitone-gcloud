@@ -293,14 +293,17 @@ export default function Modal({
             <h2 className="font-instrument mt-1 truncate text-xl text-white">{title}</h2>
             {subtitle && <div className="mt-1 text-label text-slate-400">{subtitle}</div>}
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="shrink-0 rounded-lg border border-white/10 p-2 text-white/60 transition hover:border-white/25 hover:text-white"
-          >
-            <X className="h-4 w-4" />
-          </button>
+          <div className="flex shrink-0 items-center gap-2">
+            {actions}
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close"
+              className="shrink-0 rounded-lg border border-white/10 p-2 text-white/60 transition hover:border-white/25 hover:text-white"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
         </header>
 
         <div className="scroll-y grow px-5 py-5">{children}</div>
