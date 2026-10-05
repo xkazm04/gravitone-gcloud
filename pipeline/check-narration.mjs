@@ -68,6 +68,17 @@ const TITLE_PROSE_CHARS = 45;
 const TITLE_BUDGET = 5;
 
 /**
+ * The same ratchet for the EXPRESSION spelling, `title={...}`. The literal
+ * regex below cannot see a template, a ternary or a concatenation, and four
+ * independent scouts found narration leaving through exactly that door (the
+ * EvidenceClass definitions in notebook/Chips.tsx, 28 words, were one). Held
+ * separately so each number says which door it guards. Measured 2026-10-05 at
+ * the commit that added it: 8 sites, 6 after Chips.tsx moved to <Hint> (the
+ * 6 are frozen, not blessed). LOWER, never raise.
+ */
+const TITLE_EXPR_BUDGET = 6;
+
+/**
  * Words allowed inside a <Hint>. The README's number.
  *
  * IT IS A RATCHET, NOT A WALL, and the difference was measured rather than
@@ -115,6 +126,52 @@ const HINT_EXEMPT = [
   "components/ui/signal/Keycaps.tsx",
 ];
 
+/**
+ * The string fragments a `title={...}` expression is statically made of: braced
+ * literals, template literals (static text only, `${}` removed), each branch of
+ * a ternary, each operand of a `+`. An identifier or call is a runtime value
+ * and is invisible here, as a <Hint>{variable}</Hint> is — stated, not hidden.
+ * Returns the LONGEST fragment, since a ternary shows one branch at a time.
+ */
+function exprTitles(src) {
+  const out = [];
+  for (const m of src.matchAll(/(?<![\w-])title=\{/g)) {
+    let i = m.index + m[0].length;
+    let depth = 1;
+    const frags = [];
+    while (i < src.length && depth > 0) {
+      const ch = src[i];
+      if (ch === '"' || ch === "'") {
+        let j = i + 1;
+        while (j < src.length && src[j] !== ch) j += src[j] === "\\" ? 2 : 1;
+        frags.push(src.slice(i + 1, j));
+        i = j + 1;
+      } else if (ch === "`") {
+        let j = i + 1;
+        let text = "";
+        let d = 0;
+        while (j < src.length && (src[j] !== "`" || d > 0)) {
+          if (src[j] === "$" && src[j + 1] === "{") { d++; j += 2; continue; }
+          if (d > 0 && src[j] === "{") d++;
+          else if (d > 0 && src[j] === "}") d--;
+          else if (d === 0) text += src[j];
+          j++;
+        }
+        frags.push(text);
+        i = j + 1;
+      } else {
+        if (ch === "{") depth++;
+        else if (ch === "}") depth--;
+        i++;
+      }
+    }
+    if (i >= src.length) continue;
+    const best = frags.map((f) => f.replace(/\s+/g, " ").trim()).sort((a, b) => b.length - a.length)[0];
+    if (best && best.length >= TITLE_PROSE_CHARS) out.push(best);
+  }
+  return out;
+}
+
 function* walk(dir) {
   for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
     if (e.name === "node_modules" || e.name.startsWith(".")) continue;
@@ -138,6 +195,7 @@ for (const dir of ["app", "components"]) {
 }
 
 const titles = [];
+const exprs = [];
 const hints = [];
 
 for (const abs of files) {
@@ -148,6 +206,8 @@ for (const abs of files) {
   for (const m of src.matchAll(/title="([^"]+)"/g)) {
     if (m[1].length >= TITLE_PROSE_CHARS) titles.push({ rel, text: m[1] });
   }
+
+  for (const text of exprTitles(src)) exprs.push({ rel, text });
 
   if (HINT_EXEMPT.includes(rel)) continue;
   // Literal-only children, single line or wrapped. A `{expr}` child stops the
@@ -175,6 +235,19 @@ if (titles.length > TITLE_BUDGET) {
   console.log(
     `narration: ${titles.length} long title= — under the budget of ${TITLE_BUDGET}. ` +
       `Lower TITLE_BUDGET in ${path.basename(import.meta.filename)} to hold the ground.`,
+  );
+}
+
+if (exprs.length > TITLE_EXPR_BUDGET) {
+  failed = true;
+  console.error(
+    `\nnarration: ${exprs.length} title={expression} of ${TITLE_PROSE_CHARS}+ chars, budget is ${TITLE_EXPR_BUDGET}.`,
+  );
+  console.error("Same wall as the literal form, different spelling. Use <Hint>.\n");
+  for (const t of exprs) console.error(`  ${t.rel}\n      ${t.text.slice(0, 110)}`);
+} else if (exprs.length < TITLE_EXPR_BUDGET) {
+  console.log(
+    `narration: ${exprs.length} long title={expr} — under the budget of ${TITLE_EXPR_BUDGET}. Lower TITLE_EXPR_BUDGET.`,
   );
 }
 
@@ -224,6 +297,7 @@ if (failed) {
 
 console.log(
   `narration OK — ${titles.length}/${TITLE_BUDGET} long title=, ` +
+    `${exprs.length}/${TITLE_EXPR_BUDGET} long title={expr}, ` +
     `${hints.length}/${HINT_OVER_BUDGET} <Hint> over ${HINT_MAX_WORDS} words, ` +
     `none over the ${HINT_HARD_CAP}-word cap.`,
 );
