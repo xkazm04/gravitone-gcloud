@@ -79,6 +79,10 @@ const PROJECT_SCOPE = "projects";
 export function useProjects(uid: string | null) {
   const [projects, setProjects] = useState<Project[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The LIST could not be read. `projects` is [] then, exactly as it is for an
+  // account with none, and `error` is also set by a failed write on a genuinely
+  // empty shelf, so neither of those can tell the two apart.
+  const [readFailed, setReadFailed] = useState(false);
 
   /** One place where a project-storage failure is CLASSIFIED and published,
    *  instead of four places that each kept a bare `e.message` and threw the
@@ -120,9 +124,11 @@ export function useProjects(uid: string | null) {
         rows = await listProjects(uid);
       }
       setProjects(rows);
+      setReadFailed(false);
       ok();
     } catch (e) {
       setProjects([]);
+      setReadFailed(true);
       failed("read", "", e, "could not read your projects");
     }
   }, [uid, ok, failed]);
@@ -196,5 +202,5 @@ export function useProjects(uid: string | null) {
     [ok, failed],
   );
 
-  return { projects, error, reload, create, update, remove, loading: projects === null };
+  return { projects, error, readFailed, reload, create, update, remove, loading: projects === null };
 }

@@ -12,7 +12,11 @@
 // as `windowRange`, and the synthetic fixture, because a screenshot of a
 // non-deterministic shelf measures nothing.
 
+import { readFileSync } from "node:fs";
+
 import { test, expect } from "@playwright/test";
+
+import { stripComments } from "./_helpers";
 
 import { PHASES, emptyProgress, type PhaseKey, type PhaseState, type Project, type TemplateId } from "@/lib/projects";
 import {
@@ -348,4 +352,24 @@ test("?seed=N is deterministic, tagged, valid, and spans every state", () => {
   for (const s of ["blocked", "review", "working", "draft", "delivered"] as const) expect(c[s], s).toBeGreaterThan(0);
   expect(a.every((p) => p.updatedAt >= p.createdAt && p.updatedAt <= T0)).toBe(true);
   expect(syntheticProjects(0, "u1")).toEqual([]);
+});
+
+/** Comments stripped: the files these ratchets read explain the rules in prose. */
+const src = (p: string) => stripComments(readFileSync(p, "utf8"));
+
+test("an unreadable shelf is not drawn as an empty one", () => {
+  // listProjects failing left projects=[] with `error` set, and a failed create
+  // on a genuinely empty shelf looks identical, so the view could not tell
+  // "could not read" from "no projects" and drew EmptyShelf (a fact: no
+  // projects) plus a filled create control into the store that had just failed.
+  const hook = src("lib/useProjects.ts");
+  expect(hook.length, "walked nothing").toBeGreaterThan(0);
+  expect(hook, "useProjects does not report a read failure").toMatch(/setReadFailed\(true\)/);
+  expect(hook, "useProjects does not return readFailed").toContain("return { projects, error, readFailed,");
+
+  const view = src("app/projects/ProjectsView.tsx");
+  expect(view, "the view does not branch on a failed read").toMatch(/readFailed &&/);
+  expect(view, "the failed-read branch offers no retry").toMatch(/onClick=\{\(\) => void reload\(\)\}/);
+  // The failure branch must come before the Shelf in the render, or EmptyShelf wins.
+  expect(view.indexOf("readFailed &&")).toBeLessThan(view.indexOf("<Shelf"));
 });

@@ -22,6 +22,7 @@ import Link from "next/link";
 import { Zap } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
+import { Button } from "@/components/ui/Primitives";
 import { Ghost, Tally } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
@@ -47,7 +48,7 @@ export default function ProjectsView() {
   const router = useRouter();
   const params = useSearchParams();
   const stored = useProjects(user?.uid ?? null);
-  const { error, loading, create } = stored;
+  const { error, loading, create, readFailed, reload } = stored;
 
   /* ── The synthetic shelf (dev only, never stored) ─────────────────────────
    *
@@ -224,6 +225,13 @@ export default function ProjectsView() {
             // `label` keeps it spoken — a dashed border says nothing to a
             // screen reader (components/ui/signal/Ghost.tsx).
             <Ghost shape="row" count={3} label="Reading the shelf" />
+          ) : readFailed && (projects ?? []).length === 0 ? (
+            // The list could not be read: that is not an empty shelf, and the
+            // create control would invite a write into the store that just
+            // failed. The banner above carries the machine's message.
+            <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={() => void reload()}>
+              Try again
+            </Button>
           ) : (
             <Shelf
               projects={projects ?? []}
