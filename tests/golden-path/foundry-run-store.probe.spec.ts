@@ -107,9 +107,15 @@ test("concurrent putVerdicts: Promise.all of two writes on the same run both res
     // Before: both writers share `${file}.${process.pid}.tmp`, so second rename rejects when concurrent.
     await Promise.all([putVerdicts(id, verdictsA), putVerdicts(id, verdictsB)]);
 
+    // putVerdicts REPLACES the whole map, so this race has exactly two legal
+    // histories: A's document or B's, each whole. "Either verdict" alone would
+    // also accept a document stitched from both writers. A lost update ACROSS
+    // keys is a different race (whole-map replace, foundry-engine-B) and the
+    // index lost update is foundry-commit-race.probe.spec.ts.
     const saved = JSON.parse(readFileSync(path.join(dir, "verdicts.json"), "utf8")) as Verdicts;
-    const written = saved["sc0/haze--ref--s0"]?.verdict;
-    expect(["keep", "reject"]).toContain(written);
+    expect([verdictsA, verdictsB], "the file is one writer's whole document").toContainEqual(saved);
+    // writeJsonAtomic's unique tmp names must all have been renamed away.
+    expect(readdirSync(dir).filter((f) => f.endsWith(".tmp")), "no tmp residue from either writer").toEqual([]);
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
