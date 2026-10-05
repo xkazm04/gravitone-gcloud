@@ -248,6 +248,13 @@ export interface MusicVideoSourceStepData {
   savedAt?: number;
 }
 
+/** How many of the fields keyed to the attached track Frames has filled in. A
+ *  replacement clears them, so this is what a replace has to confirm. */
+export function downstreamCount(data: MusicVideoSourceStepData | undefined): number {
+  if (!data) return 0;
+  return [data.posterAssetId, data.seed, data.effectParams].filter((v) => v !== undefined).length;
+}
+
 /** A NEW TRACK REPLACING THE ATTACHED ONE. The fields keyed to the old track
  *  (Frames' poster, the effects-studio's locked seed and compositor parameters)
  *  are dropped, not carried: a poster, a "locked once set" seed and parameters

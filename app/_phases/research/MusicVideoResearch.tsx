@@ -5,7 +5,7 @@
 // owns the whole record (the upload, the baked envelope, and marking the
 // project researched); this file is drawing only.
 
-import { Dropzone } from "@/components/kit";
+import { ConfirmDialog, Dropzone } from "@/components/kit";
 import { CHIP_CLASS, TALLY_TONE, Tally } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 
@@ -40,10 +40,25 @@ export default function MusicVideoResearch({ projectId }: { projectId: string })
           accept="audio/*"
           constraints="mp3 · wav · m4a — one track, analyzed once on drop"
           label={mv.envelope ? "Replace the track this video is cut to" : "Attach the track this video is cut to"}
-          onFiles={mv.attach}
+          onFiles={mv.requestAttach}
           testId="music-video-dropzone"
         />
       </div>
+
+      <ConfirmDialog
+        open={mv.pendingReplace !== null}
+        onClose={mv.cancelReplace}
+        onCancel={mv.cancelReplace}
+        onConfirm={mv.confirmReplace}
+        title="Replace the track"
+        railLabel="replace"
+        rail={[
+          { n: mv.downstream, tone: "rose", label: "cleared" },
+          { n: 1, tone: "emerald", label: "style kept" },
+        ]}
+        consequence="Replace the track — the poster, seed and effect settings are cleared."
+        confirmLabel="Replace track"
+      />
 
       {mv.status === "decoding" && (
         <p className="font-jetbrains text-label text-cyan-200/80" role="status" data-testid="music-video-decoding">

@@ -28,7 +28,7 @@ import { analyzeAudioEnvelope, AudioDecodeError, type AudioEnvelope } from "@/li
 
 import { patchRecord, type RecordWriteOutcome } from "../_shared/records/patch";
 import { useRecord } from "../_shared/records/useRecord";
-import { withTrack, type MusicVideoSourceStepData } from "../_shared/stepStore";
+import { downstreamCount, withTrack, type MusicVideoSourceStepData } from "../_shared/stepStore";
 import { MUSIC_VIDEO_SOURCE, RESEARCH } from "./records";
 
 export type AttachStatus = "idle" | "decoding" | "error";
@@ -40,11 +40,14 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
   const [fileName, setFileName] = useState<string | undefined>(undefined);
   const [status, setStatus] = useState<AttachStatus>("idle");
   const [error, setError] = useState<string | null>(null);
+  const [downstream, setDownstream] = useState(0);
+  const [pending, setPending] = useState<File | null>(null);
 
   const { hydrated, patch } = useRecord(MUSIC_VIDEO_SOURCE, projectId, (saved) => {
     setSourceAssetId(saved?.sourceAssetId);
     setStyleState(saved?.style ?? "");
     setEnvelope(saved?.envelope);
+    setDownstream(downstreamCount(saved));
     // The name is not stored on the record: the Asset row `sourceAssetId`
     // points at already carries what the creator called the file, so an old
     // record with no name field resolves the same way and a missing row just
@@ -151,10 +154,30 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
 
       setSourceAssetId(pair.asset.id);
       setEnvelope(env);
+      setDownstream(0);
       setStatus("idle");
     },
     [uid, patch, markResearched],
   );
+
+  /** The drop and picker route. Replacing a track that Frames has already
+   *  worked on waits for a confirm (the replace clears that work); a first
+   *  attach, or a track with nothing downstream, goes straight through. */
+  const requestAttach = useCallback(
+    (files: FileList | File[]) => {
+      const file = "length" in files ? files[0] : undefined;
+      if (!file) return;
+      if (envelope && downstream > 0) setPending(file);
+      else void attach([file]);
+    },
+    [attach, envelope, downstream],
+  );
+  const confirmReplace = useCallback(() => {
+    const file = pending;
+    setPending(null);
+    if (file) void attach([file]);
+  }, [pending, attach]);
+  const cancelReplace = useCallback(() => setPending(null), []);
 
   const clearError = useCallback(() => {
     setStatus("idle");
@@ -172,6 +195,11 @@ export function useMusicVideoSource(projectId: string, uid: string | null) {
     error,
     setStyle,
     attach,
+    requestAttach,
+    pendingReplace: pending,
+    downstream,
+    confirmReplace,
+    cancelReplace,
     clearError,
   };
 }

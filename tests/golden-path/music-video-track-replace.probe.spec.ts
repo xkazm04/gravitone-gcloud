@@ -18,7 +18,7 @@ import { readFileSync } from "node:fs";
 
 import { test, expect } from "@playwright/test";
 
-import { withTrack } from "@/app/_phases/_shared/stepStore";
+import { downstreamCount, withTrack } from "@/app/_phases/_shared/stepStore";
 
 import { stripComments } from "./_helpers";
 
@@ -55,4 +55,24 @@ test("replacement fields: new track in, downstream WP3 fields out, style and unk
 
   // An old record with no name and nothing downstream, and a first attach.
   expect(withTrack(undefined, { sourceAssetId: "a", envelope: env })).toEqual({ sourceAssetId: "a", envelope: env });
+});
+
+// An accidental drop must not silently clear the poster, seed and effect
+// settings: with an envelope AND downstream fields, the drop waits for a confirm.
+test("a replace over downstream work routes through the destructive confirm", () => {
+  const ui = stripComments(readFileSync("app/_phases/research/MusicVideoResearch.tsx", "utf8"));
+  const hook = stripComments(readFileSync("app/_phases/research/useMusicVideoSource.ts", "utf8"));
+  expect(ui.length).toBeGreaterThan(0);
+  expect(hook.length).toBeGreaterThan(0);
+  expect(ui).toMatch(/onFiles=\{mv\.requestAttach\}/);
+  expect(ui).not.toMatch(/onFiles=\{mv\.attach\}/);
+  expect(ui).toMatch(/<ConfirmDialog[\s\S]*?onCancel=\{mv\.cancelReplace\}[\s\S]*?onConfirm=\{mv\.confirmReplace\}/);
+  expect(hook).toMatch(/if \(envelope && downstream > 0\) setPending\(file\)/);
+  expect(hook).toMatch(/else void attach\(\[file\]\)/);
+});
+
+test("downstreamCount: none → 0 (no confirm), any Frames field → counted", () => {
+  expect(downstreamCount(undefined)).toBe(0);
+  expect(downstreamCount({ sourceAssetId: "a", style: "x" })).toBe(0);
+  expect(downstreamCount({ posterAssetId: "p", seed: 0 })).toBe(2);
 });
