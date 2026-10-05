@@ -14,9 +14,11 @@
 // there is nothing to place a movement on, and seeding early would write a
 // session in which every movement is unplaced.
 //
-// WHAT IS PERSISTED IS ONLY THE SPOTS. See `ScoreStepData` — a take is an
-// object URL over megabytes of decoded audio and this record has no field for
-// one. That question stays open and this hook does not pretend otherwise.
+// WHAT IS PERSISTED IS ONLY THE SPOTS — and, since MUSIC-B (2026-10-05), each
+// spot's take POINTERS (`takeIds`, `activeTakeId`). The bytes are the sound
+// store's (lib/sound), never this record's: the ADR
+// 2026-08-29-score-take-persistence is closed with option D, and nothing a
+// quota can be filled with is written here.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -206,6 +208,25 @@ export function useScoreSpots(projectId: string, scenes: Scene[] | null) {
     );
   }, []);
 
+  /** Change a spot's TAKE POINTERS (./takes.ts). Unlike `patchSpot` this keeps
+   *  `proposed`: a proposal is a claim about where a cue sits and what it is
+   *  for, and hearing a take of it changes neither. */
+  const updateTakes = useCallback((id: string, next: (spot: ScoreSpot) => ScoreSpot) => {
+    setSession((s) =>
+      s
+        ? {
+            ...s,
+            hadRecord: true,
+            spots: s.spots.map((sp) => {
+              if (sp.id !== id) return sp;
+              const { takeIds, activeTakeId } = next(sp);
+              return { ...sp, takeIds, activeTakeId };
+            }),
+          }
+        : s,
+    );
+  }, []);
+
   const removeSpot = useCallback((id: string) => {
     setSession((s) => (s ? { ...s, hadRecord: true, spots: s.spots.filter((sp) => sp.id !== id) } : s));
   }, []);
@@ -228,6 +249,7 @@ export function useScoreSpots(projectId: string, scenes: Scene[] | null) {
     trouble,
     addSpot,
     patchSpot,
+    updateTakes,
     removeSpot,
   };
 }

@@ -13,7 +13,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { capabilities } from "@/lib/capabilities";
 import { getProject } from "@/lib/projects";
+import { listTakes } from "@/lib/sound/client";
 
 import {
   readStep,
@@ -36,9 +38,10 @@ import type { Offsets } from "./offsets";
  *  pass saved before the rebuild still loads. */
 const PHASE = "cut";
 
-/** A take loaded into this session. NOT persisted, for the reason the Score
- *  step gives on its own `Take`: a `blob:` URL is dead on the next load, and
- *  writing the bytes is the open ADR (2026-08-29-score-take-persistence). */
+/** A file dropped into this session. NOT persisted: a `blob:` URL is dead on
+ *  the next load. A cue's KEPT take is the Score step's — a sound-store take
+ *  the spot points at (ADR 2026-08-29-score-take-persistence, option D) — and
+ *  deriveTimeline resolves that pointer; a session drop only overrides it. */
 export interface SessionTake {
   url: string;
   name: string;
@@ -164,14 +167,30 @@ export function useCut(projectId: string) {
     });
   }, []);
 
+  /* ── the sound store's takes — what a spot's `activeTakeId` resolves against.
+     Read once per project where the store exists (the posture the Score step
+     renders into it under); `null` otherwise, which deriveTimeline draws as
+     "not read", never as held. */
+  const [storeTakeIds, setStoreTakeIds] = useState<ReadonlySet<string> | null>(null);
+  useEffect(() => {
+    if (!capabilities().musicSectionEdit) return;
+    let live = true;
+    void listTakes({ kind: "music" }).then((r) => {
+      if (live) setStoreTakeIds(r.ok ? new Set(r.data.takes.map((t) => t.id)) : null);
+    });
+    return () => {
+      live = false;
+    };
+  }, [projectId]);
+
   /* ── the cut ────────────────────────────────────────────────────────────── */
   const takeUrls = useMemo(
     () => Object.fromEntries(Object.entries(takes).map(([k, v]) => [k, v.url])),
     [takes],
   );
   const cut: DerivedCut | null = useMemo(
-    () => (up ? deriveTimeline({ projectId, ...up, takes: takeUrls }) : null),
-    [projectId, up, takeUrls],
+    () => (up ? deriveTimeline({ projectId, ...up, takes: takeUrls, storeTakeIds }) : null),
+    [projectId, up, takeUrls, storeTakeIds],
   );
   const checks: FinishCheck[] = useMemo(() => (cut ? finishLine(cut, offsets) : []), [cut, offsets]);
 

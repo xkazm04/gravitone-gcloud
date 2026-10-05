@@ -71,6 +71,7 @@ import {
 } from "@/lib/musicClient";
 import type { MusicQuote } from "@/lib/music/pricing";
 import type { MusicProvenance } from "@/lib/music/types";
+import { capabilities } from "@/lib/capabilities";
 
 import { readStep, type StorageTrouble } from "../_shared/stepStore";
 import { useLoadFor } from "../_shared/useLoadFor";
@@ -78,9 +79,12 @@ import Notice from "../_shared/ui/Notice";
 import { usePhaseReport } from "../_shared/usePhaseReport";
 import type { Frame } from "../frames/frames";
 import type { FramesStepData } from "../frames/useFrames";
+import CueTakes from "./CueTakes";
 import { pictureFromFrames } from "./picture";
 import SpotList from "./SpotList";
 import { toCueSpots } from "./spots";
+import { bindTake, cueTakeRequest } from "./takes";
+import { useCueTakes } from "./useCueTakes";
 import { useScoreSpots, type SpotOrigin } from "./useSpots";
 
 /** Step 3's key in the step store — read here, never written. `useFrames.ts` is
@@ -199,14 +203,21 @@ function EmptyLanes({ targetS = 0, busy = false }: { targetS?: number; busy?: bo
   );
 }
 
-/** One cue's live take, in this session.
+/** One cue's render in flight, or a SESSION take.
  *
- *  NOT PERSISTED, and that is a decision rather than a gap: what this holds is an
- *  object URL over decoded audio, and a stored `blob:` URL is dead on the next
- *  load. Persisting a take means writing the BYTES — several megabytes a cue —
- *  into the same IndexedDB whose step store names quota exhaustion as a real
- *  destination. That call is not made here; see the ADR in
- *  .vault/Architect/decisions/2026-08-29-score-take-persistence.md.
+ *  WHERE A TAKE LIVES — the ADR
+ *  .vault/Architect/decisions/2026-08-29-score-take-persistence.md, decided
+ *  2026-10-05 as option D (MUSIC-B): the BYTES go to the server-side sound
+ *  store (lib/sound, origin "score", linked to this project and cue) and the
+ *  spot keeps only pointers (`takeIds`, `activeTakeId` — ./takes.ts). Nothing
+ *  a quota can be filled with is written to IndexedDB. Those takes are drawn by
+ *  ./CueTakes.tsx and this state carries only `working` / `refused` / `error`
+ *  for them.
+ *
+ *  `done` remains for the posture with no sound store (hosted:
+ *  `capabilities().musicSectionEdit` off): an object URL over decoded audio,
+ *  dead on the next load, exactly as before — option A, where it is the only
+ *  honest one.
  *
  *  `provenance` rides on the done state because it is the ONLY thing on this
  *  surface entitled to name a vendor or a model. It comes back from the engine
@@ -497,6 +508,11 @@ function StandardScore({ projectId }: { projectId: string }) {
   /** THE SPOTTING SESSION — proposed from the script's movements, edited here,
    *  persisted under this step's own key. `null` while the reads land. */
   const session = useScoreSpots(projectId, picture?.scenes ?? null);
+  /** THE POSTURE. The sound store is this machine's disk and a revision needs
+   *  the vendor's stored-song inpainting; `musicSectionEdit` already answers
+   *  for both. Off, takes stay session-only, as they always were. */
+  const storeBacked = capabilities().musicSectionEdit;
+  const store = useCueTakes(storeBacked);
 
   /** Spots + this project's picture + this project's story → cues. All three
    *  arguments are the creator's now; before this pair of commits every one of
@@ -586,6 +602,26 @@ function StandardScore({ projectId }: { projectId: string }) {
     if (!cue || cue.bpm === undefined) return;
     const bpm = cue.bpm;
     setTakes((t) => ({ ...t, [cue.id]: { state: "working" } }));
+    // THE STORE PATH: the cue goes to /api/sound/generate (op "cue"), the take
+    // is filed server-side, and the spot gains a pointer. The previous take
+    // stays — two renders are two takes to compare, not a replacement.
+    const req = storeBacked ? cueTakeRequest(cue, projectId) : null;
+    if (req) {
+      const r = await store.generate(`cue-${cue.id}`, req);
+      if (!mounted.current) return;
+      if (r.ok) {
+        session.updateTakes(cue.id, (s) => bindTake(s, r.take.id));
+        setTakes((t) => {
+          const next = { ...t };
+          delete next[cue.id];
+          return next;
+        });
+      } else {
+        // 422 is the engine's `refused` (lib/music/errors.ts statusFor).
+        setTakes((t) => ({ ...t, [cue.id]: r.status === 422 ? { state: "refused", msg: r.error } : { state: "error", msg: r.error } }));
+      }
+      return;
+    }
     try {
       const out = await generateCueAudio({
         title: cue.title,
@@ -652,16 +688,21 @@ function StandardScore({ projectId }: { projectId: string }) {
    *     sum can exceed the clock. The scenes are a SET, and the set is exact.
    *
    * So the line counts picture: which scenes a cue sits on, and which none does.
-   * Takes are counted separately and only for THIS session, because they are not
-   * persisted (see `Take`) and a count that survived a reload would be a claim
-   * about audio that did not. */
+   * Takes are counted separately: the spots' store pointers where the sound
+   * store backs them (they survive a reload, so the count may), and only THIS
+   * session's where it does not — a count that survived a reload there would be
+   * a claim about audio that did not (see `Take`). */
   const spottedSceneIds = new Set(
     (session.spots ?? []).filter((s) => cues.some((c) => c.id === s.id)).flatMap((s) => s.sceneIds),
   );
   const spottedS = (picture?.scenes ?? [])
     .filter((s) => spottedSceneIds.has(s.id))
     .reduce((n, s) => n + s.targetS, 0);
-  const takesHeld = Object.values(takes).filter((t) => t.state === "done").length;
+  const takesHeld = storeBacked
+    ? (session.spots ?? []).reduce((n, s) => n + (s.takeIds?.length ?? 0), 0)
+    : Object.values(takes).filter((t) => t.state === "done").length;
+  /** The spot behind the open cue — whose pointers ./CueTakes.tsx draws. */
+  const spot = cue ? (session.spots ?? []).find((s) => s.id === cue.id) : undefined;
 
   /* THE FRAMES ARE ON DISK AND OUT OF REACH — a storage failure, which is NOT
      an absence of picture and must never be drawn as one. The creator's cut is
@@ -891,7 +932,7 @@ function StandardScore({ projectId }: { projectId: string }) {
               label="takes"
               value={takesHeld}
               tone="cyan"
-              hint="not kept past a reload"
+              hint={storeBacked ? undefined : "not kept past a reload"}
             />
           )}
           {/* BEATS THAT ARE NOT ON THE CLOCK, sitting off it. They exist in the
@@ -1050,7 +1091,7 @@ function StandardScore({ projectId }: { projectId: string }) {
           >
             {take?.state === "working"
               ? "rendering…"
-              : take?.state === "done"
+              : take?.state === "done" || (spot?.takeIds?.length ?? 0) > 0
                 ? "render another take"
                 : refused
                   ? "re-ask the model"
@@ -1102,6 +1143,17 @@ function StandardScore({ projectId }: { projectId: string }) {
             </span>
           ))}
         </div>
+        {storeBacked && spot && (
+          <CueTakes
+            // A section picked or a note typed on one cue is not carried to the next.
+            key={spot.id}
+            projectId={projectId}
+            spot={spot}
+            store={store}
+            sectionEdit={storeBacked}
+            onSpot={(next) => session.updateTakes(spot.id, next)}
+          />
+        )}
         {take?.state === "done" && (
           <>
             <audio controls src={take.url} className="mt-3 h-9 w-full" />
