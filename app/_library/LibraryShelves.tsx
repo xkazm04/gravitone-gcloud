@@ -190,7 +190,9 @@ function RailRow({
   return (
     <li>
       <button
+        type="button"
         onClick={onClick}
+        aria-pressed={active}
         className={`flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-label transition ${
           active ? "bg-cyan-400/10 text-cyan-200" : "text-slate-400 hover:bg-white/5 hover:text-white"
         }`}

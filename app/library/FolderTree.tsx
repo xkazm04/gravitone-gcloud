@@ -260,6 +260,7 @@ function Row({
       ) : (
         <button
           onClick={onClick}
+          aria-current={active ? "true" : undefined}
           // F2 is the rename key everywhere a tree has one, and the double
           // click is the mouse half of the same act. Both, because either
           // alone leaves one kind of user unable to rename anything.

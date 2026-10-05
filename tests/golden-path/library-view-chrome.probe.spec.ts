@@ -20,3 +20,8 @@ function read(rel: string): string {
 test("the Assets rail calls its filing unit a folder, never a category", () => {
   expect(read("app/library/AssetsBrowser.tsx")).not.toMatch(/categor/i);
 });
+
+test("the folder rail and the shelves rail expose which row is selected", () => {
+  expect(read("app/library/FolderTree.tsx")).toContain("aria-current");
+  expect(read("app/_library/LibraryShelves.tsx")).toContain("aria-pressed");
+});
