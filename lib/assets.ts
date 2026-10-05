@@ -27,6 +27,7 @@ import {
   BY_UID,
   UPLOADS_STORE,
 } from "./studioDb";
+import type { WirePlan } from "./music/types";
 import type { Proof, StyleBlock, Theme } from "./themes";
 
 export type AssetKind = "image" | "audio";
@@ -68,6 +69,48 @@ export interface AudioMeta {
    *  rest of this bag — absent for a take composed before this field existed,
    *  never a guess dressed as data. */
   prompt_text?: string;
+  // ── THE SOUND LAB'S FIELDS (app/playground, 2026-10-05). The lab files every
+  // render into this same store so the Library's ledger is where it is judged;
+  // these record what the render handed back that the bag had no place for.
+  // Every one is absent on a fixture row and on a file returned by hand, and
+  // absent means "not known", never a default.
+  /** How the lab made the take. */
+  lab_op?: LabOp;
+  /** The music vendor's stored-song id — the handle a section edit references
+   *  (lib/music/types.ts#WireAudioRefChunk). Without it a take cannot be
+   *  edited after a reload, only re-rolled. */
+  song_id?: string;
+  /** The vendor's own composition plan for what was rendered, verbatim — the
+   *  section list (with measured durations) a later edit ranges against. */
+  plan?: WirePlan;
+  /** A section edit's per-section mode, in plan order. */
+  edit_modes?: LabEditMode[];
+  /** Magnitude per slice, 0 to 1, measured off the bytes in the browser
+   *  (app/library/audio/analysis.ts). */
+  peaks?: number[];
+  /** Tempo, key and energy MEASURED on the bytes. Kept apart from
+   *  `tempo_bpm` / `key`, which are what the recipe ASKED for. */
+  measured?: MeasuredAudio;
+  /** The one change a fan-out made to produce this take (book.ts#Variation). */
+  variation?: { axis: string; diff: string[] };
+  /** The hunt (a fan-out of one seed) this take was rendered or returned in. */
+  hunt_id?: string;
+}
+
+/** How the Sound lab produced a take: one prompt, a rendered plan, a section
+ *  edit of a stored song, a sound effect. */
+export type LabOp = "compose" | "plan" | "section-edit" | "sfx";
+
+/** A section edit's per-section choice: keep by reference, regenerate under
+ *  the original at a strength, or regenerate free. */
+export type LabEditMode = "keep" | "low" | "medium" | "high" | "free";
+
+export interface MeasuredAudio {
+  tempo_bpm: number;
+  key: string;
+  energy: "high" | "medium" | "low" | null;
+  /** The measurement's own name for itself, e.g. "onset autocorr · goertzel chroma". */
+  method: string;
 }
 
 export interface Asset {

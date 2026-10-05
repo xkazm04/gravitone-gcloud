@@ -43,11 +43,13 @@ export const MODULES = [
   // Publishing: the schedule, the channels a headless agent can post to, and
   // what came back from them.
   { label: "Calendar", href: "/calendar" },
-  // Temporary by design: a bench for exercising the music vendor's latest
-  // feature surface (plan drafting, section editing, SFX) before any of it is
-  // promoted into the studio's own steps. Remove when the Score phase has
-  // absorbed what the bench was built to learn.
-  { label: "Playground", href: "/playground" },
+  // The Sound lab: an experimental studio for finding the right track and
+  // polishing it — ElevenLabs live, Suno by manual round trip, a local lane
+  // declared. No longer a temporary bench: since 2026-10-05 every render it
+  // makes is a take in the Library's audio store, judged on the Library's
+  // rubric, so it is where the audio the Library holds is made. The route
+  // keeps its old name so links and the cx screen id survive.
+  { label: "Sound lab", href: "/playground" },
   // Upstream of the Library, and deliberately not a tab of it: the Library
   // holds ratified things a project stands on, the foundry mass-produces
   // candidates most of which are meant to be deleted. Runs on the local GPU

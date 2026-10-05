@@ -29,7 +29,6 @@ import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRe
 
 import { ToastTray, WorldRoot, useToast } from "@/components/kit";
 import { Ghost } from "@/components/ui/signal";
-import type { AudioMeta } from "@/lib/assets";
 import { useAuth } from "@/lib/useAuth";
 
 import { analyzeFile, type Stage } from "./analysis";
@@ -53,7 +52,8 @@ import {
   verdict,
   vocabulary,
   compose,
-  type Draft,
+  newDraft,
+  returnMeta,
   type Grouping,
   type Hand,
   type RatingKey,
@@ -65,6 +65,7 @@ import {
   type Verdict,
 } from "./book";
 import { useBook } from "./bookStore";
+import { copyText } from "./clipboard";
 import { Engine } from "./engine";
 import { Composer, Drafts, Recipe, TakePanel, Variations, type ComposerState } from "./Inspector";
 import Ledger, { COLS, sortRows, visibleCols, type ColId, type Sort } from "./Ledger";
@@ -85,28 +86,6 @@ const TYPES: readonly [TypeFilter, string][] = [
 
 const isField = (el: Element | null) =>
   !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || (el as HTMLElement).isContentEditable);
-
-/** Copy for a human to paste. The async clipboard first; the textarea route
- *  for a browser that refuses it (core.js#copy). */
-async function copyText(text: string): Promise<boolean> {
-  try {
-    await navigator.clipboard.writeText(text);
-    return true;
-  } catch {
-    const t = document.createElement("textarea");
-    t.value = text;
-    document.body.appendChild(t);
-    t.select();
-    let ok = false;
-    try {
-      ok = document.execCommand("copy");
-    } catch {
-      ok = false;
-    }
-    t.remove();
-    return ok;
-  }
-}
 
 const toggled = <T,>(set: ReadonlySet<T>, v: T): Set<T> => {
   const n = new Set(set);
@@ -325,16 +304,7 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
 
   const copyDraft = async (seed: Seed, tgt: Target, parent: string | null, ref: string | null) => {
     const text = compose(seed, tgt, book.hands);
-    const draft: Draft = {
-      id: `dr-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 5)}`,
-      created_at: Date.now(),
-      copied_at: null,
-      text,
-      target: tgt,
-      seed,
-      parent_id: parent,
-      ref_id: ref,
-    };
+    const draft = newDraft(seed, tgt, text, parent, ref);
     updateBook((b) => ({ ...b, drafts: [draft, ...b.drafts] }));
     const ok = await copyText(text);
     if (ok) {
@@ -358,23 +328,7 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
   const attach = async (file: File, draftId: string) => {
     const d = book.drafts.find((x) => x.id === draftId);
     const parent = d?.parent_id ? byId.get(d.parent_id) : undefined;
-    const seed = d?.seed ?? (parent ? seedOf(parent) : blankSeed());
-    const meta: Partial<AudioMeta> = {
-      vendor: d?.target,
-      parent_id: parent?.id,
-      draft_id: d?.id,
-      prompt_text: d?.text,
-      genre_tags: seed.genres,
-      mood_tags: seed.moods,
-      instrumentation: seed.instruments,
-      tempo_bpm: seed.bpm ?? undefined,
-      key: seed.key ?? undefined,
-      reference_track_id: parent?.reference_track_id ?? d?.ref_id ?? undefined,
-      sfx_category: parent?.sfx_category ?? undefined,
-      loopable: parent ? parent.loopable : undefined,
-    };
-    for (const k of Object.keys(meta) as (keyof AudioMeta)[]) if (meta[k] === undefined) delete meta[k];
-    const row = await shelf.attachReturn(file, meta);
+    const row = await shelf.attachReturn(file, returnMeta(d, parent));
     if (!row) return;
     const t = takeFromAsset(row);
     setFlash(t.id);

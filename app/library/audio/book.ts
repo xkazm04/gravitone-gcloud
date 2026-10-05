@@ -13,7 +13,8 @@
 // imports the kit's stylesheets, and this model is also read by a Node probe
 // (tests/golden-path/library-audio.probe.spec.ts) that has no CSS loader.
 import { clock } from "@/components/kit/Player";
-import type { Asset, AudioMeta } from "@/lib/assets";
+import type { Asset, AudioMeta, LabEditMode, LabOp, MeasuredAudio } from "@/lib/assets";
+import type { WirePlan } from "@/lib/music/types";
 
 import { REFERENCES, refById, type ReferenceTrack } from "./audioRefs";
 
@@ -64,11 +65,61 @@ export interface Take {
   /** Its bytes in studioDb's uploads store (lib/assets#putUploads). Null for a
    *  fixture row, which has none and plays through ./engine.ts's sketch. */
   upload_id: string | null;
+  // ── what the Sound lab (app/playground) records on a take it rendered. All
+  // null on a fixture row and on a file returned by hand: they are facts the
+  // render handed back, never something this module infers.
+  /** How the lab made it: one prompt, a rendered plan, a section edit, an effect. */
+  lab_op: LabOp | null;
+  /** The vendor's stored-song id — the handle a later section edit references. */
+  song_id: string | null;
+  /** The vendor's own composition plan for what was rendered. */
+  plan: WirePlan | null;
+  /** A section edit's per-section mode, in plan order. */
+  edit_modes: LabEditMode[] | null;
+  /** Magnitude per slice, measured off the bytes (./analysis.ts). */
+  peaks: number[] | null;
+  /** Tempo and key MEASURED on the bytes — beside `tempo_bpm`/`key`, which are
+   *  what the recipe asked for. The two disagreeing is a finding, not a bug. */
+  measured: MeasuredAudio | null;
+  /** The one change that produced this take, when it came out of a fan-out. */
+  variation: { axis: string; diff: string[] } | null;
+  hunt_id: string | null;
 }
 
 const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
 const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
 const strs = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : []);
+
+const EDIT_MODES: readonly LabEditMode[] = ["keep", "low", "medium", "high", "free"];
+const LAB_OPS: readonly LabOp[] = ["compose", "plan", "section-edit", "sfx"];
+
+function planOf(v: unknown): WirePlan | null {
+  if (!v || typeof v !== "object") return null;
+  const chunks = (v as { chunks?: unknown }).chunks;
+  return Array.isArray(chunks) ? ({ chunks } as WirePlan) : null;
+}
+
+function measuredOf(v: unknown): MeasuredAudio | null {
+  if (!v || typeof v !== "object") return null;
+  const m = v as Record<string, unknown>;
+  const tempo = num(m.tempo_bpm);
+  const key = str(m.key);
+  if (tempo == null || !key) return null;
+  const e = m.energy;
+  return {
+    tempo_bpm: tempo,
+    key,
+    energy: e === "high" || e === "medium" || e === "low" ? e : null,
+    method: str(m.method) ?? "unknown",
+  };
+}
+
+function variationOf(v: unknown): { axis: string; diff: string[] } | null {
+  if (!v || typeof v !== "object") return null;
+  const r = v as Record<string, unknown>;
+  const axis = str(r.axis);
+  return axis ? { axis, diff: strs(r.diff) } : null;
+}
 
 function ratingsOf(v: unknown): Ratings | null {
   if (!v || typeof v !== "object") return null;
@@ -111,6 +162,16 @@ export function takeFromAsset(a: Asset): Take {
     prompt_text: str(m.prompt_text),
     file_name: str(m.fileName),
     upload_id: str(m.uploadId),
+    lab_op: LAB_OPS.find((o) => o === m.lab_op) ?? null,
+    song_id: str(m.song_id),
+    plan: planOf(m.plan),
+    edit_modes: Array.isArray(m.edit_modes)
+      ? m.edit_modes.map((x) => EDIT_MODES.find((e) => e === x) ?? "keep")
+      : null,
+    peaks: Array.isArray(m.peaks) ? m.peaks.map((x) => (typeof x === "number" && Number.isFinite(x) ? x : 0)) : null,
+    measured: measuredOf(m.measured),
+    variation: variationOf(m.variation),
+    hunt_id: str(m.hunt_id),
   };
 }
 
@@ -369,6 +430,17 @@ const pctKept = (e: TermEntry) => (e.keepRate != null ? `${Math.round(e.keepRate
 
 export function variations(t: Take, voc: readonly TermEntry[]): Variation[] {
   if (t.kind !== "track") return [];
+  return variationsOfSeed(seedOf(t), voc);
+}
+
+/** The one-change variations of a SEED, which is what `variations` always
+ *  read off a take (its terms, tempo and key — `seedOf`). Split out so a
+ *  recipe that is not yet a take — the Sound lab's working seed, a reference
+ *  track's concept — fans out by the same rules rather than a second copy of
+ *  them (app/playground/labModel.ts#fanOut). For a take the result is
+ *  identical: `seedOf` starts with no fence, so the fence line below adds
+ *  exactly the one term it always did. */
+export function variationsOfSeed(base: Seed, voc: readonly TermEntry[]): Variation[] {
   const best = (facet: Facet, not: string[]) =>
     voc
       .filter((v) => v.facet === facet && !not.includes(v.term) && v.stance !== "avoid" && v.judged >= 2)
@@ -382,12 +454,19 @@ export function variations(t: Take, voc: readonly TermEntry[]): Variation[] {
     voc
       .filter((v) => v.facet === facet && among.includes(v.term))
       .sort((a, b) => (a.stance === "avoid" ? -1 : 0) || (a.keepRate ?? 1) - (b.keepRate ?? 1))[0];
-  const base = seedOf(t);
+  const clone = (): Seed => ({
+    genres: base.genres.slice(),
+    moods: base.moods.slice(),
+    instruments: base.instruments.slice(),
+    bpm: base.bpm,
+    key: base.key,
+    avoid: base.avoid.slice(),
+  });
   const out: Variation[] = [];
   const wi = worst("instrumentation", base.instruments);
   const bi = best("instrumentation", base.instruments);
   if (wi && bi) {
-    const s = seedOf(t);
+    const s = clone();
     s.instruments = s.instruments.map((x) => (x === wi.term ? bi.term : x));
     out.push({
       axis: "swap",
@@ -399,7 +478,7 @@ export function variations(t: Take, voc: readonly TermEntry[]): Variation[] {
   const wm = worst("mood_tags", base.moods);
   const bm = best("mood_tags", base.moods);
   if (wm && bm) {
-    const s = seedOf(t);
+    const s = clone();
     s.moods = s.moods.map((x) => (x === wm.term ? bm.term : x));
     out.push({
       axis: "mood",
@@ -408,9 +487,9 @@ export function variations(t: Take, voc: readonly TermEntry[]): Variation[] {
       why: pctKept(bm),
     });
   }
-  const bpm = t.tempo_bpm || 100;
+  const bpm = base.bpm || 100;
   for (const d of [-6, 6]) {
-    const s = seedOf(t);
+    const s = clone();
     s.bpm = bpm + d;
     out.push({
       axis: "tempo",
@@ -419,12 +498,12 @@ export function variations(t: Take, voc: readonly TermEntry[]): Variation[] {
       why: `${Math.round(bpm + d)} BPM`,
     });
   }
-  if (t.key && REL[t.key]) {
-    const s = seedOf(t);
-    s.key = REL[t.key];
+  if (base.key && REL[base.key]) {
+    const s = clone();
+    s.key = REL[base.key];
     out.push({
       axis: "key",
-      diff: [`${t.key} → ${REL[t.key]}`],
+      diff: [`${base.key} → ${REL[base.key]}`],
       seed: s,
       why: "relative",
     });
@@ -435,8 +514,8 @@ export function variations(t: Take, voc: readonly TermEntry[]): Variation[] {
       .filter((v) => v.facet === "instrumentation" && v.judged >= 4 && !base.instruments.includes(v.term))
       .sort((a, b) => (a.keepRate ?? 1) - (b.keepRate ?? 1))[0];
   if (fence) {
-    const s = seedOf(t);
-    s.avoid = [fence.term];
+    const s = clone();
+    s.avoid = [...s.avoid.filter((x) => x !== fence.term), fence.term];
     out.push({
       axis: "fence",
       diff: [`no ${fence.term}`],
@@ -458,11 +537,65 @@ export interface Draft {
   seed: Seed;
   parent_id: string | null;
   ref_id: string | null;
+  /** Set when the draft was one lane of a Sound lab hunt (app/playground):
+   *  the return then joins that hunt, carrying the change it was sent for.
+   *  Absent on every draft the Library writes. */
+  hunt_id?: string;
+  variation?: { axis: string; diff: string[] };
 }
 
 /** A draft's returns are the takes that name it — derived, not stored, so a
  *  deleted take cannot linger in a draft's list. */
 export const returnsOf = (draftId: string, takes: readonly Take[]) => takes.filter((t) => t.draft_id === draftId);
+
+/** A new draft, before it is copied. Was inline in AudioWorkbench#copyDraft;
+ *  lifted so the Sound lab files its Suno drafts into the SAME book, and a
+ *  return dropped in either place attaches to the draft that asked for it. */
+export function newDraft(
+  seed: Seed,
+  target: Target,
+  text: string,
+  parent: string | null,
+  ref: string | null,
+  now: number = Date.now(),
+): Draft {
+  return {
+    id: `dr-${now.toString(36)}${Math.random().toString(36).slice(2, 5)}`,
+    created_at: now,
+    copied_at: null,
+    text,
+    target,
+    seed,
+    parent_id: parent,
+    ref_id: ref,
+  };
+}
+
+/** What a returned file is filed with: its draft, its parent, the recipe it
+ *  was asked for (core.js#attachReturn). Was inline in AudioWorkbench#attach;
+ *  the Sound lab's drop zone files through the same function. Absent fields
+ *  are dropped, never written as undefined. */
+export function returnMeta(d: Draft | undefined, parent: Take | undefined): Partial<AudioMeta> {
+  const seed = d?.seed ?? (parent ? seedOf(parent) : blankSeed());
+  const meta: Partial<AudioMeta> = {
+    vendor: d?.target,
+    parent_id: parent?.id,
+    draft_id: d?.id,
+    prompt_text: d?.text,
+    genre_tags: seed.genres,
+    mood_tags: seed.moods,
+    instrumentation: seed.instruments,
+    tempo_bpm: seed.bpm ?? undefined,
+    key: seed.key ?? undefined,
+    reference_track_id: parent?.reference_track_id ?? d?.ref_id ?? undefined,
+    sfx_category: parent?.sfx_category ?? undefined,
+    loopable: parent ? parent.loopable : undefined,
+    hunt_id: d?.hunt_id,
+    variation: d?.variation,
+  };
+  for (const k of Object.keys(meta) as (keyof AudioMeta)[]) if (meta[k] === undefined) delete meta[k];
+  return meta;
+}
 
 /* ── reference tracks ──────────────────────────────────────────────────── */
 
@@ -710,10 +843,28 @@ export function rng(seed: number): () => number {
 
 const peakCache = new Map<string, number[]>();
 
+/** Max-pool (or stretch) a measured envelope to n slices, so a 120-slice
+ *  measurement draws in a 96-stroke waveform without losing its transients. */
+export function resample(src: readonly number[], n: number): number[] {
+  if (src.length === n) return src.slice();
+  const out: number[] = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.floor((i / n) * src.length);
+    const b = Math.max(a + 1, Math.floor(((i + 1) / n) * src.length));
+    let m = 0;
+    for (let j = a; j < b && j < src.length; j++) m = Math.max(m, src[j]);
+    out.push(m);
+  }
+  return out;
+}
+
 /** A fixture row has no bytes to read a waveform off, so its shape is drawn
  *  from its id: an effect as an attack and decay (or a level for a loop), a
  *  track as four sections. Same rows, same shape, every visit (core.js#peaks). */
 export function peaksOf(t: Take, n = 96): number[] {
+  // A take whose bytes were measured draws ITS waveform, resampled to n — the
+  // shape below is only for a row that has nothing to measure.
+  if (t.peaks && t.peaks.length) return resample(t.peaks, n);
   const k = `${t.id}:${n}`;
   const hit = peakCache.get(k);
   if (hit) return hit;
