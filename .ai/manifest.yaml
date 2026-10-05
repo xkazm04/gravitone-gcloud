@@ -93,6 +93,13 @@ capabilities:
   # blocked at `__import__`, which is what lets the CI job skip `pip install` and still block — then
   # exit 1 on a seeded failing check.
   foundry-selftest: { command: "python pipeline/foundry/selftest.py", verified: true }
+  # The publishing engine's headless surface (lib/publish): channels · exports · list · schedule ·
+  # tick · publish · metrics, each with --json. Not npm-shaped for the same reason as the line above:
+  # the tsx invocation IS the definition. `channels` is the read-only verb (readiness per channel, env
+  # names only, no network). Dry by default — PUBLISH_MODE unset writes request plans and uploads
+  # nothing. Run 2026-10-05: channels exit 0; schedule -> list -> tick -> a dry publication with its
+  # plan file on disk, exit 0 throughout; a TikTok schedule refused with exit 1.
+  publish: { command: "npx tsx pipeline/publish.mts channels", verified: true }
   # THE AGGREGATE CHAIN — every gate below in one ordered command, and the order is load-bearing:
   # typecheck && lint:ratchet && check:manifest && check:notebook && check:trailer-structure && test
   # && build && check:bundle. check:bundle in particular reads BUILT chunks, so build must run first;

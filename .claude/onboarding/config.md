@@ -70,6 +70,7 @@ appended secret does not land in a commit. Confirm that is still true before wri
 | 6 | Imaging · generate / edit / recognize | metered, per render | `lib/imaging/env.ts` · `isConfigured()`; chain from `lib/imaging/router.ts` · `planFor()`, split by `IMAGING_ENV` (`dev`\|`prod`) |
 | 7 | Music · generate (Score) | metered | `lib/music/elevenlabs.ts` · `isMusicConfigured()` |
 | 8 | Local video render (ComfyUI) | hardware | `nvidia-smi`, then `pipeline/vlm-probe/guard.py --status` |
+| 9 | Publishing · dry (schedule, plan, no upload) → live YouTube | free → a Google Cloud OAuth app | `lib/publish/channels.ts` · `channelReadiness()`; `npx tsx pipeline/publish.mts channels` |
 
 **Rung 3 is the one newcomers are never told about.** It needs no key, no account and no vendor: if
 the operator already has a `claude` login on this machine, the reasoning routes work for free. Offer
@@ -104,6 +105,9 @@ One account each. Every one of them is optional; none is needed to see the studi
 | `QWEN_API_KEY` | Alibaba DashScope | see `.env.example` | Recognition in dev. `QWEN_BASE_URL` only if the account lives on the Beijing host. |
 | `ELEVENLABS_API_KEY` | ElevenLabs | see `.env.example` | The Score step's render. Cues are written and edited without it; only the render is gated. |
 | `NEXT_PUBLIC_FIREBASE_*` (3) | Firebase console → Project settings → Web app | see `.env.example` | Only if you want real Google sign-in. A **partial config is a missing config** — all three or none. |
+| `YOUTUBE_CLIENT_ID` + `YOUTUBE_CLIENT_SECRET` + `YOUTUBE_REFRESH_TOKEN` | Google Cloud console — OAuth client (Desktop app) on a project with YouTube Data API v3 enabled | linked in `.env.example`'s Publishing block | Only matters with `PUBLISH_MODE=live`; the default `dry` schedules and "publishes" with no key and no network. **The operator creates the OAuth app and mints the refresh token by hand** — never offer to. All three or none: a partial set reads `dry`. Refresh tokens expire after 7 days while the consent screen is in Testing. Uploads are private only. |
+| `TIKTOK_ACCESS_TOKEN` | TikTok for Developers — Content Posting API | linked in `.env.example` | **Declared, not wired.** No adapter exists; the channel reads `not_wired` whatever is set. Do not ask for it. |
+| `INSTAGRAM_ACCESS_TOKEN` + `INSTAGRAM_USER_ID` | Meta for Developers — Instagram Graph API | linked in `.env.example` | **Declared, not wired**, same as TikTok. |
 
 **Take the link from `.env.example`'s comment block, not from this table and not from memory.** The
 preflight already does exactly that, and this table deliberately does not duplicate the URLs so that

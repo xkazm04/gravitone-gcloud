@@ -144,6 +144,8 @@ const { googleProvider } = await import("../lib/imaging/providers/google");
 const { qwenProvider } = await import("../lib/imaging/providers/qwen");
 const { isMusicConfigured, MUSIC_KEY_VAR } = await import("../lib/music/elevenlabs");
 const { ACCESS_SECRET_VAR, accessSecret } = await import("../lib/apiAuth");
+const { channelReadiness, PUBLISH_ENV_VARS, PUBLISH_MODE_VAR } = await import("../lib/publish/channels");
+const { YOUTUBE_ENV_VARS } = await import("../lib/publish/oauth");
 
 /** The browser copy of the access secret. Its NAME is derived from the server
  *  one rather than typed, because lib/apiAuth.ts owns the stem and the pair is
@@ -533,7 +535,42 @@ const musicGate = (): CapGate => {
     url: docUrl(MUSIC_KEY_VAR),
   };
 };
+/** Publishing: the flag says the calendar exists here; WHICH channel can
+ *  upload is lib/publish/channels.ts's readiness table, asked rather than
+ *  re-derived. Dry runs work with no key, so the row is reachable only when
+ *  YouTube is genuinely live — anything less is one named action away. */
+const publishGate = (): CapGate => {
+  let r: ReturnType<typeof channelReadiness>;
+  try {
+    r = channelReadiness();
+  } catch (e) {
+    return {
+      outcome: "after-action",
+      probe: `${PUBLISH_MODE_VAR}=${process.env[PUBLISH_MODE_VAR]?.trim() || "unset"}`,
+      why: `${e instanceof Error ? e.message : String(e)}. Unset it (dry) or set it to live.`,
+      source: "lib/publish/channels.ts · publishModeFromEnv()",
+      vars: [PUBLISH_MODE_VAR],
+    };
+  }
+  const yt = r.channels.find((c) => c.id === "youtube")!;
+  const missing = yt.env.filter((e) => !e.present).map((e) => e.name);
+  return {
+    outcome: yt.status === "live" ? "reachable" : "after-action",
+    probe: r.channels.map((c) => `${c.id}:${c.status}`).join(" ") + ` · ${yt.cli.map((c) => `${c.name}:${c.present ? "on PATH" : "—"}`).join(" ")}`,
+    why:
+      yt.status === "live"
+        ? `YouTube uploads are live (private only). ${yt.note ?? ""} Presence is not validity — a revoked refresh token fails on the first upload.`
+        : `Scheduling and dry-run publishing work now: a publish writes a request plan and uploads nothing. ` +
+          `Live YouTube uploads need ${PUBLISH_MODE_VAR}=live${missing.length ? ` and ${missing.join(", ")}` : ""}. ` +
+          (docHint(YOUTUBE_ENV_VARS[0]) ?? "") +
+          ` TikTok and Instagram are not wired; no key changes that.`,
+    source: "lib/publish/channels.ts · channelReadiness()",
+    vars: [PUBLISH_MODE_VAR, ...YOUTUBE_ENV_VARS],
+    url: docUrl(YOUTUBE_ENV_VARS[0]),
+  };
+};
 const CAP_GATE: Partial<Record<string, () => CapGate>> = {
+  publish: publishGate,
   musicGenerate: musicGate,
   musicSectionEdit: musicGate,
   musicSfx: musicGate,
@@ -629,6 +666,7 @@ const wantedVars = [
   ACCESS_SECRET_VAR,
   ACCESS_SECRET_PUBLIC_VAR,
   ...CAP_FLAG.values(),
+  ...PUBLISH_ENV_VARS,
 ];
 const discrepancies = [...new Set(wantedVars)]
   .filter((v) => !ENV_DOC.has(v))

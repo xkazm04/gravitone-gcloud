@@ -94,6 +94,19 @@ export interface Capabilities {
    *
    *  STRUCTURALLY IMPOSSIBLE in a hosted posture, not merely unimplemented. */
   desktopTooling: boolean;
+
+  /** Scheduling finished exports onto channels and publishing them
+   *  (lib/publish, the Calendar, `pipeline/publish.mts`).
+   *
+   *  LOCAL BY CONSTRUCTION. The schedule, publications and request plans are
+   *  JSON under `foundry-out/publish/`, and what gets published is an mp4 the
+   *  Cut step's export wrote to `foundry-out/music-video-exports/` with a local
+   *  Chromium and ffmpeg (lib/musicVideoExport.ts). A hosted instance has
+   *  neither that disk nor that export, so the calendar would be empty and
+   *  forget itself on every restart. Which CHANNEL can actually upload is not
+   *  this flag's business — that is lib/publish/channels.ts's readiness table
+   *  (live / dry / not_wired), which the preflight reads for this row. */
+  publish: boolean;
 }
 
 /**
@@ -109,7 +122,7 @@ export interface Capabilities {
  * deployment turns things off on purpose, in its own environment, where somebody
  * has thought about it.
  *
- * A hosted deployment sets, in one block (.env.example carries the same five,
+ * A hosted deployment sets, in one block (.env.example carries the same six,
  * with a line of reason each — the two lists must agree, and until 2026-09-05
  * this one was missing the last entry, so a deployment that copied THIS block
  * shipped a music render button with no adapter behind it):
@@ -118,6 +131,7 @@ export interface Capabilities {
  *   NEXT_PUBLIC_CAP_LOCAL_VIDEO=0
  *   NEXT_PUBLIC_CAP_DESKTOP_TOOLING=0
  *   NEXT_PUBLIC_CAP_MUSIC_GENERATE=0    (until a Google music adapter exists)
+ *   NEXT_PUBLIC_CAP_PUBLISH=0           (the calendar lives on local disk)
  */
 export function capabilities(): Capabilities {
   return {
@@ -126,6 +140,7 @@ export function capabilities(): Capabilities {
     musicSfx: on(process.env.NEXT_PUBLIC_CAP_MUSIC_SFX, true),
     localVideoRender: on(process.env.NEXT_PUBLIC_CAP_LOCAL_VIDEO, true),
     desktopTooling: on(process.env.NEXT_PUBLIC_CAP_DESKTOP_TOOLING, true),
+    publish: on(process.env.NEXT_PUBLIC_CAP_PUBLISH, true),
   };
 }
 
@@ -149,4 +164,6 @@ export const ABSENCE_REASON: Record<keyof Capabilities, string> = {
     "Clip rendering runs on a local GPU rig, which a hosted deployment does not have. Run the studio locally to render clips.",
   desktopTooling:
     "This step hands off to desktop tooling on your own machine, which a hosted deployment cannot reach.",
+  publish:
+    "Publishing keeps its calendar and reads finished exports on the studio's own disk, which a hosted deployment does not have. Run the studio locally to schedule and publish.",
 };
