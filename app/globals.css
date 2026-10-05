@@ -108,7 +108,7 @@ body { margin: 0; }
    since `outline-2` sets width alone and would otherwise fall back to
    currentColor.
 
-   Six files do that today, and they are the whole list (this comment used to
+   Eight files do that today, and they are the whole list (this comment used to
    name eight components — Region, Track, TakePlayer, NarrationDock,
    FeedbackDock, ScriptScore, TakeTimeline, voices/new — none of which has ever
    existed in this repo; the list was carried over from the app this design
@@ -117,7 +117,8 @@ body { margin: 0; }
      components/ui/Field.tsx       · CONTROL, and Segmented via has-[:focus-visible]
      components/ui/NotificationBell.tsx · the bell, and its tray (which takes
        focus on open, so it needs a ring of its own to show it)
-     app/_projects/ProjectsMatrix.tsx
+     components/ui/Select.tsx      · the dropdown trigger
+     app/_projects/{ShelfHeader,parts}.tsx
      app/_phases/research/_parts/CardTile.tsx
      app/_phases/research/_parts/FollowUpQueue.tsx
 

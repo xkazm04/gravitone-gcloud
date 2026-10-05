@@ -1,4 +1,4 @@
-// `?seed=N` — a synthetic shelf, in memory only, to prove the /projects variants
+// `?seed=N` — a synthetic shelf, in memory only, to prove the /projects shelf
 // at volume (platform-consolidation WP2: "scaling to hundreds of projects").
 //
 // NEVER WRITTEN. These rows are merged into the view's list and nothing else:

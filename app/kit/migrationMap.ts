@@ -103,7 +103,7 @@ export const MODULES: readonly Module[] = [
     files: 8,
     needs: ["Card", "CardGrid", "ConfirmDialog", "Ghost", "Tally", "StatusPill", "PageHead", "Field", "Segmented", "Deck", "DeckStage", "DeckCard", "StageRail", "Table", "NotificationBell", "UserMenu"],
     missing: [],
-    evidence: "Deck in ProjectsView, CreateWizard; Field in ProjectDialog; .sort in ProjectsMatrix",
+    evidence: "Deck in ProjectsView, CreateWizard; Field in ProjectDialog; .sort in the race sheet (app/_projects/shelf.ts)",
   },
   {
     module: "Library",

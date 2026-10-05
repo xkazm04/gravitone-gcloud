@@ -7,13 +7,13 @@
 // this matrix. The matrix won and the other two are gone — a list tells you
 // what you have, and only the grid tells you where the whole shelf is jammed.
 //
-// ROUND 2 (platform-consolidation WP2, 2026-10-04) reopens it for scale: the
+// ROUND 2 (platform-consolidation WP2, 2026-10-04) reopened it for scale: the
 // shelf has to hold hundreds of projects and absorb StatReel's rundown. Three
-// directions again, behind `?v=1|2|3` (components/ui/VariantSwitch.tsx), over
-// one query model (app/_projects/shelf.ts): V1 Ledger — the matrix, windowed;
-// V2 Race sheet — lanes on a five-gate track; V3 Pivot board — state columns
-// by kind rows. This host keeps everything the three must share: storage, the
-// dialogs, the demo strip, the style gap, and the dev-only synthetic shelf.
+// directions ran behind `?v=1|2|3` over one query model (app/_projects/shelf.ts)
+// — a windowed ledger, a race sheet, a pivot board — and the race sheet won
+// (operator verdict, 2026-10-05). The other two are gone and so is the switch.
+// This host keeps what is not the sheet's: storage, the dialogs, the demo
+// shelf, the style gap, and the dev-only synthetic shelf.
 
 import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -25,21 +25,16 @@ import StudioFrame from "@/components/ui/StudioFrame";
 import { Ghost, Tally } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
-import { VariantSwitch, useVariant } from "@/components/ui/VariantSwitch";
 import { useThemes } from "@/lib/useThemes";
 import { lockedOnly } from "@/lib/themes";
 import { isSeeded } from "@/app/_studio/projectSeed";
 import type { Project, ProjectContents, ProjectDraft } from "@/lib/projects";
 
 import ProjectDialog, { ConfirmDelete } from "../_projects/ProjectDialog";
-import Ledger from "../_projects/Ledger";
-import PivotBoard from "../_projects/PivotBoard";
 import RaceSheet from "../_projects/RaceSheet";
-import { DemoTag, EmptyShelf } from "../_projects/parts";
+import { DemoChip, EmptyShelf } from "../_projects/parts";
 import type { SurfaceProps } from "../_projects/surface";
 import { isSynthetic, syntheticProjects } from "../_projects/synthetic";
-
-const SURFACE = { 1: Ledger, 2: RaceSheet, 3: PivotBoard } as const;
 
 /** `?seed=N` is honoured only outside a production build. `NODE_ENV` is inlined
  *  at build time, so in production this is a constant 0 and the synthetic
@@ -51,7 +46,6 @@ export default function ProjectsView() {
   const { user } = useAuth();
   const router = useRouter();
   const params = useSearchParams();
-  const [variant] = useVariant();
   const stored = useProjects(user?.uid ?? null);
   const { error, loading, create } = stored;
 
@@ -59,7 +53,7 @@ export default function ProjectsView() {
    *
    * `?seed=300` merges 300 fixture projects into the list (app/_projects/
    * synthetic.ts). Edits and deletes on them are applied here, in memory, so
-   * every path the variants drive can be exercised at volume without one row
+   * every path the sheet drives can be exercised at volume without one row
    * reaching IndexedDB. `update` and `remove` below are the ONLY writers the
    * page calls, and they route a synthetic id away from storage. */
   const seedN = seedOf(params.get("seed"));
@@ -110,7 +104,10 @@ export default function ProjectsView() {
   const lockedThemes = useMemo(() => lockedOnly(allThemes), [allThemes]);
   const gated = themes !== null && lockedThemes.length === 0;
 
-  const [dialog, setDialog] = useState<{ open: boolean; project: Project | null }>({
+  const [dialog, setDialog] = useState<{
+    open: boolean;
+    project: Project | null;
+  }>({
     open: false,
     project: null,
   });
@@ -119,21 +116,17 @@ export default function ProjectsView() {
   /* ── The demo shelf, said out loud ──────────────────────────────────────
    *
    * A brand-new account is handed six fictional productions (lib/useProjects
-   * seeds them so the studio has something to open), and until now they were
-   * drawn exactly like work the user made: a stranger's real first screen was
-   * six projects with progress heat and "2h ago" timestamps that they had
-   * never touched. The seeding stays — it is the product decision, and the
-   * genuinely empty shelf is one click away now instead of six deletes.
+   * seeds them so the studio has something to open), and until 2026-09 they
+   * were drawn exactly like work the user made: a stranger's real first screen
+   * was six projects with progress and "2h ago" timestamps they had never
+   * touched. The seeding stays — it is the product decision, and the genuinely
+   * empty shelf is one confirm away instead of six deletes.
    *
-   * The strip is a NOTE, not a warning: same neutral chrome as the style note
-   * at the foot of the page, and it disappears on its own once the examples
-   * are gone. */
+   * It was a full-width strip with a sentence in it; since round 2 it is the
+   * `demo 6` chip in the sheet's toolbar (parts.tsx#DemoChip), which owns the
+   * question. This keeps the answer. The chip goes on its own once the
+   * examples are gone. */
   const demos = useMemo(() => (projects ?? []).filter(isSeeded), [projects]);
-  // Two-step, inline: this deletes several records at once, which no single
-  // row's confirmation covers, and a modal for it would be louder than the
-  // thing it guards. `clearing` is the question, `wiping` is the answer being
-  // carried out.
-  const [clearing, setClearing] = useState(false);
   const [wiping, setWiping] = useState(false);
   const mainRef = useRef<HTMLElement>(null);
 
@@ -143,22 +136,13 @@ export default function ProjectsView() {
   // went — the shelf shows exactly what survived, which is the truth.
   //
   // Then focus lands on the landmark, for the reason ConfirmDelete's own note
-  // below states at length: the control this was fired from is inside the
-  // strip, the strip is gone the moment the last row is, and a restore onto a
-  // detached node is silent — focus falls to <body>.
-  // The pivot board's bulk delete: the same `remove`, one project at a time,
-  // for the reason `clearExamples` below gives — sequential, so the shelf
-  // visibly thins and a failure stops nothing that already went.
-  const removeMany = async (ps: Project[]) => {
-    for (const p of ps) await remove(p.id);
-    mainRef.current?.focus();
-  };
-
+  // below states at length: the control this was fired from is the chip's
+  // confirm, the chip is gone the moment the last example is, and a restore
+  // onto a detached node is silent — focus falls to <body>.
   const clearExamples = async () => {
     setWiping(true);
     for (const p of demos) await remove(p.id);
     setWiping(false);
-    setClearing(false);
     mainRef.current?.focus();
   };
 
@@ -206,7 +190,7 @@ export default function ProjectsView() {
             merely repetitive; with them gone the header band held one small
             button and 100px of nothing, so the band went too and the button
             moved next to the create control it is the shortcut for (`aside`,
-            _projects/parts.tsx#ShelfProps).
+            _projects/surface.ts#SurfaceProps).
 
             The heading stays as a landmark: `sr-only` keeps the document's
             outline intact for a screen reader and for anything that walks
@@ -224,51 +208,6 @@ export default function ProjectsView() {
           </p>
         )}
 
-        {demos.length > 0 && (
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-2.5">
-            <p className="font-hanken flex flex-wrap items-center gap-2 text-label text-slate-400">
-              <DemoTag />
-              {demos.length === 1
-                ? "One row on this shelf is an example this account was opened with"
-                : `${demos.length} rows on this shelf are examples this account was opened with`}{" "}
-              — open them, edit them, or clear them out.
-            </p>
-            {/* THE TRIGGER IS ALSO THE CANCEL, and it never unmounts — it
-                changes its word. A confirm that swaps its own opener out drops
-                a keyboard user on <body>, which is the failure Modal.tsx and
-                ConfirmDelete below both spend paragraphs avoiding. The
-                confirmation button `autoFocus`es instead (it only ever mounts
-                from a click, so it cannot steal focus on load), and pressing
-                the trigger again backs out with focus still on it. */}
-            <span className="flex flex-wrap items-center gap-2">
-              {clearing && (
-                <>
-                  <span className="font-hanken text-label text-slate-300">
-                    Delete {demos.length === 1 ? "it" : `all ${demos.length}`}?
-                  </span>
-                  <button
-                    type="button"
-                    autoFocus
-                    onClick={clearExamples}
-                    disabled={wiping}
-                    className="font-jetbrains cursor-pointer rounded-lg border border-rose-400/35 px-3 py-1 text-label text-rose-200 transition hover:bg-rose-400/10 disabled:cursor-default disabled:opacity-50"
-                  >
-                    {wiping ? "clearing…" : "yes, clear them"}
-                  </button>
-                </>
-              )}
-              <button
-                type="button"
-                onClick={() => setClearing((c) => !c)}
-                disabled={wiping}
-                className="font-jetbrains shrink-0 cursor-pointer rounded-lg border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-white/25 hover:text-white/75 disabled:opacity-50"
-              >
-                {clearing ? "keep them" : "clear the examples"}
-              </button>
-            </span>
-          </div>
-        )}
-
         <section>
           {loading ? (
             // Three ghost rows, not "reading the shelf…". The wait is short and
@@ -279,7 +218,6 @@ export default function ProjectsView() {
             <Ghost shape="row" count={3} label="Reading the shelf" />
           ) : (
             <Shelf
-              variant={variant}
               projects={projects ?? []}
               onOpen={(p, step) =>
                 // The project is the RESOURCE and gets the path; the step is a
@@ -290,7 +228,6 @@ export default function ProjectsView() {
               }
               onEdit={(p) => setDialog({ open: true, project: p })}
               onDelete={(p) => setDoomed(p)}
-              onDeleteMany={removeMany}
               // Always the wizard: its style stage offers presets (minted into
               // a locked theme at create) and an honest empty state that
               // routes, so there is no account state in which sending the user
@@ -318,15 +255,18 @@ export default function ProjectsView() {
                  a screen reader announces and what the two-word `title` echoes
                  for a mouse. */
               aside={
-                <button
-                  type="button"
-                  onClick={() => setDialog({ open: true, project: null })}
-                  aria-label="Quick create"
-                  title="Quick create"
-                  className="cursor-pointer rounded-full border border-white/12 p-2 text-white/45 transition hover:border-white/25 hover:text-white/75"
-                >
-                  <Zap aria-hidden className="h-4 w-4" />
-                </button>
+                <>
+                  {demos.length > 0 && <DemoChip count={demos.length} busy={wiping} onClear={clearExamples} />}
+                  <button
+                    type="button"
+                    onClick={() => setDialog({ open: true, project: null })}
+                    aria-label="Quick create"
+                    title="Quick create"
+                    className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/12 text-white/45 transition hover:border-white/25 hover:text-white/75"
+                  >
+                    <Zap aria-hidden className="h-4 w-4" />
+                  </button>
+                </>
               }
             />
           )}
@@ -360,8 +300,11 @@ export default function ProjectsView() {
             facts about what to do next, and only the ratio tells them apart.
             The link is an ACTION, not narration — /library is still one click
             from a shelf whose owner came to commission a style. */}
+        {/* ROUND 2 (2026-10-05) took the box away: a bordered panel under a
+            bordered sheet read as a second table with one cell in it. It is a
+            line now, at the sheet's left edge — the same three facts. */}
         {gated && (
-          <div className="mt-6 flex flex-wrap items-center gap-3 rounded-xl border border-white/8 bg-white/[0.015] px-4 py-3">
+          <div className="mt-3 flex flex-wrap items-center gap-3 px-1">
             {/* The hollow twin of a style's face — the same absent-swatch shape
                 ProjectDialog#StyleSwatch draws for "no style" and the wizard's
                 EmptyStyleDeck draws where a style card would be. Dashed, so it
@@ -422,15 +365,13 @@ export default function ProjectsView() {
           if (took) setDoomed(null);
         }}
       />
-      <VariantSwitch labels={["Ledger", "Race sheet", "Pivot board"]} />
     </StudioFrame>
   );
 }
 
-/** The empty shelf is the same object in every variant (parts.tsx#EmptyShelf):
- *  there is nothing to arrange, so there is nothing for a direction to differ on. */
-function Shelf({ variant, ...props }: SurfaceProps & { variant: 1 | 2 | 3 }) {
+/** An empty shelf has nothing to arrange, so the sheet is not mounted for it:
+ *  no toolbar over nothing, one filled create control (parts.tsx#EmptyShelf). */
+function Shelf(props: SurfaceProps) {
   if (props.projects.length === 0) return <EmptyShelf onCreate={props.onCreate} aside={props.aside} />;
-  const Surface = SURFACE[variant];
-  return <Surface {...props} />;
+  return <RaceSheet {...props} />;
 }

@@ -1,45 +1,109 @@
 "use client";
 
 // The React side of ./shelf.ts — the URL as the query's only store, a keyboard
-// cursor, and a windowed list. Every /projects variant mounts the same three.
+// cursor, and a windowed list. The race sheet (./RaceSheet.tsx) mounts all three.
 
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 
 import type { Project } from "@/lib/projects";
 
-import {
-  deriveShelf,
-  prefixOffsets,
-  queryFromParams,
-  queryToParams,
-  windowRange,
-  type ShelfDefaults,
-  type ShelfQuery,
-} from "./shelf";
+import { deriveShelf, prefixOffsets, queryFromParams, queryToParams, windowRange, type ShelfQuery } from "./shelf";
 
 /* ── The query lives in the URL ───────────────────────────────────────────── */
 
-/** `defaults` must be a module-level constant: it is a memo dependency. */
-export function useShelf(projects: readonly Project[], defaults: ShelfDefaults) {
-  const params = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+/** After the entrance wave (RaceSheet.tsx, ~250ms) has run. */
+const URL_WRITE_DELAY_MS = 320;
 
-  const query = useMemo(() => queryFromParams(params, defaults), [params, defaults]);
+export function useShelf(projects: readonly Project[]) {
+  const params = useSearchParams();
+  const pathname = usePathname();
+  const urlKey = params.toString();
+
+  // THE PAGE RENDERS FROM ITS OWN COPY, AND THE URL FOLLOWS IT.
+  //
+  // `url` is the URL as this hook last saw it; `key` is the URL spelling of the
+  // copy. When the URL moves — Back, a link, a hand edit — the copy is re-read
+  // from it, during render (the `prevQ` idiom ShelfHeader.tsx#SearchBox uses),
+  // so the URL stays the query's store and a shared link opens the same shelf.
+  // When it moves to the copy's own spelling, that is this hook's write landing
+  // (below, deferred), and there is nothing to read. A pick the URL has not
+  // caught up with yet is NOT a URL move: `url` has not changed, so the copy
+  // is not reverted to the stale address in the meantime.
+  const [local, setLocal] = useState(() => ({ url: urlKey, key: urlKey, query: queryFromParams(params) }));
+  let query = local.query;
+  if (local.url !== urlKey) {
+    if (urlKey === local.key) {
+      setLocal({ ...local, url: urlKey });
+    } else {
+      query = queryFromParams(params);
+      setLocal({ url: urlKey, key: urlKey, query });
+    }
+  }
 
   // `replace`, not `push`: a filter is a view onto the same shelf, and Back
-  // should leave /projects rather than step through every chip pressed.
+  // should leave /projects rather than step through every filter picked.
+  //
+  // WHY THE COPY, AND WHY THE NATIVE HISTORY CALL — both measured 2026-10-05 on
+  // ?seed=300, clicking a filter and sampling the DOM every frame:
+  //  · `router.replace` is a navigation: a server round trip for the page's
+  //    RSC payload even when only the query string moved. The shelf sat on the
+  //    OLD rows for ~240ms after every pick, then swapped all of them in one
+  //    frame. The dropdown had closed, so the pick read as ignored and then the
+  //    list blinked.
+  //  · `history.replaceState` skips the round trip — Next integrates it and
+  //    `useSearchParams` re-reads it (node_modules/next/dist/docs/01-app/
+  //    01-getting-started/04-linking-and-navigating.md, "Native History API")
+  //    — but the re-read lands as a router transition, and rendering FROM it
+  //    still left the new answer ~330ms behind the click in dev.
+  // So the pick is a state update at the click's own priority, painted on the
+  // next frame, and the URL is written AFTER the new answer has settled in —
+  // the router's re-read re-renders the whole tree (measured: the click's long
+  // task went 120ms → 230ms in dev with the write inline), and it has no
+  // business in the frame the answer lands in. Picks inside the window coalesce
+  // into one write.
+  //
+  // A WRITE STILL PENDING WHEN THE PAGE IS LEFT IS FLUSHED FIRST, not dropped
+  // and not left to fire. Measured: Escape in the search box (which empties a
+  // type=search input natively), J, Enter — the row's router.push was in
+  // flight when the write fired, and Next's replaceState integration took the
+  // URL back to /projects; the studio never opened. `flush` writes now, and
+  // the sheet calls it before every `onOpen` — so the push is the LAST word,
+  // and Back returns to exactly the shelf that was on screen. Unmounting
+  // cancels whatever is left.
+  //
+  // Nothing on this page is server-rendered from the query, so the round trip
+  // had nothing to fetch.
+  const pending = useRef<{ timer: number; url: string } | null>(null);
+  const write = useCallback(() => {
+    const p = pending.current;
+    if (!p) return;
+    window.clearTimeout(p.timer);
+    pending.current = null;
+    window.history.replaceState(null, "", p.url);
+  }, []);
+  useEffect(
+    () => () => {
+      if (pending.current) window.clearTimeout(pending.current.timer);
+    },
+    [],
+  );
   const setQuery = useCallback(
     (patch: Partial<ShelfQuery>) => {
-      const next = queryToParams({ ...query, ...patch }, params, defaults).toString();
-      router.replace(next ? `${pathname}?${next}` : pathname, { scroll: false });
+      const next = { ...local.query, ...patch };
+      const key = queryToParams(next, params).toString();
+      setLocal((l) => ({ ...l, key, query: next }));
+      if (pending.current) window.clearTimeout(pending.current.timer);
+      pending.current = {
+        url: key ? `${pathname}?${key}` : pathname,
+        timer: window.setTimeout(write, URL_WRITE_DELAY_MS),
+      };
     },
-    [query, params, defaults, router, pathname],
+    [local.query, params, pathname, write],
   );
 
   const view = useMemo(() => deriveShelf(projects, query), [projects, query]);
-  return { query, setQuery, ...view };
+  return { query, setQuery, flush: write, ...view };
 }
 
 /* ── The keyboard ─────────────────────────────────────────────────────────── */
@@ -54,22 +118,15 @@ const modalOpen = () => document.querySelector('[role="dialog"][aria-modal="true
 
 /**
  * J / K walk `order` (the ids in on-screen order), Enter opens, `/` focuses the
- * search, X toggles selection where a variant has one, Escape clears it.
+ * search, Escape leaves it.
  *
  * Enter is taken only when focus is on a ROW (or nowhere): a focused edit button
  * inside a row must still do its own job on Enter.
  *
- * `moved` ticks on every keyboard move so a variant can scroll the row into
+ * `moved` ticks on every keyboard move so the sheet can scroll the row into
  * view and focus it — the row may not be in the DOM yet when the key lands.
  */
-export function useShelfKeys(
-  order: readonly string[],
-  {
-    onOpen,
-    onToggle,
-    onEscape,
-  }: { onOpen: (id: string) => void; onToggle?: (id: string) => void; onEscape?: () => void },
-) {
+export function useShelfKeys(order: readonly string[], { onOpen }: { onOpen: (id: string) => void }) {
   const [activeId, setActiveState] = useState<string | null>(null);
   const [moved, setMoved] = useState(0);
   const searchRef = useRef<HTMLInputElement | null>(null);
@@ -115,24 +172,17 @@ export function useShelfKeys(
       if (e.key === "Enter" && at && (onRow || nowhere)) {
         e.preventDefault();
         onOpen(at);
-        return;
       }
-      if (key === "x" && at && onToggle && (onRow || nowhere)) {
-        e.preventDefault();
-        onToggle(at);
-        return;
-      }
-      if (e.key === "Escape" && onEscape) onEscape();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [order, setActiveId, onOpen, onToggle, onEscape]);
+  }, [order, setActiveId, onOpen]);
 
   return { activeId: active, setActiveId, moved, searchRef };
 }
 
 /** Focus the row element for `id` without letting the browser scroll it — the
- *  variant has already put it where it belongs. */
+ *  sheet has already put it where it belongs. */
 export function focusRow(id: string | null) {
   if (!id) return;
   const el = document.querySelector<HTMLElement>(`[data-shelf-id="${CSS.escape(id)}"]`);
@@ -146,8 +196,7 @@ export function useRevealOnMove(
   moved: number,
   activeId: string | null,
   indexOf: (id: string) => number,
-  reveal: (i: number, stickyTop?: number) => void,
-  stickyTop = 0,
+  reveal: (i: number) => void,
 ) {
   const handled = useRef(0);
   useEffect(() => {
@@ -155,7 +204,7 @@ export function useRevealOnMove(
     handled.current = moved;
     if (!activeId) return;
     const i = indexOf(activeId);
-    if (i >= 0) reveal(i, stickyTop);
+    if (i >= 0) reveal(i);
     // Two frames: the first lets the re-windowed slice commit, the second
     // finds the row in it.
     let inner = 0;
@@ -166,7 +215,7 @@ export function useRevealOnMove(
       cancelAnimationFrame(outer);
       cancelAnimationFrame(inner);
     };
-  }, [moved, activeId, indexOf, reveal, stickyTop]);
+  }, [moved, activeId, indexOf, reveal]);
 }
 
 /* ── The windowed list ────────────────────────────────────────────────────── */
@@ -175,7 +224,7 @@ export function useRevealOnMove(
  * Rows of known height in a scrolling box; only the slice that intersects the
  * box (plus `overscan` each side) is rendered, padded above and below to the
  * height of what is not. Fixed heights per row kind are the contract — the
- * variant draws each row at exactly the height it declares here.
+ * sheet draws each row at exactly the height it declares here.
  *
  * Written here rather than reaching for kit `useWindow` (components/kit/Pager.tsx)
  * because that one GROWS: "+N" and "all" add rows that never leave, so a shelf
@@ -204,14 +253,14 @@ export function useVirtual(
     setScrollTop(e.currentTarget.scrollTop);
   }, []);
 
-  /** Bring row i fully into view, below `stickyTop` px of pinned chrome. */
+  /** Bring row i fully into view. */
   const reveal = useCallback(
-    (i: number, stickyTop = 0) => {
+    (i: number) => {
       const el = ref.current;
       if (!el || i < 0 || i >= offsets.length - 1) return;
       const top = offsets[i];
       const bottom = offsets[i + 1];
-      if (top - stickyTop < el.scrollTop) el.scrollTop = Math.max(0, top - stickyTop);
+      if (top < el.scrollTop) el.scrollTop = top;
       else if (bottom > el.scrollTop + el.clientHeight) el.scrollTop = bottom - el.clientHeight;
       setScrollTop(el.scrollTop);
     },

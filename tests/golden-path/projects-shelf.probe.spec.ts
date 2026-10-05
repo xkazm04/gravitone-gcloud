@@ -1,10 +1,11 @@
 // THE SHELF MODEL — app/_projects/shelf.ts, driven without a browser.
 //
-// The three /projects prototypes (platform-consolidation WP2) share one query
-// model so the bake-off compares drawings, not three different ideas of what a
-// filter means. This probe holds the model to the five claims the variants lean
-// on: the URL is a faithful, canonical store of the query; filters narrow and
-// the state tallies count the facet; groups come out in catalogue order and
+// The /projects race sheet draws from one query model (platform-consolidation
+// WP2; three prototypes shared it until the race sheet won on 2026-10-05). This
+// probe holds the model to the claims the sheet leans on: the URL is a faithful,
+// canonical store of the query; filters narrow and every dropdown counts its
+// own facet; each dropdown's one value maps onto the query's lists and back;
+// the Type menu reads in name order; groups come out in catalogue order and
 // keep the sort inside them; "needs you next" puts blocked first and sinks
 // delivered, as a total order; and `nextAction` names the step it opens on.
 // Plus the windowing arithmetic, because "< 60 rows in the DOM" is only as true
@@ -15,9 +16,12 @@ import { test, expect } from "@playwright/test";
 
 import { PHASES, emptyProgress, type PhaseKey, type PhaseState, type Project, type TemplateId } from "@/lib/projects";
 import {
+  ANY,
   DEFAULTS,
+  MULTI,
   compareNeedsYou,
   deriveShelf,
+  facetCounts,
   flattenGroups,
   groupProjects,
   isFiltered,
@@ -31,9 +35,16 @@ import {
   queryToParams,
   sortProjects,
   stateCounts,
+  statePatch,
+  stateValue,
+  stepPatch,
+  stepValue,
+  typePatch,
+  typeValue,
   windowRange,
   type ShelfQuery,
 } from "@/app/_projects/shelf";
+import { typeOptions } from "@/app/_projects/ShelfHeader";
 import { isSynthetic, syntheticProjects } from "@/app/_projects/synthetic";
 
 const T0 = 1_700_000_000_000;
@@ -86,18 +97,18 @@ test("a full query survives the URL and comes back identical", () => {
 });
 
 test("defaults are not written, and an empty query is an empty string", () => {
+  // The race sheet opens ungrouped, in rundown order.
+  expect(DEFAULTS).toEqual({ group: "none", sort: "needs-you" });
   expect(queryToParams(q()).toString()).toBe("");
-  const v2 = { group: "none", sort: "needs-you" } as const;
-  expect(queryToParams(q({ sort: "needs-you" }), new URLSearchParams(), v2).toString()).toBe("");
-  // ...but the same sort is explicit against a variant whose default differs,
-  // so it survives a switch of variant.
-  expect(queryToParams(q({ sort: "needs-you" }), new URLSearchParams(), DEFAULTS).get("s")).toBe("needs-you");
+  expect(queryToParams(q({ sort: "needs-you", group: "none" })).toString()).toBe("");
+  // Anything else is explicit, and survives a reload.
+  expect(queryToParams(q({ sort: "updated" })).get("s")).toBe("updated");
+  expect(queryToParams(q({ group: "state" })).get("g")).toBe("state");
 });
 
-test("params the model does not own (v, seed) are kept; unknown values are dropped", () => {
-  const base = new URLSearchParams("v=2&seed=300&st=old");
+test("params the model does not own (seed) are kept; unknown values are dropped", () => {
+  const base = new URLSearchParams("seed=300&st=old");
   const out = queryToParams(q({ states: ["draft"] }), base);
-  expect(out.get("v")).toBe("2");
   expect(out.get("seed")).toBe("300");
   expect(out.get("st")).toBe("draft");
 
@@ -108,7 +119,7 @@ test("params the model does not own (v, seed) are kept; unknown values are dropp
   expect(hand.phase).toBeUndefined(); // "motion" is a retired step
   expect(hand.phaseState).toBe("done");
   expect(hand.group).toBe("none");
-  expect(hand.sort).toBe("updated");
+  expect(hand.sort).toBe("needs-you");
 });
 
 /* ── Filtering ────────────────────────────────────────────────────────────── */
@@ -150,6 +161,82 @@ test("a filter that matches nothing is an empty view, not an error", () => {
   expect(isFiltered(clearFilters(q({ q: "x", states: ["draft"], group: "state", sort: "title" })))).toBe(false);
   // Clearing filters leaves the arrangement alone.
   expect(clearFilters(q({ group: "state", sort: "title" }))).toMatchObject({ group: "state", sort: "title" });
+});
+
+/* ── The dropdowns ────────────────────────────────────────────────────────── */
+
+test("every dropdown counts its own facet: the other filters apply, its own does not", () => {
+  // Trailer picked in Type, blocked picked in State.
+  const query = q({ disciplines: ["trailer"], states: ["blocked"] });
+  const f = facetCounts(SHELF, query);
+  // Type's counts ignore Type but honour State: one blocked project, a trailer.
+  expect(f.disciplines).toEqual({ educational: 0, trailer: 1, free: 0, "music-video": 0 });
+  expect(f.templates.teaser).toBe(1);
+  // Step's counts honour both: only "b" survives, and its Script is blocked.
+  expect(f.steps.script.blocked).toBe(1);
+  expect(f.steps.script.started).toBe(1);
+  expect(f.steps.research.empty).toBe(1);
+
+  // Unfiltered, each menu partitions the shelf: disciplines sum to it, and so
+  // does every step's set of states.
+  const all = facetCounts(SHELF, q());
+  expect(Object.values(all.disciplines).reduce((a, b) => a + b, 0)).toBe(SHELF.length);
+  expect(Object.values(all.templates).reduce((a, b) => a + b, 0)).toBe(SHELF.length);
+  for (const k of PHASES) {
+    const { started, ...states } = all.steps[k];
+    expect(
+      Object.values(states).reduce((a, b) => a + b, 0),
+      k,
+    ).toBe(SHELF.length);
+    expect(started, k).toBe(SHELF.length - states.empty);
+  }
+  // Search is not a facet: it narrows every menu's counts.
+  expect(facetCounts(SHELF, q({ q: "harbor" })).disciplines.educational).toBe(1);
+});
+
+test("each dropdown's one value maps onto the query's lists and back", () => {
+  // State.
+  expect(stateValue(q())).toBe(ANY);
+  expect(stateValue(q({ states: ["review"] }))).toBe("review");
+  expect(stateValue(q({ states: ["review", "blocked"] }))).toBe(MULTI);
+  expect(statePatch("blocked")).toEqual({ states: ["blocked"] });
+  expect(statePatch(ANY)).toEqual({ states: [] });
+  expect(statePatch("bogus")).toEqual({ states: [] });
+
+  // Type: a discipline OR a template, never both from one pick.
+  expect(typeValue(q())).toBe(ANY);
+  expect(typeValue(q({ disciplines: ["trailer"] }))).toBe("d:trailer");
+  expect(typeValue(q({ templates: ["teaser"] }))).toBe("t:teaser");
+  expect(typeValue(q({ disciplines: ["trailer"], templates: ["teaser"] }))).toBe(MULTI);
+  expect(typePatch("d:free")).toEqual({ disciplines: ["free"], templates: [] });
+  expect(typePatch("t:cinematic")).toEqual({ disciplines: [], templates: ["cinematic"] });
+  expect(typePatch("t:nope")).toEqual({ disciplines: [], templates: [] });
+  for (const v of ["d:educational", "t:music-video"]) expect(typeValue(q(typePatch(v)))).toBe(v);
+
+  // Step: a step alone is "started"; a step and a state is that state there.
+  expect(stepValue(q())).toBe(ANY);
+  expect(stepValue(q({ phase: "frames" }))).toBe("frames");
+  expect(stepValue(q({ phase: "frames", phaseState: "review" }))).toBe("frames:review");
+  expect(stepValue(q({ phaseState: "blocked" }))).toBe(MULTI); // a bare ps= has no option
+  expect(stepPatch("score:blocked")).toEqual({ phase: "score", phaseState: "blocked" });
+  expect(stepPatch("cut")).toEqual({ phase: "cut", phaseState: undefined });
+  expect(stepPatch("motion:done")).toEqual({ phase: undefined, phaseState: undefined }); // retired step
+  expect(stepPatch(ANY)).toEqual({ phase: undefined, phaseState: undefined });
+  // The patch is the filter: "Frames needs a call" finds exactly "a".
+  expect(SHELF.filter((p) => matches(p, q(stepPatch("frames:review")))).map((p) => p.id)).toEqual(["a"]);
+});
+
+test("the Type menu: Discipline then Template, each in name order, counts as meta", () => {
+  const groups = typeOptions(facetCounts(SHELF, q()));
+  expect(groups.map((g) => g.label)).toEqual(["", "Discipline", "Template"]);
+  expect(groups[0].options.map((o) => o.value)).toEqual([ANY]);
+  for (const g of groups.slice(1)) {
+    const labels = g.options.map((o) => o.label);
+    expect(labels, g.label).toEqual([...labels].sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" })));
+  }
+  expect(groups[1].options).toHaveLength(4);
+  expect(groups[2].options.find((o) => o.value === "t:teaser")?.meta).toBe(1);
+  expect(groups[1].options.find((o) => o.value === "d:educational")?.meta).toBe(3);
 });
 
 /* ── Grouping ─────────────────────────────────────────────────────────────── */

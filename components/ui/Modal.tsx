@@ -44,7 +44,7 @@ import { WorldProvider, useWorld } from "./world";
  * research?", confirming runs `doClear`, and `run.reset()` lands in the SAME
  * commit as the close — so `ready` goes false, the Clear button unmounts with
  * the dialog, and the restore focused a node that was already gone.
- * ProjectsMatrix's per-row Delete is the same shape one page over.
+ * The race sheet's per-row Delete (app/_projects/RaceSheet.tsx) is the same shape one page over.
  *
  * ContextMenu's own guard (`if (opener && document.contains(opener))`) is the
  * right test and half the answer: it SKIPS a pointless focus() and moves focus

@@ -31,6 +31,11 @@ export interface SelectOption<T extends string> {
   /** A small coloured dot before the label — a tone class like `bg-rose-400`. */
   dot?: string;
   disabled?: boolean;
+  /** What the CLOSED trigger says when this option is picked, if the label
+   *  leans on its group heading to be read. Under a "Frames" heading the
+   *  option is "needs a call"; on the trigger, with no heading above it, it has
+   *  to be "Frames · needs a call". Defaults to `label`. */
+  trigger?: string;
 }
 
 export interface SelectGroup<T extends string> {
@@ -53,6 +58,7 @@ export function Select<T extends string>({
   align = "left",
   minWidth = 200,
   testId,
+  icon,
 }: {
   value: T;
   onChange: (v: T) => void;
@@ -66,6 +72,10 @@ export function Select<T extends string>({
   /** Popup min width in px; it is never narrower than the trigger. */
   minWidth?: number;
   testId?: string;
+  /** Drawn in place of the caps prefix, for a toolbar where the prefix costs
+   *  more width than it buys (a sort, a grouping). `label` stays the accessible
+   *  name and the listbox's, so nothing is lost to a screen reader. */
+  icon?: React.ReactNode;
 }) {
   const id = useId();
   const listId = `${id}-list`;
@@ -82,6 +92,7 @@ export function Select<T extends string>({
   const flat = useMemo(() => groups.flatMap((g) => g.options), [groups]);
   const selectedIndex = flat.findIndex((o) => o.value === value);
   const selected = selectedIndex >= 0 ? flat[selectedIndex] : null;
+  const shown = selected ? (selected.trigger ?? selected.label) : null;
 
   const enabled = useCallback((i: number) => i >= 0 && i < flat.length && !flat[i].disabled, [flat]);
   const step = useCallback(
@@ -163,7 +174,7 @@ export function Select<T extends string>({
         aria-expanded={open}
         aria-controls={listId}
         aria-activedescendant={open && active >= 0 ? `${id}-o${active}` : undefined}
-        aria-label={`${label}: ${selected?.label ?? placeholder ?? "none"}`}
+        aria-label={`${label}: ${shown ?? placeholder ?? "none"}`}
         data-testid={testId}
         onClick={() => (open ? close() : openAt(selectedIndex))}
         onKeyDown={onKey}
@@ -173,10 +184,16 @@ export function Select<T extends string>({
             : "border-white/8 bg-white/[0.03] hover:border-white/15 hover:bg-white/[0.05]"
         }`}
       >
-        <span className="font-jetbrains text-label uppercase tracking-[0.14em] text-white/45">{label}</span>
+        {icon ? (
+          <span aria-hidden className="flex shrink-0 text-white/45">
+            {icon}
+          </span>
+        ) : (
+          <span className="font-jetbrains shrink-0 text-label uppercase tracking-[0.14em] text-white/45">{label}</span>
+        )}
         <span className="flex min-w-0 flex-1 items-center gap-2 font-hanken text-content text-white/90">
           {selected?.dot && <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${selected.dot}`} />}
-          <span className="truncate">{selected?.label ?? placeholder ?? "—"}</span>
+          <span className="truncate">{shown ?? placeholder ?? "—"}</span>
         </span>
         <ChevronDown
           aria-hidden

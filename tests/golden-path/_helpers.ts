@@ -47,7 +47,7 @@ export function keepEnv(vars: readonly string[]): void {
 const allEmpty = (): Record<PhaseKey, PhaseState> =>
   Object.fromEntries(PHASES.map((p) => [p, "empty"])) as Record<PhaseKey, PhaseState>;
 
-/** A valid Project with the fields ProjectsMatrix actually reads. */
+/** A valid Project with the fields the projects shelf (app/_projects/shelf.ts, RaceSheet.tsx) actually reads. */
 export function mkProject(
   id: string,
   updatedAt: number,

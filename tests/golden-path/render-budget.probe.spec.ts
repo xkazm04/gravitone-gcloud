@@ -1,86 +1,128 @@
 // LANE 1 — MEASURED RENDER BUDGET (dynamic).
 //
-// Static verdict for this surface: "render-budget technique HOLDS (by pattern)".
-// The ProjectsMatrix doctrine (its header comment) optimises DOM WEIGHT: one
-// thin ~32px row, the progress column IS the table, half-height bars. That is a
-// real technique and this probe confirms the per-row DOM stays bounded.
+// This probe was written against ProjectsMatrix, whose doctrine optimised DOM
+// WEIGHT — one thin row per project — and it measured the axis that doctrine
+// could not see: a single logical update rebuilt EVERY row (5 × N cells, no
+// memo boundary, a fresh closure per cell). That finding was true and it is now
+// moot: the matrix lost the round-1 bake-off and was deleted on 2026-10-05
+// (platform-consolidation round 2). The race sheet that replaced it answers the
+// same two questions differently, and this file holds it to its answers:
 //
-// But "render budget" has a SECOND axis the static scan cannot see: does a
-// single logical update re-do work for every row? ProjectsMatrix has NO
-// memoisation — no React.memo row, no useMemo around the sort, and a fresh
-// inline onClick per cell. This probe MEASURES both axes by calling the ACTUAL
-// component (it is hook-free, so it is a pure function of props) and walking the
-// element tree it allocates.
+//   WEIGHT. A lane is heavier than a matrix row — a title line, a meta line, a
+//   five-gate track, a CTA — so per-lane cost is bounded, not minimal. `Lane`
+//   is hook-free and exported for exactly this: it is called here as a plain
+//   function and the element tree it allocates is counted.
+//
+//   WORK PER UPDATE. The sheet still re-derives all N projects when one changes
+//   (deriveShelf re-filters and re-sorts; nothing is memoised per row). What it
+//   no longer does is RENDER N: the list is windowed (useShelf.ts#useVirtual),
+//   so the lanes a one-row change re-renders are the lanes on screen — a count
+//   set by the viewport, the same at 300 projects as at 2000. That is the claim
+//   measured below, through the same pure functions the sheet renders from
+//   (flattenGroups → prefixOffsets → windowRange), with the sheet's own row
+//   heights and overscan imported rather than restated.
 import { test, expect } from "@playwright/test";
-import ProjectsMatrix from "@/app/_projects/ProjectsMatrix";
-import { mkProject, walkTree, noopProps } from "./_helpers";
 
-function render(projects: ReturnType<typeof mkProject>[]) {
-  const tree = (ProjectsMatrix as unknown as (p: unknown) => unknown)({ projects, ...noopProps });
+import { Lane, LANE, LIST_MIN_PX, OVERSCAN } from "@/app/_projects/RaceSheet";
+import {
+  deriveShelf,
+  flattenGroups,
+  prefixOffsets,
+  queryFromParams,
+  windowRange,
+  type ShelfQuery,
+} from "@/app/_projects/shelf";
+import { mkProject, walkTree } from "./_helpers";
+
+const noop = () => {};
+
+function laneWeight(p: ReturnType<typeof mkProject>) {
+  const tree = (Lane as unknown as (props: unknown) => unknown)({
+    p,
+    active: false,
+    tabbable: false,
+    onFocus: noop,
+    onOpen: noop,
+    onEdit: noop,
+    onDelete: noop,
+  });
   const acc = { n: 0, testids: [] as string[], handlers: [] as unknown[] };
   walkTree(tree, acc);
-  const cells = acc.testids.filter((t) => t.startsWith("cell-")).length;
-  return { total: acc.n, cells, handlers: acc.handlers, order: acc.testids.filter((t) => t.endsWith("-research")) };
+  return acc;
 }
 
-test("Lane1: per-row DOM weight is bounded (the DOM-economy claim HOLDS)", () => {
+/** The lanes the sheet would put in the DOM for this shelf, in a list box
+ *  `viewport` px tall scrolled to `scrollTop`. */
+function windowed(projects: ReturnType<typeof mkProject>[], q: ShelfQuery, viewport: number, scrollTop = 0) {
+  const view = deriveShelf(projects, q);
+  const flat = flattenGroups(view.groups, new Set(), q.group !== "none");
+  const offsets = prefixOffsets(flat.map(() => LANE));
+  const [s, e] = windowRange(offsets, scrollTop, viewport, OVERSCAN);
+  return { view, rendered: flat.slice(s, e) };
+}
+
+const q = (over: Partial<ShelfQuery> = {}): ShelfQuery => ({ ...queryFromParams(new URLSearchParams()), ...over });
+
+test("Lane1: a lane's DOM weight is bounded, whatever state the project is in", () => {
   const now = Date.now();
-  const one = render([mkProject("a", now)]);
-  const fifty = render(Array.from({ length: 50 }, (_, i) => mkProject(`p${i}`, now - i * 1000)));
-  // Marginal element cost of each additional row (chrome cancels out; `one.total`
-  // is header+chrome+1 row, so the difference over 49 rows is the per-row cost).
-  const marginal = (fifty.total - one.total) / 49;
-  console.log(`[Lane1] elements: N=1 -> ${one.total}, N=50 -> ${fifty.total}; marginal/row ~= ${marginal.toFixed(1)}`);
-  console.log(`[Lane1] cells: N=1 -> ${one.cells} (=5), N=50 -> ${fifty.cells} (=250)`);
-  expect(one.cells).toBe(5); // 5 phases per row
-  expect(fifty.cells).toBe(250);
-  // A thin row is a bounded number of elements. If this ever balloons, the
-  // DOM-economy technique has regressed.
-  expect(marginal).toBeLessThan(45);
+  const fresh = laneWeight(mkProject("a", now));
+  const busy = laneWeight(
+    mkProject("b", now, { research: "done", script: "done", frames: "review", score: "blocked", cut: "working" }),
+  );
+  const done = laneWeight(
+    mkProject("c", now, { research: "done", script: "done", frames: "done", score: "done", cut: "done" }),
+  );
+  console.log(`[Lane1] elements per lane: fresh=${fresh.n}, mid-race=${busy.n}, delivered=${done.n}`);
+  for (const w of [fresh, busy, done]) expect(w.n).toBeLessThan(45);
+  // Five gates, each its own button: the per-step entry point is the track.
+  expect(busy.handlers.length).toBeGreaterThanOrEqual(5 + 1);
 });
 
-test("Lane1: a SINGLE logical update rebuilds EVERY row (no memo boundary) — MEASURED", () => {
+test("Lane1: the lanes in the DOM are set by the viewport, not by the shelf's size", () => {
   const now = Date.now();
-  const N = 200;
+  const make = (n: number) =>
+    Array.from({ length: n }, (_, i) => mkProject(`p${String(i).padStart(4, "0")}`, now - i * 1000));
+  // The shortest the list may be, and a tall 1440p list.
+  for (const viewport of [LIST_MIN_PX, 1100]) {
+    const bound = Math.ceil(viewport / LANE) + 1 + 2 * OVERSCAN;
+    const at300 = windowed(make(300), q(), viewport).rendered.length;
+    const at2000 = windowed(make(2000), q(), viewport).rendered.length;
+    const deep = windowed(make(2000), q(), viewport, 2000 * LANE * 0.6).rendered.length;
+    console.log(
+      `[Lane1] viewport ${viewport}px: lanes rendered N=300 -> ${at300}, N=2000 -> ${at2000} (scrolled: ${deep}); bound ${bound}`,
+    );
+    expect(at300).toBeLessThanOrEqual(bound);
+    expect(at2000).toBe(at300);
+    expect(deep).toBeLessThanOrEqual(bound);
+  }
+});
+
+test("Lane1: a single logical update re-derives N but re-renders only the window — MEASURED", () => {
+  const now = Date.now();
+  const N = 300;
   const base = Array.from({ length: N }, (_, i) => mkProject(`p${String(i).padStart(3, "0")}`, now - i * 1000));
+  const byUpdated = q({ sort: "updated" });
 
   const t0 = performance.now();
-  const before = render(base);
-  const renderMsFull = performance.now() - t0;
+  const before = windowed(base, byUpdated, 760);
+  const fullMs = performance.now() - t0;
 
-  // The realistic "single logical update": ONE project is touched (updatedAt
-  // bumped so it jumps to the top). The parent hands ProjectsMatrix a new array;
-  // because nothing is memoised, the whole component re-runs.
+  // ONE project is touched (updatedAt bumped, so it jumps to the top).
   const updated = base.map((p, i) => (i === 137 ? mkProject(p.id, now + 5000) : p));
   const t1 = performance.now();
-  const after = render(updated);
-  const renderMsUpdate = performance.now() - t1;
+  const after = windowed(updated, byUpdated, 760);
+  const updateMs = performance.now() - t1;
 
-  console.log(`[Lane1] N=${N}: full-render ${renderMsFull.toFixed(2)}ms, single-update re-render ${renderMsUpdate.toFixed(2)}ms`);
-  console.log(`[Lane1] cells rebuilt on a 1-of-${N} change: ${after.cells} (bound implied by "should not re-render every row" = ~5)`);
-  console.log(`[Lane1] the re-sort ran: row 137 moved from pos ${before.order.indexOf("cell-p137-research")} to top=${after.order[0] === "cell-p137-research"}`);
-
-  // MEASURED FINDING: a one-row logical change rebuilds all 5*N cells, not ~5.
-  expect(after.cells).toBe(5 * N); // 1000 cells rebuilt for a 1-field change
-  expect(before.cells).toBe(5 * N);
-  // The re-sort re-ran over all N (the moved row is now first).
-  expect(after.order[0]).toBe("cell-p137-research");
-});
-
-test("Lane1: per-row onClick handlers are re-allocated every render (why child memo cannot help)", () => {
-  const now = Date.now();
-  const N = 10;
-  const projects = Array.from({ length: N }, (_, i) => mkProject(`p${i}`, now - i * 1000));
-  const r1 = render(projects);
-  const r2 = render(projects); // identical props
-  // The handler count scales with N (per-row + per-cell closures).
-  const stable = r1.handlers.filter((h) => r2.handlers.includes(h));
-  console.log(`[Lane1] handlers/render=${r1.handlers.length} for N=${N}; referentially stable across identical renders=${stable.length}`);
-  // Handlers scale with rows: a fresh closure per row and per cell.
-  expect(r1.handlers.length).toBeGreaterThanOrEqual(5 * N);
-  // Only pass-through callback props (e.g. the single New-project button's
-  // onCreate) stay stable — a small CONSTANT, never proportional to N. Every
-  // per-row/per-cell closure is rebuilt, so a React.memo'd row would still
-  // re-render because its onClick is never referentially stable.
-  expect(stable.length).toBeLessThanOrEqual(2);
+  console.log(
+    `[Lane1] N=${N}: derive+window ${fullMs.toFixed(2)}ms, after a 1-of-${N} change ${updateMs.toFixed(2)}ms; ` +
+      `rows re-derived ${after.view.rows.length}, lanes re-rendered ${after.rendered.length}`,
+  );
+  // The model still walks the whole shelf...
+  expect(after.view.rows).toHaveLength(N);
+  // ...and the re-sort ran: the touched project is now first.
+  const first = after.rendered[0];
+  expect(first.kind === "project" && first.project.id).toBe("p137");
+  // ...but what reaches the DOM is the window, not N.
+  expect(after.rendered.length).toBe(before.rendered.length);
+  expect(after.rendered.length).toBeLessThan(N / 10);
 });

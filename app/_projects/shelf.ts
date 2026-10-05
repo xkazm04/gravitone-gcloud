@@ -1,11 +1,13 @@
-// THE SHELF MODEL — one query, one order, one grouping, shared by every
-// /projects variant (platform-consolidation WP2, 2026-10-04).
+// THE SHELF MODEL — one query, one order, one grouping, for the /projects race
+// sheet (platform-consolidation WP2, 2026-10-04; consolidated in round 2 on
+// 2026-10-05, when the race sheet won and the ledger and the pivot board went).
 //
-// Pure on purpose: no React, no DOM, no storage. The three prototypes differ in
-// how they DRAW a shelf; if they also differed in what "blocked" sorts ahead of,
-// or in how a filter is spelled in the URL, the bake-off would be comparing two
-// things at once. tests/golden-path/projects-shelf.probe.spec.ts drives every
-// export here without a browser.
+// Pure on purpose: no React, no DOM, no storage. It was written that way so
+// three prototypes could be compared on how they DREW a shelf rather than on
+// what "blocked" sorts ahead of; with one surface left the reason is the probe
+// lane. tests/golden-path/projects-shelf.probe.spec.ts drives every export here
+// without a browser, and sort-stability / render-budget hold the race sheet's
+// order and its DOM bound through the same functions it renders from.
 //
 // Derived from StatReel's rundown (apps/studio/src): `nextAction` is logic.ts:134
 // re-read against Gravitone's record, `compareNeedsYou` is display.ts:157
@@ -39,12 +41,9 @@ export type ShelfSort = "needs-you" | "updated" | "created" | "title";
 export const GROUPS: readonly ShelfGroup[] = ["none", "discipline", "template", "state"];
 export const SORTS: readonly ShelfSort[] = ["needs-you", "updated", "created", "title"];
 
-/** Worst news first — the order the header's tallies and a state grouping read in.
+/** Worst news first — the order the State dropdown and a state grouping read in.
  *  The same precedence `projectState` (lib/projects.ts:399) resolves a project by. */
 export const STATE_ORDER: readonly ProjectState[] = ["blocked", "review", "working", "draft", "delivered"];
-
-/** The pivot board's columns, left to right: the direction work travels. */
-export const BOARD_ORDER: readonly ProjectState[] = ["draft", "working", "review", "blocked", "delivered"];
 
 export const PHASE_STATES: readonly PhaseState[] = ["empty", "working", "review", "done", "blocked"];
 
@@ -63,16 +62,20 @@ export interface ShelfQuery {
   sort: ShelfSort;
 }
 
-/** What a variant opens on when the URL says nothing. Absent params read as
- *  these, and a value equal to them is not written back, so a clean URL stays
- *  clean — and an explicit `s=` survives a switch to a variant with another
- *  default, which is the point of carrying it. */
-export interface ShelfDefaults {
-  group: ShelfGroup;
-  sort: ShelfSort;
-}
-
-export const DEFAULTS: ShelfDefaults = { group: "none", sort: "updated" };
+/** What the shelf opens on when the URL says nothing: ungrouped, in rundown
+ *  order. Absent params read as these and a value equal to them is not written
+ *  back, so a clean URL stays clean.
+ *
+ *  It was `updated`, overridable per surface, while three variants shared this
+ *  model and each opened on its own arrangement. The race sheet always opened
+ *  on `needs-you`, and it is the surface left. */
+export const DEFAULTS: {
+  readonly group: ShelfGroup;
+  readonly sort: ShelfSort;
+} = {
+  group: "none",
+  sort: "needs-you",
+};
 
 export const PARAM = {
   q: "q",
@@ -102,7 +105,7 @@ function one<T extends string>(raw: string | null, allowed: readonly T[]): T | u
 
 type ParamsLike = { get(name: string): string | null };
 
-export function queryFromParams(params: ParamsLike, defaults: ShelfDefaults = DEFAULTS): ShelfQuery {
+export function queryFromParams(params: ParamsLike): ShelfQuery {
   return {
     q: params.get(PARAM.q) ?? "",
     states: list(params.get(PARAM.states), STATE_ORDER),
@@ -110,17 +113,16 @@ export function queryFromParams(params: ParamsLike, defaults: ShelfDefaults = DE
     templates: list(params.get(PARAM.templates), TEMPLATE_IDS),
     phase: one(params.get(PARAM.phase), PHASES),
     phaseState: one(params.get(PARAM.phaseState), PHASE_STATES),
-    group: one(params.get(PARAM.group), GROUPS) ?? defaults.group,
-    sort: one(params.get(PARAM.sort), SORTS) ?? defaults.sort,
+    group: one(params.get(PARAM.group), GROUPS) ?? DEFAULTS.group,
+    sort: one(params.get(PARAM.sort), SORTS) ?? DEFAULTS.sort,
   };
 }
 
 /** The query written into `base` (which keeps every param this model does not
- *  own — `v`, `seed`). Canonical: enum order inside a list, defaults omitted. */
+ *  own — `seed`). Canonical: enum order inside a list, defaults omitted. */
 export function queryToParams(
   q: ShelfQuery,
   base: ParamsLike & { toString(): string } = new URLSearchParams(),
-  defaults: ShelfDefaults = DEFAULTS,
 ): URLSearchParams {
   const out = new URLSearchParams(base.toString());
   for (const k of Object.values(PARAM)) out.delete(k);
@@ -133,8 +135,8 @@ export function queryToParams(
   put(PARAM.templates, TEMPLATE_IDS.filter((t) => q.templates.includes(t)).join(","));
   put(PARAM.phase, q.phase);
   put(PARAM.phaseState, q.phaseState);
-  put(PARAM.group, q.group === defaults.group ? undefined : q.group);
-  put(PARAM.sort, q.sort === defaults.sort ? undefined : q.sort);
+  put(PARAM.group, q.group === DEFAULTS.group ? undefined : q.group);
+  put(PARAM.sort, q.sort === DEFAULTS.sort ? undefined : q.sort);
   return out;
 }
 
@@ -240,19 +242,32 @@ function matchesPhase(p: Project, q: ShelfQuery): boolean {
   return true;
 }
 
-/** Everything but the state filter — the population the header's tallies count,
- *  so toggling a state never changes the numbers printed on the states. */
-export function matchesFacet(p: Project, q: ShelfQuery): boolean {
+/** The three facets a dropdown narrows by. Search is not one: a word typed into
+ *  the box is the population being asked about, so it narrows every count. */
+export type Facet = "state" | "type" | "step";
+
+/** Every filter but `omit`'s. Each dropdown counts its options over this — the
+ *  shelf as it would be if that one dropdown were reset — so picking "blocked"
+ *  never changes the number printed beside "blocked", and a menu's numbers add
+ *  up to what its "any" would show. */
+export function matchesExcept(p: Project, q: ShelfQuery, omit: Facet | null): boolean {
   return (
-    (q.disciplines.length === 0 || q.disciplines.includes(disciplineFor(p))) &&
-    (q.templates.length === 0 || q.templates.includes(p.template)) &&
-    matchesPhase(p, q) &&
+    (omit === "type" ||
+      ((q.disciplines.length === 0 || q.disciplines.includes(disciplineFor(p))) &&
+        (q.templates.length === 0 || q.templates.includes(p.template)))) &&
+    (omit === "step" || matchesPhase(p, q)) &&
+    (omit === "state" || q.states.length === 0 || q.states.includes(projectState(p))) &&
     matchesText(p, q.q)
   );
 }
 
+/** Everything but the state filter — the population the State dropdown counts. */
+export function matchesFacet(p: Project, q: ShelfQuery): boolean {
+  return matchesExcept(p, q, "state");
+}
+
 export function matches(p: Project, q: ShelfQuery): boolean {
-  return matchesFacet(p, q) && (q.states.length === 0 || q.states.includes(projectState(p)));
+  return matchesExcept(p, q, null);
 }
 
 /* ── Grouping ─────────────────────────────────────────────────────────────── */
@@ -316,6 +331,94 @@ export function stateCounts(ps: readonly Project[]): StateCounts {
   return c;
 }
 
+/* ── The other dropdowns' counts ──────────────────────────────────────────── */
+
+export type StepCounts = Record<PhaseKey, Record<PhaseState, number> & { started: number }>;
+
+export interface FacetCounts {
+  /** Over every filter but Type. */
+  disciplines: Record<Discipline, number>;
+  templates: Record<TemplateId, number>;
+  /** Over every filter but Step: per step, how many projects stand in each
+   *  state there, and how many have started it at all (anything but `empty`). */
+  steps: StepCounts;
+}
+
+export function facetCounts(projects: readonly Project[], q: ShelfQuery): FacetCounts {
+  const disciplines = Object.fromEntries(DISCIPLINES.map((d) => [d, 0])) as Record<Discipline, number>;
+  const templates = Object.fromEntries(TEMPLATE_IDS.map((t) => [t, 0])) as Record<TemplateId, number>;
+  const steps = Object.fromEntries(
+    PHASES.map((k) => [k, { started: 0, ...Object.fromEntries(PHASE_STATES.map((s) => [s, 0])) }]),
+  ) as StepCounts;
+  for (const p of projects) {
+    if (matchesExcept(p, q, "type")) {
+      disciplines[disciplineFor(p)] += 1;
+      if (p.template in templates) templates[p.template] += 1;
+    }
+    if (matchesExcept(p, q, "step")) {
+      for (const k of PHASES) {
+        const st = p.progress[k];
+        steps[k][st] += 1;
+        if (st !== "empty") steps[k].started += 1;
+      }
+    }
+  }
+  return { disciplines, templates, steps };
+}
+
+/* ── One dropdown per facet ───────────────────────────────────────────────── */
+//
+// The query keeps LISTS (`st=review,blocked`, `d=trailer,free`), because a URL a
+// person edits, or one written before round 2 when the states were toggles, can
+// hold several. A dropdown holds one. These are the two directions between
+// them: one member reads as that option, none as "any", and several as MULTI —
+// which no option carries, so the trigger prints its placeholder for it and the
+// next pick replaces the whole list.
+
+export const ANY = "";
+export const MULTI = "multi";
+
+/** The State dropdown: one project state, or any. */
+export function stateValue(q: ShelfQuery): string {
+  return q.states.length === 0 ? ANY : q.states.length === 1 ? q.states[0] : MULTI;
+}
+
+export function statePatch(v: string): Pick<ShelfQuery, "states"> {
+  const s = one(v, STATE_ORDER);
+  return { states: s ? [s] : [] };
+}
+
+/** The Type dropdown spans two lists — a discipline is `d:<id>`, a template
+ *  `t:<id>` — so one menu offers both and neither filter is lost to the merge. */
+export function typeValue(q: ShelfQuery): string {
+  const n = q.disciplines.length + q.templates.length;
+  if (n === 0) return ANY;
+  if (n > 1) return MULTI;
+  return q.disciplines.length ? `d:${q.disciplines[0]}` : `t:${q.templates[0]}`;
+}
+
+export function typePatch(v: string): Pick<ShelfQuery, "disciplines" | "templates"> {
+  const id = v.slice(2);
+  const d = v.startsWith("d:") ? one(id, DISCIPLINES) : undefined;
+  if (d) return { disciplines: [d], templates: [] };
+  const t = v.startsWith("t:") ? one(id, TEMPLATE_IDS) : undefined;
+  return { disciplines: [], templates: t ? [t] : [] };
+}
+
+/** The Step dropdown carries a step AND what it says: `frames` alone is "Frames
+ *  started", `frames:review` is "Frames needs a call". A state with no step
+ *  (a bare `ps=`, which only a hand-edited URL holds now) is MULTI. */
+export function stepValue(q: ShelfQuery): string {
+  if (!q.phase) return q.phaseState ? MULTI : ANY;
+  return q.phaseState ? `${q.phase}:${q.phaseState}` : q.phase;
+}
+
+export function stepPatch(v: string): Pick<ShelfQuery, "phase" | "phaseState"> {
+  const [k, st] = v.split(":");
+  const phase = one(k ?? null, PHASES);
+  return phase ? { phase, phaseState: one(st ?? null, PHASE_STATES) } : { phase: undefined, phaseState: undefined };
+}
+
 /* ── The whole derivation ─────────────────────────────────────────────────── */
 
 export interface ShelfView {
@@ -326,6 +429,8 @@ export interface ShelfView {
   /** Filtered and sorted. */
   rows: Project[];
   groups: ShelfGroupBlock[];
+  /** What the Type and Step dropdowns print beside their options. */
+  facets: FacetCounts;
 }
 
 export function deriveShelf(projects: readonly Project[], q: ShelfQuery): ShelfView {
@@ -335,7 +440,13 @@ export function deriveShelf(projects: readonly Project[], q: ShelfQuery): ShelfV
     q.states.length === 0 ? facet : facet.filter((p) => q.states.includes(projectState(p))),
     q.sort,
   );
-  return { total: projects.length, counts, rows, groups: groupProjects(rows, q.group) };
+  return {
+    total: projects.length,
+    counts,
+    rows,
+    groups: groupProjects(rows, q.group),
+    facets: facetCounts(projects, q),
+  };
 }
 
 /* ── Flattening for a windowed list ───────────────────────────────────────── */
