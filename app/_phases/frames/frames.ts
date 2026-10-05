@@ -351,7 +351,7 @@ export function trailerRender(
     // Points at the view that actually carries this chain. Frames derives no
     // FRAMES from a trailer beat - a trailer beat is one to many SHOTS, and what
     // Frames renders from a shot is the next slice, not this one.
-    engineLabel: `${templateOf(opts.template as TemplateId).label} · ${beats.length} beats — see the shots view`,
+    engineLabel: `${templateOf(opts.template as TemplateId).label} · ${beats.length} beats`,
     template: opts.template,
     durationS: opts.durationS,
     beats,
@@ -377,7 +377,7 @@ export function absentTrailerRender(opts: {
   return {
     id: `no-spine-${opts.template}`,
     title: opts.title,
-    engineLabel: "no spine composed yet — Step 2 composes it",
+    engineLabel: "no spine composed yet",
     template: opts.template,
     durationS: opts.durationS,
     beats: [],

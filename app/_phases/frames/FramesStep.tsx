@@ -153,7 +153,8 @@ function StandardFrames({ projectId }: { projectId: string }) {
             }))}
           />
           <p className="font-jetbrains text-content text-white/35">
-            {ctl.frames.length} frames derived from &ldquo;{ctl.render.title}&rdquo; ({ctl.render.engineLabel})
+            {!promotionalCut && <>{ctl.frames.length} frames derived from </>}
+            &ldquo;{ctl.render.title}&rdquo; ({ctl.render.engineLabel})
           </p>
         </div>
 
