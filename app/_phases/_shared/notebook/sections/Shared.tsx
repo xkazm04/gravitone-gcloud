@@ -26,7 +26,7 @@ export function CurrencyBody({ withHalfLife = false }: { withHalfLife?: boolean 
   const c = NOTEBOOK.currency;
   return (
     <>
-      <p className="text-sm leading-relaxed text-slate-300">
+      <p className="text-content leading-relaxed text-slate-300">
         {withHalfLife && (
           <>
             half-life <span className="text-amber-200">{c.halfLife}</span> —{" "}

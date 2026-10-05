@@ -132,7 +132,7 @@ export default function ArgumentSections() {
             {n.counterPositions.map((c, i) =>
               typeof c === "string" ? (
                 <li key={`legacy-${i}`} className="rounded-xl border border-white/8 bg-white/[0.02] p-3">
-                  <p className="text-sm leading-relaxed text-slate-300">{c}</p>
+                  <p className="text-content leading-relaxed text-slate-300">{c}</p>
                   {/* The legacy form names no holder and cites no fact, so it
                       cannot downgrade a tension — see CounterPosition in
                       types.ts. Two empty rings where the holder and the
@@ -154,7 +154,7 @@ export default function ArgumentSections() {
                     {c.holder}
                     {c.locator ? ` · ${c.locator}` : ""}
                   </p>
-                  <p className="mt-1 text-sm leading-relaxed text-slate-300">{c.position}</p>
+                  <p className="mt-1 text-content leading-relaxed text-slate-300">{c.position}</p>
                   {c.statementVerbatim && (
                     <p className="mt-1.5 border-l-2 border-white/10 pl-3 text-content leading-relaxed text-slate-300">
                       “{c.statementVerbatim}”

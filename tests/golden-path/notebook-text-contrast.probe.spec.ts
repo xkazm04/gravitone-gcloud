@@ -42,3 +42,19 @@ test("notebook text is not drawn below 4.5:1 (text-white alpha >= 45)", () => {
   }
   expect(hits).toEqual([]);
 });
+
+// Prose is text-content (--text-content, 18px). Tailwind's text-sm / text-base
+// are display rungs; globals.css says nothing there is a body size.
+test("notebook prose uses the text-content rung, not text-sm / text-base", () => {
+  const files = walk(ROOT);
+  expect(files.length, "the walk read nothing").toBeGreaterThan(0);
+  const hits: string[] = [];
+  for (const f of files) {
+    stripComments(readFileSync(f, "utf8"))
+      .split("\n")
+      .forEach((line, i) => {
+        if (/\btext-(sm|base)\b/.test(line)) hits.push(`${relative(ROOT, f)}:${i + 1}`);
+      });
+  }
+  expect(hits).toEqual([]);
+});
