@@ -59,7 +59,7 @@ const ROW = "grid grid-cols-[3.5rem_minmax(0,1fr)_minmax(0,1.4fr)_2.75rem] items
  *  ledger flattened, the phase is the one thing here that has to out-rank a row. */
 function PhaseHeading({ phase }: { phase: TraceStep["phase"] }) {
   return (
-    <p className="font-jetbrains mt-3 mb-1 text-content tracking-[0.16em] text-white/30 uppercase first:mt-0">
+    <p className="font-jetbrains mt-3 mb-1 text-content tracking-[0.16em] text-white/60 uppercase first:mt-0">
       {PHASE_LABEL[phase]}
     </p>
   );
