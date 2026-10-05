@@ -50,8 +50,16 @@ import { atSeconds, type Movement, type TrailerCut } from "../script/trailer/typ
  *                    back to the part of the spine that produced it.
  *
  * `status` is absent by construction: a spot is a REQUEST, and `CueStatus`
- * ("rendered" | "failed") is a fact about a take. Takes are not persisted (see
- * `ScoreStepData`), so nothing here could carry one honestly.
+ * ("rendered" | "failed") is a fact about a take.
+ *
+ * TAKES ARE POINTERS. The ADR 2026-08-29-score-take-persistence is closed with
+ * option D (MUSIC-B, 2026-10-05): a take's BYTES live in the server-side sound
+ * store (lib/sound, origin "score"), and the spot holds only the ids — a few
+ * bytes each, nothing a quota can be filled with. Both fields are optional and
+ * additive: a spot saved before them reads exactly as it did, and a build
+ * without the feature ignores them. A pointer to a take the store no longer
+ * has is a real state (an ephemeral disk, a cleared store) and every reader
+ * draws it as missing, never as held (./takes.ts, cut/deriveTimeline.ts).
  */
 export interface ScoreSpot {
   id: string;
@@ -67,6 +75,11 @@ export interface ScoreSpot {
   bpm?: number;
   proposed?: boolean;
   fromMovement?: string;
+  /** The sound-store takes this cue has had, in the order they arrived —
+   *  renders, revisions and adopted lab takes alike. */
+  takeIds?: string[];
+  /** The one the cue USES: the creator's pick, never simply the newest. */
+  activeTakeId?: string;
 }
 
 /** A movement that has no place on this picture, and the reason in the

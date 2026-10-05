@@ -51,6 +51,7 @@ const OP_WORD: Record<SoundTake["op"], string> = {
   "section-edit": "section edit",
   sfx: "sfx",
   manual: "manual",
+  cue: "score cue",
 };
 
 export default function Judge({ data, kind, now }: { data: TriageData; kind: SoundKind; now: number }) {

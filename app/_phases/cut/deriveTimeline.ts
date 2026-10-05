@@ -31,11 +31,15 @@
 //            spotting. A spot's span is DERIVED from the scenes it covers by
 //            `cuesFrom` (app/_studio/score.ts) — the same call the Score step
 //            makes — so the block here is the same seconds the vendor is asked
-//            for. A TAKE is not persisted anywhere: it is an object URL held in
-//            ScoreSpotting's state and dead on navigation (ADR
+//            for. A TAKE lives in the server-side sound store and the spot
+//            points at it (`activeTakeId`, ADR
 //            .vault/Architect/decisions/2026-08-29-score-take-persistence.md,
-//            undecided). So a spot is a missing block unless a take is loaded
-//            into THIS session (`takes` below), and nothing claims otherwise.
+//            option D, MUSIC-B 2026-10-05). The block plays the store's file
+//            URL only when the store's listing has that take; a pointer the
+//            store does not answer (gone from the store, or a store nobody
+//            could read) is MISSING with its reason, never `ok`. A file
+//            dropped into THIS session (`takes` below) still wins: it is what
+//            is playing now.
 //
 // THE FIXTURE. `TIMELINE` is Glass Harbor's cut and nobody else's — it names
 // sc-1..sc-5 and runs 31s, which is `PROJECT` in app/_studio/scenes.ts. So it is
@@ -49,6 +53,7 @@ import type { TimelineClip, TrackId } from "../../_studio/projectTypes";
 import type { Frame } from "../frames/frames";
 import { pictureFromFrames } from "../score/picture";
 import { toCueSpots, type ScoreSpot } from "../score/spots";
+import { takeFileUrl } from "@/lib/sound/client";
 
 /** The one seeded project whose story the fixture tells. */
 export const FIXTURE_PROJECT_ID = "seed-glass-harbor";
@@ -115,6 +120,10 @@ export interface CutInput {
   spots: ScoreSpot[] | null;
   /** Cue id → a take loaded into this session. */
   takes?: Record<string, string>;
+  /** The take ids the sound store answered with. `null`/absent = the store
+   *  was not read (hosted posture, a failed listing): a spot's pointer then
+   *  resolves to nothing, because "not read" is not "held". */
+  storeTakeIds?: ReadonlySet<string> | null;
 }
 
 export const LANES: { id: TrackId; label: string }[] = [
@@ -161,7 +170,7 @@ function fromFixture(targetS: number | null): DerivedCut {
 }
 
 export function deriveTimeline(input: CutInput): DerivedCut {
-  const { projectId, project, frames, spots, takes = {} } = input;
+  const { projectId, project, frames, spots, takes = {}, storeTakeIds = null } = input;
   const targetS = project && project.targetS > 0 ? project.targetS : null;
 
   if (!frames || frames.length === 0) {
@@ -232,8 +241,12 @@ export function deriveTimeline(input: CutInput): DerivedCut {
       title: project?.title ?? "",
       logline: project?.logline ?? "",
     });
+    const pointer = new Map(spots.map((s) => [s.id, s.activeTakeId]));
     for (const cue of cues) {
-      const take = takes[cue.id];
+      const held = pointer.get(cue.id);
+      const stored = held && storeTakeIds?.has(held) ? takeFileUrl(held) : undefined;
+      const take = takes[cue.id] ?? stored;
+      const why = held ? (storeTakeIds ? "take gone from the store" : "sound store not read") : "no take in hand";
       clips.push({
         id: `mus-${cue.id}`,
         track: "music",
@@ -243,7 +256,7 @@ export function deriveTimeline(input: CutInput): DerivedCut {
         status: take ? "ok" : "missing",
         ref: cue.id,
         owner: "score",
-        ...(take ? { src: take } : { why: "no take in hand" }),
+        ...(take ? { src: take } : { why }),
         ...(cue.note ? { note: cue.note } : {}),
       });
     }

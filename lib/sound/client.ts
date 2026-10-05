@@ -56,6 +56,9 @@ export interface TakeQuery {
   origin?: TakeOrigin;
   /** Fixture rows are excluded unless asked for. */
   fixtures?: boolean;
+  /** A Score cue's takes: the project and cue (spot id) they were rendered for. */
+  projectId?: string;
+  cueId?: string;
 }
 
 /** The file URL for a take's bytes — usable directly as an <audio src>.
@@ -72,7 +75,7 @@ export const takeFileUrl = (id: string) => {
 
 export const listTakes = (f: TakeQuery = {}) =>
   call<{ takes: SoundTake[] }>(
-    `/api/sound/takes${q({ kind: f.kind, verdict: f.verdict, stage: f.stage, provider: f.provider, origin: f.origin, fixtures: f.fixtures ? "1" : null })}`,
+    `/api/sound/takes${q({ kind: f.kind, verdict: f.verdict, stage: f.stage, provider: f.provider, origin: f.origin, fixtures: f.fixtures ? "1" : null, projectId: f.projectId, cueId: f.cueId })}`,
   );
 
 export const patchTake = (id: string, patch: TakePatch) =>

@@ -156,6 +156,8 @@ export function withTakeDefaults(t: SoundTake): SoundTake {
     variation: o.variation ?? null,
     editModes: o.editModes ?? null,
     fileName: o.fileName ?? null,
+    projectId: o.projectId ?? null,
+    cueId: o.cueId ?? null,
   };
 }
 
