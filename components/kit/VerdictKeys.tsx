@@ -11,6 +11,8 @@
 // `toggle` is for a surface whose old control cleared on a second press.
 // `keepWord` is what K does on this surface ("Keep", "Approve"): it is the
 // accessible name, so a screen reader hears the verb and not a letter.
+// `keepKey` is the letter drawn and named for it — K on the foundry, A on the
+// Board, where K already means "previous item" (lib/board/keys.ts).
 
 import type { MouseEvent } from "react";
 
@@ -21,6 +23,7 @@ export function VerdictKeys({
   onVerdict,
   variant = "card",
   keepWord = "Keep",
+  keepKey = "K",
   subject,
   clear = false,
   toggle = false,
@@ -30,6 +33,8 @@ export function VerdictKeys({
   onVerdict: (v: VerdictValue | null) => void;
   variant?: "tile" | "row" | "card";
   keepWord?: string;
+  /** The key that keeps on this surface; drawn on the button and named in its label. */
+  keepKey?: string;
   /** What the verdict is about, for the accessible name: "the whole Blueprint row". */
   subject?: string;
   /** Offer U once something is decided. */
@@ -48,10 +53,10 @@ export function VerdictKeys({
         type="button"
         className={`k-vk k-vk--k k-vk--${variant}`}
         aria-pressed={value === "keep"}
-        aria-label={`${keepWord}${of}${variant === "row" ? "" : " (K)"}`}
+        aria-label={`${keepWord}${of}${variant === "row" ? "" : ` (${keepKey})`}`}
         onClick={press("keep")}
       >
-        {tag}K
+        {tag}{keepKey}
       </button>
       <button
         type="button"
