@@ -28,6 +28,7 @@ import { motion } from "motion/react";
 import DeckCard, { type DeckCardSpec } from "@/components/ui/deck/DeckCard";
 import DeckStage from "@/components/ui/deck/DeckStage";
 import { useDeckReducedMotion } from "@/components/ui/deck/motionGuard";
+import { StaleBadge } from "@/components/ui/signal";
 
 import type { GateReport, GateRollup } from "../gate";
 import { BandMeter } from "../_parts/Meters";
@@ -50,29 +51,50 @@ const ART_TONE: Record<string, string> = {
    hand-typed checks. Vocabulary is GatePanel's ("% enforced", "checked",
    "failed", "not checked") and the glyphs are Meters' CHECK marks — invented
    nothing. `unmeasured` is amber, as loud as the rose violations. */
-function VerdictCounts({ report, checks }: { report: GateReport; checks: ScriptRender["checks"] }) {
+function VerdictCounts({
+  report,
+  checks,
+  rewritten,
+}: {
+  report: GateReport;
+  checks: ScriptRender["checks"];
+  rewritten: boolean;
+}) {
   const n = (s: CheckState) => checks.filter((c) => c.state === s).length;
   const fails = n("fail");
   const unmeasuredChecks = n("unmeasured");
   return (
-    <p className="font-jetbrains mt-auto pt-1 text-label leading-relaxed text-white/40">
-      gate: <span className="text-white/70">{report.enforced}% enforced</span>
-      {" · "}
-      <span className="text-emerald-300">{report.passes} checked</span>
-      {" · "}
-      <span className={report.violations > 0 ? "text-rose-300" : "text-white/40"}>
-        {report.violations} failed
-      </span>
-      {" · "}
-      <span className={report.unmeasured > 0 ? "text-amber-300" : "text-white/40"}>
-        {report.unmeasured} not checked
-      </span>
-      <br />
-      checks: <span className="text-emerald-300">{n("pass")}✓</span>{" "}
-      <span className="text-amber-300">{n("declared")}!</span>
-      {fails > 0 && <span className="text-rose-300"> {fails}✕</span>}
-      {unmeasuredChecks > 0 && <span className="text-amber-300"> {unmeasuredChecks}—</span>}
-    </p>
+    <div className="font-jetbrains mt-auto pt-1 text-label leading-relaxed text-white/40">
+      <p>
+        gate: <span className="text-white/70">{report.enforced}% enforced</span>
+        {" · "}
+        <span className="text-emerald-300">{report.passes} checked</span>
+        {" · "}
+        <span className={report.violations > 0 ? "text-rose-300" : "text-white/40"}>
+          {report.violations} failed
+        </span>
+        {" · "}
+        <span className={report.unmeasured > 0 ? "text-amber-300" : "text-white/40"}>
+          {report.unmeasured} not checked
+        </span>
+      </p>
+      {/* Glyph + colour alone is no verdict; each count carries its state in
+          words for AT (Meters' CHECK labels). */}
+      <p>
+        checks: <span className="text-emerald-300">{n("pass")}✓<span className="sr-only"> pass</span></span>{" "}
+        <span className="text-amber-300">{n("declared")}!<span className="sr-only"> declared deviation</span></span>
+        {fails > 0 && <span className="text-rose-300"> {fails}✕<span className="sr-only"> fail</span></span>}
+        {unmeasuredChecks > 0 && (
+          <span className="text-amber-300"> {unmeasuredChecks}—<span className="sr-only"> not checked</span></span>
+        )}
+        {rewritten && (
+          <>
+            {" "}
+            <StaleBadge words="not re-run" why="typed by hand against the original chain" />
+          </>
+        )}
+      </p>
+    </div>
   );
 }
 
@@ -85,7 +107,6 @@ function DuelCardBody({
   chain,
   words,
   rewritten,
-  chainLabel,
   report,
   picked,
   open,
@@ -98,7 +119,6 @@ function DuelCardBody({
   chain: Beat[];
   words: number;
   rewritten: boolean;
-  chainLabel?: string;
   report: GateReport;
   picked: boolean;
   open: boolean;
@@ -235,17 +255,20 @@ function DuelCardBody({
                 declared deviation — {d}
               </p>
             ))}
+            {/* Same badge, same words as HypothesisColumn: one staleness concept,
+                one spelling on both faces. Only the word count is re-measured. */}
             {rewritten && (
-              <p className="font-jetbrains text-label leading-snug text-amber-200/70">
-                words are counted from {chainLabel ?? "this version"}&rsquo;s own chain. Turns,
-                questions aloud and the promise form are the original render&rsquo;s and were not
-                re-measured.
+              <p>
+                <StaleBadge
+                  words="turns · questions · promise form"
+                  why="the original render's figures — only words were re-counted"
+                />
               </p>
             )}
             {/* Counts, not a score, and IN the depth with the rest of the
                 measurements — the front no longer stacks a metadata spread.
                 Same data, same vocabulary, one gesture away. */}
-            <VerdictCounts report={report} checks={r.checks} />
+            <VerdictCounts report={report} checks={r.checks} rewritten={rewritten} />
           </div>
         </motion.div>
       )}
@@ -284,7 +307,6 @@ function DuelCardBody({
 export default function CandidatesDuel({
   renders,
   chains,
-  chainLabel,
   gate,
   adoptedId,
   onAdopt,
@@ -336,7 +358,6 @@ export default function CandidatesDuel({
                 chain={chain}
                 words={words}
                 rewritten={rewritten}
-                chainLabel={chainLabel}
                 report={gate.byRender[r.id]}
                 picked={picked}
                 open={!!openDepth[r.id]}
