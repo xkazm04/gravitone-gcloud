@@ -25,10 +25,20 @@
 // inside its cycle directory before it is read or unlinked. Cycle ids are
 // validated against a strict slug so a crafted id cannot walk anywhere.
 
-import { copyFile, mkdir, readFile, readdir, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { copyFile, mkdir, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import { FoundryError } from "../store";
+import {
+  FoundryError,
+  containedIn,
+  foundryFile,
+  listManifests,
+  readJson,
+  readManifestFile,
+  runRoot,
+  writeJsonAtomic,
+} from "../runStore";
 import type {
   CycleManifest,
   Improvement,
@@ -41,57 +51,31 @@ import type {
 } from "./types";
 
 const OUT_ROOT = path.join(process.cwd(), "foundry-out", "training");
-const FOUNDRY_DIR = path.join(process.cwd(), "pipeline", "foundry");
-const LEDGER = path.join(FOUNDRY_DIR, "training-ledger.json");
-const THUMBS_DIR = path.join(FOUNDRY_DIR, "training", "thumbs");
 /** Ledger `thumb` paths are repo-relative with forward slashes on every OS. */
 const THUMBS_REL = "pipeline/foundry/training/thumbs";
 
-const CYCLE_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
-// Images and json only — a video's servable face is its poster, by design.
-const SERVABLE = new Set([".png", ".jpg", ".jpeg", ".webp", ".json"]);
-
 function cycleDir(id: string): string {
-  if (!CYCLE_ID.test(id)) throw new FoundryError("That is not a cycle id.", 400);
-  return path.join(OUT_ROOT, id);
+  return runRoot(OUT_ROOT, id, "cycle");
 }
 
 /** Containment only — the commit must also unlink video files, which are
  *  deliberately not servable. Never exported; serving goes via resolveInCycle. */
 function containedInCycle(id: string, rel: string): string {
-  const dir = cycleDir(id);
-  const abs = path.resolve(dir, rel);
-  if (abs !== dir && !abs.startsWith(dir + path.sep)) throw new FoundryError("Path is outside the cycle.", 400);
-  return abs;
+  return containedIn(cycleDir(id), rel, false, "cycle");
 }
 
 /** Resolve a cycle-relative path for serving; refuse escapes and non-images. */
 export function resolveInCycle(id: string, rel: string): string {
-  const abs = containedInCycle(id, rel);
-  if (!SERVABLE.has(path.extname(abs).toLowerCase())) throw new FoundryError("Not a servable file.", 400);
-  return abs;
+  return containedIn(cycleDir(id), rel, true, "cycle");
 }
 
-async function readJson<T>(file: string, fallback: T): Promise<T> {
-  try {
-    return JSON.parse(await readFile(file, "utf8")) as T;
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return fallback;
-    throw e;
-  }
-}
-
-/** Write-then-rename, because the loop and the app both read these files while
- *  the other side may be writing. Local copy of store.ts's helper (unexported). */
-async function writeJsonAtomic(file: string, value: unknown): Promise<void> {
-  await mkdir(path.dirname(file), { recursive: true });
-  const tmp = `${file}.${process.pid}.tmp`;
-  await writeFile(tmp, JSON.stringify(value, null, 2), "utf8");
-  await rename(tmp, file);
-}
-
-async function readManifest(id: string): Promise<CycleManifest> {
-  const m = await readJson<CycleManifest | null>(path.join(cycleDir(id), "cycle.json"), null);
+export async function readCycle(id: string): Promise<CycleManifest> {
+  const m = await readManifestFile<CycleManifest>(path.join(cycleDir(id), "cycle.json"), id, "cycle");
+  if (m === undefined)
+    throw new FoundryError(
+      `The manifest of cycle ${id} is unreadable — the loop may be mid-write, or the file is damaged. Try again; if it persists, inspect foundry-out/training/${id}/cycle.json.`,
+      503,
+    );
   if (!m) throw new FoundryError(`No cycle called ${id}.`, 404);
   return m;
 }
@@ -105,20 +89,9 @@ const decidedCount = (v: TrainingVerdicts) => Object.values(v).filter((x) => x =
 /* ── reads ────────────────────────────────────────────────────────────────── */
 
 export async function listCycles(): Promise<TrainingCycleSummary[]> {
-  let names: string[];
-  try {
-    names = await readdir(OUT_ROOT);
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return [];
-    throw e;
-  }
-  const out: TrainingCycleSummary[] = [];
-  for (const name of names) {
-    if (!CYCLE_ID.test(name)) continue;
-    const m = await readJson<CycleManifest | null>(path.join(OUT_ROOT, name, "cycle.json"), null);
-    if (!m) continue;
+  const { items } = await listManifests<CycleManifest, TrainingCycleSummary>(OUT_ROOT, "cycle.json", async (name, m) => {
     const v = await readJson<TrainingVerdicts>(path.join(OUT_ROOT, name, "verdicts.json"), {});
-    out.push({
+    return {
       id: m.id,
       at: m.at,
       dimension: m.dimension,
@@ -127,13 +100,13 @@ export async function listCycles(): Promise<TrainingCycleSummary[]> {
       media: m.media,
       improvements: m.improvements.length,
       decided: decidedCount(v),
-    });
-  }
-  return out.sort((a, b) => (a.at < b.at ? 1 : -1));
+    };
+  });
+  return items.sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
 export async function getCycle(id: string): Promise<TrainingCycleDetail> {
-  const [cycle, verdicts] = await Promise.all([readManifest(id), readTrainingVerdicts(id)]);
+  const [cycle, verdicts] = await Promise.all([readCycle(id), readTrainingVerdicts(id)]);
   return { cycle, verdicts };
 }
 
@@ -150,7 +123,7 @@ export async function trainingFileStat(id: string, rel: string): Promise<{ abs: 
 /* ── writes ───────────────────────────────────────────────────────────────── */
 
 export async function putTrainingVerdicts(id: string, verdicts: TrainingVerdicts): Promise<TrainingVerdicts> {
-  const cycle = await readManifest(id);
+  const cycle = await readCycle(id);
   if (cycle.status === "committed") throw new FoundryError("This cycle is committed; its verdicts are final.", 409);
   const known = new Set(cycle.improvements.map((i) => i.id));
   const clean: TrainingVerdicts = {};
@@ -211,7 +184,7 @@ function mediaFiles(ref: MediaRef): string[] {
  *  ones whose media survives on this machine. */
 export async function commitCycle(id: string): Promise<TrainingCommitResult> {
   const dir = cycleDir(id);
-  const cycle = await readManifest(id);
+  const cycle = await readCycle(id);
   if (cycle.status === "committed") throw new FoundryError("This cycle is already committed.", 409);
   if (!["awaiting-gate", "failed"].includes(cycle.status)) throw new FoundryError("The loop is still running this cycle.", 409);
   const verdicts = await readTrainingVerdicts(id);
@@ -219,21 +192,48 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
 
   const decided = cycle.improvements.filter((i) => verdicts[i.id] === "approve" || verdicts[i.id] === "reject");
 
-  // Keepers first: the tracked copy must exist before the source is unlinked.
-  await mkdir(THUMBS_DIR, { recursive: true });
+  // (1) Keepers first: copy keeper thumbnail to thumbs destination (if destination doesn't already exist).
+  const thumbsDir = foundryFile(path.join("training", "thumbs"));
+  await mkdir(thumbsDir, { recursive: true });
   const thumbs: string[] = [];
   const trackedThumb = new Map<string, string>();
   for (const imp of decided) {
     if (verdicts[imp.id] !== "approve" || !imp.thumbnail) continue;
-    const src = resolveInCycle(id, imp.thumbnail);
-    const rel = `${THUMBS_REL}/${id}--${imp.id}${path.extname(imp.thumbnail).toLowerCase()}`;
-    await copyFile(src, path.join(process.cwd(), rel));
+    const fileName = `${id}--${imp.id}${path.extname(imp.thumbnail).toLowerCase()}`;
+    const rel = `${THUMBS_REL}/${fileName}`;
+    const dst = path.join(thumbsDir, fileName);
+    if (!existsSync(dst)) {
+      const src = resolveInCycle(id, imp.thumbnail);
+      await copyFile(src, dst);
+    }
     trackedThumb.set(imp.id, rel);
     thumbs.push(rel);
   }
 
-  // Then the cull: both arms of every pair of every decided improvement,
-  // poster included, thumbnail source included — the tracked copy survives.
+  // (2) The versioned index: read existing ledger, replace existing row for this cycle if present (or append), write atomically.
+  const ledgerPath = foundryFile("training-ledger.json");
+  const ledger = await readJson<{ rows: TrainingLedgerRow[] }>(ledgerPath, { rows: [] });
+  ledger.rows = (ledger.rows ?? []).filter((r) => r.cycle !== id);
+  for (const imp of decided) {
+    const human = verdicts[imp.id] as "approve" | "reject";
+    const gem = geminiAgreement(imp);
+    ledger.rows.push({
+      cycle: id,
+      dimension: cycle.dimension,
+      subject: cycle.subject,
+      technique: imp.technique,
+      human,
+      verdict: human === "approve" ? "better" : "not-better",
+      judge_pick_rate: judgePickRate(imp),
+      ...(gem !== undefined ? { gemini_agreement: gem } : {}),
+      ...(trackedThumb.has(imp.id) ? { thumb: trackedThumb.get(imp.id) } : {}),
+      reflected: false,
+      at,
+    });
+  }
+  await writeJsonAtomic(ledgerPath, ledger);
+
+  // (3) Cull: delete run media / thumbs only AFTER ledger write succeeded!
   let deleted = 0;
   for (const imp of decided) {
     for (const pair of imp.pairs) {
@@ -252,28 +252,7 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     }
   }
 
-  // The versioned index — the sync channel. Append-only, one row per decided
-  // improvement; reflected:false marks it as the loop's pending work.
-  const ledger = await readJson<{ rows: TrainingLedgerRow[] }>(LEDGER, { rows: [] });
-  for (const imp of decided) {
-    const human = verdicts[imp.id] as "approve" | "reject";
-    const gem = geminiAgreement(imp);
-    ledger.rows.push({
-      cycle: id,
-      dimension: cycle.dimension,
-      subject: cycle.subject,
-      technique: imp.technique,
-      human,
-      verdict: human === "approve" ? "better" : "not-better",
-      judge_pick_rate: judgePickRate(imp),
-      ...(gem !== undefined ? { gemini_agreement: gem } : {}),
-      ...(trackedThumb.has(imp.id) ? { thumb: trackedThumb.get(imp.id) } : {}),
-      reflected: false,
-      at,
-    });
-  }
-  await writeJsonAtomic(LEDGER, ledger);
-
+  // (4) Mark cycle committed.
   await writeFile(path.join(dir, "findings.md"), findingsMarkdown(cycle, verdicts, decided), "utf8");
   cycle.status = "committed";
   cycle.log.push({ at, msg: `committed: ${decided.length} decided, ${deleted} files deleted, ${thumbs.length} thumb(s) kept` });
