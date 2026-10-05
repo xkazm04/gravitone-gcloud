@@ -6,8 +6,10 @@
 // that did not work has to be sayable.
 
 import Link from "next/link";
+import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 
+import { StaleBadge } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 
 /**
@@ -26,8 +28,19 @@ import { useAuth } from "@/lib/useAuth";
  * It sits top right and is the only gold-filled thing on the page, so it is
  * findable at a glance at every size; on phones it is the same pill, smaller.
  */
+const REASON_CHIP: Record<string, string | undefined> = {
+  "session-ended": "session ended",
+  "account-switched": "account changed",
+};
+
 export function EnterButton({ className = "" }: { className?: string }) {
-  const { user, loading, signIn, error } = useAuth();
+  const { user, loading, signIn, error, lastTransition } = useAuth();
+  // Real state about the user's work: the shelf was wiped because the session
+  // ended or the account changed. A deliberate sign-out stays silent (the user
+  // did it). Dismissed locally the moment they sign in again; the provider's
+  // transition is not ours to clear.
+  const [seen, setSeen] = useState(false);
+  const ended = !user && !seen ? REASON_CHIP[lastTransition ?? ""] : undefined;
 
   const shell =
     "font-hanken inline-flex items-center gap-2.5 rounded-full whitespace-nowrap font-semibold tracking-[0.02em] " +
@@ -44,7 +57,10 @@ export function EnterButton({ className = "" }: { className?: string }) {
           <ArrowRight className="h-[1.05em] w-[1.05em]" aria-hidden />
         </Link>
       ) : (
-        <button onClick={() => void signIn()} disabled={loading} className={`cursor-pointer ${shell}`}>
+        <button onClick={() => {
+          setSeen(true);
+          void signIn();
+        }} disabled={loading} className={`cursor-pointer ${shell}`}>
           <svg viewBox="-10 -10 20 20" aria-hidden="true" className="h-[1.05em] w-[1.05em] max-[760px]:hidden">
             <path d="M5.3-5.3A7.5 7.5 0 1 0 7.4 1.3L2.4 1.3" fill="none" stroke="currentColor" strokeWidth="1.4" />
             <circle cx="5.3" cy="-5.3" r="1.7" fill="currentColor" />
@@ -52,6 +68,9 @@ export function EnterButton({ className = "" }: { className?: string }) {
           </svg>
           Sign in with Google
         </button>
+      )}
+      {ended && (
+        <StaleBadge words={ended} glyph="history" />
       )}
       {error && (
         <p role="alert" className="font-hanken max-w-[240px] text-right text-label text-[var(--al-ant-t)]">

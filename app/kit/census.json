@@ -72,6 +72,7 @@
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/frames/ShotSheet.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/research/MusicVideoResearch.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/_phases/research/guided/RunStage.tsx",
         "app/_phases/research/run/LiveResult.tsx",
@@ -150,7 +151,9 @@
       "surfaces": [
         "components/kit/index.ts"
       ],
-      "adopters": []
+      "adopters": [
+        "app/_phases/research/MusicVideoResearch.tsx"
+      ]
     },
     "ContextMenu": {
       "home": "components/kit/ContextMenu.tsx",
@@ -795,6 +798,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_landing/parts.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/score/CueTakes.tsx",
         "app/_phases/script/_parts/BaselineOnlyNote.tsx",
@@ -846,6 +850,7 @@
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/frames/ShotSheet.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/research/MusicVideoResearch.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/_phases/research/guided/RunStage.tsx",
         "app/_phases/research/run/LiveResult.tsx",
@@ -1216,9 +1221,10 @@
     "app/_landing": {
       "files": 5,
       "kitImports": 1,
-      "signalImports": 0,
+      "signalImports": 1,
       "parts": [
         "Mark",
+        "StaleBadge",
         "Wordmark"
       ],
       "suspects": {
@@ -1328,6 +1334,7 @@
       "parts": [
         "Button",
         "CHIP_CLASS",
+        "ConfirmDialog",
         "Deck",
         "DeckCard",
         "DeckStage",
@@ -2029,7 +2036,6 @@
     "Chips",
     "Column",
     "Command",
-    "ConfirmDialog",
     "ContextMenu",
     "Count",
     "Credit",
