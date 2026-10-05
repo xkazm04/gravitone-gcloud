@@ -238,8 +238,9 @@ jobs:
 
     # `npm run verify` (package.json) mirrors this job's blocking steps after
     # install, in the same order: typecheck, lint:ratchet, check:manifest,
-    # check:notebook, check:type, check:trailer-structure, check:gate,
-    # check:frames-prompt, test, build, check:bundle. The pre-push hook runs it before any push to main.
+    # check:notebook, check:type, check:narration, check:clips,
+    # check:trailer-structure, check:gate, check:frames-prompt, check:style-refs,
+    # test, build, check:bundle. The pre-push hook runs it before any push to main.
     # If a step is added, removed, or reordered here, change `verify` in the
     # same commit — the two must not drift.
     steps:
@@ -305,6 +306,21 @@ jobs:
       - name: type scale
         run: npm run check:type
 
+      # BLOCKING, and new here on 2026-10-05: these two and `style refs` below
+      # were added to `verify` (2026-09-04..09) without this job, so the pre-push
+      # hook held a rule CI did not — the drift the comment above forbids.
+      # Narration reads committed source only.
+      - name: narration
+        run: npm run check:narration
+
+      # check:clips decodes every committed clip (check 4: the record matches the
+      # file) and exits 2, could-not-run, without ffprobe - never a silent pass.
+      - name: ffprobe for the clip gate
+        run: command -v ffprobe >/dev/null || (sudo apt-get update -qq && sudo apt-get install -y -qq --no-install-recommends ffmpeg)
+
+      - name: clips
+        run: npm run check:clips
+
       - name: trailer structure
         run: npm run check:trailer-structure
 
@@ -319,6 +335,11 @@ jobs:
       # that falls out of the prompt surface has no compiler to break, only this.
       - name: frames prompt
         run: npm run check:frames-prompt
+
+      # BLOCKING. Pure function over lib/themes - the founding proof must survive
+      # a full sheet in the reference window.
+      - name: style refs
+        run: npm run check:style-refs
 
       # BLOCKING. Node-context probes. Not skipped when earlier steps are
       # green-but-uninteresting: this is the rung that refuses.

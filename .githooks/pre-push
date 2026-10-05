@@ -29,8 +29,8 @@ done
 if [ "$GRAVITONE_SKIP_GATE" = "1" ]; then
   echo "==================================================================" >&2
   echo "pre-push: GRAVITONE_SKIP_GATE=1 — SKIPPING THE FULL GATE ON MAIN:" >&2
-  echo "  typecheck, lint:ratchet, check:manifest, test, build, check:bundle" >&2
-  echo "  (npm run verify) will NOT run before this push." >&2
+  echo "  npm run verify (every step of the CI gates job; package.json lists" >&2
+  echo "  them) will NOT run before this push." >&2
   echo "Record the reason in the commit message or in docs/DEPLOYMENT.md's" >&2
   echo "skip log. CI will still render the real verdict — watch it." >&2
   echo "==================================================================" >&2
