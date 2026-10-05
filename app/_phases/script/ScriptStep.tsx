@@ -37,7 +37,7 @@ import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/
 
 import { CONCLUSIONS } from "../_shared/notebook/conclusions";
 import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
-import { loadStep, type BeatPicksStepData } from "../_shared/stepStore";
+import { loadStep, readStep, type BeatPicksStepData, type StorageTrouble } from "../_shared/stepStore";
 import Notice from "../_shared/ui/Notice";
 import { usePhaseReport } from "../_shared/usePhaseReport";
 import { useScope } from "../research/useScope";
@@ -172,6 +172,29 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
   return <ExplainerScript projectId={projectId} asked={current.asked} />;
 }
 
+/** A RESEARCH RECORD THAT COULD NOT BE READ IS NOT AN UNFINISHED ONE. `loadStep`
+ *  flattens a failed read to the seeded default, which draws as "blocked at
+ *  Research, go open it" over research that is done — wrong cause, wrong
+ *  remedy. `readStep` tells them apart and the store's own message is shown in
+ *  full (the Frames step's rule, FramesStep.tsx). */
+function ResearchReadTrouble({ trouble }: { trouble: StorageTrouble }) {
+  return (
+    <Notice
+      title={
+        trouble.kind === "quota"
+          ? "out of room"
+          : trouble.kind === "blocked"
+            ? "another tab holds the database open"
+            : trouble.kind === "unavailable"
+              ? "no storage in this browser session"
+              : trouble.kind
+      }
+    >
+      <p className="font-jetbrains text-content text-white/45">{trouble.message}</p>
+    </Notice>
+  );
+}
+
 /** NOTHING TO WRITE — a music video has no notebook to write candidates
  *  against, so this half carries no content of its own (per the idea note's
  *  locked decision, "Skip both, auto-mark done"). Gated exactly like the
@@ -180,17 +203,21 @@ export default function ScriptStep({ projectId }: { projectId: string }) {
  *  that gate is open, with no user action. */
 function MusicVideoScript({ projectId }: { projectId: string }) {
   const [researched, setResearched] = useState<boolean | null>(null);
+  const [trouble, setTrouble] = useState<StorageTrouble | null>(null);
 
   useEffect(() => {
     let alive = true;
-    void loadStep(projectId, "research").then((saved) => {
-      if (alive) setResearched(!!saved?.researched);
+    void readStep(projectId, "research").then((r) => {
+      if (!alive) return;
+      if (r.ok) setResearched(!!r.data?.researched);
+      else setTrouble(r.trouble);
     });
     return () => { alive = false; };
   }, [projectId]);
 
   usePhaseReport(projectId, "script", researched ? "done" : null);
 
+  if (trouble) return <ResearchReadTrouble trouble={trouble} />;
   if (researched === null) return <Skeleton />;
 
   if (!researched)
@@ -215,6 +242,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   const [tab, setTab] = useState<Tab>("candidates");
   const [showing, setShowing] = useState<"baseline" | "candidate">("candidate");
   const [researched, setResearched] = useState<boolean | null>(null);
+  const [trouble, setTrouble] = useState<StorageTrouble | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
   // ADOPTION IS A RECORD NOW, not a useState. It used to be per-mount local
@@ -244,8 +272,10 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
 
   useEffect(() => {
     let alive = true;
-    void loadStep(projectId, "research").then((saved) => {
-      if (alive) setResearched(!!saved?.researched);
+    void readStep(projectId, "research").then((r) => {
+      if (!alive) return;
+      if (r.ok) setResearched(!!r.data?.researched);
+      else setTrouble(r.trouble);
     });
     return () => { alive = false; };
   }, [projectId]);
@@ -295,6 +325,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   // candidate, so this is the verdict on the chain about to be accepted.
   const gate = useMemo(() => gateChains(chains, { conclusions: CONCLUSIONS }), [chains]);
 
+  if (trouble) return <ResearchReadTrouble trouble={trouble} />;
   if (researched === null) return <Skeleton />;
 
   // BLOCKED BY AN UPSTREAM STEP, drawn as the pipeline it is. The essay that
