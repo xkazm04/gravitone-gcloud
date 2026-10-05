@@ -265,6 +265,8 @@ export interface FakeCall {
   kind: "version" | "turn";
   argv: string[];
   envKeys: string[];
+  /** The stand-in's own pid (turns only) — the bottom of the spawned tree. */
+  pid?: number;
   promptChars?: number;
   promptSha256?: string;
   heading?: string | null;

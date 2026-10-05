@@ -260,6 +260,16 @@ export async function reason(req: TextRequest): Promise<TextResult> {
 
     for (let i = 0; i < chain.length; i++) {
       const id = chain[i];
+      // A CANCEL STOPS THE WALK. Checked before every candidate, including the
+      // first: a turn the caller has stopped is not served by the next rung —
+      // that would be a second bill for an answer nobody is waiting for. The
+      // trail says how far the walk got before the cancel landed.
+      if (req.signal?.aborted)
+        throw new TextError(
+          `The ${req.turn} turn was cancelled before ${id} was asked. Nothing was changed.`,
+          "cancelled",
+          id,
+        );
       const provider = PROVIDERS[id]();
 
       // A plan entry that cannot do the job is a bug in the table above, not a
@@ -410,6 +420,7 @@ function trailReason(e: TextError): RerouteStep["why"] {
     case "rate-limited":
     case "timeout":
     case "bad-response":
+    case "cancelled":
       return e.kind;
     default:
       return "failed";

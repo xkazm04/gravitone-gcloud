@@ -49,6 +49,8 @@ import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/r
 import { POST as articlesCreatePOST } from "@/app/api/articles/route";
 import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
 import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
+import { POST as turnsPOST } from "@/app/api/turns/route";
+import { POST as turnCancelPOST } from "@/app/api/turns/[id]/cancel/route";
 
 const SECRET = "probe-secret-value";
 
@@ -125,6 +127,18 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
     "articles/resume",
     "/api/articles/[runId]/resume",
     (r: Request) => articlesResumePOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
+  ],
+  // The turn ledger (AIO-A). Starting a turn spends the seat or a metered key;
+  // an empty body is a 400 from the `kind` check before any kind's prompt is
+  // built or any record written. Cancel spends nothing (guardAccessOnly — a
+  // "stop" is never rate-refused) but discloses and ends a paid run, so it is
+  // driven too: the id names no turn, so the authed case is the ledger's 404,
+  // read-only.
+  ["turns", "/api/turns", turnsPOST],
+  [
+    "turns/cancel",
+    "/api/turns/[id]/cancel",
+    (r: Request) => turnCancelPOST(r, { params: Promise.resolve({ id: "tn-000000000000" }) }),
   ],
 ];
 
