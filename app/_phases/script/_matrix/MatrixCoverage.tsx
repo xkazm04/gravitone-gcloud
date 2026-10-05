@@ -153,7 +153,9 @@ function Row({
   const notesCtx = useNotes();
   const existingNotes = notesCtx?.api.notes ?? [];
   const alreadyDescope = existingNotes.some((n) => n.cardId === card.id && n.kind === "descope");
-  const disabled = !notesCtx || notesCtx.api.running || card.required || alreadyDescope;
+  // `required` is aria-disabled on the marker, not `disabled`: a native
+  // disabled button leaves the tab order and strands requiredWhy behind a mouse.
+  const blocked = !notesCtx || notesCtx.api.running || alreadyDescope;
 
   return (
     <li
@@ -174,10 +176,11 @@ function Row({
               type="button"
               data-testid={`conflict-${card.id}`}
               onClick={() => {
-                if (disabled) return;
+                if (blocked || card.required) return;
                 notesCtx.api.addNote(card.id, "descope");
               }}
-              disabled={disabled}
+              disabled={blocked}
+              aria-disabled={card.required || undefined}
               title={
                 card.required
                   ? card.requiredWhy
@@ -185,10 +188,11 @@ function Row({
                     ? "Descope note already staged for this card"
                     : "Click to stage a descope note"
               }
-              className="font-jetbrains rounded border border-rose-400/40 bg-rose-400/[0.08] px-1.5 py-0.5 text-left text-label text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-75"
+              className="font-jetbrains rounded border border-rose-400/40 bg-rose-400/[0.08] px-1.5 py-0.5 text-left text-label text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:opacity-75 aria-disabled:cursor-not-allowed"
             >
               {out === "descoped" ? "cut" : "not taken"} · still spoken{" "}
               {conflict.map((c) => `${secs(c.seconds)} by ${c.label}`).join(", ")}
+              {card.required && <span className="sr-only"> — required: {card.requiredWhy}</span>}
             </button>
           )}
         </span>

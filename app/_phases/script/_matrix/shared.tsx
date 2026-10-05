@@ -62,7 +62,10 @@ export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi
     <button
       data-testid={`scope-${card.id}`}
       onClick={() => !locked && api.toggle(card.id, "descoped")}
-      disabled={locked}
+      // `aria-disabled`, NOT `disabled`: a disabled button leaves the tab order,
+      // which put the reason it is locked behind a mouse (TabRail's rule).
+      aria-disabled={locked || undefined}
+      aria-describedby={locked ? `scope-why-${card.id}` : undefined}
       title={
         locked
           ? card.requiredWhy
@@ -74,7 +77,7 @@ export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi
       }
       className={`grid shrink-0 place-items-center rounded border transition ${dims} ${
         locked
-          ? "cursor-not-allowed border-white/10 text-white/20"
+          ? "cursor-not-allowed border-white/15 text-white/50"
           : out === "descoped"
             ? "border-amber-400/60 bg-amber-400/10 text-amber-300 hover:border-amber-400"
             : out === "not-taken"
@@ -82,14 +85,31 @@ export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi
               : "border-white/20 text-transparent hover:border-cyan-400/60 hover:text-cyan-400/40"
       }`}
       aria-label={
-        out === "descoped"
+        locked
+          ? `${card.id} is required`
+          : out === "descoped"
           ? `${card.id} is descoped`
           : out === "not-taken"
             ? `${card.id} is not taken`
             : `${card.id} is in scope`
       }
     >
-      {out === "descoped" ? "—" : out === "not-taken" ? "·" : "✓"}
+      {locked ? (
+        <svg aria-hidden viewBox="0 0 12 12" className="h-2.5 w-2.5 fill-current">
+          <path d="M3.5 5V3.75a2.5 2.5 0 015 0V5H9.5a.5.5 0 01.5.5v4a.5.5 0 01-.5.5h-7a.5.5 0 01-.5-.5v-4a.5.5 0 01.5-.5H3.5zm1 0h3V3.75a1.5 1.5 0 00-3 0V5z" />
+        </svg>
+      ) : out === "descoped" ? (
+        "—"
+      ) : out === "not-taken" ? (
+        "·"
+      ) : (
+        "✓"
+      )}
+      {locked && (
+        <span id={`scope-why-${card.id}`} className="sr-only">
+          {card.requiredWhy}
+        </span>
+      )}
     </button>
   );
 }
