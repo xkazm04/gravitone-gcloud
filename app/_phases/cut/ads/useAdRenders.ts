@@ -11,6 +11,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { useAnnounce } from "@/lib/announcer";
 import { accessHeader } from "@/lib/imagingClient";
 import type { useJobs } from "@/lib/jobs";
 import { usePolling } from "@/lib/usePolling";
@@ -54,10 +55,24 @@ export function useAdRenders(
   const [refusal, setRefusal] = useState<RenderRefusal | null>(null);
   /** exportId → the job this tab started for it. */
   const jobFor = useRef(new Map<string, string>());
+  /** exportId → the status last announced, so a poll announces a change once. */
+  const said = useRef(new Map<string, string>());
+  // State changes reach a screen reader through the one announcer
+  // (lib/announcer.tsx), not a live region of this step's own.
+  const announce = useAnnounce();
 
   const land = useCallback(
     (id: string, v: AdRenderView | "gone") => {
       setViews((m) => ({ ...m, [id]: v }));
+      const status = v === "gone" ? "gone" : v.status;
+      if (said.current.has(id) && said.current.get(id) !== status && (status === "done" || status === "failed")) {
+        const aspect = v === "gone" ? "" : `${v.aspect} `;
+        announce({
+          key: `ad-render:${id}:${status}`,
+          text: status === "done" ? `${aspect}render ready` : `${aspect}render failed: ${v !== "gone" ? (v.error ?? "") : ""}`,
+        });
+      }
+      said.current.set(id, status);
       const job = jobFor.current.get(id);
       if (!job) return;
       if (v === "gone") {
@@ -68,7 +83,7 @@ export function useAdRenders(
         jobFor.current.delete(id);
       }
     },
-    [jobs],
+    [jobs, announce],
   );
 
   const refresh = useCallback(
@@ -111,10 +126,13 @@ export function useAdRenders(
         if (res.status !== 202 || typeof body.exportId !== "string") {
           const message = typeof body.message === "string" ? body.message : `The render was refused (HTTP ${res.status}).`;
           setRefusal({ aspect: req.aspect, code: typeof body.error === "string" ? body.error : "failed", message });
+          announce({ key: `ad-render-refused:${req.aspect}:${Date.now()}`, text: message });
           if (job) jobs.settle(job.id, "failed", message);
           return;
         }
         if (job) jobFor.current.set(body.exportId, job.id);
+        said.current.set(body.exportId, "queued");
+        announce({ key: `ad-render:${body.exportId}:queued`, text: `${req.aspect} render started` });
         setViews((m) => ({
           ...m,
           [body.exportId!]: {
@@ -132,12 +150,13 @@ export function useAdRenders(
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e);
         setRefusal({ aspect: req.aspect, code: "network", message });
+        announce({ key: `ad-render-refused:${req.aspect}:${Date.now()}`, text: message });
         if (job) jobs.settle(job.id, "failed", message);
       } finally {
         setStarting(null);
       }
     },
-    [starting, jobs, projectId, onExport],
+    [starting, jobs, projectId, onExport, announce],
   );
 
   return { views, start, starting, refusal };

@@ -166,7 +166,7 @@ function ExportState({ view, job }: { view: AdRenderView | "gone" | undefined; j
   if (view === "gone") return <StaleBadge words="gone" glyph="history" why="Not in this machine's ad exports." />;
   if (view.status === "queued" || view.status === "rendering")
     return (
-      <span className="inline-flex items-center gap-1.5" role="status">
+      <span className="inline-flex items-center gap-1.5">
         <Loader2 className="h-3.5 w-3.5 animate-spin text-cyan-200/70" aria-hidden />
         <span className="font-jetbrains text-label text-cyan-100/80">{view.status}</span>
         {job && <Elapsed job={job} />}
@@ -174,7 +174,7 @@ function ExportState({ view, job }: { view: AdRenderView | "gone" | undefined; j
     );
   if (view.status === "failed")
     return (
-      <span role="alert" className="font-jetbrains text-label text-rose-200/85">
+      <span className="font-jetbrains text-label text-rose-200/85">
         {view.error ?? "failed"}
       </span>
     );

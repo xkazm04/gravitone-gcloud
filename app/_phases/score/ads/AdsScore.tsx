@@ -20,6 +20,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Loader2, Music2 } from "lucide-react";
 
 import { Ghost, Hint, StaleBadge, Tally, UpstreamBreak } from "@/components/ui/signal";
+import { useAnnounce } from "@/lib/announcer";
 import { ABSENCE_REASON, capabilities } from "@/lib/capabilities";
 import { getProject, type Project } from "@/lib/projects";
 import { costLabel, perSecondPrice } from "@/lib/musicClient";
@@ -81,6 +82,10 @@ export default function AdsScore({ projectId }: { projectId: string }) {
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
   const [bpmDraft, setBpmDraft] = useState<string | null>(null);
+  // Failures reach a screen reader through the one announcer (lib/announcer.tsx),
+  // keyed per event so a repeated error is announced again.
+  const announce = useAnnounce();
+  const [failures, setFailures] = useState(0);
 
   const scenario = useMemo(
     () => scenarios?.options.find((o) => o.id === scenarios.pickedId) ?? null,
@@ -130,7 +135,12 @@ export default function AdsScore({ projectId }: { projectId: string }) {
     setFailure(null);
     const r = await store.generate(`ad-bed-${projectId}`, request);
     setBusy(false);
-    if (!r.ok) return setFailure(r.error);
+    if (!r.ok) {
+      setFailure(r.error);
+      setFailures((n) => n + 1);
+      announce({ key: `ads-bed-render:${failures + 1}`, text: r.error });
+      return;
+    }
     const scenarioId = scenario.id;
     update((cur) => ({ ...fromSpot(cur, bindTake(bedSpot(cur, scenario), r.take.id)), scenarioId }));
   }
@@ -219,7 +229,7 @@ export default function AdsScore({ projectId }: { projectId: string }) {
         )}
 
         {failure && (
-          <p role="alert" className="font-jetbrains mt-2 text-content leading-snug text-rose-200/85">
+          <p className="font-jetbrains mt-2 text-content leading-snug text-rose-200/85">
             {failure}
           </p>
         )}
