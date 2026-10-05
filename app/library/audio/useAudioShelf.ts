@@ -32,6 +32,7 @@ import { clearFixtures, listTakes, patchTake, uploadTake } from "@/lib/sound/cli
 import type { SoundTake } from "@/lib/sound/types";
 
 import { applyLocally, assetFromSoundTake, playUrl, splitPatch, uploadMetaOf } from "./soundAdapter";
+import { NO_ERRORS, patchKey, pickNotice, setNotice, type ShelfErrors } from "./shelfErrors";
 import { migrateAnnex, migrateShelf } from "./soundMigration";
 
 /** A returned file's length, read off its metadata. Null when the browser
@@ -55,7 +56,9 @@ function probeDuration(url: string): Promise<number | null> {
 
 export function useAudioShelf(uid: string | undefined) {
   const [takes, setTakes] = useState<SoundTake[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [errors, setErrors] = useState<ShelfErrors>(NO_ERRORS);
+  const notice = useCallback((key: string, message: string | null) => setErrors((e) => setNotice(e, key, message)), []);
+  const error = useMemo(() => pickNotice(errors), [errors]);
   /** The latest rows, for the writers below — a callback that closed over an
    *  older `takes` would map a patch onto a stale kind or a removed row. */
   const latest = useRef<SoundTake[] | null>(null);
@@ -72,14 +75,15 @@ export function useAudioShelf(uid: string | undefined) {
       if (cancelled) return;
       if (!r.ok) {
         setTakes([]);
-        setError(`The audio shelf could not be read: ${r.error}`);
+        notice("read", `The audio shelf could not be read: ${r.error}`);
         return;
       }
       const annexed = await migrateAnnex(uid, r.data.takes);
       if (cancelled) return;
       const fresh = new Map(annexed.moved.map((t) => [t.id, t] as const));
       setTakes(r.data.takes.map((t) => fresh.get(t.id) ?? t));
-      setError(
+      notice(
+        "migrate",
         moved.failed.length
           ? `${moved.failed.length} of this browser's takes did not move to the studio shelf (${moved.failed[0].error}); a reload retries.`
           : annexed.failed.length
@@ -90,7 +94,7 @@ export function useAudioShelf(uid: string | undefined) {
     return () => {
       cancelled = true;
     };
-  }, [uid]);
+  }, [uid, notice]);
 
   const assets = useMemo<Asset[] | null>(
     () => (takes && uid ? takes.map((t) => assetFromSoundTake(t, uid)) : takes ? [] : null),
@@ -112,7 +116,7 @@ export function useAudioShelf(uid: string | undefined) {
       setTakes((prev) => prev && prev.map((x) => (x.id === id ? applyLocally(x, tp) : x)));
       patchTake(id, tp).then((r) => {
         if (!r.ok) {
-          setError(`The last judgment was not saved: ${r.error}. A reload would lose it.`);
+          notice(patchKey(id), `The last judgment was not saved: ${r.error}. A reload would lose it.`);
           return;
         }
         // Only what the server DERIVES is taken from its answer. Ratings are
@@ -125,10 +129,10 @@ export function useAudioShelf(uid: string | undefined) {
             x.id === id ? { ...x, stage: s.stage, label: s.label, judgedAt: s.judgedAt, finalizedAt: s.finalizedAt } : x,
           ),
         );
-        setError(null);
+        notice(patchKey(id), null);
       });
     },
-    [uid],
+    [uid, notice],
   );
 
   /** File a returned take. Resolves to the stored row, or null when the write
@@ -148,15 +152,15 @@ export function useAudioShelf(uid: string | undefined) {
       });
       const r = await uploadTake(file, file.name, up);
       if (!r.ok) {
-        setError(`${file.name} was not filed: ${r.error}.`);
+        notice("upload", `${file.name} was not filed: ${r.error}.`);
         return null;
       }
       const take = r.data.take;
       setTakes((prev) => [take, ...(prev ?? []).filter((x) => x.id !== take.id)]);
-      setError(null);
+      notice("upload", null);
       return assetFromSoundTake(take, uid);
     },
-    [uid],
+    [uid, notice],
   );
 
   const fixtures = useMemo(() => (takes ?? []).filter((t) => t.origin === "fixture").length, [takes]);
@@ -165,13 +169,13 @@ export function useAudioShelf(uid: string | undefined) {
   const clearExamples = useCallback(async (): Promise<boolean> => {
     const r = await clearFixtures();
     if (!r.ok) {
-      setError(`The examples were not cleared: ${r.error}.`);
+      notice("clear", `The examples were not cleared: ${r.error}.`);
       return false;
     }
     setTakes((prev) => prev && prev.filter((t) => t.origin !== "fixture"));
-    setError(null);
+    notice("clear", null);
     return true;
-  }, []);
+  }, [notice]);
 
   return { assets, urls, error, patch, attachReturn, fixtures, clearExamples, takes };
 }
