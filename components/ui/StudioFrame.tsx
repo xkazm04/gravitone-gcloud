@@ -130,8 +130,14 @@ export default function StudioFrame({
     );
   }
 
+  // `overflow-clip`, not `overflow-hidden`: both keep the aurora's oversized
+  // blobs from widening the page, but `hidden` makes this root a scroll
+  // container, and a scroll container that never scrolls silently disables
+  // every `position: sticky` beneath it — the foundry's run rail and side
+  // panel, the projects shelf's group headings (2026-10-05). `clip` clips
+  // without becoming one.
   return (
-    <div className="font-hanken relative min-h-screen overflow-hidden bg-[var(--gt-ink)] text-slate-200 grain">
+    <div className="font-hanken relative min-h-screen overflow-clip bg-[var(--gt-ink)] text-slate-200 grain">
       {/* The aurora reads --gt-level / --gt-working (globals.css, filter only),
           so the atmosphere can lean into whatever is playing or rendering once
           a signal source exists. At the idle defaults it is the identity
