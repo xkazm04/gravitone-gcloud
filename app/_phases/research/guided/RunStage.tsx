@@ -364,9 +364,6 @@ export default function RunStage({
                   onOpenEvidence={onOpenEvidence}
                   onClear={onClear}
                 />
-                <span className="font-jetbrains ml-auto text-label text-cyan-200/80">
-                  Next deals the takes →
-                </span>
               </div>
             )}
           </div>

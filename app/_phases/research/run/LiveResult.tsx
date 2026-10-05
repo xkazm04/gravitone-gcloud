@@ -39,6 +39,7 @@
 // substitution this step already fights. Wiring the board onto a live notebook
 // is real work in another file and is not smuggled in here.
 
+import { Bell } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
@@ -129,9 +130,16 @@ export default function LiveResult({ state }: { state: LiveState }) {
             a real run · <Elapsed since={state.startedAt} />
           </span>
         </p>
-        <p className="font-hanken mt-2 text-content leading-relaxed text-slate-300">
-          The engine is writing a notebook about “{state.topic}”. This is minutes, not seconds, and it
-          is billing right now — leaving the step does not cancel it, and the bell reports the result.
+        {/* The topic and the fact that it is billing are the work. That leaving
+            the step does not cancel it is carried by the same glyph line the
+            simulated run uses (guided/RunStage.tsx's running-note). */}
+        <p className="font-hanken mt-2 flex flex-wrap items-center gap-2 text-content leading-relaxed text-slate-300">
+          “{state.topic}”
+          <span className={`${CHIP_CLASS} ${TALLY_TONE.amber}`}>billing</span>
+        </p>
+        <p className="font-jetbrains mt-1.5 flex items-center gap-1.5 text-label text-white/40">
+          <Bell className="h-3.5 w-3.5 shrink-0 animate-pulse text-cyan-300/70" aria-hidden />
+          in the background — the bell reports the result
         </p>
       </div>
     );

@@ -48,7 +48,6 @@ export function FaceSwitch({ face, onSwitch }: { face: Face; onSwitch: (f: Face)
       type="button"
       data-testid="research-face-switch"
       onClick={() => onSwitch(other)}
-      title={`Switch to ${word}. Nothing is discarded — both faces read and write the same record.`}
       className="font-jetbrains rounded-full border border-white/12 px-2.5 py-1 text-label tracking-[0.1em] text-white/45 transition hover:border-white/25 hover:text-white/75"
     >
       switch to {word}
