@@ -11,7 +11,7 @@
 // an energy curve, and a structure check that reports malformed / unmeasured
 // and never "works".
 
-import { Hint } from "@/components/ui/signal";
+import { Hint, UpstreamBreak } from "@/components/ui/signal";
 import type { Discipline } from "@/lib/projects";
 
 import Notice from "../../_shared/ui/Notice";
@@ -88,12 +88,12 @@ export default function TrailerScript({
 
   if (!api.cut || !api.budget || !api.report)
     return (
-      <Notice severity="info" title="no spine composed for this project yet">
-        <p>
-          The Script step opens on the spine Step 1 confirmed, it does not compose one. Pick one beat
-          per part in Step 1 and compose — the cut appears here, editable.
-        </p>
-      </Notice>
+      <UpstreamBreak
+        blockedAt="research"
+        current="script"
+        done={[]}
+        action={{ label: "Open Research", href: `/studio/${projectId}?step=research` }}
+      />
     );
 
   const { cut, budget, report } = api;
