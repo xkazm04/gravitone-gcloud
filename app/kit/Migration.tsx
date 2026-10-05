@@ -2,7 +2,7 @@
 // will use, the gaps each will hit. Then the gaps, ranked by how many modules hit
 // them — the order the kit should grow in.
 
-import { DataTable, Kicker, Stats } from "@/components/kit";
+import { DataTable, Ghost, Kicker, Stats } from "@/components/kit";
 
 import { GAPS, MODULES } from "./migrationMap";
 
@@ -44,6 +44,9 @@ export function Migration() {
       <section className="kr-section" aria-labelledby="kr-gaps">
         <Kicker>Gaps</Kicker>
         <h2 id="kr-gaps">What the kit does not have</h2>
+        {ranked.length === 0 ? (
+          <Ghost shape="row" label="no gaps" />
+        ) : (
         <DataTable
           head={["Gap", "Missing part", "Shape", "First hit", "Modules"]}
           rows={ranked.map((g) => [
@@ -54,6 +57,7 @@ export function Migration() {
             <span key="m" className="k-num">{hits(g.id).length}</span>,
           ])}
         />
+        )}
       </section>
     </div>
   );

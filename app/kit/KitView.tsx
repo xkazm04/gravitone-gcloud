@@ -59,7 +59,7 @@ export default function KitView() {
           { id: "identity", label: "Identity" },
           { id: "law", label: "Law", tally: { value: RULES.length } },
           { id: "parts", label: "Parts", tally: { value: PART_COUNT } },
-          { id: "migration", label: "Migration", tally: { value: GAPS.length, tone: "amber" } },
+          { id: "migration", label: "Migration", tally: { value: GAPS.length, tone: GAPS.length ? "amber" : "neutral" } },
         ]}
       />
       {tab === "identity" && <Identity />}
