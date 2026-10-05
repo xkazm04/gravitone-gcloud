@@ -31,14 +31,14 @@ export function useVariant(): [Variant, (v: Variant) => void] {
   return [v, set];
 }
 
-/** A fixed chip in the lower-left corner naming the variant directions. */
+/** A fixed chip in the lower-right corner (clear of the Next dev badge) naming the variant directions. */
 export function VariantSwitch({ labels }: { labels: [string, string, string] }) {
   const [v, set] = useVariant();
   return (
     <div
       role="radiogroup"
       aria-label="Prototype variant"
-      className="fixed bottom-4 left-4 z-50 flex items-center gap-1 rounded-full border border-[var(--gt-hairline)] bg-[var(--gt-surface-bottom)] p-1 font-jetbrains text-label shadow-[var(--gt-shadow-float)]"
+      className="fixed bottom-4 right-4 z-50 flex items-center gap-1 rounded-full border border-[var(--gt-hairline)] bg-[var(--gt-ink)]/95 backdrop-blur-xl p-1 font-jetbrains text-label shadow-[var(--gt-shadow-float)]"
     >
       {labels.map((label, i) => {
         const n = (i + 1) as Variant;

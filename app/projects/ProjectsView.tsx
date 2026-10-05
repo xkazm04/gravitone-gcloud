@@ -6,9 +6,17 @@
 // record, sortable by any column), a call sheet (queued by what needs you) and
 // this matrix. The matrix won and the other two are gone — a list tells you
 // what you have, and only the grid tells you where the whole shelf is jammed.
+//
+// ROUND 2 (platform-consolidation WP2, 2026-10-04) reopens it for scale: the
+// shelf has to hold hundreds of projects and absorb StatReel's rundown. Three
+// directions again, behind `?v=1|2|3` (components/ui/VariantSwitch.tsx), over
+// one query model (app/_projects/shelf.ts): V1 Ledger — the matrix, windowed;
+// V2 Race sheet — lanes on a five-gate track; V3 Pivot board — state columns
+// by kind rows. This host keeps everything the three must share: storage, the
+// dialogs, the demo strip, the style gap, and the dev-only synthetic shelf.
 
-import { useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import Link from "next/link";
 import { Zap } from "lucide-react";
@@ -17,19 +25,81 @@ import StudioFrame from "@/components/ui/StudioFrame";
 import { Ghost, Tally } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
+import { VariantSwitch, useVariant } from "@/components/ui/VariantSwitch";
 import { useThemes } from "@/lib/useThemes";
 import { lockedOnly } from "@/lib/themes";
 import { isSeeded } from "@/app/_studio/projectSeed";
-import type { Project, ProjectDraft } from "@/lib/projects";
+import type { Project, ProjectContents, ProjectDraft } from "@/lib/projects";
 
 import ProjectDialog, { ConfirmDelete } from "../_projects/ProjectDialog";
-import ProjectsMatrix from "../_projects/ProjectsMatrix";
-import { DemoTag } from "../_projects/parts";
+import Ledger from "../_projects/Ledger";
+import PivotBoard from "../_projects/PivotBoard";
+import RaceSheet from "../_projects/RaceSheet";
+import { DemoTag, EmptyShelf } from "../_projects/parts";
+import type { SurfaceProps } from "../_projects/surface";
+import { isSynthetic, syntheticProjects } from "../_projects/synthetic";
+
+const SURFACE = { 1: Ledger, 2: RaceSheet, 3: PivotBoard } as const;
+
+/** `?seed=N` is honoured only outside a production build. `NODE_ENV` is inlined
+ *  at build time, so in production this is a constant 0 and the synthetic
+ *  branch below is dead code. */
+const seedOf = (raw: string | null): number =>
+  process.env.NODE_ENV !== "production" ? Math.max(0, Math.floor(Number(raw) || 0)) : 0;
 
 export default function ProjectsView() {
   const { user } = useAuth();
   const router = useRouter();
-  const { projects, error, loading, create, update, remove } = useProjects(user?.uid ?? null);
+  const params = useSearchParams();
+  const [variant] = useVariant();
+  const stored = useProjects(user?.uid ?? null);
+  const { error, loading, create } = stored;
+
+  /* ── The synthetic shelf (dev only, never stored) ─────────────────────────
+   *
+   * `?seed=300` merges 300 fixture projects into the list (app/_projects/
+   * synthetic.ts). Edits and deletes on them are applied here, in memory, so
+   * every path the variants drive can be exercised at volume without one row
+   * reaching IndexedDB. `update` and `remove` below are the ONLY writers the
+   * page calls, and they route a synthetic id away from storage. */
+  const seedN = seedOf(params.get("seed"));
+  const [synthEdits, setSynthEdits] = useState<ReadonlyMap<string, Project>>(new Map());
+  const [synthGone, setSynthGone] = useState<ReadonlySet<string>>(new Set());
+  const synthetic = useMemo(
+    () =>
+      seedN > 0
+        ? syntheticProjects(seedN, user?.uid ?? "dev")
+            .filter((p) => !synthGone.has(p.id))
+            .map((p) => synthEdits.get(p.id) ?? p)
+        : [],
+    [seedN, user?.uid, synthGone, synthEdits],
+  );
+  const projects = useMemo(
+    () => (stored.projects === null ? null : [...stored.projects, ...synthetic]),
+    [stored.projects, synthetic],
+  );
+
+  const storedUpdate = stored.update;
+  const update = useCallback(
+    async (id: string, patch: Partial<Project>): Promise<Project | null> => {
+      if (!isSynthetic({ id })) return storedUpdate(id, patch);
+      const current = synthetic.find((p) => p.id === id);
+      if (!current) return null;
+      const next = { ...current, ...patch, updatedAt: Date.now() };
+      setSynthEdits((m) => new Map(m).set(id, next));
+      return next;
+    },
+    [storedUpdate, synthetic],
+  );
+  const storedRemove = stored.remove;
+  const remove = useCallback(
+    async (id: string): Promise<ProjectContents | null> => {
+      if (!isSynthetic({ id })) return storedRemove(id);
+      setSynthGone((g) => new Set(g).add(id));
+      return { steps: 0, phases: [] };
+    },
+    [storedRemove],
+  );
   // The gate: a project is rendered against a locked visual identity, so one
   // has to exist before there is anything to create. See /library.
   //
@@ -76,6 +146,14 @@ export default function ProjectsView() {
   // below states at length: the control this was fired from is inside the
   // strip, the strip is gone the moment the last row is, and a restore onto a
   // detached node is silent — focus falls to <body>.
+  // The pivot board's bulk delete: the same `remove`, one project at a time,
+  // for the reason `clearExamples` below gives — sequential, so the shelf
+  // visibly thins and a failure stops nothing that already went.
+  const removeMany = async (ps: Project[]) => {
+    for (const p of ps) await remove(p.id);
+    mainRef.current?.focus();
+  };
+
   const clearExamples = async () => {
     setWiping(true);
     for (const p of demos) await remove(p.id);
@@ -200,7 +278,8 @@ export default function ProjectsView() {
             // screen reader (components/ui/signal/Ghost.tsx).
             <Ghost shape="row" count={3} label="Reading the shelf" />
           ) : (
-            <ProjectsMatrix
+            <Shelf
+              variant={variant}
               projects={projects ?? []}
               onOpen={(p, step) =>
                 // The project is the RESOURCE and gets the path; the step is a
@@ -211,6 +290,7 @@ export default function ProjectsView() {
               }
               onEdit={(p) => setDialog({ open: true, project: p })}
               onDelete={(p) => setDoomed(p)}
+              onDeleteMany={removeMany}
               // Always the wizard: its style stage offers presets (minted into
               // a locked theme at create) and an honest empty state that
               // routes, so there is no account state in which sending the user
@@ -342,6 +422,15 @@ export default function ProjectsView() {
           if (took) setDoomed(null);
         }}
       />
+      <VariantSwitch labels={["Ledger", "Race sheet", "Pivot board"]} />
     </StudioFrame>
   );
+}
+
+/** The empty shelf is the same object in every variant (parts.tsx#EmptyShelf):
+ *  there is nothing to arrange, so there is nothing for a direction to differ on. */
+function Shelf({ variant, ...props }: SurfaceProps & { variant: 1 | 2 | 3 }) {
+  if (props.projects.length === 0) return <EmptyShelf onCreate={props.onCreate} aside={props.aside} />;
+  const Surface = SURFACE[variant];
+  return <Surface {...props} />;
 }

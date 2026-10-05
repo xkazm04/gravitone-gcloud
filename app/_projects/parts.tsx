@@ -167,6 +167,19 @@ export function DemoTag({ className = "" }: { className?: string }) {
   );
 }
 
+/** The mark on a `?seed=N` row (./synthetic.ts): in memory, dev-only, never
+ *  stored. Same weight as `DemoTag` — it only has to stop a volume fixture
+ *  being read as somebody's work in a screenshot. */
+export function SynthTag({ className = "" }: { className?: string }) {
+  return (
+    <span
+      className={`font-jetbrains shrink-0 rounded-full border border-dashed border-white/15 px-1.5 py-0.5 text-label leading-none text-white/35 ${className}`}
+    >
+      synthetic
+    </span>
+  );
+}
+
 /** The CTA on a shelf that already has work on it. Outlined, not filled: when
  *  there are projects to read, the projects are the hero and the create button
  *  is a tool on the shelf's edge. `EmptyShelf` deliberately draws the SAME
