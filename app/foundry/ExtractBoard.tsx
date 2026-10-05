@@ -228,8 +228,10 @@ export function ExtractBoard({
           {run.sources.map((s) => (
             <figure key={s.id} className="flex flex-col gap-1.5">
               <Art src={extractFileUrl(run.id, s.file)} alt={s.name} className="aspect-video" />
-              <figcaption className={`font-jetbrains truncate text-label ${s.readback ? "text-emerald-200/80" : s.error ? "text-rose-200/80" : "text-white/40"}`}>
-                {s.readback ? s.readback.render_mode : s.error ? "failed" : "…"}
+              <figcaption
+                className={`font-jetbrains text-label ${s.readback ? "truncate text-emerald-200/80" : s.error ? "break-words text-rose-200/80" : "truncate text-white/40"}`}
+              >
+                {s.readback ? s.readback.render_mode : s.error ? s.error : "…"}
               </figcaption>
             </figure>
           ))}
@@ -460,7 +462,13 @@ function Thumb({
 }
 
 function RoundThumb({ run, style, round, source, onZoom }: { run: string; style: ExtractedStyle; round: ReplicaRound; source: string; onZoom: (z: Zoom) => void }) {
-  if (!round.file) return <Art alt={`r${round.n} failed`} state="failed" className="aspect-video" />;
+  if (!round.file)
+    return (
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Art alt={`r${round.n} failed`} state="failed" className="aspect-video" />
+        {round.error && <span className="font-jetbrains text-label break-words text-rose-200/80">{round.error}</span>}
+      </div>
+    );
   return (
     <Thumb
       src={extractFileUrl(run, round.file)}
@@ -478,7 +486,13 @@ function RoundThumb({ run, style, round, source, onZoom }: { run: string; style:
 }
 
 function TransferThumb({ run, style, transfer, onZoom }: { run: string; style: ExtractedStyle; transfer: Transfer; onZoom: (z: Zoom) => void }) {
-  if (!transfer.file) return <Art alt={`scene ${transfer.scene + 1} failed`} state="failed" className="aspect-video" />;
+  if (!transfer.file)
+    return (
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <Art alt={`scene ${transfer.scene + 1} failed`} state="failed" className="aspect-video" />
+        {transfer.error && <span className="font-jetbrains text-label break-words text-rose-200/80">{transfer.error}</span>}
+      </div>
+    );
   return (
     <Thumb
       src={extractFileUrl(run, transfer.file)}
