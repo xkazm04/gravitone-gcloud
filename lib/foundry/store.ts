@@ -38,6 +38,7 @@ import type {
   Candidate,
   Catalogue,
   CommitResult,
+  ForgeCommitPlan,
   LedgerRow,
   RunDetail,
   RunManifest,
@@ -46,6 +47,7 @@ import type {
   Verdict,
   Verdicts,
 } from "./types";
+import { planForgeCommit } from "./commitPlan";
 
 /** Exported for the disk probe, which writes a probe-prefixed run under it. */
 export const OUT_ROOT = path.join(process.cwd(), "foundry-out", "runs");
@@ -190,8 +192,18 @@ function findingsMarkdown(run: RunManifest, verdicts: Verdicts, decided: Candida
   return rows.join("\n");
 }
 
+/** Preview what a commit will do without touching the disk or indices. */
+export async function previewCommit(id: string, undecidedAs: "reject" | "leave" = "reject"): Promise<ForgeCommitPlan> {
+  const [run, verdicts, catalogue] = await Promise.all([
+    readManifest(id),
+    readVerdicts(id),
+    getCatalogue(),
+  ]);
+  return planForgeCommit(run, verdicts, catalogue, undecidedAs);
+}
+
 /** Delete the rejected, index the decided, leave the kept untouched. */
-export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Promise<CommitResult> {
+export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "reject", token?: string): Promise<CommitResult> {
   const dir = runDir(id);
   const run = await readManifest(id);
   if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
@@ -202,6 +214,13 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
   // disk and fails if they drift.
   if (!["done", "incomplete", "failed"].includes(run.status)) throw new FoundryError("The forge is still running this run.", 409);
   const verdicts = await readVerdicts(id);
+  const catalogue = await getCatalogue();
+
+  const plan = planForgeCommit(run, verdicts, catalogue, undecidedAs);
+  if (token !== undefined && token !== plan.token) {
+    throw new FoundryError("The run state changed since the preview was generated.", 409);
+  }
+
   const at = new Date().toISOString();
 
   // Undecided candidates that never produced a file cannot be kept or
@@ -213,37 +232,12 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
   const decided = withFile.filter((c) => verdicts[c.id]);
   const undecided = withFile.length - decided.length;
 
-  let deleted = 0;
-  for (const c of decided) {
-    if (verdicts[c.id].verdict !== "reject") continue;
-    for (const rel of [c.file, c.sidecar]) {
-      try {
-        await unlink(resolveInRun(id, rel));
-      } catch (e) {
-        if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
-      }
-    }
-    c.deleted = true;
-    deleted++;
-  }
-  const kept = decided.length - deleted;
-
   // The versioned indices. A run's rows are REPLACED, not appended.
   //
-  // This function is not atomic and cannot be: it writes ledger.json, then
-  // styles.json, then findings.md, then verdicts.json, and only at the very
-  // end does run.json say `committed`. A throw anywhere after the ledger
-  // write (a full disk, a Windows watcher holding styles.json) leaves the run
-  // still reading `done` — and the only recovery the UI offers is to press
-  // commit again, which the guard at the top of this function happily allows
-  // because the run is not `committed`. Appending made that retry write every
-  // row a SECOND time: measured, 3 decided candidates became 6 ledger rows and
-  // 6 evidence rows, each identical on every key.
-  //
-  // So each commit clears whatever this run id contributed before and writes
-  // its rows fresh. Other runs are untouched, and on a first commit — where
-  // nothing carries this id — the filter removes nothing and the behaviour is
-  // exactly the append it replaced, multiplicity per seed included.
+  // Indices are written FIRST, before any files are unlinked. If writing
+  // ledger or styles fails (e.g. disk full or styles.json is a directory),
+  // no files have been deleted yet, keeping the banner "The commit failed
+  // and nothing was deleted" honest.
   const ledger = await readJson<{ rows: LedgerRow[] }>(foundryFile("ledger.json"), { rows: [] });
   ledger.rows = ledger.rows.filter((r) => r.run !== id);
   for (const c of decided) {
@@ -262,8 +256,8 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
   }
   await writeJsonAtomic(foundryFile("ledger.json"), ledger);
 
-  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
-  for (const s of catalogue.styles) {
+  const stylesDoc = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
+  for (const s of stylesDoc.styles) {
     // Same rule for the evidence list, and it matters more: `keptScenes`
     // below dedupes by run/scene, so doubled evidence promotes nothing and
     // shows up only as a list twice its true length that no reader can
@@ -275,8 +269,25 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave"): Pr
     const keptScenes = new Set(s.evidence.filter((e) => e.verdict === "keep").map((e) => `${e.run}/${e.scene}`));
     if (keptScenes.size >= 2) s.status = "proven";
   }
-  await writeJsonAtomic(foundryFile("styles.json"), catalogue);
+  await writeJsonAtomic(foundryFile("styles.json"), stylesDoc);
 
+  // File deletions happen SECOND.
+  let deleted = 0;
+  for (const c of decided) {
+    if (verdicts[c.id].verdict !== "reject") continue;
+    for (const rel of [c.file, c.sidecar]) {
+      try {
+        await unlink(resolveInRun(id, rel));
+      } catch (e) {
+        if ((e as NodeJS.ErrnoException).code !== "ENOENT") throw e;
+      }
+    }
+    c.deleted = true;
+    deleted++;
+  }
+  const kept = decided.length - deleted;
+
+  // Manifest, verdicts and findings updated THIRD.
   const findings = findingsMarkdown(run, verdicts, decided);
   await writeFile(path.join(dir, "findings.md"), findings, "utf8");
   await writeJsonAtomic(path.join(dir, "verdicts.json"), verdicts);

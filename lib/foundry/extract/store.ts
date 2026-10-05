@@ -39,7 +39,9 @@ import type { Exemplar, StyleDef } from "../types";
 import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
+import { planExtractCommit } from "../commitPlan";
 import type {
+  ExtractCommitPlan,
   ExtractCommitResult,
   ExtractDetail,
   ExtractManifest,
@@ -306,21 +308,61 @@ export async function putExtractVerdicts(id: string, verdicts: ExtractVerdicts):
   await writeJsonAtomic(path.join(runDir(id), "verdicts.json"), clean);
 }
 
+/** Preview what an extract commit will do without writing to styles.json. */
+export async function previewExtractCommit(id: string): Promise<ExtractCommitPlan> {
+  const [run, verdicts, catalogue] = await Promise.all([
+    readManifest(id),
+    readVerdicts(id),
+    readJson<{ styles: StyleDef[] }>(foundryFile("styles.json"), { styles: [] }),
+  ]);
+  return planExtractCommit(run, verdicts, catalogue);
+}
+
+export type CommitExtractOptions = { verdicts?: ExtractVerdicts; token?: string };
+
 /** Write every KEPT style into the catalogue as a `candidate`, with its
  *  exemplars. Rejected styles are recorded on the run and nothing else. */
-export async function commitExtractRun(id: string, verdictsIn?: ExtractVerdicts): Promise<ExtractCommitResult> {
+export async function commitExtractRun(
+  id: string,
+  verdictsOrOptions?: ExtractVerdicts | CommitExtractOptions | string,
+  tokenArg?: string,
+): Promise<ExtractCommitResult> {
+  let verdictsIn: ExtractVerdicts | undefined;
+  let token: string | undefined;
+
+  if (typeof verdictsOrOptions === "string") {
+    token = verdictsOrOptions;
+  } else if (verdictsOrOptions && typeof verdictsOrOptions === "object") {
+    if ("token" in verdictsOrOptions || "verdicts" in verdictsOrOptions) {
+      const opts = verdictsOrOptions as { verdicts?: ExtractVerdicts; token?: string };
+      verdictsIn = opts.verdicts;
+      token = opts.token;
+    } else {
+      verdictsIn = verdictsOrOptions as ExtractVerdicts;
+    }
+  }
+  if (tokenArg) token = tokenArg;
+
   const run = await readManifest(id);
   if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
   if (run.status !== "done") throw new FoundryError("The run is not finished.", 409);
   if (verdictsIn) await putExtractVerdicts(id, verdictsIn);
   const verdicts = await readVerdicts(id);
+
+  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
+  const plan = planExtractCommit(run, verdicts, catalogue);
+  if (token !== undefined && token !== plan.token) {
+    throw new FoundryError("The run state changed since the preview was generated.", 409);
+  }
+
   const at = new Date().toISOString();
 
   const kept = run.styles.filter((s) => verdicts[s.id]?.verdict === "keep");
   const rejected = run.styles.filter((s) => verdicts[s.id]?.verdict === "reject");
   if (!kept.length) throw new FoundryError("Keep at least one style first.", 400);
 
-  const catalogue = await readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
+  // Replace styles where origin.source === id on retry rather than colliding with own suffix
+  catalogue.styles = catalogue.styles.filter((s) => s.origin?.source !== id);
   const taken = new Set(catalogue.styles.map((s) => s.id));
   const written: string[] = [];
   const models = [run.engines.vision, run.engines.reasoner, run.engines.generator].filter((x): x is string => !!x);

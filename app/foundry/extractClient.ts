@@ -3,6 +3,7 @@
 // server — shrinking a gallery before it is uploaded.
 
 import type {
+  ExtractCommitPlan,
   ExtractCommitResult,
   ExtractDetail,
   ExtractManifest,
@@ -26,8 +27,13 @@ export const stepExtractRun = (id: string, units = 1, retry = false) =>
   call<StepResult>(`/api/foundry/extract/${encodeURIComponent(id)}/step`, { method: "POST", body: JSON.stringify({ units, retry }) });
 export const saveExtractVerdicts = (id: string, verdicts: ExtractVerdicts) =>
   call<{ ok: true }>(`/api/foundry/extract/${encodeURIComponent(id)}/verdicts`, { method: "PUT", body: JSON.stringify({ verdicts }) });
-export const commitExtractRun = (id: string) =>
-  call<ExtractCommitResult>(`/api/foundry/extract/${encodeURIComponent(id)}/commit`, { method: "POST", body: "{}" });
+export const previewExtractCommit = (id: string) =>
+  call<ExtractCommitPlan>(`/api/foundry/extract/${encodeURIComponent(id)}/commit`);
+export const commitExtractRun = (id: string, token?: string) =>
+  call<ExtractCommitResult>(`/api/foundry/extract/${encodeURIComponent(id)}/commit`, {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
 
 /** URL of an extract-run file, for an <img>. */
 export const extractFileUrl = (run: string, rel: string) => fileUrl(run, rel, "extract");

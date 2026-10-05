@@ -296,6 +296,20 @@ export interface ExtractCommitResult {
   written: string[];
 }
 
+export interface ExtractRename {
+  from: string;
+  to: string;
+}
+
+export interface ExtractCommitPlan {
+  counts: { kept: number; rejected: number; undecided: number };
+  written: ExtractRename[];
+  similar: Record<string, string[]>;
+  rejected: string[];
+  undecided: string[];
+  token: string;
+}
+
 /** Upload shape: what the browser or the CLI hands the store to create a run. */
 export interface ExtractUpload {
   name: string;

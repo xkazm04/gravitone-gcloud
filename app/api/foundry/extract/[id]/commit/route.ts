@@ -5,16 +5,35 @@
 
 import { guardAccessOnly } from "@/lib/apiAuth";
 import { FoundryError } from "@/lib/foundry/store";
-import { commitExtractRun } from "@/lib/foundry/extract/store";
+import { commitExtractRun, previewExtractCommit } from "@/lib/foundry/extract/store";
 
 export const runtime = "nodejs";
+
+export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const denied = guardAccessOnly(req);
+  if (denied) return denied;
+  const { id } = await params;
+  try {
+    return Response.json(await previewExtractCommit(id));
+  } catch (e) {
+    if (e instanceof FoundryError) return Response.json({ detail: e.message }, { status: e.status });
+    throw e;
+  }
+}
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const denied = guardAccessOnly(req);
   if (denied) return denied;
   const { id } = await params;
+  let body: { token?: unknown } = {};
   try {
-    return Response.json(await commitExtractRun(id));
+    body = await req.json();
+  } catch {
+    /* empty body allowed */
+  }
+  const token = typeof body.token === "string" ? body.token : undefined;
+  try {
+    return Response.json(await commitExtractRun(id, { token }));
   } catch (e) {
     if (e instanceof FoundryError) return Response.json({ detail: e.message }, { status: e.status });
     throw e;

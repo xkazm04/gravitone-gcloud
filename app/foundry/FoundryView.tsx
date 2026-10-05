@@ -77,7 +77,7 @@ import {
   type TabDef,
 } from "@/components/kit";
 import StudioFrame from "@/components/ui/StudioFrame";
-import type { CommitResult, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
+import type { CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
 
 import { CullGrid } from "./CullGrid";
@@ -87,7 +87,7 @@ import { Fornax } from "./Fornax";
 import { Lightbox } from "./Lightbox";
 import { StylesShelf } from "./StylesShelf";
 import { fetchExtractRuns } from "./extractClient";
-import { commitRun, fetchCatalogue, fetchRun, fetchRuns, fetchTrainingCycles, saveVerdicts } from "./foundryClient";
+import { commitRun, fetchCatalogue, fetchRun, fetchRuns, fetchTrainingCycles, previewCommit, saveVerdicts } from "./foundryClient";
 import { COMMITTABLE, LIVE, STATUS_WORD, runKind } from "./parts";
 
 // THE TABS CARRIED A BLURB AND SO THE BLURB GOT WRITTEN — up to 45 words per
@@ -151,6 +151,8 @@ export default function FoundryView() {
   const [open, setOpen] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [commitPlan, setCommitPlan] = useState<ForgeCommitPlan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(false);
   const [result, setResult] = useState<CommitResult | null>(null);
   const [findingsOpen, setFindingsOpen] = useState(false);
   /** A commit that FAILED, shown inside the dialog that asked for it.
@@ -235,6 +237,7 @@ export default function FoundryView() {
       setFocused(null);
       setOpen(null);
       setFindingsOpen(false);
+      setCommitPlan(null);
       setSave("idle");
       loadDetail(id, false);
     },
@@ -320,14 +323,28 @@ export default function FoundryView() {
     return { total: cs.length, kept, rejected, undecided: cs.length - kept - rejected };
   }, [detail, verdicts]);
 
+  const openConfirm = () => {
+    if (!selected) return;
+    setConfirm(true);
+    setCommitError(null);
+    setLoadingPlan(true);
+    previewCommit(selected, "reject")
+      .then(
+        (p) => setCommitPlan(p),
+        (e) => setCommitError(e instanceof Error ? e.message : "could not prepare commit plan"),
+      )
+      .finally(() => setLoadingPlan(false));
+  };
+
   const doCommit = async () => {
     if (!selected) return;
     setCommitting(true);
     setCommitError(null);
     try {
-      const r = await commitRun(selected, "reject");
+      const r = await commitRun(selected, "reject", commitPlan?.token);
       setResult(r);
       setConfirm(false);
+      setCommitPlan(null);
       setOpen(null);
       loadDetail(selected, false);
       loadRuns();
@@ -542,7 +559,7 @@ export default function FoundryView() {
                 // reader cannot see anywhere else: why THIS button will not go.
                 <>
                   {blocked && <LockNote>{blocked}</LockNote>}
-                  <Button disabled={Boolean(blocked)} onClick={() => setConfirm(true)}>
+                  <Button disabled={Boolean(blocked)} onClick={openConfirm}>
                     Commit the cull
                   </Button>
                 </>
@@ -585,32 +602,37 @@ export default function FoundryView() {
             if (committing) return;
             setConfirm(false);
             setCommitError(null);
+            setCommitPlan(null);
           }}
           title="Commit the cull?"
           eyebrow={<Kicker>{selected}</Kicker>}
           railLabel="commit"
-          // THE RAIL IS THE SENTENCE. "undecided counts as rejected: the cull
-          // is what you chose, not what you skipped" was the app explaining a
-          // picture — kept on one side, rejected on the other, and undecided
-          // hatched into the rejected side because it is not a third outcome.
-          // What stays in prose is the consequence a destructive confirm is
-          // entitled to state, and the path the judgement is written to.
           rail={[
-            { n: counts.kept, tone: "emerald", label: "kept" },
-            { n: counts.rejected, tone: "rose", label: "rejected" },
-            { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+            { n: commitPlan ? commitPlan.counts.kept : counts.kept, tone: "emerald", label: "kept" },
+            { n: commitPlan ? commitPlan.counts.deleted : counts.rejected, tone: "rose", label: "rejected" },
+            { n: commitPlan ? commitPlan.counts.undecided : counts.undecided, tone: "rose", label: "undecided", hatched: true },
           ]}
           consequence={
             <>
               Everything not kept is deleted from disk. Every decided candidate is written to <code>pipeline/foundry/ledger.json</code> and the style catalogue. This cannot be undone.
+              {commitPlan && commitPlan.promotions.length > 0 && (
+                <div className="mt-2 text-xs">
+                  Promoted to proven: <b>{commitPlan.promotions.join(", ")}</b>
+                </div>
+              )}
             </>
           }
-          busy={committing}
-          confirmLabel={`Delete ${counts.rejected + counts.undecided}, keep ${counts.kept}`}
+          busy={committing || loadingPlan}
+          confirmLabel={
+            loadingPlan
+              ? "Preparing..."
+              : `Delete ${(commitPlan ? commitPlan.counts.deleted + commitPlan.counts.undecided : counts.rejected + counts.undecided)}, keep ${commitPlan ? commitPlan.counts.kept : counts.kept}`
+          }
           onConfirm={doCommit}
           onCancel={() => {
             setConfirm(false);
             setCommitError(null);
+            setCommitPlan(null);
           }}
         >
           {commitError && (

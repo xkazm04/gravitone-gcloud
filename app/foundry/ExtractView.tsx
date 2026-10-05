@@ -52,11 +52,11 @@ import {
   TextField,
 } from "@/components/kit";
 import { foreignLease, hasFailures } from "@/lib/foundry/extract/engine";
-import type { ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
+import type { ExtractCommitPlan, ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
 import { usePolling } from "@/lib/usePolling";
 
 import { ExtractBoard } from "./ExtractBoard";
-import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, saveExtractVerdicts, stepExtractRun } from "./extractClient";
+import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, previewExtractCommit, saveExtractVerdicts, stepExtractRun } from "./extractClient";
 import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD, extractKind } from "./parts";
 
 type SaveKind = "idle" | "saving" | "saved" | "error";
@@ -81,6 +81,8 @@ export function ExtractView() {
   const [driveError, setDriveError] = useState<string | null>(null);
   const [confirm, setConfirm] = useState(false);
   const [committing, setCommitting] = useState(false);
+  const [commitPlan, setCommitPlan] = useState<ExtractCommitPlan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(false);
   const [result, setResult] = useState<ExtractCommitResult | null>(null);
   /** A commit that FAILED, shown inside the dialog that asked for it.
    *
@@ -185,6 +187,7 @@ export function ExtractView() {
       setSelected(id);
       setDetail(null);
       setResult(null);
+      setCommitPlan(null);
       setFocused(null);
       setSave("idle");
       if (id) loadDetail(id, false);
@@ -307,14 +310,28 @@ export function ExtractView() {
     return { total: ids.length, kept, rejected, undecided: ids.length - kept - rejected };
   }, [detail, verdicts]);
 
+  const openConfirm = () => {
+    if (!selected) return;
+    setConfirm(true);
+    setCommitError(null);
+    setLoadingPlan(true);
+    previewExtractCommit(selected)
+      .then(
+        (p) => setCommitPlan(p),
+        (e) => setCommitError(e instanceof Error ? e.message : "could not prepare commit plan"),
+      )
+      .finally(() => setLoadingPlan(false));
+  };
+
   const doCommit = async () => {
     if (!selected) return;
     setCommitting(true);
     setCommitError(null);
     try {
-      const r = await commitExtractRun(selected);
+      const r = await commitExtractRun(selected, commitPlan?.token);
       setResult(r);
       setConfirm(false);
+      setCommitPlan(null);
       loadDetail(selected, false);
       loadRuns();
     } catch (e) {
@@ -442,7 +459,7 @@ export function ExtractView() {
               // pill on the strip above already names the run's state.
               <>
                 {blocked && <LockNote>{blocked}</LockNote>}
-                <Button disabled={Boolean(blocked)} onClick={() => setConfirm(true)}>
+                <Button disabled={Boolean(blocked)} onClick={openConfirm}>
                   Commit the kept styles
                 </Button>
               </>
@@ -457,31 +474,56 @@ export function ExtractView() {
           if (committing) return;
           setConfirm(false);
           setCommitError(null);
+          setCommitPlan(null);
         }}
         title="Commit the kept styles?"
         eyebrow={<Kicker>{selected}</Kicker>}
         railLabel="commit"
-        // "Undecided counts as thrown" was prose describing a rail: kept on
-        // one side, thrown on the other, undecided hatched into the thrown
-        // side because it is not a third outcome. What stays is the
-        // destination and the one irreversible fact.
         rail={[
-          { n: counts.kept, tone: "emerald", label: "kept" },
-          { n: counts.rejected, tone: "rose", label: "thrown" },
-          { n: counts.undecided, tone: "rose", label: "undecided", hatched: true },
+          { n: commitPlan ? commitPlan.counts.kept : counts.kept, tone: "emerald", label: "kept" },
+          { n: commitPlan ? commitPlan.counts.rejected : counts.rejected, tone: "rose", label: "thrown" },
+          { n: commitPlan ? commitPlan.counts.undecided : counts.undecided, tone: "rose", label: "undecided", hatched: true },
         ]}
         consequence={
           <>
             The kept styles join <code>pipeline/foundry/styles.json</code> as candidates, with their sources, best replicas and transfers as exemplars. Nothing is deleted, but the verdicts are final.
+            {commitPlan && commitPlan.written.some((w) => w.from !== w.to) && (
+              <div className="mt-2 text-xs">
+                Renamed on catalogue collision:{" "}
+                <b>
+                  {commitPlan.written
+                    .filter((w) => w.from !== w.to)
+                    .map((w) => `${w.from} → ${w.to}`)
+                    .join(", ")}
+                </b>
+              </div>
+            )}
+            {commitPlan &&
+              Object.keys(commitPlan.similar).some((k) => commitPlan.similar[k].length > 0) && (
+                <div className="mt-2 text-xs">
+                  Near duplicates in catalogue:{" "}
+                  <b>
+                    {Object.entries(commitPlan.similar)
+                      .filter(([, dupes]) => dupes.length > 0)
+                      .map(([sid, dupes]) => `${sid} ~ ${dupes.join(", ")}`)
+                      .join("; ")}
+                  </b>
+                </div>
+              )}
           </>
         }
         tone="gold"
-        busy={committing}
-        confirmLabel={`Commit ${counts.kept}, reject ${counts.rejected + counts.undecided}`}
+        busy={committing || loadingPlan}
+        confirmLabel={
+          loadingPlan
+            ? "Preparing..."
+            : `Commit ${commitPlan ? commitPlan.counts.kept : counts.kept}, reject ${(commitPlan ? commitPlan.counts.rejected + commitPlan.counts.undecided : counts.rejected + counts.undecided)}`
+        }
         onConfirm={doCommit}
         onCancel={() => {
           setConfirm(false);
           setCommitError(null);
+          setCommitPlan(null);
         }}
       >
         {commitError && (

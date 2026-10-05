@@ -5,7 +5,7 @@
 // query parameter (see app/api/foundry/file/route.ts for why that is honest).
 
 import { accessHeader } from "@/lib/imagingClient";
-import type { Catalogue, CommitResult, RunDetail, RunSummary, Verdicts } from "@/lib/foundry/types";
+import type { Catalogue, CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdicts } from "@/lib/foundry/types";
 import type { TrainingCommitResult, TrainingCycleDetail, TrainingCycleSummary, TrainingVerdicts } from "@/lib/foundry/training/types";
 
 export class FoundryRequestError extends Error {
@@ -49,10 +49,12 @@ export const saveVerdicts = (id: string, verdicts: Verdicts) =>
     method: "PUT",
     body: JSON.stringify({ verdicts }),
   });
-export const commitRun = (id: string, undecidedAs: "reject" | "leave") =>
+export const previewCommit = (id: string, undecidedAs: "reject" | "leave" = "reject") =>
+  call<ForgeCommitPlan>(`/api/foundry/runs/${encodeURIComponent(id)}/commit?undecidedAs=${undecidedAs}`);
+export const commitRun = (id: string, undecidedAs: "reject" | "leave" = "reject", token?: string) =>
   call<CommitResult>(`/api/foundry/runs/${encodeURIComponent(id)}/commit`, {
     method: "POST",
-    body: JSON.stringify({ undecidedAs }),
+    body: JSON.stringify({ undecidedAs, token }),
   });
 
 /* ── The Dojo's seams — the training loop's cycles, gated by hand ────────── */
