@@ -450,6 +450,11 @@ export interface LawRule {
   gate: string;
 }
 
+/** The floor law rule 12 states, in WCAG contrast; the Palette table flags against this same number. */
+export const MUTING_FLOOR = 10.5;
+/** The two text levels the floor governs. */
+export const MUTING_TOKENS: readonly string[] = ["--al-white", "--al-vellum"];
+
 export const RULES: readonly LawRule[] = [
   { rule: "The app does not explain itself.", gate: "check:narration, and the diff read by a person" },
   { rule: "State rides on tallies, marks and shapes.", gate: "signal/README.md; StatusGlyph, Tally, Magnitude" },
@@ -462,7 +467,7 @@ export const RULES: readonly LawRule[] = [
   { rule: "Colour is a token. A missing hue is a report.", gate: "chrome-colour-literals probe" },
   { rule: "Nothing below 16px; the door's chart labels are 14px.", gate: "check:type; the type-pass audit for the door" },
   { rule: "No italics: the display voice is Instrument Serif upright.", gate: "type-pass audit (italic nodes = 0); the diff" },
-  { rule: "One muting level: white, then vellum, both 11:1 or better.", gate: "/kit contrast table, computed from WORLD_ALMANAC" },
+  { rule: `One muting level: white, then vellum, both ${MUTING_FLOOR}:1 or better on every ground.`, gate: "/kit contrast table, computed from WORLD_ALMANAC" },
   { rule: "No grey text: ash is for rings and rules; a hue as text is lightened toward white, never faded.", gate: "type-pass audit (ash text = 0, text under 7:1 counted); the diff" },
   { rule: "State is never a dimmer colour: locked, disabled, low and rejected take a dashed edge or a rule.", gate: "type-pass audit (dimmed text counted); the diff" },
   { rule: "Every mark has an accessible name.", gate: "StatusGlyph label, aria-label on keys" },

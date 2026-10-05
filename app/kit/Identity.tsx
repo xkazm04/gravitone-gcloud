@@ -29,7 +29,7 @@ import {
 import { ASTERISM_PATH, ASTERISM_STARS, Mark, Wordmark } from "@/components/kit/brand";
 import { WORLD_ALMANAC } from "@/components/ui/tokens";
 
-import { MOTION, NON_COLOUR, TOKEN_ROLES, TYPE_ROLES } from "./catalog";
+import { MOTION, MUTING_FLOOR, MUTING_TOKENS, NON_COLOUR, TOKEN_ROLES, TYPE_ROLES } from "./catalog";
 import { contrast, mixHex, resolve, tierOf } from "./contrast";
 
 const ZOOM = 19;
@@ -141,7 +141,7 @@ function ratioCell(a: string, against: string) {
   return (
     <span className="kr-tier">
       <b>{r.toFixed(1)}</b>
-      <i className={TOKEN_ROLES[a].text && t === "fails" ? "kr-rowflag" : undefined}>{mark}</i>
+      <i className={TOKEN_ROLES[a].text && (t === "fails" || (MUTING_TOKENS.includes(a) && r < MUTING_FLOOR)) ? "kr-rowflag" : undefined}>{mark}</i>
     </span>
   );
 }
