@@ -30,7 +30,7 @@ export type PipState = "filled" | "hollow" | "amber" | "rose";
 
 const PIP: Record<PipState, string> = {
   filled: "bg-cyan-300/90",
-  hollow: "border border-white/25",
+  hollow: "border border-white/55",
   amber: "bg-amber-300/90",
   rose: "bg-rose-400/90",
 };
@@ -38,7 +38,7 @@ const PIP: Record<PipState, string> = {
 /** The pips past `states.length` — capacity that exists but is not spoken for.
  *  Fainter than `hollow`, which means "a slot that is waiting"; this means "a
  *  slot that is merely allowed". */
-const CAPACITY = "border border-white/[0.10]";
+const CAPACITY = "border border-white/35";
 
 /** Neutral, verbless, and only used when the caller supplies nothing. */
 function describe(states: PipState[], total: number): string {
