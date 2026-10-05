@@ -27,6 +27,7 @@ import { useEffect } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
 import { Keycaps } from "@/components/ui/signal";
+import { fieldStatus, type Calibration } from "@/lib/foundry/calibration";
 import type { Candidate, RunManifest, Verdict, VerdictRecord } from "@/lib/foundry/types";
 
 import { artStateOf, workingIdOf } from "./CullGrid";
@@ -92,6 +93,7 @@ export function Lightbox({
   onStep,
   index,
   count,
+  calibration = null,
 }: {
   run: RunManifest;
   candidate: Candidate | null;
@@ -103,6 +105,8 @@ export function Lightbox({
   /** Position of the open candidate in the run, for the ends of the arrows. */
   index: number;
   count: number;
+  /** The grader measured against the human ledger (lib/foundry/calibration.ts). */
+  calibration?: Calibration | null;
 }) {
   const artState = artStateOf(candidate ?? undefined, candidate ? workingIdOf(run) === candidate.id : false);
   // Verdicts exist only on a picture that is drawn: the tile shows no stamp on any
@@ -268,7 +272,7 @@ export function Lightbox({
               <section className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h3 className="font-instrument text-xl text-white">Shot · craft fidelity</h3>
-                  <ScorePill label="craft" value={g.craft?.score} />
+                  <ScorePill label="craft" value={g.craft?.score} status={fieldStatus(calibration, "craft", candidate?.mechanism)} />
                 </div>
                 <GradeTable
                   head={["field", "source", "candidate"]}
@@ -285,7 +289,7 @@ export function Lightbox({
               <section className="rounded-xl border border-white/8 bg-white/[0.02] p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h3 className="font-instrument text-xl text-white">Look · style adherence</h3>
-                  <ScorePill label="style" value={g.style?.score} />
+                  <ScorePill label="style" value={g.style?.score} status={fieldStatus(calibration, "style_score", candidate?.mechanism)} />
                 </div>
                 <GradeTable
                   head={["field", "wanted", "candidate"]}

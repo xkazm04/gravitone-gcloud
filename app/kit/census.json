@@ -370,6 +370,7 @@
         "app/_phases/script/trailer/MovementSection.tsx",
         "app/_phases/script/trailer/PromiseLedger.tsx",
         "app/articles/ArticlesView.tsx",
+        "app/foundry/ui.tsx",
         "app/library/LibraryAtelier.tsx",
         "app/library/MoveDialog.tsx",
         "app/library/PresetRail.tsx",
@@ -1618,6 +1619,7 @@
       "parts": [
         "Button",
         "CHIP_CLASS",
+        "Ghost",
         "Hint",
         "Keycaps",
         "Modal",

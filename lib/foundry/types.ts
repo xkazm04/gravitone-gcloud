@@ -22,6 +22,10 @@ export interface StyleReadback {
 
 export interface Grade {
   grader: string;
+  /** grade.py's schema + prompt digest (forge.py stamps it). Absent on grades
+   *  written before the stamp: lib/foundry/calibration.ts reads those as the
+   *  `unstamped` series, never as the current grader. */
+  grader_digest?: string;
   at: string;
   /** Craft fidelity against the source frame's annotation. Null = unmeasured. */
   craft: { score: number | null; per_field: Record<string, number>; annotation: Record<string, unknown> } | null;
@@ -192,6 +196,11 @@ export interface LedgerRow {
   style_score: number | null;
   has_text: boolean | null;
   at: string;
+  /** Who graded the row's scores -- the grade's `grader` and `grader_digest`.
+   *  Optional: no commit writes them yet, and every row before that is the
+   *  `unstamped` calibration series (lib/foundry/calibration.ts). */
+  grader?: string | null;
+  grader_digest?: string | null;
 }
 
 export interface CommitResult {

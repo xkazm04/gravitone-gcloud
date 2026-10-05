@@ -30,6 +30,7 @@ import { Maximize2 } from "lucide-react";
 import { Fragment, useEffect, useMemo } from "react";
 
 import { useRoving } from "@/components/kit/useRoving";
+import { fieldStatus, type Calibration } from "@/lib/foundry/calibration";
 import type { Candidate, RunManifest, Verdict, Verdicts } from "@/lib/foundry/types";
 
 import { fileUrl } from "./foundryClient";
@@ -90,6 +91,7 @@ export function CullGrid({
   onVerdict,
   onOpen,
   keysEnabled,
+  calibration = null,
 }: {
   run: RunManifest;
   verdicts: Verdicts;
@@ -100,6 +102,8 @@ export function CullGrid({
   onVerdict: (ids: string | string[], v: Verdict | null) => void;
   onOpen: (id: string) => void;
   keysEnabled: boolean;
+  /** The grader measured against the human ledger (lib/foundry/calibration.ts). */
+  calibration?: Calibration | null;
 }) {
   const columns = useMemo(
     () => run.plan.mechanisms.flatMap((m) => run.plan.seeds.map((seed) => ({ mechanism: m, seed }))),
@@ -281,6 +285,7 @@ export function CullGrid({
                 onFocus={() => onFocus(id)}
                 onOpen={() => onOpen(id)}
                 onVerdict={(v) => onVerdict(id, v)}
+                calibration={calibration}
               />
             );
           });
@@ -386,6 +391,7 @@ function CandidateTile({
   onFocus,
   onOpen,
   onVerdict,
+  calibration,
 }: {
   run: string;
   id: string;
@@ -399,6 +405,7 @@ function CandidateTile({
   onFocus: () => void;
   onOpen: () => void;
   onVerdict: (v: Verdict | null) => void;
+  calibration: Calibration | null;
 }) {
   const state = artStateOf(candidate, working);
   const ready = state === "ready" && candidate !== undefined;
@@ -479,8 +486,8 @@ function CandidateTile({
         {ready && g && (
           <ScoreMeters
             rows={[
-              { label: "craft", value: g.craft?.score },
-              { label: "style", value: g.style?.score },
+              { label: "craft", value: g.craft?.score, status: fieldStatus(calibration, "craft", candidate.mechanism) },
+              { label: "style", value: g.style?.score, status: fieldStatus(calibration, "style_score", candidate.mechanism) },
             ]}
           />
         )}

@@ -27,13 +27,17 @@
 
 import type { ReactNode } from "react";
 
-export type GhostShape = "row" | "tile" | "slot" | "card";
+// `bar` is a meter's track with no fill: a score that is on screen but is not a
+// measurement of anything (app/foundry/ui.tsx draws a grade field the human
+// ledger shows to be inverted or at chance this way -- lib/foundry/calibration.ts).
+export type GhostShape = "row" | "tile" | "slot" | "card" | "bar";
 
 const SHAPE: Record<GhostShape, string> = {
   row: "h-14 w-full rounded-xl",
   tile: "aspect-square w-full rounded-xl",
   slot: "h-24 w-full rounded-lg",
   card: "h-40 w-full rounded-2xl",
+  bar: "h-1.5 w-full rounded-full",
 };
 
 export function Ghost({
