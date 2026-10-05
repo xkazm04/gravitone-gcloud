@@ -17,18 +17,17 @@
 // (registry: concurrency-guards#race-catalog-with-two-histories). The legal
 // history is one: both commits' changes present.
 //
-// ── EXPECTED RED, MARKED test.fail() ────────────────────────────────────────
-// Cases 4 and 5 FAIL on today's stores; that red is the finding, measured
-// 2026-10-05. They are marked `test.fail()` so `npm test` stays green while
-// the defect is open. THE FIX IS foundry-engine-A
-// (docs/concepts/moonshots-2026-10-05/05-asset-management.md: `withCatalogue`,
-// one lock over the catalogue, plan computed inside it). When it lands, these
-// cases pass, Playwright reports "expected to fail, but passed", and the lane
-// goes red until the `test.fail()` lines below are deleted — the flip is the
-// proof the lock works. The harness does not hang under a lock: an actor that
-// blocks outside the port is treated as stalled and the other actor runs.
-// ONE CONDITION for that flip: the fixed commits must keep their index reads
-// and writes on lib/foundry/fsPort, or the boundary guard below fails instead.
+// ── WAS EXPECTED RED; FLIPPED BY foundry-engine-A ───────────────────────────
+// Cases 4 and 5 FAILED on the stores as they were on 2026-10-05 (both orders,
+// four lost updates); they were marked `test.fail()` while the defect was
+// open. foundry-engine-A (lib/foundry/catalogue.ts `withCatalogue`: one lock
+// over the catalogue, the plan computed inside it) closed it, and the
+// `test.fail()` lines were deleted in the same change — the flip is the proof
+// the lock works. Under the lock the second actor blocks OUTSIDE the port,
+// which the interleaver reads as stalled; the schedule degrades to serial and
+// the log line reports `window parked/stalled`.
+// ONE CONDITION keeps this lane honest: the commits must keep their index
+// reads and writes on lib/foundry/fsPort, or the boundary guard below fails.
 
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -220,10 +219,6 @@ function settled<T>(o: Outcome<T>, who: string): T {
 
 for (const first of ["forge", "extract"] as const) {
   test(`case 4 (${first} writes first): a forge commit and an extract commit that both read styles.json keep BOTH changes (I4)`, async () => {
-    // RED TODAY — the lost update this lane exists to show. Fix: foundry-engine-A
-    // (withCatalogue: one lock, plan inside it). Delete this line when it lands.
-    test.fail();
-
     writeFileSync(path.join(foundryDir(), "styles.json"), JSON.stringify({ styles: [styleDef("haze")] }), "utf8");
     const runId = forgeRun(`probe-race-forge-${process.pid}`);
     const exId = extractRun(`probe-race-ex-${process.pid}`);
@@ -258,11 +253,6 @@ for (const first of ["forge", "extract"] as const) {
 
 for (const first of ["c1", "c2"] as const) {
   test(`case 5 (${first} writes first): two commitCycle calls that both read training-ledger.json keep BOTH cycles' rows (I4)`, async () => {
-    // RED TODAY — same lost update on the Dojo's cross-machine channel. Fix:
-    // foundry-engine-A (withCatalogue covers training-ledger.json). Delete this
-    // line when it lands.
-    test.fail();
-
     const c1 = cycle(`probe-race-c1-${process.pid}`);
     const c2 = cycle(`probe-race-c2-${process.pid}`);
     try {

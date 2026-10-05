@@ -247,6 +247,87 @@ def test_list_survives_a_row_from_another_schema():
     check("--list prints every readback row", len(buf.getvalue().strip().splitlines()), 3)
 
 
+# ── the catalogue lock: one fence for TS and Python ─────────────────────────
+
+def test_catalogue_lock_speaks_the_apps_protocol():
+    """acquire.py and the app's commits (lib/foundry/catalogue.ts) write the
+    same styles.json; they exclude each other only if they agree on the lock
+    file's name, its staleness bound and its wait bound. The numbers are read
+    out of the TypeScript, not restated, so a change on one side fails here."""
+    import os
+    import time as _time
+    L = load("catalogue_lock")
+    repo = HERE.parent.parent
+    disk_tx = (repo / "lib" / "diskTx.ts").read_text(encoding="utf-8")
+    catalogue_ts = (repo / "lib" / "foundry" / "catalogue.ts").read_text(encoding="utf-8")
+    import re
+    timing = re.search(r"DEFAULT_LOCK_TIMING[^=]*=\s*\{\s*staleMs:\s*([\d_]+),\s*waitMs:\s*([\d_]+)", disk_tx)
+    check("catalogue lock: lib/diskTx.ts declares DEFAULT_LOCK_TIMING", bool(timing), True)
+    if timing:
+        check("catalogue lock: the staleness bound agrees with the app",
+              int(timing.group(1).replace("_", "")), int(L.STALE_S * 1000))
+        check("catalogue lock: the wait bound agrees with the app",
+              int(timing.group(2).replace("_", "")), int(L.WAIT_S * 1000))
+    check("catalogue lock: the lock file name agrees with the app",
+          f'CATALOGUE_LOCK = "{L.LOCK_NAME}"' in catalogue_ts, True)
+    check("catalogue lock: the journal name agrees with the app",
+          f'CATALOGUE_JOURNAL = "{L.JOURNAL_NAME}"' in catalogue_ts, True)
+
+    root = Path(tempfile.mkdtemp())
+    lock = root / L.LOCK_NAME
+    with L.catalogue_lock(root, by="selftest"):
+        held = json.loads(lock.read_text(encoding="utf-8"))
+        check("catalogue lock: the body names its holder", (held["pid"], held["by"]), (os.getpid(), "selftest"))
+        check("catalogue lock: this process holds it", L.holds_lock(root), True)
+        try:
+            with L.catalogue_lock(root, wait_s=0.15):
+                outcome = "entered twice"
+        except L.CatalogueLocked as e:
+            outcome = "refused" if str(lock) in str(e) else f"refused without naming the lock: {e}"
+        check("catalogue lock: a second holder past the wait bound is refused, naming the file", outcome, "refused")
+    check("catalogue lock: leaving the block releases it", lock.exists(), False)
+
+    lock.write_text('{"pid": 1, "at": "2026-01-01T00:00:00Z", "by": "dead"}', encoding="utf-8")
+    old = _time.time() - 120
+    os.utime(lock, (old, old))
+    with L.catalogue_lock(root, wait_s=0.5):
+        took = L.holds_lock(root)
+    check("catalogue lock: a lock older than the staleness bound is broken", took, True)
+
+
+def test_acquire_journals_and_revisions_under_the_lock():
+    """An acquire is a catalogue transaction like any app commit: one journal
+    line ahead of the write, styles.json `_rev` advanced from the newest of
+    the file and the journal, and no save at all without the lock."""
+    A = load("acquire")
+    root = Path(tempfile.mkdtemp())
+    (root / "styles.json").write_text(json.dumps({"_rev": 4, "styles": []}), encoding="utf-8")
+    (root / "catalogue-journal.jsonl").write_text(json.dumps({"rev": 6, "op": "extract-commit", "run": "r"}) + "\n",
+                                                  encoding="utf-8")
+    rb = root / "style.jsonl"
+    rb.write_text(json.dumps(readback_row("src-a")) + "\n", encoding="utf-8")
+    A.STYLES, A.READBACKS = root / "styles.json", rb
+    argv, sys.argv = sys.argv, ["acquire.py", "--source", "src-a", "--id", "acq-a", "--name", "A"]
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            A.main()
+    finally:
+        sys.argv = argv
+    cat = json.loads((root / "styles.json").read_text(encoding="utf-8"))
+    lines = [json.loads(l) for l in (root / "catalogue-journal.jsonl").read_text(encoding="utf-8").splitlines() if l.strip()]
+    check("acquire: the style lands", [s["id"] for s in cat["styles"]], ["acq-a"])
+    check("acquire: _rev is minted past the newest journal line", cat["_rev"], 7)
+    check("acquire: exactly one journal line, naming the transaction",
+          [(l["rev"], l["op"], l["run"], l["ids"], l["by"]) for l in lines[1:]], [(7, "acquire", "src-a", ["acq-a"], "acquire.py")])
+    check("acquire: the lock is released", (root / ".catalogue.lock").exists(), False)
+    try:
+        A.save_catalogue({"styles": []}, "src-b", ["b"])
+        outcome = "saved without the lock"
+    except RuntimeError:
+        outcome = "refused"
+    check("acquire: save_catalogue refuses to run outside the lock", outcome, "refused")
+
+
 # ── intake: the paid readback ───────────────────────────────────────────────
 
 def test_an_unparseable_readback_is_kept_on_disk():
@@ -760,6 +841,8 @@ TESTS = [
     test_a_run_that_gave_up_mid_generation_does_not_report_done,
     test_a_grade_names_the_grader_version_not_just_the_model,
     test_list_survives_a_row_from_another_schema,
+    test_catalogue_lock_speaks_the_apps_protocol,
+    test_acquire_journals_and_revisions_under_the_lock,
     test_an_unparseable_readback_is_kept_on_disk,
     test_frame_manifest_v2_schema_write_and_read_v1_normalization,
     test_shot_index_and_beat_of_mapping,

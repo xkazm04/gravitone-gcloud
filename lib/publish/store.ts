@@ -28,8 +28,10 @@
 // silently replaced with an empty one — that would erase a calendar — it
 // throws, and the caller reports it.
 
-import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
+
+import { exclusiveSection } from "../diskTx";
 
 import type { MetricSnapshot, Publication, ScheduleSlot } from "./types";
 
@@ -125,58 +127,30 @@ export async function writeJsonAtomic(file: string, value: unknown): Promise<voi
 }
 
 // ── locking ──────────────────────────────────────────────────────────────────
+//
+// The queue + exclusive-create lock live in lib/diskTx.ts now (the foundry
+// catalogue is the third store to need them); the timing and the refusal text
+// are this store's, unchanged.
 
-const LOCK_STALE_MS = 30_000;
-const LOCK_WAIT_MS = 10_000;
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const LOCK_TIMING = { staleMs: 30_000, waitMs: 10_000 };
 
-async function acquireLock(): Promise<() => Promise<void>> {
-  const root = storeRoot();
-  await mkdir(root, { recursive: true });
-  const lock = path.join(root, ".lock");
-  const started = Date.now();
-  for (;;) {
-    try {
-      const fh = await open(lock, "wx");
-      await fh.writeFile(JSON.stringify({ pid: process.pid, at: new Date().toISOString() }));
-      await fh.close();
-      return () => rm(lock, { force: true });
-    } catch (e) {
-      if ((e as NodeJS.ErrnoException).code !== "EEXIST") throw e;
-      // A holder that died mid-mutation leaves the file behind; a mutation is
-      // milliseconds of JSON, so a lock this old has no living owner.
-      const age = await stat(lock).then((s) => Date.now() - s.mtimeMs).catch(() => 0);
-      if (age > LOCK_STALE_MS) {
-        await rm(lock, { force: true });
-        continue;
-      }
-      if (Date.now() - started > LOCK_WAIT_MS) {
-        throw new StoreError(`the publish store is locked (${lock}) and the holder did not release it in ${LOCK_WAIT_MS} ms`);
-      }
-      await sleep(20 + Math.random() * 30);
-    }
-  }
-}
-
-let queue: Promise<unknown> = Promise.resolve();
+const exclusive = exclusiveSection(
+  () => path.join(storeRoot(), ".lock"),
+  () => ({
+    timing: LOCK_TIMING,
+    onTimeout: (lock, waitMs) => new StoreError(`the publish store is locked (${lock}) and the holder did not release it in ${waitMs} ms`),
+  }),
+);
 
 /** Run `fn` with exclusive access to the store, in this process AND across
  *  processes. Every read-modify-write of the store goes through here. */
 export function withStore<T>(fn: (tx: StoreTx) => Promise<T>): Promise<T> {
-  const run = queue.then(async () => {
-    const release = await acquireLock();
-    try {
-      const tx = new StoreTx();
-      const out = await fn(tx);
-      await tx.commit();
-      return out;
-    } finally {
-      await release();
-    }
+  return exclusive(async () => {
+    const tx = new StoreTx();
+    const out = await fn(tx);
+    await tx.commit();
+    return out;
   });
-  // the queue survives a failed mutation; the failure belongs to its caller
-  queue = run.catch(() => undefined);
-  return run;
 }
 
 /** A transaction: loads each file at most once, writes back only what was touched. */

@@ -1,4 +1,6 @@
-// GET /api/foundry/styles — the style catalogue and the ledger behind it.
+// GET /api/foundry/styles — the style catalogue, the ledger behind it, and
+// `_rev`, the catalogue revision (lib/foundry/catalogue.ts), so a client can
+// tell the catalogue moved since it last read it.
 
 import { guardAccessOnly } from "@/lib/apiAuth";
 import { getCatalogue } from "@/lib/foundry/store";

@@ -140,6 +140,10 @@ __pycache__/
 # forge logs (pipeline/foundry/forge.py > logs/)
 /pipeline/foundry/logs/
 
+# The catalogue lock (lib/foundry/catalogue.ts, pipeline/foundry/catalogue_lock.py):
+# process state, never content. catalogue-journal.jsonl beside it IS versioned.
+/pipeline/foundry/.catalogue.lock
+
 # vlm-probe generated plates and clips. The spike's stills and video are
 # regenerable output, not source: every lane keeps its lane.json (seed, the
 # verbatim character/location clauses, steps, and where the reference joins),

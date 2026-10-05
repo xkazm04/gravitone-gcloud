@@ -39,6 +39,7 @@ import type { Exemplar, StyleDef } from "../types";
 import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
+import { withCatalogue } from "../catalogue";
 import { planExtractCommit } from "../commitPlan";
 import { foundryFs } from "../fsPort";
 import type {
@@ -344,69 +345,75 @@ export async function commitExtractRun(
   }
   if (tokenArg) token = tokenArg;
 
-  // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
-  const fs = foundryFs();
-  const run = await readManifest(id);
-  if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
-  if (run.status !== "done") throw new FoundryError("The run is not finished.", 409);
-  if (verdictsIn) await putExtractVerdicts(id, verdictsIn);
-  const verdicts = await readVerdicts(id);
+  // One catalogue transaction (lib/foundry/catalogue.ts): the status check,
+  // the plan, its token comparison and the styles.json write share one lock,
+  // so a forge commit or a second extract commit cannot land in between.
+  return withCatalogue({ op: "extract-commit", run: id }, async (tx) => {
+    // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
+    const fs = foundryFs();
+    const run = await readManifest(id);
+    if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
+    if (run.status !== "done") throw new FoundryError("The run is not finished.", 409);
+    if (verdictsIn) await putExtractVerdicts(id, verdictsIn);
+    const verdicts = await readVerdicts(id);
 
-  const catalogue = await fs.readJson<{ styles: StyleDef[] } & Record<string, unknown>>(foundryFile("styles.json"), { styles: [] });
-  const plan = planExtractCommit(run, verdicts, catalogue);
-  if (token !== undefined && token !== plan.token) {
-    throw new FoundryError("The run state changed since the preview was generated.", 409);
-  }
-
-  const at = new Date().toISOString();
-
-  const kept = run.styles.filter((s) => verdicts[s.id]?.verdict === "keep");
-  const rejected = run.styles.filter((s) => verdicts[s.id]?.verdict === "reject");
-  if (!kept.length) throw new FoundryError("Keep at least one style first.", 400);
-
-  // Replace styles where origin.source === id on retry rather than colliding with own suffix
-  catalogue.styles = catalogue.styles.filter((s) => s.origin?.source !== id);
-  const taken = new Set(catalogue.styles.map((s) => s.id));
-  const written: string[] = [];
-  const models = [run.engines.vision, run.engines.reasoner, run.engines.generator].filter((x): x is string => !!x);
-
-  for (const s of kept) {
-    let cid = s.id;
-    for (let i = 2; taken.has(cid); i++) cid = `${s.id}-${i}`;
-    taken.add(cid);
-    const exemplars: Exemplar[] = [];
-    for (const mid of s.members) {
-      const src = run.sources.find((x) => x.id === mid);
-      if (src) exemplars.push({ kind: "extract", run: id, file: src.file, role: "source" });
+    const catalogue = await tx.read("styles.json");
+    const plan = planExtractCommit(run, verdicts, catalogue);
+    if (token !== undefined && token !== plan.token) {
+      throw new FoundryError("The run state changed since the preview was generated.", 409);
     }
-    for (const r of s.replicas) {
-      const best = [...r.rounds].filter((x) => x.file).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
-      // The settle reason travels with the exemplar. Without it a replica the
-      // loop GAVE UP on enters the catalogue as evidence the recipe works,
-      // indistinguishable from one that hit the target.
-      if (best?.file) exemplars.push({ kind: "extract", run: id, file: best.file, role: "replica", settled: settleReason(run, r.rounds) ?? undefined });
+
+    const at = new Date().toISOString();
+
+    const kept = run.styles.filter((s) => verdicts[s.id]?.verdict === "keep");
+    const rejected = run.styles.filter((s) => verdicts[s.id]?.verdict === "reject");
+    if (!kept.length) throw new FoundryError("Keep at least one style first.", 400);
+
+    // Replace styles where origin.source === id on retry rather than colliding with own suffix
+    catalogue.styles = catalogue.styles.filter((s) => s.origin?.source !== id);
+    const taken = new Set(catalogue.styles.map((s) => s.id));
+    const written: string[] = [];
+    const models = [run.engines.vision, run.engines.reasoner, run.engines.generator].filter((x): x is string => !!x);
+
+    for (const s of kept) {
+      let cid = s.id;
+      for (let i = 2; taken.has(cid); i++) cid = `${s.id}-${i}`;
+      taken.add(cid);
+      const exemplars: Exemplar[] = [];
+      for (const mid of s.members) {
+        const src = run.sources.find((x) => x.id === mid);
+        if (src) exemplars.push({ kind: "extract", run: id, file: src.file, role: "source" });
+      }
+      for (const r of s.replicas) {
+        const best = [...r.rounds].filter((x) => x.file).sort((a, b) => (b.score ?? -1) - (a.score ?? -1))[0];
+        // The settle reason travels with the exemplar. Without it a replica the
+        // loop GAVE UP on enters the catalogue as evidence the recipe works,
+        // indistinguishable from one that hit the target.
+        if (best?.file) exemplars.push({ kind: "extract", run: id, file: best.file, role: "replica", settled: settleReason(run, r.rounds) ?? undefined });
+      }
+      for (const t of s.transfers) if (t.file) exemplars.push({ kind: "extract", run: id, file: t.file, role: "transfer" });
+
+      catalogue.styles.push({
+        id: cid,
+        name: s.name,
+        family: s.family,
+        status: "candidate",
+        origin: { kind: "extracted", source: id, models },
+        observables: { ...s.observables },
+        recipe: s.recipe,
+        negative: s.negative,
+        evidence: [],
+        exemplars,
+      });
+      written.push(cid);
     }
-    for (const t of s.transfers) if (t.file) exemplars.push({ kind: "extract", run: id, file: t.file, role: "transfer" });
+    await tx.begin(written);
+    await tx.write("styles.json");
 
-    catalogue.styles.push({
-      id: cid,
-      name: s.name,
-      family: s.family,
-      status: "candidate",
-      origin: { kind: "extracted", source: id, models },
-      observables: { ...s.observables },
-      recipe: s.recipe,
-      negative: s.negative,
-      evidence: [],
-      exemplars,
-    });
-    written.push(cid);
-  }
-  await fs.writeJsonAtomic(foundryFile("styles.json"), catalogue);
-
-  run.status = "committed";
-  run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
-  run.log.push({ at, msg: `committed: ${written.join(", ")} → styles.json` });
-  await fs.writeJsonAtomic(path.join(runDir(id), "run.json"), run);
-  return { kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
+    run.status = "committed";
+    run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
+    run.log.push({ at, msg: `committed: ${written.join(", ")} → styles.json` });
+    await fs.writeJsonAtomic(path.join(runDir(id), "run.json"), run);
+    return { kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
+  });
 }
