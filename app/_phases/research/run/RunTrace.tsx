@@ -85,6 +85,9 @@ export default function RunTrace({
   const running = state.status === "running";
   const died = failedStepId ? TRACE.find((s) => s.id === failedStepId) : undefined;
   const last = emitted[emitted.length - 1];
+  // Abort is the creator's own act, not a process death: the row says where
+  // they stopped, in the amber the expert face uses for a non-defect ending.
+  const stoppedByUser = state.status === "failed" && state.stoppedByUser === true;
 
   return (
     <ol className={className}>
@@ -131,16 +134,16 @@ export default function RunTrace({
         <li data-testid="trace-failed-step">
           {(!last || last.phase !== died.phase) && <PhaseHeading phase={died.phase} />}
           <div className={`${ROW} py-1`}>
-            <span className="font-jetbrains text-label text-rose-300/70">
+            <span className={`font-jetbrains text-label ${stoppedByUser ? "text-amber-300/70" : "text-rose-300/70"}`}>
               {KIND_LABEL[died.kind]}
             </span>
-            <span title={died.label} className="truncate text-label text-rose-200/80">
+            <span title={died.label} className={`truncate text-label ${stoppedByUser ? "text-amber-200/80" : "text-rose-200/80"}`}>
               {died.label}
             </span>
-            <span className="font-jetbrains truncate text-label text-rose-300">
-              process ended here
+            <span className={`font-jetbrains truncate text-label ${stoppedByUser ? "text-amber-300" : "text-rose-300"}`}>
+              {stoppedByUser ? "stopped here" : "process ended here"}
             </span>
-            <span aria-hidden className="font-jetbrains text-right text-label text-rose-300/50">
+            <span aria-hidden className={`font-jetbrains text-right text-label ${stoppedByUser ? "text-amber-300/50" : "text-rose-300/50"}`}>
               —
             </span>
           </div>

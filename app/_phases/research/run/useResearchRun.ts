@@ -176,7 +176,13 @@ export function useResearchRun(projectId: string) {
     if (cur.state.status !== "running") return;
     finish(
       projectId,
-      { status: "failed", elapsedMs: cur.state.elapsedMs, atStep: cur.state.done, error: STOPPED },
+      {
+        status: "failed",
+        elapsedMs: cur.state.elapsedMs,
+        atStep: cur.state.done,
+        error: STOPPED,
+        stoppedByUser: true,
+      },
       false,
     );
   }, [projectId]);

@@ -314,13 +314,23 @@ export default function RunStage({
                 (a successful run with no video in it, not a defect). */}
             {run.state.status === "failed" && (
               <div className="mt-4 border-t border-white/8 pt-4">
-                <Notice severity="error" title="the run did not finish">
+                {/* Abort is the only way a creator reaches `failed`, so it is
+                    drawn as the creator's own stop (polite, amber); the rose
+                    alert is kept for a process that really died. */}
+                <Notice
+                  severity={run.state.stoppedByUser ? "warning" : "error"}
+                  title={run.state.stoppedByUser ? "stopped" : "the run did not finish"}
+                >
                   <p data-testid="run-error">{run.state.error}</p>
                   <button
                     type="button"
                     onClick={startResearch}
                     disabled={!topic.trim()}
-                    className="font-jetbrains mt-2 rounded-full border border-rose-400/40 px-3.5 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/10 disabled:opacity-40"
+                    className={`font-jetbrains mt-2 rounded-full border px-3.5 py-1.5 text-label transition disabled:opacity-40 ${
+                      run.state.stoppedByUser
+                        ? "border-amber-400/40 text-amber-200 hover:bg-amber-400/10"
+                        : "border-rose-400/40 text-rose-200 hover:bg-rose-400/10"
+                    }`}
                   >
                     run it again
                   </button>

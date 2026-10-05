@@ -156,6 +156,10 @@ const STATUS_TONE: Record<RunState["status"], string> = {
   failed: "text-rose-300/80",
 };
 
+function statusToneOf(state: RunState): string {
+  return state.status === "failed" && state.stoppedByUser ? "text-amber-300/80" : STATUS_TONE[state.status];
+}
+
 function statusOf(state: RunState): string {
   switch (state.status) {
     case "running":
@@ -165,6 +169,7 @@ function statusOf(state: RunState): string {
     case "no-tension":
       return `no tension · ${secs(state.elapsedMs)}`;
     case "failed":
+      if (state.stoppedByUser) return `stopped · ${secs(state.elapsedMs)}`;
       return `ended early · ${secs(state.elapsedMs)}`;
     default:
       return "";
@@ -184,7 +189,7 @@ export function RunStatus({ state }: { state: RunState }) {
     <span
       data-testid="run-status"
       aria-live="polite"
-      className={`font-jetbrains text-label tracking-[0.14em] uppercase ${STATUS_TONE[state.status]}`}
+      className={`font-jetbrains text-label tracking-[0.14em] uppercase ${statusToneOf(state)}`}
     >
       {statusOf(state)}
     </span>

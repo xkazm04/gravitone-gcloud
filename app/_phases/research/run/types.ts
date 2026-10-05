@@ -37,4 +37,13 @@ export type RunState =
   | { status: "running"; done: number; elapsedMs: number }
   | { status: "done"; elapsedMs: number }
   | { status: "no-tension"; elapsedMs: number; reason: string }
-  | { status: "failed"; elapsedMs: number; atStep: number; error: string };
+  | {
+      status: "failed";
+      elapsedMs: number;
+      atStep: number;
+      error: string;
+      /** The creator pressed Abort. Not a process death: it renders as a stop
+       *  (warning, "stopped here"), and the crash vocabulary stays for a real
+       *  failure. */
+      stoppedByUser?: true;
+    };
