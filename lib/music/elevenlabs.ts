@@ -273,33 +273,47 @@ async function composeCall(plan: MusicPlan, totalMs: number, timeoutMs: number):
 // the feature set exactly as shipped; production surfaces keep going through
 // the doctrine-shaped composeMusic path.
 
-async function vendorFetch(url: string, body: unknown): Promise<Response> {
+// `read` consumes the body INSIDE the deadline, for the reason composeCall's
+// comment gives: the fetch resolves on the response HEAD, and clearing the timer
+// there left the body read - the megabyte of audio - with no deadline at all. A
+// vendor that answered 200 and stalled mid-stream was not a timeout; it was a
+// handler that sat until maxDuration (moonshot backlog Q2, 2026-10-05, pinned by
+// tests/golden-path/music-body-deadline.probe.spec.ts).
+async function vendorFetch<T>(url: string, body: unknown, read: (res: Response) => Promise<T>): Promise<T> {
   const key = keyOrThrow();
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
   let res: Response;
   try {
-    res = await fetch(url, {
-      method: "POST",
-      headers: { "xi-api-key": key, "content-type": "application/json" },
-      body: JSON.stringify(body),
-      signal: ctrl.signal,
-    });
-  } catch (e) {
-    throw new MusicError(
-      (e as Error).name === "AbortError" ? "timeout" : "failed",
-      (e as Error).name === "AbortError"
-        ? `The vendor did not answer within ${TIMEOUT_MS / 1000}s.`
-        : `The vendor could not be reached: ${(e as Error).message}`,
-    );
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { "xi-api-key": key, "content-type": "application/json" },
+        body: JSON.stringify(body),
+        signal: ctrl.signal,
+      });
+    } catch (e) {
+      throw new MusicError(
+        (e as Error).name === "AbortError" ? "timeout" : "failed",
+        (e as Error).name === "AbortError"
+          ? `The vendor did not answer within ${TIMEOUT_MS / 1000}s.`
+          : `The vendor could not be reached: ${(e as Error).message}`,
+      );
+    }
+    if (!res.ok) {
+      const detail = await res.text().catch(() => "");
+      throw vendorFailure(res.status, detail, "request");
+    }
+    try {
+      return await read(res);
+    } catch (e) {
+      if ((e as Error).name === "AbortError")
+        throw new MusicError("timeout", `The vendor began answering but did not finish within ${TIMEOUT_MS / 1000}s.`);
+      throw e;
+    }
   } finally {
     clearTimeout(timer);
   }
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw vendorFailure(res.status, detail, "request");
-  }
-  return res;
 }
 
 /** Draft a composition plan from a prompt — COSTS NO CREDITS, which makes it
@@ -324,15 +338,20 @@ async function draftPlanCall(req: {
   negativeStyle?: string;
   sourcePlan?: WirePlan;
 }): Promise<WirePlan> {
-  const res = await vendorFetch(PLAN_ENDPOINT, {
+  const json = await vendorFetch(PLAN_ENDPOINT, {
     prompt: req.prompt,
     model_id: MODEL_ID,
     ...(req.lengthMs ? { music_length_ms: req.lengthMs } : {}),
     ...(req.style ? { style: req.style } : {}),
     ...(req.negativeStyle ? { negative_style: req.negativeStyle } : {}),
     ...(req.sourcePlan ? { source_composition_plan: req.sourcePlan } : {}),
-  });
-  const json = (await res.json().catch(() => null)) as WirePlan | null;
+  }, (res) =>
+    // An unparseable body is a bad-response below; an aborted one is the deadline.
+    (res.json() as Promise<WirePlan>).catch((e: Error) => {
+      if (e.name === "AbortError") throw e;
+      return null;
+    }),
+  );
   if (!json || !Array.isArray(json.chunks))
     throw new MusicError("bad-response", "The plan endpoint did not return { chunks: [...] }.");
   return json;
@@ -408,54 +427,54 @@ async function composeDetailedCall(req: {
   lengthMs?: number;
   storeForInpainting?: boolean;
 }): Promise<DetailedMusicResult> {
-  const res = await vendorFetch(DETAILED_ENDPOINT, {
+  return vendorFetch(DETAILED_ENDPOINT, {
     model_id: MODEL_ID,
     output_format: OUTPUT_FORMAT,
     ...(req.prompt ? { prompt: req.prompt } : {}),
     ...(req.plan ? { composition_plan: req.plan } : {}),
     ...(req.lengthMs && req.prompt ? { music_length_ms: req.lengthMs } : {}),
     ...(req.storeForInpainting ? { store_for_inpainting: true } : {}),
-  });
+  }, async (res) => {
+    // The song id travels in a response header; the exact name is treated as
+    // vendor-owned, so match any header that carries "song".
+    let songId: string | null = null;
+    res.headers.forEach((v, k) => {
+      if (/song[-_]?id/i.test(k)) songId = v;
+    });
 
-  // The song id travels in a response header; the exact name is treated as
-  // vendor-owned, so match any header that carries "song".
-  let songId: string | null = null;
-  res.headers.forEach((v, k) => {
-    if (/song[-_]?id/i.test(k)) songId = v;
-  });
+    const ctype = res.headers.get("content-type") ?? "";
+    let audio: Buffer | null = null;
+    let plan: WirePlan | null = null;
+    let meta: Record<string, unknown> | null = null;
 
-  const ctype = res.headers.get("content-type") ?? "";
-  let audio: Buffer | null = null;
-  let plan: WirePlan | null = null;
-  let meta: Record<string, unknown> | null = null;
-
-  if (ctype.includes("multipart")) {
-    const boundary = ctype.match(/boundary=([^;]+)/)?.[1]?.replace(/"/g, "");
-    if (!boundary) throw new MusicError("bad-response", "Multipart response without a boundary.");
-    for (const part of splitMultipart(Buffer.from(await res.arrayBuffer()), boundary)) {
-      if (/application\/json/i.test(part.headers)) {
-        const j = JSON.parse(part.body.toString("utf8")) as Record<string, unknown>;
-        plan = (j.composition_plan as WirePlan) ?? plan;
-        songId = (j.song_id as string) ?? songId;
-        meta = (j.song_metadata as Record<string, unknown>) ?? j;
-      } else if (/audio\//i.test(part.headers)) {
-        audio = part.body;
+    if (ctype.includes("multipart")) {
+      const boundary = ctype.match(/boundary=([^;]+)/)?.[1]?.replace(/"/g, "");
+      if (!boundary) throw new MusicError("bad-response", "Multipart response without a boundary.");
+      for (const part of splitMultipart(Buffer.from(await res.arrayBuffer()), boundary)) {
+        if (/application\/json/i.test(part.headers)) {
+          const j = JSON.parse(part.body.toString("utf8")) as Record<string, unknown>;
+          plan = (j.composition_plan as WirePlan) ?? plan;
+          songId = (j.song_id as string) ?? songId;
+          meta = (j.song_metadata as Record<string, unknown>) ?? j;
+        } else if (/audio\//i.test(part.headers)) {
+          audio = part.body;
+        }
       }
+    } else if (ctype.includes("application/json")) {
+      const j = (await res.json()) as Record<string, unknown>;
+      plan = (j.composition_plan as WirePlan) ?? null;
+      songId = (j.song_id as string) ?? songId;
+      meta = (j.song_metadata as Record<string, unknown>) ?? j;
+      const b64 = (j.audio_base_64 as string) ?? (j.audio as string);
+      if (typeof b64 === "string") audio = Buffer.from(b64, "base64");
+    } else {
+      audio = Buffer.from(await res.arrayBuffer());
     }
-  } else if (ctype.includes("application/json")) {
-    const j = (await res.json()) as Record<string, unknown>;
-    plan = (j.composition_plan as WirePlan) ?? null;
-    songId = (j.song_id as string) ?? songId;
-    meta = (j.song_metadata as Record<string, unknown>) ?? j;
-    const b64 = (j.audio_base_64 as string) ?? (j.audio as string);
-    if (typeof b64 === "string") audio = Buffer.from(b64, "base64");
-  } else {
-    audio = Buffer.from(await res.arrayBuffer());
-  }
 
-  if (!audio || audio.length < 1_000)
-    throw new MusicError("bad-response", `No usable audio in the detailed response (content-type ${ctype}).`);
-  return { audio: { b64: audio.toString("base64"), mime: "audio/mpeg" }, songId, plan, meta };
+    if (!audio || audio.length < 1_000)
+      throw new MusicError("bad-response", `No usable audio in the detailed response (content-type ${ctype}).`);
+    return { audio: { b64: audio.toString("base64"), mime: "audio/mpeg" }, songId, plan, meta };
+  });
 }
 
 /** Text-to-SFX: envelope-first prompt in, one sound out. The adherence dial
@@ -482,14 +501,13 @@ async function generateSfxCall(req: {
   promptInfluence?: number;
   loop?: boolean;
 }): Promise<SfxResult> {
-  const res = await vendorFetch(SFX_ENDPOINT, {
+  const bytes = await vendorFetch(SFX_ENDPOINT, {
     text: req.text,
     model_id: SFX_MODEL_ID,
     ...(req.durationSeconds !== undefined ? { duration_seconds: req.durationSeconds } : {}),
     ...(req.promptInfluence !== undefined ? { prompt_influence: req.promptInfluence } : {}),
     ...(req.loop !== undefined ? { loop: req.loop } : {}),
-  });
-  const bytes = Buffer.from(await res.arrayBuffer());
+  }, async (res) => Buffer.from(await res.arrayBuffer()));
   if (bytes.length < 500)
     throw new MusicError("bad-response", `The vendor returned ${bytes.length} bytes — not audio.`);
   return {
