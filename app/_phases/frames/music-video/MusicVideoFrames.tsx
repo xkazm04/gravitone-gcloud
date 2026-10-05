@@ -11,7 +11,7 @@
 
 import { useEffect, useState } from "react";
 
-import { CHIP_CLASS, TALLY_TONE, Tally } from "@/components/ui/signal";
+import { CHIP_CLASS, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
 import { elapsed, useJobs, type Job } from "@/lib/jobs";
 import { useAuth } from "@/lib/useAuth";
 
@@ -117,9 +117,14 @@ export default function MusicVideoFrames({ projectId }: { projectId: string }) {
 
   if (!envelope)
     return (
-      <p className="font-jetbrains text-label text-amber-200/85" data-testid="music-video-no-envelope">
-        no analyzed track yet — attach one in Research before generating a poster.
-      </p>
+      <div data-testid="music-video-no-envelope">
+        <UpstreamBreak
+          blockedAt="research"
+          current="frames"
+          done={[]}
+          action={{ label: "Open Research", href: `/studio/${projectId}?step=research` }}
+        />
+      </div>
     );
 
   return (

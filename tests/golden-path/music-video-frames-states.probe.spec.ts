@@ -34,3 +34,12 @@ test("an unresolved poster is a stated state and a rejected read is caught", () 
   expect(s).toContain('data-testid="music-video-poster-missing"');
   expect(s).not.toContain("re-generate the poster");
 });
+
+test("the no-envelope state is the drawn UpstreamBreak with a route to Research", () => {
+  const s = src();
+  expect(s).toMatch(/import\s*\{[^}]*\bUpstreamBreak\b[^}]*\}\s*from\s*"@\/components\/ui\/signal"/);
+  expect(s).toContain('blockedAt="research"');
+  expect(s).toContain('current="frames"');
+  expect(s).toContain("step=research");
+  expect(s).not.toContain("attach one in Research");
+});
