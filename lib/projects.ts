@@ -277,14 +277,14 @@ export const TEMPLATES = [
   // knowledge/templates/<id>/TEMPLATE.md, never measured in this repo.
   {
     id: "ad-social-15",
-    label: "Social ad · 15s",
+    label: "Social vertical",
     defaultS: 15,
     range: [6, 20] as const,
     note: "9:16, hook in the first second, sound-off first",
   },
   {
     id: "ad-spot-30",
-    label: "Spot · 30s",
+    label: "Spot",
     defaultS: 30,
     range: [20, 45] as const,
     note: "16:9 or 1:1 — room for a small arc and an end-card",
