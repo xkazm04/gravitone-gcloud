@@ -99,7 +99,12 @@ const UNRESOLVED: FramesRender = {
 };
 
 /** What one `generatePlate` call ended as. See the doc on `generatePlate`. */
-export type PlateOutcome = "ready" | "refused" | "failed";
+export type PlateOutcome = "ready" | "refused" | "failed" | "over-budget";
+
+export interface PlateResult {
+  outcome: PlateOutcome;
+  retryAt?: number;
+}
 
 /** Exported since 2026-09-08 because this record has a second READER: the Score
  *  step spots against the creator's own frames (score/picture.ts) and reads this
@@ -353,9 +358,9 @@ export function useFrames(projectId: string) {
    * apart keeps firing the whole cut into a wall it already hit once.
    */
   const generatePlate = useCallback(
-    async (id: string): Promise<PlateOutcome> => {
+    async (id: string): Promise<PlateResult> => {
       const frame = frames.find((f) => f.id === id);
-      if (!frame) return "failed";
+      if (!frame) return { outcome: "failed" };
       const subject = frame.plate.subject?.trim() || subjectFor(frame);
 
       setBusy((b) => new Set(b).add(id));
@@ -381,15 +386,23 @@ export function useFrames(projectId: string) {
             subject,
           },
         }));
-        return img ? "ready" : "refused";
+        return { outcome: img ? "ready" : "refused" };
       } catch (e) {
         const refused = e instanceof ImagingRequestError && e.code === "refused";
+        const isOverBudget =
+          e instanceof ImagingRequestError &&
+          (e.code === "over-budget" || e.status === 402);
+        const retryAt = isOverBudget && e instanceof ImagingRequestError ? e.retryAt : undefined;
+
         patch(id, (f) => ({
           ...f,
           plate: { ...f.plate, state: refused ? "refused" : "empty", subject, note: e instanceof Error ? e.message : undefined },
         }));
         setError(e instanceof Error ? e.message : "The plate could not be generated.");
-        return refused ? "refused" : "failed";
+        if (isOverBudget) {
+          return { outcome: "over-budget", retryAt };
+        }
+        return { outcome: refused ? "refused" : "failed" };
       } finally {
         setBusy((b) => {
           const n = new Set(b);

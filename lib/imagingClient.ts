@@ -62,6 +62,8 @@ export class ImagingRequestError extends Error {
     message: string,
     readonly code: string,
     readonly status: number,
+    readonly retryAt?: number,
+    readonly provider?: string,
   ) {
     super(message);
     this.name = "ImagingRequestError";
@@ -85,6 +87,44 @@ export function accessHeader(): Record<string, string> {
   return s && s.trim() ? { authorization: `Bearer ${s.trim()}` } : {};
 }
 
+export interface BudgetQuoteResult {
+  ceilingUsd: number;
+  spentUsd: number;
+  remainingUsd: number;
+  windowMs: number;
+  perImageUsd: number | null;
+  quote: {
+    remainingUsd: number;
+    estimateUsd: number | null;
+    affordableImages: number;
+    verdict: "fits" | "partial" | "blocked" | "unknown";
+    resumeAt: number | null;
+  };
+}
+
+export async function quoteBudget(images?: number): Promise<BudgetQuoteResult> {
+  const url = typeof images === "number" && images > 0 ? `/api/imaging/budget?images=${images}` : "/api/imaging/budget";
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method: "GET",
+      headers: { ...accessHeader() },
+    });
+  } catch {
+    throw new ImagingRequestError("The studio could not be reached.", "offline", 0);
+  }
+
+  const json = await res.json().catch(() => ({}) as Record<string, unknown>);
+  if (!res.ok) {
+    const detail = typeof json.detail === "string" ? json.detail : "The imaging call failed.";
+    const code = typeof json.code === "string" ? json.code : "failed";
+    const retryAt = typeof json.retryAt === "number" ? json.retryAt : undefined;
+    const provider = typeof json.provider === "string" ? json.provider : undefined;
+    throw new ImagingRequestError(detail, code, res.status, retryAt, provider);
+  }
+  return json as BudgetQuoteResult;
+}
+
 async function post<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
   try {
@@ -101,7 +141,9 @@ async function post<T>(path: string, body: unknown): Promise<T> {
   if (!res.ok) {
     const detail = typeof json.detail === "string" ? json.detail : "The imaging call failed.";
     const code = typeof json.code === "string" ? json.code : "failed";
-    throw new ImagingRequestError(detail, code, res.status);
+    const retryAt = typeof json.retryAt === "number" ? json.retryAt : undefined;
+    const provider = typeof json.provider === "string" ? json.provider : undefined;
+    throw new ImagingRequestError(detail, code, res.status, retryAt, provider);
   }
   return json as T;
 }

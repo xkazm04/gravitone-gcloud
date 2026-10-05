@@ -15,15 +15,17 @@
 // It also does the thing neither sibling can: RENDER EVERY MISSING PLATE in one
 // action, serially, because sixteen clicks is not a workflow.
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
 import { Tally } from "@/components/ui/signal";
+import { quoteBudget, type BudgetQuoteResult } from "@/lib/imagingClient";
 
 import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef, type PlateState } from "./frames";
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
 import LayerPanel from "./LayerPanel";
+import { planRender, afterOutcome } from "./renderPlan";
 import type { useFrames } from "./useFrames";
 
 // The assembly table's columns, shared by the header and every row — they can
@@ -45,11 +47,31 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
   /** How many plates were still missing when a batch stopped itself. Null when
    *  no batch has stopped early — absence, not zero. */
   const [stoppedWith, setStoppedWith] = useState<number | null>(null);
+  const [budgetQuoteResult, setBudgetQuoteResult] = useState<BudgetQuoteResult | null>(null);
+  const [pausedUntil, setPausedUntil] = useState<number | null>(null);
   // One selection, shared by the canvas and the panel. Held here rather than in
   // either of them so they cannot disagree about what is selected.
   const [selected, setSelected] = useState<LayerRef>(null);
 
   const missing = frames.filter((f) => !isComposed(f));
+
+  useEffect(() => {
+    let mounted = true;
+    if (missing.length === 0) return;
+    void quoteBudget(missing.length)
+      .then((res) => {
+        if (mounted) setBudgetQuoteResult(res);
+      })
+      .catch(() => {});
+    return () => {
+      mounted = false;
+    };
+  }, [missing.length]);
+
+  const plan = planRender({
+    missing: missing.length,
+    quote: missing.length > 0 ? (budgetQuoteResult?.quote ?? null) : null,
+  });
 
   /** Serial, not parallel: the vendor's rate ceiling is unpublished and a
    *  sixteen-wide burst is exactly how you find it.
@@ -64,11 +86,19 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
   const renderMissing = async () => {
     setRunningAll(true);
     setStoppedWith(null);
+    setPausedUntil(null);
     try {
       const queue = frames.filter((f) => !isComposed(f));
-      for (let i = 0; i < queue.length; i++) {
-        const outcome = await generatePlate(queue[i].id);
-        if (outcome === "failed") {
+      const limit = plan.count > 0 ? Math.min(plan.count, queue.length) : queue.length;
+      for (let i = 0; i < limit; i++) {
+        const res = await generatePlate(queue[i].id);
+        const action = afterOutcome(res.outcome, res.retryAt);
+        if (action.action === "pause-until") {
+          setPausedUntil(action.until ?? null);
+          setStoppedWith(queue.length - i);
+          break;
+        }
+        if (action.action === "stop") {
           setStoppedWith(queue.length - i);
           break;
         }
@@ -131,15 +161,17 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
         </button>
         <button
           onClick={() => void renderMissing()}
-          disabled={runningAll || missing.length === 0}
+          disabled={runningAll || missing.length === 0 || plan.count === 0}
           className="inline-flex items-center gap-2 rounded-xl border border-cyan-400/35 bg-cyan-400/10 px-3.5 py-1.5 text-label font-semibold text-cyan-100 transition hover:bg-cyan-400/20 disabled:opacity-40"
         >
           {runningAll ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Sparkles className="h-3.5 w-3.5" aria-hidden />}
           {runningAll
             ? "rendering…"
-            : stoppedWith !== null
-              ? `retry ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`
-              : `render ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`}
+            : pausedUntil !== null
+              ? `paused until ${new Date(pausedUntil).toLocaleTimeString()} (${stoppedWith ?? missing.length} left)`
+              : stoppedWith !== null
+                ? `retry ${missing.length} missing plate${missing.length === 1 ? "" : "s"}`
+                : plan.label}
           {/* WHAT THE STOPPED BATCH GOT THROUGH, on the button that ran it. A
               paragraph used to stand under this row saying "The batch stopped
               after a failure that was about the run rather than one plate — N
