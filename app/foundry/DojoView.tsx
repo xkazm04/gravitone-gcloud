@@ -273,6 +273,7 @@ export function DojoView() {
 
         <div className="flex min-w-0 flex-col gap-5">
           {!detail && selected && <Loading label="reading the cycle" />}
+          {cycles === null && !listError && <Loading label="reading the cycles" />}
           {!selected && cycles && cycles.length > 0 && <PickACycle cycles={cycles} onPick={selectCycle} />}
           {detail && (
             <>

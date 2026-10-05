@@ -387,6 +387,7 @@ export default function FoundryView() {
       <RunStrip runs={runs} previews={previews} selected={selected} onSelect={selectRun} error={runsError} onRetry={loadRuns} />
       {run && <RunBar run={run} focused={focusedCandidate} />}
       {committedReport}
+      {runs === null && !runsError && <Loading label="reading the runs" />}
       {pending}
       {grid}
     </div>
