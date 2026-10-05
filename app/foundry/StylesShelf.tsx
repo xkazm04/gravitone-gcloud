@@ -37,6 +37,7 @@ import type { Catalogue, LedgerRow, StyleDef } from "@/lib/foundry/types";
 import { fetchCatalogue } from "./foundryClient";
 import { exemplarUrl, familyCounts, familyOf, heroOf, keptFileUrl, keptRows, ledgerFor } from "./styleArt";
 import { Art, ErrorNote, Label, Loading, Rise, StatusChip, pct } from "./ui";
+import { refusedKey } from "./keyGuard";
 
 /** Cards per shelf page, and shelves per page down. */
 const PAGE = 12;
@@ -114,6 +115,7 @@ export function StylesShelf() {
   useEffect(() => {
     if (at < 0) return;
     const onKey = (e: KeyboardEvent) => {
+      if (refusedKey(e)) return;
       if (e.key === "ArrowRight") {
         e.preventDefault();
         step(1);

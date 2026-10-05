@@ -33,6 +33,7 @@ import { artStateOf, workingIdOf } from "./CullGrid";
 import { when } from "./RunCards";
 import { fileUrl } from "./foundryClient";
 import { Art, FlagPill, Label, ScorePill, StatusChip, VerdictButtons, VerdictStamp, gradeOf, pct, verdictRing } from "./ui";
+import { refusedKey } from "./keyGuard";
 
 const STYLE_FIELDS = ["render_mode", "palette_strategy", "edge_treatment", "black_handling"];
 
@@ -111,6 +112,7 @@ export function Lightbox({
   useEffect(() => {
     if (!candidate) return;
     const onKey = (e: KeyboardEvent) => {
+      if (refusedKey(e)) return;
       switch (e.key) {
         case "k":
         case "K":

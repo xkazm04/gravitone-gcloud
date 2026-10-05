@@ -32,6 +32,7 @@ import { RailFrame, RailItem, Wash } from "./RunCards";
 import { fetchTrainingCycle, fetchTrainingCycles, saveTrainingVerdicts, commitTrainingCycle, fileUrl } from "./foundryClient";
 import { DOJO_STATUS_WORD, cycleKind } from "./parts";
 import { Art, BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PrimaryAction, SaveNote, StatusChip, VerdictButtons, VerdictStamp, ScorePill, type SaveKind } from "./ui";
+import { refusedKey } from "./keyGuard";
 
 /** Statuses the loop is still working — the page only watches these. */
 const DOJO_LIVE: CycleStatus[] = ["planning", "generating", "judging"];
@@ -178,6 +179,7 @@ export function DojoView() {
     // A committed cycle is read-only: no key handling at all.
     if (!detail || readOnly || confirm) return;
     const onKey = (e: KeyboardEvent) => {
+      if (refusedKey(e)) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       const i = focused ? order.indexOf(focused) : -1;

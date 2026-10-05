@@ -36,6 +36,7 @@ import { ABANDONED_SETTLES, OBSERVABLE_FIELDS } from "@/lib/foundry/extract/type
 import { activatesOnEnter } from "./CullGrid";
 import { extractFileUrl } from "./extractClient";
 import { Art, ErrorNote, FlagPill, Glass, Label, ScorePill, VerdictButtons, VerdictStamp, pct } from "./ui";
+import { refusedKey } from "./keyGuard";
 
 interface Zoom {
   title: string;
@@ -150,6 +151,7 @@ export function ExtractBoard({
   useEffect(() => {
     if (!keysEnabled) return;
     const onKey = (e: KeyboardEvent) => {
+      if (refusedKey(e)) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       const i = focused ? order.indexOf(focused) : -1;

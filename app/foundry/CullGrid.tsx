@@ -34,6 +34,7 @@ import type { Candidate, RunManifest, Verdict, Verdicts } from "@/lib/foundry/ty
 
 import { fileUrl } from "./foundryClient";
 import { Art, FlagPill, ScoreMeters, VerdictButtons, VerdictStamp, verdictRing, type ArtState } from "./ui";
+import { refusedKey } from "./keyGuard";
 
 /** Elements the browser ACTIVATES on Enter.
  *
@@ -138,6 +139,7 @@ export function CullGrid({
   useEffect(() => {
     if (!keysEnabled) return;
     const onKey = (e: KeyboardEvent) => {
+      if (refusedKey(e)) return;
       const t = e.target as HTMLElement | null;
       if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       const i = focused ? order.indexOf(focused) : -1;
