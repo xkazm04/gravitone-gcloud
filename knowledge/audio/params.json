@@ -1,0 +1,26 @@
+{
+  "$comment": "GENERATED — do not edit. Machine-readable half of knowledge/audio/PATTERNS.md: per-provider strengths counted from the sound ledger. Prompt composers read `kinds.<kind>.strengths`; every row is MEASURED with its own n, and no row below `min_n` is ever written.",
+  "version": 1,
+  "source": "pipeline/sound/ledger.json",
+  "command": "npx tsx pipeline/sound.mts knowledge",
+  "asOf": null,
+  "min_n": 3,
+  "evidence_contract": {
+    "MEASURED": "Counted from pipeline/sound/ledger.json by `npx tsx pipeline/sound.mts knowledge`; n is beside every figure; only cells with n >= 3.",
+    "INFERRED": "A lesson: one person's claim across judged takes, quoted verbatim with the evidence it was confirmed on.",
+    "excluded": "Fixture takes (design samples) never enter the ledger, so nothing here counts them."
+  },
+  "kinds": {
+    "music": {
+      "judged": 0,
+      "strengths": [],
+      "belowFloor": 0
+    },
+    "sfx": {
+      "judged": 0,
+      "strengths": [],
+      "belowFloor": 0
+    }
+  },
+  "lessons": []
+}

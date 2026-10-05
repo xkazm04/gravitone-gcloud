@@ -157,7 +157,8 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
   const table: Record<string, { evicted?: string; exempt?: string }> = {
     "lib/useProjects.ts": { evicted: `gravitone.seeded.${uid}` },
     "lib/useAssets.ts": { evicted: `gravitone.assets.seeded.${uid}` },
-    "app/library/audio/useAudioShelf.ts": { evicted: `gravitone.audio-seeded.v2.${uid}` },
+    "app/library/audio/soundMigration.ts": { evicted: `gravitone.sound-migrated.v1.${uid}` },
+    "app/library/audio/soundAnnex.ts": { evicted: `gravitone.audio-annex.${uid}` },
     "app/library/audio/bookStore.ts": { evicted: `gravitone.audio-book.${uid}` },
     "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
   };

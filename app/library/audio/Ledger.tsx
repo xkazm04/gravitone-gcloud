@@ -458,6 +458,15 @@ function Row({
       case "title":
         return (
           <td key={id} className="c-title">
+            {/* Before the title, not after it: the cell truncates, and the
+                label is what an agent selects this take by — it must not be
+                the part the ellipsis eats. */}
+            {t.stage === "finalized" && t.label && (
+              <span className="chip chip--label" aria-label={`finalized as ${t.label}`}>
+                {t.label}
+              </span>
+            )}
+            {t.fixture && <span className="chip chip--demo">demo</span>}
             {t.title}
             <small>{dur(t.duration_s)}</small>
           </td>

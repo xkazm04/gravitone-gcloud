@@ -27,6 +27,7 @@
 
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from "react";
 
+import { DemoChip } from "@/app/_projects/parts";
 import { ToastTray, WorldRoot, useToast } from "@/components/kit";
 import { Ghost } from "@/components/ui/signal";
 import { useAuth } from "@/lib/useAuth";
@@ -128,6 +129,7 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
   const [kbd, setKbd] = useState(false);
   const [drawer, setDrawer] = useState<"inspector" | "terms" | null>(null);
   const [width, setWidth] = useState(1440);
+  const [wiping, setWiping] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
   const midRef = useRef<HTMLDivElement>(null);
@@ -670,6 +672,22 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
               )}
             </span>
             <span className="grow" />
+            {shelf.fixtures > 0 && (
+              <DemoChip
+                count={shelf.fixtures}
+                busy={wiping}
+                noun={["take", "takes"]}
+                onClear={async () => {
+                  // The chip unmounts with the last example, so focus goes to
+                  // the ledger landmark rather than falling to <body>
+                  // (app/projects/ProjectsView.tsx#clearExamples, same reason).
+                  setWiping(true);
+                  await shelf.clearExamples();
+                  setWiping(false);
+                  midRef.current?.focus();
+                }}
+              />
+            )}
             {storageError && (
               <div className="storage" role="alert">
                 {storageError}
@@ -721,7 +739,7 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
             />
           </aside>
 
-          <main ref={midRef} className="ab-col ab-col--mid" aria-label="Ledger" data-testid="audio-ledger">
+          <main ref={midRef} tabIndex={-1} className="ab-col ab-col--mid" aria-label="Ledger" data-testid="audio-ledger">
             {shelf.assets === null ? (
               <>
                 <div className="colhead">

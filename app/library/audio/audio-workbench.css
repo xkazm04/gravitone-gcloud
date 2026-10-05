@@ -200,6 +200,10 @@
 .ab .chip--src.chip--ref { font-family: var(--k-sans); }
 .ab .chip--ref { color: var(--gt-accent-violet); border-color: color-mix(in srgb, var(--gt-accent-violet) 35%, transparent); }
 .ab .chip--ret { color: var(--gt-accent-emerald); border-color: color-mix(in srgb, var(--gt-accent-emerald) 35%, transparent); }
+/* a finalized take's library label (what agents select by), and the mark on an example row */
+.ab .c-title .chip { margin: 0 6px 0 0; vertical-align: 1px; }
+.ab .chip--label { color: var(--gt-accent-cyan); border-color: color-mix(in srgb, var(--gt-accent-cyan) 40%, transparent); font-family: var(--k-mono); }
+.ab .chip--demo { color: var(--al-ash); font-family: var(--k-mono); }
 .ab .chip--retired { color: var(--al-ant-t); border-color: color-mix(in srgb, var(--al-ant) 40%, transparent); text-decoration: line-through; text-decoration-thickness: 1px; }
 .ab .tag-retired { display: inline-block; padding: 0 6px; border-radius: 4px; font-size: var(--text-label); text-transform: uppercase; letter-spacing: 0.06em; color: var(--gt-ink); background: var(--al-ant); text-decoration: none; }
 .ab tr.grp td { padding: 0; background: color-mix(in srgb, white 2.5%, transparent); border-bottom: 1px solid var(--gt-hairline); }

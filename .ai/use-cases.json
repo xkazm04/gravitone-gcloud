@@ -35,6 +35,26 @@
       "owner": "gravity"
     },
     {
+      "key": "text.sound-hunt",
+      "name": "Draft a Sound lab hunt map",
+      "description": "Turns an operator's musical or sound-effect problem into a map of variation axes ending in concrete, renderable prompts (pipeline/SOUND-HUNT-PROMPT.md), validated before a node is kept.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/hunt.ts::draftHunt -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.sound-lesson",
+      "name": "Draft a lesson from a finished hunt",
+      "description": "Turns a hunt's winners and losers into one drafted 'when X, brief Y, because Z' claim (pipeline/SOUND-LESSON-PROMPT.md); evidence is counted by code and a human confirms before anything is stored.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/sound/hunt.ts::draftHuntLesson -> lib/text/router.ts::reason()",
+      "expected_models": ["claude-opus-5", "gemini-3.6-flash"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.probe",
       "name": "Text engine availability probe",
       "description": "Zero-token health check that walks the text engine's provider chain to report which one would serve a given turn, without generating anything.",

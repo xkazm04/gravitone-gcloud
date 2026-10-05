@@ -1,61 +1,37 @@
 "use client";
 
-// THE AUDIO SHELF — the module's one reader and writer of lib/assets.
+// THE AUDIO SHELF — the module's one reader and writer of the sound store.
 //
-//   read     every `kind: "audio"` row for the account, plus the bytes behind
-//            any returned take (studioDb's uploads store), as object URLs this
-//            hook mints and releases.
-//   seed     once per account, the contest fixture (./audioSeed.ts).
-//   patch    a verdict, a score, a reject reason: lib/assets#updateAssetMeta,
-//            applied to the local list first so the ledger and the inspector
-//            read one post-write state without a refetch.
-//   return   a file a person downloaded from Suno or ElevenLabs becomes a new
-//            unjudged take with its bytes, its draft and its parent recorded —
-//            lib/assets#putUploads, one transaction over row and bytes. The
-//            contest held these as session-only blob URLs; here they survive a
-//            reload.
+// Since round 4 (2026-10-05) the takes live on the studio server (lib/sound,
+// /api/sound/*, through lib/sound/client.ts) instead of in this browser's
+// IndexedDB: the Sound lab's Triage, Arrangement and Hunt, the agents' CLI
+// (pipeline/sound.mts) and this Library read and write ONE shelf. What this
+// hook hands its callers did not change shape — `assets` (Asset rows with an
+// AudioMeta bag), `urls` (upload id -> playable URL), `patch`, `attachReturn`,
+// `error` — so AudioWorkbench and everything below it read the same model they
+// always did. The mapping is ./soundAdapter.ts, in one place.
+//
+//   read     every take, fixtures included (the Library shows them, marked),
+//            mapped to Assets with this account's annex laid over.
+//   migrate  once per account, this browser's IndexedDB rows are pushed to the
+//            store (./soundMigration.ts) before the first read.
+//   patch    a verdict, a score, a reject reason: applied to the local row
+//            first so the ledger and the inspector read one post-write state,
+//            then PATCHed; the server's derived fields (stage, label) are
+//            taken from its answer.
+//   return   a file a person brought back becomes a new unjudged take with its
+//            bytes, its draft and its parent recorded.
+//   clear    the examples: every fixture take, server-side, in one call.
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import {
-  assetFromUpload,
-  getUploadBlobs,
-  listAssets,
-  putAssets,
-  putUploads,
-  readUploadPointer,
-  updateAssetMeta,
-  type Asset,
-  type AudioMeta,
-} from "@/lib/assets";
+import type { Asset, AudioMeta } from "@/lib/assets";
+import { clearFixtures, listTakes, patchTake, uploadTake } from "@/lib/sound/client";
+import type { SoundTake } from "@/lib/sound/types";
 
-/** The seeded-once mark — same contract as lib/useProjects.ts's `seededKey`:
- *  outside IndexedDB so it survives a user deleting every seeded row, and the
- *  rows go in with `put`, so two tabs racing one fresh account upsert the same
- *  ids rather than one of them needing to lose.
- *
- *  `.v2`: the first audio seed (eight hand-written rows, 2026-10-04) set an
- *  unversioned mark, and an account carrying it would otherwise never be
- *  offered the contest fixture. The fixture's ids cover all eight of the old
- *  ones, so the reseed REPLACES that seed rather than sitting beside it.
- *  lib/identityEviction.ts evicts both marks. */
-const seededKey = (uid: string) => `gravitone.audio-seeded.v2.${uid}`;
-
-function alreadySeeded(uid: string): boolean {
-  try {
-    return localStorage.getItem(seededKey(uid)) === "1";
-  } catch {
-    return true;
-  }
-}
-
-function markSeeded(uid: string): void {
-  try {
-    localStorage.setItem(seededKey(uid), "1");
-  } catch {
-    /* the seed is idempotent by id; a lost mark costs a re-put, not a duplicate */
-  }
-}
+import { loadAnnex, mergeAnnex } from "./soundAnnex";
+import { applyLocally, assetFromSoundTake, playUrl, splitPatch, uploadMetaOf, type AnnexMap } from "./soundAdapter";
+import { migrateShelf } from "./soundMigration";
 
 /** A returned file's length, read off its metadata. Null when the browser
  *  cannot say — the take is then stored with no length rather than a fake 0. */
@@ -76,109 +52,129 @@ function probeDuration(url: string): Promise<number | null> {
   });
 }
 
-const message = (e: unknown, fallback: string) => (e instanceof Error && e.message ? e.message : fallback);
-
 export function useAudioShelf(uid: string | undefined) {
-  const [assets, setAssets] = useState<Asset[] | null>(null);
-  /** upload id -> object URL, for the returned takes whose bytes are present. */
-  const [urls, setUrls] = useState<ReadonlyMap<string, string>>(() => new Map());
+  const [takes, setTakes] = useState<SoundTake[] | null>(null);
+  const [annex, setAnnex] = useState<AnnexMap>({});
   const [error, setError] = useState<string | null>(null);
-  /** Every URL this hook minted, released on unmount. A ref, not state: it is
-   *  read only by the cleanup, never by a render. */
-  const owned = useRef(new Set<string>());
-
+  /** The latest rows, for the writers below — a callback that closed over an
+   *  older `takes` would map a patch onto a stale kind or a removed row. */
+  const latest = useRef<SoundTake[] | null>(null);
   useEffect(() => {
-    const held = owned.current;
-    return () => {
-      held.forEach((u) => URL.revokeObjectURL(u));
-      held.clear();
-    };
-  }, []);
+    latest.current = takes;
+  }, [takes]);
 
   useEffect(() => {
     if (!uid) return;
     let cancelled = false;
-    const minted: string[] = [];
-    const held = owned.current;
     (async () => {
-      try {
-        let rows = await listAssets(uid);
-        if (!alreadySeeded(uid)) {
-          const { seedAudioAssets } = await import("./audioSeed");
-          await putAssets(seedAudioAssets(uid));
-          markSeeded(uid);
-          rows = await listAssets(uid);
-        }
-        const audio = rows.filter((a) => a.kind === "audio");
-        const ids = audio.map((a) => readUploadPointer(a.src)).filter((id): id is string => Boolean(id));
-        const blobs = await getUploadBlobs(ids);
-        if (cancelled) return;
-        const next = new Map<string, string>();
-        for (const [id, blob] of blobs) {
-          const u = URL.createObjectURL(blob);
-          minted.push(u);
-          held.add(u);
-          next.set(id, u);
-        }
-        setUrls(next);
-        setAssets(audio);
-        setError(null);
-      } catch (e) {
-        if (cancelled) return;
-        setAssets([]);
-        setError(message(e, "could not read the audio shelf"));
+      const moved = await migrateShelf(uid);
+      const r = await listTakes({ fixtures: true });
+      if (cancelled) return;
+      setAnnex(loadAnnex(uid));
+      if (!r.ok) {
+        setTakes([]);
+        setError(`The audio shelf could not be read: ${r.error}`);
+        return;
       }
+      setTakes(r.data.takes);
+      setError(
+        moved.failed.length
+          ? `${moved.failed.length} of this browser's takes did not move to the studio shelf (${moved.failed[0].error}); a reload retries.`
+          : null,
+      );
     })();
     return () => {
       cancelled = true;
-      for (const u of minted) {
-        URL.revokeObjectURL(u);
-        held.delete(u);
-      }
     };
   }, [uid]);
 
-  const patch = useCallback((id: string, p: Partial<AudioMeta>) => {
-    setAssets((prev) => prev && prev.map((a) => (a.id === id ? { ...a, meta: { ...(a.meta ?? {}), ...p } } : a)));
-    updateAssetMeta(id, p as Record<string, unknown>).then(
-      () => setError(null),
-      (e) =>
-        setError(
-          `The last judgment was not saved: ${message(e, "the browser refused the write")}. A reload would lose it.`,
-        ),
-    );
-  }, []);
+  const assets = useMemo<Asset[] | null>(
+    () => (takes && uid ? takes.map((t) => assetFromSoundTake(t, uid, annex[t.id])) : takes ? [] : null),
+    [takes, annex, uid],
+  );
+  /** take id -> the URL its bytes play from. Server URLs, so there is nothing
+   *  to mint or revoke: the Library no longer owns object URLs for takes. */
+  const urls = useMemo<ReadonlyMap<string, string>>(
+    () => new Map((takes ?? []).filter((t) => t.file).map((t) => [t.id, playUrl(t.id)] as const)),
+    [takes],
+  );
+
+  const patch = useCallback(
+    (id: string, p: Partial<AudioMeta>) => {
+      const t = latest.current?.find((x) => x.id === id);
+      if (!t || !uid) return;
+      const { patch: tp, annex: ax } = splitPatch(t.kind, p);
+      if (Object.keys(ax).length) {
+        const err = mergeAnnex(uid, { [id]: ax });
+        setAnnex((m) => ({ ...m, [id]: { ...(m[id] ?? {}), ...ax } }));
+        if (err) setError(err);
+      }
+      if (!Object.keys(tp).length) return;
+      setTakes((prev) => prev && prev.map((x) => (x.id === id ? applyLocally(x, tp) : x)));
+      patchTake(id, tp).then((r) => {
+        if (!r.ok) {
+          setError(`The last judgment was not saved: ${r.error}. A reload would lose it.`);
+          return;
+        }
+        // Only what the server DERIVES is taken from its answer. Ratings are
+        // not: a second key pressed before this answer arrived is already in
+        // the local row, and the answer to the first would erase it.
+        const s = r.data.take;
+        setTakes((prev) =>
+          prev &&
+          prev.map((x) =>
+            x.id === id ? { ...x, stage: s.stage, label: s.label, judgedAt: s.judgedAt, finalizedAt: s.finalizedAt } : x,
+          ),
+        );
+        setError(null);
+      });
+    },
+    [uid],
+  );
 
   /** File a returned take. Resolves to the stored row, or null when the write
    *  failed (the error is then on `error`). */
   const attachReturn = useCallback(
     async (file: File, meta: Partial<AudioMeta>): Promise<Asset | null> => {
       if (!uid) return null;
-      const pair = assetFromUpload(uid, file, ["audio"], "audio");
-      const url = URL.createObjectURL(file);
-      owned.current.add(url);
-      const length = await probeDuration(url);
-      const audioMeta: Partial<AudioMeta> = {
-        ...meta,
-        verdict: "unjudged",
-        ...(length != null ? { duration_s: length } : {}),
-      };
-      pair.asset.meta = { ...(pair.asset.meta ?? {}), ...audioMeta };
-      try {
-        await putUploads([pair]);
-      } catch (e) {
-        URL.revokeObjectURL(url);
-        owned.current.delete(url);
-        setError(`${file.name} was not filed: ${message(e, "the browser refused the write")}.`);
+      const local = URL.createObjectURL(file);
+      const length = await probeDuration(local);
+      URL.revokeObjectURL(local);
+      const m = { ...(meta as Record<string, unknown>), ...(length != null ? { duration_s: length } : {}) };
+      // A file the lab rendered keeps "lab"; anything else a person brought
+      // back is a Suno return when it answers a Suno draft, else an import.
+      const { meta: up, annex: ax } = uploadMetaOf({ ...m, verdict: "unjudged" } as Partial<AudioMeta> & Record<string, unknown>, {
+        title: file.name.replace(/\.[^.]+$/, "") || file.name,
+        fileName: file.name,
+      });
+      const r = await uploadTake(file, file.name, up);
+      if (!r.ok) {
+        setError(`${file.name} was not filed: ${r.error}.`);
         return null;
       }
-      setUrls((m) => new Map(m).set(pair.upload.id, url));
-      setAssets((prev) => [...(prev ?? []), pair.asset]);
-      setError(null);
-      return pair.asset;
+      const take = r.data.take;
+      const err = mergeAnnex(uid, { [take.id]: ax });
+      setAnnex((a) => ({ ...a, [take.id]: { ...(a[take.id] ?? {}), ...ax } }));
+      setTakes((prev) => [take, ...(prev ?? []).filter((x) => x.id !== take.id)]);
+      setError(err);
+      return assetFromSoundTake(take, uid, ax);
     },
     [uid],
   );
 
-  return { assets, urls, error, patch, attachReturn };
+  const fixtures = useMemo(() => (takes ?? []).filter((t) => t.origin === "fixture").length, [takes]);
+
+  /** Delete every example take. Resolves true when the store confirmed it. */
+  const clearExamples = useCallback(async (): Promise<boolean> => {
+    const r = await clearFixtures();
+    if (!r.ok) {
+      setError(`The examples were not cleared: ${r.error}.`);
+      return false;
+    }
+    setTakes((prev) => prev && prev.filter((t) => t.origin !== "fixture"));
+    setError(null);
+    return true;
+  }, []);
+
+  return { assets, urls, error, patch, attachReturn, fixtures, clearExamples, takes };
 }

@@ -94,6 +94,8 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "scene-direction": ["claude-cli", "google"],
     "style-synthesis": ["claude-cli", "google"],
     research: ["claude-cli", "google"],
+    "sound-hunt": ["claude-cli", "google"],
+    "sound-lesson": ["claude-cli", "google"],
     probe: ["claude-cli"],
   },
   cloud: {
@@ -101,6 +103,8 @@ const PLAN: Record<TextEnv, Record<TurnClass, TextProviderId[]>> = {
     "scene-direction": ["google"],
     "style-synthesis": ["google"],
     research: ["google"],
+    "sound-hunt": ["google"],
+    "sound-lesson": ["google"],
     probe: ["google"],
   },
 };
@@ -123,6 +127,12 @@ const DEFAULT_TIMEOUT_MS: Record<TurnClass, number> = {
   // notebook is nine phases of judgement and one large structured answer. It
   // sits under /api/research's own `maxDuration` so the engine gives up first.
   research: 600_000,
+  // Both sound turns are small: one idea or one hunt's results in, one
+  // structured answer out. Five minutes is generous, and sits under the sound
+  // routes' own maxDuration (app/api/sound/hunts/route.ts) so the engine gives
+  // up before the platform does.
+  "sound-hunt": 300_000,
+  "sound-lesson": 300_000,
   probe: 30_000,
 };
 

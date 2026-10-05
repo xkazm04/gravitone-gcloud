@@ -84,6 +84,16 @@ export interface Take {
   /** The one change that produced this take, when it came out of a fan-out. */
   variation: { axis: string; diff: string[] } | null;
   hunt_id: string | null;
+  // ── what the sound store (lib/sound, round 4) adds to a row. Read off the
+  // meta ./soundAdapter.ts writes; false / null on a row that never passed
+  // through the store.
+  /** A design sample (./audioSeed.ts), not somebody's work: drawn with a
+   *  `demo` mark, cleared by the examples action, never counted by the ledger. */
+  fixture: boolean;
+  /** Arrangement's column, once kept (lib/sound/types.ts Stage). */
+  stage: string | null;
+  /** The library label a finalized take carries — what agents select it by. */
+  label: string | null;
 }
 
 const str = (v: unknown): string | null => (typeof v === "string" && v ? v : null);
@@ -140,7 +150,9 @@ export function takeFromAsset(a: Asset): Take {
   const v = m.verdict as AudioMeta["verdict"] | undefined;
   return {
     id: a.id,
-    kind: str(m.sfx_category) ? "sfx" : "track",
+    // `sound_kind` first: the sound store knows an effect with no category is
+    // still an effect (./soundAdapter.ts); a pre-store row has only the category.
+    kind: m.sound_kind === "sfx" || (m.sound_kind !== "music" && str(m.sfx_category)) ? "sfx" : "track",
     title: a.name,
     duration_s: num(m.duration_s),
     vendor: str(m.vendor),
@@ -172,6 +184,9 @@ export function takeFromAsset(a: Asset): Take {
     measured: measuredOf(m.measured),
     variation: variationOf(m.variation),
     hunt_id: str(m.hunt_id),
+    fixture: m.fixture === true,
+    stage: str(m.stage),
+    label: str(m.label),
   };
 }
 

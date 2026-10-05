@@ -120,6 +120,11 @@ const MODEL_FOR_TURN: Record<TextRequest["turn"], string> = {
   // "which is judgment, not retrieval". Flash is the wrong instrument for the
   // one step that decides whether the run produced a video or a wiki timeline.
   research: process.env.GOOGLE_TEXT_MODEL_PLAN?.trim() || "gemini-3.1-pro-preview",
+  // Flash, like `style-synthesis`: a hunt map and a lesson draft are a few KB
+  // of prompt and one schema-shaped answer each — judgement over a short list,
+  // not the nine-phase reasoning that earns the pro model above.
+  "sound-hunt": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
+  "sound-lesson": process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
   probe: process.env.GOOGLE_TEXT_MODEL?.trim() || "gemini-3.6-flash",
 };
 

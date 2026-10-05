@@ -92,8 +92,33 @@ export type TextCapability = "reason";
  *                        quietly promote this turn to a tool-using one: that is
  *                        a second capability and a separate seam, per the note
  *                        on `TextCapability` above.
+ *
+ *   · `sound-hunt`       /api/sound/hunts — an operator's musical (or sound-
+ *                        effect) problem in, a MAP of variants out: axes of
+ *                        variation, each ending in concrete prompts to render.
+ *                        Prompt: pipeline/SOUND-HUNT-PROMPT.md. Schema-shaped and
+ *                        validated in lib/sound/hunt.ts before a node is kept.
+ *                        Cheap — a few KB of prompt, flash-class — and it spends
+ *                        nothing on the vendor: the map is drafted, the operator
+ *                        chooses which leaves to render.
+ *   · `sound-lesson`     /api/sound/hunts/[id]/lesson — a finished hunt's
+ *                        winners and losers in, ONE drafted "when X, brief Y,
+ *                        because Z" claim out. A sibling word rather than reusing
+ *                        `sound-hunt`, for the reason this type exists: drafting
+ *                        a map and drafting a lesson are different turns with
+ *                        different prompts, and a spend chart that merged them
+ *                        could not say which one a team actually leans on. The
+ *                        draft is never stored by the model — a human confirms
+ *                        it (lib/sound/ledger.ts appendLesson).
  */
-export type TurnClass = "edit-plan" | "scene-direction" | "style-synthesis" | "research" | "probe";
+export type TurnClass =
+  | "edit-plan"
+  | "scene-direction"
+  | "style-synthesis"
+  | "research"
+  | "sound-hunt"
+  | "sound-lesson"
+  | "probe";
 
 /**
  * HOW THE ANSWER WAS REACHED. Not cosmetic — see the header, point 1.

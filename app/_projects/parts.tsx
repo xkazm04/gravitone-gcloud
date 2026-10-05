@@ -196,7 +196,19 @@ export function NewProjectButton({ onClick, className = "" }: { onClick: () => v
  *
  *  The question is a statement of consequence, which CLAUDE.md exempts: it
  *  says how many records go, and that is the whole of it. */
-export function DemoChip({ count, busy, onClear }: { count: number; busy: boolean; onClear: () => void }) {
+export function DemoChip({
+  count,
+  busy,
+  onClear,
+  noun = ["project", "projects"],
+}: {
+  count: number;
+  busy: boolean;
+  onClear: () => void;
+  /** What an example IS on this shelf, singular and plural, for the chip's
+   *  accessible name. The Library's audio shelf passes takes (2026-10-05). */
+  noun?: readonly [string, string];
+}) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLSpanElement>(null);
   const trigger = useRef<HTMLButtonElement>(null);
@@ -231,7 +243,7 @@ export function DemoChip({ count, busy, onClear }: { count: number; busy: boolea
         ref={trigger}
         type="button"
         aria-expanded={open}
-        aria-label={`${count} example ${count === 1 ? "project" : "projects"}`}
+        aria-label={`${count} example ${count === 1 ? noun[0] : noun[1]}`}
         onClick={() => setOpen((o) => !o)}
         disabled={busy}
         className={`font-jetbrains inline-flex h-8 cursor-pointer items-center gap-1.5 rounded-full border px-2.5 text-label transition disabled:cursor-default disabled:opacity-50 ${

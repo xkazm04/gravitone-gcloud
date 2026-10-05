@@ -164,9 +164,11 @@ export function userScopedLocalKeys(uid: string): string[] {
   return [
     `gravitone.seeded.${uid}`, // lib/useProjects.ts — "this account's shelf was seeded"
     `gravitone.assets.seeded.${uid}`, // lib/useAssets.ts — same, for the library
-    `gravitone.audio-seeded.v2.${uid}`, // app/library/audio/useAudioShelf.ts — same, for the audio module
+    `gravitone.audio-seeded.v2.${uid}`, // the audio module's IndexedDB seed mark — no longer written since the sound store (2026-10-05), still evicted where a machine holds it
     `gravitone.audio-book.${uid}`, // app/library/audio/bookStore.ts — the audio vocabulary's stances and the drafts sent out
     `gravitone.audio-seeded.${uid}`, // the audio module's first seed mark — no longer written, still evicted where a machine holds it
+    `gravitone.sound-migrated.v1.${uid}`, // app/library/audio/soundMigration.ts — "this account's audio rows moved to the sound store"
+    `gravitone.audio-annex.${uid}`, // app/library/audio/soundAnnex.ts — reference / round / draft links the sound store has no field for
     JOBS_KEY, // lib/jobs.tsx — profile-wide, cleared wholesale (see above)
   ];
 }

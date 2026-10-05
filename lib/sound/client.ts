@@ -107,3 +107,9 @@ export const patchHunt = (id: string, patch: { nodes?: HuntNode[]; lessonId?: st
 /** Asks the text engine to draft a lesson from a hunt's results. A human confirms it via addLesson. */
 export const draftHuntLesson = (id: string) =>
   call<{ draft: Omit<Lesson, "id" | "confirmedAt"> }>(`/api/sound/hunts/${encodeURIComponent(id)}/lesson`, { method: "POST" });
+
+/** Remove every fixture take — the Library's "clear the examples". Fixtures
+ *  only: the route refuses any other origin (DELETE /api/sound/takes?origin=fixture).
+ *  ADDED BY WP1 (2026-10-05), additive: the contract had no delete, and the
+ *  brief's demo chip needs one. */
+export const clearFixtures = () => call<{ removed: number }>("/api/sound/takes?origin=fixture", { method: "DELETE" });

@@ -43,6 +43,9 @@ import { POST as musicSfxPOST } from "@/app/api/music/sfx/route";
 import { POST as foundryExtractPOST } from "@/app/api/foundry/extract/route";
 import { POST as foundryStepPOST } from "@/app/api/foundry/extract/[id]/step/route";
 import { POST as musicVideoExportPOST } from "@/app/api/music-video/export/route";
+import { POST as soundGeneratePOST } from "@/app/api/sound/generate/route";
+import { POST as soundHuntsPOST } from "@/app/api/sound/hunts/route";
+import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/route";
 
 const SECRET = "probe-secret-value";
 
@@ -93,6 +96,17 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
   // ever spawned — same "4xx, never 401, nothing spent" shape as every route
   // above.
   ["music-video/export", "/api/music-video/export", musicVideoExportPOST],
+  // The Sound lab's three spending routes (round 4). An empty body is a 400
+  // from each one's own validation — `kind` for generate and hunts — before
+  // lib/music or lib/text is reached; the lesson route's id names no hunt, so
+  // the authed case is the store's 404, never a model turn.
+  ["sound/generate", "/api/sound/generate", soundGeneratePOST],
+  ["sound/hunts", "/api/sound/hunts", soundHuntsPOST],
+  [
+    "sound/hunts/lesson",
+    "/api/sound/hunts/[id]/lesson",
+    (r: Request) => soundHuntLessonPOST(r, { params: Promise.resolve({ id: "no-such-hunt" }) }),
+  ],
 ];
 
 /**
