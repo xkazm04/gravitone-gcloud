@@ -310,12 +310,9 @@ export function ConfirmDeleteStyle({
           <Button variant="ghost" className="cursor-pointer px-4 py-2" onClick={onClose}>
             Keep it
           </Button>
-          <button
-            onClick={onConfirm}
-            className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20"
-          >
+          <Button variant="danger" className="cursor-pointer px-5 py-2" onClick={onConfirm}>
             Delete the style
-          </button>
+          </Button>
         </div>
       }
     >

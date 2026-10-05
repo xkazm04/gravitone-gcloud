@@ -25,3 +25,12 @@ test("the folder rail and the shelves rail expose which row is selected", () => 
   expect(read("app/library/FolderTree.tsx")).toContain("aria-current");
   expect(read("app/_library/LibraryShelves.tsx")).toContain("aria-pressed");
 });
+
+test("destructive library buttons are the shared danger Button, not hand-rolled rose", () => {
+  for (const rel of ["app/library/parts.tsx", "app/library/AssetLightbox.tsx"]) {
+    const src = read(rel);
+    const raw = [...src.matchAll(/<button\b[^>]*>/g)].filter((m) => m[0].includes("bg-rose-400/10"));
+    expect(raw.length, `${rel} hand-rolls a rose button`).toBe(0);
+    expect(src).toContain('variant="danger"');
+  }
+});

@@ -19,6 +19,7 @@ import Image from "next/image";
 import { ChevronLeft, ChevronRight, Unlink } from "lucide-react";
 
 import Modal from "@/components/ui/Modal";
+import { Button } from "@/components/ui/Primitives";
 import { Hint, Keycaps } from "@/components/ui/signal";
 import type { Asset } from "@/lib/assets";
 
@@ -146,13 +147,9 @@ export default function AssetLightbox({
             {/* The same act the tile affords, offered where the user is
                 actually looking at the plate. It closes the viewer: the row it
                 was describing does not exist afterwards. */}
-            <button
-              type="button"
-              onClick={onRemove}
-              className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-4 py-1.5 text-label text-rose-200 transition hover:bg-rose-400/20"
-            >
+            <Button variant="danger" className="cursor-pointer px-4 py-1.5" onClick={onRemove}>
               Remove from shelf
-            </button>
+            </Button>
           </div>
         </div>
       }
