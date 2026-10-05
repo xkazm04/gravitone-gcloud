@@ -99,6 +99,13 @@ Open from it: Score's two hand-rolled `<audio>` should move onto kit `Player` (c
 raised once); `app/kit/census.json` is a committed derived file, so every session whose commit
 changes imports must re-run `npx tsx pipeline/kit-census.mts` (the gate says so).
 
+**Wave 3 landed and pushed 2026-10-06** (origin `a9d5975`, 17 registry gates green, 1242 probes).
+Operator decisions taken: the retrieval rung ships OFF behind `TEXT_RETRIEVE`; Motion is restored
+as the sixth step, knowingly reversing the 2026-08-14 retirement (`80ac10c`). Open from it: a
+verdict can say `review` but never `done` (WORKSPACE-A's contract - ratify before stage 2 switches
+the shelf over); Motion rows draw as empty boxes until a frame has a plate; `library-sound-migration`
+probe runs close to its 30s ceiling under parallel load.
+
 ## Map drift the scouts reported (operator's call; this session ran no scan)
 
 - `project-shelf` still lists `app/_projects/ProjectsMatrix.tsx` (gone). The live shelf
@@ -175,20 +182,20 @@ convergence table above.
 | `DATA-B` | [A change feed under every hook: one cache, live across components and tabs](01-studio-hub.md) | studio-data-layer | L | 6/8/5 | architecture |  | open |
 | `SLP-A` | [Mutation rung: every probe names the defect it guards, and a runner proves it goes red](01-studio-hub.md) | studio-logic-probes | M | 5/8/2 | none |  | open |
 | `SLP-B` | [Scenario rung: product-written step scenarios so the live lane and cx-capture reach every state](01-studio-hub.md) | studio-logic-probes | L | 6/8/4 | policy-loosen |  | open |
-| `WORKSPACE-A` | [Step contracts: progress becomes a projection of step records, not a mounted report](01-studio-hub.md) | studio-workspace | XL | 8/9/6 | contract |  | open |
+| `WORKSPACE-A` | [Step contracts: progress becomes a projection of step records, not a mounted report](01-studio-hub.md) | studio-workspace | XL | 8/9/6 | contract |  | partial b35a803 - stage 1 verdict modules; switch-over (stage 2) open; contract: verdict says review, never done |
 | `WORKSPACE-B` | [Outputs becomes this project's real reel, with provenance and keep-on-shelf](01-studio-hub.md) | studio-workspace | L | 6/8/4 | direction | C6 | open |
 | `research-run-engine-A` | [The real research run becomes a server-owned durable job with a run ledger](02-research-script.md) | research-run-engine | L | 7/9/6 | architecture | C2 | open |
-| `research-run-engine-B` | [Researched, not reasoned: a search-capable research rung with source receipts and a real trace](02-research-script.md) | research-run-engine | XL | 8/9/7 | policy-loosen |  | open |
+| `research-run-engine-B` | [Researched, not reasoned: a search-capable research rung with source receipts and a real trace](02-research-script.md) | research-run-engine | XL | 8/9/7 | policy-loosen |  | partial 9e81447 - stages 1-2 behind TEXT_RETRIEVE (off); trace + chip open; no live run yet |
 | `research-scope-board-A` | [The board deals any notebook: a per-project NotebookSource replaces the fixture constant](02-research-script.md) | research-scope-board | XL | 8/10/7 | contract | C1 | partial ca6ddbe - stage 1 (NotebookSource); stages 2-4 open |
 | `research-scope-board-B` | [Follow-ups that land: a per-project revision ledger the creator applies, rejects and undoes](02-research-script.md) | research-scope-board | L | 7/8/5 | direction |  | open |
 | `script-phase-A` | [ScriptDraft: renders become per-project data, and the hand tables become derivations](02-research-script.md) | script-phase | L | 8/9/7 | contract |  | partial 1099deb - session 1 (draft, impactOf, editPlanSchema, derived ledgerFor) |
-| `script-phase-B` | [Compose: the creator's own notebook in, three gated candidate renders out](02-research-script.md) | script-phase | XL | 9/10/7 | direction |  | open |
+| `script-phase-B` | [Compose: the creator's own notebook in, three gated candidate renders out](02-research-script.md) | script-phase | XL | 9/10/7 | direction |  | partial 901198a - stages 1-2 (prompt, parseDraft, /api/script + gate); UI action + durable job open |
 | `trailer-script-A` | [The trailer cut as an edit log: spine + ordered ops, so edits survive recompose and undo is free](02-research-script.md) | trailer-script | L | 7/8/5 | architecture |  | open |
 | `trailer-script-B` | [Notes and a model edit plan for the trailer: bring the stack-and-recalibrate loop to the cut, structure-checked before accept](02-research-script.md) | trailer-script | L | 8/8/6 | direction |  | open |
-| `frames-phase-A` | [One picture-unit contract: trailer shots own plates and reach Score and Cut](03-frames-score-cut.md) | frames-phase | XL | 8/9/6 | architecture + direction |  | open |
+| `frames-phase-A` | [One picture-unit contract: trailer shots own plates and reach Score and Cut](03-frames-score-cut.md) | frames-phase | XL | 8/9/6 | architecture + direction |  | partial eff57ca - stage 1 (units, v2 record); Score/Cut readers, shot plates open |
 | `frames-phase-B` | [The direction pass becomes a proposal: per-beat diff, keep my edits, stale plates marked](03-frames-score-cut.md) | frames-phase | L | 6/8/4 | direction |  | open |
 | `frames-score-cut-A` | [Cue takes become sound-store rows: the music lane survives a reload, and agents can fill it](03-frames-score-cut.md) | frames-score-cut | L | 6/8/5 | contract (closes ADR 2026-08-29-score-take-persistence) | C4 | merged into MUSIC-B 6997be6 (Cut resolution); take-fit row open |
-| `frames-score-cut-B` | [Compile the cut: an animatic MP4 from the derived timeline](03-frames-score-cut.md) | frames-score-cut | L | 7/8/5 | architecture + direction |  | open |
+| `frames-score-cut-B` | [Compile the cut: an animatic MP4 from the derived timeline](03-frames-score-cut.md) | frames-score-cut | L | 7/8/5 | architecture + direction |  | partial 38bfc82 - CutDocument + export kernel + /api/cut/export; Finish-line button, drawn layers open |
 | `phase-shared-A` | [Step records get a registry: typed keys, a versioned read seam, atomic patch, lineage](03-frames-score-cut.md) | phase-shared | XL | 8/9/6 | architecture |  | partial d27f335 - stage 1 + 3 data-loss conversions; lineage/ratchet open |
 | `phase-shared-B` | [Your own notebook, downstream: one resolver replaces the Bitcoin fixture everywhere](03-frames-score-cut.md) | phase-shared | XL | 8/9/6 | direction + architecture | C1 | open |
 | `production-script-probes-A` | [Turn contracts: one server-owned schema, prompt and validator per TurnClass](04-pipeline-probes-video.md) | production-script-probes | L | 7/8/5 | contract |  | open |
@@ -196,7 +203,7 @@ convergence table above.
 | `imaging-music-probes-A` | [One meter kernel for every vendor balance, proven by one conformance kit](04-pipeline-probes-video.md) | imaging-music-probes | XL | 8/8/5 | architecture | C3 | open |
 | `imaging-music-probes-B` | [Spend-invariant lane: one vendor boundary, generated adversarial traffic, global invariants](04-pipeline-probes-video.md) | imaging-music-probes | L | 6/8/3 | architecture |  | open |
 | `video-clip-pipeline-A` | [Clip take ledger: N seeds, persisted verdicts, adoption with waivers](04-pipeline-probes-video.md) | video-clip-pipeline | L | 6/7/3 | architecture |  | open |
-| `video-clip-pipeline-B` | [The Motion step: frames become clips, graded and adopted inside the studio](04-pipeline-probes-video.md) | video-clip-pipeline | XL | 9/9/7 | direction |  | open |
+| `video-clip-pipeline-B` | [The Motion step: frames become clips, graded and adopted inside the studio](04-pipeline-probes-video.md) | video-clip-pipeline | XL | 9/9/7 | direction |  | partial a9d5975 - stage 1, Motion restored as step 6 (operator decision, reverses 80ac10c); queue/takes/Cut open |
 | `foundry-curation-A` | [One gate kernel: Cull, Extract and Dojo sit on the Board's source adapters](05-asset-management.md) | foundry-curation | L | 6/7/5 | architecture |  | open |
 | `foundry-curation-B` | [Cull by exception: the grader is calibrated against you while you cull](05-asset-management.md) | foundry-curation | L | 7/8/6 | direction | C8 | open |
 | `foundry-engine-A` | [The catalogue gets one write path: journaled, revisioned, honoured by Python and the Dojo loop](05-asset-management.md) | foundry-engine | L | 6/8/5 | architecture | C9 | landed c5e5e1d - lock + journal + _rev; race cases green; sound store re-point open |
