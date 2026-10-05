@@ -217,7 +217,7 @@ export interface ScoreStepData {
 
 /** THE MUSIC-VIDEO DISCIPLINE'S WHOLE RESEARCH OUTPUT, under phase key
  *  `"music-video-source"` — a sibling of `research`/`research-beats`/etc.,
- *  not a new phase (PHASES stays exactly five, see lib/projects.ts).
+ *  not a new phase (see lib/projects.ts PHASES for the steps).
  *
  *  Written once by Research (the mp3 upload pointer, the style line, and the
  *  baked `AudioEnvelope` — `lib/audioEnvelope.ts`, computed once and never

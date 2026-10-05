@@ -65,7 +65,8 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
       progress: {
         research: "done",
         script: "done",
-        frames: "review", // scene 5 unpicked, 1 clip rejected, 1 rendering
+        frames: "review", // scene 5 unpicked
+        motion: "review", // 1 clip rejected, 1 rendering
         score: "review", // a cue was refused
         cut: "working", // playable with gaps
       },
@@ -85,6 +86,7 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
         research: "done",
         script: "working",
         frames: "empty",
+        motion: "empty",
         score: "empty",
         cut: "empty",
       },
@@ -106,6 +108,7 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
         // Every candidate for the archive scene came back refused — a real
         // wall, not a slow render, and the reason /projects has a blocked word.
         frames: "blocked",
+        motion: "empty",
         score: "empty",
         cut: "empty",
       },
@@ -125,6 +128,7 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
         research: "done",
         script: "done",
         frames: "done",
+        motion: "done",
         score: "done",
         cut: "done",
       },
@@ -158,6 +162,7 @@ export function seedProjects(uid: string, now: number = Date.now()): Project[] {
         research: "working",
         script: "empty",
         frames: "empty",
+        motion: "empty",
         score: "empty",
         cut: "empty",
       },

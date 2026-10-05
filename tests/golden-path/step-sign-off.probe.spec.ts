@@ -212,7 +212,7 @@ test("case 6: reopen after sign-off -> signedOff.frames absent and stateOf equal
   expect(afterUnsigned).toEqual(beforeUnsigned);
 });
 
-test("case 7: all five steps reported working/review and each signed off -> doneCount 5 and projectState 'delivered'; legacy record with no signedOff reads as today", async () => {
+test("case 7: every step reported working/review and each signed off -> doneCount PHASES.length and projectState 'delivered'; legacy record with no signedOff reads as today", async () => {
   const p0 = await putProject(
     newProject("u1", {
       title: "P7",
@@ -227,12 +227,13 @@ test("case 7: all five steps reported working/review and each signed off -> done
     await signOff(p0.id, ph);
   }
   const delivered = (await getProject(p0.id))!;
-  expect(doneCount(delivered)).toBe(5);
+  expect(doneCount(delivered)).toBe(PHASES.length);
   expect(projectState(delivered)).toBe("delivered");
   expect(phaseStates(delivered)).toEqual({
     research: "done",
     script: "done",
     frames: "done",
+    motion: "done",
     score: "done",
     cut: "done",
   });

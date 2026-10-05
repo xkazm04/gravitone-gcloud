@@ -116,11 +116,13 @@ test("params the model does not own (seed) are kept; unknown values are dropped"
   expect(out.get("seed")).toBe("300");
   expect(out.get("st")).toBe("draft");
 
-  const hand = queryFromParams(new URLSearchParams("st=review,bogus&d=nope&t=teaser,x&ph=motion&ps=done&g=weird&s=zzz"));
+  const hand = queryFromParams(new URLSearchParams("st=review,bogus&d=nope&t=teaser,x&ph=grade&ps=done&g=weird&s=zzz"));
   expect(hand.states).toEqual(["review"]);
   expect(hand.disciplines).toEqual([]);
   expect(hand.templates).toEqual(["teaser"]);
-  expect(hand.phase).toBeUndefined(); // "motion" is a retired step
+  expect(hand.phase).toBeUndefined(); // "grade" is no step
+  // Motion was retired once and is a step again (video-clip-pipeline-B).
+  expect(queryFromParams(new URLSearchParams("ph=motion")).phase).toBe("motion");
   expect(hand.phaseState).toBe("done");
   expect(hand.group).toBe("none");
   expect(hand.sort).toBe("needs-you");
@@ -224,7 +226,8 @@ test("each dropdown's one value maps onto the query's lists and back", () => {
   expect(stepValue(q({ phaseState: "blocked" }))).toBe(MULTI); // a bare ps= has no option
   expect(stepPatch("score:blocked")).toEqual({ phase: "score", phaseState: "blocked" });
   expect(stepPatch("cut")).toEqual({ phase: "cut", phaseState: undefined });
-  expect(stepPatch("motion:done")).toEqual({ phase: undefined, phaseState: undefined }); // retired step
+  expect(stepPatch("grade:done")).toEqual({ phase: undefined, phaseState: undefined }); // no such step
+  expect(stepPatch("motion:done")).toEqual({ phase: "motion", phaseState: "done" });
   expect(stepPatch(ANY)).toEqual({ phase: undefined, phaseState: undefined });
   // The patch is the filter: "Frames needs a call" finds exactly "a".
   expect(SHELF.filter((p) => matches(p, q(stepPatch("frames:review")))).map((p) => p.id)).toEqual(["a"]);
@@ -316,7 +319,7 @@ test("nextAction names the move and the step it opens on", () => {
 test("the trail runs over the unbroken run of locked steps from the start", () => {
   expect(lockedRun(mk("x"))).toBe(-1);
   expect(lockedRun(mk("x", { prog: { research: "done", script: "done", score: "done" } }))).toBe(1);
-  expect(lockedRun(mk("x", { prog: ALL_DONE }))).toBe(4);
+  expect(lockedRun(mk("x", { prog: ALL_DONE }))).toBe(PHASES.length - 1);
 });
 
 /* ── Windowing ────────────────────────────────────────────────────────────── */

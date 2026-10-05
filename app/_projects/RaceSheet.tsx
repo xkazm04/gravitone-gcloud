@@ -290,7 +290,7 @@ export default function RaceSheet({ projects, onOpen: leave, onEdit, onDelete, o
               <span role="columnheader" className="tracking-[0.18em] uppercase">
                 Project
               </span>
-              <div role="columnheader" aria-label="Steps, five gates" className="relative h-6">
+              <div role="columnheader" aria-label={`Steps, ${PHASES.length} gates`} className="relative h-6">
                 {PHASES.map((k, i) => (
                   <span
                     key={k}

@@ -51,6 +51,7 @@ import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/
 import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
 import { POST as turnsPOST } from "@/app/api/turns/route";
 import { POST as turnCancelPOST } from "@/app/api/turns/[id]/cancel/route";
+import { POST as motionDirectPOST } from "@/app/api/motion/direct/route";
 
 const SECRET = "probe-secret-value";
 
@@ -140,6 +141,10 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
     "/api/turns/[id]/cancel",
     (r: Request) => turnCancelPOST(r, { params: Promise.resolve({ id: "tn-000000000000" }) }),
   ],
+  // The Motion step's direction turn (video-clip-pipeline-B): two recognize
+  // passes per call. An empty body is a 400 from the plate check before
+  // lib/imaging is reached.
+  ["motion/direct", "/api/motion/direct", motionDirectPOST],
 ];
 
 /**
