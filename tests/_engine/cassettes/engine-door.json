@@ -1,0 +1,73 @@
+{
+  "name": "engine-door",
+  "source": "hand-written",
+  "recordedAt": "2026-10-05",
+  "cliVersion": "2.1.289",
+  "cliArgsFingerprint": "9bffdfc1075733e3",
+  "turns": [
+    {
+      "match": { "heading": "# DOOR ok" },
+      "prompt": null,
+      "mode": "ok",
+      "envelope": {
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "duration_ms": 4210,
+        "duration_api_ms": 3987,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-0000000000d1",
+        "total_cost_usd": 0.0021,
+        "usage": { "input_tokens": 42, "cache_creation_input_tokens": 0, "cache_read_input_tokens": 0, "output_tokens": 9 },
+        "permission_denials": []
+      },
+      "resultJson": { "ok": true }
+    },
+    {
+      "match": { "heading": "# DOOR prose" },
+      "prompt": null,
+      "mode": "ok",
+      "envelope": {
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "duration_ms": 3802,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-0000000000d2",
+        "total_cost_usd": 0.0019,
+        "result": "Sure. The answer is yes, and here is why, in a paragraph."
+      }
+    },
+    {
+      "match": { "heading": "# DOOR is_error" },
+      "prompt": null,
+      "mode": "is_error",
+      "envelope": {
+        "type": "result",
+        "subtype": "error_during_execution",
+        "is_error": true,
+        "duration_ms": 1204,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-0000000000d3",
+        "total_cost_usd": 0.0004,
+        "result": "The run stopped before it produced an answer."
+      }
+    },
+    {
+      "match": { "heading": "# DOOR not-json" },
+      "prompt": null,
+      "mode": "not-json"
+    },
+    {
+      "match": { "heading": "# DOOR login" },
+      "prompt": null,
+      "mode": "login-stderr"
+    },
+    {
+      "match": { "heading": "# DOOR exit" },
+      "prompt": null,
+      "mode": "exit:2",
+      "stderr": "error: unknown option '--effort'"
+    }
+  ]
+}
