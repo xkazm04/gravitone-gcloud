@@ -100,6 +100,20 @@ import {
   type VerdictValue,
 } from "@/components/kit";
 import { ASTERISM_PATH, ASTERISM_STARS, Mark, Wordmark } from "@/components/kit/brand";
+import {
+  BandTrack,
+  CHIP_CLASS,
+  HintPopover,
+  Keycaps,
+  PipRow,
+  Provenance,
+  StaleBadge,
+  TALLY_TONE,
+  UpstreamBreak,
+  hintRootClass,
+  useHint,
+  type TallyTone,
+} from "@/components/ui/signal";
 
 import { KIT_GROUPS, PART_COUNT, type PartName } from "./catalog";
 import { BellDemo, PagerDemo, RovingDemo, StepsConstDemo, StepsDemo, TableDemo, UserDemo, WindowDemo } from "./PartsWorkbench";
@@ -524,7 +538,22 @@ function ArmPair(picked: 0 | 1 | null, gone = false): [DuoArm, DuoArm] {
 
 // ── the demos, one per catalog part ─────────────────────────────────────────
 
-const GLYPH_KINDS: StatusKind[] = ["live", "ready", "inc", "failed", "committed", "gate", "keep", "reject", "undecided", "queued", "lock"];
+/** useHint + HintPopover + hintRootClass: the Hint disclosure hung on a trigger of the caller's own. */
+function DisclosureDemo() {
+  const d = useHint();
+  return (
+    <span {...d.rootProps} className={hintRootClass}>
+      <button type="button" className="k-caps" {...d.triggerProps} onClick={d.toggle}>
+        seed 3
+      </button>
+      <HintPopover d={d}>flux-dev · 36 candidates · 12 kept</HintPopover>
+    </span>
+  );
+}
+
+const TONES = Object.keys(TALLY_TONE) as TallyTone[];
+
+const GLYPH_KINDS: StatusKind[] =["live", "ready", "inc", "failed", "committed", "gate", "keep", "reject", "undecided", "queued", "lock"];
 
 const DEMOS: Record<PartName, () => ReactNode> = {
   WorldRoot: () => (
@@ -1028,6 +1057,56 @@ const DEMOS: Record<PartName, () => ReactNode> = {
   useRoving: () => <RovingDemo />,
   NotificationBell: () => <BellDemo />,
   UserMenu: () => <UserDemo />,
+  PipRow: () => (
+    <>
+      <S name="three of five"><PipRow states={["filled", "filled", "filled"]} max={5} label="3 of 5 picked" /></S>
+      <S name="mixed"><PipRow states={["filled", "amber", "rose", "hollow"]} label="1 kept, 1 running, 1 failed, 1 open" /></S>
+    </>
+  ),
+  BandTrack: () => (
+    <>
+      <S name="inside"><BandTrack value={58} min={0} max={120} band={[45, 75]} unit="s" label="runtime 58s, band 45–75s" /></S>
+      <S name="above, stand-in band"><BandTrack value={96} min={0} max={120} band={[45, 75]} unit="s" hatchBand showBounds label="runtime 96s, band 45–75s unmeasured" /></S>
+    </>
+  ),
+  UpstreamBreak: () => (
+    <>
+      <S name="info">
+        <UpstreamBreak blockedAt="script" current="frames" done={["research"]} action={{ label: "Open Script", onClick: noop }} />
+      </S>
+      <S name="error">
+        <UpstreamBreak blockedAt="research" current="script" done={[]} severity="error" detail="notebook · load · 404 run-0412" />
+      </S>
+    </>
+  ),
+  Keycaps: () => (
+    <Keycaps
+      map={[
+        { keys: ["K"], does: "keep" },
+        { keys: ["X"], does: "reject" },
+        { keys: ["U"], does: "undecided" },
+        { keys: ["←", "→"], does: "move" },
+      ]}
+    />
+  ),
+  StaleBadge: () => (
+    <div className="kr-row">
+      <StaleBadge />
+      <StaleBadge words="measured before" glyph="history" why="against notebook v3; now v5" />
+    </div>
+  ),
+  Provenance: () => <Provenance model="flux-dev" run="run-0412" step="frames" vendor="Leonardo" cost="$0.04" />,
+  useHint: () => <DisclosureDemo />,
+  HintPopover: () => <DisclosureDemo />,
+  hintRootClass: () => <Verbatim>{hintRootClass}</Verbatim>,
+  CHIP_CLASS: () => <Verbatim>{CHIP_CLASS}</Verbatim>,
+  TALLY_TONE: () => (
+    <div className="kr-row">
+      {TONES.map((t) => (
+        <span key={t} className={`${CHIP_CLASS} ${TALLY_TONE[t]}`}>{t}</span>
+      ))}
+    </div>
+  ),
   Mark: () => (
     <div className="kr-row" style={{ alignItems: "flex-end" }}>
       <S name="24, plain"><Mark size={24} construction={false} title="Gravitone, 24px" /></S>
@@ -1057,6 +1136,7 @@ const WIDE: ReadonlySet<PartName> = new Set<PartName>([
   "Deck", "DeckStage", "DeckCard", "StageRail", "FolderTree", "ContextMenu", "LayerList", "Player", "Waveform", "Timeline",
   "Bar", "PageHead", "TabRail", "StatusStrip", "Tile", "Scene", "Matrix", "Entry", "Card", "CardGrid",
   "Dock", "ConfirmDialog", "Figures", "Doc", "DataTable", "Ghost", "Thumb", "Dropzone", "Plate", "Field", "Select", "Callout", "ToastTray", "useToast",
+  "UpstreamBreak", "BandTrack", "CHIP_CLASS",
 ]);
 
 export function Parts() {
