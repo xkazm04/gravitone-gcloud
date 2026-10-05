@@ -49,7 +49,7 @@ export default function AssetsBrowser({ onOpenStyles, onCount }: ShelfProps) {
   return (
     <div className="grid gap-5 lg:grid-cols-[240px_1fr]">
       <aside>
-        <p className="font-jetbrains mb-2 text-content tracking-[0.18em] text-white/40 uppercase">categories</p>
+        <p className="font-jetbrains mb-2 text-content tracking-[0.18em] text-white/40 uppercase">folders</p>
         <FolderTree
           nodes={tree}
           selected={selected}
