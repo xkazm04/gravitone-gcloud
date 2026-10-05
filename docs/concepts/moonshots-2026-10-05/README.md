@@ -88,6 +88,12 @@ under an Obsidian-kit root yet). Found while doing them: a test fixture run unde
 inherited `GIT_DIR` and turned this checkout bare. Fixed in `3c43ae7` (article fixture and landing
 code) and `7572284` (the hook no longer hands `GIT_DIR` to `verify`).
 
+**Wave 1 landed and pushed 2026-10-05** (origin `6892a4d`, all 17 registry gates green): see
+the catalogue Status column. Found by the builders, open for a later card: the imaging router
+settles a hold on a billed failure and then reroutes with NO hold (`lib/imaging/router.ts:429`,
+IMG-A stage 2); `npx tsx` gate scripts fetch tsx from the network in CI (tsx is not a
+devDependency); `.ai/manifest.yaml:112-120` still describes the old 8-step verify chain.
+
 ## Map drift the scouts reported (operator's call; this session ran no scan)
 
 - `project-shelf` still lists `app/_projects/ProjectsMatrix.tsx` (gone). The live shelf
@@ -168,7 +174,7 @@ convergence table above.
 | `WORKSPACE-B` | [Outputs becomes this project's real reel, with provenance and keep-on-shelf](01-studio-hub.md) | studio-workspace | L | 6/8/4 | direction | C6 | open |
 | `research-run-engine-A` | [The real research run becomes a server-owned durable job with a run ledger](02-research-script.md) | research-run-engine | L | 7/9/6 | architecture | C2 | open |
 | `research-run-engine-B` | [Researched, not reasoned: a search-capable research rung with source receipts and a real trace](02-research-script.md) | research-run-engine | XL | 8/9/7 | policy-loosen |  | open |
-| `research-scope-board-A` | [The board deals any notebook: a per-project NotebookSource replaces the fixture constant](02-research-script.md) | research-scope-board | XL | 8/10/7 | contract | C1 | open |
+| `research-scope-board-A` | [The board deals any notebook: a per-project NotebookSource replaces the fixture constant](02-research-script.md) | research-scope-board | XL | 8/10/7 | contract | C1 | partial ca6ddbe - stage 1 (NotebookSource); stages 2-4 open |
 | `research-scope-board-B` | [Follow-ups that land: a per-project revision ledger the creator applies, rejects and undoes](02-research-script.md) | research-scope-board | L | 7/8/5 | direction |  | open |
 | `script-phase-A` | [ScriptDraft: renders become per-project data, and the hand tables become derivations](02-research-script.md) | script-phase | L | 8/9/7 | contract |  | open |
 | `script-phase-B` | [Compose: the creator's own notebook in, three gated candidate renders out](02-research-script.md) | script-phase | XL | 9/10/7 | direction |  | open |
@@ -196,7 +202,7 @@ convergence table above.
 | `library-styles-atelier-B` | [The trial matrix is the wall: compare six presets on five problems, then run yours as one slate](05-asset-management.md) | library-styles-atelier | L | 7/8/5 | direction |  | open |
 | `library-view-A` | [The studio's Outputs shelf is a fixture: derive it from the project's real step records](05-asset-management.md) | library-view | L | 7/8/5 | architecture | C6 | open |
 | `library-view-B` | [The Foundry's catalogue reaches projects: start a Library style from a proven Foundry style](05-asset-management.md) | library-view | L | 6/8/5 | direction | C7 | open |
-| `IMG-A` | [One spend kernel for every paid call: a durable ledger shared by imaging, music and text](06-imaging-music.md) | imaging-service | L | 7/9/6 | architecture | C3 | open |
+| `IMG-A` | [One spend kernel for every paid call: a durable ledger shared by imaging, music and text](06-imaging-music.md) | imaging-service | L | 7/9/6 | architecture | C3 | partial c8f399f - stage 1 (lib/spend + imaging); music/text/file store open |
 | `IMG-B` | [Plates that inspect and repair themselves: free local-eye QC plus instruction edits as plate versions](06-imaging-music.md) | imaging-service | L | 6/8/4 | direction |  | open |
 | `CC-A` | [The ruler graduates: a frozen, digest-pinned scale with JSON verdicts and a resident worker](06-imaging-music.md) | character-consistency-testing | M | 5/8/3 | architecture |  | open |
 | `CC-B` | [GPU tenancy lease: one cross-process turn broker replaces look-then-kill recycling](06-imaging-music.md) | character-consistency-testing | L | 7/8/6 | architecture |  | open |
@@ -208,7 +214,7 @@ convergence table above.
 | `UI-SHELL-B` | [Go anywhere from anywhere: a shell palette over projects, steps, decisions](07-design-system.md) | ui-shell | L | 6/8/4 | direction |  | open |
 | `SIGNAL-A` | [One keymap, declared once: bind, guard and draw from the same object](07-design-system.md) | signal-vocabulary | L | 6/8/5 | architecture |  | open |
 | `SIGNAL-B` | [Every count is a door: tallies and rails that filter what they count](07-design-system.md) | signal-vocabulary | L | 5/7/4 | direction |  | open |
-| `KIT-A` | [The kit census: adoption, gaps and the migration map derived from the tree](07-design-system.md) | kit-specimen-route | L | 6/8/3 | architecture |  | open |
+| `KIT-A` | [The kit census: adoption, gaps and the migration map derived from the tree](07-design-system.md) | kit-specimen-route | L | 6/8/3 | architecture |  | landed b0d1d5b + 6892a4d (wired) |
 | `KIT-B` | [Specimens in the world they ship in: every part, every world, measured](07-design-system.md) | kit-specimen-route | L | 6/7/3 | direction |  | open |
 | `UCP-A` | [Probes query the program, not the text: one AST layer for every source probe](07-design-system.md) | ui-component-probes | L | 7/8/4 | architecture |  | open |
 | `UCP-B` | [The legibility lane: assert what only photographs caught](07-design-system.md) | ui-component-probes | L | 7/8/5 | architecture |  | open |
@@ -216,7 +222,7 @@ convergence table above.
 | `AIO-B` | [Dispatch manifest: see what the engine will read, and which engine, before you spend](08-app-infrastructure.md) | ai-orchestration | L | 6/7/3 | direction |  | open |
 | `AUP-A` | [Verified principal and account vault: the server knows who is calling, and holds the work](08-app-infrastructure.md) | auth-persistence | XL | 9/9/7 | direction |  | open |
 | `AUP-B` | [Sign-out cannot destroy work: preview the wipe, take a studio archive, bring it back](08-app-infrastructure.md) | auth-persistence | L | 6/9/5 | policy-loosen | C5 | open |
-| `CIP-A` | [Engine stand-in lane: a fake `claude` on PATH replays recorded envelopes through real routes](08-app-infrastructure.md) | cli-infrastructure-probes | L | 6/8/3 | none | C10 | open |
+| `CIP-A` | [Engine stand-in lane: a fake `claude` on PATH replays recorded envelopes through real routes](08-app-infrastructure.md) | cli-infrastructure-probes | L | 6/8/3 | none | C10 | landed 76d4c80 - recalibrate lane; frames cassette open |
 | `CIP-B` | [Deployment-cell matrix: every route and capability judged per posture cell, derived](08-app-infrastructure.md) | cli-infrastructure-probes | M | 5/7/2 | none |  | open |
 | `text-engine-A` | [Durable turns: reason() becomes submit/settle over a server-side turn ledger](09-content-pipeline.md) | text-engine | L | 7/9/6 | architecture | C2 | open |
 | `text-engine-B` | [Repair, don't discard: a failed validation becomes a draft with a repair turn](09-content-pipeline.md) | text-engine | L | 6/8/5 | direction |  | open |
@@ -226,7 +232,7 @@ convergence table above.
 | `foundry-dojo-B` | [Blind gate: the human picks per pair before seeing the judges](09-content-pipeline.md) | foundry-dojo | M | 5/8/3 | direction |  | open |
 | `probe-frame-data-A` | [Corpus lockfile: frames addressed by content, manifests tracked, any clone re-materializes](09-content-pipeline.md) | probe-frame-data | M | 5/7/3 | architecture |  | open |
 | `probe-frame-data-B` | [Truth by construction: every generated shot emits its own ground-truth sidecar](09-content-pipeline.md) | probe-frame-data | M | 5/8/4 | architecture | C11 | open |
-| `pipeline-scripts-A` | [One gate registry: verify, CI and hooks projected from a single declaration](09-content-pipeline.md) | pipeline-scripts | M | 5/8/4 | architecture |  | open |
+| `pipeline-scripts-A` | [One gate registry: verify, CI and hooks projected from a single declaration](09-content-pipeline.md) | pipeline-scripts | M | 5/8/4 | architecture |  | landed 82e7c13 - registry + runner; --changed skip open |
 | `pipeline-scripts-B` | [Recorded-engine lane: drive the real reasoning routes end-to-end without a model](09-content-pipeline.md) | pipeline-scripts | L | 7/8/5 | architecture | C10 | open |
-| `data-asset-probes-A` | [Effect-log harness: enumerate every crash point and interleaving of the foundry commits](09-content-pipeline.md) | data-asset-probes | L | 7/8/4 | architecture | C9 | open |
+| `data-asset-probes-A` | [Effect-log harness: enumerate every crash point and interleaving of the foundry commits](09-content-pipeline.md) | data-asset-probes | L | 7/8/4 | architecture | C9 | landed 548ea81 - harness; race cases test.fail until foundry-engine-A |
 | `data-asset-probes-B` | [Notebook corpus lane: every tracked notebook walks the one validation door](09-content-pipeline.md) | data-asset-probes | M | 5/7/3 | architecture |  | open |
