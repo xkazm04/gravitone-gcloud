@@ -64,6 +64,22 @@ export function activatesOnEnter(t: { tagName?: string; getAttribute?: (n: strin
 
 const CRAFT_SUMMARY = ["shot_size", "camera_angle", "composition", "lighting_key", "lighting_direction", "depth_of_field"];
 
+/** The one reading of a candidate's state, for the tile and the comparison alike.
+ *  A verdict is only ever written onto a `ready` candidate: the tile hides the
+ *  stamp on every other state and the bar's counts exclude them. */
+export function artStateOf(candidate: Candidate | undefined, working: boolean): ArtState {
+  if (candidate?.deleted) return "deleted";
+  if (candidate?.status === "failed") return "failed";
+  if (candidate && (candidate.status === "graded" || candidate.status === "unmeasured" || candidate.status === "generated")) return "ready";
+  return working ? "generating" : "queued";
+}
+
+/** The candidate the forge is on right now: the first still pending on a live run. */
+export function workingIdOf(run: RunManifest): string | undefined {
+  const live = ["created", "annotating", "generating", "grading"].includes(run.status);
+  return live ? run.candidates.find((c) => c.status === "pending")?.id : undefined;
+}
+
 export function CullGrid({
   run,
   verdicts,
@@ -91,11 +107,9 @@ export function CullGrid({
   const order = useMemo(() => run.candidates.map((c) => c.id), [run.candidates]);
   const byId = useMemo(() => new Map(run.candidates.map((c) => [c.id, c])), [run.candidates]);
   const indexOf = useMemo(() => new Map(order.map((id, i) => [id, i])), [order]);
-  // The candidate the forge is on right now: the first one still pending on a
-  // live run. Drawn as "generating" rather than "queued" — the one tile on the
-  // page that is actually moving.
-  const live = ["created", "annotating", "generating", "grading"].includes(run.status);
-  const working = live ? run.candidates.find((c) => c.status === "pending")?.id : undefined;
+  // Drawn as "generating" rather than "queued" — the one tile on the page that is
+  // actually moving.
+  const working = workingIdOf(run);
 
   // ROVING FOCUS ALONGSIDE THE WINDOW KEYS. The arrows, K/X/U and Enter stay bound on
   // `window` below (the probe holds that contract, and a cull should not need the
@@ -150,15 +164,15 @@ export function CullGrid({
           break;
         case "k":
         case "K":
-          if (focused && !readOnly) onVerdict(focused, "keep");
+          if (focused && !readOnly && artStateOf(byId.get(focused), false) === "ready") onVerdict(focused, "keep");
           break;
         case "x":
         case "X":
-          if (focused && !readOnly) onVerdict(focused, "reject");
+          if (focused && !readOnly && artStateOf(byId.get(focused), false) === "ready") onVerdict(focused, "reject");
           break;
         case "u":
         case "U":
-          if (focused && !readOnly) onVerdict(focused, null);
+          if (focused && !readOnly && artStateOf(byId.get(focused), false) === "ready") onVerdict(focused, null);
           break;
         case "Enter":
           // Enter belongs to the focused element when that element activates on
@@ -174,7 +188,7 @@ export function CullGrid({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [keysEnabled, readOnly, focused, order, columns.length, onFocus, onVerdict, onOpen]);
+  }, [keysEnabled, readOnly, focused, order, byId, columns.length, onFocus, onVerdict, onOpen]);
 
   useEffect(() => {
     if (!focused) return;
@@ -384,8 +398,8 @@ function CandidateTile({
   onOpen: () => void;
   onVerdict: (v: Verdict | null) => void;
 }) {
-  const ready = candidate && !candidate.deleted && (candidate.status === "graded" || candidate.status === "unmeasured" || candidate.status === "generated");
-  const state: ArtState = candidate?.deleted ? "deleted" : candidate?.status === "failed" ? "failed" : ready ? "ready" : working ? "generating" : "queued";
+  const state = artStateOf(candidate, working);
+  const ready = state === "ready" && candidate !== undefined;
   const v = state === "ready" ? verdict : undefined;
   const g = candidate?.grade;
   const flag = ready && g ? (g.veto?.has_text ? "text" : candidate.status === "unmeasured" ? "unmeasured" : null) : null;

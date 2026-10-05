@@ -29,6 +29,7 @@ import { Button } from "@/components/ui/Primitives";
 import { Keycaps } from "@/components/ui/signal";
 import type { Candidate, RunManifest, Verdict, VerdictRecord } from "@/lib/foundry/types";
 
+import { artStateOf, workingIdOf } from "./CullGrid";
 import { when } from "./RunCards";
 import { fileUrl } from "./foundryClient";
 import { Art, FlagPill, Label, ScorePill, StatusChip, VerdictButtons, VerdictStamp, gradeOf, pct, verdictRing } from "./ui";
@@ -102,21 +103,26 @@ export function Lightbox({
   index: number;
   count: number;
 }) {
+  const artState = artStateOf(candidate ?? undefined, candidate ? workingIdOf(run) === candidate.id : false);
+  // Verdicts exist only on a picture that is drawn: the tile shows no stamp on any
+  // other state and the bar's counts leave them out.
+  const canVerdict = artState === "ready";
+
   useEffect(() => {
     if (!candidate) return;
     const onKey = (e: KeyboardEvent) => {
       switch (e.key) {
         case "k":
         case "K":
-          if (!readOnly) onVerdict("keep");
+          if (!readOnly && canVerdict) onVerdict("keep");
           break;
         case "x":
         case "X":
-          if (!readOnly) onVerdict("reject");
+          if (!readOnly && canVerdict) onVerdict("reject");
           break;
         case "u":
         case "U":
-          if (!readOnly) onVerdict(null);
+          if (!readOnly && canVerdict) onVerdict(null);
           break;
         case "ArrowRight":
           e.preventDefault();
@@ -130,7 +136,7 @@ export function Lightbox({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [candidate, readOnly, onVerdict, onStep]);
+  }, [candidate, readOnly, canVerdict, onVerdict, onStep]);
 
   const verdict: Verdict | undefined = record?.verdict;
   const scene = candidate ? run.scenes.find((s) => s.id === candidate.scene) : null;
@@ -177,14 +183,18 @@ export function Lightbox({
               label="Comparison shortcuts"
               map={[
                 { keys: ["←", "→"], does: "step" },
-                { keys: ["K"], does: "keep" },
-                { keys: ["X"], does: "reject" },
-                { keys: ["U"], does: "clear" },
+                ...(canVerdict
+                  ? [
+                      { keys: ["K"], does: "keep" },
+                      { keys: ["X"], does: "reject" },
+                      { keys: ["U"], does: "clear" },
+                    ]
+                  : []),
                 { keys: ["Esc"], does: "close" },
               ]}
             />
           )}
-          {!readOnly && (
+          {!readOnly && canVerdict && (
             <span className="ml-auto flex items-center gap-3">
               <span className={`font-jetbrains text-label ${verdict === "keep" ? "text-emerald-200" : verdict === "reject" ? "text-rose-200" : "text-white/45"}`}>
                 {verdict === "keep" ? "kept" : verdict === "reject" ? "rejected" : "undecided"}
@@ -213,12 +223,12 @@ export function Lightbox({
             <figure className="flex flex-col gap-2">
               <div className={`rounded-xl transition ${verdictRing(verdict)}`}>
                 <Art
-                  src={candidate.deleted ? undefined : fileUrl(run.id, candidate.file)}
-                  state={candidate.deleted ? "deleted" : "ready"}
+                  src={canVerdict ? fileUrl(run.id, candidate.file) : undefined}
+                  state={artState}
                   alt={candidate.id}
                   className="aspect-video"
                 >
-                  {verdict && <VerdictStamp verdict={verdict} className="absolute top-3 left-3" />}
+                  {canVerdict && verdict && <VerdictStamp verdict={verdict} className="absolute top-3 left-3" />}
                 </Art>
               </div>
               <figcaption className="flex flex-col gap-1 px-1">
@@ -236,6 +246,9 @@ export function Lightbox({
                     </span>
                   )}
                 </span>
+                {artState === "failed" && candidate.error && (
+                  <span className="font-jetbrains text-label break-words text-rose-200/80">{candidate.error}</span>
+                )}
                 {record && (
                   <span className="flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
                     <span className={`font-jetbrains shrink-0 text-label ${record.verdict === "keep" ? "text-emerald-200/90" : "text-rose-200/90"}`}>
