@@ -107,7 +107,7 @@ import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 // `gravitone.jobs.v1` from localStorage evicts the record on disk and leaves the
 // root-mounted provider's live copy of it untouched, which is the half a user of
 // the next account can actually read.
-import { __announceIdentityEvicted } from "@/lib/jobs";
+import { __announceIdentityEvicted, __identityEvictionListenerCount } from "@/lib/jobs";
 
 /**
  * WHY the identity changed.
@@ -144,6 +144,18 @@ export interface EvictionReport {
   /** True when the wipe could not be completed. The identity transition still
    *  proceeds — see `evictIdentity` — but the caller may say so. */
   failed: boolean;
+}
+
+/**
+ * `dryRun` — PREVIEW THE WIPE. Every count is computed exactly as the real
+ * eviction computes it (the same reads, one transaction over the same five
+ * stores, opened readonly), and nothing is deleted, removed or announced. The
+ * report is the one the real eviction would return, field for field, so a
+ * sign-out surface can show what is about to go before it goes, and a probe can
+ * hold the preview against the wipe that follows it (studio-archive probe).
+ */
+export interface EvictionOptions {
+  dryRun?: boolean;
 }
 
 /** The job/notification store. NOT uid-keyed — it is one record for the profile —
@@ -226,7 +238,12 @@ export function transitionFor(was: string | null, now: string | null): EvictionR
  * other storage failure reaches — rather than thrown, because there is no caller
  * in a position to retry it.
  */
-export async function evictIdentity(uid: string, reason: EvictionReason): Promise<EvictionReport> {
+export async function evictIdentity(
+  uid: string,
+  reason: EvictionReason,
+  opts: EvictionOptions = {},
+): Promise<EvictionReport> {
+  const dry = opts.dryRun === true;
   const report: EvictionReport = {
     uid,
     reason,
@@ -248,14 +265,14 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
     if (typeof localStorage !== "undefined") {
       for (const k of userScopedLocalKeys(uid)) {
         if (localStorage.getItem(k) !== null) {
-          localStorage.removeItem(k);
+          if (!dry) localStorage.removeItem(k);
           report.local++;
         }
       }
     }
   } catch (e) {
     report.failed = true;
-    reportStorageTrouble("write", uid, "sign-out", e);
+    reportStorageTrouble(dry ? "read" : "write", uid, "sign-out", e);
   }
 
   // The IN-MEMORY half of the job tray, announced immediately after the stored
@@ -264,7 +281,8 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
   // showing the previous account's work. Counted into the report beside the
   // keys, because a wipe that told nobody and a wipe with nobody to tell are
   // different facts and the log has to be able to say which.
-  report.trays = __announceIdentityEvicted();
+  // A dry run counts the listeners instead: announcing IS the wipe of that copy.
+  report.trays = dry ? __identityEvictionListenerCount() : __announceIdentityEvicted();
 
   if (typeof indexedDB === "undefined") return report;
 
@@ -279,7 +297,7 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
       // through are gone.
       const tx = db.transaction(
         [PROJECTS_STORE, STEPS_STORE, THEMES_STORE, ASSETS_STORE, UPLOADS_STORE],
-        "readwrite",
+        dry ? "readonly" : "readwrite",
       );
       tx.oncomplete = () => resolve();
       tx.onabort = () => reject(tx.error ?? new Error("eviction aborted"));
@@ -298,12 +316,12 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
         const ids = (projectKeys.result as IDBValidKey[]) ?? [];
         report.projects = ids.length;
         for (const id of ids) {
-          projects.delete(id);
+          if (!dry) projects.delete(id);
           const stepKeys = steps.index(BY_PROJECT).getAllKeys(id as string);
           stepKeys.onsuccess = () => {
             const keys = (stepKeys.result as IDBValidKey[]) ?? [];
             report.steps += keys.length;
-            for (const k of keys) steps.delete(k);
+            if (!dry) for (const k of keys) steps.delete(k);
           };
         }
       };
@@ -313,7 +331,7 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
       themeKeys.onsuccess = () => {
         const keys = (themeKeys.result as IDBValidKey[]) ?? [];
         report.themes = keys.length;
-        for (const k of keys) themes.delete(k);
+        if (!dry) for (const k of keys) themes.delete(k);
       };
 
       // Assets are read as RECORDS, not keys, because the row is the only thing
@@ -329,10 +347,10 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
         const rows = (assetRows.result as { id: IDBValidKey; src?: unknown }[]) ?? [];
         report.assets = rows.length;
         for (const row of rows) {
-          assets.delete(row.id);
+          if (!dry) assets.delete(row.id);
           const uploadId = typeof row.src === "string" ? readUploadPointer(row.src) : null;
           if (uploadId) {
-            uploads.delete(uploadId);
+            if (!dry) uploads.delete(uploadId);
             report.uploads++;
           }
         }
@@ -340,11 +358,11 @@ export async function evictIdentity(uid: string, reason: EvictionReason): Promis
     });
   } catch (e) {
     report.failed = true;
-    reportStorageTrouble("write", uid, "sign-out", e);
+    reportStorageTrouble(dry ? "read" : "write", uid, "sign-out", e);
   }
 
   console.log(
-    `[identity] evicted uid=${uid.slice(0, 6)}… reason=${reason} projects=${report.projects} ` +
+    `[identity] ${dry ? "would evict" : "evicted"} uid=${uid.slice(0, 6)}… reason=${reason} projects=${report.projects} ` +
       `steps=${report.steps} themes=${report.themes} assets=${report.assets} uploads=${report.uploads} ` +
       `local=${report.local} ` +
       `trays=${report.trays}` +

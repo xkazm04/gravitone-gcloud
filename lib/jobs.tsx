@@ -238,6 +238,14 @@ export function __announceIdentityEvicted(): number {
   return told;
 }
 
+/** How many mounted job stores `__announceIdentityEvicted` WOULD tell, read
+ *  without telling any of them. The eviction's dry run reports this so its
+ *  preview equals the real wipe's report; announcing would empty the tray it is
+ *  only meant to count. Called ONLY by lib/identityEviction.ts. */
+export function __identityEvictionListenerCount(): number {
+  return evictionListeners.size;
+}
+
 interface Persisted { jobs: Job[]; events: JobEvent[] }
 
 /** The shared record as written, with NO judgement applied. Used by everything
