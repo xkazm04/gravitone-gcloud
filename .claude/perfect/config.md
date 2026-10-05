@@ -148,6 +148,10 @@ EXPORTS this file, plus the managed `<!-- personas:context-map -->` block in `CL
 - "Add auth / a database / a NEW third-party vendor" - a deliberate deferral, not a gap.
   (Superseded 2026-08-29: "a model call" is no longer a veto — imaging, music and text all make
   real ones. Deepening those is in season; a fourth vendor is not.)
+  (Superseded 2026-10-04 by the operator, platform-consolidation spark: PUBLISHING vendors are
+  authorised — YouTube now, TikTok and Instagram declared — behind `lib/publish/` only, dry-run by
+  default, with the schedule file-backed under `foundry-out/publish/` (no database). Every other
+  new vendor is still out of scope.)
 - "Bring back the Motion step" - retired 2026-08-14 (see the product brief).
 - Localization - this repo ships English only, and `locale_count: 1` is deliberate.
 

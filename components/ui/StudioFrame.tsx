@@ -35,6 +35,14 @@ import { WorldRoot } from "@/components/kit/WorldRoot";
 export const MODULES = [
   { label: "Projects", href: "/projects" },
   { label: "Library", href: "/library" },
+  // The one decision inbox: every human gate in the app (foundry runs, style
+  // proofs, step adoptions, publish slots) decided in one vocabulary. The
+  // foundry keeps the engines that PRODUCE candidates; this is where they are
+  // judged.
+  { label: "Board", href: "/board" },
+  // Publishing: the schedule, the channels a headless agent can post to, and
+  // what came back from them.
+  { label: "Calendar", href: "/calendar" },
   // Temporary by design: a bench for exercising the music vendor's latest
   // feature surface (plan drafting, section editing, SFX) before any of it is
   // promoted into the studio's own steps. Remove when the Score phase has
