@@ -390,6 +390,7 @@ function Row({
                       <span className="font-jetbrains w-11 shrink-0 text-label text-white/35">{t.role}</span>
                       <input
                         value={t.value}
+                        aria-label={`${t.role} text`}
                         onChange={(e) => onText(t.id, e.target.value)}
                         className="font-hanken min-w-0 flex-1 rounded border border-white/10 bg-white/[0.03] px-1.5 py-1 text-content text-slate-200 focus:border-cyan-400/40"
                       />
@@ -444,6 +445,7 @@ function Row({
                 value={frame.plate.subject ?? ""}
                 onChange={(e) => onSubject(e.target.value)}
                 rows={3}
+                aria-label="plate subject"
                 placeholder="subject"
                 className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-cyan-400/40"
               />
@@ -463,6 +465,7 @@ function Row({
                 value={frame.clip?.motion ?? ""}
                 onChange={(e) => onMotion(e.target.value)}
                 rows={2}
+                aria-label="clip motion"
                 placeholder="what this plate does — e.g. a slow push in as the left stack settles"
                 className="font-hanken w-full resize-none rounded-lg border border-white/10 bg-white/[0.03] px-2.5 py-2 text-content leading-snug text-slate-200 focus:border-violet-300/40"
               />

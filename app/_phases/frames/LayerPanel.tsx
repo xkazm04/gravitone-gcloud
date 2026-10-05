@@ -181,16 +181,16 @@ function Row({
         )}
       </button>
 
-      <button onClick={onUp} disabled={first} aria-label="Bring forward" className="rounded p-0.5 text-white/25 transition hover:text-white/80 disabled:opacity-20">
+      <button onClick={onUp} disabled={first} aria-label={`Bring ${name} forward`} className="rounded p-0.5 text-white/25 transition hover:text-white/80 disabled:opacity-20">
         <ArrowUp className="h-3 w-3" aria-hidden />
       </button>
-      <button onClick={onDown} disabled={last} aria-label="Send backward" className="rounded p-0.5 text-white/25 transition hover:text-white/80 disabled:opacity-20">
+      <button onClick={onDown} disabled={last} aria-label={`Send ${name} backward`} className="rounded p-0.5 text-white/25 transition hover:text-white/80 disabled:opacity-20">
         <ArrowDown className="h-3 w-3" aria-hidden />
       </button>
-      <button onClick={onHide} aria-label={hidden ? "Show layer" : "Hide layer"} className="rounded p-0.5 text-white/25 transition hover:text-white/80">
+      <button onClick={onHide} aria-label={hidden ? `Show ${name}` : `Hide ${name}`} className="rounded p-0.5 text-white/25 transition hover:text-white/80">
         {hidden ? <EyeOff className="h-3 w-3" aria-hidden /> : <Eye className="h-3 w-3" aria-hidden />}
       </button>
-      <button onClick={onRemove} aria-label="Remove layer" className="rounded p-0.5 text-white/25 transition hover:text-rose-300">
+      <button onClick={onRemove} aria-label={`Remove ${name}`} className="rounded p-0.5 text-white/25 transition hover:text-rose-300">
         <Trash2 className="h-3 w-3" aria-hidden />
       </button>
     </div>
