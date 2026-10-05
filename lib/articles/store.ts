@@ -152,18 +152,24 @@ export async function readTextFile(file: string): Promise<string | undefined> {
  * from `failed` when the failure happened during landing (a resume re-lands;
  * it never re-approves). Pushing to the registry is reachable only through
  * `approved -> landing`, so nothing that has not passed the gate can land.
+ *
+ * `critiquing` (scope amendment 1) sits between `drafting` and `checking` and
+ * is the only way to `checking`: no draft reaches the gate unreviewed. A
+ * critique that fails its quorum is `failed` with `critique-quorum`, and a
+ * resume goes back into `critiquing`.
  */
 export const TRANSITIONS: Record<ArticleStatus, readonly ArticleStatus[]> = {
   queued: ["researching", "failed"],
   researching: ["drafting", "failed"],
-  drafting: ["checking", "failed"],
+  drafting: ["critiquing", "failed"],
+  critiquing: ["checking", "failed"],
   checking: ["awaiting-approval", "failed"],
   "awaiting-approval": ["approved", "rejected"],
   approved: ["landing", "failed"],
   landing: ["landed", "failed"],
   landed: [],
   rejected: [],
-  failed: ["queued", "researching", "drafting", "checking", "approved"],
+  failed: ["queued", "researching", "drafting", "critiquing", "checking", "approved"],
 };
 
 export function canTransition(from: ArticleStatus, to: ArticleStatus): boolean {

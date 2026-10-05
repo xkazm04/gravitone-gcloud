@@ -31,6 +31,7 @@ import os from "node:os";
 import path from "node:path";
 
 import { citedNumbers, htmlProse, postWords, THRESHOLDS } from "./checks";
+import { readCritiqueDetail, registryCritique, type RegistryCritique } from "./critique";
 import { resolveRegistryDir, type RegistryLocation } from "./registryRead";
 import { ArticleError, slugify } from "./store";
 import type { ArticleLanding, ArticleRun, CheckReport, Claim, PostMeta, RegistryPatch, Source } from "./types";
@@ -116,10 +117,15 @@ export interface PublicationInput {
   sources: Source[];
   claims: Claim[];
   check?: CheckReport;
+  /** The critique record (lib/articles/critique.ts registryCritique). */
+  critique?: RegistryCritique;
 }
 
 /** publication.json, schema `publication/1` (ai-registry docs/publications-lane.md).
- *  Absent values are omitted, never null. */
+ *  Absent values are omitted, never null. `critique` is the one optional
+ *  top-level key the schema names ("The critique record"): written whenever
+ *  the run has a decided critique, which every run since the critique step
+ *  has. */
 export function publicationJson(p: PublicationInput): Record<string, unknown> {
   const words = postWords(p.md);
   const costs = p.run.steps.map((s) => s.costUsd).filter((c): c is number => typeof c === "number");
@@ -147,6 +153,7 @@ export function publicationJson(p: PublicationInput): Record<string, unknown> {
     figures: figureRecords(p.html),
     check: { ...(p.check?.dimensions ?? {}) },
     run: runBlock,
+    ...(p.critique ? { critique: p.critique.block } : {}),
   };
 }
 
@@ -249,6 +256,7 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
   const sources = await readJson<Source[]>(path.join(runDir, "sources.json"));
   const claims = await readJson<Claim[]>(path.join(runDir, "claims.json"));
   const check = existsSync(path.join(runDir, "check.json")) ? await readJson<CheckReport>(path.join(runDir, "check.json")) : undefined;
+  const critique = registryCritique(await readCritiqueDetail(runDir));
 
   // Patch safety BEFORE anything touches the registry.
   const diffs: { patch: RegistryPatch; diff: string }[] = [];
@@ -288,8 +296,16 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
   const pubDir = path.join(worktree, "publications", slug);
   await mkdir(pubDir, { recursive: true });
   const date = now().toISOString().slice(0, 10);
-  const pub = publicationJson({ run: art, slug, date, meta, html, md, sources, claims, check });
+  const pub = publicationJson({ run: art, slug, date, meta, html, md, sources, claims, check, ...(critique ? { critique } : {}) });
   await writeFile(path.join(pubDir, "publication.json"), `${JSON.stringify(pub, null, 2)}\n`, "utf8");
+  // The critique detail: every round's reviews and dispositions, flattened,
+  // each entry carrying its round. Both files or neither, and only beside the
+  // block (the registry gate fails a critique/ directory without one).
+  if (critique) {
+    await mkdir(path.join(pubDir, "critique"), { recursive: true });
+    await writeFile(path.join(pubDir, "critique", "reviews.json"), `${JSON.stringify(critique.reviews, null, 2)}\n`, "utf8");
+    await writeFile(path.join(pubDir, "critique", "dispositions.json"), `${JSON.stringify(critique.dispositions, null, 2)}\n`, "utf8");
+  }
   await writeFile(path.join(pubDir, "post.html"), html.replace(/\r\n/g, "\n"), "utf8");
   await writeFile(path.join(pubDir, "post.md"), md.replace(/\r\n/g, "\n"), "utf8");
   await writeFile(path.join(pubDir, "SOURCES.md"), sourcesMarkdown(meta.title, sources), "utf8");
@@ -360,6 +376,12 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
     `- Topic: ${art.topic.kind === "subject" ? `${art.topic.bundle}/${art.topic.subject}` : art.topic.text}`,
     `- Standard: ${art.standard.recipe} ${art.standard.version ?? ""} (${art.standard.bundle})`,
     `- Sources: ${sources.length}, primary ${sources.filter((s) => s.primary).length}, counter ${sources.filter((s) => s.counter).length}`,
+    ...(critique
+      ? [
+          `- Critique: ${critique.block.rounds} round${critique.block.rounds === 1 ? "" : "s"}, decision ${critique.block.decision}; reviewers ${critique.block.reviewers.map((r) => `${r.id} (${r.engine} ${r.model}) ${r.outcome}`).join(", ")}`,
+          `- Findings: ${critique.block.findings.total} (accepted ${critique.block.findings.accepted}, rejected ${critique.block.findings.rejected}, deferred ${critique.block.findings.deferred}) — publications/${slug}/critique/`,
+        ]
+      : []),
     "",
     ...(checkRows.length ? ["| dimension | deterministic check |", "|---|---|", ...checkRows, ""] : []),
     ...(check?.notMeasured.length ? [`Not measured by the check (the human's judgement): ${check.notMeasured.join(", ")}.`, ""] : []),

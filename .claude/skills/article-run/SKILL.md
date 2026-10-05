@@ -2,7 +2,7 @@
 name: article-run
 memory: none
 category: Content
-description: Start a technical blog post through the article pipeline (lib/articles) headlessly and report where it stands - research with live web, outline, draft and a deterministic check, stopping at the human gate in /articles. Wraps `run` and `status` of pipeline/article.mts only; it never approves, rejects or lands anything. Invoke with /article-run <bundle/slug | "free topic"> [--angle "..."] [--model id] [--effort level], or /article-run status [<runId>].
+description: Start a technical blog post through the article pipeline (lib/articles) headlessly and report where it stands - research with live web, outline, draft, a multi-model critique and a deterministic check, stopping at the human gate in /articles. Wraps `run` and `status` of pipeline/article.mts only; it never approves, rejects or lands anything. Invoke with /article-run <bundle/slug | "free topic"> [--angle "..."] [--model id] [--effort level], or /article-run status [<runId>].
 argument-hint: "<bundle/slug | \"topic text\"> [--angle \"...\"] | status [runId]"
 allowed-tools: Read, Bash, PowerShell, Glob, Grep
 ---
@@ -23,14 +23,21 @@ give them the run id.
 
 ## Before starting a run: it spends
 
-A run starts three real agent sessions on the operator's logged-in Claude seat (research uses web
-search and fetch; it is the dearest). Say so before the first `run` of a session and wait for a yes,
-unless the user's own message already asked for the run explicitly. A dry run with the stub agent
-spends nothing:
+A run starts real agent sessions on the operator's logins. There are three writer sessions on the
+Claude seat (research uses web search and fetch). Then the critique runs four reviewers with web
+access through the local claude, codex, grok and agy CLIs, plus one to four more writer sessions:
+8 agent turns at the least, 26 at the most (docs/articles.md, "The critique"). Say so before the
+first `run` of a session and wait for a yes, unless the user's own message already asked for the
+run explicitly. A dry run with every engine stubbed spends nothing:
 
 ```bash
-ARTICLES_AGENT_BIN="node|tests/fixtures/articles/stub-agent.mjs" npx tsx pipeline/article.mts run --topic "..." --json
+STUB=tests/fixtures/articles/stub-agent.mjs
+ARTICLES_AGENT_BIN="node|$STUB" ARTICLES_CODEX_BIN="node|$STUB|--as=codex" \
+  ARTICLES_GROK_BIN="node|$STUB|--as=grok" ARTICLES_AGY_BIN="node|$STUB|--as=agy" \
+  npx tsx pipeline/article.mts run --topic "..." --json
 ```
+
+Leaving out one of the four variables runs that real CLI.
 
 The registry must be reachable: `$AI_REGISTRY_DIR`, else `.ai/manifest.yaml` `registry.local`, else
 `../ai-registry`. In a git worktree of this repo `../ai-registry` usually does not exist; set
@@ -41,7 +48,8 @@ The registry must be reachable: `$AI_REGISTRY_DIR`, else `.ai/manifest.yaml` `re
 
 Arguments: a registry subject as `<bundle>/<slug>` (e.g. `software-engineering/agent-cli-transport`)
 or free text in quotes. Optional `--angle`, `--model` (default the repo's `lib/model.ts` MODEL),
-`--effort` (`low|medium|high|xhigh|max`, default `high`).
+`--effort` (`low|medium|high|xhigh|max`, default `high`), `--reviewers <file>` (a reviewer panel
+in place of `pipeline/article-reviewers.json`).
 
 ```bash
 npx tsx pipeline/article.mts run --subject software-engineering/agent-cli-transport --angle "..." --json
@@ -65,13 +73,20 @@ npx tsx pipeline/article.mts status --json           # every run, newest first
 After a run, read `<dir>/check.json` and report, in this order:
 
 1. The run id, its status, and the gate: `/articles/<runId>`.
-2. The check's failures (they are listed first), each with its value and the bar. Say plainly that
+2. The critique, from `run.json` `critique`: rounds, each reviewer with its engine, model and
+   outcome, and the error of any that did not complete (an `unavailable` or `seat-limit` reviewer
+   is a review that did not happen, not a verdict). Then the findings by disposition and the
+   writer's decision. The per-round detail is in `<dir>/critique/round-<n>/`.
+3. The check's failures (they are listed first), each with its value and the bar. Say plainly that
    `storytelling` and `depth` are not measured by the check; they are the human's judgement.
-3. Sources: count, primary, counter (`<dir>/sources.json`).
-4. Proposed registry patches (`<dir>/patches.json`): id, kind, target, rationale. Anything in
+4. Sources: count, primary, counter (`<dir>/sources.json`).
+5. Proposed registry patches (`<dir>/patches.json`): id, kind, target, rationale. Anything in
    `<dir>/patches.rejected.json` was refused by the engine; say why.
-5. Cost per step from `run.json` `steps[].costUsd`. A step without the field is unpriced, not free.
+6. Cost per step from `run.json` `steps[].costUsd`. A step without the field is unpriced, not free.
+   codex and agy reviewers never report a cost.
 
 If the run failed, report `error` verbatim and which step failed. `<dir>/agent/<step>.json` holds the
-agent's outcome (`completed | timed-out | errored | seat-limit`); a `seat-limit` is a run that did
-not happen, not a verdict on the topic. Suggest `resume` to the operator; do not run it.
+agent's outcome (`completed | unavailable | timed-out | errored | seat-limit`); a `seat-limit` is a
+run that did not happen, not a verdict on the topic. `critique: critique-quorum: …` means fewer than
+two reviewers completed a round, and the error names each one's reason. Suggest `resume` to the
+operator; do not run it.

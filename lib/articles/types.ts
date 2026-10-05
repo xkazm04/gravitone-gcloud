@@ -15,6 +15,13 @@
 //     post/figures/NN-*.svg                 draft
 //     patches.json          RegistryPatch[] draft (proposals), diffs by code
 //     patches/<id>.patch    unified diff against the registry, made by code
+//     critique/reviewers.json                the reviewer panel, snapshot at critique start
+//     critique/round-<n>/reviews/<id>.json   Review          one per completed reviewer
+//     critique/round-<n>/receipts/<id>.json  ReviewerReceipt one per reviewer that ran
+//     critique/round-<n>/closed.json         the round reached quorum
+//     critique/round-<n>/dispositions.json   FindingDisposition[]  the writer
+//     critique/round-<n>/decision.json       CritiqueDecisionRecord the writer
+//     critique/round-<n>/revised.json        the writer revised the post after this round
 //     check.json            CheckReport     check (deterministic, no model)
 //     check/*.png           screenshots at 390 and 1440 px
 //     medium/               paste-ready package, built at landing
@@ -25,11 +32,14 @@
 // JSON, never written as `null` — the registry's publication/1 contract uses the
 // same convention, and the two meet in lib/articles/registryWrite.ts.
 
-/** Exactly the contract's ten states. Order is the happy path. */
+/** The contract's ten states plus `critiquing` (scope amendment 1, the
+ *  multi-model critique between the draft and the check). Order is the happy
+ *  path. */
 export const ARTICLE_STATUSES = [
   "queued",
   "researching",
   "drafting",
+  "critiquing",
   "checking",
   "awaiting-approval",
   "approved",
@@ -40,9 +50,10 @@ export const ARTICLE_STATUSES = [
 ] as const;
 export type ArticleStatus = (typeof ARTICLE_STATUSES)[number];
 
-/** The four steps. `outline` and `draft` both run while the status is
- *  `drafting`; `research` is `researching`; `check` is `checking`. */
-export const STEP_NAMES = ["research", "outline", "draft", "check"] as const;
+/** The five steps. `outline` and `draft` both run while the status is
+ *  `drafting`; `research` is `researching`; `critique` is `critiquing`;
+ *  `check` is `checking`. */
+export const STEP_NAMES = ["research", "outline", "draft", "critique", "check"] as const;
 export type StepName = (typeof STEP_NAMES)[number];
 
 export type StepStatus = "running" | "done" | "failed";
@@ -110,6 +121,123 @@ export interface ArticleLanding {
   medium?: string;
 }
 
+/* ── the critique (scope amendment 1) ──────────────────────────────────────── */
+
+/** The four local CLIs a reviewer can run through (lib/agent/cliSeam.ts). */
+export const REVIEWER_ENGINES = ["claude", "codex", "grok", "agy"] as const;
+export type ReviewerEngine = (typeof REVIEWER_ENGINES)[number];
+
+/** What became of one reviewer in one round. `unavailable` and `seat-limit`
+ *  are runs that did not happen (a 402, a usage limit, a missing CLI), never a
+ *  verdict on the post. */
+export const REVIEWER_OUTCOMES = ["completed", "unavailable", "timed-out", "errored", "seat-limit"] as const;
+export type ReviewerOutcome = (typeof REVIEWER_OUTCOMES)[number];
+
+export const REVIEW_VERDICTS = ["publish", "revise", "rework"] as const;
+export type ReviewVerdict = (typeof REVIEW_VERDICTS)[number];
+export const FINDING_KINDS = ["factual", "format", "engagement", "insight", "voice"] as const;
+export type FindingKind = (typeof FINDING_KINDS)[number];
+export const FINDING_SEVERITIES = ["blocker", "major", "minor"] as const;
+export type FindingSeverity = (typeof FINDING_SEVERITIES)[number];
+export const DISPOSITIONS = ["accepted", "rejected", "deferred"] as const;
+export type Disposition = (typeof DISPOSITIONS)[number];
+export const CRITIQUE_DECISIONS = ["keep", "rewrite", "research"] as const;
+export type CritiqueDecision = (typeof CRITIQUE_DECISIONS)[number];
+
+/** One reviewer of the panel (pipeline/article-reviewers.json). */
+export interface ReviewerSpec {
+  /** Kebab-case slug, unique in the panel; the registry publishes it. */
+  id: string;
+  engine: ReviewerEngine;
+  model: string;
+  effort: EffortLevel;
+  timeoutMin: number;
+}
+
+export interface ReviewFinding {
+  /** Unique within its review. */
+  id: string;
+  kind: FindingKind;
+  severity: FindingSeverity;
+  /** Where in the post: a section and paragraph, a figure, a citation. */
+  location: string;
+  claim: string;
+  /** http(s) URLs the reviewer opened; may be empty. */
+  evidence: string[];
+  suggestion: string;
+}
+
+/** A review as the engine stored it, after validation. `reviewer`, `model`
+ *  and `effort` are the engine's (the panel's), never the reviewer's own say. */
+export interface Review {
+  reviewer: string;
+  model: string;
+  effort: EffortLevel;
+  verdict: ReviewVerdict;
+  summary: string;
+  findings: ReviewFinding[];
+}
+
+/** The writer's call on one finding. `action` is omitted when nothing was done. */
+export interface FindingDisposition {
+  reviewer: string;
+  findingId: string;
+  disposition: Disposition;
+  reason: string;
+  action?: string;
+}
+
+export interface CritiqueDecisionRecord {
+  round: number;
+  decision: CritiqueDecision;
+  rationale: string;
+}
+
+/** One reviewer in the run's summary: its outcome in the last round it ran,
+ *  the first error of that round when it did not complete, and its cost across
+ *  every round in which the CLI reported one. */
+export interface CritiqueReviewer {
+  id: string;
+  engine: ReviewerEngine;
+  model: string;
+  effort: EffortLevel;
+  outcome: ReviewerOutcome;
+  costUsd?: number;
+  error?: string;
+}
+
+/** The seam's receipt for one reviewer in one round. */
+export interface ReviewerReceipt extends CritiqueReviewer {
+  round: number;
+  /** 1, or 2 after a malformed first answer. */
+  attempts: number;
+  turns: number;
+  durationMs: number;
+  errors: string[];
+  /** Entries the reviewer left in its read-only workspace (a fence breach,
+   *  recorded; nothing it writes is ever read back). Absent when none. */
+  wrote?: string[];
+  /** Evidence entries dropped because they were not http(s) URLs. */
+  dropped?: number;
+}
+
+export interface CritiqueCounts {
+  total: number;
+  accepted: number;
+  rejected: number;
+  deferred: number;
+}
+
+/** `ArticleRun.critique` — the summary the gate, the CLI and the registry's
+ *  publication.json `critique` block read. `decision` is absent until the
+ *  writer has decided after the first round. */
+export interface ArticleCritique {
+  rounds: number;
+  reviewers: CritiqueReviewer[];
+  findings: CritiqueCounts;
+  decision?: CritiqueDecision;
+}
+
 export interface ArticleRun {
   id: string;
   status: ArticleStatus;
@@ -122,6 +250,8 @@ export interface ArticleRun {
   createdAt: string;
   updatedAt: string;
   error?: string;
+  /** Present once the first critique round has a reviewer outcome. */
+  critique?: ArticleCritique;
   approval?: ArticleApproval;
   rejection?: ArticleRejection;
   landing?: ArticleLanding;
@@ -227,6 +357,29 @@ export interface ArticleRunDetail {
   patches: (RegistryPatch & { diff: string })[];
   /** Run-relative path of the rendered post, when it exists. */
   post?: string;
+  /** The critique's files, read back; absent before the critique step began. */
+  critique?: CritiqueDetail;
+}
+
+/** One critique round as its files hold it. A field is absent until its file
+ *  exists: no dispositions before the writer has answered. */
+export interface CritiqueRoundDetail {
+  round: number;
+  receipts: ReviewerReceipt[];
+  reviews: Review[];
+  /** The round reached quorum (`closed.json`). */
+  closed: boolean;
+  dispositions?: FindingDisposition[];
+  decision?: CritiqueDecisionRecord;
+  /** The writer revised the post after this round. */
+  revised?: { at: string; research: boolean };
+}
+
+export interface CritiqueDetail {
+  reviewers: ReviewerSpec[];
+  maxRounds: number;
+  minCompleted: number;
+  rounds: CritiqueRoundDetail[];
 }
 
 /** A registry subject offered as a topic. */

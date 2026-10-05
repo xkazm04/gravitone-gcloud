@@ -16,8 +16,15 @@ import { THRESHOLDS } from "./checks";
 import type { ArticleTopic } from "./types";
 
 export const PROMPT_FILE = "pipeline/ARTICLE-POST-PROMPT.md" as const;
-export type PromptPhase = "research" | "outline" | "draft";
+/** The writer's phases. `critique` (dispositions + decision), `revise-research`
+ *  and `revise` are the writer's side of the critique step (scope amendment 1). */
+export type PromptPhase = "research" | "outline" | "draft" | "critique" | "revise-research" | "revise";
+export const PROMPT_PHASES: readonly PromptPhase[] = ["research", "outline", "draft", "critique", "revise-research", "revise"];
 export const MAX_PATCHES = 3;
+
+/** The reviewers' prompt — one section, `review`, read per call like the
+ *  writer's. It inlines the same standard by address. */
+export const REVIEW_PROMPT_FILE = "pipeline/ARTICLE-REVIEW-PROMPT.md" as const;
 
 /** Split on `<!-- section: name -->` markers (the lib/sound/hunt.ts shape).
  *  Text before the first marker is the file's own header and is never sent. */
@@ -46,9 +53,22 @@ export async function loadPromptFile(root: string = process.cwd()): Promise<Prom
   }
   md = md.replace(/\r\n/g, "\n");
   const sections = sectionsOf(md);
-  for (const s of ["shared", "research", "outline", "draft"]) {
+  for (const s of ["shared", ...PROMPT_PHASES]) {
     if (!sections[s]) throw new ArticleError(`${PROMPT_FILE} has no "${s}" section`, 500, "prompt-malformed");
   }
+  return { sha: createHash("sha256").update(md).digest("hex"), sections };
+}
+
+export async function loadReviewPromptFile(root: string = process.cwd()): Promise<PromptFile> {
+  let md: string;
+  try {
+    md = await readFile(path.join(root, REVIEW_PROMPT_FILE), "utf8");
+  } catch {
+    throw new ArticleError(`the prompt file ${REVIEW_PROMPT_FILE} is missing — it is part of the code`, 500, "prompt-missing");
+  }
+  md = md.replace(/\r\n/g, "\n");
+  const sections = sectionsOf(md);
+  if (!sections.review) throw new ArticleError(`${REVIEW_PROMPT_FILE} has no "review" section`, 500, "prompt-malformed");
   return { sha: createHash("sha256").update(md).digest("hex"), sections };
 }
 
@@ -60,6 +80,9 @@ export interface PromptContext {
   standard: string;
   standardAddress: string;
   today: string;
+  /** The critique round the writer is answering (critique / revise phases). */
+  round?: number;
+  maxRounds?: number;
 }
 
 /** Fill `{{SLOT}}`s; an unknown slot is left standing so a probe can see it. */
@@ -89,6 +112,12 @@ export function promptSlots(phase: PromptPhase, ctx: PromptContext): Record<stri
     READ_MIN: String(THRESHOLDS.readMinutes[0]),
     READ_MAX: String(THRESHOLDS.readMinutes[1]),
     MAX_PATCHES: String(MAX_PATCHES),
+    ROUND: String(ctx.round ?? 1),
+    MAX_ROUNDS: String(ctx.maxRounds ?? 2),
+    DECISIONS:
+      (ctx.round ?? 1) >= (ctx.maxRounds ?? 2)
+        ? '"keep" or "rewrite" — this is the LAST round: a rewrite now is final and is not reviewed again, and "research" is not available'
+        : '"keep", "rewrite" or "research" — a rewrite or a research is reviewed again in the next round',
   };
 }
 
@@ -96,4 +125,41 @@ export function promptSlots(phase: PromptPhase, ctx: PromptContext): Record<stri
 export function buildPrompt(file: PromptFile, phase: PromptPhase, ctx: PromptContext): string {
   const slots = promptSlots(phase, ctx);
   return `${fill(file.sections.shared, slots)}\n\n${fill(file.sections[phase], slots)}\n`;
+}
+
+export interface ReviewPromptContext {
+  reviewer: string;
+  model: string;
+  effort: string;
+  round: number;
+  maxRounds: number;
+  topic: ArticleTopic;
+  standard: string;
+  standardAddress: string;
+  today: string;
+  /** post/post.md as the writer wrote it. */
+  postMd: string;
+  /** sources.json, verbatim. */
+  sourcesJson: string;
+}
+
+/** One reviewer's prompt. Pure over its inputs. */
+export function buildReviewPrompt(file: PromptFile, ctx: ReviewPromptContext): string {
+  const slots: Record<string, string> = {
+    REVIEWER_ID: ctx.reviewer,
+    REVIEWER_MODEL: ctx.model,
+    REVIEWER_EFFORT: ctx.effort,
+    ROUND: String(ctx.round),
+    MAX_ROUNDS: String(ctx.maxRounds),
+    ROUND_NOTE: ctx.round > 1 ? `This is review round ${ctx.round}: the writer has revised the post after round ${ctx.round - 1}. Review the post as it stands now, from scratch.` : "This is review round 1: the first draft.",
+    TOPIC: ctx.topic.text,
+    STANDARD: ctx.standard,
+    STANDARD_ADDRESS: ctx.standardAddress,
+    TODAY: ctx.today,
+    POST_MD: ctx.postMd.trim(),
+    SOURCES_JSON: ctx.sourcesJson.trim(),
+    MIN_SOURCES: String(THRESHOLDS.minSources),
+    MIN_FIGURES: String(THRESHOLDS.minFigures),
+  };
+  return `${fill(file.sections.review, slots)}\n`;
 }

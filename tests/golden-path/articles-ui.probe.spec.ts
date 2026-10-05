@@ -40,7 +40,7 @@ import { POST as resumePOST } from "@/app/api/articles/[runId]/resume/route";
 import { GET as fileGET } from "@/app/api/articles/[runId]/file/[...path]/route";
 import { carryKey } from "@/app/api/articles/_lib/respond";
 import type { RunDetail, RunList } from "@/app/articles/articlesClient";
-import { checkOrder, costOf, nodesOf, phaseOf } from "@/app/articles/runModel";
+import { checkOrder, costOf, countBySeverity, findingGroups, latestRound, nodesOf, phaseOf, reviewerRows, roundTimeline } from "@/app/articles/runModel";
 import { liveOf, START_GRACE_MS } from "@/app/articles/useArticles";
 import { createRun, defaultDeps, driveRun } from "@/lib/articles/engine";
 import { readRun, runDir } from "@/lib/articles/store";
@@ -100,6 +100,11 @@ const PHASE_OF_SEED: Record<SeedState, string> = {
   stalled: "stalled",
   failed: "failed",
   unreachable: "failed",
+  "critique-running": "running",
+  "critique-partial": "gate",
+  "critique-quorum": "failed",
+  "critique-keep": "gate",
+  "critique-rewrite": "gate",
   gate: "gate",
   landing: "landing",
   landed: "landed",
@@ -122,7 +127,9 @@ test("case 1: every seeded state reads back through GET /api/articles/<id> as th
   expect(failed.agent.draft).toMatchObject({ outcome: "seat-limit", turns: 2, errors: ["Claude AI usage limit reached"] });
   expect(failed.post, "a failed draft has no post").toBeUndefined();
   expect(failed.landingLog).toBeUndefined();
-  expect(nodesOf(failed.run, false).map((n) => n.state)).toEqual(["done", "done", "failed", "pending", "pending"]);
+  expect(nodesOf(failed.run, false).map((n) => n.state)).toEqual(["done", "done", "failed", "pending", "pending", "pending"]);
+  expect(failed.critique, "a run that failed before its critique has no critique").toBeUndefined();
+  expect(failed.run.critique).toBeUndefined();
 
   const landFailed = await detail(ids["land-failed"]);
   expect(landFailed.landingLog).toMatch(/title asks the gate to fail/);
@@ -132,7 +139,7 @@ test("case 1: every seeded state reads back through GET /api/articles/<id> as th
   const researching = await detail(ids.researching);
   expect(researching.driving).toBe(true);
   expect(researching.sources, "research has not finished: no sources yet").toEqual([]);
-  expect(nodesOf(researching.run, true).map((n) => n.state)).toEqual(["running", "pending", "pending", "pending", "pending"]);
+  expect(nodesOf(researching.run, true).map((n) => n.state)).toEqual(["running", "pending", "pending", "pending", "pending", "pending"]);
   expect(nodesOf(researching.run, false)[0].state, "a running step with no driver is stalled").toBe("stalled");
 
   const drafting = await detail(ids.drafting);
@@ -151,7 +158,7 @@ test("case 1: every seeded state reads back through GET /api/articles/<id> as th
 
   const list = (await (await listGET(at("/api/articles"))).json()) as RunList;
   expect(list.runs.map((r) => r.id)).toEqual(expect.arrayContaining(Object.values(ids)));
-  expect(list.driving.sort()).toEqual([ids.drafting, ids.landing, ids.researching].sort());
+  expect(list.driving.sort()).toEqual([ids.drafting, ids.landing, ids.researching, ids["critique-running"]].sort());
   expect(list.damaged).toEqual([]);
 });
 
@@ -180,6 +187,62 @@ test("case 2: the model — cost sums only what was reported, the check puts fai
   expect(liveOf({ run, driving: false }, t + START_GRACE_MS + 1)).toBe(false);
   expect(phaseOf(run, false)).toBe("stalled");
   expect(phaseOf(run, true)).toBe("landing");
+});
+
+test("case 2b: the critique panel's reading of every critique state, through GET /api/articles/<id>", async () => {
+  const gate = await toGate();
+  const ids = seedRunStates(box.store, gate.id, { driverPid: process.pid });
+
+  // running: two reviewers back; the two without a receipt read as reviewing
+  // while the drive is live, and as not run when it is not
+  const running = await detail(ids["critique-running"]);
+  expect(running.driving).toBe(true);
+  expect(nodesOf(running.run, true).map((n) => n.state)).toEqual(["done", "done", "done", "running", "pending", "pending"]);
+  const live = reviewerRows(running.critique!, 1, true);
+  expect(live.map((r) => `${r.spec.id}:${r.state}`)).toEqual(["fable:completed", "grok:reviewing", "gemini:reviewing", "gpt:completed"]);
+  expect(reviewerRows(running.critique!, 1, false).map((r) => r.state)).toEqual(["completed", "not-run", "not-run", "completed"]);
+  expect(roundTimeline(running.critique!)[0]).toMatchObject({ round: 1, completed: 2, of: 4, closed: false });
+  expect(roundTimeline(running.critique!)[0].decision).toBeUndefined();
+  // a round the writer has not answered: every finding is unanswered, never a made-up disposition
+  expect(findingGroups(running.critique!.rounds[0]).flatMap((g) => g.rows).every((r) => r.disposition === undefined)).toBe(true);
+
+  // partial: grok out of balance, visible with its error; the run reached the gate
+  const partial = await detail(ids["critique-partial"]);
+  const prow = reviewerRows(partial.critique!, 1, false);
+  expect(prow.find((r) => r.spec.id === "grok")).toMatchObject({ state: "unavailable", error: expect.stringMatching(/402 Payment Required/) });
+  expect(prow.find((r) => r.spec.id === "grok")?.counts, "no review, no counts").toBeUndefined();
+  expect(partial.run.critique).toMatchObject({ rounds: 1, decision: "keep", findings: { total: 9, accepted: 3, rejected: 3, deferred: 3 } });
+  expect(partial.run.critique?.reviewers.map((r) => r.outcome)).toEqual(["completed", "unavailable", "completed", "completed"]);
+
+  // quorum: failed with the named error and every reviewer's reason
+  const quorum = await detail(ids["critique-quorum"]);
+  expect(phaseOf(quorum.run, false)).toBe("failed");
+  expect(quorum.run.error).toMatch(/^critique: critique-quorum: round 1: 1 of 4/);
+  expect(quorum.run.error).toMatch(/grok unavailable.*gemini seat-limit.*gpt timed-out/);
+  expect(reviewerRows(quorum.critique!, 1, false).map((r) => r.state)).toEqual(["completed", "unavailable", "seat-limit", "timed-out"]);
+  expect(nodesOf(quorum.run, false).map((n) => n.state)).toEqual(["done", "done", "done", "failed", "pending", "pending"]);
+
+  // keep: one round, findings grouped by kind in the lenses' order, blockers first
+  const keep = await detail(ids["critique-keep"]);
+  const groups = findingGroups(keep.critique!.rounds[0]);
+  expect(groups.map((g) => g.kind)).toEqual(["factual", "format", "insight"]);
+  expect(groups[0].rows.every((r) => r.finding.severity === "blocker" && r.disposition?.disposition === "accepted")).toBe(true);
+  expect(groups[0].rows[0].disposition?.action).toBe("Replace the price and date it.");
+  expect(latestRound(keep.critique!)).toBe(1);
+
+  // rewrite with two rounds: research then a rewrite, round 2 kept
+  const rewrite = await detail(ids["critique-rewrite"]);
+  const t = roundTimeline(rewrite.critique!);
+  expect(t.map((l) => [l.round, l.decision?.decision, l.revised?.research ?? null])).toEqual([[1, "research", true], [2, "keep", null]]);
+  expect(latestRound(rewrite.critique!)).toBe(2);
+  expect(rewrite.run.critique).toMatchObject({ rounds: 2, decision: "keep" });
+  expect(rewrite.run.critique?.findings.total).toBe(9 + 3);
+  expect(countBySeverity(rewrite.critique!.rounds[1].reviews[0].findings)).toEqual({ blocker: 0, major: 0, minor: 1 });
+  // cost only where the CLI reported one: the claude reviewer has it, codex and agy do not
+  const cost = Object.fromEntries((rewrite.run.critique?.reviewers ?? []).map((r) => [r.id, r.costUsd]));
+  expect(cost.fable).toBeGreaterThan(0);
+  expect(cost.gpt).toBeUndefined();
+  expect(cost.gemini).toBeUndefined();
 });
 
 /* ── the acts ─────────────────────────────────────────────────────────── */
@@ -323,12 +386,13 @@ test("case 9: Board — the gate's runs are the items; approve with patches and 
   try {
     const src = makeArticlesSource();
     const count = await src.count();
-    // at the gate: the template + the gate clone; decided: landing, landed,
-    // land-failed (approved), rejected. Not items: anything before the gate.
-    expect(count).toEqual({ total: 6, pending: 2, decided: 4, rejected: 1 });
+    // at the gate: the template, the gate clone and the three critiqued gate
+    // clones; decided: landing, landed, land-failed (approved), rejected. Not
+    // items: anything before the gate (a critique quorum failure included).
+    expect(count).toEqual({ total: 9, pending: 5, decided: 4, rejected: 1 });
     const entries = await src.loadEntries();
     expect(entries.map((e) => e.item.id).sort()).toEqual(
-      [gate.id, ids.gate, ids.landing, ids.landed, ids["land-failed"], ids.rejected].map((id) => `articles:${id}`).sort(),
+      [gate.id, ids.gate, ids["critique-partial"], ids["critique-keep"], ids["critique-rewrite"], ids.landing, ids.landed, ids["land-failed"], ids.rejected].map((id) => `articles:${id}`).sort(),
     );
     const pending = entries.find((e) => e.item.id === `articles:${ids.gate}`)!;
     expect(pending.item.verdict).toBe(null);
@@ -367,7 +431,7 @@ test("case 9: Board — the gate's runs are the items; approve with patches and 
 
 test("case 10: Board — a run before the gate is not an item, and the verdict is read off the status alone", () => {
   const base = { id: "r", topic: { kind: "free", text: "t" }, steps: [], model: "m", createdAt: "t" } as unknown as ArticleRun;
-  for (const status of ["queued", "researching", "drafting", "checking"] as const) {
+  for (const status of ["queued", "researching", "drafting", "critiquing", "checking"] as const) {
     expect(fromArticle({ status }), status).toBeUndefined();
     expect(articleEntry({ ...base, status }, null)).toBeNull();
   }

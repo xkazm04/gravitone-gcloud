@@ -106,7 +106,7 @@ const NODE_RING: Record<Tone, string> = {
 
 export function Stepper({ nodes }: { nodes: StepNode[] }) {
   return (
-    <ol className="grid grid-cols-5 gap-2" aria-label="steps" data-testid="article-stepper">
+    <ol className="grid grid-cols-6 gap-2" aria-label="steps" data-testid="article-stepper">
       {nodes.map((n, i) => {
         const look = NODE_LOOK[n.state];
         const took = span(n.startedAt, n.endedAt);

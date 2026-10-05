@@ -75,6 +75,26 @@
       "owner": "gravity"
     },
     {
+      "key": "text.article-review",
+      "name": "Review a drafted technical blog post (multi-model critique)",
+      "description": "One reviewer of the critique panel (pipeline/article-reviewers.json), run read-only with web access through the local claude, codex, grok or agy CLI on the operator's own login: the post, its sources and the registry's post standard in (pipeline/ARTICLE-REVIEW-PROMPT.md), one JSON review out in the final message, validated in lib/articles/critique.ts before it is kept. Reviewers run in parallel, blind to each other, at most two rounds.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/articles/engine.ts::reviewOnce -> lib/agent/cliSeam.ts::runReviewer()",
+      "expected_models": ["claude-fable-5-1", "grok-4.7", "gemini-3.8-flash-high", "gpt-6-astra"],
+      "owner": "gravity"
+    },
+    {
+      "key": "text.article-critique-writer",
+      "name": "Answer the critique of a technical blog post, and revise it",
+      "description": "The writer's turns inside the critique, with the draft's model and Read/Write/Edit only: one disposition (accepted, rejected or deferred, with a reason) per reviewer finding and a keep/rewrite/research decision (pipeline/ARTICLE-POST-PROMPT.md, critique section), then on rewrite the whole post again (revise section). A research decision runs a text.article-research turn first. Validated in lib/articles/critique.ts; a human approves before anything reaches the registry.",
+      "kind": "generation",
+      "status": "active",
+      "component": "lib/articles/engine.ts::critiqueTurn(critique|revise) -> lib/agent/cliSeam.ts::runAgent()",
+      "expected_models": ["claude-opus-5"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.probe",
       "name": "Text engine availability probe",
       "description": "Zero-token health check that walks the text engine's provider chain to report which one would serve a given turn, without generating anything.",

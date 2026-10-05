@@ -1,10 +1,14 @@
 // ARTICLE — the headless surface of the article pipeline (lib/articles/).
 //
-//   npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort <level>]
+//   npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort <level>] [--reviewers <file>]
 //   npx tsx pipeline/article.mts status [<runId>]          # one run, or the list
 //   npx tsx pipeline/article.mts approve <runId> [--patches p1,p2]
 //   npx tsx pipeline/article.mts reject <runId> --note "<text>"
-//   npx tsx pipeline/article.mts resume <runId>
+//   npx tsx pipeline/article.mts resume <runId> [--reviewers <file>]
+//
+//   --reviewers <file> replaces pipeline/article-reviewers.json for a run whose
+//   critique has not started yet (it sets ARTICLES_REVIEWERS_FILE); a run that
+//   has begun its critique keeps the panel it snapshotted.
 //
 //   --json on any command: one JSON document on stdout, nothing else.
 //   Exit 0 ok · 1 the operation failed (a failed run, a refused approval) · 2 usage.
@@ -18,9 +22,11 @@
 // same calls the /api/articles routes make.
 //
 // SPENDING. `run` and `resume` start real agent sessions on the operator's
-// logged-in Claude seat (research uses web tools). ARTICLES_AGENT_BIN replaces
-// the agent with a stub for a dry run:
-//   ARTICLES_AGENT_BIN="node|tests/fixtures/articles/stub-agent.mjs" npx tsx pipeline/article.mts run --topic "…"
+// logged-in Claude seat (research uses web tools), and the critique runs the
+// reviewer panel through the local claude, codex, grok and agy CLIs on the
+// operator's own logins. ARTICLES_AGENT_BIN (the writer and claude reviewers)
+// and ARTICLES_CODEX_BIN / ARTICLES_GROK_BIN / ARTICLES_AGY_BIN replace them
+// with the stub for a dry run (docs/articles.md, "Headless").
 
 import fs from "node:fs";
 import path from "node:path";
@@ -43,6 +49,8 @@ function loadEnv(root: string) {
   }
 }
 loadEnv(ROOT);
+// A path the caller typed (--reviewers) is relative to where they typed it.
+const CALLER_CWD = process.cwd();
 // The store root and the prompt file are cwd-relative, as in the server.
 process.chdir(ROOT);
 
@@ -68,8 +76,8 @@ function usage(msg?: string): never {
     if (msg) console.error(`article: ${msg}\n`);
     console.error(
       "usage: npx tsx pipeline/article.mts <run|status|approve|reject|resume> [--json]\n" +
-        '  run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max]\n' +
-        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   resume <runId>",
+        '  run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max] [--reviewers <file>]\n' +
+        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   resume <runId> [--reviewers <file>]",
     );
   }
   process.exit(2);
@@ -101,14 +109,29 @@ const dirOf = (id: string) => {
   const rel = path.relative(ROOT, runDir(id));
   return (rel.startsWith("..") || path.isAbsolute(rel) ? runDir(id) : rel).split(path.sep).join("/");
 };
-const brief = (r: ArticleRun) => ({ runId: r.id, dir: dirOf(r.id), status: r.status, ...(r.error ? { error: r.error } : {}) });
+const brief = (r: ArticleRun) => ({ runId: r.id, dir: dirOf(r.id), status: r.status, ...(r.error ? { error: r.error } : {}), ...(r.critique ? { critique: r.critique } : {}) });
+
+const usd = (n: number | undefined) => (n === undefined ? "unpriced" : `$${n.toFixed(4)}`);
+
+/** The critique summary: who reviewed with what outcome, the findings by the
+ *  writer's disposition, and the decision. */
+function printCritique(c: NonNullable<ArticleRun["critique"]>) {
+  const done = c.reviewers.filter((x) => x.outcome === "completed").length;
+  console.log(`  critique ${c.rounds} round${c.rounds === 1 ? "" : "s"} · ${done} of ${c.reviewers.length} reviewers completed · decision ${c.decision ?? "(not yet)"}`);
+  for (const x of c.reviewers) {
+    console.log(`  reviewer ${x.id.padEnd(8)} ${x.engine.padEnd(6)} ${`${x.model}@${x.effort}`.padEnd(24)} ${x.outcome.padEnd(11)} ${usd(x.costUsd)}${x.error ? `  ${x.error}` : ""}`);
+  }
+  const f = c.findings;
+  console.log(`  findings ${f.total} · accepted ${f.accepted} · rejected ${f.rejected} · deferred ${f.deferred}`);
+}
 
 function printRun(r: ArticleRun) {
   console.log(`${r.id}  ${r.status}`);
   console.log(`  topic    ${r.topic.kind === "subject" ? `${r.topic.bundle}/${r.topic.subject} — ` : ""}${r.topic.text}${r.topic.angle ? `  (angle: ${r.topic.angle})` : ""}`);
   console.log(`  standard ${r.standard.recipe} ${r.standard.version ?? "(unresolved)"} · ${r.standard.bundle} ${r.standard.bundleHash?.slice(0, 19) ?? ""}`);
   console.log(`  model    ${r.model} · effort ${r.effort}`);
-  for (const s of r.steps) console.log(`  step     ${s.name.padEnd(8)} ${s.status.padEnd(7)} ${s.costUsd === undefined ? "unpriced" : `$${s.costUsd.toFixed(4)}`}`);
+  for (const s of r.steps) console.log(`  step     ${s.name.padEnd(8)} ${s.status.padEnd(7)} ${usd(s.costUsd)}`);
+  if (r.critique) printCritique(r.critique);
   if (r.approval) console.log(`  approved ${r.approval.at} patches: ${r.approval.patches.join(", ") || "none"}`);
   if (r.rejection) console.log(`  rejected ${r.rejection.at}: ${r.rejection.note}`);
   if (r.landing) console.log(`  landing  ${r.landing.branch}${r.landing.prUrl ? ` · ${r.landing.prUrl}` : ""}${r.landing.worktree ? ` · worktree ${r.landing.worktree}` : ""}`);
@@ -124,6 +147,14 @@ function finish(r: ArticleRun, wanted: ArticleRun["status"][]) {
 }
 
 async function main() {
+  // The panel override is an environment variable so the engine (and a route
+  // in the same process, were there one) reads it the same way.
+  const reviewers = cmd === "run" || cmd === "resume" ? flag("reviewers") : undefined;
+  if (reviewers) {
+    const at = path.resolve(CALLER_CWD, reviewers);
+    if (!fs.existsSync(at)) usage(`--reviewers: no such file ${reviewers}`);
+    process.env.ARTICLES_REVIEWERS_FILE = at;
+  }
   switch (cmd) {
     case "run": {
       const subject = flag("subject");

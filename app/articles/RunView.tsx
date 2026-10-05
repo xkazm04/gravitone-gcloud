@@ -18,9 +18,10 @@ import { Field, TextArea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Primitives";
 import { CHIP_CLASS, Provenance, TALLY_TONE, Tally } from "@/components/ui/signal";
 import { SURFACE } from "@/components/ui/tokens";
-import type { ArticleRun } from "@/lib/articles/types";
+import { STEP_NAMES, type ArticleRun } from "@/lib/articles/types";
 
 import { approveRun, rejectRun, resumeRun, runFileUrl, type RunDetail } from "./articlesClient";
+import { CritiqueView } from "./CritiquePanel";
 import { CheckView, DraftFrame, PatchCard, PhaseChip, RefusedPatches, Section, SourcesTable, Stepper } from "./parts";
 import { costOf, fmtUsd, nodesOf, phaseOf, resumeVerb, topicLine, type RunPhase } from "./runModel";
 import { useArticleRun } from "./useArticles";
@@ -77,6 +78,24 @@ export default function RunView({ runId }: { runId: string }) {
       {d.post && (
         <Section id="draft" title="Draft" aside={d.meta?.tags.length ? <span className="font-jetbrains text-label text-white/45">{d.meta.tags.join(" · ")}</span> : undefined}>
           <DraftFrame runId={run.id} post={d.post} title={title} />
+        </Section>
+      )}
+
+      {d.critique && (
+        <Section
+          id="critique"
+          title="Critique"
+          aside={
+            run.critique ? (
+              <>
+                <Tally value={run.critique.reviewers.filter((x) => x.outcome === "completed").length} of={d.critique.reviewers.length} label="reviewed" tone="emerald" />
+                <Tally value={run.critique.findings.total} label="answered" />
+                {run.critique.decision && <span className={`${CHIP_CLASS} ${run.critique.decision === "keep" ? TALLY_TONE.emerald : TALLY_TONE.cyan} uppercase`}>{run.critique.decision}</span>}
+              </>
+            ) : undefined
+          }
+        >
+          <CritiqueView detail={d.critique} {...(run.critique ? { summary: run.critique } : {})} live={live && run.status === "critiquing"} />
         </Section>
       )}
 
@@ -201,14 +220,14 @@ function Banner({ run, detail, phase, onRun }: { run: ArticleRun; detail: RunDet
       <div role="status" className="flex flex-wrap items-center gap-3 rounded-2xl border border-cyan-300/25 bg-cyan-400/[0.05] px-5 py-3.5" data-testid="article-banner" data-phase={phase}>
         <span aria-hidden className="h-2 w-2 animate-pulse rounded-full bg-cyan-300" />
         <span className="font-jetbrains text-label tracking-[0.14em] text-cyan-100 uppercase">{step ? step.name : run.status}</span>
-        <Tally value={run.steps.filter((s) => s.status === "done").length} of={4} label="steps" tone="cyan" />
+        <Tally value={run.steps.filter((s) => s.status === "done").length} of={STEP_NAMES.length} label="steps" tone="cyan" />
         {detail.sources.length > 0 && <Tally value={detail.sources.length} label="sources" tone="cyan" />}
       </div>
     );
   }
   if (phase === "stalled" || phase === "failed") {
     const failedStep = run.steps.find((s) => s.status === "failed");
-    const receipt = failedStep && failedStep.name !== "check" ? detail.agent[failedStep.name] : undefined;
+    const receipt = failedStep && failedStep.name !== "check" && failedStep.name !== "critique" ? detail.agent[failedStep.name] : undefined;
     const rose = phase === "failed";
     return (
       <div

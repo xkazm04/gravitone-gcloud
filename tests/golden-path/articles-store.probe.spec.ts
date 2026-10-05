@@ -61,9 +61,9 @@ async function code(p: Promise<unknown>): Promise<string | null> {
   }
 }
 
-test("statuses: exactly the contract's ten, and every one has a row", () => {
+test("statuses: the contract's ten plus `critiquing` (scope amendment 1), and every one has a row", () => {
   expect([...ARTICLE_STATUSES]).toEqual([
-    "queued", "researching", "drafting", "checking", "awaiting-approval",
+    "queued", "researching", "drafting", "critiquing", "checking", "awaiting-approval",
     "approved", "landing", "landed", "rejected", "failed",
   ]);
   expect(Object.keys(TRANSITIONS).sort()).toEqual([...ARTICLE_STATUSES].sort());
@@ -79,10 +79,14 @@ test("transitions: terminal states stay put, and nothing lands without approval"
   expect(into("approved").sort()).toEqual(["awaiting-approval", "failed"]);
   expect(into("landed")).toEqual(["landing"]);
   // every working state can fail; the gate and the terminals cannot
-  for (const s of ["queued", "researching", "drafting", "checking", "approved", "landing"] as ArticleStatus[]) expect(canTransition(s, "failed")).toBe(true);
+  for (const s of ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"] as ArticleStatus[]) expect(canTransition(s, "failed")).toBe(true);
   for (const s of ["awaiting-approval", "landed", "rejected"] as ArticleStatus[]) expect(canTransition(s, "failed")).toBe(false);
   expect(canTransition("researching", "awaiting-approval")).toBe(false);
   expect(canTransition("queued", "approved")).toBe(false);
+  // the critique sits between the draft and the check, and is the only way to it
+  expect(into("checking").sort()).toEqual(["critiquing", "failed"]);
+  expect(canTransition("drafting", "checking"), "no draft reaches the check unreviewed").toBe(false);
+  expect(into("critiquing").sort()).toEqual(["drafting", "failed"]);
 });
 
 test("updateRun: an illegal move is refused and nothing is written", async () => {

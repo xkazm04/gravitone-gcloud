@@ -12,7 +12,8 @@
 //   knowledge/software-engineering/index.json -> one subject (a topic)
 //   scripts/gate.mjs -> a stub gate: `--lane L --write` regenerates
 //     publications/index.json; `--lane L` checks every publication.json, and
-//     fails when a publication's title contains FAIL-GATE.
+//     fails when a publication's title contains FAIL-GATE. It also knows the
+//     optional `critique` block and critique/ directory, in outline.
 //
 // The real registry is never touched: nothing here reads AI_REGISTRY_DIR.
 
@@ -50,6 +51,27 @@ for (const d of pubs) {
   if (p.slug !== d) { console.error(d + ": slug " + p.slug); bad++; }
   if (String(p.title).includes("FAIL-GATE")) { console.error(d + ": title asks the gate to fail"); bad++; }
   for (const f of ["post.html", "post.md", "SOURCES.md", "medium/story.html", "medium/tags.txt", "medium/README.md"]) if (!fs.existsSync(path.join("publications", d, f))) { console.error(d + ": no " + f); bad++; }
+  // The critique record, in the stub's measure: the block's shape and counts,
+  // and critique/ only beside the block, holding both files whose counts agree.
+  // (The real gate is ai-registry scripts/check-publications.mjs.)
+  const c = p.critique;
+  if (c !== undefined) {
+    for (const k of ["rounds", "reviewers", "findings", "decision"]) if (!(k in c)) { console.error(d + ": critique missing " + k); bad++; }
+    const f = c.findings || {};
+    if (f.total !== f.accepted + f.rejected + f.deferred) { console.error(d + ": critique counts do not add up"); bad++; }
+  }
+  const cdir = path.join("publications", d, "critique");
+  if (fs.existsSync(cdir)) {
+    if (c === undefined) { console.error(d + ": critique/ without a critique block"); bad++; }
+    const names = fs.readdirSync(cdir).sort().join(",");
+    if (names !== "dispositions.json,reviews.json") { console.error(d + ": critique/ holds " + names); bad++; }
+    else if (c !== undefined) {
+      const ds = JSON.parse(fs.readFileSync(path.join(cdir, "dispositions.json"), "utf8"));
+      const rv = JSON.parse(fs.readFileSync(path.join(cdir, "reviews.json"), "utf8"));
+      if (ds.length !== c.findings.total) { console.error(d + ": critique total " + c.findings.total + " but " + ds.length + " dispositions"); bad++; }
+      if (rv.some((r) => typeof r.round !== "number") || ds.some((x) => typeof x.round !== "number")) { console.error(d + ": a critique entry has no round"); bad++; }
+    }
+  }
 }
 console.log("lane " + lane + (write ? " --write" : "") + ": " + pubs.length + " publication(s), " + bad + " problem(s)");
 process.exit(bad ? 1 : 0);

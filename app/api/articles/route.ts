@@ -21,7 +21,7 @@ import { failure, objectBody } from "./_lib/respond";
 export const runtime = "nodejs";
 
 /** The statuses a driver works in — the only ones worth asking about a lease. */
-const WORKING: ArticleStatus[] = ["queued", "researching", "drafting", "checking", "approved", "landing"];
+const WORKING: ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 export async function GET(req: Request) {
   const denied = guardAccessOnly(req);

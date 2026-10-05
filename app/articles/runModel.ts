@@ -11,14 +11,31 @@
 //   · `failed` AFTER APPROVAL is a landing failure: the post was approved, the
 //     registry write-back broke. Resume re-lands; it never re-approves.
 
-import type { ArticleRun, ArticleStatus, CheckItem, CheckReport, StepName } from "@/lib/articles/types";
+import {
+  FINDING_KINDS,
+  FINDING_SEVERITIES,
+  type ArticleRun,
+  type ArticleStatus,
+  type CheckItem,
+  type CheckReport,
+  type CritiqueDetail,
+  type CritiqueRoundDetail,
+  type FindingDisposition,
+  type FindingKind,
+  type FindingSeverity,
+  type ReviewerOutcome,
+  type ReviewerSpec,
+  type ReviewFinding,
+  type ReviewVerdict,
+  type StepName,
+} from "@/lib/articles/types";
 
 export type Tone = "cyan" | "amber" | "rose" | "emerald" | "neutral";
 
 /** What the page draws a run as. */
 export type RunPhase = "running" | "stalled" | "failed" | "gate" | "landing" | "landed" | "rejected";
 
-export const WORKING: readonly ArticleStatus[] = ["queued", "researching", "drafting", "checking", "approved", "landing"];
+export const WORKING: readonly ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 export function phaseOf(run: Pick<ArticleRun, "status">, driving: boolean): RunPhase {
   switch (run.status) {
@@ -72,7 +89,7 @@ export const fmtUsd = (n: number) => `$${n < 0.01 && n > 0 ? n.toFixed(4) : n.to
 /* ── the stepper ───────────────────────────────────────────────────────── */
 
 export type NodeId = StepName | "gate";
-export const NODES: readonly NodeId[] = ["research", "outline", "draft", "check", "gate"];
+export const NODES: readonly NodeId[] = ["research", "outline", "draft", "critique", "check", "gate"];
 export type NodeState = "pending" | "running" | "stalled" | "done" | "failed" | "waiting" | "rejected";
 
 export interface StepNode {
@@ -148,6 +165,127 @@ export function checkCounts(report: Pick<CheckReport, "items" | "notMeasured">):
 /** What Resume will do, in the verb on its button. */
 export function resumeVerb(run: Pick<ArticleRun, "approval" | "status">): string {
   return run.approval ? "Re-land" : "Resume";
+}
+
+/* ── the critique ─────────────────────────────────────────────────────── */
+
+/** A reviewer as the panel draws it in one round: its outcome once it has a
+ *  receipt; `reviewing` while a live driver is on the round and it has none
+ *  yet; `not run` when nothing is working on it (a stalled round, or a round
+ *  that stopped before it). */
+export type ReviewerState = ReviewerOutcome | "reviewing" | "not-run";
+
+export const REVIEWER_LOOK: Record<ReviewerState, { word: string; tone: Tone }> = {
+  completed: { word: "completed", tone: "emerald" },
+  unavailable: { word: "unavailable", tone: "amber" },
+  "seat-limit": { word: "seat limit", tone: "amber" },
+  "timed-out": { word: "timed out", tone: "rose" },
+  errored: { word: "errored", tone: "rose" },
+  reviewing: { word: "reviewing", tone: "cyan" },
+  "not-run": { word: "not run", tone: "neutral" },
+};
+
+export const VERDICT_TONE: Record<ReviewVerdict, Tone> = { publish: "emerald", revise: "amber", rework: "rose" };
+export const SEVERITY_TONE: Record<FindingSeverity, Tone> = { blocker: "rose", major: "amber", minor: "neutral" };
+/** A rejected finding is the writer's call, not a failure: neutral. An
+ *  unanswered one is amber — the gate must see it. */
+export const DISPOSITION_TONE: Record<FindingDisposition["disposition"] | "unanswered", Tone> = {
+  accepted: "emerald",
+  rejected: "neutral",
+  deferred: "cyan",
+  unanswered: "amber",
+};
+
+export interface ReviewerRow {
+  spec: ReviewerSpec;
+  state: ReviewerState;
+  verdict?: ReviewVerdict;
+  /** Findings by severity; absent when there is no review. */
+  counts?: Record<FindingSeverity, number>;
+  costUsd?: number;
+  error?: string;
+  attempts?: number;
+  /** Files it left in its read-only workspace. */
+  wrote?: string[];
+}
+
+/** The panel in one round, in panel order. */
+export function reviewerRows(detail: CritiqueDetail, round: number, live: boolean): ReviewerRow[] {
+  const r = detail.rounds.find((x) => x.round === round);
+  return detail.reviewers.map((spec) => {
+    const receipt = r?.receipts.find((x) => x.id === spec.id);
+    const review = r?.reviews.find((x) => x.reviewer === spec.id);
+    const state: ReviewerState = receipt ? receipt.outcome : live && r && !r.closed ? "reviewing" : live && !r && round === detail.rounds.length + 1 ? "reviewing" : "not-run";
+    const counts = review ? countBySeverity(review.findings) : undefined;
+    return {
+      spec,
+      state,
+      ...(review ? { verdict: review.verdict } : {}),
+      ...(counts ? { counts } : {}),
+      ...(receipt?.costUsd !== undefined ? { costUsd: receipt.costUsd } : {}),
+      ...(receipt && receipt.outcome !== "completed" && receipt.errors[0] ? { error: receipt.errors[0] } : {}),
+      ...(receipt ? { attempts: receipt.attempts } : {}),
+      ...(receipt?.wrote?.length ? { wrote: receipt.wrote } : {}),
+    };
+  });
+}
+
+export function countBySeverity(findings: Pick<ReviewFinding, "severity">[]): Record<FindingSeverity, number> {
+  const c = { blocker: 0, major: 0, minor: 0 } as Record<FindingSeverity, number>;
+  for (const f of findings) c[f.severity]++;
+  return c;
+}
+
+export interface FindingRow {
+  reviewer: string;
+  finding: ReviewFinding;
+  /** Absent until the writer has answered the round. */
+  disposition?: FindingDisposition;
+}
+
+/** A round's findings grouped by kind (the lenses' order), blockers first
+ *  inside each group, then by reviewer. Empty groups are left out. */
+export function findingGroups(round: Pick<CritiqueRoundDetail, "reviews" | "dispositions">): { kind: FindingKind; rows: FindingRow[] }[] {
+  const sev = (s: FindingSeverity) => FINDING_SEVERITIES.indexOf(s);
+  const rows: FindingRow[] = round.reviews.flatMap((rv) =>
+    rv.findings.map((f) => {
+      const d = round.dispositions?.find((x) => x.reviewer === rv.reviewer && x.findingId === f.id);
+      return { reviewer: rv.reviewer, finding: f, ...(d ? { disposition: d } : {}) };
+    }),
+  );
+  return FINDING_KINDS.map((kind) => ({
+    kind,
+    rows: rows.filter((x) => x.finding.kind === kind).sort((a, b) => sev(a.finding.severity) - sev(b.finding.severity) || a.reviewer.localeCompare(b.reviewer)),
+  })).filter((g) => g.rows.length > 0);
+}
+
+export interface RoundLine {
+  round: number;
+  completed: number;
+  of: number;
+  findings: number;
+  closed: boolean;
+  decision?: CritiqueRoundDetail["decision"];
+  revised?: CritiqueRoundDetail["revised"];
+}
+
+/** One line per round that ran: who completed, how much was found, what the
+ *  writer decided and whether the post was revised after it. */
+export function roundTimeline(detail: CritiqueDetail): RoundLine[] {
+  return detail.rounds.map((r) => ({
+    round: r.round,
+    completed: r.receipts.filter((x) => x.outcome === "completed").length,
+    of: detail.reviewers.length,
+    findings: r.reviews.reduce((a, rv) => a + rv.findings.length, 0),
+    closed: r.closed,
+    ...(r.decision ? { decision: r.decision } : {}),
+    ...(r.revised ? { revised: r.revised } : {}),
+  }));
+}
+
+/** The round the panel opens on: the last one that has anything to show. */
+export function latestRound(detail: CritiqueDetail): number {
+  return detail.rounds.length ? detail.rounds[detail.rounds.length - 1].round : 1;
 }
 
 /** The topic as one line: `bundle/slug` for a registry subject, else the text. */

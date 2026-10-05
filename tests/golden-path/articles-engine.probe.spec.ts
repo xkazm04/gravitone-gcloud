@@ -94,7 +94,7 @@ test("run to the gate: every file of the run contract, through the real seam", a
   process.env.STUB_AGENT_ARGV_LOG = path.join(box.dir, "argv.log");
   const run = await toGate();
   expect(run.status, run.error).toBe("awaiting-approval");
-  expect(run.steps.map((s) => `${s.name}:${s.status}`)).toEqual(["research:done", "outline:done", "draft:done", "check:done"]);
+  expect(run.steps.map((s) => `${s.name}:${s.status}`)).toEqual(["research:done", "outline:done", "draft:done", "critique:done", "check:done"]);
   // the stub reports no cost, so none is recorded — never a zero
   expect(run.steps.every((s) => s.costUsd === undefined)).toBe(true);
   expect(run.standard.version).toBe("0.1.0");
@@ -104,14 +104,20 @@ test("run to the gate: every file of the run contract, through the real seam", a
     expect(existsSync(path.join(dir, f)), f).toBe(true);
   }
   const seen = readFileSync(path.join(box.dir, "argv.log"), "utf8").trim().split("\n").map((l) => JSON.parse(l));
-  expect(seen).toHaveLength(3);
-  for (const s of seen) {
-    expect(s.meteredKeyVisible, "the metered key reached the agent").toBe(false);
+  // three writer turns, four reviewers (one per engine), one writer answer
+  expect(seen).toHaveLength(8);
+  const writer = seen.filter((s) => s.entries.includes("inputs"));
+  const reviewers = seen.filter((s) => !s.entries.includes("inputs"));
+  expect(writer).toHaveLength(4);
+  for (const s of seen) expect(s.meteredKeyVisible, "the metered key reached the agent").toBe(false);
+  for (const s of writer) {
     expect(s.entries).toEqual(["inputs", "out"]);
     expect(s.argv).toContain("--restricted");
   }
-  expect(seen[0].argv[seen[0].argv.indexOf("--tools") + 1]).toBe("WebSearch,WebFetch,Read,Write,Edit");
-  expect(seen[2].argv[seen[2].argv.indexOf("--tools") + 1]).toBe("Read,Write,Edit");
+  expect(writer[0].argv[writer[0].argv.indexOf("--tools") + 1]).toBe("WebSearch,WebFetch,Read,Write,Edit");
+  expect(writer[2].argv[writer[2].argv.indexOf("--tools") + 1]).toBe("Read,Write,Edit");
+  expect(reviewers.map((s) => s.engine).sort()).toEqual(["agy", "claude", "codex", "grok"]);
+  for (const s of reviewers) expect(s.entries, `${s.engine}'s workspace`).toEqual(["REVIEW.md", "post", "sources.json"]);
 
   const detail = await getRunDetail(run.id);
   expect(detail.sources).toHaveLength(8);
@@ -235,7 +241,7 @@ test("a run on a registry subject records the subject and reads its golden path"
   const done = await driveRun(run.id, deps());
   expect(done.status).toBe("awaiting-approval");
   expect(readFileSync(path.join(runDir(run.id), "agent", "research-prompt.md"), "utf8")).toContain("Budgets are counted in tokens, not characters.");
-  expect((await readRun(run.id)).steps).toHaveLength(4);
+  expect((await readRun(run.id)).steps).toHaveLength(5);
 });
 
 test("medium story: the Markdown subset, figures as PNG with captions", () => {

@@ -7,6 +7,10 @@
 // are reported as NOT MEASURED, never as passed, because a green row nobody
 // measured reads exactly like a green row somebody did.
 //
+// The `critique` item (dimension truth, lib/articles/critique.ts) reads the
+// critique's files: at least the quorum of reviewers completed every round, and
+// every blocker factual finding has a disposition with a reason.
+//
 // A failed item does not stop the run. The report is shown at the human gate,
 // failures first, and the human decides. (The registry's own publications gate
 // re-checks the mechanical rules at landing, and that one does block.)
@@ -21,6 +25,7 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
+import { critiqueCheckItem, readCritiqueDetail } from "./critique";
 import type { CheckDimension, CheckItem, CheckReport, Claim, Source } from "./types";
 import { CHECK_DIMENSIONS } from "./types";
 
@@ -474,6 +479,9 @@ export async function runCheck(
     figures.push({ name: f.slice("figures/".length), svg: (await readMaybe(path.join(postDir, f))) ?? "" });
   }
   const items = staticItems({ html, md, sources, claims, figures, postFiles });
+  // The multi-model critique (scope amendment 1): quorum held in every round,
+  // every blocker factual finding answered with a reason.
+  items.push(critiqueCheckItem(await readCritiqueDetail(runDir)));
   let screenshots: string[] = [];
   if (html && opts.render !== false) {
     const r = await renderedItems(postDir, path.join(runDir, "check"));

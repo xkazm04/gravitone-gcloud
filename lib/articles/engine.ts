@@ -1,19 +1,22 @@
 // THE ARTICLE ENGINE — one post from a topic to the human gate, and on approval
 // into the registry. Server only.
 //
-//   queued -> researching -> drafting -> checking -> awaiting-approval
-//                (research)   (outline, draft) (check)        |
-//                                                  approved <-+-> rejected
-//                                                     |
-//                                                  landing -> landed
+//   queued -> researching -> drafting -> critiquing -> checking -> awaiting-approval
+//                (research)   (outline, draft) (critique)  (check)        |
+//                                                              approved <-+-> rejected
+//                                                                 |
+//                                                              landing -> landed
 //   any working state -> failed -> (resume) back to the state whose step failed
 //
-// THREE AGENT TURNS, ONE DETERMINISTIC STEP. research (web tools, call site
-// `article-research`), outline and draft (no web, call site `article-draft`),
-// each a fresh headless session through lib/agent/cliSeam.ts in an isolated
-// workspace that holds only `inputs/` and `out/`. The check is code
-// (lib/articles/checks.ts). Landing is code (lib/articles/registryWrite.ts) and
-// starts only from `approved`.
+// THREE WRITER TURNS, A CRITIQUE, ONE DETERMINISTIC STEP. research (web tools,
+// call site `article-research`), outline and draft (no web, call site
+// `article-draft`), each a fresh headless session through lib/agent/cliSeam.ts
+// in an isolated workspace that holds only `inputs/` and `out/`. Then the
+// CRITIQUE (scope amendment 1, below `critiqueStep`): reviewer models from
+// every provider read the draft in parallel, blind to each other; the writer
+// answers every finding and decides keep | rewrite | research; at most two
+// review rounds. The check is code (lib/articles/checks.ts). Landing is code
+// (lib/articles/registryWrite.ts) and starts only from `approved`.
 //
 // THE CLI AND THE ROUTES SHARE THIS MODULE, so they cannot disagree about what
 // a run is. Every ArticleRun field is produced here; the CLI
@@ -28,12 +31,32 @@ import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs
 import os from "node:os";
 import path from "node:path";
 
-import { runAgent as realRunAgent, type AgentResult, type AgentTool, type AgentTurnClass, type RunAgentInput } from "@/lib/agent/cliSeam";
+import {
+  REVIEW_PROMPT_FILE as REVIEW_MD,
+  runAgent as realRunAgent,
+  runReviewer as realRunReviewer,
+  type AgentResult,
+  type AgentTool,
+  type AgentTurnClass,
+  type ReviewerCall,
+  type RunAgentInput,
+} from "@/lib/agent/cliSeam";
 import { MODEL } from "@/lib/model";
 
 import { runCheck } from "./checks";
+import {
+  loadPanel,
+  readCritiqueDetail,
+  roundDir,
+  summarizeCritique,
+  validateDecision,
+  validateDispositions,
+  validatePanel,
+  validateReview,
+  type ReviewerPanel,
+} from "./critique";
 import { buildMediumPackage } from "./mediumPackage";
-import { buildPrompt, loadPromptFile, MAX_PATCHES, PROMPT_FILE, type PromptPhase } from "./prompt";
+import { buildPrompt, buildReviewPrompt, loadPromptFile, loadReviewPromptFile, MAX_PATCHES, PROMPT_FILE, type PromptPhase } from "./prompt";
 import {
   resolveRegistryDir,
   resolveStandard,
@@ -69,9 +92,13 @@ import {
   type CheckReport,
   type Claim,
   type CreateRunInput,
+  type CritiqueDecisionRecord,
   type EffortLevel,
   type PostMeta,
   type RegistryPatch,
+  type Review,
+  type ReviewerReceipt,
+  type ReviewerSpec,
   type Source,
   type StepName,
 } from "./types";
@@ -80,6 +107,8 @@ import {
 
 export interface EngineDeps {
   runAgent: (input: RunAgentInput) => Promise<AgentResult>;
+  /** One reviewer of the critique, any of the four engines. */
+  runReviewer: (call: ReviewerCall) => Promise<AgentResult>;
   now: () => Date;
   /** Open a browser for the rendered check items. */
   render: boolean;
@@ -90,13 +119,23 @@ export interface EngineDeps {
 }
 
 export function defaultDeps(over: Partial<EngineDeps> = {}): EngineDeps {
-  return { runAgent: realRunAgent, now: () => new Date(), render: true, root: process.cwd(), ...over };
+  return { runAgent: realRunAgent, runReviewer: realRunReviewer, now: () => new Date(), render: true, root: process.cwd(), ...over };
 }
 
-const STEP_PLAN: Record<Exclude<StepName, "check">, { phase: PromptPhase; turn: AgentTurnClass; tools: AgentTool[]; timeoutMin: number }> = {
+type WriterStep = Exclude<StepName, "check" | "critique">;
+
+const STEP_PLAN: Record<WriterStep, { phase: PromptPhase; turn: AgentTurnClass; tools: AgentTool[]; timeoutMin: number }> = {
   research: { phase: "research", turn: "article-research", tools: ["WebSearch", "WebFetch", "Read", "Write", "Edit"], timeoutMin: 45 },
   outline: { phase: "outline", turn: "article-draft", tools: ["Read", "Write", "Edit"], timeoutMin: 15 },
   draft: { phase: "draft", turn: "article-draft", tools: ["Read", "Write", "Edit"], timeoutMin: 45 },
+};
+
+/** The writer's turns inside the critique: answering the reviews (no web),
+ *  research again (web), rewrite (no web). */
+const CRITIQUE_PLAN: Record<"critique" | "revise-research" | "revise", { turn: AgentTurnClass; tools: AgentTool[]; timeoutMin: number; label: string }> = {
+  critique: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 20, label: "writer" },
+  "revise-research": { turn: "article-research", tools: ["WebSearch", "WebFetch", "Read", "Write", "Edit"], timeoutMin: 45, label: "research" },
+  revise: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 45, label: "revise" },
 };
 
 class StepError extends Error {
@@ -183,13 +222,14 @@ export async function readPatches(id: string): Promise<RegistryPatch[]> {
 
 export async function getRunDetail(id: string): Promise<ArticleRunDetail> {
   const run = await readRun(id);
-  const [sources, claims, outline, meta, check, patches] = await Promise.all([
+  const [sources, claims, outline, meta, check, patches, critique] = await Promise.all([
     readJsonFile<Source[]>(inRun(id, "sources.json"), []),
     readJsonFile<Claim[]>(inRun(id, "claims.json"), []),
     readTextFile(inRun(id, "outline.md")),
     readJsonFile<PostMeta | null>(inRun(id, "post/meta.json"), null),
     readJsonFile<CheckReport | null>(inRun(id, "check.json"), null),
     readPatches(id),
+    readCritiqueDetail(runDir(id)),
   ]);
   const withDiffs = await Promise.all(patches.map(async (p) => ({ ...p, diff: (await readTextFile(inRun(id, p.patchFile))) ?? "" })));
   const post = await stat(inRun(id, "post/index.html")).then(() => "post/index.html", () => undefined);
@@ -202,6 +242,7 @@ export async function getRunDetail(id: string): Promise<ArticleRunDetail> {
     ...(meta ? { meta } : {}),
     ...(check ? { check } : {}),
     ...(post ? { post } : {}),
+    ...(critique ? { critique } : {}),
   };
 }
 
@@ -241,10 +282,11 @@ export function resumePoint(run: ArticleRun): ArticleStatus {
   if (run.approval) return "approved";
   if (!done("research")) return run.steps.length ? "researching" : "queued";
   if (!done("outline") || !done("draft")) return "drafting";
+  if (!done("critique")) return "critiquing";
   return "checking";
 }
 
-const RESUMABLE: ArticleStatus[] = ["queued", "researching", "drafting", "checking", "approved", "landing"];
+const RESUMABLE: ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 /** Make a run drivable again. A `failed` run goes back to its resume point; a
  *  run left mid-step by a driver that died is resumable as it stands. The
@@ -299,6 +341,10 @@ export async function driveRun(id: string, deps: EngineDeps = defaultDeps()): Pr
         case "drafting":
           if (!(await step(id, "outline", deps))) return readRun(id);
           if (!(await step(id, "draft", deps))) return readRun(id);
+          await setStatus(id, "critiquing", deps);
+          continue;
+        case "critiquing":
+          if (!(await step(id, "critique", deps))) return readRun(id);
           await setStatus(id, "checking", deps);
           continue;
         case "checking":
@@ -330,7 +376,7 @@ async function step(id: string, name: StepName, deps: EngineDeps): Promise<boole
   const startedAt = deps.now().toISOString();
   await updateRun(id, (r) => withStep(r, { name, status: "running", startedAt, ...(prior?.costUsd !== undefined ? { costUsd: prior.costUsd } : {}) }), deps.now);
   try {
-    const cost = name === "check" ? await checkStep(id, deps) : await agentStep(id, name, deps);
+    const cost = name === "check" ? await checkStep(id, deps) : name === "critique" ? await critiqueStep(id, deps) : await agentStep(id, name, deps);
     await updateRun(id, (r) => withStep(r, finish(r, name, "done", deps, cost)), deps.now);
     return true;
   } catch (e) {
@@ -344,7 +390,7 @@ async function step(id: string, name: StepName, deps: EngineDeps): Promise<boole
 function withStep(run: ArticleRun, s: ArticleStep): ArticleRun {
   const steps = run.steps.filter((x) => x.name !== s.name);
   steps.push(s);
-  const order = ["research", "outline", "draft", "check"];
+  const order = ["research", "outline", "draft", "critique", "check"];
   steps.sort((a, b) => order.indexOf(a.name) - order.indexOf(b.name));
   return { ...run, steps };
 }
@@ -369,7 +415,7 @@ async function makeWorkspace(id: string, name: string, now: Date): Promise<strin
   return ws;
 }
 
-async function agentStep(id: string, name: Exclude<StepName, "check">, deps: EngineDeps): Promise<number | undefined> {
+async function agentStep(id: string, name: WriterStep, deps: EngineDeps): Promise<number | undefined> {
   const plan = STEP_PLAN[name];
   const run = await readRun(id);
   const dir = runDir(id);
@@ -456,7 +502,7 @@ async function copyDir(from: string, to: string): Promise<string[]> {
 async function stageInputs(
   ws: string,
   dir: string,
-  name: Exclude<StepName, "check">,
+  name: WriterStep,
   std: ResolvedStandard,
   registry: RegistryLocation,
   material: { file: string; text: string } | undefined,
@@ -562,7 +608,9 @@ async function ingestOutline(ws: string, dir: string): Promise<void> {
 
 const PATCH_ID = /^p\d{1,2}$/;
 
-async function ingestDraft(ws: string, dir: string): Promise<void> {
+/** The post files out of a draft or a critique rewrite. Validated before the
+ *  previous post is touched; then the previous post is replaced wholesale. */
+async function ingestPost(ws: string, dir: string): Promise<void> {
   const out = path.join(ws, "out");
   const html = await readTextFile(path.join(out, "post", "index.html"));
   const md = await readTextFile(path.join(out, "post", "post.md"));
@@ -576,9 +624,7 @@ async function ingestDraft(ws: string, dir: string): Promise<void> {
     tags: Array.isArray(metaRaw.tags) ? metaRaw.tags.filter((t): t is string => typeof t === "string" && !!t.trim()).map((t) => t.trim()).slice(0, 5) : [],
   };
 
-  // A redraft replaces the previous post wholesale.
   await rm(path.join(dir, "post"), { recursive: true, force: true });
-  await rm(path.join(dir, "patches"), { recursive: true, force: true });
   await writeFileAtomic(path.join(dir, "post", "index.html"), html);
   await writeFileAtomic(path.join(dir, "post", "post.md"), md);
   await writeJsonAtomic(path.join(dir, "post", "meta.json"), meta);
@@ -589,6 +635,13 @@ async function ingestDraft(ws: string, dir: string): Promise<void> {
     // no figures directory: the check counts zero and says so
   }
   for (const f of figs) await writeFileAtomic(path.join(dir, "post", "figures", f), await readFile(path.join(out, "post", "figures", f)));
+}
+
+async function ingestDraft(ws: string, dir: string): Promise<void> {
+  const out = path.join(ws, "out");
+  // A redraft replaces the previous post and its patches wholesale.
+  await ingestPost(ws, dir);
+  await rm(path.join(dir, "patches"), { recursive: true, force: true });
 
   // Patches: proposals in, diffs out — computed here, never typed by the model.
   const sources = await readJsonFile<Source[]>(path.join(dir, "sources.json"), []);
@@ -688,6 +741,394 @@ export async function diffFiles(original: string, proposal: string, target: stri
     return diff.replace(/^diff --git b\/(\S+) b\/(\S+)$/m, "diff --git a/$1 b/$2");
   } finally {
     await rm(tmp, { recursive: true, force: true });
+  }
+}
+
+/* ── the critique step (scope amendment 1) ─────────────────────────────────── */
+//
+//   round n:  every reviewer of the panel, in parallel, blind to each other,
+//             each in its own read-only workspace (a copy of post/, sources.json
+//             and REVIEW.md) -> critique/round-n/reviews/<id>.json
+//             fewer than `minCompleted` completed -> `critique-quorum`, failed
+//             -> the WRITER (the draft's model) answers every finding and
+//             decides: critique/round-n/{dispositions,decision}.json
+//             keep -> the step is done
+//             rewrite -> a rewrite turn replaces post/
+//             research -> a research turn (web) updates sources/claims, then
+//             the rewrite turn
+//             -> round n+1 reviews the revision; in the LAST round the writer
+//             may only keep or rewrite, and a last rewrite is not re-reviewed.
+//
+// RESUMABLE AT EVERY FILE. A reviewer whose review file exists never runs
+// again; a round with closed.json runs no reviewer at all; a round with its
+// decision runs no writer turn; a round with revised.json is not revised
+// again. A killed or failed run resumes inside the step from the first file
+// that is missing.
+//
+// COST BOUND, in agent turns: per round, one per reviewer plus at most one
+// retry each for a malformed review, one writer turn plus at most one retry
+// for an invalid answer, and at most two revision turns (research, rewrite).
+// With the four-reviewer panel and two rounds: 8 turns at the least (round 1
+// and keep, plus the three writer turns before it: 3 + 4 + 1), 26 at the most
+// (3 + round 1: 4+4+1+1+2 + round 2: 4+4+1+1+1).
+
+/** Fewer reviewers completed a round than the panel's quorum. */
+class QuorumError extends StepError {}
+
+const sumCost = (a: number | undefined, b: number | undefined) => (a === undefined && b === undefined ? undefined : (a ?? 0) + (b ?? 0));
+const fileExists = (f: string) => stat(f).then(() => true, () => false);
+
+/** The panel this run is reviewed by: the snapshot taken when its critique
+ *  began, so a resume (or the UI) never meets a panel the run did not start
+ *  with. The first call reads pipeline/article-reviewers.json (or
+ *  ARTICLES_REVIEWERS_FILE) and writes the snapshot. */
+async function critiquePanel(dir: string, deps: EngineDeps): Promise<ReviewerPanel> {
+  const snap = path.join(dir, "critique", "reviewers.json");
+  const held = await readJsonFile<unknown>(snap, undefined);
+  if (held !== undefined) return validatePanel(held, snap);
+  const panel = await loadPanel(deps.root);
+  await writeJsonAtomic(snap, panel);
+  return panel;
+}
+
+async function syncCritiqueSummary(id: string, deps: EngineDeps): Promise<void> {
+  const summary = summarizeCritique(await readCritiqueDetail(runDir(id)));
+  if (summary) await updateRun(id, (r) => ({ ...r, critique: summary }), deps.now);
+}
+
+async function critiqueStep(id: string, deps: EngineDeps): Promise<number | undefined> {
+  const dir = runDir(id);
+  let cost: number | undefined;
+  try {
+    const panel = await critiquePanel(dir, deps);
+    for (let round = 1; round <= panel.maxCritiqueRounds; round++) {
+      const last = round === panel.maxCritiqueRounds;
+      const rd = path.join(dir, ...roundDir(round).split("/"));
+
+      if (!(await fileExists(path.join(rd, "closed.json")))) cost = sumCost(cost, await reviewRound(id, round, panel, deps));
+
+      let decision = await readJsonFile<CritiqueDecisionRecord | null>(path.join(rd, "decision.json"), null);
+      if (!decision || !(await fileExists(path.join(rd, "dispositions.json")))) {
+        const answered = await writerAnswers(id, round, panel, last, deps);
+        cost = sumCost(cost, answered.cost);
+        decision = answered.decision;
+      }
+      await syncCritiqueSummary(id, deps);
+      if (decision.decision === "keep") return cost;
+
+      if (!(await fileExists(path.join(rd, "revised.json")))) cost = sumCost(cost, await revise(id, round, panel, decision, deps));
+      if (last) return cost;
+    }
+    return cost;
+  } catch (e) {
+    await syncCritiqueSummary(id, deps).catch(() => undefined);
+    // A thrown StepError carries the cost of the turns that ran inside the
+    // failing call; the rounds before it are in `cost`.
+    throw new StepError((e as Error).message, sumCost(cost, e instanceof StepError ? e.costUsd : undefined));
+  }
+}
+
+/** The run's standard, re-resolved now (never a stale copy), as prompt text. */
+async function standardForPrompt(id: string, deps: EngineDeps): Promise<{ text: string; address: string }> {
+  const run = await readRun(id);
+  const registry = deps.registry ?? resolveRegistryDir();
+  const std = await resolveStandard(registry);
+  if (std.standard.version !== run.standard.version || std.standard.bundleHash !== run.standard.bundleHash) {
+    await updateRun(id, (r) => ({ ...r, standard: std.standard }), deps.now);
+  }
+  return {
+    text: standardText(std),
+    address: `recipes/index.json#${std.recipe.slug}@${std.recipe.version}, knowledge/${std.standard.bundle}/index.json ${std.standard.bundleHash}`,
+  };
+}
+
+/** Every file under a directory with its size and mtime — what a reviewer's
+ *  workspace held before it ran, to say what it wrote. */
+async function snapshotTree(root: string, rel = ""): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  let entries: import("node:fs").Dirent[];
+  try {
+    entries = await readdir(path.join(root, rel), { withFileTypes: true });
+  } catch {
+    return out;
+  }
+  for (const e of entries) {
+    const child = rel ? `${rel}/${e.name}` : e.name;
+    if (e.isDirectory()) for (const [k, v] of await snapshotTree(root, child)) out.set(k, v);
+    else {
+      const s = await stat(path.join(root, child)).catch(() => null);
+      out.set(child, s ? `${s.size}:${s.mtimeMs}` : "?");
+    }
+  }
+  return out;
+}
+
+async function reviewRound(id: string, round: number, panel: ReviewerPanel, deps: EngineDeps): Promise<number | undefined> {
+  const dir = runDir(id);
+  const rd = path.join(dir, ...roundDir(round).split("/"));
+  const run = await readRun(id);
+  const std = await standardForPrompt(id, deps);
+  const file = await loadReviewPromptFile(deps.root);
+  const postMd = (await readTextFile(path.join(dir, "post", "post.md"))) ?? "";
+  const sourcesJson = (await readTextFile(path.join(dir, "sources.json"))) ?? "[]";
+  if (!postMd.trim()) throw new StepError("there is no post/post.md to review");
+
+  const pending: ReviewerSpec[] = [];
+  for (const spec of panel.reviewers) if (!(await fileExists(path.join(rd, "reviews", `${spec.id}.json`)))) pending.push(spec);
+  const costs = await Promise.all(
+    pending.map((spec) =>
+      reviewOnce(id, round, spec, deps, (note) =>
+        buildReviewPrompt(file, {
+          reviewer: spec.id,
+          model: spec.model,
+          effort: spec.effort,
+          round,
+          maxRounds: panel.maxCritiqueRounds,
+          topic: run.topic,
+          standard: std.text,
+          standardAddress: std.address,
+          today: deps.now().toISOString().slice(0, 10),
+          postMd,
+          sourcesJson,
+        }) + note,
+      ),
+    ),
+  );
+  const cost = costs.reduce<number | undefined>((a, c) => sumCost(a, c), undefined);
+
+  const completed: string[] = [];
+  for (const spec of panel.reviewers) if (await fileExists(path.join(rd, "reviews", `${spec.id}.json`))) completed.push(spec.id);
+  await syncCritiqueSummary(id, deps);
+  if (completed.length < panel.minCompleted) {
+    const why: string[] = [];
+    for (const spec of panel.reviewers) {
+      if (completed.includes(spec.id)) continue;
+      const r = await readJsonFile<ReviewerReceipt | null>(path.join(rd, "receipts", `${spec.id}.json`), null);
+      why.push(`${spec.id} ${r?.outcome ?? "did not run"}${r?.errors[0] ? `: ${r.errors[0]}` : ""}`);
+    }
+    throw new QuorumError(`critique-quorum: round ${round}: ${completed.length} of ${panel.reviewers.length} reviewers completed, ${panel.minCompleted} needed (${why.join("; ")})`, cost);
+  }
+  await writeJsonAtomic(path.join(rd, "closed.json"), { round, at: deps.now().toISOString(), completed });
+  return cost;
+}
+
+/** One reviewer, once — plus one retry when its answer is not a review. Writes
+ *  its receipt, and its review when it completed. Never throws for the
+ *  reviewer's sake: a reviewer that fails is an outcome. */
+async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: EngineDeps, prompt: (note: string) => string): Promise<number | undefined> {
+  const dir = runDir(id);
+  const rd = path.join(dir, ...roundDir(round).split("/"));
+  let cost: number | undefined;
+  let turns = 0;
+  let durationMs = 0;
+  let note = "";
+  const wrote = new Set<string>();
+  let receipt: ReviewerReceipt | undefined;
+
+  for (let attempt = 1; attempt <= 2 && !receipt; attempt++) {
+    const text = prompt(note);
+    if (attempt === 1) await writeFileAtomic(path.join(rd, "prompts", `${spec.id}.md`), text);
+    const ws = path.join(os.tmpdir(), "gravitone-article-ws", `${id}-r${round}-${spec.id}-${attempt}-${deps.now().getTime()}`);
+    try {
+      await rm(ws, { recursive: true, force: true });
+      await mkdir(ws, { recursive: true });
+      await copyDir(path.join(dir, "post"), path.join(ws, "post"));
+      await copyFile(path.join(dir, "sources.json"), path.join(ws, "sources.json"));
+      await writeFile(path.join(ws, REVIEW_MD), text, "utf8");
+      const before = await snapshotTree(ws);
+      const result = await deps.runReviewer({ engine: spec.engine, cwd: ws, prompt: text, model: spec.model, effort: spec.effort, timeoutMin: spec.timeoutMin });
+      for (const [k, v] of await snapshotTree(ws)) if (before.get(k) !== v) wrote.add(k);
+      cost = sumCost(cost, result.costUsd);
+      turns += result.turns;
+      durationMs += result.durationMs;
+      const base = {
+        id: spec.id,
+        engine: spec.engine,
+        model: spec.model,
+        effort: spec.effort,
+        round,
+        attempts: attempt,
+        turns,
+        durationMs,
+        ...(cost !== undefined ? { costUsd: Math.round(cost * 1_000_000) / 1_000_000 } : {}),
+        ...(wrote.size ? { wrote: [...wrote].sort().slice(0, 20) } : {}),
+      };
+      if (result.outcome !== "completed") {
+        receipt = { ...base, outcome: result.outcome, errors: result.errors.length ? result.errors : [`the reviewer ${result.outcome}`] };
+        break;
+      }
+      try {
+        const { review, dropped } = validateReview(result.final, spec);
+        await writeJsonAtomic(path.join(rd, "reviews", `${spec.id}.json`), review satisfies Review);
+        receipt = { ...base, outcome: "completed", errors: [], ...(dropped ? { dropped } : {}) };
+      } catch (e) {
+        const msg = (e as Error).message;
+        if (attempt === 2) receipt = { ...base, outcome: "errored", errors: [`malformed review twice: ${msg}`] };
+        else note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${msg}. Answer again. Your whole final message is ONE JSON object matching OUTPUT above, and nothing else.\n`;
+      }
+    } catch (e) {
+      receipt = { id: spec.id, engine: spec.engine, model: spec.model, effort: spec.effort, round, attempts: attempt, turns, durationMs, outcome: "errored", errors: [(e as Error).message] };
+    } finally {
+      await rm(ws, { recursive: true, force: true }).catch(() => undefined);
+    }
+  }
+  if (receipt) await writeJsonAtomic(path.join(rd, "receipts", `${spec.id}.json`), receipt);
+  return cost;
+}
+
+/** Copy the run's critique material into a writer workspace's inputs/. */
+async function stageCritiqueInputs(ws: string, dir: string, round: number, reviews: Review[], extra: ("outline" | "answers")[]): Promise<void> {
+  const inputs = path.join(ws, "inputs");
+  const rd = path.join(dir, ...roundDir(round).split("/"));
+  await copyDir(path.join(dir, "post"), path.join(inputs, "post"));
+  await copyFile(path.join(dir, "sources.json"), path.join(inputs, "sources.json"));
+  await copyFile(path.join(dir, "claims.json"), path.join(inputs, "claims.json"));
+  await mkdir(path.join(inputs, "reviews"), { recursive: true });
+  for (const r of reviews) await writeFile(path.join(inputs, "reviews", `${r.reviewer}.json`), `${JSON.stringify(r, null, 2)}\n`, "utf8");
+  if (extra.includes("outline")) await copyFile(path.join(dir, "outline.md"), path.join(inputs, "outline.md"));
+  if (extra.includes("answers")) {
+    await copyFile(path.join(rd, "dispositions.json"), path.join(inputs, "dispositions.json"));
+    await copyFile(path.join(rd, "decision.json"), path.join(inputs, "decision.json"));
+  }
+}
+
+async function roundReviews(dir: string, round: number, panel: ReviewerPanel): Promise<Review[]> {
+  const rd = path.join(dir, ...roundDir(round).split("/"));
+  const out: Review[] = [];
+  for (const spec of panel.reviewers) {
+    const r = await readJsonFile<Review | null>(path.join(rd, "reviews", `${spec.id}.json`), null);
+    if (r) out.push(r);
+  }
+  return out;
+}
+
+/** One writer turn of the critique; its receipt is agent/critique-r<n>-<label>.json. */
+async function critiqueTurn(
+  id: string,
+  round: number,
+  phase: keyof typeof CRITIQUE_PLAN,
+  panel: ReviewerPanel,
+  deps: EngineDeps,
+  stage: (ws: string) => Promise<void>,
+  ingest: (ws: string) => Promise<void>,
+): Promise<number | undefined> {
+  const plan = CRITIQUE_PLAN[phase];
+  const dir = runDir(id);
+  const run = await readRun(id);
+  const std = await standardForPrompt(id, deps);
+  const file = await loadPromptFile(deps.root);
+  const base = buildPrompt(file, phase, {
+    topic: run.topic,
+    standard: std.text,
+    standardAddress: std.address,
+    today: deps.now().toISOString().slice(0, 10),
+    round,
+    maxRounds: panel.maxCritiqueRounds,
+  });
+  const name = `critique-r${round}-${plan.label}`;
+  await writeFileAtomic(path.join(dir, "agent", `${name}-prompt.md`), base);
+  let cost: number | undefined;
+  let note = "";
+  // Only the writer's answer is retried (an invalid answer is the writer's to
+  // correct); a revision that fails its ingest fails the step.
+  const attempts = phase === "critique" ? 2 : 1;
+  for (let attempt = 1; attempt <= attempts; attempt++) {
+    const ws = await makeWorkspace(id, `${name}-${attempt}`, deps.now());
+    try {
+      await stage(ws);
+      const result = await deps.runAgent({ cwd: ws, prompt: base + note, model: run.model, effort: run.effort, tools: plan.tools, timeoutMin: plan.timeoutMin, turn: plan.turn });
+      cost = sumCost(cost, result.costUsd);
+      await writeJsonAtomic(path.join(dir, "agent", `${name}.json`), {
+        turn: plan.turn,
+        outcome: result.outcome,
+        turns: result.turns,
+        durationMs: result.durationMs,
+        exitCode: result.exitCode,
+        attempts: attempt,
+        ...(result.costUsd !== undefined ? { costUsd: result.costUsd } : {}),
+        errors: result.errors,
+        final: result.final.slice(0, 4000),
+      });
+      if (result.outcome !== "completed") {
+        await keepOut(ws, dir, name);
+        throw new StepError(`round ${round} ${plan.label}: the agent ${result.outcome}${result.errors.length ? `: ${result.errors.join("; ")}` : ""}`, cost);
+      }
+      try {
+        await ingest(ws);
+        return cost;
+      } catch (e) {
+        await keepOut(ws, dir, name);
+        if (attempt === attempts) throw new StepError(`round ${round} ${plan.label}: ${(e as Error).message}`, cost);
+        note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${(e as Error).message}. Write both files again, correctly.\n`;
+      }
+    } finally {
+      await rm(ws, { recursive: true, force: true }).catch(() => undefined);
+    }
+  }
+  return cost;
+}
+
+async function writerAnswers(id: string, round: number, panel: ReviewerPanel, last: boolean, deps: EngineDeps): Promise<{ cost: number | undefined; decision: CritiqueDecisionRecord }> {
+  const dir = runDir(id);
+  const rd = path.join(dir, ...roundDir(round).split("/"));
+  const reviews = await roundReviews(dir, round, panel);
+  let decision: CritiqueDecisionRecord | undefined;
+  const cost = await critiqueTurn(
+    id,
+    round,
+    "critique",
+    panel,
+    deps,
+    (ws) => stageCritiqueInputs(ws, dir, round, reviews, []),
+    async (ws) => {
+      const dispositions = validateDispositions(await readOutJson(path.join(ws, "out", "dispositions.json"), "out/dispositions.json"), reviews);
+      const d = validateDecision(await readOutJson(path.join(ws, "out", "decision.json"), "out/decision.json"), round, last);
+      await writeJsonAtomic(path.join(rd, "dispositions.json"), dispositions);
+      await writeJsonAtomic(path.join(rd, "decision.json"), d);
+      decision = d;
+    },
+  );
+  return { cost, decision: decision! };
+}
+
+/** A critique research keeps every source's number and URL: the post, the
+ *  claims and any registry patch cite them by number. */
+export function assertSourcesStable(before: Source[], after: Source[]): void {
+  const now = new Map(after.map((s) => [s.n, s]));
+  const moved = before.filter((s) => now.get(s.n)?.url !== s.url).map((s) => `[${s.n}]`);
+  if (moved.length) throw new Error(`out/sources.json dropped or renumbered ${moved.join(" ")}: existing sources keep their number and URL`);
+}
+
+async function revise(id: string, round: number, panel: ReviewerPanel, decision: CritiqueDecisionRecord, deps: EngineDeps): Promise<number | undefined> {
+  const dir = runDir(id);
+  const rd = path.join(dir, ...roundDir(round).split("/"));
+  const reviews = await roundReviews(dir, round, panel);
+  const research = decision.decision === "research";
+  let cost: number | undefined;
+  try {
+    if (research && !(await fileExists(path.join(rd, "researched.json")))) {
+      const stage = (ws: string) => stageCritiqueInputs(ws, dir, round, reviews, ["answers"]);
+      const ingest = async (ws: string) => {
+        const before = await readJsonFile<Source[]>(path.join(dir, "sources.json"), []);
+        const sources = validateSources(await readOutJson(path.join(ws, "out", "sources.json"), "out/sources.json"));
+        assertSourcesStable(before, sources);
+        const claims = validateClaims(await readOutJson(path.join(ws, "out", "claims.json"), "out/claims.json"), sources);
+        await writeJsonAtomic(path.join(dir, "sources.json"), sources);
+        await writeJsonAtomic(path.join(dir, "claims.json"), claims);
+        await writeJsonAtomic(path.join(rd, "researched.json"), { at: deps.now().toISOString(), sources: sources.length, added: sources.length - before.length });
+      };
+      cost = sumCost(cost, await critiqueTurn(id, round, "revise-research", panel, deps, stage, ingest));
+    }
+    const stage = (ws: string) => stageCritiqueInputs(ws, dir, round, reviews, ["outline", "answers"]);
+    const ingest = async (ws: string) => {
+      await ingestPost(ws, dir);
+      await writeJsonAtomic(path.join(rd, "revised.json"), { at: deps.now().toISOString(), research });
+    };
+    cost = sumCost(cost, await critiqueTurn(id, round, "revise", panel, deps, stage, ingest));
+    return cost;
+  } catch (e) {
+    // the research turn's cost survives a failed rewrite
+    throw new StepError((e as Error).message, sumCost(cost, e instanceof StepError ? e.costUsd : undefined));
   }
 }
 
