@@ -279,7 +279,10 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
               <button
                 type="button"
                 data-testid="bell-mark-all"
-                onClick={markAllRead}
+                onClick={() => {
+                  markAllRead();
+                  panelRef.current?.focus();
+                }}
                 className={al ? "k-tray__btn" : "font-jetbrains text-label text-white/55 transition hover:text-white/85"}
               >
                 mark all read
@@ -300,7 +303,10 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                 </p>
                 <button
                   type="button"
-                  onClick={clearStorageTrouble}
+                  onClick={() => {
+                    clearStorageTrouble();
+                    panelRef.current?.focus();
+                  }}
                   className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
                 >
                   dismiss
@@ -405,7 +411,10 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                               key={act.kind}
                               type="button"
                               data-testid="bell-interrupted-clear"
-                              onClick={() => clear(act.jobId)}
+                              onClick={() => {
+                                clear(act.jobId);
+                                panelRef.current?.focus();
+                              }}
                               className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
                             >
                               clear
@@ -495,7 +504,10 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                             <button
                               key={act.kind}
                               type="button"
-                              onClick={() => markRead(act.eventId)}
+                              onClick={() => {
+                                markRead(act.eventId);
+                                panelRef.current?.focus();
+                              }}
                               className={al ? "k-tray__btn" : "font-jetbrains shrink-0 text-label text-white/55 transition hover:text-white/85"}
                             >
                               dismiss
