@@ -204,6 +204,11 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
           rows = await listAssets(uid);
         }
       }
+      // IMAGES ONLY. The audio shelf (app/library/audio) keeps its takes in the
+      // same store with `kind: "audio"` and an empty `src`; counted here they
+      // inflated the Assets tally by the 160-row audio seed and drew as blank
+      // tiles. Audio is read by its own module, never by this hook.
+      rows = rows.filter((a) => a.kind !== "audio");
       setAssets(await hydrateUploads(await hydrateProofs(uid, rows)));
       setError(null);
     } catch (e) {
