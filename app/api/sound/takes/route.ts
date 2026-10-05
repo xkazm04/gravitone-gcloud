@@ -1,4 +1,5 @@
 // GET    /api/sound/takes?kind&verdict&stage&provider&origin&fixtures=1 -> { takes }  (newest first)
+//                          &projectId&cueId   a Score cue's takes (origin "score")
 // POST   /api/sound/takes  multipart `file` + `meta` (Partial<SoundTake>)     -> 201 { take }
 //                           (200 { take } when a migrated row's id is already filed)
 // DELETE /api/sound/takes?origin=fixture                                     -> { removed }

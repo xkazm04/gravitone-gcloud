@@ -42,13 +42,16 @@ export interface TakeFilter {
   fixtures?: boolean;
   group?: string | null;
   label?: string | null;
+  /** A Score cue's takes: the project and the cue (spot id) they were rendered for. */
+  projectId?: string | null;
+  cueId?: string | null;
 }
 
 const KINDS: readonly SoundKind[] = ["music", "sfx"];
 const PROVIDERS: readonly ProviderId[] = ["elevenlabs", "suno", "local"];
-const ORIGINS: readonly TakeOrigin[] = ["agent", "lab", "hunt", "import", "suno-return", "fixture"];
+const ORIGINS: readonly TakeOrigin[] = ["agent", "lab", "hunt", "import", "suno-return", "fixture", "score"];
 const VERDICTS: readonly Verdict[] = ["unjudged", "kept", "rejected"];
-const OPS: readonly SoundOp[] = ["compose", "plan", "section-edit", "sfx", "manual"];
+const OPS: readonly SoundOp[] = ["compose", "plan", "section-edit", "sfx", "manual", "cue"];
 
 const pick = <T extends string>(list: readonly T[], v: unknown): T | null => list.find((x) => x === v) ?? null;
 
@@ -72,6 +75,8 @@ export function parseTakeFilter(sp: URLSearchParams): TakeFilter {
     fixtures: sp.get("fixtures") === "1",
     group: sp.get("group") || null,
     label: sp.get("label") || null,
+    projectId: sp.get("projectId") || null,
+    cueId: sp.get("cueId") || null,
   };
 }
 
@@ -84,7 +89,9 @@ export function filterTakes(takes: readonly SoundTake[], f: TakeFilter = {}): So
       (!f.provider || t.provider === f.provider) &&
       (f.origin ? t.origin === f.origin : f.fixtures || t.origin !== "fixture") &&
       (!f.group || t.group === f.group) &&
-      (!f.label || (t.label ?? "").toLowerCase().includes(f.label.toLowerCase())),
+      (!f.label || (t.label ?? "").toLowerCase().includes(f.label.toLowerCase())) &&
+      (!f.projectId || t.projectId === f.projectId) &&
+      (!f.cueId || t.cueId === f.cueId),
   );
   // Newest first; the id breaks a tie so two takes filed in one millisecond
   // keep one order across reads.
@@ -334,6 +341,8 @@ export async function createTake(
       // The name the file arrived under, unless the caller states another (a
       // migrated Library row keeps the name it was uploaded with).
       fileName: str(meta.fileName, 255) ?? (hasBytes && file!.name ? file!.name.slice(0, 255) : null),
+      projectId: str(meta.projectId, 120),
+      cueId: str(meta.cueId, 120),
       // A migrated row keeps the time it was made, so "newest first" means the
       // same thing in the Library after the move as before it.
       createdAt: iso(meta.createdAt) ?? nowIso,

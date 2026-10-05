@@ -140,6 +140,14 @@ function toChunk(s: PlanSection) {
   };
 }
 
+/** A doctrine plan (cueToPlan's output) in the vendor's wire grammar — the same
+ *  chunks composeMusic sends, for the detailed, stored-for-inpainting path that
+ *  lib/sound renders Score cues on (op "cue"), so a cue's sections can later be
+ *  edited one at a time. */
+export function toWirePlan(plan: MusicPlan): WirePlan {
+  return { chunks: plan.sections.map(toChunk) };
+}
+
 /**
  * A vendor's non-ok response, classified.
  *

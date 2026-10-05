@@ -82,6 +82,8 @@ function take(o: Partial<SoundTake> & { id: string }): SoundTake {
     variation: null,
     editModes: null,
     fileName: null,
+    projectId: null,
+    cueId: null,
     createdAt: `2026-10-05T${String(n).padStart(2, "0")}:00:00.000Z`,
     judgedAt: null,
     finalizedAt: null,

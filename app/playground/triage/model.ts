@@ -35,6 +35,9 @@ export const ORIGIN_RANK: Record<TakeOrigin, number> = {
   agent: 0,
   lab: 1,
   hunt: 2,
+  // A production cue rendered from the Score step: real work, heard after the
+  // lab's own batches and before returns and imports.
+  score: 2,
   "suno-return": 3,
   import: 4,
   fixture: 9,

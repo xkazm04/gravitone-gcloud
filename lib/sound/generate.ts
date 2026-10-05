@@ -20,21 +20,36 @@
 //                      reference (./editPlan.ts); its parent is the source.
 //   op "sfx"           text-to-SFX, 0.5–30 s, with the loop flag and the
 //                      prompt influence (null = the vendor's default).
+//   op "cue"           a Score cue's CueBrief (title, intent, bpm, style block
+//                      and THE PICTURE it plays under) → lib/music/plan.ts
+//                      cueToPlan → the wire plan, rendered stored for
+//                      inpainting. The doctrine stays server-side, as
+//                      app/api/music/generate/route.ts requires: the browser
+//                      sends the cue, never a plan, and the length bought is the
+//                      picture's. Filed origin "score" with {projectId, cueId},
+//                      so a cue's takes outlive the tab (MUSIC-B; the ADR
+//                      2026-08-29-score-take-persistence, option D).
+//
+// A SCORE TAKE STAYS A SCORE TAKE. A section edit of one inherits its
+// {projectId, cueId} from the source (or, for a lab take adopted onto a cue,
+// takes the request's), so a revision is listed under the cue it revises
+// rather than falling off it.
 //
 // A HUNT LEAF IS UPDATED HERE TOO. A render that names huntId + nodeId lands
 // on that node (takeIds, state rendered — or failed with the vendor's own
 // sentence), so a hunt reads the same from the lab, the CLI and a reload.
 
-import { composeDetailed, draftPlan, generateSfx } from "@/lib/music/elevenlabs";
-import type { WirePlan } from "@/lib/music/types";
+import { composeDetailed, draftPlan, generateSfx, toWirePlan } from "@/lib/music/elevenlabs";
+import { cueDurationS, cueToPlan } from "@/lib/music/plan";
+import type { CueBrief, CuePicture, WirePlan } from "@/lib/music/types";
 
 import { asWirePlan, buildEditPlan, editSeconds, isGenChunk, planMs } from "./editPlan";
 import { getTake, createTake, termsOf } from "./takes";
 import { SoundError, withStore } from "./store";
 import type { GenerateRequest, SoundKind, SoundTake } from "./types";
 
-const OPS = ["compose", "plan", "section-edit", "sfx"] as const;
-const ORIGINS = ["agent", "lab", "hunt"] as const;
+const OPS = ["compose", "plan", "section-edit", "sfx", "cue"] as const;
+const ORIGINS = ["agent", "lab", "hunt", "score"] as const;
 
 /** The vendor's windows, restated as the bounds a request is held to BEFORE
  *  anything is sent (lib/music/elevenlabs.ts states them for the wire). */
@@ -42,6 +57,59 @@ export const DURATION_BOUNDS: Record<SoundKind, { min: number; max: number }> = 
   music: { min: 3, max: 600 },
   sfx: { min: 0.5, max: 30 },
 };
+
+/** A Score cue's brief, held to the bounds app/api/music/generate/route.ts
+ *  holds the same brief to, BEFORE anything is sent — the picture's length is
+ *  the length bought, so every scene is bounded and so is their sum. */
+function parseCueBrief(v: unknown): CueBrief {
+  if (!v || typeof v !== "object" || Array.isArray(v)) throw new SoundError('op "cue" needs a "cue" brief object', 400);
+  const c = v as Record<string, unknown>;
+  const text = (x: unknown, field: string, max: number): string => {
+    if (typeof x !== "string" || !x.trim()) throw new SoundError(`"cue.${field}" must be a non-empty string`, 400);
+    if (x.length > max) throw new SoundError(`"cue.${field}" is over ${max} characters`, 400);
+    return x.trim();
+  };
+  const num = (x: unknown, field: string, min: number, max: number): number => {
+    if (typeof x !== "number" || !Number.isFinite(x) || x < min || x > max) throw new SoundError(`"cue.${field}" must be a number in ${min}..${max}`, 400);
+    return x;
+  };
+  const words = (x: unknown, field: string): string[] => {
+    if (x === undefined || x === null) return [];
+    if (!Array.isArray(x) || x.some((s) => typeof s !== "string")) throw new SoundError(`"cue.${field}" must be an array of strings`, 400);
+    if (x.length > 40) throw new SoundError(`"cue.${field}" is over 40 entries`, 400);
+    return (x as string[]).map((s) => s.trim()).filter(Boolean);
+  };
+  const p = (c.picture && typeof c.picture === "object" ? c.picture : {}) as Record<string, unknown>;
+  const raw = p.scenes;
+  if (!Array.isArray(raw) || raw.length === 0) throw new SoundError('"cue.picture.scenes" must be a non-empty array — a cue is a span of film', 400);
+  if (raw.length > 30) throw new SoundError('"cue.picture.scenes" is over 30 entries', 400);
+  const scenes = raw.map((sc, i) => {
+    const r = (sc && typeof sc === "object" ? sc : {}) as Record<string, unknown>;
+    return {
+      index: num(r.index, `picture.scenes[${i}].index`, 0, 10_000),
+      slug: text(r.slug, `picture.scenes[${i}].slug`, 200),
+      mood: text(r.mood, `picture.scenes[${i}].mood`, 200),
+      startS: num(r.startS, `picture.scenes[${i}].startS`, 0, 36_000),
+      durS: num(r.durS, `picture.scenes[${i}].durS`, 0, 600),
+    };
+  });
+  const picture: CuePicture = {
+    projectTitle: text(p.projectTitle, "picture.projectTitle", 200),
+    logline: typeof p.logline === "string" ? p.logline.trim().slice(0, 600) : "",
+    scenes,
+  };
+  const totalS = cueDurationS(picture);
+  const { min, max } = DURATION_BOUNDS.music;
+  if (totalS < min || totalS > max) throw new SoundError(`the picture totals ${totalS}s; a cue renders ${min}..${max}s`, 400);
+  return {
+    title: text(c.title, "title", 120),
+    intent: text(c.intent, "intent", 2000),
+    bpm: num(c.bpm, "bpm", 40, 220),
+    styleBlock: words(c.styleBlock, "styleBlock"),
+    avoid: words(c.avoid, "avoid"),
+    picture,
+  };
+}
 
 /** Hold a JSON body to GenerateRequest. Every refusal is a 400 naming the
  *  field — the route is a money route and a guessed default would be spend
@@ -59,14 +127,25 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
   if (kind === "music" && op === "sfx") throw new SoundError('op "sfx" renders an effect; set kind "sfx"', 400);
   const origin = ORIGINS.find((o) => o === b.origin);
   if (!origin) throw new SoundError(`"origin" must be one of ${ORIGINS.join(", ")}`, 400);
+  // A score take is a cue render or a revision of one; a cue render is always
+  // a score take, filed under the project and cue it was rendered for.
+  if (op === "cue" && origin !== "score") throw new SoundError('op "cue" is filed with origin "score"', 400);
+  if (origin === "score" && op !== "cue" && op !== "section-edit")
+    throw new SoundError('origin "score" is op "cue", or a "section-edit" of a score take', 400);
+  const link = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim().slice(0, 120) : null);
+  const projectId = link(b.projectId);
+  const cueId = link(b.cueId);
+  if (op === "cue" && (!projectId || !cueId))
+    throw new SoundError('op "cue" needs "projectId" and "cueId" — the take is filed under the cue it scores', 400);
+  const cue = op === "cue" ? parseCueBrief(b.cue) : null;
 
   const prompt = typeof b.prompt === "string" ? b.prompt.trim() : "";
-  if (op !== "section-edit" && op !== "plan" && !prompt) throw new SoundError('"prompt" is required', 400);
+  if (op !== "section-edit" && op !== "plan" && op !== "cue" && !prompt) throw new SoundError('"prompt" is required', 400);
   if (prompt.length > 4100) throw new SoundError('"prompt" is over 4100 characters', 400);
 
   const d = typeof b.durationS === "number" && Number.isFinite(b.durationS) ? b.durationS : NaN;
   const bounds = DURATION_BOUNDS[kind];
-  if (op !== "section-edit" && !(d >= bounds.min && d <= bounds.max))
+  if (op !== "section-edit" && op !== "cue" && !(d >= bounds.min && d <= bounds.max))
     throw new SoundError(`"durationS" must be ${bounds.min}..${bounds.max} seconds for ${kind}`, 400);
 
   const plan = b.plan === null || b.plan === undefined ? null : asWirePlan(b.plan);
@@ -99,7 +178,7 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
     op,
     prompt,
     negative: strOrNull(b.negative),
-    durationS: Number.isFinite(d) ? d : 0,
+    durationS: cue ? cueDurationS(cue.picture) : Number.isFinite(d) ? d : 0,
     loop: typeof b.loop === "boolean" ? b.loop : null,
     promptInfluence,
     technique: strs(b.technique),
@@ -107,6 +186,9 @@ export function parseGenerateRequest(body: unknown): GenerateRequest {
     tempoBpm: numOrNull(b.tempoBpm),
     key: strOrNull(b.key),
     origin,
+    cue,
+    projectId,
+    cueId,
     sourceTakeId,
     editModes,
     plan,
@@ -128,26 +210,56 @@ export function withNegative(prompt: string, negative: string | null): string {
 
 function titleFor(req: GenerateRequest): string {
   if (req.title) return req.title.slice(0, 200);
+  if (req.cue) return req.cue.title.slice(0, 200);
   const terms = [...req.terms.genre, ...req.terms.mood].slice(0, 2).join(" · ") || req.terms.sfxCategory;
   const head = terms || req.prompt.split(/[.,\n]/)[0].trim().slice(0, 48) || "take";
   return `${head} — ${req.op}`;
 }
 
-type Rendered = { b64: string; mime: string; songId: string | null; plan: WirePlan | null; durationS: number; parentId: string | null; prompt: string };
+type Rendered = {
+  b64: string;
+  mime: string;
+  songId: string | null;
+  plan: WirePlan | null;
+  durationS: number;
+  parentId: string | null;
+  prompt: string;
+  /** The Score cue the take belongs to, when it belongs to one. */
+  link: { projectId: string | null; cueId: string | null };
+};
+
+const NO_LINK = { projectId: null, cueId: null };
 
 async function render(req: GenerateRequest): Promise<Rendered> {
   switch (req.op) {
     case "compose": {
       const prompt = withNegative(req.prompt, req.negative);
       const out = await composeDetailed({ prompt, lengthMs: Math.round(req.durationS * 1000), storeForInpainting: true });
-      return { b64: out.audio.b64, mime: out.audio.mime, songId: out.songId, plan: out.plan, durationS: req.durationS, parentId: null, prompt: req.prompt };
+      return { b64: out.audio.b64, mime: out.audio.mime, songId: out.songId, plan: out.plan, durationS: req.durationS, parentId: null, prompt: req.prompt, link: NO_LINK };
+    }
+    case "cue": {
+      // cueToPlan throws MusicError("bad-request") for a cue it will not brief;
+      // the route answers that 400 with nothing sent.
+      const brief = req.cue!;
+      const wire = toWirePlan(cueToPlan(brief));
+      const out = await composeDetailed({ plan: wire, storeForInpainting: true });
+      return {
+        b64: out.audio.b64,
+        mime: out.audio.mime,
+        songId: out.songId,
+        plan: out.plan ?? wire,
+        durationS: cueDurationS(brief.picture),
+        parentId: null,
+        prompt: brief.intent,
+        link: { projectId: req.projectId ?? null, cueId: req.cueId ?? null },
+      };
     }
     case "plan": {
       const plan =
         (req.plan as WirePlan | null) ??
         (await draftPlan({ prompt: req.prompt, lengthMs: Math.round(Math.min(req.durationS, 300) * 1000), negativeStyle: req.negative ?? undefined }));
       const out = await composeDetailed({ plan, storeForInpainting: true });
-      return { b64: out.audio.b64, mime: out.audio.mime, songId: out.songId, plan: out.plan ?? plan, durationS: planMs(plan) / 1000, parentId: null, prompt: req.prompt };
+      return { b64: out.audio.b64, mime: out.audio.mime, songId: out.songId, plan: out.plan ?? plan, durationS: planMs(plan) / 1000, parentId: null, prompt: req.prompt, link: NO_LINK };
     }
     case "section-edit": {
       const source = await getTake(req.sourceTakeId!);
@@ -170,6 +282,11 @@ async function render(req: GenerateRequest): Promise<Rendered> {
         durationS: planMs(plan) / 1000,
         parentId: source.id,
         prompt: req.prompt || source.prompt,
+        // The source's cue when it has one; else the cue the request revises it
+        // for (an adopted lab take revised from the Score step).
+        link: source.cueId
+          ? { projectId: source.projectId, cueId: source.cueId }
+          : { projectId: req.projectId ?? null, cueId: req.cueId ?? null },
       };
     }
     case "sfx": {
@@ -180,7 +297,7 @@ async function render(req: GenerateRequest): Promise<Rendered> {
         loop: req.loop ?? undefined,
         promptInfluence: req.promptInfluence ?? undefined,
       });
-      return { b64: out.audio.b64, mime: out.audio.mime, songId: null, plan: null, durationS: req.durationS, parentId: null, prompt: req.prompt };
+      return { b64: out.audio.b64, mime: out.audio.mime, songId: null, plan: null, durationS: req.durationS, parentId: null, prompt: req.prompt, link: NO_LINK };
     }
   }
 }
@@ -205,6 +322,8 @@ async function markNode(req: GenerateRequest, takeId: string | null, error: stri
   });
 }
 
+const CUE_TECHNIQUES = ["section-plan-as-the-brief", "sonic-style-vocabulary", "duration-and-tempo-locking"];
+
 export async function generateTake(req: GenerateRequest, now = new Date()): Promise<SoundTake> {
   let r: Rendered;
   try {
@@ -222,11 +341,13 @@ export async function generateTake(req: GenerateRequest, now = new Date()): Prom
       provider: "elevenlabs",
       op: req.op,
       origin: req.origin,
-      technique: req.technique,
+      // A cue is briefed by the doctrine whatever the caller listed: these are
+      // the techniques cueToPlan applies, the axis the ledger learns along.
+      technique: req.op === "cue" && !req.technique.length ? CUE_TECHNIQUES : req.technique,
       prompt: r.prompt,
       negative: req.negative,
       terms: req.terms,
-      tempoBpm: req.tempoBpm,
+      tempoBpm: req.cue ? req.cue.bpm : req.tempoBpm,
       key: req.key,
       durationS: r.durationS,
       loop: req.kind === "sfx" ? req.loop : null,
@@ -236,6 +357,8 @@ export async function generateTake(req: GenerateRequest, now = new Date()): Prom
       songId: r.songId,
       plan: r.plan,
       editModes: req.op === "section-edit" ? req.editModes : null,
+      projectId: r.link.projectId,
+      cueId: r.link.cueId,
     },
     { bytes, mime: r.mime, name: `${req.op}.mp3` },
     now,

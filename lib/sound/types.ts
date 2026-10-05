@@ -11,12 +11,16 @@
 // Absent-value convention: `null` = unknown / not measured / not set. Never 0,
 // never an omitted key.
 
+import type { CueBrief } from "@/lib/music/types";
+
 export type SoundKind = "music" | "sfx";
 export type ProviderId = "elevenlabs" | "suno" | "local";
 
 /** Who put the take in the store. `fixture` rows are design samples: shown, but
- *  excluded from the ledger, the insights and the agents' default listing. */
-export type TakeOrigin = "agent" | "lab" | "hunt" | "import" | "suno-return" | "fixture";
+ *  excluded from the ledger, the insights and the agents' default listing.
+ *  `score` is a production cue rendered from the studio's Score step — a real
+ *  take, judged and ledgered like any other (MUSIC-B, 2026-10-05). */
+export type TakeOrigin = "agent" | "lab" | "hunt" | "import" | "suno-return" | "fixture" | "score";
 
 /** `proven` is never stored — it is read off a kept take's mean score (≥ 7). */
 export type Verdict = "unjudged" | "kept" | "rejected";
@@ -27,8 +31,10 @@ export type Verdict = "unjudged" | "kept" | "rejected";
 export type Stage = "pending" | "remaster" | "edit" | "finalized";
 export const STAGES: readonly Stage[] = ["pending", "remaster", "edit", "finalized"];
 
-/** How a provider produced the take. */
-export type SoundOp = "compose" | "plan" | "section-edit" | "sfx" | "manual";
+/** How a provider produced the take. `cue` is a Score cue rendered from its
+ *  CueBrief through lib/music/plan.ts's doctrine — a plan the server derived,
+ *  never one the browser typed. */
+export type SoundOp = "compose" | "plan" | "section-edit" | "sfx" | "manual" | "cue";
 
 /** Rubric dimensions per kind, each scored 1–10 or null. */
 export const RUBRIC: Record<SoundKind, readonly string[]> = {
@@ -152,6 +158,13 @@ export interface SoundTake {
   editModes: string[] | null;
   /** The file's name as it arrived (an upload, a return), verbatim. */
   fileName: string | null;
+  /** The studio project and Score cue (spot id) a `score` take was rendered
+   *  for — provenance, so a cue's takes can be listed from the store. null for
+   *  every other take. Which take a cue USES is not here: that decision lives
+   *  on the spot (app/_phases/score/spots.ts `takeIds` / `activeTakeId`), so an
+   *  adopted lab take needs no linkage of its own. */
+  projectId: string | null;
+  cueId: string | null;
   createdAt: string;
   judgedAt: string | null;
   finalizedAt: string | null;
@@ -194,7 +207,13 @@ export interface GenerateRequest {
   terms: SoundTerms;
   tempoBpm: number | null;
   key: string | null;
-  origin: Extract<TakeOrigin, "agent" | "lab" | "hunt">;
+  origin: Extract<TakeOrigin, "agent" | "lab" | "hunt" | "score">;
+  /** cue only: the Score cue's brief. The plan is derived from it server-side
+   *  (lib/music/plan.ts cueToPlan), so `prompt`/`durationS`/`plan` are not read. */
+  cue?: CueBrief | null;
+  /** cue (required) and a score section-edit (inherited from the source). */
+  projectId?: string | null;
+  cueId?: string | null;
   /** section-edit only. */
   sourceTakeId: string | null;
   editModes: string[] | null;
