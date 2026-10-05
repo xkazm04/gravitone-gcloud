@@ -21,6 +21,13 @@ export type { CostBasis };
 export const VIDEO_MODELS = ["kling-2-5", "hailuo-03", "veo-3"] as const;
 export type VideoModel = (typeof VIDEO_MODELS)[number];
 
+/** The ids the vendor has ACCEPTED, which is what the Animate control offers.
+ *  Measured 2026-10-06 against the live v2 API: `hailuo-03` passed model
+ *  validation (the call reached billing); `kling-2-5` was refused with
+ *  VALIDATION_ERROR 'value of tag "model" must be in oneOf'. `veo-3` is
+ *  unverified. A model joins this list when a live call proves its id. */
+export const OFFERED_VIDEO_MODELS: readonly VideoModel[] = ["hailuo-03"];
+
 /** Clip lengths a request may ask for. Typed, never prose in the prompt. */
 export const CLIP_DURATIONS = [5, 10] as const;
 export type ClipDuration = (typeof CLIP_DURATIONS)[number];

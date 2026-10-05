@@ -31,6 +31,7 @@ import { clipPriceTable, estimateClipUsd, gateHoldUsd } from "./pricing";
 import { mintClipId, patchClipRecord, readClipRecord, writeClipBytes, writeClipRecord } from "./store";
 import {
   CLIP_DURATIONS,
+  OFFERED_VIDEO_MODELS,
   VIDEO_MODELS,
   type ClipDuration,
   type ClipRecord,
@@ -57,7 +58,7 @@ function adapter(): VideoAdapter {
  *  is configured, so the route that serves it is access-gated. */
 export function videoCapability(): VideoCapability {
   const configured = adapter().configured();
-  return { configured, models: configured ? [...VIDEO_MODELS] : [], priceUsd: clipPriceTable() };
+  return { configured, models: configured ? [...OFFERED_VIDEO_MODELS] : [], priceUsd: clipPriceTable() };
 }
 
 /* ── validation ───────────────────────────────────────────────────────────── */
