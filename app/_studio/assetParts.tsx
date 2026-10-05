@@ -1,14 +1,14 @@
 "use client";
 
 // Shared leaves for library assets: kind glyphs, kind-native mock previews,
-// the honest caption block, provenance as a walkable chain, and the step
-// status dot. AssetDrawer composes these in its own file.
+// the honest caption block, provenance as a walkable chain.
+// AssetDrawer composes these in its own file.
 
 import { AudioLines, Clapperboard, FileText, Image as ImageIcon, Sparkles, Upload } from "lucide-react";
 
 import { Provenance } from "@/components/ui/signal";
 
-import type { Asset, AssetKind, StepStatus } from "./types";
+import type { Asset, AssetKind } from "./types";
 import { assetById } from "./assets";
 
 export const fmtBytes = (n: number) =>
@@ -158,17 +158,4 @@ export function ProvenanceBlock({
       )}
     </div>
   );
-}
-
-/** Step status dot — the run chip's truth marker. */
-export function StepDot({ status }: { status: StepStatus }) {
-  const cls =
-    status === "done"
-      ? "bg-cyan-300"
-      : status === "failed"
-        ? "bg-rose-400"
-        : status === "running"
-          ? "bg-cyan-300/60 ring-2 ring-cyan-300/25"
-          : "bg-white/20";
-  return <span className={`h-2 w-2 shrink-0 rounded-full ${cls}`} aria-hidden />;
 }
