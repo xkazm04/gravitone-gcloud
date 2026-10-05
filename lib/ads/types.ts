@@ -30,6 +30,24 @@ export const AD_SCENARIO_COUNT = 3;
 /** Key-image takes generated per shot before one is adopted. */
 export const AD_IMAGE_TAKES = 3;
 
+/** Each template's runtime band, in seconds — a SERVER-SAFE MIRROR of
+ *  lib/projects.ts TEMPLATES[].range, which is client-only (IndexedDB). The
+ *  concept validator (lib/ads/validate.ts) refuses a scenario outside it;
+ *  tests/golden-path/ads-concepts.probe.spec.ts asserts the two agree. */
+export const AD_RUNTIME_RANGE: Record<AdTemplateId, readonly [number, number]> = {
+  "ad-social-15": [6, 20],
+  "ad-spot-30": [20, 45],
+};
+
+/** The end card's hold when nobody has set one — the ADS_FINISH record's
+ *  default (app/_phases/_shared/records/ads.ts), mirrored here so the scenario
+ *  round reserves it first (timed-shot-list rule 1) on the server too. */
+export const AD_END_CARD_HOLD_S = 2;
+
+/** The longest shot one clip can carry — "every shot ≤ one clip length"
+ *  (timed-shot-list rule 3) — and the floor for a new image (rule 4). */
+export const AD_SHOT_SECONDS = { min: 1.5, max: 10 } as const;
+
 /* ── The brief ────────────────────────────────────────────────────────────── */
 
 export interface AdBrief {
@@ -90,6 +108,24 @@ export interface AdIdea {
   whyItWorks: string;
   /** The honest downside. */
   risk: string;
+  // ── Optional, added by the Idea round (WP2). Absent on an idea written before
+  //    the round carried them; a reader treats absence as "not recorded", never
+  //    as "passed". Doctrine: knowledge/templates/ad-social-15/steps/01-script/
+  //    PATTERNS.md §1–§4 (registry ad-concept-ideation).
+  /** The product truth the idea grips — one per round, written BEFORE any idea
+   *  (proposition-before-idea) and stamped on every idea so the scenario round
+   *  receives it as a fixed field. */
+  truth?: string;
+  /** The screening gates' verdicts IN WORDS, one line per gate ("swap test —
+   *  yes: …"). Never a score (idea-screening-gates). */
+  gateNotes?: string[];
+  /** What the picture claims about the product, and why that is substantiated
+   *  or plainly non-literal. Required on a `demo` idea, null where the idea
+   *  demonstrates nothing (idea-screening-gates, the sixth question). */
+  pictureClaim?: string | null;
+  /** ad-spot-30 only: true when the idea cannot be told without its turn, so it
+   *  has no 15s sibling (ad-spot-30 PATTERNS §1). Null on the 15s template. */
+  needsTurn?: boolean | null;
 }
 
 /* ── Round 2: scenarios ───────────────────────────────────────────────────── */
@@ -269,6 +305,17 @@ export interface AdRenderRecord {
   durationS: number | null;
   createdAt: number;
   finishedAt: number | null;
+  /** Integrated loudness and true peak of the finished file's audio, measured
+   *  by ffmpeg's ebur128 after the mux. `null` when the ad is silent or the
+   *  measurement failed; absent on a record not yet finished. */
+  loudness?: { integratedLufs: number; truePeakDb: number | null } | null;
+  /** Pixel size actually written; null until done. */
+  width?: number | null;
+  height?: number | null;
+  /** The encoder that produced the file; null until done. */
+  encoder?: "h264_nvenc" | "libx264" | null;
+  /** Whether the file carries a music bed; null until done. */
+  hasAudio?: boolean | null;
 }
 
 /* ── Pure helpers both sides use ──────────────────────────────────────────── */
