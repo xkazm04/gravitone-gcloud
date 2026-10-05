@@ -353,7 +353,8 @@ export default function StudioView({ projectId }: { projectId: string }) {
                 <button
                   type="button"
                   data-testid="studio-step-signoff"
-                  disabled={!isLocked && Boolean(blocker)}
+                  aria-disabled={!isLocked && Boolean(blocker) ? true : undefined}
+                  aria-describedby={!isLocked && blocker ? "studio-signoff-blocker" : undefined}
                   title={!isLocked && blocker ? blocker : isLocked ? "Reopen this step" : "Lock this step"}
                   onClick={isLocked ? handleReopen : handleSignOff}
                   className={`font-jetbrains flex cursor-pointer items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-label transition ${
@@ -371,6 +372,15 @@ export default function StudioView({ projectId }: { projectId: string }) {
                   )}
                   {isLocked ? "Reopen" : "Lock step"}
                 </button>
+                {/* Not `disabled`: that drops the button from the tab order and
+                    Firefox shows no title on it. aria-disabled keeps it focusable
+                    (handleSignOff already refuses when a blocker is set) and the
+                    reason is its accessible description. */}
+                {!isLocked && blocker && (
+                  <span id="studio-signoff-blocker" className="sr-only">
+                    {blocker}
+                  </span>
+                )}
 
                 <button
                   type="button"

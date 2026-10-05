@@ -329,3 +329,16 @@ function findElementByAriaLabelPrefix(node: unknown, prefix: string): TestElemen
   if (el.props?.["aria-label"]?.startsWith(prefix)) return el;
   return findElementByAriaLabelPrefix(el.props?.children, prefix);
 }
+
+// A disabled button is skipped by Tab and Firefox shows no title tooltip on it,
+// so the blocker reason must travel by aria-describedby on a focusable control.
+test("case 10: the Lock step button keeps focus and describes its blocker (no disabled= on the sign-off control)", () => {
+  const code = stripComments(readFileSync(resolve(process.cwd(), "app/studio/[projectId]/StudioView.tsx"), "utf-8"));
+  const at = code.indexOf('data-testid="studio-step-signoff"');
+  expect(at, "the sign-off button was not found").toBeGreaterThan(0);
+  const open = code.slice(code.lastIndexOf("<button", at), code.indexOf(">", code.indexOf("onClick", at)));
+  expect(open, "disabled= takes the button out of the tab order").not.toMatch(/[^-\w]disabled=/);
+  expect(open).toMatch(/aria-disabled=/);
+  expect(open).toMatch(/aria-describedby=\{[^}]*\}/);
+  expect(code, "the described element must render the blocker").toMatch(/id="studio-signoff-blocker"[^>]*>\s*\{blocker\}/);
+});
