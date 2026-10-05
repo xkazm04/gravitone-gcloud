@@ -28,21 +28,26 @@ import {
 
 /* ── The lifecycle ────────────────────────────────────────────────────────── */
 
-/** The five studio steps, in production order. The ONE source of that order —
+/** The six studio steps, in production order. The ONE source of that order —
  *  the /studio stepper and every /projects surface read it from here.
  *
- *  Motion used to sit between Frames and Score as its own step. It is gone:
- *  a still and the movement given to it are one art-direction decision made
- *  against one source frame, and splitting them put a step boundary through
- *  the middle of a single act. Frames owns both now — the picked still AND
- *  the clip made from it. */
-export const PHASES = ["research", "script", "frames", "score", "cut"] as const;
+ *  MOTION IS A STEP AGAIN (operator decision, 2026-10-05; card
+ *  video-clip-pipeline-B). It was folded into Frames once, on the argument
+ *  that a still and the movement given to it are one art-direction decision.
+ *  That held while a clip could only be TYPED: nothing in the app could read a
+ *  plate, propose what moves, or render it. Motion now owns the turn that
+ *  reads a plate and proposes (or declines) its movement, and the later stages
+ *  own the render queue, the graded takes and adoption — enough work, with its
+ *  own failure states, to be a step. The motion line itself still lives on the
+ *  frame (`FrameClip.motion`), so a still and its movement remain one record. */
+export const PHASES = ["research", "script", "frames", "motion", "score", "cut"] as const;
 export type PhaseKey = (typeof PHASES)[number];
 
 export const PHASE_TITLE: Record<PhaseKey, string> = {
   research: "Research",
   script: "Script",
   frames: "Frames",
+  motion: "Motion",
   score: "Score",
   cut: "Cut",
 };
@@ -52,35 +57,48 @@ export const PHASE_TITLE: Record<PhaseKey, string> = {
  *  Records written before a step was retired still name it — in `phase`, and
  *  as a key in `progress`. Both are read on every load, so the rename happens
  *  at the read seam (`getProject`/`listProjects`) rather than in each surface:
- *  a stored
- *  `phase: "motion"` would otherwise match no step in the rail, and the studio
- *  would silently open on Research instead of where the work actually is. */
-const RETIRED_PHASES: Record<string, PhaseKey> = { motion: "frames" };
+ *  a stored bookmark naming a retired step would otherwise match no step in
+ *  the rail, and the studio would silently open on Research instead of where
+ *  the work actually is.
+ *
+ *  EMPTY TODAY, and kept: `motion → frames` lived here until Motion came back.
+ *  A record still carrying a `motion` word from before that retirement was
+ *  never re-saved since (every write migrated it away), so the word is the
+ *  old Motion step's own claim about itself and is read as exactly that. The
+ *  merge into Frames was only right while Motion did not exist. */
+const RETIRED_PHASES: Record<string, PhaseKey> = {};
 
 /** Bring a stored record up to the current step list. Cheap and idempotent —
- *  a record with nothing retired in it is returned untouched.
+ *  a current record is returned untouched.
  *
- *  Progress merges worst-news-first: if Frames was locked but Motion was
- *  blocked, the merged Frames is blocked. Reporting the survivor as "done"
- *  when half of what it now covers had stopped would be the one lie this
- *  migration must not tell. */
+ *  Two directions, both at this one seam:
+ *   · a RETIRED step's word merges into its heir worst-news-first: if the heir
+ *     was locked but the retired step was blocked, the merged step is blocked.
+ *     Reporting the survivor as "done" when half of what it now covers had
+ *     stopped would be the one lie this migration must not tell.
+ *   · a step ADDED after the record was written (Motion, for every record from
+ *     a five-step build) reads `empty` — the only honest word for a step that
+ *     did not exist when the work was done. Never derived from its neighbours:
+ *     a locked Frames says nothing about whether anything was ever directed to
+ *     move. */
 export function migrateProject(p: Project): Project {
   const legacy = Object.keys(RETIRED_PHASES).filter((k) => k in p.progress);
+  const missing = PHASES.filter((k) => !(k in p.progress));
   const needsDiscipline = !p.discipline;
-  if (legacy.length === 0 && !(p.phase in RETIRED_PHASES) && !needsDiscipline) return p;
+  if (legacy.length === 0 && missing.length === 0 && !(p.phase in RETIRED_PHASES) && !needsDiscipline) return p;
 
   // A record from before disciplines existed: the template already implies
   // one, so it is filled here rather than left for every surface to derive.
   const discipline = p.discipline ?? disciplineOf(p.template);
-  if (legacy.length === 0 && !(p.phase in RETIRED_PHASES)) return { ...p, discipline };
 
-  const progress = { ...p.progress };
+  const progress = { ...p.progress } as Record<string, PhaseState>;
   for (const old of legacy) {
     const heir = RETIRED_PHASES[old];
-    const state = progress[old as PhaseKey];
-    delete progress[old as PhaseKey];
+    const state = progress[old];
+    delete progress[old];
     progress[heir] = worseOf(progress[heir], state);
   }
+  for (const k of missing) progress[k] = "empty";
   return {
     ...p,
     discipline,
@@ -392,21 +410,18 @@ export function newProject(uid: string, draft: ProjectDraft): Project {
 export function stateOf(p: Project, phase: PhaseKey): PhaseState {
   if (p.progress[phase] === "blocked") return "blocked";
   if (p.signedOff?.[phase]) return "done";
-  return p.progress[phase];
+  // `?? "empty"` for a record that reached a reader without passing the read
+  // seam (a fixture, a synthetic row): a step it never heard of has not started.
+  return p.progress[phase] ?? "empty";
 }
 
-/** Effective states across all five phases. */
+/** Effective states across every phase — derived from PHASES, so a step added
+ *  there cannot be missing here. */
 export function phaseStates(p: Project): Record<PhaseKey, PhaseState> {
-  return {
-    research: stateOf(p, "research"),
-    script: stateOf(p, "script"),
-    frames: stateOf(p, "frames"),
-    score: stateOf(p, "score"),
-    cut: stateOf(p, "cut"),
-  };
+  return Object.fromEntries(PHASES.map((k) => [k, stateOf(p, k)])) as Record<PhaseKey, PhaseState>;
 }
 
-/** Steps locked, out of five. The one number every variant shows. */
+/** Steps locked, out of `PHASES.length`. The one number every variant shows. */
 export function doneCount(p: Project): number {
   return PHASES.filter((k) => stateOf(p, k) === "done").length;
 }

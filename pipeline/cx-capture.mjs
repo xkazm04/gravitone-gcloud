@@ -53,6 +53,9 @@ const SCREENS = {
   //
   // Nobody reaches step 4 without passing step 3. Walking the upstream steps is
   // what the user does, so it is what the capture does.
+  // Motion reads the frames record too, so it walks Frames first for the same
+  // reason Score does.
+  "studio-motion": { url: `/studio/${PROJECT}?step=motion`, via: ["frames"] },
   "studio-score": { url: `/studio/${PROJECT}?step=score`, via: ["frames"] },
   "studio-cut": { url: `/studio/${PROJECT}?step=cut`, via: ["frames", "score"] },
   "library-styles": { url: "/library" },
