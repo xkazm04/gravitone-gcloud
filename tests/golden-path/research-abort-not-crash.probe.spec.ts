@@ -40,6 +40,6 @@ test("RunTrace says 'stopped here' and keeps 'process ended here' for crashes", 
   expect(src).toContain("process ended here");
 });
 
-test("statusOf reads 'stopped ·' for a user stop", () => {
-  expect(code("app/_phases/research/run/controls.tsx")).toContain("stopped ·");
+test("the status word reads stopped for a user stop", () => {
+  expect(code("app/_phases/research/run/controls.tsx")).toMatch(/stoppedByUser\s*\?\s*"stopped"/);
 });

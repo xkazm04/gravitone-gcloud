@@ -116,11 +116,17 @@ export default function LiveResult({ state }: { state: LiveState }) {
     return (
       <div
         data-testid="live-run-running"
-        role="status"
         className="rounded-2xl border border-violet-400/20 bg-violet-400/[0.03] p-5"
       >
         <p className="font-jetbrains text-label tracking-[0.16em] text-violet-200/80 uppercase">
-          a real run · <Elapsed since={state.startedAt} />
+          {/* The announcement is static: a polite region re-announces every
+              mutation, and Elapsed mutates once a second for minutes. */}
+          <span role="status" className="sr-only">
+            a real run is running
+          </span>
+          <span aria-hidden>
+            a real run · <Elapsed since={state.startedAt} />
+          </span>
         </p>
         <p className="font-hanken mt-2 text-content leading-relaxed text-slate-300">
           The engine is writing a notebook about “{state.topic}”. This is minutes, not seconds, and it

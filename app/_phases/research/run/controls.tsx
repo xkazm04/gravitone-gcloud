@@ -160,19 +160,22 @@ function statusToneOf(state: RunState): string {
   return state.status === "failed" && state.stoppedByUser ? "text-amber-300/80" : STATUS_TONE[state.status];
 }
 
-function statusOf(state: RunState): string {
+/** The status word, and the clock apart from it. The word changes at the start
+ *  and at the ending; the clock changes every step. Only the word is a live
+ *  region (see RunStatus). */
+function statusParts(state: RunState): { word: string; clock: string } {
+  const clock = ` · ${secs((state as { elapsedMs?: number }).elapsedMs ?? 0)}`;
   switch (state.status) {
     case "running":
-      return `running · ${secs(state.elapsedMs)}`;
+      return { word: "running", clock };
     case "done":
-      return `complete · ${secs(state.elapsedMs)}`;
+      return { word: "complete", clock };
     case "no-tension":
-      return `no tension · ${secs(state.elapsedMs)}`;
+      return { word: "no tension", clock };
     case "failed":
-      if (state.stoppedByUser) return `stopped · ${secs(state.elapsedMs)}`;
-      return `ended early · ${secs(state.elapsedMs)}`;
+      return { word: state.stoppedByUser ? "stopped" : "ended early", clock };
     default:
-      return "";
+      return { word: "", clock: "" };
   }
 }
 
@@ -183,15 +186,18 @@ function statusOf(state: RunState): string {
  *  "how far along" anyway — the trace is. The clock here is the run's OWN mocked
  *  wall time, the same units the per-step durations are in, so it agrees with
  *  the list underneath it rather than competing with it. `aria-live` because the
- *  ending is the part a reader must not have to poll for. */
+ *  ending is the part a reader must not have to poll for — and so it holds the
+ *  status WORD only: the clock beside it is aria-hidden, since a polite region
+ *  announces every mutation and the seconds tick on each of the 15 steps. */
 export function RunStatus({ state }: { state: RunState }) {
+  const { word, clock } = statusParts(state);
   return (
     <span
       data-testid="run-status"
-      aria-live="polite"
       className={`font-jetbrains text-label tracking-[0.14em] uppercase ${statusToneOf(state)}`}
     >
-      {statusOf(state)}
+      <span aria-live="polite">{word}</span>
+      <span aria-hidden>{clock}</span>
     </span>
   );
 }
