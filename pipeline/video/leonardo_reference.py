@@ -49,7 +49,15 @@ MODELS = {
     "veo-3": "Google Veo 3",
     "kling-2-5": "Kling 2.5 Turbo",
 }
-ENV_FILE = Path(r"C:\Users\kazda\kiro\personas\.env")
+# Where vendor keys are looked up, first existing file wins: KEYS_ENV_FILE when
+# set, then this checkout's own .env.local / .env, then the personas .env under
+# the home directory (the GPU box's layout - this used to be that box's literal
+# path, which pointed nowhere on any other machine).
+def env_files():
+    named = os.environ.get("KEYS_ENV_FILE")
+    if named:
+        return [Path(named)]
+    return [ROOT / ".env.local", ROOT / ".env", Path.home() / "kiro" / "personas" / ".env"]
 
 POLL_SECONDS = 10
 MAX_POLLS = 90  # 15 minutes; a hosted video job is minutes, not seconds
@@ -59,12 +67,15 @@ def api_key():
     k = os.environ.get("LEONARDO_API_KEY")
     if k:
         return k
-    if ENV_FILE.exists():
-        for line in ENV_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
+    for env_file in env_files():
+        if not env_file.exists():
+            continue
+        for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
             line = line.strip()
             if line.startswith("LEONARDO_API_KEY=") and "=" in line:
                 return line.split("=", 1)[1].strip().strip('"').strip("'")
-    raise SystemExit("no LEONARDO_API_KEY in the environment or the personas .env")
+    raise SystemExit("no LEONARDO_API_KEY in the environment or in "
+                     + ", ".join(str(f) for f in env_files()))
 
 
 def req(method, url, key, body=None, timeout=120):

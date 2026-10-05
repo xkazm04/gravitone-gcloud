@@ -7,7 +7,7 @@
   "height": 480,
   "length": 73,
   "fps": 24,
-  "hero": "C:\\Users\\kazda\\kiro\\gravitone-gcloud\\pipeline\\vlm-probe\\shots\\reference\\00-hero.png",
+  "hero": "pipeline/vlm-probe/shots/reference/00-hero.png",
   "character": "a woman in her early thirties with close-cropped platinum-blonde hair, a thin pale scar running from her left eyebrow down across her cheekbone, deep-set grey eyes, a scuffed charcoal flight jacket with a burnt-orange collar worn over a grey undershirt",
   "location": "a derelict cargo hangar with corrugated steel walls streaked in rust, one hard shaft of daylight falling through a torn hole in the roof, dust suspended in the beam, stacked shipping crates receding into shadow",
   "beats": {

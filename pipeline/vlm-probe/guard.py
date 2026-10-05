@@ -37,8 +37,10 @@ COMFY = "http://127.0.0.1:8188"
 # replicate.py and fetch_ref2va.py derive output/, input/ and models/ from
 # this; until 2026-09-04 each carried its own copy of the literal, so moving
 # the install meant five edits and a missed one meant a script reading a
-# tree nobody wrote to. Override with the COMFY_DIR environment variable.
-COMFY_DIR = os.environ.get("COMFY_DIR", r"C:\Users\kazda\ComfyUI")
+# tree nobody wrote to. Override with the COMFY_DIR environment variable; the
+# default is ComfyUI under the home directory (the GPU box's layout, which was
+# hard-coded here as that one machine's path until 2026-10-05).
+COMFY_DIR = os.environ.get("COMFY_DIR", os.path.join(os.path.expanduser("~"), "ComfyUI"))
 
 
 def _post(url, payload, timeout=120):

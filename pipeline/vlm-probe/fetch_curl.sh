@@ -5,7 +5,7 @@
 # visible as the file's own size and a stall costs a retry, not a restart.
 set -u
 BASE="https://huggingface.co/Comfy-Org/MiniMax-H3/resolve/main"
-M="C:/Users/kazda/ComfyUI/models"
+M="${COMFY_DIR:-$HOME/ComfyUI}/models"   # same default as guard.py's COMFY_DIR
 fetch() {  # remote_rel  dest_abs
   echo "== $1"
   for attempt in 1 2 3 4 5 6 7 8; do

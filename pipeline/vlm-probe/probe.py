@@ -30,7 +30,19 @@ from schema import PROMPT, gemini_schema, json_schema  # noqa: E402
 HERE = Path(__file__).parent
 FRAMES_DIR = HERE / "frames"
 OUT_ROOT = HERE.parent.parent / "vlm-probe-out"
-ENV_FILE = Path(r"C:\Users\kazda\kiro\personas\.env")
+ROOT = HERE.parent.parent
+
+
+# Where vendor keys are looked up: KEYS_ENV_FILE when set, else this checkout's
+# .env.local / .env and the personas .env under the home directory (the GPU
+# box's layout - this used to be that box's literal path). An earlier file in
+# the list wins a key the later ones also set.
+def env_files():
+    named = os.environ.get("KEYS_ENV_FILE")
+    if named:
+        return [Path(named)]
+    return [ROOT / ".env.local", ROOT / ".env", Path.home() / "kiro" / "personas" / ".env"]
+
 
 OLLAMA = os.environ.get("OLLAMA_HOST", "http://127.0.0.1:11434")
 OLLAMA_CLOUD = "https://ollama.com"
@@ -51,15 +63,16 @@ MIME = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".webp
 
 
 def load_env():
-    if not ENV_FILE.exists():
-        return {}
     env = {}
-    for line in ENV_FILE.read_text(encoding="utf-8", errors="replace").splitlines():
-        line = line.strip()
-        if not line or line.startswith("#") or "=" not in line:
+    for env_file in reversed(env_files()):
+        if not env_file.exists():
             continue
-        k, v = line.split("=", 1)
-        env[k.strip()] = v.strip().strip('"').strip("'")
+        for line in env_file.read_text(encoding="utf-8", errors="replace").splitlines():
+            line = line.strip()
+            if not line or line.startswith("#") or "=" not in line:
+                continue
+            k, v = line.split("=", 1)
+            env[k.strip()] = v.strip().strip('"').strip("'")
     return env
 
 
