@@ -103,6 +103,8 @@ export default function ProjectsView() {
   const submit = async (draft: ProjectDraft) => {
     const editing = dialog.project;
     if (editing) {
+      // Edit delegates through useProjects.update to atomic in-transaction editProject;
+      // passes draft cleanly without clobbering background phase or progress writes.
       const saved = await update(editing.id, draft);
       if (saved) setDialog({ open: false, project: null });
       return;

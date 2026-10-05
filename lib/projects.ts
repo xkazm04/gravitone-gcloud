@@ -528,12 +528,50 @@ export async function addProjects(rows: Project[]): Promise<void> {
 // another tab. It cannot corrupt anything (last write wins on whole records),
 // and the day this record is server-backed the seam is one PATCH per function.
 
+/**
+ * Mutate a project record in place inside a single read-write transaction.
+ *
+ * Prevents concurrent writers from clobbering each other's fields.
+ * Returns the updated record (migrated), or null if the record was not found.
+ */
+export async function patchProject(
+  id: string,
+  mutate: (p: Project) => void,
+  opts?: { touch?: boolean },
+): Promise<Project | null> {
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    let updated: Project | null = null;
+    await runTx(db, PROJECTS_STORE, "readwrite", (store) => {
+      const req = store.get(id);
+      req.onsuccess = () => {
+        const row = req.result as Project | undefined;
+        if (!row) return;
+        const migrated = migrateProject(row);
+        const p: Project = { ...migrated, progress: { ...migrated.progress } };
+        mutate(p);
+        if (opts?.touch) p.updatedAt = Date.now();
+        store.put(p);
+        updated = p;
+      };
+    });
+    return updated;
+  } finally {
+    db?.close();
+  }
+}
+
 /** Remember where the user is standing. See the note above: this is a bookmark,
  *  so `updatedAt` and `progress` are left exactly where they were. */
 export async function parkAt(id: string, phase: PhaseKey): Promise<void> {
-  const current = await getProject(id);
-  if (!current || current.phase === phase) return;
-  await writeProject({ ...current, phase });
+  await patchProject(
+    id,
+    (p) => {
+      p.phase = phase;
+    },
+    { touch: false },
+  );
 }
 
 /**
@@ -552,10 +590,43 @@ export async function reportPhase(
   phase: PhaseKey,
   state: Exclude<PhaseState, "empty">,
 ): Promise<Project | undefined> {
-  const current = await getProject(id);
-  if (!current) return undefined;
-  if (current.progress[phase] === state) return current;
-  return putProject({ ...current, progress: { ...current.progress, [phase]: state } });
+  const updated = await patchProject(
+    id,
+    (p) => {
+      p.progress[phase] = state;
+    },
+    { touch: true },
+  );
+  return updated ?? undefined;
+}
+
+/**
+ * Patch an existing project record with allowed draft fields.
+ *
+ * Only ProjectDraft fields cross the edit door — phase, progress, uid,
+ * id, and timestamps can NEVER be overwritten via this function.
+ * Stamps updatedAt to mark the project as touched.
+ */
+export async function editProject(
+  id: string,
+  draft: Partial<ProjectDraft>,
+): Promise<Project | null> {
+  return patchProject(
+    id,
+    (p) => {
+      const d = draft as Record<string, unknown>;
+      if (typeof d.title === "string") p.title = d.title.trim();
+      if (typeof d.logline === "string") p.logline = d.logline.trim();
+      if (d.discipline !== undefined) p.discipline = d.discipline as Discipline;
+      if (d.template !== undefined) p.template = d.template as TemplateId;
+      if (typeof d.targetS === "number") p.targetS = d.targetS;
+      if (d.themeId !== undefined) p.themeId = d.themeId as string | undefined;
+      if (d.description !== undefined) (p as unknown as Record<string, unknown>).description = d.description;
+      if (d.theme !== undefined) (p as unknown as Record<string, unknown>).theme = d.theme;
+      if (d.outputCount !== undefined) (p as unknown as Record<string, unknown>).outputCount = d.outputCount;
+    },
+    { touch: true },
+  );
 }
 
 /* ── Deleting, and saying first what that takes ───────────────────────────── */
