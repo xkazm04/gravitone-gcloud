@@ -198,7 +198,7 @@ export default function Deck({
             {!stage.done && stage.blockedHint && (
               <span
                 data-testid="deck-blocked-hint"
-                className={almanac ? "k-deck__hint" : "font-jetbrains text-label text-white/40"}
+                className={almanac ? "k-deck__hint" : "font-jetbrains text-label text-white/60"}
               >
                 {stage.blockedHint}
               </span>

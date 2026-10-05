@@ -178,7 +178,7 @@ export default function DeckCard({
     <p className="font-jetbrains text-label leading-relaxed text-amber-200/85">risk — {spec.risk}</p>
   );
   const footnoteLine = spec.footnote && (
-    <p className="font-jetbrains mt-auto pt-1 text-label text-white/30">{spec.footnote}</p>
+    <p className="font-jetbrains mt-auto pt-1 text-label text-white/50">{spec.footnote}</p>
   );
 
   return (
@@ -318,7 +318,7 @@ export default function DeckCard({
                 </span>
               )}
               {spec.eyebrow && (
-                <span className="font-jetbrains text-label tracking-[0.16em] text-white/35 uppercase">
+                <span className="font-jetbrains text-label tracking-[0.16em] text-white/50 uppercase">
                   {spec.eyebrow}
                 </span>
               )}
@@ -397,7 +397,7 @@ export default function DeckCard({
         ) : (
           <div className="flex grow flex-col gap-2 p-4">
             {spec.eyebrow && (
-              <span className="font-jetbrains text-label tracking-[0.16em] text-white/35 uppercase">
+              <span className="font-jetbrains text-label tracking-[0.16em] text-white/50 uppercase">
                 {spec.eyebrow}
               </span>
             )}
