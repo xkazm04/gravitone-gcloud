@@ -113,6 +113,27 @@ test("ConfirmDelete latches while the delete is in flight", () => {
   const dialog = code(DIALOG);
   const del = dialog.slice(dialog.indexOf("export function ConfirmDelete"));
   expect(del, "ConfirmDelete does not track an in-flight delete").toContain("setBusy(");
-  expect(del, "Delete is not disabled while the delete runs").toMatch(/disabled=\{!holds \|\| busy\}/);
+  expect(del, "Delete is not disabled while the delete runs").toMatch(/disabled=\{\(!holds && unread === null\) \|\| busy\}/);
   expect(del, "the confirm does not await the caller").toMatch(/await onConfirm\(/);
+});
+
+test("a delete confirm that could not count says so, and does not say zero", () => {
+  // projectContents swallowed every failure into EMPTY_CONTENTS, so an unreadable
+  // store rendered "No saved steps." with an enabled Delete, and the cascade that
+  // followed removed the frames the dialog had just denied.
+  const lib = code("lib/projects.ts");
+  const from = lib.indexOf("export async function readProjectContents");
+  expect(from, "readProjectContents not found").toBeGreaterThan(-1);
+  const readBody = lib.slice(from, lib.indexOf("export async function projectContents", from));
+  expect(readBody, "the counting read swallows its failure into EMPTY_CONTENTS").not.toMatch(
+    /catch[\s\S]*EMPTY_CONTENTS/,
+  );
+
+  const dialog = code(DIALOG);
+  expect(dialog, "ConfirmDelete still gates on the swallowing projectContents").not.toMatch(
+    /\bprojectContents\(/,
+  );
+  expect(dialog, "ConfirmDelete has no failure branch for the count").toContain("setUnread(");
+  expect(dialog, "the zero branch is gone").toContain("No saved steps.");
+  expect(dialog, "no distinct count-failed render").toContain("delete-unread");
 });

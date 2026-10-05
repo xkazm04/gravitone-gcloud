@@ -743,21 +743,33 @@ function orderPhases(raw: string[]): string[] {
   return [...known, ...rest];
 }
 
-/** What `deleteProject(id)` would destroy. Never rejects: a confirmation that
- *  cannot count is still a confirmation, and refusing to open the dialog because
- *  the store hiccuped would be the worse failure. An unreadable store answers
- *  `{ steps: 0 }`, and the delete itself still reports what it actually took. */
-export async function projectContents(id: string): Promise<ProjectContents> {
+/** What `deleteProject(id)` would destroy, or a REJECTION when the store cannot
+ *  be read. An unreadable count is not a zero: the delete confirmation that
+ *  called this used to print "No saved steps." for a store it could not open,
+ *  and the cascade that followed removed the steps it had just denied. The
+ *  caller decides how to say "could not count"; the delete itself still
+ *  reports what it actually took. */
+export async function readProjectContents(id: string): Promise<ProjectContents> {
   let db: IDBDatabase | null = null;
   try {
     db = await openDb();
     if (!db.objectStoreNames.contains(STEPS_STORE)) return EMPTY_CONTENTS;
     const keys = await getKeysByIndex(db, STEPS_STORE, BY_PROJECT, id);
     return { steps: keys.length, phases: orderPhases(keys.map((k) => phaseOfStepKey(id, k))) };
-  } catch {
-    return EMPTY_CONTENTS;
   } finally {
     db?.close();
+  }
+}
+
+/** The never-rejecting readback for callers that report a count rather than
+ *  gate a destructive act on it (the test harness's project readback). An
+ *  unreadable store answers `{ steps: 0 }`; a confirmation must use
+ *  `readProjectContents` instead. */
+export async function projectContents(id: string): Promise<ProjectContents> {
+  try {
+    return await readProjectContents(id);
+  } catch {
+    return EMPTY_CONTENTS;
   }
 }
 

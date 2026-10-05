@@ -27,7 +27,7 @@ import {
   PHASES,
   PHASE_TITLE,
   disciplineOf,
-  projectContents,
+  readProjectContents,
   templateOf,
   templatesFor,
   type Discipline,
@@ -384,7 +384,7 @@ function StyleSwatch({ theme }: { theme?: Theme }) {
  *  sentence would be an understatement instead, so the dialog reads the project's
  *  own step keys and says which steps go with it.
  *
- *  Counting costs nothing: `projectContents` reads primary KEYS off the
+ *  Counting costs nothing: `readProjectContents` reads primary KEYS off the
  *  by-project index and never touches the records, which for a composed cut are
  *  several megabytes of base64. The Delete button waits for that count anyway —
  *  a confirmation that has not finished saying what it will destroy has not
@@ -403,6 +403,9 @@ export function ConfirmDelete({
   error?: string | null;
 }) {
   const [holds, setHolds] = useState<ProjectContents | null>(null);
+  // The machine's message when the count itself failed. Kept apart from
+  // `holds` so a store that could not be read never renders as zero steps.
+  const [unread, setUnread] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const confirm = async () => {
     if (busy) return;
@@ -417,11 +420,17 @@ export function ConfirmDelete({
 
   useEffect(() => {
     setHolds(null);
+    setUnread(null);
     if (!id) return;
     let alive = true;
-    void projectContents(id).then((c) => {
-      if (alive) setHolds(c);
-    });
+    readProjectContents(id).then(
+      (c) => {
+        if (alive) setHolds(c);
+      },
+      (e: unknown) => {
+        if (alive) setUnread(e instanceof Error ? e.message : "could not read the saved steps");
+      },
+    );
     return () => {
       alive = false;
     };
@@ -455,11 +464,11 @@ export function ConfirmDelete({
           </Button>
           <button
             onClick={() => void confirm()}
-            disabled={!holds || busy}
+            disabled={(!holds && unread === null) || busy}
             data-testid="confirm-delete"
             className="font-jetbrains cursor-pointer rounded-full border border-rose-400/40 bg-rose-400/10 px-5 py-2 text-label text-rose-200 transition hover:bg-rose-400/20 disabled:cursor-not-allowed disabled:border-white/10 disabled:bg-transparent disabled:text-white/30"
           >
-            {holds ? "Delete" : "reading…"}
+            {holds || unread !== null ? "Delete" : "reading…"}
           </button>
         </div>
         </div>
@@ -476,10 +485,22 @@ export function ConfirmDelete({
           this dialog the user cannot work out for themselves: how many steps
           have work saved in them, which ones, and whether any of it was paid
           for. Those are figures about the work, and they are the reason this
-          confirmation waits for `projectContents` before it will enable its own
+          confirmation waits for `readProjectContents` before it will enable its own
           button. They are now drawn as the same five cells the shelf's matrix
           uses — filled rose where work exists, hollow where it does not — so
           the count has a shape as well as a number. */}
+      {unread !== null && (
+        <div data-testid="delete-unread">
+          <div aria-hidden className="grid grid-cols-5 gap-2">
+            {PHASES.map((k) => (
+              <div key={k} title={PHASE_TITLE[k]} className="h-3 rounded-[3px] border border-dashed border-white/20" />
+            ))}
+          </div>
+          <p role="alert" className="font-hanken mt-4 text-content leading-snug text-amber-200/90">
+            Could not count the saved steps — {unread}
+          </p>
+        </div>
+      )}
       {holds && (
         <div data-testid="delete-takes">
           {/* NUMBERS UNDER THE CELLS, NOT NAMES. This dialog is `max-w-md`, so
