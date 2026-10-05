@@ -19,8 +19,13 @@
 // this probe asserts in two places, and the second is the one that matters:
 //
 //   1. the array itself carries a tool restriction and a turn cap;
-//   2. those two survive an ACTUAL `spawn` through the ACTUAL shell setting,
-//      measured against an argv echo rather than reasoned about.
+//   2. those two survive `runClaude`'s OWN spawn through the ACTUAL shell
+//      setting, measured by the stand-in engine that received them rather
+//      than reasoned about.
+//
+// The argv echo below is kept for the third case only: it pins the cmd.exe
+// behaviour the quoting branch exists for, which needs a naive argv no door
+// would ever send.
 import { spawn } from "node:child_process";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -28,7 +33,9 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { cliArgs, USES_SHELL } from "@/lib/claudeCli";
+import { cliArgs, runClaude, USES_SHELL } from "@/lib/claudeCli";
+
+import { FAKE_ENGINE_ENV, keepEnv, withFakeEngine } from "./_helpers";
 
 /** A stand-in for the `claude` binary that reports exactly what argv it received.
  *
@@ -81,17 +88,29 @@ test("engine args: the array declares a tool restriction and a single turn", () 
   expect(valueOf(args, "--max-turns")).toBe("1");
 });
 
-test("engine args: BOTH restrictions survive the real spawn, on this platform's shell setting", async () => {
-  const argv = await received(cliArgs(), USES_SHELL);
-  console.log(`[cli] shell=${USES_SHELL} argv=${JSON.stringify(argv)}`);
+// THE REAL DOOR, NOT A REPLICA OF IT. This case used to spawn `node echo.mjs`
+// with `cliArgs()` through its own `spawn` call — a copy of the spawn in
+// lib/claudeCli.ts that could drift from it (a changed shell setting, a changed
+// argv, a wrapper) and stay green. Now `runClaude` itself spawns "claude", the
+// shell resolves the stand-in `withFakeEngine` put first on PATH, and the argv
+// asserted is the one the stand-in RECEIVED (CIP-A).
+keepEnv(FAKE_ENGINE_ENV);
 
-  // The turn cap is the assertion that fails loudest against the defect: under
-  // the old code `--max-turns` was consumed AS the value of `--allowed-tools`,
-  // so it was not a flag at all and this returns undefined.
-  expect(valueOf(argv, "--max-turns"), "--max-turns did not survive as a flag").toBe("1");
+test("engine args: BOTH restrictions survive runClaude's own spawn, on this platform's shell setting", async () => {
+  await withFakeEngine("engine-door", async (engine) => {
+    await runClaude("# DOOR ok\n");
+    const [turn] = engine.turns();
+    const argv = turn!.argv;
+    console.log(`[cli] shell=${USES_SHELL} argv=${JSON.stringify(argv)}`);
 
-  // And the tool restriction must be an EMPTY allow-list, not the next flag.
-  expect(valueOf(argv, "--allowed-tools"), "--allowed-tools swallowed the next flag").toBe("");
+    // The turn cap is the assertion that fails loudest against the defect: under
+    // the old code `--max-turns` was consumed AS the value of `--allowed-tools`,
+    // so it was not a flag at all and this returns undefined.
+    expect(valueOf(argv, "--max-turns"), "--max-turns did not survive as a flag").toBe("1");
+
+    // And the tool restriction must be an EMPTY allow-list, not the next flag.
+    expect(valueOf(argv, "--allowed-tools"), "--allowed-tools swallowed the next flag").toBe("");
+  });
 });
 
 test("engine args: a bare empty string is lost by the shell — the reason the branch exists", async () => {
