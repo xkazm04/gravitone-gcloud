@@ -171,6 +171,13 @@ const JOB_NOUN: Record<JobKind, string> = {
   "video-export": "Export",
 };
 
+/** The name a job goes by everywhere the bell shows it — running, interrupted
+ *  and settled — so one run is not "poster-generate" in flight and "Poster
+ *  generation" on return. */
+export function jobNoun(kind: JobKind): string {
+  return JOB_NOUN[kind];
+}
+
 /** Where the record lives across reloads. Jobs are LONG — minutes for a real
  *  research run — and a refresh mid-run used to lose the whole thing silently,
  *  including any unread notification about work that had already finished.

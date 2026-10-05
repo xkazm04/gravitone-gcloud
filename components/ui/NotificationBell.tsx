@@ -25,7 +25,7 @@ import {
   useStorageTrouble,
   type StorageFailure,
 } from "@/app/_phases/_shared/stepStore";
-import { elapsed, useJobs } from "@/lib/jobs";
+import { elapsed, jobNoun, useJobs } from "@/lib/jobs";
 import { trayModel } from "@/lib/jobLinks";
 import { politenessFor, useAnnounce } from "@/lib/announcer";
 import { Ghost } from "@/components/ui/signal";
@@ -335,7 +335,7 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                 >
                   <div className={al ? "k-tcard__h" : "flex items-center justify-between gap-2"}>
                     <span className={al ? "k-caps k-tcard__k" : "font-jetbrains text-label tracking-[0.12em] text-cyan-200 uppercase"}>
-                      {j.kind} running
+                      {jobNoun(j.kind)} running
                     </span>
                     <div className="flex items-center gap-2">
                       <span className={al ? "k-num k-tcard__m" : "font-jetbrains text-label text-white/50"}>{elapsed(j)}</span>
@@ -388,7 +388,7 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
                 >
                   <div className={al ? "k-tcard__h" : "flex items-start justify-between gap-2"}>
                     <p className={al ? "k-caps k-tcard__k" : "font-jetbrains text-content tracking-[0.12em] text-amber-200 uppercase"}>
-                      {j.kind} interrupted
+                      {jobNoun(j.kind)} interrupted
                     </p>
                     <div className="flex items-center gap-2">
                       {j.actions.map((act) => {
