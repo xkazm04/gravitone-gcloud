@@ -416,7 +416,7 @@ function Row({
                           t.factId ? "border-white/10 text-white/60" : "border-amber-300/40 text-amber-200"
                         }`}
                       >
-                        <option value="">— cites no fact —</option>
+                        <option value="">— unsourced —</option>
                         {facts.map((f) => (
                           <option key={f.id} value={f.id}>
                             {f.id} · {f.claim.slice(0, 60)}

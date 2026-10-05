@@ -332,9 +332,12 @@ function TextMark({
       {/* A figure with no fact behind it is the defect this step exists to
           prevent, so it is marked on the canvas rather than in a side panel. */}
       {t.role === "figure" && !t.factId && (
-        <span className="ml-1 align-super text-label text-amber-300" title="not bound to a notebook fact">
-          ●
-        </span>
+        <>
+          <span className="ml-1 align-super text-label text-amber-300" aria-hidden>
+            ●
+          </span>
+          <span className="sr-only">unsourced</span>
+        </>
       )}
     </span>
   );

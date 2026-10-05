@@ -175,9 +175,12 @@ function Row({
           {name}
         </span>
         {warn && (
-          <span className="shrink-0 text-label text-amber-300" title="figure with no fact behind it">
-            ●
-          </span>
+          <>
+            <span className="shrink-0 text-label text-amber-300" aria-hidden>
+              ●
+            </span>
+            <span className="sr-only">unsourced</span>
+          </>
         )}
       </button>
 
