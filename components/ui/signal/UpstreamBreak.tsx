@@ -123,7 +123,7 @@ export function UpstreamBreak({
                   ) : hasIt ? (
                     <span aria-hidden className="h-2.5 w-2.5 rounded-full bg-cyan-300/70" />
                   ) : (
-                    <span aria-hidden className="h-2.5 w-2.5 rounded-full border border-white/20" />
+                    <span aria-hidden className="h-2.5 w-2.5 rounded-full border border-white/45" />
                   )}
                 </span>
                 <span
@@ -135,7 +135,7 @@ export function UpstreamBreak({
                         : "text-cyan-200"
                       : here
                         ? "text-white/85"
-                        : "text-white/35"
+                        : "text-white/55"
                   }`}
                 >
                   {PHASE_TITLE[p]}
