@@ -53,11 +53,16 @@ Type: no italics (the display voice is upright Instrument Serif), text is `--al-
 | `LayerList` | layers, top-down, drag or arrow to reorder | `<LayerList label heading layers selectedId onSelect onReorder onToggleHidden onRemove/>` |
 | `Transport` `Waveform` `Player` `clock` | play marks, a magnitude wave you seek on, both; controlled, no `<audio>` inside | `<Player label kind peaks marks? playing position duration onToggle onSeek/>` |
 | `Timeline` | tracks against one ruler, cues as marks, drift drawn with both ends | `<Timeline label duration tracks cues? playhead? onSelect?/>` |
+| `PipRow` `BandTrack` `UpstreamBreak` `Keycaps` `StaleBadge` `Provenance` `useHint` `HintPopover` `hintRootClass` `CHIP_CLASS` `TALLY_TONE` | the rest of the signal vocabulary (`components/ui/signal`, imported from there): slots as pips, a value in its band, the step upstream that is missing, a keymap, a measurement that is stale, where a thing came from; Hint's disclosure on a trigger of your own; the chip shape and tones a Tally draws | `<PipRow states max?/>`, `<BandTrack value min max band?/>`, `<UpstreamBreak blockedAt current done action?/>` |
 | `Mark` `Wordmark` `ASTERISM_PATH` `ASTERISM_STARS` | the G asterism, the wordmark (`components/kit/brand`) | `<Mark size construction? title?/>`, `<Wordmark height/>` |
 
 `/kit` renders every row above in each of its states from `app/kit/catalog.ts`, and
 `tests/golden-path/kit-catalog.probe.spec.ts` fails when an export, the catalog and this table disagree.
-The migration map (which module needs which part, and which parts do not exist yet) is `app/kit/migrationMap.ts`.
+Who uses what is measured, not written: `pipeline/kit-census.mts` walks `app/` and `components/` and writes
+`app/kit/census.json` (each part's adopter files, each module's kit and signal imports, hand-rolled suspects,
+parts with no adopter). Rewrite it with `npx tsx pipeline/kit-census.mts`; `npm run check:kit-census` and the
+catalog probe fail when it is stale, and a suspect count may only fall. Which parts a module is *meant* to use
+is declared intent, in `app/kit/migrationMap.ts`; the Migration tab sets the two side by side.
 
 ## When to use which
 

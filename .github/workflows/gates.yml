@@ -347,6 +347,11 @@ jobs:
       - name: assets tree
         run: npm run check:assets-tree
 
+      # BLOCKING, new 2026-10-05 (KIT-A). Recomputes app/kit/census.json from the
+      # tree and diffs it - the /kit migration map is derived, never hand-typed.
+      - name: kit census
+        run: npm run check:kit-census
+
       # BLOCKING. Node-context probes. Not skipped when earlier steps are
       # green-but-uninteresting: this is the rung that refuses.
       - name: probes

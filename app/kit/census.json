@@ -1,0 +1,2085 @@
+{
+  "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
+  "files": 460,
+  "parts": {
+    "ASTERISM_PATH": {
+      "home": "components/kit/brand/asterism.ts",
+      "surfaces": [
+        "components/kit/brand/index.ts"
+      ],
+      "adopters": []
+    },
+    "ASTERISM_STARS": {
+      "home": "components/kit/brand/asterism.ts",
+      "surfaces": [
+        "components/kit/brand/index.ts"
+      ],
+      "adopters": []
+    },
+    "BandTrack": {
+      "home": "components/ui/signal/BandTrack.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_projects/wizard/stages.tsx"
+      ]
+    },
+    "Bar": {
+      "home": "components/kit/Bar.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "components/ui/StudioFrame.tsx"
+      ]
+    },
+    "Button": {
+      "home": "components/ui/Primitives.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/Primitives.tsx"
+      ],
+      "adopters": [
+        "app/_phases/research/_parts/FollowUpQueue.tsx",
+        "app/_phases/research/guided/RunStage.tsx",
+        "app/_projects/ProjectDialog.tsx",
+        "app/articles/ArticlesView.tsx",
+        "app/articles/RunView.tsx",
+        "app/articles/new/NewArticle.tsx",
+        "app/calendar/Composer.tsx",
+        "app/calendar/SlotSheet.tsx",
+        "app/error.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/Lightbox.tsx",
+        "app/foundry/ui.tsx",
+        "app/library/AssetLightbox.tsx",
+        "app/library/MoveDialog.tsx",
+        "app/library/assets/EmptyShelf.tsx",
+        "app/library/parts.tsx",
+        "app/projects/ProjectsView.tsx",
+        "app/studio/[projectId]/StudioView.tsx",
+        "components/ui/UserMenu.tsx",
+        "components/ui/deck/Deck.tsx"
+      ]
+    },
+    "CHIP_CLASS": {
+      "home": "components/ui/signal/Tally.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/cut/parts/Inspector.tsx",
+        "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/research/beats/SlotColumn.tsx",
+        "app/_phases/research/guided/RunStage.tsx",
+        "app/_phases/research/run/LiveResult.tsx",
+        "app/_phases/score/ScoreSpotting.tsx",
+        "app/articles/CritiquePanel.tsx",
+        "app/articles/RunView.tsx",
+        "app/articles/parts.tsx",
+        "app/calendar/Composer.tsx",
+        "app/calendar/MetricsTab.tsx",
+        "app/calendar/SlotSheet.tsx",
+        "app/calendar/ui.tsx",
+        "app/foundry/ui.tsx",
+        "app/library/parts.tsx",
+        "app/playground/hunt/Lesson.tsx"
+      ]
+    },
+    "Callout": {
+      "home": "components/kit/Callout.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Card": {
+      "home": "components/kit/Card.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "CardGrid": {
+      "home": "components/kit/Card.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "CheckField": {
+      "home": "components/kit/Fields.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Chip": {
+      "home": "components/kit/Chip.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Chips": {
+      "home": "components/kit/Chip.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Column": {
+      "home": "components/kit/Entry.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Command": {
+      "home": "components/kit/Notice.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "ConfirmDialog": {
+      "home": "components/kit/ConfirmDialog.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "ContextMenu": {
+      "home": "components/kit/ContextMenu.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Count": {
+      "home": "components/kit/Dock.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Credit": {
+      "home": "components/kit/Credit.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Crumbs": {
+      "home": "components/kit/Crumbs.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "components/ui/StudioFrame.tsx"
+      ]
+    },
+    "DataTable": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Deck": {
+      "home": "components/ui/deck/Deck.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/guided/GuidedResearch.tsx",
+        "app/_projects/wizard/CreateWizard.tsx"
+      ]
+    },
+    "DeckCard": {
+      "home": "components/ui/deck/DeckCard.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/guided/GuidedResearch.tsx",
+        "app/_phases/script/candidates/CandidatesDuel.tsx",
+        "components/ui/deck/DeckStage.tsx"
+      ]
+    },
+    "DeckStage": {
+      "home": "components/ui/deck/DeckStage.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/guided/GuidedResearch.tsx",
+        "app/_phases/script/candidates/CandidatesDuel.tsx",
+        "app/_projects/wizard/CreateWizard.tsx"
+      ]
+    },
+    "DefList": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Doc": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "DocLede": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "DocSection": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Dock": {
+      "home": "components/kit/Dock.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "DockAction": {
+      "home": "components/kit/Dock.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Dropzone": {
+      "home": "components/kit/Dropzone.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/MusicVideoResearch.tsx",
+        "app/library/audio/Inspector.tsx",
+        "app/library/audio/References.tsx"
+      ]
+    },
+    "Duo": {
+      "home": "components/kit/Duo.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Entry": {
+      "home": "components/kit/Entry.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "ErrorBox": {
+      "home": "components/kit/Notice.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Eyebrow": {
+      "home": "components/ui/Primitives.tsx",
+      "surfaces": [
+        "components/ui/Primitives.tsx"
+      ],
+      "adopters": [
+        "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/_phases/research/beats/BeatVariantBoard.tsx",
+        "app/_phases/research/beats/ModeChooser.tsx",
+        "app/_projects/ProjectDialog.tsx"
+      ]
+    },
+    "Field": {
+      "home": "components/ui/Field.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/Field.tsx"
+      ],
+      "adopters": [
+        "app/_projects/ProjectDialog.tsx",
+        "app/_projects/wizard/stages.tsx",
+        "app/articles/RunView.tsx",
+        "app/articles/new/NewArticle.tsx",
+        "app/calendar/Composer.tsx"
+      ]
+    },
+    "FieldRow": {
+      "home": "components/kit/Fields.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Figures": {
+      "home": "components/kit/Figures.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Final": {
+      "home": "components/kit/Dock.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "FlagChip": {
+      "home": "components/kit/ScoreChip.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "FolderTree": {
+      "home": "components/kit/FolderTree.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Ghost": {
+      "home": "components/ui/signal/Ghost.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/cut/parts/Inspector.tsx",
+        "app/_phases/cut/parts/Lanes.tsx",
+        "app/_phases/cut/parts/Monitor.tsx",
+        "app/_phases/frames/alternatives/VariantContactSheet.tsx",
+        "app/_phases/research/_parts/FollowUpQueue.tsx",
+        "app/_phases/script/trailer/MovementSection.tsx",
+        "app/_phases/script/trailer/PromiseLedger.tsx",
+        "app/articles/ArticlesView.tsx",
+        "app/library/LibraryAtelier.tsx",
+        "app/library/MoveDialog.tsx",
+        "app/library/PresetRail.tsx",
+        "app/library/assets/EmptyShelf.tsx",
+        "app/library/audio/AudioWorkbench.tsx",
+        "app/playground/arrange/index.tsx",
+        "app/playground/hunt/index.tsx",
+        "app/playground/triage/Judge.tsx",
+        "app/playground/triage/Strengths.tsx",
+        "app/playground/triage/index.tsx",
+        "app/projects/ProjectsView.tsx",
+        "components/ui/NotificationBell.tsx"
+      ]
+    },
+    "Hint": {
+      "home": "components/ui/signal/Hint.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/cut/parts/Transport.tsx",
+        "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/_phases/research/_parts/FollowUpQueue.tsx",
+        "app/_phases/research/_parts/FollowUpResult.tsx",
+        "app/_phases/research/_parts/ScopeGate.tsx",
+        "app/_phases/research/beats/BeatVariantBoard.tsx",
+        "app/_phases/research/beats/SlotColumn.tsx",
+        "app/_phases/research/guided/RunStage.tsx",
+        "app/_phases/research/run/LiveResult.tsx",
+        "app/_phases/research/run/controls.tsx",
+        "app/_phases/score/ScoreSpotting.tsx",
+        "app/_phases/score/SpotList.tsx",
+        "app/_phases/script/ScriptStep.tsx",
+        "app/_phases/script/_matrix/shared.tsx",
+        "app/_phases/script/_notes/RecalibrateControl.tsx",
+        "app/_phases/script/_parts/ConstraintLedger.tsx",
+        "app/_phases/script/_parts/Meters.tsx",
+        "app/_phases/script/trailer/EnergyCurve.tsx",
+        "app/_phases/script/trailer/TrailerScript.tsx",
+        "app/_projects/ProjectDialog.tsx",
+        "app/_projects/wizard/stages.tsx",
+        "app/articles/new/NewArticle.tsx",
+        "app/articles/parts.tsx",
+        "app/board/parts.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/library/AssetLightbox.tsx",
+        "app/library/Playground.tsx",
+        "app/playground/arrange/Board.tsx",
+        "app/playground/triage/Strengths.tsx"
+      ]
+    },
+    "HintPopover": {
+      "home": "components/ui/signal/Hint.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/beats/ModeChooser.tsx"
+      ]
+    },
+    "KeyRow": {
+      "home": "components/kit/Dock.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Keycaps": {
+      "home": "components/ui/signal/Keycaps.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/cut/parts/Transport.tsx",
+        "app/_projects/ShelfHeader.tsx",
+        "app/board/parts.tsx",
+        "app/foundry/DojoView.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/FoundryView.tsx",
+        "app/foundry/Lightbox.tsx",
+        "app/library/AssetLightbox.tsx",
+        "app/library/assets/ShelfGallery.tsx",
+        "app/library/audio/Ledger.tsx",
+        "app/playground/arrange/index.tsx",
+        "app/playground/hunt/Audition.tsx",
+        "app/playground/hunt/index.tsx",
+        "app/playground/triage/Judge.tsx"
+      ]
+    },
+    "Kicker": {
+      "home": "components/kit/Kicker.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "LayerList": {
+      "home": "components/kit/LayerList.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Loading": {
+      "home": "components/kit/Notice.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "LockNote": {
+      "home": "components/kit/Dock.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Magnitude": {
+      "home": "components/kit/Magnitude.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Mark": {
+      "home": "components/kit/brand/Mark.tsx",
+      "surfaces": [
+        "components/kit/brand/index.ts"
+      ],
+      "adopters": [
+        "app/_landing/Door.tsx",
+        "components/ui/StudioFrame.tsx"
+      ]
+    },
+    "Matrix": {
+      "home": "components/kit/Matrix.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Meridian": {
+      "home": "components/kit/StatusStrip.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Modal": {
+      "home": "components/ui/Modal.tsx",
+      "surfaces": [
+        "components/ui/Modal.tsx"
+      ],
+      "adopters": [
+        "app/_phases/research/ResearchStep.tsx",
+        "app/_phases/research/_parts/ScopeGate.tsx",
+        "app/_phases/script/ScriptStep.tsx",
+        "app/_projects/ProjectDialog.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/FoundryView.tsx",
+        "app/foundry/Lightbox.tsx",
+        "app/foundry/StylesShelf.tsx",
+        "app/foundry/ui.tsx",
+        "app/library/AssetLightbox.tsx",
+        "app/library/MoveDialog.tsx",
+        "app/library/parts.tsx"
+      ]
+    },
+    "NotificationBell": {
+      "home": "components/ui/NotificationBell.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "components/ui/StudioFrame.tsx"
+      ]
+    },
+    "NumberField": {
+      "home": "components/kit/Fields.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "NumberInput": {
+      "home": "components/ui/Field.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/Field.tsx"
+      ],
+      "adopters": [
+        "app/_projects/ProjectDialog.tsx",
+        "app/_projects/wizard/stages.tsx"
+      ]
+    },
+    "OpenLink": {
+      "home": "components/kit/Report.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "PageHead": {
+      "home": "components/kit/PageHead.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Pager": {
+      "home": "components/kit/Pager.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Panel": {
+      "home": "components/ui/Primitives.tsx",
+      "surfaces": [
+        "components/ui/Primitives.tsx"
+      ],
+      "adopters": [
+        "app/calendar/BroadcastWeek.tsx",
+        "app/calendar/ChannelsTab.tsx",
+        "app/calendar/MetricsTab.tsx",
+        "app/library/LibraryAtelier.tsx",
+        "app/library/parts.tsx",
+        "app/playground/hunt/Start.tsx",
+        "app/playground/hunt/index.tsx",
+        "app/playground/triage/Batch.tsx",
+        "app/playground/triage/Judge.tsx",
+        "app/playground/triage/Strengths.tsx"
+      ]
+    },
+    "PanelBox": {
+      "home": "components/kit/Fields.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "PipRow": {
+      "home": "components/ui/signal/PipRow.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/beats/BeatVariantBoard.tsx",
+        "app/_phases/research/beats/SlotColumn.tsx",
+        "app/board/parts.tsx",
+        "app/calendar/ChannelsTab.tsx",
+        "app/library/parts.tsx",
+        "app/playground/hunt/Inspector.tsx",
+        "app/playground/hunt/index.tsx",
+        "app/playground/triage/Strengths.tsx"
+      ]
+    },
+    "Plate": {
+      "home": "components/kit/Plate.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Player": {
+      "home": "components/kit/Player.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/library/audio/Inspector.tsx"
+      ]
+    },
+    "Prose": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Provenance": {
+      "home": "components/ui/signal/Provenance.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/score/ScoreSpotting.tsx",
+        "app/_studio/assetParts.tsx",
+        "app/articles/RunView.tsx",
+        "app/playground/hunt/index.tsx"
+      ]
+    },
+    "Report": {
+      "home": "components/kit/Report.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "RowHead": {
+      "home": "components/kit/Matrix.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Rule": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "STUDIO_STEPS": {
+      "home": "components/kit/Steps.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "SaveState": {
+      "home": "components/kit/Dock.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Scene": {
+      "home": "components/kit/Matrix.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "ScoreChip": {
+      "home": "components/kit/ScoreChip.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Segmented": {
+      "home": "components/ui/Field.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/Field.tsx"
+      ],
+      "adopters": [
+        "app/_phases/script/trailer/WithholdingPanel.tsx",
+        "app/_projects/ProjectDialog.tsx",
+        "app/articles/new/NewArticle.tsx",
+        "app/library/LibraryAtelier.tsx"
+      ]
+    },
+    "Select": {
+      "home": "components/ui/Field.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/Field.tsx"
+      ],
+      "adopters": []
+    },
+    "Sheet": {
+      "home": "components/kit/Sheet.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "SideItem": {
+      "home": "components/kit/SideList.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "SideList": {
+      "home": "components/kit/SideList.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Sky": {
+      "home": "components/kit/Sky.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "StackBar": {
+      "home": "components/ui/signal/StackBar.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_projects/RaceSheet.tsx",
+        "app/board/ContactSheet.tsx",
+        "app/board/shared.tsx",
+        "app/foundry/ui.tsx"
+      ]
+    },
+    "StageRail": {
+      "home": "components/ui/deck/StageRail.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "components/ui/deck/Deck.tsx"
+      ]
+    },
+    "StaleBadge": {
+      "home": "components/ui/signal/StaleBadge.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/beats/BeatVariantBoard.tsx",
+        "app/_phases/script/_parts/BaselineOnlyNote.tsx",
+        "app/_phases/script/_parts/HypothesisColumn.tsx",
+        "app/_phases/script/candidates/CandidatesDuel.tsx"
+      ]
+    },
+    "Stats": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "StatusGlyph": {
+      "home": "components/kit/StatusGlyph.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "StatusPill": {
+      "home": "components/kit/StatusPill.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "StatusStrip": {
+      "home": "components/kit/StatusStrip.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Steps": {
+      "home": "components/kit/Steps.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "TALLY_TONE": {
+      "home": "components/ui/signal/Tally.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/cut/parts/Inspector.tsx",
+        "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/research/beats/SlotColumn.tsx",
+        "app/_phases/research/guided/RunStage.tsx",
+        "app/_phases/research/run/LiveResult.tsx",
+        "app/_phases/score/ScoreSpotting.tsx",
+        "app/articles/CritiquePanel.tsx",
+        "app/articles/RunView.tsx",
+        "app/articles/parts.tsx",
+        "app/calendar/Composer.tsx",
+        "app/calendar/MetricsTab.tsx",
+        "app/calendar/SlotSheet.tsx",
+        "app/calendar/ui.tsx",
+        "app/foundry/ui.tsx",
+        "app/library/parts.tsx",
+        "app/playground/hunt/Lesson.tsx"
+      ]
+    },
+    "TabRail": {
+      "home": "components/ui/signal/TabRail.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/frames/FramesStep.tsx",
+        "app/_phases/script/ScriptStep.tsx",
+        "app/calendar/CalendarView.tsx",
+        "app/library/LibraryView.tsx",
+        "app/playground/PlaygroundView.tsx"
+      ]
+    },
+    "Table": {
+      "home": "components/kit/Table.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Tag": {
+      "home": "components/kit/PageHead.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Tally": {
+      "home": "components/ui/signal/Tally.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/_shared/notebook/EvidenceLog.tsx",
+        "app/_phases/cut/music-video/MusicVideoExport.tsx",
+        "app/_phases/cut/parts/Lanes.tsx",
+        "app/_phases/cut/parts/Transport.tsx",
+        "app/_phases/frames/FramesAssembly.tsx",
+        "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/frames/alternatives/VariantContactSheet.tsx",
+        "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/research/MusicVideoResearch.tsx",
+        "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/_phases/research/_parts/FollowUpResult.tsx",
+        "app/_phases/score/ScoreSpotting.tsx",
+        "app/_phases/script/_notes/StickyNotebook.tsx",
+        "app/_phases/script/trailer/RaisesChips.tsx",
+        "app/articles/ArticlesView.tsx",
+        "app/articles/CritiquePanel.tsx",
+        "app/articles/RunView.tsx",
+        "app/articles/parts.tsx",
+        "app/board/ContactSheet.tsx",
+        "app/calendar/BroadcastWeek.tsx",
+        "app/calendar/ChannelsTab.tsx",
+        "app/calendar/MetricsTab.tsx",
+        "app/foundry/DojoView.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/RunCards.tsx",
+        "app/foundry/StylesShelf.tsx",
+        "app/playground/arrange/Board.tsx",
+        "app/playground/hunt/Board.tsx",
+        "app/playground/hunt/Lesson.tsx",
+        "app/playground/hunt/Start.tsx",
+        "app/playground/hunt/index.tsx",
+        "app/playground/triage/Judge.tsx",
+        "app/playground/triage/Strengths.tsx",
+        "app/playground/triage/index.tsx",
+        "app/projects/ProjectsView.tsx"
+      ]
+    },
+    "TextArea": {
+      "home": "components/ui/Field.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/Field.tsx"
+      ],
+      "adopters": [
+        "app/_projects/ProjectDialog.tsx",
+        "app/_projects/wizard/stages.tsx",
+        "app/articles/RunView.tsx",
+        "app/articles/new/NewArticle.tsx",
+        "app/calendar/Composer.tsx"
+      ]
+    },
+    "TextField": {
+      "home": "components/kit/Fields.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "TextInput": {
+      "home": "components/ui/Field.tsx",
+      "surfaces": [
+        "components/kit/index.ts",
+        "components/ui/Field.tsx"
+      ],
+      "adopters": [
+        "app/_projects/ProjectDialog.tsx",
+        "app/_projects/wizard/stages.tsx",
+        "app/articles/new/NewArticle.tsx",
+        "app/calendar/Composer.tsx"
+      ]
+    },
+    "Thumb": {
+      "home": "components/kit/Thumb.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Tile": {
+      "home": "components/kit/Tile.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Timeline": {
+      "home": "components/kit/Timeline.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "ToastTray": {
+      "home": "components/kit/Toast.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/library/audio/AudioWorkbench.tsx"
+      ]
+    },
+    "Transport": {
+      "home": "components/kit/Player.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "UpstreamBreak": {
+      "home": "components/ui/signal/UpstreamBreak.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/score/ScoreSpotting.tsx",
+        "app/_phases/script/ScriptStep.tsx",
+        "app/_phases/script/trailer/TrailerScript.tsx"
+      ]
+    },
+    "UserMenu": {
+      "home": "components/ui/UserMenu.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "components/ui/StudioFrame.tsx"
+      ]
+    },
+    "Verbatim": {
+      "home": "components/kit/Doc.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "VerdictKeys": {
+      "home": "components/kit/VerdictKeys.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "VerdictMark": {
+      "home": "components/kit/Entry.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Waveform": {
+      "home": "components/kit/Player.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Wordmark": {
+      "home": "components/kit/brand/Wordmark.tsx",
+      "surfaces": [
+        "components/kit/brand/index.ts"
+      ],
+      "adopters": [
+        "app/_landing/Door.tsx",
+        "components/ui/StudioFrame.tsx"
+      ]
+    },
+    "WorldRoot": {
+      "home": "components/kit/WorldRoot.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/library/audio/AudioWorkbench.tsx",
+        "components/ui/StudioFrame.tsx"
+      ]
+    },
+    "clock": {
+      "home": "components/kit/Player.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/library/audio/References.tsx",
+        "app/library/audio/book.ts"
+      ]
+    },
+    "components/ui/Primitives#Waveform": {
+      "home": "components/ui/Primitives.tsx",
+      "surfaces": [
+        "components/ui/Primitives.tsx"
+      ],
+      "adopters": []
+    },
+    "components/ui/Primitives#Wordmark": {
+      "home": "components/ui/Primitives.tsx",
+      "surfaces": [
+        "components/ui/Primitives.tsx"
+      ],
+      "adopters": [
+        "components/ui/StudioFrame.tsx"
+      ]
+    },
+    "components/ui/Select#Select": {
+      "home": "components/ui/Select.tsx",
+      "surfaces": [
+        "components/ui/Select.tsx"
+      ],
+      "adopters": [
+        "app/_projects/ShelfHeader.tsx",
+        "app/articles/new/NewArticle.tsx",
+        "app/board/shared.tsx",
+        "app/calendar/Composer.tsx",
+        "app/playground/triage/Batch.tsx",
+        "app/playground/triage/Strengths.tsx"
+      ]
+    },
+    "gradeOf": {
+      "home": "components/kit/Magnitude.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "hintRootClass": {
+      "home": "components/ui/signal/Hint.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/beats/ModeChooser.tsx"
+      ]
+    },
+    "pct": {
+      "home": "components/kit/ScoreChip.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "useHint": {
+      "home": "components/ui/signal/Hint.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/research/beats/ModeChooser.tsx"
+      ]
+    },
+    "useRoving": {
+      "home": "components/kit/useRoving.ts",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/foundry/CullGrid.tsx"
+      ]
+    },
+    "useToast": {
+      "home": "components/kit/Toast.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": [
+        "app/board/useBoard.ts",
+        "app/library/audio/AudioWorkbench.tsx"
+      ]
+    },
+    "useWindow": {
+      "home": "components/kit/Pager.tsx",
+      "surfaces": [
+        "components/kit/index.ts"
+      ],
+      "adopters": []
+    }
+  },
+  "modules": {
+    "app": {
+      "files": 4,
+      "kitImports": 0,
+      "signalImports": 0,
+      "parts": [
+        "Button"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "app/_dev-inspector": {
+      "files": 4,
+      "kitImports": 0,
+      "signalImports": 0,
+      "parts": [],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 1
+      },
+      "suspectFiles": {
+        "app/_dev-inspector/DevInspector.tsx": {
+          "typing": 1
+        }
+      }
+    },
+    "app/_landing": {
+      "files": 5,
+      "kitImports": 1,
+      "signalImports": 0,
+      "parts": [
+        "Mark",
+        "Wordmark"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "app/_library": {
+      "files": 1,
+      "kitImports": 0,
+      "signalImports": 0,
+      "parts": [],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "app/_phases/_shared": {
+      "files": 20,
+      "kitImports": 0,
+      "signalImports": 1,
+      "parts": [
+        "Tally"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 2,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/_phases/_shared/notebook/Chips.tsx": {
+          "title": 2
+        }
+      }
+    },
+    "app/_phases/cut": {
+      "files": 18,
+      "kitImports": 0,
+      "signalImports": 5,
+      "parts": [
+        "CHIP_CLASS",
+        "Ghost",
+        "Hint",
+        "Keycaps",
+        "TALLY_TONE",
+        "Tally"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 1
+      },
+      "suspectFiles": {
+        "app/_phases/cut/parts/Transport.tsx": {
+          "typing": 1
+        }
+      }
+    },
+    "app/_phases/frames": {
+      "files": 20,
+      "kitImports": 0,
+      "signalImports": 5,
+      "parts": [
+        "CHIP_CLASS",
+        "Ghost",
+        "Hint",
+        "TALLY_TONE",
+        "TabRail",
+        "Tally",
+        "UpstreamBreak"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 1,
+        "media": 0,
+        "title": 7,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/_phases/frames/FramesAssembly.tsx": {
+          "select": 1,
+          "title": 3
+        },
+        "app/_phases/frames/ShotSheet.tsx": {
+          "title": 2
+        },
+        "app/_phases/frames/alternatives/VariantContactSheet.tsx": {
+          "title": 2
+        }
+      }
+    },
+    "app/_phases/research": {
+      "files": 31,
+      "kitImports": 1,
+      "signalImports": 11,
+      "parts": [
+        "Button",
+        "CHIP_CLASS",
+        "Deck",
+        "DeckCard",
+        "DeckStage",
+        "Dropzone",
+        "Eyebrow",
+        "Ghost",
+        "Hint",
+        "HintPopover",
+        "Modal",
+        "PipRow",
+        "StaleBadge",
+        "TALLY_TONE",
+        "Tally",
+        "hintRootClass",
+        "useHint"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 13,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/_phases/research/_parts/CardActions.tsx": {
+          "title": 1
+        },
+        "app/_phases/research/_parts/CardTile.tsx": {
+          "title": 4
+        },
+        "app/_phases/research/_parts/FollowUpResult.tsx": {
+          "title": 1
+        },
+        "app/_phases/research/beats/BeatVariantBoard.tsx": {
+          "title": 1
+        },
+        "app/_phases/research/beats/ModeChooser.tsx": {
+          "title": 1
+        },
+        "app/_phases/research/guided/RunStage.tsx": {
+          "title": 1
+        },
+        "app/_phases/research/run/RunTrace.tsx": {
+          "title": 3
+        },
+        "app/_phases/research/run/controls.tsx": {
+          "title": 1
+        }
+      }
+    },
+    "app/_phases/score": {
+      "files": 5,
+      "kitImports": 0,
+      "signalImports": 2,
+      "parts": [
+        "CHIP_CLASS",
+        "Hint",
+        "Provenance",
+        "TALLY_TONE",
+        "Tally",
+        "UpstreamBreak"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 1,
+        "title": 5,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/_phases/score/ScoreSpotting.tsx": {
+          "media": 1,
+          "title": 5
+        }
+      }
+    },
+    "app/_phases/script": {
+      "files": 46,
+      "kitImports": 0,
+      "signalImports": 14,
+      "parts": [
+        "DeckCard",
+        "DeckStage",
+        "Ghost",
+        "Hint",
+        "Modal",
+        "Segmented",
+        "StaleBadge",
+        "TabRail",
+        "Tally",
+        "UpstreamBreak"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 1,
+        "media": 0,
+        "title": 11,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/_phases/script/_matrix/MatrixCoverage.tsx": {
+          "title": 2
+        },
+        "app/_phases/script/_matrix/MatrixSpend.tsx": {
+          "title": 1
+        },
+        "app/_phases/script/_matrix/MatrixTracks.tsx": {
+          "title": 3
+        },
+        "app/_phases/script/_matrix/VersionBar.tsx": {
+          "title": 1
+        },
+        "app/_phases/script/_matrix/shared.tsx": {
+          "title": 1
+        },
+        "app/_phases/script/_notes/NotesContext.tsx": {
+          "title": 1
+        },
+        "app/_phases/script/_notes/PresetSelect.tsx": {
+          "title": 1
+        },
+        "app/_phases/script/_notes/RecalibrateControl.tsx": {
+          "title": 1
+        },
+        "app/_phases/script/trailer/PromiseLedger.tsx": {
+          "select": 1
+        }
+      }
+    },
+    "app/_projects": {
+      "files": 10,
+      "kitImports": 0,
+      "signalImports": 4,
+      "parts": [
+        "BandTrack",
+        "Button",
+        "Deck",
+        "DeckStage",
+        "Eyebrow",
+        "Field",
+        "Hint",
+        "Keycaps",
+        "Modal",
+        "NumberInput",
+        "Segmented",
+        "StackBar",
+        "TextArea",
+        "TextInput",
+        "components/ui/Select#Select"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 4,
+        "typing": 1
+      },
+      "suspectFiles": {
+        "app/_projects/ProjectDialog.tsx": {
+          "title": 2
+        },
+        "app/_projects/ShelfHeader.tsx": {
+          "title": 1
+        },
+        "app/_projects/parts.tsx": {
+          "title": 1
+        },
+        "app/_projects/useShelf.ts": {
+          "typing": 1
+        }
+      }
+    },
+    "app/_studio": {
+      "files": 14,
+      "kitImports": 0,
+      "signalImports": 1,
+      "parts": [
+        "Provenance"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "app/api": {
+      "files": 53,
+      "kitImports": 0,
+      "signalImports": 0,
+      "parts": [],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "app/articles": {
+      "files": 11,
+      "kitImports": 0,
+      "signalImports": 5,
+      "parts": [
+        "Button",
+        "CHIP_CLASS",
+        "Field",
+        "Ghost",
+        "Hint",
+        "Provenance",
+        "Segmented",
+        "TALLY_TONE",
+        "Tally",
+        "TextArea",
+        "TextInput",
+        "components/ui/Select#Select"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 3,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/articles/ArticlesView.tsx": {
+          "title": 1
+        },
+        "app/articles/RunView.tsx": {
+          "title": 1
+        },
+        "app/articles/parts.tsx": {
+          "title": 1
+        }
+      }
+    },
+    "app/board": {
+      "files": 9,
+      "kitImports": 1,
+      "signalImports": 3,
+      "parts": [
+        "Hint",
+        "Keycaps",
+        "PipRow",
+        "StackBar",
+        "Tally",
+        "components/ui/Select#Select",
+        "useToast"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 4,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/board/parts.tsx": {
+          "media": 4
+        }
+      }
+    },
+    "app/calendar": {
+      "files": 16,
+      "kitImports": 0,
+      "signalImports": 7,
+      "parts": [
+        "Button",
+        "CHIP_CLASS",
+        "Field",
+        "Panel",
+        "PipRow",
+        "TALLY_TONE",
+        "TabRail",
+        "Tally",
+        "TextArea",
+        "TextInput",
+        "components/ui/Select#Select"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "app/foundry": {
+      "files": 16,
+      "kitImports": 1,
+      "signalImports": 8,
+      "parts": [
+        "Button",
+        "CHIP_CLASS",
+        "Hint",
+        "Keycaps",
+        "Modal",
+        "StackBar",
+        "TALLY_TONE",
+        "Tally",
+        "useRoving"
+      ],
+      "suspects": {
+        "tab": 1,
+        "select": 0,
+        "media": 0,
+        "title": 1,
+        "typing": 3
+      },
+      "suspectFiles": {
+        "app/foundry/CullGrid.tsx": {
+          "typing": 1
+        },
+        "app/foundry/DojoView.tsx": {
+          "typing": 1
+        },
+        "app/foundry/ExtractBoard.tsx": {
+          "typing": 1
+        },
+        "app/foundry/ExtractView.tsx": {
+          "title": 1
+        },
+        "app/foundry/plant.tsx": {
+          "tab": 1
+        }
+      }
+    },
+    "app/kit": {
+      "files": 11,
+      "kitImports": 7,
+      "signalImports": 1,
+      "parts": [
+        "ASTERISM_PATH",
+        "ASTERISM_STARS",
+        "BandTrack",
+        "Bar",
+        "Button",
+        "CHIP_CLASS",
+        "Callout",
+        "Card",
+        "CardGrid",
+        "CheckField",
+        "Chip",
+        "Chips",
+        "Column",
+        "Command",
+        "ConfirmDialog",
+        "ContextMenu",
+        "Count",
+        "Credit",
+        "Crumbs",
+        "DataTable",
+        "Deck",
+        "DeckCard",
+        "DeckStage",
+        "DefList",
+        "Doc",
+        "DocLede",
+        "DocSection",
+        "Dock",
+        "DockAction",
+        "Dropzone",
+        "Duo",
+        "Entry",
+        "ErrorBox",
+        "Field",
+        "FieldRow",
+        "Figures",
+        "Final",
+        "FlagChip",
+        "FolderTree",
+        "Ghost",
+        "Hint",
+        "HintPopover",
+        "KeyRow",
+        "Keycaps",
+        "Kicker",
+        "LayerList",
+        "Loading",
+        "LockNote",
+        "Magnitude",
+        "Mark",
+        "Matrix",
+        "Meridian",
+        "NotificationBell",
+        "NumberField",
+        "NumberInput",
+        "OpenLink",
+        "PageHead",
+        "Pager",
+        "PanelBox",
+        "PipRow",
+        "Plate",
+        "Player",
+        "Prose",
+        "Provenance",
+        "Report",
+        "RowHead",
+        "Rule",
+        "STUDIO_STEPS",
+        "SaveState",
+        "Scene",
+        "ScoreChip",
+        "Segmented",
+        "Select",
+        "Sheet",
+        "SideItem",
+        "SideList",
+        "Sky",
+        "StackBar",
+        "StageRail",
+        "StaleBadge",
+        "Stats",
+        "StatusGlyph",
+        "StatusPill",
+        "StatusStrip",
+        "Steps",
+        "TALLY_TONE",
+        "TabRail",
+        "Table",
+        "Tag",
+        "Tally",
+        "TextArea",
+        "TextField",
+        "TextInput",
+        "Thumb",
+        "Tile",
+        "Timeline",
+        "ToastTray",
+        "Transport",
+        "UpstreamBreak",
+        "UserMenu",
+        "Verbatim",
+        "VerdictKeys",
+        "VerdictMark",
+        "Waveform",
+        "Wordmark",
+        "WorldRoot",
+        "clock",
+        "gradeOf",
+        "hintRootClass",
+        "pct",
+        "useHint",
+        "useRoving",
+        "useToast",
+        "useWindow"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "app/library": {
+      "files": 39,
+      "kitImports": 4,
+      "signalImports": 11,
+      "parts": [
+        "Button",
+        "CHIP_CLASS",
+        "Dropzone",
+        "Ghost",
+        "Hint",
+        "Keycaps",
+        "Modal",
+        "Panel",
+        "PipRow",
+        "Player",
+        "Segmented",
+        "TALLY_TONE",
+        "TabRail",
+        "ToastTray",
+        "WorldRoot",
+        "clock",
+        "useToast"
+      ],
+      "suspects": {
+        "tab": 2,
+        "select": 0,
+        "media": 0,
+        "title": 2,
+        "typing": 2
+      },
+      "suspectFiles": {
+        "app/library/AssetLightbox.tsx": {
+          "title": 1,
+          "typing": 1
+        },
+        "app/library/audio/AudioWorkbench.tsx": {
+          "tab": 2,
+          "typing": 1
+        },
+        "app/library/parts.tsx": {
+          "title": 1
+        }
+      }
+    },
+    "app/playground": {
+      "files": 35,
+      "kitImports": 0,
+      "signalImports": 12,
+      "parts": [
+        "CHIP_CLASS",
+        "Ghost",
+        "Hint",
+        "Keycaps",
+        "Panel",
+        "PipRow",
+        "Provenance",
+        "TALLY_TONE",
+        "TabRail",
+        "Tally",
+        "components/ui/Select#Select"
+      ],
+      "suspects": {
+        "tab": 1,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 3
+      },
+      "suspectFiles": {
+        "app/playground/hunt/Audition.tsx": {
+          "typing": 1
+        },
+        "app/playground/hunt/index.tsx": {
+          "tab": 1,
+          "typing": 1
+        },
+        "app/playground/triage/Judge.tsx": {
+          "typing": 1
+        }
+      }
+    },
+    "app/projects": {
+      "files": 3,
+      "kitImports": 0,
+      "signalImports": 1,
+      "parts": [
+        "Button",
+        "Ghost",
+        "Tally"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 1,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/projects/ProjectsView.tsx": {
+          "title": 1
+        }
+      }
+    },
+    "app/studio": {
+      "files": 4,
+      "kitImports": 0,
+      "signalImports": 0,
+      "parts": [
+        "Button"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 2,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "app/studio/[projectId]/Stepper.tsx": {
+          "title": 1
+        },
+        "app/studio/[projectId]/StudioView.tsx": {
+          "title": 1
+        }
+      }
+    },
+    "components/kit": {
+      "files": 48,
+      "kitImports": 13,
+      "signalImports": 4,
+      "parts": [
+        "ASTERISM_PATH",
+        "ASTERISM_STARS",
+        "Button",
+        "Ghost",
+        "Magnitude",
+        "Modal",
+        "Sky",
+        "StackBar",
+        "StatusGlyph",
+        "StatusPill",
+        "Tally",
+        "gradeOf"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "components/ui": {
+      "files": 15,
+      "kitImports": 1,
+      "signalImports": 1,
+      "parts": [
+        "Bar",
+        "Button",
+        "Crumbs",
+        "Ghost",
+        "Mark",
+        "NotificationBell",
+        "UserMenu",
+        "Wordmark",
+        "WorldRoot",
+        "components/ui/Primitives#Wordmark"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 1,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {
+        "components/ui/Clip.tsx": {
+          "media": 1
+        }
+      }
+    },
+    "components/ui/deck": {
+      "files": 10,
+      "kitImports": 0,
+      "signalImports": 0,
+      "parts": [
+        "Button",
+        "DeckCard",
+        "StageRail"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    },
+    "components/ui/signal": {
+      "files": 12,
+      "kitImports": 0,
+      "signalImports": 4,
+      "parts": [
+        "Button",
+        "CHIP_CLASS",
+        "Hint",
+        "HintPopover",
+        "TALLY_TONE",
+        "Tally",
+        "hintRootClass",
+        "useHint"
+      ],
+      "suspects": {
+        "tab": 0,
+        "select": 0,
+        "media": 0,
+        "title": 0,
+        "typing": 0
+      },
+      "suspectFiles": {}
+    }
+  },
+  "zeroAdopters": [
+    "ASTERISM_PATH",
+    "ASTERISM_STARS",
+    "Callout",
+    "Card",
+    "CardGrid",
+    "CheckField",
+    "Chip",
+    "Chips",
+    "Column",
+    "Command",
+    "ConfirmDialog",
+    "ContextMenu",
+    "Count",
+    "Credit",
+    "DataTable",
+    "DefList",
+    "Doc",
+    "DocLede",
+    "DocSection",
+    "Dock",
+    "DockAction",
+    "Duo",
+    "Entry",
+    "ErrorBox",
+    "FieldRow",
+    "Figures",
+    "Final",
+    "FlagChip",
+    "FolderTree",
+    "KeyRow",
+    "Kicker",
+    "LayerList",
+    "Loading",
+    "LockNote",
+    "Magnitude",
+    "Matrix",
+    "Meridian",
+    "NumberField",
+    "OpenLink",
+    "PageHead",
+    "Pager",
+    "PanelBox",
+    "Plate",
+    "Prose",
+    "Report",
+    "RowHead",
+    "Rule",
+    "STUDIO_STEPS",
+    "SaveState",
+    "Scene",
+    "ScoreChip",
+    "Select",
+    "Sheet",
+    "SideItem",
+    "SideList",
+    "Sky",
+    "Stats",
+    "StatusGlyph",
+    "StatusPill",
+    "StatusStrip",
+    "Steps",
+    "Table",
+    "Tag",
+    "TextField",
+    "Thumb",
+    "Tile",
+    "Timeline",
+    "Transport",
+    "Verbatim",
+    "VerdictKeys",
+    "VerdictMark",
+    "Waveform",
+    "components/ui/Primitives#Waveform",
+    "gradeOf",
+    "pct",
+    "useWindow"
+  ]
+}
