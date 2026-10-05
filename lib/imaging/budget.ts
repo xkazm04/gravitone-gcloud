@@ -24,6 +24,18 @@
 // does NOT compromise pricing.ts's no-env property — this module reads env, that
 // one still does not.
 //
+// ── THE KERNEL MOVED OUT (2026-10-05, card IMG-A stage 1) ──────────────────
+//
+// The reserve → settle → book mechanics below now run on lib/spend/meter.ts,
+// the one kernel every metered vendor is meant to share, over its in-memory
+// store — so "per-process" above is still exactly true, and moving to a shared
+// store is now a store swap rather than a rewrite. This file keeps every name
+// it always exported, the vocabulary (`usd`, `cap`, `provider`), and the lines
+// and refusal sentence an operator greps for. Everything that is about
+// imaging stays here; everything that is about a ceiling moved.
+// tests/golden-path/meter-conformance.probe.spec.ts runs the shared kit against
+// these exports.
+//
 // ── THE METER WATCHES ITSELF (added 2026-08-24) ────────────────────────────
 //
 // A ceiling that never reports its own activity is only half a limit. Two things
@@ -50,23 +62,22 @@
 // them, so they need none of log.ts's scrubbing (and this module deliberately
 // does not depend on log.ts).
 
-import { overBudget } from "./errors";
+import { SPEND_CLASSES, ceilingOf, floorOf, windowMsOf } from "../spend/classes";
+import { createMeter } from "../spend/meter";
+import { ImagingError, overBudget } from "./errors";
 import { estimatePerImage } from "./pricing";
 import type { Capability, ProviderId } from "./types";
 
-export const BUDGET_VAR = "IMAGING_BUDGET_USD_PER_WINDOW";
-export const WINDOW_VAR = "IMAGING_BUDGET_WINDOW_MS";
-export const FLOOR_VAR = "IMAGING_BUDGET_FLOOR_USD";
+const CLASS = SPEND_CLASSES["imaging-usd"];
 
-const DEFAULT_CEILING_USD = 5;
-const DEFAULT_WINDOW_MS = 3_600_000; // one hour
-const DEFAULT_FLOOR_USD = 0; // off unless an operator states a band
+export const BUDGET_VAR = CLASS.ceilingVar;
+export const WINDOW_VAR = CLASS.windowVar;
+export const FLOOR_VAR = CLASS.floorVar;
 
-/** The ceiling in USD. Unset/negative/NaN → the safe default. `0` is a valid
- *  ceiling meaning "spend nothing", not "disabled". */
+/** The ceiling in USD. Unset/negative/NaN → the safe default ($5). `0` is a
+ *  valid ceiling meaning "spend nothing", not "disabled". */
 export function budgetCeilingUsd(): number {
-  const n = Number(process.env[BUDGET_VAR]);
-  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_CEILING_USD;
+  return ceilingOf(CLASS);
 }
 
 /**
@@ -84,14 +95,12 @@ export function budgetCeilingUsd(): number {
  * `assertWithinBudget`, so declaring a floor can never change who gets refused.
  */
 export function budgetFloorUsd(): number {
-  const n = Number(process.env[FLOOR_VAR]);
-  return Number.isFinite(n) && n >= 0 ? n : DEFAULT_FLOOR_USD;
+  return floorOf(CLASS);
 }
 
-/** The rolling window in ms. Unset/non-positive/NaN → the safe default. */
+/** The rolling window in ms. Unset/non-positive/NaN → the safe default (1 h). */
 export function budgetWindowMs(): number {
-  const n = Number(process.env[WINDOW_VAR]);
-  return Number.isFinite(n) && n > 0 ? n : DEFAULT_WINDOW_MS;
+  return windowMsOf(CLASS);
 }
 
 /**
@@ -138,8 +147,6 @@ export interface SpendRow {
   basis: SpendBasis;
 }
 
-let ledger: SpendRow[] = [];
-
 /**
  * A reservation of estimated spend held while a request is in flight.
  */
@@ -147,18 +154,6 @@ export interface Hold {
   id: string;
   amountUsd: number;
   createdAt: number;
-}
-
-const activeHolds: Map<string, Hold> = new Map();
-let holdSeq = 0;
-
-/** Total currently reserved across all active holds. */
-export function heldUsd(): number {
-  let total = 0;
-  for (const h of activeHolds.values()) {
-    total += h.amountUsd;
-  }
-  return total;
 }
 
 /**
@@ -194,56 +189,68 @@ export interface BudgetCounters {
   lastEvictionAt: number | null;
 }
 
-const zeroCounters = (): BudgetCounters => ({
-  refusals: 0,
-  refusedUsd: 0,
-  booked: 0,
-  bookedFailed: 0,
-  failedUsd: 0,
-  unpriced: 0,
-  evicted: 0,
-  evictedUsd: 0,
-  lastEvictionAt: null,
-});
-
-let counters: BudgetCounters = zeroCounters();
-
 /** One greppable line, same `[imaging]` prefix as log.ts's call lines so a
  *  single grep finds the engine's whole trace. Numbers only — see the header. */
 function note(line: string): void {
   console.log(`[imaging] budget ${line}`);
 }
 
-function prune(now: number): void {
-  const cutoff = now - budgetWindowMs();
-  const kept: SpendRow[] = [];
-  let droppedUsd = 0;
-  let dropped = 0;
-  for (const s of ledger) {
-    if (s.at >= cutoff) kept.push(s);
-    else {
-      dropped++;
-      droppedUsd += s.usd;
-    }
-  }
-  if (dropped === 0) return; // nothing rolled over; stay silent
-  ledger = kept;
-  counters.evicted += dropped;
-  counters.evictedUsd += droppedUsd;
-  counters.lastEvictionAt = now;
-  const remaining = kept.reduce((a, s) => a + s.usd, 0);
+/** The axes an imaging row is attributed on — the ones log.ts prints. */
+type ImagingAxes = { cap: Capability; provider: ProviderId; model?: string };
+
+/**
+ * The ledger. One kernel meter over the in-memory store; everything below is
+ * this file's vocabulary laid over it.
+ */
+const meter = createMeter<SpendEntry, ImagingAxes, SpendBasis>(CLASS, {
+  entry: (e) => ({
+    amount: e.usd,
+    outcome: e.outcome,
+    basis: e.basis,
+    axes: { cap: e.cap, provider: e.provider, model: e.model },
+    at: e.at,
+  }),
+  refuse: ({ amount, spent, held, ceiling, windowMs, refusals }) => {
+    note(
+      `refused est=$${amount.toFixed(4)} spent=$${spent.toFixed(4)} held=$${held.toFixed(4)} ` +
+        `ceiling=$${ceiling.toFixed(2)} windowMs=${windowMs} refusals=${refusals}`,
+    );
+    const windowMin = Math.round(windowMs / 60000);
+    const effectiveSpent = spent + held;
+    return overBudget(
+      `Imaging spend ceiling reached: this call is estimated at $${amount.toFixed(4)} and ` +
+        `$${effectiveSpent.toFixed(4)} has already been spent in the last ~${windowMin} min, which would ` +
+        `exceed the $${ceiling.toFixed(2)} ceiling (${BUDGET_VAR}). Refused before any vendor was ` +
+        `called; wait for the window to roll over or raise the ceiling.`,
+    );
+  },
+  // A reservation that is not a finite, non-negative number is the caller's
+  // input, not a budget verdict: a 400, nothing dispatched, nothing billed.
+  // Reached from a direct lib caller (a pipeline script) with a `count` that is
+  // not a number — the HTTP route already validates it (api.ts asCount).
+  invalid: (amount) =>
+    new ImagingError(
+      `Imaging spend cannot be reserved: the estimate for this call is ${String(amount)}, ` +
+        `not a finite non-negative amount. Check the request's image count.`,
+      "invalid-request",
+    ),
   // The reset is the ONLY sanctioned way spend leaves the window, so it says so
   // out loud: a total that fell without one of these lines is a bug, not a roll.
-  note(
-    `window-reset evicted=${dropped} usd=$${droppedUsd.toFixed(4)} ` +
-      `remaining=$${remaining.toFixed(4)} windowMs=${budgetWindowMs()}`,
-  );
+  evicted: ({ dropped, droppedAmount, remaining, windowMs }) =>
+    note(
+      `window-reset evicted=${dropped} usd=$${droppedAmount.toFixed(4)} ` +
+        `remaining=$${remaining.toFixed(4)} windowMs=${windowMs}`,
+    ),
+});
+
+/** Total currently reserved across all active holds. */
+export function heldUsd(): number {
+  return meter.held();
 }
 
 /** Total spend inside the current window. */
 export function currentSpendUsd(now: number = Date.now()): number {
-  prune(now);
-  return ledger.reduce((a, s) => a + s.usd, 0);
+  return meter.spent(now);
 }
 
 /**
@@ -267,26 +274,33 @@ export function budgetStats(now: number = Date.now()): {
   rows: number;
   counters: BudgetCounters;
 } {
-  const spentUsd = currentSpendUsd(now); // prunes first, so the counters are current
-  const held = heldUsd();
-  const ceilingUsd = budgetCeilingUsd();
-  const floorUsd = budgetFloorUsd();
-  const windowMs = budgetWindowMs();
+  // The kernel prunes first, so the counters are current. `underFloor` is a
+  // declared band, some traffic, and a total beneath the band's bottom — rows
+  // must be non-zero: an idle window is not a thrifty one.
+  const s = meter.stats(now);
+  const c = s.counters;
   return {
-    ceilingUsd,
-    floorUsd,
-    // A declared band, some traffic, and a total beneath the band's bottom.
-    // Rows must be non-zero: an idle window is not a thrifty one, and reporting
-    // an empty meter as under-floor would make the signal worthless.
-    underFloor: floorUsd > 0 && ledger.length > 0 && spentUsd < floorUsd,
-    spentUsd,
-    heldUsd: held,
-    remainingUsd: Math.max(ceilingUsd - spentUsd - held, 0),
-    windowMs,
-    windowStart: now - windowMs,
-    windowEnd: now,
-    rows: ledger.length,
-    counters: { ...counters },
+    ceilingUsd: s.ceiling,
+    floorUsd: s.floor,
+    underFloor: s.underFloor,
+    spentUsd: s.spent,
+    heldUsd: s.held,
+    remainingUsd: s.remaining,
+    windowMs: s.windowMs,
+    windowStart: s.windowStart,
+    windowEnd: s.windowEnd,
+    rows: s.rows,
+    counters: {
+      refusals: c.refusals,
+      refusedUsd: c.refused,
+      booked: c.booked,
+      bookedFailed: c.bookedFailed,
+      failedUsd: c.failed,
+      unpriced: c.unpriced,
+      evicted: c.evicted,
+      evictedUsd: c.evictedAmount,
+      lastEvictionAt: c.lastEvictionAt,
+    },
   };
 }
 
@@ -303,11 +317,10 @@ export function budgetStats(now: number = Date.now()): {
  * the preferred provider ever called — is computed there, against this.
  */
 export function reachByCapability(now: number = Date.now()): Record<string, ProviderId[]> {
-  prune(now);
   const reach: Record<string, Set<ProviderId>> = {};
-  for (const r of ledger) {
-    if (r.outcome !== "served" || !r.cap || !r.provider) continue;
-    (reach[r.cap] ??= new Set()).add(r.provider);
+  for (const { outcome, axes } of meter.rows(now)) {
+    if (outcome !== "served" || !axes.cap || !axes.provider) continue;
+    (reach[axes.cap] ??= new Set()).add(axes.provider);
   }
   const out: Record<string, ProviderId[]> = {};
   for (const [cap, set] of Object.entries(reach)) out[cap] = [...set].sort();
@@ -334,45 +347,26 @@ export function estimatePendingUsd(images: number = 1): number {
  * Refuses if spending `amountUsd` now would exceed the window ceiling
  * (taking into account already-booked spend and active holds).
  * Throws an `over-budget` ImagingError; returns a Hold on success.
+ *
+ * The refusal is counted BEFORE the throw, so it cannot escape unrecorded down
+ * the one path that leaves without returning. The count is the difference
+ * between "the ceiling is working" and "the ceiling is strangling something",
+ * and neither is legible without it.
+ *
+ * An amount that is not a finite, non-negative number throws an
+ * `invalid-request` ImagingError instead, and is never held: a NaN hold used to
+ * be admitted and made every later comparison against the ceiling false.
  */
 export function reserve(amountUsd: number, now: number = Date.now()): Hold {
-  const ceiling = budgetCeilingUsd();
-  const spent = currentSpendUsd(now);
-  const held = heldUsd();
-  if (spent + held + amountUsd > ceiling) {
-    // Counted BEFORE the throw, so a refusal cannot escape unrecorded down the
-    // one path that leaves this function without returning. The count is the
-    // difference between "the ceiling is working" and "the ceiling is
-    // strangling something", and neither is legible without it.
-    counters.refusals++;
-    counters.refusedUsd += amountUsd;
-    note(
-      `refused est=$${amountUsd.toFixed(4)} spent=$${spent.toFixed(4)} held=$${held.toFixed(4)} ` +
-        `ceiling=$${ceiling.toFixed(2)} windowMs=${budgetWindowMs()} refusals=${counters.refusals}`,
-    );
-    const windowMin = Math.round(budgetWindowMs() / 60000);
-    const effectiveSpent = spent + held;
-    throw overBudget(
-      `Imaging spend ceiling reached: this call is estimated at $${amountUsd.toFixed(4)} and ` +
-        `$${effectiveSpent.toFixed(4)} has already been spent in the last ~${windowMin} min, which would ` +
-        `exceed the $${ceiling.toFixed(2)} ceiling (${BUDGET_VAR}). Refused before any vendor was ` +
-        `called; wait for the window to roll over or raise the ceiling.`,
-    );
-  }
-  const hold: Hold = {
-    id: `hold-${++holdSeq}-${now}`,
-    amountUsd,
-    createdAt: now,
-  };
-  activeHolds.set(hold.id, hold);
-  return hold;
+  const h = meter.reserve(amountUsd, now);
+  return { id: h.id, amountUsd: h.amount, createdAt: h.createdAt };
 }
 
 /**
  * Release a hold without recording spend (e.g. on unbilled failure or cancellation).
  */
 export function release(hold: Hold): void {
-  activeHolds.delete(hold.id);
+  meter.release(hold);
 }
 
 /**
@@ -398,13 +392,10 @@ export interface SpendEntry {
 
 /**
  * Settle a hold by removing the reservation and recording the actual spend.
+ * The hold is gone afterwards even if an entry throws while being read.
  */
 export function settle(hold: Hold, entries: SpendEntry | SpendEntry[]): void {
-  activeHolds.delete(hold.id);
-  const list = Array.isArray(entries) ? entries : [entries];
-  for (const entry of list) {
-    recordSpend(entry);
-  }
+  meter.settle(hold, entries);
 }
 
 /**
@@ -433,19 +424,7 @@ export function settle(hold: Hold, entries: SpendEntry | SpendEntry[]): void {
  * and carry `outcome: "failed"` so a reader can subtract them.
  */
 export function recordSpend(entry: SpendEntry): void {
-  const { usd, cap, provider, model, outcome, basis } = entry;
-  const now = entry.at ?? Date.now();
-  if (typeof usd === "number" && Number.isFinite(usd) && usd > 0) {
-    prune(now);
-    ledger.push({ at: now, usd, cap, provider, model, outcome, basis });
-    counters.booked++;
-    if (outcome === "failed") {
-      counters.bookedFailed++;
-      counters.failedUsd += usd;
-    }
-    return;
-  }
-  counters.unpriced++;
+  meter.book(entry);
 }
 
 /**
@@ -470,35 +449,33 @@ export function spendByAxis(now: number = Date.now()): {
   byOutcome: Record<SpendOutcome, number>;
   unattributedUsd: number;
 } {
-  prune(now);
-  const byCapability: Record<string, number> = {};
-  const byProvider: Record<string, number> = {};
-  const byModel: Record<string, number> = {};
-  const byOutcome: Record<SpendOutcome, number> = { served: 0, failed: 0 };
-  let totalUsd = 0;
-  let unattributedUsd = 0;
-  for (const r of ledger) {
-    totalUsd += r.usd;
-    byOutcome[r.outcome] += r.usd;
-    if (r.cap) byCapability[r.cap] = (byCapability[r.cap] ?? 0) + r.usd;
-    else unattributedUsd += r.usd;
-    if (r.provider) byProvider[r.provider] = (byProvider[r.provider] ?? 0) + r.usd;
-    if (r.model) byModel[r.model] = (byModel[r.model] ?? 0) + r.usd;
-  }
-  return { totalUsd, byCapability, byProvider, byModel, byOutcome, unattributedUsd };
+  const a = meter.byAxis(now);
+  return {
+    totalUsd: a.total,
+    byCapability: a.byAxis.cap,
+    byProvider: a.byAxis.provider,
+    byModel: a.byAxis.model,
+    byOutcome: a.byOutcome,
+    unattributedUsd: a.unattributed,
+  };
 }
 
 /** The window's rows, newest last. A copy — a reader cannot reach in and edit
  *  the ledger by mutating what it was shown. */
 export function spendRows(now: number = Date.now()): readonly SpendRow[] {
-  prune(now);
-  return ledger.map((r) => ({ ...r }));
+  return meter.rows(now).map((r) => ({
+    at: r.at,
+    usd: r.amount,
+    cap: r.axes.cap,
+    provider: r.axes.provider,
+    model: r.axes.model,
+    outcome: r.outcome,
+    basis: r.basis,
+  }));
 }
 
 /** Test hook — clear the window ledger AND the counters, so one probe's
  *  refusals never show up in the next one's reading. */
 export function __resetBudget(): void {
-  ledger = [];
-  counters = zeroCounters();
-  activeHolds.clear();
+  meter.reset();
 }

@@ -1,0 +1,79 @@
+// SPEND CLASSES — what each metered balance is, declared once.
+//
+// A spend class is one ceiling: a unit, the env vars an operator turns it with,
+// the defaults that apply when they do not, and the axes a booked row is
+// attributed on. The meter (./meter.ts) is the same code for every class; the
+// class is the only thing that differs.
+//
+// ONE CLASS TODAY, BY DESIGN (card IMG-A stage 1). `imaging-usd` is the ledger
+// lib/imaging/budget.ts always kept, moved onto the kernel with no change in
+// behaviour. Music seconds and text USD join in later stages, each as one more
+// entry here — music with its own vars (lib/music/budget.ts), text with a new
+// one. A class nobody books against is a declared ceiling that enforces
+// nothing, so a class is added in the same change as its first adapter.
+//
+// ENV IS READ PER CALL, never cached at import: a probe or an operator changes a
+// ceiling after the module loaded and the next call must see it.
+//
+// DEFAULTS ARE SAFE, NOT UNLIMITED. An unset ceiling is the class's bounded
+// default, never an open tab ("budget-defaults-unlimited"). `0` is a valid
+// ceiling meaning "spend nothing", not "disabled".
+
+export type SpendClass = "imaging-usd";
+
+export type SpendUnit = "usd";
+
+export interface SpendClassDef {
+  readonly id: SpendClass;
+  readonly unit: SpendUnit;
+  /** The ceiling per window, in `unit`. */
+  readonly ceilingVar: string;
+  /** The rolling window, in ms. */
+  readonly windowVar: string;
+  /** The bottom of the expected band, in `unit`. Reporting only: nothing the
+   *  gate reads, so declaring a floor can never change who is refused. */
+  readonly floorVar: string;
+  readonly defaultCeiling: number;
+  readonly defaultWindowMs: number;
+  readonly defaultFloor: number;
+  /** The axes a booked row carries, in the order a surface lists them. */
+  readonly axes: readonly string[];
+  /** The axis whose absence makes a row `unattributed` — the honesty field a
+   *  booking path that forgot its axes shows up in. One of `axes`. */
+  readonly attributionAxis: string;
+}
+
+export const SPEND_CLASSES: Readonly<Record<SpendClass, SpendClassDef>> = {
+  "imaging-usd": {
+    id: "imaging-usd",
+    unit: "usd",
+    ceilingVar: "IMAGING_BUDGET_USD_PER_WINDOW",
+    windowVar: "IMAGING_BUDGET_WINDOW_MS",
+    floorVar: "IMAGING_BUDGET_FLOOR_USD",
+    defaultCeiling: 5,
+    defaultWindowMs: 3_600_000, // one hour
+    defaultFloor: 0, // off unless an operator states a band
+    // The axes lib/imaging/log.ts already prints, so the ledger and the log
+    // line describe one call in one vocabulary.
+    axes: ["cap", "provider", "model"],
+    attributionAxis: "cap",
+  },
+};
+
+/** The ceiling. Unset/negative/NaN → the class default. */
+export function ceilingOf(def: SpendClassDef): number {
+  const n = Number(process.env[def.ceilingVar]);
+  return Number.isFinite(n) && n >= 0 ? n : def.defaultCeiling;
+}
+
+/** The floor. Unset/negative/NaN → the class default (0: no band declared). */
+export function floorOf(def: SpendClassDef): number {
+  const n = Number(process.env[def.floorVar]);
+  return Number.isFinite(n) && n >= 0 ? n : def.defaultFloor;
+}
+
+/** The rolling window in ms. Unset/non-positive/NaN → the class default. */
+export function windowMsOf(def: SpendClassDef): number {
+  const n = Number(process.env[def.windowVar]);
+  return Number.isFinite(n) && n > 0 ? n : def.defaultWindowMs;
+}
