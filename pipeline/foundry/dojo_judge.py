@@ -56,8 +56,12 @@ def gemini(model, claim, cdir, pid, a_arm):
         parts.append({"inline_data": {"mime_type": "image/png", "data": data}})
     body = {"contents": [{"parts": parts}],
             "generationConfig": {"temperature": 0, "response_mime_type": "application/json"}}
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key()}"
-    req = urllib.request.Request(url, json.dumps(body).encode(), {"content-type": "application/json"})
+    # The key travels as a header, never in the URL: a URL is what proxy logs,
+    # tracebacks and error strings carry (lib/imaging/providers/google.ts does
+    # the same; selftest.py holds it).
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+    req = urllib.request.Request(url, json.dumps(body).encode(),
+                                 {"content-type": "application/json", "x-goog-api-key": key()})
     with urllib.request.urlopen(req, timeout=120) as resp:
         return json.loads(json.load(resp)["candidates"][0]["content"]["parts"][0]["text"])
 

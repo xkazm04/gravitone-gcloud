@@ -701,6 +701,33 @@ def test_lane_record_check_detects_tampering():
     check("tampered image detected", findings, [("02-medium", "pixels changed since record")])
 
 
+def test_dojo_gemini_key_travels_in_a_header_not_the_url():
+    # The judge put the API key in the request URL (?key=...). A URL is the part
+    # of a request that ends up in proxy logs, tracebacks and error strings; the
+    # header is the channel lib/imaging/providers/google.ts already uses.
+    # Moonshot backlog Q6, 2026-10-05. The vendor is faked at urlopen.
+    m = load("dojo_judge")
+    seen = {}
+
+    def fake_urlopen(req, timeout=None):
+        seen["url"] = req.full_url
+        seen["header"] = req.get_header("X-goog-api-key")
+        reply = {"candidates": [{"content": {"parts": [{"text": '{"pick":"A","reason":"r"}'}]}}]}
+        return io.BytesIO(json.dumps(reply).encode())
+
+    m.key = lambda: "SELFTEST-SECRET"
+    m.urllib.request.urlopen = fake_urlopen
+    with tempfile.TemporaryDirectory() as d:
+        cdir = Path(d)
+        (cdir / "pairs").mkdir()
+        for arm in ("baseline", "challenger"):
+            (cdir / "pairs" / f"p1--{arm}.png").write_bytes(b"png bytes, never decoded")
+        got = m.gemini("gemini-test", "claim", cdir, "p1", "baseline")
+    check("dojo gemini: the pick is still parsed", got.get("pick"), "A")
+    check("dojo gemini: the key is not in the URL", "SELFTEST-SECRET" in seen["url"], False)
+    check("dojo gemini: the key travels as x-goog-api-key", seen["header"], "SELFTEST-SECRET")
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -723,6 +750,7 @@ TESTS = [
     test_lane_record_record_stills_and_replay_roundtrip,
     test_lane_record_record_clip_hero_repo_relative,
     test_lane_record_check_detects_tampering,
+    test_dojo_gemini_key_travels_in_a_header_not_the_url,
 ]
 
 
