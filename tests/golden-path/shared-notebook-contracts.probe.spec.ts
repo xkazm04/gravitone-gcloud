@@ -308,3 +308,18 @@ test("evidence log: the gaps line quotes the gap and points at no dialog it cann
   expect(src, "a pointer to the notebook with no control to reach it").not.toMatch(/See the notebook/);
   expect(src, "the gap count and the first gap stay rendered").toMatch(/NOTEBOOK_COUNTS\.gaps[\s\S]{0,200}researchGaps\[0\]/);
 });
+
+test("evidence log: facts, unknowns, bibliography and the resolved state carry the notebook's names", () => {
+  const dir = "app/_phases/_shared/notebook";
+  const log = stripComments(readFileSync(join(ROOT, dir, "EvidenceLog.tsx"), "utf8"));
+  const apparatus = stripComments(readFileSync(join(ROOT, dir, "sections/Apparatus.tsx"), "utf8"));
+  expect(log.length, "walk read nothing").toBeGreaterThan(0);
+  expect(apparatus.length, "walk read nothing").toBeGreaterThan(0);
+  for (const key of ["facts", "unknowns", "sources"]) {
+    expect(log, `head for ${key} reads SECTION_LABEL`).toContain(`SECTION_LABEL.${key}`);
+  }
+  expect(log, "second vocabulary for the same rows").not.toMatch(/["'`>]\s*(claims|constraints|lifted|bibliography)/);
+  expect(log).toMatch(/label="facts"/);
+  expect(log).toMatch(/label="resolved"/);
+  expect(apparatus).toMatch(/>\s*resolved\s*</);
+});
