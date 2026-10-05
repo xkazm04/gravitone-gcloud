@@ -1,6 +1,6 @@
 // REGRESSION CONTROL for the render-boundary gate (app/_phases/script/gate.ts).
 //
-// Run:  npx tsx pipeline/gate-regression.mts
+// Run:  npm run check:gate   (npx tsx pipeline/gate-regression.mts) - in verify and CI
 //
 // Case 1 is the whole reason the gate exists. On 2026-08-11 a render shipped
 // the sentence "So when Treasury yields climbed... Bitcoin was sold" against a
@@ -32,3 +32,6 @@ for (const [name, text, shouldTrip] of cases) {
   v.forEach(f => console.log(`         → ${f.subject}: ${f.detail.slice(0,110)}`));
 }
 console.log(bad ? `\n${bad} REGRESSION FAILURE(S)` : "\nall regression cases behave correctly");
+// The status IS the gate: this printed "REGRESSION FAILURE(S)" and exited 0, so
+// nothing that ran it could fail (moonshot backlog Q4, 2026-10-05).
+process.exit(bad ? 1 : 0);
