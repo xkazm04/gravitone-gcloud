@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 472,
+  "files": 473,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -72,6 +72,7 @@
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/frames/ShotSheet.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/research/MusicVideoResearch.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/_phases/research/guided/RunStage.tsx",
         "app/_phases/research/run/LiveResult.tsx",
@@ -150,7 +151,9 @@
       "surfaces": [
         "components/kit/index.ts"
       ],
-      "adopters": []
+      "adopters": [
+        "app/_phases/research/MusicVideoResearch.tsx"
+      ]
     },
     "ContextMenu": {
       "home": "components/kit/ContextMenu.tsx",
@@ -846,6 +849,7 @@
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/frames/ShotSheet.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
+        "app/_phases/research/MusicVideoResearch.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/_phases/research/guided/RunStage.tsx",
         "app/_phases/research/run/LiveResult.tsx",
@@ -1264,7 +1268,7 @@
       "suspectFiles": {}
     },
     "app/_phases/cut": {
-      "files": 18,
+      "files": 19,
       "kitImports": 0,
       "signalImports": 5,
       "parts": [
@@ -1328,6 +1332,7 @@
       "parts": [
         "Button",
         "CHIP_CLASS",
+        "ConfirmDialog",
         "Deck",
         "DeckCard",
         "DeckStage",
@@ -2029,7 +2034,6 @@
     "Chips",
     "Column",
     "Command",
-    "ConfirmDialog",
     "ContextMenu",
     "Count",
     "Credit",
