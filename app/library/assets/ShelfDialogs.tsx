@@ -90,8 +90,8 @@ export default function ShelfDialogs({ shelf }: { shelf: Shelf }) {
             {
               label:
                 picked.has(menu.asset.id) && chosen.length > 1
-                  ? `Move ${chosen.length} to folderâ€¦`
-                  : "Move to folderâ€¦",
+                  ? `Move ${chosen.length} to folder…`
+                  : "Move to folder…",
               // Right-clicking INSIDE a selection acts on the selection;
               // right-clicking outside one acts on the tile under the pointer,
               // which is what every file manager does and what the user means.
