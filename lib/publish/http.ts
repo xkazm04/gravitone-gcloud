@@ -15,8 +15,6 @@
 // `{ detail, code }`, so it is re-spoken here rather than leaking a second
 // shape to the two clients coding against the contract.
 
-import { guardAccessOnly } from "@/lib/apiAuth";
-
 import { PublishConfigError } from "./channels";
 import { PublishError } from "./schedule";
 import { StoreError } from "./store";
@@ -25,9 +23,14 @@ export function errorResponse(message: string, status: number, code?: string): R
   return Response.json(code ? { error: message, code } : { error: message }, { status });
 }
 
-/** null = proceed; otherwise the 401 to return, in the contract's shape. */
-export async function guardPublish(req: Request): Promise<Response | null> {
-  const denied = guardAccessOnly(req);
+/** Re-speak a gate denial in the contract's shape; null (proceed) passes through.
+ *
+ *  Each route calls `guardAccessOnly(req)` ITSELF and hands the result here,
+ *  rather than this module calling it on the route's behalf: the auth probe
+ *  (tests/golden-path/imaging-auth.probe.spec.ts) reads every route file for a
+ *  gate door from lib/apiAuth.ts, and a wrapper hides the door from it — the
+ *  six publish routes first landed reading as ungated for exactly that reason. */
+export async function asContractDenial(denied: Response | null): Promise<Response | null> {
   if (!denied) return null;
   const body = (await denied.json().catch(() => ({}))) as { detail?: string; code?: string };
   return errorResponse(body.detail ?? "unauthorized", denied.status, body.code);

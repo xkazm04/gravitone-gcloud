@@ -7,13 +7,14 @@
 // Calendar and the Board see the state a tick would see — but it never
 // publishes. Publishing is `pipeline/publish.mts tick|publish`.
 
-import { guardPublish, readJson, toErrorResponse } from "@/lib/publish/http";
+import { guardAccessOnly } from "@/lib/apiAuth";
+import { asContractDenial, readJson, toErrorResponse } from "@/lib/publish/http";
 import { createSlot, listSlots, parseScheduleInput } from "@/lib/publish/schedule";
 
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const denied = await guardPublish(req);
+  const denied = await asContractDenial(guardAccessOnly(req));
   if (denied) return denied;
   try {
     const now = new Date();
@@ -24,7 +25,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const denied = await guardPublish(req);
+  const denied = await asContractDenial(guardAccessOnly(req));
   if (denied) return denied;
   try {
     const slot = await createSlot(parseScheduleInput(await readJson(req)));

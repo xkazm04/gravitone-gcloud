@@ -184,6 +184,8 @@ const OWN_LOAD_GUARD: Record<string, string> = {
     "a dialog's own open/close lifecycle rather than a keyed load; the key here is the dialog being open, not a project id.",
   "app/studio/[projectId]/StudioView.tsx":
     "the shell's project load, above every step and outside the step store entirely.",
+  "app/board/useBoard.ts":
+    "a fan-out, not a load: one effect counts eight independent sources in parallel and settles each into its own slot of a per-source state map, so a failure in one never blanks the others. useLoadFor keys ONE read to ONE apply; eight of them would be eight effects racing the same map.",
   "app/_phases/frames/music-video/MusicVideoFrames.tsx":
     "resolves a poster asset into an object URL this component itself owns and must revoke on unmount/id-change (lib/assets.ts#hydrateUploadSrcs's own discipline, applied by hand for one asset) — useLoadFor's apply callback has no cleanup hook for a browser resource like this, which is a different shape than 'apply a read result'.",
 };

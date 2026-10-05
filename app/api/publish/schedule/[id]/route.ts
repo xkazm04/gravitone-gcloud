@@ -4,13 +4,14 @@
 // A missed slot is rescheduled with status "scheduled" and a new publishAt;
 // the transitions a slot may take are lib/publish/schedule.ts's header.
 
-import { guardPublish, readJson, toErrorResponse } from "@/lib/publish/http";
+import { guardAccessOnly } from "@/lib/apiAuth";
+import { asContractDenial, readJson, toErrorResponse } from "@/lib/publish/http";
 import { cancelSlot, parseSlotPatch, updateSlot } from "@/lib/publish/schedule";
 
 export const runtime = "nodejs";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = await guardPublish(req);
+  const denied = await asContractDenial(guardAccessOnly(req));
   if (denied) return denied;
   try {
     const { id } = await params;
@@ -21,7 +22,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = await guardPublish(req);
+  const denied = await asContractDenial(guardAccessOnly(req));
   if (denied) return denied;
   try {
     const { id } = await params;
