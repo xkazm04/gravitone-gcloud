@@ -1,8 +1,10 @@
-// THE KIT CATALOG — the one typed list of what `components/kit` exports.
+// THE KIT CATALOG — the one typed list of what `components/kit` and the signal
+// vocabulary (`components/ui/signal`) export.
 //
 // The /kit route renders from it, components/kit/README.md is checked against it,
 // and tests/golden-path/kit-catalog.probe.spec.ts fails when an export of
-// components/kit/index.ts (or components/kit/brand/index.ts) has no entry here,
+// components/kit/index.ts, components/kit/brand/index.ts or
+// components/ui/signal/index.ts has no entry here,
 // when an entry names something no longer exported, or when the README stops
 // listing an entry. Add a part to the kit and this file is the next edit; the page
 // then refuses to typecheck until the part has a specimen (Parts.tsx).
@@ -330,6 +332,24 @@ export const KIT_GROUPS = [
     for: "tracks on a time axis with cues as marks",
     parts: [
       { name: "Timeline", api: "<Timeline label duration tracks=[{id,label,clips:[{id,label,start,dur,state?,offset?}]}] cues? playhead? selectedId? onSelect? tick? pxPerSecond?/>" },
+    ],
+  },
+  {
+    id: "signal",
+    title: "Signal",
+    for: "pips, a value in its band, an upstream break, keys, staleness, provenance; Hint's parts (components/ui/signal)",
+    parts: [
+      { name: "PipRow", api: '<PipRow states=["filled"|"hollow"|"amber"|"rose"] max? label?/>' },
+      { name: "BandTrack", api: "<BandTrack value min max band? unit? hatchBand? showBounds? label?/>" },
+      { name: "UpstreamBreak", api: '<UpstreamBreak blockedAt current done action?={label,onClick|href} severity?="info|error" detail?/>' },
+      { name: "Keycaps", api: "<Keycaps map=[{keys,does}] label?/>" },
+      { name: "StaleBadge", api: '<StaleBadge words? why? glyph?="hourglass|history"/>' },
+      { name: "Provenance", api: "<Provenance model? run? step? vendor? cost?/>" },
+      { name: "useHint", api: "const d = useHint() -> {hintId, open, show, hide, toggle, rootProps, triggerProps}" },
+      { name: "HintPopover", api: "<HintPopover d={useHint()}>twelve words</HintPopover>" },
+      { name: "hintRootClass", api: "the wrapper class a useHint disclosure positions against" },
+      { name: "CHIP_CLASS", api: "the chip shape a Tally draws" },
+      { name: "TALLY_TONE", api: "Record<TallyTone, classes>: neutral, cyan, emerald, amber, rose" },
     ],
   },
   {

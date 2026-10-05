@@ -30,6 +30,7 @@
     "check:style-refs": "npx tsx pipeline/style-ref-stability.mts",
     "check:narration": "node pipeline/check-narration.mjs",
     "check:clips": "node pipeline/check-clips.mjs",
+    "check:kit-census": "npx tsx pipeline/kit-census.mts --check",
     "build:preset-clips": "npx tsx pipeline/build-preset-clips.mts"
   },
   "dependencies": {
