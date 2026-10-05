@@ -57,6 +57,10 @@ export type TextErrorKind =
   /** It answered, and we could not use what came back — prose where JSON was
    *  required, a missing required field, an envelope that did not parse. */
   | "bad-response"
+  /** The caller's signal aborted. The engine was ended (a local process tree is
+   *  killed — lib/claudeCli.ts), and no other engine is tried: the caller asked
+   *  to stop, not to be served by someone else. */
+  | "cancelled"
   /** Anything else. */
   | "failed";
 
@@ -193,6 +197,12 @@ export function statusFor(kind: TextErrorKind): number {
       return 429;
     case "timeout":
       return 504;
+    // The de-facto "client closed request". Nobody is normally left to read
+    // it — the caller that aborted has stopped listening — but a route that
+    // answers one must not dress a cancel up as an engine fault (502) or as
+    // the caller's mistake (4xx in the standard range).
+    case "cancelled":
+      return 499;
     case "bad-response":
     case "failed":
       return 502;

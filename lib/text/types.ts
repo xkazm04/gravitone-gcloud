@@ -186,7 +186,9 @@ export interface RerouteStep {
     | "refused"
     | "rate-limited"
     | "timeout"
-    | "bad-response";
+    | "bad-response"
+    /** The caller cancelled while this one was serving. The walk stops here. */
+    | "cancelled";
 }
 
 /** A caller may steer within the plan; it may never replace it. Identical rules
@@ -231,6 +233,21 @@ export interface TextRequest extends TextSteer {
    * a healthy-looking probe. See router.ts::resolveTimeout.
    */
   timeoutMs?: number;
+  /**
+   * The caller's cancel, threaded to the transport.
+   *
+   * The local adapter hands it to `runClaude`, which ends the whole process
+   * tree on abort; the router checks it between candidates, so a cancelled turn
+   * never walks on to the next rung (that would be a second bill for a turn the
+   * caller asked to stop). A cancel surfaces as `TextError` kind `cancelled`.
+   *
+   * KNOWN GAP: the cloud adapter (providers/google.ts via lib/text/http.ts) does
+   * not yet abort its in-flight fetch on this signal. A request already sent to
+   * the vendor runs to its own end and its answer is returned; what the caller
+   * does with an answer to a turn it cancelled is the caller's rule (the turn
+   * ledger, lib/turns/runner.ts, refuses to let it overwrite the cancel).
+   */
+  signal?: AbortSignal;
 }
 
 /** The receipt. Travels with the answer, and onward to the client as `engine`. */

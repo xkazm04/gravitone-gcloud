@@ -26,10 +26,17 @@ export interface CliResult {
 export class CliError extends Error {
   constructor(
     message: string,
-    readonly kind: "not-installed" | "not-logged-in" | "failed" | "timeout",
+    /** `cancelled`: the caller's signal aborted and the process tree was ended
+     *  (or, for a signal already aborted, never started). Not a failure of the
+     *  engine, and never a reason to try another one. */
+    readonly kind: "not-installed" | "not-logged-in" | "failed" | "timeout" | "cancelled",
   ) {
     super(message);
   }
+
+  /** For `cancelled` only: was a process started before the cancel landed? A
+   *  signal already aborted at the door spawns nothing and spends nothing. */
+  spawned = false;
 }
 
 /** Whether this platform needs the shell to resolve `claude` (a `.cmd` shim on
@@ -276,12 +283,48 @@ export function cliArgs(usesShell: boolean = USES_SHELL): string[] {
   ];
 }
 
-/** Run one headless turn and return its text. */
-export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResult> {
+export interface RunOptions {
+  /** The application's ceiling. Floored — see floorTimeout. */
+  timeoutMs?: number;
+  /**
+   * The caller's cancel. When it aborts, the WHOLE TREE is ended (killTree, the
+   * same door the timeout uses) and the promise rejects `cancelled` at once,
+   * without waiting for the engine.
+   *
+   * Until this existed a cancel stopped at the caller: the Script step aborted
+   * its fetch on unmount and settled the job `interrupted`, the route never
+   * learned, and `claude` ran on to its 600s ceiling on the operator's seat for
+   * an answer nobody would receive. An abort that leaves the process running
+   * has not cancelled anything; it has only stopped listening — the sentence
+   * killTree's header says about the timeout, and true here for the same
+   * reason.
+   */
+  signal?: AbortSignal;
+}
+
+function cancelled(spawned: boolean): CliError {
+  const e = new CliError(
+    spawned
+      ? "The turn was cancelled, and the local Claude process tree was ended."
+      : "The turn was cancelled before the local Claude process was started.",
+    "cancelled",
+  );
+  e.spawned = spawned;
+  return e;
+}
+
+/** Run one headless turn and return its text.
+ *
+ *  The second argument is still accepted as a bare timeout, which is what
+ *  pipeline/direct-frames.mts and the probes pass. */
+export function runClaude(prompt: string, opts: number | RunOptions = {}): Promise<CliResult> {
+  const { timeoutMs = 600_000, signal } = typeof opts === "number" ? { timeoutMs: opts } : opts;
   // Floored, never taken literally: a zero or a garbage value here would kill
   // every turn in milliseconds and route the whole product to its fallback with
   // a probe that still reads green. See floorTimeout.
   const ceiling = floorTimeout(timeoutMs, 600_000);
+  // Already cancelled: nothing is spawned, so nothing is spent.
+  if (signal?.aborted) return Promise.reject(cancelled(false));
   return new Promise((resolve, reject) => {
     const child = spawn("claude", cliArgs(), {
       stdio: ["pipe", "pipe", "pipe"],
@@ -297,19 +340,34 @@ export function runClaude(prompt: string, timeoutMs = 600_000): Promise<CliResul
       // The tree, not the shell — see killTree. A timeout that left `claude`
       // running would keep spending the seat after the caller had been told
       // the turn was over.
+      signal?.removeEventListener("abort", onAbort);
       killTree(child);
       reject(new CliError(`The local Claude process did not finish within ${Math.round(ceiling / 1000)}s.`, "timeout"));
     }, ceiling);
+
+    // The tree first, then the verdict: the rejection does not wait for the
+    // close, because a cmd.exe whose grandchild is being walked by taskkill can
+    // take a moment to report, and the caller asked to stop now.
+    function onAbort() {
+      clearTimeout(timer);
+      killTree(child);
+      reject(cancelled(true));
+    }
+    signal?.addEventListener("abort", onAbort, { once: true });
 
     child.stdout.on("data", (c) => (out += c));
     child.stderr.on("data", (c) => (err += c));
     child.on("error", () => {
       clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
       reject(new CliError("The `claude` CLI is not installed or not on PATH.", "not-installed"));
     });
 
     child.on("close", (code) => {
       clearTimeout(timer);
+      // A signal that outlives this turn (a server-side turn's controller is
+      // kept until the record settles) must not reach a process that is gone.
+      signal?.removeEventListener("abort", onAbort);
       // The verdict is shared with the probe — see classifyExit — so the two
       // doors cannot disagree about what a missing binary looks like.
       if (code !== 0) return reject(classifyExit(code, err));

@@ -27,26 +27,28 @@
 import { CliError, probeClaude, runClaude } from "../../claudeCli";
 import { MODEL } from "../../model";
 import { localPosture, describePosture } from "../../deployment";
-import { TextError } from "../errors";
+import { TextError, type TextErrorKind } from "../errors";
 import type { ProbeResult, TextProvider, TextRequest, TextResult } from "../types";
 
-/** CliError's four kinds into the shared taxonomy. A total mapping, so a new
- *  CliError kind is a type error here rather than a silent `failed`. */
+/** CliError's kinds into the shared taxonomy. A total mapping — the record is
+ *  keyed by CliError's own kind union — so a new CliError kind is a type error
+ *  here rather than a silent `failed`. */
+const KIND_OF: Record<CliError["kind"], TextErrorKind> = {
+  "not-installed": "not-installed",
+  "not-logged-in": "not-logged-in",
+  timeout: "timeout",
+  cancelled: "cancelled",
+  failed: "failed",
+};
+
 function asTextError(e: CliError): TextError {
-  const kind =
-    e.kind === "not-installed"
-      ? "not-installed"
-      : e.kind === "not-logged-in"
-        ? "not-logged-in"
-        : e.kind === "timeout"
-          ? "timeout"
-          : "failed";
-  const err = new TextError(e.message, kind, "claude-cli");
+  const err = new TextError(e.message, KIND_OF[e.kind], "claude-cli");
   // A process that ran and exited non-zero, or one we killed mid-run, reached
   // the engine — the operator's seat may well have been charged for the work.
   // A missing binary never did. Evidence, not inference, exactly as
-  // ImagingError.dispatched is set.
-  err.dispatched = e.kind === "failed" || e.kind === "timeout";
+  // ImagingError.dispatched is set. A cancel is dispatched only if a process
+  // was started: a signal that was already aborted spawns nothing.
+  err.dispatched = e.kind === "failed" || e.kind === "timeout" || (e.kind === "cancelled" && e.spawned);
   return err;
 }
 
@@ -90,7 +92,10 @@ export function claudeCliProvider(): TextProvider {
     async reason(req: TextRequest, timeoutMs: number): Promise<TextResult> {
       const started = Date.now();
       try {
-        const run = await runClaude(req.prompt, timeoutMs);
+        // The caller's signal goes to the door, which ends the whole process
+        // tree on abort. Without it a cancel stopped at the HTTP layer and the
+        // engine ran on to its ceiling.
+        const run = await runClaude(req.prompt, { timeoutMs, signal: req.signal });
         return {
           text: run.text,
           provenance: {

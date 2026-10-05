@@ -108,7 +108,18 @@ async function main() {
 
   const prompt = await readStdin();
   const marker = markerOf(prompt);
-  const seen = { kind: "turn", argv, envKeys, promptChars: prompt.length, promptSha256: sha256(prompt), ...marker };
+  // `pid` is this process's own: the bottom of the tree the door spawned (under
+  // cmd.exe on win32). A probe that cancels a turn asks whether it is still
+  // alive, the sleeper-pid technique cli-kill-tree uses for the timeout.
+  const seen = {
+    kind: "turn",
+    argv,
+    envKeys,
+    pid: process.pid,
+    promptChars: prompt.length,
+    promptSha256: sha256(prompt),
+    ...marker,
+  };
 
   let cassette;
   try {
