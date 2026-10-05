@@ -45,6 +45,13 @@ Repo law are the same ones `.claude/perfect/config.md` carries - read that file'
   as a side effect** - a builder claiming it reverted this needs it verified by the Director reading
   the actual committed diff, not trusted from the report (seen twice: 2026-09-05 as a bare lesson,
   2026-10-03 as a real leaked commit the Director caught and amended out).
+- `worktree:` Turbopack refuses a worktree whose `node_modules` is a junction to the main checkout
+  ("Symlink [project]/node_modules is invalid, it points out of the filesystem root"), for `next dev`
+  AND `next build`. Builders run `next dev --webpack`. The Director's build is NOT `next build
+  --webpack`: webpack's route-export typecheck is stricter and fails on untouched pre-existing routes
+  (`api/foundry/extract`, `api/frames`). Build with Turbopack after a TEMPORARY, never-committed line
+  in next.config.ts: `nextConfig.turbopack = { ...nextConfig.turbopack, root: "<main checkout>" }`,
+  then `npm run check:bundle`, then restore the file (copy it aside first). Measured 2026-10-05.
 
 ## Rituals
 
@@ -67,6 +74,13 @@ See `.claude/perfect/config.md` `## Repo law` verbatim, plus:
 - A step surface MUST be scouted against `knowledge/templates/<template>/steps/<step>/PATTERNS.md`
   and `params.json` before it is designed. "Commission the craft research" is a valid answer.
 - `lib/projects.ts` `PHASES` and `TEMPLATES` are append-only registries (positional fallback).
+- **Tree-wide probes judge files a builder never opens — name them in every brief.** An API route
+  calls a `lib/apiAuth.ts` door (`guardRequest` / `guardAccessOnly` / `checkAccess`) IN ITS OWN FILE;
+  a wrapper hides it from `imaging-auth.probe.spec.ts`. A hand-rolled `let alive = true` guard needs
+  `useLoadFor`/`useStepFor` or a reasoned `OWN_LOAD_GUARD` entry. NO client-reachable module may
+  spell a server-only env var NAME, not even in a dev fixture or a label (`check:bundle`; a dynamic
+  import behind an inline NODE_ENV test did NOT keep the chunk out). All three surfaced only at the
+  Director's verify on 2026-10-05, after six builders reported green.
 - Prompts live in `pipeline/*-PROMPT.md` and are read by the code (`app/_phases/**/run/*`); a prompt
   change is a code change and its regression control (`pipeline/*-regression.mts`) runs.
 
@@ -87,3 +101,4 @@ One AskUserQuestion call of up to 4 questions per wave.
 - 2026-08-27 · Next 16 refuses a second `next dev` while :3000 is held — builders must smoke via `NEXT_PUBLIC_LOCAL_MODE=1 npm run build && npx next start -p 31xx`; say so in every builder brief. Builder briefs must forbid `git stash` explicitly (one ran it). Bridge auth = header `x-personas-local-token`.
 - 2026-08-30 · A UI builder's smoke server outlived its "killed" report and held next-swc, blocking worktree deletion — before `git worktree remove`, check the builder's port is dead (`Get-NetTCPConnection -LocalPort 31xx`). Also: the harness shell cwd persists across calls — a merge run while cwd is inside the worktree merges the branch into itself ("Already up to date" is the tell); cd to the main checkout explicitly. `.ai/manifest.yaml` skills-list additions can ride a concurrent session's WIP commit when that session is already appending to the same list — say so in both ledgers.
 - 2026-08-30 · Parallel builders running tree-wide gates cross-attribute failures (WP2's ratchet run caught WP3's committed lint rise; WP4 was transiently blamed) — keep requiring every builder report to split “my files” vs “the tree”, it made attribution instant. Pre-committing shared-file types (stepStore) as a Director commit before the parallel fan-out prevented the only write collision. Scout rule worth asking: “what does the consumer write on MERE hydration?” — useVersions saves an empty record on open, which killed a brief's record-existence default. The active-runs `## Active` entry can be dropped by a concurrent session's rewrite — re-read it at wrap and restate completion under Recently completed rather than assuming the entry survived.
+- 2026-10-05 (platform-consolidation, 6 parallel builders) · WP0 Director commit of wire types + an explicit HTTP contract (shapes, status codes, error body) let engine, UI and a third consumer build in parallel with zero contract drift; SendMessage to running builders delivered a mid-flight decision (access header) without a rework round. Every wave answer was the Recommended option — the operator delegates shape when options are scouted. A literal reading of "keep ported, delete Live" would have shipped a static iframe; the scout's naming check (which variant is the real implementation?) was the highest-value question of the run. Promoted to Gates/Repo law this run: Turbopack-in-worktree build recipe; tree-wide probes list.
