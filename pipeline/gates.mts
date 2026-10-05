@@ -140,6 +140,13 @@ export const GATES: readonly Gate[] = [
     rationale: "Pure function over lib/assets.ts: a parent folder totals and shows its whole subtree. Unwired from 2026-08 until gate liveness found it.",
   },
   {
+    id: "kit-census",
+    npmScript: "check:kit-census",
+    class: "blocking",
+    outcomes: "01",
+    rationale: "app/kit/census.json recomputed from an AST walk of app/ and components/ and diffed: the /kit migration map cannot go stale, and hand-rolled suspects only ratchet down.",
+  },
+  {
     id: "probes",
     npmScript: "test",
     class: "blocking",
