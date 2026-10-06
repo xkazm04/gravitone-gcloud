@@ -70,7 +70,8 @@ export interface StripGates {
   length: GateResult;
 }
 
-export type CardStatus = "rendered" | "lint-failed" | "render-failed" | "author-failed";
+/** `pending`: queued or authoring - the run has not reached a verdict on it yet. */
+export type CardStatus = "pending" | "rendered" | "lint-failed" | "render-failed" | "author-failed";
 
 export interface StripCard {
   /** "<lane>-<case>--<approachId>", "--r2" for a replica, "--ctrl" for a control. */

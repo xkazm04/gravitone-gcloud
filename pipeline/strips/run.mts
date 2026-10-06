@@ -117,7 +117,7 @@ const cardId = (a: Approach, suffix = "") =>
   `${a.case.startsWith(`${a.lane}-`) ? a.case : `${a.lane}-${a.case}`}--${a.id === "CTRL" ? "ctrl" : a.id}${suffix}`;
 const blank = (a: Approach, id: string, effort: string, replicaOf?: string): StripCard => ({
   id, lane: a.lane, case: a.case, approach: a.id, ...(replicaOf ? { replicaOf } : {}), effort,
-  status: "author-failed", rounds: 0, authorMs: 0, renderMs: 0, files: {},
+  status: "pending", rounds: 0, authorMs: 0, renderMs: 0, files: {},
 });
 
 if (CONTROLS) {

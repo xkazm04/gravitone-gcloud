@@ -330,7 +330,7 @@ function StripTile({
         ) : (
           <Art
             alt={`strip ${num}`}
-            state={ok ? (run.status === "committed" && v === "reject" ? "deleted" : "missing") : "failed"}
+            state={ok ? (run.status === "committed" && v === "reject" ? "deleted" : "missing") : card.status === "pending" ? "missing" : "failed"}
             absentWord={ok ? undefined : CARD_STATUS_WORD[card.status]}
             className="h-full w-full"
             rounded="rounded-xl"

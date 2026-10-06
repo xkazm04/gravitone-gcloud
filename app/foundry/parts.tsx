@@ -88,6 +88,7 @@ export const STRIP_STATUS_WORD: Record<StripRun["status"], string> = {
 
 /** A card's pipeline status, in the word a failed card shows instead of a player. */
 export const CARD_STATUS_WORD: Record<CardStatus, string> = {
+  pending: "authoring",
   rendered: "rendered",
   "lint-failed": "lint failed",
   "render-failed": "render failed",
