@@ -40,7 +40,9 @@ export default function Notice({
     el.querySelectorAll("button").forEach((b) => b.remove());
     const text = (el.textContent ?? "").replace(/\s+/g, " ").trim();
     if (text) say({ key: `notice:${severity}:${text}`, text });
-  }, [announce, severity, say]);
+  // `title` is a dep because a notice that stays mounted while its count moves
+  // ("3 weakened" -> "4 weakened") is new news; same words stay deduped by key.
+  }, [announce, severity, title, say]);
   const tone =
     severity === "error"
       ? "border-rose-400/30 bg-rose-400/[0.06] text-rose-200"
