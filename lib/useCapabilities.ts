@@ -19,7 +19,7 @@
 
 import { useEffect, useState } from "react";
 
-import { capabilities, PENDING_FACTS, type Capabilities, type CapabilitiesAnswer, type DeploymentFacts } from "./capabilities";
+import { capabilities, FLAGS_ONLY, PENDING_FACTS, type Capabilities, type CapabilitiesAnswer, type DeploymentFacts } from "./capabilities";
 import { accessHeader } from "./imagingClient";
 
 export interface CapabilitiesView {
@@ -29,7 +29,7 @@ export interface CapabilitiesView {
   known: boolean;
 }
 
-const UNANSWERED: DeploymentFacts = { musicKey: true, localBinaries: true };
+const UNANSWERED: DeploymentFacts = FLAGS_ONLY;
 
 let answered: CapabilitiesView | null = null;
 let asking: Promise<CapabilitiesView> | null = null;

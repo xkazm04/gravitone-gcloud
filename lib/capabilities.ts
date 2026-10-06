@@ -160,6 +160,26 @@ export interface CapabilitiesAnswer {
   facts: DeploymentFacts;
 }
 
+/** Every fact taken as present: the operator's flags alone. For READING what is
+ *  already on this machine — never for deciding whether to spend. */
+export const FLAGS_ONLY: Readonly<DeploymentFacts> = { musicKey: true, localBinaries: true };
+
+/**
+ * Whether this deployment keeps a sound store whose takes are LISTED and
+ * adopted — the musicSectionEdit FLAG alone, facts taken as present.
+ *
+ * Split from the capability on purpose. The store is this machine's disk
+ * (lib/sound/store.ts): a vendor key is needed to ADD to it (render, revise a
+ * section — those stay on the fact-backed `musicSectionEdit`/`musicGenerate`),
+ * never to read it. Folding the key into the listing would hide takes a
+ * creator already rendered and paid for the moment a key is removed or
+ * expires. A pure flag read, so the server and the browser agree on it with no
+ * request and no pending state.
+ */
+export function soundStoreListed(): boolean {
+  return capabilities(FLAGS_ONLY).musicSectionEdit;
+}
+
 /** Facts while the server has not answered yet: every one of them false, so a
  *  control that depends on one is shut until it is known to work. */
 export const PENDING_FACTS: Readonly<DeploymentFacts> = { musicKey: false, localBinaries: false };

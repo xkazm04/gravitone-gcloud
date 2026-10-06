@@ -71,7 +71,7 @@ import {
 } from "@/lib/musicClient";
 import type { MusicQuote } from "@/lib/music/pricing";
 import type { MusicProvenance } from "@/lib/music/types";
-import { absenceReason } from "@/lib/capabilities";
+import { absenceReason, soundStoreListed } from "@/lib/capabilities";
 import { useCapabilities } from "@/lib/useCapabilities";
 
 import { readStep, type StorageTrouble } from "../_shared/stepStore";
@@ -217,7 +217,7 @@ function EmptyLanes({ targetS = 0, busy = false }: { targetS?: number; busy?: bo
  *  for them.
  *
  *  `done` remains for the posture with no sound store (hosted:
- *  `capabilities().musicSectionEdit` off): an object URL over decoded audio,
+ *  `soundStoreListed()` false): an object URL over decoded audio,
  *  dead on the next load, exactly as before — option A, where it is the only
  *  honest one.
  *
@@ -511,11 +511,13 @@ function StandardScore({ projectId }: { projectId: string }) {
   /** THE SPOTTING SESSION — proposed from the script's movements, edited here,
    *  persisted under this step's own key. `null` while the reads land. */
   const session = useScoreSpots(projectId, picture?.scenes ?? null);
-  /** THE POSTURE. The sound store is this machine's disk and a revision needs
-   *  the vendor's stored-song inpainting; `musicSectionEdit` already answers
-   *  for both. Off, takes stay session-only, as they always were. */
+  /** THE POSTURE, in two halves. The sound store is this machine's disk:
+   *  whether its takes are LISTED is the operator's flag alone
+   *  (soundStoreListed) — a key is never needed to read takes already paid
+   *  for. What SPENDS (a render, a section revision) is the fact-backed
+   *  matrix: no key, no spend. Store off, takes stay session-only. */
   const { caps, facts, known: capsKnown } = useCapabilities();
-  const storeBacked = caps.musicSectionEdit;
+  const storeBacked = soundStoreListed();
   const store = useCueTakes(storeBacked);
 
   /** Spots + this project's picture + this project's story → cues. All three
@@ -1162,7 +1164,7 @@ function StandardScore({ projectId }: { projectId: string }) {
             projectId={projectId}
             spot={spot}
             store={store}
-            sectionEdit={storeBacked}
+            sectionEdit={caps.musicSectionEdit}
             onSpot={(next) => session.updateTakes(spot.id, next)}
           />
         )}

@@ -131,7 +131,7 @@ const WANT_TAILS = process.argv.includes("--tails");
  * import would be hoisted above loadEnv and would read an environment that had
  * not been filled in yet. Same reason verify-text-engine.mts does it. */
 
-const { capabilities, ABSENCE_REASON } = await import("../lib/capabilities");
+const { capabilities, ABSENCE_REASON, FLAGS_ONLY } = await import("../lib/capabilities");
 const { localPosture, describePosture } = await import("../lib/deployment");
 const { LOCAL_MODE } = await import("../lib/localMode");
 const { firebaseReady, FIREBASE_VARS } = await import("../lib/firebase");
@@ -676,7 +676,7 @@ for (const [key, flagOn] of Object.entries(caps)) {
 // its own outcome and remedy (musicGate says "set the key", localRender says
 // which posture). Folding the facts in here would file a keyless laptop's music
 // row as absent — the outcome that means no key changes it.
-const FLAGS_VIEW = { musicKey: true, localBinaries: true };
+const FLAGS_VIEW = FLAGS_ONLY;
 for (const r of capabilityRows({ ...capabilities(FLAGS_VIEW) })) add(r);
 
 /* ── .env.example vs lib/ — reported, never corrected ─────────────────────── */

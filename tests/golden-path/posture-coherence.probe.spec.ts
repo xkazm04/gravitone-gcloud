@@ -35,6 +35,7 @@ import {
   CAPABILITY_ROUTES,
   FACT_ABSENT,
   PENDING_FACTS,
+  soundStoreListed,
   type CapabilitiesAnswer,
   type DeploymentFacts,
 } from "@/lib/capabilities";
@@ -116,6 +117,29 @@ test("serverCapabilities(): reads the key and the posture from their owners - fr
   delete process.env.K_SERVICE;
   process.env.LOCAL_BINARIES = "off";
   expect(serverCapabilities().localRender, "LOCAL_BINARIES=off on a laptop").toBe(false);
+});
+
+test("keyless cell: spending section edits is off, and takes already stored are still listed - reading needs no key", () => {
+  laptop();
+  const c = serverCapabilities();
+  expect([c.musicSectionEdit, c.musicGenerate], "the spend is off with no key").toEqual([false, false]);
+  expect(soundStoreListed(), "the storeBacked decision on a keyless box").toBe(true);
+  process.env[MUSIC_KEY_VAR] = "probe-key";
+  expect([serverCapabilities().musicSectionEdit, soundStoreListed()], "keyed").toEqual([true, true]);
+  // The operator's flag is the one thing that removes the store.
+  delete process.env[MUSIC_KEY_VAR];
+  process.env.NEXT_PUBLIC_CAP_MUSIC_SECTION_EDIT = "0";
+  expect(soundStoreListed(), "flag off, no store").toBe(false);
+
+  // And the three surfaces that LIST takes decide it from soundStoreListed(),
+  // never from the fact-backed capability. Comment-stripped source.
+  const LISTERS = ["app/_phases/score/ScoreSpotting.tsx", "app/_phases/score/ads/AdsScore.tsx", "app/_phases/cut/useCut.ts"];
+  for (const f of LISTERS) {
+    const src = stripComments(readFileSync(path.join(ROOT, f), "utf8"));
+    expect(src, `${f} no longer reads soundStoreListed()`).toMatch(/\bsoundStoreListed\s*\(\s*\)/);
+    expect(src, `${f} lists takes behind the fact-backed capability`).not.toMatch(/useCueTakes\(\s*caps\./);
+    expect(src, `${f} decides the store from the fact-backed capability`).not.toMatch(/storeBacked\s*=\s*[^;]*caps\./);
+  }
 });
 
 test("absenceReason(): names the missing fact when that is the cause, the flag's reason otherwise; fact sentences fit a Hint", () => {
