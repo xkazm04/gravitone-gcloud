@@ -54,6 +54,8 @@ const NO_LEONARDO = flag("--no-leonardo");
 const NO_REVIEW = flag("--no-review");
 const RESUME = flag("--resume");
 const DRY = flag("--dry");
+/** Re-render and re-gate every authored card of --run, with no authoring turn. */
+const REGATE = flag("--regate");
 
 const ROOT = process.cwd();
 const RUN_DIR = path.join(ROOT, "foundry-out", "strips", RUN_ID);
@@ -77,6 +79,32 @@ const control = (lane: StripLane, kase: string): Approach => ({
       : "The plain, correct baseline: flat light ground, one accent, a clean labelled diagram of the causal steps in a neutral sans, steps appearing in order. No theme, no texture, no metaphor.",
   falsifier: "None intended: this card exists to prove the brief is legible and the harness works. If it fails its countable expectations, the brief or the harness is wrong.",
 });
+
+// ---- regate: re-render existing strips, spend no seat ------------------------
+if (REGATE) {
+  const runPath = path.join(RUN_DIR, "run.json");
+  const m: StripRun = JSON.parse(await readFile(runPath, "utf8"));
+  const browser = await launchHeadless();
+  try {
+    for (const card of m.cards) {
+      const html = path.join(RUN_DIR, card.id, "strip.html");
+      if (!existsSync(html) || card.status === "lint-failed" || card.status === "author-failed") continue;
+      const r = await renderStrip({ browser, htmlPath: html, outDir: path.join(RUN_DIR, card.id), lane: card.lane });
+      card.gates = r.gates;
+      card.error = r.error;
+      card.status = r.ok ? "rendered" : "render-failed";
+      card.renderMs = r.renderMs;
+      card.files = { ...card.files, ...r.files };
+      await writeFile(path.join(RUN_DIR, card.id, "meta.json"), JSON.stringify(card, null, 2));
+      const g = r.gates;
+      console.log(`[${card.id}] regated ${card.status}${g ? ` seek:${g.seek.ok ? "ok" : "X"} legibility:${g.legibility.ok ? "ok" : "X"} motion:${g.motion.ok ? "ok" : "X"}` : ""}`);
+    }
+    await writeFile(runPath, JSON.stringify(m, null, 2));
+  } finally {
+    await browser.close();
+  }
+  process.exit(0);
+}
 
 // ---- card selection ---------------------------------------------------------
 type Job = { card: StripCard; approach: Approach };

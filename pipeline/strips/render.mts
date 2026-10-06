@@ -15,12 +15,25 @@ import { copyFile, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 
-import type { Browser, Page } from "playwright";
+import { chromium, type Browser, type Page } from "playwright";
 
-import { launchHeadless, makeWorkDir, run, videoArgs, withEncoderFallback } from "../../lib/export/headless";
+import { makeWorkDir, run, videoArgs, withEncoderFallback } from "../../lib/export/headless";
 import { STRIP_FPS, STRIP_FRAMES, STRIP_SIZE, type StripGates, type StripLane } from "../../lib/foundry/strips/types";
 
-export { launchHeadless };
+/**
+ * Chromium for strips, with incremental rasterization switched off.
+ *
+ * Measured 2026-10-06 on a pure strip (every value derived from t): two
+ * identical sequential walks 0..180 ended on DIFFERENT pixels (about 0.05%,
+ * anti-aliasing at tile seams), while cold renders were identical. Partial
+ * raster reuses tiles across frames, so a frame's pixels depended on the
+ * frames before it - the exact property the seek gate measures - and the
+ * gate failed authors for the renderer's history. With these three flags
+ * cold, sequential and repeated walks are byte-identical.
+ */
+export async function launchHeadless(): Promise<Browser> {
+  return chromium.launch({ headless: true, args: ["--disable-partial-raster", "--disable-gpu", "--disable-lcd-text"] });
+}
 
 const READY_TIMEOUT_MS = 30_000;
 const FRAME_TIMEOUT_MS = 15_000;
