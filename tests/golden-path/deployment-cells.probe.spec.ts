@@ -771,9 +771,20 @@ test("invariant 1 control: seeded - localRender on where spawning is forbidden -
     ).toBe(true);
 });
 
+/** Variables the TEST RUNNER writes, not the app. Playwright's TypeScript hook
+ *  sets BROWSERSLIST_IGNORE_OLD_DATA=true the first time it compiles a file
+ *  missing from its compilation cache (playwright/lib/common/index.js
+ *  transformHook) — and this lane re-requires every app/ and lib/ module per
+ *  cell, so on a tree with freshly changed files that first compile lands
+ *  inside the lane. Measured 2026-10-06: red on the first full run after a
+ *  commit rewrote line endings, green on the next. */
+const RUNNER_OWNED = new Set(["BROWSERSLIST_IGNORE_OLD_DATA"]);
+
 test("the lane leaves process.env exactly as it found it (acceptance 7)", () => {
   const now = { ...process.env };
-  const changed = [...new Set([...Object.keys(before), ...Object.keys(now)])].filter((k) => before[k] !== now[k]);
+  const changed = [...new Set([...Object.keys(before), ...Object.keys(now)])].filter(
+    (k) => before[k] !== now[k] && !RUNNER_OWNED.has(k),
+  );
   expect(changed, "these variables differ from their value before the lane").toEqual([]);
 });
 
