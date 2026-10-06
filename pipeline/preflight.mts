@@ -146,6 +146,10 @@ const { isMusicConfigured, MUSIC_KEY_VAR } = await import("../lib/music/elevenla
 const { ACCESS_SECRET_VAR, accessSecret } = await import("../lib/apiAuth");
 const { channelReadiness, PUBLISH_ENV_VARS, PUBLISH_MODE_VAR } = await import("../lib/publish/channels");
 const { YOUTUBE_ENV_VARS } = await import("../lib/publish/oauth");
+// The declared deployment cells (CIP-B). They live beside the lane that judges
+// every route in each of them, and this report only says which one this
+// machine is closest to — the cell is that lane's fact, not a second copy here.
+const { nearestCell } = await import("../tests/golden-path/_cells");
 
 /** The browser copy of the access secret. Its NAME is derived from the server
  *  one rather than typed, because lib/apiAuth.ts owns the stem and the pair is
@@ -733,6 +737,10 @@ const report = {
     firebaseReady,
     accessGate: gatePairOk ? "open" : gateOpen ? "server-only" : "closed",
     reasoningServing: status.serving,
+    cell: (() => {
+      const { cell, diff } = nearestCell();
+      return { nearest: cell.name, exact: diff.length === 0, diff };
+    })(),
   },
   counts: {
     reachable: rows.filter((r) => r.outcome === "reachable").length,
@@ -760,6 +768,8 @@ if (WANT_JSON) {
   console.log(`  imaging env     ${imgEnv}    (IMAGING_ENV=${process.env.IMAGING_ENV?.trim() || "unset"})`);
   console.log(`  local mode      ${LOCAL_MODE ? "on" : "off"}    (${LOCAL_MODE_VAR}=${process.env[LOCAL_MODE_VAR]?.trim() || "unset"})`);
   console.log(`  route gate      ${report.posture.accessGate}`);
+  const { nearest, exact, diff: cellDiff } = report.posture.cell;
+  console.log(`  deploy cell     ${nearest}${exact ? "" : `, nearest - differs by ${cellDiff.join(" ")}`}`);
 
   rule("PROBE — what was MEASURED here (never folded into the posture above)");
   console.log(`  claude CLI      ${machine.claudeCli}`);

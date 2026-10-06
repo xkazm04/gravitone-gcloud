@@ -122,16 +122,13 @@ export interface Capabilities {
  * deployment turns things off on purpose, in its own environment, where somebody
  * has thought about it.
  *
- * A hosted deployment sets, in one block (.env.example carries the same six,
- * with a line of reason each — the two lists must agree, and until 2026-09-05
- * this one was missing the last entry, so a deployment that copied THIS block
- * shipped a music render button with no adapter behind it):
- *   NEXT_PUBLIC_CAP_MUSIC_SECTION_EDIT=0
- *   NEXT_PUBLIC_CAP_MUSIC_SFX=0
- *   NEXT_PUBLIC_CAP_LOCAL_VIDEO=0
- *   NEXT_PUBLIC_CAP_DESKTOP_TOOLING=0
- *   NEXT_PUBLIC_CAP_MUSIC_GENERATE=0    (until a Google music adapter exists)
- *   NEXT_PUBLIC_CAP_PUBLISH=0           (the calendar lives on local disk)
+ * What a hosted deployment turns off is HOSTED_CAPS below — one constant, not a
+ * comment. It used to be a list in this comment AND a list in .env.example,
+ * "the two lists must agree", and until 2026-09-05 this one was missing the
+ * last entry, so a deployment that copied it shipped a music render button with
+ * no adapter behind it. .env.example still carries the block, with a line of
+ * reason per variable, and tests/golden-path/deployment-cells.probe.spec.ts
+ * fails naming any variable on which the two differ (CIP-B).
  */
 export function capabilities(): Capabilities {
   return {
@@ -143,6 +140,58 @@ export function capabilities(): Capabilities {
     publish: on(process.env.NEXT_PUBLIC_CAP_PUBLISH, true),
   };
 }
+
+/**
+ * THE HOSTED BLOCK — every flag a hosted deployment sets, and the value it sets.
+ *
+ * One entry per capability the hosted posture cannot honour. A capability that
+ * is NOT here stays on in a hosted deployment, so an entry missing from this
+ * list is a button that is visible, enabled, and answers 503 — the failure the
+ * top of this file names. The deployment-cell lane applies exactly this block
+ * to its Cloud Run cells, so a capability left out of it is judged on the
+ * hosted routes the day it lands, rather than discovered after a deploy.
+ *
+ * `musicGenerate` is here until a Google music adapter exists (see its field
+ * above); `publish` is here because the calendar lives on local disk.
+ */
+export const HOSTED_CAPS: readonly { cap: keyof Capabilities; variable: string; value: "0" }[] = [
+  { cap: "musicSectionEdit", variable: "NEXT_PUBLIC_CAP_MUSIC_SECTION_EDIT", value: "0" },
+  { cap: "musicSfx", variable: "NEXT_PUBLIC_CAP_MUSIC_SFX", value: "0" },
+  { cap: "localVideoRender", variable: "NEXT_PUBLIC_CAP_LOCAL_VIDEO", value: "0" },
+  { cap: "desktopTooling", variable: "NEXT_PUBLIC_CAP_DESKTOP_TOOLING", value: "0" },
+  { cap: "musicGenerate", variable: "NEXT_PUBLIC_CAP_MUSIC_GENERATE", value: "0" },
+  { cap: "publish", variable: "NEXT_PUBLIC_CAP_PUBLISH", value: "0" },
+];
+
+/**
+ * The API routes behind each capability, as repo-relative route files.
+ *
+ * A capability that is ON must not have a route that answers "not configured"
+ * — that is the disagreement the deployment-cell lane looks for, per cell.
+ * A capability with no route here is one whose work never crosses this app's
+ * API: `localVideoRender` runs on the GPU rig through pipeline/vlm-probe (the
+ * hosted clip hop at /api/video/clips is a vendor, not the rig), and
+ * `desktopTooling` hands off to the operator's own machine. An empty list is a
+ * claim, and the lane checks every listed file exists.
+ *
+ * Paths, not imports: this module is read in the browser, and a route module
+ * there would pull a server's worth of code into the client bundle.
+ */
+export const CAPABILITY_ROUTES: Readonly<Record<keyof Capabilities, readonly string[]>> = {
+  musicGenerate: ["app/api/music/generate/route.ts"],
+  musicSectionEdit: ["app/api/music/compose/route.ts"],
+  musicSfx: ["app/api/music/sfx/route.ts"],
+  localVideoRender: [],
+  desktopTooling: [],
+  publish: [
+    "app/api/publish/channels/route.ts",
+    "app/api/publish/exports/route.ts",
+    "app/api/publish/metrics/route.ts",
+    "app/api/publish/metrics/refresh/route.ts",
+    "app/api/publish/schedule/route.ts",
+    "app/api/publish/schedule/[id]/route.ts",
+  ],
+};
 
 /**
  * The sentence a surface shows where a capability is absent.
