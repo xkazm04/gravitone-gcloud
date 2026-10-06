@@ -1,0 +1,46 @@
+{
+  "case": "edu-chokepoint",
+  "title": "Why one strait can move the oil price",
+  "beat": "Most oil leaving the Persian Gulf must squeeze through the narrow Strait of Hormuz, so blocking it removes supply that pipelines cannot replace, and world prices jump.",
+  "steps": [
+    "Gulf producers load tankers inside the Persian Gulf",
+    "All sea exports funnel through the Strait of Hormuz, between Oman and Iran",
+    "Bypass pipelines can carry only part of that flow",
+    "If the strait is blocked, supply to world markets drops",
+    "World oil prices rise"
+  ],
+  "facts": [
+    {
+      "text": "About 20.9 million barrels a day passed Hormuz in early 2025, about 20% of world use",
+      "source": "https://www.eia.gov/international/content/analysis/special_topics/World_Oil_Transit_Chokepoints/",
+      "publisher": "U.S. Energy Information Administration (World Oil Transit Chokepoints, last updated March 3, 2026)",
+      "quote": "In 1H25, total oil flows through the strait averaged 20.9 million b/d, or the equivalent of about 20% of global petroleum liquids consumption"
+    },
+    {
+      "text": "Bypass pipelines: about 4.7 million barrels a day",
+      "source": "https://www.eia.gov/international/content/analysis/special_topics/World_Oil_Transit_Chokepoints/",
+      "publisher": "U.S. Energy Information Administration (World Oil Transit Chokepoints, last updated March 3, 2026)",
+      "quote": "Saudi Aramco's East-West crude oil pipeline and the UAE's Abu Dhabi pipeline together could provide about 4.7 million b/d of capacity to bypass the strait"
+    },
+    {
+      "text": "2026: the strait closed, a first in the EIA's experience",
+      "source": "https://www.eia.gov/pressroom/releases/press586.php",
+      "publisher": "U.S. EIA press release, April 7, 2026",
+      "quote": "just as we had never before seen the strait close, we've never seen it reopen"
+    },
+    {
+      "text": "Brent: $85 a barrel in June 2026, $32 below its April peak",
+      "source": "https://www.eia.gov/pressroom/releases/press590.php",
+      "publisher": "U.S. EIA press release, July 7, 2026",
+      "quote": "The Brent crude oil spot price averaged $85 per barrel (b) in June, down $22/b from May and $32/b from the April 2026 peak."
+    }
+  ],
+  "countable": [
+    "exactly one narrow strait, with Oman on one side and Iran on the other",
+    "one main sea lane out of the Persian Gulf; tankers pass through it single file",
+    "bypass pipeline(s) drawn clearly thinner than the sea lane (4.7 vs 20.9 million b/d, under a quarter)",
+    "one price line that rises after the blockage"
+  ],
+  "notes": "Flow figure is first-half 2025 from EIA's chokepoints report (Table 1: Hormuz 20.7 million b/d in 2024, 20.9 in 1H25). EIA's earlier June 16, 2025 Today in Energy note gave 20 million b/d for 2024; the March 2026 report revises that to 20.7, so use the 1H25 figure. The 2026 closure facts come from EIA STEO press releases; the April peak price itself is not stated, only the $32/b drop to June.",
+  "retrieved": "2026-10-06"
+}
