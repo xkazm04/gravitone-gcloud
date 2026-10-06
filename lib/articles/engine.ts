@@ -41,6 +41,7 @@ import {
   type ReviewerCall,
   type RunAgentInput,
 } from "@/lib/agent/cliSeam";
+import { cwdBoundGitEnv } from "@/lib/gitEnv";
 import { MODEL } from "@/lib/model";
 
 import { runCheck } from "./checks";
@@ -728,7 +729,7 @@ export async function diffFiles(original: string, proposal: string, target: stri
       execFile(
         "git",
         ["-c", "core.autocrlf=false", "-c", "core.safecrlf=false", "diff", "--no-index", "--no-color", "--no-prefix", "--", left, `b/${target}`],
-        { cwd: tmp, maxBuffer: 16 * 1024 * 1024, windowsHide: true },
+        { cwd: tmp, env: cwdBoundGitEnv(), maxBuffer: 16 * 1024 * 1024, windowsHide: true },
         (err, stdout, stderr) => {
           // exit 1 = "there are differences", which is the point
           const code = err ? (err as unknown as { code?: number }).code : 0;
