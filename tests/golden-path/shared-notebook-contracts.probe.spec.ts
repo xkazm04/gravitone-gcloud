@@ -244,15 +244,12 @@ test("load guard: every exemption still names a file that carries the shape", ()
  * version bump into a close race. stepStore was "the fourteenth, and the only
  * one that did not".
  *
- * Measured 2026-09-06: twenty-one call sites, and a FIFTEENTH file that does
- * not close — the one below. It is listed rather than fixed here because it is
- * another context's file; the entry is what makes the debt visible and bounded,
- * and what makes a NEW unclosed caller fail.
+ * Measured 2026-09-06: twenty-one call sites, and a FIFTEENTH file that did
+ * not close: lib/identityEviction.ts, fixed 2026-10-06 and removed from this
+ * map. EMPTY is the legitimate state; an entry is what makes a debt visible and
+ * bounded, and what makes a NEW unclosed caller fail.
  */
-const UNCLOSED: Record<string, string> = {
-  "lib/identityEviction.ts":
-    "opens the database for the five-store eviction transaction (line ~260) and never closes it, so every sign-out and account switch leaks one connection with a live onversionchange handler — exactly the shape stepStore's withStore header describes. Out of this context's paths; the fix is a try/finally around the existing await, and it belongs to whoever owns lib/.",
-};
+const UNCLOSED: Record<string, string> = {};
 
 /** Every file that opens a database connection, walked off the tree. */
 function dbOpeners(): string[] {
