@@ -220,7 +220,22 @@ export function parseEnvelope(stdout: string): ParsedEnvelope {
  *  grok 1.0.40 on 2026-10-05 answered "API error (status 402 Payment Required):
  *  Grok Build usage balance exhausted"; codex lists the models it supports and
  *  refuses others as "not supported". */
-const UNAVAILABLE = /\b402\b|payment required|balance (is )?exhausted|insufficient (credit|balance|funds)|not supported|unsupported model|model[^.;]{0,60}(not found|does not exist|is not available|not available)|cli was not found|could not be started/;
+const UNAVAILABLE = /\b402\b|payment required|balance (is )?exhausted|insufficient (credit|balance|funds)|not supported|unsupported model|model[^.;]{0,60}(not found|does not exist|is not available|not available)|cli was not found|could not be started|eligibility check failed|load code assist/;
+/** agy fails its start-up eligibility call with a 503 and then sits idle until its own timeout:
+ *  on 2026-10-05 the Gemini reviewer printed "ERROR: failed to send message: send failed;
+ *  already reported to the user: Eligibility check failed: failed to get load code assist
+ *  response: UNAVAILABLE (code 503): The service is currently unavailable." and held its slot
+ *  for 25 minutes. The line on stdout or stderr is the whole diagnosis, so the reviewer is
+ *  stopped the moment it appears and recorded as `unavailable`. */
+const AGY_EARLY_UNAVAILABLE = /eligibility check failed[^\n]{0,200}|load code assist response[^\n]{0,200}/i;
+
+/** The early-failure line in a chunk of an engine's output, when it is one that ends the call. */
+export function earlyUnavailable(engine: ReviewerEngineName, text: string): string | undefined {
+  if (engine !== "agy") return undefined;
+  const m = AGY_EARLY_UNAVAILABLE.exec(text);
+  return m ? m[0].replace(/\s+/g, " ").trim() : undefined;
+}
+
 /** A seat or rate limit: the contest runner's pattern, plus HTTP 429. */
 const SEAT_LIMIT = /\b429\b|too many requests|usage limit|rate limit|quota|out of (extra )?usage|resource.?exhausted|seat/;
 
@@ -625,16 +640,30 @@ export function runReviewer(call: ReviewerCall): Promise<AgentResult> {
     let err = "";
     let timedOut = false;
     let spawnError: string | undefined;
+    let early: string | undefined;
     const timer = setTimeout(() => {
       timedOut = true;
       killTree(child.pid, () => {
         if (child.exitCode === null) child.kill();
       });
     }, timeoutMs);
+    const watch = (c: Buffer) => {
+      if (early) return;
+      const line = earlyUnavailable(call.engine, c.toString("utf8"));
+      if (!line) return;
+      early = line;
+      killTree(child.pid, () => {
+        if (child.exitCode === null) child.kill();
+      });
+    };
 
-    child.stdout.on("data", (c: Buffer) => out.push(c));
+    child.stdout.on("data", (c: Buffer) => {
+      out.push(c);
+      watch(c);
+    });
     child.stderr.on("data", (c: Buffer) => {
       if (err.length < 20_000) err += c.toString("utf8");
+      watch(c);
     });
     child.on("error", (e) => {
       spawnError = `the ${call.engine} CLI could not be started: ${e.message}`;
@@ -643,6 +672,7 @@ export function runReviewer(call: ReviewerCall): Promise<AgentResult> {
       clearTimeout(timer);
       const parsed = parseEngineEnvelope(call.engine, Buffer.concat(out).toString("utf8"));
       if (spawnError) parsed.errors.unshift(spawnError);
+      if (early) parsed.errors = [early];
       if (code !== 0 && !parsed.errors.length && !timedOut) {
         const tail = err.replace(/\s+/g, " ").trim().slice(-240);
         parsed.errors.push(`exited ${code}${tail ? `: ${tail}` : ""}`);

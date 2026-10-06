@@ -32,6 +32,10 @@
 // STUB_DISPOSITIONS=bad — the writer's dispositions miss a finding and leave a
 //   reason empty, on every attempt.
 // STUB_RESEARCH=renumber — a critique research drops source [1].
+// STUB_POST_DEFECT="draft,revise,fix" — the phases whose post carries one seeded defect (an em
+//   dash, which the check fails by name): "draft" the first post, "revise" a critique rewrite,
+//   "fix" the post a fix turn writes (so the fix does not meet the failure).
+// STUB_FIX_MODE=error — a fix turn fails (the other writer turns still work).
 // STUB_AGENT_ARGV_LOG=<file> appends the engine, argv, cwd, the workspace's
 //   entries and whether a metered key or any credential-named variable
 //   reached this process.
@@ -121,6 +125,11 @@ if (/^ARTICLE-REVIEW\b/m.test(prompt)) {
     process.exit(1);
   };
 
+  if (rmode === "eligibility") {
+    // agy's start-up 503: the line is printed at once and the process then sits idle
+    process.stderr.write("ERROR: failed to send message: send failed; already reported to the user: Eligibility check failed: failed to get load code assist response: UNAVAILABLE (code 503): The service is currently unavailable.\n");
+    await new Promise((r) => setTimeout(r, 10 * 60_000));
+  }
   if (rmode === "hang") await new Promise((r) => setTimeout(r, 10 * 60_000));
   if (rmode === "unavailable" || rmode === "seat" || rmode === "error") fail(rmode);
   if (rmode === "garbage" || (rmode === "garbage-once" && !retry)) ok("I reviewed the post and it looks fine overall, nice work!");
@@ -194,7 +203,7 @@ if (phase === "outline") {
 
 /** The whole post under out/post/. `sources` is what the research holds now;
  *  `note` is a sentence a revision adds, citing [2]. */
-function writePost(sources, note) {
+function writePost(sources, note, defect) {
   const SECTIONS = ["The unit of text", "Where the bill comes from", "Where the claim stops", "What changes on Monday"];
   const sentences = [
     "A tokenizer cuts text into pieces that were frequent in its training corpus [1].",
@@ -209,6 +218,7 @@ function writePost(sources, note) {
   const paragraphs = (k) => Array.from({ length: 2 }, (_, i) => sentences.slice((i + k) % 4, ((i + k) % 4) + 4).join(" "));
   const body = SECTIONS.map((t, k) => ({ title: t, paras: paragraphs(k) }));
   if (note) body[1].paras[0] = `${body[1].paras[0]} ${note}`;
+  if (defect) body[0].paras[0] = `${body[0].paras[0]} A pause \u2014 and a dash.`;
   const extra = sources.filter((s) => s.n > 8);
   if (extra.length) body[2].paras[0] = `${body[2].paras[0]} ${extra.map((s) => `A newer measurement narrows the claim [${s.n}].`).join(" ")}`;
   const figures = [1, 2, 3, 4, 5].map((i) => ({ file: `0${i}-figure-${i}.svg`, caption: `Figure ${i}: a labelled diagram of step ${i} [${i}]` }));
@@ -256,8 +266,10 @@ ${body.map((s, k) => `<h2>${s.title}</h2>\n${s.paras.map((p) => `<p>${cite(p)}</
   return words;
 }
 
+const defectIn = (p) => (process.env.STUB_POST_DEFECT ?? "").split(",").map((x) => x.trim()).includes(p);
+
 if (phase === "draft") {
-  const words = writePost(SOURCES);
+  const words = writePost(SOURCES, undefined, defectIn("draft"));
 
   // One change to an existing registry file and one new file.
   const reg = path.resolve("inputs", "registry");
@@ -332,8 +344,19 @@ if (phase === "revise-research") {
 }
 
 if (phase === "revise") {
-  const words = writePost(currentSources(), `The price was revised after review round ${round} [2].`);
+  const words = writePost(currentSources(), `The price was revised after review round ${round} [2].`, defectIn("revise"));
   console.log(claudeEnvelope(`A stub post about tokens, ${words} words, 5 figures`));
+  process.exit(0);
+}
+
+if (phase === "fix") {
+  if (process.env.STUB_FIX_MODE === "error") {
+    console.log(claudeEnvelope("the stub was told to fail the fix", { subtype: "error_during_execution", is_error: true }));
+    process.exit(1);
+  }
+  const failures = JSON.parse(fs.readFileSync(path.resolve("inputs", "check-failures.json"), "utf8"));
+  const words = writePost(currentSources(), undefined, defectIn("fix"));
+  console.log(claudeEnvelope(`A stub post about tokens, ${failures.length} failures met, ${words} words`));
   process.exit(0);
 }
 

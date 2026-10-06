@@ -90,6 +90,8 @@ import {
   type ArticleRunDetail,
   type ArticleStatus,
   type ArticleStep,
+  type CheckItem,
+  type CheckPassRecord,
   type CheckReport,
   type Claim,
   type CreateRunInput,
@@ -133,11 +135,16 @@ const STEP_PLAN: Record<WriterStep, { phase: PromptPhase; turn: AgentTurnClass; 
 
 /** The writer's turns inside the critique: answering the reviews (no web),
  *  research again (web), rewrite (no web). */
-const CRITIQUE_PLAN: Record<"critique" | "revise-research" | "revise", { turn: AgentTurnClass; tools: AgentTool[]; timeoutMin: number; label: string }> = {
+const CRITIQUE_PLAN: Record<"critique" | "revise-research" | "revise" | "fix", { turn: AgentTurnClass; tools: AgentTool[]; timeoutMin: number; label: string }> = {
   critique: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 20, label: "writer" },
   "revise-research": { turn: "article-research", tools: ["WebSearch", "WebFetch", "Read", "Write", "Edit"], timeoutMin: 45, label: "research" },
   revise: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 45, label: "revise" },
+  fix: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 30, label: "fix" },
 };
+
+/** Fix turns the engine runs for one check label (after the draft, after a revision) before it
+ *  stops and lets the post go on with its failures recorded. */
+export const MAX_FIX_PASSES = 2;
 
 class StepError extends Error {
   constructor(
@@ -223,7 +230,7 @@ export async function readPatches(id: string): Promise<RegistryPatch[]> {
 
 export async function getRunDetail(id: string): Promise<ArticleRunDetail> {
   const run = await readRun(id);
-  const [sources, claims, outline, meta, check, patches, critique] = await Promise.all([
+  const [sources, claims, outline, meta, check, patches, critique, checkPasses] = await Promise.all([
     readJsonFile<Source[]>(inRun(id, "sources.json"), []),
     readJsonFile<Claim[]>(inRun(id, "claims.json"), []),
     readTextFile(inRun(id, "outline.md")),
@@ -231,6 +238,7 @@ export async function getRunDetail(id: string): Promise<ArticleRunDetail> {
     readJsonFile<CheckReport | null>(inRun(id, "check.json"), null),
     readPatches(id),
     readCritiqueDetail(runDir(id)),
+    readCheckPasses(runDir(id)),
   ]);
   const withDiffs = await Promise.all(patches.map(async (p) => ({ ...p, diff: (await readTextFile(inRun(id, p.patchFile))) ?? "" })));
   const post = await stat(inRun(id, "post/index.html")).then(() => "post/index.html", () => undefined);
@@ -242,6 +250,7 @@ export async function getRunDetail(id: string): Promise<ArticleRunDetail> {
     ...(outline !== undefined ? { outline } : {}),
     ...(meta ? { meta } : {}),
     ...(check ? { check } : {}),
+    ...(checkPasses.length ? { checkPasses } : {}),
     ...(post ? { post } : {}),
     ...(critique ? { critique } : {}),
   };
@@ -342,6 +351,7 @@ export async function driveRun(id: string, deps: EngineDeps = defaultDeps()): Pr
         case "drafting":
           if (!(await step(id, "outline", deps))) return readRun(id);
           if (!(await step(id, "draft", deps))) return readRun(id);
+          await checkedBetween(id, "draft", "draft", deps);
           await setStatus(id, "critiquing", deps);
           continue;
         case "critiquing":
@@ -818,6 +828,9 @@ async function critiqueStep(id: string, deps: EngineDeps): Promise<number | unde
       if (decision.decision === "keep") return cost;
 
       if (!(await fileExists(path.join(rd, "revised.json")))) cost = sumCost(cost, await revise(id, round, panel, decision, deps));
+      // The revision is checked before anyone reviews it again (or before the gate):
+      // the check's failures go back to the writer as mandatory fixes. Idempotent on resume.
+      cost = sumCost(cost, await checkLoop(id, `round-${round}`, deps).catch(noteCheckError));
       if (last) return cost;
     }
     return cost;
@@ -1008,10 +1021,11 @@ async function critiqueTurn(
   id: string,
   round: number,
   phase: keyof typeof CRITIQUE_PLAN,
-  panel: ReviewerPanel,
+  panel: Pick<ReviewerPanel, "maxCritiqueRounds">,
   deps: EngineDeps,
   stage: (ws: string) => Promise<void>,
   ingest: (ws: string) => Promise<void>,
+  opts: { name?: string; checkFailures?: string } = {},
 ): Promise<number | undefined> {
   const plan = CRITIQUE_PLAN[phase];
   const dir = runDir(id);
@@ -1025,14 +1039,16 @@ async function critiqueTurn(
     today: deps.now().toISOString().slice(0, 10),
     round,
     maxRounds: panel.maxCritiqueRounds,
+    ...(opts.checkFailures !== undefined ? { checkFailures: opts.checkFailures } : {}),
   });
-  const name = `critique-r${round}-${plan.label}`;
+  const name = opts.name ?? `critique-r${round}-${plan.label}`;
+  const who = opts.name ?? `round ${round} ${plan.label}`;
   await writeFileAtomic(path.join(dir, "agent", `${name}-prompt.md`), base);
   let cost: number | undefined;
   let note = "";
-  // Only the writer's answer is retried (an invalid answer is the writer's to
-  // correct); a revision that fails its ingest fails the step.
-  const attempts = phase === "critique" ? 2 : 1;
+  // Only the writer's answer (and a fix) is retried (an invalid answer is the
+  // writer's to correct); a revision that fails its ingest fails the step.
+  const attempts = phase === "critique" || phase === "fix" ? 2 : 1;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const ws = await makeWorkspace(id, `${name}-${attempt}`, deps.now());
     try {
@@ -1052,14 +1068,14 @@ async function critiqueTurn(
       });
       if (result.outcome !== "completed") {
         await keepOut(ws, dir, name);
-        throw new StepError(`round ${round} ${plan.label}: the agent ${result.outcome}${result.errors.length ? `: ${result.errors.join("; ")}` : ""}`, cost);
+        throw new StepError(`${who}: the agent ${result.outcome}${result.errors.length ? `: ${result.errors.join("; ")}` : ""}`, cost);
       }
       try {
         await ingest(ws);
         return cost;
       } catch (e) {
         await keepOut(ws, dir, name);
-        if (attempt === attempts) throw new StepError(`round ${round} ${plan.label}: ${(e as Error).message}`, cost);
+        if (attempt === attempts) throw new StepError(`${who}: ${(e as Error).message}`, cost);
         note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${(e as Error).message}. Write both files again, correctly.\n`;
       }
     } finally {
@@ -1131,6 +1147,101 @@ async function revise(id: string, round: number, panel: ReviewerPanel, decision:
     // the research turn's cost survives a failed rewrite
     throw new StepError((e as Error).message, sumCost(cost, e instanceof StepError ? e.costUsd : undefined));
   }
+}
+
+/* ── the check between writer turns ───────────────────────────────────────── */
+
+/** The check's failures the writer must meet between turns. The critique item is excluded:
+ *  it cannot pass until the critique is over. Items not measured are not failures. */
+export function mandatoryFailures(report: CheckReport): CheckItem[] {
+  return report.items.filter((i) => i.status === "fail" && i.id !== "critique");
+}
+
+/** The failures as the fix prompt carries them. */
+export function failuresText(failed: CheckPassRecord["failed"]): string {
+  return failed
+    .map((f) => `- \`${f.id}\` (${f.dimension}): ${f.label}. Measured: ${f.value ?? "n/a"}. Required: ${f.expected ?? "see the label"}.${f.detail?.length ? `\n${f.detail.slice(0, 12).map((d) => `    - ${d}`).join("\n")}` : ""}`)
+    .join("\n");
+}
+
+const passFile = (dir: string, r: Pick<CheckPassRecord, "label" | "pass">) => path.join(dir, "checks", `${r.label}-${r.pass}.json`);
+
+export async function readCheckPasses(dir: string, label?: string): Promise<CheckPassRecord[]> {
+  let files: string[];
+  try {
+    files = (await readdir(path.join(dir, "checks"))).filter((f) => f.endsWith(".json"));
+  } catch {
+    return [];
+  }
+  const out: CheckPassRecord[] = [];
+  for (const f of files) {
+    const r = await readJsonFile<CheckPassRecord | null>(path.join(dir, "checks", f), null);
+    if (r && (label === undefined || r.label === label)) out.push(r);
+  }
+  return out.sort((a, b) => (label === undefined ? a.at.localeCompare(b.at) || a.pass - b.pass : a.pass - b.pass));
+}
+
+/** A check that could not run is not a reason to stop a run that has spent an hour; the final
+ *  check step runs it again and fails by name if the problem is real. */
+function noteCheckError(e: unknown): undefined {
+  console.error(`[articles] the between-turn check could not run: ${(e as Error).message}`);
+  return undefined;
+}
+
+/**
+ * Check the post as the writer left it; when items fail, hand them to the writer as mandatory
+ * fixes and check again, at most MAX_FIX_PASSES times. Failures that remain are recorded in
+ * `checks/<label>-<pass>.json` and the run goes on; the final check step reports them to the
+ * human. A failed fix turn is recorded (`fixError`) and ends the loop; the post is untouched.
+ * State is the pass files alone, so a resume carries on where the last drive stopped.
+ */
+export async function checkLoop(id: string, label: string, deps: EngineDeps): Promise<number | undefined> {
+  const dir = runDir(id);
+  let cost: number | undefined;
+  for (;;) {
+    const held = await readCheckPasses(dir, label);
+    let rec = held[held.length - 1];
+    if (!rec || rec.fixed) {
+      const report = await runCheck(dir, { render: deps.render, now: deps.now });
+      rec = {
+        label,
+        pass: held.length + 1,
+        at: report.at,
+        failed: mandatoryFailures(report).map((i) => ({ id: i.id, dimension: i.dimension, label: i.label, ...(i.value !== undefined ? { value: i.value } : {}), ...(i.expected ? { expected: i.expected } : {}), ...(i.detail?.length ? { detail: i.detail.slice(0, 12) } : {}) })),
+        fixed: false,
+      };
+      await writeJsonAtomic(passFile(dir, rec), rec);
+    }
+    if (!rec.failed.length || rec.pass > MAX_FIX_PASSES) return cost;
+    try {
+      cost = sumCost(cost, await fixTurn(id, rec, deps));
+    } catch (e) {
+      cost = sumCost(cost, e instanceof StepError ? e.costUsd : undefined);
+      await writeJsonAtomic(passFile(dir, rec), { ...rec, fixed: true, fixError: (e as Error).message });
+      return cost;
+    }
+    await writeJsonAtomic(passFile(dir, rec), { ...rec, fixed: true });
+  }
+}
+
+/** One fix turn: the post and its failures in, a whole replacement post out. */
+async function fixTurn(id: string, rec: CheckPassRecord, deps: EngineDeps): Promise<number | undefined> {
+  const dir = runDir(id);
+  const stage = async (ws: string) => {
+    const inputs = path.join(ws, "inputs");
+    await copyDir(path.join(dir, "post"), path.join(inputs, "post"));
+    await copyFile(path.join(dir, "sources.json"), path.join(inputs, "sources.json"));
+    await copyFile(path.join(dir, "claims.json"), path.join(inputs, "claims.json"));
+    await writeFile(path.join(inputs, "check-failures.json"), `${JSON.stringify(rec.failed, null, 2)}\n`, "utf8");
+  };
+  return critiqueTurn(id, 0, "fix", { maxCritiqueRounds: 2 }, deps, stage, (ws) => ingestPost(ws, dir), { name: `fix-${rec.label}-${rec.pass}`, checkFailures: failuresText(rec.failed) });
+}
+
+/** Run the loop outside a step and put what it cost on `stepName`'s record. */
+async function checkedBetween(id: string, label: string, stepName: StepName, deps: EngineDeps): Promise<void> {
+  const cost = await checkLoop(id, label, deps).catch(noteCheckError);
+  if (!cost) return;
+  await updateRun(id, (r) => ({ ...r, steps: r.steps.map((s) => (s.name === stepName ? { ...s, costUsd: Math.round(((s.costUsd ?? 0) + cost) * 1_000_000) / 1_000_000 } : s)) }), deps.now);
 }
 
 /* ── the check step ────────────────────────────────────────────────────────── */

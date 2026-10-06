@@ -17,9 +17,11 @@ import type { ArticleTopic } from "./types";
 
 export const PROMPT_FILE = "pipeline/ARTICLE-POST-PROMPT.md" as const;
 /** The writer's phases. `critique` (dispositions + decision), `revise-research`
- *  and `revise` are the writer's side of the critique step (scope amendment 1). */
-export type PromptPhase = "research" | "outline" | "draft" | "critique" | "revise-research" | "revise";
-export const PROMPT_PHASES: readonly PromptPhase[] = ["research", "outline", "draft", "critique", "revise-research", "revise"];
+ *  and `revise` are the writer's side of the critique step (scope amendment 1);
+ *  `fix` is the turn that meets the deterministic check's failures, after the
+ *  draft and after each revision (2026-10-06). */
+export type PromptPhase = "research" | "outline" | "draft" | "critique" | "revise-research" | "revise" | "fix";
+export const PROMPT_PHASES: readonly PromptPhase[] = ["research", "outline", "draft", "critique", "revise-research", "revise", "fix"];
 export const MAX_PATCHES = 3;
 
 /** The reviewers' prompt — one section, `review`, read per call like the
@@ -83,6 +85,8 @@ export interface PromptContext {
   /** The critique round the writer is answering (critique / revise phases). */
   round?: number;
   maxRounds?: number;
+  /** The check's failures as prompt text (fix phase). */
+  checkFailures?: string;
 }
 
 /** Fill `{{SLOT}}`s; an unknown slot is left standing so a probe can see it. */
@@ -107,11 +111,14 @@ export function promptSlots(phase: PromptPhase, ctx: PromptContext): Record<stri
     MIN_COUNTER: String(THRESHOLDS.minCounter),
     MIN_FIGURES: String(THRESHOLDS.minFigures),
     MAX_LABEL_WORDS: String(THRESHOLDS.maxFigureLabelWords),
+    MIN_BODY_1440: String(THRESHOLDS.minBodyPx1440),
     MIN_BODY_390: String(THRESHOLDS.minBodyPx390),
     MIN_CHROME: String(THRESHOLDS.minChromePx),
     READ_MIN: String(THRESHOLDS.readMinutes[0]),
     READ_MAX: String(THRESHOLDS.readMinutes[1]),
     MAX_PATCHES: String(MAX_PATCHES),
+    MAX_WORDS: String(THRESHOLDS.maxWords),
+    CHECK_FAILURES: ctx.checkFailures ?? "",
     ROUND: String(ctx.round ?? 1),
     MAX_ROUNDS: String(ctx.maxRounds ?? 2),
     DECISIONS:

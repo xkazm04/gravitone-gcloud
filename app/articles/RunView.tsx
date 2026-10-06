@@ -101,7 +101,7 @@ export default function RunView({ runId }: { runId: string }) {
 
       {d.check && (
         <Section id="check" title="Check">
-          <CheckView report={d.check} runId={run.id} />
+          <CheckView report={d.check} runId={run.id} passes={d.checkPasses} />
         </Section>
       )}
 

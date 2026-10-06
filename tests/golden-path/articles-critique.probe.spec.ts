@@ -278,7 +278,7 @@ test("panel: the operator's four reviewers, and a malformed panel is refused by 
   expect(p.reviewers.map((r) => `${r.id}:${r.engine}:${r.model}@${r.effort}/${r.timeoutMin}`)).toEqual([
     "fable:claude:claude-fable-5-1@high/25",
     "grok:grok:grok-4.7@high/25",
-    "gemini:agy:gemini-3.8-flash@high/25",
+    "gemini:agy:gemini-3.8-flash@high/14",
     "gpt:codex:gpt-6-astra@high/25",
   ]);
   expect(p).toMatchObject({ maxCritiqueRounds: 2, minCompleted: 2 });

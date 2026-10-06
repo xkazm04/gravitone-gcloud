@@ -1,12 +1,12 @@
 {
   "schema": "article-reviewers/1",
-  "note": "The multi-model critique panel (scope amendment 1, 2026-10-05). Read by lib/articles/critique.ts loadPanel; ARTICLES_REVIEWERS_FILE or `article.mts run --reviewers <file>` overrides it. Each reviewer runs read-only with web access through its local CLI on the operator's own login (lib/agent/cliSeam.ts runReviewer). gpt runs gpt-6-astra because gpt-6.1-astra is not offered on this account (codex lists gpt-6.1-sol and gpt-6-astra, probed 2026-10-05); grok answered 402 Payment Required on 2026-10-05 and is kept on the panel so its absence is recorded, not hidden. A run continues when at least minCompleted reviewers complete a round, and stops at critique-quorum otherwise.",
+  "note": "The multi-model critique panel (scope amendment 1, 2026-10-05). Read by lib/articles/critique.ts loadPanel; ARTICLES_REVIEWERS_FILE or `article.mts run --reviewers <file>` overrides it. Each reviewer runs read-only with web access through its local CLI on the operator's own login (lib/agent/cliSeam.ts runReviewer). gpt runs gpt-6-astra because gpt-6.1-astra is not offered on this account (codex lists gpt-6.1-sol and gpt-6-astra, probed 2026-10-05); grok answered 402 Payment Required on 2026-10-05 and is kept on the panel so its absence is recorded, not hidden. gemini (agy) holds a 14 minute timeout because its two completed rounds took 11 minutes and its hung call on 2026-10-05 took 25 before a 503, and the engine stops agy at once on its eligibility-check 503 (lib/agent/cliSeam.ts earlyUnavailable). A run continues when at least minCompleted reviewers complete a round, and stops at critique-quorum otherwise.",
   "maxCritiqueRounds": 2,
   "minCompleted": 2,
   "reviewers": [
     { "id": "fable", "engine": "claude", "model": "claude-fable-5-1", "effort": "high", "timeoutMin": 25 },
     { "id": "grok", "engine": "grok", "model": "grok-4.7", "effort": "high", "timeoutMin": 25 },
-    { "id": "gemini", "engine": "agy", "model": "gemini-3.8-flash", "effort": "high", "timeoutMin": 25 },
+    { "id": "gemini", "engine": "agy", "model": "gemini-3.8-flash", "effort": "high", "timeoutMin": 14 },
     { "id": "gpt", "engine": "codex", "model": "gpt-6-astra", "effort": "high", "timeoutMin": 25 }
   ]
 }

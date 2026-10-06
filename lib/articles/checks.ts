@@ -44,6 +44,12 @@ export const THRESHOLDS = {
   minChromePx: 13,
   readMinutes: [8, 14] as [number, number],
   wordsPerMinute: 230,
+  /** The hard ceiling on the post's words as `postWords` counts them (prose, table cells and
+   *  captions; not code, images or Sources). The outline budgets the writer to about
+   *  `readMinutes[1]` minutes; this is the line a post may not cross at all. Set 2026-10-06
+   *  above the longest accepted post (6,942 on the first run) and below runaway growth: the
+   *  second run drifted to 6,497 raw words after accepting 94 of 98 findings. */
+  maxWords: 7000,
 } as const;
 
 /* ── text helpers ──────────────────────────────────────────────────────────── */
@@ -290,6 +296,8 @@ export function staticItems(input: StaticInput): CheckItem[] {
     const sections = body.split(/^## /m);
     const last = sections.length > 1 ? sections[sections.length - 1] : body;
     const hasTable = /^\|.+\|\s*$\n^\|\s*:?-{2,}/m.test(last);
+    const words = postWords(md);
+    items.push(item("structure", "length-ceiling", "The post stays under its word ceiling", words <= THRESHOLDS.maxWords, { value: `${words} words`, expected: `≤ ${THRESHOLDS.maxWords} words (replacement, not addition: cut or tighten before adding)` }));
     items.push(item("structure", "closing-table", "The close carries a summary table", hasTable, { value: hasTable ? "table present" : "none", expected: "a Markdown table in the last section before Sources (skim readers read the opening and the ending)" }));
   }
 

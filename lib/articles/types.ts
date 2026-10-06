@@ -346,6 +346,21 @@ export interface CheckReport {
   screenshots: string[];
 }
 
+/** One run of the deterministic check between writer turns (after the draft, after each
+ *  critique revision), as `checks/<label>-<pass>.json` holds it. The failures it found are
+ *  handed to the writer as mandatory fixes; `fixed` is true once that fix turn has run. */
+export interface CheckPassRecord {
+  /** "draft" or "round-<n>". */
+  label: string;
+  /** 1 is the check of the text as the writer left it; each fix turn adds one. */
+  pass: number;
+  at: string;
+  failed: { id: string; dimension: CheckDimension; label: string; value?: string | number; expected?: string; detail?: string[] }[];
+  fixed: boolean;
+  /** The fix turn failed (the post is left as it was); the run goes on to the gate. */
+  fixError?: string;
+}
+
 /** Everything the /articles/[runId] page needs in one read. */
 export interface ArticleRunDetail {
   run: ArticleRun;
@@ -354,6 +369,8 @@ export interface ArticleRunDetail {
   outline?: string;
   meta?: PostMeta;
   check?: CheckReport;
+  /** The checks that ran between writer turns, oldest first. */
+  checkPasses?: CheckPassRecord[];
   patches: (RegistryPatch & { diff: string })[];
   /** Run-relative path of the rendered post, when it exists. */
   post?: string;

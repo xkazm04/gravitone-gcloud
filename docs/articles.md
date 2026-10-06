@@ -192,7 +192,35 @@ measured against):
 
 The rendered items open `post/index.html` in Playwright's chromium with every http(s) request
 aborted and counted. A failed item does not stop the run; the report goes to the gate, failures
-first.
+first. The structure dimension also holds `length-ceiling`: the post's words (`postWords`: prose,
+table cells and captions, not code or Sources) stay at or under `THRESHOLDS.maxWords` (7,000, set
+above the longest accepted post and below runaway growth); the prompt states it and the fix turn
+below enforces it.
+
+### The check between writer turns
+
+The check no longer waits for the end. `checkLoop` (`lib/articles/engine.ts`) runs it after the
+draft and after every critique revision, before anyone reviews the text again or the human sees
+it:
+
+1. `runCheck` on the post as the writer left it. The failed items, except the `critique` item
+   (it cannot pass until the critique is over), are the pass's failures.
+2. If any failed and fewer than `MAX_FIX_PASSES` (2) fix turns have run for this label, a **fix
+   turn** (writer phase `fix`, `article-critique-writer` class, no web) gets the post, sources and
+   claims plus the failures twice: in the prompt (item id, dimension, measured value, bar, the
+   offending text) and in `inputs/check-failures.json`. It writes the whole post again; the
+   engine ingests it like any rewrite (`ingestPost`) and the loop checks again.
+3. When the bound is reached with failures left, the run goes on to the next step and the gate;
+   nothing is hidden: the last pass keeps its failures and the final `check` step reports them.
+   A fix turn that fails (timeout, invalid output) is recorded as `fixError`, leaves the post as
+   it was and ends the loop; it never fails the run.
+
+Every pass is `checks/<label>-<pass>.json` (`CheckPassRecord`: label `draft` or `round-<n>`, the
+failures, `fixed`, `fixError`), also returned as `checkPasses` by `getRunDetail`. The files are the
+loop's whole state, so a resume repeats no pass and no turn. The fix turns' receipts are
+`agent/fix-<label>-<pass>.json` and `-prompt.md`; their cost is added to the draft step or to the
+critique step. A check that cannot run at all (an exception) is logged and skipped between turns;
+the final check step surfaces it.
 
 ## Lessons from the first full run
 
@@ -215,10 +243,20 @@ behind the prompt and check changes of 2026-10-06. For the next author of a run:
   claim resting on a page it could not open is unverified and capped below `blocker`.
 - **A panel of four gave two.** Grok returned 402 (balance), Gemini hung 25 minutes and then
   503ed (agy eligibility check). Both are recorded, not hidden, and the quorum of two held.
-  Pending: a shorter agy timeout and an early classification of its eligibility failure.
+  Done (2026-10-06): agy's start-up line "Eligibility check failed: failed to get load code
+  assist response: UNAVAILABLE (code 503)" is recognised on stdout or stderr while the process
+  idles (`earlyUnavailable` in `lib/agent/cliSeam.ts`), the reviewer is stopped at once and
+  recorded `unavailable` with that line, and the panel gives gemini a 14 minute timeout (its
+  completed rounds took 11) in place of 25.
 - **The check ran too late.** It ran once, after the last rewrite, and failed three dimensions
-  nobody could still fix. Pending (engine change, not made): run it after the draft and after
-  every revision and hand its failures to the writer as mandatory fixes.
+  nobody could still fix. The second run (judge calibration and drift, 2026-10-06) reached the
+  gate with four failures for the same reason: a 6-paragraph run without a visual, an 18-word
+  figure label, body type at 17px and chrome type at 10.92px. Done: the check now runs after the
+  draft and after each revision, its failures go back to the writer as mandatory fixes (at most
+  two passes per label) and the rest is recorded; see "The check between writer turns".
+- **The writer accepted 94 of 98 findings** on the second run and the post stayed long (about
+  6,500 words). Length was stated but not measured; `length-ceiling` now measures it and the fix
+  turn cuts to it.
 - **The owner's review of the finished post** is encoded as house rules in the writer prompt and
   as checks: no em or en dash; no chronicle opening (tell the situation briefly, show a sequence
   as a timeline figure); no stated reading time (the platform shows one); a visual element at
@@ -367,12 +405,16 @@ The Board's `articles` source (`lib/board/sources/articles.ts`, verdicts in
 
 ## Probes
 
-`tests/golden-path/articles-{store,checks,registry,engine,critique,ui}.probe.spec.ts`, offline,
+`tests/golden-path/articles-{store,checks,registry,engine,critique,checkloop,ui}.probe.spec.ts`, offline,
 against `tests/fixtures/articles/registry-fixture.mjs` (a bare origin plus a clone; its stub gate
 also knows the `critique` block and directory in outline), the stub agent through the real seam for
 the writer and all four reviewer engines, and a stub `gh`. They never name the real registry.
 `articles-critique` pins each engine's argv and fence, the envelopes (a 402 and a usage limit
 included), the schemas, every critique flow, resume inside the step, the check item and the
-write-back. `articles-ui` calls the routes as functions and covers every state seeded by
+write-back. `articles-checkloop` seeds one defect with `STUB_POST_DEFECT` (an em dash, in the draft,
+a revision or the fix itself) and pins the between-turn check: the failure reaches the fix prompt
+and file, the fix replaces the post, the bound of two holds, a failed fix is recorded, a revised
+post is checked before the next review round, resume is idempotent, plus agy's early 503 and the
+shorter agy timeout. `articles-ui` calls the routes as functions and covers every state seeded by
 `tests/fixtures/articles/runStates.ts`: running, partial, quorum, keep and rewrite critiques
 among them. The three `guardRequest` routes are driven in `imaging-auth.probe.spec.ts`.

@@ -172,3 +172,14 @@ test.describe("rendered", () => {
     expect(r.screenshots).toEqual([]);
   });
 });
+
+test("length ceiling: a post over the word ceiling fails it and says how far", () => {
+  const filler = Array.from({ length: THRESHOLDS.maxWords + 50 }, (_, i) => `w${i}`).join(" ");
+  const long = `# T\n\n${filler}\n\n## Sources\n\n1. x\n`;
+  const short = `# T\n\n${PARA}\n\n## Sources\n\n1. x\n`;
+  const item = (md: string) => byId(staticItems({ html: page(), md, sources: SOURCES, claims: [], figures: figures(), postFiles: files() }), "length-ceiling");
+  expect(item(short).status).toBe("pass");
+  expect(item(long).status).toBe("fail");
+  expect(String(item(long).value)).toMatch(/^70\d\d words/);
+  expect(item(long).expected).toContain(String(THRESHOLDS.maxWords));
+});

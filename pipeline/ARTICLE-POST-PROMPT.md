@@ -47,7 +47,7 @@ HOUSE RULES the owner set after the first full run (each is checked by code):
 - The content preview comes BEFORE the first section heading.
 - VISUAL CADENCE: never more than two consecutive prose paragraphs without a visual element (a figure, a table, a code block, a compact diagram strip or a callout). A small visual counts. Where a visual carries what a paragraph said, shorten the paragraph: replacement, not addition.
 - The closing chapter carries a summary or comparison table of what the body compared, short cells, nothing new. Some readers read only the opening and the ending; together they must stand alone.
-- Length is a ceiling, not a target: depth comes from replacing flat material, never from appending.
+- Length is a ceiling, not a target: depth comes from replacing flat material, never from appending. The deterministic check holds the post to {{MAX_WORDS}} words (prose, table cells and captions; not code or Sources) and fails it above that.
 
 TRUTH. Every factual claim is true and traces to a numbered source. A plain page with honest numbers beats a beautiful page with an invented one. Data is current: name each figure's source and date, and mention an older model, tokenizer, price or benchmark only as history.
 
@@ -172,3 +172,19 @@ Rewrite the post so that every accepted finding's action is carried out and noth
 Write the WHOLE post again under `out/post/`, to exactly the draft phase's contract: `out/post/figures/NN-short-name.svg` (at least {{MIN_FIGURES}}, labels of at most {{MAX_LABEL_WORDS}} words), `out/post/index.html` (self-contained, no network, the content preview before the first `<h2>` and stating no read time, captions citing `[n]`, highlighted code, `<ol id="sources">` with one `<li id="src-N">` per source, a closing that wraps and carries its summary table, no run of more than two prose paragraphs without a visual, no em or en dash), `out/post/post.md` (Medium-ready, a final `## Sources` list in source order) and `out/post/meta.json`. Copy a figure from `inputs/post/figures/` when it does not change. Do not write registry patches in this phase.
 
 Then reply with one line: the title, the word count and the figure count.
+
+<!-- section: fix -->
+YOUR PHASE: FIX THE CHECK'S FAILURES. The deterministic check ran on the post as it stands (`inputs/post/`) and failed the items below. They are mandatory: the post does not go on to review or to the human gate with any of them open. Meet each one at the measure it names, change nothing the check did not flag beyond what a fix requires, and keep every claim and its `[n]` citation.
+
+{{CHECK_FAILURES}}
+
+How to fix, by kind:
+- A run of prose paragraphs without a visual: put a figure, a table, a code block or a callout where the run is longest, and shorten the paragraphs it now carries. A visual replaces words; it is not added on top of them.
+- Text inside a figure over the label limit: cut it to labels and short annotations of at most {{MAX_LABEL_WORDS}} words; the sentence goes into the paragraph or the caption.
+- A font size below its bar: raise it in the page's CSS (body text at least {{MIN_BODY_1440}}px at 1440 wide and {{MIN_BODY_390}}px at 390; page chrome, captions and bylines at least {{MIN_CHROME}}px).
+- Over the word ceiling ({{MAX_WORDS}}): cut the flattest material first (a restated point, a second example of the same thing, a paragraph a table already carries). Never trade length for a missing claim.
+- Anything else: the item's `expected` line is the bar.
+
+The post is no longer than the post you were given unless a failure is the missing piece itself. Write the WHOLE post again under `out/post/` to exactly the draft phase's contract: `out/post/figures/NN-short-name.svg` (copy a figure from `inputs/post/figures/` when it does not change), `out/post/index.html`, `out/post/post.md` (a final `## Sources` list in source order) and `out/post/meta.json`. The same rules hold: no em or en dash, no stated reading time, the content preview before the first `<h2>`, the closing carries its summary table. Do not search the web and do not write registry patches in this phase. The failures are also in `inputs/check-failures.json`.
+
+Then reply with one line: the title and how many failures you met.

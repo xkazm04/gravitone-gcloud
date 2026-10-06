@@ -24,7 +24,7 @@ import {
 
 import { CHIP_CLASS, Hint, TALLY_TONE, Tally } from "@/components/ui/signal";
 import { SURFACE } from "@/components/ui/tokens";
-import type { CheckItem, CheckReport, Claim, RegistryPatch, Source } from "@/lib/articles/types";
+import type { CheckItem, CheckPassRecord, CheckReport, Claim, RegistryPatch, Source } from "@/lib/articles/types";
 
 import { runFileUrl } from "./articlesClient";
 import { checkCounts, checkOrder, fmtUsd, PHASE_LOOK, span, type NodeState, type RunPhase, type StepNode, type Tone } from "./runModel";
@@ -202,11 +202,30 @@ function CheckRow({ it }: { it: CheckItem }) {
   );
 }
 
-export function CheckView({ report, runId }: { report: CheckReport; runId: string }) {
+/** One line per check the engine ran between writer turns: what failed and whether the writer
+ *  fixed it (lib/articles/engine.ts checkLoop). */
+function passLine(p: CheckPassRecord): string {
+  const where = p.label === "draft" ? "after the draft" : `after revision ${p.label.replace("round-", "")}`;
+  if (!p.failed.length) return `${where}, pass ${p.pass}: clean`;
+  const ids = p.failed.map((f) => f.id).join(", ");
+  if (p.fixError) return `${where}, pass ${p.pass}: ${ids} failed; the fix turn failed (${p.fixError})`;
+  return `${where}, pass ${p.pass}: ${ids} failed${p.fixed ? "; sent back to the writer" : "; left as it is (fix bound reached)"}`;
+}
+
+export function CheckView({ report, runId, passes }: { report: CheckReport; runId: string; passes?: CheckPassRecord[] }) {
   const counts = checkCounts(report);
   const items = checkOrder(report);
   return (
     <div className="space-y-4">
+      {passes && passes.length > 0 && (
+        <ul className="space-y-0.5" data-testid="article-check-passes">
+          {passes.map((p) => (
+            <li key={`${p.label}-${p.pass}`} className="font-jetbrains text-label break-words text-white/55">
+              {passLine(p)}
+            </li>
+          ))}
+        </ul>
+      )}
       <div className="flex flex-wrap items-center gap-2" data-testid="article-check-counts">
         <Tally value={counts.fail} label="fail" tone={counts.fail ? "rose" : "neutral"} />
         <Tally value={counts.notMeasured} label="not measured" tone={counts.notMeasured ? "amber" : "neutral"} />
