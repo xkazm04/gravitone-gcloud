@@ -229,7 +229,7 @@ export const CASSETTE_MAX_AGE_DAYS = 180;
 
 /** One scripted answer. `match` fields that are absent match anything. */
 export interface CassetteTurn {
-  match?: { heading?: string | null; schemaSha256?: string | null };
+  match?: { heading?: string | null; headingSha256?: string | null; schemaSha256?: string | null };
   /** The prompt this envelope was recorded against — a hash and a length,
    *  never the text. `null` on a hand-written turn, which had no prompt. */
   prompt: { sha256: string; chars: number } | null;
@@ -280,6 +280,7 @@ export interface FakeCall {
   promptChars?: number;
   promptSha256?: string;
   heading?: string | null;
+  headingSha256?: string | null;
   schemaSha256?: string | null;
   /** The cassette turn that answered, or null when none matched. */
   turn?: number | null;
