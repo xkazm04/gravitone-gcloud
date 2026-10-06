@@ -39,11 +39,11 @@ import { registerTurnKind, TurnInputError, type TurnSpec } from "@/lib/turns/run
 export const RECALIBRATE_KIND = "recalibrate";
 
 /** A request the route refuses before assembling anything, with the route's
- *  own status. The generic /api/turns door answers any TurnInputError 400;
- *  /api/recalibrate answers `refusal` exactly as it always has. */
+ *  own status — which the generic /api/turns door answers too (a too-large run
+ *  is 413 on both). /api/recalibrate answers `refusal` exactly as it always has. */
 export class RecalibrateRefused extends TurnInputError {
   constructor(readonly refusal: Refusal) {
-    super(refusal.detail);
+    super(refusal.detail, refusal.status, refusal.code ?? "bad-request");
     this.name = "RecalibrateRefused";
   }
 }

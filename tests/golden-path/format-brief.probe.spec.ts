@@ -183,5 +183,8 @@ test("the frames route compiles the format block into THE RUN", () => {
   expect(prompt).toContain(block);
   // Ahead of the script: the kind of piece frames how every beat after it reads.
   expect(prompt.indexOf(block)).toBeLessThan(prompt.indexOf("## THE SCRIPT"));
-  expect(read(ROUTE_TS)).toMatch(/assembleFrames\(body,/);
+  // Since AIO-A stage 3 the route hands the run to the `frames` turn kind, and
+  // the kind is what asks the assembler: follow the call one hop.
+  expect(read(ROUTE_TS)).toMatch(/\bFRAMES_SPEC\b/);
+  expect(read("lib/turns/kinds/frames.ts")).toMatch(/assembleFrames\(body,/);
 });

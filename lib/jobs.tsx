@@ -67,7 +67,10 @@ export type JobKind =
   | "ad-ideas"
   | "ad-scenarios"
   | "video-clip"
-  | "ad-render";
+  | "ad-render"
+  // Step 3's scene-direction pass. Turn-backed from its first day as a job
+  // (AIO-A stage 3): before that it was a fetch no job ever saw.
+  | "frames";
 export type JobStatus = "running" | "done" | "failed" | "interrupted";
 
 export interface Job {
@@ -194,6 +197,7 @@ const JOB_NOUN: Record<JobKind, string> = {
   "ad-scenarios": "Ad scenarios",
   "video-clip": "Clip",
   "ad-render": "Ad render",
+  frames: "Scene direction",
 };
 
 /** The name a job goes by everywhere the bell shows it — running, interrupted
@@ -490,11 +494,11 @@ export function applyClear(jobs: Job[], jobId: string): Job[] {
 // `e-<turnId>` — so a second poll, a second tab, or a reload cannot announce
 // one turn twice: there is nothing to append, only a record to read.
 //
-// Other kinds (frames, poster, export, research — stage 3) keep the
-// localStorage path above unchanged.
+// Scene direction (`frames`) joined in stage 3. Other kinds (poster, export,
+// research — a later stage) keep the localStorage path above unchanged.
 
 /** The kinds that run as server-owned turns. */
-export const TURN_KINDS: ReadonlySet<JobKind> = new Set<JobKind>(["recalibrate"]);
+export const TURN_KINDS: ReadonlySet<JobKind> = new Set<JobKind>(["recalibrate", "frames"]);
 
 export interface TurnFlag {
   turnId: string;
@@ -527,6 +531,7 @@ const TURN_FLAG_CAP = 50;
 /** The bell's sentence for a turn that came back. */
 const TURN_DONE_DETAIL: Partial<Record<JobKind, string>> = {
   recalibrate: "A recalibrated set of scripts is ready on the Script step — compare it, then accept or run again.",
+  frames: "Scene direction for the cut is ready on the Frames step.",
 };
 
 const viewOf = (r: TurnView): TurnView => ({
@@ -686,6 +691,33 @@ export function turnEventsOf(state: TurnState): JobEvent[] {
     });
   }
   return out.sort((a, b) => b.at - a.at || a.id.localeCompare(b.id));
+}
+
+/** How many jobs there are and how many still run, with turn-backed work
+ *  counted FROM THE LEDGER rather than from one tab's list.
+ *
+ *  `local` is what a provider holds (its own jobs plus the turns it watches);
+ *  `ledger` is what the server reports for the account's projects. A turn is
+ *  counted once, by id, and the ledger's status wins: a turn another tab or
+ *  device started is counted though this tab never tracked it, and one that
+ *  ended while this tab had not polled yet is not counted as running. A watched
+ *  turn the ledger read did not return (a project that could not be read this
+ *  time) keeps the tab's view rather than vanishing. What the harness snapshot
+ *  reports (lib/harness/protocol.ts `jobs`). */
+export function jobCounts(local: readonly Job[], ledger: readonly Pick<TurnView, "id" | "status">[]): { running: number; total: number } {
+  const turns = new Map(ledger.map((t) => [t.id, t]));
+  let running = 0;
+  let total = 0;
+  for (const t of turns.values()) {
+    total++;
+    if (isLiveTurn(t.status)) running++;
+  }
+  for (const j of local) {
+    if (j.turnId && turns.has(j.turnId)) continue;
+    total++;
+    if (j.status === "running") running++;
+  }
+  return { running, total };
 }
 
 /** Two tabs' flags, unioned. `read` and `clearedAt` are sticky, as for events. */

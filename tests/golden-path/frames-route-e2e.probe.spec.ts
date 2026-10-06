@@ -21,16 +21,19 @@
 // log, not an inference from how fast the answer came back.
 //
 // WHAT THESE CASES PIN IS BEHAVIOUR — status, body fields, spawn or no spawn.
-// The route's prompt assembly is due to move into a pure assembler (AIO-B) and
-// its dispatch onto a server turn ledger (AIO-A); neither should have to touch
-// this file unless the route's answer changes.
+// The route's prompt assembly moved into a pure assembler (AIO-B) and its
+// dispatch onto the server's turn ledger (AIO-A stage 3). The second DID change
+// the route's default answer — 202 `{ turnId }` — so every case here asks with
+// `?wait=1` and a `projectId`, which keeps the synchronous body these cases
+// were written against. Nothing they assert about that body moved.
 //
 // The cassettes are keyed by the sha256 of the prompt's first heading, not the
 // heading itself: that line is the opening of FRAMES-SCENE-PROMPT.md, and the
 // cassette-content probe (engine-door) refuses any cassette that carries a
 // prompt document's text. The route hands the router no schema (it owns the
 // parse of `raw`), so the turn's schema marker is null, and the cassette says so.
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
@@ -51,9 +54,14 @@ keepEnv([
   "GOOGLE_AI_API_KEY",
   "NEXT_PUBLIC_DEV_AUTH",
   "LIGHTTRACK_DISABLE",
+  "TEXT_TURN_DIR",
 ]);
 
+let turnDir = "";
 test.beforeEach(() => {
+  // The turn ledger the route writes, per case, never the checkout's own.
+  turnDir = mkdtempSync(join(tmpdir(), "gravitone-frames-e2e-"));
+  process.env.TEXT_TURN_DIR = turnDir;
   __resetRateLimit();
   process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   delete process.env[ACCESS_SECRET_VAR];
@@ -62,6 +70,10 @@ test.beforeEach(() => {
   // No cloud key unless a case adds one: a failed local rung has nowhere metered to go.
   delete process.env.GOOGLE_AI_API_KEY;
   process.env.LIGHTTRACK_DISABLE = "1";
+});
+test.afterEach(() => {
+  if (turnDir) rmSync(turnDir, { recursive: true, force: true });
+  turnDir = "";
 });
 
 const BEATS = [
@@ -74,7 +86,7 @@ const FACTS = [
   { id: "f-halving-2024", claim: "The 2024 halving cut issuance to 3.125 BTC per block." },
 ];
 const STYLE = { technique: "layered paper collage", palette: ["#0e1116", "#e8d9b0"], grain: "light" };
-const RUN = { title: "The cycle that broke", schema: SCENE_SCHEMA, beats: BEATS, facts: FACTS, style: STYLE };
+const RUN = { title: "The cycle that broke", schema: SCENE_SCHEMA, beats: BEATS, facts: FACTS, style: STYLE, projectId: "p-frames-e2e" };
 
 let ip = 0;
 async function frames(
@@ -82,7 +94,7 @@ async function frames(
   headers: Record<string, string> = {},
 ): Promise<{ status: number; json: Record<string, unknown> }> {
   const res = await POST(
-    new Request("http://localhost/api/frames", {
+    new Request("http://localhost/api/frames?wait=1", {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": `10.78.0.${++ip}`, ...headers },
       body: typeof body === "string" ? body : JSON.stringify(body),

@@ -68,8 +68,14 @@ const settle = async () => {
 };
 const wait = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** What `useAuth` reads. Signed out: `useThemes(null)` then reads nothing. */
-const AUTH = { user: null, loading: false };
+/** What `useAuth` reads. Signed out: `useThemes(null)` then reads nothing.
+ *
+ *  The harness answers EVERY `useContext` with this one object, and since AIO-A
+ *  stage 3 `useFrames` also reads the jobs context (its direction pass is a
+ *  watched turn), so the object carries the part of `useJobs()` it reads too:
+ *  no jobs, nothing busy. Its mount-time ledger read goes to a relative URL Node
+ *  cannot fetch, and is swallowed exactly as an offline browser's would be. */
+const AUTH = { user: null, loading: false, jobs: [], busy: () => false, track: () => undefined, cancel: () => undefined };
 
 function harness<T>(run: () => T) {
   const cells: unknown[] = [];

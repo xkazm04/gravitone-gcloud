@@ -176,12 +176,13 @@ for (const g of GOLDENS) {
     await withFakeEngine(kind === "recalibrate" ? "recalibrate-ok" : framesCassette(), async (engine) => {
       const res = await POST(
         // `?wait=1` and a projectId: recalibrate answers 202 by default since
-        // AIO-A stage 2. Neither reaches the prompt — the assembler reads only
-        // the keys it names — which is exactly what this case pins.
-        new Request(`http://localhost/api/${kind}${kind === "recalibrate" ? "?wait=1" : ""}`, {
+        // AIO-A stage 2, and frames since stage 3. Neither reaches the prompt —
+        // the assembler reads only the keys it names — which is exactly what
+        // this case pins.
+        new Request(`http://localhost/api/${kind}?wait=1`, {
           method: "POST",
           headers: { "content-type": "application/json", "x-forwarded-for": `10.79.0.${++ip}` },
-          body: JSON.stringify(kind === "recalibrate" ? { ...g.body, projectId: "p-parity" } : g.body),
+          body: JSON.stringify({ ...g.body, projectId: "p-parity" }),
         }),
       );
       const turns = engine.turns();

@@ -47,11 +47,11 @@
 import { after } from "next/server";
 
 import { guardRequest } from "@/lib/apiAuth";
-import { TextError, statusFor, type TextErrorKind } from "@/lib/text/errors";
+import { TextError, statusFor } from "@/lib/text/errors";
+import { slotBusy, syncBody } from "@/lib/turns/answer";
 import { refusalResponse } from "@/lib/turns/assemble/manifest";
 import { PromptUnavailable, recalibrateRefusal, type RecalibrateInput } from "@/lib/turns/assemble/recalibrate";
 import { RECALIBRATE_SPEC, RecalibrateRefused } from "@/lib/turns/kinds/recalibrate";
-import type { TurnRecord } from "@/lib/turns/ledger";
 import { startTurn } from "@/lib/turns/runner";
 
 /** The size predicate lives with the assembler; re-exported so the probes that
@@ -65,34 +65,6 @@ export const maxDuration = 800;
 
 /** The same project-id rule /api/turns holds. */
 const PROJECT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
-
-/** The text-error kinds `statusFor` maps. A record's error kind is a plain
- *  string on disk; anything else is the runner's own `failed`. */
-const TEXT_KINDS = new Set<string>([
-  "no-key", "not-installed", "not-logged-in", "policy-forbidden", "managed-platform", "unsupported",
-  "invalid-request", "refused", "no-alternative", "rate-limited", "timeout", "cancelled", "bad-response", "failed",
-]);
-
-const NOTHING_CHANGED = /Nothing was changed\.$/;
-
-/** A settled record as the synchronous body this route always answered. */
-function syncBody(rec: TurnRecord): Response {
-  if (rec.status === "done") return Response.json(rec.result);
-  const err = rec.error ?? { kind: rec.status, message: "" };
-  if (rec.status === "cancelled")
-    return Response.json({ detail: "The turn was cancelled. Nothing was changed.", code: "cancelled" }, { status: 499 });
-  if (rec.status === "orphaned") return Response.json({ detail: err.message, code: "orphaned" }, { status: 502 });
-  const kind = TEXT_KINDS.has(err.kind) ? (err.kind as TextErrorKind) : "failed";
-  const detail = !err.message
-    ? "The recalibration failed. Nothing was changed."
-    : NOTHING_CHANGED.test(err.message)
-      ? err.message
-      : `${err.message} Nothing was changed.`;
-  // A plan the settle door refused is `bad-response` with the whole sentence
-  // already written; it answered 502 with `{ detail }` alone, and still does.
-  const plain = NOTHING_CHANGED.test(err.message ?? "") && err.kind === "bad-response";
-  return Response.json(plain ? { detail } : { detail, code: kind }, { status: statusFor(kind) });
-}
 
 export async function POST(req: Request) {
   // LOCAL-COMPUTE ROUTE - auth + rate limit before anything is read or spawned.
@@ -146,15 +118,7 @@ export async function POST(req: Request) {
     return Response.json({ detail: "The recalibration failed. Nothing was changed." }, { status: 502 });
   }
 
-  if (!out.ok)
-    return Response.json(
-      {
-        detail: `A recalibration is already running for this project (${out.holder.id}). Wait for it, or cancel it.`,
-        code: "slot-busy",
-        holder: out.holder.id,
-      },
-      { status: 409 },
-    );
+  if (!out.ok) return slotBusy("A recalibration", out.holder);
 
   const settled = out.done;
   try {
@@ -164,6 +128,7 @@ export async function POST(req: Request) {
     // run is already under way as a detached promise.
   }
 
-  if (new URL(req.url).searchParams.get("wait") === "1") return syncBody(await settled);
+  if (new URL(req.url).searchParams.get("wait") === "1")
+    return syncBody(await settled, "The recalibration failed. Nothing was changed.");
   return Response.json({ turnId: out.turnId }, { status: 202 });
 }
