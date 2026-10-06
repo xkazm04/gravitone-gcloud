@@ -92,7 +92,7 @@ function harness(run: () => void) {
 
 test("a progress write refused once is retried and lands", async () => {
   const p = await putProject(
-    newProject("u-retry", { title: "t", logline: "l", template: "explainer" } as Parameters<typeof newProject>[1]),
+    newProject("u-retry", { title: "t", logline: "l", template: "explainer", discipline: "video", targetS: 60 } as unknown as Parameters<typeof newProject>[1]),
   );
   // Refuse exactly the first open of the store, the way a blocked upgrade does.
   const realOpen = indexedDB.open.bind(indexedDB);
