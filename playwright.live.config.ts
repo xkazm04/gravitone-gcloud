@@ -80,7 +80,7 @@ export default defineConfig({
   // test and exit 0. This lane is four journeys, so the collapse is smaller in
   // absolute terms and identical in kind — a green that reports on almost
   // nothing. See playwright.config.ts for the measurement.
-  forbidOnly: !!process.env.CI,
+  forbidOnly: !!process.env.CI || !!process.env.PW_FORBID_ONLY,
 
   timeout: 120_000,
   expect: { timeout: 20_000 },

@@ -198,6 +198,10 @@ function runGate(g: Gate, row: Row, buffered: boolean): Promise<void> {
     // script name was validated as plain, so nothing here needs quoting.
     const child = spawn(`npm run ${g.npmScript}`, {
       cwd: ROOT,
+      // The playwright configs refuse a committed `.only` when this is set. CI sets
+      // CI instead; the pre-push hook sets neither, and CI=1 there would also
+      // change `next build` and eslint.
+      env: { ...process.env, PW_FORBID_ONLY: "1" },
       shell: true,
       stdio: buffered ? ["ignore", "pipe", "pipe"] : "inherit",
     });
