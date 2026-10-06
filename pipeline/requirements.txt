@@ -1,0 +1,22 @@
+# What the Python under pipeline/ imports from outside the standard library and
+# outside this repo. Unpinned on purpose: exact versions live in
+# pipeline/requirements.lock.txt, produced by `pip freeze` on the GPU rig (the
+# `primary` machine in .ai/manifest.yaml) and absent until that is run.
+#
+# The list is what the code imports, and nothing else: `python
+# pipeline/foundry/selftest.py` fails when a tracked .py file imports a
+# third-party module that is not named here. `replicate` is NOT a dependency:
+# pipeline/vlm-probe/replicate.py is a local module of that name.
+#
+# Lazy / optional (imported inside a function, not at import time):
+#   Pillow            forge.py, intake.py, consistency.py, palette_measure.py
+#   huggingface-hub   fetch_ref2va.py only
+#   transformers      identity.py only (inside the model loader)
+#   facenet-pytorch   identity.py only (inside the model loader)
+# torch is imported at module top by identity.py only.
+numpy
+Pillow
+huggingface-hub
+torch
+transformers
+facenet-pytorch
