@@ -21,7 +21,8 @@ import { Loader2, Music2 } from "lucide-react";
 
 import { Ghost, Hint, StaleBadge, Tally, UpstreamBreak } from "@/components/ui/signal";
 import { useAnnounce } from "@/lib/announcer";
-import { ABSENCE_REASON, capabilities } from "@/lib/capabilities";
+import { absenceReason } from "@/lib/capabilities";
+import { useCapabilities } from "@/lib/useCapabilities";
 import { getProject, type Project } from "@/lib/projects";
 import { costLabel, perSecondPrice } from "@/lib/musicClient";
 import type { MusicQuote } from "@/lib/music/pricing";
@@ -65,7 +66,7 @@ export default function AdsScore({ projectId }: { projectId: string }) {
     [patch],
   );
 
-  const caps = capabilities();
+  const { caps, facts, known } = useCapabilities();
   const store = useCueTakes(caps.musicSectionEdit);
 
   const [price, setPrice] = useState<MusicQuote | "unknown" | null>(null);
@@ -96,7 +97,7 @@ export default function AdsScore({ projectId }: { projectId: string }) {
   const reported = !scenario ? null : rec.activeTakeId ? "done" : rec.takeIds.length || rec.bpm !== null ? "working" : null;
   usePhaseReport(projectId, "score", reported);
 
-  if (!projectRead || !briefRead.hydrated || !scenariosRead.hydrated || !finishRead.hydrated || !scoreRead.hydrated)
+  if (!projectRead || !briefRead.hydrated || !scenariosRead.hydrated || !finishRead.hydrated || !scoreRead.hydrated || !known)
     return <Ghost shape="card" label="reading the ad" />;
 
   if (!scenario)
@@ -111,8 +112,8 @@ export default function AdsScore({ projectId }: { projectId: string }) {
 
   if (!caps.musicSectionEdit)
     return (
-      <Notice severity="warning" title="no sound store here">
-        <p>{ABSENCE_REASON.musicSectionEdit}</p>
+      <Notice severity="warning" title={facts.musicKey ? "no sound store here" : "no music key"}>
+        <p>{absenceReason("musicSectionEdit", facts)}</p>
       </Notice>
     );
 
@@ -225,7 +226,7 @@ export default function AdsScore({ projectId }: { projectId: string }) {
           {estimate.title && <Hint>{estimate.title}</Hint>}
         </div>
         {!caps.musicGenerate && (
-          <p className="mt-2 text-content leading-snug text-amber-200/80">{ABSENCE_REASON.musicGenerate}</p>
+          <p className="mt-2 text-content leading-snug text-amber-200/80">{absenceReason("musicGenerate", facts)}</p>
         )}
 
         {failure && (

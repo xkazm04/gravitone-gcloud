@@ -12,7 +12,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAnnounce } from "@/lib/announcer";
-import { accessHeader } from "@/lib/imagingClient";
+import { accessHeader, withAccess } from "@/lib/imagingClient";
 import type { useJobs } from "@/lib/jobs";
 import { usePolling } from "@/lib/usePolling";
 import type { AdErrorBody, AdExportRef, AdRenderRequest } from "@/lib/ads/types";
@@ -35,12 +35,10 @@ async function readRecord(id: string): Promise<AdRenderView | "gone" | null> {
   }
 }
 
-/** The download href, with the (already PUBLIC — lib/apiAuth.ts) access secret
- *  as `k=`: an `<a download>` cannot carry an Authorization header. */
+/** The download href, credential through the one door (lib/imagingClient.ts
+ *  withAccess): an `<a download>` cannot carry an Authorization header. */
 export function adDownloadHref(id: string): string {
-  const url = `/api/ads/render/${id}/file`;
-  const k = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET?.trim();
-  return k ? `${url}?k=${encodeURIComponent(k)}` : url;
+  return withAccess(`/api/ads/render/${id}/file`);
 }
 
 export function useAdRenders(

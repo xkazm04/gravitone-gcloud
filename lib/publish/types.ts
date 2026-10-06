@@ -14,7 +14,9 @@ export interface ChannelReadiness {
   status: ChannelStatus;
   /** Names only — a value never leaves the server. */
   env: { name: string; present: boolean }[];
-  cli: { name: string; present: boolean }[];
+  /** `forbidden`: this deployment may not spawn a local binary at all
+   *  (lib/deployment.ts), so PATH was not probed and nothing renders here. */
+  cli: { name: string; present: boolean; forbidden?: true }[];
   note?: string;
 }
 

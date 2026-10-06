@@ -73,6 +73,18 @@ export const CELLS: readonly Cell[] = [
     engine: "claude-cli",
   },
   {
+    // The first thing anybody runs. Until 2026-10-06 the music capabilities
+    // defaulted on here while every music route answered 503 no-key — the
+    // finding the lane's invariant 1 was proved on. A capability now follows
+    // the key (lib/capabilities.ts, CAPABILITY_FACT), and this cell keeps it so.
+    name: "laptop-fresh-clone",
+    who: "a fresh clone: dev-auth on, no keys at all",
+    env: { NEXT_PUBLIC_DEV_AUTH: "1", LIGHTTRACK_DISABLE: "1" },
+    present: [],
+    posture: "available",
+    engine: "claude-cli",
+  },
+  {
     name: "laptop-offline-rehearsal",
     who: "a laptop rehearsing the hosted posture: LOCAL_BINARIES=off, a real access secret",
     env: { LOCAL_BINARIES: "off", LIGHTTRACK_DISABLE: "1" },

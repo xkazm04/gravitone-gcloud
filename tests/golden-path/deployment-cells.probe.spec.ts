@@ -49,8 +49,9 @@ import path from "node:path";
 import { test, expect } from "@playwright/test";
 
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
-import { capabilities, CAPABILITY_ROUTES, HOSTED_CAPS, type Capabilities } from "@/lib/capabilities";
+import { CAPABILITY_ROUTES, HOSTED_CAPS, type Capabilities } from "@/lib/capabilities";
 import { MANAGED_MARKERS } from "@/lib/deployment";
+import { serverCapabilities } from "@/lib/serverCapabilities";
 
 import {
   applyCell,
@@ -158,6 +159,7 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/articles/[runId]/resume/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/articles/[runId]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/articles/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
+  "app/api/capabilities/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/cut/export/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/cut/export/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
   "app/api/foundry/extract/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
@@ -237,22 +239,16 @@ const NOT_READY = new Set([
  * re-checked every run, and an entry that stops being true fails as stale, so
  * the fix cannot land without the record being taken down with it.
  */
-const KNOWN_UNHIDDEN_REFUSALS: Record<string, string> = {
-  "app/api/cut/export/route.ts":
-    "the Cut's animatic export spawns ffmpeg; no capability covers it, so a hosted deployment shows the export and answers 403 local-binaries-forbidden",
-  "app/api/music-video/export/route.ts":
-    "the music-video export spawns Chromium and ffmpeg; no capability covers it, so a hosted deployment shows it and answers 503 local-binaries-forbidden",
-  "app/api/ads/render/route.ts":
-    "the ads Finish render spawns ffmpeg and a headless browser; no capability covers it, so a hosted deployment shows it and answers 503 local-binaries-forbidden",
-};
+//
+// EMPTY SINCE 2026-10-06 (posture coherence). The three exports that answered
+// local-binaries-forbidden with no capability over them are behind
+// `localRender` now, and lib/publish/channels.ts answers from the posture
+// without probing PATH. The machinery stays: the next finding is recorded the
+// same way, and goes red as stale the day it is fixed.
+const KNOWN_UNHIDDEN_REFUSALS: Record<string, string> = {};
 
 /** Spawns a managed cell is known to make, by the route that makes them. */
-const KNOWN_MANAGED_SPAWNS: Record<string, { pattern: RegExp; why: string }> = {
-  "app/api/publish/channels/route.ts": {
-    pattern: /\b(where|which) (ffmpeg|ffprobe)\b/,
-    why: "lib/publish/channels.ts probes PATH for ffmpeg/ffprobe through a shell on the first readiness read, whatever the posture - and `publish` is off in every hosted cell, so the probe answers a question the deployment has already ruled out",
-  },
-};
+const KNOWN_MANAGED_SPAWNS: Record<string, { pattern: RegExp; why: string }> = {};
 
 /** Bodies that get each capability route PAST validation, so a "not ready"
  *  answer is observable (an empty body is refused before the key is read).
@@ -387,7 +383,9 @@ function load<T>(rel: string): T {
 function cellLib() {
   return {
     apiAuth: load<typeof import("@/lib/apiAuth")>("lib/apiAuth.ts"),
-    capabilities: load<typeof import("@/lib/capabilities")>("lib/capabilities.ts").capabilities,
+    // The server's matrix - flags AND facts (the music key, the posture) -
+    // which is what a cell's browser is told by GET /api/capabilities.
+    capabilities: load<typeof import("@/lib/serverCapabilities")>("lib/serverCapabilities.ts").serverCapabilities,
     localPosture: load<typeof import("@/lib/deployment")>("lib/deployment.ts").localPosture,
     engineStatus: load<typeof import("@/lib/text/router")>("lib/text/router.ts").engineStatus,
     musicBudget: load<typeof import("@/lib/music/budget")>("lib/music/budget.ts"),
@@ -469,7 +467,12 @@ interface CellRun {
   summary: string;
 }
 
-async function runCell(cell: Cell, opts: { sweep: boolean } = { sweep: true }): Promise<CellRun> {
+/** `seed` replaces the matrix the cell computed — the positive controls below
+ *  use it to put a known fault back, never a declared cell. */
+async function runCell(
+  cell: Cell,
+  opts: { sweep: boolean; seed?: (caps: Capabilities) => Capabilities } = { sweep: true },
+): Promise<CellRun> {
   const files = routeFiles();
   const scratch = mkdtempSync(path.join(tmpdir(), `cells-${cell.name}-`));
   const restore = applyCell(cell, scratch);
@@ -497,7 +500,8 @@ async function runCell(cell: Cell, opts: { sweep: boolean } = { sweep: true }): 
               `${cell.name}: engineStatus("edit-plan") serves ${status.serving}, the cell declares ${cell.engine} - ` +
                 status.candidates.map((c) => `${c.provider}:${c.ok}`).join(" "),
             );
-          const caps = lib.capabilities();
+          const computed = lib.capabilities();
+          const caps = opts.seed ? opts.seed(computed) : computed;
           const caller = callerOf(cell);
           const fetchesBeforeReady = () => hosts.length;
           let sweepFetches = 0;
@@ -674,7 +678,7 @@ test("capabilities: CAPABILITY_ROUTES covers every capability and names only rou
     routes.filter((r) => !files.includes(r)).map((r) => `${cap} -> ${r}`),
   );
   expect(bad, "CAPABILITY_ROUTES names a route file that is not on disk").toEqual([]);
-  expect(Object.keys(CAPABILITY_ROUTES).sort()).toEqual(Object.keys(capabilities()).sort());
+  expect(Object.keys(CAPABILITY_ROUTES).sort()).toEqual(Object.keys(serverCapabilities()).sort());
   for (const f of Object.keys(READY_BODIES)) expect(Object.values(CAPABILITY_ROUTES).flat(), `${f} has a ready body and no capability`).toContain(f);
   for (const f of [...Object.keys(KNOWN_UNHIDDEN_REFUSALS), ...Object.keys(KNOWN_MANAGED_SPAWNS)])
     expect(files, `a known finding names ${f}, which is not on disk`).toContain(f);
@@ -715,7 +719,7 @@ test("hosted block: each HOSTED_CAPS variable is the flag capabilities() reads f
   expect(wrong, "HOSTED_CAPS pairs a capability with a variable capabilities() does not read for it").toEqual([]);
   const restore = applyCell(CELLS.find((c) => c.name === "cloud-run-saas")!, tmpdir());
   try {
-    const caps = capabilities();
+    const caps = serverCapabilities();
     for (const h of HOSTED_CAPS) expect(caps[h.cap], `${h.variable}=${h.value} left ${h.cap} on`).toBe(false);
   } finally {
     restore();
@@ -732,28 +736,38 @@ for (const cell of CELLS) {
   });
 }
 
-// The positive control for invariant 1. A green lane over the declared cells
-// says nothing unless the same check goes red where the disagreement is real:
-// a dev-auth laptop with no music key (a fresh clone) shows the Score render —
-// `musicGenerate` defaults on — and the route answers 503 no-key. The check
-// must name the cell and each music route; if it ever stops doing so, the
-// "ok" verdicts above stopped meaning anything.
-test("invariant 1 witness: a cell whose music capability is on and whose key is absent is named, with its routes", async () => {
-  const fresh: Cell = {
-    name: "laptop-fresh-clone",
-    who: "a fresh clone with dev-auth on and no keys",
-    env: { NEXT_PUBLIC_DEV_AUTH: "1", LIGHTTRACK_DISABLE: "1" },
-    present: [],
-    posture: "available",
-    engine: "claude-cli",
-  };
-  const run = await runCell(fresh, { sweep: false });
+// THE POSITIVE CONTROLS for invariant 1. A green lane over the declared cells
+// says nothing unless the same check goes red where the disagreement is real.
+// Until 2026-10-06 a real cell supplied that: a fresh clone showed the music
+// capabilities with no key, and the check named it. That disagreement is fixed
+// (the declared `laptop-fresh-clone` cell above is green), so each control now
+// SEEDS the old fault back — the matrix as it was computed before the fix — and
+// requires the check to name the cell and every route. If one ever stops doing
+// so, the "ok" verdicts above stopped meaning anything.
+const freshClone = (): Cell => CELLS.find((c) => c.name === "laptop-fresh-clone")!;
+
+test("invariant 1 control: seeded - music capabilities on with no key - is named, with every music route", async () => {
+  const run = await runCell(freshClone(), {
+    sweep: false,
+    seed: (c) => ({ ...c, musicGenerate: true, musicSectionEdit: true, musicSfx: true }),
+  });
   console.log(run.summary);
   for (const l of run.lines) console.log(l);
   for (const f of Object.keys(READY_BODIES))
     expect(
       run.failures.some((x) => x.startsWith("laptop-fresh-clone:") && x.includes(f) && /answers 503 no-key/.test(x)),
       `invariant 1 did not flag ${f} in a cell where its capability is on and its key is absent`,
+    ).toBe(true);
+});
+
+test("invariant 1 control: seeded - localRender on where spawning is forbidden - names each export", async () => {
+  const cell = CELLS.find((c) => c.name === "cloud-run-saas")!;
+  const run = await runCell(cell, { sweep: true, seed: (c) => ({ ...c, localRender: true }) });
+  console.log(run.summary);
+  for (const f of CAPABILITY_ROUTES.localRender)
+    expect(
+      run.failures.some((x) => x.startsWith("cloud-run-saas:") && x.includes(f) && /503 local-binaries-forbidden and no capability/.test(x)),
+      `invariant 1 did not flag ${f} with localRender seeded on in a managed cell`,
     ).toBe(true);
 });
 

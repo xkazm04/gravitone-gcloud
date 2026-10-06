@@ -181,13 +181,14 @@ const post = (body: unknown, ip: string) =>
     }),
   );
 
-test("case 4 · a posture that forbids local binaries refuses with a 4xx naming it, and no file lands", async () => {
+// 503, not the 403 this route answered until 2026-10-06: the three exports
+// behind `localRender` refuse with one status and one code (the route's header).
+test("case 4 · a posture that forbids local binaries refuses with 503 naming it, and no file lands", async () => {
   process.env.LOCAL_BINARIES = "off";
   const document = compileCut(derive(), { "mus-a": 250 }, POINTERS);
 
   const res = await post({ document, projectId: "p-doc" }, "10.9.0.1");
-  expect(res.status).toBeGreaterThanOrEqual(400);
-  expect(res.status).toBeLessThan(500);
+  expect(res.status).toBe(503);
   const body = (await res.json()) as { detail: string; code: string };
   expect(body.code).toBe("local-binaries-forbidden");
   expect(body.detail).toContain(describePosture("policy-forbidden"));

@@ -107,7 +107,62 @@ export interface Capabilities {
    *  this flag's business — that is lib/publish/channels.ts's readiness table
    *  (live / dry / not_wired), which the preflight reads for this row. */
   publish: boolean;
+
+  /** Renders and exports that run ffmpeg / headless Chromium in this process:
+   *  the Cut's animatic (/api/cut/export), the music-video export and the ads
+   *  Finish render.
+   *
+   *  NOT A FLAG. It is `canSpawnLocalBinaries()` (lib/deployment.ts) and
+   *  nothing else, because the posture is the whole answer: a flag could only
+   *  repeat it, and a flag left on where the posture forbids spawning is
+   *  exactly the button that answers 503. Until 2026-10-06 nothing covered
+   *  these three routes, and the deployment-cell lane recorded each of them
+   *  answering local-binaries-forbidden behind a visible control. */
+  localRender: boolean;
 }
+
+/**
+ * WHAT ONLY THE SERVER KNOWS — the facts a capability can be missing for that
+ * no NEXT_PUBLIC_ flag can see.
+ *
+ * A flag is inlined into the bundle; a key and a posture are not, and must not
+ * be (a browser chunk that names a server-only variable fails
+ * `npm run check:bundle`). So this module never reads them itself: the server
+ * hands them in (lib/serverCapabilities.ts), and the browser receives the
+ * server's answer from GET /api/capabilities (lib/useCapabilities.ts).
+ */
+export interface DeploymentFacts {
+  /** lib/music/elevenlabs.ts `isMusicConfigured()`. */
+  musicKey: boolean;
+  /** lib/deployment.ts `canSpawnLocalBinaries()`. */
+  localBinaries: boolean;
+}
+
+/**
+ * Which fact each capability ALSO needs, beyond its flag. A capability named
+ * here is on only when its flag allows it AND its fact holds: an explicit flag
+ * can turn a configured capability off, and can never turn an unconfigured one
+ * on. Until 2026-10-06 the music three defaulted on with no key, so a fresh
+ * clone showed the Score render and the Sound lab's compose/SFX and every one
+ * of them answered 503 no-key.
+ */
+export const CAPABILITY_FACT: Readonly<Partial<Record<keyof Capabilities, keyof DeploymentFacts>>> = {
+  musicGenerate: "musicKey",
+  musicSectionEdit: "musicKey",
+  musicSfx: "musicKey",
+  localRender: "localBinaries",
+};
+
+/** What GET /api/capabilities answers: the matrix and the facts behind it, so a
+ *  surface can say WHICH thing is missing (absenceReason below). */
+export interface CapabilitiesAnswer {
+  capabilities: Capabilities;
+  facts: DeploymentFacts;
+}
+
+/** Facts while the server has not answered yet: every one of them false, so a
+ *  control that depends on one is shut until it is known to work. */
+export const PENDING_FACTS: Readonly<DeploymentFacts> = { musicKey: false, localBinaries: false };
 
 /**
  * THE MATRIX.
@@ -129,16 +184,28 @@ export interface Capabilities {
  * no adapter behind it. .env.example still carries the block, with a line of
  * reason per variable, and tests/golden-path/deployment-cells.probe.spec.ts
  * fails naming any variable on which the two differ (CIP-B).
+ *
+ * `facts` is REQUIRED, and that is the point: the flags alone answer "may this
+ * deployment offer it", never "can it". The server passes the real facts
+ * (`serverCapabilities()`); a browser surface reads `useCapabilities()`, which
+ * carries the server's answer — a component calling this directly would be
+ * guessing at a key it cannot see, and a probe fails one that does
+ * (tests/golden-path/posture-coherence.probe.spec.ts).
  */
-export function capabilities(): Capabilities {
-  return {
+export function capabilities(facts: DeploymentFacts): Capabilities {
+  const caps: Capabilities = {
     musicGenerate: on(process.env.NEXT_PUBLIC_CAP_MUSIC_GENERATE, true),
     musicSectionEdit: on(process.env.NEXT_PUBLIC_CAP_MUSIC_SECTION_EDIT, true),
     musicSfx: on(process.env.NEXT_PUBLIC_CAP_MUSIC_SFX, true),
     localVideoRender: on(process.env.NEXT_PUBLIC_CAP_LOCAL_VIDEO, true),
     desktopTooling: on(process.env.NEXT_PUBLIC_CAP_DESKTOP_TOOLING, true),
     publish: on(process.env.NEXT_PUBLIC_CAP_PUBLISH, true),
+    // No flag: the fact below is the whole answer.
+    localRender: true,
   };
+  for (const [cap, fact] of Object.entries(CAPABILITY_FACT) as [keyof Capabilities, keyof DeploymentFacts][])
+    caps[cap] = caps[cap] && facts[fact];
+  return caps;
 }
 
 /**
@@ -183,6 +250,7 @@ export const CAPABILITY_ROUTES: Readonly<Record<keyof Capabilities, readonly str
   musicSfx: ["app/api/music/sfx/route.ts"],
   localVideoRender: [],
   desktopTooling: [],
+  localRender: ["app/api/cut/export/route.ts", "app/api/music-video/export/route.ts", "app/api/ads/render/route.ts"],
   publish: [
     "app/api/publish/channels/route.ts",
     "app/api/publish/exports/route.ts",
@@ -215,4 +283,23 @@ export const ABSENCE_REASON: Record<keyof Capabilities, string> = {
     "This step hands off to desktop tooling on your own machine, which a hosted deployment cannot reach.",
   publish:
     "Publishing keeps its calendar and reads finished exports on the studio's own disk, which a hosted deployment does not have. Run the studio locally to schedule and publish.",
+  localRender: "Renders and exports run ffmpeg on the studio's own machine; this deployment may not spawn it.",
 };
+
+/**
+ * The sentence when a FACT, not a flag, is what took a capability away — short
+ * enough for a disabled control's <Hint> (twelve words, CLAUDE.md "The app does
+ * not explain itself"), and naming the missing thing rather than the screen.
+ */
+export const FACT_ABSENT: Record<keyof DeploymentFacts, string> = {
+  musicKey: "no music vendor key on this server",
+  localBinaries: "ffmpeg and headless Chromium cannot run in this deployment",
+};
+
+/** Why `cap` is off, given the facts it was computed from: the missing fact
+ *  when that is the cause (a keyless laptop is not "the hosted plan"), the
+ *  flag's ABSENCE_REASON otherwise. */
+export function absenceReason(cap: keyof Capabilities, facts: DeploymentFacts): string {
+  const fact = CAPABILITY_FACT[cap];
+  return fact && !facts[fact] ? FACT_ABSENT[fact] : ABSENCE_REASON[cap];
+}

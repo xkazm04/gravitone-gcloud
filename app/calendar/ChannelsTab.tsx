@@ -54,7 +54,9 @@ function commands(exports: Load<ExportList>, slots: readonly ScheduleSlot[], now
   ];
 }
 
-function Presence({ name, present, kind }: { name: string; present: boolean; kind: "env" | "cli" }) {
+/** `forbidden`: a binary this deployment may not spawn at all, so it was never
+ *  looked for (lib/publish/channels.ts cliPresence). */
+function Presence({ name, present, kind, forbidden }: { name: string; present: boolean; kind: "env" | "cli"; forbidden?: boolean }) {
   return (
     <li className="flex items-center gap-3 rounded-lg px-2 py-1.5 transition hover:bg-white/[0.03]">
       <span
@@ -67,7 +69,14 @@ function Presence({ name, present, kind }: { name: string; present: boolean; kin
         {kind === "cli" && <span className="mr-1.5 text-white/35">$</span>}
         {name}
       </span>
-      <span className={`font-jetbrains shrink-0 text-label ${present ? "text-emerald-200/90" : "text-white/40"}`}>{present ? "set" : "absent"}</span>
+      {forbidden ? (
+        <span className="font-jetbrains inline-flex shrink-0 items-center gap-1 text-label text-amber-200/80">
+          <Lock aria-hidden className="h-3 w-3" />
+          forbidden
+        </span>
+      ) : (
+        <span className={`font-jetbrains shrink-0 text-label ${present ? "text-emerald-200/90" : "text-white/40"}`}>{present ? "set" : "absent"}</span>
+      )}
     </li>
   );
 }
@@ -131,7 +140,7 @@ function ChannelCard({ c, index, reduced }: { c: ChannelReadiness; index: number
             <p className="font-jetbrains mb-1 px-2 text-label tracking-[0.18em] text-white/35 uppercase">cli</p>
             <ul aria-label={`${c.name} command-line tools`}>
               {c.cli.map((e) => (
-                <Presence key={e.name} name={e.name} present={e.present} kind="cli" />
+                <Presence key={e.name} name={e.name} present={e.present} kind="cli" forbidden={e.forbidden} />
               ))}
             </ul>
           </div>

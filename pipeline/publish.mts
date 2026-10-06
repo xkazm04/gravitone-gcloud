@@ -118,7 +118,7 @@ async function main() {
         for (const e of c.env) console.log(`    env ${pad(e.name, 24)} ${e.present ? "set" : "unset"}`);
       }
       const cli = r.channels[0]?.cli ?? [];
-      console.log(`\n  cli ${cli.map((c) => `${c.name}:${c.present ? "on PATH" : "missing"}`).join("  ")}`);
+      console.log(`\n  cli ${cli.map((c) => `${c.name}:${c.present ? "on PATH" : c.forbidden ? "forbidden here" : "missing"}`).join("  ")}`);
       return;
     }
     case "exports": {

@@ -8,8 +8,11 @@
 
 import { useState } from "react";
 
-import { Tally } from "@/components/ui/signal";
+import { Hint, Tally } from "@/components/ui/signal";
+import { absenceReason } from "@/lib/capabilities";
+import { withAccess } from "@/lib/imagingClient";
 import { useElapsed, useJobs, type Job } from "@/lib/jobs";
+import { useCapabilities } from "@/lib/useCapabilities";
 
 import { type MusicVideoSourceStepData } from "../../_shared/stepStore";
 import { useStepFor } from "../../_shared/useLoadFor";
@@ -17,17 +20,9 @@ import { useStepFor } from "../../_shared/useLoadFor";
 import { EXPORT_RESOLUTION_IDS, EXPORT_RESOLUTION_LABEL } from "./resolutions";
 import { useMusicVideoExport } from "./useMusicVideoExport";
 
-/** The download link's href, with the (already PUBLIC, per lib/apiAuth.ts's
- *  own header) access secret appended as `k=` when one is configured — a plain
- *  `<a href>`/download click cannot carry an `Authorization` header, so the
- *  file route accepts this fallback the same way `app/foundry/foundryClient.ts#fileUrl`
- *  already does for its own gallery tiles. */
-function downloadHref(url: string): string {
-  const k = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET?.trim();
-  if (!k) return url;
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}k=${encodeURIComponent(k)}`;
-}
+// The download link's href goes through the one credential door
+// (lib/imagingClient.ts withAccess): a plain `<a href>`/download click cannot
+// carry an `Authorization` header, so the file route reads `k=` instead.
 
 /** Real elapsed time, not a fraction — `lib/jobs.tsx`'s own rule for a driven
  *  job with no schedule. A multi-minute track's frame-by-frame capture has no
@@ -51,6 +46,10 @@ export default function MusicVideoExport({ projectId }: { projectId: string }) {
   const hydrated = useStepFor<MusicVideoSourceStepData>(projectId, "music-video-source", setComp);
   const exportState = useMusicVideoExport(projectId, jobs);
   const runningJob = jobs.runningFor(projectId, "video-export")[0];
+  // The export spawns Chromium and ffmpeg in the server process: off where the
+  // posture forbids it (lib/capabilities.ts localRender), and shut while the
+  // server's answer is in flight.
+  const { caps, facts, known } = useCapabilities();
 
   if (!hydrated)
     return (
@@ -101,15 +100,22 @@ export default function MusicVideoExport({ projectId }: { projectId: string }) {
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={() => void exportState.runExport(comp!)}
-        disabled={busy}
-        data-testid="music-video-run-export"
-        className="font-jetbrains rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1.5 text-label text-cyan-100 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {busy ? "exporting…" : `export · ${EXPORT_RESOLUTION_LABEL[exportState.resolution]}`}
-      </button>
+      <div className="flex items-center gap-2">
+        <button
+          type="button"
+          onClick={() => void exportState.runExport(comp!)}
+          disabled={busy || !caps.localRender}
+          data-testid="music-video-run-export"
+          className="font-jetbrains rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1.5 text-label text-cyan-100 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {busy ? "exporting…" : `export · ${EXPORT_RESOLUTION_LABEL[exportState.resolution]}`}
+        </button>
+        {known && !caps.localRender && (
+          <Hint variant="lock" tone="amber" label="why export is off">
+            {absenceReason("localRender", facts)}
+          </Hint>
+        )}
+      </div>
 
       {runningJob && <ExportProgress job={runningJob} />}
 
@@ -127,7 +133,7 @@ export default function MusicVideoExport({ projectId }: { projectId: string }) {
             {(exportState.result.wallMs / 1000).toFixed(1)}s total
           </p>
           <a
-            href={downloadHref(exportState.result.downloadUrl)}
+            href={withAccess(exportState.result.downloadUrl)}
             download={`music-video-${exportState.result.id}.mp4`}
             data-testid="music-video-download"
             className="font-jetbrains inline-block text-label text-cyan-200 underline underline-offset-2"

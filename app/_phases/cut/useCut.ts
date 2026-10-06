@@ -13,9 +13,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { capabilities } from "@/lib/capabilities";
 import { getProject } from "@/lib/projects";
 import { listTakes } from "@/lib/sound/client";
+import { useCapabilities } from "@/lib/useCapabilities";
 
 import {
   readStep,
@@ -172,8 +172,9 @@ export function useCut(projectId: string) {
      renders into it under); `null` otherwise, which deriveTimeline draws as
      "not read", never as held. */
   const [storeTakeIds, setStoreTakeIds] = useState<ReadonlySet<string> | null>(null);
+  const storeBacked = useCapabilities().caps.musicSectionEdit;
   useEffect(() => {
-    if (!capabilities().musicSectionEdit) return;
+    if (!storeBacked) return;
     let live = true;
     void listTakes({ kind: "music" }).then((r) => {
       if (live) setStoreTakeIds(r.ok ? new Set(r.data.takes.map((t) => t.id)) : null);
@@ -181,7 +182,7 @@ export function useCut(projectId: string) {
     return () => {
       live = false;
     };
-  }, [projectId]);
+  }, [projectId, storeBacked]);
 
   /* ── the cut ────────────────────────────────────────────────────────────── */
   const takeUrls = useMemo(
