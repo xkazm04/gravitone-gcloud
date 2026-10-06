@@ -40,9 +40,21 @@ keepEnv([
   "NEXT_PUBLIC_DEV_AUTH",
   "LIGHTTRACK_DISABLE",
   "K_SERVICE",
+  "TEXT_TURN_DIR",
 ]);
 
+// /api/recalibrate runs as a ledger turn since AIO-A stage 2; its records go to
+// a temp directory of this file's own, never foundry-out/.
+let turnDir = "";
+test.beforeAll(() => {
+  turnDir = mkdtempSync(join(tmpdir(), "gravitone-preview-turns-"));
+});
+test.afterAll(() => {
+  if (turnDir) rmSync(turnDir, { recursive: true, force: true });
+});
+
 test.beforeEach(() => {
+  process.env.TEXT_TURN_DIR = turnDir;
   process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
@@ -226,8 +238,13 @@ test("acceptance 3: forceRenders/forceConclusions move material into the manifes
   expect(ghost.manifest.renders!.sent).toEqual(["adjudication"]);
 });
 
+/** The synchronous body (`?wait=1`; the route answers 202 by default since
+ *  AIO-A stage 2), one project per call so no case waits on another's slot. */
+let recalProject = 0;
 async function recalibrate(body: unknown) {
-  const res = await recalibratePOST(post("http://localhost/api/recalibrate", body));
+  const res = await recalibratePOST(
+    post("http://localhost/api/recalibrate?wait=1", { ...(body as object), projectId: `p-preview-${++recalProject}` }),
+  );
   return { status: res.status, json: (await res.json()) as Record<string, unknown> };
 }
 

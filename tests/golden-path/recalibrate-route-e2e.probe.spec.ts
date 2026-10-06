@@ -16,6 +16,13 @@
 // `adjudication` (impact.ts ATTRIBUTION), so `reversal-chain` and
 // `derived-short` go out as RENDERS NOT SENT, and with an empty scope every
 // conclusion is out and unnamed — so each one is held back by name.
+//
+// `?wait=1` SINCE AIO-A STAGE 2 (2026-10-06). The route now answers 202 with a
+// turn id by default and runs the turn on the server's ledger; `?wait=1` holds
+// the request and answers the synchronous body this probe has always read. The
+// contract under test — statuses, sentences, the receipt — is that body, so
+// the probe asks for it explicitly, names a project (the ledger's slot is per
+// project), and points the ledger at a temp directory of its own.
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -30,9 +37,18 @@ import { EDIT_PLAN_SCHEMA } from "@/app/_phases/script/editPlan";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, schemaSha256, withFakeEngine } from "./_helpers";
 
-keepEnv([...FAKE_ENGINE_ENV, "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "NEXT_PUBLIC_DEV_AUTH", "LIGHTTRACK_DISABLE"]);
+keepEnv([...FAKE_ENGINE_ENV, "TEXT_TURN_DIR", "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "NEXT_PUBLIC_DEV_AUTH", "LIGHTTRACK_DISABLE"]);
+
+let turnDir = "";
+test.beforeAll(() => {
+  turnDir = mkdtempSync(join(tmpdir(), "gravitone-recal-e2e-turns-"));
+});
+test.afterAll(() => {
+  if (turnDir) rmSync(turnDir, { recursive: true, force: true });
+});
 
 test.beforeEach(() => {
+  process.env.TEXT_TURN_DIR = turnDir;
   process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
@@ -47,10 +63,10 @@ const HELD = "c-one-time-rerating";
 let ip = 0;
 async function recalibrate(): Promise<{ status: number; json: Record<string, unknown> }> {
   const res = await POST(
-    new Request("http://localhost/api/recalibrate", {
+    new Request("http://localhost/api/recalibrate?wait=1", {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": `10.77.0.${++ip}` },
-      body: JSON.stringify({ notebook: {}, renders: RENDERS, scope: {}, notes: [NOTE] }),
+      body: JSON.stringify({ projectId: "p-recal-e2e", notebook: {}, renders: RENDERS, scope: {}, notes: [NOTE] }),
     }),
   );
   return { status: res.status, json: (await res.json()) as Record<string, unknown> };

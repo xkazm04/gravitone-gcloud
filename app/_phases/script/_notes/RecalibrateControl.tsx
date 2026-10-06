@@ -5,7 +5,7 @@
 // The rules it enforces: one run at a time, a candidate is never auto-accepted,
 // and a plan that does not fit the runtime says so.
 //
-// The running state shows ELAPSED TIME and nothing else. It used to draw a
+// The running state shows ELAPSED TIME and a stop, nothing else. It used to draw a
 // percentage bar off a nine-second mock timer while a minutes-long Claude Opus 5
 // turn was still in flight — a duration the app did not know, animated as though
 // it did. An indeterminate bar is the honest shape for work with no schedule.
@@ -199,8 +199,24 @@ export default function RecalibrateControl({
           <p className="font-jetbrains text-content tracking-[0.14em] text-cyan-200 uppercase">
             recalibrating
           </p>
-          <span data-testid="recalibrate-elapsed" className="font-jetbrains text-label text-white/40">
-            {api.runningSince === null ? "starting…" : elapsedSince(api.runningSince, now)}
+          <span className="flex items-center gap-2">
+            <span data-testid="recalibrate-elapsed" className="font-jetbrains text-label text-white/40">
+              {api.runningSince === null ? "starting…" : elapsedSince(api.runningSince, now)}
+            </span>
+            {/* The run is the server's and outlives this step (2026-10-06), so
+                stopping it is a deliberate act with its own control. It ends
+                the engine's process, not just this view of it. Absent until the
+                server has named the turn — there is nothing to stop before. */}
+            {api.runningSince !== null && (
+              <button
+                data-testid="recalibrate-stop"
+                onClick={api.cancel}
+                aria-label="Stop the recalibration"
+                className="font-jetbrains rounded-full border border-white/15 px-2 py-0.5 text-label text-white/55 transition hover:border-rose-400/40 hover:text-rose-200"
+              >
+                stop
+              </button>
+            )}
           </span>
         </div>
         {/* Indeterminate on purpose — see the header note. */}

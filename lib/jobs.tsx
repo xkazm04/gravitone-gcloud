@@ -45,6 +45,7 @@
 
 import { usePolling } from "./usePolling";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { cancelTurn, isLiveTurn, listTurns, type TurnSummary } from "./turns/client";
 
 // "poster-generate" and "video-export" are the music-video discipline's two
 // long-running calls (WP1 of the music-video spark: lib/imaging/providers/agy.ts
@@ -96,6 +97,10 @@ export interface Job {
    *  make about it is "I cannot see it", which is true of that tab and says
    *  nothing about the job. Absent on records written before this existed. */
   ownerTab?: string;
+  /** Set on a TURN-BACKED job: the server's turn id, which is also the job's
+   *  `id`. Such a job is read from the server ledger, never written here —
+   *  see the turn section below. */
+  turnId?: string;
   error?: string;
   clearedAt?: number;
 }
@@ -134,8 +139,14 @@ interface JobsApi {
    *  when the app can no longer receive the result — the same word a reload
    *  mid-run already uses. */
   settle: (jobId: string, outcome: Exclude<JobStatus, "running">, detail: string) => void;
+  /** On a turn-backed job this asks the server to stop the turn, which ends
+   *  the engine's process tree (lib/turns/runner.ts). */
   cancel: (jobId: string) => void;
   clear: (jobId: string) => void;
+  /** Watch a server-owned turn: it joins `jobs` (and the bell) from the ledger
+   *  until it settles. The server minted its id, so there is nothing to
+   *  `start` — and nothing to `settle`: the ledger says when it ended. */
+  track: (t: { turnId: string; projectId: string; kind: JobKind; label: string; record?: TurnView }) => void;
   /** True while this project already has a follow-up in flight. */
   followupBusy: (projectId: string) => boolean;
   /** True while this project already has a job of this kind in flight. */
@@ -260,25 +271,34 @@ export function __identityEvictionListenerCount(): number {
   return evictionListeners.size;
 }
 
-interface Persisted { jobs: Job[]; events: JobEvent[] }
+/** `turns` holds the turn-backed jobs' FLAGS only — which turns this browser
+ *  is watching, and whether their bell event was read or cleared. Their status
+ *  lives on the server. It sits inside the one key on purpose: the identity
+ *  eviction already removes this key, and a second key would be a second thing
+ *  for it to remember. */
+interface Persisted { jobs: Job[]; events: JobEvent[]; turns: Record<string, TurnFlag> }
 
 /** The shared record as written, with NO judgement applied. Used by everything
  *  that is asking what another tab currently believes. */
 function parseStore(raw: string | null): Persisted {
-  if (!raw) return { jobs: [], events: [] };
+  if (!raw) return { jobs: [], events: [], turns: {} };
   try {
-    const p = JSON.parse(raw) as Persisted;
+    const p = JSON.parse(raw) as Partial<Persisted>;
     // `measured` post-dates the first store; a record written before it exists
     // was a timer job, and calling it measured is the truth about that record.
-    return { jobs: (p.jobs ?? []).map((j) => ({ ...j, measured: j.measured ?? true })), events: p.events ?? [] };
+    return {
+      jobs: (p.jobs ?? []).map((j) => ({ ...j, measured: j.measured ?? true })),
+      events: p.events ?? [],
+      turns: p.turns && typeof p.turns === "object" ? p.turns : {},
+    };
   } catch {
-    return { jobs: [], events: [] };
+    return { jobs: [], events: [], turns: {} };
   }
 }
 
 /** The record as THIS TAB should read it on mount. */
 function readStore(): Persisted {
-  if (typeof localStorage === "undefined") return { jobs: [], events: [] };
+  if (typeof localStorage === "undefined") return { jobs: [], events: [], turns: {} };
   const p = parseStore(localStorage.getItem(STORE_KEY));
   // A job that was RUNNING when the page died is not running HERE now — this
   // prototype's clock went with the tab. Do not resurrect it as live and do
@@ -296,7 +316,7 @@ function readStore(): Persisted {
           error: "The page reloaded while this was running. The prototype cannot reattach to it." }
       : j,
   );
-  return { jobs, events: p.events };
+  return { jobs, events: p.events, turns: p.turns };
 }
 
 /** Which of two copies of ONE job to believe. Only ever asked about a job this
@@ -401,6 +421,7 @@ function claimInStore(job: Job): void {
       JSON.stringify({
         jobs: [job, ...p.jobs.filter((j) => j.id !== job.id)].slice(0, 50),
         events: p.events.slice(0, 50),
+        turns: p.turns,
       }),
     );
   } catch {
@@ -453,9 +474,241 @@ export function applyClear(jobs: Job[], jobId: string): Job[] {
   return jobs.map((j) => (j.id === jobId ? { ...j, clearedAt: Date.now() } : j));
 }
 
+/* ── TURN-BACKED JOBS (AIO-A stage 2, 2026-10-06) ─────────────────────────── */
+//
+// A recalibration is no longer a fetch this tab holds open. It is a TURN the
+// server owns (lib/turns/runner.ts), with a durable record in the ledger, and
+// this provider only WATCHES it: the job's status, its end and its error are
+// read from the ledger through usePolling, and nothing here can settle one.
+// That is what closes the two windows `claimedElsewhere` documents — the slot
+// is claimed on the server, under one lock, against the ledger — and what lets
+// a turn finish while no tab is mounted and still reach the bell.
+//
+// WHAT THIS BROWSER KEEPS is a FLAG per watched turn: which project to poll,
+// the label the creator saw, and whether its bell event was read or cleared.
+// The bell event itself is DERIVED from the record (`turnEventsOf`), keyed
+// `e-<turnId>` — so a second poll, a second tab, or a reload cannot announce
+// one turn twice: there is nothing to append, only a record to read.
+//
+// Other kinds (frames, poster, export, research — stage 3) keep the
+// localStorage path above unchanged.
+
+/** The kinds that run as server-owned turns. */
+export const TURN_KINDS: ReadonlySet<JobKind> = new Set<JobKind>(["recalibrate"]);
+
+export interface TurnFlag {
+  turnId: string;
+  projectId: string;
+  kind: JobKind;
+  /** What the creator asked for, as the bell shows it. */
+  label: string;
+  /** When this browser started watching; the record's own start replaces it
+   *  once read. */
+  startedAt: number;
+  read?: boolean;
+  clearedAt?: number;
+}
+
+/** The part of a ledger record the provider reads. */
+export type TurnView = Pick<TurnSummary, "id" | "kind" | "projectId" | "status" | "startedAt" | "updatedAt" | "endedAt" | "error">;
+
+export interface TurnState {
+  flags: Record<string, TurnFlag>;
+  /** Records as last read from the ledger. Never persisted: the ledger is the
+   *  truth and a mount reads it again. */
+  records: Record<string, TurnView>;
+}
+
+export const EMPTY_TURNS: TurnState = { flags: {}, records: {} };
+
+/** How many watched turns a browser remembers. */
+const TURN_FLAG_CAP = 50;
+
+/** The bell's sentence for a turn that came back. */
+const TURN_DONE_DETAIL: Partial<Record<JobKind, string>> = {
+  recalibrate: "A recalibrated set of scripts is ready on the Script step — compare it, then accept or run again.",
+};
+
+const viewOf = (r: TurnView): TurnView => ({
+  id: r.id,
+  kind: r.kind,
+  projectId: r.projectId,
+  status: r.status,
+  startedAt: r.startedAt,
+  updatedAt: r.updatedAt,
+  ...(r.endedAt ? { endedAt: r.endedAt } : {}),
+  ...(r.error ? { error: r.error } : {}),
+});
+
+function capFlags(flags: Record<string, TurnFlag>): Record<string, TurnFlag> {
+  const all = Object.values(flags);
+  if (all.length <= TURN_FLAG_CAP) return flags;
+  const keep = all.sort((a, b) => b.startedAt - a.startedAt).slice(0, TURN_FLAG_CAP);
+  return Object.fromEntries(keep.map((f) => [f.turnId, f]));
+}
+
+/** Start watching a turn. A turn already watched keeps its flag (and its read
+ *  state); a record, when given, is taken as the newest known. */
+export function trackTurn(state: TurnState, flag: TurnFlag, record?: TurnView): TurnState {
+  const flags = state.flags[flag.turnId] ? state.flags : capFlags({ ...state.flags, [flag.turnId]: flag });
+  const next = flags === state.flags ? state : { ...state, flags };
+  return record ? mergeTurnRecords(next, [record]) : next;
+}
+
+/** Fold ledger records in. Only WATCHED turns are taken — the bell shows what
+ *  this browser asked for, not every turn the server has run. Unchanged
+ *  records return the state by reference. */
+export function mergeTurnRecords(state: TurnState, incoming: readonly TurnView[]): TurnState {
+  let records = state.records;
+  for (const r of incoming) {
+    if (!state.flags[r.id]) continue;
+    const prev = records[r.id];
+    if (prev && prev.status === r.status && prev.updatedAt === r.updatedAt) continue;
+    records = { ...records, [r.id]: viewOf(r) };
+  }
+  return records === state.records ? state : { ...state, records };
+}
+
+/** The projects with a watched turn that is not known to have ended. Empty
+ *  means polling stops. */
+export function turnsToPoll(state: TurnState): string[] {
+  const out = new Set<string>();
+  for (const f of Object.values(state.flags)) {
+    const r = state.records[f.turnId];
+    if (!r || isLiveTurn(r.status)) out.add(f.projectId);
+  }
+  return [...out].sort();
+}
+
+export interface TurnPoll {
+  /** When the reads began. A flag tracked after this cannot be judged by
+   *  them: the list may predate its turn. */
+  at: number;
+  projects: string[];
+  turns: TurnView[];
+}
+
+/** Read the ledger for every project `turnsToPoll` names, through the client
+ *  door. A project that cannot be read this round is skipped, not fatal. */
+export async function fetchTurns(state: TurnState, list: (projectId: string) => Promise<TurnView[]> = listTurns): Promise<TurnPoll> {
+  const at = Date.now();
+  const projects: string[] = [];
+  const turns: TurnView[] = [];
+  for (const projectId of turnsToPoll(state)) {
+    try {
+      turns.push(...(await list(projectId)));
+      projects.push(projectId);
+    } catch {
+      // offline, or a 401 while the identity settles — the next tick asks again
+    }
+  }
+  return { at, projects, turns };
+}
+
+/** Apply one poll. A watched turn the ledger no longer lists for a project it
+ *  was asked about (the ledger was cleared, or the turn fell out of the list's
+ *  window before this browser ever read it) stops being watched, rather than
+ *  being polled for forever. */
+export function applyTurnPoll(state: TurnState, poll: TurnPoll): TurnState {
+  let next = mergeTurnRecords(state, poll.turns);
+  const seen = new Set(poll.turns.map((t) => t.id));
+  const asked = new Set(poll.projects);
+  const gone = Object.values(next.flags).filter(
+    (f) => asked.has(f.projectId) && !seen.has(f.turnId) && !next.records[f.turnId] && f.startedAt < poll.at,
+  );
+  if (gone.length) {
+    const flags = { ...next.flags };
+    for (const f of gone) delete flags[f.turnId];
+    next = { ...next, flags };
+  }
+  return next;
+}
+
+export async function pollTurns(state: TurnState, list?: (projectId: string) => Promise<TurnView[]>): Promise<TurnState> {
+  return applyTurnPoll(state, await fetchTurns(state, list));
+}
+
+const msOf = (iso: string | undefined, fallback?: number): number | undefined => {
+  const n = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(n) ? n : fallback;
+};
+
+/** One watched turn as a Job. `cancelled` reads as the local cancel always has
+ *  ("Stopped by you."), `orphaned` as `interrupted` — the server-side twin of
+ *  the word a reload uses. */
+export function turnJobOf(flag: TurnFlag, rec?: TurnView): Job {
+  const base: Job = {
+    id: flag.turnId,
+    turnId: flag.turnId,
+    projectId: flag.projectId,
+    kind: flag.kind,
+    label: flag.label,
+    status: "running",
+    startedAt: msOf(rec?.startedAt, flag.startedAt)!,
+    progress: 0,
+    measured: false,
+    ...(flag.clearedAt != null ? { clearedAt: flag.clearedAt } : {}),
+  };
+  if (!rec || isLiveTurn(rec.status)) return base;
+  const endedAt = msOf(rec.endedAt ?? rec.updatedAt);
+  if (rec.status === "done") return { ...base, status: "done", endedAt };
+  if (rec.status === "cancelled") return { ...base, status: "failed", endedAt, error: "Stopped by you." };
+  const error = rec.error?.message || (rec.status === "orphaned" ? "The server stopped before this turn finished." : "The turn failed.");
+  return { ...base, status: rec.status === "orphaned" ? "interrupted" : "failed", endedAt, error };
+}
+
+export function turnJobsOf(state: TurnState): Job[] {
+  return Object.values(state.flags)
+    .map((f) => turnJobOf(f, state.records[f.turnId]))
+    .sort((a, b) => b.startedAt - a.startedAt || a.id.localeCompare(b.id));
+}
+
+/** The bell events the watched turns have earned: one per turn that ENDED,
+ *  keyed by its id. A cancel earns none — the creator pressed stop, and being
+ *  told so is noise. */
+export function turnEventsOf(state: TurnState): JobEvent[] {
+  const out: JobEvent[] = [];
+  for (const f of Object.values(state.flags)) {
+    const r = state.records[f.turnId];
+    if (!r || isLiveTurn(r.status) || r.status === "cancelled") continue;
+    const ok = r.status === "done";
+    const job = turnJobOf(f, r);
+    out.push({
+      id: `e-${f.turnId}`,
+      jobId: f.turnId,
+      projectId: f.projectId,
+      kind: f.kind,
+      ok,
+      title: `${JOB_NOUN[f.kind]} ${ok ? "returned" : r.status === "orphaned" ? "was interrupted" : "failed"}`,
+      detail: ok ? (TURN_DONE_DETAIL[f.kind] ?? "") : (job.error ?? ""),
+      at: job.endedAt ?? job.startedAt,
+      read: Boolean(f.read),
+    });
+  }
+  return out.sort((a, b) => b.at - a.at || a.id.localeCompare(b.id));
+}
+
+/** Two tabs' flags, unioned. `read` and `clearedAt` are sticky, as for events. */
+function mergeTurnFlags(mine: Record<string, TurnFlag>, theirs: Record<string, TurnFlag>): Record<string, TurnFlag> {
+  const out = { ...mine };
+  for (const [id, t] of Object.entries(theirs)) {
+    const m = out[id];
+    if (!m) {
+      out[id] = t;
+      continue;
+    }
+    const clearedAt = m.clearedAt != null && t.clearedAt != null ? Math.max(m.clearedAt, t.clearedAt) : (m.clearedAt ?? t.clearedAt);
+    out[id] = { ...m, read: Boolean(m.read || t.read), ...(clearedAt != null ? { clearedAt } : {}) };
+  }
+  return capFlags(out);
+}
+
 export function JobsProvider({ children }: { children: React.ReactNode }) {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [events, setEvents] = useState<JobEvent[]>([]);
+  // The turn-backed half: flags persisted with the record, records read from
+  // the ledger. See the turn section above.
+  const [turns, setTurns] = useState<TurnState>(EMPTY_TURNS);
   // The serialisation guard, held SYNCHRONOUSLY. `jobs` is state: two clicks in
   // one tick both read the same pre-update array and both pass a `jobs.some(…)`
   // check, which for recalibrate means two real Claude processes. A ref is
@@ -484,6 +737,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
     const p = readStore();
     setJobs(p.jobs);
     setEvents(p.events);
+    setTurns({ flags: p.turns, records: {} });
     setHydrated(true);
   }, []);
 
@@ -491,7 +745,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
   // we just received, which is what `lastWritten` is for.
   useEffect(() => {
     if (!hydrated || typeof localStorage === "undefined") return;
-    const raw = JSON.stringify({ jobs: jobs.slice(0, 50), events: events.slice(0, 50) });
+    const raw = JSON.stringify({ jobs: jobs.slice(0, 50), events: events.slice(0, 50), turns: turns.flags });
     if (raw === lastWritten.current) return;
     try {
       localStorage.setItem(STORE_KEY, raw);
@@ -499,7 +753,23 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // Quota or private mode. Losing persistence is survivable; crashing is not.
     }
-  }, [jobs, events, hydrated]);
+  }, [jobs, events, turns.flags, hydrated]);
+
+  // THE LEDGER, READ. Only while a watched turn is not known to have ended,
+  // and only while the tab is visible (usePolling). A mount whose flags name a
+  // turn that settled while no tab was open polls once, derives its one bell
+  // event, and stops.
+  const pollingTurns = useRef(false);
+  const pollTurnsNow = useCallback(() => {
+    if (pollingTurns.current) return;
+    pollingTurns.current = true;
+    void fetchTurns(turns)
+      .then((poll) => setTurns((cur) => applyTurnPoll(cur, poll)))
+      .finally(() => {
+        pollingTurns.current = false;
+      });
+  }, [turns]);
+  usePolling(pollTurnsNow, 2000, hydrated && turnsToPoll(turns).length > 0);
 
   // THE IDENTITY LEAVING. Registered here rather than reached for through auth —
   // see the eviction door above for why the import points this way.
@@ -516,6 +786,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
         lastWritten.current = null;
         setJobs([]);
         setEvents([]);
+        setTurns(EMPTY_TURNS);
       }),
     [],
   );
@@ -549,6 +820,10 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
       lastWritten.current = contradictsUs ? null : e.newValue;
       setJobs((mine) => mergeJobs(mine, incoming.jobs));
       setEvents((mine) => mergeEvents(mine, incoming.events));
+      setTurns((mine) => {
+        const flags = mergeTurnFlags(mine.flags, incoming.turns);
+        return { ...mine, flags };
+      });
     };
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
@@ -594,10 +869,21 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
     [],
   );
 
+  // Every job this tab can see: its own and the turn-backed ones the ledger
+  // reports. What `busy`, the bell and every surface read.
+  const allJobs = useMemo(
+    () => [...turnJobsOf(turns), ...jobs].sort((a, b) => b.startedAt - a.startedAt || a.id.localeCompare(b.id)),
+    [turns, jobs],
+  );
+  const allEvents = useMemo(
+    () => [...turnEventsOf(turns), ...events].sort((a, b) => b.at - a.at || a.id.localeCompare(b.id)),
+    [turns, events],
+  );
+
   const busy = useCallback(
     (projectId: string, kind: JobKind) =>
-      jobs.some((j) => j.projectId === projectId && j.kind === kind && j.status === "running"),
-    [jobs],
+      allJobs.some((j) => j.projectId === projectId && j.kind === kind && j.status === "running"),
+    [allJobs],
   );
 
   const followupBusy = useCallback((projectId: string) => busy(projectId, "followup"), [busy]);
@@ -627,7 +913,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
       //     other, and neither tab could see the other.
       if (SERIALISED.has(kind)) {
         if (live.current.has(slot)) return null;
-        if (jobs.some((j) => j.projectId === projectId && j.kind === kind && j.status === "running")) return null;
+        if (allJobs.some((j) => j.projectId === projectId && j.kind === kind && j.status === "running")) return null;
         if (claimedElsewhere(projectId, kind)) return null;
         live.current.add(slot);
       }
@@ -657,7 +943,7 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
 
       return job;
     },
-    [jobs],
+    [allJobs],
   );
 
   const settle = useCallback<JobsApi["settle"]>(
@@ -670,6 +956,17 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
   );
 
   const cancel = useCallback((jobId: string) => {
+    // A TURN is stopped on the server, which kills the engine's process tree;
+    // the record that comes back is the new truth. A 409 (it had already
+    // ended) carries the record too, and is folded in the same way.
+    if (jobId.startsWith("tn-")) {
+      void cancelTurn(jobId)
+        .then((out) => {
+          if (out.turn) setTurns((cur) => mergeTurnRecords(cur, [out.turn!]));
+        })
+        .catch(() => undefined);
+      return;
+    }
     // The same refusal `settle` makes, in the same words, for the mirror case:
     // a late CANCEL after a settle must not relabel a job that already ended.
     // The slot release moved inside it deliberately — `finish` already released
@@ -684,25 +981,55 @@ export function JobsProvider({ children }: { children: React.ReactNode }) {
 
   const clear = useCallback((jobId: string) => {
     setJobs((js) => applyClear(js, jobId));
+    // The same rule for a turn: only an interrupted (orphaned) one is cleared.
+    setTurns((cur) => {
+      const f = cur.flags[jobId];
+      if (!f || f.clearedAt != null || turnJobOf(f, cur.records[jobId]).status !== "interrupted") return cur;
+      return { ...cur, flags: { ...cur.flags, [jobId]: { ...f, clearedAt: Date.now() } } };
+    });
+  }, []);
+
+  const track = useCallback<JobsApi["track"]>(({ turnId, projectId, kind, label, record }) => {
+    setTurns((cur) => trackTurn(cur, { turnId, projectId, kind, label, startedAt: Date.now() }, record));
+  }, []);
+
+  const markRead = useCallback((id: string) => {
+    const turnId = id.startsWith("e-tn-") ? id.slice(2) : null;
+    if (turnId)
+      setTurns((cur) =>
+        cur.flags[turnId] && !cur.flags[turnId]!.read
+          ? { ...cur, flags: { ...cur.flags, [turnId]: { ...cur.flags[turnId]!, read: true } } }
+          : cur,
+      );
+    else setEvents((es) => es.map((e) => (e.id === id ? { ...e, read: true } : e)));
+  }, []);
+
+  const markAllRead = useCallback(() => {
+    setEvents((es) => es.map((e) => ({ ...e, read: true })));
+    setTurns((cur) => ({
+      ...cur,
+      flags: Object.fromEntries(Object.entries(cur.flags).map(([id, f]) => [id, { ...f, read: true }])),
+    }));
   }, []);
 
   const value = useMemo<JobsApi>(
     () => ({
-      jobs,
-      events,
-      unread: events.filter((e) => !e.read),
+      jobs: allJobs,
+      events: allEvents,
+      unread: allEvents.filter((e) => !e.read),
       start,
       settle,
       cancel,
       clear,
+      track,
       followupBusy,
       busy,
       runningFor: (projectId, kind) =>
-        jobs.filter((j) => j.projectId === projectId && j.status === "running" && (!kind || j.kind === kind)),
-      markRead: (id) => setEvents((es) => es.map((e) => (e.id === id ? { ...e, read: true } : e))),
-      markAllRead: () => setEvents((es) => es.map((e) => ({ ...e, read: true }))),
+        allJobs.filter((j) => j.projectId === projectId && j.status === "running" && (!kind || j.kind === kind)),
+      markRead,
+      markAllRead,
     }),
-    [jobs, events, start, settle, cancel, clear, followupBusy, busy],
+    [allJobs, allEvents, start, settle, cancel, clear, track, followupBusy, busy, markRead, markAllRead],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

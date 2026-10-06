@@ -117,9 +117,15 @@ test("conclusions: the one consumer that serialises the notebook for a model sen
     /\bconclusions\b/.test(route),
     "the recalibrate assembler no longer names conclusions in its payload",
   ).toBe(true);
+  // Since AIO-A stage 2 the route hands the run to the `recalibrate` turn kind,
+  // whose prepare step is where the assembler is called.
   expect(
-    /\bassembleRecalibrate\(/.test(stripComments(readFileSync(join(ROOT, "app/api/recalibrate/route.ts"), "utf8"))),
-    "the recalibrate route no longer builds its prompt through the assembler",
+    /\bRECALIBRATE_SPEC\b/.test(stripComments(readFileSync(join(ROOT, "app/api/recalibrate/route.ts"), "utf8"))),
+    "the recalibrate route no longer runs the recalibrate turn kind",
+  ).toBe(true);
+  expect(
+    /\bassembleRecalibrate\(/.test(stripComments(readFileSync(join(ROOT, "lib/turns/kinds/recalibrate.ts"), "utf8"))),
+    "the recalibrate turn kind no longer builds its prompt through the assembler",
   ).toBe(true);
 
   // And neither note may go back to claiming otherwise. The prose is what a
@@ -179,7 +185,7 @@ const OWN_LOAD_GUARD: Record<string, string> = {
   "app/_phases/script/trailer/useTrailerCut.ts":
     "named in useLoadFor.ts's header: a branching two-stage load (the saved cut, else compose from confirmed picks) with two distinct guard points. Flattening it would hide the branch that is the whole logic of the hook.",
   "app/_phases/script/useVersions.ts":
-    "named in useLoadFor.ts's header: carries an AbortController too, because it can cancel a model turn in flight rather than merely ignore its answer. Ignoring a result and cancelling the work that produces it cost different money.",
+    "named in useLoadFor.ts's header: three keyed reads with three different applies - the step record, the turn ledger's newest recalibration (watch it, or land it once), and a settled turn's full record - each behind its own guard. (It carried an AbortController until 2026-10-06; the run is a server-owned turn now, and leaving the step no longer stops it.)",
   "app/_phases/frames/useFrames.ts":
     "named in useLoadFor.ts's header: separates a read failure from an operation failure into two fields a surface renders differently, and gates its save on both.",
   "app/_phases/research/ResearchStep.tsx":

@@ -27,7 +27,8 @@
 //     must equal system + tail exactly, and its manifest must account for every
 //     character of it.
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
@@ -44,9 +45,20 @@ import { assembleRecalibrate } from "@/lib/turns/assemble/recalibrate";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, withFakeEngine, type Cassette } from "./_helpers";
 
-keepEnv([...FAKE_ENGINE_ENV, "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "NEXT_PUBLIC_DEV_AUTH", "LIGHTTRACK_DISABLE"]);
+keepEnv([...FAKE_ENGINE_ENV, "TEXT_TURN_DIR", "TEXT_ENV", "LOCAL_BINARIES", "GOOGLE_AI_API_KEY", "NEXT_PUBLIC_DEV_AUTH", "LIGHTTRACK_DISABLE"]);
+
+// /api/recalibrate runs as a ledger turn since AIO-A stage 2; its records go to
+// a temp directory of this file's own, never foundry-out/.
+let turnDir = "";
+test.beforeAll(() => {
+  turnDir = mkdtempSync(join(tmpdir(), "gravitone-parity-turns-"));
+});
+test.afterAll(() => {
+  if (turnDir) rmSync(turnDir, { recursive: true, force: true });
+});
 
 test.beforeEach(() => {
+  process.env.TEXT_TURN_DIR = turnDir;
   process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
@@ -163,10 +175,13 @@ for (const g of GOLDENS) {
     const POST = kind === "recalibrate" ? recalibratePOST : framesPOST;
     await withFakeEngine(kind === "recalibrate" ? "recalibrate-ok" : framesCassette(), async (engine) => {
       const res = await POST(
-        new Request(`http://localhost/api/${kind}`, {
+        // `?wait=1` and a projectId: recalibrate answers 202 by default since
+        // AIO-A stage 2. Neither reaches the prompt — the assembler reads only
+        // the keys it names — which is exactly what this case pins.
+        new Request(`http://localhost/api/${kind}${kind === "recalibrate" ? "?wait=1" : ""}`, {
           method: "POST",
           headers: { "content-type": "application/json", "x-forwarded-for": `10.79.0.${++ip}` },
-          body: JSON.stringify(g.body),
+          body: JSON.stringify(kind === "recalibrate" ? { ...g.body, projectId: "p-parity" } : g.body),
         }),
       );
       const turns = engine.turns();

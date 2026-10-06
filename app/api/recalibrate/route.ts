@@ -27,34 +27,72 @@
 // Which is why the prompt is BUILT rather than forwarded, and WHERE: the cuts,
 // the additions and the manifest that names them live in
 // lib/turns/assemble/recalibrate.ts (AIO-B), a pure function of this body and
-// the system prompt. This handler admits the request, asks the assembler, sends
-// the prompt, and holds the answer to the scope the assembler decided — so a
-// free preview (app/api/turns/preview) and this run build the same bytes, which
-// tests/golden-path/turn-assemble-parity.probe.spec.ts pins.
+// the system prompt. A free preview (app/api/turns/preview) and this run build
+// the same bytes, which tests/golden-path/turn-assemble-parity.probe.spec.ts
+// pins.
+//
+// ── A TURN, NOT A HELD-OPEN REQUEST (AIO-A stage 2, 2026-10-06) ─────────────
+//
+// This handler admits the request and hands it to the turn runner as the
+// `recalibrate` kind (lib/turns/kinds/recalibrate.ts: prepare = the refusals
+// and the assembler, settle = parseEditPlan and the stray/blind guards). It
+// answers 202 `{ turnId }` as soon as the record is written; the run belongs to
+// the server, and a tab that reloads or leaves the Script step loses nothing.
+// A second run for the same project while one is live is a 409 naming it.
+//
+// `?wait=1` holds the request until the turn settles and answers the
+// synchronous body this route always answered — 200 `{ plan, manifest, engine }`,
+// or the same refusal statuses and sentences — for scripts and probes.
+
+import { after } from "next/server";
 
 import { guardRequest } from "@/lib/apiAuth";
-import { TextError, statusFor } from "@/lib/text/errors";
-import { reason } from "@/lib/text/router";
+import { TextError, statusFor, type TextErrorKind } from "@/lib/text/errors";
 import { refusalResponse } from "@/lib/turns/assemble/manifest";
-import {
-  PromptUnavailable,
-  assembleRecalibrate,
-  blindConclusions,
-  recalibrateRefusal,
-  recalibrateSystemPrompt,
-  rendersOf,
-  strayRenders,
-  type RecalibrateInput,
-} from "@/lib/turns/assemble/recalibrate";
-import { EDIT_PLAN_SCHEMA, PlanError, parseEditPlan } from "@/app/_phases/script/editPlan";
+import { PromptUnavailable, recalibrateRefusal, type RecalibrateInput } from "@/lib/turns/assemble/recalibrate";
+import { RECALIBRATE_SPEC, RecalibrateRefused } from "@/lib/turns/kinds/recalibrate";
+import type { TurnRecord } from "@/lib/turns/ledger";
+import { startTurn } from "@/lib/turns/runner";
 
 /** The size predicate lives with the assembler; re-exported so the probes that
  *  ask it here (claude-run-bounded) keep asking the route. */
 export { tooLarge } from "@/lib/turns/assemble/recalibrate";
 
 export const runtime = "nodejs";
-/** A real run is minutes. Give the handler room rather than truncating it. */
+/** A real run is minutes. `after()` and `?wait=1` both live as long as the
+ *  route may, so give it room rather than truncating it. */
 export const maxDuration = 800;
+
+/** The same project-id rule /api/turns holds. */
+const PROJECT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
+
+/** The text-error kinds `statusFor` maps. A record's error kind is a plain
+ *  string on disk; anything else is the runner's own `failed`. */
+const TEXT_KINDS = new Set<string>([
+  "no-key", "not-installed", "not-logged-in", "policy-forbidden", "managed-platform", "unsupported",
+  "invalid-request", "refused", "no-alternative", "rate-limited", "timeout", "cancelled", "bad-response", "failed",
+]);
+
+const NOTHING_CHANGED = /Nothing was changed\.$/;
+
+/** A settled record as the synchronous body this route always answered. */
+function syncBody(rec: TurnRecord): Response {
+  if (rec.status === "done") return Response.json(rec.result);
+  const err = rec.error ?? { kind: rec.status, message: "" };
+  if (rec.status === "cancelled")
+    return Response.json({ detail: "The turn was cancelled. Nothing was changed.", code: "cancelled" }, { status: 499 });
+  if (rec.status === "orphaned") return Response.json({ detail: err.message, code: "orphaned" }, { status: 502 });
+  const kind = TEXT_KINDS.has(err.kind) ? (err.kind as TextErrorKind) : "failed";
+  const detail = !err.message
+    ? "The recalibration failed. Nothing was changed."
+    : NOTHING_CHANGED.test(err.message)
+      ? err.message
+      : `${err.message} Nothing was changed.`;
+  // A plan the settle door refused is `bad-response` with the whole sentence
+  // already written; it answered 502 with `{ detail }` alone, and still does.
+  const plain = NOTHING_CHANGED.test(err.message ?? "") && err.kind === "bad-response";
+  return Response.json(plain ? { detail } : { detail, code: kind }, { status: statusFor(kind) });
+}
 
 export async function POST(req: Request) {
   // LOCAL-COMPUTE ROUTE - auth + rate limit before anything is read or spawned.
@@ -73,130 +111,59 @@ export async function POST(req: Request) {
   const denied = await guardRequest(req);
   if (denied) return denied;
 
-  let body: RecalibrateInput;
+  let body: RecalibrateInput & { projectId?: unknown };
   try {
     body = await req.json();
   } catch {
     return Response.json({ detail: "Request body was not valid JSON." }, { status: 400 });
   }
+  // The refusals first, in the order they always ran — a 413 for an oversized
+  // body is answered before anything else is asked of it.
   const refused = recalibrateRefusal(body);
   if (refused) return refusalResponse(refused);
+  // The slot is per project: one live recalibration per project, across tabs
+  // and devices, decided against the ledger.
+  const projectId = body.projectId;
+  if (typeof projectId !== "string" || !PROJECT_ID_RE.test(projectId))
+    return Response.json({ detail: "`projectId` is required.", code: "bad-request" }, { status: 400 });
 
-  // ASSEMBLY AND DISPATCH ARE TWO STEPS, kept apart on purpose: the assembler
-  // decides what is sent (and the manifest says so); everything after it is
-  // one turn on the engine and the guards over its answer. AIO-A's turn runner
-  // takes the second half; the first does not move.
-  //
-  // BUILT INSIDE THE TRY. `recalibrateSystemPrompt()` reads a file from disk,
-  // and this await used to sit ABOVE the try -- so a missing
-  // `pipeline/RECALIBRATE-PROMPT.md` threw straight out of the handler: Next
-  // returned a bare 500 with no body, the client's
-  // `res.json().catch(() => ({ detail: "" }))` fell back to "The model could
-  // not be reached", and a simulated candidate was staged under a reason naming
-  // the wrong system entirely. Every throw on this path now has a door.
+  let out: Awaited<ReturnType<typeof startTurn>>;
   try {
-    const { prompt, manifest } = assembleRecalibrate(body, await recalibrateSystemPrompt());
-
-    // THE SCHEMA IS HANDED TO THE ENGINE, not only written into the prompt
-    // above. On the local rung nothing changes — the CLI cannot constrain its
-    // own output, so the router appends the same demand the prompt already makes
-    // and validates the answer on the way back. On the cloud rung it becomes
-    // real enforcement. Either way `parseEditPlan` below is unchanged and still
-    // authoritative: it checks more than a schema can (render ids against the
-    // table, op vocabulary), and this app does not have two validators.
-    const run = await reason({ prompt, turn: "edit-plan", schema: EDIT_PLAN_SCHEMA });
-    const plan = parseEditPlan(run.text, { renders: rendersOf(body) });
-
-    // A plan may only name material that was sent. `parseEditPlan` checks the
-    // id against the render TABLE, which still holds all three — so the check
-    // that the id was in THIS request reads the manifest that scoped it (forced
-    // renders included). Refused wholesale rather than filtered: an edit aimed
-    // at a chain the engine never read is a guess, and applying the rest of a
-    // plan built around that guess is worse than running again.
-    const stray = strayRenders(plan.edits, manifest);
-    if (stray.length)
-      return Response.json(
-        {
-          detail: `The engine returned edits for renders it was not given (${stray.join(", ")}), so it was editing a beat chain it could not read. Nothing was changed.`,
-        },
-        { status: 502 },
-      );
-    // Same rule, other axis: a beat may not rest on a conclusion whose text this
-    // run withheld. Being told a card's NAME is not being handed the card, and a
-    // beat's `cards` is what every coverage number is recomputed from — an id
-    // declared from the name alone produces a matrix that cites reasoning the
-    // engine never read. Refused wholesale, like the stray render above, for the
-    // same reason: the rest of a plan built around that guess is not salvage.
-    const blind = blindConclusions(plan.edits, manifest);
-    if (blind.length)
-      return Response.json(
-        {
-          detail: `The engine declared beats resting on conclusions whose text it was not sent (${blind.join(", ")}). Those are out of scope, so no beat may rest on them, and it had only their names. Nothing was changed.`,
-        },
-        { status: 502 },
-      );
-    // The receipt travels with the plan. A run that took minutes and cost real
-    // money and could tell the creator neither was the defect; the client keeps
-    // this on the version it stages, so what a version cost survives with it.
-    return Response.json({
-      plan,
-      // What the engine read, as the assembler decided it: sizes and ids, never
-      // text. Additive — a client that does not read it is unaffected.
-      manifest,
-      engine: {
-        // `kind` keeps its existing two-value shape for the client that already
-        // reads it; everything below it is new and additive, so a staged version
-        // written before this change still renders.
-        kind: run.provenance.transport === "local-subprocess" ? "local-claude-code" : "cloud-api",
-        provider: run.provenance.provider,
-        model: run.provenance.model,
-        // THE RUNG TRAVELS ONTO THE VERSION. The client keeps this receipt on
-        // the version it stages, so "which engine wrote this plan, and was it
-        // the one I configured" survives with the work — which is the whole
-        // point of labelling the ladder rather than logging it.
-        rung: run.provenance.rung,
-        transport: run.provenance.transport,
-        schemaEnforcement: run.provenance.schemaEnforcement,
-        reroutedFrom: run.provenance.reroutedFrom,
-        sessionId: run.provenance.sessionId,
-        costUsd: run.provenance.costUsd,
-        costBasis: run.provenance.costBasis,
-        durationMs: run.provenance.durationMs,
-        promptChars: run.provenance.promptChars,
-      },
-    });
+    out = await startTurn(RECALIBRATE_SPEC as Parameters<typeof startTurn>[0], projectId, body);
   } catch (e) {
+    if (e instanceof RecalibrateRefused) return refusalResponse(e.refusal);
     // Before anything ran. Distinguished from every failure below because the
     // engine was never reached: this is a broken install, not a broken turn, and
     // pointing the creator at the model would send them looking in the one place
-    // the fault is not.
+    // the fault is not. (It used to throw from ABOVE the try and leave a bare
+    // 500 with no body, which the client read as "the model could not be
+    // reached".)
     if (e instanceof PromptUnavailable)
-      return Response.json(
-        { detail: `${e.message} The engine was never started, so nothing was changed.` },
-        { status: 500 },
-      );
-
-    if (e instanceof PlanError)
-      // The engine ran and returned something unusable. Say which, because the
-      // fix is a prompt change, not a retry.
-      return Response.json(
-        { detail: `The engine returned a plan this app cannot use: ${e.message} Nothing was changed.` },
-        { status: 502 },
-      );
-
-    // One taxonomy, one status map (lib/text/errors.ts). This used to be a
-    // hand-rolled ternary here and a second copy of it in /api/frames. The
-    // message a TextError carries at the bottom of the ladder names every engine
-    // that was tried and why each dropped out, so "the model could not be
-    // reached" — the sentence that sends an operator to check the one place the
-    // fault is not — is no longer something this route can say.
+      return Response.json({ detail: `${e.message} The engine was never started, so nothing was changed.` }, { status: 500 });
     if (e instanceof TextError)
-      return Response.json(
-        { detail: `${e.message} Nothing was changed.`, code: e.kind },
-        { status: statusFor(e.kind) },
-      );
-
+      return Response.json({ detail: `${e.message} Nothing was changed.`, code: e.kind }, { status: statusFor(e.kind) });
     console.error("[recalibrate]", e);
     return Response.json({ detail: "The recalibration failed. Nothing was changed." }, { status: 502 });
   }
+
+  if (!out.ok)
+    return Response.json(
+      {
+        detail: `A recalibration is already running for this project (${out.holder.id}). Wait for it, or cancel it.`,
+        code: "slot-busy",
+        holder: out.holder.id,
+      },
+      { status: 409 },
+    );
+
+  const settled = out.done;
+  try {
+    after(() => settled);
+  } catch {
+    // No request scope (a probe or a script calling the handler directly). The
+    // run is already under way as a detached promise.
+  }
+
+  if (new URL(req.url).searchParams.get("wait") === "1") return syncBody(await settled);
+  return Response.json({ turnId: out.turnId }, { status: 202 });
 }
