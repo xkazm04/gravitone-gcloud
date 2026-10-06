@@ -20,6 +20,8 @@
 
 import { spawnSync } from "node:child_process";
 
+import { canSpawnLocalBinaries } from "../deployment";
+
 import { YOUTUBE_ENV_VARS } from "./oauth";
 import type { ChannelId, ChannelReadiness } from "./types";
 import type { PublishMode } from "./youtube";
@@ -93,7 +95,16 @@ function onPath(bin: string): boolean {
   }
 }
 
-export function cliPresence(): { name: string; present: boolean }[] {
+/**
+ * ASKED OF THE POSTURE FIRST. Where lib/deployment.ts forbids spawning a local
+ * binary (LOCAL_BINARIES=off, a managed platform) nothing here can render, so
+ * the answer is `forbidden` and PATH is never probed: the `where`/`which` above
+ * runs through a shell, and a managed deployment starts no process at all — the
+ * deployment-cell lane counted two per Cloud Run cell until 2026-10-06. Checked
+ * before the cache, per call, because the posture is (lib/deployment.ts).
+ */
+export function cliPresence(): ChannelReadiness["cli"] {
+  if (!canSpawnLocalBinaries()) return CLI_NAMES.map((name) => ({ name, present: false, forbidden: true as const }));
   cliCache ??= CLI_NAMES.map((name) => ({ name, present: onPath(name) }));
   return cliCache.map((c) => ({ ...c }));
 }

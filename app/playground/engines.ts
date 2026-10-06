@@ -26,7 +26,7 @@
 // views render whatever the row says without being edited. That is the whole
 // reason this is a table and not three `if`s.
 
-import { ABSENCE_REASON, type Capabilities } from "@/lib/capabilities";
+import { absenceReason, ABSENCE_REASON, type Capabilities, type DeploymentFacts } from "@/lib/capabilities";
 
 export type EngineId = "elevenlabs" | "suno" | "local";
 export type Transport = "api" | "manual" | "none";
@@ -79,8 +79,14 @@ export interface EngineDef {
   candidates?: LocalCandidate[];
 }
 
-/** The registry, for one deployment's capability flags. */
-export function engineRegistry(caps: Pick<Capabilities, "musicSectionEdit" | "musicSfx">): EngineDef[] {
+/** The registry, for one deployment's capability flags. `facts` (the server's,
+ *  lib/useCapabilities.ts) lets a withheld op name what is missing - the key on
+ *  a fresh clone, the hosted plan elsewhere; without it the flag's reason. */
+export function engineRegistry(
+  caps: Pick<Capabilities, "musicSectionEdit" | "musicSfx">,
+  facts?: DeploymentFacts,
+): EngineDef[] {
+  const why = (cap: "musicSectionEdit" | "musicSfx") => (facts ? absenceReason(cap, facts) : ABSENCE_REASON[cap]);
   // compose / plan / section-edit stand or fall together: they share
   // /api/music/compose and its stored-song posture, which is what the
   // musicSectionEdit flag governs (lib/capabilities.ts). The Score phase's cue
@@ -89,17 +95,17 @@ export function engineRegistry(caps: Pick<Capabilities, "musicSectionEdit" | "mu
   const elWithheld: EngineDef["withheld"] = [];
   for (const op of ["compose", "plan", "section-edit"] as const) {
     if (caps.musicSectionEdit) elOps.push(op);
-    else elWithheld.push({ op, reason: ABSENCE_REASON.musicSectionEdit });
+    else elWithheld.push({ op, reason: why("musicSectionEdit") });
   }
   if (caps.musicSfx) elOps.push("sfx");
-  else elWithheld.push({ op: "sfx", reason: ABSENCE_REASON.musicSfx });
+  else elWithheld.push({ op: "sfx", reason: why("musicSfx") });
 
   return [
     {
       id: "elevenlabs",
       name: "ElevenLabs",
       transport: "api",
-      status: elOps.length ? { state: "live" } : { state: "off", reason: ABSENCE_REASON.musicSectionEdit },
+      status: elOps.length ? { state: "live" } : { state: "off", reason: why("musicSectionEdit") },
       ops: elOps,
       withheld: elWithheld,
     },

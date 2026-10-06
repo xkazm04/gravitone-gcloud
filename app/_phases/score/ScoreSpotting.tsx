@@ -71,7 +71,8 @@ import {
 } from "@/lib/musicClient";
 import type { MusicQuote } from "@/lib/music/pricing";
 import type { MusicProvenance } from "@/lib/music/types";
-import { capabilities } from "@/lib/capabilities";
+import { absenceReason, soundStoreListed } from "@/lib/capabilities";
+import { useCapabilities } from "@/lib/useCapabilities";
 
 import { readStep, type StorageTrouble } from "../_shared/stepStore";
 import { useLoadFor } from "../_shared/useLoadFor";
@@ -216,7 +217,7 @@ function EmptyLanes({ targetS = 0, busy = false }: { targetS?: number; busy?: bo
  *  for them.
  *
  *  `done` remains for the posture with no sound store (hosted:
- *  `capabilities().musicSectionEdit` off): an object URL over decoded audio,
+ *  `soundStoreListed()` false): an object URL over decoded audio,
  *  dead on the next load, exactly as before — option A, where it is the only
  *  honest one.
  *
@@ -510,10 +511,13 @@ function StandardScore({ projectId }: { projectId: string }) {
   /** THE SPOTTING SESSION — proposed from the script's movements, edited here,
    *  persisted under this step's own key. `null` while the reads land. */
   const session = useScoreSpots(projectId, picture?.scenes ?? null);
-  /** THE POSTURE. The sound store is this machine's disk and a revision needs
-   *  the vendor's stored-song inpainting; `musicSectionEdit` already answers
-   *  for both. Off, takes stay session-only, as they always were. */
-  const storeBacked = capabilities().musicSectionEdit;
+  /** THE POSTURE, in two halves. The sound store is this machine's disk:
+   *  whether its takes are LISTED is the operator's flag alone
+   *  (soundStoreListed) — a key is never needed to read takes already paid
+   *  for. What SPENDS (a render, a section revision) is the fact-backed
+   *  matrix: no key, no spend. Store off, takes stay session-only. */
+  const { caps, facts, known: capsKnown } = useCapabilities();
+  const storeBacked = soundStoreListed();
   const store = useCueTakes(storeBacked);
 
   /** Spots + this project's picture + this project's story → cues. All three
@@ -601,7 +605,7 @@ function StandardScore({ projectId }: { projectId: string }) {
     // `disabled`: `/api/music/generate` validates bpm in 40..220 and the brief
     // puts the number into the plan's own style words, so a cue with no tempo
     // has nothing to send and nothing this surface may invent for it.
-    if (!cue || cue.bpm === undefined) return;
+    if (!cue || cue.bpm === undefined || !caps.musicGenerate) return;
     const bpm = cue.bpm;
     setTakes((t) => ({ ...t, [cue.id]: { state: "working" } }));
     // THE STORE PATH: the cue goes to /api/sound/generate (op "cue"), the take
@@ -1084,7 +1088,10 @@ function StandardScore({ projectId }: { projectId: string }) {
             // dead button. `/api/music/generate` validates bpm in 40..220 and
             // `cueToPlan` puts it into the plan's own words and into `barsFit`;
             // there is nothing to send and nothing honest to substitute.
-            disabled={take?.state === "working" || cue.bpm === undefined}
+            // SHUT WHERE MUSIC CANNOT RENDER (lib/capabilities.ts musicGenerate:
+            // no key on a fresh clone, the hosted flag elsewhere) - and shut,
+            // reasonless, for the moment the server's answer is in flight.
+            disabled={take?.state === "working" || cue.bpm === undefined || !caps.musicGenerate}
             className={`rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] px-3 py-1.5 text-label font-medium text-cyan-200/90 transition hover:bg-cyan-400/[0.14] disabled:opacity-50 ${
               // A render in flight is a wait; a missing tempo is a refusal. The
               // cursor should not say "hold on" about the second one.
@@ -1099,6 +1106,11 @@ function StandardScore({ projectId }: { projectId: string }) {
                   ? "re-ask the model"
                   : "render this cue"}
           </button>
+          {capsKnown && !caps.musicGenerate && (
+            <Hint variant="lock" tone="amber" label="why render is off">
+              {absenceReason("musicGenerate", facts)}
+            </Hint>
+          )}
           {/* WHAT THE CLICK COSTS, BESIDE THE BUTTON THAT SPENDS IT — not a
               dialog, which would kill the one thing a spotting session is for.
               Today it reads "13s of audio · unpriced", because ElevenLabs bills
@@ -1152,7 +1164,7 @@ function StandardScore({ projectId }: { projectId: string }) {
             projectId={projectId}
             spot={spot}
             store={store}
-            sectionEdit={storeBacked}
+            sectionEdit={caps.musicSectionEdit}
             onSpot={(next) => session.updateTakes(spot.id, next)}
           />
         )}

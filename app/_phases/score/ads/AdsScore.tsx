@@ -21,7 +21,8 @@ import { Loader2, Music2 } from "lucide-react";
 
 import { Ghost, Hint, StaleBadge, Tally, UpstreamBreak } from "@/components/ui/signal";
 import { useAnnounce } from "@/lib/announcer";
-import { ABSENCE_REASON, capabilities } from "@/lib/capabilities";
+import { ABSENCE_REASON, absenceReason, soundStoreListed } from "@/lib/capabilities";
+import { useCapabilities } from "@/lib/useCapabilities";
 import { getProject, type Project } from "@/lib/projects";
 import { costLabel, perSecondPrice } from "@/lib/musicClient";
 import type { MusicQuote } from "@/lib/music/pricing";
@@ -65,8 +66,11 @@ export default function AdsScore({ projectId }: { projectId: string }) {
     [patch],
   );
 
-  const caps = capabilities();
-  const store = useCueTakes(caps.musicSectionEdit);
+  const { caps, facts, known } = useCapabilities();
+  // Listing stored takes is the flag alone; rendering and section edits spend
+  // and stay on the fact-backed caps (lib/capabilities.ts soundStoreListed).
+  const listed = soundStoreListed();
+  const store = useCueTakes(listed);
 
   const [price, setPrice] = useState<MusicQuote | "unknown" | null>(null);
   useEffect(() => {
@@ -109,7 +113,7 @@ export default function AdsScore({ projectId }: { projectId: string }) {
       />
     );
 
-  if (!caps.musicSectionEdit)
+  if (!listed)
     return (
       <Notice severity="warning" title="no sound store here">
         <p>{ABSENCE_REASON.musicSectionEdit}</p>
@@ -224,8 +228,8 @@ export default function AdsScore({ projectId }: { projectId: string }) {
           </button>
           {estimate.title && <Hint>{estimate.title}</Hint>}
         </div>
-        {!caps.musicGenerate && (
-          <p className="mt-2 text-content leading-snug text-amber-200/80">{ABSENCE_REASON.musicGenerate}</p>
+        {known && !caps.musicGenerate && (
+          <p className="mt-2 text-content leading-snug text-amber-200/80">{absenceReason("musicGenerate", facts)}</p>
         )}
 
         {failure && (

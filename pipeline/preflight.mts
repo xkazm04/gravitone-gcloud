@@ -131,7 +131,7 @@ const WANT_TAILS = process.argv.includes("--tails");
  * import would be hoisted above loadEnv and would read an environment that had
  * not been filled in yet. Same reason verify-text-engine.mts does it. */
 
-const { capabilities, ABSENCE_REASON } = await import("../lib/capabilities");
+const { capabilities, ABSENCE_REASON, FLAGS_ONLY } = await import("../lib/capabilities");
 const { localPosture, describePosture } = await import("../lib/deployment");
 const { LOCAL_MODE } = await import("../lib/localMode");
 const { firebaseReady, FIREBASE_VARS } = await import("../lib/firebase");
@@ -559,7 +559,7 @@ const publishGate = (): CapGate => {
   const missing = yt.env.filter((e) => !e.present).map((e) => e.name);
   return {
     outcome: yt.status === "live" ? "reachable" : "after-action",
-    probe: r.channels.map((c) => `${c.id}:${c.status}`).join(" ") + ` · ${yt.cli.map((c) => `${c.name}:${c.present ? "on PATH" : "—"}`).join(" ")}`,
+    probe: r.channels.map((c) => `${c.id}:${c.status}`).join(" ") + ` · ${yt.cli.map((c) => `${c.name}:${c.present ? "on PATH" : c.forbidden ? "forbidden" : "—"}`).join(" ")}`,
     why:
       yt.status === "live"
         ? `YouTube uploads are live (private only). ${yt.note ?? ""} Presence is not validity — a revoked refresh token fails on the first upload.`
@@ -600,6 +600,20 @@ const CAP_GATE: Partial<Record<string, () => CapGate>> = {
             "reads the same posture, so unset LOCAL_BINARIES if you meant to keep desktop hand-offs."
           : ABSENCE_REASON.desktopTooling,
     source: "lib/deployment.ts · localPosture()",
+  }),
+  // No flag: the posture is the whole answer (lib/capabilities.ts). A policy
+  // flag is an action, a managed platform is not — the CLI rung's split.
+  localRender: () => ({
+    outcome: posture === "available" ? "reachable" : posture === "managed-platform" ? "absent" : "after-action",
+    posture: `${posture} — ${describePosture(posture)}`.slice(0, 200),
+    probe: `localPosture()=${posture}`,
+    why:
+      posture === "available"
+        ? "This process may spawn ffmpeg and headless Chromium; whether they are on PATH is each export's own check."
+        : posture === "policy-forbidden"
+          ? `${describePosture(posture)}. Unset LOCAL_BINARIES to render and export here.`
+          : ABSENCE_REASON.localRender,
+    source: "lib/deployment.ts · canSpawnLocalBinaries()",
   }),
 };
 
@@ -656,7 +670,14 @@ for (const [key, flagOn] of Object.entries(caps)) {
 // `Capabilities` is an interface, and TypeScript grants an implicit index signature
 // to an anonymous object type but never to an interface — so the matrix is spread
 // into one. Nothing is filtered or renamed on the way through.
-for (const r of capabilityRows({ ...capabilities() })) add(r);
+//
+// THE FLAGS' VIEW, facts taken as present. A missing key or a forbidding
+// posture is not "absent by design": each is its gate's to report above, with
+// its own outcome and remedy (musicGate says "set the key", localRender says
+// which posture). Folding the facts in here would file a keyless laptop's music
+// row as absent — the outcome that means no key changes it.
+const FLAGS_VIEW = FLAGS_ONLY;
+for (const r of capabilityRows({ ...capabilities(FLAGS_VIEW) })) add(r);
 
 /* ── .env.example vs lib/ — reported, never corrected ─────────────────────── */
 
@@ -695,7 +716,7 @@ const discrepancies = [...new Set(wantedVars)]
  * It writes nothing, spawns nothing and asserts nothing about the operator's
  * machine, so it is safe to run anywhere. */
 if (process.argv.includes("--selftest")) {
-  const real = capabilities();
+  const real = capabilities(FLAGS_VIEW);
   const augmented = { ...real, hypotheticalNewThing: true, hypotheticalOffThing: false };
   const extra = capabilityRows(augmented).filter((r) => !(r.id.slice(4) in real));
   console.log(`\nSELF-TEST · two capabilities that exist in no source file, put through the same loop\n`);

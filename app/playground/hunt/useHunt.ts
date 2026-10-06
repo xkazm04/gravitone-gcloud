@@ -40,7 +40,7 @@ import type {
   SoundKind,
   SoundTake,
 } from "@/lib/sound/types";
-import { capabilities } from "@/lib/capabilities";
+import { useCapabilities } from "@/lib/useCapabilities";
 
 import { engineRegistry, type EngineDef } from "../engines";
 import { useMusicPrice } from "../shared/price";
@@ -106,7 +106,10 @@ export function useHunt(kind: SoundKind) {
   const cost = useMusicPrice();
 
   // ── the engines, as this deployment declares them ──
-  const [reg] = useState<EngineDef[]>(() => engineRegistry(capabilities()));
+  // The server's answer (lib/useCapabilities.ts): with no music key, compose
+  // and SFX are withheld with that reason instead of offered and refused 503.
+  const { caps, facts } = useCapabilities();
+  const reg = useMemo<EngineDef[]>(() => engineRegistry(caps, facts), [caps, facts]);
   const reach = useCallback(
     (p: ProviderId): Reach => {
       const e = reg.find((x) => x.id === p);

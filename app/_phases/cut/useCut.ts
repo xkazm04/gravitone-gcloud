@@ -13,8 +13,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { capabilities } from "@/lib/capabilities";
 import { getProject } from "@/lib/projects";
+import { soundStoreListed } from "@/lib/capabilities";
 import { listTakes } from "@/lib/sound/client";
 
 import {
@@ -172,8 +172,12 @@ export function useCut(projectId: string) {
      renders into it under); `null` otherwise, which deriveTimeline draws as
      "not read", never as held. */
   const [storeTakeIds, setStoreTakeIds] = useState<ReadonlySet<string> | null>(null);
+  // Reading the store needs no vendor key: the flag alone decides
+  // (lib/capabilities.ts soundStoreListed), so a keyless box still resolves
+  // takes it already holds.
+  const storeBacked = soundStoreListed();
   useEffect(() => {
-    if (!capabilities().musicSectionEdit) return;
+    if (!storeBacked) return;
     let live = true;
     void listTakes({ kind: "music" }).then((r) => {
       if (live) setStoreTakeIds(r.ok ? new Set(r.data.takes.map((t) => t.id)) : null);
@@ -181,7 +185,7 @@ export function useCut(projectId: string) {
     return () => {
       live = false;
     };
-  }, [projectId]);
+  }, [projectId, storeBacked]);
 
   /* ── the cut ────────────────────────────────────────────────────────────── */
   const takeUrls = useMemo(

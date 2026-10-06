@@ -257,7 +257,8 @@ const code = (rel: string) => stripComments(readFileSync(join(ROOT, rel), "utf8"
  *  a parallel builder this wave (posture coherence: the cut/music-video/ads
  *  export buttons). Each must STILL be a violation - when one is migrated to
  *  `withAccess`, delete its line here. The list may only shrink. */
-const PENDING = new Set(["app/_phases/cut/music-video/MusicVideoExport.tsx", "app/_phases/cut/ads/useAdRenders.ts"]);
+// Emptied 2026-10-06: both export download links go through withAccess now.
+const PENDING = new Set<string>([]);
 
 /** A hand-built `k=` credential query, in any of the spellings the tree used. */
 const K_QUERY: [string, RegExp][] = [

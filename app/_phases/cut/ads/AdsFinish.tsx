@@ -17,11 +17,13 @@ import { useCallback, useMemo, useState } from "react";
 
 import { Download, ImagePlus, Loader2, X } from "lucide-react";
 
-import { CHIP_CLASS, Ghost, StaleBadge, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
+import { CHIP_CLASS, Ghost, Hint, StaleBadge, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
 import { assetFromUpload, getAsset, getUploadBlobs, putUploads, readUploadPointer } from "@/lib/assets";
+import { absenceReason } from "@/lib/capabilities";
 import { useElapsed, useJobs, type Job } from "@/lib/jobs";
 import { getProject, templateOf, type Project } from "@/lib/projects";
 import { useAuth } from "@/lib/useAuth";
+import { useCapabilities } from "@/lib/useCapabilities";
 import type { AdExportRef, AdsBriefData, AdsFinishData, AdsScenariosData, AdsShotsData } from "@/lib/ads/types";
 import type { Aspect } from "@/lib/imaging/types";
 
@@ -241,6 +243,10 @@ export default function AdsFinish({ projectId }: { projectId: string }) {
   );
   const latest = useMemo(() => latestByAspect(finish?.exports ?? []), [finish?.exports]);
   const renders = useAdRenders(projectId, [...latest.values()], jobs, onExport);
+  // The render spawns ffmpeg and headless Chromium in the server process: off
+  // where the posture forbids it (lib/capabilities.ts localRender), and shut
+  // while the server's answer is in flight.
+  const { caps, facts, known: capsKnown } = useCapabilities();
 
   const rows = useMemo(() => (scenario ? shotRows(scenario, shots) : []), [scenario, shots]);
   const doneViews = [...latest.values()]
@@ -422,7 +428,14 @@ export default function AdsFinish({ projectId }: { projectId: string }) {
 
         {/* ASPECTS — one render each. */}
         <section className="rounded-2xl border border-white/8 bg-white/[0.02] p-4" aria-label="exports">
-          <span className={EYEBROW}>exports</span>
+          <span className="flex items-center gap-2">
+            <span className={EYEBROW}>exports</span>
+            {capsKnown && !caps.localRender && (
+              <Hint variant="lock" tone="amber" label="why render is off">
+                {absenceReason("localRender", facts)}
+              </Hint>
+            )}
+          </span>
           <ul className="mt-3 space-y-2">
             {AD_ASPECTS.map((aspect) => {
               const on = finish.aspects.includes(aspect);
@@ -445,7 +458,7 @@ export default function AdsFinish({ projectId }: { projectId: string }) {
                     <button
                       type="button"
                       onClick={() => void renderAspect(aspect)}
-                      disabled={blocked || inFlight || renders.starting !== null}
+                      disabled={blocked || inFlight || renders.starting !== null || !caps.localRender}
                       data-testid={`ads-render-${aspect}`}
                       className="font-jetbrains rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-3 py-1 text-label text-cyan-100 transition hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-40"
                     >
