@@ -29,13 +29,11 @@
 //     label. The ONE exception is the rendered runtime, which is not a claim
 //     about craft — it is the number the director typed into the create dialog.
 //
-// WHY ONE ASSERTION READS SOURCE. Whether the ROUTE actually sends the block
-// cannot be observed from here: `app/api/frames/route.ts` builds its prompt
-// inline and hands it to `runClaude`, which spawns the `claude` CLI, and a route
-// file may not export a helper for a test to call (Next validates the export
-// surface of `route.ts`). So the wiring is asserted against the source, in the
-// same shape as harness-gate.probe.spec.ts — and it is labelled as such, because
-// it proves the call is written, not that its output reached a model.
+// THE ROUTE'S PROMPT IS READ, NOT ITS SOURCE. `app/api/frames/route.ts` used to
+// build its prompt inline, so whether it sent the block could only be asserted
+// against the source text. Since AIO-B the prompt comes from
+// lib/turns/assemble/frames.ts, a pure function, and the last case below reads
+// the block out of the assembled prompt itself.
 
 import { test, expect } from "@playwright/test";
 import { readFileSync } from "node:fs";
@@ -43,6 +41,7 @@ import { resolve } from "node:path";
 
 import { TEMPLATES, type TemplateId } from "@/lib/projects";
 import { FORMAT_BRIEFS, compileFormatBrief, formatBriefFor, runtimeWords } from "@/lib/formatBrief";
+import { assembleFrames } from "@/lib/turns/assemble/frames";
 
 const ROOT = resolve(__dirname, "../..");
 const read = (rel: string) => readFileSync(resolve(ROOT, rel), "utf8");
@@ -173,12 +172,16 @@ test("the prompt's `## The format` section sits between the motion rules and the
   expect(section).toMatch(/states no format/i);
 });
 
-// SOURCE-COUPLED — see the header. This proves the call is written into the
-// route, not that a model received its output.
-test("the frames route compiles the format block into THE RUN (source-level)", () => {
-  const src = read(ROUTE_TS);
-  expect(src).toContain('from "@/lib/formatBrief"');
-  expect(src).toContain("compileFormatBrief(body.template, body.targetS)");
+// BEHAVIOURAL NOW (AIO-B). The prompt is built by lib/turns/assemble/frames.ts,
+// a pure function the route calls, so the block can be read out of the very
+// prompt the route sends instead of out of its source. The one source-level
+// line left proves the route still asks that assembler.
+test("the frames route compiles the format block into THE RUN", () => {
+  const body = { beats: [{ at: "0:00", kind: "hook", text: "x" }], style: "ink", template: "mid-educational-video", targetS: 300 };
+  const { prompt } = assembleFrames(body, "SYSTEM");
+  const block = compileFormatBrief(body.template, body.targetS);
+  expect(prompt).toContain(block);
   // Ahead of the script: the kind of piece frames how every beat after it reads.
-  expect(src.indexOf("compileFormatBrief(body.template")).toBeLessThan(src.indexOf("## THE SCRIPT"));
+  expect(prompt.indexOf(block)).toBeLessThan(prompt.indexOf("## THE SCRIPT"));
+  expect(read(ROUTE_TS)).toMatch(/assembleFrames\(body,/);
 });

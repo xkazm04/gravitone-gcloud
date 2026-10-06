@@ -105,14 +105,21 @@ test("conclusions: the one consumer that serialises the notebook for a model sen
   // since 2026-08, in its own block. Two copies of one claim, both asserting a
   // defect that had already been fixed, and a comment that describes a live
   // finding is acted on as one.
-  const route = stripComments(readFileSync(join(ROOT, "app/api/recalibrate/route.ts"), "utf8"));
+  //
+  // The payload is built by lib/turns/assemble/recalibrate.ts since AIO-B (the
+  // route calls it), so that is the file whose imports are read.
+  const route = stripComments(readFileSync(join(ROOT, "lib/turns/assemble/recalibrate.ts"), "utf8"));
   expect(
     /import\s*\{[^}]*\bCONCLUSIONS\b[^}]*\}\s*from/.test(route),
-    "the recalibrate route no longer imports CONCLUSIONS - the model would be annotated about c-* cards it was never shown",
+    "the recalibrate assembler no longer imports CONCLUSIONS - the model would be annotated about c-* cards it was never shown",
   ).toBe(true);
   expect(
     /\bconclusions\b/.test(route),
-    "the recalibrate route no longer names conclusions in its payload",
+    "the recalibrate assembler no longer names conclusions in its payload",
+  ).toBe(true);
+  expect(
+    /\bassembleRecalibrate\(/.test(stripComments(readFileSync(join(ROOT, "app/api/recalibrate/route.ts"), "utf8"))),
+    "the recalibrate route no longer builds its prompt through the assembler",
   ).toBe(true);
 
   // And neither note may go back to claiming otherwise. The prose is what a

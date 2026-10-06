@@ -117,6 +117,14 @@ test("every route under app/api that reaches the text router carries a size boun
 
   const spawners = routes.filter((f) => /@\/lib\/(text\/router|claudeCli)/.test(stripComments(readFileSync(f, "utf8"))));
   expect(spawners.length, "no route was found that reaches the engine").toBeGreaterThanOrEqual(4);
-  const unbounded = spawners.filter((f) => !/\b413\b|MAX_[A-Z_]*(CHARS|RUN)\b|\btooLarge\b/.test(stripComments(readFileSync(f, "utf8"))));
+  // `recalibrateRefusal` / `framesRefusal` are the assemblers' refusal doors
+  // (lib/turns/assemble/, AIO-B): each runs that route's `tooLarge` and answers
+  // its 413, so a route that asks one is bounded by the same predicate.
+  const unbounded = spawners.filter(
+    (f) =>
+      !/\b413\b|MAX_[A-Z_]*(CHARS|RUN)\b|\btooLarge\b|\b(recalibrate|frames)Refusal\b/.test(
+        stripComments(readFileSync(f, "utf8")),
+      ),
+  );
   expect(unbounded.map((f) => path.relative(root, f)), "routes that spend a run with no size bound").toEqual([]);
 });

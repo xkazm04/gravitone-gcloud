@@ -34,6 +34,7 @@
 
 import { KEY_VAR } from "./env";
 import type { TextErrorKind } from "./errors";
+import { recordTurn } from "./stats";
 import type {
   LadderRung,
   RerouteStep,
@@ -181,6 +182,16 @@ export function formatTurn(l: TurnLog): string {
 }
 
 export function logTurn(l: TurnLog): void {
+  // The duration and cost also go to a bounded in-process ring
+  // (lib/text/stats.ts), which is what lets a preview say "about how long".
+  // Durations, rungs and costs only — the ring builds its record field by field
+  // and the prompt is not in a TurnLog to begin with. Isolated: a stats fault
+  // must never cost the log line or the turn.
+  try {
+    recordTurn(l);
+  } catch {
+    /* an estimate is a convenience; the line below is the record */
+  }
   const line = formatTurn(l);
   if (l.kind) console.error(line);
   else console.log(line);
