@@ -1,0 +1,24 @@
+{
+  "name": "frames-no-format",
+  "route": "app/api/frames/route.ts",
+  "capturedAt": "2026-10-06",
+  "capturedFrom": "the route's own inline assembly at 09c6906, before lib/turns/assemble/ existed (stdin of a stand-in claude)",
+  "inputs": {
+    "formatBrief": "e4d1234463e74df0"
+  },
+  "body": {
+    "style": "flat ink on paper",
+    "beats": [
+      {
+        "at": "0:00",
+        "kind": "hook",
+        "label": "the price",
+        "text": "Bitcoin hit a record.",
+        "device": "situation"
+      }
+    ]
+  },
+  "tailChars": 860,
+  "tailSha256": "302b18966523b4b096b774983db6a5d23d2199c1cd1ebe2b89399b272602f940",
+  "tail": "\n\n---\n\n# THE RUN\n\nReturn ONE JSON object and nothing else — no prose before or after, no code fence.\nIt must satisfy this schema:\n\n{}\n\n## THE FORMAT — NOT STATED\n\nThis run arrived without a format this studio recognises.\nDo not guess one. Direct the beats you were given, and where a choice would have turned on the\nlength or the kind of piece, say so in that scene's `rationale` instead of assuming a shape.\n\n## THE SCRIPT — untitled\nBeats in order. `at` is the timestamp you must echo as `beatAt`.\n[\n  {\n    \"at\": \"0:00\",\n    \"kind\": \"hook\",\n    \"label\": \"the price\",\n    \"text\": \"Bitcoin hit a record.\",\n    \"device\": \"situation\"\n  }\n]\n\n## THE NOTEBOOK — every fact you may cite\nA figure on screen MUST carry one of these ids. If no row supports a number, do not show one.\n\n\n## THE LOCKED VISUAL STYLE — compose within it, not against it\n\"flat ink on paper\""
+}

@@ -1,0 +1,73 @@
+{
+  "name": "frames-known-format",
+  "route": "app/api/frames/route.ts",
+  "capturedAt": "2026-10-06",
+  "capturedFrom": "the route's own inline assembly at 09c6906, before lib/turns/assemble/ existed (stdin of a stand-in claude)",
+  "inputs": {
+    "formatBrief": "66ca724b13a47238"
+  },
+  "body": {
+    "title": "Why Bitcoin's Price Won't Rise",
+    "schema": {
+      "type": "object",
+      "required": [
+        "scenes"
+      ],
+      "properties": {
+        "scenes": {
+          "type": "array"
+        }
+      }
+    },
+    "style": {
+      "name": "paper collage",
+      "palette": [
+        "#111",
+        "#eee"
+      ],
+      "rules": [
+        "layered 2D"
+      ]
+    },
+    "template": "mid-educational-video",
+    "targetS": 300,
+    "facts": [
+      {
+        "id": "f-macro-cause",
+        "claim": "Rates moved the price.",
+        "confidence": "high",
+        "loadBearing": true
+      },
+      {
+        "id": "f-etf-flows",
+        "claim": "Inflows were booked first.",
+        "confidence": "medium",
+        "loadBearing": false
+      }
+    ],
+    "beats": [
+      {
+        "at": "0:00",
+        "kind": "hook",
+        "label": "the price",
+        "text": "Bitcoin hit a record.",
+        "device": "situation"
+      },
+      {
+        "at": "0:12",
+        "kind": "turn",
+        "label": "the wish list",
+        "text": "Then it got everything it asked for, and halved."
+      },
+      {
+        "at": "0:30",
+        "kind": "answer",
+        "label": "nothing went wrong",
+        "text": "That is the problem."
+      }
+    ]
+  },
+  "tailChars": 2756,
+  "tailSha256": "94a57ea9662ea118a74bc9b0ece6aaa41f2fa39999508d776beac7046c4175d6",
+  "tail": "\n\n---\n\n# THE RUN\n\nReturn ONE JSON object and nothing else — no prose before or after, no code fence.\nIt must satisfy this schema:\n\n{\n  \"type\": \"object\",\n  \"required\": [\n    \"scenes\"\n  ],\n  \"properties\": {\n    \"scenes\": {\n      \"type\": \"array\"\n    }\n  }\n}\n\n## THE FORMAT — what kind of piece this is\n\nThis is **a mid-length educational video**. Three to six minutes — the shortest length that holds a full argument: a claim, a mechanism, a real objection and a verdict. (knowledge/templates/mid-educational-video/TEMPLATE.md)\n\n**Target runtime: 300s (5:00).** That is the director's own target for THIS piece — not a band borrowed from the craft library, and not a length you should edit the beats to reach.\n\nWhat the format changes about your direction:\n\n- **The movements are announced, and the picture should announce them too.** The format runs 2–3 movements and 3–5 turns (MEASURED · n=3, same file). A movement boundary is where the composition should visibly change register — camera, axis or count — because a cut whose movements look alike is a five-minute video with one act.\n- **This is the only one of these formats with room to establish, vary and pay off.** A motif planted in the hook can return at a turn and mean something. Use it, and say so in `rationale` when you do.\n- **Long enough to ramble, and the picture rambles first.** A frame that restates the one before it costs the viewer a minute of a format whose whole discipline is that every beat earns its place.\n- **The subjects are contested — economy, tech, politics** (stated by the template). A plate that visually takes a side the script does not take is an argument nobody wrote and nobody can check.\n\n## THE SCRIPT — Why Bitcoin's Price Won't Rise\nBeats in order. `at` is the timestamp you must echo as `beatAt`.\n[\n  {\n    \"at\": \"0:00\",\n    \"kind\": \"hook\",\n    \"label\": \"the price\",\n    \"text\": \"Bitcoin hit a record.\",\n    \"device\": \"situation\"\n  },\n  {\n    \"at\": \"0:12\",\n    \"kind\": \"turn\",\n    \"label\": \"the wish list\",\n    \"text\": \"Then it got everything it asked for, and halved.\"\n  },\n  {\n    \"at\": \"0:30\",\n    \"kind\": \"answer\",\n    \"label\": \"nothing went wrong\",\n    \"text\": \"That is the problem.\"\n  }\n]\n\n## THE NOTEBOOK — every fact you may cite\nA figure on screen MUST carry one of these ids. If no row supports a number, do not show one.\n[\n  {\n    \"id\": \"f-macro-cause\",\n    \"claim\": \"Rates moved the price.\",\n    \"confidence\": \"high\",\n    \"loadBearing\": true\n  },\n  {\n    \"id\": \"f-etf-flows\",\n    \"claim\": \"Inflows were booked first.\",\n    \"confidence\": \"medium\",\n    \"loadBearing\": false\n  }\n]\n\n## THE LOCKED VISUAL STYLE — compose within it, not against it\n{\n  \"name\": \"paper collage\",\n  \"palette\": [\n    \"#111\",\n    \"#eee\"\n  ],\n  \"rules\": [\n    \"layered 2D\"\n  ]\n}"
+}
