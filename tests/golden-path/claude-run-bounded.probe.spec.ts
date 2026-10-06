@@ -115,14 +115,22 @@ test("every route under app/api that reaches the text router carries a size boun
   walk(root);
   expect(routes.length, "the walk read no routes").toBeGreaterThan(10);
 
-  const spawners = routes.filter((f) => /@\/lib\/(text\/router|claudeCli)/.test(stripComments(readFileSync(f, "utf8"))));
+  // A route reaches the engine through the router directly, or — since AIO-A
+  // moved recalibrate (stage 2) and scene direction (stage 3) onto the ledger —
+  // by handing a turn kind to the runner's `startTurn`, which calls `reason()`.
+  const spawners = routes.filter((f) =>
+    /@\/lib\/(text\/router|claudeCli)|\bstartTurn\b/.test(stripComments(readFileSync(f, "utf8"))),
+  );
   expect(spawners.length, "no route was found that reaches the engine").toBeGreaterThanOrEqual(4);
   // `recalibrateRefusal` / `framesRefusal` are the assemblers' refusal doors
   // (lib/turns/assemble/, AIO-B): each runs that route's `tooLarge` and answers
-  // its 413, so a route that asks one is bounded by the same predicate.
+  // its 413, so a route that asks one is bounded by the same predicate. The
+  // generic /api/turns door is bounded by the kind's own `prepare`, which raises
+  // a TurnInputError carrying that 413 — the door answers its status
+  // (turn-frames.probe.spec.ts drives it).
   const unbounded = spawners.filter(
     (f) =>
-      !/\b413\b|MAX_[A-Z_]*(CHARS|RUN)\b|\btooLarge\b|\b(recalibrate|frames)Refusal\b/.test(
+      !/\b413\b|MAX_[A-Z_]*(CHARS|RUN)\b|\btooLarge\b|\b(recalibrate|frames)Refusal\b|\bTurnInputError\b/.test(
         stripComments(readFileSync(f, "utf8")),
       ),
   );

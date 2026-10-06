@@ -18,6 +18,7 @@ export const KIND_STEP: Record<JobKind, PhaseKey> = {
   "ad-scenarios": "script",
   "video-clip": "motion",
   "ad-render": "cut",
+  frames: "frames",
 };
 
 export function studioHref(projectId: string, step: PhaseKey): string {

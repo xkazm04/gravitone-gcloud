@@ -16,7 +16,9 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { accessHeader, generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
+import { generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
+import { useJobs } from "@/lib/jobs";
+import { getTurn, resumeTurn, startFrames, type TurnRecord } from "@/lib/turns/client";
 import {
   PHASES,
   getProject,
@@ -59,7 +61,12 @@ import {
 import { framesFromUnits, unitsFromFrames, unitsFromRender, type PictureUnit } from "./picture/unit";
 import { usePhaseReport } from "../_shared/usePhaseReport";
 import { FRAMES_RECORD } from "./records";
-import { applySceneSpecs, reviewSceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
+import { applySceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
+import { addDirectionSpend, landDirection, type DirectionResult } from "./direction";
+
+/** The turn kind the direction pass runs as (lib/turns/kinds/frames.ts), which
+ *  is also its job kind in the bell. */
+const KIND = "frames";
 
 /** This step's phase key — what it reports its progress under. Its record is
  *  `FRAMES_RECORD` (./records), read and written only through the def. */
@@ -133,6 +140,11 @@ export interface FramesStepData {
    *  money was spent on the step, not on the session — a reload that forgets it
    *  turns the header's spend line back into an undercount. */
   direction?: DirectionSpend;
+  /** The last scene-direction TURN this step took onto the cut (applied, or
+   *  found to have nothing to apply). The pass is a server-owned turn since
+   *  AIO-A stage 3, and a mount lands a settled one it has not taken — so this
+   *  is what makes "exactly once" survive a reload. */
+  turn?: string;
   savedAt?: number;
 }
 
@@ -199,6 +211,11 @@ export function useFrames(projectId: string) {
   /** What the art-direction passes have cost this cut. Null until one has run —
    *  which is absence, and reads as absence, rather than $0.00. */
   const [direction, setDirection] = useState<DirectionSpend | null>(null);
+  /** The last direction turn this step took — persisted on the record, so
+   *  "exactly once" survives a reload. The ref is the synchronous guard; the
+   *  state is what is saved. */
+  const [consumed, setConsumed] = useState<string | null>(null);
+  const consumedRef = useRef<string | null>(null);
 
   /* ── load ───────────────────────────────────────────────────────────────── */
   /** The read that did not happen, when one did not.
@@ -297,7 +314,7 @@ export function useFrames(projectId: string) {
    *  save below writes nothing: a stored record is rewritten when somebody
    *  changes it, never because somebody opened it. That is what lets a v1
    *  record sit on disk as v1 until its first edit (./picture/migrate.ts). */
-  const asRead = useRef<{ frames: Frame[]; direction: DirectionSpend | null } | null>(null);
+  const asRead = useRef<{ frames: Frame[]; direction: DirectionSpend | null; turn: string | null } | null>(null);
 
   useEffect(() => {
     if (!source) return;
@@ -335,7 +352,13 @@ export function useFrames(projectId: string) {
       // frames away, and carrying its bill onto the new ones would be the same
       // lie as omitting it — a figure that describes work not on screen.
       const spend = sameCut ? (stored?.direction ?? null) : null;
-      asRead.current = sameCut ? { frames: next, direction: spend } : null;
+      // The consumed turn is a fact about the PROJECT's passes, not about one
+      // cut, so it is kept across a re-derive: a pass already taken is never
+      // taken again, whichever frames it was taken onto.
+      const took = stored?.turn ?? null;
+      asRead.current = sameCut ? { frames: next, direction: spend, turn: took } : null;
+      consumedRef.current = took;
+      setConsumed(took);
       setFrames(next);
       setDirection(spend);
       setStepLoaded(true);
@@ -359,7 +382,13 @@ export function useFrames(projectId: string) {
     // we could not read with one we invented.
     if (loadTrouble) return;
     // AND not while the cut is still exactly what was read — see `asRead`.
-    if (asRead.current && frames === asRead.current.frames && direction === asRead.current.direction) return;
+    if (
+      asRead.current &&
+      frames === asRead.current.frames &&
+      direction === asRead.current.direction &&
+      consumed === asRead.current.turn
+    )
+      return;
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => {
       void saveRecord(FRAMES_RECORD, projectId, {
@@ -370,12 +399,13 @@ export function useFrames(projectId: string) {
         frames,
         renderId: source.id,
         ...(direction ? { direction } : {}),
+        ...(consumed ? { turn: consumed } : {}),
       });
     }, 600);
     return () => {
       if (timer.current) clearTimeout(timer.current);
     };
-  }, [frames, direction, stepLoaded, loadTrouble, projectId, source]);
+  }, [frames, direction, consumed, stepLoaded, loadTrouble, projectId, source]);
 
   const patch = useCallback((id: string, fn: (f: Frame) => Frame) => {
     setFrames((fs) => fs.map((f) => (f.id === id ? fn(f) : f)));
@@ -571,7 +601,23 @@ export function useFrames(projectId: string) {
 
   /* ── authoring ──────────────────────────────────────────────────────────── */
 
-  const [directing, setDirecting] = useState(false);
+  // THE PASS IS A TURN THE SERVER OWNS (AIO-A stage 3, 2026-10-06). The click
+  // asks /api/frames through the one client door (lib/turns/client.ts); the
+  // route answers 202 with a turn id as soon as the ledger has the record, and
+  // the jobs provider watches it — so the pass is in the bell, and it is the
+  // ledger, not this closure, that says when it ended. The operator decision
+  // made for recalibrate holds here too: leaving the step does not stop the
+  // pass, a reload re-attaches to it, `cancelDirection` is the deliberate stop
+  // that ends the engine, and a settled pass is taken onto the cut once.
+  const jobs = useJobs();
+  const { busy: jobBusy, track, cancel: cancelJob } = jobs;
+  /** This project's newest direction turn, as the ledger reports it. */
+  const turnJob = jobs.jobs.find((j) => j.turnId && j.projectId === projectId && j.kind === KIND);
+  /** Between the click and the 202: no turn id exists yet, and the button
+   *  must already be locked. */
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
+  const directing = jobBusy(projectId, KIND) || starting;
 
   /** What the last pass refused, keyed by the beat it refused, so the ledger can
    *  say it ON that beat's row. A rejection printed as one error line is a
@@ -580,6 +626,83 @@ export function useFrames(projectId: string) {
   /** The pass's own summary — partial success, which is neither an error nor
    *  silence and deserves its own voice. */
   const [notice, setNotice] = useState<string | null>(null);
+
+  // What a landing reads: the cut as it is when the answer arrives. Written in
+  // an effect, never during render.
+  const live = useRef({ frames });
+  useEffect(() => {
+    live.current = { frames };
+  });
+
+  /** Take a settled direction turn onto the cut — at most once per turn. */
+  const land = useCallback((rec: TurnRecord) => {
+    if (consumedRef.current === rec.id) return;
+    consumedRef.current = rec.id;
+    setConsumed(rec.id);
+    if (rec.status === "failed") {
+      const why = rec.error?.message || "The scene direction failed.";
+      setError(/Nothing was changed\.$/.test(why) ? why : `${why} Nothing was changed.`);
+      return;
+    }
+    // cancelled or orphaned: nothing came back, and nothing is applied.
+    if (rec.status !== "done") return;
+    const result = (rec.result ?? {}) as DirectionResult;
+    // The bill, before the parse — see addDirectionSpend.
+    setDirection((d) => addDirectionSpend(d, result.engine, Date.now()));
+    try {
+      const landing = landDirection(String(result.raw ?? ""), live.current.frames, FACTS);
+      // Apply what survived. Rejected and unmentioned beats keep exactly what
+      // they had — applySceneSpecs only touches frames it has a spec for.
+      setFrames((fs) => applySceneSpecs(fs, landing.specs));
+      setRejections(landing.rejections);
+      setNotice(landing.notice);
+    } catch (e) {
+      setError(
+        e instanceof SceneSpecError
+          ? `The engine returned direction this app cannot use: ${e.message} Nothing was changed.`
+          : e instanceof Error
+            ? e.message
+            : "The scene direction failed.",
+      );
+    }
+  }, []);
+
+  // ON MOUNT, the project's newest direction turn is asked for: a live one is
+  // watched (the button stays locked and offers a stop), a settled one this
+  // step has not taken is applied, once. Gated on the step's own record having
+  // been read, because that record is where the consumed id lives — and never
+  // over a record that could not be read, whose save is disarmed.
+  const ready = stepLoaded && Boolean(source) && !loadTrouble;
+  useEffect(() => {
+    if (!ready) return;
+    let alive = true;
+    void resumeTurn(projectId, KIND, consumedRef.current)
+      .then((l) => {
+        if (!alive) return;
+        if (l.action === "watch") track({ turnId: l.turn.id, projectId, kind: KIND, label: "scene direction", record: l.turn });
+        else if (l.action === "land") land(l.turn);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [ready, projectId, track, land]);
+
+  // The watched turn ENDING while the step is mounted: read its whole record
+  // (the list the provider polls carries no result) and land it.
+  const endedTurn = turnJob && turnJob.status !== "running" ? turnJob.id : null;
+  useEffect(() => {
+    if (!ready || !endedTurn || endedTurn === consumed) return;
+    let alive = true;
+    void getTurn(endedTurn)
+      .then((rec) => {
+        if (alive && rec) land(rec);
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [ready, endedTurn, consumed, land]);
 
   /**
    * Art-direct the whole cut in one pass.
@@ -608,108 +731,68 @@ export function useFrames(projectId: string) {
       );
       return;
     }
-    setDirecting(true);
+    if (directing || startingRef.current) return;
+    startingRef.current = true;
+    setStarting(true);
     setError(null);
     setNotice(null);
     setRejections({});
     try {
-      const res = await fetch("/api/frames", {
-        method: "POST",
-        headers: { "content-type": "application/json", ...accessHeader() },
-        body: JSON.stringify({
-          title: render.title,
-          schema: SCENE_SCHEMA,
-          style: block,
-          // THE FORMAT — the second thing this hook reads the project record for.
-          // Until this landed, the direction pass knew the style but not the kind
-          // of piece or its length, so a thirty-second clip and a six-minute
-          // argument were art-directed against an identical brief. Sent raw and
-          // resolved server-side by lib/formatBrief.ts; both are omitted while the
-          // record is still loading, and the prompt then says it was not told
-          // rather than guessing.
-          //
-          // A SEAM THIS DOES NOT CLOSE: the beats come from `render`, a fixture,
-          // and `ScriptRender` declares a `template` of its own (a loose `string`
-          // — app/_phases/script/types.ts:53) which need not agree with the
-          // project's. RENDERS[0] says "mid-educational-video" for every project
-          // whatever its record says. The record is the right authority — it is
-          // what the director chose — but the disagreement is real today, so the
-          // prompt's `## The format` §2 tells the model to direct the beats it has
-          // and say so, rather than editing them toward a number.
-          template: project?.template,
-          targetS: project?.targetS,
-          facts: FACTS.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
-          beats: frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device })),
-        }),
+      const out = await startFrames(projectId, {
+        title: render.title,
+        schema: SCENE_SCHEMA,
+        style: block,
+        // THE FORMAT — the second thing this hook reads the project record for.
+        // Until this landed, the direction pass knew the style but not the kind
+        // of piece or its length, so a thirty-second clip and a six-minute
+        // argument were art-directed against an identical brief. Sent raw and
+        // resolved server-side by lib/formatBrief.ts; both are omitted while the
+        // record is still loading, and the prompt then says it was not told
+        // rather than guessing.
+        //
+        // A SEAM THIS DOES NOT CLOSE: the beats come from `render`, a fixture,
+        // and `ScriptRender` declares a `template` of its own (a loose `string`
+        // — app/_phases/script/types.ts:53) which need not agree with the
+        // project's. RENDERS[0] says "mid-educational-video" for every project
+        // whatever its record says. The record is the right authority — it is
+        // what the director chose — but the disagreement is real today, so the
+        // prompt's `## The format` §2 tells the model to direct the beats it has
+        // and say so, rather than editing them toward a number.
+        template: project?.template,
+        targetS: project?.targetS,
+        facts: FACTS.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
+        beats: frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device })),
       });
-      const json = await res.json().catch(() => ({}) as Record<string, unknown>);
-      if (!res.ok) throw new Error(typeof json.detail === "string" ? json.detail : "The scene direction failed.");
-
-      // The bill, before the parse. `/api/frames` has always returned what this
-      // pass cost and how long it took; the client used to destructure `raw`
-      // and `detail` and drop `engine` on the floor, which made the header's
-      // dollar figure an undercount of the single most expensive call here.
-      //
-      // Read it before parsing on purpose: a response this app cannot USE was
-      // still a response the user PAID for, and a rejected pass that costs
-      // nothing on screen is the same lie in a different direction.
-      const engine = (json.engine ?? {}) as { costUsd?: unknown; durationMs?: unknown };
-      const costUsd = typeof engine.costUsd === "number" && Number.isFinite(engine.costUsd) ? engine.costUsd : undefined;
-      const durationMs =
-        typeof engine.durationMs === "number" && Number.isFinite(engine.durationMs) ? engine.durationMs : undefined;
-      setDirection((d) => ({
-        runs: (d?.runs ?? 0) + 1,
-        costUsd: (d?.costUsd ?? 0) + (costUsd ?? 0),
-        // A pass the engine did not price is COUNTED, not assumed free. It is
-        // what turns the total into a floor, and the header says so.
-        unpriced: (d?.unpriced ?? 0) + (costUsd === undefined ? 1 : 0),
-        lastMs: durationMs,
-        lastAt: Date.now(),
-      }));
-
-      // The grade travels with the ids. Passing only the id set proved a
-      // citation resolved and let a `low` fact be drawn as an exact figure.
-      const report = reviewSceneSpecs(
-        String(json.raw ?? ""),
-        frames,
-        new Set(FACTS.map((f) => f.id)),
-        new Map(FACTS.map((f) => [f.id, f.confidence])),
-      );
-      // Apply what survived. Rejected and unmentioned beats keep exactly what
-      // they had — applySceneSpecs only touches frames it has a spec for.
-      setFrames((fs) => applySceneSpecs(fs, report.specs));
-
-      // Findings go to the rows they belong to. A rejection for a timestamp
-      // that is not in this script has no row, so it goes to the summary.
-      const inScript = new Set(frames.map((f) => f.at));
-      const notes: Record<string, string> = {};
-      for (const r of report.rejected) if (inScript.has(r.beatAt)) notes[r.beatAt] = r.reason;
-      for (const at of report.missing) notes[at] = "The pass returned no scene for this beat.";
-      setRejections(notes);
-
-      const orphans = report.rejected.filter((r) => !inScript.has(r.beatAt));
-      if (report.rejected.length || report.missing.length) {
-        const parts = [`${report.specs.length} of ${frames.length} beats directed`];
-        if (report.rejected.length) parts.push(`${report.rejected.length} rejected`);
-        if (report.missing.length) parts.push(`${report.missing.length} with no scene returned`);
-        setNotice(
-          `${parts.join(" · ")}. ${
-            report.specs.length ? "The reasons are on those rows; every other beat was applied." : "Nothing was applied."
-          }${orphans.length ? ` The engine also invented ${orphans.map((o) => `"${o.beatAt}"`).join(", ")}.` : ""}`,
-        );
+      if (out.ok) {
+        track({ turnId: out.turnId, projectId, kind: KIND, label: "scene direction" });
+        return;
       }
-    } catch (e) {
-      setError(
-        e instanceof SceneSpecError
-          ? `The engine returned direction this app cannot use: ${e.message} Nothing was changed.`
-          : e instanceof Error
-            ? e.message
-            : "The scene direction failed.",
-      );
+      // The rule working, server-side: another tab or device holds the slot.
+      // Watch that pass instead of starting a second one.
+      if (out.status === 409 && out.holder) {
+        track({ turnId: out.holder, projectId, kind: KIND, label: "scene direction" });
+        return;
+      }
+      // Refused before any turn existed (401, 413, no beats, no style).
+      setError(out.detail || "The scene direction failed.");
+    } catch {
+      setError("The scene direction request failed. Nothing was changed.");
     } finally {
-      setDirecting(false);
+      startingRef.current = false;
+      setStarting(false);
     }
-  }, [frames, block, render.title, render.origin, project?.template, project?.targetS]);
+  }, [frames, block, render.title, render.origin, project?.template, project?.targetS, projectId, directing, track]);
+
+  /** Stop the live pass. On the server: the record says `cancelled` and the
+   *  engine's process tree is ended (lib/turns/runner.ts `cancelTurn`). */
+  const cancelDirection = useCallback(() => {
+    if (turnJob && turnJob.status === "running") cancelJob(turnJob.id);
+  }, [turnJob, cancelJob]);
+
+  /** When the live pass started, by the ledger's clock — so an elapsed time
+   *  survives a reload. Null while nothing runs, and until the server has
+   *  named the turn. */
+  const directingSince = directing && turnJob?.status === "running" ? turnJob.startedAt : null;
 
   /** What the plates cost. Kept apart from the direction pass rather than
    *  merged: one is many small charges the user makes one at a time, the other
@@ -812,7 +895,11 @@ export function useFrames(projectId: string) {
     clipsAuthored,
     setFrames,
     directing,
+    /** When the live pass started (the ledger's clock), or null. */
+    directingSince,
     direct,
+    /** Stop the live pass — the server ends the engine. */
+    cancelDirection,
     rejections,
     notice,
     generatePlate,

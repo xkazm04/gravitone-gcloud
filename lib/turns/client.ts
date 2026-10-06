@@ -9,7 +9,7 @@
 // site forgets, so the calls live here and nowhere else —
 // tests/golden-path/turn-recalibrate.probe.spec.ts walks app/, components/ and
 // lib/ and fails on any raw fetch of /api/recalibrate or /api/turns outside
-// this file.
+// this file, and turn-frames.probe.spec.ts holds /api/frames to the same rule.
 //
 // NOT SERVER CODE, AND IT IMPORTS NONE: lib/turns/ledger.ts pulls node:fs and
 // node:crypto, so only its TYPES come across. The live-status set is restated
@@ -55,6 +55,21 @@ function refusedOf(res: Response, json: Record<string, unknown>): StartOutcome {
  *  already holds this project's slot. */
 export async function startRecalibrate(projectId: string, body: Record<string, unknown>): Promise<StartOutcome> {
   const res = await fetch("/api/recalibrate", {
+    method: "POST",
+    headers: { ...JSON_HEADERS, ...accessHeader() },
+    body: JSON.stringify({ ...body, projectId }),
+  });
+  const json = await bodyOf(res);
+  if (res.status === 202 && typeof json.turnId === "string") return { ok: true, turnId: json.turnId };
+  return refusedOf(res, json);
+}
+
+/** Start a scene-direction pass (AIO-A stage 3). The same contract: the
+ *  route's refusals (413 too large, 400 no beats or no style) before any
+ *  record exists, 202 with the turn id after, 409 naming the pass that already
+ *  holds this project's slot. */
+export async function startFrames(projectId: string, body: Record<string, unknown>): Promise<StartOutcome> {
+  const res = await fetch("/api/frames", {
     method: "POST",
     headers: { ...JSON_HEADERS, ...accessHeader() },
     body: JSON.stringify({ ...body, projectId }),

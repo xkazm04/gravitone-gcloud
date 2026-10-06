@@ -64,7 +64,13 @@ export interface AccountSnapshot {
   themes: number;
   /** THE READ-BACK FOR FIRE-AND-FORGET. Research and follow-up runs dispatch
    *  into the job store and land asynchronously (lib/jobs.tsx). The harness
-   *  polls this rather than treating "no error" as success. */
+   *  polls this rather than treating "no error" as success.
+   *
+   *  TURN-BACKED WORK (recalibrate, scene direction) IS COUNTED FROM THE SERVER
+   *  LEDGER for the account's projects (`jobCounts` in lib/jobs.tsx), not from
+   *  the tab's list: a turn started in another tab or device is counted, a turn
+   *  that ended before this tab polled is not running, and one turn is one job.
+   *  The other kinds are still this tab's own. */
   jobs: { running: number; total: number };
 }
 

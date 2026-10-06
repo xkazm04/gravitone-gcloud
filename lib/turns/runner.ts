@@ -55,10 +55,16 @@ import {
   type TurnRecord,
 } from "./ledger";
 
-/** What a client sent that a kind cannot build a prompt from. The route
- *  answers it 400, and nothing has been written or dispatched. */
+/** What a client sent that a kind cannot build a prompt from. Nothing has been
+ *  written or dispatched. It carries the status every door answers it with —
+ *  400 unless the kind says otherwise (a run too large to send is 413) — so
+ *  /api/turns and a kind's own route cannot disagree about one refusal. */
 export class TurnInputError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly status: 400 | 413 = 400,
+    readonly code: string = "bad-request",
+  ) {
     super(message);
     this.name = "TurnInputError";
   }

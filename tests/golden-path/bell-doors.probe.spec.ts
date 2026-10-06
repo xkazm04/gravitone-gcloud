@@ -26,6 +26,7 @@ test("case 1: every JobKind maps to a PhaseKey in KIND_STEP; jobHref returns cor
     "ad-scenarios",
     "video-clip",
     "ad-render",
+    "frames",
   ];
   for (const kind of allJobKinds) {
     expect(KIND_STEP[kind]).toBeDefined();
@@ -37,6 +38,8 @@ test("case 1: every JobKind maps to a PhaseKey in KIND_STEP; jobHref returns cor
   expect(jobHref({ projectId: "p1", kind: "research" })).toBe("/studio/p1?step=research");
   expect(jobHref({ projectId: "p1", kind: "followup" })).toBe("/studio/p1?step=research");
   expect(jobHref({ projectId: "p1", kind: "poster-generate" })).toBe("/studio/p1?step=frames");
+  // Scene direction (AIO-A stage 3) opens the step it directs.
+  expect(jobHref({ projectId: "p1", kind: "frames" })).toBe("/studio/p1?step=frames");
   expect(jobHref({ projectId: "p1", kind: "video-export" })).toBe("/studio/p1?step=cut");
   expect(jobHref({ projectId: "p1", kind: "ad-scenarios" })).toBe("/studio/p1?step=script");
   // Clips are animated in Motion (ads split, 2026-10-06): images in Frames, clips in Motion.

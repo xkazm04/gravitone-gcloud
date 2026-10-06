@@ -44,7 +44,8 @@
 import { useEffect } from "react";
 
 import { useAuth } from "@/lib/useAuth";
-import { useJobs } from "@/lib/jobs";
+import { jobCounts, useJobs } from "@/lib/jobs";
+import { listTurns } from "@/lib/turns/client";
 import { evictIdentity } from "@/lib/identityEviction";
 import { listProjects, projectContents } from "@/lib/projects";
 import { listThemes } from "@/lib/themes";
@@ -77,6 +78,12 @@ export default function HarnessBridge() {
         // the gate rather than assert against an account that does not exist yet.
         const rows = uid ? await listProjects(uid) : [];
         const themes = uid ? await listThemes(uid) : [];
+        // TURN-BACKED WORK IS READ FROM THE LEDGER (AIO-A stage 3). This tab's
+        // list knows only the turns it watches, and only as of its last poll;
+        // the server knows every turn this account's projects have, started
+        // from any tab or device. A project whose list cannot be read leaves
+        // that project's watched turns at the tab's view rather than at zero.
+        const ledger = (await Promise.all(rows.map((p) => listTurns(p.id).catch(() => [])))).flat();
         return {
           protocol: 1,
           uid,
@@ -87,10 +94,7 @@ export default function HarnessBridge() {
             progress: p.progress,
           })),
           themes: themes.length,
-          jobs: {
-            running: jobs.filter((j) => j.status === "running").length,
-            total: jobs.length,
-          },
+          jobs: jobCounts(jobs, ledger),
         };
       },
 

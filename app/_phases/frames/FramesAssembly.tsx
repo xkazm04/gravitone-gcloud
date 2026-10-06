@@ -52,6 +52,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
   // One selection, shared by the canvas and the panel. Held here rather than in
   // either of them so they cannot disagree about what is selected.
   const [selected, setSelected] = useState<LayerRef>(null);
+  const now = useTicker(ctl.directingSince !== null);
 
   const missing = frames.filter((f) => !isComposed(f));
 
@@ -174,7 +175,27 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
         >
           {ctl.directing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Wand2 className="h-3.5 w-3.5" aria-hidden />}
           {ctl.directing ? "directing…" : "direct the cut"}
+          {/* By the ledger's clock, so a reload mid-pass picks up where it was. */}
+          {ctl.directingSince !== null && (
+            <span data-testid="direct-elapsed" className="font-jetbrains font-normal text-violet-100/55">
+              {humanMs(Math.max(0, now - ctl.directingSince))}
+            </span>
+          )}
         </button>
+        {/* The pass is the server's and outlives this step (2026-10-06), so
+            stopping it is a deliberate act with its own control. It ends the
+            engine's process, not just this view of it. Absent until the server
+            has named the turn — there is nothing to stop before. */}
+        {ctl.directingSince !== null && (
+          <button
+            data-testid="direct-stop"
+            onClick={ctl.cancelDirection}
+            aria-label="Stop the scene direction"
+            className="font-jetbrains rounded-full border border-white/15 px-2.5 py-1 text-label text-white/55 transition hover:border-rose-400/40 hover:text-rose-200"
+          >
+            stop
+          </button>
+        )}
         <button
           onClick={() => void renderMissing()}
           disabled={runningAll || missing.length === 0 || plan.count === 0}
@@ -513,4 +534,17 @@ function Row({
       )}
     </div>
   );
+}
+
+/** The wall clock, ticking once a second only while `on` — the direction
+ *  pass's elapsed time. The clock is created and destroyed with the pass, and
+ *  the only setState is inside the interval, never in the effect body. */
+function useTicker(on: boolean): number {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (!on) return;
+    const iv = setInterval(() => setNow(Date.now()), 1_000);
+    return () => clearInterval(iv);
+  }, [on]);
+  return now;
 }

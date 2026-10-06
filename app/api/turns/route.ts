@@ -10,6 +10,9 @@
 //   400                            no kind, an unregistered kind, a bad project
 //                                  id, or input the kind cannot build from;
 //                                  nothing was written and nothing was sent
+//   413 `{ detail, code }`         the kind refused the run as too large to send
+//                                  (TurnInputError's own status, the same answer
+//                                  the kind's route gives); nothing was sent
 //
 // `?wait=1` holds the request until the turn settles and answers 200 with the
 // final record: the synchronous shape, kept for pipeline scripts.
@@ -31,11 +34,13 @@ import { after } from "next/server";
 
 import { guardAccessOnly, guardRequest } from "@/lib/apiAuth";
 import { TextError, statusFor } from "@/lib/text/errors";
+import { slotBusy } from "@/lib/turns/answer";
 import { ensureSwept, listTurns } from "@/lib/turns/ledger";
 import { startTurn, turnKind, turnKinds, TurnInputError } from "@/lib/turns/runner";
 // The production kinds, registered on import (AIO-A stage 2). A kind is owned
 // by the module that owns its prompt; this line only makes it reachable here.
 import "@/lib/turns/kinds/recalibrate";
+import "@/lib/turns/kinds/frames";
 
 export const runtime = "nodejs";
 /** The longest turn the ladder allows (the edit-plan ceiling), with room —
@@ -70,20 +75,14 @@ export async function POST(req: Request) {
   try {
     out = await startTurn(spec, projectId, body?.input);
   } catch (e) {
-    if (e instanceof TurnInputError) return bad(e.message);
+    // The kind's own status: a run too large to send is 413 here exactly as it
+    // is on the kind's route, and anything else it refuses is the 400 it was.
+    if (e instanceof TurnInputError) return Response.json({ detail: e.message, code: e.code }, { status: e.status });
     if (e instanceof TextError) return Response.json({ detail: e.message, code: e.kind }, { status: statusFor(e.kind) });
     throw e;
   }
 
-  if (!out.ok)
-    return Response.json(
-      {
-        detail: `A ${kind} turn is already running for this project (${out.holder.id}). Wait for it, or cancel it.`,
-        code: "slot-busy",
-        holder: out.holder.id,
-      },
-      { status: 409 },
-    );
+  if (!out.ok) return slotBusy(`A ${kind} turn`, out.holder);
 
   const settled = out.done;
   try {
