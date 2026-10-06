@@ -77,9 +77,8 @@ export default defineConfig({
 
   // Same refusal as the node lane, for the same measured reason: Playwright's
   // default lets one committed `test.only` reduce a blocking gate to a single
-  // test and exit 0. This lane is four journeys, so the collapse is smaller in
-  // absolute terms and identical in kind — a green that reports on almost
-  // nothing. See playwright.config.ts for the measurement.
+  // test and exit 0. A lane of journeys collapses the same way: a green that
+  // reports on almost nothing. See playwright.config.ts for the measurement.
   forbidOnly: !!process.env.CI || !!process.env.PW_FORBID_ONLY,
 
   timeout: 120_000,
