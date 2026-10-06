@@ -106,6 +106,12 @@ verdict can say `review` but never `done` (WORKSPACE-A's contract - ratify befor
 the shelf over); Motion rows draw as empty boxes until a frame has a plate; `library-sound-migration`
 probe runs close to its 30s ceiling under parallel load.
 
+**Lane 08 (app infrastructure) worked 2026-10-06** (local main `9fcc7e5`, not pushed). Operator
+decisions: a recalibrate or scene-direction turn keeps running when the creator leaves the step
+(explicit stop kills the engine); AUP-A stage 1 only - no spend attribution, no vault; AUP-B dialog
+only - an involuntary session end still wipes. Capabilities are now the server's answer
+(`/api/capabilities`, `useCapabilities`), so a control is never visible-and-503 by posture or key.
+
 ## Map drift the scouts reported (operator's call; this session ran no scan)
 
 - `project-shelf` still lists `app/_projects/ProjectsMatrix.tsx` (gone). The live shelf
@@ -230,12 +236,12 @@ convergence table above.
 | `KIT-B` | [Specimens in the world they ship in: every part, every world, measured](07-design-system.md) | kit-specimen-route | L | 6/7/3 | direction |  | open |
 | `UCP-A` | [Probes query the program, not the text: one AST layer for every source probe](07-design-system.md) | ui-component-probes | L | 7/8/4 | architecture |  | open |
 | `UCP-B` | [The legibility lane: assert what only photographs caught](07-design-system.md) | ui-component-probes | L | 7/8/5 | architecture |  | open |
-| `AIO-A` | [AI turns run as server-owned durable jobs; the tab only watches them](08-app-infrastructure.md) | ai-orchestration | XL | 8/9/6 | architecture | C2 | partial c295e98 - stage 1 kernel (ledger, runner, cancel kills tree); recalibrate onto it is stage 2 |
-| `AIO-B` | [Dispatch manifest: see what the engine will read, and which engine, before you spend](08-app-infrastructure.md) | ai-orchestration | L | 6/7/3 | direction |  | open |
-| `AUP-A` | [Verified principal and account vault: the server knows who is calling, and holds the work](08-app-infrastructure.md) | auth-persistence | XL | 9/9/7 | direction |  | open |
-| `AUP-B` | [Sign-out cannot destroy work: preview the wipe, take a studio archive, bring it back](08-app-infrastructure.md) | auth-persistence | L | 6/9/5 | policy-loosen | C5 | partial d06e9f7 - archive + dry-run; sign-out dialog + lock policy (operator) open |
-| `CIP-A` | [Engine stand-in lane: a fake `claude` on PATH replays recorded envelopes through real routes](08-app-infrastructure.md) | cli-infrastructure-probes | L | 6/8/3 | none | C10 | landed 76d4c80 - recalibrate lane; frames cassette open |
-| `CIP-B` | [Deployment-cell matrix: every route and capability judged per posture cell, derived](08-app-infrastructure.md) | cli-infrastructure-probes | M | 5/7/2 | none |  | open |
+| `AIO-A` | [AI turns run as server-owned durable jobs; the tab only watches them](08-app-infrastructure.md) | ai-orchestration | XL | 8/9/6 | architecture | C2 | partial ac96f1d - stages 1-3: kernel; recalibrate (ab1df8c) and scene direction on the ledger, survive reload, stop kills the engine; harness reads the ledger. Open: poster/export/research onto turns, cross-device bell, hosted ledger (GCS) + lease |
+| `AIO-B` | [Dispatch manifest: see what the engine will read, and which engine, before you spend](08-app-infrastructure.md) | ai-orchestration | L | 6/7/3 | direction |  | partial 2832c85 - session 1: pure assemblers + golden-prompt parity, POST /api/turns/preview, stats ring. Open: DispatchStrip UI, engineRun.manifest on versions |
+| `AUP-A` | [Verified principal and account vault: the server knows who is calling, and holds the work](08-app-infrastructure.md) | auth-persistence | XL | 9/9/7 | direction |  | partial 7b36c9f - stage 1 (operator: stage 1 only): verified principal, PRINCIPAL_MODE default legacy, principal-keyed rate buckets; credential door 5e66af4. Stage 2 spend attribution and stage 3 vault not approved |
+| `AUP-B` | [Sign-out cannot destroy work: preview the wipe, take a studio archive, bring it back](08-app-infrastructure.md) | auth-persistence | L | 6/9/5 | policy-loosen | C5 | partial ef42e6f - archive + dry-run; sign-out dialog + archive import. Lock-instead-of-wipe declined by operator 2026-10-06 |
+| `CIP-A` | [Engine stand-in lane: a fake `claude` on PATH replays recorded envelopes through real routes](08-app-infrastructure.md) | cli-infrastructure-probes | L | 6/8/3 | none | C10 | landed 2059833 - recalibrate (76d4c80) and frames routes end to end through the stand-in |
+| `CIP-B` | [Deployment-cell matrix: every route and capability judged per posture cell, derived](08-app-infrastructure.md) | cli-infrastructure-probes | M | 5/7/2 | none |  | landed 9e275ad - 7 cells x every route; posture coherence 9fcc7e5 closed its 3 findings. Open: acceptance 6 |
 | `text-engine-A` | [Durable turns: reason() becomes submit/settle over a server-side turn ledger](09-content-pipeline.md) | text-engine | L | 7/9/6 | architecture | C2 | open |
 | `text-engine-B` | [Repair, don't discard: a failed validation becomes a draft with a repair turn](09-content-pipeline.md) | text-engine | L | 6/8/5 | direction |  | open |
 | `foundry-forge-A` | [Calibrated grading: the human ledger scores, gates and versions the grader](09-content-pipeline.md) | foundry-forge | L | 6/8/4 | architecture | C8 | partial 2276df9 - calibration (craft inverted 0.288); commit-time write + thumbnails open |
