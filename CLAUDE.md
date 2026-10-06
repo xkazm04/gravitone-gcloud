@@ -209,6 +209,16 @@ it answers `missing or invalid local token` and nothing else. The port is not fi
 in the app's own handshake file, `~/.personas/local-http.json` (`{"pid":...,"port":17400,"token":"..."}`)
 - read them from there rather than probing, and probe 17400..17410 only if that file is absent.
 
+**A live bridge is not enough: it must be the bridge whose database wrote the map.** This repo is
+checked out on two machines, each with its own Personas and its own project row, and a scan
+re-exports `context-map.json` from the LOCAL database. Measured 2026-10-06: the committed map came
+from project `d57f858b` at `C:/Users/kazda/kiro/gravitone-gcloud` (36 contexts); a subtree scan on the
+other machine (project `91d8170c`, a database a month behind) exported 19 contexts with 12 ungrouped,
+and nine scans were spent before anyone noticed. Before scanning, compare `project.root` in
+`context-map.json` with this checkout's path. If they differ, do not scan; log the needed scans in
+`.vault/map-drift.md` for the machine that owns the map. If a scan has already run, restore the map
+with `git checkout -- context-map.json CLAUDE.md`.
+
 ```bash
 # 1. The bridge, from the app's own handshake file (port AND token live here)
 PORT=$(python -c "import json,os;print(json.load(open(os.path.expanduser('~/.personas/local-http.json')))['port'])")
