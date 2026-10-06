@@ -210,6 +210,7 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/sound/takes/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx", DELETE: "4xx" } },
   "app/api/turns/[id]/cancel/route.ts": { door: "access", ok: { POST: "4xx" } },
   "app/api/turns/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
+  "app/api/turns/preview/route.ts": { door: "access", ok: { POST: "4xx" } },
   "app/api/turns/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/video/clips/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/video/clips/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
