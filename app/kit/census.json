@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 521,
+  "files": 523,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -65,6 +65,7 @@
         "app/library/parts.tsx",
         "app/projects/ProjectsView.tsx",
         "app/studio/[projectId]/StudioView.tsx",
+        "components/ui/SignOutDialog.tsx",
         "components/ui/UserMenu.tsx",
         "components/ui/deck/Deck.tsx"
       ]
@@ -409,7 +410,8 @@
         "app/playground/triage/Strengths.tsx",
         "app/playground/triage/index.tsx",
         "app/projects/ProjectsView.tsx",
-        "components/ui/NotificationBell.tsx"
+        "components/ui/NotificationBell.tsx",
+        "components/ui/SignOutDialog.tsx"
       ]
     },
     "Hint": {
@@ -569,7 +571,8 @@
         "app/foundry/ui.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/MoveDialog.tsx",
-        "app/library/parts.tsx"
+        "app/library/parts.tsx",
+        "components/ui/SignOutDialog.tsx"
       ]
     },
     "NotificationBell": {
@@ -982,7 +985,8 @@
         "app/playground/triage/Judge.tsx",
         "app/playground/triage/Strengths.tsx",
         "app/playground/triage/index.tsx",
-        "app/projects/ProjectsView.tsx"
+        "app/projects/ProjectsView.tsx",
+        "components/ui/SignOutDialog.tsx"
       ]
     },
     "TextArea": {
@@ -2044,16 +2048,18 @@
       "suspectFiles": {}
     },
     "components/ui": {
-      "files": 15,
+      "files": 17,
       "kitImports": 1,
-      "signalImports": 1,
+      "signalImports": 2,
       "parts": [
         "Bar",
         "Button",
         "Crumbs",
         "Ghost",
         "Mark",
+        "Modal",
         "NotificationBell",
+        "Tally",
         "UserMenu",
         "Wordmark",
         "WorldRoot",
