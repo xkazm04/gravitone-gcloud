@@ -1,0 +1,503 @@
+{
+  "name": "recalibrate-named-conclusion",
+  "route": "app/api/recalibrate/route.ts",
+  "capturedAt": "2026-10-06",
+  "capturedFrom": "the route's own inline assembly at 09c6906, before lib/turns/assemble/ existed (stdin of a stand-in claude)",
+  "inputs": {
+    "conclusions": "f4938cc75097da79",
+    "attribution": "b65fd5aa49a8b8bc",
+    "editPlanSchema": "532bdd5adc8891da"
+  },
+  "body": {
+    "notebook": {
+      "question": "Why did the price stop rising once the wish list was delivered?",
+      "facts": [
+        {
+          "id": "f-macro-cause",
+          "claim": "Rates, not the wish list, moved the price.",
+          "source": "fixture"
+        },
+        {
+          "id": "f-etf-flows",
+          "claim": "Inflows were booked before they were bought.",
+          "source": "fixture"
+        }
+      ],
+      "cutFacts": [
+        "c-borrowed-prosperity"
+      ],
+      "engineFit": {
+        "reversal-chain": "strong",
+        "adjudication": "fair"
+      },
+      "sources": [
+        {
+          "id": "s-1",
+          "title": "a bibliography row nothing can cite"
+        }
+      ]
+    },
+    "renders": [
+      {
+        "form": "explainer",
+        "id": "reversal-chain",
+        "engine": "reversal-chain",
+        "engineLabel": "Reversal Chain",
+        "pleasure": "being corrected",
+        "title": "Why Bitcoin's Price Won't Rise",
+        "template": "mid-educational-video",
+        "durationS": 300,
+        "words": 947,
+        "wordBudget": 950,
+        "wpm": 190,
+        "turns": 4,
+        "turnBand": [
+          3,
+          5
+        ],
+        "questionsAloud": 1,
+        "promiseForm": "topics",
+        "feelsLike": "an argument",
+        "bestFor": "an audience that already holds the wrong model",
+        "weakness": "can read as contrarian if the steel-man is cut",
+        "causalDensityPct": null,
+        "beats": [
+          {
+            "at": "0:00",
+            "kind": "hook",
+            "label": "SCQA · situation",
+            "connector": null,
+            "text": "On the 6th of October 2025, Bitcoin hit one hundred and twenty six thousand dollars. The highest price in its history.",
+            "device": "situation"
+          },
+          {
+            "at": "0:12",
+            "kind": "hook",
+            "label": "the wish list, delivered",
+            "connector": "THEREFORE",
+            "text": "In the ten months since, it has received almost everything it spent fifteen years asking for. A Strategic Bitcoin Reserve. The industry's flagship legislation. Regulators replaced by people who like it. Spot ETFs, then retirement accounts. Every single item. Delivered."
+          },
+          {
+            "at": "0:30",
+            "kind": "hook",
+            "label": "the complication",
+            "connector": "BUT",
+            "text": "And in that same ten months, Bitcoin lost roughly half its value.",
+            "device": "scale conversion"
+          },
+          {
+            "at": "0:35",
+            "kind": "question",
+            "label": "the only question asked aloud",
+            "connector": "THEREFORE",
+            "text": "So what went wrong?"
+          },
+          {
+            "at": "0:40",
+            "kind": "answer",
+            "label": "the answer, stated immediately",
+            "connector": "BUT",
+            "text": "Nothing went wrong. That is the problem. Bitcoin got exactly what it asked for, and getting it is the reason the price stopped going up."
+          },
+          {
+            "at": "0:50",
+            "kind": "promise",
+            "label": "three topics, one breath",
+            "connector": "THEREFORE",
+            "text": "To see why, we need three things: where the ETF money actually went, what happened to the buyers who promised they would never sell, and why Washington's approval turned out not to matter.",
+            "device": "promise form: topics"
+          },
+          {
+            "at": "0:55",
+            "kind": "movement",
+            "label": "M1 · where the money went",
+            "connector": "THEREFORE",
+            "text": "The inflows have been real. Money has gone in. More demand, same fixed supply, higher price — that is not a stupid model. It is the model almost everyone was using.",
+            "device": "obvious reading, stated generously"
+          },
+          {
+            "at": "1:20",
+            "kind": "turn",
+            "label": "TURN 1 · an inflow is not a purchase",
+            "connector": "BUT",
+            "text": "Authorised participants routinely create and short ETF shares before they buy any underlying Bitcoin. The purchase is lagged, and partly hedged. The inflow is a booking, not a meal.",
+            "device": "analogy — spent once"
+          },
+          {
+            "at": "1:45",
+            "kind": "turn",
+            "label": "escalation",
+            "connector": "THEREFORE",
+            "text": "Long-term holders sold about three point six seven million Bitcoin into that range — a larger distribution than any previous cycle. The ETF was not a wave lifting the boat. It was an exit.",
+            "device": "scale conversion"
+          },
+          {
+            "at": "2:05",
+            "kind": "movement",
+            "label": "M2 · the buyers who would never sell",
+            "connector": "THEREFORE",
+            "text": "If the market values your company above the Bitcoin on your balance sheet, you can issue shares, buy more, and every shareholder ends up owning more Bitcoin per share. It is genuinely accretive. It makes you a buyer who does not care what the price is.",
+            "device": "mechanism"
+          },
+          {
+            "at": "2:50",
+            "kind": "turn",
+            "label": "TURN 2 · the machine only turns one way",
+            "connector": "BUT",
+            "text": "The moment mNAV drops under one, issuing shares to buy Bitcoin destroys value instead of creating it. The buying stops. Not because anyone lost conviction — because the arithmetic inverted. And in June, Strategy sold thirty two Bitcoin. As a transaction it is nothing. As a sentence, it ended the thing the model was built on."
+          },
+          {
+            "at": "3:15",
+            "kind": "steelman",
+            "label": "the script attacks its own argument",
+            "connector": "BUT",
+            "text": "The obvious next step is to call these people forced sellers, and that is not what the evidence says. Strategy holds more than two and a half years of debt and dividend payments in cash. And long-term holders added roughly three hundred and eighty thousand Bitcoin in a single month this year — after the crash, not before.",
+            "device": "steel-man"
+          },
+          {
+            "at": "3:35",
+            "kind": "movement",
+            "label": "M3 · why Washington didn't matter",
+            "connector": "THEREFORE",
+            "text": "In March 2025 the President signed an executive order creating a Strategic Bitcoin Reserve. For a fifteen-year-old argument about legitimacy, that was the end of the argument."
+          },
+          {
+            "at": "4:00",
+            "kind": "turn",
+            "label": "TURN 3 · the reserve that was never built",
+            "connector": "BUT",
+            "text": "Sixteen months later it still is not built. Federal agencies cannot agree how much Bitcoin the government owns. And where the policy did land, the price fell anyway — because regulatory permission is not demand."
+          },
+          {
+            "at": "4:15",
+            "kind": "turn",
+            "label": "TURN 4 · the thesis",
+            "connector": "BUT",
+            "text": "So institutional adoption failed? No. It succeeded completely. That is what did this. An asset inside a risk model gets sized, hedged, rebalanced — and cut when the environment turns. Bitcoin now moves on the ten-year Treasury yield: the single most boring number in finance."
+          },
+          {
+            "at": "4:45",
+            "kind": "close",
+            "label": "reframe, not summary",
+            "connector": "THEREFORE",
+            "text": "Bitcoin spent fifteen years arguing it was an escape from the financial system. It won that argument, and the prize for winning was being absorbed into the thing it was escaping. The price isn't broken. The story is."
+          }
+        ],
+        "checks": [
+          {
+            "label": "but/therefore between adjacent beats, no AND THEN",
+            "state": "pass",
+            "detail": "every movement boundary is a turn"
+          },
+          {
+            "label": "thesis stated early",
+            "state": "pass",
+            "detail": "0:40 of 5:00"
+          },
+          {
+            "label": "turns in band (3–5 at mid-length)",
+            "state": "pass",
+            "detail": "4"
+          },
+          {
+            "label": "turn cadence 60–90s",
+            "state": "declared",
+            "detail": "1:20 · 2:50 · 4:00 · 4:15 — the last two are stacked on purpose"
+          },
+          {
+            "label": "analogies ≤ one per hard mechanism",
+            "state": "pass",
+            "detail": "2 total, both physical, both spent once"
+          },
+          {
+            "label": "every significant number converted",
+            "state": "pass",
+            "detail": "6 conversions"
+          },
+          {
+            "label": "steel-man present",
+            "state": "pass",
+            "detail": "3:15"
+          },
+          {
+            "label": "close reframes, does not summarise",
+            "state": "pass",
+            "detail": "the prize for winning"
+          },
+          {
+            "label": "low-confidence data excluded",
+            "state": "pass",
+            "detail": "the vendor liquidity-beta figures were cut"
+          },
+          {
+            "label": "price stated as a ratio, not a number",
+            "state": "pass",
+            "detail": "'roughly half its value' — per notebook § currency"
+          },
+          {
+            "label": "causal-opener density",
+            "state": "unmeasured",
+            "detail": "not counted on this render; measure before shipping"
+          }
+        ],
+        "deviations": [
+          "Turns 3 and 4 sit 15 seconds apart rather than 60–90. Deliberate: turn 3 is the setup for turn 4 and separating them would break the causal link. Flagged rather than silently allowed — see the run's NOTES.md, change #4."
+        ],
+        "cutFacts": [
+          {
+            "factId": "f-liquidity",
+            "why": "vendor research, single source, methodology unreviewed — very quotable, which is exactly why the confidence field had to catch it"
+          }
+        ]
+      },
+      {
+        "form": "explainer",
+        "id": "adjudication",
+        "engine": "adjudication",
+        "engineLabel": "Adjudication",
+        "pleasure": "watching a question get settled",
+        "title": "Why Bitcoin's Price Won't Rise",
+        "template": "mid-educational-video",
+        "durationS": 250,
+        "words": 762,
+        "wordBudget": 770,
+        "wpm": 185,
+        "turns": null,
+        "turnBand": null,
+        "questionsAloud": 1,
+        "promiseForm": "numbered candidates",
+        "feelsLike": "a hearing",
+        "bestFor": "an audience that has heard all four takes and wants a ruling",
+        "weakness": "slower start; candidate 1 costs 40s before any momentum",
+        "causalDensityPct": null,
+        "beats": [
+          {
+            "at": "0:00",
+            "kind": "hook",
+            "label": "the contradiction",
+            "connector": null,
+            "text": "Bitcoin peaked at a hundred and twenty six thousand dollars in October 2025. It is now worth roughly half that. In between, the entire wish list arrived."
+          },
+          {
+            "at": "0:25",
+            "kind": "promise",
+            "label": "numbered candidates",
+            "connector": "THEREFORE",
+            "text": "There are four serious explanations for that. Three of them are partly right. One of them is the actual answer, and it is not the one you would expect."
+          },
+          {
+            "at": "0:35",
+            "kind": "candidate",
+            "label": "C1 · it's just the cycle",
+            "connector": "THEREFORE",
+            "text": "State it fairly: Bitcoin has done this four times. Test it: long-term holders added 380,000 BTC in a single month, after the fall — that is what the middle of a cycle looks like. Verdict: partly right, incomplete — it explains the shape and not the timing.",
+            "device": "the premise-challenging candidate, placed first"
+          },
+          {
+            "at": "1:15",
+            "kind": "candidate",
+            "label": "C2 · the ETF demand was never real",
+            "connector": "BUT",
+            "text": "An inflow is not a purchase; APs create and short shares before buying the underlying, and what arrives is absorbed. Verdict: true, and underrated — but a transmission, not a cause."
+          },
+          {
+            "at": "2:00",
+            "kind": "candidate",
+            "label": "C3 · the treasury flywheel reversed",
+            "connector": "BUT",
+            "text": "mNAV 3.89 to below 1.0; the buying stops when the arithmetic inverts. Then the self-correction: nobody is a forced seller — 2.5 years of coverage in cash. Verdict: real, but not a reason to sell.",
+            "device": "counter-evidence at full strength"
+          },
+          {
+            "at": "2:50",
+            "kind": "candidate",
+            "label": "C4 · macro ate the news",
+            "connector": "BUT",
+            "text": "Yields near 4.5%, thirty-year at 5%, a stronger dollar. Verdict: closest — but it only describes the weather. It does not explain why Bitcoin now has weather at all."
+          },
+          {
+            "at": "3:30",
+            "kind": "verdict",
+            "label": "the ruling",
+            "connector": "THEREFORE",
+            "text": "Because it won. Adoption put Bitcoin inside risk models, where it is sized, hedged, rebalanced and cut. Candidates one, two and three are the transmission. The cause is that Bitcoin won its argument."
+          },
+          {
+            "at": "4:00",
+            "kind": "close",
+            "label": "reframe",
+            "connector": "THEREFORE",
+            "text": "It isn't that Bitcoin stopped working. It's that it started working like everything else."
+          }
+        ],
+        "checks": [
+          {
+            "label": "D-honest · is the premise itself in the candidate set?",
+            "state": "pass",
+            "detail": "candidate 1 argues there is nothing to explain, and goes first, not buried"
+          },
+          {
+            "label": "D-honest · can any candidate win against the author's prior?",
+            "state": "pass",
+            "detail": "candidate 1 is given the strongest evidence and is explicitly not dismissed"
+          },
+          {
+            "label": "D-honest · counter-evidence at full strength?",
+            "state": "pass",
+            "detail": "candidate 3 contains an explicit self-correction against the forced-seller reading"
+          },
+          {
+            "label": "do the verdicts differ?",
+            "state": "pass",
+            "detail": "partly right · underrated · real but not a reason · the answer"
+          },
+          {
+            "label": "causal-opener density ≥ 30%",
+            "state": "unmeasured",
+            "detail": "runs high by construction; Basic Logic's 15% on this engine is the warning case — measure before shipping"
+          },
+          {
+            "label": "digression allowance",
+            "state": "pass",
+            "detail": "0% — the allowance is disabled for adjudication"
+          },
+          {
+            "label": "steel-man present",
+            "state": "pass",
+            "detail": "carried inside candidate 3"
+          }
+        ],
+        "deviations": [
+          "Runtime 4:10 against a 5:00 target — the candidate structure came in short. Under the 3-6 min band, so not a violation, but the slot it fills is 50 seconds emptier than the reversal chain's."
+        ],
+        "cutFacts": [
+          {
+            "factId": "f-liquidity",
+            "why": "same vendor figure, cut for the same reason — the notebook's confidence rating held across both renders"
+          }
+        ]
+      },
+      {
+        "form": "explainer",
+        "id": "derived-short",
+        "engine": "paradox-teaser",
+        "engineLabel": "Paradox Teaser",
+        "pleasure": "a contradiction that must resolve",
+        "title": "“They never sell”",
+        "template": "short-form-clip",
+        "durationS": 45,
+        "words": 108,
+        "wordBudget": 112,
+        "wpm": 150,
+        "turns": 1,
+        "turnBand": null,
+        "questionsAloud": 0,
+        "promiseForm": "contradiction",
+        "derivedFromId": "reversal-chain",
+        "derivedFromBeat": "Movement 2, turn 2 — the treasury flywheel reversing",
+        "feelsLike": "a magic trick with the method shown",
+        "bestFor": "a cold audience with no context, pointing at the long video",
+        "weakness": "no joke anywhere — neither the subject nor the notebook has one, and the library says humour has to ride inside information",
+        "causalDensityPct": null,
+        "beats": [
+          {
+            "at": "0:00",
+            "kind": "hook",
+            "label": "contradiction hook · 6 words",
+            "connector": null,
+            "text": "This company said it would never sell Bitcoin."
+          },
+          {
+            "at": "0:04",
+            "kind": "movement",
+            "label": "the commitment",
+            "connector": "THEREFORE",
+            "text": "It bought billions of dollars of it. It borrowed money to buy more. It made “we never sell” the entire brand."
+          },
+          {
+            "at": "0:12",
+            "kind": "movement",
+            "label": "the mechanism, one sentence",
+            "connector": "THEREFORE",
+            "text": "The trick was that its stock traded higher than the Bitcoin it owned — so it could keep issuing shares, buying more coins, and making every shareholder richer in Bitcoin terms."
+          },
+          {
+            "at": "0:24",
+            "kind": "turn",
+            "label": "the reversal",
+            "connector": "BUT",
+            "text": "Then the stock fell below the value of its own Bitcoin. And the machine only runs one way."
+          },
+          {
+            "at": "0:31",
+            "kind": "verdict",
+            "label": "the payoff, complete on its own",
+            "connector": "THEREFORE",
+            "text": "In June, Strategy sold thirty two Bitcoin. About two million dollars, from a company holding billions. Financially, nothing. As a sentence, everything."
+          },
+          {
+            "at": "0:40",
+            "kind": "close",
+            "label": "the withheld loop — a DIFFERENT question",
+            "connector": "BUT",
+            "text": "Which raises a much bigger one: Bitcoin got every single thing it asked for this year, and it's still down fifty percent. Full video explains why."
+          }
+        ],
+        "checks": [
+          {
+            "label": "complete on its own",
+            "state": "pass",
+            "detail": "asks 'did the never-sellers sell?' and answers it fully"
+          },
+          {
+            "label": "the withheld thing is a DIFFERENT question",
+            "state": "pass",
+            "detail": "closes the flywheel loop, opens the whole-asset loop"
+          },
+          {
+            "label": "pointer explicit and last",
+            "state": "pass",
+            "detail": "a named thing, then the pointer — no 'watch to find out'"
+          },
+          {
+            "label": "no dependence on the parent's setup",
+            "state": "pass",
+            "detail": "assumes neither the ETF nor the macro section"
+          },
+          {
+            "label": "one idea",
+            "state": "pass",
+            "detail": "a mechanism that only runs in one direction"
+          },
+          {
+            "label": "close lands a joke",
+            "state": "fail",
+            "detail": "there is no joke. The pointer replaces it — a real limitation, recorded in NOTES.md #4"
+          }
+        ],
+        "deviations": [
+          "Word budget assumes image-led production at 150 wpm. If produced narration-led it needs ~60 more words, and the beat timings move."
+        ],
+        "cutFacts": []
+      }
+    ],
+    "scope": {
+      "c-permission-not-appetite": {
+        "descoped": false
+      }
+    },
+    "notes": [
+      {
+        "kind": "less-focus",
+        "cardId": "c-closed-end-fund"
+      },
+      {
+        "kind": "more-focus",
+        "cardId": "f-macro-cause"
+      }
+    ]
+  },
+  "tailChars": 11579,
+  "tailSha256": "682a37d006ee4ce85b8cf615d0880b1beea6e80b65c402e3f1bd936b95bfdccb",
+  "tail": "\n\n---\n\n# THE RUN\n\nReturn ONE JSON object and nothing else — no prose before or after, no code fence.\nIt must satisfy this schema:\n\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"edits\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"renderId\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"reversal-chain\",\n              \"adjudication\",\n              \"derived-short\"\n            ]\n          },\n          \"op\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"retime\",\n              \"rewrite\",\n              \"cut\",\n              \"insert\"\n            ]\n          },\n          \"beatAt\": {\n            \"type\": \"string\",\n            \"description\": \"mm:ss of the beat being changed\"\n          },\n          \"afterBeatAt\": {\n            \"type\": \"string\",\n            \"description\": \"insert only — the beat to insert after\"\n          },\n          \"seconds\": {\n            \"type\": \"integer\",\n            \"description\": \"retime/insert — how long the beat holds\"\n          },\n          \"text\": {\n            \"type\": \"string\",\n            \"description\": \"rewrite/insert — the spoken line\"\n          },\n          \"label\": {\n            \"type\": \"string\",\n            \"description\": \"insert — the beat's craft label\"\n          },\n          \"connector\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"BUT\",\n              \"THEREFORE\"\n            ],\n            \"description\": \"insert — link to the previous beat. Required on an insert; a plan without it is rejected\"\n          },\n          \"cards\": {\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"string\"\n            },\n            \"description\": \"rewrite/insert — notebook card ids this beat rests on. Required.\"\n          },\n          \"why\": {\n            \"type\": \"string\",\n            \"description\": \"written for the person deciding whether to accept it\"\n          }\n        },\n        \"required\": [\n          \"renderId\",\n          \"op\",\n          \"why\"\n        ],\n        \"additionalProperties\": false\n      }\n    },\n    \"refusals\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"note\": {\n            \"type\": \"string\"\n          },\n          \"why\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"note\",\n          \"why\"\n        ],\n        \"additionalProperties\": false\n      }\n    },\n    \"unchanged\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"summary\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"edits\",\n    \"refusals\",\n    \"unchanged\",\n    \"summary\"\n  ],\n  \"additionalProperties\": false\n}\n\n## NOTEBOOK\n{\"question\":\"Why did the price stop rising once the wish list was delivered?\",\"facts\":[{\"id\":\"f-macro-cause\",\"claim\":\"Rates, not the wish list, moved the price.\",\"source\":\"fixture\"},{\"id\":\"f-etf-flows\",\"claim\":\"Inflows were booked before they were bought.\",\"source\":\"fixture\"}],\"cutFacts\":[\"c-borrowed-prosperity\"]}\n\n## CONCLUSIONS (reasoned, not researched — beside the notebook, never in it)\nA conclusion has no source of its own: it is synthesis over the cards in its\n`restsOn` plus an analogy, and the creator opts each one IN. `inScope: false`\nmeans they have not, so rule 4 binds it exactly as it binds any descoped card —\nit may not be given a beat, and a note on it can only be refused, by name.\n[{\"id\":\"c-closed-end-fund\",\"claim\":\"Strategy was never a Bitcoin company. It was a closed-end fund with a premium, and closed-end premiums always close.\",\"reasoning\":\"mNAV above 1 is the definition of a closed-end fund trading above net asset value. The premium funded the accretion, the accretion justified the premium, and that loop runs only while sentiment holds. When it inverts, the vehicle's only remaining levers are buybacks and selling the asset — which is exactly the observed sequence.\",\"leap\":\"moderate\",\"restsOn\":[\"f-mnav\",\"f-mstr-drop\",\"f-mstr-sold\",\"m-treasury-flywheel\"],\"precedent\":{\"domain\":\"GBTC, 2020–2022\",\"note\":\"The Grayscale trust ran a large premium, attracted capital because of it, then flipped to a persistent discount that trapped holders. Same structure, same direction, one cycle earlier — and largely the same investors.\"},\"falsifiableBy\":\"mNAV recovering above 1 and holding there through a flat price — that would mean the premium reflects something other than reflexive sentiment.\",\"useFor\":\"reversal\",\"inScope\":false},{\"id\":\"c-permission-not-appetite\",\"claim\":\"Washington delivered permission, and permission was never the constraint. Everyone who wanted Bitcoin already had it.\",\"reasoning\":\"The reserve, the Act and the friendly regulators all remove barriers to buying. None of them creates a reason to buy. A fifteen-year retail bull market had already exhausted the population that wanted exposure through any available means — the legal wrapper arrived after the appetite it was supposed to unlock.\",\"leap\":\"moderate\",\"restsOn\":[\"f-sbr\",\"f-sbr-unbuilt\",\"f-genius\",\"f-macro-cause\"],\"precedent\":{\"domain\":\"cannabis legalisation\",\"note\":\"Legal-market equities peaked around legalisation and fell afterwards. The regulatory event was priced as demand; it turned out to be access, and access was the smaller half.\"},\"falsifiableBy\":\"A measurable cohort of first-time holders arriving through the retirement-account channel — new buyers who genuinely could not participate before.\",\"useFor\":\"reversal\",\"inScope\":true},{\"id\":\"c-borrowed-prosperity\",\"claim\":\"This was not a bull market that ended. It was a transfer of ownership that completed — from people who believed in it to people who are allocated to it.\",\"reasoning\":\"Read the flows together and one story fits all of them: long-term holders sold 3.67m coins into the strength, treasury companies stopped buying when the arithmetic inverted, mid-tier holders distributed into whale accumulation, and what remains is held inside risk-managed portfolios. The believers exited; the allocators arrived. That is a change in who owns it, and owners with different reasons behave differently.\",\"leap\":\"far\",\"restsOn\":[\"f-lth-distribution\",\"f-midtier-distribute\",\"f-whale-absorb\",\"f-correlation\"],\"precedent\":{\"domain\":\"gold after the 1970s\",\"note\":\"Gold moved from a monetary rebellion held by conviction buyers to a portfolio sleeve held by allocators — and its behaviour changed accordingly: lower drama, tighter correlation to real rates, decades of range.\"},\"falsifiableBy\":\"Evidence that long-term-holder supply is rebuilding at these prices from the same cohort that sold — the believers returning rather than being replaced.\",\"useFor\":\"thesis\",\"inScope\":false}]\n\n## CONCLUSIONS NOT SENT\nEach of these is out of scope, unnamed by any note, and cited nowhere in what you\nwere given — so no edit you may emit can rest on one, and the text is withheld.\nThey exist and you have not read them: the notebook DID synthesise, and a summary\nsaying otherwise is wrong. Refuse any note asking for one, by name. Never write\nthe idea yourself instead — uncited, that breaks rule 1. Emit NO `cards` entry\nnaming one; a plan that does is rejected wholesale.\n[{\"id\":\"c-one-time-rerating\",\"useFor\":\"thesis\",\"leap\":\"moderate\"},{\"id\":\"c-correlation-is-the-product\",\"useFor\":\"reframe\",\"leap\":\"far\"},{\"id\":\"c-scarcity-not-a-floor\",\"useFor\":\"reversal\",\"leap\":\"near\"},{\"id\":\"c-reserve-was-the-product\",\"useFor\":\"colour\",\"leap\":\"unhinged\"}]\n\n## CURRENT RENDERS\n[{\"form\":\"explainer\",\"id\":\"adjudication\",\"engine\":\"adjudication\",\"engineLabel\":\"Adjudication\",\"pleasure\":\"watching a question get settled\",\"title\":\"Why Bitcoin's Price Won't Rise\",\"template\":\"mid-educational-video\",\"durationS\":250,\"words\":762,\"wordBudget\":770,\"wpm\":185,\"turns\":null,\"turnBand\":null,\"questionsAloud\":1,\"promiseForm\":\"numbered candidates\",\"feelsLike\":\"a hearing\",\"bestFor\":\"an audience that has heard all four takes and wants a ruling\",\"weakness\":\"slower start; candidate 1 costs 40s before any momentum\",\"causalDensityPct\":null,\"beats\":[{\"at\":\"0:00\",\"kind\":\"hook\",\"label\":\"the contradiction\",\"connector\":null,\"text\":\"Bitcoin peaked at a hundred and twenty six thousand dollars in October 2025. It is now worth roughly half that. In between, the entire wish list arrived.\",\"cards\":[\"f-ath\",\"f-drawdown\"]},{\"at\":\"0:25\",\"kind\":\"promise\",\"label\":\"numbered candidates\",\"connector\":\"THEREFORE\",\"text\":\"There are four serious explanations for that. Three of them are partly right. One of them is the actual answer, and it is not the one you would expect.\",\"cards\":null},{\"at\":\"0:35\",\"kind\":\"candidate\",\"label\":\"C1 · it's just the cycle\",\"connector\":\"THEREFORE\",\"text\":\"State it fairly: Bitcoin has done this four times. Test it: long-term holders added 380,000 BTC in a single month, after the fall — that is what the middle of a cycle looks like. Verdict: partly right, incomplete — it explains the shape and not the timing.\",\"device\":\"the premise-challenging candidate, placed first\",\"cards\":[\"f-supply-2pct\"]},{\"at\":\"1:15\",\"kind\":\"candidate\",\"label\":\"C2 · the ETF demand was never real\",\"connector\":\"BUT\",\"text\":\"An inflow is not a purchase; APs create and short shares before buying the underlying, and what arrives is absorbed. Verdict: true, and underrated — but a transmission, not a cause.\",\"cards\":[\"r1\",\"f-etf-lag\",\"f-etf-absorbed\",\"m-etf-plumbing\"]},{\"at\":\"2:00\",\"kind\":\"candidate\",\"label\":\"C3 · the treasury flywheel reversed\",\"connector\":\"BUT\",\"text\":\"mNAV 3.89 to below 1.0; the buying stops when the arithmetic inverts. Then the self-correction: nobody is a forced seller — 2.5 years of coverage in cash. Verdict: real, but not a reason to sell.\",\"device\":\"counter-evidence at full strength\",\"cards\":[\"r2\",\"f-mnav\",\"m-treasury-flywheel\",\"f-mstr-defence\",\"steel-man\"]},{\"at\":\"2:50\",\"kind\":\"candidate\",\"label\":\"C4 · macro ate the news\",\"connector\":\"BUT\",\"text\":\"Yields near 4.5%, thirty-year at 5%, a stronger dollar. Verdict: closest — but it only describes the weather. It does not explain why Bitcoin now has weather at all.\",\"cards\":[\"f-yields\",\"f-macro-cause\",\"f-correlation\"]},{\"at\":\"3:30\",\"kind\":\"verdict\",\"label\":\"the ruling\",\"connector\":\"THEREFORE\",\"text\":\"Because it won. Adoption put Bitcoin inside risk models, where it is sized, hedged, rebalanced and cut. Candidates one, two and three are the transmission. The cause is that Bitcoin won its argument.\",\"cards\":[\"r4\",\"m-institutionalisation\"]},{\"at\":\"4:00\",\"kind\":\"close\",\"label\":\"reframe\",\"connector\":\"THEREFORE\",\"text\":\"It isn't that Bitcoin stopped working. It's that it started working like everything else.\",\"cards\":null}],\"deviations\":[\"Runtime 4:10 against a 5:00 target — the candidate structure came in short. Under the 3-6 min band, so not a violation, but the slot it fills is 50 seconds emptier than the reversal chain's.\"],\"cutFacts\":[{\"factId\":\"f-liquidity\",\"why\":\"same vendor figure, cut for the same reason — the notebook's confidence rating held across both renders\"}]}]\n\n## RENDERS NOT SENT\nNo beat in these rests on a card the notes name, so their beat chains are not\nincluded in this run. You cannot edit what you cannot see: emit NO edit whose\n`renderId` is one of these — a plan that names one is rejected wholesale.\n[{\"id\":\"reversal-chain\",\"engineLabel\":\"Reversal Chain\",\"durationS\":300},{\"id\":\"derived-short\",\"engineLabel\":\"Paradox Teaser\",\"durationS\":45}]\n\n## SCOPE (cards the creator has taken out)\n{\"c-permission-not-appetite\":{\"descoped\":false}}\n\n## NOTES\n[\n  {\n    \"kind\": \"less-focus\",\n    \"cardId\": \"c-closed-end-fund\"\n  },\n  {\n    \"kind\": \"more-focus\",\n    \"cardId\": \"f-macro-cause\"\n  }\n]"
+}

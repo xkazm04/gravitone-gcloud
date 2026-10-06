@@ -1,0 +1,44 @@
+{
+  "name": "recalibrate-bare",
+  "route": "app/api/recalibrate/route.ts",
+  "capturedAt": "2026-10-06",
+  "capturedFrom": "the route's own inline assembly at 09c6906, before lib/turns/assemble/ existed (stdin of a stand-in claude)",
+  "inputs": {
+    "conclusions": "f4938cc75097da79",
+    "attribution": "b65fd5aa49a8b8bc",
+    "editPlanSchema": "532bdd5adc8891da"
+  },
+  "body": {
+    "renders": [
+      {
+        "id": "tiny",
+        "engineLabel": "Tiny",
+        "durationS": 30,
+        "checks": [
+          {
+            "row": "dropped by RENDER_DROP"
+          }
+        ],
+        "beats": [
+          {
+            "at": "0:00",
+            "kind": "hook",
+            "text": "One beat.",
+            "cards": [
+              "f-etf-flows"
+            ]
+          }
+        ]
+      }
+    ],
+    "notes": [
+      {
+        "kind": "less-focus",
+        "cardId": "f-etf-flows"
+      }
+    ]
+  },
+  "tailChars": 4359,
+  "tailSha256": "e9606f6aa2d273ae2e38910af8247beb7671679b9414b9b5554c8f9046f6b6dd",
+  "tail": "\n\n---\n\n# THE RUN\n\nReturn ONE JSON object and nothing else — no prose before or after, no code fence.\nIt must satisfy this schema:\n\n{\n  \"type\": \"object\",\n  \"properties\": {\n    \"edits\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"renderId\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"reversal-chain\",\n              \"adjudication\",\n              \"derived-short\"\n            ]\n          },\n          \"op\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"retime\",\n              \"rewrite\",\n              \"cut\",\n              \"insert\"\n            ]\n          },\n          \"beatAt\": {\n            \"type\": \"string\",\n            \"description\": \"mm:ss of the beat being changed\"\n          },\n          \"afterBeatAt\": {\n            \"type\": \"string\",\n            \"description\": \"insert only — the beat to insert after\"\n          },\n          \"seconds\": {\n            \"type\": \"integer\",\n            \"description\": \"retime/insert — how long the beat holds\"\n          },\n          \"text\": {\n            \"type\": \"string\",\n            \"description\": \"rewrite/insert — the spoken line\"\n          },\n          \"label\": {\n            \"type\": \"string\",\n            \"description\": \"insert — the beat's craft label\"\n          },\n          \"connector\": {\n            \"type\": \"string\",\n            \"enum\": [\n              \"BUT\",\n              \"THEREFORE\"\n            ],\n            \"description\": \"insert — link to the previous beat. Required on an insert; a plan without it is rejected\"\n          },\n          \"cards\": {\n            \"type\": \"array\",\n            \"items\": {\n              \"type\": \"string\"\n            },\n            \"description\": \"rewrite/insert — notebook card ids this beat rests on. Required.\"\n          },\n          \"why\": {\n            \"type\": \"string\",\n            \"description\": \"written for the person deciding whether to accept it\"\n          }\n        },\n        \"required\": [\n          \"renderId\",\n          \"op\",\n          \"why\"\n        ],\n        \"additionalProperties\": false\n      }\n    },\n    \"refusals\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"object\",\n        \"properties\": {\n          \"note\": {\n            \"type\": \"string\"\n          },\n          \"why\": {\n            \"type\": \"string\"\n          }\n        },\n        \"required\": [\n          \"note\",\n          \"why\"\n        ],\n        \"additionalProperties\": false\n      }\n    },\n    \"unchanged\": {\n      \"type\": \"array\",\n      \"items\": {\n        \"type\": \"string\"\n      }\n    },\n    \"summary\": {\n      \"type\": \"string\"\n    }\n  },\n  \"required\": [\n    \"edits\",\n    \"refusals\",\n    \"unchanged\",\n    \"summary\"\n  ],\n  \"additionalProperties\": false\n}\n\n## NOTEBOOK\n\n\n## CONCLUSIONS (reasoned, not researched — beside the notebook, never in it)\nA conclusion has no source of its own: it is synthesis over the cards in its\n`restsOn` plus an analogy, and the creator opts each one IN. `inScope: false`\nmeans they have not, so rule 4 binds it exactly as it binds any descoped card —\nit may not be given a beat, and a note on it can only be refused, by name.\n[]\n\n## CONCLUSIONS NOT SENT\nEach of these is out of scope, unnamed by any note, and cited nowhere in what you\nwere given — so no edit you may emit can rest on one, and the text is withheld.\nThey exist and you have not read them: the notebook DID synthesise, and a summary\nsaying otherwise is wrong. Refuse any note asking for one, by name. Never write\nthe idea yourself instead — uncited, that breaks rule 1. Emit NO `cards` entry\nnaming one; a plan that does is rejected wholesale.\n[{\"id\":\"c-one-time-rerating\",\"useFor\":\"thesis\",\"leap\":\"moderate\"},{\"id\":\"c-correlation-is-the-product\",\"useFor\":\"reframe\",\"leap\":\"far\"},{\"id\":\"c-closed-end-fund\",\"useFor\":\"reversal\",\"leap\":\"moderate\"},{\"id\":\"c-permission-not-appetite\",\"useFor\":\"reversal\",\"leap\":\"moderate\"},{\"id\":\"c-scarcity-not-a-floor\",\"useFor\":\"reversal\",\"leap\":\"near\"},{\"id\":\"c-borrowed-prosperity\",\"useFor\":\"thesis\",\"leap\":\"far\"},{\"id\":\"c-reserve-was-the-product\",\"useFor\":\"colour\",\"leap\":\"unhinged\"}]\n\n## CURRENT RENDERS\n[{\"id\":\"tiny\",\"engineLabel\":\"Tiny\",\"durationS\":30,\"beats\":[{\"at\":\"0:00\",\"kind\":\"hook\",\"text\":\"One beat.\",\"cards\":[\"f-etf-flows\"]}]}]\n\n## SCOPE (cards the creator has taken out)\n\n\n## NOTES\n[\n  {\n    \"kind\": \"less-focus\",\n    \"cardId\": \"f-etf-flows\"\n  }\n]"
+}
