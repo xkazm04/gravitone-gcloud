@@ -20,7 +20,6 @@ import { accessHeader, generateImage, imgSrc, ImagingRequestError } from "@/lib/
 import {
   PHASES,
   getProject,
-  reportPhase,
   type PhaseKey,
   type PhaseState,
   type Project,
@@ -35,7 +34,6 @@ import { readRecord } from "../_shared/records/registry";
 import { saveRecord } from "../_shared/records/patch";
 import {
   readStep,
-  reportStorageTrouble,
   type BeatPicksStepData,
   type ScriptAdoptionStepData,
   type StorageTrouble,
@@ -59,6 +57,7 @@ import {
   type FrameText,
 } from "./frames";
 import { framesFromUnits, unitsFromFrames, unitsFromRender, type PictureUnit } from "./picture/unit";
+import { usePhaseReport } from "../_shared/usePhaseReport";
 import { FRAMES_RECORD } from "./records";
 import { applySceneSpecs, reviewSceneSpecs, SceneSpecError, SCENE_SCHEMA } from "./sceneSpec";
 
@@ -767,27 +766,12 @@ export function useFrames(projectId: string) {
     return "working";
   }, [stepLoaded, frames, rejections, clipsAuthored, direction, unboundFigures]);
 
-  // Written once per CHANGE of that word, not once per render — the ref carries
-  // the project id so switching projects cannot suppress the first report of
-  // the second one. A failed write stays SILENT IN THIS SURFACE on purpose: the
-  // cell simply stays where it was, which claims nothing, and taking the step
-  // down over a ledger entry would be the wrong trade.
-  //
-  // But it no longer vanishes. `.catch(() => undefined)` made a failed write
-  // unobservable to anyone, anywhere — including the case that matters, which is
-  // a full quota, because plates are the reason this project is near one. It now
-  // reaches the same trouble channel every other storage failure reaches, and the
-  // bell says so. Silent in the step, visible in the app.
-  const lastReport = useRef<string | null>(null);
-  useEffect(() => {
-    if (!reported) return;
-    const stamp = `${projectId}:${reported}`;
-    if (lastReport.current === stamp) return;
-    lastReport.current = stamp;
-    void reportPhase(projectId, PHASE, reported).catch((e: unknown) => {
-      reportStorageTrouble("write", projectId, `${PHASE} · progress`, e);
-    });
-  }, [reported, projectId]);
+  // Written once per CHANGE of that word, retried a bounded number of times when
+  // refused, and surfaced on the bell only if it never lands: the one rule for
+  // every step lives in usePhaseReport. A failed write stays SILENT IN THIS
+  // SURFACE on purpose — taking the step down over a ledger entry would be the
+  // wrong trade.
+  usePhaseReport(projectId, PHASE, reported);
 
   return {
     render,
