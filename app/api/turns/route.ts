@@ -21,12 +21,21 @@
 // promise is the whole of it.
 //
 // Money route: the turn spends the operator's seat or a metered key. Full guard.
+//
+// GET /api/turns?projectId=<id>[&kind=<kind>] — that project's turns, newest
+// first, at most LIST_LIMIT, WITHOUT `result` (GET /api/turns/<id> carries it).
+// What a watching tab polls, so it is gated and not rate-counted, like the
+// single-turn read (guardAccessOnly's own reason).
 
 import { after } from "next/server";
 
-import { guardRequest } from "@/lib/apiAuth";
+import { guardAccessOnly, guardRequest } from "@/lib/apiAuth";
 import { TextError, statusFor } from "@/lib/text/errors";
+import { ensureSwept, listTurns } from "@/lib/turns/ledger";
 import { startTurn, turnKind, turnKinds, TurnInputError } from "@/lib/turns/runner";
+// The production kinds, registered on import (AIO-A stage 2). A kind is owned
+// by the module that owns its prompt; this line only makes it reachable here.
+import "@/lib/turns/kinds/recalibrate";
 
 export const runtime = "nodejs";
 /** The longest turn the ladder allows (the edit-plan ceiling), with room —
@@ -85,4 +94,24 @@ export async function POST(req: Request) {
 
   if (new URL(req.url).searchParams.get("wait") === "1") return Response.json({ turn: await settled });
   return Response.json({ turnId: out.turnId }, { status: 202 });
+}
+
+const LIST_LIMIT = 20;
+
+export async function GET(req: Request) {
+  const denied = await guardAccessOnly(req);
+  if (denied) return denied;
+  const q = new URL(req.url).searchParams;
+  const projectId = q.get("projectId");
+  if (!projectId || !PROJECT_ID_RE.test(projectId)) return bad("`projectId` is required.");
+  const kind = q.get("kind");
+
+  // A boot's first read settles what the last boot left running.
+  await ensureSwept();
+  const turns = (await listTurns())
+    .filter((t) => t.projectId === projectId && (!kind || t.kind === kind))
+    .sort((a, b) => b.startedAt.localeCompare(a.startedAt) || b.id.localeCompare(a.id))
+    .slice(0, LIST_LIMIT)
+    .map(({ result: _result, ...rest }) => rest);
+  return Response.json({ turns });
 }

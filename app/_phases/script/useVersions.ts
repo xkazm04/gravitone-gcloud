@@ -11,28 +11,29 @@
 //   3. A candidate is not a baseline until you accept it. Accepting is the only
 //      thing that changes what Candidates and Tracks show.
 //
-// Rule 2 is enforced against the REAL call, not a timer in front of it. The
-// recalibrate job is started `driven` (lib/jobs.tsx): it is `running` from the
-// click until the fetch settles — minutes, on the model path — and `settle` is
-// what ends it. The old shape started a nine-second mock, fired the fetch when
-// the mock said "done", and re-armed the button while a Claude Opus 5 turn was
-// still in flight; a second click then discarded the first run's result
-// client-side while the process kept burning. The fetch now lives in `run`,
-// where the user's click is, rather than in an effect keyed on a timer.
+// Rule 2 is enforced against the REAL run, not a timer in front of it — and
+// since AIO-A stage 2 (2026-10-06) the real run is a TURN THE SERVER OWNS. The
+// click asks /api/recalibrate through the one client door (lib/turns/client.ts);
+// the route answers 202 with a turn id as soon as the ledger has the record,
+// and the job the pad locks on is that turn, read from the ledger by the jobs
+// provider. A second click in this tab, another tab or another device meets
+// the server's 409, which names the turn already holding the slot.
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { accessHeader } from "@/lib/imagingClient";
 import { useJobs } from "@/lib/jobs";
+import { getTurn, resumeTurn, startRecalibrate, type TurnRecord } from "@/lib/turns/client";
 import { loadStep, saveStep } from "../_shared/stepStore";
 import { recalibrate, recalibrateFromPlan } from "./recalibrate";
 import { NOTEBOOK } from "../_shared/notebook/notebook";
 import { renderPayloadFor } from "./chainBase";
 import { BASELINE, engineRunOf, type GateOverride, type Note, type NoteKind, type Version } from "./versions";
+import type { EditPlan } from "./editPlan";
 import type { Card } from "../_shared/notebook/cards";
 import type { Scope } from "../research/scope";
 
 const PHASE = "script-versions";
+const KIND = "recalibrate";
 
 /** The receipt for a candidate that was staged when the project last closed.
  *
@@ -52,19 +53,18 @@ interface Stored {
   /** Accepted versions, oldest first. The baseline itself is never stored. */
   accepted: Version[];
   staged?: LostCandidate;
+  /** The last turn whose answer this pad took (staged, or found to have
+   *  nothing to stage). A mount never takes it a second time. */
+  turn?: string;
   savedAt?: number;
 }
 
 export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scope }) {
   const jobs = useJobs();
-  // Held in a ref so the job-landing effect reads the CURRENT cards+scope
-  // without re-running (and re-staging a candidate) every time scope changes.
-  const ctxRef = useRef(ctx);
-  ctxRef.current = ctx;
+  const { busy, track, cancel: cancelJob } = jobs;
   const [notes, setNotes] = useState<Note[]>([]);
   const [accepted, setAccepted] = useState<Version[]>([]);
   const [candidate, setCandidate] = useState<Version | null>(null);
-  const [jobId, setJobId] = useState<string | null>(null);
   // Keyed to the project rather than a boolean reset in the effect. The reset
   // was a synchronous setState inside an effect body — the area's own ratcheted
   // lint finding — and "hydrated for THIS id" is also the stronger guard: the
@@ -75,9 +75,14 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
   const hydrated = hydratedFor === projectId;
   const [lostCandidate, setLostCandidate] = useState<LostCandidate | null>(null);
-  /** The in-flight call, so a genuinely superseded run stops burning a model
-   *  turn instead of being dropped on the floor client-side. */
-  const inFlight = useRef<{ ac: AbortController; jobId: string } | null>(null);
+  /** The last turn this pad took — persisted, so "exactly once" survives a
+   *  reload. The ref is the synchronous guard; the state is what is saved. */
+  const [consumed, setConsumed] = useState<string | null>(null);
+  const consumedRef = useRef<string | null>(null);
+  /** Between the click and the 202: no turn id exists yet, and the pad must
+   *  already be locked. */
+  const [starting, setStarting] = useState(false);
+  const startingRef = useRef(false);
 
   /** THE NOTE ORDINAL, AND IT MUST NOT REWIND.
    *
@@ -100,6 +105,8 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       setAccepted(s?.accepted ?? []);
       setCandidate(null);
       setLostCandidate(s?.staged ?? null);
+      consumedRef.current = s?.turn ?? null;
+      setConsumed(s?.turn ?? null);
       setHydratedFor(projectId);
     });
     return () => { alive = false; };
@@ -113,42 +120,91 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       staged: candidate
         ? { label: candidate.label, at: candidate.createdAt, notes: candidate.notes.length }
         : undefined,
+      ...(consumed ? { turn: consumed } : {}),
     });
-  }, [projectId, notes, accepted, candidate, hydrated]);
+  }, [projectId, notes, accepted, candidate, consumed, hydrated]);
 
   /** What Candidates and Tracks read: the latest ACCEPTED version. */
   const baseline = useMemo(() => accepted[accepted.length - 1] ?? BASELINE, [accepted]);
 
-  const running = jobs.busy(projectId, "recalibrate");
-  const myJob = jobId ? jobs.jobs.find((j) => j.id === jobId) : undefined;
+  /** This project's newest turn-backed recalibration, as the ledger reports it. */
+  const turnJob = jobs.jobs.find((j) => j.turnId && j.projectId === projectId && j.kind === KIND);
+  const running = busy(projectId, KIND) || starting;
 
   const [engineNote, setEngineNote] = useState<string | null>(null);
 
-  // `settle` through a ref so the teardown below can end a job without taking
-  // the jobs API as a dependency — that object is new on every render, and an
-  // effect that re-ran on every render would abort the call it is guarding.
-  const settleRef = useRef(jobs.settle);
-  settleRef.current = jobs.settle;
+  // What a landing reads: the pad as it is when the answer arrives. The pad is
+  // locked while the turn is live (rule 2), so these are the notes the run was
+  // started from. Written in an effect, never during render.
+  const live = useRef({ notes, baseline, accepted, ctx });
+  useEffect(() => {
+    live.current = { notes, baseline, accepted, ctx };
+  });
 
-  // Leaving the step ends the run rather than leaking it. The result is staged
-  // into THIS hook's state; once it is gone the answer has nowhere to land, so
-  // the honest move is to stop the call rather than let a Claude Opus 5 turn
-  // finish for a listener that no longer exists. `interrupted` is the word the
-  // jobs store already uses for exactly this.
-  useEffect(
-    () => () => {
-      const f = inFlight.current;
-      if (!f) return;
-      inFlight.current = null;
-      f.ac.abort();
-      settleRef.current(
-        f.jobId,
-        "interrupted",
-        "You left the Script step while this was running, so it was stopped. Nothing was changed.",
-      );
-    },
-    [projectId],
-  );
+  /** Take a settled turn's answer onto the pad — at most once per turn. */
+  const land = useCallback((rec: TurnRecord) => {
+    if (consumedRef.current === rec.id) return;
+    consumedRef.current = rec.id;
+    setConsumed(rec.id);
+    const { notes: runNotes, baseline: base, accepted: acc, ctx: c } = live.current;
+    const id = `v${acc.length + 2}`;
+    if (rec.status === "done") {
+      const { plan, engine } = (rec.result ?? {}) as { plan?: EditPlan; engine?: unknown };
+      if (!plan) return;
+      setEngineNote(null);
+      setLostCandidate(null);
+      // The receipt is attached here rather than inside the transform: what a
+      // run cost is a fact about the TURN, not about the edit plan, and the
+      // transform is shared with the path that never makes one.
+      setCandidate({ ...recalibrateFromPlan(base, runNotes, plan, id, Date.now(), c), engineRun: engineRunOf(engine) });
+      return;
+    }
+    if (rec.status === "failed") {
+      // The engine could not serve, or served a plan the guards refused. The
+      // sentence is the server's; the simulated candidate is the fallback the
+      // pad has always staged beside it.
+      const why = rec.error?.message || "The recalibration failed. Nothing was changed.";
+      setEngineNote(why);
+      setCandidate(recalibrate(base, runNotes, id, Date.now(), c));
+    }
+    // cancelled or orphaned: nothing came back, and nothing is staged.
+  }, []);
+
+  // LEAVING THE STEP NO LONGER STOPS THE RUN — operator decision, 2026-10-06
+  // (AIO-A stage 2). The old rule aborted the fetch on unmount and settled the
+  // job `interrupted`, on the reasoning that the answer had nowhere to land. It
+  // also never stopped the engine: the abort ended at the fetch while the
+  // `claude` process ran on to its ceiling. The turn is the server's now, so
+  // the answer has somewhere to land — the ledger — and THIS is where it is
+  // picked up: on mount, the project's newest recalibration is asked for. A
+  // live one is watched (the pad stays locked and offers a stop that really
+  // ends the engine); a settled one this pad has not taken is staged, once.
+  useEffect(() => {
+    if (!hydrated) return;
+    let alive = true;
+    void resumeTurn(projectId, KIND, consumedRef.current)
+      .then((l) => {
+        if (!alive) return;
+        if (l.action === "watch") track({ turnId: l.turn.id, projectId, kind: KIND, label: "recalibration", record: l.turn });
+        else if (l.action === "land") land(l.turn);
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [hydrated, projectId, track, land]);
+
+  // The watched turn ENDING while the pad is mounted: read its whole record
+  // (the list the provider polls carries no result) and land it.
+  const endedTurn = turnJob && turnJob.status !== "running" ? turnJob.id : null;
+  useEffect(() => {
+    if (!hydrated || !endedTurn || endedTurn === consumed) return;
+    let alive = true;
+    void getTurn(endedTurn)
+      .then((rec) => {
+        if (alive && rec) land(rec);
+      })
+      .catch(() => undefined);
+    return () => { alive = false; };
+  }, [hydrated, endedTurn, consumed, land]);
 
   const addNote = useCallback(
     (cardId: string, kind: NoteKind, text?: string) => {
@@ -169,77 +225,64 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
 
   const clearNotes = useCallback(() => { if (!running) setNotes([]); }, [running]);
 
-  /** Start the run, and OWN it until it settles.
+  /** Ask the server for a recalibration turn.
    *
-   *  The whole call lives here rather than in an effect: this is a user action,
-   *  it happens once per click, and the job it opens stays `running` — locking
-   *  the button and the note pad — for as long as the real request takes. */
+   *  A user action, once per click. The pad locks at the click (`starting`)
+   *  and stays locked for as long as the ledger says the turn is live — the
+   *  provider's poll, not this closure, is what ends it, so leaving the step,
+   *  reloading or closing the tab changes nothing about the run. */
   const run = useCallback(() => {
-    if (running || inFlight.current || !notes.length) return;
-    const j = jobs.start("recalibrate", projectId, `${notes.length} note${notes.length === 1 ? "" : "s"}`);
-    // Refused: a run for this project is already live. Not an error — the rule
-    // working. Say nothing and change nothing.
-    if (!j) return;
-
-    setJobId(j.id);
+    if (running || startingRef.current || !notes.length) return;
+    startingRef.current = true;
+    setStarting(true);
     setLostCandidate(null);
-    const ac = new AbortController();
-    inFlight.current = { ac, jobId: j.id };
 
-    // Frozen at click time. The notes that produced a version travel with it,
-    // and the pad is locked while the run is live, but reading them off the
-    // closure rather than off later state is what makes that a guarantee.
+    // Frozen at click time, for the one path that stages from here: a run the
+    // server refused before any turn existed.
     const runNotes = notes;
     const base = baseline;
     const id = `v${accepted.length + 2}`;
-    const ctx = ctxRef.current;
-    const settle = jobs.settle;
+    const c = live.current.ctx;
+    const label = `${runNotes.length} note${runNotes.length === 1 ? "" : "s"}`;
+    const fallback = (why: string) => {
+      setEngineNote(why);
+      setCandidate(recalibrate(base, runNotes, id, Date.now(), c));
+    };
 
-    void (async () => {
-      try {
-        const res = await fetch("/api/recalibrate", {
-          method: "POST",
-          headers: { "content-type": "application/json", ...accessHeader() },
-          body: JSON.stringify({
-            notebook: NOTEBOOK,
-            renders: renderPayloadFor(base),
-            scope: ctx.scope,
-            notes: runNotes,
-          }),
-          signal: ac.signal,
-        });
-        if (!res.ok) {
-          const { detail } = await res.json().catch(() => ({ detail: "" }));
-          const why = detail || "The model could not be reached.";
-          setEngineNote(why);
-          setCandidate(recalibrate(base, runNotes, id, Date.now(), ctx));
-          settle(j.id, "done", `Simulated instead — ${why}`);
+    void startRecalibrate(projectId, {
+      notebook: NOTEBOOK,
+      renders: renderPayloadFor(base),
+      scope: c.scope,
+      notes: runNotes,
+    })
+      .then((out) => {
+        if (out.ok) {
+          setEngineNote(null);
+          track({ turnId: out.turnId, projectId, kind: KIND, label });
           return;
         }
-        const { plan, engine } = await res.json();
-        setEngineNote(null);
-        // The receipt is attached here rather than inside the transform: what a
-        // run cost is a fact about the CALL, not about the edit plan, and the
-        // transform is shared with the path that never makes one.
-        setCandidate({
-          ...recalibrateFromPlan(base, runNotes, plan, id, Date.now(), ctx),
-          engineRun: engineRunOf(engine),
-        });
-        settle(j.id, "done", "A recalibrated set of scripts is staged — compare it, then accept or run again.");
-      } catch (e) {
-        // An abort is not a failure: whoever aborted has already settled the
-        // job, and staging a fallback for a run the user walked away from would
-        // put a result on a pad nobody is looking at.
-        if (ac.signal.aborted || (e instanceof DOMException && e.name === "AbortError")) return;
-        const why = "The recalibration request failed. Nothing was changed.";
-        setEngineNote(why);
-        setCandidate(recalibrate(base, runNotes, id, Date.now(), ctx));
-        settle(j.id, "done", `Simulated instead — ${why}`);
-      } finally {
-        if (inFlight.current?.ac === ac) inFlight.current = null;
-      }
-    })();
-  }, [running, notes, baseline, accepted.length, jobs, projectId]);
+        // The rule working, server-side: another tab or device holds the slot.
+        // Watch that turn instead of starting a second one.
+        if (out.status === 409 && out.holder) {
+          track({ turnId: out.holder, projectId, kind: KIND, label: "recalibration" });
+          return;
+        }
+        // Refused before any turn existed (401, 413, no notes, a missing prompt
+        // file): the simulated fallback, with the server's sentence beside it.
+        fallback(out.detail || "The recalibration could not be started.");
+      })
+      .catch(() => fallback("The recalibration request failed. Nothing was changed."))
+      .finally(() => {
+        startingRef.current = false;
+        setStarting(false);
+      });
+  }, [running, notes, baseline, accepted.length, projectId, track]);
+
+  /** Stop the live turn. On the server: the record says `cancelled` and the
+   *  engine's process tree is ended (lib/turns/runner.ts `cancelTurn`). */
+  const cancel = useCallback(() => {
+    if (turnJob && turnJob.status === "running") cancelJob(turnJob.id);
+  }, [turnJob, cancelJob]);
 
   /** Accept the candidate as the new baseline. The notes that produced it travel
    *  with the version and are cleared from the pad — they have been answered.
@@ -268,8 +311,9 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
    *  local Claude Opus 5 turn and nothing here knows how long it will take.
    *
    *  Hoisted out of the returned literal so the memo below can depend on the
-   *  value rather than on `myJob`, which is re-found on every render. */
-  const runningSince = running ? (myJob?.startedAt ?? null) : null;
+   *  value rather than on `turnJob`, which is re-found on every render. The
+   *  start is the ledger's, so it survives a reload. */
+  const runningSince = running && turnJob?.status === "running" ? turnJob.startedAt : null;
 
   /** THE RETURNED OBJECT HAS A STABLE IDENTITY, and it used to be a fresh literal
    *  on every render. `VersionsApi` is `ReturnType<typeof useVersions>`, and the
@@ -307,6 +351,8 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       running,
       runningSince,
       run,
+      /** Stop the live run — the server ends the engine. */
+      cancel,
       accept,
       discard,
       /** Why the simulated engine ran, when it did. Null on a real model result. */
@@ -328,6 +374,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       running,
       runningSince,
       run,
+      cancel,
       accept,
       discard,
       engineNote,

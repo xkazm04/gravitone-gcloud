@@ -39,10 +39,11 @@
 //     saved cut, else compose one from the confirmed picks) with two distinct
 //     guard points. Flattening it into one `load` would hide the branch that is
 //     the entire logic of the hook.
-//   · `script/useVersions.ts` — carries an AbortController as well, because it
-//     can cancel a model turn in flight rather than merely ignore its answer.
-//     Ignoring a result and cancelling the work that produces it are different
-//     acts and cost different money.
+//   · `script/useVersions.ts` — three keyed reads with three different applies:
+//     the step record, the turn ledger's newest recalibration (watch it, or
+//     land it once), and a settled turn's full record. It carried an
+//     AbortController until 2026-10-06; the run is a server-owned turn now, and
+//     stopping it is the explicit cancel (lib/turns/client.ts), not an unmount.
 //   · `frames/useFrames.ts` — separates a read failure from an operation failure
 //     into two distinct fields a surface renders differently, and gates its save
 //     on both. `useStepFor` below takes the half of that lesson which every

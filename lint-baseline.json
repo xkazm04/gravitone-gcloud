@@ -29,6 +29,6 @@
   "warnings": {
     "react-hooks/set-state-in-effect": 10,
     "react-hooks/exhaustive-deps": 1,
-    "react-hooks/refs": 3
+    "react-hooks/refs": 1
   }
 }
