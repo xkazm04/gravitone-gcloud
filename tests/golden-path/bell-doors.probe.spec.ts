@@ -39,7 +39,8 @@ test("case 1: every JobKind maps to a PhaseKey in KIND_STEP; jobHref returns cor
   expect(jobHref({ projectId: "p1", kind: "poster-generate" })).toBe("/studio/p1?step=frames");
   expect(jobHref({ projectId: "p1", kind: "video-export" })).toBe("/studio/p1?step=cut");
   expect(jobHref({ projectId: "p1", kind: "ad-scenarios" })).toBe("/studio/p1?step=script");
-  expect(jobHref({ projectId: "p1", kind: "video-clip" })).toBe("/studio/p1?step=frames");
+  // Clips are animated in Motion (ads split, 2026-10-06): images in Frames, clips in Motion.
+  expect(jobHref({ projectId: "p1", kind: "video-clip" })).toBe("/studio/p1?step=motion");
   expect(jobHref({ kind: "recalibrate" })).toBeNull();
   expect(jobHref({ projectId: "", kind: "recalibrate" })).toBeNull();
 });

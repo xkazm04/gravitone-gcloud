@@ -16,7 +16,7 @@ export const KIND_STEP: Record<JobKind, PhaseKey> = {
   "video-export": "cut",
   "ad-ideas": "research",
   "ad-scenarios": "script",
-  "video-clip": "frames",
+  "video-clip": "motion",
   "ad-render": "cut",
 };
 

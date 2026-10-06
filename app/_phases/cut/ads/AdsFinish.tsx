@@ -267,10 +267,10 @@ export default function AdsFinish({ projectId }: { projectId: string }) {
   if (!rows.some((r) => r.clipId))
     return (
       <UpstreamBreak
-        blockedAt="frames"
+        blockedAt="motion"
         current="cut"
-        done={["research", "script"]}
-        action={{ label: "Adopt clips", href: `/studio/${projectId}?step=frames` }}
+        done={["research", "script", "frames"]}
+        action={{ label: "Adopt clips", href: `/studio/${projectId}?step=motion` }}
       />
     );
 

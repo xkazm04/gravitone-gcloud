@@ -17,13 +17,38 @@ import { useState } from "react";
 import { Button } from "@/components/ui/Primitives";
 import { TextArea } from "@/components/ui/Field";
 import { CHIP_CLASS, Ghost, Provenance, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
+import { getProject, type Discipline } from "@/lib/projects";
 
+import { useLoadFor } from "../_shared/useLoadFor";
 import type { Frame } from "../frames/frames";
+
+import AdsMotion from "./ads/AdsMotion";
 
 import { plateImage, type MotionOutcome } from "./direction";
 import { useMotion } from "./useMotion";
 
+/** THE ROUTER — FramesStep.tsx's shape: an ads project's clips are animated
+ *  from its adopted key images (./ads), and it is routed away HERE, before
+ *  `useMotion` mounts and reads a frame ledger an ads project does not have. */
 export default function MotionStep({ projectId }: { projectId: string }) {
+  const [discipline, setDiscipline] = useState<Discipline | undefined>(undefined);
+  const hydrated = useLoadFor(
+    projectId,
+    (id) => getProject(id),
+    (p) => setDiscipline(p?.discipline ?? "educational"),
+  );
+
+  if (!hydrated)
+    return (
+      <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
+        reading the cut…
+      </p>
+    );
+  if (discipline === "ads") return <AdsMotion projectId={projectId} />;
+  return <StandardMotion projectId={projectId} />;
+}
+
+function StandardMotion({ projectId }: { projectId: string }) {
   const m = useMotion(projectId);
 
   if (!m.loaded)

@@ -687,7 +687,6 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
-        "app/_phases/frames/ads/AdsFrames.tsx",
         "app/_phases/motion/MotionStep.tsx",
         "app/_phases/research/ads/parts.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
@@ -825,7 +824,6 @@
       "adopters": [
         "app/_landing/parts.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
-        "app/_phases/frames/ads/AdsFrames.tsx",
         "app/_phases/research/ads/AdsIdea.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/score/CueTakes.tsx",
@@ -909,7 +907,6 @@
       ],
       "adopters": [
         "app/_phases/frames/FramesStep.tsx",
-        "app/_phases/frames/ads/AdsFrames.tsx",
         "app/_phases/script/ScriptStep.tsx",
         "app/calendar/CalendarView.tsx",
         "app/library/LibraryView.tsx",
@@ -944,7 +941,6 @@
         "app/_phases/cut/parts/Transport.tsx",
         "app/_phases/frames/FramesAssembly.tsx",
         "app/_phases/frames/ShotSheet.tsx",
-        "app/_phases/frames/ads/AdsFrames.tsx",
         "app/_phases/frames/alternatives/VariantContactSheet.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
         "app/_phases/motion/MotionStep.tsx",
@@ -1061,7 +1057,6 @@
       "adopters": [
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/frames/ShotSheet.tsx",
-        "app/_phases/frames/ads/AdsFrames.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
         "app/_phases/motion/MotionStep.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
@@ -1160,7 +1155,6 @@
         "components/ui/Select.tsx"
       ],
       "adopters": [
-        "app/_phases/frames/ads/AdsFrames.tsx",
         "app/_projects/ShelfHeader.tsx",
         "app/articles/new/NewArticle.tsx",
         "app/board/shared.tsx",
@@ -1352,13 +1346,10 @@
         "CHIP_CLASS",
         "Ghost",
         "Hint",
-        "Provenance",
-        "StaleBadge",
         "TALLY_TONE",
         "TabRail",
         "Tally",
-        "UpstreamBreak",
-        "components/ui/Select#Select"
+        "UpstreamBreak"
       ],
       "suspects": {
         "tab": 0,

@@ -98,7 +98,7 @@ export interface AdFinishCheck {
   target: string;
   verdict: Verdict;
   /** The step that clears it. */
-  owner?: "frames" | "score";
+  owner?: "motion" | "score";
   /** True when a fail here refuses the render. */
   blocks?: boolean;
   deny?: string;
@@ -124,7 +124,7 @@ export function adFinishChecks(args: {
     value: `${adopted}/${rows.length}`,
     target: `${rows.length}/${rows.length}`,
     verdict: rows.length === 0 ? "unmeasured" : adopted === rows.length ? "pass" : "fail",
-    owner: "frames",
+    owner: "motion",
     blocks: true,
     ...(adopted < rows.length
       ? { deny: `shot ${rows.filter((r) => !r.clipId).map((r) => r.index + 1).join(", ")} without a clip` }
