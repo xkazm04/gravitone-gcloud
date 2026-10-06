@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 525,
+  "files": 526,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -76,6 +76,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/frames/ShotSheet.tsx",
@@ -696,6 +697,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/motion/MotionStep.tsx",
         "app/_phases/motion/ads/AdsMotion.tsx",
         "app/_phases/research/ads/parts.tsx",
@@ -810,6 +812,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/script/ads/AdsScenario.tsx",
         "app/_projects/RaceSheet.tsx",
         "app/board/ContactSheet.tsx",
@@ -886,6 +889,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/frames/ShotSheet.tsx",
@@ -949,6 +953,7 @@
       ],
       "adopters": [
         "app/_phases/_shared/notebook/EvidenceLog.tsx",
+        "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/cut/music-video/MusicVideoExport.tsx",
         "app/_phases/cut/parts/Lanes.tsx",
@@ -1311,11 +1316,15 @@
       "suspectFiles": {}
     },
     "app/_phases/_shared": {
-      "files": 25,
+      "files": 26,
       "kitImports": 0,
-      "signalImports": 2,
+      "signalImports": 3,
       "parts": [
+        "CHIP_CLASS",
         "HintPopover",
+        "Provenance",
+        "StackBar",
+        "TALLY_TONE",
         "Tally",
         "hintRootClass",
         "useHint"
