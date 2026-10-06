@@ -57,6 +57,10 @@ uat/runs/*/captures/
 .claude/skills/motionize/out/
 .claude/skills/motionize/node_modules/
 
+# Agent worktrees (Agent isolation: "worktree", EnterWorktree): each is a whole
+# checkout on its own branch, and its node_modules is a junction back to this one.
+/.claude/worktrees/
+
 # /research working cache (craft-mode corpora live in knowledge/, not here)
 .research-cache/
 .next-drive/
