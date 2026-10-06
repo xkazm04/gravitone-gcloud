@@ -9,7 +9,7 @@ import { readMetrics, readPublications } from "@/lib/publish/store";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     const [pubs, metrics] = await Promise.all([readPublications(), readMetrics()]);

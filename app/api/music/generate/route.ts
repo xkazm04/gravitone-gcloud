@@ -111,7 +111,7 @@ function asPicture(v: unknown): CuePicture {
 }
 
 export async function POST(req: Request) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
   try {
     const body = (await req.json().catch(() => {

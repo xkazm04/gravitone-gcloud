@@ -114,7 +114,7 @@ export function tooLarge(body: {
 export async function POST(req: Request) {
   // Local-compute route (spends the machine's Claude subscription) — auth +
   // rate limit before anything is read or dispatched.
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
 
   // `template` and `targetS` are the project record's own two format fields, and

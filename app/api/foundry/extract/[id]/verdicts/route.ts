@@ -9,7 +9,7 @@ import type { ExtractVerdicts } from "@/lib/foundry/extract/types";
 export const runtime = "nodejs";
 
 export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   const { id } = await params;
   let body: { verdicts?: unknown };

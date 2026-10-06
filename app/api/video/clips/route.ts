@@ -27,7 +27,7 @@ export const runtime = "nodejs";
 export const maxDuration = 1000;
 
 export async function POST(req: Request) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
   try {
     let body: unknown;
@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   return Response.json(videoCapability(), { headers: { "cache-control": "no-store" } });
 }

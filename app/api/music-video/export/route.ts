@@ -78,7 +78,7 @@ function asSeed(v: unknown): number {
 }
 
 export async function POST(req: Request) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
 
   // THE SECOND GATE, BEFORE ANY BODY PARSING OR BROWSER SPAWN. A missing

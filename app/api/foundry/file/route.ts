@@ -37,7 +37,7 @@ export async function GET(req: Request) {
   // IMAGING_ACCESS_SECRET configured — the fail-closed default — showed a
   // gallery of broken tiles whose only word was one that sends a reader to
   // check the key they presented, not the one the server never had.
-  const denied = guardAccessOnly(probe);
+  const denied = await guardAccessOnly(probe);
   if (denied) return denied;
 
   const run = url.searchParams.get("run") ?? "";

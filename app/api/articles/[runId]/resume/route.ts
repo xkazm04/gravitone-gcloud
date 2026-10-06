@@ -15,7 +15,7 @@ import { existing, failure } from "../../_lib/respond";
 export const runtime = "nodejs";
 
 export async function POST(req: Request, { params }: { params: Promise<{ runId: string }> }) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
   const { runId } = await params;
   const missing = await existing(runId);

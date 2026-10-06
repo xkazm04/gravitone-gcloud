@@ -24,7 +24,7 @@ export const runtime = "nodejs";
 const WORKING: ArticleStatus[] = ["queued", "researching", "drafting", "critiquing", "checking", "approved", "landing"];
 
 export async function GET(req: Request) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   try {
     const { runs, damaged } = await listArticleRuns();
@@ -39,7 +39,7 @@ export async function GET(req: Request) {
 const str = (v: unknown) => (typeof v === "string" ? v : undefined);
 
 export async function POST(req: Request) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
   const body = await objectBody(req);
   if (body instanceof Response) return body;
