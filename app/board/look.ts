@@ -23,6 +23,7 @@ import {
   Pipette,
   Quote,
   Repeat2,
+  Scale,
   ScanEye,
   ScrollText,
   Shield,
@@ -53,6 +54,7 @@ export const KIND_ICON: Record<string, LucideIcon> = {
   mechanism: Workflow,
   reversal: Repeat2,
   "steel-man": Shield,
+  counter: Scale,
   conclusion: Flag,
 };
 

@@ -65,6 +65,9 @@ const TODAY: [string, string, string, string, 0 | 1, 0 | 1][] = [
   ["c-scarcity-not-a-floor", "conclusion", "conclusions", "f-whale-absorb f-midtier-distribute f-lth-distribution", 1, 0],
   ["c-borrowed-prosperity", "conclusion", "conclusions", "f-lth-distribution f-midtier-distribute f-whale-absorb f-correlation", 1, 0],
   ["c-reserve-was-the-product", "conclusion", "conclusions", "f-sbr f-sbr-unbuilt f-genius", 1, 0],
+  ["counter-1", "counter", "counter-case", "", 0, 0],
+  ["counter-2", "counter", "counter-case", "", 0, 0],
+  ["counter-3", "counter", "counter-case", "", 0, 0],
   ["steel-man", "steel-man", "counter-case", "f-mstr-defence f-supply-2pct", 0, 1],
 ];
 

@@ -20,6 +20,7 @@ import {
   Flag,
   Flame,
   FlipHorizontal2,
+  Scale,
   Shield,
 } from "lucide-react";
 
@@ -70,6 +71,8 @@ export function kindIcon(card: Pick<Card, "kind" | "hottest">): React.ReactNode 
       return <FlipHorizontal2 />;
     case "steel-man":
       return <Shield />;
+    case "counter":
+      return <Scale />;
     default:
       return <Flag />; // conclusions and anything the notebook grows next
   }
