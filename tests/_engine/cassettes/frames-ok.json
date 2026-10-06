@@ -1,0 +1,60 @@
+{
+  "name": "frames-ok",
+  "source": "hand-written",
+  "recordedAt": "2026-10-06",
+  "cliVersion": "2.1.289",
+  "cliArgsFingerprint": "9bffdfc1075733e3",
+  "turns": [
+    {
+      "match": {
+        "headingSha256": "972f4a9122833fdaa52d9b1875bfed9378055fefa32dad6edfcd001f8e45b947",
+        "schemaSha256": null
+      },
+      "prompt": null,
+      "mode": "ok",
+      "envelope": {
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "duration_ms": 142807,
+        "duration_api_ms": 141930,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-0000000000f1",
+        "total_cost_usd": 0.62417,
+        "usage": {
+          "input_tokens": 18342,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 2716
+        },
+        "permission_denials": []
+      },
+      "resultJson": {
+        "scenes": [
+          {
+            "beatAt": "0:00",
+            "subject": "A four-panel calendar torn across its fourth panel, the tear running into a stack of fund prospectuses.",
+            "motion": "Slow push in on the tear.",
+            "rationale": "The hook is a broken rhythm; the tear is the break and the prospectuses are its cause.",
+            "elements": [
+              { "kind": "bracket", "label": "cycle calendar", "x": 8, "y": 14, "w": 60, "h": 62 },
+              { "kind": "bar", "label": "prospectuses", "x": 64, "y": 40, "w": 26, "h": 44, "accent": true }
+            ],
+            "texts": [{ "role": "kicker", "value": "The cycle broke", "x": 10, "y": 82 }]
+          },
+          {
+            "beatAt": "0:12",
+            "subject": "Two scales side by side: one weighed down by inflow receipts, the other nearly empty under a halving stamp.",
+            "motion": "The heavy scale settles; the light one does not move.",
+            "rationale": "The beat compares two causes; a balance makes the comparison literal without a chart.",
+            "elements": [
+              { "kind": "bar", "label": "inflow scale", "x": 12, "y": 22, "w": 34, "h": 56, "accent": true },
+              { "kind": "bar", "label": "halving scale", "x": 54, "y": 22, "w": 34, "h": 56 }
+            ],
+            "texts": [{ "role": "figure", "value": "18 months", "x": 14, "y": 84, "factId": "f-etf-inflows" }]
+          }
+        ]
+      }
+    }
+  ]
+}
