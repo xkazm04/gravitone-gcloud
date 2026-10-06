@@ -36,6 +36,9 @@ import type { Scope } from "../research/scope";
 const PHASE = "script-versions";
 const KIND = "recalibrate";
 
+/** `ids` with `id` added, or removed if it was there. */
+const flip = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+
 /** The receipt for a candidate that was staged when the project last closed.
  *
  *  Staging itself is deliberately NOT persisted — a version the creator never
@@ -235,7 +238,20 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
   const toggleForceRender = useCallback(
     (id: string) => {
       if (running) return; // rule 2
-      setForceRenders((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
+      setForceRenders((f) => flip(f, id));
+    },
+    [running],
+  );
+
+  /** Conclusions the creator put back into the run — the same decision about
+   *  the other cut. A held conclusion travels as its id, `useFor` and `leap`
+   *  only, and the blind guard refuses a plan that names it; a forced one goes
+   *  in whole and the guard reads it as visible. */
+  const [forceConclusions, setForceConclusions] = useState<string[]>([]);
+  const toggleForceConclusion = useCallback(
+    (id: string) => {
+      if (running) return; // rule 2
+      setForceConclusions((f) => flip(f, id));
     },
     [running],
   );
@@ -250,8 +266,9 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       scope: ctx.scope,
       notes,
       ...(forceRenders.length ? { forceRenders } : {}),
+      ...(forceConclusions.length ? { forceConclusions } : {}),
     }),
-    [baseline, ctx.scope, notes, forceRenders],
+    [baseline, ctx.scope, notes, forceRenders, forceConclusions],
   );
 
   /** What the next run would send and who would serve it — free, debounced,
@@ -329,6 +346,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       setCandidate(null);
       setNotes([]);
       setForceRenders([]);
+      setForceConclusions([]);
     },
     [candidate],
   );
@@ -393,6 +411,8 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       blocked,
       forceRenders,
       toggleForceRender,
+      forceConclusions,
+      toggleForceConclusion,
       /** A candidate that was staged when this project was last closed and is now
        *  gone. Shown once, cleared by the next run. */
       lostCandidate,
@@ -418,6 +438,8 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       blocked,
       forceRenders,
       toggleForceRender,
+      forceConclusions,
+      toggleForceConclusion,
       lostCandidate,
     ],
   );

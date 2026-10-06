@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 526,
+  "files": 527,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -1519,7 +1519,7 @@
       }
     },
     "app/_phases/script": {
-      "files": 50,
+      "files": 51,
       "kitImports": 0,
       "signalImports": 15,
       "parts": [

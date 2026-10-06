@@ -25,7 +25,8 @@ import { overrideFrom, overrideLineOf, receiptOf } from "../versions";
 import { inertNotes } from "../recalibrate";
 import { MODEL } from "@/lib/model";
 import DeclinedList, { declinedCount } from "./DeclinedList";
-import DispatchStrip, { type DispatchToggle } from "../../_shared/ui/DispatchStrip";
+import DispatchStrip from "../../_shared/ui/DispatchStrip";
+import { dispatchToggles } from "../dispatchToggles";
 import type { Card } from "../../_shared/notebook/cards";
 import type { Scope } from "../../research/scope";
 import { conflictDelta } from "../scopeConflicts";
@@ -230,15 +231,10 @@ export default function RecalibrateControl({
       </div>
     );
 
-  // THE PRE-FLIGHT (AIO-B). Every withheld render, and every one the creator
-  // already put back, is a toggle; a forced render is in `sent`, so it is
-  // re-added from the pad's own list or it would vanish the moment it is on.
-  const notSent = new Set([...(api.preview?.ok ? (api.preview.preview.manifest.renders?.notSent ?? []) : []), ...api.forceRenders]);
-  const toggles: DispatchToggle[] = RENDERS.filter((r) => notSent.has(r.id)).map((r) => ({
-    id: r.id,
-    label: r.engineLabel,
-    on: api.forceRenders.includes(r.id),
-  }));
+  // THE PRE-FLIGHT (AIO-B): every withheld render and conclusion is a toggle.
+  const toggles = dispatchToggles(api.preview, api.forceRenders, api.forceConclusions);
+  const onToggle = (id: string, group?: string) =>
+    group === "conclusions" ? api.toggleForceConclusion(id) : api.toggleForceRender(id);
 
   return (
     <div className="space-y-1.5">
@@ -260,7 +256,7 @@ export default function RecalibrateControl({
         {n ? `Recalibrate · ${n} note${n === 1 ? "" : "s"}` : "Recalibrate"}
       </button>
       {n > 0 && (
-        <DispatchStrip id="recalibrate-dispatch" outcome={api.preview} toggles={toggles} onToggle={api.toggleForceRender} />
+        <DispatchStrip id="recalibrate-dispatch" outcome={api.preview} toggles={toggles} onToggle={onToggle} />
       )}
       {!n && (
         <p className="font-jetbrains flex items-center gap-1.5 text-label text-white/30">

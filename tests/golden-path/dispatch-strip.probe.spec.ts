@@ -24,6 +24,7 @@ import { test, expect } from "@playwright/test";
 
 import { POST as previewPOST } from "@/app/api/turns/preview/route";
 import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
+import { conclusionLabel, dispatchToggles } from "@/app/_phases/script/dispatchToggles";
 import { RENDERS } from "@/app/_phases/script/renders";
 import { BASELINE, engineRunWith, manifestOf, receiptOf, type Version } from "@/app/_phases/script/versions";
 import { dispatchBlock, previewTurn, type PreviewOutcome } from "@/lib/turns/client";
@@ -94,6 +95,44 @@ test("the door asks the preview route once, with the kind and the run's own body
     // A preview with an engine that can serve does not block the run.
     expect(dispatchBlock(out)).toBeNull();
   });
+});
+
+const HELD = "c-one-time-rerating";
+
+test("every withheld render and conclusion is a toggle, and a forced one stays on its toggle", async () => {
+  await withFakeEngine("recalibrate-ok", async () => {
+    const plain = await previewTurn("recalibrate", RECAL);
+    expect(plain.ok).toBe(true);
+    if (!plain.ok) return;
+    const held = plain.preview.manifest.conclusions!.held;
+    expect(held).toContain(HELD);
+
+    const before = dispatchToggles(plain, [], []);
+    expect(before.filter((t) => t.group === "renders").map((t) => t.id)).toEqual(["reversal-chain", "derived-short"]);
+    expect(before.filter((t) => t.group === "conclusions").map((t) => t.id).sort()).toEqual([...held].sort());
+    expect(before.every((t) => !t.on)).toBe(true);
+    expect(before.find((t) => t.id === HELD)!.label).toBe("one time rerating");
+
+    // Forcing moves the conclusion into the manifest's whole set — and the
+    // toggle is still there, on, in the same place.
+    const forcedInput = { ...RECAL, forceConclusions: [HELD] };
+    const forced = await previewTurn("recalibrate", forcedInput);
+    expect(forced.ok).toBe(true);
+    if (!forced.ok) return;
+    expect(forced.preview.manifest.conclusions!.whole).toContain(HELD);
+    expect(forced.preview.manifest.conclusions!.held).not.toContain(HELD);
+    expect(forced.preview.manifest.totalChars).toBeGreaterThan(plain.preview.manifest.totalChars);
+    const after = dispatchToggles(forced, [], [HELD]);
+    expect(after.map((t) => t.id)).toEqual(before.map((t) => t.id));
+    expect(after.filter((t) => t.on).map((t) => t.id)).toEqual([HELD]);
+    // The door sent the force on the wire, so the run reads what the strip read.
+    expect(seen.at(-1)!.body).toMatchObject({ input: { forceConclusions: [HELD] } });
+  });
+});
+
+test("a conclusion's toggle is named by its id", () => {
+  expect(conclusionLabel("c-correlation-is-the-product")).toBe("correlation is the product");
+  expect(dispatchToggles(null, [], [])).toEqual([]);
 });
 
 test("acceptance 4 (client): managed posture, no cloud key -> the run control is blocked with both reasons", async () => {
