@@ -250,6 +250,31 @@ function splitConclusions(
   return { whole, held };
 }
 
+/** The most material one run is sent, in serialised characters: roughly a
+ *  quarter of a million tokens, far past any real notebook and far short of an
+ *  800-second Opus run nobody authorised. The same ceiling /api/frames holds. */
+const MAX_RUN_CHARS = 1_000_000;
+
+/** Why this run's material is too large, or `null`. A pure predicate so the
+ *  negative case can be asked without dispatching a run. */
+export function tooLarge(body: Record<string, unknown>): string | null {
+  const sizes = (["notebook", "renders", "scope", "notes"] as const).map((k) => [k, jsonSize(body[k])] as const);
+  const total = sizes.reduce((n, [, s]) => n + s, 0);
+  if (total <= MAX_RUN_CHARS) return null;
+  const [biggest] = [...sizes].sort((a, b) => b[1] - a[1])[0]!;
+  const shown = Number.isFinite(total) ? `${Math.round(total / 1000)}k characters` : "unserialisable";
+  return `The run's material is ${shown} (largest: ${biggest}); the ceiling is ${MAX_RUN_CHARS / 1000}k. Nothing was dispatched.`;
+}
+
+function jsonSize(v: unknown): number {
+  if (v === undefined || v === null) return 0;
+  try {
+    return JSON.stringify(v)?.length ?? 0;
+  } catch {
+    return Number.POSITIVE_INFINITY; // circular: refuse it
+  }
+}
+
 export async function POST(req: Request) {
   // LOCAL-COMPUTE ROUTE - auth + rate limit before anything is read or spawned.
   //
@@ -273,6 +298,8 @@ export async function POST(req: Request) {
   } catch {
     return Response.json({ detail: "Request body was not valid JSON." }, { status: 400 });
   }
+  const oversized = tooLarge(body);
+  if (oversized) return Response.json({ detail: oversized, code: "too-large" }, { status: 413 });
   if (!Array.isArray(body.notes) || body.notes.length === 0)
     return Response.json({ detail: "No notes were sent, so there is nothing to recalibrate." }, { status: 400 });
 
