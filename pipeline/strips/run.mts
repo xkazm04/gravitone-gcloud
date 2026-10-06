@@ -53,6 +53,9 @@ const NO_LEONARDO = flag("--no-leonardo");
  *  on the F1 control (2026-10-06) the review cost 7 min and changed nothing visible. */
 const NO_REVIEW = flag("--no-review");
 const RESUME = flag("--resume");
+/** Measured 2026-10-06: first authoring turns ran 6-38 min, and two intricate cards
+ *  died at a 40-min cap before reporting. 75 leaves headroom without hiding a hang. */
+const AUTHOR_TIMEOUT_MIN = Number(arg("--author-timeout") ?? 75);
 const DRY = flag("--dry");
 /** Re-render and re-gate every authored card of --run, with no authoring turn. */
 const REGATE = flag("--regate");
@@ -245,7 +248,7 @@ async function runCard({ card: seed, approach }: Job): Promise<void> {
   for (let round = 0; round <= MAX_ROUNDS; round++) {
     console.log(`[${card.id}] author turn ${round === 0 ? "1" : `fix ${round}`}`);
     const t0 = Date.now();
-    const a = await authorStrip({ ws, lane: approach.lane, brief, approach, effort: card.effort, asset: asset?.file, feedback });
+    const a = await authorStrip({ ws, lane: approach.lane, brief, approach, effort: card.effort, asset: asset?.file, feedback, timeoutMin: AUTHOR_TIMEOUT_MIN });
     card.authorMs += Date.now() - t0;
     cost += a.result.costUsd ?? 0;
     card.costUsd = cost || undefined;
@@ -254,6 +257,7 @@ async function runCard({ card: seed, approach }: Job): Promise<void> {
         card.status = "author-failed";
         card.error = `${a.result.outcome}: ${a.result.errors.join(" | ") || "no out/strip.html written"}`;
         await put(card);
+        console.warn(`[${card.id}] author-failed - ${card.error}`);
         return;
       }
       break; // a failed fix turn keeps the last good render
@@ -272,6 +276,7 @@ async function runCard({ card: seed, approach }: Job): Promise<void> {
     card.lint = lint.length ? lint : undefined;
     if (lint.length) {
       card.status = "lint-failed";
+      console.warn(`[${card.id}] lint-failed - ${lint.join("; ").slice(0, 200)}`);
       card.gates = undefined;
       card.error = undefined;
       await put(card);
