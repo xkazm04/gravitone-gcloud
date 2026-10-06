@@ -21,6 +21,8 @@
 import { Film } from "lucide-react";
 import { useEffect, useSyncExternalStore } from "react";
 
+import { withAccess } from "@/lib/imagingClient";
+
 export interface PosterInfo {
   src: string;
   /** the video's own pixel size — what says 9:16 or 16:9 */
@@ -46,12 +48,10 @@ const settle = (id: string, info: PosterInfo | null) => {
   for (const fn of listeners) fn();
 };
 
-/** The file route's address, with the (already PUBLIC) access secret as `k=`:
- *  a <video src> cannot carry an Authorization header — the same fallback
- *  app/_phases/cut/music-video/MusicVideoExport.tsx downloadHref uses. */
+/** The file route's address, with the access credential as `k=` (`withAccess`):
+ *  a <video src> cannot carry an Authorization header. */
 function fileUrl(id: string): string {
-  const k = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET?.trim();
-  return `/api/music-video/export/file?id=${encodeURIComponent(id)}${k ? `&k=${encodeURIComponent(k)}` : ""}`;
+  return withAccess(`/api/music-video/export/file?id=${encodeURIComponent(id)}`);
 }
 
 function grab(id: string) {

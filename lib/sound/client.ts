@@ -3,7 +3,7 @@
 // Every call resolves — never throws — to `{ ok: true, data }` or
 // `{ ok: false, status, error }`, the error being the engine's own words.
 
-import { accessHeader } from "@/lib/imagingClient";
+import { accessHeader, withAccess } from "@/lib/imagingClient";
 
 import type {
   GenerateRequest,
@@ -63,15 +63,10 @@ export interface TakeQuery {
 
 /** The file URL for a take's bytes — usable directly as an <audio src>.
  *  An <audio> element cannot send the Authorization header accessHeader()
- *  adds, so the access key rides as `k=` (the file route accepts it, and it is
- *  read off accessHeader() so this module names no environment). Without it every lab
- *  and Library player 401s once the secret is set. */
-export const takeFileUrl = (id: string) => {
-  const base = `/api/sound/takes/${encodeURIComponent(id)}/file`;
-  const auth = accessHeader().authorization;
-  const k = auth ? auth.replace(/^Bearer\s+/i, "") : "";
-  return k ? `${base}?k=${encodeURIComponent(k)}` : base;
-};
+ *  adds, so the credential rides as `k=` through the one client door,
+ *  `withAccess` (the file route accepts it). Without it every lab and Library
+ *  player 401s once the gate is closed. */
+export const takeFileUrl = (id: string) => withAccess(`/api/sound/takes/${encodeURIComponent(id)}/file`);
 
 export const listTakes = (f: TakeQuery = {}) =>
   call<{ takes: SoundTake[] }>(

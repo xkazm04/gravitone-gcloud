@@ -7,7 +7,7 @@
 // and imports nothing from the server-only modules beside it — only the wire
 // types, which are types and constants.
 
-import { accessHeader } from "@/lib/imagingClient";
+import { accessHeader, withAccess } from "@/lib/imagingClient";
 
 import type { ClipRecord, VideoCapability, VideoClipRequest, VideoClipStarted } from "./types";
 
@@ -54,12 +54,10 @@ export const startVideoClip = (body: VideoClipRequest) =>
 export const getClipRecord = (clipId: string) =>
   call<ClipRecord>(`/api/video/clips/${encodeURIComponent(clipId)}`, { cache: "no-store" });
 
-/** The mp4 for a <video src>, which cannot carry a header — so the public
- *  access secret rides as `k=`, as every other file route here takes it. */
+/** The mp4 for a <video src>, which cannot carry a header — so the credential
+ *  rides as `k=` through `withAccess`, as every other file route here takes it. */
 export function clipFileUrl(clipId: string): string {
-  const base = `/api/video/clips/${encodeURIComponent(clipId)}/file`;
-  const k = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET?.trim();
-  return k ? `${base}?k=${encodeURIComponent(k)}` : base;
+  return withAccess(`/api/video/clips/${encodeURIComponent(clipId)}/file`);
 }
 
 export const isTerminalClip = (s: ClipRecord["status"]) => s === "done" || s === "failed" || s === "refused";
