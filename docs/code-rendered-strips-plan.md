@@ -242,86 +242,64 @@ Every kept style is re-authored against a **second brief** in its lane
 
 ## The 40 approach cards
 
-Each card has these fields:
+The cards live in `pipeline/strips/approaches.json`, with the shape of
+`Approach` in `lib/foundry/strips/types.ts`. Each card carries:
 
-- `id`
-- `lane`
-- `name`
-- `medium`: svg, canvas, dom, css3d or webgl
-- `motionGrammar`: draw-on, morph, camera, stepped, particle, reflow or type
-- `density`: low, mid or high
-- `texture`: code, leonardo or none
-- `seat`: chart or concept, stats lane only
-- `leonardo`
-- `vendored`
-- `falsifier`: the way this card is most likely to lose
+- a direction
+- a falsifier, written before rendering: the most likely way the card loses
+- medium, motion grammar, density
+- for the stats lane, a chart or concept seat
+- a Leonardo asset declaration
 
-The falsifier is written before rendering.
+**Briefs (operator decision 2026-10-06).** Each lane has several cases, and
+each card renders the case its form suits. This follows
+`case-native-chart-form`: the chart form follows the story. That **confounds
+style with case** in round 1, which is accepted and handled in two ways:
 
-**Educational, brief `edu-01`:** *how a heat pump moves heat from cold
-outside air into a warm room.* One mechanism beat. Countable expectations:
-two reservoirs, one loop, refrigerant shown changing phase twice, one
-labelled arrow of heat flow.
+- Every case also gets a **positive-control** strip (the plain house
+  infographic, `--ctrl`). Each card is triaged against its own case's control.
+- Round 2 re-authors every kept style on a **different** case, from the
+  module alone. That separates style from case.
 
-| # | Approach | Medium | Grammar | Leonardo |
-|---|---|---|---|---|
-| E01 | House infographic (**positive control**: flat, one accent) | svg | draw-on | none |
-| E02 | Mathematical ink on dark (stroke draw-on, morphing labels) | svg | morph | none |
-| E03 | Cut-paper layers with cast shadows | svg | camera | texture: paper |
-| E04 | Copperplate cross-hatch engraving | svg | draw-on | none |
-| E05 | Two-ink risograph, misregistered overprint | svg | stepped | none |
-| E06 | Sketchbook pencil on graph paper (seeded jitter) | svg | draw-on | none |
-| E07 | Isometric diorama with slow camera pan | svg | camera | none |
-| E08 | Blueprint with dimension lines and callouts | svg | draw-on | none |
-| E09 | Chalkboard lecture | svg | draw-on | texture: slate |
-| E10 | Kinetic typography (words are the actors) | dom | type | none |
-| E11 | Exploded-view mechanical | svg | camera | none |
-| E12 | Particle field: heat as flowing particles | canvas | particle | none |
-| E13 | Clay stop-motion feel (12 fps holds, boil) | svg | stepped | none |
-| E14 | 8-bit pixel diagram | canvas | stepped | none |
-| E15 | Museum specimen cabinet with label cards | dom | camera | backdrop: cabinet |
-| E16 | Single continuous neon line | svg | draw-on | none |
-| E17 | Comic panels with halftone | svg | camera | none |
-| E18 | Bauhaus geometric construction | svg | morph | none |
-| E19 | Watercolour wash with bleeding edges | svg | morph | texture: wash |
-| E20 | Low-poly 3D, flat shaded | webgl (three) | camera | none |
+Data comes from fetched primary sources only: `pipeline/strips/data/*.json`,
+reproducible by `pipeline/strips/fetch/*.mjs`.
 
-**Statistical, brief `stat-01`:** one real dataset, fetched from its primary
-source in phase 0 and committed with source and retrieval date. Default
-proposal: *wind and solar share of electricity, top 8 countries, 2005–2024*.
-The lane mixes **chart seats** and **concept seats**, as
-`concept-landing-proposals` asks. Countable expectations: a leader is
-identifiable at every frame, the year is always visible, and the source line
-is always on screen.
+**Statistical (9:16), decade-spanning and changing gradually, 4 cards per
+case:**
 
-| # | Approach | Seat | Medium | Grammar | Leonardo |
-|---|---|---|---|---|---|
-| S01 | House bar race (**positive control**: "the infographic post") | chart | svg | reflow | none |
-| S02 | Broadcast scoreboard, leader-adaptive theme | chart | dom | reflow | backdrop: arena |
-| S03 | Editorial newspaper chart with annotations | chart | svg | draw-on | none |
-| S04 | Isotype pictogram counts | concept | svg | stepped | none |
-| S05 | Cut-paper skyline (towers on one scale) | concept | svg | camera | texture: paper |
-| S06 | Vital-signs monitor trace | concept | canvas | draw-on | none |
-| S07 | Gauge cluster / share dials | concept | svg | morph | none |
-| S08 | Vertical number line with a ghost of last year | chart | svg | morph | none |
-| S09 | Waffle grid of 100 units | chart | svg | reflow | none |
-| S10 | Race-track lanes | concept | svg | camera | none |
-| S11 | Orthographic globe with a dated log | chart | svg (d3-geo) | camera | none |
-| S12 | Rank-flow ribbons (bump chart) | chart | svg | draw-on | none |
-| S13 | Treemap mosaic with tile reflow | chart | svg | reflow | none |
-| S14 | Bubble trails over time | chart | canvas | particle | none |
-| S15 | Split-flap departures board | concept | dom | stepped | none |
-| S16 | Two-ink risograph stat poster | concept | svg | stepped | none |
-| S17 | Neon arcade leaderboard (falsifier: "gamer wallpaper") | chart | canvas | reflow | none |
-| S18 | Hand-drawn notebook chart | chart | svg | draw-on | none |
-| S19 | Particle mass: each particle is N units, flowing between bins | concept | canvas | particle | none |
-| S20 | Big-number kinetic type (the number is the hero) | concept | dom | type | none |
+| Case | Data | Cards |
+|---|---|---|
+| `f1-wins`: most F1 race wins, cumulative 1950–2025 | Jolpica-F1 (Ergast-compatible), cross-checked against Wikipedia | S01 broadcast scoreboard (leader-adaptive) · S02 race-track lanes · S03 split-flap board · S04 neon arcade leaderboard |
+| `intl-goals`: men's international goals, cumulative | martj42/international_results goalscorers, cross-checked | S05 ball-stack columns · S06 editorial newspaper chart · S07 big-number kinetic type · S08 rank-flow ribbons |
+| `heavyweight-lineal`: lineal heavyweight champions over time | Wikipedia lineal championship (CC BY-SA) | S09 belt passing down the timeline · S10 fight-poster risograph · S11 reign Gantt + days counter · S12 hand-drawn notebook |
+| `govt-debt`: largest government debt in USD, 1980–2024 | IMF DataMapper GGXWDG_NGDP × NGDPD | S13 cut-paper skyline · S14 gauge cluster · S15 treemap reflow · S16 orthographic globe + dated log |
+| `gdp-top`: largest economies, 1960–2024 | World Bank NY.GDP.MKTP.CD | S17 isotype pictograms · S18 waffle of world share · S19 bubble trails · S20 bar race with ghost of the past |
 
-That is 6 Leonardo assets across 40 strips, under the cap of 10.
-**E01 and S01 are rendered first, alone.** They are the positive control,
-and they must pass the pre-gates and the brief's countable expectations
-before any other card is authored. If the control fails, the brief or the
-harness is wrong, not the approaches.
+**Educational (16:9), "how things work", 5 cards per case:**
+
+| Case | Domain | Cards |
+|---|---|---|
+| `edu-rate-hike`: how a rate hike cools inflation | economy | E01 kinetic typography · E02 Bauhaus geometric · E03 isometric diorama · E04 comic halftone · E05 mathematical ink |
+| `edu-chokepoint`: how the Strait of Hormuz moves oil prices | geopolitics | E06 nautical blueprint · E07 cut-paper layers · E08 two-ink risograph · E09 low-poly 3D map · E10 particle flow |
+| `edu-aqueduct`: how a Roman aqueduct crossed a valley on gravity | history | E11 copperplate cross-hatch · E12 watercolour wash · E13 exploded cross-section · E14 museum cabinet · E15 clay stop-motion |
+| `edu-radar`: how radar times an echo to measure distance | military | E16 oscilloscope neon line · E17 8-bit pixel · E18 chalkboard · E19 sketchbook pencil · E20 1940s field manual |
+
+**Leonardo:** 7 supporting assets in total, under the cap of 10. They are 5
+textures (paper, watercolour paper, chalkboard, aged manual paper,
+construction paper) and 2 backdrops (museum cabinet, studio bokeh). None
+contains text, logos or people. One asset is made per approach, and replicas
+reuse it.
+
+**Vendored libraries** come from `pipeline/strips/vendor/`, which holds
+pinned UMD builds with checksums. They are three (E09) and
+d3-geo/topojson/world-atlas (S16). Nothing loads from the network.
+
+**The full round is 52 cards:**
+
+- 40 approaches
+- 9 controls
+- 8 replicas: E02, E07, E13, E18, S02, S07, S13, S18 (two per lane-half)
+- 3 low-effort arms: E10, S06, S19
 
 ## Order of work
 
@@ -344,12 +322,12 @@ per-card seat time before P4 is launched.
 
 ## Forks for the operator
 
-- **A. Aspect per lane.** *Recommended:* stats 9:16, edu 16:9 (above). The
-  alternative is both 9:16 for one shorts surface.
-- **B. Briefs.** *Recommended:* heat pump (edu) and wind and solar share
-  (stats). Any brief works if it has countable expectations and, for stats,
-  a fetchable primary source.
-- **C. Consumer path (after P6).** Proven motion styles need a studio
+- **A. Aspect per lane.** **Decided 2026-10-06:** stats 9:16, edu 16:9.
+- **B. Briefs.** **Decided 2026-10-06:** five decade-spanning stats cases
+  and four "how things work" edu cases (economy, geopolitics, history,
+  military). See the tables above.
+- **C. Consumer path (after P6).** **Decided 2026-10-06:** this waits for
+  the triage. Proven motion styles need a studio
   consumer. Nothing outside `/foundry` reads the catalogue today
   (`docs/concepts/moonshots-2026-10-05/09-content-pipeline.md:166-171`).
   *Recommended order:*

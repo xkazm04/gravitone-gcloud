@@ -31,6 +31,8 @@ const config = [
     // them would grade code this repo does not author.
     ignores: [
       "node_modules/**",
+      // Pinned third-party UMD builds a strip page inlines (pipeline/strips/vendor/README.md).
+      "pipeline/strips/vendor/**",
       // Contest and kit scratch: arena entries are throwaway prototypes, not product code.
       ".contest/**",
       ".kit/**",

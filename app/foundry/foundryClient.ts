@@ -6,6 +6,8 @@
 
 import { accessHeader, withAccess } from "@/lib/imagingClient";
 import type { Catalogue, CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdicts } from "@/lib/foundry/types";
+import type { StripCommitPlan, StripCommitResult, StripRunDetail, StripRunSummary } from "@/lib/foundry/strips/triage";
+import type { StripVerdicts } from "@/lib/foundry/strips/types";
 import type { TrainingCommitResult, TrainingCycleDetail, TrainingCycleSummary, TrainingVerdicts } from "@/lib/foundry/training/types";
 
 export class FoundryRequestError extends Error {
@@ -69,10 +71,31 @@ export const saveTrainingVerdicts = (id: string, verdicts: TrainingVerdicts) =>
 export const commitTrainingCycle = (id: string) =>
   call<TrainingCommitResult>(`/api/foundry/training/${encodeURIComponent(id)}/commit`, { method: "POST" });
 
-/** URL of a run file, for an <img>. `kind` picks the output root — the
- *  forge's runs by default, the Extract module's with "extract", the Dojo's
- *  cycles with "training". */
-export function fileUrl(run: string, rel: string, kind?: "extract" | "training"): string {
+/* ── The Strips seams — code-rendered strips, triaged by hand ──────────── */
+
+export const fetchStripRuns = () => call<{ runs: StripRunSummary[] }>("/api/foundry/strips").then((r) => r.runs);
+export const fetchStripRun = (id: string) => call<StripRunDetail>(`/api/foundry/strips/${encodeURIComponent(id)}`);
+export const saveStripVerdicts = (id: string, verdicts: StripVerdicts) =>
+  call<{ verdicts: StripVerdicts }>(`/api/foundry/strips/${encodeURIComponent(id)}/verdicts`, {
+    method: "PUT",
+    body: JSON.stringify({ verdicts }),
+  }).then((r) => r.verdicts);
+export const previewStripCommit = (id: string) => call<StripCommitPlan>(`/api/foundry/strips/${encodeURIComponent(id)}/commit`);
+export const commitStripRun = (id: string, token?: string) =>
+  call<StripCommitResult>(`/api/foundry/strips/${encodeURIComponent(id)}/commit`, {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+
+/** URL of one card's authored page — for a sandboxed iframe only. */
+export function stripPageUrl(run: string, card: string): string {
+  return withAccess(`/api/foundry/strips/${encodeURIComponent(run)}/page?${new URLSearchParams({ card }).toString()}`);
+}
+
+/** URL of a run file, for an <img> or a <video>. `kind` picks the output
+ *  root — the forge's runs by default, the Extract module's with "extract",
+ *  the Dojo's cycles with "training", the code-rendered strips with "strips". */
+export function fileUrl(run: string, rel: string, kind?: "extract" | "training" | "strips"): string {
   const q = new URLSearchParams({ run, path: rel, ...(kind ? { kind } : {}) });
   return withAccess(`/api/foundry/file?${q.toString()}`);
 }

@@ -1,0 +1,29 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;background:#f4efe6;overflow:hidden}
+svg{display:block}
+</style></head><body>
+<svg id="s" xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" viewBox="0 0 1080 1920"></svg>
+<script>
+/* STYLE MODULE */
+const TOKENS = { ground: "#f4efe6", ink: "#1d1d1b", accent: "#d6452b" };
+const ease = (x) => x < 0.5 ? 4*x*x*x : 1 - Math.pow(-2*x+2, 3)/2;
+/* CASE */
+window.STRIP = { width: 1080, height: 1920, fps: 30, frames: 240 };
+const S = document.getElementById("s");
+const data = [["A", 40], ["B", 75], ["C", 55]];
+window.renderFrameAt = function (i) {
+  window.__acc = (window.__acc||0) + 1; const t = window.__acc / 30, p = ease(Math.min(1, t / 6));
+  let h = `<rect width="1080" height="1920" fill="${TOKENS.ground}"/>`;
+  h += `<text x="80" y="200" font-family="Georgia,serif" font-size="64" fill="${TOKENS.ink}">Hand fixture</text>`;
+  data.forEach(([n, v], k) => {
+    const w = 800 * (v / 100) * p;
+    h += `<rect x="80" y="${400 + k*220}" width="${w}" height="140" fill="${k===1?TOKENS.accent:TOKENS.ink}"/>`;
+    h += `<text x="80" y="${380 + k*220}" font-family="Arial" font-size="40" fill="${TOKENS.ink}">${n} ${Math.round(v*p)}</text>`;
+  });
+  h += `<text x="80" y="1500" font-family="Arial" font-size="32" fill="${TOKENS.ink}">Source: fixture</text>`;
+  S.innerHTML = h;
+};
+addEventListener("message", (e) => { if (e.data && e.data.type === "strip-frame") renderFrameAt(e.data.i | 0); });
+renderFrameAt(0);
+window.STRIP_READY = true;
+</script></body></html>

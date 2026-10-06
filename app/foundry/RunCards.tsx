@@ -90,7 +90,7 @@ export function RunStrip({
   );
 }
 
-function RunsError({ error, onRetry }: { error: string; onRetry: () => void }) {
+export function RunsError({ error, onRetry }: { error: string; onRetry: () => void }) {
   return (
     <ErrorNote
       action={

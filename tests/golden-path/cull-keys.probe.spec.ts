@@ -146,5 +146,6 @@ test("cull keys: the rule is WIRED into every Enter case, not merely exported", 
   console.log(`[cull-keys] window-level Enter handlers under app/foundry: ${handlers.join(", ")}`);
   // Both known surfaces must still be IN the population — a rename that drops
   // one out would leave the loop above vacuously green over what remains.
-  expect(handlers.sort()).toEqual(["CullGrid.tsx", "ExtractBoard.tsx"]);
+  // StripGrid.tsx joined 2026-10-06 (the Strips tab, the Cull's keys).
+  expect(handlers.sort()).toEqual(["CullGrid.tsx", "ExtractBoard.tsx", "StripGrid.tsx"]);
 });
