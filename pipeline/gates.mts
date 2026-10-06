@@ -126,6 +126,13 @@ export const GATES: readonly Gate[] = [
     rationale: "pipeline/FRAMES-SCENE-PROMPT.md and shotPrompt.ts against the rules a human gated through the Dojo. Filesystem only.",
   },
   {
+    id: "ads-prompts",
+    npmScript: "check:ads-prompts",
+    class: "blocking",
+    outcomes: "01",
+    rationale: "pipeline/ADS-*-PROMPT.md against the registry rules they quote (19 pins), plus lib/ads/validate.ts behavioural cases. Filesystem only, no model.",
+  },
+  {
     id: "style-refs",
     npmScript: "check:style-refs",
     class: "blocking",

@@ -336,6 +336,12 @@ jobs:
       - name: frames prompt
         run: npm run check:frames-prompt
 
+      # BLOCKING. Pins the ad prompts' registry rules (ad-concept-ideation,
+      # short-ad-structure, still-to-motion-direction, ad-finishing) and the
+      # concept validator's refusals - offline, no model.
+      - name: ads prompts
+        run: npm run check:ads-prompts
+
       # BLOCKING. Pure function over lib/themes - the founding proof must survive
       # a full sheet in the reference window.
       - name: style refs
