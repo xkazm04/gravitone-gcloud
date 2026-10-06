@@ -70,7 +70,7 @@ export async function POST(req: Request) {
   // Found from app-infrastructure while reading lib/apiAuth.ts, whose header
   // names "app/api/frames" as the CLI-compute route it protects: the sentence
   // was written before this route existed and nothing re-read it afterwards.
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
 
   let body: RecalibrateInput;

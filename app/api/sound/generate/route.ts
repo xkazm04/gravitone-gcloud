@@ -17,7 +17,7 @@ export const runtime = "nodejs";
 export const maxDuration = 300;
 
 export async function POST(req: Request) {
-  const denied = await asContractDenial(guardRequest(req));
+  const denied = await asContractDenial(await guardRequest(req));
   if (denied) return denied;
   try {
     const take = await generateTake(parseGenerateRequest(await readJson(req)));

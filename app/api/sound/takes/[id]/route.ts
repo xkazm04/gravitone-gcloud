@@ -12,7 +12,7 @@ import { parseTakePatch, patchTake } from "@/lib/sound/takes";
 export const runtime = "nodejs";
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     const { id } = await params;

@@ -14,7 +14,7 @@ const fail = (status: number, error: string, message: string) =>
   Response.json({ error, message } satisfies AdErrorBody, { status });
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   const { id } = await params;
   if (!AD_EXPORT_ID_RE.test(id)) return fail(400, "bad-request", "That is not an ad export id.");

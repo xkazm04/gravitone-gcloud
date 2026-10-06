@@ -19,7 +19,7 @@ import type { SoundTake } from "@/lib/sound/types";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     return Response.json({ takes: await listTakes(parseTakeFilter(new URL(req.url).searchParams)) });
@@ -29,7 +29,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     const declared = Number(req.headers.get("content-length") ?? 0);
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
 /** Clear the examples. Fixtures only, by construction (takes.ts removeFixtures):
  *  any other `origin` is refused rather than read as "delete everything". */
 export async function DELETE(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     if (new URL(req.url).searchParams.get("origin") !== "fixture")

@@ -7,7 +7,7 @@ import { asContractDenial, toErrorResponse } from "@/lib/publish/http";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     return Response.json({ exports: await listExports() });

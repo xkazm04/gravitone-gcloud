@@ -6,7 +6,7 @@ import { FoundryError, listRuns } from "@/lib/foundry/store";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   try {
     return Response.json({ runs: await listRuns() });

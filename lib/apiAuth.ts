@@ -21,10 +21,21 @@
 //   · A browser can only present a secret that shipped in its bundle
 //     (`NEXT_PUBLIC_IMAGING_ACCESS_SECRET`), which is therefore PUBLIC. So
 //     against a determined attacker who reads the bundle this is a rate-limit +
-//     casual-abuse gate, not a cryptographic identity check. The real upgrade
-//     is Firebase ID-token verification once `firebase-admin` is wired — the
-//     Bearer branch below is deliberately shaped so that a token which is not
-//     the shared secret is the natural place to add it.
+//     casual-abuse gate, not a cryptographic identity check.
+//
+// THE UPGRADE LANDED WITHOUT firebase-admin (card AUP-A stage 1, 2026-10-06).
+// lib/principal.ts verifies Firebase ID tokens itself (RS256 over WebCrypto
+// against Google's securetoken JWKS), and both guards below now resolve ONE
+// principal per request through `resolvePrincipal`. `PRINCIPAL_MODE=legacy` —
+// the default — is the shared-secret gate above, unchanged response for
+// response; `PRINCIPAL_MODE=verified` closes the shared-secret door and admits
+// only a verified token (or the dev fixture). The money bucket keys on the
+// verified uid when there is one, else on the client IP as before.
+//
+// THE GUARDS ARE ASYNC. Verifying a token can fetch Google's keys, so both
+// return a Promise and every route `await`s them. A route that forgets gets a
+// Promise, which is truthy, and returns it: a refusal still refuses, an
+// admitted request answers nothing. principal.probe.spec.ts walks every call.
 //
 // SERVER ONLY. Reads `IMAGING_ACCESS_SECRET`, which is never NEXT_PUBLIC_ and
 // must never appear in a client bundle. Keys are read lazily per call (like
@@ -32,6 +43,19 @@
 // does not hold a stale absence.
 
 import { createHash, timingSafeEqual } from "node:crypto";
+
+import {
+  DEV_FIXTURE,
+  LOCAL_OWNER,
+  SHARED_SECRET,
+  isRefusal,
+  principalMode,
+  principalRateKey,
+  resolveVerified,
+  type KeyUse,
+  type Refusal,
+  type Resolution,
+} from "./principal";
 
 export const ACCESS_SECRET_VAR = "IMAGING_ACCESS_SECRET";
 
@@ -87,8 +111,10 @@ function secretsMatch(a: string, b: string): boolean {
 
 export type AccessVerdict = "ok" | "no-config" | "missing" | "wrong";
 
-/** Decide whether this request may reach a money/compute route. Pure over its
- *  inputs (headers + env), so it is unit-testable without a server. */
+/** The LEGACY shared-secret verdict. Pure over its inputs (headers + env), so it
+ *  is unit-testable without a server. It is what `resolvePrincipal` consults in
+ *  PRINCIPAL_MODE=legacy and nothing consults in verified mode — a route that
+ *  calls this directly instead of a guard would bypass the verified principal. */
 export function checkAccess(req: Request): AccessVerdict {
   if (devOpen()) return "ok";
   const secret = accessSecret();
@@ -403,24 +429,86 @@ function deny(status: number, detail: string, code: string, retryAfterSec?: numb
   return Response.json({ detail, code }, { status, headers });
 }
 
-/**
- * Guard a money/compute request. Returns a `Response` to return IMMEDIATELY
- * (401 or 429), or `null` when the caller may proceed.
- *
- * Order: rate limit first (cheap, and it should bound an unauthenticated
- * flooder too), then access. A single unauthenticated call is under the limit,
- * so it gets the honest 401; a flood gets 429 first.
- */
-export function guardRequest(req: Request): Response | null {
-  const rl = rateLimit(clientIp(req));
-  if (!rl.allowed)
-    return deny(429, "Too many requests. Slow down and retry.", "rate-limited", rl.retryAfterSec);
 
-  return guardAccessOnly(req);
+/** The legacy gate's three refusals, word for word as they were before the
+ *  principal existed — `PRINCIPAL_MODE=legacy` promises the same responses. */
+const LEGACY_DETAIL: Record<Exclude<AccessVerdict, "ok">, string> = {
+  "no-config":
+    `This route is access-gated and no ${ACCESS_SECRET_VAR} is configured, so it is closed. ` +
+    "Set it on the server and present it as `Authorization: Bearer <secret>`.",
+  missing: "This route requires access credentials. Send `Authorization: Bearer <secret>`.",
+  wrong: "The access credentials were not accepted.",
+};
+
+/**
+ * WHO IS CALLING — one principal per request, or a typed refusal.
+ *
+ *   · the dev fixture first, in either mode (`devOpen`, non-production only);
+ *   · legacy: the shared-secret verdict, unchanged. Admitted callers are the
+ *     local owner under NEXT_PUBLIC_LOCAL_MODE, else the shared secret. No
+ *     token is read and nothing is fetched;
+ *   · verified: lib/principal.ts — a Firebase ID token or a refusal. The secret
+ *     is never consulted, so no refusal can fall through to it.
+ *
+ * `use` matters only to a JWKS outage: `money` fails closed, `read` may verify
+ * against the last good key set. `now` is injectable for the probes.
+ */
+export async function resolvePrincipal(
+  req: Request,
+  opts: { use?: KeyUse; now?: number } = {},
+): Promise<Resolution> {
+  if (devOpen()) return DEV_FIXTURE;
+  if (principalMode() === "legacy") {
+    const verdict = checkAccess(req);
+    if (verdict === "ok") return process.env.NEXT_PUBLIC_LOCAL_MODE === "1" ? LOCAL_OWNER : SHARED_SECRET;
+    return { kind: "refused", code: verdict, status: 401, detail: LEGACY_DETAIL[verdict] };
+  }
+  return resolveVerified(req, {
+    use: opts.use ?? "money",
+    now: opts.now,
+    secretPresented: presentedSecret(req) !== undefined,
+  });
+}
+
+function refusalResponse(r: Refusal): Response {
+  // The legacy verdicts keep their old body exactly: `{ detail, code }`.
+  if (r.code === "no-config" || r.code === "missing" || r.code === "wrong") return deny(401, r.detail, "unauthorized");
+  const headers: Record<string, string> = r.status === 503 ? { "retry-after": "30" } : {};
+  const code = r.status === 503 ? "verifier-unavailable" : "unauthorized";
+  return Response.json({ detail: r.detail, code, refusal: r.code }, { status: r.status, headers });
+}
+
+async function guard(req: Request, use: KeyUse): Promise<Response | null> {
+  const who = await resolvePrincipal(req, { use });
+  if (use === "money") {
+    // One verified person is one bucket, whatever IP they arrive from. Anyone
+    // else — refused, the fixture, the local owner, the shared secret — keys
+    // on the client IP exactly as before, so a flood of unauthenticated calls
+    // still meets 429 ahead of its 401.
+    const rl = rateLimit(principalRateKey(who) ?? clientIp(req));
+    if (!rl.allowed)
+      return deny(429, "Too many requests. Slow down and retry.", "rate-limited", rl.retryAfterSec);
+  }
+  return isRefusal(who) ? refusalResponse(who) : null;
+}
+
+/**
+ * Guard a money/compute request. Resolves to a `Response` to return
+ * IMMEDIATELY (401, 429, or 503 when Google's keys cannot be confirmed), or
+ * `null` when the caller may proceed. AWAIT IT.
+ *
+ * Order: the principal (pure in legacy mode), then the rate bucket — keyed on
+ * the verified uid when there is one, else the client IP — then the refusal. A
+ * single unauthenticated call is under the limit, so it gets the honest 401; a
+ * flood gets 429 first.
+ */
+export function guardRequest(req: Request): Promise<Response | null> {
+  return guard(req, "money");
 }
 
 /**
  * Access check WITHOUT the rate bucket — for gated routes that spend nothing.
+ * AWAIT IT.
  *
  * The bucket exists to bound spend per origin on the money/compute routes. The
  * foundry routes only read and write local disk, and their page legitimately
@@ -430,25 +518,11 @@ export function guardRequest(req: Request): Response | null {
  * between a polling surface and the money routes also means an open /foundry
  * tab could starve a real generation call — the opposite of what the limiter
  * is for. Access is still required; only the counting is skipped.
+ *
+ * It is also the READ door for a JWKS outage: these routes keep verifying
+ * against the last good key set (lib/principal.ts STALE_READ_MS) where a money
+ * route refuses.
  */
-export function guardAccessOnly(req: Request): Response | null {
-  switch (checkAccess(req)) {
-    case "ok":
-      return null;
-    case "no-config":
-      return deny(
-        401,
-        `This route is access-gated and no ${ACCESS_SECRET_VAR} is configured, so it is closed. ` +
-          "Set it on the server and present it as `Authorization: Bearer <secret>`.",
-        "unauthorized",
-      );
-    case "missing":
-      return deny(
-        401,
-        "This route requires access credentials. Send `Authorization: Bearer <secret>`.",
-        "unauthorized",
-      );
-    case "wrong":
-      return deny(401, "The access credentials were not accepted.", "unauthorized");
-  }
+export function guardAccessOnly(req: Request): Promise<Response | null> {
+  return guard(req, "read");
 }

@@ -34,7 +34,7 @@ const MIMES = new Set(["image/png", "image/jpeg", "image/webp"]);
 export const MAX_BODY_BYTES = 256 * 1024 * 1024;
 
 export async function GET(req: Request) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   try {
     return Response.json({ runs: await listExtractRuns() });
@@ -45,7 +45,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
   const declared = Number(req.headers.get("content-length"));
   if (Number.isFinite(declared) && declared > MAX_BODY_BYTES)
