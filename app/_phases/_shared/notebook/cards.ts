@@ -7,9 +7,9 @@
 import { falsifierOf, falsifierText, type ConclusionSubject, type Falsifier, type Leap } from "./conclusions";
 import { UNTAGGED_DIMENSION_ID, type DimensionId } from "./dimensions";
 import { asSource, fixtureSource, type NotebookSource } from "./source";
-import type { FactSource, Notebook } from "./types";
+import type { CounterPosition, FactSource, Notebook } from "./types";
 
-export type CardKind = "fact" | "mechanism" | "reversal" | "steel-man" | "conclusion";
+export type CardKind = "fact" | "mechanism" | "reversal" | "steel-man" | "counter" | "conclusion";
 
 export interface Card {
   id: string;
@@ -17,6 +17,9 @@ export interface Card {
   dimension: DimensionId;
   title: string;
   detail?: string;
+  /** Counter cards only: WHO holds the position. Absent on the legacy string
+   *  form, which names no one. */
+  holder?: string;
   /** Facts only. */
   loadBearing?: boolean;
   confidence?: "high" | "medium" | "low";
@@ -123,6 +126,23 @@ export function buildCards(input: NotebookSource | Notebook = fixtureSource()): 
       optIn: true,
     });
   }
+  // A COUNTER-POSITION IS A CARD (operator decision 2026-10-06): in by default
+  // like a fact, attributed to its holder, cuttable, and NOT required - the
+  // steel-man stays the only card the board may not descope. Its evidence ids
+  // are its edges, so cutting a fact it cites wounds it through the same
+  // woundsOf() arithmetic as every other card. The positions carry no id of
+  // their own; the id is the position's place in the array, which is the only
+  // identity the legacy string form has.
+  (nb.counterPositions as readonly (string | CounterPosition)[]).forEach((p, i) => {
+    const typed = typeof p === "string" ? null : p;
+    cards.push({
+      id: `counter-${i + 1}`, kind: "counter", dimension: "counter-case",
+      title: typed ? typed.position : (p as string),
+      detail: typed?.statementVerbatim,
+      holder: typed?.holder,
+      dependsOn: typed ? [...new Set(typed.evidence)] : [],
+    });
+  });
   cards.push({
     id: "steel-man", kind: "steel-man", dimension: "counter-case",
     title: nb.steelMan.claim, detail: nb.steelMan.statement,
@@ -205,6 +225,7 @@ export function notebookIssues(input: NotebookSource | Notebook = fixtureSource(
   (nb.obligations ?? []).forEach((o) => claim(o.id, "obligations[]"));
   src.conclusions.forEach((c) => claim(c.id, "conclusions[]"));
   claim("steel-man", "steelMan");
+  (nb.counterPositions as readonly unknown[]).forEach((_, i) => claim(`counter-${i + 1}`, "counterPositions[]"));
 
   const factIds = new Set(nb.facts.map((f) => f.id));
   const cards = buildCards(src);

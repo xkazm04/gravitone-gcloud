@@ -139,16 +139,17 @@ test("cards: the steel-man is the only card the board may not descope", () => {
   expect(required.map((c) => c.id)).toEqual(["steel-man"]);
   expect(required[0].requiredWhy, "the required card must say why it is required").toBeTruthy();
 
-  // No card is derived from a counter-position, however the field is spelled.
+  // Counter-positions ARE cards since 2026-10-06 (counter-position-cards.probe
+  // pins the contract); none of them may be the required one.
   const positions = (NOTEBOOK.counterPositions as readonly (string | { position: string })[]).map(
     (c) => (typeof c === "string" ? c : c.position),
   );
   expect(positions.length, "the fixture carries counter-positions").toBeGreaterThan(0);
-  for (const p of positions)
-    expect(
-      cards.some((c) => c.title === p),
-      "a counter-position now has a card - the note in types.ts saying it has none is stale",
-    ).toBe(false);
+  for (const p of positions) {
+    const card = cards.find((c) => c.title === p);
+    expect(card?.kind, "a counter-position has a card").toBe("counter");
+    expect(card?.required, "a counter card is cuttable").toBeFalsy();
+  }
 });
 
 /* ── 2 · the load-side race guard: every hand-rolled site is named ──────────── */

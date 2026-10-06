@@ -57,6 +57,7 @@ export const KIND_LABEL: Record<Card["kind"], string> = {
   mechanism: "mechanism",
   reversal: "reversal",
   "steel-man": "steel-man",
+  counter: "counter",
   conclusion: "conclusion",
 };
 
@@ -126,6 +127,11 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
         {card.loadBearing && (
           <span className="font-jetbrains rounded border border-cyan-400/25 bg-cyan-400/[0.06] px-1.5 py-0.5 text-label tracking-[0.1em] text-cyan-200/90">
             load-bearing
+          </span>
+        )}
+        {card.holder && (
+          <span className="font-jetbrains rounded border border-amber-400/25 bg-amber-400/[0.05] px-1.5 py-0.5 text-label tracking-[0.1em] text-amber-200/80">
+            {card.holder}
           </span>
         )}
         {card.confidence && <ConfidenceMark c={card.confidence} />}
