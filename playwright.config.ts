@@ -41,12 +41,14 @@ export default defineConfig({
   // must not count as enforcement". The runner had the same hole as the code it
   // was written to guard.
   //
-  // Gated on CI rather than set outright, because `.only` is a legitimate local
-  // tool while iterating and CI is where this repo says the refusal lives
-  // (gates.yml: "a check that runs only locally is a courtesy, not a gate"). The
-  // residual gap is stated rather than hidden: a `.only` committed by mistake
-  // still passes the pre-push hook, and is refused by CI before it reaches main.
-  forbidOnly: !!process.env.CI,
+  // Gated rather than set outright, because `.only` is a legitimate local tool
+  // while iterating. Two switches close it: CI (where gates.yml says the refusal
+  // lives: "a check that runs only locally is a courtesy, not a gate") and
+  // PW_FORBID_ONLY, which pipeline/run-gates.mts sets for every gate it spawns -
+  // so the pre-push hook (`npm run verify`) refuses a committed `.only` too,
+  // without CI=1 also changing what `next build` and eslint do. Held by
+  // tests/golden-path/forbid-only-gate.probe.spec.ts.
+  forbidOnly: !!process.env.CI || !!process.env.PW_FORBID_ONLY,
 
   reporter: [["list"]],
   projects: [{ name: "node", use: {} }],
