@@ -50,6 +50,7 @@ import { test, expect } from "@playwright/test";
 
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { capabilities, CAPABILITY_ROUTES, HOSTED_CAPS, type Capabilities } from "@/lib/capabilities";
+import { MANAGED_MARKERS } from "@/lib/deployment";
 
 import {
   applyCell,
@@ -58,7 +59,7 @@ import {
   CELL_SECRET,
   CELLS,
   credentialVars,
-  managedMarkers,
+  envOf,
   nearestCell,
   storeRootVars,
   type Cell,
@@ -616,23 +617,23 @@ test("cells: the derived axes read something, and every cell is a distinct shape
   expect(credentialVars()).toContain("GOOGLE_AI_API_KEY");
   expect(credentialVars()).toContain(ACCESS_SECRET_VAR);
   expect(storeRootVars().length, "no store roots derived").toBeGreaterThanOrEqual(5);
-  expect(managedMarkers()).toContain("K_SERVICE");
-  const shapes = CELLS.map((c) => JSON.stringify(Object.entries(c.env).sort()));
+  expect(MANAGED_MARKERS).toContain("K_SERVICE");
+  const shapes = CELLS.map((c) => JSON.stringify(Object.entries(envOf(c)).sort()));
   expect(new Set(shapes).size, "two cells assign the same environment").toBe(CELLS.length);
-  for (const c of CELLS) for (const v of Object.keys(c.env)) expect(cellAxes(), `${c.name} sets ${v}, which is not an axis`).toContain(v);
+  for (const c of CELLS) for (const v of Object.keys(envOf(c))) expect(cellAxes(), `${c.name} sets ${v}, which is not an axis`).toContain(v);
   console.log(
     `[cells] ${CELLS.length} cells over ${cellAxes().length} axes (${credentialVars().length} credentials derived, ` +
-      `${managedMarkers().length} managed markers, ${HOSTED_CAPS.length} hosted flags) + ${storeRootVars().length} store roots redirected`,
+      `${MANAGED_MARKERS.length} managed markers, ${HOSTED_CAPS.length} hosted flags) + ${storeRootVars().length} store roots redirected`,
   );
 });
 
 test("cells: each declared cell is its own nearest cell, exactly — the line pipeline/preflight.mts prints", () => {
   for (const c of CELLS) {
-    const { cell, diff } = nearestCell(c.env);
+    const { cell, diff } = nearestCell(envOf(c));
     expect(`${cell.name} ${diff.join(" ")}`.trim(), `${c.name}'s own environment reads as another cell`).toBe(c.name);
   }
   // And a near miss names its difference rather than matching silently.
-  const { cell, diff } = nearestCell({ ...CELLS.find((c) => c.name === "cloud-run-saas")!.env, NEXT_PUBLIC_CAP_PUBLISH: undefined });
+  const { cell, diff } = nearestCell({ ...envOf(CELLS.find((c) => c.name === "cloud-run-saas")!), NEXT_PUBLIC_CAP_PUBLISH: undefined });
   expect(cell.name).toBe("cloud-run-saas");
   expect(diff).toEqual(["-NEXT_PUBLIC_CAP_PUBLISH=0"]);
 });
@@ -741,6 +742,7 @@ test("invariant 1 witness: a cell whose music capability is on and whose key is 
     name: "laptop-fresh-clone",
     who: "a fresh clone with dev-auth on and no keys",
     env: { NEXT_PUBLIC_DEV_AUTH: "1", LIGHTTRACK_DISABLE: "1" },
+    present: [],
     posture: "available",
     engine: "claude-cli",
   };

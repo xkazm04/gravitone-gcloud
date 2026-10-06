@@ -146,10 +146,9 @@ const { isMusicConfigured, MUSIC_KEY_VAR } = await import("../lib/music/elevenla
 const { ACCESS_SECRET_VAR, accessSecret } = await import("../lib/apiAuth");
 const { channelReadiness, PUBLISH_ENV_VARS, PUBLISH_MODE_VAR } = await import("../lib/publish/channels");
 const { YOUTUBE_ENV_VARS } = await import("../lib/publish/oauth");
-// The declared deployment cells (CIP-B). They live beside the lane that judges
-// every route in each of them, and this report only says which one this
-// machine is closest to — the cell is that lane's fact, not a second copy here.
-const { nearestCell } = await import("../tests/golden-path/_cells");
+// The declared deployment cells (CIP-B). The probe lane judges every route in
+// each of them; this report only says which one this machine is closest to.
+const { nearestCell } = await import("../lib/deploymentCells");
 
 /** The browser copy of the access secret. Its NAME is derived from the server
  *  one rather than typed, because lib/apiAuth.ts owns the stem and the pair is
