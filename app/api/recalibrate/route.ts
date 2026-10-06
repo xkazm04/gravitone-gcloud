@@ -24,256 +24,37 @@
 //   2. No cross-call prompt caching, so each run re-reads the whole notebook.
 //      Runs are minutes either way; this is a cost line, not a latency one.
 //
-// Which is why the prompt is BUILT rather than forwarded. There is no cache to
-// amortise a payload nobody reads, so every character that cannot change the
-// answer is bought once per run, at Opus-5-at-high-effort prices. THREE cuts,
-// all below, all stated as what they are: the notebook slices no beat can cite,
-// the renders these notes cannot reach, and the conclusions no edit may rest on.
-// The last two share a shape — NAMED, never hidden, and a plan that acts on one
-// is refused wholesale — because a payload that silently omits material teaches
-// the engine to reason about a notebook it was not given.
-//
-// And TWO ADDITIONS, which cost more than those cuts saved and are worth it,
-// because both were the payload failing to carry what the prompt claimed it did:
-//   · THE ATTRIBUTION. § WHAT YOU RECEIVE promised each beat's `cards`, and the
-//     payload never sent them — so the engine invented the one field every
-//     coverage number, spend bar and track weight is recomputed from.
-//   · THE CONCLUSIONS. They are not in the `Notebook` object by design, so a
-//     payload built by dropping keys from it contained none — and a note on a
-//     `c-*` card named a card the engine had never read.
-// The rule both break is the same one: a prompt that describes a payload it did
-// not receive buys a confident answer to a question nobody asked. Tokens that
-// make the matrix true beat tokens saved making it fiction — which is also why
-// the third cut sends every conclusion whole the moment a note, a beat or the
-// creator's scope can reach one.
-
-import { readFile } from "node:fs/promises";
-import path from "node:path";
+// Which is why the prompt is BUILT rather than forwarded, and WHERE: the cuts,
+// the additions and the manifest that names them live in
+// lib/turns/assemble/recalibrate.ts (AIO-B), a pure function of this body and
+// the system prompt. This handler admits the request, asks the assembler, sends
+// the prompt, and holds the answer to the scope the assembler decided — so a
+// free preview (app/api/turns/preview) and this run build the same bytes, which
+// tests/golden-path/turn-assemble-parity.probe.spec.ts pins.
 
 import { guardRequest } from "@/lib/apiAuth";
 import { TextError, statusFor } from "@/lib/text/errors";
 import { reason } from "@/lib/text/router";
-import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
+import { refusalResponse } from "@/lib/turns/assemble/manifest";
+import {
+  PromptUnavailable,
+  assembleRecalibrate,
+  blindConclusions,
+  recalibrateRefusal,
+  recalibrateSystemPrompt,
+  rendersOf,
+  strayRenders,
+  type RecalibrateInput,
+} from "@/lib/turns/assemble/recalibrate";
 import { EDIT_PLAN_SCHEMA, PlanError, parseEditPlan } from "@/app/_phases/script/editPlan";
-import { rendersInScope } from "@/app/_phases/script/chainBase";
-import { ATTRIBUTION } from "@/app/_phases/script/impact";
+
+/** The size predicate lives with the assembler; re-exported so the probes that
+ *  ask it here (claude-run-bounded) keep asking the route. */
+export { tooLarge } from "@/lib/turns/assemble/recalibrate";
 
 export const runtime = "nodejs";
 /** A real run is minutes. Give the handler room rather than truncating it. */
 export const maxDuration = 800;
-
-/** The system prompt is a file on disk, so it is a thing that can be MISSING —
- *  `pipeline/` is not part of the app's module graph and a build or a deployment
- *  that does not carry it produces exactly this. Named as its own failure because
- *  the generic answer is a lie here: nothing was reached and nothing ran, and
- *  telling the creator "the model could not be reached" sends them to go and
- *  check Claude Code, which is fine. */
-class PromptUnavailable extends Error {}
-
-let cachedPrompt: string | null = null;
-async function systemPrompt(): Promise<string> {
-  // A versioned document beside the research prompt, not a string literal here —
-  // it is edited far more often than this handler is.
-  if (!cachedPrompt) {
-    const at = path.join(process.cwd(), "pipeline", "RECALIBRATE-PROMPT.md");
-    try {
-      cachedPrompt = await readFile(at, "utf8");
-    } catch {
-      throw new PromptUnavailable(`The recalibration prompt could not be read from ${at}.`);
-    }
-  }
-  return cachedPrompt;
-}
-
-/* ------------------------------------------- what the run can actually act on */
-
-/** Notebook slices no beat can ever cite, so no edit can rest on them.
- *
- *  A beat declares `cards`, and a card is a fact, a mechanism, a reversal, a
- *  conclusion or the steel-man (`_shared/notebook/cards.ts`). Four of those five
- *  live in this object and stay in it, in full, because `more-focus` may bring in
- *  material no render currently speaks. The fifth does not live here at all:
- *  conclusions are a separate export and are sent in their own block below —
- *  this comment used to claim otherwise while the payload shipped none. What
- *  goes:
- *    · engineFit — which engine suits this material. The three renders already
- *      exist; this run edits them, it does not choose between engines.
- *    · sources   — a bibliography. Not a card, so nothing can cite it, and every
- *      fact already carries its own `source` field.
- *
- *  Everything else stays even where it only INFORMS writing — analogyCandidates,
- *  scaleConversions, currency, counterPositions, researchGaps — because a
- *  rewrite that cannot see the sanctioned analogy invents one, and inventing is
- *  the single thing RECALIBRATE-PROMPT.md forbids absolutely. */
-const NOTEBOOK_DROP = ["engineFit", "sources"];
-
-/** Render keys no edit op writes.
- *
- *  `checks` is the render's own craft self-check table. Nothing in the plan
- *  produces or consumes it, the app recomputes nothing from it, and its one
- *  genuinely actionable row — a turn cadence deliberately stacked out of band —
- *  is repeated verbatim in `deviations`, which stays. */
-const RENDER_DROP = ["checks"];
-
-type Loose = Record<string, unknown>;
-
-const without = (o: unknown, keys: string[]): unknown => {
-  if (!o || typeof o !== "object") return o;
-  const out = { ...(o as Loose) };
-  for (const k of keys) delete out[k];
-  return out;
-};
-
-/** THE ATTRIBUTION THE PROMPT PROMISES.
- *
- *  § WHAT YOU RECEIVE told the engine that every beat carries "the notebook card
- *  ids it rests on". It did not. `ATTRIBUTION` was imported for `touches()`
- *  below and then never transmitted — so on every rewrite the engine GUESSED the
- *  one field the app recomputes the whole matrix from (`impactFrom`), while
- *  being told it had been handed it.
- *
- *  `null`, never `[]`, where the app has no row. The table is hand-authored
- *  against each render's text (impact.ts) and records the beats that STATE a
- *  claim; hooks, questions, promises and closes usually state none. But "no row
- *  in a hand-authored table" is a different fact from "rests on nothing", and an
- *  empty array asserts the second. The prompt says which is which rather than
- *  letting the engine pick.
- *
- *  It is the FIXTURE attribution, deliberately: `recalibrateFromPlan` applies
- *  the returned plan against `ATTRIBUTION_OF(renderId)`, so the base the engine
- *  reads is the same document the app will edit. */
-function withAttribution(r: Loose): Loose {
-  const marks = ATTRIBUTION[String(r.id)] ?? {};
-  const beats = Array.isArray(r.beats) ? (r.beats as Loose[]) : [];
-  return {
-    ...r,
-    beats: beats.map((raw) => {
-      const b = (raw ?? {}) as Loose;
-      const cards = b.cards !== undefined ? b.cards : (marks[String(b.at)] ?? null);
-      return { ...b, cards };
-    }),
-  };
-}
-
-/** THE CONCLUSIONS, WITH THE ONE BIT THE SCOPE RECORD CANNOT SAY.
- *
- *  They are not in `Notebook` and must not be: a conclusion is reasoned rather
- *  than researched, it has no source, and filing it beside the sourced facts is
- *  precisely what conclusions.ts exists to prevent. So they travel BESIDE the
- *  notebook, in their own block, with that separation intact — which is also the
- *  one of the two shapes `types.ts` sanctions for a consumer paying this cost.
- *
- *  `inScope` is computed here rather than left to the engine to infer, because
- *  the sign is invisible in the SCOPE record: a conclusion is OUT until the
- *  creator takes it, so a `c-*` id absent from that record is descoped, while an
- *  `f-*` id absent from it is kept (`research/scope.ts::OPT_IN_DEFAULT`, which
- *  owns this rule). That module is `"use client"` and cannot be imported into a
- *  route handler, so the rule is restated in one expression with its owner
- *  named. The alternative is a payload whose sign the engine has to guess, which
- *  is the defect this whole change exists to close.
- *
- *  Out-of-scope conclusions are NAMED even when they are not sent, and that is
- *  not a hole: rule 4 forbids speaking them, and a note CAN be written on one —
- *  refusing a note about a card the engine never read is how this went wrong the
- *  first time. See `splitConclusions` for what "named" means and what it costs. */
-function conclusionsFor(scope: unknown) {
-  const rec = (scope && typeof scope === "object" ? scope : {}) as Record<string, { descoped?: boolean } | undefined>;
-  return CONCLUSIONS.map((c) => ({ ...c, inScope: rec[c.id]?.descoped === false }));
-}
-
-type ScopedConclusion = ReturnType<typeof conclusionsFor>[number];
-
-/** WHICH CONCLUSIONS THIS RUN CAN ACT ON.
- *
- *  e225446 measured the conclusions block at 8,613 characters of a 40,384-char
- *  prompt, and every conclusion is `optIn: true` — so the common case shipped
- *  ~8.6KB of synthesis the note could not touch, on every run, at Opus-5 prices.
- *  This is the same cut `RENDERS NOT SENT` makes one section down, and it is
- *  made with the same care: NAMED, never hidden, and refused if acted on.
- *
- *  A conclusion travels WHOLE — claim, reasoning, precedent, falsifier, the lot
- *  — if ANY of these is true. They are ORs, and each one is a way the engine
- *  could legitimately need to read it:
- *
- *    · `inScope` — the creator took it. It may be given a beat, so it must be
- *      readable. This is the whole worst case: take every conclusion and the
- *      payload is byte-identical to what it was before this change.
- *    · A NOTE NAMES IT. A note on a `c-*` card is answered against the card, and
- *      "refusing a note about a card the engine never read" is the exact defect
- *      e225446 closed. Nothing here reopens it.
- *    · ANY note is `custom`. Free text is read literally and may name a
- *      conclusion in prose with no `cardId` to match on, so one custom note
- *      sends every conclusion whole. `rendersInScope` fails open on the same
- *      input for the same reason.
- *    · ITS ID APPEARS ANYWHERE ELSE IN THE PAYLOAD. Checked as a substring of
- *      the serialised notebook and the serialised renders rather than re-derived
- *      through `touches()`, because the question is literally "can the engine
- *      see this id somewhere it cannot resolve". That covers a beat whose
- *      `cards` cite a conclusion — which `ATTRIBUTION` does not do today, but a
- *      plan that adds one is applied back into it (`recalibrateFromPlan`) — plus
- *      `cutFacts`, `currency.expiresFirst/durable` and `analogyCandidates[].for`,
- *      all of which are card-id edges that may point at a `c-*`. A false hit
- *      sends more, which is the direction it is safe to be wrong in.
- *
- *  What is left over is a conclusion that is out of scope, unnamed by any note,
- *  and unreferenced anywhere the engine can see. There is no edit it may emit
- *  that rests on one — rule 4 forbids the only such edit — so what it needs is
- *  the knowledge that the material exists and was withheld, which is its id.
- *  `useFor` and `leap` ride along for the same reason `RENDERS NOT SENT` carries
- *  `engineLabel` and `durationS`: they cost ~40 characters and let a refusal
- *  name what kind of thing it is refusing.
- *
- *  THE ONE THING THIS MAY NOT BECOME: a saving that lets the engine reason about
- *  something it cannot see. The gate after `parseEditPlan` is the enforcement —
- *  a plan whose `cards` name a held conclusion is refused wholesale, exactly as
- *  one naming an unsent render is. */
-function splitConclusions(
-  conclusions: ScopedConclusion[],
-  notes: unknown[],
-  visibleElsewhere: string,
-): { whole: ScopedConclusion[]; held: { id: string; useFor: string; leap: string }[] } {
-  const named = new Set<string>();
-  for (const raw of notes) {
-    const n = (raw ?? {}) as Loose;
-    // A note with no kind is read as `custom` here for the same reason
-    // `rendersInScope` reads it that way: the unknown case fails open.
-    if ((typeof n.kind === "string" ? n.kind : "custom") === "custom")
-      return { whole: conclusions, held: [] };
-    if (typeof n.cardId === "string") named.add(n.cardId);
-  }
-  const whole: ScopedConclusion[] = [];
-  const held: { id: string; useFor: string; leap: string }[] = [];
-  for (const c of conclusions) {
-    if (c.inScope || named.has(c.id) || visibleElsewhere.includes(c.id)) whole.push(c);
-    else held.push({ id: c.id, useFor: c.useFor, leap: c.leap });
-  }
-  return { whole, held };
-}
-
-/** The most material one run is sent, in serialised characters: roughly a
- *  quarter of a million tokens, far past any real notebook and far short of an
- *  800-second Opus run nobody authorised. The same ceiling /api/frames holds. */
-const MAX_RUN_CHARS = 1_000_000;
-
-/** Why this run's material is too large, or `null`. A pure predicate so the
- *  negative case can be asked without dispatching a run. */
-export function tooLarge(body: Record<string, unknown>): string | null {
-  const sizes = (["notebook", "renders", "scope", "notes"] as const).map((k) => [k, jsonSize(body[k])] as const);
-  const total = sizes.reduce((n, [, s]) => n + s, 0);
-  if (total <= MAX_RUN_CHARS) return null;
-  const [biggest] = [...sizes].sort((a, b) => b[1] - a[1])[0]!;
-  const shown = Number.isFinite(total) ? `${Math.round(total / 1000)}k characters` : "unserialisable";
-  return `The run's material is ${shown} (largest: ${biggest}); the ceiling is ${MAX_RUN_CHARS / 1000}k. Nothing was dispatched.`;
-}
-
-function jsonSize(v: unknown): number {
-  if (v === undefined || v === null) return 0;
-  try {
-    return JSON.stringify(v)?.length ?? 0;
-  } catch {
-    return Number.POSITIVE_INFINITY; // circular: refuse it
-  }
-}
 
 export async function POST(req: Request) {
   // LOCAL-COMPUTE ROUTE - auth + rate limit before anything is read or spawned.
@@ -292,112 +73,29 @@ export async function POST(req: Request) {
   const denied = guardRequest(req);
   if (denied) return denied;
 
-  let body: { notebook?: unknown; renders?: unknown; scope?: unknown; notes?: unknown };
+  let body: RecalibrateInput;
   try {
     body = await req.json();
   } catch {
     return Response.json({ detail: "Request body was not valid JSON." }, { status: 400 });
   }
-  const oversized = tooLarge(body);
-  if (oversized) return Response.json({ detail: oversized, code: "too-large" }, { status: 413 });
-  if (!Array.isArray(body.notes) || body.notes.length === 0)
-    return Response.json({ detail: "No notes were sent, so there is nothing to recalibrate." }, { status: 400 });
+  const refused = recalibrateRefusal(body);
+  if (refused) return refusalResponse(refused);
 
-  const allRenders = Array.isArray(body.renders) ? (body.renders as Loose[]) : [];
-  const inScope = rendersInScope(allRenders, body.notes);
-  const sent = allRenders
-    .filter((r) => inScope.has(String(r.id)))
-    .map((r) => withAttribution(without(r, RENDER_DROP) as Loose));
-  // Named, never hidden: the engine has to know these exist so it does not
-  // reason as though the project has one render, and the creator has to be able
-  // to tell "left alone" from "never looked at".
-  const notSent = allRenders
-    .filter((r) => !inScope.has(String(r.id)))
-    .map((r) => ({ id: r.id, engineLabel: r.engineLabel, durationS: r.durationS }));
-
-  // Serialised once, and read twice: these two strings ARE the payload the
-  // engine can see, so asking whether a conclusion id occurs in them is the
-  // exact question `splitConclusions` needs answered.
-  const notebookJson = JSON.stringify(without(body.notebook, NOTEBOOK_DROP));
-  const sentJson = JSON.stringify(sent);
-  const { whole: conclusions, held } = splitConclusions(
-    conclusionsFor(body.scope),
-    body.notes,
-    notebookJson + sentJson,
-  );
-  const heldIds = new Set(held.map((h) => h.id));
-
-  // Everything goes down stdin. The notebook and three beat chains are far past
-  // any platform's command-line argument limit, and on Windows that limit fails
-  // as a truncated argument rather than an error — a silent corruption of the
-  // one input the whole run depends on.
+  // ASSEMBLY AND DISPATCH ARE TWO STEPS, kept apart on purpose: the assembler
+  // decides what is sent (and the manifest says so); everything after it is
+  // one turn on the engine and the guards over its answer. AIO-A's turn runner
+  // takes the second half; the first does not move.
   //
-  // BUILT INSIDE THE TRY. `systemPrompt()` reads a file from disk, and this
-  // await used to sit ABOVE the try -- so a missing
+  // BUILT INSIDE THE TRY. `recalibrateSystemPrompt()` reads a file from disk,
+  // and this await used to sit ABOVE the try -- so a missing
   // `pipeline/RECALIBRATE-PROMPT.md` threw straight out of the handler: Next
   // returned a bare 500 with no body, the client's
   // `res.json().catch(() => ({ detail: "" }))` fell back to "The model could
   // not be reached", and a simulated candidate was staged under a reason naming
   // the wrong system entirely. Every throw on this path now has a door.
   try {
-    const prompt = [
-      await systemPrompt(),
-      "",
-      "---",
-      "",
-      "# THE RUN",
-      "",
-      "Return ONE JSON object and nothing else — no prose before or after, no code fence.",
-      "It must satisfy this schema:",
-      "",
-      JSON.stringify(EDIT_PLAN_SCHEMA, null, 2),
-      "",
-      "## NOTEBOOK",
-      notebookJson,
-      "",
-      "## CONCLUSIONS (reasoned, not researched — beside the notebook, never in it)",
-      "A conclusion has no source of its own: it is synthesis over the cards in its",
-      "`restsOn` plus an analogy, and the creator opts each one IN. `inScope: false`",
-      "means they have not, so rule 4 binds it exactly as it binds any descoped card —",
-      "it may not be given a beat, and a note on it can only be refused, by name.",
-      JSON.stringify(conclusions),
-      // Named, never hidden — the same shape and the same rule as RENDERS NOT SENT
-      // below. The engine has to know this material exists so it does not reason
-      // as though the notebook synthesised nothing, and it has to know it did not
-      // read it so it cannot act on a claim it only saw the name of.
-      ...(held.length
-        ? [
-            "",
-            "## CONCLUSIONS NOT SENT",
-            "Each of these is out of scope, unnamed by any note, and cited nowhere in what you",
-            "were given — so no edit you may emit can rest on one, and the text is withheld.",
-            "They exist and you have not read them: the notebook DID synthesise, and a summary",
-            "saying otherwise is wrong. Refuse any note asking for one, by name. Never write",
-            "the idea yourself instead — uncited, that breaks rule 1. Emit NO `cards` entry",
-            "naming one; a plan that does is rejected wholesale.",
-            JSON.stringify(held),
-          ]
-        : []),
-      "",
-      "## CURRENT RENDERS",
-      sentJson,
-      ...(notSent.length
-        ? [
-            "",
-            "## RENDERS NOT SENT",
-            "No beat in these rests on a card the notes name, so their beat chains are not",
-            "included in this run. You cannot edit what you cannot see: emit NO edit whose",
-            "`renderId` is one of these — a plan that names one is rejected wholesale.",
-            JSON.stringify(notSent),
-          ]
-        : []),
-      "",
-      "## SCOPE (cards the creator has taken out)",
-      JSON.stringify(body.scope),
-      "",
-      "## NOTES",
-      JSON.stringify(body.notes, null, 2),
-    ].join("\n");
+    const { prompt, manifest } = assembleRecalibrate(body, await recalibrateSystemPrompt());
 
     // THE SCHEMA IS HANDED TO THE ENGINE, not only written into the prompt
     // above. On the local rung nothing changes — the CLI cannot constrain its
@@ -407,15 +105,15 @@ export async function POST(req: Request) {
     // authoritative: it checks more than a schema can (render ids against the
     // table, op vocabulary), and this app does not have two validators.
     const run = await reason({ prompt, turn: "edit-plan", schema: EDIT_PLAN_SCHEMA });
-    const plan = parseEditPlan(run.text, { renders: allRenders });
+    const plan = parseEditPlan(run.text, { renders: rendersOf(body) });
 
     // A plan may only name material that was sent. `parseEditPlan` checks the
     // id against the render TABLE, which still holds all three — so the check
-    // that the id was in THIS request belongs here, beside the decision that
-    // scoped it. Refused wholesale rather than filtered: an edit aimed at a
-    // chain the engine never read is a guess, and applying the rest of a plan
-    // built around that guess is worse than running again.
-    const stray = [...new Set(plan.edits.map((e) => e.renderId).filter((id) => !inScope.has(id)))];
+    // that the id was in THIS request reads the manifest that scoped it (forced
+    // renders included). Refused wholesale rather than filtered: an edit aimed
+    // at a chain the engine never read is a guess, and applying the rest of a
+    // plan built around that guess is worse than running again.
+    const stray = strayRenders(plan.edits, manifest);
     if (stray.length)
       return Response.json(
         {
@@ -429,7 +127,7 @@ export async function POST(req: Request) {
     // declared from the name alone produces a matrix that cites reasoning the
     // engine never read. Refused wholesale, like the stray render above, for the
     // same reason: the rest of a plan built around that guess is not salvage.
-    const blind = [...new Set(plan.edits.flatMap((e) => e.cards ?? []).filter((id) => heldIds.has(id)))];
+    const blind = blindConclusions(plan.edits, manifest);
     if (blind.length)
       return Response.json(
         {
@@ -442,6 +140,9 @@ export async function POST(req: Request) {
     // this on the version it stages, so what a version cost survives with it.
     return Response.json({
       plan,
+      // What the engine read, as the assembler decided it: sizes and ids, never
+      // text. Additive — a client that does not read it is unaffected.
+      manifest,
       engine: {
         // `kind` keeps its existing two-value shape for the client that already
         // reads it; everything below it is new and additive, so a staged version

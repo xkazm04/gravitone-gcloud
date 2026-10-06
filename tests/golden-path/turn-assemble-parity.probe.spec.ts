@@ -27,7 +27,7 @@
 //     must equal system + tail exactly, and its manifest must account for every
 //     character of it.
 import { createHash } from "node:crypto";
-import { readdirSync, readFileSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
@@ -39,6 +39,8 @@ import { ATTRIBUTION } from "@/app/_phases/script/impact";
 import { EDIT_PLAN_SCHEMA } from "@/app/_phases/script/editPlan";
 import { compileFormatBrief } from "@/lib/formatBrief";
 import { schemaInstruction } from "@/lib/text/json";
+import { assembleFrames } from "@/lib/turns/assemble/frames";
+import { assembleRecalibrate } from "@/lib/turns/assemble/recalibrate";
 
 import { FAKE_ENGINE_ENV, keepEnv, loadCassette, withFakeEngine, type Cassette } from "./_helpers";
 
@@ -81,11 +83,14 @@ const systemFor = (kind: "recalibrate" | "frames") =>
   readFileSync(join(ROOT, "pipeline", kind === "recalibrate" ? "RECALIBRATE-PROMPT.md" : "FRAMES-SCENE-PROMPT.md"), "utf8");
 
 /** Why this golden can no longer speak for the assembly, or null. */
+function currentInputs(g: Golden): Record<string, string> {
+  return KIND(g) === "recalibrate"
+    ? { conclusions: short(CONCLUSIONS), attribution: short(ATTRIBUTION), editPlanSchema: short(EDIT_PLAN_SCHEMA) }
+    : { formatBrief: sha(compileFormatBrief(g.body.template, g.body.targetS)).slice(0, 16) };
+}
+
 function staleInputs(g: Golden): string | null {
-  const now =
-    KIND(g) === "recalibrate"
-      ? { conclusions: short(CONCLUSIONS), attribution: short(ATTRIBUTION), editPlanSchema: short(EDIT_PLAN_SCHEMA) }
-      : { formatBrief: sha(compileFormatBrief(g.body.template, g.body.targetS)).slice(0, 16) };
+  const now = currentInputs(g);
   const moved = Object.entries(now)
     .filter(([k, v]) => g.inputs[k] !== v)
     .map(([k]) => k);
@@ -94,6 +99,32 @@ function staleInputs(g: Golden): string | null {
         `assembly drift. Re-capture with TURN_GOLDEN_RECAPTURE=1, read the diff, and commit it.`
     : null;
 }
+
+/** The assembler's tail for a golden's body: its prompt minus the system prompt
+ *  it was handed. */
+function assembled(g: Golden, system: string) {
+  return KIND(g) === "recalibrate" ? assembleRecalibrate(g.body, system) : assembleFrames(g.body, system);
+}
+
+// RE-CAPTURE, ON PURPOSE ONLY. When a golden's INPUT moved (a conclusion edited,
+// the edit-plan schema changed, a format brief rewritten), the golden is stale
+// rather than the assembly wrong. `TURN_GOLDEN_RECAPTURE=1 npx playwright test
+// turn-assemble-parity` rewrites every tail from the assembler; the diff is
+// then READ before it is committed — a recapture accepts whatever the assembler
+// builds now, so it is never the answer to a red parity case on its own.
+if (process.env.TURN_GOLDEN_RECAPTURE === "1")
+  test("recapture: rewrite every golden from the assembler", () => {
+    for (const g of GOLDENS) {
+      const system = systemFor(KIND(g));
+      g.tail = assembled(g, system).prompt.slice(system.length);
+      g.tailChars = g.tail.length;
+      g.tailSha256 = sha(g.tail);
+      g.inputs = currentInputs(g);
+      g.capturedAt = new Date().toISOString().slice(0, 10);
+      writeFileSync(join(GOLDEN_DIR, `${g.name}.json`), JSON.stringify(g, null, 2) + "\n");
+      console.log(`[parity] recaptured ${g.name}: ${g.tailChars} chars`);
+    }
+  });
 
 test("goldens: the population is derived, covers both routes, and each one is intact", () => {
   console.log(`[parity] ${GOLDENS.length} goldens: ${GOLDENS.map((g) => g.name).join(", ")}`);
@@ -144,5 +175,30 @@ for (const g of GOLDENS) {
       expect(turns[0]!.promptChars, `${g.name}: the prompt's LENGTH moved`).toBe(stdin.length);
       expect(turns[0]!.promptSha256, `${g.name}: same length, different bytes`).toBe(sha(stdin));
     });
+  });
+}
+
+/** The first place two strings part, with a little of each side: a sha
+ *  mismatch alone says nothing about where to look. */
+function firstDiff(want: string, got: string): string {
+  let i = 0;
+  while (i < want.length && i < got.length && want[i] === got[i]) i++;
+  if (i === want.length && i === got.length) return "identical";
+  return `at char ${i}: golden ${JSON.stringify(want.slice(i, i + 60))}, assembler ${JSON.stringify(got.slice(i, i + 60))}`;
+}
+
+for (const g of GOLDENS) {
+  test(`assembler parity: ${g.name} is the golden byte for byte, and its manifest accounts for every char`, () => {
+    const system = systemFor(KIND(g));
+    const { prompt, manifest } = assembled(g, system);
+    expect(firstDiff(system + g.tail, prompt), `${g.name}: the assembler drifted from the pre-extraction route`).toBe("identical");
+    expect(manifest.totalChars).toBe(prompt.length);
+    expect(manifest.blocks.reduce((n, b) => n + b.chars, 0), `${g.name}: the blocks do not sum to the prompt`).toBe(prompt.length);
+    expect(manifest.blocks[0]).toEqual({ name: "system", chars: system.length + "\n\n---\n\n".length });
+
+    // The system prompt is a prefix and nothing else: another one moves no byte
+    // of what follows it.
+    const other = assembled(g, "# A DIFFERENT SYSTEM PROMPT\n").prompt;
+    expect(other.slice("# A DIFFERENT SYSTEM PROMPT\n".length)).toBe(g.tail);
   });
 }
