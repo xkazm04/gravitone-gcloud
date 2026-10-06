@@ -131,6 +131,8 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
         )}
         {card.holder && (
           <span className="font-jetbrains rounded border border-amber-400/25 bg-amber-400/[0.05] px-1.5 py-0.5 text-label tracking-[0.1em] text-amber-200/80">
+            {/* A bare name read aloud says nothing about whose position this is. */}
+            <span className="sr-only">held by </span>
             {card.holder}
           </span>
         )}
