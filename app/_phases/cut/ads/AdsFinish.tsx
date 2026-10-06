@@ -459,7 +459,7 @@ export default function AdsFinish({ projectId }: { projectId: string }) {
           </ul>
           {renders.refusal && (
             <div className="mt-3">
-              <Notice severity="warning" title={`${renders.refusal.aspect} · ${renders.refusal.code}`}>
+              <Notice announce severity="warning" title={`${renders.refusal.aspect} · ${renders.refusal.code}`}>
                 <p data-testid="ads-render-refusal">{renders.refusal.message}</p>
               </Notice>
             </div>
