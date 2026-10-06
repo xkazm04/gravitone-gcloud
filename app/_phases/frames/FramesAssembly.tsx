@@ -25,6 +25,7 @@ import { durationOf, humanMs, isComposed, type Frame, type FrameText, type Layer
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
 import LayerPanel from "./LayerPanel";
+import DispatchStrip from "../_shared/ui/DispatchStrip";
 import { planRender, afterOutcome } from "./renderPlan";
 import type { useFrames } from "./useFrames";
 
@@ -169,7 +170,11 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
         <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => void ctl.direct()}
-          disabled={ctl.directing}
+          data-testid="direct-the-cut"
+          // A pass the route would refuse, or no engine can serve, is not
+          // offered: the strip under the row carries the reason (AIO-B).
+          disabled={ctl.directing || Boolean(ctl.directionBlocked)}
+          aria-describedby={ctl.directionBlocked ? "frames-dispatch" : undefined}
           title="Read the whole script and art-direct every frame in one pass"
           className="inline-flex items-center gap-2 rounded-xl border border-violet-300/35 bg-violet-300/10 px-3.5 py-1.5 text-label font-semibold text-violet-100 transition hover:bg-violet-300/20 disabled:opacity-40"
         >
@@ -229,6 +234,10 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
         </button>
         </div>
       </div>
+
+      {/* The direction pass's pre-flight: what it sends, who serves it, about
+          how long it takes here — beside the button that spends it. */}
+      <DispatchStrip id="frames-dispatch" outcome={ctl.directionPreview} />
 
       <div className="overflow-hidden rounded-xl border border-white/8">
         <div className={`font-jetbrains grid ${ASSEMBLY_GRID} gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase`}>

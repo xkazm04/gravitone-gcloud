@@ -25,6 +25,7 @@ import { overrideFrom, overrideLineOf, receiptOf } from "../versions";
 import { inertNotes } from "../recalibrate";
 import { MODEL } from "@/lib/model";
 import DeclinedList, { declinedCount } from "./DeclinedList";
+import DispatchStrip, { type DispatchToggle } from "../../_shared/ui/DispatchStrip";
 import type { Card } from "../../_shared/notebook/cards";
 import type { Scope } from "../../research/scope";
 import { conflictDelta } from "../scopeConflicts";
@@ -229,12 +230,25 @@ export default function RecalibrateControl({
       </div>
     );
 
+  // THE PRE-FLIGHT (AIO-B). Every withheld render, and every one the creator
+  // already put back, is a toggle; a forced render is in `sent`, so it is
+  // re-added from the pad's own list or it would vanish the moment it is on.
+  const notSent = new Set([...(api.preview?.ok ? (api.preview.preview.manifest.renders?.notSent ?? []) : []), ...api.forceRenders]);
+  const toggles: DispatchToggle[] = RENDERS.filter((r) => notSent.has(r.id)).map((r) => ({
+    id: r.id,
+    label: r.engineLabel,
+    on: api.forceRenders.includes(r.id),
+  }));
+
   return (
     <div className="space-y-1.5">
       <button
         data-testid="run-recalibration"
         onClick={api.run}
-        disabled={!n}
+        // A run the route would refuse, or that no engine can serve, is not
+        // offered: the strip under the button carries the reason, verbatim.
+        disabled={!n || Boolean(api.blocked)}
+        aria-describedby={api.blocked ? "recalibrate-dispatch" : undefined}
         // KEPT, and it is the one deliberate exception in this pass: a disabled
         // control with no visual equivalent for what enables it (uat 2026-09-05,
         // KW-L1-6 — a first-timer on the guided Candidates tab had no way to
@@ -245,6 +259,9 @@ export default function RecalibrateControl({
       >
         {n ? `Recalibrate · ${n} note${n === 1 ? "" : "s"}` : "Recalibrate"}
       </button>
+      {n > 0 && (
+        <DispatchStrip id="recalibrate-dispatch" outcome={api.preview} toggles={toggles} onToggle={api.toggleForceRender} />
+      )}
       {!n && (
         <p className="font-jetbrains flex items-center gap-1.5 text-label text-white/30">
           nothing to recalibrate yet
@@ -257,8 +274,11 @@ export default function RecalibrateControl({
         {/* Derived from the last result's provenance, never hand-removed: the
             label disappears on its own when a real model produced the version,
             and comes back on its own if the call falls back. */}
+        {/* Once the pre-flight has answered, the strip names the engine that
+            would serve — this static label would contradict it on any posture
+            where that is not the local seat. */}
         <span className="font-jetbrains text-label text-white/30">
-          {api.engineNote ? "simulated fallback" : `local claude code · ${MODEL}`}
+          {api.engineNote ? "simulated fallback" : api.preview?.ok ? "" : `local claude code · ${MODEL}`}
         </span>
         {n > 0 && (
           <button

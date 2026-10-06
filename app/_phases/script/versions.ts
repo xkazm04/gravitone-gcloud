@@ -192,6 +192,62 @@ export interface EngineRun {
   /** How much prompt the run was billed for. The one number that says whether a
    *  payload change actually reduced anything. */
   promptChars?: number;
+  /** WHAT THE ENGINE READ (AIO-B): the assembler's manifest for this run —
+   *  which renders and conclusions went in and which were held back, and what
+   *  the prompt was made of. Absent on a version staged before it existed, and
+   *  absence reads as "not recorded", never as "everything was sent". */
+  manifest?: RunManifest;
+}
+
+/** The manifest as a version keeps it: sizes and ids, never text (the same
+ *  rule lib/turns/assemble/manifest.ts holds for the wire). */
+export interface RunManifest {
+  blocks: { name: string; chars: number }[];
+  renders?: { sent: string[]; notSent: string[] };
+  conclusions?: { whole: string[]; held: string[] };
+  totalChars: number;
+  ceilingChars: number;
+}
+
+/** Take a manifest off the wire and keep only what has its shape. A list with
+ *  a non-string in it, or a size that is not a finite number, is not admitted
+ *  piecemeal — the manifest is a claim about the whole payload, so a damaged
+ *  one is dropped whole rather than half-believed. */
+export function manifestOf(raw: unknown): RunManifest | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const fin = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
+  const ids = (v: unknown): v is string[] => Array.isArray(v) && v.every((x) => typeof x === "string");
+  if (!fin(r.totalChars) || !fin(r.ceilingChars) || !Array.isArray(r.blocks)) return undefined;
+  const blocks = r.blocks.filter(
+    (b): b is { name: string; chars: number } =>
+      !!b && typeof b === "object" && typeof (b as { name?: unknown }).name === "string" && fin((b as { chars?: unknown }).chars),
+  );
+  if (blocks.length !== r.blocks.length) return undefined;
+  const pair = <A extends string, B extends string>(v: unknown, a: A, b: B) => {
+    if (v === undefined) return undefined;
+    const o = v as Record<string, unknown> | null;
+    return o && ids(o[a]) && ids(o[b]) ? ({ [a]: o[a], [b]: o[b] } as Record<A | B, string[]>) : null;
+  };
+  const renders = pair(r.renders, "sent", "notSent");
+  const conclusions = pair(r.conclusions, "whole", "held");
+  if (renders === null || conclusions === null) return undefined;
+  return {
+    blocks: blocks.map((b) => ({ name: b.name, chars: b.chars })),
+    ...(renders ? { renders } : {}),
+    ...(conclusions ? { conclusions } : {}),
+    totalChars: r.totalChars,
+    ceilingChars: r.ceilingChars,
+  };
+}
+
+/** The receipt for a run: the engine's account, with what it read stamped on.
+ *  A manifest without an engine account has nothing to ride on and is not kept
+ *  — an `engineRun` asserts a model call, and the manifest alone does not. */
+export function engineRunWith(engine: unknown, manifest: unknown): EngineRun | undefined {
+  const run = engineRunOf(engine);
+  const m = manifestOf(manifest);
+  return run && m ? { ...run, manifest: m } : run;
 }
 
 /** Take an engine block off the wire and keep only what is actually a number or
@@ -241,6 +297,13 @@ export function receiptOf(v: Version): string | null {
     r.costUsd === undefined ? "cost not reported" : usd(r.costUsd),
     r.durationMs === undefined ? "duration not reported" : secs(r.durationMs),
     r.promptChars === undefined ? null : `${Math.round(r.promptChars / 1000)}k prompt chars`,
+    // WHAT WAS HELD BACK, and only when something was: "3/3 renders" on every
+    // receipt is the unremarkable case, and the same rule as `via` below keeps
+    // it off. A receipt with no manifest says nothing here — not "all sent".
+    r.manifest?.renders?.notSent.length
+      ? `${r.manifest.renders.sent.length}/${r.manifest.renders.sent.length + r.manifest.renders.notSent.length} renders sent`
+      : null,
+    r.manifest?.conclusions?.held.length ? `${r.manifest.conclusions.held.length} conclusions held` : null,
     r.model ?? null,
     // WHERE IT RAN, on the receipt, and only when there is something to say.
     //

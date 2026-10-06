@@ -18,7 +18,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
 import { useJobs } from "@/lib/jobs";
-import { getTurn, resumeTurn, startFrames, type TurnRecord } from "@/lib/turns/client";
+import { dispatchBlock, getTurn, resumeTurn, startFrames, type TurnRecord } from "@/lib/turns/client";
+import { useTurnPreview } from "@/lib/turns/usePreview";
 import {
   PHASES,
   getProject,
@@ -704,6 +705,42 @@ export function useFrames(projectId: string) {
     };
   }, [ready, endedTurn, consumed, land]);
 
+  /** THE ONE BODY the direction pass sends and the pre-flight reads (AIO-B),
+   *  so the strip beside the button cannot describe a different payload. */
+  const directionInput = useMemo(
+    () => ({
+      title: render.title,
+      schema: SCENE_SCHEMA,
+      style: block,
+      // THE FORMAT — the second thing this hook reads the project record for.
+      // Until this landed, the direction pass knew the style but not the kind
+      // of piece or its length, so a thirty-second clip and a six-minute
+      // argument were art-directed against an identical brief. Sent raw and
+      // resolved server-side by lib/formatBrief.ts; both are omitted while the
+      // record is still loading, and the prompt then says it was not told
+      // rather than guessing.
+      //
+      // A SEAM THIS DOES NOT CLOSE: the beats come from `render`, a fixture,
+      // and `ScriptRender` declares a `template` of its own (a loose `string`
+      // — app/_phases/script/types.ts:53) which need not agree with the
+      // project's. RENDERS[0] says "mid-educational-video" for every project
+      // whatever its record says. The record is the right authority — it is
+      // what the director chose — but the disagreement is real today, so the
+      // prompt's `## The format` §2 tells the model to direct the beats it has
+      // and say so, rather than editing them toward a number.
+      template: project?.template,
+      targetS: project?.targetS,
+      facts: FACTS.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
+      beats: frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device })),
+    }),
+    [render.title, block, project?.template, project?.targetS, frames],
+  );
+
+  /** What the pass would send and who would serve it — free, debounced, and
+   *  only while there is a pass to describe. */
+  const directionPreview = useTurnPreview(KIND, directionInput, frames.length > 0 && !directing);
+  const directionBlocked = dispatchBlock(directionPreview);
+
   /**
    * Art-direct the whole cut in one pass.
    *
@@ -731,38 +768,14 @@ export function useFrames(projectId: string) {
       );
       return;
     }
-    if (directing || startingRef.current) return;
+    if (directing || startingRef.current || directionBlocked) return;
     startingRef.current = true;
     setStarting(true);
     setError(null);
     setNotice(null);
     setRejections({});
     try {
-      const out = await startFrames(projectId, {
-        title: render.title,
-        schema: SCENE_SCHEMA,
-        style: block,
-        // THE FORMAT — the second thing this hook reads the project record for.
-        // Until this landed, the direction pass knew the style but not the kind
-        // of piece or its length, so a thirty-second clip and a six-minute
-        // argument were art-directed against an identical brief. Sent raw and
-        // resolved server-side by lib/formatBrief.ts; both are omitted while the
-        // record is still loading, and the prompt then says it was not told
-        // rather than guessing.
-        //
-        // A SEAM THIS DOES NOT CLOSE: the beats come from `render`, a fixture,
-        // and `ScriptRender` declares a `template` of its own (a loose `string`
-        // — app/_phases/script/types.ts:53) which need not agree with the
-        // project's. RENDERS[0] says "mid-educational-video" for every project
-        // whatever its record says. The record is the right authority — it is
-        // what the director chose — but the disagreement is real today, so the
-        // prompt's `## The format` §2 tells the model to direct the beats it has
-        // and say so, rather than editing them toward a number.
-        template: project?.template,
-        targetS: project?.targetS,
-        facts: FACTS.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
-        beats: frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device })),
-      });
+      const out = await startFrames(projectId, directionInput);
       if (out.ok) {
         track({ turnId: out.turnId, projectId, kind: KIND, label: "scene direction" });
         return;
@@ -781,7 +794,7 @@ export function useFrames(projectId: string) {
       startingRef.current = false;
       setStarting(false);
     }
-  }, [frames, block, render.title, render.origin, project?.template, project?.targetS, projectId, directing, track]);
+  }, [frames, render.origin, projectId, directing, track, directionBlocked, directionInput]);
 
   /** Stop the live pass. On the server: the record says `cancelled` and the
    *  engine's process tree is ended (lib/turns/runner.ts `cancelTurn`). */
@@ -897,6 +910,8 @@ export function useFrames(projectId: string) {
     directing,
     /** When the live pass started (the ledger's clock), or null. */
     directingSince,
+    directionPreview,
+    directionBlocked,
     direct,
     /** Stop the live pass — the server ends the engine. */
     cancelDirection,

@@ -17,9 +17,10 @@
 
 import { accessHeader } from "@/lib/imagingClient";
 
+import type { TurnManifest } from "./assemble/manifest";
 import type { TurnRecord, TurnStatus } from "./ledger";
 
-export type { TurnRecord, TurnStatus };
+export type { TurnManifest, TurnRecord, TurnStatus };
 
 /** A record as the list answers it: everything but `result`, which only the
  *  single-turn read carries (a plan is the creator's work, and a list that
@@ -89,6 +90,61 @@ export async function startTurn(kind: string, projectId: string, input: unknown)
   const json = await bodyOf(res);
   if (res.status === 202 && typeof json.turnId === "string") return { ok: true, turnId: json.turnId };
   return refusedOf(res, json);
+}
+
+/** What POST /api/turns/preview answers: the prompt the turn WOULD send, the
+ *  engine that would serve it (or every reason none can), and how long that
+ *  turn class has taken on that rung here. Free — nothing is dispatched. */
+export interface TurnPreview {
+  manifest: TurnManifest;
+  engine: {
+    available: boolean;
+    provider: string | null;
+    rung: string | null;
+    transport: string | null;
+    costBasis: string | null;
+    /** Every candidate that dropped out, in the router's own words. */
+    descent: { provider: string; detail: string }[];
+  };
+  estimate: { p50Ms: number | null; n: number; p50CostUsd: number | null };
+}
+
+/** A preview, or the refusal the turn's own route would answer for the same
+ *  input (400 / 413, same sentence — both ask one refusal function). */
+export type PreviewOutcome =
+  | { ok: true; preview: TurnPreview }
+  | { ok: false; status: number; detail: string; code?: string };
+
+/** Ask what a turn would send and to whom, without spending. `input` is
+ *  exactly the body the kind's own route takes, minus the project id. */
+export async function previewTurn(kind: string, input: unknown, signal?: AbortSignal): Promise<PreviewOutcome> {
+  const res = await fetch("/api/turns/preview", {
+    method: "POST",
+    headers: { ...JSON_HEADERS, ...accessHeader() },
+    body: JSON.stringify({ kind, input }),
+    signal,
+  });
+  const json = await bodyOf(res);
+  if (res.ok && json.manifest && json.engine) return { ok: true, preview: json as unknown as TurnPreview };
+  return {
+    ok: false,
+    status: res.status,
+    detail: typeof json.detail === "string" ? json.detail : `preview failed (${res.status})`,
+    ...(typeof json.code === "string" ? { code: json.code } : {}),
+  };
+}
+
+/** Why a run control must not dispatch, read off a preview — or null when it
+ *  may. Two answers stop it: the route would refuse this input (the same
+ *  400/413 sentence), or no engine can serve (the router's reasons, verbatim).
+ *  A 401/403/5xx from the preview itself does NOT stop the run: the preview is
+ *  advisory, and the run's own route is the authority on access. */
+export function dispatchBlock(outcome: PreviewOutcome | null): { reason: string; descent: TurnPreview["engine"]["descent"] } | null {
+  if (!outcome) return null;
+  if (!outcome.ok)
+    return outcome.status === 400 || outcome.status === 413 ? { reason: outcome.detail, descent: [] } : null;
+  if (outcome.preview.engine.available) return null;
+  return { reason: "no engine", descent: outcome.preview.engine.descent };
 }
 
 export class TurnClientError extends Error {

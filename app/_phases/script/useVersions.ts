@@ -22,12 +22,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { useJobs } from "@/lib/jobs";
-import { getTurn, resumeTurn, startRecalibrate, type TurnRecord } from "@/lib/turns/client";
+import { dispatchBlock, getTurn, resumeTurn, startRecalibrate, type TurnRecord } from "@/lib/turns/client";
+import { useTurnPreview } from "@/lib/turns/usePreview";
 import { loadStep, saveStep } from "../_shared/stepStore";
 import { recalibrate, recalibrateFromPlan } from "./recalibrate";
 import { NOTEBOOK } from "../_shared/notebook/notebook";
 import { renderPayloadFor } from "./chainBase";
-import { BASELINE, engineRunOf, type GateOverride, type Note, type NoteKind, type Version } from "./versions";
+import { BASELINE, engineRunWith, type GateOverride, type Note, type NoteKind, type Version } from "./versions";
 import type { EditPlan } from "./editPlan";
 import type { Card } from "../_shared/notebook/cards";
 import type { Scope } from "../research/scope";
@@ -149,14 +150,15 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
     const { notes: runNotes, baseline: base, accepted: acc, ctx: c } = live.current;
     const id = `v${acc.length + 2}`;
     if (rec.status === "done") {
-      const { plan, engine } = (rec.result ?? {}) as { plan?: EditPlan; engine?: unknown };
+      const { plan, engine, manifest } = (rec.result ?? {}) as { plan?: EditPlan; engine?: unknown; manifest?: unknown };
       if (!plan) return;
       setEngineNote(null);
       setLostCandidate(null);
       // The receipt is attached here rather than inside the transform: what a
       // run cost is a fact about the TURN, not about the edit plan, and the
       // transform is shared with the path that never makes one.
-      setCandidate({ ...recalibrateFromPlan(base, runNotes, plan, id, Date.now(), c), engineRun: engineRunOf(engine) });
+      // The manifest rides on it (AIO-B): what the engine actually read.
+      setCandidate({ ...recalibrateFromPlan(base, runNotes, plan, id, Date.now(), c), engineRun: engineRunWith(engine, manifest) });
       return;
     }
     if (rec.status === "failed") {
@@ -225,6 +227,38 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
 
   const clearNotes = useCallback(() => { if (!running) setNotes([]); }, [running]);
 
+  /** Renders the creator put back into the run (AIO-B). The assembler sends
+   *  only the renders the notes touch and names the rest as NOT SENT; a forced
+   *  one goes in whole, and the stray guard reads the widened scope. Not
+   *  persisted: it is a decision about the NEXT run, and accepting answers it. */
+  const [forceRenders, setForceRenders] = useState<string[]>([]);
+  const toggleForceRender = useCallback(
+    (id: string) => {
+      if (running) return; // rule 2
+      setForceRenders((f) => (f.includes(id) ? f.filter((x) => x !== id) : [...f, id]));
+    },
+    [running],
+  );
+
+  /** THE ONE BODY a click sends and the preview reads. Built once, here, so
+   *  the strip beside the button cannot describe a different payload from the
+   *  one the button dispatches. */
+  const runInput = useMemo(
+    () => ({
+      notebook: NOTEBOOK,
+      renders: renderPayloadFor(baseline),
+      scope: ctx.scope,
+      notes,
+      ...(forceRenders.length ? { forceRenders } : {}),
+    }),
+    [baseline, ctx.scope, notes, forceRenders],
+  );
+
+  /** What the next run would send and who would serve it — free, debounced,
+   *  and only while there is a run to describe. */
+  const preview = useTurnPreview(KIND, runInput, hydrated && notes.length > 0 && !running && !candidate);
+  const blocked = dispatchBlock(preview);
+
   /** Ask the server for a recalibration turn.
    *
    *  A user action, once per click. The pad locks at the click (`starting`)
@@ -232,7 +266,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
    *  provider's poll, not this closure, is what ends it, so leaving the step,
    *  reloading or closing the tab changes nothing about the run. */
   const run = useCallback(() => {
-    if (running || startingRef.current || !notes.length) return;
+    if (running || startingRef.current || !notes.length || blocked) return;
     startingRef.current = true;
     setStarting(true);
     setLostCandidate(null);
@@ -240,6 +274,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
     // Frozen at click time, for the one path that stages from here: a run the
     // server refused before any turn existed.
     const runNotes = notes;
+    const body = runInput;
     const base = baseline;
     const id = `v${accepted.length + 2}`;
     const c = live.current.ctx;
@@ -249,12 +284,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       setCandidate(recalibrate(base, runNotes, id, Date.now(), c));
     };
 
-    void startRecalibrate(projectId, {
-      notebook: NOTEBOOK,
-      renders: renderPayloadFor(base),
-      scope: c.scope,
-      notes: runNotes,
-    })
+    void startRecalibrate(projectId, body)
       .then((out) => {
         if (out.ok) {
           setEngineNote(null);
@@ -276,7 +306,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
         startingRef.current = false;
         setStarting(false);
       });
-  }, [running, notes, baseline, accepted.length, projectId, track]);
+  }, [running, notes, baseline, accepted.length, projectId, track, blocked, runInput]);
 
   /** Stop the live turn. On the server: the record says `cancelled` and the
    *  engine's process tree is ended (lib/turns/runner.ts `cancelTurn`). */
@@ -298,6 +328,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       setAccepted((a) => [...a, override ? { ...candidate, override } : candidate]);
       setCandidate(null);
       setNotes([]);
+      setForceRenders([]);
     },
     [candidate],
   );
@@ -357,6 +388,11 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       discard,
       /** Why the simulated engine ran, when it did. Null on a real model result. */
       engineNote,
+      /** The pre-flight read for the next run, and why it may not dispatch. */
+      preview,
+      blocked,
+      forceRenders,
+      toggleForceRender,
       /** A candidate that was staged when this project was last closed and is now
        *  gone. Shown once, cleared by the next run. */
       lostCandidate,
@@ -378,6 +414,10 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       accept,
       discard,
       engineNote,
+      preview,
+      blocked,
+      forceRenders,
+      toggleForceRender,
       lostCandidate,
     ],
   );
