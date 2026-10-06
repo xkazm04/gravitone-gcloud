@@ -7,7 +7,7 @@ import { getCycle } from "@/lib/foundry/training/store";
 export const runtime = "nodejs";
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   const { id } = await params;
   try {

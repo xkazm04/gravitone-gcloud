@@ -164,7 +164,7 @@ async function systemPrompt(): Promise<string> {
  * probes the local transport, which is a `claude --version`-class call and free.
  */
 export async function GET(req: Request): Promise<Response> {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
 
   const status = await engineStatus("research");
@@ -191,7 +191,7 @@ export async function GET(req: Request): Promise<Response> {
 export async function POST(req: Request): Promise<Response> {
   // MONEY/COMPUTE ROUTE — auth + rate limit before anything is read or spawned,
   // the same first line as every other spending route in this app.
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
 
   let body: { topic?: unknown };

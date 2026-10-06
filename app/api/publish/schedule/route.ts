@@ -14,7 +14,7 @@ import { createSlot, listSlots, parseScheduleInput } from "@/lib/publish/schedul
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     const now = new Date();
@@ -25,7 +25,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     const slot = await createSlot(parseScheduleInput(await readJson(req)));

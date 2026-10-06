@@ -26,7 +26,7 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const k = url.searchParams.get("k");
   const probe = k ? new Request(req.url, { headers: { authorization: `Bearer ${k}` } }) : req;
-  const denied = guardAccessOnly(probe);
+  const denied = await guardAccessOnly(probe);
   if (denied) return denied;
 
   const id = url.searchParams.get("id") ?? "";

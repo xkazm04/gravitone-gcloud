@@ -39,6 +39,8 @@ import { LOCAL_MODE, LOCAL_USER } from "./localMode";
 // imports it, and this context does not own the list — see lib/identityEviction.ts
 // for the enumerated triggers and the one deliberate exclusion.
 import { evictIdentity, transitionFor, type EvictionReason } from "./identityEviction";
+// The ID-token CACHE (not an eviction trigger) — see where it is subscribed below.
+import { subscribeSessionToken } from "./sessionToken";
 
 // Popup can fail (blocked, closed, COOP, internal-error) — fall back to a
 // full-page redirect, which always works. getRedirectResult (on mount) then
@@ -122,11 +124,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     getRedirectResult(auth).catch((e) =>
       setError(e instanceof Error ? e.message : "sign-in failed"),
     );
-    // onAuthStateChanged, NOT onIdTokenChanged. That is not an arbitrary choice
-    // of subscription: a plain credential refresh fires the token listener and is
-    // NOT an identity flip, so listening there would wipe the user's own work on
-    // Firebase's refresh cadence. See lib/identityEviction.ts.
-    return onAuthStateChanged(auth, (u) => {
+    // THE TOKEN CACHE IS FED ELSEWHERE, AND ONLY FED. The server verifies the
+    // Firebase ID token itself now (lib/principal.ts) and accessHeader() is
+    // synchronous, so lib/sessionToken.ts holds the current token through its
+    // own token subscription. That module caches and does nothing else: it
+    // never evicts, never compares identities, never touches a store.
+    const stopToken = subscribeSessionToken(auth);
+    // This context subscribes to onAuthStateChanged, NOT onIdTokenChanged. That
+    // is not an arbitrary choice of subscription: a plain credential refresh
+    // fires the token listener and is NOT an identity flip, so listening there
+    // would wipe the user's own work on Firebase's refresh cadence. See
+    // lib/identityEviction.ts.
+    const stopState = onAuthStateChanged(auth, (u) => {
       // IDENTITY IS COMPARED BY DURABLE IDENTIFIER. Never by display name or
       // email — those change without the person changing, and a reclaimed address
       // stays equal while pointing at somebody else.
@@ -144,6 +153,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setLoading(false);
       setAuthResolved(true);
     });
+    return () => {
+      stopToken();
+      stopState();
+    };
   }, []);
 
   const signIn = useCallback(async () => {

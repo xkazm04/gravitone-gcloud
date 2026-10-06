@@ -43,7 +43,7 @@ function parseRange(h: string | null, size: number): { start: number; end: numbe
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const k = new URL(req.url).searchParams.get("k");
   const probe = k ? new Request(req.url, { headers: { authorization: `Bearer ${k}` } }) : req;
-  const denied = await asContractDenial(guardAccessOnly(probe));
+  const denied = await asContractDenial(await guardAccessOnly(probe));
   if (denied) return denied;
   try {
     const { id } = await params;

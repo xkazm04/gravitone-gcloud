@@ -30,7 +30,7 @@ function listOf(v: unknown, kind: string): string[] {
 }
 
 export async function GET(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     return Response.json({ groups: (await readGroups()).groups });
@@ -40,7 +40,7 @@ export async function GET(req: Request) {
 }
 
 export async function PUT(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     const body = (await readJson(req)) as { groups?: Partial<SoundGroups> } | null;

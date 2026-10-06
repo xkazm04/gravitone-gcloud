@@ -9,7 +9,7 @@ import { refreshMetrics } from "@/lib/publish/publisher";
 export const runtime = "nodejs";
 
 export async function POST(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     return Response.json(await refreshMetrics());

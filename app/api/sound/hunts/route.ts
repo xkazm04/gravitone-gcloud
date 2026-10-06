@@ -19,7 +19,7 @@ export const runtime = "nodejs";
 export const maxDuration = 320;
 
 export async function GET(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     const kind = new URL(req.url).searchParams.get("kind");
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
-  const denied = await asContractDenial(guardRequest(req));
+  const denied = await asContractDenial(await guardRequest(req));
   if (denied) return denied;
   try {
     const body = (await readJson(req)) as { kind?: unknown; idea?: unknown } | null;

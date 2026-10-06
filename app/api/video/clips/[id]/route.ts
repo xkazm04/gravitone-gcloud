@@ -13,7 +13,7 @@ import { isClipId } from "@/lib/imaging/video/store";
 export const runtime = "nodejs";
 
 export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   try {
     const { id } = await ctx.params;

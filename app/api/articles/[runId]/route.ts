@@ -34,7 +34,7 @@ interface AgentReceipt {
 }
 
 export async function GET(req: Request, { params }: { params: Promise<{ runId: string }> }) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   const { runId } = await params;
   try {

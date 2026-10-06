@@ -473,11 +473,11 @@ test("guard: the constant-time compare is not short-circuited by its own length 
   expect(cmp, "the length check precedes timingSafeEqual - the wrong-length branch returns early").toBeLessThan(len);
 });
 
-test("guard: FAILS CLOSED when no secret is configured", () => {
+test("guard: FAILS CLOSED when no secret is configured", async () => {
   delete process.env[ACCESS_SECRET_VAR];
   // Even a caller presenting *something* is denied — there is nothing to match.
   expect(checkAccess(req("/x", { ip: "1.1.1.1", bearer: "anything" }))).toBe("no-config");
-  const denied = guardRequest(req("/x", { ip: "9.9.9.9", bearer: "anything" }));
+  const denied = await guardRequest(req("/x", { ip: "9.9.9.9", bearer: "anything" }));
   expect(denied?.status).toBe(401);
 });
 
@@ -509,13 +509,13 @@ test("rate limit: refuses once the per-IP bucket is drained", () => {
   delete process.env.IMAGING_RATE_WINDOW_SEC;
 });
 
-test("rate limit: guardRequest answers 429 past capacity (before it even checks auth)", () => {
+test("rate limit: guardRequest answers 429 past capacity (before it even checks auth)", async () => {
   process.env.IMAGING_RATE_CAPACITY = "3";
   const ip = "10.0.0.9";
   const statuses: number[] = [];
   for (let i = 0; i < 5; i++) {
     // no bearer at all — proves 429 outranks the 401 for a flood
-    const res = guardRequest(req("/api/imaging/generate", { ip }));
+    const res = await guardRequest(req("/api/imaging/generate", { ip }));
     statuses.push(res ? res.status : 200);
   }
   console.log(`[auth] flood statuses = ${statuses.join(",")}`);

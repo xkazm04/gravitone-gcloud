@@ -11,7 +11,7 @@ import { budgetQuote } from "@/lib/imaging/budgetForecast";
 import { estimatePerImage } from "@/lib/imaging/pricing";
 
 export async function GET(req: Request): Promise<Response> {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
 
   const url = new URL(req.url);

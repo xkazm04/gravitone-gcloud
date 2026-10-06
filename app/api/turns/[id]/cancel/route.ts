@@ -18,7 +18,7 @@ import { cancelTurn } from "@/lib/turns/runner";
 export const runtime = "nodejs";
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   const { id } = await params;
   if (!TURN_ID_RE.test(id)) return Response.json({ detail: "That is not a turn id.", code: "bad-request" }, { status: 400 });

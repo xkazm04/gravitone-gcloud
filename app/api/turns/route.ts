@@ -38,7 +38,7 @@ const PROJECT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
 const bad = (detail: string) => Response.json({ detail, code: "bad-request" }, { status: 400 });
 
 export async function POST(req: Request) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
 
   let body: { kind?: unknown; projectId?: unknown; input?: unknown } | null;
