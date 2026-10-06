@@ -25,6 +25,18 @@ export interface DispatchToggle {
   label: string;
   /** Forced in by the creator. */
   on: boolean;
+  /** Toggles of one group share a row; rows keep first-appearance order. */
+  group?: string;
+}
+
+/** Toggles split into rows by `group`, in the order each group first appears. */
+function rowsOf(toggles: DispatchToggle[]): DispatchToggle[][] {
+  const rows = new Map<string, DispatchToggle[]>();
+  for (const t of toggles) {
+    const key = t.group ?? "";
+    rows.set(key, [...(rows.get(key) ?? []), t]);
+  }
+  return [...rows.values()];
 }
 
 /** Block slug → tone. What the creator wrote reads cyan, the material it is
@@ -67,7 +79,7 @@ export default function DispatchStrip({
   id: string;
   outcome: PreviewOutcome | null;
   toggles?: DispatchToggle[];
-  onToggle?: (id: string) => void;
+  onToggle?: (id: string, group?: string) => void;
 }) {
   if (!outcome) return null;
 
@@ -133,15 +145,15 @@ export default function DispatchStrip({
 
       {segments.length > 0 && <StackBar segments={segments} label="prompt, thousands of characters" />}
 
-      {toggles.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5">
-          {toggles.map((t) => (
+      {rowsOf(toggles).map((row) => (
+        <div key={row[0]!.group ?? ""} className="flex flex-wrap items-center gap-1.5">
+          {row.map((t) => (
             <button
               key={t.id}
               type="button"
               data-testid={`dispatch-include-${t.id}`}
               aria-pressed={t.on}
-              onClick={() => onToggle?.(t.id)}
+              onClick={() => onToggle?.(t.id, t.group)}
               className={`${CHIP_CLASS} ${t.on ? TALLY_TONE.emerald : TALLY_TONE.neutral} transition hover:border-emerald-400/40`}
             >
               <span aria-hidden>{t.on ? "✓" : "+"}</span>
@@ -149,7 +161,7 @@ export default function DispatchStrip({
             </button>
           ))}
         </div>
-      )}
+      ))}
 
       {!engine.available && engine.descent.length > 0 && (
         <ul data-testid="dispatch-descent" className="font-jetbrains space-y-0.5 text-label leading-snug text-rose-200/80">
