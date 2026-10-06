@@ -286,8 +286,15 @@ export async function evictIdentity(
 
   if (typeof indexedDB === "undefined") return report;
 
+  // `openDb()` is not cached, so this handle is OURS to close (stepStore's
+  // `withStore` header has the history). The close sits in the `finally`, after
+  // the transaction promise has settled on `oncomplete` or an abort — closing
+  // under a live transaction would abort the wipe rather than release the
+  // connection.
+  let db: IDBDatabase | undefined;
   try {
-    const db = await openDb();
+    db = await openDb();
+    const conn = db;
     await new Promise<void>((resolve, reject) => {
       // ONE transaction over all five stores. A wipe that half-commits is worse
       // than one that does not run: it leaves an account's steps behind with no
@@ -295,7 +302,7 @@ export async function evictIdentity(
       // pointing at them — which no surface will ever list and no future
       // eviction will ever find, because the by-uid rows they were reachable
       // through are gone.
-      const tx = db.transaction(
+      const tx = conn.transaction(
         [PROJECTS_STORE, STEPS_STORE, THEMES_STORE, ASSETS_STORE, UPLOADS_STORE],
         dry ? "readonly" : "readwrite",
       );
@@ -359,6 +366,12 @@ export async function evictIdentity(
   } catch (e) {
     report.failed = true;
     reportStorageTrouble(dry ? "read" : "write", uid, "sign-out", e);
+  } finally {
+    try {
+      db?.close();
+    } catch {
+      // A connection that could not be closed does not change the wipe's outcome.
+    }
   }
 
   console.log(
