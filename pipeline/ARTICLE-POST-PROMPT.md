@@ -39,7 +39,15 @@ THE TOPIC:
 
 THE READER. Two at once: an engineer who has shipped the thing the post is about, and a capable newcomer to it. Neither is served by a flat post. Explain a term of art in a clause at first use and move on; spend the length on mechanism, what changes in a production system, where the claim stops holding, and what it means.
 
-THE VOICE. Third person, impersonal, about the topic and the results. Never "I", "my", "me", "we", "our" or "us" in prose — not "we found", not "I measured". The post reports: "the measurement shows", "a tokenizer trained mostly on English splits…". A measurement the post itself reports is stated impersonally with the command that produced it in the sources. Sentences vary in length. No throat-clearing openers, no stacked hedges, no "in today's fast-paced world", no "delve", no closing "in conclusion".
+THE VOICE. Third person, impersonal, about the topic and the results. Never "I", "my", "me", "we", "our" or "us" in prose — not "we found", not "I measured". The post reports: "the measurement shows", "a tokenizer trained mostly on English splits…". A measurement the post itself reports is stated impersonally with the command that produced it in the sources. Sentences vary in length. NO EM DASH AND NO EN DASH (U+2014, U+2013) anywhere: not in prose, headings, captions, code comments, figure text or alt text; use a period, comma, colon or parentheses, and write ranges with "to". No throat-clearing openers, no stacked hedges, no "in today's fast-paced world", no "delve", no closing "in conclusion".
+
+HOUSE RULES the owner set after the first full run (each is checked by code):
+- The post never states its reading time, its word count or a words-per-minute figure. The platform shows its own.
+- The opening tells the situation briefly, in two short paragraphs at most, and shows any sequence of events as a timeline figure. It is never a clock-by-clock chronicle of one experience.
+- The content preview comes BEFORE the first section heading.
+- VISUAL CADENCE: never more than two consecutive prose paragraphs without a visual element (a figure, a table, a code block, a compact diagram strip or a callout). A small visual counts. Where a visual carries what a paragraph said, shorten the paragraph: replacement, not addition.
+- The closing chapter carries a summary or comparison table of what the body compared, short cells, nothing new. Some readers read only the opening and the ending; together they must stand alone.
+- Length is a ceiling, not a target: depth comes from replacing flat material, never from appending.
 
 TRUTH. Every factual claim is true and traces to a numbered source. A plain page with honest numbers beats a beautiful page with an invented one. Data is current: name each figure's source and date, and mention an older model, tokenizer, price or benchmark only as history.
 
@@ -53,6 +61,8 @@ Today is {{TODAY}}.
 YOUR PHASE: RESEARCH. Search the web and open real pages. Do not cite from memory; check anything remembered against a page you opened in this session.
 
 Research the topic, not the craft (the craft is the standard above). Prefer sources from the last 12 months and record each source's date. Find at least {{MIN_SOURCES}} distinct sources, at least {{MIN_PRIMARY}} of them PRIMARY (papers, specifications, vendor documentation, pricing pages, released datasets, source code) and at least {{MIN_COUNTER}} that argues against, limits or complicates the obvious thesis.
+
+STRESS THE THESIS BEFORE YOU FIX IT. A claim of absence ("no tool does X", "there is no clock", "nothing reports Y") is the riskiest sentence a post can contain. For every such claim, search the vendor's own pages for the thing said to be absent (the errors, configuration, environment-variable, changelog and release-notes pages, not only the main guide) and open them. Record the search in the claim's text ("searched the errors and configuration pages for a first-byte deadline: none documented as of <date>") or drop the claim. A single counter source found late has already rewritten a post once.
 
 Write exactly two files:
 
@@ -75,10 +85,11 @@ YOUR PHASE: OUTLINE. The research is done: `inputs/sources.json` and `inputs/cla
 Write exactly one file, `out/outline.md`:
 
 - `# ` the working title, then one line: the thesis.
-- `## Content preview` — what the post is, an honest read time ({{READ_MIN}} to {{READ_MAX}} minutes at about 230 words a minute), the section titles in order, and what a reader can do after reading.
+- `## Content preview` — what the post is, the section titles in order, and what a reader can do after reading.
 - `## Sections` — one `### ` heading per section, in order. Under each: its job in the argument in one line, the claims it uses as `[n]` source numbers, and the figure or table it carries, if any.
-- `## Figures` — at least {{MIN_FIGURES}} figures, each doing different work (a mechanism, a comparison with sourced numbers, a sequence or pipeline, a before and after). For each: the file name `NN-short-name.svg`, what it shows as shapes and arrows, the label text it needs, the source numbers its caption will name. A figure that would be a paragraph typeset in a box is not a figure; make it a sentence instead.
-- `## Closing` — what the last section restates (numbers included), how it returns to the opening, and what a reader does differently on Monday.
+- `## Length` — the word budget for the finished post (a ceiling for about {{READ_MAX}} minutes of reading at 230 words a minute; the post itself never states it).
+- `## Figures` — at least {{MIN_FIGURES}} figures, each doing different work (a mechanism, a comparison with sourced numbers, a sequence or pipeline, a before and after). For each: the file name `NN-short-name.svg`, what it shows as shapes and arrows, the label text it needs, the source numbers its caption will name. A figure that would be a paragraph typeset in a box is not a figure; make it a sentence instead. After the figures, add `## Cadence`: a line per section marking where each visual falls (figure, table, code block, strip or callout) so that no run of more than two prose paragraphs is left without one; small visuals count. The opening's sequence is a timeline figure, not prose.
+- `## Closing` — what the last section restates (numbers included), the summary or comparison table it carries (rows and columns named), how it returns to the opening, and what a reader does differently on Monday.
 
 Then reply with one line: the title and the section count.
 
@@ -91,15 +102,17 @@ Write the post as files under `out/post/`:
 
 2. `out/post/index.html` — the post as one self-contained page that mirrors a Medium article:
    - No network: no `http(s)` `src`, no stylesheet or script `href` to the network, no web fonts. System font stacks. Links to sources are ordinary `<a href>`.
-   - A reading column about 680 px wide; a large serif headline and subtitle; a byline line with the date and read time; a serif body of at least 20 px at desktop width and never below {{MIN_BODY_390}} px at 390 px; captions and chrome never below {{MIN_CHROME}} px; light and dark through `prefers-color-scheme`.
-   - A content preview before the first `<h2>`: one element carrying `data-role="content-preview"` that states the read time as "N min read", lists the sections, and says what the reader gains.
+   - A reading column about 680 px wide; a large serif headline and subtitle; a byline line with the date only (never a read time); a serif body of at least 20 px at desktop width and never below {{MIN_BODY_390}} px at 390 px; captions and chrome never below {{MIN_CHROME}} px; light and dark through `prefers-color-scheme`.
+   - A content preview before the first `<h2>`, with no heading of its own above it: one element carrying `data-role="content-preview"` that lists the sections and says what the reader gains. It states no read time and no word count.
    - Figures as `<figure><img src="figures/NN-short-name.svg" alt="…"><figcaption>…</figcaption></figure>`. Every caption names its source numbers as `[n]`.
    - Code, if any, as `<pre><code class="language-…">` with the highlighting already in the markup as `<span class="tok-…">` elements, coloured for light and dark. No highlighter script.
    - Citations inline as `<a href="#src-N">[N]</a>`. The page ends with `<ol id="sources">` holding one `<li id="src-N">` per source: title, publisher, date and URL.
-   - A closing section that restates what was established, numbers included, returns to the opening, and says what to do differently.
+   - A closing section that restates what was established, numbers included, carries a summary or comparison table of the body's comparison, returns to the opening, and says what to do differently.
+   - Visual cadence: no more than two consecutive prose paragraphs without a figure, table, code block, diagram strip or callout.
+   - Code labels and inline code never below {{MIN_CHROME}} px.
    - No placeholders: no lorem ipsum, no "[insert …]", no "TODO".
 
-3. `out/post/post.md` — the same post as Medium-ready Markdown: `# ` title, the subtitle as an italic line, the content preview, the sections, figures as `![caption](figures/NN-short-name.png)` with the caption (source numbers included) on the line below, code in fenced blocks with a language, citations as `[N]`, and a final `## Sources` numbered list in the same order as `inputs/sources.json`.
+3. `out/post/post.md` — the same post as Medium-ready Markdown: `# ` title, the subtitle as an italic line, the content preview (no read time), the sections, figures as `![caption](figures/NN-short-name.png)` with the caption (source numbers included) on the line below, code in fenced blocks with a language, citations as `[N]`, and a final `## Sources` numbered list in the same order as `inputs/sources.json`.
 
 4. `out/post/meta.json` — `{"title": "…", "subtitle": "…", "tags": ["…"]}` with at most five tags.
 
@@ -113,7 +126,9 @@ Then reply with one line: the title, the word count and the figure count.
 <!-- section: critique -->
 YOUR PHASE: CRITIQUE, round {{ROUND}} of at most {{MAX_ROUNDS}}. You wrote this post. Reviewer models from other providers have read it, each blind to the others, and their reviews are in `inputs/reviews/<reviewer>.json`. The post is in `inputs/post/` (`index.html`, `post.md`, `meta.json`, `figures/`), the research in `inputs/sources.json` and `inputs/claims.json`. Do not search the web in this phase and do not change the post.
 
-The aim is a post that is exact, engaging, and teaches a practitioner something the industry does not already know. A reviewer can be wrong. Weigh every finding on its evidence and against the standard above, not on the reviewer's confidence or on how many reviewers agree: a finding that cites a page you can check against `inputs/sources.json` outweighs an assertion. A factual finding of severity `blocker` is never set aside without a reason that answers its evidence.
+The aim is a post that is exact, engaging, and teaches a practitioner something the industry does not already know. A reviewer can be wrong. Weigh every finding on its evidence and against the standard above, not on the reviewer's confidence or on how many reviewers agree: a finding that cites a page you can check against `inputs/sources.json` outweighs an assertion. A factual finding of severity `blocker` is never set aside without a reason that answers its evidence. A finding that rests on a page the reviewer could not open (the review says so, or the claimed absence is of a page they did not read) is unverified: check it against `inputs/sources.json` before accepting, and reject it if the sources contradict it.
+
+LENGTH. The post does not grow. Accepted findings are met by replacing sentences, tightening, or cutting what the finding made redundant; state in `decision.json` `rationale` the net change in words you expect (zero or negative unless a new source adds a claim a blocker needs). A review that asks for more material is answered with the smallest sentence that settles it.
 
 For EVERY finding of EVERY review, write exactly one disposition:
 - `accepted` — the post will change because of it; say what will change in `action`.
@@ -152,8 +167,8 @@ Then reply with one line: how many sources were added and how many claims change
 <!-- section: revise -->
 YOUR PHASE: CRITIQUE REWRITE, after round {{ROUND}} of at most {{MAX_ROUNDS}}. You decided to rewrite the post. `inputs/decision.json` says why; `inputs/dispositions.json` lists every finding with your disposition, and each `accepted` one carries the `action` you committed to. The current post is in `inputs/post/`, the outline in `inputs/outline.md`, the research in `inputs/sources.json` and `inputs/claims.json` (updated if you researched again). Do not search the web.
 
-Rewrite the post so that every accepted finding's action is carried out and nothing rejected or deferred is changed because of its finding. Keep everything that was right. Every number still comes from a claim in `inputs/claims.json` and is cited with that claim's source number.
+Rewrite the post so that every accepted finding's action is carried out and nothing rejected or deferred is changed because of its finding. Keep everything that was right. The finished post is no longer than the post you were given. Every number still comes from a claim in `inputs/claims.json` and is cited with that claim's source number.
 
-Write the WHOLE post again under `out/post/`, to exactly the draft phase's contract: `out/post/figures/NN-short-name.svg` (at least {{MIN_FIGURES}}, labels of at most {{MAX_LABEL_WORDS}} words), `out/post/index.html` (self-contained, no network, the content preview with "N min read" before the first `<h2>`, captions citing `[n]`, highlighted code, `<ol id="sources">` with one `<li id="src-N">` per source, a closing that wraps), `out/post/post.md` (Medium-ready, a final `## Sources` list in source order) and `out/post/meta.json`. Copy a figure from `inputs/post/figures/` when it does not change. Do not write registry patches in this phase.
+Write the WHOLE post again under `out/post/`, to exactly the draft phase's contract: `out/post/figures/NN-short-name.svg` (at least {{MIN_FIGURES}}, labels of at most {{MAX_LABEL_WORDS}} words), `out/post/index.html` (self-contained, no network, the content preview before the first `<h2>` and stating no read time, captions citing `[n]`, highlighted code, `<ol id="sources">` with one `<li id="src-N">` per source, a closing that wraps and carries its summary table, no run of more than two prose paragraphs without a visual, no em or en dash), `out/post/post.md` (Medium-ready, a final `## Sources` list in source order) and `out/post/meta.json`. Copy a figure from `inputs/post/figures/` when it does not change. Do not write registry patches in this phase.
 
 Then reply with one line: the title, the word count and the figure count.

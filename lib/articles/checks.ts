@@ -151,6 +151,60 @@ const absent = (dimension: CheckDimension, id: string, label: string, why: strin
   detail: [why],
 });
 
+/** A reading time, a word count at a reading speed, or the speed itself. The owner's rule
+ *  (2026-10-06): a post never states its own length; Medium shows one. */
+export const STATED_READ_TIME = /\b\d+\s*(?:-|–)?\s*min(?:ute)?s?\s+read\b|\bwords?\s+(?:a|per)\s+minute\b|\bwpm\b|\bread(?:ing)?\s+time\b/i;
+
+/** Longest run of consecutive prose paragraphs with no visual element, over post.md before
+ *  its Sources list. A visual is an image, a table, a fenced code block or a blockquote
+ *  callout; headings, lists, figure captions and italic-only lines (the subtitle, a byline)
+ *  neither count as prose nor end a run. Exported for the probe. */
+export function proseRuns(md: string): { longest: number; runs: string[] } {
+  const body = md.split(/^## Sources\b/m)[0];
+  const lines = body.split(/\r?\n/);
+  type Kind = "prose" | "visual" | "neutral";
+  const blocks: { kind: Kind; text: string }[] = [];
+  let cur: string[] = [];
+  let fence = false;
+  const flush = () => {
+    if (!cur.length) return;
+    const text = cur.join(" ").trim();
+    cur = [];
+    let kind: Kind = "prose";
+    if (/^#{1,6}\s/.test(text) || /^(?:---|\*\*\*)$/.test(text)) kind = "neutral";
+    else if (/^!\[|^<figure\b|^<svg\b/i.test(text) || /^\|.+\|/.test(text) || text.startsWith(">")) kind = "visual";
+    else if (/^(?:[-*+]|\d+[.)])\s/.test(text)) kind = "neutral";
+    else if (/^\*{1,2}(?:Figure|Fig\.|Table|Diagram)\s*\d/i.test(text) || /^\*[^*][^]*\*$/.test(text) || /^_[^_][^]*_$/.test(text)) kind = "neutral";
+    blocks.push({ kind, text });
+  };
+  for (const line of lines) {
+    if (/^\s*```/.test(line)) {
+      if (!fence) {
+        flush();
+        fence = true;
+        blocks.push({ kind: "visual", text: "```" });
+      } else fence = false;
+      continue;
+    }
+    if (fence) continue;
+    if (!line.trim()) flush();
+    else cur.push(line.trim());
+  }
+  flush();
+  let run = 0;
+  let longest = 0;
+  const runs: string[] = [];
+  for (const b of blocks) {
+    if (b.kind === "visual") run = 0;
+    else if (b.kind === "prose") {
+      run++;
+      longest = Math.max(longest, run);
+      if (run === 3) runs.push(b.text.slice(0, 70));
+    }
+  }
+  return { longest, runs };
+}
+
 export function staticItems(input: StaticInput): CheckItem[] {
   const { html, md, sources, claims, figures, postFiles } = input;
   const items: CheckItem[] = [];
@@ -163,27 +217,21 @@ export function staticItems(input: StaticInput): CheckItem[] {
     if (at < 0) items.push(item("structure", "content-preview", "Content preview present", false, { value: "none", expected: 'an element with data-role="content-preview" before the first <h2>' }));
     else {
       const block = html.slice(at, firstH2 > at ? firstH2 : at + 6000);
-      const readTime = /(\d+)\s*(?:-|–)?\s*min(?:ute)?s?\s+read/i.exec(htmlProse(`<x ${block}`));
+      const readTime = STATED_READ_TIME.exec(htmlProse(`<x ${block}`));
       const entries = (block.match(/<li\b/gi) ?? []).length;
       const problems = [
         ...(firstH2 >= 0 && at > firstH2 ? ["it comes after the first <h2>"] : []),
-        ...(readTime ? [] : ['no "N min read"']),
+        ...(readTime ? [`it states a read time ("${readTime[0]}"); the platform shows its own`] : []),
         ...(entries >= 3 ? [] : [`lists ${entries} sections (≥ 3)`]),
       ];
-      items.push(item("structure", "content-preview", "Content preview present", !problems.length, { value: problems.length ? "incomplete" : `${entries} sections`, expected: "before the first <h2>, with a read time and ≥ 3 sections", ...(problems.length ? { detail: problems } : {}) }));
+      items.push(item("structure", "content-preview", "Content preview present", !problems.length, { value: problems.length ? "incomplete" : `${entries} sections`, expected: "before the first <h2>, ≥ 3 sections, no stated read time", ...(problems.length ? { detail: problems } : {}) }));
     }
   } else items.push(absent("structure", "content-preview", "Content preview present", "post/index.html is missing"));
 
-  if (html && md) {
-    const declared = /(\d+)\s*(?:-|–)?\s*min(?:ute)?s?\s+read/i.exec(htmlProse(html));
-    const words = postWords(md);
-    const computed = Math.max(1, Math.round(words / THRESHOLDS.wordsPerMinute));
-    if (!declared) items.push(item("structure", "read-time", "Read time honest", false, { value: `${words} words ≈ ${computed} min`, expected: 'a declared "N min read"', detail: ["the page declares no read time"] }));
-    else {
-      const d = Number(declared[1]);
-      const ok = Math.abs(d - computed) <= Math.max(2, Math.round(computed * 0.25));
-      items.push(item("structure", "read-time", "Read time honest", ok, { value: `declared ${d} min; ${words} words ≈ ${computed} min`, expected: `within ±${Math.max(2, Math.round(computed * 0.25))} min of the word count at ${THRESHOLDS.wordsPerMinute} wpm` }));
-    }
+  if (html || md) {
+    const hay = `${html ? htmlProse(html) : ""}\n${md ? mdProse(md, { dropSources: true }) : ""}`;
+    const hits = [...new Set([...hay.matchAll(new RegExp(STATED_READ_TIME.source, "gi"))].map((m) => m[0]))];
+    items.push(item("structure", "read-time", "No stated reading time", !hits.length, { value: hits.length, expected: "0 (the platform shows its own read time)", ...(hits.length ? { detail: hits.slice(0, 6) } : {}) }));
   }
 
   const corpus = `${html ? htmlProse(html) : ""}\n${md ?? ""}`;
@@ -228,12 +276,33 @@ export function staticItems(input: StaticInput): CheckItem[] {
     items.push(item("figures", "figure-label-length", "Text inside figures is label-length", !long.length, { value: `longest ${worst} words`, expected: `≤ ${THRESHOLDS.maxFigureLabelWords} words per text run`, ...(long.length ? { detail: long.slice(0, 10) } : {}) }));
   }
 
+  if (md) {
+    const { longest, runs } = proseRuns(md);
+    items.push(item("figures", "visual-cadence", "A visual at least after every second paragraph", longest <= 2, { value: `longest run ${longest} prose paragraphs`, expected: "≤ 2 consecutive prose paragraphs without a figure, table, code block or callout", ...(runs.length ? { detail: runs.slice(0, 12).map((r) => `run of 3+ reaching: "${r}"`) } : {}) }));
+    const body = md.split(/^## Sources\b/m)[0];
+    const sections = body.split(/^## /m);
+    const last = sections.length > 1 ? sections[sections.length - 1] : body;
+    const hasTable = /^\|.+\|\s*$\n^\|\s*:?-{2,}/m.test(last);
+    items.push(item("structure", "closing-table", "The close carries a summary table", hasTable, { value: hasTable ? "table present" : "none", expected: "a Markdown table in the last section before Sources (skim readers read the opening and the ending)" }));
+  }
+
   // ── voice
   const fp = [
     ...(md ? firstPersonHits(mdProse(md, { dropQuotes: true, dropSources: true })) : []),
     ...(html ? firstPersonHits(htmlProse(html, { dropQuotes: true })) : []),
   ];
   if (md || html) items.push(item("voice", "first-person", "No first person in prose", !fp.length, { value: fp.length, expected: "0", ...(fp.length ? { detail: fp.slice(0, 12) } : {}) }));
+  if (md || html) {
+    const where: string[] = [];
+    const scan = (label: string, text: string) => {
+      const n = (text.match(/[\u2014\u2013]/g) ?? []).length;
+      if (n) where.push(`${label}: ${n}`);
+    };
+    scan("post.md", md ?? "");
+    scan("index.html", html ?? "");
+    for (const f of figures) scan(f.name, f.svg);
+    items.push(item("voice", "no-em-dash", "No em or en dash", !where.length, { value: where.length ? where.join(", ") : 0, expected: "0 (house rule: ranges use \"to\"; use a period, comma, colon or parentheses)", ...(where.length ? { detail: where } : {}) }));
+  }
 
   // ── medium fidelity (static half)
   if (html) {

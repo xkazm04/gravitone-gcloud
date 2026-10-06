@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { citedNumbers, firstPersonHits, htmlProse, runCheck, staticItems, summarize, THRESHOLDS } from "@/lib/articles/checks";
+import { citedNumbers, firstPersonHits, htmlProse, proseRuns, runCheck, staticItems, summarize, THRESHOLDS } from "@/lib/articles/checks";
 import type { CheckItem, Source } from "@/lib/articles/types";
 
 const SOURCES: Source[] = Array.from({ length: 8 }, (_, i) => ({
@@ -35,7 +35,7 @@ p,li{font-size:${opts.bodyPx ?? 20}px;line-height:1.6} figcaption{font-size:14px
 @media (prefers-color-scheme: dark){body{background:#111;color:#eee}}</style>
 ${opts.external ? '<link rel="stylesheet" href="https://fonts.example.org/x.css">' : ""}
 </head><body><main><h1>Title</h1>
-${opts.noPreview ? "" : '<nav data-role="content-preview"><p>1 min read</p><ol><li>One</li><li>Two</li><li>Three</li></ol></nav>'}
+${opts.noPreview ? "" : '<nav data-role="content-preview"><p>What follows</p><ol><li>One</li><li>Two</li><li>Three</li></ol></nav>'}
 <h2>One</h2><p>${PARA}</p><p>${opts.firstPerson ? "We measured this ourselves and I think it holds [2]." : "The measurement shows the gap holds across scripts [2]."}</p>
 ${figs}
 <pre><code class="language-js">${opts.plainCode ? "const x = 1;" : '<span class="tok-kw">const</span> x = 1;'}</code></pre>
@@ -44,7 +44,7 @@ ${figs}
 </main></body></html>`;
 }
 
-const md = `# Title\n\n*Sub*\n\n${PARA}\n\nThe measurement shows the gap holds across scripts [2].\n\n## Sources\n\n1. x\n`;
+const md = `# Title\n\n*Sub*\n\n${PARA}\n\nThe measurement shows the gap holds across scripts [2].\n\n| Tool | Field |\n|---|---|\n| a | b |\n\n## Sources\n\n1. x\n`;
 const files = (n = 5) => new Set(Array.from({ length: n }, (_, i) => `figures/0${i + 1}-f.svg`));
 const svg = (words: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>${words}</text></svg>`;
 const figures = (n = 5, label = "Step one") => Array.from({ length: n }, (_, i) => ({ name: `0${i + 1}-f.svg`, svg: svg(label) }));
@@ -78,6 +78,31 @@ test("static: each seeded defect fails its own item and names itself", () => {
   expect(unresolved.detail!.join(" ")).toMatch(/\[12\]/);
   expect(byId(staticItems({ ...base, html: page(), claims: [{ text: "x", source: 99 }] }), "claims-resolve").status).toBe("fail");
   expect(byId(staticItems({ ...base, html: page(), md: `${md}\n[insert chart here]` }), "no-placeholders").status).toBe("fail");
+
+  // the owner's rules after the first full run (2026-10-06)
+  const dash = byId(staticItems({ ...base, html: page(), md: md.replace("holds across", "holds — across") }), "no-em-dash");
+  expect(dash.status).toBe("fail");
+  expect(dash.detail!.join(" ")).toMatch(/post\.md: 1/);
+  expect(byId(staticItems({ ...base, html: page(), figures: figures(5, "a – b") }), "no-em-dash").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page(), md: md.replace("*Sub*", "*Sub* 14 min read") }), "read-time").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page(), md: md.replace("*Sub*", "*Sub*\n\nAt 230 words a minute") }), "read-time").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page().replace("<p>What follows</p>", "<p>What follows, 9 min read</p>") }), "content-preview").status).toBe("fail");
+  expect(byId(staticItems({ ...base, html: page(), md: md.replace(/\| Tool[\s\S]*?\| a \| b \|\n\n/, "") }), "closing-table").status).toBe("fail");
+});
+
+test("visual cadence: runs of prose, and what resets them", () => {
+  const P = (n: number) => `Paragraph ${n} says one thing about tokenizers and their cost.`;
+  const fig = "![Figure 1](figures/01-f.png)\n*Figure 1. A caption [1].*";
+  const ok = `# T\n\n*Sub*\n\n${P(1)}\n\n${P(2)}\n\n${fig}\n\n${P(3)}\n\n${P(4)}\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n${P(5)}\n\n## Sources\n\n1. x\n`;
+  expect(proseRuns(ok).longest).toBe(2);
+  const bad = `# T\n\n${P(1)}\n\n${P(2)}\n\n${P(3)}\n\n${fig}\n\n## Sources\n\n1. x\n`;
+  const r = proseRuns(bad);
+  expect(r.longest).toBe(3);
+  expect(r.runs[0]).toMatch(/Paragraph 3/);
+  // a fenced block and a blockquote callout reset; a list and a heading do not
+  expect(proseRuns(`${P(1)}\n\n${P(2)}\n\n\`\`\`js\nconst x = 1;\n\`\`\`\n\n${P(3)}\n\n${P(4)}\n\n> **Note** one fact\n\n${P(5)}`).longest).toBe(2);
+  expect(proseRuns(`${P(1)}\n\n## H\n\n- a\n- b\n\n${P(2)}\n\n${P(3)}`).longest).toBe(3);
+  expect(byId(staticItems({ html: page(), md: bad, sources: SOURCES, claims: [], figures: figures(), postFiles: files() }), "visual-cadence").status).toBe("fail");
 });
 
 test("first person: what counts and what does not", () => {

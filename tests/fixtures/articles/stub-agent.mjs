@@ -206,7 +206,7 @@ function writePost(sources, note) {
     "The corpus decides who pays, which is a question of fairness as well as engineering [8].",
     "A parallel corpus makes the comparison concrete [3].",
   ];
-  const paragraphs = (k) => Array.from({ length: 4 }, (_, i) => sentences.slice((i + k) % 4, ((i + k) % 4) + 4).join(" "));
+  const paragraphs = (k) => Array.from({ length: 2 }, (_, i) => sentences.slice((i + k) % 4, ((i + k) % 4) + 4).join(" "));
   const body = SECTIONS.map((t, k) => ({ title: t, paras: paragraphs(k) }));
   if (note) body[1].paras[0] = `${body[1].paras[0]} ${note}`;
   const extra = sources.filter((s) => s.n > 8);
@@ -239,8 +239,8 @@ pre { overflow-x: auto; font-size: 15px; }
 </style></head>
 <body><main>
 <h1>A stub post about tokens</h1>
-<p class="byline">Staff writer · 2026-10-05 · ${minutes} min read</p>
-<nav data-role="content-preview"><p>${minutes} min read. What follows, in four parts:</p><ol>${SECTIONS.map((s) => `<li>${s}</li>`).join("")}</ol><p>After reading, a budget can be set per language.</p></nav>
+<p class="byline">Staff writer · 2026-10-05</p>
+<nav data-role="content-preview"><p>What follows, in four parts:</p><ol>${SECTIONS.map((s) => `<li>${s}</li>`).join("")}</ol><p>After reading, a budget can be set per language.</p></nav>
 ${body.map((s, k) => `<h2>${s.title}</h2>\n${s.paras.map((p) => `<p>${cite(p)}</p>`).join("\n")}\n<figure><img src="figures/${figures[k].file}" alt="${figures[k].caption}"><figcaption>${cite(figures[k].caption)}</figcaption></figure>`).join("\n")}
 <figure><img src="figures/${figures[4].file}" alt="${figures[4].caption}"><figcaption>${cite(figures[4].caption)}</figcaption></figure>
 <pre><code class="language-js"><span class="tok-kw">const</span> pieces = tokenize(text);</code></pre>
@@ -249,9 +249,9 @@ ${body.map((s, k) => `<h2>${s.title}</h2>\n${s.paras.map((p) => `<p>${cite(p)}</
 </main></body></html>
 `;
   write("post/index.html", html);
-  const md = `# A stub post about tokens\n\n*The unit of text decides the bill.*\n\n${minutes} min read. Four parts: ${SECTIONS.join(", ")}.\n\n${body
+  const md = `# A stub post about tokens\n\n*The unit of text decides the bill.*\n\n> Four parts: ${SECTIONS.join(", ")}.\n\n${body
     .map((s, k) => `## ${s.title}\n\n${s.paras.join("\n\n")}\n\n![${figures[k].caption}](figures/${figures[k].file.replace(/\.svg$/, ".png")})\n${figures[k].caption}`)
-    .join("\n\n")}\n\n![${figures[4].caption}](figures/${figures[4].file.replace(/\.svg$/, ".png")})\n${figures[4].caption}\n\n\`\`\`js\nconst pieces = tokenize(text);\n\`\`\`\n\n## Sources\n\n${sources.map((s) => `${s.n}. [${s.title}](${s.url}), ${s.publisher}, ${s.date}`).join("\n")}\n`;
+    .join("\n\n")}\n\n![${figures[4].caption}](figures/${figures[4].file.replace(/\.svg$/, ".png")})\n${figures[4].caption}\n\n\`\`\`js\nconst pieces = tokenize(text);\n\`\`\`\n\n| Part | Message |\n|---|---|\n| one | tokens decide the bill |\n\n## Sources\n\n${sources.map((s) => `${s.n}. [${s.title}](${s.url}), ${s.publisher}, ${s.date}`).join("\n")}\n`;
   write("post/post.md", md);
   write("post/meta.json", JSON.stringify({ title: "A stub post about tokens", subtitle: "The unit of text decides the bill", tags: ["tokens", "llm", "localization", "cost", "engineering", "extra"] }, null, 2));
   return words;

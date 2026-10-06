@@ -183,9 +183,9 @@ measured against):
 
 | Dimension | Measured |
 |---|---|
-| structure | content preview before the first `<h2>` with a read time and the sections; declared read time against the word count; no placeholders |
-| figures | at least 5 `<figure>`s, every one captioned, every caption citing a source that exists, images resolving inside the post, label-length text inside the SVGs |
-| voice | first-person words in prose (outside code and quotes) |
+| structure | content preview before the first `<h2>` listing the sections and stating no read time; no stated reading time anywhere (`read-time`); a summary table in the closing section (`closing-table`); no placeholders |
+| figures | at least 5 `<figure>`s, every one captioned, every caption citing a source that exists, images resolving inside the post, label-length text inside the SVGs; visual cadence (`visual-cadence`): no run of 3 or more prose paragraphs in `post.md` without an image, table, code block or callout |
+| voice | first-person words in prose (outside code and quotes); no em or en dash in `post.md`, `index.html` or a figure (`no-em-dash`) |
 | medium-fidelity | no network resources (static and rendered), highlighted code, a dark scheme, smallest body type at 1440 (>= 18 px) and 390 (>= 17 px), smallest caption/chrome type (>= 13 px), no sideways scroll at 390 |
 | truth | >= 8 sources, >= 3 primary, >= 1 counter; every source dated with an http(s) URL; every `[n]` resolves; every claim's source exists; item `critique`: at least 2 reviewers completed every round, and every `blocker` `factual` finding has a disposition with a reason |
 | storytelling, depth | not measured: the human's judgement, reported as such and never as a pass |
@@ -193,6 +193,38 @@ measured against):
 The rendered items open `post/index.html` in Playwright's chromium with every http(s) request
 aborted and counted. A failed item does not stop the run; the report goes to the gate, failures
 first.
+
+## Lessons from the first full run
+
+The first real run (2026-10-05, topic `software-engineering/agent-cli-transport`, 155 minutes,
+about $51 of the cost the Claude seat reports; Codex and Gemini report none) is the evidence
+behind the prompt and check changes of 2026-10-06. For the next author of a run:
+
+- **Where the time and money go.** Research 12 min / $5, outline 4 / $1, draft 21 / $6, critique
+  (two rounds) 117 min / $39, check under a minute. The critique step is about three quarters
+  of both. It earns it on accuracy: about 70 percent of 68 findings were factual, 17 were
+  blockers, and two independent reviewers flagged the same real errors (a parser that reported a
+  half-streamed turn as success). It moved engagement, insight and voice very little.
+- **The research phase was the weak link, not the critique.** The thesis said no clock inside
+  the child could end a stalled request; the vendor's own errors page documents one. Research had
+  met its counter-source floor and still missed the page. The research prompt now makes every
+  claim of absence carry a search of the vendor's errors, configuration and changelog pages.
+- **The writer accepted 65 of 68 findings** and the post ended at 33 minutes of reading. The
+  critique prompt now holds the post to a length ceiling (replacement, not addition) and the
+  review prompt asks reviewers to say what a requested addition should displace. A reviewer's
+  claim resting on a page it could not open is unverified and capped below `blocker`.
+- **A panel of four gave two.** Grok returned 402 (balance), Gemini hung 25 minutes and then
+  503ed (agy eligibility check). Both are recorded, not hidden, and the quorum of two held.
+  Pending: a shorter agy timeout and an early classification of its eligibility failure.
+- **The check ran too late.** It ran once, after the last rewrite, and failed three dimensions
+  nobody could still fix. Pending (engine change, not made): run it after the draft and after
+  every revision and hand its failures to the writer as mandatory fixes.
+- **The owner's review of the finished post** is encoded as house rules in the writer prompt and
+  as checks: no em or en dash; no chronicle opening (tell the situation briefly, show a sequence
+  as a timeline figure); no stated reading time (the platform shows one); a visual element at
+  least after every second paragraph; a summary or comparison table in the close for readers who
+  read only the opening and the ending. The same rules live in the registry standard
+  (`visual-cadence` and the preview, opening and closing techniques, recipe 0.2.0).
 
 ## The gate and landing
 
