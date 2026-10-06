@@ -135,7 +135,7 @@ export function Receipt({ engine }: { engine: AdEngine | null }) {
 export function RunFailed({ failure }: { failure: RunFailure }) {
   if (failure.error === "needs-brief")
     return (
-      <Notice severity="warning" title="the brief needs an answer">
+      <Notice announce severity="warning" title="the brief needs an answer">
         <p data-testid="concept-question">{failure.message}</p>
       </Notice>
     );

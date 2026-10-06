@@ -285,7 +285,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
                   actual limit, rather than left to look like a queue still moving. */}
               {r.status === "unanswered" && (
                 <div data-testid={`followup-unanswered-${r.cardId ?? r.id}`} className="mt-2">
-                  <Notice severity="warning" title="no transcribed answer">
+                  <Notice announce severity="warning" title="no transcribed answer">
                     <span className="inline-flex items-center gap-1.5">
                       only two follow-ups are transcribed from a real run
                       <Hint variant="warn" tone="amber" label="Which two are transcribed">

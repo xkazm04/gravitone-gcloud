@@ -90,7 +90,7 @@ export function Consequences({ api }: { api: ScopeApi }) {
   if (!s.wounds.length) {
     const copy = cutCopy(s);
     return (
-      <Notice severity="info" title={copy.title}>
+      <Notice announce severity="info" title={copy.title}>
         <p>Nothing downstream depends on them. The beat chain is intact.</p>
         {copy.alsoNotTaken && <p className="mt-1 text-white/50">{copy.alsoNotTaken}</p>}
       </Notice>
@@ -98,6 +98,7 @@ export function Consequences({ api }: { api: ScopeApi }) {
   }
   return (
     <Notice
+      announce
       severity={s.broken ? "error" : "warning"}
       title={s.broken ? `${s.broken} turn${s.broken === 1 ? "" : "s"} cannot be argued` : `${s.wounds.length} weakened`}
     >

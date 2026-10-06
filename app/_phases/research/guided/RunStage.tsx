@@ -318,6 +318,7 @@ export default function RunStage({
                     drawn as the creator's own stop (polite, amber); the rose
                     alert is kept for a process that really died. */}
                 <Notice
+                  announce
                   severity={run.state.stoppedByUser ? "warning" : "error"}
                   title={run.state.stoppedByUser ? "stopped" : "the run did not finish"}
                 >
@@ -339,7 +340,7 @@ export default function RunStage({
             )}
             {run.state.status === "no-tension" && (
               <div className="mt-4 border-t border-white/8 pt-4">
-                <Notice severity="warning" title="no tension found">
+                <Notice announce severity="warning" title="no tension found">
                   <p data-testid="no-tension-reason">{run.state.reason}</p>
                   <button
                     type="button"
