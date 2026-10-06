@@ -14,7 +14,7 @@ import { readLedger, SoundError } from "@/lib/sound/store";
 export const runtime = "nodejs";
 
 export async function GET(req: Request) {
-  const denied = await asContractDenial(guardAccessOnly(req));
+  const denied = await asContractDenial(await guardAccessOnly(req));
   if (denied) return denied;
   try {
     const raw = new URL(req.url).searchParams.get("kind");

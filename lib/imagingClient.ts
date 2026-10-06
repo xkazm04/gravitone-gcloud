@@ -6,6 +6,8 @@
 // and must never be reachable from a component. This one holds no secret and
 // knows no vendor; it posts JSON to our own origin and unwraps the answer.
 
+import { ID_TOKEN_HEADER, currentIdToken } from "./sessionToken";
+
 export interface ClientImage {
   base64: string;
   mime: string;
@@ -71,20 +73,31 @@ export class ImagingRequestError extends Error {
 }
 
 /**
- * The access header the money/compute routes now require (lib/apiAuth.ts).
+ * The access headers the gated routes require (lib/apiAuth.ts). Synchronous:
+ * it is spread inline into every client `fetch`.
  *
- * A browser can only present a secret that shipped in its bundle, so this is
- * `NEXT_PUBLIC_IMAGING_ACCESS_SECRET` — PUBLIC by construction, and therefore a
- * rate-limit + casual-abuse gate rather than a cryptographic identity check.
- * The real upgrade is Firebase ID-token verification server-side once
- * firebase-admin is wired; the server already accepts a Bearer token, so that
- * swap is header-value-only on this side. Empty when unset — the server then
- * fails closed with a 401, which is the honest signal that the gate is on but
- * unconfigured.
+ * Two credentials, and the server's PRINCIPAL_MODE decides which one counts —
+ * this side cannot know the mode, so it sends what it has, shaped so that
+ * BOTH servers are satisfied by the same request:
+ *
+ *   · a bundle WITH `NEXT_PUBLIC_IMAGING_ACCESS_SECRET` (the legacy deploy)
+ *     sends `Authorization: Bearer <secret>` exactly as before, plus the
+ *     cached Firebase ID token in its own header once there is one. A legacy
+ *     server reads the secret and ignores the token; a verified server reads
+ *     the token and ignores the secret.
+ *   · a bundle WITHOUT it (the verified deploy, where a public secret buys
+ *     nothing) sends `Authorization: Bearer <idToken>`. That is also what the
+ *     `?k=` media URLs read off `authorization` (lib/sound/client.ts).
+ *
+ * The token comes from lib/sessionToken.ts, fed by useAuth's onIdTokenChanged.
+ * Empty when there is neither — the server then answers 401 by name.
  */
 export function accessHeader(): Record<string, string> {
   const s = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET;
-  return s && s.trim() ? { authorization: `Bearer ${s.trim()}` } : {};
+  const secret = s && s.trim() ? s.trim() : "";
+  const token = currentIdToken();
+  if (secret) return token ? { authorization: `Bearer ${secret}`, [ID_TOKEN_HEADER]: token } : { authorization: `Bearer ${secret}` };
+  return token ? { authorization: `Bearer ${token}` } : {};
 }
 
 export interface BudgetQuoteResult {

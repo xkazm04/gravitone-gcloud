@@ -12,7 +12,7 @@ import { existing, failure, objectBody } from "../../_lib/respond";
 export const runtime = "nodejs";
 
 export async function POST(req: Request, { params }: { params: Promise<{ runId: string }> }) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
   const { runId } = await params;
   const body = await objectBody(req);

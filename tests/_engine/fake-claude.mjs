@@ -21,7 +21,8 @@
 //     answer to prove the fake — not a real, spending `claude` — is the one the
 //     shell resolved, before any turn is sent.
 //   · Otherwise it reads the prompt from stdin, derives the TURN MARKER from it
-//     (the first `# ` heading line, and the sha256 of the one-line JSON Schema
+//     (the first `# ` heading line — or its sha256, for a heading that is a
+//     prompt document's own text — and the sha256 of the one-line JSON Schema
 //     lib/text/router.ts appends after "It must satisfy this JSON Schema:"),
 //     picks the cassette turn whose `match` agrees, and answers in that turn's
 //     mode. No match is exit 3 with a sentence saying "re-record": a schema or
@@ -86,6 +87,7 @@ function pick(cassette, marker) {
   const i = turns.findIndex((t) => {
     const m = t.match ?? {};
     if (m.heading !== undefined && m.heading !== marker.heading) return false;
+    if (m.headingSha256 !== undefined && m.headingSha256 !== marker.headingSha256) return false;
     if (m.schemaSha256 !== undefined && m.schemaSha256 !== marker.schemaSha256) return false;
     return true;
   });

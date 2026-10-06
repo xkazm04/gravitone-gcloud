@@ -15,7 +15,7 @@ export const runtime = "nodejs";
 export const maxDuration = 320;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = await asContractDenial(guardRequest(req));
+  const denied = await asContractDenial(await guardRequest(req));
   if (denied) return denied;
   try {
     const { id } = await params;

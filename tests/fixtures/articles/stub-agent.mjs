@@ -214,7 +214,6 @@ function writePost(sources, note) {
   const figures = [1, 2, 3, 4, 5].map((i) => ({ file: `0${i}-figure-${i}.svg`, caption: `Figure ${i}: a labelled diagram of step ${i} [${i}]` }));
   const mdBody = body.map((s) => `## ${s.title}\n\n${s.paras.join("\n\n")}`).join("\n\n");
   const words = (mdBody.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) ?? []).length;
-  const minutes = Math.max(1, Math.round(words / 230));
 
   for (const [i, f] of figures.entries()) {
     write(

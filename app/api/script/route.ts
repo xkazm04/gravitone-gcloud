@@ -141,7 +141,7 @@ function jsonSize(v: unknown): number {
 
 export async function POST(req: Request) {
   // LOCAL-COMPUTE ROUTE — auth + rate limit before anything is read or spawned.
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
 
   let body: Loose;

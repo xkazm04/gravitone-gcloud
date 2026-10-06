@@ -35,7 +35,7 @@ const fail = (status: number, error: string, message: string) =>
   Response.json({ error, message } satisfies AdErrorBody, { status });
 
 export async function POST(req: Request) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
 
   if (!canSpawnLocalBinaries())

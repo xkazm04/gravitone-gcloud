@@ -22,13 +22,13 @@ export const runtime = "nodejs";
 export const maxDuration = 320;
 
 export async function GET(req: Request): Promise<Response> {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
   return conceptPreflight("ad-scenarios");
 }
 
 export async function POST(req: Request): Promise<Response> {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
   return scenariosResponse(req);
 }

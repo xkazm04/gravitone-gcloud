@@ -21,15 +21,21 @@ export const sha256 = (s) => createHash("sha256").update(s, "utf8").digest("hex"
  * The turn marker: the prompt's first `# ` heading, and the sha256 of the
  * schema line after the LAST schema lead (the router's, which follows any the
  * route wrote itself).
+ *
+ * The heading also comes HASHED (`headingSha256`), for a prompt whose first
+ * heading is prose from a prompt document — /api/frames opens with
+ * FRAMES-SCENE-PROMPT.md's title, and a cassette that held that line would be
+ * holding prompt text, which the cassette-content probe refuses. A cassette
+ * keys such a turn by the hash and leaves `heading` out.
  * @param {string} prompt
- * @returns {{ heading: string | null, schemaSha256: string | null }}
+ * @returns {{ heading: string | null, headingSha256: string | null, schemaSha256: string | null }}
  */
 export function markerOf(prompt) {
   const lines = prompt.split(/\r?\n/);
   const heading = lines.find((l) => /^# \S/.test(l))?.trim() ?? null;
   const at = lines.lastIndexOf(SCHEMA_LEAD);
   const schemaSha256 = at >= 0 && at + 1 < lines.length ? sha256(lines[at + 1]) : null;
-  return { heading, schemaSha256 };
+  return { heading, headingSha256: heading === null ? null : sha256(heading), schemaSha256 };
 }
 
 /**

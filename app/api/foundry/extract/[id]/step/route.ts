@@ -26,7 +26,7 @@ export const maxDuration = 300;
 const MAX_UNITS = 4;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = guardRequest(req);
+  const denied = await guardRequest(req);
   if (denied) return denied;
   const { id } = await params;
   let units = 1;
