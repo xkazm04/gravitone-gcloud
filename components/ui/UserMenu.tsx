@@ -19,16 +19,23 @@
 // focus to the trigger, aria-expanded says which state it is in.
 
 import { useEffect, useId, useRef, useState } from "react";
+import { useAnnounce } from "@/lib/announcer";
 import { useAuth } from "@/lib/useAuth";
 import { LOCAL_MODE } from "@/lib/localMode";
 import { Button } from "./Primitives";
+import SignOutDialog, { buildArchive, saveArchive } from "./SignOutDialog";
+import { errorText } from "./archiveSummary";
 import { useWorld } from "./world";
 
 /** In the Almanac world (`useWorld`) the control wears the kit's skin (`k-acct`, `k-tray`
  *  in components/kit/account.css); the behaviour is the same in both. `defaultOpen`
  *  seeds the panel open for the /kit specimen. */
 export default function UserMenu({ defaultOpen = false }: { defaultOpen?: boolean } = {}) {
-  const { user, profile, loading, ready, signIn, signOut } = useAuth();
+  // NOT `signOut`. The account menu never ends a session itself: "Sign out"
+  // opens <SignOutDialog>, which previews the wipe, offers the archive, and is
+  // the one place the destructive call is made (AUP-B; signout-dialog.probe).
+  const { user, profile, loading, ready, signIn } = useAuth();
+  const [confirming, setConfirming] = useState(false);
   const al = useWorld() === "almanac";
   const [open, setOpen] = useState(defaultOpen);
   const seeded = useRef(defaultOpen);
@@ -142,21 +149,89 @@ export default function UserMenu({ defaultOpen = false }: { defaultOpen?: boolea
             // Google sign-in" — an env var, in an account menu, addressed to
             // nobody who is looking at one. Leaving local mode is a deployment
             // act; the person here wants to know their work is somewhere.
-            <p className={al ? "k-tray__note" : "font-jetbrains px-3 py-2 text-content leading-snug text-white/45"}>
-              Local studio — work lives in this browser&apos;s storage, not in an account.
-            </p>
+            //
+            // The archive IS offered here (AUP-B): this browser holding the only
+            // copy is exactly the case a backup file exists for, and it needs
+            // no session to end.
+            <>
+              <p className={al ? "k-tray__note" : "font-jetbrains px-3 py-2 text-content leading-snug text-white/45"}>
+                Local studio — work lives in this browser&apos;s storage, not in an account.
+              </p>
+              <LocalArchiveItem uid={user.uid} al={al} itemRef={firstItemRef} />
+            </>
           ) : (
             <button
               type="button"
               ref={firstItemRef}
-              onClick={() => void signOut()}
-              className={al ? "k-tray__item" : "w-full cursor-pointer rounded-lg px-3 py-2 text-left text-label text-white/80 transition hover:bg-white/5"}
+              onClick={() => {
+                // Focus to the trigger BEFORE the panel unmounts, so the dialog
+                // records a live opener and hands focus back to the account
+                // control on close rather than to <main>.
+                triggerRef.current?.focus();
+                setOpen(false);
+                setConfirming(true);
+              }}
+              className={al ? "k-tray__item" : ITEM_CLASS}
             >
               Sign out
             </button>
           )}
         </div>
       )}
+      {!LOCAL_MODE && (
+        <SignOutDialog open={confirming} onClose={() => setConfirming(false)} uid={user.uid} email={user.email} />
+      )}
     </div>
+  );
+}
+
+const ITEM_CLASS =
+  "w-full cursor-pointer rounded-lg px-3 py-2 text-left text-label text-white/80 transition hover:bg-white/5 disabled:cursor-wait disabled:text-white/40";
+
+/** Local mode's one account act: save the shelf as a `.gravitone` file. Built on
+ *  press (no dialog to build it behind), saved to the person's own disk. */
+function LocalArchiveItem({
+  uid,
+  al,
+  itemRef,
+}: {
+  uid: string;
+  al: boolean;
+  itemRef: React.RefObject<HTMLButtonElement | null>;
+}) {
+  const announce = useAnnounce();
+  const [building, setBuilding] = useState(false);
+  const [failure, setFailure] = useState<string | null>(null);
+  const run = async () => {
+    setBuilding(true);
+    setFailure(null);
+    try {
+      saveArchive(await buildArchive(uid));
+    } catch (e) {
+      const text = errorText(e);
+      setFailure(text);
+      announce({ key: `local-archive-failed:${Date.now()}`, text });
+    } finally {
+      setBuilding(false);
+    }
+  };
+  return (
+    <>
+      <button
+        type="button"
+        ref={itemRef}
+        onClick={() => void run()}
+        disabled={building}
+        aria-busy={building}
+        className={al ? "k-tray__item" : ITEM_CLASS}
+      >
+        Download archive
+      </button>
+      {failure && (
+        <p className={al ? "k-tray__note" : "font-jetbrains px-3 py-2 text-content leading-snug text-rose-200"}>
+          {failure}
+        </p>
+      )}
+    </>
   );
 }

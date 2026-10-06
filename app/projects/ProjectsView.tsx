@@ -19,11 +19,14 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import Link from "next/link";
-import { Zap } from "lucide-react";
+import { Upload, X, Zap } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Button } from "@/components/ui/Primitives";
 import { Ghost, Tally } from "@/components/ui/signal";
+import { errorText, importTallies } from "@/components/ui/archiveSummary";
+import { importArchive, type ImportReport } from "@/lib/studioArchive";
+import { useAnnounce } from "@/lib/announcer";
 import { useAuth } from "@/lib/useAuth";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
@@ -100,7 +103,7 @@ export default function ProjectsView() {
   //
   // Memoised because the dialog reseeds its draft when this identity changes,
   // and a fresh array on every render is a fresh identity on every render.
-  const { themes } = useThemes(user?.uid ?? null);
+  const { themes, reload: reloadThemes } = useThemes(user?.uid ?? null);
   const allThemes = useMemo(() => themes ?? [], [themes]);
   const lockedThemes = useMemo(() => lockedOnly(allThemes), [allThemes]);
   const gated = themes !== null && lockedThemes.length === 0;
@@ -149,6 +152,46 @@ export default function ProjectsView() {
     for (const p of demos) await remove(p.id);
     setWiping(false);
     mainRef.current?.focus();
+  };
+
+  /* ── Import archive (AUP-B) ────────────────────────────────────────────
+   *
+   * A `.gravitone` file — what the sign-out dialog and local mode's account
+   * menu save — brought back into THIS account. `skip` is the default policy:
+   * a row this account already holds stays as it is and the archive's copy is
+   * dropped, so importing the same file twice changes nothing. Another
+   * account's row is always re-minted (lib/studioArchive.ts, COLLISIONS).
+   *
+   * The result is drawn as counts; a refusal or a storage error is shown in
+   * the archive code's own words. Verified in full before one write
+   * transaction, so a refused file wrote nothing. */
+  const announce = useAnnounce();
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [importing, setImporting] = useState(false);
+  const [imported, setImported] = useState<ImportReport | null>(null);
+  const [importFailure, setImportFailure] = useState<string | null>(null);
+  const importFile = async (file: File) => {
+    if (!user?.uid) return;
+    setImporting(true);
+    setImported(null);
+    setImportFailure(null);
+    try {
+      const report = await importArchive(file, user.uid, { onCollision: "skip" });
+      setImported(report);
+      announce({
+        key: `archive-imported:${Date.now()}`,
+        text: `Archive imported: ${importTallies(report)
+          .map((t) => `${t.n} ${t.label}`)
+          .join(", ")}`,
+      });
+      await Promise.all([reload(), reloadThemes()]);
+    } catch (e) {
+      const text = errorText(e);
+      setImportFailure(text);
+      announce({ key: `archive-import-failed:${Date.now()}`, text });
+    } finally {
+      setImporting(false);
+    }
   };
 
   // Create walks straight into the studio — a project with no work in it has
@@ -217,6 +260,34 @@ export default function ProjectsView() {
           </p>
         )}
 
+        {/* Spoken through the announcer (lib/announcer.tsx rule 2: one
+            writer), not by a live region of its own. */}
+        {importFailure && (
+          <p
+            data-testid="import-failure"
+            className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/5 px-4 py-3 text-content text-rose-200"
+          >
+            {importFailure}
+          </p>
+        )}
+        {imported && (
+          <div data-testid="import-result" className="mb-4 flex flex-wrap items-center gap-2 px-1">
+            <Upload aria-hidden className="h-4 w-4 text-white/45" />
+            <span className="sr-only">Archive imported:</span>
+            {importTallies(imported).map((t) => (
+              <Tally key={t.label} label={t.label} value={t.n} tone={t.tone} />
+            ))}
+            <button
+              type="button"
+              onClick={() => setImported(null)}
+              aria-label="Dismiss import result"
+              className="ml-1 cursor-pointer rounded-full p-1 text-white/45 transition hover:text-white/80"
+            >
+              <X aria-hidden className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
         <section>
           {loading ? (
             // Three ghost rows, not "reading the shelf…". The wait is short and
@@ -279,6 +350,31 @@ export default function ProjectsView() {
               aside={
                 <>
                   {demos.length > 0 && <DemoChip count={demos.length} busy={wiping} onClear={clearExamples} />}
+                  {/* `hidden`: the visible control is the button below, and a
+                      display:none file input still opens its picker on click(). */}
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept=".gravitone,application/gzip,application/x-ndjson"
+                    hidden
+                    data-testid="import-archive-input"
+                    onChange={(e) => {
+                      const f = e.currentTarget.files?.[0];
+                      e.currentTarget.value = "";
+                      if (f) void importFile(f);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    disabled={importing}
+                    aria-busy={importing}
+                    data-testid="import-archive"
+                    className="font-jetbrains flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-full border border-white/12 px-4 text-label text-white/45 transition hover:border-white/25 hover:text-white/75 disabled:cursor-wait disabled:opacity-60"
+                  >
+                    <Upload aria-hidden className="h-4 w-4" />
+                    Import archive
+                  </button>
                   <button
                     type="button"
                     onClick={() => {
