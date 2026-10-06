@@ -63,7 +63,7 @@ export type LocalPosture =
  * A false NEGATIVE costs nothing: the adapter's probe fails to find `claude` and
  * the ladder descends one rung with an honest reason.
  */
-const MANAGED_MARKERS = [
+export const MANAGED_MARKERS = [
   "K_SERVICE",
   "K_REVISION",
   "CLOUD_RUN_JOB",
