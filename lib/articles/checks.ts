@@ -160,7 +160,14 @@ export const STATED_READ_TIME = /\b\d+\s*(?:-|–)?\s*min(?:ute)?s?\s+read\b|\bw
  *  callout; headings, lists, figure captions and italic-only lines (the subtitle, a byline)
  *  neither count as prose nor end a run. Exported for the probe. */
 export function proseRuns(md: string): { longest: number; runs: string[] } {
-  const body = md.split(/^## Sources\b/m)[0];
+  let body = md.split(/^## Sources\b/m)[0];
+  // The content preview, fenced by two horizontal rules before the first section, renders as a
+  // boxed element on the page; it counts as one visual here.
+  const firstH2 = body.search(/^## /m);
+  const box = /^---[ \t]*\r?\n[\s\S]*?\r?\n---[ \t]*$/m.exec(body);
+  if (box && (firstH2 < 0 || box.index < firstH2 + 1) && body.slice(0, box.index).split(/\r?\n/).filter((l) => /^## /.test(l)).length === 0) {
+    body = `${body.slice(0, box.index)}> content preview${body.slice(box.index + box[0].length)}`;
+  }
   const lines = body.split(/\r?\n/);
   type Kind = "prose" | "visual" | "neutral";
   const blocks: { kind: Kind; text: string }[] = [];

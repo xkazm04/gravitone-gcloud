@@ -101,6 +101,8 @@ test("visual cadence: runs of prose, and what resets them", () => {
   expect(r.runs[0]).toMatch(/Paragraph 3/);
   // a fenced block and a blockquote callout reset; a list and a heading do not
   expect(proseRuns(`${P(1)}\n\n${P(2)}\n\n\`\`\`js\nconst x = 1;\n\`\`\`\n\n${P(3)}\n\n${P(4)}\n\n> **Note** one fact\n\n${P(5)}`).longest).toBe(2);
+  // the rule-fenced content preview is one boxed visual
+  expect(proseRuns(`# T\n\n${P(1)}\n\n---\n\n**What this is.** ${P(2)}\n\n**Route.**\n\n---\n\n## One\n\n${P(3)}\n\n${P(4)}`).longest).toBe(2);
   expect(proseRuns(`${P(1)}\n\n## H\n\n- a\n- b\n\n${P(2)}\n\n${P(3)}`).longest).toBe(3);
   expect(byId(staticItems({ html: page(), md: bad, sources: SOURCES, claims: [], figures: figures(), postFiles: files() }), "visual-cadence").status).toBe("fail");
 });
