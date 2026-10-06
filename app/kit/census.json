@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 516,
+  "files": 520,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -42,7 +42,9 @@
       ],
       "adopters": [
         "app/_phases/frames/ads/AdsFrames.tsx",
+        "app/_phases/frames/ads/parts.tsx",
         "app/_phases/motion/MotionStep.tsx",
+        "app/_phases/motion/ads/AdsMotion.tsx",
         "app/_phases/research/_parts/FollowUpQueue.tsx",
         "app/_phases/research/ads/AdsIdea.tsx",
         "app/_phases/research/guided/RunStage.tsx",
@@ -77,8 +79,10 @@
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/frames/ShotSheet.tsx",
         "app/_phases/frames/ads/AdsFrames.tsx",
+        "app/_phases/frames/ads/parts.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
         "app/_phases/motion/MotionStep.tsx",
+        "app/_phases/motion/ads/AdsMotion.tsx",
         "app/_phases/research/MusicVideoResearch.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/_phases/research/guided/RunStage.tsx",
@@ -688,6 +692,7 @@
       ],
       "adopters": [
         "app/_phases/motion/MotionStep.tsx",
+        "app/_phases/motion/ads/AdsMotion.tsx",
         "app/_phases/research/ads/parts.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
         "app/_studio/assetParts.tsx",
@@ -824,6 +829,7 @@
       "adopters": [
         "app/_landing/parts.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
+        "app/_phases/frames/ads/parts.tsx",
         "app/_phases/research/ads/AdsIdea.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/score/CueTakes.tsx",
@@ -879,8 +885,10 @@
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/frames/ShotSheet.tsx",
         "app/_phases/frames/ads/AdsFrames.tsx",
+        "app/_phases/frames/ads/parts.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
         "app/_phases/motion/MotionStep.tsx",
+        "app/_phases/motion/ads/AdsMotion.tsx",
         "app/_phases/research/MusicVideoResearch.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/_phases/research/guided/RunStage.tsx",
@@ -907,6 +915,7 @@
       ],
       "adopters": [
         "app/_phases/frames/FramesStep.tsx",
+        "app/_phases/frames/ads/parts.tsx",
         "app/_phases/script/ScriptStep.tsx",
         "app/calendar/CalendarView.tsx",
         "app/library/LibraryView.tsx",
@@ -941,6 +950,7 @@
         "app/_phases/cut/parts/Transport.tsx",
         "app/_phases/frames/FramesAssembly.tsx",
         "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/frames/ads/parts.tsx",
         "app/_phases/frames/alternatives/VariantContactSheet.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
         "app/_phases/motion/MotionStep.tsx",
@@ -1057,8 +1067,10 @@
       "adopters": [
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/frames/ads/parts.tsx",
         "app/_phases/frames/music-video/MusicVideoFrames.tsx",
         "app/_phases/motion/MotionStep.tsx",
+        "app/_phases/motion/ads/AdsMotion.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
         "app/_phases/score/ads/AdsScore.tsx",
         "app/_phases/script/ScriptStep.tsx",
@@ -1155,6 +1167,7 @@
         "components/ui/Select.tsx"
       ],
       "adopters": [
+        "app/_phases/motion/ads/AdsMotion.tsx",
         "app/_projects/ShelfHeader.tsx",
         "app/articles/new/NewArticle.tsx",
         "app/board/shared.tsx",
@@ -1338,14 +1351,15 @@
       }
     },
     "app/_phases/frames": {
-      "files": 26,
+      "files": 28,
       "kitImports": 0,
-      "signalImports": 6,
+      "signalImports": 7,
       "parts": [
         "Button",
         "CHIP_CLASS",
         "Ghost",
         "Hint",
+        "StaleBadge",
         "TALLY_TONE",
         "TabRail",
         "Tally",
@@ -1372,9 +1386,9 @@
       }
     },
     "app/_phases/motion": {
-      "files": 4,
+      "files": 6,
       "kitImports": 0,
-      "signalImports": 1,
+      "signalImports": 2,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1383,7 +1397,8 @@
         "TALLY_TONE",
         "Tally",
         "TextArea",
-        "UpstreamBreak"
+        "UpstreamBreak",
+        "components/ui/Select#Select"
       ],
       "suspects": {
         "tab": 0,
