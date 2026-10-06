@@ -832,6 +832,58 @@ def test_dojo_gemini_key_travels_in_a_header_not_the_url():
     check("dojo gemini: the key travels as x-goog-api-key", seen["header"], "SELFTEST-SECRET")
 
 
+def test_every_third_party_import_is_declared_in_requirements():
+    # pipeline/requirements.txt claims to be what the code imports. This walks
+    # every tracked .py file with `ast` (never importing the packages -- the CI
+    # python job has none) and fails on a module that is neither stdlib, nor a
+    # sibling/sys.path-local module, nor declared. 2026-10-06.
+    import ast
+    import re
+    import subprocess
+
+    root = HERE.parent.parent
+    files = subprocess.run(["git", "ls-files", "*.py"], cwd=root, capture_output=True,
+                           text=True).stdout.split()
+    check("requirements guard: the walk found python files", len(files) > 0, True)
+
+    def norm(n):
+        return re.sub(r"[-_.]+", "-", n).lower()
+
+    # import name -> distribution name, where they differ
+    dist_of = {"PIL": "Pillow", "facenet_pytorch": "facenet-pytorch", "cv2": "opencv-python",
+               "yaml": "PyYAML", "sklearn": "scikit-learn"}
+    # modules importable by bare name from a script under pipeline/ (the scripts
+    # insert vlm-probe/ and foundry/ onto sys.path), plus each file's own siblings
+    pipeline_local = {Path(f).stem for f in files if f.startswith("pipeline/")}
+
+    def undeclared(declared):
+        out = set()
+        for f in files:
+            fp = root / f
+            sibs = {p.stem for p in fp.parent.glob("*.py")} | {p.name for p in fp.parent.iterdir() if p.is_dir()}
+            local = sibs | (pipeline_local if f.startswith("pipeline/") else set())
+            tree = ast.parse(fp.read_text(encoding="utf-8"), filename=f)
+            for node in ast.walk(tree):
+                mods = ([a.name for a in node.names] if isinstance(node, ast.Import)
+                        else [node.module] if isinstance(node, ast.ImportFrom) and node.level == 0 and node.module
+                        else [])
+                for m in mods:
+                    top = m.split(".")[0]
+                    if top in sys.stdlib_module_names or top in local:
+                        continue
+                    if norm(dist_of.get(top, top)) not in declared:
+                        out.add(f"{f}: {top}")
+        return sorted(out)
+
+    lines = (root / "pipeline" / "requirements.txt").read_text(encoding="utf-8").splitlines()
+    declared = {norm(re.split(r"[<>=!~\[; ]", l.strip())[0]) for l in lines
+                if l.strip() and not l.strip().startswith("#")}
+    check("requirements guard: nothing imported is undeclared", undeclared(declared), [])
+    # the control: drop one name and the same walk must name its importers
+    got = undeclared(declared - {"facenet-pytorch"})
+    check("requirements guard: a missing name is caught", got, ["pipeline/vlm-probe/identity.py: facenet_pytorch"])
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -858,6 +910,7 @@ TESTS = [
     test_lane_record_record_clip_hero_repo_relative,
     test_lane_record_check_detects_tampering,
     test_dojo_gemini_key_travels_in_a_header_not_the_url,
+    test_every_third_party_import_is_declared_in_requirements,
 ]
 
 
