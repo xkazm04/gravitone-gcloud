@@ -86,18 +86,64 @@ export class ImagingRequestError extends Error {
  *     server reads the secret and ignores the token; a verified server reads
  *     the token and ignores the secret.
  *   · a bundle WITHOUT it (the verified deploy, where a public secret buys
- *     nothing) sends `Authorization: Bearer <idToken>`. That is also what the
- *     `?k=` media URLs read off `authorization` (lib/sound/client.ts).
+ *     nothing) sends `Authorization: Bearer <idToken>`.
  *
  * The token comes from lib/sessionToken.ts, fed by useAuth's onIdTokenChanged.
  * Empty when there is neither — the server then answers 401 by name.
  */
 export function accessHeader(): Record<string, string> {
-  const s = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET;
-  const secret = s && s.trim() ? s.trim() : "";
+  const secret = bundleSecret();
   const token = currentIdToken();
   if (secret) return token ? { authorization: `Bearer ${secret}`, [ID_TOKEN_HEADER]: token } : { authorization: `Bearer ${secret}` };
   return token ? { authorization: `Bearer ${token}` } : {};
+}
+
+/** The public bundle secret, trimmed, or "" — read HERE and nowhere else in the
+ *  client (credential-door.probe walks the tree for a second reader). */
+function bundleSecret(): string {
+  const s = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET;
+  return s && s.trim() ? s.trim() : "";
+}
+
+/** The query parameter the media/file routes read the credential from. */
+export const ACCESS_QUERY_PARAM = "k";
+
+/**
+ * THE QUERY CREDENTIAL — the one value a media URL may carry, or `undefined`.
+ *
+ * <img>, <video>, <audio>, <iframe> and a plain <a download> cannot send a
+ * header, so the routes that serve bytes to them (and only those — pinned by
+ * credential-door.probe) read the credential from `?k=`. A URL has room for ONE
+ * credential, so where `accessHeader()` can send both, this picks:
+ *
+ *   · a bundle WITH the public secret (legacy): the secret, exactly as the
+ *     hand-built URLs sent it. A legacy server compares `k` to its secret, and
+ *     a token there would be "wrong";
+ *   · a bundle WITHOUT it (verified): the cached Firebase ID token;
+ *   · the dev fixture, the local owner, or nobody signed in: nothing. Those
+ *     users have no token (lib/sessionToken.ts never caches one for them).
+ *
+ * A TOKEN IN A URL CAN REACH ACCESS LOGS, browser history and a Referer. That
+ * is accepted here because of what the token can do and for how long: a
+ * Firebase ID token expires within the hour, and the server reads `k` only on
+ * GET byte-serves behind the READ door (`guardAccessOnly`). The money door
+ * (`guardRequest`) never reads a query credential, so a logged URL can, at
+ * worst, re-fetch bytes its holder could already see — for minutes, not spend.
+ */
+export function accessQuery(): string | undefined {
+  return bundleSecret() || currentIdToken() || undefined;
+}
+
+/** `url` with the query credential appended (`?k=` or `&k=`, before any
+ *  `#fragment`), or `url` unchanged when there is none. Build every media URL
+ *  through this — never by reading the bundle secret or `accessHeader()`. */
+export function withAccess(url: string): string {
+  const k = accessQuery();
+  if (!k) return url;
+  const hash = url.indexOf("#");
+  const [path, frag] = hash === -1 ? [url, ""] : [url.slice(0, hash), url.slice(hash)];
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}${ACCESS_QUERY_PARAM}=${encodeURIComponent(k)}${frag}`;
 }
 
 export interface BudgetQuoteResult {

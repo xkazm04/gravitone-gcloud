@@ -7,8 +7,8 @@
 // route that acts for the operator. `guardAccessOnly`, not `guardRequest`:
 // nothing here spends per request, and the Calendar polls (the same reason
 // apiAuth.ts:422 gives for the foundry). Open in dev with
-// NEXT_PUBLIC_DEV_AUTH=1; a browser caller presents
-// NEXT_PUBLIC_IMAGING_ACCESS_SECRET exactly as app/foundry/foundryClient.ts:74.
+// NEXT_PUBLIC_DEV_AUTH=1; a browser caller presents `accessHeader()`
+// (lib/imagingClient.ts), the one client credential door.
 //
 // ONE ERROR SHAPE. The HTTP contract (platform-consolidation brief, "Data &
 // API") says errors are `{ error: string }`. apiAuth's denial is

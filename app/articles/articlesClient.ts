@@ -14,7 +14,7 @@
 //   refused      the route answered 4xx/5xx `{ error, code }`, or the network
 //                failed (status 0) — the message is the work, shown verbatim
 
-import { accessHeader } from "@/lib/imagingClient";
+import { accessHeader, withAccess } from "@/lib/imagingClient";
 import type { ArticleRun, ArticleRunDetail, CreateRunInput } from "@/lib/articles/types";
 
 export type Fetched<T> =
@@ -87,10 +87,10 @@ export const rejectRun = (id: string, note: string) =>
   call<{ run: ArticleRun }>(`${runPath(id)}/reject`, { method: "POST", body: JSON.stringify({ note }) });
 export const resumeRun = (id: string) => call<{ run: ArticleRun }>(`${runPath(id)}/resume`, { method: "POST" });
 
-/** A run file as a URL an <iframe> or <img> can load: the secret rides as `k`
- *  because neither can send a header (app/api/articles/[runId]/file). */
+/** A run file as a URL an <iframe> or <img> can load: the credential rides as
+ *  `k` through `withAccess`, because neither can send a header
+ *  (app/api/articles/[runId]/file). */
 export function runFileUrl(id: string, rel: string): string {
-  const k = process.env.NEXT_PUBLIC_IMAGING_ACCESS_SECRET?.trim();
   const at = rel.split("/").map(encodeURIComponent).join("/");
-  return `${runPath(id)}/file/${at}${k ? `?k=${encodeURIComponent(k)}` : ""}`;
+  return withAccess(`${runPath(id)}/file/${at}`);
 }

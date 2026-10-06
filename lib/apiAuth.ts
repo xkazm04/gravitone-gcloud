@@ -522,6 +522,17 @@ export function guardRequest(req: Request): Promise<Response | null> {
  * It is also the READ door for a JWKS outage: these routes keep verifying
  * against the last good key set (lib/principal.ts STALE_READ_MS) where a money
  * route refuses.
+ *
+ * THE QUERY CREDENTIAL LIVES ONLY BEHIND THIS DOOR. The GET byte-serves that
+ * feed an <img>/<video>/<audio>/<iframe>/<a download> read `?k=` and present it
+ * here as `Authorization: Bearer <k>` — a header the element cannot send. The
+ * client builds that URL through one door, `withAccess` in lib/imagingClient.ts:
+ * the bundle secret in legacy, the Firebase ID token in verified, which
+ * lib/principal.ts reads off a JWT-shaped Bearer like any other. A token in a
+ * URL can reach access logs, history and a Referer; that is accepted ONLY here,
+ * because the token expires within the hour and these routes serve bytes and
+ * spend nothing. `guardRequest` never reads the URL, and no route that reads
+ * `k` calls it (credential-door.probe pins both, and the set of routes).
  */
 export function guardAccessOnly(req: Request): Promise<Response | null> {
   return guard(req, "read");
