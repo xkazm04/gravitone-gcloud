@@ -87,7 +87,7 @@ async function engineFor(turn: TurnClass) {
 }
 
 export async function POST(req: Request) {
-  const denied = guardAccessOnly(req);
+  const denied = await guardAccessOnly(req);
   if (denied) return denied;
 
   let body: { kind?: unknown; input?: unknown } | null;
