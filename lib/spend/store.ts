@@ -112,6 +112,9 @@ export interface SpendStore<R> {
    *  (lib/imaging/budgetForecast.ts earliestExpiry). Never write through it.
    *  Optional: a store without it reads as having seen nothing. */
   lastSeen?(): Readonly<SpendState<R>>;
+  /** Why this store and not the one this machine would otherwise get, when
+   *  that is the case (./select.ts: the managed posture). Optional. */
+  reason?(): string | undefined;
   /** Test hook: empty rows, holds and counters. */
   reset(): void;
 }

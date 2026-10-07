@@ -70,6 +70,8 @@
 
 import { SPEND_CLASSES, ceilingOf, windowMsOf } from "../spend/classes";
 import { createMeter } from "../spend/meter";
+import { spendStoreFor } from "../spend/select";
+import type { SpendStoreKind } from "../spend/store";
 import { MusicError } from "./errors";
 import { priceCall, type MusicCostBasis, type MusicOp } from "./pricing";
 
@@ -158,16 +160,17 @@ function note(line: string): void {
 type MusicAxes = { op: MusicOp; model?: string };
 
 /**
- * The ledger. One kernel meter over the in-memory store; everything below is
- * this file's vocabulary laid over it.
+ * The ledger. One kernel meter over the store lib/spend/select.ts picks for
+ * this class (the machine's file store, or memory where pinned or managed);
+ * everything below is this file's vocabulary laid over it.
  *
  * A row stores its seconds, op, model and basis, and NOT the quote's credits or
  * dollars: those are a pure function of the first three over pricing.ts's
  * committed table, so `musicSpendRows` derives them on read and the kernel's row
- * stays one shape for every class. That holds while rows live no longer than
- * the code that priced them, which an in-memory window guarantees. A durable
- * store must revisit it: a row kept across a deploy that declared a rate would
- * be re-quoted at the new rate.
+ * stays one shape for every class. On the file store a row now outlives the
+ * process that priced it, so a row kept across a deploy that declared a new
+ * rate is re-quoted at that rate when read. The ceiling is unaffected (it is
+ * seconds, which the row stores); only the derived credits and dollars are.
  */
 const meter = createMeter<MusicSpendEntry, MusicAxes, MusicCostBasis>(CLASS, {
   entry: (e) => {
@@ -215,7 +218,7 @@ const meter = createMeter<MusicSpendEntry, MusicAxes, MusicCostBasis>(CLASS, {
   // loud: a total that fell without one of these lines is a bug, not a roll.
   evicted: ({ dropped, droppedAmount, remaining, windowMs }) =>
     note(`window-reset evicted=${dropped} sec=${droppedAmount} remaining=${remaining} windowMs=${windowMs}`),
-});
+}, spendStoreFor(CLASS.id));
 
 /** Seconds of audio requested inside the current window — booked rows only;
  *  renders still in flight are `musicBudgetStats().heldSeconds`. */
@@ -247,6 +250,10 @@ export async function musicBudgetStats(now: number = Date.now()): Promise<{
   windowEnd: number;
   rows: number;
   counters: MusicBudgetCounters;
+  /** Where these numbers live: this machine's ledger file, or this process. */
+  store: SpendStoreKind;
+  /** Why it is not the file, when the posture decided (managed). */
+  storeReason?: string;
 }> {
   const s = await meter.stats(now); // prunes first, so the counters are current
   const c = s.counters;
@@ -275,6 +282,8 @@ export async function musicBudgetStats(now: number = Date.now()): Promise<{
       expiredSeconds: c.expiredAmount,
       lateWrites: c.lateWrites,
     },
+    store: s.store,
+    ...(s.storeReason ? { storeReason: s.storeReason } : {}),
   };
 }
 

@@ -23,6 +23,7 @@
 
 import { SPEND_CLASSES } from "../../spend/classes";
 import { createMeter, type MeterAxes, type MeterRow, type MeterStats } from "../../spend/meter";
+import { spendStoreFor } from "../../spend/select";
 import { VideoError } from "./errors";
 import type { CostBasis } from "./types";
 
@@ -73,7 +74,7 @@ const meter = createMeter<VideoSpendEntry, VideoAxes, CostBasis>(CLASS, {
       `[video] budget window-reset evicted=${dropped} usd=$${droppedAmount.toFixed(4)} ` +
         `remaining=$${remaining.toFixed(4)} windowMs=${windowMs}`,
     ),
-});
+}, spendStoreFor(CLASS.id));
 
 export interface VideoHold {
   readonly id: string;

@@ -6,8 +6,11 @@
 // SpendStore seam, so the Next server, a pipeline script and a second process on
 // this machine spend from ONE window, and a restart forgets nothing.
 //
-// Every case that touches the file store gets its own mkdtempSync directory,
-// removed afterwards, so no probe ever writes the real foundry-out/spend/.
+// EVERY OTHER PROBE STAYS IN MEMORY. playwright.config.ts pins the node lane to
+// SPEND_STORE=memory; the first case below proves that pin reaches this worker.
+// Only this file opts into the file store, and every case that does gets its own
+// mkdtempSync directory, removed afterwards, so no probe ever writes the real
+// foundry-out/spend/.
 //
 // TWO PROCESSES MEANS TWO PROCESSES. Cases that need another process spawn a
 // real Node child (tsx's own loader, resolved once from `npx tsx`), importing
@@ -22,18 +25,23 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { keepEnv } from "./_helpers";
+import { FAKE_ENGINE_ENV, keepEnv, loadCassette, withFakeEngine, type Cassette } from "./_helpers";
 import { meterConformance } from "./_meterKit";
 import { MANAGED_MARKERS } from "@/lib/deployment";
+import { BUDGET_VAR, budgetStats } from "@/lib/imaging/budget";
+import { videoBudgetStats } from "@/lib/imaging/video/budget";
+import { musicBudgetStats } from "@/lib/music/budget";
 import { SPEND_CLASSES, type SpendClassDef } from "@/lib/spend/classes";
 import { createMeter, type MeterRow } from "@/lib/spend/meter";
-import { fileStore, HostedSpendStoreNotBuilt } from "@/lib/spend/fileStore";
+import { fileStore, HOSTED_NOT_BUILT, HostedSpendStoreNotBuilt } from "@/lib/spend/fileStore";
 import type { SpendStore } from "@/lib/spend/store";
+import { reason } from "@/lib/text/router";
+import { textSpendStats } from "@/lib/text/spend";
 
 test.describe.configure({ timeout: 120_000 });
 
 const STORE_VARS = ["SPEND_STORE", "SPEND_STORE_DIR", "SPEND_HOLD_TTL_MS"] as const;
-keepEnv([...STORE_VARS, ...MANAGED_MARKERS, "LOCAL_BINARIES"]);
+keepEnv([...STORE_VARS, ...MANAGED_MARKERS, "LOCAL_BINARIES", BUDGET_VAR]);
 
 const ROOT = process.cwd();
 
@@ -116,6 +124,188 @@ function startChild(name: string, body: string, env: NodeJS.ProcessEnv): Promise
 
 const alone = (dir: string, name: string, body: string, extra: Record<string, string> = {}) =>
   startChild(name, body, childEnv(dir, extra));
+
+/** Run children that meet at a barrier and then act at the same moment. */
+async function together(dir: string, bodies: Record<string, string>, extra: Record<string, string> = {}): Promise<ChildResult[]> {
+  const sync = scratch();
+  const env = childEnv(dir, { ...extra, SYNC_DIR: sync });
+  const running = Object.entries(bodies).map(([name, body]) => startChild(name, body, env));
+  const names = Object.keys(bodies);
+  for (let i = 0; i < 6000 && !names.every((n) => existsSync(path.join(sync, `ready-${n}`))); i++)
+    await new Promise((r) => setTimeout(r, 10));
+  writeFileSync(path.join(sync, "go"), "");
+  return Promise.all(running);
+}
+
+// ── the pin ────────────────────────────────────────────────────────────────
+
+test("the node lane is pinned to the memory store, and the pin reaches this worker", async () => {
+  // Read before any case of this file sets anything: keepEnv restores it.
+  expect(process.env.SPEND_STORE, "playwright.config.ts sets SPEND_STORE=memory for every worker").toBe("memory");
+  for (const m of MANAGED_MARKERS) delete process.env[m];
+  expect((await budgetStats()).store).toBe("memory");
+  expect((await musicBudgetStats()).store).toBe("memory");
+  expect((await videoBudgetStats()).store).toBe("memory");
+  expect((await textSpendStats()).store).toBe("memory");
+});
+
+// ── case 1: one window across two processes ────────────────────────────────
+
+test("case 1: two processes each reserve 60% of a $1 ceiling at once; exactly one is refused over-budget", async () => {
+  const dir = scratch();
+  const body = `
+import { reserve } from "@/lib/imaging/budget";
+await barrier();
+try {
+  const h = await reserve(0.6);
+  out({ ok: true, id: h.id });
+} catch (e) {
+  out({ ok: false, kind: (e as { kind?: string }).kind, message: (e as Error).message });
+}
+`;
+  const results = (await together(dir, { a: body, b: body }, { [BUDGET_VAR]: "1" })).map((c) => c.result);
+  console.log(`[spend-ledger] case 1 -> ${JSON.stringify(results.map((x) => (x.ok ? "held" : x.kind)))}`);
+  expect(results.filter((x) => x.ok)).toHaveLength(1);
+  const refused = results.filter((x) => !x.ok);
+  expect(refused).toHaveLength(1);
+  expect(refused[0].kind).toBe("over-budget");
+  expect(String(refused[0].message)).toContain("Imaging spend ceiling reached");
+});
+
+// ── case 2: a restart forgets nothing ──────────────────────────────────────
+
+test("case 2: book $4, and another process on the same directory reads $4 spent", async () => {
+  const dir = scratch();
+  const booked = await alone(
+    dir,
+    "book",
+    `
+import { recordSpend } from "@/lib/imaging/budget";
+await recordSpend({ usd: 4, cap: "generate", provider: "google", model: "probe", outcome: "served", basis: "vendor" });
+out({ ok: true });
+`,
+  );
+  expect(booked.result.ok).toBe(true);
+  const read = await alone(
+    dir,
+    "read",
+    `
+import { budgetStats } from "@/lib/imaging/budget";
+const s = await budgetStats();
+out({ spentUsd: s.spentUsd, rows: s.rows, store: s.store });
+`,
+  );
+  console.log(`[spend-ledger] case 2 -> ${JSON.stringify(read.result)}`);
+  expect(read.result.store).toBe("file");
+  expect(read.result.spentUsd).toBeCloseTo(4, 9);
+  expect(read.result.rows).toBe(1);
+});
+
+// ── case 3: music, across processes, refused before the vendor ─────────────
+
+test("case 3: two concurrent music renders summing past the ceiling: the second is refused before fetch", async () => {
+  const dir = scratch();
+  const body = `
+import { composeMusic } from "@/lib/music/elevenlabs";
+let fetches = 0;
+globalThis.fetch = (async () => {
+  fetches++;
+  return new Response(new Uint8Array(2048), { status: 200, headers: { "content-type": "audio/mpeg" } });
+}) as typeof fetch;
+const PLAN = {
+  positiveGlobalStyles: ["warm"],
+  negativeGlobalStyles: ["harsh"],
+  sections: [{ name: "bed", durationMs: 12000, positiveStyles: ["warm"], negativeStyles: ["harsh"] }],
+};
+await barrier();
+try {
+  await composeMusic(PLAN);
+  out({ ok: true, fetches });
+} catch (e) {
+  out({ ok: false, kind: (e as { kind?: string }).kind, fetches });
+}
+`;
+  const results = (
+    await together(dir, { a: body, b: body }, {
+      MUSIC_BUDGET_SECONDS_PER_WINDOW: "20", // each 12 s render is 60% of it
+      ELEVENLABS_API_KEY: "probe-key-not-a-real-one",
+    })
+  ).map((c) => c.result);
+  console.log(`[spend-ledger] case 3 -> ${JSON.stringify(results)}`);
+  // "Reached" is judged by the fake fetch, not by how the render ended: what
+  // the case proves is which call the ceiling stopped before the vendor.
+  const refused = results.filter((x) => x.kind === "over-budget");
+  const reached = results.filter((x) => x.kind !== "over-budget");
+  expect(refused).toHaveLength(1);
+  expect(refused[0].fetches, "the refused render reached the vendor").toBe(0);
+  expect(reached).toHaveLength(1);
+  expect(reached[0].fetches).toBeGreaterThanOrEqual(1);
+});
+
+// ── case 4: text, counted on the shared ledger ─────────────────────────────
+
+const SCHEMA = { type: "object", properties: { ok: { type: "boolean" } }, required: ["ok"] } as const;
+
+function costing(usd: number): Cassette {
+  const base = loadCassette("engine-door");
+  const ok = base.turns.find((t) => t.match?.heading === "# DOOR ok")!;
+  return { ...base, turns: [{ ...ok, match: { heading: "# SPEND" }, envelope: { ...ok.envelope!, total_cost_usd: usd } }] };
+}
+
+test.describe("case 4: text on the file store", () => {
+  keepEnv([...FAKE_ENGINE_ENV, "TEXT_ENV", "GOOGLE_AI_API_KEY", "LIGHTTRACK_DISABLE"]);
+
+  test("a claude-cli turn reporting $0.31 books one vendor row; a google turn is counted unpriced with no $0 row", async () => {
+    const dir = scratch();
+    process.env.SPEND_STORE = "file";
+    process.env.SPEND_STORE_DIR = dir;
+    for (const m of MANAGED_MARKERS) delete process.env[m];
+    process.env.TEXT_ENV = "local";
+    process.env.LOCAL_BINARIES = "on";
+    process.env.LIGHTTRACK_DISABLE = "1";
+    delete process.env.GOOGLE_AI_API_KEY;
+
+    await withFakeEngine(costing(0.31), async () => {
+      const out = await reason({ prompt: "# SPEND\n", turn: "edit-plan", schema: SCHEMA });
+      expect(out.provenance.provider).toBe("claude-cli");
+    });
+    process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
+    const real = globalThis.fetch;
+    globalThis.fetch = (async () =>
+      new Response(
+        JSON.stringify({
+          candidates: [{ content: { parts: [{ text: '{"ok":true}' }] }, finishReason: "STOP" }],
+          usageMetadata: { promptTokenCount: 12, candidatesTokenCount: 4 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      )) as typeof fetch;
+    try {
+      const out = await reason({ prompt: "x", turn: "edit-plan", schema: SCHEMA, avoid: "claude-cli" });
+      expect(out.provenance.provider).toBe("google");
+    } finally {
+      globalThis.fetch = real;
+    }
+
+    // Read back by ANOTHER process: what this worker booked is on disk.
+    const read = await alone(
+      dir,
+      "read",
+      `
+import { textSpendRows, textSpendStats } from "@/lib/text/spend";
+const s = await textSpendStats();
+out({ rows: await textSpendRows(), unpriced: s.counters.unpriced, booked: s.counters.booked, store: s.store });
+`,
+    );
+    console.log(`[spend-ledger] case 4 -> ${JSON.stringify(read.result)}`);
+    const rows = read.result.rows as MeterRow[];
+    expect(read.result.store).toBe("file");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ amount: 0.31, basis: "vendor", outcome: "served" });
+    expect(rows[0].axes.provider).toBe("claude-cli");
+    expect(read.result.unpriced).toBe(1);
+    expect(read.result.booked).toBe(1);
+  });
+});
 
 // ── a kernel meter on the file store, for the cases below the adapters ─────
 
@@ -352,6 +542,39 @@ test.describe("the file store", () => {
     for (const m of MANAGED_MARKERS) delete process.env[m];
     process.env.LOCAL_BINARIES = "off"; // the CLI posture is not the disk posture
     expect(fileStore("spend-managed").kind).toBe("file");
+  });
+
+  test("on the managed posture every class is in memory, with the reason; asking for the file there is refused", async () => {
+    process.env.SPEND_STORE_DIR = scratch();
+    delete process.env.SPEND_STORE;
+    process.env.K_SERVICE = "probe-service";
+    for (const s of [await budgetStats(), await musicBudgetStats(), await videoBudgetStats(), await textSpendStats()]) {
+      expect(s.store).toBe("memory");
+      expect(s.storeReason).toBe("hosted spend store not built (operator 2026-10-07: local now, hosted later)");
+    }
+    expect(HOSTED_NOT_BUILT).toBe("hosted spend store not built (operator 2026-10-07: local now, hosted later)");
+
+    // Asking for the file store on that posture is refused loudly, never run
+    // quietly per instance.
+    process.env.SPEND_STORE = "file";
+    await expect(budgetStats()).rejects.toThrow(HostedSpendStoreNotBuilt);
+    // And a value that names no store picks none.
+    delete process.env.K_SERVICE;
+    process.env.SPEND_STORE = "gcs";
+    await expect(budgetStats()).rejects.toThrow(/SPEND_STORE=gcs is not a spend store/);
+  });
+
+  test("on this machine, with no pin, every class is on the file store", async () => {
+    const dir = scratch();
+    process.env.SPEND_STORE_DIR = dir;
+    delete process.env.SPEND_STORE;
+    for (const m of MANAGED_MARKERS) delete process.env[m];
+    for (const s of [await budgetStats(), await musicBudgetStats(), await videoBudgetStats(), await textSpendStats()]) {
+      expect(s.store).toBe("file");
+      expect(s.storeReason).toBeUndefined();
+    }
+    for (const cls of ["imaging-usd", "music-audio-s", "video-usd", "text-usd"])
+      expect(existsSync(path.join(dir, `${cls}.json`)), cls).toBe(true);
   });
 
   test("latency: 200 reserve+settle round trips on the file store", async () => {

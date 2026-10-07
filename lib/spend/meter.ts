@@ -46,7 +46,7 @@
 // the HTTP status a refusal maps to stay where they were.
 
 import { ceilingOf, floorOf, isCountOnly, windowMsOf, type AnySpendClassDef, type CountOnlyClassDef, type SpendClassDef } from "./classes";
-import { memoryStore, SpendStoreBusy, type Hold, type MeterCounters, type SpendState, type SpendStore } from "./store";
+import { memoryStore, SpendStoreBusy, type Hold, type MeterCounters, type SpendState, type SpendStore, type SpendStoreKind } from "./store";
 
 export type SpendOutcome = "served" | "failed";
 
@@ -120,6 +120,11 @@ export interface MeterStats {
   windowEnd: number;
   rows: number;
   counters: MeterCounters;
+  /** Where these numbers live (SpendStore.kind). */
+  store: SpendStoreKind;
+  /** Why the class is on that store, when it is not the one this machine
+   *  would otherwise get (lib/spend/select.ts). Absent otherwise. */
+  storeReason?: string;
 }
 
 export interface MeterAxes {
@@ -409,6 +414,11 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
 
     stats(now = Date.now()) {
       const windowMs = windowMsOf(def);
+      // Read after the transaction, so it names the store that answered.
+      const where = (): { store: SpendStoreKind; storeReason?: string } => {
+        const reason = store.reason?.();
+        return reason ? { store: store.kind, storeReason: reason } : { store: store.kind };
+      };
       // ONE transaction: prune first, so the counters are current, then read.
       if (counting)
         return read(now, (s) => ({
@@ -418,7 +428,7 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
           windowEnd: now,
           rows: s.rows.length,
           counters: { ...s.counters },
-        })) as Promise<MeterStats>;
+        })).then((v) => ({ ...v, ...where() })) as Promise<MeterStats>;
       const ceiling = ceilingOf(limits);
       const floor = floorOf(limits);
       return read(now, (s) => {
@@ -438,7 +448,7 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
           rows: s.rows.length,
           counters: { ...s.counters },
         };
-      });
+      }).then((v) => ({ ...v, ...where() }));
     },
 
     byAxis: (now = Date.now()) =>

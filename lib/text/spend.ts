@@ -22,6 +22,7 @@
 
 import { SPEND_CLASSES } from "../spend/classes";
 import { createMeter, type CountStats, type MeterAxes, type MeterRow } from "../spend/meter";
+import { spendStoreFor } from "../spend/select";
 import type { SpendStore } from "../spend/store";
 import { TextError } from "./errors";
 import type { TextProvenance } from "./types";
@@ -55,11 +56,14 @@ const hooks = {
   }),
 };
 
-let meter = createMeter<TextSpendEntry, TextAxes, TextSpendBasis>(CLASS, hooks);
+// On the store lib/spend/select.ts picks for this class: the machine's file
+// store, or memory where pinned or managed.
+let meter = createMeter<TextSpendEntry, TextAxes, TextSpendBasis>(CLASS, hooks, spendStoreFor(CLASS.id));
 
-/** Test hook: put the ledger on another store (one that throws, say). */
+/** Test hook: put the ledger on another store (one that throws, say); null
+ *  puts it back on the selected one. */
 export function __setTextSpendStore(store: SpendStore<TextSpendRow> | null): void {
-  meter = createMeter<TextSpendEntry, TextAxes, TextSpendBasis>(CLASS, hooks, store ?? undefined);
+  meter = createMeter<TextSpendEntry, TextAxes, TextSpendBasis>(CLASS, hooks, store ?? spendStoreFor(CLASS.id));
 }
 
 export function __resetTextSpend(): void {

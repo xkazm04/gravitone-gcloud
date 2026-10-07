@@ -29,6 +29,10 @@ export async function GET(req: Request): Promise<Response> {
     spentUsd: stats.spentUsd,
     remainingUsd: stats.remainingUsd,
     windowMs: stats.windowMs,
+    // Where the window lives: this machine's ledger file, or (pinned or on the
+    // managed posture) this process alone, with the reason.
+    store: stats.store,
+    ...(stats.storeReason ? { storeReason: stats.storeReason } : {}),
     perImageUsd,
     quote,
   });

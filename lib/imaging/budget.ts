@@ -70,6 +70,8 @@
 
 import { SPEND_CLASSES, ceilingOf, floorOf, windowMsOf } from "../spend/classes";
 import { createMeter } from "../spend/meter";
+import { spendStoreFor } from "../spend/select";
+import type { SpendStoreKind } from "../spend/store";
 import { ImagingError, overBudget } from "./errors";
 import { estimatePerImage } from "./pricing";
 import type { Capability, ProviderId } from "./types";
@@ -213,8 +215,9 @@ function note(line: string): void {
 type ImagingAxes = { cap: Capability; provider: ProviderId; model?: string };
 
 /**
- * The ledger. One kernel meter over the in-memory store; everything below is
- * this file's vocabulary laid over it.
+ * The ledger. One kernel meter over the store lib/spend/select.ts picks for
+ * this class (the machine's file store, or memory where pinned or managed);
+ * everything below is this file's vocabulary laid over it.
  */
 const meter = createMeter<SpendEntry, ImagingAxes, SpendBasis>(CLASS, {
   entry: (e) => ({
@@ -258,7 +261,7 @@ const meter = createMeter<SpendEntry, ImagingAxes, SpendBasis>(CLASS, {
       `window-reset evicted=${dropped} usd=$${droppedAmount.toFixed(4)} ` +
         `remaining=$${remaining.toFixed(4)} windowMs=${windowMs}`,
     ),
-});
+}, spendStoreFor(CLASS.id));
 
 /** Total currently reserved across all active holds. */
 export function heldUsd(): Promise<number> {
@@ -290,6 +293,10 @@ export async function budgetStats(now: number = Date.now()): Promise<{
   windowEnd: number;
   rows: number;
   counters: BudgetCounters;
+  /** Where these numbers live: this machine's ledger file, or this process. */
+  store: SpendStoreKind;
+  /** Why it is not the file, when the posture decided (managed). */
+  storeReason?: string;
 }> {
   // The kernel prunes first, so the counters are current. `underFloor` is a
   // declared band, some traffic, and a total beneath the band's bottom — rows
@@ -321,6 +328,8 @@ export async function budgetStats(now: number = Date.now()): Promise<{
       expiredUsd: c.expiredAmount,
       lateWrites: c.lateWrites,
     },
+    store: s.store,
+    ...(s.storeReason ? { storeReason: s.storeReason } : {}),
   };
 }
 
