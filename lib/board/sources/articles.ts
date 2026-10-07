@@ -60,6 +60,7 @@ import {
   type Fetched,
   type RunDetail,
   type TopicChoice,
+  type TopicList,
 } from "@/app/articles/articlesClient";
 import { ARTICLE_STATUSES, CHECK_DIMENSIONS, RUN_COST_HINT, canTransition, type ArticleRun, type ArticleStatus } from "@/lib/articles/types";
 
@@ -502,10 +503,31 @@ export function makeArticlesSource(opts: { now?: () => number } = {}): ArticlesP
 
   const loadPipeline = async (): Promise<PipelineEntry[]> => {
     const [runsR, topicsR] = await Promise.all([listRuns(), listTopics({ limit: TOPIC_LIMIT })]);
+    // The studio's own route is not optional: if the runs cannot be read there
+    // is no lane to draw, and saying so is the honest answer.
     const { runs, damaged } = must(runsR);
-    // Topics are the first column. A read that failed is not an empty column: it
-    // fails the load, so the surface says unavailable or error, never "nothing proposed".
-    const topicList = mustAt(topicsR, "/api/articles/topics");
+
+    // TOPICS ARE DIFFERENT, and the difference is the whole reason `degraded`
+    // exists. They come from the sibling ai-registry, which is a checkout that
+    // may simply not be on this machine - while the other three columns come
+    // from the studio and are fine. Failing the whole load here would take the
+    // GATE column down with it, which is the one column with work waiting in
+    // it, to report an absent sibling. So the first column alone reports its
+    // failure and the rest of the lane draws its items.
+    //
+    // A read that failed is still never an empty column: `degraded` is what the
+    // surface draws instead of "nothing proposed", and the two cannot be
+    // confused because an empty read leaves `degraded` absent.
+    let topicList: TopicList = { topics: [], covered: [], claimed: [], remaining: 0 };
+    let topicsDown: string | null = null;
+    if (topicsR.ok) {
+      topicList = topicsR.data;
+    } else {
+      topicsDown =
+        topicsR.kind === "unavailable" || topicsR.status === 0 || topicsR.status === 401 || topicsR.status === 403 || (topicsR.status === 404 && topicsR.error === "HTTP 404")
+          ? `/api/articles/topics is not reachable here: ${topicsR.error}`
+          : topicsR.error;
+    }
 
     const hidden = new Map<string, { stage: CanonStage; count: number; why: string }>();
     const gated = runs.filter((r) => r.status === "awaiting-approval");
@@ -543,6 +565,7 @@ export function makeArticlesSource(opts: { now?: () => number } = {}): ArticlesP
     notes = {
       hidden: [...(more > 0 ? [{ stage: "proposed" as const, count: more, why: `uncovered topics past the first ${TOPIC_LIMIT}` }] : []), ...hidden.values()],
       damaged,
+      ...(topicsDown ? { degraded: [{ stage: "proposed" as const, reason: topicsDown }] } : {}),
     };
     return [...natives.values()].map(entryOf);
   };

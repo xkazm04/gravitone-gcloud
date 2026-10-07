@@ -336,7 +336,9 @@ test("articles pipeline: unreadable is unavailable or error, never an empty lane
       const src = makeArticlesSource({ now: () => NOW });
       try {
         const entries = await src.loadPipeline();
-        states[label] = stateOfEntries({ total: entries.length, pending: 0, decided: 0, rejected: 0 }, []).kind === "empty" && entries.length === 0 ? "empty" : `loaded(${entries.length})`;
+        const base = stateOfEntries({ total: entries.length, pending: 0, decided: 0, rejected: 0 }, []).kind === "empty" && entries.length === 0 ? "empty" : `loaded(${entries.length})`;
+        const down = src.lastLoad?.().degraded;
+        states[label] = down?.length ? `${base}+degraded(${down.map((d) => d.stage).join(",")})` : base;
       } catch (e) {
         const s = stateOfError(e);
         states[label] = s.kind === "unavailable" ? `unavailable{${s.reason}}` : s.kind === "error" ? `error{${s.message}}` : s.kind;
@@ -357,9 +359,49 @@ test("articles pipeline: unreadable is unavailable or error, never an empty lane
   expect(states["route not built (404, no body)"]).toMatch(/^unavailable\{/);
   expect(states["signed out (401)"]).toMatch(/^unavailable\{/);
   expect(states["server error (500)"]).toBe("error{run.json is corrupt}");
-  expect(states["topics route 404 (runs fine)"]).toMatch(/^unavailable\{\/api\/articles\/topics/);
-  expect(states["topics registry 503 (runs fine)"]).toBe("error{the registry cannot be reached}");
+  // A TOPICS FAILURE DEGRADES ONE COLUMN; IT DOES NOT FAIL THE LANE. Topics come
+  // from the sibling ai-registry, which may simply not be on this machine, while
+  // the other three columns come from the studio. Failing the load here would
+  // take the GATE column - the one with work waiting in it - down to report an
+  // absent sibling. So the lane still loads, and `proposed` carries its reason.
+  expect(states["topics route 404 (runs fine)"]).toMatch(/\+degraded\(proposed\)$/);
+  expect(states["topics registry 503 (runs fine)"]).toMatch(/\+degraded\(proposed\)$/);
   expect(states["nothing yet (empty store, no topics)"]).toBe("empty");
+});
+
+test("articles pipeline: a topics failure degrades the proposed column and the rest of the lane still draws", async () => {
+  const runs = ALL_STATUS_RUNS.map((r) => (r.status === "rejected" ? { ...r, rejection: { at: iso(1), note: "n" } } : r));
+
+  // Control first: with topics reachable, `degraded` is absent. Without this the
+  // assertion below would pass on a source that reports every load as degraded.
+  const ok = install(articlesApi(runs));
+  let healthy;
+  try {
+    const src = makeArticlesSource({ now: () => NOW });
+    await src.loadPipeline();
+    healthy = src.lastLoad();
+  } finally {
+    ok.restore();
+  }
+  expect(healthy?.degraded).toBeUndefined();
+
+  const f = install((url, m, b) => (url.pathname === "/api/articles/topics" ? json({ error: "the registry cannot be reached" }, 503) : articlesApi(runs)(url, m, b)));
+  try {
+    const src = makeArticlesSource({ now: () => NOW });
+    const entries = await src.loadPipeline();
+    const notes = src.lastLoad();
+    console.log(`
+TOPICS DOWN -> degraded ${JSON.stringify(notes?.degraded)} · drew ${entries.length} entries`);
+
+    // The column that failed says why, naming the stage.
+    expect(notes?.degraded).toEqual([{ stage: "proposed", reason: "the registry cannot be reached" }]);
+    // And no candidate is drawn as if the column were merely empty.
+    expect(entries.filter((e) => e.placement.stage === "proposed")).toHaveLength(0);
+    // The gate column - the whole point - still has its run.
+    expect(entries.some((e) => e.placement.stage === "gate")).toBe(true);
+  } finally {
+    f.restore();
+  }
 });
 
 test("articles: the verdict half is untouched - load() still lists only runs that reached the gate", async () => {
