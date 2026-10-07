@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 527,
+  "files": 535,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -58,6 +58,7 @@
         "app/error.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/Lightbox.tsx",
+        "app/foundry/StripLightbox.tsx",
         "app/foundry/ui.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/MoveDialog.tsx",
@@ -98,6 +99,9 @@
         "app/calendar/MetricsTab.tsx",
         "app/calendar/SlotSheet.tsx",
         "app/calendar/ui.tsx",
+        "app/foundry/StripGrid.tsx",
+        "app/foundry/StripLightbox.tsx",
+        "app/foundry/StripsView.tsx",
         "app/foundry/ui.tsx",
         "app/library/parts.tsx",
         "app/playground/hunt/Lesson.tsx"
@@ -489,6 +493,8 @@
         "app/foundry/ExtractView.tsx",
         "app/foundry/FoundryView.tsx",
         "app/foundry/Lightbox.tsx",
+        "app/foundry/StripLightbox.tsx",
+        "app/foundry/StripsView.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/assets/ShelfGallery.tsx",
         "app/library/audio/Ledger.tsx",
@@ -570,6 +576,8 @@
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/FoundryView.tsx",
         "app/foundry/Lightbox.tsx",
+        "app/foundry/StripLightbox.tsx",
+        "app/foundry/StripsView.tsx",
         "app/foundry/StylesShelf.tsx",
         "app/foundry/ui.tsx",
         "app/library/AssetLightbox.tsx",
@@ -662,6 +670,7 @@
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/board/parts.tsx",
         "app/calendar/ChannelsTab.tsx",
+        "app/foundry/StripGrid.tsx",
         "app/library/parts.tsx",
         "app/playground/hunt/Inspector.tsx",
         "app/playground/hunt/index.tsx",
@@ -704,6 +713,7 @@
         "app/_phases/score/ScoreSpotting.tsx",
         "app/_studio/assetParts.tsx",
         "app/articles/RunView.tsx",
+        "app/foundry/StripGrid.tsx",
         "app/playground/hunt/index.tsx"
       ]
     },
@@ -911,6 +921,9 @@
         "app/calendar/MetricsTab.tsx",
         "app/calendar/SlotSheet.tsx",
         "app/calendar/ui.tsx",
+        "app/foundry/StripGrid.tsx",
+        "app/foundry/StripLightbox.tsx",
+        "app/foundry/StripsView.tsx",
         "app/foundry/ui.tsx",
         "app/library/parts.tsx",
         "app/playground/hunt/Lesson.tsx"
@@ -983,6 +996,8 @@
         "app/foundry/DojoView.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/RunCards.tsx",
+        "app/foundry/StripGrid.tsx",
+        "app/foundry/StripsView.tsx",
         "app/foundry/StylesShelf.tsx",
         "app/playground/arrange/Board.tsx",
         "app/playground/hunt/Board.tsx",
@@ -1227,7 +1242,8 @@
         "components/kit/index.ts"
       ],
       "adopters": [
-        "app/foundry/CullGrid.tsx"
+        "app/foundry/CullGrid.tsx",
+        "app/foundry/StripGrid.tsx"
       ]
     },
     "useToast": {
@@ -1633,7 +1649,7 @@
       "suspectFiles": {}
     },
     "app/api": {
-      "files": 70,
+      "files": 75,
       "kitImports": 0,
       "signalImports": 0,
       "parts": [],
@@ -1736,9 +1752,9 @@
       "suspectFiles": {}
     },
     "app/foundry": {
-      "files": 16,
-      "kitImports": 1,
-      "signalImports": 8,
+      "files": 19,
+      "kitImports": 2,
+      "signalImports": 11,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1746,6 +1762,8 @@
         "Hint",
         "Keycaps",
         "Modal",
+        "PipRow",
+        "Provenance",
         "StackBar",
         "TALLY_TONE",
         "Tally",
@@ -1754,7 +1772,7 @@
       "suspects": {
         "tab": 1,
         "select": 0,
-        "media": 0,
+        "media": 1,
         "title": 1,
         "typing": 3
       },
@@ -1770,6 +1788,9 @@
         },
         "app/foundry/ExtractView.tsx": {
           "title": 1
+        },
+        "app/foundry/StripLightbox.tsx": {
+          "media": 1
         },
         "app/foundry/plant.tsx": {
           "tab": 1
