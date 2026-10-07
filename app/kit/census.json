@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 538,
+  "files": 541,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -77,6 +77,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
         "app/_phases/_shared/notebook/SourceChip.tsx",
         "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
@@ -389,6 +390,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/cut/parts/Lanes.tsx",
@@ -707,6 +709,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
         "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/motion/MotionStep.tsx",
         "app/_phases/motion/ads/AdsMotion.tsx",
@@ -901,6 +904,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
         "app/_phases/_shared/notebook/SourceChip.tsx",
         "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
@@ -1321,18 +1325,27 @@
       "suspectFiles": {}
     },
     "app/_library": {
-      "files": 1,
+      "files": 2,
       "kitImports": 0,
-      "signalImports": 0,
-      "parts": [],
+      "signalImports": 1,
+      "parts": [
+        "CHIP_CLASS",
+        "Ghost",
+        "Provenance",
+        "TALLY_TONE"
+      ],
       "suspects": {
         "tab": 0,
         "select": 0,
-        "media": 0,
+        "media": 1,
         "title": 0,
         "typing": 0
       },
-      "suspectFiles": {}
+      "suspectFiles": {
+        "app/_library/LibraryShelves.tsx": {
+          "media": 1
+        }
+      }
     },
     "app/_phases/_shared": {
       "files": 29,
@@ -1385,7 +1398,7 @@
       }
     },
     "app/_phases/frames": {
-      "files": 29,
+      "files": 30,
       "kitImports": 0,
       "signalImports": 7,
       "parts": [
@@ -1507,7 +1520,7 @@
       }
     },
     "app/_phases/score": {
-      "files": 13,
+      "files": 14,
       "kitImports": 0,
       "signalImports": 4,
       "parts": [

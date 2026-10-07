@@ -58,6 +58,9 @@ const SCREENS = {
   "studio-motion": { url: `/studio/${PROJECT}?step=motion`, via: ["frames"] },
   "studio-score": { url: `/studio/${PROJECT}?step=score`, via: ["frames"] },
   "studio-cut": { url: `/studio/${PROJECT}?step=cut`, via: ["frames", "score"] },
+  // The Outputs shelf is not a route: it is the header button, opened over a step.
+  // It reads this project's own frames and score, so it walks both first.
+  "studio-outputs": { url: `/studio/${PROJECT}?step=cut`, via: ["frames", "score"], open: "Outputs" },
   "library-styles": { url: "/library" },
   "library-assets": { url: "/library", tab: "Assets" },
   "library-animations": { url: "/library", tab: "Animations" },
@@ -145,6 +148,11 @@ if (spec.url !== "/" && (await page.getByTestId("dev-auth-banner").count()) === 
   console.error("Nothing was captured; a sign-in wall is not the screen you asked for.");
   await browser.close();
   process.exit(3);
+}
+
+if (spec.open) {
+  await page.getByRole("button", { name: new RegExp(`^${spec.open}`) }).first().click().catch(() => {});
+  await page.waitForTimeout(1600);
 }
 
 if (spec.tab) {
