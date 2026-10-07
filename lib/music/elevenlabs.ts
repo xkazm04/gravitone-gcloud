@@ -13,7 +13,7 @@
 // The key is read lazily per call, like lib/imaging/env.ts: a route handler
 // that booted before .env.local was filled must not hold a stale absence.
 
-import { assertWithinMusicBudget, recordMusicSpend } from "./budget";
+import { releaseMusic, reserveMusic, settleMusic } from "./budget";
 import { MusicError } from "./errors";
 import { logCall } from "./log";
 import { priceCall, type MusicOp } from "./pricing";
@@ -65,11 +65,15 @@ export function isMusicConfigured(): boolean {
  *
  * Three things happen around each call, in this order:
  *
- *   1. THE CEILING REFUSES BEFORE THE VENDOR IS TOUCHED. `assertWithinMusicBudget`
- *      throws `over-budget` (HTTP 402) with nothing billed. Refusing rather than
- *      billing is the entire distinction — a meter you can read but not enforce
- *      is a dashboard.
- *   2. THE CALL IS BOOKED against the rolling window on settle.
+ *   1. THE CEILING REFUSES BEFORE THE VENDOR IS TOUCHED, OR HOLDS THE SECONDS.
+ *      `reserveMusic` throws `over-budget` (HTTP 402) with nothing billed.
+ *      Refusing rather than billing is the entire distinction — a meter you can
+ *      read but not enforce is a dashboard. When it admits the call it HOLDS the
+ *      seconds until the vendor answers: a check that held nothing let two
+ *      renders that each fit both pass against the same total (card IMG-A
+ *      stage 2).
+ *   2. THE HOLD IS SETTLED into a booked row when the vendor rendered, and
+ *      released with nothing booked when it did not.
  *   3. ONE GREPPABLE LINE is written, whatever happened.
  */
 
@@ -98,12 +102,14 @@ async function metered<T>(
   // OUTSIDE the try on purpose: a budget refusal is not a call, so it must not
   // be booked or logged as one. budget.ts writes its own `[music] budget
   // refused ...` line, which is where a refusal belongs.
-  assertWithinMusicBudget(seconds);
+  const hold = reserveMusic(seconds);
 
   const started = Date.now();
   try {
     const out = await run();
-    if (seconds > 0) recordMusicSpend({ seconds, op, model, outcome: "served" });
+    // A zero-second call (a free plan draft) asked for no audio: it books
+    // nothing and is not counted as unmetered, as before holds existed.
+    if (seconds > 0) settleMusic(hold, { seconds, op, model, outcome: "served" });
     const quote = priceCall({ op, model, seconds });
     logCall({
       op,
@@ -119,9 +125,14 @@ async function metered<T>(
     const err =
       e instanceof MusicError ? e : new MusicError("failed", `The ${op} call failed unexpectedly.`);
     if (seconds > 0 && BILLED_ON_FAILURE.has(err.kind))
-      recordMusicSpend({ seconds, op, model, outcome: "failed" });
+      settleMusic(hold, { seconds, op, model, outcome: "failed" });
     logCall({ op, ms: Date.now() - started, seconds, kind: err.kind, message: err.message });
     throw err;
+  } finally {
+    // Whatever was not settled above rendered nothing the vendor bills: a
+    // rejected key, a refusal, a rate limit, a request that never left. Its
+    // seconds go back with nothing booked. After a settle this is a no-op.
+    releaseMusic(hold);
   }
 }
 

@@ -5,12 +5,11 @@
 // attributed on. The meter (./meter.ts) is the same code for every class; the
 // class is the only thing that differs.
 //
-// ONE CLASS TODAY, BY DESIGN (card IMG-A stage 1). `imaging-usd` is the ledger
-// lib/imaging/budget.ts always kept, moved onto the kernel with no change in
-// behaviour. Music seconds and text USD join in later stages, each as one more
-// entry here — music with its own vars (lib/music/budget.ts), text with a new
-// one. A class nobody books against is a declared ceiling that enforces
-// nothing, so a class is added in the same change as its first adapter.
+// ONE CLASS AT A TIME, BY DESIGN (card IMG-A stage 1). `imaging-usd` is the
+// ledger lib/imaging/budget.ts always kept, moved onto the kernel with no
+// change in behaviour. Text USD joins in a later stage, as one more entry here
+// with a new var. A class nobody books against is a declared ceiling that
+// enforces nothing, so a class is added in the same change as its first adapter.
 //
 // `video-usd` (2026-10-06, spark ads-project-type WP3) is the second, and it
 // arrived that way: lib/imaging/video/budget.ts books every hosted
@@ -19,6 +18,12 @@
 // where a plate costs cents, and one ceiling over both would let a single
 // clip starve a whole storyboard of plates (or the other way round).
 //
+// `music-audio-s` (card IMG-A stage 2) is the third, and the first whose unit
+// is not money: lib/music/budget.ts has always metered SECONDS OF AUDIO
+// REQUESTED, because no credits-per-second rate has been measured and a ceiling
+// in a unit nobody can compute never fires. It keeps the vars and defaults that
+// file always read; only the floor var is new, and it is reporting only.
+//
 // ENV IS READ PER CALL, never cached at import: a probe or an operator changes a
 // ceiling after the module loaded and the next call must see it.
 //
@@ -26,9 +31,10 @@
 // default, never an open tab ("budget-defaults-unlimited"). `0` is a valid
 // ceiling meaning "spend nothing", not "disabled".
 
-export type SpendClass = "imaging-usd" | "video-usd";
+export type SpendClass = "imaging-usd" | "video-usd" | "music-audio-s";
 
-export type SpendUnit = "usd";
+/** `audio-s`: seconds of audio requested from a music vendor. */
+export type SpendUnit = "usd" | "audio-s";
 
 export interface SpendClassDef {
   readonly id: SpendClass;
@@ -84,6 +90,22 @@ export const SPEND_CLASSES: Readonly<Record<SpendClass, SpendClassDef>> = {
     // honesty field, as `cap` is for imaging.
     axes: ["project", "provider", "model"],
     attributionAxis: "project",
+  },
+  "music-audio-s": {
+    id: "music-audio-s",
+    unit: "audio-s",
+    ceilingVar: "MUSIC_BUDGET_SECONDS_PER_WINDOW",
+    windowVar: "MUSIC_BUDGET_WINDOW_MS",
+    floorVar: "MUSIC_BUDGET_FLOOR_SECONDS",
+    // 600 s of audio an hour: a POLICY CHOICE, not a measurement, and the one
+    // invented number in lib/music/budget.ts (its header says why). Unchanged
+    // by the move onto the kernel.
+    defaultCeiling: 600,
+    defaultWindowMs: 3_600_000, // one hour
+    defaultFloor: 0, // reporting only, as for imaging and video
+    // The axes lib/music/log.ts prints: what was asked for, and which model.
+    axes: ["op", "model"],
+    attributionAxis: "op",
   },
 };
 

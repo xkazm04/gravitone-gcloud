@@ -1,9 +1,10 @@
 // LANE — METER CONFORMANCE (dynamic).
 //
 // Runs the one meter kit (./_meterKit.ts) against every spend meter this repo
-// has. Today that is the imaging USD ceiling, read through its PUBLIC exports
-// (lib/imaging/budget.ts) — the same names the router and the routes call — so
-// this file proves the adapter, not an internal.
+// has: the imaging USD ceiling and the music seconds ceiling, each read through
+// its PUBLIC exports (lib/imaging/budget.ts, lib/music/budget.ts) — the same
+// names the router and the music adapter call — so this file proves the
+// adapters, not an internal.
 //
 // Card IMG-A (docs/concepts/moonshots-2026-10-05/06-imaging-music.md), stage 1:
 // the kit was written against today's imaging API before the kernel existed, so
@@ -34,6 +35,23 @@ import {
 } from "@/lib/imaging/budget";
 import { ImagingError } from "@/lib/imaging/errors";
 import { generate } from "@/lib/imaging/router";
+import {
+  MUSIC_BUDGET_VAR,
+  MUSIC_FLOOR_VAR,
+  MUSIC_WINDOW_VAR,
+  __resetMusicBudget,
+  musicBudgetStats,
+  musicSpendByAxis,
+  musicSpendRows,
+  recordMusicSpend,
+  releaseMusic,
+  reserveMusic,
+  settleMusic,
+  type MusicHold,
+  type MusicSpendEntry,
+  type MusicSpendRow,
+} from "@/lib/music/budget";
+import { MusicError } from "@/lib/music/errors";
 import { SPEND_CLASSES, type SpendClassDef } from "@/lib/spend/classes";
 import { createMeter } from "@/lib/spend/meter";
 
@@ -117,6 +135,88 @@ const imaging: MeterUnderTest = {
 };
 
 meterConformance(imaging);
+
+// ── Music, in seconds of audio (card IMG-A stage 2) ───────────────────────
+//
+// The kit's figures sit on a ceiling of 1, which reads as one second as well as
+// it reads as one dollar. The defaults are music's own, restated rather than
+// read back from the class: 600 s an hour is what lib/music/budget.ts always
+// defaulted to, and a move onto the kernel that changed it must be red here.
+
+const musicEntry = (r: KitRow): MusicSpendEntry => ({
+  get seconds() {
+    return r.amount;
+  },
+  op: (r.attributed === false ? undefined : "generate") as MusicSpendEntry["op"],
+  model: "kit-model",
+  outcome: r.outcome,
+  at: r.at,
+});
+
+meterConformance({
+  name: "music-audio-s (lib/music/budget)",
+  ceilingVar: MUSIC_BUDGET_VAR,
+  windowVar: MUSIC_WINDOW_VAR,
+  floorVar: MUSIC_FLOOR_VAR,
+  defaultCeiling: 600,
+  defaultWindowMs: 3_600_000,
+  attributionAxis: "op",
+  reset: __resetMusicBudget,
+  reserve: (amount, now) => reserveMusic(amount, now),
+  release: (h) => releaseMusic(h as MusicHold),
+  settle: (h, rows) => settleMusic(h as MusicHold, rows.map(musicEntry)),
+  book: (r) => recordMusicSpend(musicEntry(r)),
+  stats: (now) => {
+    const s = musicBudgetStats(now);
+    const c = s.counters;
+    return {
+      ceiling: s.ceilingSeconds,
+      floor: s.floorSeconds,
+      underFloor: s.underFloor,
+      spent: s.spentSeconds,
+      held: s.heldSeconds,
+      remaining: s.remainingSeconds,
+      windowMs: s.windowMs,
+      windowStart: s.windowStart,
+      windowEnd: s.windowEnd,
+      rows: s.rows,
+      counters: {
+        refusals: c.refusals,
+        refused: c.refusedSeconds,
+        booked: c.booked,
+        bookedFailed: c.bookedFailed,
+        failed: c.failedSeconds,
+        unpriced: c.unmetered,
+        evicted: c.evicted,
+        evictedAmount: c.evictedSeconds,
+        lastEvictionAt: c.lastEvictionAt,
+      },
+    };
+  },
+  byAxis: (now) => {
+    const a = musicSpendByAxis(now);
+    return {
+      total: a.totalSeconds,
+      served: a.byOutcome.served,
+      failed: a.byOutcome.failed,
+      unattributed: a.unattributedSeconds,
+      axes: { op: a.byOp, model: a.byModel },
+    };
+  },
+  rows: (now) => musicSpendRows(now).map((r) => ({ at: r.at, amount: r.seconds, outcome: r.outcome })),
+  tamper: () => {
+    const s = musicBudgetStats();
+    s.counters.booked = 0;
+    s.spentSeconds = 999;
+    for (const r of musicSpendRows() as MusicSpendRow[]) r.seconds = 999;
+    const a = musicSpendByAxis();
+    a.totalSeconds = 999;
+    for (const axis of [a.byOp, a.byModel, a.byOutcome] as Record<string, number>[])
+      for (const k of Object.keys(axis)) axis[k] = 999;
+  },
+  isOverBudget: (e) => e instanceof MusicError && e.kind === "over-budget",
+  isInvalid: (e) => e instanceof MusicError && e.kind === "bad-request",
+});
 
 // ── The bare kernel, on a class of its own ────────────────────────────────
 //
