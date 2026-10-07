@@ -44,6 +44,7 @@ import { TextError } from "../text/errors";
 import { reason } from "../text/router";
 import type { TextResult, TurnClass } from "../text/types";
 import {
+  digestOf,
   ensureSwept,
   LIVE,
   mintTurnId,
@@ -83,7 +84,32 @@ export interface TurnSpec<I = unknown, R = unknown> {
   /** The kind's own door over the engine's answer. Its return value is the
    *  record's `result`; a throw fails the turn with the thrown message (and its
    *  `findings`, when the error carries them). */
-  settle(result: TextResult, input: I): R | Promise<R>;
+  settle(result: TextResult, input: I, via?: unknown): R | Promise<R>;
+  /** How the engine is asked, for a kind that is not one `reason()` call —
+   *  research tries a retrieval rung and falls back to reasoning, each with its
+   *  own prompt and schema. Absent, the runner calls `reason()` with the
+   *  prepared prompt and schema. It must go through the router (`reason` /
+   *  `retrieve`) and pass `ctx.signal` on, so a cancel reaches the engine's
+   *  tree and every served turn books its one spend row. It reports back the
+   *  prompt it ACTUALLY sent: the record's `promptDigest` covers that, never
+   *  the prepared prompt of a rung that was not used. `via` is handed to
+   *  `settle` as its third argument. */
+  dispatch?(ctx: DispatchContext<I>): Promise<Dispatched>;
+}
+
+export interface DispatchContext<I = unknown> {
+  prompt: string;
+  schema?: Record<string, unknown>;
+  input: I;
+  turn: TurnClass;
+  signal: AbortSignal;
+}
+
+export interface Dispatched {
+  served: TextResult;
+  /** The prompt that reached the engine that served. */
+  prompt: string;
+  via?: unknown;
 }
 
 /* ── the registry ─────────────────────────────────────────────────────────── */
@@ -185,10 +211,15 @@ async function run(
   try {
     await ifLive(id, () => ({ status: "running" }));
     if (ctl.signal.aborted) throw new TextError("The turn was cancelled before it was dispatched.", "cancelled");
-    const served = await reason({ prompt, turn: spec.turn, schema, signal: ctl.signal });
+    const { served, prompt: sent, via } = spec.dispatch
+      ? await spec.dispatch({ prompt, schema, input, turn: spec.turn, signal: ctl.signal })
+      : { served: await reason({ prompt, turn: spec.turn, schema, signal: ctl.signal }), prompt, via: undefined };
+    // The record was minted against the prepared prompt; when another one was
+    // sent, the record says which.
+    if (sent !== prompt) await ifLive(id, () => ({ promptDigest: digestOf(sent), promptChars: sent.length }));
     let result: unknown;
     try {
-      result = await spec.settle(served, input);
+      result = await spec.settle(served, input, via);
     } catch (e) {
       // The engine answered and the kind's door refused it. The receipt is
       // kept — the turn was paid for whether or not its answer was usable.
