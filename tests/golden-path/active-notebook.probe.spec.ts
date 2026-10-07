@@ -469,3 +469,10 @@ test("wiring: the Research step deals the active notebook into its scope", () =>
   expect(code("app/_phases/research/guided/useEducationalResearch.ts")).toContain("useActiveNotebook(projectId)");
   expect(code("app/_phases/research/ResearchStep.tsx")).toContain("useScope(projectId,research.source)");
 });
+
+test("wiring: the live card no longer says the takes deal from the stand-in", () => {
+  const src = code("app/_phases/research/run/LiveResult.tsx");
+  expect(src.length).toBeGreaterThan(500);
+  expect(src).not.toContain("stand-in");
+  expect(src).not.toContain("NOTEBOOK.researched");
+});
