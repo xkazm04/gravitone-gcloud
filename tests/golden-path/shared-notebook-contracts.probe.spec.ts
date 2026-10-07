@@ -109,9 +109,16 @@ test("conclusions: the one consumer that serialises the notebook for a model sen
   // The payload is built by lib/turns/assemble/recalibrate.ts since AIO-B (the
   // route calls it), so that is the file whose imports are read.
   const route = stripComments(readFileSync(join(ROOT, "lib/turns/assemble/recalibrate.ts"), "utf8"));
+  // C1 closing stage: the conclusions are the BODY's (the dealt source's), never
+  // the fixture's, so the assembler reads `body.conclusions` and imports no
+  // fixture constant.
   expect(
     /import\s*\{[^}]*\bCONCLUSIONS\b[^}]*\}\s*from/.test(route),
-    "the recalibrate assembler no longer imports CONCLUSIONS - the model would be annotated about c-* cards it was never shown",
+    "the recalibrate assembler imports the fixture's CONCLUSIONS again - every notebook would be annotated with Bitcoin's",
+  ).toBe(false);
+  expect(
+    /\bbody\.conclusions\b/.test(route),
+    "the recalibrate assembler no longer reads the body's conclusions - the model would never see the notebook's c-* cards",
   ).toBe(true);
   expect(
     /\bconclusions\b/.test(route),

@@ -24,6 +24,7 @@ import { test, expect } from "@playwright/test";
 
 import { POST as previewPOST } from "@/app/api/turns/preview/route";
 import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
+import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
 import { conclusionLabel, dispatchToggles } from "@/app/_phases/script/dispatchToggles";
 import { RENDERS } from "@/app/_phases/script/renders";
 import { BASELINE, engineRunWith, manifestOf, receiptOf, type Version } from "@/app/_phases/script/versions";
@@ -81,7 +82,7 @@ test.afterEach(() => {
 /** Attributed only in `adjudication`, so the other two renders are withheld —
  *  the note turn-preview.probe and recalibrate-route-e2e drive. */
 const NOTE = { kind: "less-focus", cardId: "f-macro-cause" };
-const RECAL = { notebook: {}, renders: RENDERS, scope: {}, notes: [NOTE] };
+const RECAL = { notebook: {}, conclusions: CONCLUSIONS, renders: RENDERS, scope: {}, notes: [NOTE] };
 
 test("the door asks the preview route once, with the kind and the run's own body", async () => {
   await withFakeEngine("recalibrate-ok", async () => {
@@ -107,7 +108,7 @@ test("every withheld render and conclusion is a toggle, and a forced one stays o
     const held = plain.preview.manifest.conclusions!.held;
     expect(held).toContain(HELD);
 
-    const before = dispatchToggles(plain, [], []);
+    const before = dispatchToggles(plain, [], [], CONCLUSIONS);
     expect(before.filter((t) => t.group === "renders").map((t) => t.id)).toEqual(["reversal-chain", "derived-short"]);
     expect(before.filter((t) => t.group === "conclusions").map((t) => t.id).sort()).toEqual([...held].sort());
     expect(before.every((t) => !t.on)).toBe(true);
@@ -122,7 +123,7 @@ test("every withheld render and conclusion is a toggle, and a forced one stays o
     expect(forced.preview.manifest.conclusions!.whole).toContain(HELD);
     expect(forced.preview.manifest.conclusions!.held).not.toContain(HELD);
     expect(forced.preview.manifest.totalChars).toBeGreaterThan(plain.preview.manifest.totalChars);
-    const after = dispatchToggles(forced, [], [HELD]);
+    const after = dispatchToggles(forced, [], [HELD], CONCLUSIONS);
     expect(after.map((t) => t.id)).toEqual(before.map((t) => t.id));
     expect(after.filter((t) => t.on).map((t) => t.id)).toEqual([HELD]);
     // The door sent the force on the wire, so the run reads what the strip read.
@@ -132,7 +133,7 @@ test("every withheld render and conclusion is a toggle, and a forced one stays o
 
 test("a conclusion's toggle is named by its id", () => {
   expect(conclusionLabel("c-correlation-is-the-product")).toBe("correlation is the product");
-  expect(dispatchToggles(null, [], [])).toEqual([]);
+  expect(dispatchToggles(null, [], [], CONCLUSIONS)).toEqual([]);
 });
 
 test("acceptance 4 (client): managed posture, no cloud key -> the run control is blocked with both reasons", async () => {

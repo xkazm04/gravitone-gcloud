@@ -66,7 +66,7 @@ async function recalibrate(): Promise<{ status: number; json: Record<string, unk
     new Request("http://localhost/api/recalibrate?wait=1", {
       method: "POST",
       headers: { "content-type": "application/json", "x-forwarded-for": `10.77.0.${++ip}` },
-      body: JSON.stringify({ projectId: "p-recal-e2e", notebook: {}, renders: RENDERS, scope: {}, notes: [NOTE] }),
+      body: JSON.stringify({ projectId: "p-recal-e2e", notebook: {}, conclusions: CONCLUSIONS, renders: RENDERS, scope: {}, notes: [NOTE] }),
     }),
   );
   return { status: res.status, json: (await res.json()) as Record<string, unknown> };

@@ -234,7 +234,7 @@ export default function RecalibrateControl({
     );
 
   // THE PRE-FLIGHT (AIO-B): every withheld render and conclusion is a toggle.
-  const toggles = dispatchToggles(api.preview, api.forceRenders, api.forceConclusions);
+  const toggles = dispatchToggles(api.preview, api.forceRenders, api.forceConclusions, api.conclusions);
   const onToggle = (id: string, group?: string) =>
     group === "conclusions" ? api.toggleForceConclusion(id) : api.toggleForceRender(id);
 

@@ -25,6 +25,7 @@ import { test, expect } from "@playwright/test";
 import { POST as previewPOST } from "@/app/api/turns/preview/route";
 import { POST as recalibratePOST } from "@/app/api/recalibrate/route";
 import { POST as framesPOST, tooLarge as framesTooLarge } from "@/app/api/frames/route";
+import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
 import { RENDERS } from "@/app/_phases/script/renders";
 import { logTurn } from "@/lib/text/log";
 import { __resetTurnStats, turnEstimate, turnStats } from "@/lib/text/stats";
@@ -67,7 +68,7 @@ test.beforeEach(() => {
  *  withheld — the same note recalibrate-route-e2e drives. */
 const NOTE = { kind: "less-focus", cardId: "f-macro-cause" };
 const HELD = "c-one-time-rerating";
-const RECAL = { notebook: {}, renders: RENDERS, scope: {}, notes: [NOTE] };
+const RECAL = { notebook: {}, conclusions: CONCLUSIONS, renders: RENDERS, scope: {}, notes: [NOTE] };
 
 let ip = 0;
 const post = (url: string, body: unknown) =>

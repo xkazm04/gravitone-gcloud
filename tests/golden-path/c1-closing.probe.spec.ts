@@ -13,6 +13,11 @@ import { expect, test } from "@playwright/test";
 
 import { buildCards } from "@/app/_phases/_shared/notebook/cards";
 import { fixtureSource } from "@/app/_phases/_shared/notebook/source";
+import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
+import { dispatchToggles } from "@/app/_phases/script/dispatchToggles";
+import { RENDERS } from "@/app/_phases/script/renders";
+import type { PreviewOutcome } from "@/lib/turns/client";
+import { assembleRecalibrate } from "@/lib/turns/assemble/recalibrate";
 import { optInIds } from "@/app/_phases/research/scope";
 import { recalibrate } from "@/app/_phases/script/recalibrate";
 import { outWord } from "@/app/_phases/script/scopeConflicts";
@@ -23,7 +28,7 @@ import { makeTriageSource } from "@/lib/board/sources/triage";
 import { addProjects } from "@/lib/projects";
 
 import { stripComments } from "./_helpers";
-import { landLive, OWN_CONCLUSION } from "./_c1-harness";
+import { landLive, liveNotebook, OWN_CONCLUSION } from "./_c1-harness";
 
 const code = (rel: string) => stripComments(readFileSync(path.join(process.cwd(), rel), "utf8"));
 
@@ -163,4 +168,39 @@ test("case 8: the matrix and the conflict readers take the set from useScope().o
   const step = code("app/_phases/script/ScriptStep.tsx");
   expect(step).toMatch(/useVersions\(projectId, \{[^}]*optIn: scope\.optIn/);
   expect(step).toContain("conflictsIn(weighed, scope.cards, scope.scope, scope.optIn)");
+});
+
+/* ───────────────────────── case 7: recalibrate holds the source's conclusions ── */
+
+test("case 7: a reasoned notebook's conclusions reach the prompt beside the notebook, and the fixture's never do", () => {
+  const nb = liveNotebook();
+  const body = { notebook: nb, conclusions: nb.conclusions, renders: RENDERS, scope: {}, notes: [{ kind: "less-focus", cardId: "f-volume" }] };
+  const { prompt, manifest } = assembleRecalibrate(body, "SYSTEM");
+  const block = (name: string) => manifest.blocks.find((b) => b.name === name);
+  expect(manifest.conclusions!.held, "c-x is out of scope and unnamed: held, by id").toEqual([OWN_CONCLUSION.id]);
+  expect(prompt).toContain(OWN_CONCLUSION.id);
+  for (const c of CONCLUSIONS) expect(prompt, `the fixture's ${c.id} rode in`).not.toContain(c.id);
+  // Beside the notebook, never in it.
+  const notebookLine = prompt.slice(prompt.indexOf("## NOTEBOOK\n") + 12).split("\n")[0]!;
+  expect(Object.keys(JSON.parse(notebookLine))).not.toContain("conclusions");
+  expect(block("conclusions")).toBeTruthy();
+
+  // Absent means none, as /api/script reads it - not the fixture's seven.
+  const bare = assembleRecalibrate({ ...body, conclusions: undefined, notebook: {} }, "SYSTEM");
+  expect(bare.manifest.conclusions).toEqual({ whole: [], held: [] });
+  expect(bare.prompt).not.toContain(CONCLUSIONS[0]!.id);
+
+  // The strip lists a held c-x, in the source's own order.
+  const outcome = { ok: true, preview: { manifest } } as unknown as PreviewOutcome;
+  expect(dispatchToggles(outcome, [], [], nb.conclusions ?? []).filter((t) => t.group === "conclusions").map((t) => t.id)).toEqual([
+    OWN_CONCLUSION.id,
+  ]);
+});
+
+test("case 7: useVersions sends the source's conclusions, and the size check counts them", () => {
+  expect(code("app/_phases/script/useVersions.ts")).toContain("conclusions: ctx.source.conclusions");
+  const src = code("lib/turns/assemble/recalibrate.ts");
+  expect(src).not.toMatch(/import \{ CONCLUSIONS \}/);
+  expect(src).toMatch(/NOTEBOOK_DROP = \[[^\]]*"conclusions"/);
+  expect(src).toMatch(/\["notebook", "conclusions", "renders", "scope", "notes"\]/);
 });

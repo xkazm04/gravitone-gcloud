@@ -264,6 +264,9 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       notebook: ctx.source.notebook,
       renders: renderPayloadFor(baseline),
       scope: ctx.scope,
+      // Beside the notebook, never in it: the source's own conclusions, so the turn
+      // rests edits on what this notebook reasoned and not on the fixture's seven.
+      conclusions: ctx.source.conclusions,
       notes,
       ...(forceRenders.length ? { forceRenders } : {}),
       ...(forceConclusions.length ? { forceConclusions } : {}),
@@ -413,6 +416,8 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       toggleForceRender,
       forceConclusions,
       toggleForceConclusion,
+      /** The conclusions the next run holds, in the notebook's own order. */
+      conclusions: ctx.source.conclusions,
       /** A candidate that was staged when this project was last closed and is now
        *  gone. Shown once, cleared by the next run. */
       lostCandidate,
@@ -440,6 +445,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       toggleForceRender,
       forceConclusions,
       toggleForceConclusion,
+      ctx.source.conclusions,
       lostCandidate,
     ],
   );
