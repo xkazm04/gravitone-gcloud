@@ -136,7 +136,7 @@ const STEP_PLAN: Record<WriterStep, { phase: PromptPhase; turn: AgentTurnClass; 
 /** The writer's turns inside the critique: answering the reviews (no web),
  *  research again (web), rewrite (no web). */
 const CRITIQUE_PLAN: Record<"critique" | "revise-research" | "revise" | "fix", { turn: AgentTurnClass; tools: AgentTool[]; timeoutMin: number; label: string }> = {
-  critique: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 20, label: "writer" },
+  critique: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 30, label: "writer" },
   "revise-research": { turn: "article-research", tools: ["WebSearch", "WebFetch", "Read", "Write", "Edit"], timeoutMin: 45, label: "research" },
   revise: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 45, label: "revise" },
   fix: { turn: "article-critique-writer", tools: ["Read", "Write", "Edit"], timeoutMin: 30, label: "fix" },
