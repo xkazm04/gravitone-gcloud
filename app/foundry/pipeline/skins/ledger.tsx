@@ -1,32 +1,47 @@
-// v1 · DENSE LEDGER — rules and type do all the work; no card chrome at all.
+// v1 · DENSE LEDGER — rules and type do all the work. ROUND 1'S WINNER.
 //
-// THE BET. A pipeline board is a TABLE, and a well-set table needs no boxes. All
-// hierarchy here comes from three things a financial terminal has always used:
-// WEIGHT (the gate's title is the only semibold text on the board), ALIGNMENT
-// (every figure is right-aligned in tabular numerals, and the three fields of
-// the lower strip sit at the same x on every card in a column, so forty cards
-// read as three columns of a column), and a HAIRLINE (one rule between the two
-// rows; one rule in the middle of every row gap, drawn by `world`). There is no
-// chip, no pill, no rounded inner surface, no icon and no colour but the stage's.
+// THE BET. A pipeline board is a TABLE, and a well-set table needs no boxes.
+// Hierarchy comes from WEIGHT (the gate's title is the only semibold text on the
+// board), ALIGNMENT (every title starts at one x, so forty cards read as one
+// column) and a HAIRLINE (one rule in the middle of every row gap, drawn by
+// `world`). There is no chip, no pill, no rounded inner surface and no colour
+// but the stage's margin mark.
 //
-// ONE TYPE SIZE, deliberately. `text-label` for everything — title, figure,
-// vendor, state, dwell. A ledger that changes size to signal importance is a
-// ledger that has given up on weight and alignment doing it, and the repo's
-// floor (1rem) means the alternative was 1.125rem against 1rem, which is not a
-// hierarchy, it is a wobble.
+// ── WHAT ROUND 1 CHANGED, and it overruled this file's own argument ─────────
 //
-// WHERE IT LOSES, stated so it is judged against its own claim: there is nothing
-// to admire. The first ten seconds of meeting this direction are its worst ten
-// seconds, and a screenshot of it is a screenshot of a spreadsheet.
+// This header used to read "ONE TYPE SIZE, deliberately — `text-label` for
+// everything: title, figure, vendor, state, dwell", on the reasoning that
+// 1.125rem against 1rem "is not a hierarchy, it is a wobble". The operator
+// looked at it on live data and answered the opposite: the title is the only
+// thing a card is FOR, and the four facts under it were costing it its
+// readability. So:
 //
-// WHAT THIS DIRECTION CANNOT HAVE, which is a finding about the skin contract
-// rather than a choice: "no card chrome at all" is not reachable from a skin.
-// The ENGINE owns the card's 1px border, its `rounded-xl` corner and its stage
-// tint (Card.tsx), and the shell is `overflow-hidden`, so a child cannot paint
-// over a border it is clipped inside. Every card here still wears an outline
-// this direction would rather not have. The ruling in `world` is the answer:
-// a hairline in the middle of EVERY row gap across the whole board, so the eye
-// is given rows of a ledger to read even while the tiles are still there.
+//   · the title is `text-content` (1.125rem) — the 2px the operator asked for,
+//     and a named token rather than an arbitrary size;
+//   · the figure, the vendor, the state and the dwell are GONE from the card.
+//     Not hidden behind a glyph, which is the same narration one level down —
+//     removed, because every one of them was already in `ItemDetail` (created
+//     time was the one exception and it was added there in the same change);
+//   · the card shrank to one line, CARD_H 80 → 48, which is most of the
+//     vertical space round 1 said the y axis was eating.
+//
+// WHAT THE CARD KEEPS BESIDES THE TITLE is one control and no facts: an audio
+// item gets a PLAY button, so a take can be auditioned at the first level
+// without opening anything. It carries no callback — `data-play` is found by the
+// canvas's one delegated listener, exactly as `data-card` is, and one shared
+// Audio element does the playing (PipelineCanvas `playFromCard`).
+//
+// WHERE IT LOSES, stated so it is judged against its own claim: there is still
+// nothing to admire, and now there is less of it. A screenshot of this direction
+// is a screenshot of a list.
+//
+// WHAT THIS DIRECTION CANNOT HAVE, a finding about the skin contract rather than
+// a choice: "no card chrome at all" is not reachable from a skin. The ENGINE
+// owns the card's 1px border, its `rounded-xl` corner and its stage tint
+// (Card.tsx), and the shell is `overflow-hidden`, so a child cannot paint over a
+// border it is clipped inside. The ruling in `world` is the answer.
+
+import { Pause, Play } from "lucide-react";
 
 import type { CanonStage, PipelineEntry } from "@/lib/board/pipeline";
 
@@ -44,60 +59,44 @@ const GUTTER: Record<CanonStage, string> = {
   done: "top-0 h-full bg-emerald-300/30",
 };
 
-const valueOf = (entry: PipelineEntry, name: string): string | undefined =>
-  entry.facts.find((f) => f.name === name)?.value;
-
-/** How long it has sat, in the largest unit that is still exact enough to act
- *  on. Dwell is the one figure a pipeline always has and no adapter reports. */
-function dwell(iso: string): string {
-  const ms = Date.now() - Date.parse(iso);
-  if (!Number.isFinite(ms) || ms < 0) return "";
-  const min = Math.floor(ms / 60_000);
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 48) return `${hr}h`;
-  return `${Math.floor(hr / 24)}d`;
-}
-
-/** THE figure a row is about, picked in the order a ledger would read it: money
- *  first, because it is the only number anybody re-types somewhere else; then
- *  the duration; then how many of a thing there are; then dwell. `strong` is
- *  reserved for money — the one full-white glyph a card may hold. */
-function figure(entry: PipelineEntry): { text: string; strong: boolean } {
-  const money = valueOf(entry, "cost");
-  if (money) return { text: money, strong: true };
-  const length = valueOf(entry, "length");
-  if (length) return { text: length.replace(/\s+/g, ""), strong: false };
-  const count = valueOf(entry, "versions") ?? valueOf(entry, "sources") ?? valueOf(entry, "patches");
-  if (count) return { text: `×${count}`, strong: false };
-  return { text: dwell(entry.item.createdAt), strong: false };
-}
+/** The first playable source on the item, or undefined. The audio adapter puts
+ *  `{ kind: "audio", src }` on a take that has a file (lib/board/sources/audio.ts);
+ *  a prompt with no take yet has only text, and gets no button. */
+const audioSrc = (entry: PipelineEntry): string | undefined =>
+  entry.item.media.find((m): m is { kind: "audio"; src: string } => m.kind === "audio")?.src;
 
 function ledgerFace(entry: PipelineEntry) {
   const stage = entry.placement.stage;
-  const fig = figure(entry);
-  const vendor = valueOf(entry, "provider") ?? valueOf(entry, "model") ?? entry.item.group ?? entry.item.source;
-  // The BAND before the status: a band is the finer fact and it is also the
-  // shorter word, and 232px of card minus two fixed cells leaves about nine
-  // monospace characters here. A ledger truncates the long word, never the
-  // column position.
-  const state = (entry.placement.band ?? valueOf(entry, "status") ?? stage).replace(/[-_]/g, " ");
-  const waited = dwell(entry.item.createdAt);
+  const src = audioSrc(entry);
   return (
-    <div className="absolute inset-0 flex flex-col justify-center gap-1.5 pr-11 pl-3">
+    <div className="absolute inset-0 flex items-center gap-2.5 pr-11 pl-3">
       <span aria-hidden className={`absolute left-0 w-[3px] ${GUTTER[stage]}`} />
-      {/* Row one: the name, and the figure right-aligned in a fixed cell so the
-          decimal points of forty cards stand in one line. */}
-      <div className="grid grid-cols-[minmax(0,1fr)_68px] items-baseline gap-x-2">
-        <p className={`font-hanken truncate text-label ${stage === "gate" ? "font-semibold text-white" : "text-white/85"}`}>{entry.item.title}</p>
-        <p className={`font-jetbrains truncate text-right text-label tabular-nums ${fig.strong ? "text-white" : "text-white/70"}`}>{fig.text}</p>
-      </div>
-      {/* Row two: three fields at three fixed x positions, under one rule. */}
-      <div className="font-jetbrains grid grid-cols-[minmax(0,1fr)_96px_40px] items-baseline border-t border-white/10 pt-1.5 text-label text-white/45">
-        <span className="truncate">{vendor}</span>
-        <span className="truncate border-l border-white/10 pl-2 uppercase">{state}</span>
-        <span className="truncate border-l border-white/10 pl-2 text-right tabular-nums">{waited || "—"}</span>
-      </div>
+      {src && (
+        <button
+          type="button"
+          data-play
+          data-src={src}
+          // The accessible name is the WORK's — the take's own title — because
+          // forty buttons called "play" are forty identical rows to a screen
+          // reader. `data-playing` is written by the canvas on the one button
+          // whose source the shared Audio element currently holds.
+          aria-label={`Play ${entry.item.title}`}
+          // A TOGGLE, not two buttons: the canvas flips `aria-pressed` and
+          // `data-playing` on this node when the shared Audio takes its source,
+          // so the glyph and the spoken state change without the memoised card
+          // re-rendering. "Play <title>, pressed" is the standard reading of a
+          // play/pause toggle; relabelling the verb would need the canvas to
+          // know the title.
+          aria-pressed={false}
+          className="group/play grid h-7 w-7 shrink-0 cursor-pointer place-items-center rounded-full border border-white/20 text-white/70 transition hover:border-cyan-300/60 hover:text-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2 data-[playing]:border-cyan-300/70 data-[playing]:text-cyan-200"
+        >
+          {/* Two glyphs, one swapped by the attribute the canvas writes, so the
+              button's state needs no React render of a memoised card. */}
+          <Play aria-hidden className="h-3.5 w-3.5 group-data-[playing]/play:hidden" />
+          <Pause aria-hidden className="hidden h-3.5 w-3.5 group-data-[playing]/play:block" />
+        </button>
+      )}
+      <p className={`font-hanken min-w-0 truncate text-content ${stage === "gate" ? "font-semibold text-white" : "text-white/85"}`}>{entry.item.title}</p>
     </div>
   );
 }
@@ -137,8 +136,7 @@ function ledgerWorld(layout: Layout) {
 export const ledger: PipelineSkin = {
   face: ledgerFace,
   world: ledgerWorld,
-  // A ledger's own words. `running` and `settled` are what the column of
-  // numbers under them actually is; `gate` keeps its name because a ledger
-  // never renames the line somebody has to sign.
+  // A ledger's own words. `gate` keeps its name because a ledger never renames
+  // the line somebody has to sign.
   stageLabel: { working: "running", done: "settled" },
 };

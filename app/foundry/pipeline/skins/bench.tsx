@@ -38,6 +38,7 @@
 import type { CanonStage, PipelineEntry } from "@/lib/board/pipeline";
 
 import type { Layout } from "../geometry";
+import { dwell } from "../dwell";
 import type { PipelineSkin } from "../types";
 
 /** The spine, and the only colour on a card. Gate is the single saturated mark
@@ -50,19 +51,6 @@ const SPINE: Record<CanonStage, string> = {
   gate: "bg-amber-300",
   done: "bg-emerald-300/35",
 };
-
-/** How long it has been standing on the bench. The only figure a card carries,
- *  because it is the only one the pane cannot give you at a glance across
- *  twenty cards at once. */
-function dwell(iso: string): string {
-  const ms = Date.now() - Date.parse(iso);
-  if (!Number.isFinite(ms) || ms < 0) return "";
-  const min = Math.floor(ms / 60_000);
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 48) return `${hr}h`;
-  return `${Math.floor(hr / 24)}d`;
-}
 
 function benchFace(entry: PipelineEntry) {
   const stage = entry.placement.stage;

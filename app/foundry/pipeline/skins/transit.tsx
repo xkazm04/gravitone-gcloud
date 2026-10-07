@@ -51,6 +51,7 @@ import { Check, ChevronsRight, Circle, Pause } from "lucide-react";
 import type { CanonStage, PipelineEntry } from "@/lib/board/pipeline";
 
 import { CARD_H, CARD_W, COL_PAD, LANE_PAD, PITCH, type Layout } from "../geometry";
+import { dwell } from "../dwell";
 import type { PipelineSkin } from "../types";
 
 /** The rail runs in the column's left gutter — COL_PAD is 12 world px, and this
@@ -112,18 +113,6 @@ const PLATFORM: Record<CanonStage, string> = {
 
 const valueOf = (entry: PipelineEntry, name: string): string | undefined =>
   entry.facts.find((f) => f.name === name)?.value;
-
-/** Dwell — how long this vehicle has been standing here. The one figure a
- *  transit map always has room for and a station board always shows. */
-function dwell(iso: string): string {
-  const ms = Date.now() - Date.parse(iso);
-  if (!Number.isFinite(ms) || ms < 0) return "";
-  const min = Math.floor(ms / 60_000);
-  if (min < 60) return `${min}m`;
-  const hr = Math.floor(min / 60);
-  if (hr < 48) return `${hr}h`;
-  return `${Math.floor(hr / 24)}d`;
-}
 
 function transitFace(entry: PipelineEntry) {
   const stage = entry.placement.stage;

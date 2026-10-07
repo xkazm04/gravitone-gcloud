@@ -31,13 +31,12 @@ import type { Catalogue, RunSummary } from "@/lib/foundry/types";
 import { extractFileUrl, fetchExtractRun, fetchExtractRuns } from "./extractClient";
 import { fetchCatalogue, fetchRun, fetchTrainingCycle, fetchTrainingCycles, fileUrl } from "./foundryClient";
 import { EXTRACT_LIVE, LIVE, STATUS_WORD, runKind } from "./parts";
-import { heroOf, keptRows } from "./styleArt";
-import { Art, Dot, TONE_TEXT, type Tone } from "./ui";
+import { Dot, TONE_TEXT, type Tone } from "./ui";
 
 // A FIFTH TAB, and nothing retires: the operator decided the four engines of
-// the forge coexist with the pipeline board. `ENGINE`, `lines()`, `useEngineArt`
-// and `station()` below are all `Record<Tab, …>`, so tsc names every place a new
-// member has to be answered for — which is the point of keeping the union here.
+// the forge coexist with the pipeline board. `ENGINE`, `lines()` and `station()`
+// below are all `Record<Tab, …>`, so tsc names every place a new member has to be
+// answered for — which is the point of keeping the union here.
 export type Tab = "cull" | "extract" | "styles" | "dojo" | "pipeline";
 
 /* ── Reads ────────────────────────────────────────────────────────────────── */
@@ -144,27 +143,6 @@ export function useRunPreviews(runs: RunSummary[] | null, limit = 8): Record<str
   return map;
 }
 
-/** The latest output of each engine, as up to three picture URLs — what each
- *  station shows of its engine. */
-export function useEngineArt(runs: RunSummary[] | null, plant: Plant, previews: Record<string, RunPreview>): Record<Tab, string[]> {
-  const cat = plant.catalogue;
-  const styles = useMemo(() => {
-    if (!cat) return [];
-    const out: string[] = [];
-    for (const s of cat.styles) {
-      const h = heroOf(s, keptRows(cat, s));
-      if (h) out.push(h.url);
-      if (out.length === 3) break;
-    }
-    return out;
-  }, [cat]);
-  const cull = (runs ?? []).flatMap((r) => previews[r.id]?.thumbs ?? []).slice(0, 3);
-  // The pipeline draws no art: its cards ARE the pictures, and they do not
-  // exist until the canvas has loaded. A placeholder strip here would be three
-  // washes pretending to be work.
-  return { cull, extract: plant.extractArt, styles, dojo: plant.dojoArt, pipeline: [] };
-}
-
 /* ── What each engine is doing, in a line ─────────────────────────────────── */
 
 const plural = (n: number | undefined, one: string, many = `${one}s`) => (n === 1 ? one : many);
@@ -241,37 +219,48 @@ function tabKeys(e: React.KeyboardEvent<HTMLElement>) {
 
 /* ── The stations ─────────────────────────────────────────────────────────── */
 
-// ONE ROW TALL (round 3). A station was a column — name, a strip of three 16:9
-// thumbnails, figures — and the four of them stood ~180px over a cull whose
-// whole point is the grid below. The pictures stay (they are why the operator
-// picked this direction) as a fanned tray beside the figures rather than a
-// band across them: the same three outputs, a third of the height.
+// ONE ROW, LITERALLY (round 1 of the pipeline exercise). Round 3 claimed "one
+// row tall" and meant one CARD tall: inside it the name and the figures were two
+// stacked lines, so a station stood ~80px and five of them took the top of the
+// page away from the board below — which is what the operator's round-1 verdict
+// on the pipeline canvas named first. Now the four things a station says sit on
+// ONE line in the operator's own order: icon, title, status dot, figures.
+//
+// The picture tray is GONE, and that reverses a round-2 decision deliberately.
+// It was why this direction was picked then; on one line it is what the figures
+// were losing their width to, and a station whose numbers are cut mid-glyph has
+// stopped being navigation. The pictures are not lost — every engine's own tab
+// opens on its output, larger than a 48px thumb ever showed it.
 
 export function PipelineHeader({
   tab,
   onSelect,
   runs,
   plant,
-  previews,
 }: {
   tab: Tab;
   onSelect: (t: Tab) => void;
   runs: RunSummary[] | null;
   plant: Plant;
-  previews: Record<string, RunPreview>;
 }) {
   const ln = lines(runs, plant);
   const cat = plant.catalogue;
-  const art = useEngineArt(runs, plant, previews);
-  const styleArt = art.styles;
-  const forgeArt = art.cull;
 
-  // `art: null` is an engine with no picture tray at all, which is not the same
-  // as a tray whose pictures have not arrived (that is `[]`, three washes). The
-  // pipeline has no tray: its cards ARE its output and they live in the tab.
-  const station = (t: Tab, allFigures: { n: number | undefined; label: string; tone?: Tone }[], art: string[] | null, failed = false) => {
+  const station = (t: Tab, allFigures: { n: number | undefined; label: string; tone?: Tone }[], failed = false) => {
     // A list that could not be read draws no figure (see usePlant), never a bare `…`.
-    const figures = failed ? [] : allFigures;
+    // TWO FIGURES, ACTIONABLE FIRST, and the number is measured rather than
+    // chosen: at 1920px a station has about 276px for its name and its figures,
+    // "Forge · Cull" takes 100 of it, and three figures ("6 runs · 3 to cull ·
+    // 20 kept") want 254 more. Photographed, the third ran through the card's
+    // edge and printed over the station beside it. A toned figure is one that
+    // wants something — `to cull`, `at the gate`, `proven` — so those are the
+    // ones kept when only two fit, and the plain total is what gives way. The
+    // original order survives, because a station whose figures reorder as the
+    // numbers change is a station nobody can read at a glance.
+    const picked = failed ? [] : allFigures;
+    const wanted = picked.filter((f) => f.tone);
+    const keep = new Set([...wanted, ...picked.filter((f) => !f.tone)].slice(0, 2));
+    const figures = picked.filter((f) => keep.has(f));
     const on = t === tab;
     const E = ENGINE[t];
     const l = ln[t];
@@ -285,19 +274,35 @@ export function PipelineHeader({
         data-testid={`foundry-tab-${t}`}
         onClick={() => onSelect(t)}
         onKeyDown={tabKeys}
-        className={`group relative flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-3 text-left backdrop-blur-[14px] transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+        className={`group relative flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2 text-left backdrop-blur-[14px] transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
           on
             ? "border-cyan-400/45 bg-gradient-to-b from-cyan-400/[0.10] to-cyan-400/[0.02] shadow-[0_0_0_1px_var(--gt-ring-cyan),var(--gt-shadow-glow)]"
             : "border-white/8 bg-gradient-to-b from-white/[0.05] to-white/[0.015] hover:border-white/15"
         }`}
       >
-        <span className="flex min-w-0 flex-1 flex-col gap-1">
-          <span className="flex min-w-0 items-center gap-2.5">
-            <E.icon aria-hidden className={`h-4 w-4 shrink-0 ${on ? "text-cyan-200" : "text-white/50"}`} />
-            <span className={`font-instrument truncate text-xl ${on ? "text-white" : "text-white/85"}`}>{E.name}</span>
-            {l && <Dot tone={l.tone} pulse={l.pulse} />}
-          </span>
-          <span className="font-jetbrains flex flex-wrap items-baseline gap-x-3 gap-y-0.5 text-label">
+        <span className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
+          <E.icon aria-hidden className={`h-4 w-4 shrink-0 ${on ? "text-cyan-200" : "text-white/50"}`} />
+          {/* A FLOOR ON THE NAME, because the cut before this one let it reach
+              zero: the Forge station rendered as an icon, a dot and figures with
+              no word at all, and the Dojo's read `D…`. A figure clipped at the
+              card's edge is a number you can still mostly read; a name clipped
+              to nothing is a station you have to hover to identify. 4.5rem is
+              about seven characters — enough for "Forge ·…", "Extract", "Dojo". */}
+          <span className={`font-instrument min-w-[4.5rem] truncate text-content ${on ? "text-white" : "text-white/85"}`}>{E.name}</span>
+          {l && <Dot tone={l.tone} pulse={l.pulse} />}
+          {/* THE TITLE GIVES UP ITS WIDTH, NOT THE FIGURES — and the pictures gave
+              up the row. Two cuts of this were photographed before it fit. With
+              `shrink-0` on the name the figures were squeezed to about 135px and
+              cut MID-GLYPH: the Forge station read `Forge · Cull ● ( : : g`,
+              which is not a truncated figure, it is rubbish. Reversing it made
+              the figures whole and pushed them straight through the card's edge,
+              over the thumbnails and into the next station. Neither is a layout
+              bug — five stations across 1920px simply have no room for a name, a
+              dot, three figures AND three 16:9 thumbnails, and the operator's
+              round-1 list for this row is title, icon, status dot, data stats.
+              The thumbnails are what the data was losing to, so they went; each
+              engine's own tab shows its output at a size worth looking at. */}
+          <span className="font-jetbrains flex min-w-0 items-baseline gap-x-3 overflow-hidden text-label whitespace-nowrap">
             {figures.map((f) => (
               <span key={f.label} className="text-white/45">
                 <span className={`tabular-nums ${f.tone ? TONE_TEXT[f.tone] : "text-white/85"}`}>{f.n ?? "…"}</span> {f.label}
@@ -308,20 +313,6 @@ export function PipelineHeader({
             {l?.pulse && <span className={`truncate ${TONE_TEXT[l.tone]}`}>{l.text}</span>}
           </span>
         </span>
-        {art !== null && (
-          <span aria-hidden className="flex shrink-0 items-center pr-1">
-            {[0, 1, 2].map((i) => (
-              <Art
-                key={i}
-                src={art[i]}
-                alt=""
-                state={art[i] ? "ready" : "blank"}
-                rounded="rounded-md"
-                className={`aspect-video w-16 shadow-[var(--gt-shadow-float)] ring-1 ring-black/50 transition duration-200 ${i ? "-ml-8 group-hover:-ml-5" : ""} ${on ? "" : "opacity-75 group-hover:opacity-100"}`}
-              />
-            ))}
-          </span>
-        )}
       </button>
     );
   };
@@ -348,11 +339,10 @@ export function PipelineHeader({
           { n: exToCull, label: "to cull", tone: exToCull ? "amber" : undefined },
           { n: found, label: plural(found, "style") + " found" },
         ],
-        plant.extractArt,
         plant.failed?.extract,
       )}
       {arrow}
-      {station("styles", [{ n: cat?.styles.length, label: plural(cat?.styles.length, "style") }, { n: proven, label: "proven", tone: proven ? "emerald" : undefined }], styleArt, plant.failed?.catalogue)}
+      {station("styles", [{ n: cat?.styles.length, label: plural(cat?.styles.length, "style") }, { n: proven, label: "proven", tone: proven ? "emerald" : undefined }], plant.failed?.catalogue)}
       {arrow}
       {station(
         "cull",
@@ -361,14 +351,13 @@ export function PipelineHeader({
           { n: toCull, label: "to cull", tone: toCull ? "amber" : undefined },
           { n: kept, label: "kept", tone: kept ? "emerald" : undefined },
         ],
-        forgeArt,
       )}
       <span aria-hidden className="mx-1 hidden w-px self-stretch bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
-      {station("dojo", [{ n: plant.cycles?.length, label: plural(plant.cycles?.length, "cycle") }, { n: parked, label: "at the gate", tone: parked ? "amber" : undefined }], plant.dojoArt, plant.failed?.cycles)}
+      {station("dojo", [{ n: plant.cycles?.length, label: plural(plant.cycles?.length, "cycle") }, { n: parked, label: "at the gate", tone: parked ? "amber" : undefined }], plant.failed?.cycles)}
       <span aria-hidden className="mx-1 hidden w-px self-stretch bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
-      {/* No figures and no art: see `lines()` above. The station is the name,
-          the icon and whether it is the open tab. */}
-      {station("pipeline", [], null)}
+      {/* No figures: see `lines()` above. The station is the name, the icon and
+          whether it is the open tab. */}
+      {station("pipeline", [])}
     </div>
   );
 }

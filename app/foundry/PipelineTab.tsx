@@ -64,13 +64,16 @@
 
 import { Suspense, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
-import { Unplug } from "lucide-react";
+import { Maximize2, Minimize2, Unplug } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 
 import { Segmented } from "@/components/ui/Field";
 import { Select, type SelectOption } from "@/components/ui/Select";
 import { Hint, Tally } from "@/components/ui/signal";
 import { useAnnounce } from "@/lib/announcer";
+import { typing } from "@/lib/board/keys";
+
+import { refusedKey } from "./keyGuard";
 import { RUN_COST_HINT } from "@/lib/articles/types";
 import {
   CANON_STAGES,
@@ -191,12 +194,26 @@ function StageStrip({
   notes: PipelineLoadNotes | null;
   word: (s: CanonStage) => string;
 }) {
+  // ONLY THE STAGES WITH SOMETHING THE BOARD CANNOT SAY. This was a permanent
+  // four-up grid of dot + word + count, and the canvas draws a dot, the same
+  // word and the same count across the top of the board itself (Frame.tsx
+  // `StageHeads`). Photographed side by side, the two rows sat directly on top
+  // of each other saying PROPOSED 20 / RUNNING 0 / GATE 9 / SETTLED 0 twice, for
+  // about 110px of the board's height — and round 1's complaint was that the
+  // board had no height. The counts stay where they are anchored to the columns
+  // they count; what is left here is what the heads have no room for and no way
+  // to say: a stage whose upstream is DOWN, and rows a load deliberately did not
+  // draw. Both are silent when there is nothing wrong, which is most of the time.
+  const flagged = CANON_STAGES.map((s) => ({
+    s,
+    down: notes?.degraded?.find((d) => d.stage === s) ?? null,
+    hidden: notes?.hidden.filter((h) => h.stage === s) ?? [],
+  })).filter((r) => r.down || r.hidden.length > 0);
+  if (flagged.length === 0) return null;
   return (
-    <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
-      {CANON_STAGES.map((s) => {
+    <div className="grid gap-2 sm:grid-cols-2">
+      {flagged.map(({ s, down, hidden }) => {
         const tone = STAGE_TONE[s];
-        const down = notes?.degraded?.find((d) => d.stage === s) ?? null;
-        const hidden = notes?.hidden.filter((h) => h.stage === s) ?? [];
         return (
           <div key={s} className={`flex min-w-0 flex-col gap-1.5 rounded-xl border px-3 py-2 ${down ? "border-amber-300/35 bg-amber-300/[0.05]" : tone.cell}`}>
             <div className="flex items-center gap-2">
@@ -236,6 +253,44 @@ declare global {
   interface Window {
     __gtPipelineMounts?: number;
   }
+}
+
+/**
+ * THE BOARD'S HEIGHT, MEASURED — not `calc(100vh - 34rem)`.
+ *
+ * The canvas is `absolute inset-0` inside its parent, so the parent needs a real
+ * height and not a content-driven one. That was spelled as a viewport
+ * subtraction, and 34rem is 544px: on a 1080p screen the board got 536px and
+ * over half the window was reserved for the chrome above it. Round 1's first
+ * sentence was that the canvas is barely visible, and this number is most of the
+ * reason — it was correct for the chrome of the day it was written and nothing
+ * re-derived it when that chrome changed.
+ *
+ * So it is read off the element: whatever sits above the board, the board runs
+ * from where it starts to the bottom of the viewport. A ResizeObserver on the
+ * document element catches the chrome above growing or shrinking (the top bar
+ * wraps at narrow widths, the degraded strip appears and disappears) without
+ * this needing to know what any of it is.
+ */
+function useFillHeight(ref: React.RefObject<HTMLElement | null>, gutter = 12): number {
+  const [h, setH] = useState(520);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // FLOOR, not a clamp for tidiness: on a short viewport, or mid-layout when
+    // the chrome above has not settled, the subtraction can go to nothing, and a
+    // board of 0px reads as a board that failed to load.
+    const measure = () => setH(Math.max(280, Math.round(window.innerHeight - el.getBoundingClientRect().top - gutter)));
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(document.documentElement);
+    window.addEventListener("resize", measure);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", measure);
+    };
+  }, [ref, gutter]);
+  return h;
 }
 
 function CanvasMount({ children }: { children: React.ReactNode }) {
@@ -354,6 +409,15 @@ function PipelineShell() {
   // wrapper rather than the document. `PipelineHandle` has no `focus()`; it
   // should, and until it does this is the seam.
   const boardRef = useRef<HTMLDivElement>(null);
+  const boardH = useFillHeight(boardRef);
+  // FULL SCREEN with PROMOTED TYPE, both from round 1: a larger screen should buy
+  // board, and the type should grow with it. The promotion is +1px on the two
+  // scale tokens and nothing else — `--text-label` 16→17, `--text-content` 18→19
+  // — so every `text-label` and `text-content` under this root moves together and
+  // not one className changes. Writing sizes into the markup instead would mean
+  // an arbitrary size per element, which is what `npm run check:type` exists to
+  // stop and what the 631 hand-tuned sizes of 2026-08-28 actually were.
+  const [full, setFull] = useState(false);
   const closeOrder = useCallback(() => {
     setOrder(null);
     setOpen(null);
@@ -397,6 +461,33 @@ function PipelineShell() {
     if (degradedKey) sayDegraded();
   }, [degradedKey]);
 
+  // `f` TOGGLES, and Escape deliberately does not. Escape is the canvas's own
+  // "close the innermost thing" — menu, then map, then selection, then cursor
+  // (app/foundry/pipeline/keymap.ts) — and a second listener taking it would
+  // collapse the board and clear the selection on one press. `f` is free: the
+  // canvas's keymap returns null for it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      // `refusedKey` FIRST, and it is the board's own guard rather than a second
+      // set: a chord belongs to the browser (Ctrl+F is its find) and a held key
+      // must not toggle the screen forty times. Spelling that by hand here is
+      // what `foundry-key-guard` exists to catch, and it caught this.
+      if (refusedKey(e)) return;
+      if (typing(e.target)) return;
+      // Spelled as `===`, not `!== && !==`. foundry-key-guard reads the file for
+      // the first `e.key ===` and requires `refusedKey(e)` before it; a handler
+      // that only ever writes `!==` reads the key without the probe seeing it,
+      // so the probe treats "no read found" as a failure. It errs in the safe
+      // direction, and the positive form is the clearer one anyway.
+      if (e.key === "f" || e.key === "F") {
+        e.preventDefault();
+        setFull((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   /* ── render ─────────────────────────────────────────────────────────────── */
 
   const word = useCallback((s: CanonStage) => direction.skin.stageLabel?.[s] ?? s, [direction]);
@@ -417,7 +508,10 @@ function PipelineShell() {
   ));
 
   return (
-    <div className="flex flex-col gap-3">
+    <div
+      className={`flex flex-col gap-3 ${full ? "fixed inset-0 z-40 overflow-y-auto bg-[var(--gt-ink)] p-3" : ""}`}
+      style={full ? ({ "--text-label": "1.0625rem", "--text-content": "1.1875rem" } as React.CSSProperties) : undefined}
+    >
       {/* ── the top bar ─────────────────────────────────────────────────── */}
       <Glass className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
         <Segmented label="media" value={media} options={MEDIA.map((m) => ({ id: m.id, label: m.label }))} onChange={pickMedia} />
@@ -451,6 +545,21 @@ function PipelineShell() {
         </Hint>
 
         <span className="ml-auto flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setFull((v) => !v)}
+            aria-pressed={full}
+            aria-label={full ? "Leave full screen" : "Fill the screen"}
+            data-testid="pipeline-full"
+            className="font-jetbrains flex cursor-pointer items-center gap-2 rounded-full border border-white/15 px-3 py-1.5 text-label text-white/75 transition hover:border-cyan-300/50 hover:text-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2 aria-pressed:border-cyan-400/45 aria-pressed:text-cyan-200"
+          >
+            {full ? <Minimize2 aria-hidden className="h-4 w-4" /> : <Maximize2 aria-hidden className="h-4 w-4" />}
+            {/* The cap, not a <Keycaps>: that one renders a <Hint>, which is a
+                disclosure button, and a button cannot contain a button. A key and
+                its control is the whole binding here, so there is no table to
+                open. */}
+            <kbd aria-hidden className="font-jetbrains rounded border border-white/15 px-1 text-label text-white/55">F</kbd>
+          </button>
           <Tally label="cards" value={status?.total ?? 0} />
           <Tally label="drawn" value={status?.mounted ?? 0} />
           {(status?.selected ?? 0) > 0 && <Tally label="picked" value={status!.selected} tone="cyan" />}
@@ -479,8 +588,11 @@ function PipelineShell() {
 
       {/* ── the board ───────────────────────────────────────────────────── */}
       {/* THE CANVAS FILLS ITS PARENT (app/foundry/pipeline/index.ts), so the
-          parent needs an explicit height and not a content-driven one. */}
-      <div ref={boardRef} className="flex h-[calc(100vh-34rem)] min-h-[26rem] gap-3">
+          parent needs an explicit height and not a content-driven one. The
+          number is MEASURED — see `useFillHeight`, which replaced a
+          `calc(100vh-34rem)` that was reserving 544px for chrome that is now
+          about a third of that. */}
+      <div ref={boardRef} className="flex gap-3" style={{ height: boardH }}>
         <CanvasMount>
           <PipelineCanvas
             source={source}

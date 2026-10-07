@@ -177,7 +177,7 @@ export const StageHeads = memo(function StageHeads({
         const word = names[s.stage] ?? s.stage;
         const total = layout.stageCounts[s.stage];
         return (
-          <HeadSlot key={s.stage} reg={reg} axis="x" at={s.x} size={s.w} className="h-9 overflow-hidden pr-1">
+          <HeadSlot key={s.stage} reg={reg} axis="x" at={s.x} size={s.w} className="h-8 overflow-hidden pr-1">
             <div
               role="group"
               aria-label={`${word}, ${total} cards`}
@@ -197,7 +197,7 @@ export const StageHeads = memo(function StageHeads({
         layout.columns
           .filter((c: Column) => layout.stages.find((s) => s.stage === c.stage)?.banded)
           .map((c) => (
-            <HeadSlot key={c.index} reg={reg} axis="x" at={c.x} size={c.w} className="top-10 h-7 overflow-hidden pr-1">
+            <HeadSlot key={c.index} reg={reg} axis="x" at={c.x} size={c.w} className="top-8 h-6 overflow-hidden pr-1">
               <div
                 className={`font-jetbrains absolute inset-y-0 left-0 flex w-max items-center gap-2 px-2 text-label text-white/55 ${HEAD_GLASS} !rounded-md`}
               >

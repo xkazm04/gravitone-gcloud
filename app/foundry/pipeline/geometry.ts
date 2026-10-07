@@ -30,21 +30,32 @@ import {
 /* ── the grid's measurements (world units = CSS px at zoom 1) ──────────── */
 
 export const CARD_W = 272;
-export const CARD_H = 80;
+/** ROUND 1 CUT THIS FROM 80. A card held two rows — the title and a figure, then
+ *  vendor / state / dwell under a rule — and the operator's verdict was that
+ *  those four facts belong in the detail because they were costing the TITLE its
+ *  readability. A card that carries one line needs the height of one line, and
+ *  the four facts lost nothing: every one of them was already in `ItemDetail`
+ *  (created time was the exception, and it was added there in the same change). */
+export const CARD_H = 48;
 export const GAP = 8;
 export const PITCH = CARD_H + GAP;
 export const COL_PAD = 12;
 export const BAND_W = CARD_W + COL_PAD * 2;
 export const STAGE_GAP = 24;
-export const LANE_GAP = 20;
+export const LANE_GAP = 14;
 export const LANE_PAD = 12;
-/** A lane is never shorter than this many rows, the drop slot included. */
-export const LANE_MIN_ROWS = 2;
+/** A lane is never shorter than this many rows. */
+export const LANE_MIN_ROWS = 1;
 
 /** The overlay furniture, in SCREEN px: the stage heads' strip along the top and
  *  the lane heads' strip down the left. `inset` is the breathing room between
  *  that furniture and the first cell when the board is framed. */
-export const FRAME = { top: 72, left: 176, inset: 16 } as const;
+/** `top` IS MEASURED FROM WHAT StageHeads DRAWS, not chosen. The strip holds the
+ *  stage row (h-8 = 32) and, where a stage is banded, the band row beneath it
+ *  (top-8 h-6 = 32..56), plus the flow hairline. 58 clears both. Cutting it to
+ *  48 for the space clipped every band label to a sliver, which no gate saw and
+ *  a screenshot did. */
+export const FRAME = { top: 58, left: 176, inset: 16 } as const;
 
 export const ZOOM_MIN = 0.1;
 export const ZOOM_MAX = 1.6;
@@ -204,9 +215,18 @@ export function buildLayout(entries: readonly PipelineEntry[], source: LaneSourc
   for (let i = 0; i < laneKeys.length; i++) {
     let rows = 0;
     for (let c = 0; c < nC; c++) rows = Math.max(rows, ids[i * nC + c].length);
-    // +1: the drop slot is always there, so a drag never makes the lane taller
-    // and the lanes below it never jump while the pointer is down.
-    const h = LANE_PAD * 2 + Math.max(LANE_MIN_ROWS, rows + 1) * PITCH - GAP;
+    // NO RESERVED DROP ROW. Every lane used to carry `rows + 1`, so a drag could
+    // never make a lane taller and the lanes below it never jumped while the
+    // pointer was down. The cost was a permanent empty row in EVERY lane — a
+    // one-card lane stood 192px tall to hold 80px of card — and round 1's
+    // verdict was that the y axis was eating the board. It is not load-bearing
+    // for the drop: `resolveCell` resolves a CELL, never a row, and it already
+    // forgives half a LANE_GAP past the lane's bottom edge, so the append target
+    // is reachable without a row of slack behind it. What is lost is narrow and
+    // it is after the fact: a lane that gains its first card in a column grows
+    // by one PITCH, and the lanes below it shift once — on commit, with the
+    // pointer already up, not under it.
+    const h = LANE_PAD * 2 + Math.max(LANE_MIN_ROWS, rows) * PITCH - GAP;
     lanes.push({ index: i, key: laneKeys[i].key, label: laneKeys[i].label, y, h, rows });
     y += h + LANE_GAP;
   }

@@ -414,7 +414,7 @@ export default function FoundryView() {
       <main tabIndex={-1} className="pb-36">
         <h1 className="sr-only">Foundry</h1>
         <header className="pt-2">
-          <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} previews={previews} />
+          <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} />
         </header>
 
         <section role="tabpanel" aria-label={tab} className="mt-4">

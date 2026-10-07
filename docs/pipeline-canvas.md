@@ -95,10 +95,18 @@ cards. Only the words and the drawing change — the four columns are the same f
 
 | `?v=` | name | its four words | the bet | what it loses |
 | --- | --- | --- | --- | --- |
-| `1` | Dense ledger | `PROPOSED · RUNNING · GATE · SETTLED` | rules and type do all the work; no card chrome at all | first impression — nothing to admire |
+| `1` | **Dense ledger — round 1's winner** | `PROPOSED · RUNNING · GATE · SETTLED` | rules and type do all the work | first impression — nothing to admire |
 | `2` | Spatial field | `PROPOSED · IN FLIGHT · NEEDS YOU · LANDED` | glass, depth and air; lanes implied by light | items per screen, and honesty at volume |
 | `3` | Transit map | `ORIGIN · TRANSIT · HELD · TERMINUS` | items ride continuous lines; stages are stations | dense lanes — a station with 498 trains |
 | `4` | Workbench | `STOCK · MACHINE · BENCH · FINISHED` | a docked inspector follows the selection; detail costs no modal | screen width — it spends space on chrome |
+
+**Round 1 picked `?v=1`, and the card changed with the verdict.** A ledger card carried the
+title and a figure, then vendor / state / dwell under a rule; the operator's reading was that
+those four facts were costing the TITLE its readability. So the card is now the title alone
+(at `text-content`, 2px up from the rest of the board) plus, for an audio item, a play button.
+The four facts live in the detail, where `standing` was added because it was the one of them
+the detail did not already carry. The card fell from 80px to 48px with them, which is most of
+the vertical space round 1 said the Y axis was eating.
 
 Those two sentences per direction are **declared once**, beside the skin itself in
 `app/foundry/pipeline/skins/index.ts`, and the rail renders them as two disclosures. The table
@@ -196,7 +204,7 @@ None of the three is spoken twice: a degraded stage is announced once through
 ## 7. The keymap
 
 The board's keys are the **engine's**, and they are pure (`app/foundry/pipeline/keymap.ts`).
-The shell binds nothing.
+The shell binds exactly one, `F`.
 
 | key | does |
 | --- | --- |
@@ -209,12 +217,26 @@ The shell binds nothing.
 | `ContextMenu`, `Shift`+`F10` | the verb menu |
 | `+` `-` `0` | zoom in, zoom out, fit |
 | `Esc` | closes the innermost thing: menu, map, selection, cursor |
+| `F` | fill the screen, and leave it — **the shell's, not the engine's** |
 
 The guards are the Board's, not a second set: `refusedKey` first (a chord belongs to the
 browser; a held key repeats everything but an arrow), then `typing` (a letter in a field is
 text, not a verb), then an open overlay owns the keyboard — except `Esc`, which only ever
 closes. `Shift`+arrow does not repeat even though a bare arrow does: a held chord must move one
 card one cell, not march it across the board and ask the authority four times.
+
+`F` is the one key the shell owns (`PipelineTab.tsx`), and it consults the same `refusedKey`
+and `typing` guards before it reads the key — `foundry-key-guard` walks every `window`
+keydown handler under `app/foundry` and fails one that does not. **`Esc` deliberately does
+not leave full screen.** Escape is the canvas's own innermost-first close, and a second
+listener taking it would collapse the board and clear the selection on one press.
+
+Full screen also promotes the type by **+1px**, and does it by redefining the two scale
+tokens on the container (`--text-label` 1rem → 1.0625rem, `--text-content` 1.125rem →
+1.1875rem) rather than by changing a single class. Tailwind compiles `text-label` to
+`font-size: var(--text-label)`, so every label and every card title under that root moves
+together; writing sizes into the markup instead would mean one arbitrary size per element,
+which is what `npm run check:type` exists to stop.
 
 An open `aria-modal` dialog disarms the canvas automatically, so the three dialogs here need no
 co-ordination with it. The docked inspector of variant 4 is not a dialog and deliberately does

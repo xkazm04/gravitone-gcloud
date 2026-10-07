@@ -52,6 +52,7 @@ import { Ghost, Tally } from "@/components/ui/signal";
 import { isStubbedMove, type CanonStage, type MoveCost, type MoveResult, type PipelineEntry } from "@/lib/board/pipeline";
 
 import { costLine, STAGE_TONE } from "./pipeline";
+import { dwell } from "./pipeline/dwell";
 import { Art, ErrorNote, Glass, Label } from "./ui";
 
 /** Whether a move on this board writes. STUB is the default and the only state
@@ -364,18 +365,30 @@ export function ItemDetail({ entry, stageWord, actions }: { entry: PipelineEntry
 
       <Media media={item.media} title={item.title} />
 
-      {facts.length > 0 && (
-        <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
-          {facts.map((f) => (
-            <div key={f.name} className="min-w-0">
-              <dt>
-                <Label>{f.name}</Label>
-              </dt>
-              <dd className="font-jetbrains mt-0.5 text-label break-words text-white/85">{f.value}</dd>
-            </div>
-          ))}
-        </dl>
-      )}
+      {/* THE FACTS, and `standing` is here because round 1 took it off the card.
+          The ledger's card carried vendor / state / dwell under its title and the
+          operator's verdict was that those four facts were costing the title its
+          readability. Three of them were already in this list or in the chips
+          above; how long it has stood was not, and a figure removed from one
+          surface and added to none is a figure deleted. */}
+      <dl className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+        {facts.map((f) => (
+          <div key={f.name} className="min-w-0">
+            <dt>
+              <Label>{f.name}</Label>
+            </dt>
+            <dd className="font-jetbrains mt-0.5 text-label break-words text-white/85">{f.value}</dd>
+          </div>
+        ))}
+        <div className="min-w-0">
+          <dt>
+            <Label>standing</Label>
+          </dt>
+          <dd className="font-jetbrains mt-0.5 text-label text-white/85">
+            {dwell(item.createdAt) || "—"} <span className="text-white/45">· {item.createdAt}</span>
+          </dd>
+        </div>
+      </dl>
 
       {item.machinePick && (
         <div>
