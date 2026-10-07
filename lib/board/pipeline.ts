@@ -122,7 +122,17 @@ export interface MoveCost {
  *  refusal happens in the hand, before the write, instead of as a 409 after it. */
 export type MoveOffer =
   | { kind: "ok" }
-  | { kind: "needs"; needs: MoveNeed; prompt: string; cost?: MoveCost }
+  | {
+      kind: "needs";
+      needs: MoveNeed;
+      prompt: string;
+      cost?: MoveCost;
+      /** A default the prompt should open with - a suggested label, a previous
+       *  note. Its own field rather than prose inside `prompt`, because a
+       *  dialog has to put it in an input, and parsing it back out of a
+       *  sentence is how a suggestion becomes a sentence the operator deletes. */
+      suggest?: string;
+    }
   | { kind: "refused"; reason: string };
 
 export type MoveNeed = "note" | "label" | "confirm";
@@ -133,6 +143,15 @@ export interface MoveRequest {
   band: string | null;
   /** A move down the Y axis as well as across. Omitted = keep the lane. */
   lane?: string;
+  /** WHICH GROUPING the lane was read under, when `lane` is set.
+   *
+   *  The Y axis is a view choice: the same drop means "write this take's row"
+   *  under the `group` axis and "change this run's model" under the `model`
+   *  axis - and the second is not a thing a drag may do. Without this field an
+   *  adapter cannot tell them apart and has to assume the writable one, so a
+   *  drop made while the board was grouped by status would silently write a
+   *  group. An adapter refuses an axis it does not own. */
+  axis?: string;
   /** Satisfies a `needs: "note"` offer. */
   note?: string;
   /** Satisfies a `needs: "label"` offer. */
@@ -144,10 +163,64 @@ export interface MoveRequest {
 }
 
 /** `retryable` separates "the network blinked" from "the authority said no".
- *  A refusal is shown and kept; a retryable failure offers the move again. */
+ *  A refusal is shown and kept; a retryable failure offers the move again.
+ *
+ *  `stub` is the dry path: `live` was not set, so nothing was written and
+ *  nothing was spent, and `item` is exactly as it was. It is on the SUCCESS
+ *  variant on purpose - the move did not fail - which means a caller that
+ *  commits on `ok` alone draws a move that never happened. Check it.
+ *
+ *  THE ITEM MAY COME BACK WITH A DIFFERENT `id`. A move can replace the thing
+ *  it moved: rendering an audio prompt produces a take, and the candidate's id
+ *  (`audio:prompt:...`) is not the take's (`audio:take:...`). So a caller
+ *  reconciles by the RETURNED item's identity and must not assume the id it
+ *  sent back is the id it gets. */
 export type MoveResult =
-  | { ok: true; item: PipelineItem }
+  | { ok: true; item: PipelineItem; stub?: true; wouldCall?: string }
   | { ok: false; reason: string; retryable: boolean };
+
+/** A dry move: nothing written, nothing spent, the item untouched. */
+export const stubbedMove = (item: PipelineItem, wouldCall: string): MoveResult => ({
+  ok: true,
+  item,
+  stub: true,
+  wouldCall,
+});
+
+export const isStubbedMove = (r: MoveResult): boolean => r.ok && r.stub === true;
+
+/** WHAT A LOAD DID NOT DRAW. A column that hides items says so; it never just
+ *  reads shorter, because "nothing here" and "28 things I could not place" are
+ *  different sentences and only one of them is good news.
+ *
+ *  `degraded` is the per-stage half of the honesty rule. `loadPipeline()` can
+ *  only throw or succeed, and a lane is read from several places: the Articles
+ *  lane needs the sibling registry for its `proposed` column and the studio
+ *  routes for the other three. Throwing on the registry would render the whole
+ *  lane as failed and take the gate column - the one with work in it - down
+ *  with it. So a read that fails for ONE stage is reported here, that stage
+ *  draws its failure, and the rest of the lane still draws its items. */
+export interface PipelineLoadNotes {
+  hidden: { stage: CanonStage; count: number; why: string }[];
+  /** Records whose manifest could not be read at all. */
+  damaged: string[];
+  /** A stage whose own read failed while the rest of the lane loaded. */
+  degraded?: { stage: CanonStage; reason: string }[];
+}
+
+/** Per-item version bookkeeping, so a card re-renders on its own change and
+ *  never on a sibling's. Both adapters had written this; one copy is enough.
+ *  `sig` is any stable digest of the item's drawn state. */
+export function makeVersionStamp(): (id: string, sig: string) => number {
+  const seen = new Map<string, { sig: string; v: number }>();
+  return (id, sig) => {
+    const have = seen.get(id);
+    if (have && have.sig === sig) return have.v;
+    const v = (have?.v ?? 0) + 1;
+    seen.set(id, { sig, v });
+    return v;
+  };
+}
 
 /** The optional half of a Board source. A source that implements this can be
  *  drawn on the pipeline canvas; one that does not is unaffected. */
@@ -160,11 +233,16 @@ export interface PipelineCapable {
   groupAxes: GroupAxis[];
   lanes(items: readonly PipelineItem[], axis: GroupAxis): LaneDef[];
   placementOf(item: BoardItem): PipelinePlacement;
-  admits(item: PipelineItem, to: CanonStage, band: string | null): MoveOffer;
+  /** `lane` is the target row when the drop crossed the Y axis, so an adapter
+   *  can refuse a row it does not own as well as a stage it cannot reach. */
+  admits(item: PipelineItem, to: CanonStage, band: string | null, lane?: string): MoveOffer;
   move(req: MoveRequest): Promise<MoveResult>;
   /** Items with their placement. Kept separate from `loadEntries()` so the
    *  Board's own surface is untouched by this axis. */
   loadPipeline(): Promise<PipelineEntry[]>;
+  /** What the last `loadPipeline()` hid, and which stages it could not read.
+   *  Optional so a fixture source need not keep books. */
+  lastLoad?(): PipelineLoadNotes;
 }
 
 export type PipelineSource = BoardSourceExt & PipelineCapable;

@@ -38,13 +38,10 @@ import type { GenerateRequest, Hunt, HuntNode, SoundGroups, SoundKind, SoundTake
 import { stackVersions, suggestLabel } from "@/app/playground/arrange/model";
 
 import type { CanonStage, GroupAxis, LaneDef, MoveOffer, MoveRequest, MoveResult, PipelineEntry, PipelineItem, PipelineSource, StageBand } from "../pipeline";
-import { lanesFromItems, UNGROUPED_LANE } from "../pipeline";
+import { lanesFromItems, makeVersionStamp, stubbedMove, UNGROUPED_LANE, type PipelineLoadNotes } from "../pipeline";
 import type { BoardCount, BoardEntry } from "../source";
 import { countEntries, itemId, itemsOf, SourceUnavailable, VerdictRefused } from "../source";
 import type { BoardMedia, BoardVerdict } from "../types";
-// Type-only, erased at build: importing a VALUE from ./articles would pull the
-// articles adapter into the audio chunk and undo the registry's lazy load.
-import type { PipelineLoadNotes, StubbedMove } from "./articles";
 
 export const AUDIO_DECIDE_REFUSAL = "an audio take is judged in the Sound lab's Triage; the canvas moves stages";
 export const AUDIO_LANE_ONLY_PROMPT = "a candidate has no row of its own until it is rendered";
@@ -96,11 +93,6 @@ function must<T>(r: Result<T>, route: string): T {
   throw new Error(r.error);
 }
 
-/** The dry path's answer (see StubbedMove in ./articles). Duplicated, not imported: see above. */
-const stubbedMove = (item: PipelineItem, wouldCall: string): MoveResult => {
-  const r: StubbedMove = { ok: true, item, stub: true, wouldCall };
-  return r;
-};
 
 const opOf = (kind: SoundKind) => (kind === "sfx" ? ("sfx" as const) : ("compose" as const));
 
@@ -125,13 +117,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
   let notes: PipelineLoadNotes = { hidden: [], damaged: [] };
   let seq = 0;
 
-  const stamp = (id: string, sig: string): number => {
-    const have = versions.get(id);
-    if (have && have.sig === sig) return have.v;
-    const v = (have?.v ?? 0) + 1;
-    versions.set(id, { sig, v });
-    return v;
-  };
+  const stamp = makeVersionStamp();
 
   /* ── native → PipelineItem ──────────────────────────────────────────────── */
 

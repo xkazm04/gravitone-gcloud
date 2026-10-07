@@ -63,8 +63,8 @@ import {
 } from "@/app/articles/articlesClient";
 import { ARTICLE_STATUSES, CHECK_DIMENSIONS, RUN_COST_HINT, canTransition, type ArticleRun, type ArticleStatus } from "@/lib/articles/types";
 
-import type { CanonStage, GroupAxis, LaneDef, MoveOffer, MoveRequest, MoveResult, PipelineEntry, PipelineItem, PipelineSource, StageBand } from "../pipeline";
-import { lanesFromItems, UNGROUPED_LANE } from "../pipeline";
+import type { CanonStage, GroupAxis, LaneDef, MoveOffer, MoveRequest, MoveResult, PipelineEntry, PipelineItem, PipelineLoadNotes, PipelineSource, StageBand } from "../pipeline";
+import { lanesFromItems, makeVersionStamp, stubbedMove, UNGROUPED_LANE } from "../pipeline";
 import type { BoardEntry, BoardSourceExt } from "../source";
 import { itemId, itemsOf, keyOfItem, SourceUnavailable, VerdictRefused } from "../source";
 import type { BoardMedia, BoardVerdict } from "../types";
@@ -147,24 +147,11 @@ export const articleFailedRefusal = (stepName: string) => `failed at ${stepName}
 /** The store's own sentence for an edge its table forbids (lib/articles/store.ts assertTransition). */
 export const articleTransitionRefusal = (from: ArticleStatus, to: ArticleStatus) => `a run that is ${from} cannot become ${to}`;
 
-/** What the pipeline source's last load did not draw. A column that hides items
- *  says so; it never just reads shorter. */
-export interface PipelineLoadNotes {
-  hidden: { stage: CanonStage; count: number; why: string }[];
-  /** Run directories whose manifest could not be read. */
-  damaged: string[];
-}
-
-/** A move that took the dry path: nothing was written and nothing was spent.
- *  `ok: true` with `stub: true`, and the item exactly as it was. A caller that
- *  commits on `ok` alone would draw the move as done; it must check this. */
-export type StubbedMove = Extract<MoveResult, { ok: true }> & { stub: true; wouldCall: string };
-export const isStubbedMove = (r: MoveResult): r is StubbedMove => r.ok && (r as Partial<StubbedMove>).stub === true;
-/** Built as its own type first: a literal returned as `MoveResult` would be refused for the extra key. */
-export const stubbedMove = (item: PipelineItem, wouldCall: string): MoveResult => {
-  const r: StubbedMove = { ok: true, item, stub: true, wouldCall };
-  return r;
-};
+// `PipelineLoadNotes`, `stubbedMove` and `isStubbedMove` were written here
+// first and are now in ../pipeline, where the engine and the audio adapter can
+// see them too. Re-exported because the probe spec reaches them through this
+// module, and because a reader of this file should not have to know they moved.
+export { isStubbedMove, stubbedMove, type PipelineLoadNotes } from "../pipeline";
 
 export type ArticlesPipelineSource = BoardSourceExt & PipelineSource & { lastLoad(): PipelineLoadNotes };
 
@@ -278,13 +265,7 @@ export function makeArticlesSource(opts: { now?: () => number } = {}): ArticlesP
   // `version` is bumped when the native record's signature changes, so a card
   // re-renders for its own data and never for a sibling's.
   const versions = new Map<string, { sig: string; v: number }>();
-  const stamp = (id: string, sig: string): number => {
-    const have = versions.get(id);
-    if (have && have.sig === sig) return have.v;
-    const v = (have?.v ?? 0) + 1;
-    versions.set(id, { sig, v });
-    return v;
-  };
+  const stamp = makeVersionStamp();
   let notes: PipelineLoadNotes = { hidden: [], damaged: [] };
 
   const runItem = (run: ArticleRun, detail: RunDetail | null, site: Site): PipelineItem => {
