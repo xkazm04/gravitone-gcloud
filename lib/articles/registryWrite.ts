@@ -26,7 +26,7 @@
 
 import { execFile } from "node:child_process";
 import { existsSync } from "node:fs";
-import { copyFile, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -36,6 +36,7 @@ import { citedNumbers, htmlProse, postWords, THRESHOLDS } from "./checks";
 import { readCritiqueDetail, registryCritique, type RegistryCritique } from "./critique";
 import { resolveRegistryDir, type RegistryLocation } from "./registryRead";
 import { ArticleError, slugify } from "./store";
+import { uniqueDir } from "./tempDir";
 import type { ArticleLanding, ArticleRun, CheckReport, Claim, PostMeta, RegistryPatch, Source } from "./types";
 
 export class LandingError extends ArticleError {
@@ -289,13 +290,17 @@ export async function landRun(input: LandInput): Promise<ArticleLanding> {
     const remote = await run(["git", "rev-parse", "--verify", "--quiet", `refs/remotes/origin/${c}`], registry);
     return local.code === 0 || remote.code === 0;
   });
-  const worktree = path.join(os.tmpdir(), "gravitone-articles", `${art.id}-${now().getTime()}`);
+  // Made, not computed: mkdtemp leaves an empty directory only this landing
+  // owns, and `git worktree add` accepts an empty one.
+  const worktree = await uniqueDir(path.join(os.tmpdir(), "gravitone-articles"), `${art.id}-${now().getTime()}`);
   const landing: ArticleLanding = { slug, branch, worktree, gates: [] };
   await input.progress?.(landing);
 
-  await mkdir(path.dirname(worktree), { recursive: true });
   const added = await run(["git", "worktree", "add", "-b", branch, worktree, base], registry);
-  if (added.code !== 0) throw new LandingError(`git worktree add failed: ${tail(added.stderr, 400)}`, "worktree-failed", landing, added.stderr);
+  if (added.code !== 0) {
+    await rm(worktree, { recursive: true, force: true }).catch(() => undefined);
+    throw new LandingError(`git worktree add failed: ${tail(added.stderr, 400)}`, "worktree-failed", landing, added.stderr);
+  }
 
   // 3. the publication
   const pubDir = path.join(worktree, "publications", slug);
