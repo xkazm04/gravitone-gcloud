@@ -16,6 +16,11 @@ Contexts covered: imaging-service, character-consistency-testing, vlm-frame-anno
 **Size:** L · **Effort:** 7/10 · **Impact:** 9/10 · **Risk:** 6/10 · **Gate:** architecture
 **Registry:** software-engineering/cost-metering#usage-ledgers, #budget-enforcement, #reversible-debit-and-settle, #unit-classes-are-open
 
+**Operator decisions (2026-10-07) - read before building stage 3.**
+
+- **(3a) Question:** "Should the spend meter survive restarts and be shared across processes?" **Operator chose:** "Decide with hosted state later". **Consequence:** stage 3a is held. That covers the file-backed `SpendStore` under `foundry-out/spend/`, cross-process holds and TTL reclaim, i.e. acceptance cases 1, 2 and 5. The meter stays in-process, C3 stays partial, and 3a reopens only when hosted state is decided. **Constraint the repo shows:** this card's own Risks line says the cloud posture has no shared disk, and `lib/deployment.ts` names Cloud Run as the SaaS target (lines 8-9 and 54). **Alternative that lost:** the file-backed JSONL ledger plus holds file that 'The move' prescribes.
+- **(3b) Question:** "Should text turns get a spend ceiling, and may it refuse a turn?" **Operator chose:** "Count only, refuse nothing". **Consequence:** the `text-usd` class books priced rows (basis `vendor`, from the claude-cli `total_cost_usd`) and counts unpriced turns (no $0 row), and has no ceiling and no refusal. Acceptance case 4 stands. The card's per-class ceiling and fail policy for `text-usd`, and its "gets a limit for the first time" claim, are superseded for text. **Alternative that lost:** a `text-usd` ceiling with a stated open or closed fail policy, as 'The move' prescribes.
+
 **Summary.** Today there are three engines and three spend stories. Imaging has an in-memory USD ledger with holds. Music has a separate in-memory seconds ledger that checks and then records, with no hold. Text has no ceiling at all. This card lifts the reserve → settle → book kernel out of `lib/imaging/budget.ts` into `lib/spend/`, behind one store that survives a restart and is shared across processes, with one ceiling per unit class. Every metered call in the repo then sits under one limit that can be read.
 
 **Premise (verified).**
