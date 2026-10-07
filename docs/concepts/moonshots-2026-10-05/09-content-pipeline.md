@@ -162,6 +162,14 @@ _Runner-up:_ ledger-derived plans. Compute the next sweep from catalogue gaps (1
 **Context:** foundry-forge · **Slot:** B experience
 **Size:** L · **Effort:** 6/10 · **Impact:** 8/10 · **Risk:** 5/10 · **Gate:** direction
 **Registry:** media-generation/visual-style-locking#draft-proofing-locked-ratchet (+ #style-onboarding-from-sample)
+**App Master decisions (2026-10-07) - read before building foundry-forge-B's next stage.**
+
+- **(a) One plate.** The palette is read off the style's first kept ledger row, the one `heroOf` shows, because proven styles have no exemplars. **Alternative that lost:** merging palettes across 2-3 plates.
+- **(b) `finish` is the recipe text with its palette sentences stripped. `technique` is its first sentence. `subject` stays empty for the human.** **Constraint:** a theme must never carry two palettes that can disagree. **Alternative that lost:** the recipe verbatim as `finish`.
+- **(c) When this machine has no plates (no `foundry-out/`, or a missing run or plate file), the route answers 200 with `paletteMissing` and a reason, never 500, and the client creates no Theme.** **Constraint:** kept plates exist only where the forge ran.
+- **(d) The recognizer must return exactly one `{name, hex, role}` per `ColorRole`. Anything else is `paletteMissing`, and nothing is padded or invented (library-view-B case 4).** **Constraint:** `canLock` does not check the palette (`lib/themes.ts:241`, `canLock`).
+- **(e) No proofs are seeded; that waits on an operator call.** **Constraint:** `ref-early` plates were conditioned on a franchise source frame (`pipeline/foundry/forge.py:36`), and approved proofs become pinned style references (`lib/themes.ts:199`, `PINNED_REFS`). The registry's `style-onboarding-from-sample` forbids that. **Alternative that lost:** the card's kept plates as pending proofs.
+- **(f) The adopt route sits behind `guardRequest`, which deployment-cells reads as the money door.** Both route inventories (deployment-cells and imaging-auth) carry it since `b2b6057`. **Alternative that lost:** the 'access' door that task bdeaf5fd proposed, which the `wrongDoor` check fails.
 
 **Summary.** Four catalogue styles are `proven` by human culling across scenes, but nothing in the studio can use them. `styles.json` is read only by `/foundry` and the pipeline, and a Library theme can only start from scratch, a preset, a screenshot or a plate. The move adds "adopt" on a proven style. It forks the style into a draft Theme whose palette roles come from a deep read of its kept plates, with those plates offered as pending proofs. The draft, proofing, locked ratchet is preserved.
 

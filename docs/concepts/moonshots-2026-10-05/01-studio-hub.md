@@ -393,6 +393,15 @@ _Runner-up:_ a typed upstream graph on the contract (`reads`) that makes Score a
 **Context:** studio-workspace · **Slot:** B experience
 **Size:** L · **Effort:** 6/10 · **Impact:** 8/10 · **Risk:** 4/10 · **Gate:** direction
 **Registry:** media-generation/production-pipeline-phasing#asset-vs-disposable-render · software-engineering/entity-lifecycle#provenance-denormalization
+**App Master decisions (2026-10-07) - read before building WORKSPACE-B's next stage.**
+
+- **(a) The collectors are pure projections.** The reads (`readRecord`, `listTakes`) live in `app/_library/projectOutputs.ts`. **Constraint:** `readRecord` reaches React through `stepStore.ts`, so an `outputs.ts` that called it would fail the closure check. The verdict modules follow the same rule. **Alternative that lost:** collectors that read through `readRecord`, as the critic wrote it.
+- **(b) The demo plane stays open as a later WORKSPACE-B stage and is not scheduled.** **Constraint:** a fixture plane means importing `app/_studio/assets`, which stage-1 case 9 forbids. **Alternative that lost:** reintroducing it now behind a lazy boundary.
+- **(c) Real outputs get no AssetDrawer: Provenance on the row is enough.** **Constraint:** AssetDrawer takes the fixture `Asset` type, and it is kept only for `asset-drawer-dialog.probe`. **Alternative that lost:** a drawer for real outputs.
+- **(d) The census media rise 0 -> 1 for the raw `<audio>` in LibraryShelves is accepted, by the same rule as the lightbox video in task 1e7cd421.** **Constraint:** the kit Player needs peaks and a playback controller that no record holds. **Alternative that lost:** funding a Player-based take row.
+- **(e) A cue whose `activeTakeId` is not in the sound store shows a take-missing row. This point is open, not decided.** The score verdict flags only cues with no `activeTakeId`, so Outputs and the verdict can disagree on a dangling id. That goes against `critic-2026-10-07.md:482-499`. It belongs to the WORKSPACE-A / phase-shared-A chain.
+
+The studio-outputs screen is in `cx-capture.mjs` but has never been captured or looked at, because no app ran.
 
 **Summary.** The studio's "Outputs" button opens the same 30-odd mocked Glass Harbor assets for every project, under a "prototype · mocked data" stamp, while the steps behind it now hold real plates, spending and spotting. The move is to derive Outputs from this project's own step records (each with model, cost and step), let a plate be kept on the shelf as a pointer, and delete the fixture library.
 
