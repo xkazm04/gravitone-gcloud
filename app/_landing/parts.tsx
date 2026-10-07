@@ -1,9 +1,9 @@
 "use client";
 
-// The door's one control. Everything else on the page is a picture; this is the
-// verb. The only strings the door carries are this button's label, the names of
-// the things drawn (constellations, pictures) and failure states — a sign-in
-// that did not work has to be sayable.
+// The landing's one control. Everything else on the page is a picture; this is
+// the verb. The only strings the landing carries are this button's label, the
+// names of the things drawn (types, templates, the library) and failure states
+// — a sign-in that did not work has to be sayable.
 
 import Link from "next/link";
 import { useState } from "react";
@@ -35,7 +35,7 @@ const REASON_CHIP: Record<string, string | undefined> = {
 
 /** `appearance` picks the skin and nothing else: the two states, their words,
  *  the reason chip and the error are the same on every landing. "almanac" is
- *  the door's gold pill; "paper" hands the look to the Paper Cosmos stylesheet
+ *  the retired door's gold pill; "paper" hands the look to the Paper Cosmos stylesheet
  *  (app/_landing/cosmos/cosmos.css, `.pc-enter*`), which draws the coral
  *  cut-paper pill the owner chose with it. */
 export function EnterButton({

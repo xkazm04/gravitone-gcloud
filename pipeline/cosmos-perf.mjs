@@ -67,7 +67,9 @@ const SAMPLER = () => {
     new PerformanceObserver((l) => {
       for (const e of l.getEntries()) w.__perf.longtasks.push([e.startTime, e.duration]);
     }).observe({ type: "longtask", buffered: true });
-  } catch {}
+  } catch {
+    // no longtask support (non-Chromium): boot rows read 0, frames still sampled
+  }
   w.__mark = (name) => w.__perf.marks.push([name, performance.now()]);
 };
 
@@ -113,7 +115,7 @@ async function run(profile) {
   // (b) open the first project type through its accessible button (dispatched
   // click: the medallions bob, and a pointer click waits for "stable").
   await page.evaluate(() => window.__mark("open:start"));
-  await page.evaluate(() => { const b = document.querySelector(".pc .med"); b && b.click(); });
+  await page.evaluate(() => { document.querySelector(".pc .med")?.click(); });
   await page.waitForTimeout(2600);
   await page.evaluate(() => window.__mark("open:end"));
 

@@ -42,6 +42,8 @@ const EXEMPT: Record<string, string> = {
     "The App Router boundary that REPLACES the root layout, so <GravitoneTokens> never renders and a var(--gt-ink) there resolves to nothing. The one file that must not read tokens.ts.",
   "app/_phases/frames/music-video/compositor.ts":
     "The music-video effects studio's particle/bloom colours — what a GENERATED VIDEO's overlay effects look like, not this app's own chrome. Same distinction as the style-preset exemption above, for video instead of a still image; deliberately not drawn from ACCENT.cyan so the rendered output never shifts if this app's own brand accent does.",
+  "app/_landing/cosmos/engine/inks.ts":
+    "The colours of the drawn paper artwork on the Paper Cosmos landing's canvases (the dusk horizon, the galaxy's sheets, the lamp, the reams' paper stock and latches, the grain, a sheet's lit edge and cast shadow) — illustration content painted into pixels, not this app's chrome. The landing's chrome reads --pc-* tokens; every engine module takes its paint from this one file so the exemption stays one file wide.",
 };
 
 /** A CSS colour literal: 3, 4, 6 or 8 hex digits, or an rgb()/rgba() call.
