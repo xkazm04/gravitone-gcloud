@@ -21,7 +21,7 @@ import * as adoptRoute from "@/app/api/foundry/styles/[id]/adopt/route";
 import { SEED_BYTE_CAP, SEED_CAP, adoptionDraft, isPaletteSentence, plateRel, recipeSlots, type AdoptIO } from "@/lib/foundry/adopt";
 import { FoundryError } from "@/lib/foundry/store";
 import type { Catalogue, LedgerRow, StyleDef } from "@/lib/foundry/types";
-import { ORIGIN_WORD, getTheme, newTheme, putTheme, statusOf, styleFits } from "@/lib/themes";
+import { ORIGIN_WORD, getTheme, listThemes, newTheme, putTheme, statusOf, styleFits } from "@/lib/themes";
 
 import { keepEnv, stripComments } from "./_helpers";
 
@@ -162,6 +162,7 @@ test("5 · a foundry theme round-trips with the seeded text-lane proofs pending,
     proofs: d.proofs,
   });
   const back = await getTheme(made.id);
+  expect((await listThemes("uid-1")).map((t) => t.id)).toContain(made.id);
   expect(back?.origin).toBe("foundry");
   expect(back?.foundryStyleId).toBe("cold-photoreal-cg");
   expect(back?.proofs.map((p) => p.state)).toEqual(["pending", "pending"]);
