@@ -261,6 +261,10 @@ export interface MusicVideoSourceStepData {
   /** The effects-studio's (WP3) compositor parameters — not this package's to
    *  fill. */
   effectParams?: Record<string, unknown>;
+  /** The last poster turn (lib/turns/kinds/poster.ts) whose answer was taken —
+   *  landed, or found failed. A poster lands at most once per turn id, across a
+   *  watcher, a later mount and a reload. Keyed to the track like the poster. */
+  posterTurn?: string;
   savedAt?: number;
 }
 
@@ -282,10 +286,11 @@ export function withTrack(
   current: MusicVideoSourceStepData | undefined,
   track: { sourceAssetId: string; envelope: import("@/lib/audioEnvelope").AudioEnvelope },
 ): MusicVideoSourceStepData {
-  const { posterAssetId: _poster, seed: _seed, effectParams: _params, ...kept } = current ?? {};
+  const { posterAssetId: _poster, seed: _seed, effectParams: _params, posterTurn: _turn, ...kept } = current ?? {};
   void _poster;
   void _seed;
   void _params;
+  void _turn;
   return { ...kept, ...track };
 }
 

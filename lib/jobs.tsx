@@ -495,8 +495,9 @@ export function applyClear(jobs: Job[], jobId: string): Job[] {
 // one turn twice: there is nothing to append, only a record to read.
 //
 // Scene direction (`frames`) joined in stage 3, and the REAL research run in
-// stage 4b. Other kinds (poster, export) keep the localStorage path above
-// unchanged.
+// stage 4b. The music-video poster joined as the first WORK kind (lib/turns/
+// kinds/poster.ts, operator T1): its record says `uncancellable`, so no Stop is
+// drawn for it. The export keeps the localStorage path above unchanged.
 //
 // `research` IS TWO RUNS UNDER ONE KIND, and what makes a job turn-backed is
 // the job, not its kind: a job with a `turnId` came in through `track` and is
@@ -507,7 +508,7 @@ export function applyClear(jobs: Job[], jobId: string): Job[] {
 // exactly as before. Membership here means "may run as a turn", never "is one".
 
 /** The kinds that run (or, for `research`, may run) as server-owned turns. */
-export const TURN_KINDS: ReadonlySet<JobKind> = new Set<JobKind>(["recalibrate", "frames", "research"]);
+export const TURN_KINDS: ReadonlySet<JobKind> = new Set<JobKind>(["recalibrate", "frames", "research", "poster-generate"]);
 
 export interface TurnFlag {
   turnId: string;
