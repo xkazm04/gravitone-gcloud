@@ -11,6 +11,15 @@
 // `bet` is what the direction is wagering, in the operator's terms, and `loses`
 // is where it is expected to lose. Both are drawn in the variant switcher, so
 // the look is judged against a stated claim rather than a vibe.
+//
+// A bet must be REACHABLE FROM A SKIN. v1's first wording was "no card chrome at
+// all", which no skin can deliver: the engine owns the card's border, its
+// rounded corner and its stage tint, and the shell is `overflow-hidden`, so a
+// face is clipped at the padding box and cannot paint over them. A direction
+// advertised on a claim its layer cannot satisfy is judged for the engine's
+// decision, not its own. If a future direction really wants a bare card, the
+// shell needs to be able to say "draw me no shell" - that is an engine change,
+// not a skin one.
 
 import type { PipelineSkin } from "../types";
 
@@ -35,7 +44,7 @@ export interface Variant {
 }
 
 export const VARIANTS: Readonly<Record<VariantId, Variant>> = {
-  "1": { id: "1", name: "Dense ledger", bet: "rules and type do all the work; no card chrome at all", loses: "first impression — nothing to admire", skin: ledger },
+  "1": { id: "1", name: "Dense ledger", bet: "rules and type do all the work; weight and alignment, not boxes", loses: "first impression — nothing to admire", skin: ledger },
   "2": { id: "2", name: "Spatial field", bet: "glass, depth and air; lanes implied by light", loses: "items per screen, and honesty at volume", skin: field },
   "3": { id: "3", name: "Transit map", bet: "items ride continuous lines; stages are stations", loses: "dense lanes — a station with 498 trains", skin: transit },
   "4": { id: "4", name: "Workbench", bet: "a docked inspector follows the selection; detail costs no modal", loses: "screen width — it spends space on chrome", skin: bench, inspector: true },

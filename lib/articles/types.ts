@@ -455,6 +455,15 @@ export const RUN_COST_HINT = {
   measured: "2026-10",
 } as const;
 
+/**
+ * The longest a rejection or rework note may be. It lives HERE, not in
+ * engine.ts, because the client needs it: a textarea that lets the operator
+ * type 2,400 characters and then shows them a 400 from the route has wasted
+ * their note. engine.ts re-exports it and still enforces it - the bound is the
+ * server's, the hint is the client's, and there is one number.
+ */
+export const NOTE_MAX_CHARS = 2000;
+
 /* ── the status machine ────────────────────────────────────────────────────── */
 
 /**

@@ -58,6 +58,7 @@ import { CullGrid } from "./CullGrid";
 import { DojoView } from "./DojoView";
 import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
+import PipelineTab from "./PipelineTab";
 import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
 import { StylesShelf } from "./StylesShelf";
@@ -423,6 +424,12 @@ export default function FoundryView() {
             <ExtractView />
           ) : tab === "dojo" ? (
             <DojoView />
+          ) : tab === "pipeline" ? (
+            // The tab reads `?v=` through `useSearchParams` and carries its own
+            // Suspense boundary for it (./PipelineTab.tsx), which is why
+            // app/foundry/page.tsx still needs none: the boundary sits around
+            // the one component that reads a param, not around the view.
+            <PipelineTab />
           ) : (
             cull
           )}

@@ -104,8 +104,7 @@ import {
   type ReviewerReceipt,
   type ReviewerSpec,
   type Source,
-  type StepName,
-} from "./types";
+  type StepName, NOTE_MAX_CHARS } from "./types";
 
 /* ── dependencies (injectable for the probes) ──────────────────────────────── */
 
@@ -275,7 +274,7 @@ export async function approveRun(id: string, patchIds: string[], deps: EngineDep
 }
 
 /** The longest note a human act at the gate carries. */
-export const NOTE_MAX_CHARS = 2000;
+export { NOTE_MAX_CHARS } from "./types";
 
 /** A human's note at the gate: trimmed, and refused when there is nothing in it. The one place
  *  the rule lives, so a reject and a rework cannot disagree about what an empty note is. */

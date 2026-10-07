@@ -10,7 +10,11 @@
 //
 // THE FOUR RUNGS, in the order they were built:
 //   0. MEASURE. `skin.face` is called exactly once per render of one card, so
-//      counting its calls is counting card renders (harness/Harness.tsx does).
+//      counting its calls is counting card renders. There is no instrument in
+//      the tree: the fixture harness that took rung 0's numbers is NOT shipped
+//      (a page.tsx under app/ is a live route and this repo has no routable dev
+//      surface), so it lives beside the exercise note with instructions to copy
+//      it back. Whoever re-measures brings their own counter.
 //   1. THE CONTAINER OWNS THE CAMERA. One `world` element carries
 //      `translate3d(...) scale(k)`, written to the DOM directly (`setCam`); no
 //      card receives it, no React state holds it. A pan step re-renders nothing.
@@ -43,8 +47,7 @@ import {
   type MoveResult,
   type PipelineEntry,
   type PipelineItem,
-  type PipelineSource,
-} from "@/lib/board/pipeline";
+  type PipelineSource, isStubbedMove, } from "@/lib/board/pipeline";
 
 import { Card } from "./Card";
 import ContextMenu, { type MenuItem } from "./ContextMenu";
@@ -126,6 +129,20 @@ export interface PipelineCanvasProps {
   source: PipelineSource;
   /** Which of `source.groupAxes` draws the Y axis. Default: the first. */
   axisId?: string;
+  /**
+   * WHETHER A MOVE IS ALLOWED TO SPEND MONEY. Default `"stub"`, and the default
+   * is the whole point: a dispatch costs the operator's own Claude seat at
+   * $47-92 and 26-32 turns, so the arm fails to the side that spends nothing.
+   *
+   * A confirm dialog answers `{ live: true }` meaning "the operator pressed
+   * yes"; that is INTENT, and it is not authority. This prop is the authority,
+   * and it is clamped over every request in `submitMoves` - the one chokepoint
+   * every path reaches (a drag, the context menu, the move map, the keyboard).
+   * Before it existed a dragged confirm set `live: true` unconditionally and no
+   * prop could disarm it, so a shell showing STUB could still have spent the
+   * seat. Found by WP4a, which could only work around it from outside.
+   */
+  arm?: "stub" | "live";
   skin?: PipelineSkin;
   /** Re-load every this many ms. 0 = only on mount and on `apiRef.reload()`. */
   pollMs?: number;
@@ -178,7 +195,9 @@ interface Notice {
   retry?: () => void;
 }
 
-type Outcome = { ok: true } | { ok: false; reason: string; retryable: boolean; failed: string[] };
+/** `stubbed` counts the moves the authority answered but did not act on, so a
+ *  caller can tell "it moved" from "it would have". */
+type Outcome = { ok: true; stubbed: number } | { ok: false; reason: string; retryable: boolean; failed: string[] };
 
 interface Live {
   layout: Layout;
@@ -207,7 +226,7 @@ export const PipelineCanvas = memo(PipelineCanvasImpl, (a, b) =>
   a.source === b.source && a.axisId === b.axisId && a.skin === b.skin && a.pollMs === b.pollMs && a.choreoCap === b.choreoCap && a.className === b.className && !!a.onOpen === !!b.onOpen,
 );
 
-function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, onOpen, onStatus, onWave, choreoCap = CHOREO_MAX_CARDS, apiRef, className = "" }: PipelineCanvasProps) {
+function PipelineCanvasImpl({ source, axisId, arm = "stub", skin = DEFAULT_SKIN, pollMs = 0, onOpen, onStatus, onWave, choreoCap = CHOREO_MAX_CARDS, apiRef, className = "" }: PipelineCanvasProps) {
   const uid = useId().replace(/[^A-Za-z0-9]/g, "");
   const announce = useAnnounce();
   const reduced = usePrefersReducedMotion();
@@ -233,7 +252,7 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
   const swallow = useRef(false);
   const sayN = useRef(0);
   const walkSay = useRef(0);
-  const pendingSay = useRef<{ id: string; verb: string } | null>(null);
+  const pendingSay = useRef<{ id: string; verb: string; dry?: boolean } | null>(null);
   const live = useRef<Live | null>(null);
   // Where a POINTER last touched. It is not state: a click that moved the
   // keyboard cursor would re-render the card the cursor left, and a selection
@@ -531,7 +550,9 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
     pendingSay.current = null;
     const n = layout.ids[s.lane * layout.columns.length + s.col].length;
     const title = layout.entryOf.get(p.id)?.item.title ?? "";
-    say(`${title} moved to ${colWord(layout, s.col)}, ${s.row + 1} of ${n}`);
+    // A stubbed move did not happen, so it is not announced as one: the card
+    // has returned to where it was and the sentence has to agree with it.
+    say(p.dry ? `${title} not moved: nothing was spent` : `${title} moved to ${colWord(layout, s.col)}, ${s.row + 1} of ${n}`);
     const id = requestAnimationFrame(() => reveal(p.id));
     return () => cancelAnimationFrame(id);
   });
@@ -549,6 +570,7 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
     const todo = ids.filter((id) => live.current!.layout.entryOf.has(id));
     setPending((p) => new Set([...p, ...todo]));
     const failed: string[] = [];
+    let stubbed = 0;
     let first: { reason: string; retryable: boolean } | null = null;
     for (const id of todo) {
       const L = live.current!;
@@ -556,12 +578,24 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
       if (!entry) continue;
       let r: MoveResult;
       try {
-        r = await L.source.move(requestFor(L.layout, entry.item, laneKey, col, answers));
+        const req = requestFor(L.layout, entry.item, laneKey, col, answers);
+        // THE ARM CLAMPS EVERY PATH. A confirm answers `live: true` to mean the
+        // operator pressed yes; whether that is allowed to spend anything is
+        // this prop's call, not the dialog's. Both must agree, so STUB cannot
+        // be talked round by a gesture.
+        r = await L.source.move({ ...req, live: arm === "live" && req.live === true });
       } catch (e) {
         r = { ok: false, reason: e instanceof Error ? e.message : String(e), retryable: true };
       }
-      if (r.ok) live.current!.apply(r.item);
-      else {
+      if (r.ok) {
+        // `MoveResult`'s own contract: "a caller that commits on `ok` alone
+        // draws a move that never happened." A stubbed result IS ok - the
+        // authority answered, it just did not act - so the board reconciles the
+        // unchanged item (the card returns home, which is right) and the verb
+        // is NOT announced as done.
+        live.current!.apply(r.item);
+        if (isStubbedMove(r)) stubbed++;
+      } else {
         failed.push(id);
         first ??= { reason: r.reason, retryable: r.retryable };
       }
@@ -572,7 +606,7 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
         todo.forEach((i) => n.delete(i));
         return n;
       });
-    return first ? { ok: false, ...first, failed } : { ok: true };
+    return first ? { ok: false, ...first, failed } : { ok: true, stubbed };
   };
 
   const refuse = (ids: string[], reason: string, retry?: () => void) => {
@@ -657,7 +691,7 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
     say(`${title} dropped on ${dest}`);
     const o = await submitMoves(ids, laneKey, col);
     if (o.ok) {
-      pendingSay.current = { id: lead, verb: dest };
+      pendingSay.current = { id: lead, verb: dest, dry: o.stubbed > 0 && o.stubbed === ids.length };
       setNotice((n) => (n && n.ids.some((i) => ids.includes(i)) ? null : n));
       if (via.drag) landDone();
     } else {
@@ -669,7 +703,7 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
   const answerPrompt = async (p: PromptState, a: PromptAnswer): Promise<PromptOutcome> => {
     const o = await submitMoves(p.ids, p.laneKey, p.col, a);
     if (o.ok) {
-      pendingSay.current = { id: p.ids[0], verb: p.verb };
+      pendingSay.current = { id: p.ids[0], verb: p.verb, dry: o.stubbed > 0 && o.stubbed === p.ids.length };
       setNotice((n) => (n && n.ids.some((i) => p.ids.includes(i)) ? null : n));
       setPrompt(null);
       if (p.flight) landDone();
