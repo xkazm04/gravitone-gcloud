@@ -122,3 +122,34 @@ test("case 5: the Clear dialog states the counts and topic of the notebook it de
   expect(src).not.toContain("NOTEBOOK_COUNTS");
   expect(code("app/_phases/research/ResearchStep.tsx")).toContain("source={dealtSource}");
 });
+
+/* ───────────────────────────── case 6: the source chip ───────────────────────── */
+
+test("case 6: Script and Frames each draw the chip for the source they read, with an accessible name", () => {
+  const chip = code(`${NB}/SourceChip.tsx`);
+  expect(chip).toContain("CHIP_CLASS");
+  expect(chip).toMatch(/<span className="sr-only">this step reads a \{KIND_WORD\[source\.kind\]\} notebook:<\/span>/);
+  expect(chip).toContain("{source.notebook.topic}");
+  expect(chip).toMatch(/replay: "stand-in"/);
+  expect(chip).toMatch(/reasoned: "reasoned"/);
+  // `_shared` does not import upward from `research/`.
+  expect(chip).not.toMatch(/from "(\.\.\/)+research/);
+
+  // Script: beside the "step 1 · notebook" link, over the active source.
+  const script = code("app/_phases/script/ScriptStep.tsx");
+  expect(script).toMatch(/<SourceChip source=\{source\} \/>\s*<a\s+href=\{`\/studio\/\$\{projectId\}\?step=research`\}/);
+  // Frames: above the binding controls, over the notebook the hook dealt.
+  const frames = code("app/_phases/frames/FramesAssembly.tsx");
+  expect(frames).toContain("<SourceChip source={ctl.notebook} />");
+  expect(frames.indexOf("<SourceChip")).toBeLessThan(frames.indexOf("<Row"));
+});
+
+test("case 6: the chip's kind follows the source: stand-in for the seed, reasoned plus the topic for a live notebook", () => {
+  // The chip is a pure function of `source.kind` and `source.notebook.topic`, and
+  // both surfaces hand it the source the gate reads (Script) or the hook deals
+  // (Frames, frames-notebook.probe.spec.ts: `ctl.notebook.kind`).
+  const own = reasoned();
+  expect(own.kind).toBe("reasoned");
+  expect(own.notebook.topic).toBe("harbour dredging costs");
+  expect(sourceOf(NOTEBOOK, { kind: "replay" }).kind).toBe("replay");
+});

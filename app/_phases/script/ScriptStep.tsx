@@ -35,6 +35,7 @@ import Modal from "@/components/ui/Modal";
 import { Hint, TabRail, UpstreamBreak, type TabDef, type TallyTone } from "@/components/ui/signal";
 import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/projects";
 
+import SourceChip from "../_shared/notebook/SourceChip";
 import { useActiveNotebook } from "../_shared/notebook/useActiveNotebook";
 import { loadStep, readStep, type BeatPicksStepData, type StorageTrouble } from "../_shared/stepStore";
 import Notice from "../_shared/ui/Notice";
@@ -421,13 +422,17 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
             </p>
           )}
         </div>
-        {/* A LINK, not a sentence about where a link would go. */}
-        <a
-          href={`/studio/${projectId}?step=research`}
-          className="font-jetbrains shrink-0 rounded-full border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-cyan-400/40 hover:text-cyan-200"
-        >
-          <span aria-hidden>←</span> step 1 · notebook
-        </a>
+        {/* A LINK, not a sentence about where a link would go — and the chip
+            says which notebook it leads to. */}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <SourceChip source={source} />
+          <a
+            href={`/studio/${projectId}?step=research`}
+            className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-cyan-400/40 hover:text-cyan-200"
+          >
+            <span aria-hidden>←</span> step 1 · notebook
+          </a>
+        </div>
       </section>
 
       {/* A REAL TABLIST NOW. This row used to be four `aria-pressed` buttons,

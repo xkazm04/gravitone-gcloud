@@ -22,6 +22,7 @@ import { Tally } from "@/components/ui/signal";
 import { quoteBudget, type BudgetQuoteResult } from "@/lib/imagingClient";
 
 import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef, type PlateState } from "./frames";
+import SourceChip from "../_shared/notebook/SourceChip";
 import type { Fact } from "../_shared/notebook/types";
 import { FrameCanvas, KindChip, LayerBreakdown } from "./parts";
 import LayerPanel from "./LayerPanel";
@@ -238,6 +239,9 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
       {/* The direction pass's pre-flight: what it sends, who serves it, about
           how long it takes here — beside the button that spends it. */}
       <DispatchStrip id="frames-dispatch" outcome={ctl.directionPreview} />
+
+      {/* Which notebook the binding list, the brief and the grade read. */}
+      <SourceChip source={ctl.notebook} />
 
       <div className="overflow-hidden rounded-xl border border-white/8">
         <div className={`font-jetbrains grid ${ASSEMBLY_GRID} gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase`}>
