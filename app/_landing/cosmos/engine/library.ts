@@ -3,29 +3,32 @@
 // the stage, over the family's own world.
 
 import { hideBanner, showBanner } from "./banner";
-import { drawDiorama, drawTray } from "./diorama";
 import { el, ICON } from "./dom";
 import { famItems, fmtN, squarify, tornTop } from "./layout";
 import { setLv } from "./nav";
 import { palette } from "./palette";
+import { artGet, artPut, drawInto, type Surface } from "./raster";
+import type { Op } from "./rasterJobs";
 import { clamp, hash32 } from "./rng";
-import { buildWorld } from "./scene";
+import { buildWorld, prewarmWorld } from "./scene";
 import { renderStage } from "./stage";
 import { $, type Cx } from "./state";
 import type { GalaxyCategory } from "../types";
 
-function catPump(cx: Cx): void {
-  const f = cx.catQ.shift();
-  if (!f) {
-    cx.catRun = false;
-    return;
-  }
-  try {
-    f();
-  } catch {
-    // one tile failing to paint must not stop the rest
-  }
-  cx.life.timeout(() => catPump(cx), 8);
+/** a tile's or tray's stylised art from the raster service, kept for the session */
+function paintTile(cx: Cx, cv: HTMLCanvasElement, key: string, w: number, h: number, rs: number, op: Op, prio: number): void {
+  const show = (x: Surface) => {
+    drawInto(cv, x);
+    cv.classList.add("ready");
+  };
+  const hit = artGet(key);
+  if (hit) return show(hit);
+  const tok = cx.libTok;
+  void cx.raster.run({ rs, layers: [{ w, h, ops: [op] }] }, prio, "lib").then((r) => {
+    if (!r) return;
+    artPut(key, r.out[0]);
+    if (tok === cx.libTok && !cx.life.dead) show(r.out[0]);
+  });
 }
 
 function buildLib(cx: Cx, id: string): void {
@@ -35,7 +38,8 @@ function buildLib(cx: Cx, id: string): void {
     P = palette(id),
     v = cx.els.libView;
   v.innerHTML = "";
-  cx.catQ.length = 0;
+  cx.libTok++;
+  cx.raster.drop("lib");
   const locked = f.status === "locked";
   const sheetTop = Math.round(portrait ? H * 0.16 : Math.max(H * 0.115, S * 0.12));
   v.style.setProperty("--sheetTop", sheetTop + "px");
@@ -58,12 +62,8 @@ function buildLib(cx: Cx, id: string): void {
       tw = Math.round(Math.min(area.offsetWidth || W * 0.6, S * 0.9)),
       th = Math.round(tw * 0.75),
       rs = clamp(DPR, 1, 1.5);
-    cv.width = Math.ceil(tw * rs);
-    cv.height = Math.ceil(th * rs);
     cv.style.cssText = "width:100%;height:100%";
-    const c = cv.getContext("2d")!;
-    c.scale(rs, rs);
-    drawTray(c, tw, th, P, locked);
+    paintTile(cx, cv, `tray|${id}|${locked}|${tw}x${th}|${rs}`, tw, th, rs, { p: "tray", w: tw, h: th, id, locked }, -1);
     tr.setAttribute("role", "img");
     tr.setAttribute("aria-label", f.label + (locked ? ", locked, empty" : ", empty") + ", stylised illustration");
     return;
@@ -99,18 +99,14 @@ function buildLib(cx: Cx, id: string): void {
     } else {
       const cv = el("canvas", "", b);
       const bw = Math.max(8, Math.round(w - gp2 * 2)),
-        bh = Math.max(8, Math.round(h - gp2 * 2));
-      cx.catQ.push(() => {
-        const rs = clamp(DPR, 1, 1.5) * (bw > 420 ? 0.7 : 1);
-        cv.width = Math.ceil(bw * rs);
-        cv.height = Math.ceil(bh * rs);
-        const x2 = cv.getContext("2d")!;
-        x2.scale(rs, rs);
-        drawDiorama(x2, bw, bh, c.id, id, { noEmblem: Math.min(bw, bh) < 90, spread: 40, sparse: true });
-        cv.classList.add("ready");
-      });
+        bh = Math.max(8, Math.round(h - gp2 * 2)),
+        rs = cx.tier === "full" ? clamp(DPR, 1, 1.5) * (bw > 420 ? 0.7 : 1) : 0.75;
+      // treemap order is size order, largest first: the order a reader's eye lands
+      paintTile(cx, cv, `cat|${c.id}|${id}|${bw}x${bh}|${rs}`, bw, bh, rs, { p: "diorama", w: bw, h: bh, id: c.id, parent: id, o: { noEmblem: Math.min(bw, bh) < 90, spread: 40, sparse: true } }, 1 + k);
     }
     el("i", "grn", b);
+    // the dim a hovered neighbour casts, as an overlay's opacity (lite and still; full keeps its filter)
+    el("i", "cdim", b);
     if (locked) b.insertAdjacentHTML("beforeend", '<span class="lk">' + ICON.lock + "</span>");
     const bw = w - gp2 * 2,
       bh = h - gp2 * 2;
@@ -131,8 +127,6 @@ function buildLib(cx: Cx, id: string): void {
     b.onfocus = () => hotCat(cx, b, c, n, true);
     b.onblur = () => hotCat(cx, b, c, n, false);
   });
-  cx.catRun = true;
-  cx.life.timeout(() => catPump(cx), 30);
 }
 
 function hotCat(cx: Cx, b: HTMLElement, c: GalaxyCategory, n: number | null, on: boolean): void {
@@ -169,6 +163,8 @@ export function openFam(cx: Cx, id: string): void {
   buildLib(cx, id);
   hideBanner(cx);
   setLv(cx, "fam");
+  // every category opens over this family's world
+  if (f.categories.length) prewarmWorld(cx, id);
   cx.life.timeout(() => {
     const c = $(cx, ".cat", cx.els.libView);
     if (c) c.focus({ preventScroll: true });

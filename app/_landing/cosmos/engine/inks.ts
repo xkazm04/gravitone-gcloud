@@ -9,6 +9,11 @@
 // engine module takes its paint from here so the exemption stays one file.
 //
 // Values are the contest winner's (landing-universe, "Paper Cosmos"), verbatim.
+// The sky's stops and the ground are the exception: the stylesheet paints the
+// same dusk at first paint, before any canvas, so those are tokens
+// (WORLD_PAPER_COSMOS --pc-sky-*, --pc-ground) read here rather than spelled twice.
+
+import { WORLD_PAPER_COSMOS as T } from "@/components/ui/tokens";
 
 /** the grain tile: fibre strokes over the noise */
 export const GRAIN_INK = { light: "rgba(255,248,230,.10)", dark: "rgba(40,24,36,.09)" };
@@ -28,7 +33,7 @@ export const DIORAMA_INK = { star: "rgba(255,236,190,.85)" };
 
 /** horizon palette: dusk, never neon */
 export const HZ = {
-  sky: ["#0c1132", "#141a4a", "#2a2161", "#5a2f74", "#a3496b", "#e0795c", "#f4ac62", "#f8d495"],
+  sky: [0, 1, 2, 3, 4, 5, 6, 7].map((i) => T["--pc-sky-" + i]),
   far: "#4a2f78",
   midA: "#2e2f78",
   midB: "#1d2c64",
@@ -44,7 +49,7 @@ export const SKY_INK = {
   /** warm bloom behind the galaxy */
   bloom: ["rgba(255,170,100,.34)", "rgba(220,100,110,.12)", "rgba(220,100,110,0)"],
   /** below the horizon */
-  ground: "#0b0f2e",
+  ground: T["--pc-ground"],
   starGlow: "rgba(255,190,110,.95)",
   star: "#fff0cf",
   /** cloud banks: colour, height, alpha */

@@ -11,11 +11,14 @@
 // registries' (./data), or the one a test injects as window.__PC_GALAXY__ before
 // the page loads (the projected 20-type scale). `?tier=full|lite|still` forces a
 // quality tier for the performance instrument.
+//
+// FIRST PAINT is this markup alone: the dusk sky as a CSS gradient (.sky0, from
+// the --pc tokens) and the hero wordmark, both shown by the stylesheet until the
+// engine has chosen a tier; the engine's canvases then fade in over them.
 
 import { useEffect, useRef } from "react";
 
 import { EnterButton } from "../parts";
-import { registryGalaxy } from "./data";
 import type { CosmosHandle, CosmosTier } from "./engine";
 import { dmSans, fraunces } from "./fonts";
 import type { Galaxy } from "./types";
@@ -43,9 +46,11 @@ export default function Cosmos() {
     let gone = false;
     const asked = new URLSearchParams(window.location.search).get("tier");
     const tier = TIERS.find((t) => t === asked);
-    const galaxy = window.__PC_GALAXY__ ?? registryGalaxy();
-    void import("./engine").then(({ mountCosmos }) => {
+    // the registries are read in the engine's chunk, not the page's: nothing
+    // but this skeleton has to be evaluated before first paint
+    void Promise.all([import("./engine"), window.__PC_GALAXY__ ? null : import("./data")]).then(([{ mountCosmos }, data]) => {
       if (gone || !ref.current) return;
+      const galaxy = window.__PC_GALAXY__ ?? data!.registryGalaxy();
       handle = mountCosmos(ref.current, galaxy, tier ? { tier } : {});
     });
     return () => {
@@ -56,6 +61,7 @@ export default function Cosmos() {
 
   return (
     <div ref={ref} className={`pc ${fraunces.variable} ${dmSans.variable}`} data-world="paper-cosmos" data-lv="root">
+      <div className="sky0" aria-hidden="true" />
       <div className="stagev" id="scene" />
       <div id="veil" />
       <div id="world" />

@@ -1,5 +1,12 @@
 // Parallax and dolly: transforms only. The step lives on the one frame loop
-// (Life.want) and gives its slot back once the camera has settled.
+// (Life.want) and gives its slot back once the camera has settled. It moves
+// whatever planes the tier built: about sixteen in `full`, the three bands in
+// `lite`; `still` has no parallax (cx.RM). A covered overview is not moved.
+//
+// PAUSING: a hidden tab, a root scrolled out of view, and an overview fully
+// covered by a type's world all stop the idle motion (animation-play-state) and
+// the overview's frames; a covered overview is also taken out of compositing
+// (visibility) until the way back to it starts.
 
 import { clamp } from "./rng";
 import type { Cx, Plane } from "./state";
@@ -10,7 +17,11 @@ function applyPlane(cx: Cx, p: Plane, A: number, dolly: number): void {
   const x = -(cam.px + cam.dx) * A * p.d,
     y = -(cam.py + cam.dy) * A * p.d * 0.6 - dolly * H * 0.035 * p.d,
     sc = 1 + dolly * 0.045 * p.d;
-  p.pl.style.transform = `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) scale(${sc.toFixed(4)})`;
+  if (cx.tier === "full") p.pl.style.transform = `translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) scale(${sc.toFixed(4)})`;
+  // lite: whole pixels and no identity scale. A software compositor blits a
+  // layer at an integer offset and filters one at a fractional offset or scale,
+  // which is most of what a parallax frame costs it.
+  else p.pl.style.transform = `translate(${Math.round(x)}px,${Math.round(y)}px)` + (Math.abs(sc - 1) > 0.0005 ? ` scale(${sc.toFixed(4)})` : "");
 }
 
 function frame(cx: Cx, now: number): boolean {
@@ -30,8 +41,8 @@ function frame(cx: Cx, now: number): boolean {
   if (now - cam.wheelT > 800) cam.dolly *= Math.pow(0.94, f60);
   const A = cx.g.W * (cx.g.portrait ? 0.018 : 0.03);
   const inRoot = cx.ST.lv === "root";
-  cx.planes.forEach((p) => applyPlane(cx, p, A, inRoot ? cam.dolly : 0));
-  cx.wplanes.forEach((p) => applyPlane(cx, p, A * 1.1, 0));
+  if (!cx.covered) cx.planes.forEach((p) => p.d && applyPlane(cx, p, A, inRoot ? cam.dolly : 0));
+  cx.wplanes.forEach((p) => p.d && applyPlane(cx, p, A * 1.1, 0));
   const moving =
     Math.abs(cam.tx - cam.px) > 0.002 ||
     Math.abs(cam.ty - cam.py) > 0.002 ||
@@ -50,6 +61,7 @@ export function frameReq(cx: Cx): void {
 
 function setLook(cx: Cx, nx: number, ny: number): void {
   if (cx.RM) return;
+  cx.gov?.kick("move", 2000);
   cx.cam.tx = clamp(nx, -1, 1);
   cx.cam.ty = clamp(ny, -1, 1);
   frameReq(cx);
@@ -85,7 +97,33 @@ export function wireCamera(cx: Cx): void {
     },
     { passive: true },
   );
-  life.on(document, "visibilitychange", () => {
-    if (!document.hidden) frameReq(cx);
-  });
+}
+
+/** the overview is covered from when a level's world finishes opening until the way back starts */
+export function setCovered(cx: Cx, on: boolean): void {
+  if (cx.covered === on) return;
+  cx.covered = on;
+  cx.root.classList.toggle("covered", on);
+  if (!on) frameReq(cx);
+}
+
+/** tab hidden or root off screen: idle motion and the frame loop stop */
+export function wirePause(cx: Cx): void {
+  const { life, root } = cx;
+  let off = false;
+  const sync = () => {
+    const paused = document.hidden || off;
+    root.classList.toggle("paused", paused);
+    if (!paused) frameReq(cx);
+  };
+  life.on(document, "visibilitychange", sync);
+  if (typeof IntersectionObserver === "function") {
+    const io = life.observe(
+      new IntersectionObserver((es) => {
+        off = !es.some((e) => e.isIntersecting);
+        sync();
+      }),
+    );
+    io.observe(root);
+  }
 }

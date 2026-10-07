@@ -20,9 +20,19 @@
  *    the variant rendered. (Its 'SOFT' 100 is kept: the static files had no
  *    SOFT axis, so it never rendered either, and fonts.ts loads none.)
  *  - NAMES. Keyframes are pc-* (keyframe names are global and "pulse" is
- *    Tailwind's). The four infinite ones (sway, drift, pulse, bob) hang off the
- *    root's data-tier, which the engine sets at mount; today every tier runs
- *    them, and the performance tiers narrow that one selector to stop them all.
+ *    Tailwind's). The four infinite ones (sway, drift, pulse, bob) run only
+ *    under data-tier=full.
+ *
+ * TIERS (engine/perf.ts decides; the root carries data-tier). `full` is the
+ * design above, untouched. `lite` (a CPU compositing the page) and `still`
+ * (reduced motion, or a machine the governor measured as too slow for lite) are
+ * the same picture with less for a compositor to redraw: the engine folds the
+ * planes into three bands (lite) or one canvas (still), and the rules at the
+ * end of this file drop every per-frame filter and blur - a drop-shadow becomes
+ * a gradient drawn once, a dimming filter an overlay's opacity, the world's
+ * clip-path reveal a crossfade - and `still` takes the reduced-motion rules.
+ * Until the engine has chosen, the root has no data-tier: first paint is the
+ * CSS sky below (.sky0) and the hero wordmark, and the canvases fade in over it.
  *
  * The Enter pill is parts.tsx's EnterButton (appearance="paper"): .pc-enter*
  * below draws it as the variant's #enter.
@@ -39,7 +49,7 @@
   --fs-m:max(17px,calc(var(--S)*.0215));
   --fs-wm:max(24px,calc(var(--S)*.031));
   --grain:none;
-  position:fixed;inset:0;z-index:0;overflow:hidden;overflow:clip;overscroll-behavior:none;
+  position:fixed;inset:0;z-index:0;overflow:hidden;overflow:clip;overscroll-behavior:none;contain:strict;
   user-select:none;-webkit-user-select:none;touch-action:none;background:var(--pc-app);
   font-family:var(--ui);color:var(--cream);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
 }
@@ -51,16 +61,29 @@
 .pc.dragging{cursor:grabbing}
 /* ---------- depth planes ---------- */
 .pc .stagev{position:absolute;inset:0}
-.pc .pl{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;will-change:transform}
+/* first paint: the dusk before any canvas (the sky plane covers it once painted) */
+.pc .sky0{position:absolute;inset:0;pointer-events:none;background:linear-gradient(var(--pc-sky-0) 0%,var(--pc-sky-1) 9%,var(--pc-sky-2) 25%,var(--pc-sky-3) 37%,var(--pc-sky-4) 49%,var(--pc-sky-5) 61%,var(--pc-sky-6) 72%,var(--pc-sky-7) 78.5%,var(--pc-sky-7) 79.5%,var(--pc-ground) 79.5%)}
+.pc.portrait .sky0{background:linear-gradient(var(--pc-sky-0) 0%,var(--pc-sky-1) 12%,var(--pc-sky-2) 24%,var(--pc-sky-3) 33%,var(--pc-sky-4) 43%,var(--pc-sky-5) 52%,var(--pc-sky-6) 61%,var(--pc-sky-7) 66%,var(--pc-sky-7) 67%,var(--pc-ground) 67%)}
+.pc.booted .sky0{visibility:hidden}
+.pc:not([data-tier]) #hero{opacity:1;transform:translate(-50%,-50%) scale(1)}
+/* one build of the overview (or a world): a rebuild fades in over the last */
+.pc .stack{position:absolute;inset:0}
+.pc .stack.fresh{animation:pc-fresh .4s ease both}
+@keyframes pc-fresh{from{opacity:0}to{opacity:1}}
+/* layout and style containment only: a plane's canvases overhang its box by the parallax margin, so paint containment would clip them */
+.pc .pl{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;will-change:transform;contain:layout style}
 .pc .pp{position:absolute;inset:0;transform-origin:var(--ox,50%) var(--oy,50%);transition:transform 1.2s var(--ease),opacity .9s ease;transition-delay:var(--pd,0s)}
 .pc .pp>canvas,.pc .pp>.cv{position:absolute}
 .pc .pl:not(.in) .pp{opacity:0;transform:translateY(5%) scale(.96)}
-.pc[data-tier] .sway{animation:pc-sway var(--sp,60s) ease-in-out infinite alternate;animation-delay:var(--sd,0s)}
+.pc[data-tier=full] .sway{animation:pc-sway var(--sp,60s) ease-in-out infinite alternate;animation-delay:var(--sd,0s)}
 @keyframes pc-sway{from{transform:scaleY(var(--sq,1)) rotate(calc(var(--amp,3deg)*-1))}to{transform:scaleY(var(--sq,1)) rotate(var(--amp,3deg))}}
-.pc[data-tier] .drift{animation:pc-drift var(--sp,90s) linear infinite alternate}
+.pc[data-tier=full] .drift{animation:pc-drift var(--sp,90s) linear infinite alternate}
 @keyframes pc-drift{from{transform:translateX(calc(var(--dr,60px)*-1))}to{transform:translateX(var(--dr,60px))}}
-.pc[data-tier] .pulse{animation:pc-pulse 7s ease-in-out infinite alternate}
+.pc[data-tier=full] .pulse{animation:pc-pulse 7s ease-in-out infinite alternate}
 @keyframes pc-pulse{from{opacity:.82}to{opacity:1}}
+/* not seen, not moving: a hidden tab or an off-screen root, and an overview a world fully covers */
+.pc.paused *,.pc.covered #scene *{animation-play-state:paused!important}
+.pc.covered #scene{visibility:hidden}
 /* the lamp behind the galaxy's sheets (the engine sizes and places it) */
 .pc .lamp{border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb, var(--pc-lamp) 85%, transparent),color-mix(in srgb, var(--pc-lamp-2) 40%, transparent) 38%,color-mix(in srgb, var(--pc-lamp-3) 0%, transparent) 70%)}
 /* camera push into a type: near sheets rush past and fade, far sheets barely move */
@@ -74,10 +97,10 @@
 .pc .med{position:absolute;pointer-events:auto;border-radius:50%;transition:transform .42s var(--ease2),opacity .7s ease,filter .5s;transition-delay:var(--md,0s)}
 .pc .med:not(.in){opacity:0;transform:scale(.35) translateY(30px)}
 .pc .med .bob{position:absolute;inset:0}
-.pc[data-tier] .med .bob{animation:pc-bob var(--bp,8s) ease-in-out infinite alternate;animation-delay:var(--bd,0s)}
+.pc[data-tier=full] .med .bob{animation:pc-bob var(--bp,8s) ease-in-out infinite alternate;animation-delay:var(--bd,0s)}
 @keyframes pc-bob{from{transform:translateY(-3px) rotate(-.6deg)}to{transform:translateY(4px) rotate(.6deg)}}
 .pc .med .lift{position:absolute;inset:0;transition:transform .38s var(--ease2)}
-.pc .med canvas{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none}
+.pc .med canvas,.pc .med .lift>img{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;max-width:none}
 .pc .med .sh2{position:absolute;left:8%;top:12%;width:88%;height:88%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb, var(--pc-shadow-2) 55%, transparent),color-mix(in srgb, var(--pc-shadow-2) 0%, transparent));opacity:0;transform:translate(0,0) scale(.9);transition:opacity .35s,transform .45s var(--ease2);pointer-events:none}
 .pc .med .glow{position:absolute;inset:-22%;border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb, var(--pc-glow) 55%, transparent),color-mix(in srgb, var(--pc-glow) 0%, transparent));opacity:0;transition:opacity .4s;pointer-events:none}
 .pc .med:hover .lift,.pc .med.hot .lift,.pc .med:focus-visible .lift{transform:translateY(-9px) scale(1.13)}
@@ -103,7 +126,7 @@
 .pc #reams{position:absolute;inset:0}
 .pc .ream{position:absolute;pointer-events:auto;transition:transform .4s var(--ease2),opacity .7s ease;transition-delay:var(--rd,0s)}
 .pc .ream:not(.in){opacity:0;transform:translateY(60px)}
-.pc .ream .body{position:absolute;left:0;bottom:0;pointer-events:none}
+.pc .ream .body{position:absolute;left:0;bottom:0;pointer-events:none;max-width:none}
 .pc .ream .tab{position:absolute;left:var(--tl,6%);bottom:var(--tb,0);height:var(--th,30px);display:flex;align-items:center;gap:7px;padding:0 13px 0 12px;border-radius:7px 7px 0 0;background-color:var(--rt,var(--pc-tab));background-image:var(--grain);color:var(--pc-tab-ink);font:600 var(--fs-s)/1 var(--ui);letter-spacing:.015em;white-space:nowrap;box-shadow:0 -2px 5px color-mix(in srgb, var(--pc-shadow) 28%, transparent),inset 1px 1px 0 color-mix(in srgb, var(--pc-white) 40%, transparent);pointer-events:none;transition:transform .35s var(--ease2),background-color .3s}
 .pc .ream .tab svg{width:14px;height:14px;flex:none;opacity:.8}
 .pc .ream:hover,.pc .ream.hot,.pc .ream:focus-visible{transform:translateY(-10px)}
@@ -271,6 +294,7 @@
 .pc .cat canvas{opacity:0;transition:opacity .5s}
 .pc .cat canvas.ready{opacity:1}
 .pc .cat .grn{position:absolute;inset:0;background-image:var(--grain);opacity:.8;pointer-events:none}
+.pc .cat .cdim{display:none}
 .pc .cat .lbl{position:absolute;left:0;bottom:0;max-width:100%;display:flex;flex-direction:column;gap:3px;padding:.5em .7em .55em;background:var(--lbg,var(--pc-bone));color:var(--ltx,var(--pc-sheet-ink));border-radius:0 6px 0 0;box-shadow:0 -2px 6px color-mix(in srgb, var(--pc-umber) 20%, transparent)}
 .pc .cat .lbl b{font:900 var(--cfs,18px)/1 var(--disp);letter-spacing:-.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variation-settings:'SOFT' 100}
 .pc .cat .lbl em{font:700 max(15px,calc(var(--cfs,18px)*.78))/1 var(--ui);font-style:normal;opacity:.78}
@@ -340,3 +364,54 @@
   .pc .med.chosen .lift{transform:none}
   .pc #hero{display:none}
 }
+/* ---------- lite and still: the same picture, less for a CPU to composite ---------- */
+/* the grain and vignette overlay is painted into the bands and the world instead */
+.pc:is([data-tier=lite],[data-tier=still]) #grainov{display:none}
+/* bands reveal by opacity alone (a full-viewport layer scaled per frame is the expensive part) */
+.pc:is([data-tier=lite],[data-tier=still]) .pl:not(.in) .pp{transform:none}
+/* the world opens as a crossfade, not a clip-path circle: its one canvas (haze
+ * painted in) fades, unscaled, and nothing else is under that opacity
+ * (measured: a scaling world, or a background, a haze and a canvas under one
+ * opacity, cost the software compositor a filtered or an offscreen pass every
+ * frame) */
+.pc:is([data-tier=lite],[data-tier=still]) #world{clip-path:none;background:none;transition:visibility 0s linear .25s}
+.pc:is([data-tier=lite],[data-tier=still]) #world::after{display:none}
+.pc:is([data-tier=lite],[data-tier=still]) #world .pl{will-change:auto}
+.pc:is([data-tier=lite],[data-tier=still]) #world .stack{opacity:0;transition:opacity .25s ease}
+.pc:is([data-tier=lite],[data-tier=still]):is(.lv-type,.lv-tpl,.lv-cat) #world{clip-path:none;visibility:visible;transition:visibility 0s}
+.pc:is([data-tier=lite],[data-tier=still]):is(.lv-type,.lv-tpl,.lv-cat) #world .stack.wready{opacity:1;transition:opacity .3s ease .2s}
+.pc.quick #world .stack{transition-delay:0s!important}
+/* the views fade quickly: a view over card layers is an offscreen pass per frame while it fades */
+.pc:is([data-tier=lite],[data-tier=still]) .view{transition:opacity .15s ease,visibility 0s linear .15s}
+.pc:is([data-tier=lite],[data-tier=still]).lv-type #typeView{transition:opacity .15s ease .5s,visibility 0s}
+.pc:is([data-tier=lite],[data-tier=still]).lv-tpl #typeView{transition:opacity .15s ease,visibility 0s linear .15s}
+/* the camera push becomes the medallions' own scatter: the overview's bands do not scale */
+.pc:is([data-tier=lite],[data-tier=still]):is(.lv-type,.lv-tpl,.lv-fam,.lv-cat) #scene .pl.in .pp{transform:none}
+/* the type view arrives as one fade, not a fade per row */
+.pc:is([data-tier=lite],[data-tier=still]) #typeView>*:not(.navbtn){transform:none;opacity:1;transition:none}
+/* drop-shadow filters become a soft shape drawn once */
+.pc:is([data-tier=lite],[data-tier=still]) .lsheet{filter:none}
+.pc:is([data-tier=lite],[data-tier=still]) .lsheet::before{content:'';position:absolute;left:0;right:0;top:-30px;height:44px;background:linear-gradient(color-mix(in srgb, var(--pc-sheet-shadow) 0%, transparent),color-mix(in srgb, var(--pc-sheet-shadow) 50%, transparent));pointer-events:none}
+.pc:is([data-tier=lite],[data-tier=still]) .pstrip,.pc:is([data-tier=lite],[data-tier=still]) .bn-wrap{filter:none}
+.pc:is([data-tier=lite],[data-tier=still]) .pstrip::after,.pc:is([data-tier=lite],[data-tier=still]) .bn-wrap::after{content:'';position:absolute;inset:-6px -8px -4px -4px;z-index:-1;transform:translate(6px,10px);border-radius:10px;background:radial-gradient(closest-side,color-mix(in srgb, var(--pc-shadow-3) 55%, transparent) 70%,color-mix(in srgb, var(--pc-shadow-3) 0%, transparent));pointer-events:none}
+.pc:is([data-tier=lite],[data-tier=still]) .bn-wrap::after{inset:-12px -14px -8px -8px}
+.pc:is([data-tier=lite],[data-tier=still]) .slip{filter:none}
+.pc:is([data-tier=lite],[data-tier=still]) .slip .inp{box-shadow:6px 10px 0 color-mix(in srgb, var(--pc-black) 28%, transparent)}
+/* a hovered tile dims its neighbours with an overlay, not a filter */
+.pc:is([data-tier=lite],[data-tier=still]) .lv-area.hasHot .cat:not(.hot):not(:hover){filter:none}
+.pc:is([data-tier=lite],[data-tier=still]) .cat .cdim{display:block;position:absolute;inset:0;z-index:2;background:var(--pc-dim);opacity:0;transition:opacity .3s;pointer-events:none}
+.pc:is([data-tier=lite],[data-tier=still]) .lv-area.hasHot .cat:not(.hot):not(:hover) .cdim{opacity:.22}
+/* cards, tiles and the stage picture keep their offset shadows, without the wide blur */
+.pc:is([data-tier=lite],[data-tier=still]) .card .face{box-shadow:0 1px 0 color-mix(in srgb, var(--pc-white) 55%, transparent) inset,calc(var(--cw)*.012) calc(var(--cw)*.024) 6px color-mix(in srgb, var(--pc-shadow-3) 45%, transparent),calc(var(--cw)*.004) calc(var(--cw)*.008) 0 color-mix(in srgb, var(--pc-shadow-3) 25%, transparent)}
+.pc:is([data-tier=lite],[data-tier=still]) .card.focus .face{box-shadow:0 1px 0 color-mix(in srgb, var(--pc-white) 55%, transparent) inset,calc(var(--cw)*.022) calc(var(--cw)*.05) 8px color-mix(in srgb, var(--pc-shadow-3) 50%, transparent),calc(var(--cw)*.005) calc(var(--cw)*.01) 0 color-mix(in srgb, var(--pc-shadow-3) 25%, transparent)}
+.pc:is([data-tier=lite],[data-tier=still]) .cat{box-shadow:0 1px 0 color-mix(in srgb, var(--pc-white) 40%, transparent) inset,3px 6px 3px color-mix(in srgb, var(--pc-umber) 34%, transparent),1px 2px 0 color-mix(in srgb, var(--pc-umber) 25%, transparent)}
+.pc:is([data-tier=lite],[data-tier=still]) .cat:hover,.pc:is([data-tier=lite],[data-tier=still]) .cat.hot,.pc:is([data-tier=lite],[data-tier=still]) .cat:focus-visible{box-shadow:0 1px 0 color-mix(in srgb, var(--pc-white) 40%, transparent) inset,8px 16px 6px color-mix(in srgb, var(--pc-umber) 42%, transparent),1px 2px 0 color-mix(in srgb, var(--pc-umber) 25%, transparent)}
+.pc:is([data-tier=lite],[data-tier=still]) .sv-art{box-shadow:0 1px 0 color-mix(in srgb, var(--pc-white) 55%, transparent) inset,calc(var(--aw)*.018) calc(var(--aw)*.034) 8px color-mix(in srgb, var(--pc-shadow-3) 50%, transparent),calc(var(--aw)*.005) calc(var(--aw)*.01) 0 color-mix(in srgb, var(--pc-shadow-3) 28%, transparent)}
+/* still: the reduced-motion rules, for a reduced-motion user and for a machine that asked for calm */
+.pc[data-tier=still] :is(.pp,.med,.ream,#world,#world .stack,.view,.lsheet,#banner,.sv-side){transition-duration:.15s!important;transition-delay:0s!important}
+.pc[data-tier=still]:is(.lv-type,.lv-tpl,.lv-fam,.lv-cat) #scene .pl.in .pp{transform:none}
+.pc[data-tier=still] .med.chosen .lift{transform:none}
+.pc[data-tier=still] #hero{opacity:0}
+/* a stage picture painted off the main thread fades in when it lands */
+.pc .sv-art .art canvas{opacity:0;transition:opacity .3s}
+.pc .sv-art .art canvas.ready{opacity:1}

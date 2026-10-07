@@ -3,11 +3,11 @@
 // loop; a card's art is drawn lazily, a few per tick, as it comes near focus.
 
 import { paperStrip, hideBanner } from "./banner";
-import { drawDiorama } from "./diorama";
 import { el, ICON } from "./dom";
 import { carMetrics, cardPose, fmtDur } from "./layout";
 import { setLv } from "./nav";
 import { palette } from "./palette";
+import { artGet, artPut, drawInto, type Surface } from "./raster";
 import { clamp, hash32 } from "./rng";
 import { renderStage } from "./stage";
 import { $, type Card, type Cx } from "./state";
@@ -80,43 +80,42 @@ function updateName(cx: Cx): void {
   $(cx, ".nd", box)!.innerHTML = typeof t.seconds === "number" ? `<span class="chipx">${ICON.clock}${fmtDur(t.seconds)}</span>` : "";
 }
 
-function artFor(cx: Cx, c: Card, i: number): void {
+/** a card's stylised art, painted by the raster service nearest-to-focus first,
+ *  kept for the session per (template, size, tier) */
+function ensureArt(cx: Cx, i: number): void {
   const { CAR } = cx;
-  const t = CAR.list[i];
-  if (c._art) return;
-  c._art = true;
-  if (t.art) return;
+  const c = CAR.cards[i],
+    t = CAR.list[i];
+  if (!c || c._art || c._q || !t) return;
+  c._q = true;
+  if (t.art) {
+    c._art = true;
+    return;
+  }
   const cv = c.querySelector<HTMLCanvasElement>(".art canvas");
   if (!cv) return;
   const w = Math.round(CAR.cw * 0.95),
     h = Math.round(CAR.ch * 0.9),
-    rs = clamp(cx.g.DPR, 1, 1.5) * (CAR.cw > 600 ? 0.8 : 1);
-  cv.width = Math.ceil(w * rs);
-  cv.height = Math.ceil(h * rs);
-  const x = cv.getContext("2d")!;
-  x.scale(rs, rs);
-  drawDiorama(x, w, h, t.id, t.type);
-  cv.classList.add("ready");
-}
-function ensureArt(cx: Cx, i: number): void {
-  const c = cx.CAR.cards[i];
-  if (!c || c._art || c._q) return;
-  c._q = true;
-  cx.artQ.push(i);
-  if (!cx.artRun) {
-    cx.artRun = true;
-    cx.life.timeout(() => artPump(cx), 0);
-  }
-}
-function artPump(cx: Cx): void {
-  const i = cx.artQ.shift();
-  if (i == null) {
-    cx.artRun = false;
-    return;
-  }
-  const c = cx.CAR.cards[i];
-  if (c && cx.ST.type) artFor(cx, c, i);
-  cx.life.timeout(() => artPump(cx), 6);
+    rs = cx.tier === "full" ? clamp(cx.g.DPR, 1, 1.5) * (CAR.cw > 600 ? 0.8 : 1) : 0.75,
+    key = `dio|${t.id}|${t.type}|${w}x${h}|${rs}`;
+  const show = (s: Surface) => {
+    c._art = true;
+    drawInto(cv, s);
+    cv.classList.add("ready");
+  };
+  const hit = artGet(key);
+  if (hit) return show(hit);
+  const tok = cx.carTok;
+  void cx.raster
+    .run({ rs, layers: [{ w, h, ops: [{ p: "diorama", w, h, id: t.id, parent: t.type, o: null }] }] }, 2 + Math.abs(i - CAR.target), "cards")
+    .then((r) => {
+      if (!r) {
+        c._q = false;
+        return;
+      }
+      artPut(key, r.out[0]);
+      if (tok === cx.carTok && !cx.life.dead) show(r.out[0]);
+    });
 }
 
 export function buildTypeView(cx: Cx, id: string): void {
@@ -131,7 +130,8 @@ export function buildTypeView(cx: Cx, id: string): void {
   CAR.cards = [];
   CAR.hov = null;
   CAR.idx = -1;
-  cx.artQ.length = 0;
+  cx.carTok++;
+  cx.raster.drop("cards");
   Object.assign(CAR, carMetrics(g, list.length));
   v.style.setProperty("--cw", CAR.cw + "px");
   v.style.setProperty("--ch", CAR.ch + "px");

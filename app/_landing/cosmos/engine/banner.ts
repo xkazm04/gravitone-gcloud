@@ -22,23 +22,32 @@ export function showBanner(cx: Cx, o: BannerSpec): void {
     fr = $(cx, ".bn-front", bannerEl)!,
     bk = $(cx, ".bn-back", bannerEl)!;
   const { W, S, portrait } = cx.g;
+  /* write everything the measurement depends on */
   nm.textContent = o.name;
   mt.innerHTML = o.meta || "";
-  const P = o.pal;
+  const P = o.pal,
+    fs = S * 0.085;
+  bannerEl.style.setProperty("--bnfs", fs + "px");
+  /* one read */
+  let w = fr.offsetWidth,
+    h = fr.offsetHeight;
+  /* then only writes: a name too wide is set smaller, and its size follows by
+   * proportion (the text scales, the padding is a fixed share of --S, so this
+   * errs a pixel or two wide, which the torn edge absorbs) */
+  const maxW = W * (portrait ? 0.92 : 0.6);
+  if (w > maxW) {
+    const k = (maxW / w) * 0.97,
+      nmW = nm.offsetWidth;
+    bannerEl.style.setProperty("--bnfs", fs * k + "px");
+    w = w - nmW * (1 - k);
+    h = h - nm.offsetHeight * (1 - k);
+  }
   bannerEl.style.setProperty("--bn1", P ? P.t("paper", -1) : "var(--pc-bone)");
   bannerEl.style.setProperty("--bn2", P ? P.k.acc : "var(--pc-coral)");
   bannerEl.style.setProperty("--bnink", P ? P.t("deep", -2, 6) : "var(--pc-ink)");
-  bannerEl.style.setProperty("--bnfs", S * 0.085 + "px");
   bannerEl.style.left = o.x + "px";
   bannerEl.style.top = o.y + "px";
-  const maxW = W * (portrait ? 0.92 : 0.6);
-  let w = fr.offsetWidth;
-  if (w > maxW) {
-    bannerEl.style.setProperty("--bnfs", ((S * 0.085 * maxW) / w) * 0.97 + "px");
-    w = fr.offsetWidth;
-  }
-  const h = fr.offsetHeight,
-    sd = hash32(o.name);
+  const sd = hash32(o.name);
   fr.style.clipPath = tornClip(w, h, 5, sd);
   bk.style.clipPath = tornClip(w + 18, h + 15, 6, sd ^ 0x55);
   bannerEl.classList.add("on");
@@ -64,8 +73,11 @@ export function paperStrip(cx: Cx, host: HTMLElement, text: string, cls: string,
     h.style.clipPath = tornClip(ww, hh, 5, seed);
     b.style.clipPath = tornClip(ww + 17, hh + 14, 6, seed ^ 0x33);
   };
-  fit();
-  if (typeof ResizeObserver === "function") {
+  // the observer's first call comes after this frame's layout and before its
+  // paint, so the strip is cut before anyone sees it, without forcing a layout
+  // inside the click that built it; without an observer, cut it now
+  if (typeof ResizeObserver !== "function") fit();
+  else {
     // retire observers whose strip a view rebuild has already thrown away
     cx.strips = cx.strips.filter((s) => {
       if (s.el.isConnected) return true;

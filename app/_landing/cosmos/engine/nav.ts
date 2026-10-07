@@ -3,13 +3,13 @@
 // the crumbs, back button and depth stack true, and routes every way of moving.
 
 import { hideBanner, showBanner } from "./banner";
-import { frameReq } from "./camera";
+import { frameReq, setCovered } from "./camera";
 import { buildTypeView, closeTpl, focusCard, openTpl } from "./carousel";
 import { el, ICON } from "./dom";
 import { closeCat, openCat, openFam } from "./library";
 import { famItems, fmtN } from "./layout";
 import { palette } from "./palette";
-import { buildWorld } from "./scene";
+import { buildWorld, prewarmWorld } from "./scene";
 import { closeSearch } from "./search";
 import type { Cx, Level } from "./state";
 
@@ -21,9 +21,29 @@ export const catOf = (cx: Cx, famId: string | null, id: string | null) => {
 };
 const LV_CLASSES = ["lv-type", "lv-tpl", "lv-fam", "lv-cat"];
 
+/** the world's reveal is over by then: .38 s delay + 1.15 s clip-path in full,
+ *  .2 s + .3 s crossfade in lite, .15 s in still; and in lite and still the
+ *  crossfade waits for the world's pixels (its .2 s delay and .3 s fade then
+ *  run from when they land), so the overview stays until it ends */
+const COVER_MS = { full: 1700, lite: 550, still: 300 };
+const FADE_MS = { full: 0, lite: 550, still: 200 };
+
+function tryCover(cx: Cx): void {
+  const due = cx.worldReady && performance.now() - cx.worldReadyAt >= FADE_MS[cx.tier];
+  if (due) setCovered(cx, true);
+  else cx.coverT = cx.life.timeout(() => tryCover(cx), 100);
+}
+
 export function setLv(cx: Cx, lv: Level): void {
   const { root, els } = cx;
+  const was = cx.ST.lv;
   cx.ST.lv = lv;
+  if (was !== lv) cx.gov?.kick("level", 2000);
+  const covering = lv === "type" || lv === "tpl" || lv === "cat";
+  cx.life.clear(cx.coverT);
+  cx.coverT = 0;
+  if (!covering) setCovered(cx, false);
+  else if (!cx.covered) cx.coverT = cx.life.timeout(() => tryCover(cx), COVER_MS[cx.tier]);
   root.dataset.lv = lv;
   root.classList.remove(...LV_CLASSES);
   if (lv !== "root") root.classList.add("lv-" + lv);
@@ -190,6 +210,10 @@ function hotOn(cx: Cx, b: HTMLElement): void {
   if (cx.ST.lv !== "root") return;
   if (cx.hotEl && cx.hotEl !== b) cx.hotEl.classList.remove("hot");
   cx.hotEl = b;
+  // a pointer or focus resting here is the click that usually follows: paint its world now
+  const id = b.dataset.id;
+  cx.life.clear(cx.preT);
+  if (id) cx.preT = cx.life.timeout(() => prewarmWorld(cx, id), 120);
   const { L, g } = cx;
   if (b.classList.contains("med")) {
     const t = cx.typeById.get(b.dataset.id!)!,
@@ -209,6 +233,7 @@ function hotOn(cx: Cx, b: HTMLElement): void {
   }
 }
 function hotOff(cx: Cx, b: HTMLElement): void {
+  cx.life.clear(cx.preT);
   if (cx.hotEl === b) {
     b.classList.remove("hot");
     cx.hotEl = null;

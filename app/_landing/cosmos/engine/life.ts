@@ -13,17 +13,22 @@
 // one requestAnimationFrame drives every step that wants a frame, and stops when
 // none does. The infinite CSS animations (sway, drift, pulse, bob) all hang off
 // the root's data-tier in the stylesheet, which is the other half of "every
-// infinite animation owned by one place": a quality tier stops them all by
-// narrowing that one selector.
+// infinite animation owned by one place": only `full` runs them, so a lower
+// tier stops them all by one attribute.
+//
+// Anything else with a lifetime (the raster worker) registers a disposer with
+// `own`, and destroy() runs it.
 
 type Step = (now: number) => boolean;
+type Observer = { disconnect(): void };
 
 export class Life {
   dead = false;
   private offs = new Set<() => void>();
   private timers = new Set<ReturnType<typeof setTimeout>>();
   private frames = new Set<number>();
-  private observers = new Set<ResizeObserver>();
+  private observers = new Set<Observer>();
+  private owned = new Set<() => void>();
   private steps = new Map<string, Step>();
   private loopId = 0;
 
@@ -73,13 +78,18 @@ export class Life {
     this.frames.add(id);
   }
 
-  observe(ro: ResizeObserver): ResizeObserver {
+  observe<T extends Observer>(ro: T): T {
     this.observers.add(ro);
     return ro;
   }
-  unobserve(ro: ResizeObserver): void {
+  unobserve(ro: Observer): void {
     ro.disconnect();
     this.observers.delete(ro);
+  }
+
+  /** runs `fn` at destroy() */
+  own(fn: () => void): void {
+    this.owned.add(fn);
   }
 
   /** asks the one frame loop to run `step` on the next frame; the step keeps
@@ -113,5 +123,7 @@ export class Life {
     if (this.loopId) cancelAnimationFrame(this.loopId);
     this.loopId = 0;
     this.steps.clear();
+    for (const fn of this.owned) fn();
+    this.owned.clear();
   }
 }

@@ -38,28 +38,31 @@ export function endIntro(cx: Cx): void {
   h.classList.add("off");
   cx.root.classList.add("booted");
   unskip(cx);
+  settled(cx);
 }
 
 export async function boot(cx: Cx): Promise<void> {
   const { life, RM } = cx;
-  applyMeasure(cx);
   cx.introOn = !RM;
   const t0 = performance.now(),
     h = cx.els.hero;
-  if (!RM) cx.introT.push(life.timeout(() => h.classList.add("on"), 40));
+  // the hero is already up from first paint (the stylesheet shows it until the
+  // root has a tier); keep it up without a fade
+  if (!RM) h.classList.add("on");
   let built = false;
   try {
-    built = await buildScene(cx);
+    built = await buildScene(cx, "boot");
   } catch (err) {
     console.error(err);
   }
   if (life.dead) return;
-  if (built) cx.root.dataset.ready = "";
+  if (built) ready(cx);
   setLv(cx, "root");
   if (RM) {
     showAll(cx);
     cx.root.classList.add("booted");
     frameReq(cx);
+    settled(cx);
     return;
   }
   if (!cx.introOn) return;
@@ -77,9 +80,22 @@ export async function boot(cx: Cx): Promise<void> {
   cx.introT.push(
     life.timeout(() => {
       cx.introOn = false;
+      settled(cx);
     }, off - el0 + 500),
   );
   frameReq(cx);
+}
+
+/** the scene is placed */
+function ready(cx: Cx): void {
+  if (cx.root.dataset.ready == null) cx.root.dataset.ready = "";
+}
+
+/** the intro is over: the governor watches the first seconds of the page at
+ *  rest (the intro's one-off reveal, with every layer arriving, is not what a
+ *  tier is chosen for; the idle motion and the first interactions are) */
+function settled(cx: Cx): void {
+  cx.gov?.kick("boot", 3000);
 }
 
 export function wireIntro(cx: Cx): void {
@@ -132,48 +148,81 @@ export function wireFlare(cx: Cx): void {
   });
 }
 
-/** a real resize rebuilds the scene and whatever level is open */
+/** rebuilds the overview in the current tier and swaps it in; with `views`,
+ *  also whatever level is open (a resize moved everything), else only the
+ *  world (a tier change re-folds its planes) */
+export async function rebuild(cx: Cx, views: boolean): Promise<boolean> {
+  const { ST, root } = cx;
+  const lv = ST.lv,
+    keep = { type: ST.type, tpl: ST.tpl, fam: ST.fam, cat: ST.cat };
+  const focused = document.activeElement as HTMLElement | null,
+    refocus = focused && cx.stack?.contains(focused) ? focused.dataset.id : null;
+  if (!(await buildScene(cx, "swap"))) return false;
+  ready(cx);
+  if (cx.introOn) showAll(cx);
+  const worldOpen = !!((keep.type && (lv === "type" || lv === "tpl")) || (keep.fam && lv === "cat"));
+  if (keep.type && (lv === "type" || lv === "tpl")) {
+    const ti = cx.types.findIndex((t) => t.id === keep.type),
+      m = cx.L.med[ti];
+    cx.medEls[ti]?.classList.add("chosen");
+    if (views) {
+      root.classList.add("skip");
+      root.style.setProperty("--ox", m.x + "px");
+      root.style.setProperty("--oy", m.y + "px");
+      buildTypeView(cx, keep.type);
+      if (keep.tpl) {
+        const i = (cx.tplByType.get(keep.type) || []).findIndex((x) => x.id === keep.tpl);
+        syncCarousel(cx, Math.max(0, i));
+        cx.SV.list = cx.CAR.list;
+        renderStage(cx, "tpl", Math.max(0, i), null);
+      }
+    }
+  }
+  if (views && keep.fam && (lv === "fam" || lv === "cat")) {
+    root.classList.add("skip");
+    rebuildLib(cx, keep.fam);
+    if (keep.cat) {
+      const k = cx.famSorted.findIndex((c) => c.id === keep.cat);
+      cx.SV.list = cx.famSorted;
+      renderStage(cx, "cat", Math.max(0, k), null);
+    }
+  }
+  if (worldOpen) buildWorld(cx, (keep.type || keep.fam)!, true);
+  setLv(cx, lv);
+  if (refocus) [...cx.medEls, ...cx.reamEls].find((b) => b.dataset.id === refocus)?.focus({ preventScroll: true });
+  frameReq(cx);
+  unskip(cx);
+  return true;
+}
+
+/** a real resize: the layers already up are scaled to cover the new viewport at
+ *  once, and repainted for it once the size has held still for 250 ms. A change
+ *  inside the same size class (a mobile URL bar: same width, under 12% of the
+ *  height) is not a resize for the paper. */
 export function wireResize(cx: Cx): void {
-  const { life, ST, root } = cx;
+  const { life } = cx;
   life.on(window, "resize", () => {
     if (window.innerWidth === cx.g.W && Math.abs(window.innerHeight - cx.g.H) < cx.g.H * 0.12) return;
+    cover(cx, window.innerWidth, window.innerHeight);
     life.clear(cx.rzT);
     cx.rzT = life.timeout(async () => {
-      const lv = ST.lv,
-        keep = { type: ST.type, tpl: ST.tpl, fam: ST.fam, cat: ST.cat };
-      root.classList.add("skip");
       applyMeasure(cx);
-      cx.els.scene.querySelectorAll(".pl").forEach((n) => n.remove());
-      cx.planes.length = 0;
-      if (!(await buildScene(cx))) return;
-      cx.medEls.forEach((b) => b.classList.add("in"));
-      cx.reamEls.forEach((b) => b.classList.add("in"));
-      if (keep.type && (lv === "type" || lv === "tpl")) {
-        const ti = cx.types.findIndex((t) => t.id === keep.type),
-          m = cx.L.med[ti];
-        root.style.setProperty("--ox", m.x + "px");
-        root.style.setProperty("--oy", m.y + "px");
-        buildWorld(cx, keep.type);
-        buildTypeView(cx, keep.type);
-        if (keep.tpl) {
-          const i = (cx.tplByType.get(keep.type) || []).findIndex((x) => x.id === keep.tpl);
-          syncCarousel(cx, Math.max(0, i));
-          cx.SV.list = cx.CAR.list;
-          renderStage(cx, "tpl", Math.max(0, i), null);
-        }
-      }
-      if (keep.fam && (lv === "fam" || lv === "cat")) {
-        rebuildLib(cx, keep.fam);
-        if (keep.cat) {
-          const k = cx.famSorted.findIndex((c) => c.id === keep.cat);
-          cx.SV.list = cx.famSorted;
-          renderStage(cx, "cat", Math.max(0, k), null);
-        }
-      }
-      setLv(cx, lv);
-      cx.cam.px = cx.cam.py = 0;
-      frameReq(cx);
-      unskip(cx);
-    }, 220);
+      if (await rebuild(cx, true)) uncover(cx);
+    }, 250);
   });
+}
+
+/** CSS-scales the current overview and world stacks so they cover W x H */
+function cover(cx: Cx, W: number, H: number): void {
+  for (const st of [cx.stack, cx.els.world.querySelector<HTMLElement>(":scope > .stack")]) {
+    if (!st) continue;
+    const w0 = Number(st.dataset.w) || cx.g.W,
+      h0 = Number(st.dataset.h) || cx.g.H,
+      s = Math.max(W / w0, H / h0);
+    st.style.transformOrigin = "0 0";
+    st.style.transform = `translate(${((W - w0 * s) / 2).toFixed(1)}px,${((H - h0 * s) / 2).toFixed(1)}px) scale(${s.toFixed(4)})`;
+  }
+}
+function uncover(cx: Cx): void {
+  cx.els.world.querySelectorAll<HTMLElement>(":scope > .stack").forEach((st) => (st.style.transform = ""));
 }

@@ -4,11 +4,11 @@
 import type { GalaxyCategory, GalaxyTemplate } from "../types";
 import { paperStrip } from "./banner";
 import { syncCarousel } from "./carousel";
-import { drawDiorama } from "./diorama";
 import { el, ICON } from "./dom";
 import { fmtDur, fmtN, stageGeom } from "./layout";
 import { renderNav } from "./nav";
 import { palette } from "./palette";
+import { artGet, artPut, drawInto, type Surface } from "./raster";
 import { clamp, hash32 } from "./rng";
 import { $, type Cx } from "./state";
 
@@ -43,12 +43,22 @@ export function renderStage(cx: Cx, kind: "tpl" | "cat", idx: number, flip: DOMR
     const cv = el("canvas", "", holder),
       w = Math.round(s.aw * 0.955),
       h = Math.round(s.ah * 0.9),
-      rs = clamp(g.DPR, 1, 1.5) * (s.aw > 800 ? 0.85 : 1);
-    cv.width = Math.ceil(w * rs);
-    cv.height = Math.ceil(h * rs);
-    const x = cv.getContext("2d")!;
-    x.scale(rs, rs);
-    drawDiorama(x, w, h, item.id, parent, isT ? null : { spread: 40, sparse: true });
+      rs = (cx.tier === "full" ? clamp(g.DPR, 1, 1.5) : 1) * (s.aw > 800 ? 0.85 : 1),
+      o = isT ? null : { spread: 40, sparse: true },
+      key = `stage|${item.id}|${parent}|${w}x${h}|${rs}`,
+      tok = ++cx.stageTok;
+    const show = (x: Surface) => {
+      drawInto(cv, x);
+      cv.classList.add("ready");
+    };
+    const hit = artGet(key);
+    if (hit) show(hit);
+    else
+      void cx.raster.run({ rs, layers: [{ w, h, ops: [{ p: "diorama", w, h, id: item.id, parent, o }] }] }, -2, "stage").then((r) => {
+        if (!r) return;
+        artPut(key, r.out[0]);
+        if (tok === cx.stageTok && !cx.life.dead) show(r.out[0]);
+      });
   }
   const side = el("div", "sv-side", v);
   side.style.cssText += `left:${s.sx}px;top:${s.sy}px;width:${s.sw}px;${s.sh ? "height:" + s.sh + "px;justify-content:center;" : ""}`;

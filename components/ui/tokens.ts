@@ -397,6 +397,19 @@ export const WORLD_PAPER_COSMOS: Record<string, string> = {
   "--pc-sheet-shadow": "#040214",
   "--pc-veil-in": "#120c30",
   "--pc-veil-out": "#0a0720",
+  // The dusk the landing paints before any canvas exists (cosmos.css .sky0):
+  // the sky plane's own eight stops and the ground below the horizon, so the
+  // first paint and the painted sky that fades in over it are the same colours.
+  // engine/inks.ts HZ.sky and SKY_INK.ground read these, one source.
+  "--pc-sky-0": "#0c1132",
+  "--pc-sky-1": "#141a4a",
+  "--pc-sky-2": "#2a2161",
+  "--pc-sky-3": "#5a2f74",
+  "--pc-sky-4": "#a3496b",
+  "--pc-sky-5": "#e0795c",
+  "--pc-sky-6": "#f4ac62",
+  "--pc-sky-7": "#f8d495",
+  "--pc-ground": "#0b0f2e",
 };
 
 /** The `:root { … }` rule <GravitoneTokens> injects. */
