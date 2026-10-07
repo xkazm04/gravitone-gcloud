@@ -211,6 +211,8 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
   type State = SpendState<Row>;
 
   // Hold ids are unique per meter instance and never reused, reset or not.
+  // They carry the pid, so two processes on one shared store never mint the
+  // same id.
   let holdSeq = 0;
 
   function prune(s: State, now: number): Eviction | null {
@@ -341,7 +343,7 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
           return { refusal: { amount, spent, held, ceiling, windowMs: windowMsOf(def), refusals: s.counters.refusals } };
         }
         if (!take) return {};
-        const hold: Hold = { id: `hold-${++holdSeq}-${now}`, amount, createdAt: now };
+        const hold: Hold = { id: `hold-${process.pid}-${++holdSeq}-${now}`, amount, createdAt: now, pid: process.pid };
         s.holds[hold.id] = hold;
         return { hold };
       });

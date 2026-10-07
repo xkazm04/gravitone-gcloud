@@ -34,6 +34,9 @@ export interface Hold {
   readonly id: string;
   readonly amount: number;
   readonly createdAt: number;
+  /** The process that took it. A store shared across processes reclaims a
+   *  hold whose owner died (./fileStore.ts); one without a pid never is. */
+  readonly pid?: number;
 }
 
 /**
