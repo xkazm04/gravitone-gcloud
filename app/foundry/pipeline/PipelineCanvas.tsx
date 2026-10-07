@@ -1057,6 +1057,11 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
 
   /* ── what the shell can read and call ───────────────────────────────── */
 
+  // The skin's world layer: behind the cards, inside the world transform, and
+  // rebuilt ONLY when the layout changes. Not on a pan (the container owns the
+  // transform), not on a selection, not on a drag.
+  const world = useMemo(() => skin.world?.(layout) ?? null, [skin, layout]);
+
   const status = useMemo<CanvasStatus>(
     () => ({ loading: data.loading, error: data.error, notes: data.notes, total: layout.total, counts: layout.stageCounts, selected: selected.size, mounted: mounted.length, choreo }),
     [data.loading, data.error, data.notes, layout, selected, mounted.length, choreo],
@@ -1153,6 +1158,7 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
           style={{ transform: `translate3d(${FRAME.left + FRAME.inset}px, ${FRAME.top + FRAME.inset}px, 0)` }}
         >
           <CellLayer layout={layout} from={laneFrom} to={laneTo} preview={preview} names={names} />
+          {world}
           {cards}
           {ghostSrc && ghostEntry && (
             <Ghost
