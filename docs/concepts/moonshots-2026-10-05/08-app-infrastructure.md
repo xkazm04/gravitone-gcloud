@@ -20,6 +20,10 @@ Contexts, in order: ai-orchestration · auth-persistence · cli-infrastructure-p
 - **(c) Two open points from 4b, recorded and not decided:**
   - A failed live turn, on a project that has never saved a `research-notebook` record, shows its failure once more after a reload.
   - A resumed turn that this tab did not start shows an empty topic until it lands, because the ledger keeps only the prompt digest (`promptDigest`, `lib/turns/ledger.ts:79`; `resumeLive`'s `topic` defaults to `""`, `live.ts:404-408`). Adding a topic field is a `lib/turns/` ledger change.
+- **(d) AIO-A reads `landed 67beb3e` for milestone 1 (critic-2026-10-07-m1-tails, T2).** **Moved:** the poster as a work kind, after the operator answers T1 and after `GET /api/spend`, serial with script-phase-B stage 3. **Alternative that lost:** AIO-A staying `partial` until the poster lands.
+- **(e) Export onto turns is declined (T3).** **Constraint:** it spends nothing, its file already lands with its `projectId`, and `GET /api/publish/exports` lists it. The Cut reading its own exports rides with FSC-B 2b. **Alternative that lost:** a `local` work kind with a real Stop, or the ads-render shape.
+- **(f) Held, out of milestone 1:** the cross-device bell (AUP-A, an operator-only decision at README.md:140) and the hosted ledger and lease (operator: local now, hosted later).
+- **(g) Open with the operator, not decided (T1, money path):** does the keep-running rule extend to the poster's paid image? **Fact the review found:** today a reload bills the poster image and then drops it (`lib/jobs.tsx:317-321`), and no API route reads `req.signal`.
 
 
 **Summary.** Every minutes-long model turn (recalibrate, scene direction, poster, export, research) currently lives inside one browser tab's open `fetch` plus a localStorage record. If the tab reloads or the user leaves the step, the result is lost, and the engine process keeps running anyway. This card moves the job record and the run to the server: a durable turn ledger with a minted id, a cancel that actually kills the process tree, and a boot sweep. `lib/jobs.tsx` becomes a view of that ledger.

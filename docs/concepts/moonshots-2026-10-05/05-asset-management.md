@@ -454,6 +454,7 @@ _Runner-up:_ the Library leaves the browser. Themes, proofs and the plate shelf 
 **Context:** library-view · **Slot:** B experience
 **Size:** L · **Effort:** 6/10 · **Impact:** 8/10 · **Risk:** 5/10 · **Gate:** direction
 **Registry:** media-generation/visual-style-locking#style-onboarding-from-sample
+**App Master decision (2026-10-07):** the PresetRail Foundry lane is declined (T6); the card is merged into foundry-forge-B. See critic-2026-10-07-m1-tails.md.
 
 **Summary.** The Foundry's catalogue (27 styles, 4 of them human-proven across scenes) and the Library (the only place a project gets its style) never meet. The Library starts styles from six hand-written presets or from a plate. The Foundry's catalogue is a read-only shelf with no route out. The move is a "From the Foundry" lane on the preset rail:
 - pick a style;
