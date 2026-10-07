@@ -275,7 +275,7 @@ function Body({
       {scale > 0 && (
         <iframe
           ref={iframe}
-          title={`strip ${cardNumber(card)}, live page`}
+          aria-label={`strip ${cardNumber(card)}, live page`}
           src={stripPageUrl(run.id, card.id)}
           sandbox="allow-scripts"
           referrerPolicy="no-referrer"
