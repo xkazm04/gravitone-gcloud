@@ -52,6 +52,11 @@ const NOT_RUNNING: readonly ArticleStatus[] = ["failed", "rejected", ...COVERING
  *  evidence, so it is not offered unless the caller names it. */
 export const EXCLUDED_BUNDLES: readonly string[] = ["technical-writing"];
 
+/** The bundles whose subjects a technical reader of this blog (agent builders and operators) cares about.
+ *  `topics` and the auto loop offer only these unless the caller names another bundle: the first
+ *  /techwriter run was offered civic, grants and game production topics from an unfiltered ranking. */
+export const AUDIENCE_BUNDLES: readonly string[] = ["agent-operations", "llm-observability", "software-engineering"];
+
 export interface CoveredItem {
   /** `bundle/slug`, or `free:<slug of the text>` for a free-text topic. */
   key: string;
@@ -139,13 +144,13 @@ export interface RankedTopic {
 export function rankUncovered(
   subjects: readonly TopicSubject[],
   cov: Pick<Coverage, "covered" | "claimed">,
-  opts: { excludeBundles?: readonly string[] } = {},
+  opts: { excludeBundles?: readonly string[]; onlyBundles?: readonly string[] } = {},
 ): RankedTopic[] {
   const excluded = new Set(opts.excludeBundles ?? EXCLUDED_BUNDLES);
   const taken = new Set([...cov.covered.map((c) => c.key), ...cov.claimed]);
   const perBundle = new Map<string, RankedTopic[]>();
   for (const s of subjects) {
-    if (excluded.has(s.bundle) || taken.has(`${s.bundle}/${s.slug}`)) continue;
+    if (excluded.has(s.bundle) || (opts.onlyBundles && !opts.onlyBundles.includes(s.bundle)) || taken.has(`${s.bundle}/${s.slug}`)) continue;
     const list = perBundle.get(s.bundle) ?? [];
     list.push({ bundle: s.bundle, slug: s.slug, category: s.category, file: s.file });
     perBundle.set(s.bundle, list);
@@ -186,7 +191,8 @@ export async function listUncoveredTopics(opts: { limit?: number; includeBundles
   const registry = resolveRegistryDir();
   const [subjects, cov] = await Promise.all([listTopicSubjects(registry), coverage(registry.dir)]);
   const excluded = EXCLUDED_BUNDLES.filter((b) => !opts.includeBundles?.includes(b));
-  const ranked = rankUncovered(subjects, cov, { excludeBundles: excluded });
+  const only = [...AUDIENCE_BUNDLES, ...(opts.includeBundles ?? [])];
+  const ranked = rankUncovered(subjects, cov, { excludeBundles: excluded, onlyBundles: only });
   const limit = Math.max(1, Math.min(opts.limit ?? 10, 50));
   const topics: TopicChoice[] = [];
   for (const r of ranked.slice(0, limit)) {
@@ -354,7 +360,7 @@ export async function runLoop(opts: LoopOptions, baseDeps: EngineDeps = defaultD
   const target = opts.target ?? start.covered.length + (opts.add as number);
   const queue: LoopTopic[] = opts.topics
     ? opts.topics.filter((t) => !start.covered.some((c) => c.key === t.subject) && !start.claimed.includes(t.subject))
-    : rankUncovered(await listTopicSubjects(registry), start).map((t) => ({ subject: `${t.bundle}/${t.slug}` }));
+    : rankUncovered(await listTopicSubjects(registry), start, { onlyBundles: AUDIENCE_BUNDLES }).map((t) => ({ subject: `${t.bundle}/${t.slug}` }));
 
   const id = `loop-${new Date().toISOString().replace(/[-:]/g, "").replace(/\..*$/, "")}`;
   const dir = path.join(loopsRoot(), id);
