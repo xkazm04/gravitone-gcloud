@@ -1046,13 +1046,18 @@ async function critiqueTurn(
   await writeFileAtomic(path.join(dir, "agent", `${name}-prompt.md`), base);
   let cost: number | undefined;
   let note = "";
-  // Only the writer's answer (and a fix) is retried (an invalid answer is the
-  // writer's to correct); a revision that fails its ingest fails the step.
-  const attempts = phase === "critique" || phase === "fix" ? 2 : 1;
+  // The writer's answer, a fix and a re-research are retried once (an invalid answer is the
+  // writer's to correct); a revision that fails its ingest fails the step. A rejected
+  // re-research costs a whole web turn, so its retry starts from the files it just wrote
+  // and is told only what was wrong (2026-10-07: one source with no url threw away a turn
+  // three times across two runs).
+  const attempts = phase === "critique" || phase === "fix" || phase === "revise-research" ? 2 : 1;
+  let seed: string | undefined;
   for (let attempt = 1; attempt <= attempts; attempt++) {
     const ws = await makeWorkspace(id, `${name}-${attempt}`, deps.now());
     try {
       await stage(ws);
+      if (seed) await copyDir(seed, path.join(ws, "out"));
       const result = await deps.runAgent({ cwd: ws, prompt: base + note, model: run.model, effort: run.effort, tools: plan.tools, timeoutMin: plan.timeoutMin, turn: plan.turn });
       cost = sumCost(cost, result.costUsd);
       await writeJsonAtomic(path.join(dir, "agent", `${name}.json`), {
@@ -1076,7 +1081,10 @@ async function critiqueTurn(
       } catch (e) {
         await keepOut(ws, dir, name);
         if (attempt === attempts) throw new StepError(`${who}: ${(e as Error).message}`, cost);
-        note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${(e as Error).message}. Write both files again, correctly.\n`;
+        if (phase === "revise-research") {
+          seed = path.join(dir, "agent", `${name}-out`);
+          note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${(e as Error).message}. Your previous files are already in out/ (sources.json and claims.json). Correct only what the rejection names, keep every existing source's number and url exactly, and write both files again complete. Do not start the research over.\n`;
+        } else note = `\n\nYOUR PREVIOUS ANSWER WAS REJECTED: ${(e as Error).message}. Write both files again, correctly.\n`;
       }
     } finally {
       await rm(ws, { recursive: true, force: true }).catch(() => undefined);
@@ -1224,7 +1232,7 @@ export async function checkLoop(id: string, label: string, deps: EngineDeps): Pr
   }
 }
 
-/** One fix turn: the post and its failures in, a whole replacement post out. */
+/** One fix turn: the post and its failures in, the post out, edited in place. */
 async function fixTurn(id: string, rec: CheckPassRecord, deps: EngineDeps): Promise<number | undefined> {
   const dir = runDir(id);
   const stage = async (ws: string) => {
@@ -1233,6 +1241,10 @@ async function fixTurn(id: string, rec: CheckPassRecord, deps: EngineDeps): Prom
     await copyFile(path.join(dir, "sources.json"), path.join(inputs, "sources.json"));
     await copyFile(path.join(dir, "claims.json"), path.join(inputs, "claims.json"));
     await writeFile(path.join(inputs, "check-failures.json"), `${JSON.stringify(rec.failed, null, 2)}\n`, "utf8");
+    // The post is also seeded into out/post: the fix edits it in place and every paragraph
+    // the check did not flag is carried over byte for byte (a fix that rewrote the whole post
+    // cost $4 a pass and changed text nobody had flagged).
+    await copyDir(path.join(dir, "post"), path.join(ws, "out", "post"));
   };
   return critiqueTurn(id, 0, "fix", { maxCritiqueRounds: 2 }, deps, stage, (ws) => ingestPost(ws, dir), { name: `fix-${rec.label}-${rec.pass}`, checkFailures: failuresText(rec.failed) });
 }

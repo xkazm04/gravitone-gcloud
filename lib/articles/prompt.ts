@@ -118,6 +118,11 @@ export function promptSlots(phase: PromptPhase, ctx: PromptContext): Record<stri
     READ_MAX: String(THRESHOLDS.readMinutes[1]),
     MAX_PATCHES: String(MAX_PATCHES),
     MAX_WORDS: String(THRESHOLDS.maxWords),
+    MAX_PRE_WORDS: String(THRESHOLDS.maxWordsBeforeFirstSection),
+    MAX_RUN_WORDS: String(THRESHOLDS.maxProseRunWords),
+    MAX_PADDING_WORDS: String(THRESHOLDS.maxPaddingWords),
+    PADDING_PERCENT: String(Math.round(THRESHOLDS.maxPaddingShare * 100)),
+    MAX_CLOSING_ITEM_WORDS: String(THRESHOLDS.maxClosingListItemWords),
     CHECK_FAILURES: ctx.checkFailures ?? "",
     ROUND: String(ctx.round ?? 1),
     MAX_ROUNDS: String(ctx.maxRounds ?? 2),
@@ -167,6 +172,9 @@ export function buildReviewPrompt(file: PromptFile, ctx: ReviewPromptContext): s
     SOURCES_JSON: ctx.sourcesJson.trim(),
     MIN_SOURCES: String(THRESHOLDS.minSources),
     MIN_FIGURES: String(THRESHOLDS.minFigures),
+    MAX_PRE_WORDS: String(THRESHOLDS.maxWordsBeforeFirstSection),
+    MAX_RUN_WORDS: String(THRESHOLDS.maxProseRunWords),
+    MAX_CLOSING_ITEM_WORDS: String(THRESHOLDS.maxClosingListItemWords),
   };
   return `${fill(file.sections.review, slots)}\n`;
 }

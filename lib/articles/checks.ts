@@ -50,6 +50,21 @@ export const THRESHOLDS = {
    *  above the longest accepted post (6,942 on the first run) and below runaway growth: the
    *  second run drifted to 6,497 raw words after accepting 94 of 98 findings. */
   maxWords: 7000,
+  /** Words before the first `## ` section of post.md, the content preview included (title,
+   *  subtitle and byline excluded). The owner's skim readers read the opening and the ending.
+   *  Calibrated 2026-10-07 on the eight posts of the first three days: 316 to 642 words, the
+   *  five over 450 being the ones the reflections called a wall before the first section. */
+  maxWordsBeforeFirstSection: 450,
+  /** Words of consecutive prose between two visuals. The paragraph-count cadence rule is met by
+   *  splitting a paragraph; this one is not. The same eight posts ran 190 to 364 words between
+   *  visuals; 300 catches the two longest. */
+  maxProseRunWords: 300,
+  /** A prose paragraph of at most `maxPaddingWords` words in one sentence is a one-liner; no more
+   *  than this share of the prose may be one-liners (one overnight post had 46 percent). */
+  maxPaddingWords: 40,
+  maxPaddingShare: 0.3,
+  /** Words in one list item of the closing section. */
+  maxClosingListItemWords: 50,
 } as const;
 
 /* ── text helpers ──────────────────────────────────────────────────────────── */
@@ -165,7 +180,9 @@ export const STATED_READ_TIME = /\b\d+\s*(?:-|–)?\s*min(?:ute)?s?\s+read\b|\bw
  *  its Sources list. A visual is an image, a table, a fenced code block or a blockquote
  *  callout; headings, lists, figure captions and italic-only lines (the subtitle, a byline)
  *  neither count as prose nor end a run. Exported for the probe. */
-export function proseRuns(md: string): { longest: number; runs: string[] } {
+type ProseBlock = { kind: "prose" | "visual" | "neutral"; text: string };
+
+function proseBlocks(md: string): ProseBlock[] {
   let body = md.split(/^## Sources\b/m)[0];
   // The content preview, fenced by two horizontal rules before the first section, renders as a
   // boxed element on the page; it counts as one visual here.
@@ -204,6 +221,11 @@ export function proseRuns(md: string): { longest: number; runs: string[] } {
     else cur.push(line.trim());
   }
   flush();
+  return blocks;
+}
+
+export function proseRuns(md: string): { longest: number; runs: string[] } {
+  const blocks = proseBlocks(md);
   let run = 0;
   let longest = 0;
   const runs: string[] = [];
@@ -216,6 +238,88 @@ export function proseRuns(md: string): { longest: number; runs: string[] } {
     }
   }
   return { longest, runs };
+}
+
+const SENTENCE_END = /[.!?]["')\]*_]*\s+(?=[A-Z0-9`*\[(])/g;
+const plainWords = (s: string) => wordCount(s.replace(MD_IMAGE, " ").replace(/\[(\d{1,3}(?:\s*[,–-]\s*\d{1,3})*)\]/g, " "));
+
+/** What the paragraph-count cadence rule cannot see: words of prose between visuals, and the
+ *  share of the prose that is one-line paragraphs (a long paragraph split to make room for a
+ *  visual shows up here, not in proseRuns). Over post.md before its Sources list. */
+export function proseStats(md: string): { longestRunWords: number; runExcerpt: string; paragraphs: number; oneLiners: number; share: number } {
+  const blocks = proseBlocks(md);
+  let run = 0;
+  let longestRunWords = 0;
+  let runExcerpt = "";
+  let startText = "";
+  let paragraphs = 0;
+  let oneLiners = 0;
+  for (const b of blocks) {
+    if (b.kind === "visual") {
+      run = 0;
+      startText = "";
+    } else if (b.kind === "prose") {
+      const words = plainWords(b.text);
+      paragraphs++;
+      if (words <= THRESHOLDS.maxPaddingWords && (b.text.match(SENTENCE_END) ?? []).length === 0) oneLiners++;
+      if (!run) startText = b.text.slice(0, 60);
+      run += words;
+      if (run > longestRunWords) {
+        longestRunWords = run;
+        runExcerpt = startText;
+      }
+    }
+  }
+  return { longestRunWords, runExcerpt, paragraphs, oneLiners, share: paragraphs ? oneLiners / paragraphs : 0 };
+}
+
+/** Words before the first `## ` section: the opening and the content preview. The title, the
+ *  italic subtitle or byline and the rules that fence a preview do not count. */
+export function wordsBeforeFirstSection(md: string): number {
+  const at = md.search(/^## /m);
+  const head = (at < 0 ? md : md.slice(0, at))
+    .split(/\r?\n/)
+    .filter((l) => !/^#\s/.test(l) && !/^(?:---|\*\*\*)\s*$/.test(l) && !/^\s*[*_][^*_].*[*_]\s*$/.test(l))
+    .join("\n");
+  return plainWords(mdProse(head, {}));
+}
+
+/** The numbers of post.md's Sources list: gaps from 1 to the largest, repeats. */
+export function sourceListProblems(md: string): { listed: number; gaps: number[]; repeats: number[] } {
+  const at = md.search(/^## Sources\b/m);
+  if (at < 0) return { listed: 0, gaps: [], repeats: [] };
+  const nums = [...md.slice(at).matchAll(/^\s*(\d{1,3})\.\s/gm)].map((m) => Number(m[1]));
+  const seen = new Set<number>();
+  const repeats: number[] = [];
+  for (const n of nums) {
+    if (seen.has(n)) repeats.push(n);
+    seen.add(n);
+  }
+  const max = Math.max(0, ...nums);
+  const gaps: number[] = [];
+  for (let k = 1; k <= max; k++) if (!seen.has(k)) gaps.push(k);
+  return { listed: nums.length, gaps, repeats };
+}
+
+/** Word counts of the list items in the closing section (the last `## ` before Sources). */
+export function closingListItemWords(md: string): number[] {
+  const body = md.split(/^## Sources\b/m)[0];
+  const sections = body.split(/^## /m);
+  const last = sections.length > 1 ? sections[sections.length - 1] : "";
+  const out: number[] = [];
+  let cur: string[] | null = null;
+  for (const line of last.split(/\r?\n/)) {
+    if (/^\s*(?:[-*+]|\d+[.)])\s/.test(line)) {
+      if (cur) out.push(plainWords(cur.join(" ")));
+      cur = [line.replace(/^\s*(?:[-*+]|\d+[.)])\s/, "")];
+    } else if (cur && /^\s+\S/.test(line)) cur.push(line.trim());
+    else {
+      if (cur) out.push(plainWords(cur.join(" ")));
+      cur = null;
+    }
+  }
+  if (cur) out.push(plainWords(cur.join(" ")));
+  return out;
 }
 
 export function staticItems(input: StaticInput): CheckItem[] {
@@ -297,6 +401,19 @@ export function staticItems(input: StaticInput): CheckItem[] {
     const last = sections.length > 1 ? sections[sections.length - 1] : body;
     const hasTable = /^\|.+\|\s*$\n^\|\s*:?-{2,}/m.test(last);
     const words = postWords(md);
+    const stats = proseStats(md);
+    items.push(item("figures", "prose-run-words", "No long stretch of prose between visuals", stats.longestRunWords <= THRESHOLDS.maxProseRunWords, { value: `longest ${stats.longestRunWords} words`, expected: `≤ ${THRESHOLDS.maxProseRunWords} words of prose between two visuals (counted in words so that splitting a paragraph does not meet it)`, ...(stats.longestRunWords > THRESHOLDS.maxProseRunWords ? { detail: [`the stretch starting at: "${stats.runExcerpt}"`] } : {}) }));
+    items.push(item("figures", "padding-paragraphs", "Few one-line paragraphs", stats.share <= THRESHOLDS.maxPaddingShare, { value: `${stats.oneLiners} of ${stats.paragraphs} prose paragraphs (${Math.round(stats.share * 100)} percent)`, expected: `≤ ${Math.round(THRESHOLDS.maxPaddingShare * 100)} percent of the prose in one-sentence paragraphs of ≤ ${THRESHOLDS.maxPaddingWords} words (do not split paragraphs to make room for visuals)` }));
+    const pre = wordsBeforeFirstSection(md);
+    items.push(item("structure", "pre-section-words", "A short opening before the first section", pre <= THRESHOLDS.maxWordsBeforeFirstSection, { value: `${pre} words`, expected: `≤ ${THRESHOLDS.maxWordsBeforeFirstSection} words before the first section, the content preview included (one concrete incident, then the preview as one line per section)` }));
+    const longItems = closingListItemWords(md).filter((n) => n > THRESHOLDS.maxClosingListItemWords);
+    items.push(item("structure", "closing-list-items", "Closing list items are short", !longItems.length, { value: longItems.length ? `${longItems.length} over (longest ${Math.max(...longItems)} words)` : "all short", expected: `≤ ${THRESHOLDS.maxClosingListItemWords} words per list item in the closing section` }));
+    const lp = sourceListProblems(md);
+    const srcNums = sources.map((s) => s.n);
+    const srcGaps: number[] = [];
+    for (let k = 1; k <= Math.max(0, ...srcNums); k++) if (!srcNums.includes(k)) srcGaps.push(k);
+    const numberingOk = !lp.gaps.length && !lp.repeats.length && !srcGaps.length;
+    items.push(item("truth", "source-numbering", "Sources are numbered without gaps", numberingOk, { value: numberingOk ? `${lp.listed} listed` : `gaps in the list: ${lp.gaps.join(", ") || "none"}; repeats: ${lp.repeats.join(", ") || "none"}; gaps in sources.json: ${srcGaps.join(", ") || "none"}`, expected: "post.md's Sources list and sources.json numbered 1 to N with no number missing or repeated (renumber the citations when a source is dropped)" }));
     items.push(item("structure", "length-ceiling", "The post stays under its word ceiling", words <= THRESHOLDS.maxWords, { value: `${words} words`, expected: `≤ ${THRESHOLDS.maxWords} words (replacement, not addition: cut or tighten before adding)` }));
     items.push(item("structure", "closing-table", "The close carries a summary table", hasTable, { value: hasTable ? "table present" : "none", expected: "a Markdown table in the last section before Sources (skim readers read the opening and the ending)" }));
   }
