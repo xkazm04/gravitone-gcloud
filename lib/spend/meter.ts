@@ -29,7 +29,7 @@
 // The adapter hands those in as hooks, so the lines an operator greps for and
 // the HTTP status a refusal maps to stay where they were.
 
-import { ceilingOf, floorOf, windowMsOf, type SpendClassDef } from "./classes";
+import { ceilingOf, floorOf, isCountOnly, windowMsOf, type AnySpendClassDef, type CountOnlyClassDef, type SpendClassDef } from "./classes";
 import { memoryStore, type Hold, type MeterCounters, type SpendState, type SpendStore } from "./store";
 
 export type SpendOutcome = "served" | "failed";
@@ -133,6 +133,17 @@ export interface Meter<E, X extends Axes = Axes, B extends string = string> {
   reset(): void;
 }
 
+/** What a count-only class reports: the stats without any figure that needs a
+ *  ceiling. There is no `reserve`, `ceiling` or `remaining` to misread. */
+export type CountStats = Omit<MeterStats, "ceiling" | "floor" | "underFloor" | "remaining" | "held">;
+
+/** The meter over a class with no ceiling (`text-usd`): book and read, never
+ *  hold or refuse. `reserve` is absent from the type and throws if reached. */
+export type CountMeter<E, X extends Axes = Axes, B extends string = string> = Omit<
+  Meter<E, X, B>,
+  "def" | "reserve" | "ceiling" | "floor" | "held" | "stats" | "settle"
+> & { readonly def: CountOnlyClassDef; stats(now?: number): CountStats };
+
 const sumRows = (rows: readonly { amount: number }[]): number => rows.reduce((a, r) => a + r.amount, 0);
 
 const sumHolds = (holds: Record<string, Hold>): number => {
@@ -143,11 +154,27 @@ const sumHolds = (holds: Record<string, Hold>): number => {
 
 const priced = (n: number | undefined): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
 
+export type CountMeterHooks<E, X extends Axes, B extends string> = Omit<MeterHooks<E, X, B>, "refuse" | "invalid">;
+
 export function createMeter<E, X extends Axes = Axes, B extends string = string>(
   def: SpendClassDef,
   hooks: MeterHooks<E, X, B>,
+  store?: SpendStore<MeterRow<X, B>>,
+): Meter<E, X, B>;
+export function createMeter<E, X extends Axes = Axes, B extends string = string>(
+  def: CountOnlyClassDef,
+  hooks: CountMeterHooks<E, X, B>,
+  store?: SpendStore<MeterRow<X, B>>,
+): CountMeter<E, X, B>;
+export function createMeter<E, X extends Axes = Axes, B extends string = string>(
+  def: AnySpendClassDef,
+  hooks: MeterHooks<E, X, B> | CountMeterHooks<E, X, B>,
   store: SpendStore<MeterRow<X, B>> = memoryStore<MeterRow<X, B>>(),
-): Meter<E, X, B> {
+): Meter<E, X, B> | CountMeter<E, X, B> {
+  // The overloads are the contract; inside, one body serves both shapes.
+  const full = hooks as MeterHooks<E, X, B>;
+  const counting = isCountOnly(def);
+  const limits = def as SpendClassDef;
   type Row = MeterRow<X, B>;
   type State = SpendState<Row>;
 
@@ -176,7 +203,7 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
   }
 
   const announce = (e: Eviction | null): void => {
-    if (e) hooks.evicted?.(e);
+    if (e) full.evicted?.(e);
   };
 
   function bookIn(s: State, e: MeterEntry<X, B> & { at: number }): Eviction | null {
@@ -196,7 +223,7 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
 
   /** The adapter's entry, read ONCE into plain data outside any transaction. */
   function normalize(entry: E): MeterEntry<X, B> & { at: number } {
-    const e = hooks.entry(entry);
+    const e = full.entry(entry);
     return {
       amount: e.amount,
       outcome: e.outcome,
@@ -207,10 +234,10 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
   }
 
   const meter: Meter<E, X, B> = {
-    def,
+    def: limits,
     store,
-    ceiling: () => ceilingOf(def),
-    floor: () => floorOf(def),
+    ceiling: () => ceilingOf(limits),
+    floor: () => floorOf(limits),
     windowMs: () => windowMsOf(def),
 
     spent(now = Date.now()) {
@@ -222,8 +249,11 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
     held: () => store.transact((s) => sumHolds(s.holds)),
 
     reserve(amount, now = Date.now()) {
-      if (!(Number.isFinite(amount) && amount >= 0)) throw hooks.invalid(amount);
-      const ceiling = ceilingOf(def);
+      // A count-only class has nothing to hold against. Admitting would be a
+      // silent "yes" from a gate that does not exist, so it is a loud bug.
+      if (counting) throw new Error(`spend class ${def.id} is count-only: it has no ceiling and cannot be reserved against`);
+      if (!(Number.isFinite(amount) && amount >= 0)) throw full.invalid(amount);
+      const ceiling = ceilingOf(limits);
       const out = store.transact((s): { ev: Eviction | null; hold?: Hold; refusal?: Refusal } => {
         const ev = prune(s, now);
         const spent = sumRows(s.rows);
@@ -243,7 +273,7 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
         return { ev, hold };
       });
       announce(out.ev);
-      if (out.refusal) throw hooks.refuse(out.refusal);
+      if (out.refusal) throw full.refuse(out.refusal);
       return { ...out.hold! };
     },
 
@@ -277,9 +307,18 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
 
     stats(now = Date.now()) {
       const spent = meter.spent(now); // prunes first, so the counters are current
-      const ceiling = ceilingOf(def);
-      const floor = floorOf(def);
       const windowMs = windowMsOf(def);
+      if (counting)
+        return store.transact((s) => ({
+          spent,
+          windowMs,
+          windowStart: now - windowMs,
+          windowEnd: now,
+          rows: s.rows.length,
+          counters: { ...s.counters },
+        })) as MeterStats;
+      const ceiling = ceilingOf(limits);
+      const floor = floorOf(limits);
       return store.transact((s) => {
         const held = sumHolds(s.holds);
         return {
@@ -333,5 +372,5 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
 
     reset: () => store.reset(),
   };
-  return meter;
+  return meter as Meter<E, X, B>;
 }
