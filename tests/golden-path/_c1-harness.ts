@@ -38,6 +38,14 @@ export const settle = async () => {
   for (let i = 0; i < 200; i++) await new Promise((r) => setImmediate(r));
 };
 
+/** What `useContext` answers for any context (see the dispatcher). */
+const CONTEXT_STUB: unknown = new Proxy(
+  {},
+  {
+    get: (_t, k) => (k === "user" ? null : k === "jobs" ? [] : () => undefined),
+  },
+);
+
 export function harness<T>(run: () => T) {
   const cells: unknown[] = [];
   const refs: { current: unknown }[] = [];
@@ -91,6 +99,14 @@ export function harness<T>(run: () => T) {
     },
     useCallback(fn: unknown, deps?: readonly unknown[]) {
       return dispatcher.useMemo(() => fn, deps);
+    },
+    // Every context reads as a stub that answers "nobody signed in, no jobs":
+    // enough for the hooks that read an auth or jobs provider to run here.
+    useContext() {
+      return CONTEXT_STUB;
+    },
+    useLayoutEffect(fn: () => void | (() => void), deps?: readonly unknown[]) {
+      return dispatcher.useEffect(fn, deps);
     },
     useSyncExternalStore(_subscribe: unknown, getSnapshot: () => unknown) {
       return getSnapshot();

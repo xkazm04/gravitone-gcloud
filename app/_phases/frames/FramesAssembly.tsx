@@ -453,7 +453,13 @@ function Row({
                     {/* A figure is a claim. Binding it to a sourced row is the
                         only thing that separates this from a caption someone
                         typed, so the control sits on the figure itself. */}
-                    {t.role === "figure" && (
+                    {t.role === "figure" && (() => {
+                      // A binding to a fact this notebook does not carry is not
+                      // a source: it is drawn as its own option, in the
+                      // unsourced tone, rather than as "— unsourced —" over a
+                      // stored binding.
+                      const dangling = Boolean(t.factId) && !facts.some((f) => f.id === t.factId);
+                      return (
                       <select
                         value={t.factId ?? ""}
                         onChange={(e) => onBind(t.id, e.target.value || undefined)}
@@ -461,17 +467,19 @@ function Row({
                         // under; on its own it announced as an unnamed combo box.
                         aria-label={`Notebook fact cited by the figure "${t.value}"`}
                         className={`font-jetbrains ml-[3.1rem] w-[calc(100%-3.1rem)] rounded border bg-slate-950 px-1.5 py-1 text-label ${
-                          t.factId ? "border-white/10 text-white/60" : "border-amber-300/40 text-amber-200"
+                          t.factId && !dangling ? "border-white/10 text-white/60" : "border-amber-300/40 text-amber-200"
                         }`}
                       >
                         <option value="">— unsourced —</option>
+                        {dangling && <option value={t.factId}>{t.factId} · not in this notebook</option>}
                         {facts.map((f) => (
                           <option key={f.id} value={f.id}>
                             {f.id} · {f.claim.slice(0, 60)}
                           </option>
                         ))}
                       </select>
-                    )}
+                      );
+                    })()}
                   </div>
                 ))}
                 <div className="flex gap-1.5 pt-0.5">
