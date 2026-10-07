@@ -412,3 +412,22 @@ export interface CreateRunInput {
   model?: string;
   effort?: EffortLevel;
 }
+
+/** WHAT STARTING A RUN COSTS, so a surface can say it before it spends it.
+ *
+ *  Measured, not modelled: the observed range over the runs of 2026-10, the
+ *  same observation `lib/articles/loop.ts` sizes its ceilings against. It
+ *  carries its date because a figure without one is read as a constant, and
+ *  this one will move the next time the model or the critique roster changes.
+ *
+ *  Lives here rather than in loop.ts because a client component may import
+ *  this file and may not import that one, and a confirm dialog that states a
+ *  price must read it from one place. A second spelling of a price is how two
+ *  surfaces come to disagree about what the user is about to be charged. */
+export const RUN_COST_HINT = {
+  usdLow: 47,
+  usdHigh: 92,
+  turnsLow: 26,
+  turnsHigh: 32,
+  measured: "2026-10",
+} as const;
