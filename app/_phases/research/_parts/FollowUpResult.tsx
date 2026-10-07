@@ -10,8 +10,7 @@
 // WHAT IT NO LONGER SAYS. This footer used to promise that applying an effect
 // "writes a new notebook revision — the current script is unaffected". No apply
 // action exists anywhere in this app, and none can today: an effect edits the
-// notebook, and the notebook is one static module shared by every project, so
-// there is nowhere per-project to write one. The scope IS per-project and does
+// notebook, and no follow-up has a record to land an edit in. The scope IS per-project and does
 // persist — but it records kept-or-cut, and nothing these results return is a
 // kept-or-cut decision on a card that still exists. So the claim is cut rather
 // than propped up with an invented mechanism, and each effect now says where it
@@ -173,7 +172,7 @@ export default function FollowUpResult({
           <Tally value={landed} of={result.effects.length} label="landed" tone="cyan" />
         )}
         <Hint label="Why nothing can be applied">
-          the notebook is one static document — nothing here is applied
+          no effect has a record to land in
         </Hint>
       </div>
 

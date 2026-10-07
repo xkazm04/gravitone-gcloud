@@ -18,6 +18,7 @@ import { dispatchToggles } from "@/app/_phases/script/dispatchToggles";
 import { RENDERS } from "@/app/_phases/script/renders";
 import type { PreviewOutcome } from "@/lib/turns/client";
 import { assembleRecalibrate } from "@/lib/turns/assemble/recalibrate";
+import { CANNED, resultFor } from "@/app/_phases/research/followup";
 import { optInIds } from "@/app/_phases/research/scope";
 import { recalibrate } from "@/app/_phases/script/recalibrate";
 import { outWord } from "@/app/_phases/script/scopeConflicts";
@@ -203,4 +204,19 @@ test("case 7: useVersions sends the source's conclusions, and the size check cou
   expect(src).not.toMatch(/import \{ CONCLUSIONS \}/);
   expect(src).toMatch(/NOTEBOOK_DROP = \[[^\]]*"conclusions"/);
   expect(src).toMatch(/\["notebook", "conclusions", "renders", "scope", "notes"\]/);
+});
+
+/* ───────────────────────── case 11: follow-ups answer only on the replay ─────── */
+
+test("case 11: a canned transcript answers only on the replay source", async () => {
+  await landLive("c1-followup");
+  const reasoned = (await readActiveNotebook("c1-followup"))!;
+  const ask = { kind: "question" as const, prompt: "whale holders" };
+  expect(resultFor(ask, reasoned)).toBeUndefined();
+  expect(resultFor(ask, fixtureSource())).toBe(CANNED["q-whales"]);
+  expect(resultFor(ask)).toBe(CANNED["q-whales"]);
+  expect(resultFor({ kind: "deepen-card", cardId: Object.keys(CANNED).find((k) => k !== "q-whales")!, prompt: "" }, reasoned)).toBeUndefined();
+  // What the sentence says is still true: it no longer claims one static document.
+  expect(code("app/_phases/research/followup.ts")).not.toContain("one static document shared by every project");
+  expect(code("app/_phases/research/_parts/FollowUpQueue.tsx")).toContain("resultFor(r, api.source)");
 });
