@@ -266,7 +266,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   const { source } = active;
   const nb = source.notebook;
   const scope = useScope(projectId, source);
-  const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope, source });
+  const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope, source, optIn: scope.optIn });
 
   // Guided duel or expert columns — the stored choice, else a computed default
   // (guided only while nothing has been decided on this step; the inputs are
@@ -375,7 +375,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   const weighed = versions.candidate && showing === "candidate" ? versions.candidate : versions.baseline;
   const state = ready
     ? {
-        conflicts: conflictsIn(weighed, scope.cards, scope.scope).length,
+        conflicts: conflictsIn(weighed, scope.cards, scope.scope, scope.optIn).length,
         overrun: RENDERS.filter((r) => coverageIn(weighed, r.id, cardIds).overrunS > 0).length,
         unused: scope.cards.filter((c) =>
           RENDERS.every((r) => usageIn(versions.baseline, r.id, c.id).kind === "unused"),
@@ -476,7 +476,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
               to check what a note did. The pad is a fixed corner surface that
               belongs to the STEP, not to whichever grid happens to be under it,
               so it is mounted once and the tabs swap inside it. */}
-          <StickyNotebook api={versions} gate={gate} cards={scope.cards} scope={scope.scope}>
+          <StickyNotebook api={versions} gate={gate} cards={scope.cards} scope={scope.scope} optIn={scope.optIn}>
             <>
               {tab === "candidates" && (
                 <>

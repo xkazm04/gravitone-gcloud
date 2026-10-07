@@ -65,7 +65,16 @@ interface NoteGuards {
   contested: { cardId: string; kinds: NoteKind[] }[];
 }
 
-function guardNotes(notes: Note[], ctx: { cards: Card[]; scope: Scope }): NoteGuards {
+/** What a recalibration reads of the board. `optIn` is the dealt source's opt-in
+ *  set (useScope().optIn); omitted it is the fixture's, and a live notebook's
+ *  undecided conclusion would read as in scope. */
+export interface ScopeCtx {
+  cards: Card[];
+  scope: Scope;
+  optIn?: ReadonlySet<string>;
+}
+
+function guardNotes(notes: Note[], ctx: ScopeCtx): NoteGuards {
   const cardById = new Map(ctx.cards.map((c) => [c.id, c]));
   const byCard = new Map<string, NoteKind[]>();
   for (const n of notes) byCard.set(n.cardId, [...(byCard.get(n.cardId) ?? []), n.kind]);
@@ -76,7 +85,7 @@ function guardNotes(notes: Note[], ctx: { cards: Card[]; scope: Scope }): NoteGu
 
   for (const [cardId, kinds] of byCard) {
     const card = cardById.get(cardId);
-    const descopedInScope = stateOf(ctx.scope, cardId).descoped;
+    const descopedInScope = stateOf(ctx.scope, cardId, ctx.optIn).descoped;
     let surviving = [...kinds];
 
     // GUARD 1 — a note may not descope what the scope layer refuses to descope.
@@ -121,7 +130,7 @@ export function recalibrate(
   notes: Note[],
   id: string,
   at: number,
-  ctx: { cards: Card[]; scope: Scope },
+  ctx: ScopeCtx,
 ): Version {
   const { refusals, keep: applied, contested } = guardNotes(notes, ctx);
 
@@ -267,7 +276,7 @@ export function recalibrateFromPlan(
   plan: EditPlan,
   id: string,
   at: number,
-  ctx: { cards: Card[]; scope: Scope },
+  ctx: ScopeCtx,
 ): Version {
   const cardById = new Map(ctx.cards.map((c) => [c.id, c]));
   const { refusals, contested } = guardNotes(notes, ctx);
@@ -276,7 +285,7 @@ export function recalibrateFromPlan(
   // scope, whatever reason the model gives for it.
   const inScope = plan.edits.filter((e) => {
     for (const cardId of e.cards ?? []) {
-      if (stateOf(ctx.scope, cardId).descoped) {
+      if (stateOf(ctx.scope, cardId, ctx.optIn).descoped) {
         refusals.push({
           cardId,
           kind: "custom",
@@ -406,13 +415,13 @@ export function recalibrateFromPlan(
  *  (`woundsOf`); the recalibration was simply not asking. */
 function unsupportedIn(
   impact: Record<string, Record<string, Usage>>,
-  ctx: { cards: Card[]; scope: Scope },
+  ctx: ScopeCtx,
 ): Unsupported[] {
   const gone = new Set(
     ctx.cards
       .filter(
         (c) =>
-          stateOf(ctx.scope, c.id).descoped ||
+          stateOf(ctx.scope, c.id, ctx.optIn).descoped ||
           RENDERS.every((r) => (impact[r.id]?.[c.id]?.kind ?? "unused") === "cut"),
       )
       .map((c) => c.id),

@@ -63,7 +63,7 @@ interface Stored {
   savedAt?: number;
 }
 
-export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scope; source: NotebookSource }) {
+export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scope; source: NotebookSource; optIn?: ReadonlySet<string> }) {
   const jobs = useJobs();
   const { busy, track, cancel: cancelJob } = jobs;
   const [notes, setNotes] = useState<Note[]>([]);

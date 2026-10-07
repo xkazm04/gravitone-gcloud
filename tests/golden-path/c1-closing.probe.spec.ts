@@ -13,6 +13,10 @@ import { expect, test } from "@playwright/test";
 
 import { buildCards } from "@/app/_phases/_shared/notebook/cards";
 import { fixtureSource } from "@/app/_phases/_shared/notebook/source";
+import { optInIds } from "@/app/_phases/research/scope";
+import { recalibrate } from "@/app/_phases/script/recalibrate";
+import { outWord } from "@/app/_phases/script/scopeConflicts";
+import { BASELINE, type Note } from "@/app/_phases/script/versions";
 import { readActiveNotebook } from "@/app/_phases/_shared/notebook/useActiveNotebook";
 import { readStep, saveStep, type ScopeStepData } from "@/app/_phases/_shared/stepStore";
 import { makeTriageSource } from "@/lib/board/sources/triage";
@@ -127,4 +131,36 @@ test("case 10: ScriptStep's ready waits for the active notebook, and the skeleto
   const ready = /const ready = ([^;]+);/.exec(src)?.[1] ?? "";
   expect(ready, "ready does not wait for the active notebook").toContain("active.hydrated");
   expect(src).toMatch(/\{!ready \? \(\s*<Skeleton \/>/);
+});
+
+/* ───────────────────────── case 8: Step 2 reads the source's opt-in ──────────── */
+
+test("case 8: an undecided live conclusion is not-taken in Step 2, and the recalibrate guard treats it as out", async () => {
+  await landLive("c1-optin");
+  const src = (await readActiveNotebook("c1-optin"))!;
+  const cards = buildCards(src);
+  const optIn = optInIds(src);
+  const card = cards.find((c) => c.id === OWN_CONCLUSION.id)!;
+  expect(card.optIn).toBe(true);
+
+  // The default, which is the fixture's, reads the live conclusion as IN.
+  expect(outWord(card, {})).toBe("in");
+  expect(outWord(card, {}, optIn)).toBe("not-taken");
+
+  const notes: Note[] = [{ id: "n1", cardId: card.id, kind: "more-focus", at: 1 }];
+  const v = recalibrate(BASELINE, notes, "v2", 1, { cards, scope: {}, optIn });
+  expect(v.refusals.map((r) => r.cardId), "the guard let a note fund a card the board never took").toEqual([card.id]);
+  const unthreaded = recalibrate(BASELINE, notes, "v2", 1, { cards, scope: {} });
+  expect(unthreaded.refusals).toEqual([]);
+});
+
+test("case 8: the matrix and the conflict readers take the set from useScope().optIn", () => {
+  for (const f of ["_matrix/MatrixSpend.tsx", "_matrix/MatrixTracks.tsx", "_matrix/MatrixCoverage.tsx", "_matrix/shared.tsx"]) {
+    const src = code(`app/_phases/script/${f}`);
+    expect(src, f).toContain("api.optIn");
+    expect(src, f).not.toMatch(/stateOf\(api\.scope, card\.id\)|outWord\(card, api\.scope\)/);
+  }
+  const step = code("app/_phases/script/ScriptStep.tsx");
+  expect(step).toMatch(/useVersions\(projectId, \{[^}]*optIn: scope\.optIn/);
+  expect(step).toContain("conflictsIn(weighed, scope.cards, scope.scope, scope.optIn)");
 });

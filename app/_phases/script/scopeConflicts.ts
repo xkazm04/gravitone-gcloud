@@ -39,8 +39,14 @@ export interface ConflictDelta {
 }
 
 /** "not taken" is a DEFAULT, "descoped" is a DECISION. */
-export function outWord(card: Card, scope: Scope): "in" | "not-taken" | "descoped" {
-  const s = stateOf(scope, card.id);
+/** `optIn` is the dealt source's opt-in set (useScope().optIn): without it a live
+ *  notebook's undecided conclusion reads as IN, because the default is the fixture's. */
+export function outWord(
+  card: Card,
+  scope: Scope,
+  optIn?: ReadonlySet<string>,
+): "in" | "not-taken" | "descoped" {
+  const s = stateOf(scope, card.id, optIn);
   if (!s.descoped) return "in";
   return card.optIn ? "not-taken" : "descoped";
 }
@@ -50,8 +56,9 @@ export function stillSpoken(
   version: Version,
   card: Card,
   scope: Scope,
+  optIn?: ReadonlySet<string>,
 ): { renderId: string; label: string; seconds: number }[] {
-  if (outWord(card, scope) === "in") return [];
+  if (outWord(card, scope, optIn) === "in") return [];
   return RENDERS.flatMap((r) => {
     const u = usageIn(version, r.id, card.id);
     return u.kind === "spoken" ? [{ renderId: r.id, label: r.engineLabel, seconds: u.seconds }] : [];
@@ -59,9 +66,9 @@ export function stillSpoken(
 }
 
 /** Returns list of card IDs that are descoped in `scope` but `stillSpoken(version, card, scope).length > 0`. */
-export function conflictsIn(version: Version, cards: Card[], scope: Scope): string[] {
+export function conflictsIn(version: Version, cards: Card[], scope: Scope, optIn?: ReadonlySet<string>): string[] {
   return cards
-    .filter((card) => stillSpoken(version, card, scope).length > 0)
+    .filter((card) => stillSpoken(version, card, scope, optIn).length > 0)
     .map((card) => card.id);
 }
 
@@ -77,8 +84,9 @@ export function resolutionPlan(
   cards: Card[],
   scope: Scope,
   existingNotes: Array<Pick<Note, "cardId" | "kind"> & Partial<Note>>,
+  optIn?: ReadonlySet<string>,
 ): ResolutionPlan {
-  const conflictIds = new Set(conflictsIn(version, cards, scope));
+  const conflictIds = new Set(conflictsIn(version, cards, scope, optIn));
 
   const stage: ResolutionPlanStageItem[] = [];
   const skipped: ResolutionPlanSkippedItem[] = [];
@@ -125,9 +133,10 @@ export function conflictDelta(
   after: Version,
   cards: Card[],
   scope: Scope,
+  optIn?: ReadonlySet<string>,
 ): ConflictDelta {
-  const beforeList = conflictsIn(before, cards, scope);
-  const afterList = conflictsIn(after, cards, scope);
+  const beforeList = conflictsIn(before, cards, scope, optIn);
+  const afterList = conflictsIn(after, cards, scope, optIn);
   const afterSet = new Set(afterList);
   const resolved = beforeList.filter((id) => !afterSet.has(id));
 

@@ -45,11 +45,13 @@ export default function RecalibrateControl({
   gate,
   cards,
   scope,
+  optIn,
 }: {
   api: VersionsApi;
   gate?: GateRollup;
   cards?: Card[];
   scope?: Scope;
+  optIn?: ReadonlySet<string>;
 }) {
   // The clock only exists while something is running, so it is created and
   // destroyed with the run rather than reset inside an effect body.
@@ -96,7 +98,7 @@ export default function RecalibrateControl({
 
   if (api.candidate) {
     const over = RENDERS.filter((r) => (api.candidate!.budget[r.id]?.overrunS ?? 0) > 0);
-    const conflictsDelta = cards && scope ? conflictDelta(api.baseline, api.candidate, cards, scope) : null;
+    const conflictsDelta = cards && scope ? conflictDelta(api.baseline, api.candidate, cards, scope, optIn) : null;
     return (
       <div data-testid="candidate-bar" className="rounded-xl border border-cyan-400/30 bg-cyan-400/[0.06] p-2.5">
         <p className="font-jetbrains text-content tracking-[0.14em] text-cyan-200 uppercase">

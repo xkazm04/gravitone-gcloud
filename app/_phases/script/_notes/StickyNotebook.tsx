@@ -25,6 +25,7 @@ export default function StickyNotebook({
   gate,
   cards,
   scope,
+  optIn,
   children,
 }: {
   api: VersionsApi;
@@ -35,12 +36,13 @@ export default function StickyNotebook({
   gate?: GateRollup;
   cards?: Card[];
   scope?: Scope;
+  optIn?: ReadonlySet<string>;
   children: React.ReactNode;
 }) {
   return (
     <NotesProvider api={api}>
       {children}
-      <Pad api={api} gate={gate} cards={cards} scope={scope} />
+      <Pad api={api} gate={gate} cards={cards} scope={scope} optIn={optIn} />
     </NotesProvider>
   );
 }
@@ -50,11 +52,13 @@ function Pad({
   gate,
   cards,
   scope,
+  optIn,
 }: {
   api: VersionsApi;
   gate?: GateRollup;
   cards?: Card[];
   scope?: Scope;
+  optIn?: ReadonlySet<string>;
 }) {
   const [open, setOpen] = useState(true);
   const ctx = useNotes();
@@ -117,7 +121,7 @@ function Pad({
             )}
 
             <div className="mt-2.5 border-t border-white/10 pt-2.5">
-              <RecalibrateControl api={api} gate={gate} cards={cards} scope={scope} />
+              <RecalibrateControl api={api} gate={gate} cards={cards} scope={scope} optIn={optIn} />
             </div>
           </>
         )}

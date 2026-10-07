@@ -95,7 +95,7 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
               <ol className="mt-2 space-y-1">
                 {used.map(({ card, u }) => {
                   const lit = focus === card.id;
-                  const descoped = stateOf(api.scope, card.id).descoped;
+                  const descoped = stateOf(api.scope, card.id, api.optIn).descoped;
                   const placed = toS(u.beats[0]) !== null;
                   return (
                     <li
@@ -162,13 +162,13 @@ export default function MatrixTracks({ api, version }: { api: ScopeApi; version:
         </section>
       )}
 
-      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} />
+      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} optIn={api.optIn} />
     </div>
   );
 }
 
 function UnusedChip({ card, api }: { card: Card; api: ScopeApi }) {
-  const descoped = stateOf(api.scope, card.id).descoped;
+  const descoped = stateOf(api.scope, card.id, api.optIn).descoped;
   return (
     <li data-testid={`gutter-${card.id}`} className="flex items-center gap-1.5">
       <ScopePip card={card} api={api} />
