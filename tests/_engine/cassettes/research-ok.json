@@ -1,0 +1,195 @@
+{
+  "name": "research-ok",
+  "source": "hand-written",
+  "recordedAt": "2026-10-07",
+  "cliVersion": "2.1.289",
+  "cliArgsFingerprint": "9bffdfc1075733e3",
+  "turns": [
+    {
+      "prompt": null,
+      "mode": "ok",
+      "envelope": {
+        "type": "result",
+        "subtype": "success",
+        "is_error": false,
+        "duration_ms": 51000,
+        "duration_api_ms": 50500,
+        "num_turns": 1,
+        "session_id": "00000000-fake-4000-8000-0000000000r0",
+        "total_cost_usd": 0.2,
+        "usage": {
+          "input_tokens": 9000,
+          "cache_creation_input_tokens": 0,
+          "cache_read_input_tokens": 0,
+          "output_tokens": 3100
+        },
+        "permission_denials": []
+      },
+      "resultJson": {
+        "topic": "harbour dredging costs",
+        "question": "Why does dredging this harbour cost what it does?",
+        "verdict": "The volume, not the rate, drives the bill",
+        "tension": {
+          "expectation": "the contractor's rate is the expensive part",
+          "reality": "the rate is ordinary and the volume is not",
+          "whyItIsATension": "the bill is blamed on the one input that is normal",
+          "strength": "moderate"
+        },
+        "facts": [
+          {
+            "id": "f-volume",
+            "claim": "1.2 million cubic metres were dredged in the 2025 season",
+            "loadBearing": true,
+            "kind": "found",
+            "confidence": "high",
+            "confidenceNote": "read off the port authority's own ledger in this run",
+            "asOf": "2026-10-06",
+            "sources": [
+              {
+                "name": "Port authority dredging ledger",
+                "evidenceClass": "primary",
+                "url": "https://example.org/one"
+              }
+            ]
+          },
+          {
+            "id": "f-rate",
+            "claim": "The quoted rate is 14 to 19 per cubic metre",
+            "loadBearing": true,
+            "kind": "found",
+            "confidence": "high",
+            "confidenceNote": "the contractor's own rate card, fetched in this run",
+            "asOf": "2026-10-06",
+            "sources": [
+              {
+                "name": "Contractor rate card",
+                "evidenceClass": "vendor",
+                "interested": true,
+                "url": "https://example.net/two"
+              }
+            ]
+          },
+          {
+            "id": "f-recalled",
+            "claim": "A 2019 audit put the harbour's silt load at twice the regional mean",
+            "loadBearing": true,
+            "kind": "found",
+            "confidence": "high",
+            "confidenceNote": "the audit is well known",
+            "asOf": "2026-10-06",
+            "sources": [
+              {
+                "name": "Harbour silt audit",
+                "evidenceClass": "primary",
+                "url": "https://example.com/silt-audit-2019"
+              }
+            ]
+          },
+          {
+            "id": "f-regional",
+            "claim": "Regional averages sit within ten percent of this harbour's figure",
+            "loadBearing": false,
+            "kind": "found",
+            "confidence": "medium",
+            "asOf": "2026-10-06",
+            "sources": [
+              {
+                "name": "Regional cost survey",
+                "evidenceClass": "secondary",
+                "url": "https://example.org/counter-case"
+              }
+            ]
+          },
+          {
+            "id": "f-unfetched-low",
+            "claim": "Two neighbouring ports deferred dredging in 2024",
+            "loadBearing": false,
+            "kind": "found",
+            "confidence": "low",
+            "asOf": "2026-10-06",
+            "sources": [
+              {
+                "name": "Trade press",
+                "evidenceClass": "aggregator",
+                "locator": "https://example.com/trade-press"
+              }
+            ]
+          }
+        ],
+        "mechanisms": [
+          {
+            "id": "m-volume",
+            "name": "volume drives the bill",
+            "chain": [
+              "The harbour silts fast",
+              "THEREFORE each season moves more material",
+              "BUT the rate per cubic metre is ordinary"
+            ],
+            "evidence": [
+              "f-volume",
+              "f-rate"
+            ],
+            "explains": "why the total is high while the rate is not",
+            "needsAnalogy": false
+          }
+        ],
+        "reversals": [
+          {
+            "id": "r-rate",
+            "obviousReading": "a contractor charging over the odds would explain a high bill",
+            "whyWrong": "the rate sits inside the regional band",
+            "mechanismId": "m-volume",
+            "evidence": [
+              "f-rate",
+              "f-regional"
+            ],
+            "escalation": "the cost is a property of the harbour, not of the contract"
+          }
+        ],
+        "steelMan": {
+          "claim": "the cost is not unusual at all",
+          "evidence": [
+            "f-regional"
+          ],
+          "statement": "Regional averages sit within ten percent; there is nothing here to explain.",
+          "whyInclude": "it is the honest null hypothesis",
+          "provenance": "found"
+        },
+        "unknowns": [
+          {
+            "id": "u-season",
+            "what": "whether 2025 was a typical season",
+            "why": "one season was read",
+            "impact": "the script may not call the volume normal",
+            "about": [
+              "f-volume"
+            ]
+          }
+        ],
+        "engineFit": [
+          {
+            "engine": "explainer",
+            "label": "Explainer",
+            "fit": "good",
+            "why": "one mechanism and one reversal",
+            "hazard": ""
+          }
+        ],
+        "currency": {
+          "halfLife": "one dredging season",
+          "why": "volumes are reported per season",
+          "expiresFirst": [
+            "f-volume"
+          ],
+          "durable": [
+            "f-rate"
+          ],
+          "advice": "say a recent season rather than naming the year"
+        },
+        "researchGaps": [
+          "No search was run; every source is a recollection"
+        ]
+      }
+    }
+  ]
+}

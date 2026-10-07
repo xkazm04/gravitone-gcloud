@@ -41,6 +41,7 @@ import { startTurn, turnKind, turnKinds, TurnInputError } from "@/lib/turns/runn
 // by the module that owns its prompt; this line only makes it reachable here.
 import "@/lib/turns/kinds/recalibrate";
 import "@/lib/turns/kinds/frames";
+import "@/lib/turns/kinds/research";
 
 export const runtime = "nodejs";
 /** The longest turn the ladder allows (the edit-plan ceiling), with room —
