@@ -372,13 +372,44 @@ test("stage 4: on the replay source the gate is the gate it was", () => {
   }
 });
 
-/** Ratchet. Every file outside _shared/notebook/ that imports the NOTEBOOK or
- *  CONCLUSIONS constant. The count may only fall, and each consumer that moves to the active source takes one off.
- *  What remains are the renders' fixture readers (script-phase-A) and the engine
- *  side (lib/, app/api/), which have no active notebook to read. */
-const PINNED_CONSTANT_IMPORTERS = 6; // 11 before stage 4. Left: ResearchStep + RunStage (the replay path),
-// script/constraints.ts + dispatchToggles.ts (fixture-render tables, script-phase-A), lib/notebook/validate.ts
-// and lib/turns/assemble/recalibrate.ts (engine side, outside this card's paths).
+/** Every name the shipped run is read through. The walk used to match only
+ *  `NOTEBOOK` and `CONCLUSIONS` imported from a path ending in `/notebook` or
+ *  `/conclusions`, so six consumers of the fixture that a creator's own notebook
+ *  reaches were never counted (useFrames, ScopeGate's ClearDialog, followup,
+ *  triage, and the Step 2 opt-in readers; critic-2026-10-07-script-chain, Part 1,
+ *  "What the ratchet cannot see"). */
+const FIXTURE_NAMES = [
+  "NOTEBOOK",
+  "NOTEBOOK_COUNTS",
+  "FACTS",
+  "FACT_BY_ID",
+  "UNKNOWN_BY_ID",
+  "CONCLUSIONS",
+  "CARD_DIMENSION",
+];
+const FIXTURE_MODULES = "notebook|facts|conclusions|dimensions|unknowns";
+
+/** Ratchet. Every file outside _shared/notebook/ that reads the shipped run by
+ *  any of its constant names (FIXTURE_NAMES). The count may only fall, and each
+ *  consumer that moves to the active source takes one off.
+ *
+ *  C1 closing stage: 9 when the walk was widened, 4 after it. What remains, and
+ *  why each is allowed to:
+ *    · guided/RunStage.tsx       - the replay's own compact card and chip
+ *                                  (StandInNote), labelled stand-in; legitimate
+ *    · research/followup.ts      - the CANNED replay plane, answered only on the
+ *                                  replay source; until research-scope-board-B
+ *    · script/constraints.ts     - the hand ledger over the fixture's unknowns;
+ *                                  until script-phase-A s2a
+ *    · lib/notebook/validate.ts  - the engine side's FIXTURE_CONCLUSION_IDS, for a
+ *                                  notebook that declares neither field; legitimate */
+const PINNED_CONSTANT_IMPORTERS = 4;
+const EXPECTED_IMPORTERS = [
+  "app/_phases/research/followup.ts",
+  "app/_phases/research/guided/RunStage.tsx",
+  "app/_phases/script/constraints.ts",
+  "lib/notebook/validate.ts",
+];
 
 function constantImporters(): string[] {
   const root = process.cwd();
@@ -392,8 +423,10 @@ function constantImporters(): string[] {
         const rel = relative(root, p).split(sep).join("/");
         if (rel.startsWith("app/_phases/_shared/notebook/")) continue;
         const src = readFileSync(p, "utf8");
-        const imports = src.match(/import\s+(?:type\s+)?\{[^}]*\}\s+from\s+["'][^"']*\/(?:notebook|conclusions)["']/g) ?? [];
-        if (imports.some((i) => /\b(NOTEBOOK|CONCLUSIONS)\b/.test(i.replace(/\bNOTEBOOK_\w+/g, "")))) out.push(rel);
+        const imports =
+          src.match(new RegExp(`import\\s+(?:type\\s+)?\\{[^}]*\\}\\s+from\\s+["'][^"']*\\/(?:${FIXTURE_MODULES})["']`, "g")) ?? [];
+        const names = new RegExp(`\\b(${FIXTURE_NAMES.join("|")})\\b`);
+        if (imports.some((i) => names.test(i))) out.push(rel);
       }
     }
   };
@@ -401,8 +434,10 @@ function constantImporters(): string[] {
   return out.sort();
 }
 
-test("stage 4 (case 7): the files importing NOTEBOOK or CONCLUSIONS outside _shared/notebook/ only fall", () => {
+test("stage 4 (case 7, widened - C1 closing case 12): the files reading any fixture constant outside _shared/notebook/ only fall", () => {
   const found = constantImporters();
   console.log(`[ratchet] ${found.length} importers\n  ${found.join("\n  ")}`);
   expect(found.length).toBeLessThanOrEqual(PINNED_CONSTANT_IMPORTERS);
+  // Named, so a swap (one leaves, another arrives) cannot hide inside the count.
+  expect(found).toEqual(EXPECTED_IMPORTERS);
 });
