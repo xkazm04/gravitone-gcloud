@@ -9,9 +9,18 @@
 //
 // In-memory and per-process, exactly as imaging's ledger is; the window
 // survives nothing but this process.
+//
+// THE LEDGER HAS A READ SIDE (2026-10-07, card IMG-A stage 2). It used to
+// export reserve, settle, release and a stats total, and nothing else: the class
+// declares three attribution axes and no export could read one, so a spend
+// surface could say how much the clips cost and not which project spent it.
+// The shared conformance kit (tests/golden-path/_meterKit.ts) found it: 10 of
+// its 18 cases could not be run against this meter. `videoSpendByAxis`,
+// `videoSpendRows` and `recordVideoSpend` are the kernel's own views, in the
+// shape every other meter hands out.
 
 import { SPEND_CLASSES } from "../../spend/classes";
-import { createMeter, type MeterStats } from "../../spend/meter";
+import { createMeter, type MeterAxes, type MeterRow, type MeterStats } from "../../spend/meter";
 import { VideoError } from "./errors";
 import type { CostBasis } from "./types";
 
@@ -19,6 +28,8 @@ const CLASS = SPEND_CLASSES["video-usd"];
 
 export const VIDEO_BUDGET_VAR = CLASS.ceilingVar;
 export const VIDEO_WINDOW_VAR = CLASS.windowVar;
+/** The bottom of the expected band, in USD. Reporting only. */
+export const VIDEO_FLOOR_VAR = CLASS.floorVar;
 
 export interface VideoSpendEntry {
   usd: number | null | undefined;
@@ -79,14 +90,32 @@ export function releaseVideo(hold: VideoHold): void {
   meter.release(hold);
 }
 
-/** Replace the hold with what happened. An unpriced row books nothing and is
- *  counted (lib/spend/meter.ts: unpriced is not free). */
-export function settleVideo(hold: VideoHold, entry: VideoSpendEntry): void {
-  meter.settle(hold, entry);
+/** Replace the hold with what happened — one row, or several. An unpriced row
+ *  books nothing and is counted (lib/spend/meter.ts: unpriced is not free). The
+ *  hold is gone afterwards even if a row throws while being read. */
+export function settleVideo(hold: VideoHold, entries: VideoSpendEntry | VideoSpendEntry[]): void {
+  meter.settle(hold, entries);
+}
+
+/** Book a clip with no hold to settle. The clip route always holds first; this
+ *  is the kernel's `book`, for a cost learned after its hold is gone. */
+export function recordVideoSpend(entry: VideoSpendEntry): void {
+  meter.book(entry);
 }
 
 export function videoBudgetStats(now: number = Date.now()): MeterStats {
   return meter.stats(now);
+}
+
+/** The window split by project, provider, model and outcome. `unattributed` is
+ *  the honesty field: spend on rows that named no project. */
+export function videoSpendByAxis(now: number = Date.now()): MeterAxes {
+  return meter.byAxis(now);
+}
+
+/** The window's rows, oldest first, as copies. */
+export function videoSpendRows(now: number = Date.now()): MeterRow<VideoAxes, CostBasis>[] {
+  return meter.rows(now);
 }
 
 /** Test hook — clear the window and the counters. */

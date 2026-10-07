@@ -1,10 +1,11 @@
 // LANE — METER CONFORMANCE (dynamic).
 //
 // Runs the one meter kit (./_meterKit.ts) against every spend meter this repo
-// has: the imaging USD ceiling and the music seconds ceiling, each read through
-// its PUBLIC exports (lib/imaging/budget.ts, lib/music/budget.ts) — the same
-// names the router and the music adapter call — so this file proves the
-// adapters, not an internal.
+// has: the imaging USD ceiling, the music seconds ceiling and the video USD
+// ceiling, each read through its PUBLIC exports (lib/imaging/budget.ts,
+// lib/music/budget.ts, lib/imaging/video/budget.ts) — the same names the router,
+// the music adapter and the clip route call — so this file proves the adapters,
+// not an internal.
 //
 // Card IMG-A (docs/concepts/moonshots-2026-10-05/06-imaging-music.md), stage 1:
 // the kit was written against today's imaging API before the kernel existed, so
@@ -35,6 +36,22 @@ import {
 } from "@/lib/imaging/budget";
 import { ImagingError } from "@/lib/imaging/errors";
 import { generate } from "@/lib/imaging/router";
+import {
+  VIDEO_BUDGET_VAR,
+  VIDEO_FLOOR_VAR,
+  VIDEO_WINDOW_VAR,
+  __resetVideoBudget,
+  recordVideoSpend,
+  releaseVideo,
+  reserveVideo,
+  settleVideo,
+  videoBudgetStats,
+  videoSpendByAxis,
+  videoSpendRows,
+  type VideoHold,
+  type VideoSpendEntry,
+} from "@/lib/imaging/video/budget";
+import { VideoError } from "@/lib/imaging/video/errors";
 import {
   MUSIC_BUDGET_VAR,
   MUSIC_FLOOR_VAR,
@@ -216,6 +233,62 @@ meterConformance({
   },
   isOverBudget: (e) => e instanceof MusicError && e.kind === "over-budget",
   isInvalid: (e) => e instanceof MusicError && e.kind === "bad-request",
+});
+
+// ── Video clips, in USD ───────────────────────────────────────────────────
+//
+// `video-usd` came onto the kernel with the clip route (710240a) and was never
+// handed to the kit. Its defaults are restated for the same reason as music's.
+
+const videoEntry = (r: KitRow): VideoSpendEntry => ({
+  get usd() {
+    return r.amount;
+  },
+  project: (r.attributed === false ? undefined : "kit-project") as VideoSpendEntry["project"],
+  provider: "leonardo",
+  model: "kit-model",
+  outcome: r.outcome,
+  basis: "estimated",
+  at: r.at,
+});
+
+meterConformance({
+  name: "video-usd (lib/imaging/video/budget)",
+  ceilingVar: VIDEO_BUDGET_VAR,
+  windowVar: VIDEO_WINDOW_VAR,
+  floorVar: VIDEO_FLOOR_VAR,
+  defaultCeiling: 15,
+  defaultWindowMs: 3_600_000,
+  attributionAxis: "project",
+  reset: __resetVideoBudget,
+  reserve: (amount, now) => reserveVideo(amount, now),
+  release: (h) => releaseVideo(h as VideoHold),
+  settle: (h, rows) => settleVideo(h as VideoHold, rows.map(videoEntry)),
+  book: (r) => recordVideoSpend(videoEntry(r)),
+  stats: (now) => {
+    const s = videoBudgetStats(now);
+    return { ...s, counters: { ...s.counters } };
+  },
+  byAxis: (now) => {
+    const a = videoSpendByAxis(now);
+    return { total: a.total, served: a.byOutcome.served, failed: a.byOutcome.failed, unattributed: a.unattributed, axes: a.byAxis };
+  },
+  rows: (now) => videoSpendRows(now).map((r) => ({ at: r.at, amount: r.amount, outcome: r.outcome })),
+  tamper: () => {
+    const s = videoBudgetStats();
+    s.counters.booked = 0;
+    s.spent = 999;
+    for (const r of videoSpendRows()) {
+      r.amount = 999;
+      r.axes.project = "tampered";
+    }
+    const a = videoSpendByAxis();
+    a.total = 999;
+    a.byOutcome.served = 999;
+    for (const axis of Object.values(a.byAxis)) for (const k of Object.keys(axis)) axis[k] = 999;
+  },
+  isOverBudget: (e) => e instanceof VideoError && e.kind === "over-budget",
+  isInvalid: (e) => e instanceof VideoError && e.kind === "invalid",
 });
 
 // ── The bare kernel, on a class of its own ────────────────────────────────
