@@ -85,7 +85,7 @@ test("1. concurrent burst: 3 calls under $1 ceiling, first two dispatch 16 fetch
   expect(p3Error).toBeInstanceOf(ImagingError);
   expect((p3Error as ImagingError).kind).toBe("over-budget");
   expect(fetchesIssued).toBe(16);
-  expect(budgetStats().counters.refusals).toBe(1);
+  expect((await budgetStats()).counters.refusals).toBe(1);
 
   // Clean up pending fetches
   for (const r of pendingResolvers) r();
@@ -120,7 +120,7 @@ test("2. resolving pending calls settles spend and clears holds", async () => {
   for (const r of pendingResolvers) r();
   await Promise.all([p1, p2, p3]);
 
-  const stats = budgetStats() as { spentUsd: number; heldUsd: number };
+  const stats = await budgetStats() as { spentUsd: number; heldUsd: number };
   expect(stats.spentUsd).toBeCloseTo(0.72, 6);
   expect(stats.heldUsd).toBe(0);
 });
@@ -148,10 +148,11 @@ test("3. while two $0.36 calls are in flight under $1 ceiling, heldUsd is 0.72 a
   const p1 = generate({ prompt: "probe 1", aspect: "16:9", count: 8 });
   const p2 = generate({ prompt: "probe 2", aspect: "16:9", count: 8 });
 
-  const stats = budgetStats() as { heldUsd: number; remainingUsd: number };
+  const stats = await budgetStats() as { heldUsd: number; remainingUsd: number };
   expect(stats.heldUsd).toBeCloseTo(0.72, 6);
   expect(stats.remainingUsd).toBeCloseTo(0.28, 6);
 
+  await expect.poll(() => pendingResolvers.length).toBe(16); // 8 images each; the vendor is called after the hold commits
   for (const r of pendingResolvers) r();
   await Promise.all([p1, p2]);
 });
@@ -173,7 +174,7 @@ test("4. transport failure (TypeError) releases hold without booking spend and a
   expect((err as ImagingError).kind).toBe("failed");
   expect((err as ImagingError).dispatched).toBe(false);
 
-  const stats = budgetStats() as { heldUsd: number; spentUsd: number; counters: { booked: number } };
+  const stats = await budgetStats() as { heldUsd: number; spentUsd: number; counters: { booked: number } };
   expect(stats.heldUsd).toBe(0);
   expect(stats.spentUsd).toBe(0);
   expect(stats.counters.booked).toBe(0);
@@ -190,8 +191,8 @@ test("4. transport failure (TypeError) releases hold without booking spend and a
 
   const served = await generate({ prompt: "probe succeed", aspect: "16:9", count: 8 });
   expect(served.images.length).toBeGreaterThan(0);
-  expect(budgetStats().spentUsd).toBeCloseTo(0.36, 6);
-  expect((budgetStats() as { heldUsd: number }).heldUsd).toBe(0);
+  expect((await budgetStats()).spentUsd).toBeCloseTo(0.36, 6);
+  expect((await budgetStats() as { heldUsd: number }).heldUsd).toBe(0);
 });
 
 test("5. HTTP 500 failure replaces hold with one 'failed' ledger row and releases hold", async () => {
@@ -213,11 +214,11 @@ test("5. HTTP 500 failure replaces hold with one 'failed' ledger row and release
   expect(err).toBeInstanceOf(ImagingError);
   expect((err as ImagingError).dispatched).toBe(true);
 
-  const stats = budgetStats() as { heldUsd: number; counters: { bookedFailed: number } };
+  const stats = await budgetStats() as { heldUsd: number; counters: { bookedFailed: number } };
   expect(stats.heldUsd).toBe(0);
   expect(stats.counters.bookedFailed).toBe(1);
 
-  const rows = spendRows();
+  const rows = await spendRows();
   expect(rows).toHaveLength(1);
   expect(rows[0].outcome).toBe("failed");
   expect(rows[0].basis).toBe("estimate");
@@ -242,7 +243,7 @@ test("6. non-ImagingError mid-call releases hold so no hold outlives request", a
   }
   expect(err).toBeDefined();
 
-  const stats = budgetStats() as { heldUsd: number };
+  const stats = await budgetStats() as { heldUsd: number };
   expect(stats.heldUsd).toBe(0);
 });
 
@@ -261,11 +262,11 @@ test("7. GUARD: three sequential awaited $0.36 calls under $1 ceiling admit two 
 
   const res1 = await generate({ prompt: "probe 1", aspect: "16:9", count: 8 });
   expect(res1.images.length).toBe(8);
-  expect(budgetStats().spentUsd).toBeCloseTo(0.36, 6);
+  expect((await budgetStats()).spentUsd).toBeCloseTo(0.36, 6);
 
   const res2 = await generate({ prompt: "probe 2", aspect: "16:9", count: 8 });
   expect(res2.images.length).toBe(8);
-  expect(budgetStats().spentUsd).toBeCloseTo(0.72, 6);
+  expect((await budgetStats()).spentUsd).toBeCloseTo(0.72, 6);
 
   let err3: unknown;
   try {
@@ -283,7 +284,7 @@ test("7. GUARD: three sequential awaited $0.36 calls under $1 ceiling admit two 
     `exceed the $1.00 ceiling (${BUDGET_VAR}). Refused before any vendor was ` +
     `called; wait for the window to roll over or raise the ceiling.`;
   expect((err3 as ImagingError).message).toBe(expectedMessage);
-  expect(budgetStats().counters.refusals).toBe(1);
+  expect((await budgetStats()).counters.refusals).toBe(1);
 });
 
 test("8. recognize() under hold takes hold at estimate and releases at settle with counters.unpriced +1", async () => {
@@ -311,14 +312,15 @@ test("8. recognize() under hold takes hold at estimate and releases at settle wi
     image: { base64: "AQID", mime: "image/png" },
   });
 
-  const heldWhileInFlight = budgetStats().heldUsd;
+  const heldWhileInFlight = (await budgetStats()).heldUsd;
   expect(heldWhileInFlight).toBeCloseTo(0.045, 6);
 
+  await expect.poll(() => pendingResolvers.length).toBe(1); // the vendor is called after the hold commits
   for (const r of pendingResolvers) r();
   const rec = await recPromise;
   expect(rec.text).toBe("Recognized plate description");
 
-  const stats = budgetStats() as { heldUsd: number; spentUsd: number; counters: { unpriced: number; booked: number } };
+  const stats = await budgetStats() as { heldUsd: number; spentUsd: number; counters: { unpriced: number; booked: number } };
   expect(stats.heldUsd).toBe(0);
   expect(stats.spentUsd).toBe(0);
   expect(stats.counters.unpriced).toBe(1);
@@ -408,7 +410,7 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
     const pending = generate({ prompt: "probe refused", aspect: "16:9", count: 1 }).catch((e) => e);
     await until(() => chain.leonardoPost === 1, "the Leonardo POST was dispatched");
 
-    const s = budgetStats();
+    const s = await budgetStats();
     console.log(`[holds] google refused, leonardo in flight -> held=$${s.heldUsd} spent=$${s.spentUsd}`);
     expect(chain.google).toBe(1);
     // The refused call is booked (it ran); the call now in flight is HELD.
@@ -417,7 +419,7 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
 
     chain.releasePost!(noGeneration());
     await pending;
-    expect(budgetStats().heldUsd).toBe(0);
+    expect((await budgetStats()).heldUsd).toBe(0);
   });
 
   test("10. (critic 2) room for one estimate: the refusal is booked and the re-route is over-budget, never dispatched", async () => {
@@ -431,7 +433,7 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
     } catch (e) {
       err = e;
     }
-    const s = budgetStats();
+    const s = await budgetStats();
     console.log(
       `[holds] ceiling=$${s.ceilingUsd} -> kind=${(err as ImagingError)?.kind} leonardoPost=${chain.leonardoPost} spent=$${s.spentUsd}`,
     );
@@ -443,7 +445,7 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
     expect(s.spentUsd).toBeLessThanOrEqual(s.ceilingUsd);
     expect(s.heldUsd).toBe(0);
     expect(s.counters.refusals).toBe(1);
-    expect(spendRows().map((r) => `${r.provider}:${r.outcome}`)).toEqual(["google:failed"]);
+    expect((await spendRows()).map((r) => `${r.provider}:${r.outcome}`)).toEqual(["google:failed"]);
   });
 
   test("11. (critic 3) refused → re-routed → served: one failed row, one served row, no hold left", async () => {
@@ -453,8 +455,8 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
     expect(served.provenance.provider).toBe("leonardo");
     expect(served.provenance.reroutedFrom?.map((s) => `${s.provider}:${s.why}`)).toContain("google:refused");
 
-    const s = budgetStats();
-    const rows = spendRows();
+    const s = await budgetStats();
+    const rows = await spendRows();
     console.log(`[holds] refused→served -> rows=${rows.map((r) => `${r.provider}:${r.outcome}`)} held=$${s.heldUsd}`);
     expect(s.heldUsd).toBe(0);
     expect(rows.map((r) => `${r.provider}:${r.outcome}`)).toEqual(["google:failed", "leonardo:served"]);
@@ -476,7 +478,7 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
     } catch (e) {
       err = e;
     }
-    const s = budgetStats();
+    const s = await budgetStats();
     console.log(`[holds] refused then no keys -> kind=${(err as ImagingError)?.kind} refusals=${s.counters.refusals}`);
     expect(err).toBeInstanceOf(ImagingError);
     expect((err as ImagingError).kind).not.toBe("over-budget");
@@ -484,6 +486,6 @@ test.describe("a billed refusal re-reserves before the next vendor", () => {
     expect(chain.leonardoPost).toBe(0);
     expect(s.heldUsd).toBe(0);
     expect(s.counters.refusals).toBe(0);
-    expect(spendRows().map((r) => `${r.provider}:${r.outcome}`)).toEqual(["google:failed"]);
+    expect((await spendRows()).map((r) => `${r.provider}:${r.outcome}`)).toEqual(["google:failed"]);
   });
 });

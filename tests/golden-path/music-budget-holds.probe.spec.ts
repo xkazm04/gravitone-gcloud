@@ -95,7 +95,7 @@ test("(critic 5) two concurrent renders at 60% of the ceiling each: one vendor c
 
   const served = await first;
   expect(served.audio.b64.length).toBeGreaterThan(0);
-  const s = musicBudgetStats();
+  const s = await musicBudgetStats();
   expect(s.spentSeconds).toBe(PLAN_S);
   expect(s.spentSeconds).toBeLessThanOrEqual(s.ceilingSeconds);
   expect(s.counters.refusals).toBe(1);
@@ -109,7 +109,7 @@ test("(critic 6) a render in flight is held; a 401 releases it with nothing book
   const pending = composeMusic(PLAN).catch((e) => e);
   await until(() => fetches === 1, "the render reached the vendor");
 
-  const during = musicBudgetStats();
+  const during = await musicBudgetStats();
   console.log(`[music-holds] in flight -> held=${during.heldSeconds}s spent=${during.spentSeconds}s`);
   expect(during.heldSeconds).toBe(PLAN_S);
   expect(during.spentSeconds).toBe(0);
@@ -121,12 +121,12 @@ test("(critic 6) a render in flight is held; a 401 releases it with nothing book
   expect(err).toBeInstanceOf(MusicError);
   expect((err as MusicError).kind).toBe("no-key");
 
-  const after = musicBudgetStats();
+  const after = await musicBudgetStats();
   expect(after.heldSeconds).toBe(0);
   expect(after.spentSeconds).toBe(0);
   expect(after.counters.booked).toBe(0);
   expect(after.counters.unmetered).toBe(0);
-  expect(musicSpendRows()).toHaveLength(0);
+  expect(await musicSpendRows()).toHaveLength(0);
 });
 
 test("(critic 6) a render that times out mid-body books one failed row and holds nothing afterwards", async () => {
@@ -145,14 +145,14 @@ test("(critic 6) a render that times out mid-body books one failed row and holds
 
   const pending = composeMusic(PLAN, 300).catch((e) => e);
   await until(() => fetches === 1, "the render reached the vendor");
-  expect(musicBudgetStats().heldSeconds).toBe(PLAN_S);
+  expect((await musicBudgetStats()).heldSeconds).toBe(PLAN_S);
 
   const err = await pending;
   expect(err).toBeInstanceOf(MusicError);
   expect((err as MusicError).kind).toBe("timeout");
 
-  const s = musicBudgetStats();
-  const rows = musicSpendRows();
+  const s = await musicBudgetStats();
+  const rows = await musicSpendRows();
   console.log(`[music-holds] timeout -> rows=${rows.map((r) => `${r.seconds}s:${r.outcome}`)} held=${s.heldSeconds}s`);
   expect(s.heldSeconds).toBe(0);
   expect(rows).toHaveLength(1);
@@ -174,7 +174,7 @@ test("a released hold frees its room: after a 401, the next render is admitted",
   await until(() => fetches === 2, "the second render reached the vendor");
   held[1](AUDIO());
   await second;
-  const s = musicBudgetStats();
+  const s = await musicBudgetStats();
   expect(s.spentSeconds).toBe(PLAN_S);
   expect(s.heldSeconds).toBe(0);
   expect(s.counters.refusals).toBe(0);
@@ -191,7 +191,7 @@ test("a free plan draft holds nothing and books nothing, and a ceiling of 0 stil
   const plan = await draftPlan({ prompt: "probe" });
   expect(plan.chunks).toEqual([]);
   expect(fetches).toBe(1);
-  const s = musicBudgetStats();
+  const s = await musicBudgetStats();
   expect(s.heldSeconds).toBe(0);
   expect(s.counters.booked).toBe(0);
   // Zero seconds is a declared-free call, not an unmetered one.

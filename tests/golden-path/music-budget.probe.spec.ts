@@ -73,8 +73,8 @@ function stubFetch(answer: () => Promise<Response>) {
   }) as typeof fetch;
 }
 
-const book = (seconds: number | undefined, at?: number, outcome: "served" | "failed" = "served") =>
-  recordMusicSpend({ seconds, op: "generate", model: "music_v2", outcome, at });
+const book = async (seconds: number | undefined, at?: number, outcome: "served" | "failed" = "served") =>
+  await recordMusicSpend({ seconds, op: "generate", model: "music_v2", outcome, at });
 
 test.beforeEach(() => {
   __resetMusicBudget();
@@ -172,7 +172,7 @@ test("gate: under the ceiling the call proceeds and reaches the key check", asyn
 test("gate: over the ceiling the call is REFUSED before any vendor request", async () => {
   process.env[MUSIC_BUDGET_VAR] = "20";
   process.env[MUSIC_KEY_VAR] = "probe-key-not-a-real-one";
-  book(10); // 10s already rendered; this cue asks 13 more -> 23 > 20.
+  await book(10); // 10s already rendered; this cue asks 13 more -> 23 > 20.
 
   let err: unknown;
   try {
@@ -192,12 +192,12 @@ test("gate: over the ceiling the call is REFUSED before any vendor request", asy
   expect(me.message).toContain("SECONDS OF AUDIO");
 });
 
-test("gate: the refusal is COUNTED — a ceiling with no refusal count is unreadable", () => {
+test("gate: the refusal is COUNTED — a ceiling with no refusal count is unreadable", async () => {
   process.env[MUSIC_BUDGET_VAR] = "10";
-  expect(musicBudgetStats().counters.refusals).toBe(0);
-  expect(() => assertWithinMusicBudget(13)).toThrow(MusicError);
-  expect(() => assertWithinMusicBudget(13)).toThrow(MusicError);
-  const c = musicBudgetStats().counters;
+  expect((await musicBudgetStats()).counters.refusals).toBe(0);
+  await expect(assertWithinMusicBudget(13)).rejects.toThrow(MusicError);
+  await expect(assertWithinMusicBudget(13)).rejects.toThrow(MusicError);
+  const c = (await musicBudgetStats()).counters;
   console.log(`[music-budget] refusals=${c.refusals} refusedSeconds=${c.refusedSeconds}`);
   expect(c.refusals).toBe(2);
   expect(c.refusedSeconds).toBe(26);
@@ -205,37 +205,37 @@ test("gate: the refusal is COUNTED — a ceiling with no refusal count is unread
   // spending path; this is the number that tells them apart.
 });
 
-test("default ceiling is a real bound, not unlimited", () => {
+test("default ceiling is a real bound, not unlimited", async () => {
   delete process.env[MUSIC_BUDGET_VAR];
   expect(musicCeilingSeconds()).toBe(600);
-  book(600);
-  expect(() => assertWithinMusicBudget(13)).toThrow(MusicError);
+  await book(600);
+  await expect(assertWithinMusicBudget(13)).rejects.toThrow(MusicError);
 });
 
-test("a ceiling of 0 means render nothing — not `disabled`", () => {
+test("a ceiling of 0 means render nothing — not `disabled`", async () => {
   process.env[MUSIC_BUDGET_VAR] = "0";
   expect(musicCeilingSeconds()).toBe(0);
-  expect(() => assertWithinMusicBudget(1)).toThrow(MusicError);
+  await expect(assertWithinMusicBudget(1)).rejects.toThrow(MusicError);
   // …and a free call still passes, because it asks for no audio at all.
-  expect(() => assertWithinMusicBudget(0)).not.toThrow();
+  await expect(assertWithinMusicBudget(0)).resolves.toBeUndefined();
 });
 
 // ── The window rolls over, observably ───────────────────────────────────────
 
-test("window: audio older than the window no longer counts, and the reset is announced", () => {
+test("window: audio older than the window no longer counts, and the reset is announced", async () => {
   process.env[MUSIC_BUDGET_VAR] = "100";
   process.env[MUSIC_WINDOW_VAR] = "60000"; // 1-minute window
   const t0 = 5_000_000;
 
-  book(90, t0);
-  expect(currentMusicSeconds(t0)).toBe(90);
-  expect(() => assertWithinMusicBudget(20, t0)).toThrow(MusicError);
+  await book(90, t0);
+  expect(await currentMusicSeconds(t0)).toBe(90);
+  await expect(assertWithinMusicBudget(20, t0)).rejects.toThrow(MusicError);
 
   const later = t0 + 61_000;
-  expect(currentMusicSeconds(later)).toBe(0);
-  expect(() => assertWithinMusicBudget(20, later)).not.toThrow();
+  expect(await currentMusicSeconds(later)).toBe(0);
+  await expect(assertWithinMusicBudget(20, later)).resolves.toBeUndefined();
 
-  const c = musicBudgetStats(later).counters;
+  const c = (await musicBudgetStats(later)).counters;
   console.log(`[music-budget] evicted=${c.evicted} evictedSeconds=${c.evictedSeconds}`);
   // A total that fell without an eviction recorded is a bug, not a roll — this
   // is the field that makes the difference legible.
@@ -244,11 +244,11 @@ test("window: audio older than the window no longer counts, and the reset is ann
   expect(c.lastEvictionAt).not.toBeNull();
 });
 
-test("stats hand out the window boundary WITH the total", () => {
+test("stats hand out the window boundary WITH the total", async () => {
   process.env[MUSIC_BUDGET_VAR] = "100";
   const now = 9_000_000;
-  book(30, now);
-  const s = musicBudgetStats(now);
+  await book(30, now);
+  const s = await musicBudgetStats(now);
   expect(s.spentSeconds).toBe(30);
   expect(s.remainingSeconds).toBe(70);
   expect(s.windowEnd - s.windowStart).toBe(s.windowMs);
@@ -267,7 +267,7 @@ test("a refusal is not booked; a timeout is — the vendor rendered one of them"
   // A 451 refusal: the model declined, no renderer ran, nothing to bill.
   stubFetch(async () => new Response("declined", { status: 451 }));
   await expect(composeMusic(PLAN)).rejects.toThrow(MusicError);
-  expect(currentMusicSeconds()).toBe(0);
+  expect(await currentMusicSeconds()).toBe(0);
 
   // A body that starts and stalls: the render RAN and the vendor will charge.
   globalThis.fetch = ((_u: string, init?: RequestInit) => {
@@ -283,29 +283,29 @@ test("a refusal is not booked; a timeout is — the vendor rendered one of them"
   }) as unknown as typeof fetch;
   await expect(composeMusic(PLAN, 300)).rejects.toThrow(MusicError);
   console.log(`[music-budget] after stall: spent=${currentMusicSeconds()}s`);
-  expect(currentMusicSeconds()).toBe(13);
-  const c = musicBudgetStats().counters;
+  expect(await currentMusicSeconds()).toBe(13);
+  const c = (await musicBudgetStats()).counters;
   expect(c.bookedFailed).toBe(1);
   expect(c.failedSeconds).toBe(13);
 });
 
-test("an unmetered booking is counted, not silently dropped", () => {
-  book(undefined);
-  book(0);
-  book(Number.NaN);
-  expect(currentMusicSeconds()).toBe(0);
-  const c = musicBudgetStats().counters;
+test("an unmetered booking is counted, not silently dropped", async () => {
+  await book(undefined);
+  await book(0);
+  await book(Number.NaN);
+  expect(await currentMusicSeconds()).toBe(0);
+  const c = (await musicBudgetStats()).counters;
   console.log(`[music-budget] unmetered=${c.unmetered}`);
   expect(c.unmetered).toBe(3);
   expect(c.booked).toBe(0);
 });
 
-test("the ledger answers by axis, in the same vocabulary the log line uses", () => {
+test("the ledger answers by axis, in the same vocabulary the log line uses", async () => {
   const now = 7_000_000;
-  book(13, now);
-  book(5, now, "failed");
-  recordMusicSpend({ seconds: 8, op: "sfx", model: "eleven_text_to_sound_v2", outcome: "served", at: now });
-  const a = musicSpendByAxis(now);
+  await book(13, now);
+  await book(5, now, "failed");
+  await recordMusicSpend({ seconds: 8, op: "sfx", model: "eleven_text_to_sound_v2", outcome: "served", at: now });
+  const a = await musicSpendByAxis(now);
   console.log(`[music-budget] byOp=${JSON.stringify(a.byOp)} unpricedSeconds=${a.unpricedSeconds}`);
   expect(a.totalSeconds).toBe(26);
   expect(a.byOp.generate).toBe(18);
@@ -314,8 +314,8 @@ test("the ledger answers by axis, in the same vocabulary the log line uses", () 
   // Every row is unpriced today, and the ledger says so rather than letting a
   // duration be read as a bill.
   expect(a.unpricedSeconds).toBe(26);
-  expect(musicSpendRows(now)).toHaveLength(3);
-  expect(musicSpendRows(now).every((r) => r.usd === undefined)).toBe(true);
+  expect(await musicSpendRows(now)).toHaveLength(3);
+  expect((await musicSpendRows(now)).every((r) => r.usd === undefined)).toBe(true);
 });
 
 // ── What the SURFACE may say about the cost, before and after the click ─────

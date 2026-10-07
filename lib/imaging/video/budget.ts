@@ -8,7 +8,9 @@
 // the ceiling is refused with nothing dispatched and nothing billed.
 //
 // In-memory and per-process, exactly as imaging's ledger is; the window
-// survives nothing but this process.
+// survives nothing but this process. Every export that touches the ledger
+// returns a promise (card IMG-A stage 3a): the store may be one another process
+// shares, behind an async lock.
 //
 // THE LEDGER HAS A READ SIDE (2026-10-07, card IMG-A stage 2). It used to
 // export reserve, settle, release and a stats total, and nothing else: the class
@@ -80,41 +82,41 @@ export interface VideoHold {
 
 /** Hold `usd` for a clip about to be dispatched. Throws `over-budget` (402)
  *  when the hold would cross the ceiling — before any vendor is touched. */
-export function reserveVideo(usd: number, now: number = Date.now()): VideoHold {
-  const h = meter.reserve(usd, now);
+export async function reserveVideo(usd: number, now: number = Date.now()): Promise<VideoHold> {
+  const h = await meter.reserve(usd, now);
   return { id: h.id, amount: h.amount };
 }
 
 /** Drop a hold without booking: the clip never reached the vendor. */
-export function releaseVideo(hold: VideoHold): void {
-  meter.release(hold);
+export function releaseVideo(hold: VideoHold): Promise<void> {
+  return meter.release(hold);
 }
 
 /** Replace the hold with what happened — one row, or several. An unpriced row
  *  books nothing and is counted (lib/spend/meter.ts: unpriced is not free). The
  *  hold is gone afterwards even if a row throws while being read. */
-export function settleVideo(hold: VideoHold, entries: VideoSpendEntry | VideoSpendEntry[]): void {
-  meter.settle(hold, entries);
+export function settleVideo(hold: VideoHold, entries: VideoSpendEntry | VideoSpendEntry[]): Promise<void> {
+  return meter.settle(hold, entries);
 }
 
 /** Book a clip with no hold to settle. The clip route always holds first; this
  *  is the kernel's `book`, for a cost learned after its hold is gone. */
-export function recordVideoSpend(entry: VideoSpendEntry): void {
-  meter.book(entry);
+export function recordVideoSpend(entry: VideoSpendEntry): Promise<void> {
+  return meter.book(entry);
 }
 
-export function videoBudgetStats(now: number = Date.now()): MeterStats {
+export function videoBudgetStats(now: number = Date.now()): Promise<MeterStats> {
   return meter.stats(now);
 }
 
 /** The window split by project, provider, model and outcome. `unattributed` is
  *  the honesty field: spend on rows that named no project. */
-export function videoSpendByAxis(now: number = Date.now()): MeterAxes {
+export function videoSpendByAxis(now: number = Date.now()): Promise<MeterAxes> {
   return meter.byAxis(now);
 }
 
 /** The window's rows, oldest first, as copies. */
-export function videoSpendRows(now: number = Date.now()): MeterRow<VideoAxes, CostBasis>[] {
+export function videoSpendRows(now: number = Date.now()): Promise<MeterRow<VideoAxes, CostBasis>[]> {
   return meter.rows(now);
 }
 

@@ -13,13 +13,7 @@
 //   3. When the window will age out enough booked spend to afford the full request.
 //   4. Earliest expiry for Retry-After headers on 402 responses.
 
-import {
-  budgetCeilingUsd,
-  budgetWindowMs,
-  currentSpendUsd,
-  heldUsd,
-  spendRows,
-} from "./budget";
+import { budgetStats, budgetWindowMs, seenSpendRows, spendRows } from "./budget";
 import { estimatePerImage, type PriceQuote } from "./pricing";
 
 export type BudgetVerdict = "fits" | "partial" | "blocked" | "unknown";
@@ -44,13 +38,13 @@ const roundMoney = (v: number): number => Math.round(v * 10000) / 10000;
 /**
  * Project affordability and earliest resumption time for a planned batch of images.
  */
-export function budgetQuote(opts?: BudgetQuoteOptions): BudgetQuote {
+export async function budgetQuote(opts?: BudgetQuoteOptions): Promise<BudgetQuote> {
   const images = Math.max(1, opts?.images ?? 1);
   const now = opts?.now ?? Date.now();
 
-  const ceiling = budgetCeilingUsd();
-  const spent = currentSpendUsd(now);
-  const held = heldUsd();
+  // Spent and held from ONE read of the ledger, so a reservation landing
+  // between two reads cannot make the remainder describe no moment at all.
+  const { ceilingUsd: ceiling, spentUsd: spent, heldUsd: held } = await budgetStats(now);
   const remainingUsd = roundMoney(Math.max(0, ceiling - spent - held));
 
   const pricing = opts?.overrideEstimate ?? estimatePerImage();
@@ -85,7 +79,7 @@ export function budgetQuote(opts?: BudgetQuoteOptions): BudgetQuote {
 
   // Calculate earliest expiry from spendRows where remainingUsd + expiringUsd >= estimateUsd
   const windowMs = budgetWindowMs();
-  const rows = spendRows(now)
+  const rows = (await spendRows(now))
     .map((r) => ({ usd: r.usd, expiresAt: r.at + windowMs }))
     .filter((r) => r.expiresAt > now)
     .sort((a, b) => a.expiresAt - b.expiresAt);
@@ -113,10 +107,16 @@ export function budgetQuote(opts?: BudgetQuoteOptions): BudgetQuote {
 /**
  * The earliest timestamp when any booked spend row in the window expires.
  * Used for 402 over-budget Retry-After headers.
+ *
+ * Synchronous, because its caller (lib/imaging/api.ts, the error mapper) is.
+ * It reads the rows as this process last saw them rather than waiting for the
+ * ledger's lock: it answers a refusal, and the refusal has just read the
+ * ledger. Rows already past the window are filtered here, so an unpruned view
+ * gives the same answer.
  */
 export function earliestExpiry(now: number = Date.now()): number {
   const windowMs = budgetWindowMs();
-  const rows = spendRows(now)
+  const rows = seenSpendRows()
     .map((r) => r.at + windowMs)
     .filter((t) => t > now);
   if (rows.length === 0) return now + windowMs;

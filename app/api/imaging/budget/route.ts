@@ -19,10 +19,10 @@ export async function GET(req: Request): Promise<Response> {
   const parsed = imagesParam ? parseInt(imagesParam, 10) : undefined;
   const count = Number.isFinite(parsed) && parsed! > 0 ? parsed! : 1;
 
-  const stats = budgetStats();
+  const stats = await budgetStats();
   const pricing = estimatePerImage();
   const perImageUsd = typeof pricing.usd === "number" && Number.isFinite(pricing.usd) ? pricing.usd : null;
-  const quote = budgetQuote({ images: count });
+  const quote = await budgetQuote({ images: count });
 
   return Response.json({
     ceilingUsd: stats.ceilingUsd,

@@ -148,11 +148,11 @@ export interface UnreachedTop {
  * window-level view the trail cannot give, because no single call departed
  * from the plan.
  */
-export function unreachedPlanTops(
+export async function unreachedPlanTops(
   now: number = Date.now(),
   env: ImagingEnv = currentEnv(),
-): UnreachedTop[] {
-  const reach = reachByCapability(now);
+): Promise<UnreachedTop[]> {
+  const reach = await reachByCapability(now);
   const out: UnreachedTop[] = [];
   for (const [cap, servedBy] of Object.entries(reach)) {
     const plan = PLAN[env][cap as Capability];
@@ -312,7 +312,7 @@ async function run<T extends { provenance: Provenance }>(
     // An `over-budget` throw here lands in the same catch/log path as any other failure
     // and never reroutes. A billed failure spends this hold; `walk` then takes the
     // next one just before it calls another vendor (see "a billed failure spent the hold").
-    hold = reserve(estimatePendingUsd(pendingImages));
+    hold = await reserve(estimatePendingUsd(pendingImages));
     return await walk();
   } catch (e) {
     const err = e instanceof ImagingError ? e : null;
@@ -328,7 +328,7 @@ async function run<T extends { provenance: Provenance }>(
     });
     throw e;
   } finally {
-    if (hold) release(hold);
+    if (hold) await release(hold);
   }
 
   async function walk(): Promise<T> {
@@ -391,7 +391,7 @@ async function run<T extends { provenance: Provenance }>(
       // it kept from being called goes in `trail` like every other elimination.
       if (!hold) {
         try {
-          hold = reserve(estimatePendingUsd(pendingImages));
+          hold = await reserve(estimatePendingUsd(pendingImages));
         } catch (e) {
           trail.push({ provider: id, why: e instanceof ImagingError ? e.kind : "failed" });
           throw e;
@@ -409,7 +409,7 @@ async function run<T extends { provenance: Provenance }>(
         // Settle the budget hold against the window. Prefer the figure the call actually
         // carried (vendor-reported or estimated); fall back to the pre-call
         // estimate so an unreported cost still counts toward the next ceiling.
-        settle(current, {
+        await settle(current, {
           usd: served.provenance.costUsd ?? standInUsd(),
           cap,
           provider: served.provenance.provider,
@@ -455,7 +455,7 @@ async function run<T extends { provenance: Provenance }>(
         // process, and every one of the three is handled by a `continue` above
         // that does not reach this catch at all.
         if (billedOnFailure(err)) {
-          settle(current, {
+          await settle(current, {
             usd: standInUsd(),
             cap,
             provider: id,

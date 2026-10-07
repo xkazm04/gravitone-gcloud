@@ -95,12 +95,12 @@ const imaging: MeterUnderTest = {
   defaultWindowMs: 3_600_000,
   attributionAxis: "cap",
   reset: __resetBudget,
-  reserve: (amount, now) => reserve(amount, now),
-  release: (h) => release(h as Hold),
-  settle: (h, rows) => settle(h as Hold, rows.map(entry)),
-  book: (r) => recordSpend(entry(r)),
-  stats: (now) => {
-    const s = budgetStats(now);
+  reserve: async (amount, now) => await reserve(amount, now),
+  release: async (h) => await release(h as Hold),
+  settle: async (h, rows) => await settle(h as Hold, rows.map(entry)),
+  book: async (r) => await recordSpend(entry(r)),
+  stats: async (now) => {
+    const s = await budgetStats(now);
     const c = s.counters;
     return {
       ceiling: s.ceilingUsd,
@@ -126,8 +126,8 @@ const imaging: MeterUnderTest = {
       },
     };
   },
-  byAxis: (now) => {
-    const a = spendByAxis(now);
+  byAxis: async (now) => {
+    const a = await spendByAxis(now);
     return {
       total: a.totalUsd,
       served: a.byOutcome.served,
@@ -136,13 +136,13 @@ const imaging: MeterUnderTest = {
       axes: { cap: a.byCapability, provider: a.byProvider, model: a.byModel },
     };
   },
-  rows: (now) => spendRows(now).map((r) => ({ at: r.at, amount: r.usd, outcome: r.outcome })),
-  tamper: () => {
-    const s = budgetStats();
+  rows: async (now) => (await spendRows(now)).map((r) => ({ at: r.at, amount: r.usd, outcome: r.outcome })),
+  tamper: async () => {
+    const s = await budgetStats();
     s.counters.booked = 0;
     s.spentUsd = 999;
-    for (const r of spendRows() as SpendRow[]) r.usd = 999;
-    const a = spendByAxis();
+    for (const r of await spendRows() as SpendRow[]) r.usd = 999;
+    const a = await spendByAxis();
     a.totalUsd = 999;
     for (const axis of [a.byCapability, a.byProvider, a.byModel, a.byOutcome] as Record<string, number>[])
       for (const k of Object.keys(axis)) axis[k] = 999;
@@ -179,12 +179,12 @@ meterConformance({
   defaultWindowMs: 3_600_000,
   attributionAxis: "op",
   reset: __resetMusicBudget,
-  reserve: (amount, now) => reserveMusic(amount, now),
-  release: (h) => releaseMusic(h as MusicHold),
-  settle: (h, rows) => settleMusic(h as MusicHold, rows.map(musicEntry)),
-  book: (r) => recordMusicSpend(musicEntry(r)),
-  stats: (now) => {
-    const s = musicBudgetStats(now);
+  reserve: async (amount, now) => await reserveMusic(amount, now),
+  release: async (h) => await releaseMusic(h as MusicHold),
+  settle: async (h, rows) => await settleMusic(h as MusicHold, rows.map(musicEntry)),
+  book: async (r) => await recordMusicSpend(musicEntry(r)),
+  stats: async (now) => {
+    const s = await musicBudgetStats(now);
     const c = s.counters;
     return {
       ceiling: s.ceilingSeconds,
@@ -210,8 +210,8 @@ meterConformance({
       },
     };
   },
-  byAxis: (now) => {
-    const a = musicSpendByAxis(now);
+  byAxis: async (now) => {
+    const a = await musicSpendByAxis(now);
     return {
       total: a.totalSeconds,
       served: a.byOutcome.served,
@@ -220,13 +220,13 @@ meterConformance({
       axes: { op: a.byOp, model: a.byModel },
     };
   },
-  rows: (now) => musicSpendRows(now).map((r) => ({ at: r.at, amount: r.seconds, outcome: r.outcome })),
-  tamper: () => {
-    const s = musicBudgetStats();
+  rows: async (now) => (await musicSpendRows(now)).map((r) => ({ at: r.at, amount: r.seconds, outcome: r.outcome })),
+  tamper: async () => {
+    const s = await musicBudgetStats();
     s.counters.booked = 0;
     s.spentSeconds = 999;
-    for (const r of musicSpendRows() as MusicSpendRow[]) r.seconds = 999;
-    const a = musicSpendByAxis();
+    for (const r of await musicSpendRows() as MusicSpendRow[]) r.seconds = 999;
+    const a = await musicSpendByAxis();
     a.totalSeconds = 999;
     for (const axis of [a.byOp, a.byModel, a.byOutcome] as Record<string, number>[])
       for (const k of Object.keys(axis)) axis[k] = 999;
@@ -261,28 +261,28 @@ meterConformance({
   defaultWindowMs: 3_600_000,
   attributionAxis: "project",
   reset: __resetVideoBudget,
-  reserve: (amount, now) => reserveVideo(amount, now),
-  release: (h) => releaseVideo(h as VideoHold),
-  settle: (h, rows) => settleVideo(h as VideoHold, rows.map(videoEntry)),
-  book: (r) => recordVideoSpend(videoEntry(r)),
-  stats: (now) => {
-    const s = videoBudgetStats(now);
+  reserve: async (amount, now) => await reserveVideo(amount, now),
+  release: async (h) => await releaseVideo(h as VideoHold),
+  settle: async (h, rows) => await settleVideo(h as VideoHold, rows.map(videoEntry)),
+  book: async (r) => await recordVideoSpend(videoEntry(r)),
+  stats: async (now) => {
+    const s = await videoBudgetStats(now);
     return { ...s, counters: { ...s.counters } };
   },
-  byAxis: (now) => {
-    const a = videoSpendByAxis(now);
+  byAxis: async (now) => {
+    const a = await videoSpendByAxis(now);
     return { total: a.total, served: a.byOutcome.served, failed: a.byOutcome.failed, unattributed: a.unattributed, axes: a.byAxis };
   },
-  rows: (now) => videoSpendRows(now).map((r) => ({ at: r.at, amount: r.amount, outcome: r.outcome })),
-  tamper: () => {
-    const s = videoBudgetStats();
+  rows: async (now) => (await videoSpendRows(now)).map((r) => ({ at: r.at, amount: r.amount, outcome: r.outcome })),
+  tamper: async () => {
+    const s = await videoBudgetStats();
     s.counters.booked = 0;
     s.spent = 999;
-    for (const r of videoSpendRows()) {
+    for (const r of await videoSpendRows()) {
       r.amount = 999;
       r.axes.project = "tampered";
     }
-    const a = videoSpendByAxis();
+    const a = await videoSpendByAxis();
     a.total = 999;
     a.byOutcome.served = 999;
     for (const axis of Object.values(a.byAxis)) for (const k of Object.keys(axis)) axis[k] = 999;
@@ -335,24 +335,24 @@ meterConformance({
   release: (h) => kernel.release(h),
   settle: (h, rows) => kernel.settle(h, rows),
   book: (r) => kernel.book(r),
-  stats: (now) => {
-    const s = kernel.stats(now);
+  stats: async (now) => {
+    const s = await kernel.stats(now);
     return { ...s, counters: { ...s.counters } };
   },
-  byAxis: (now) => {
-    const a = kernel.byAxis(now);
+  byAxis: async (now) => {
+    const a = await kernel.byAxis(now);
     return { total: a.total, served: a.byOutcome.served, failed: a.byOutcome.failed, unattributed: a.unattributed, axes: a.byAxis };
   },
   rows: (now) => kernel.rows(now),
-  tamper: () => {
-    const s = kernel.stats();
+  tamper: async () => {
+    const s = await kernel.stats();
     s.counters.booked = 0;
     s.spent = 999;
-    for (const r of kernel.rows()) {
+    for (const r of await kernel.rows()) {
       r.amount = 999;
       r.axes.cap = "tampered";
     }
-    const a = kernel.byAxis();
+    const a = await kernel.byAxis();
     a.total = 999;
     a.byOutcome.served = 999;
     for (const axis of Object.values(a.byAxis)) for (const k of Object.keys(axis)) axis[k] = 999;
@@ -406,6 +406,6 @@ test.describe("imaging chokepoint", () => {
     expect(fetches).toBe(0);
     expect(err).toBeInstanceOf(ImagingError);
     expect((err as ImagingError).kind).toBe("invalid-request");
-    expect(budgetStats().heldUsd).toBe(0);
+    expect((await budgetStats()).heldUsd).toBe(0);
   });
 });

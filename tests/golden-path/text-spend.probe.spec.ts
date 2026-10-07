@@ -67,14 +67,14 @@ test("card case 4: a vendor-reported turn books one row; an unpriced google turn
     const out = await reason({ prompt: "# SPEND\n", turn: "edit-plan", schema: SCHEMA });
     expect(out.provenance.provider).toBe("claude-cli");
   });
-  const rows = textSpendRows();
+  const rows = await textSpendRows();
   expect(rows).toHaveLength(1);
   expect(rows[0]).toMatchObject({ basis: "vendor", amount: 0.31, outcome: "served" });
   expect(rows[0]!.axes.turn).toBe("edit-plan");
   expect(rows[0]!.axes.provider).toBe("claude-cli");
   expect(rows[0]!.axes.model).toBeTruthy();
-  expect(textSpendByAxis().byAxis.turn).toEqual({ "edit-plan": 0.31 });
-  expect(textSpendStats().counters.unpriced).toBe(0);
+  expect((await textSpendByAxis()).byAxis.turn).toEqual({ "edit-plan": 0.31 });
+  expect((await textSpendStats()).counters.unpriced).toBe(0);
 
   process.env.GOOGLE_AI_API_KEY = "probe-google-key-0123456789";
   const restore = stubGoogle();
@@ -85,22 +85,22 @@ test("card case 4: a vendor-reported turn books one row; an unpriced google turn
   } finally {
     restore();
   }
-  expect(textSpendRows(), "an unpriced turn wrote a row").toHaveLength(1);
-  expect(textSpendStats().counters.unpriced).toBe(1);
-  expect(textSpendStats().counters.booked).toBe(1);
+  expect(await textSpendRows(), "an unpriced turn wrote a row").toHaveLength(1);
+  expect((await textSpendStats()).counters.unpriced).toBe(1);
+  expect((await textSpendStats()).counters.booked).toBe(1);
 });
 
 test("no refusal: far past any imaging-sized ceiling, the next text turn is still served", async () => {
   for (let i = 0; i < 500; i++)
-    bookServedTurn({ turn: "edit-plan", provider: "claude-cli", model: "m", costUsd: 1000, costBasis: "vendor-reported" });
-  expect(textSpendStats().spent).toBe(500_000);
-  expect(textSpendStats().counters.refusals).toBe(0);
+    await bookServedTurn({ turn: "edit-plan", provider: "claude-cli", model: "m", costUsd: 1000, costBasis: "vendor-reported" });
+  expect((await textSpendStats()).spent).toBe(500_000);
+  expect((await textSpendStats()).counters.refusals).toBe(0);
 
   await withFakeEngine(costing(0.31), async () => {
     const out = await reason({ prompt: "# SPEND\n", turn: "edit-plan", schema: SCHEMA });
     expect(out.provenance.provider).toBe("claude-cli");
   });
-  expect(textSpendRows()).toHaveLength(501);
+  expect(await textSpendRows()).toHaveLength(501);
 
   // And the code says so: nothing under lib/text calls reserve().
   const dir = path.join(process.cwd(), "lib", "text");
@@ -111,14 +111,14 @@ test("no refusal: far past any imaging-sized ceiling, the next text turn is stil
   for (const f of walk(dir)) expect(readFileSync(f, "utf8").replace(/\/\/.*$/gm, ""), f).not.toMatch(/\breserve\s*\(/);
 });
 
-test("the class is count-only in its shape: no ceiling var, and reserve() is a loud error", () => {
+test("the class is count-only in its shape: no ceiling var, and reserve() is a loud error", async () => {
   const def = SPEND_CLASSES["text-usd"];
   expect(def.countOnly).toBe(true);
   expect(def).not.toHaveProperty("ceilingVar");
   expect(def).not.toHaveProperty("defaultCeiling");
   const m = createMeter(def, { entry: (e: { usd: number }) => ({ amount: e.usd, outcome: "served", basis: "vendor", axes: {} }) });
   expect(() => (m as unknown as { reserve(n: number): unknown }).reserve(0)).toThrow(/count-only/);
-  expect(m.stats()).not.toHaveProperty("ceiling");
+  expect(await m.stats()).not.toHaveProperty("ceiling");
 });
 
 test("a booking failure does not fail the turn", async () => {

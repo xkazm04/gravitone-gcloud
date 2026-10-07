@@ -294,7 +294,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
     // lib/text/lighttrack.ts's own contract for why it can never throw here.
     logTurn(l);
     emitLightTrack(l);
-    bookServedTurn(out.provenance);
+    await bookServedTurn(out.provenance);
     return out;
   } catch (e) {
     const err = e instanceof TextError ? e : null;
@@ -311,7 +311,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
     };
     logTurn(l);
     emitLightTrack(l);
-    bookFailedTurn(req.turn, e);
+    await bookFailedTurn(req.turn, e);
     throw e;
   }
 
@@ -482,7 +482,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
     };
     logTurn(l);
     emitLightTrack(l);
-    bookServedTurn(out.provenance);
+    await bookServedTurn(out.provenance);
     return out;
   } catch (e) {
     const err = e instanceof TextError ? e : null;
@@ -499,7 +499,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
     };
     logTurn(l);
     emitLightTrack(l);
-    bookFailedTurn(req.turn, e);
+    await bookFailedTurn(req.turn, e);
     throw e;
   }
 

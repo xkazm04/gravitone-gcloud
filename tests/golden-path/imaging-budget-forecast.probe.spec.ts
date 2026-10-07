@@ -58,8 +58,8 @@ test.afterEach(() => {
   globalThis.fetch = realFetch;
 });
 
-const book = (usd: number, at: number) =>
-  recordSpend({
+const book = async (usd: number, at: number) =>
+  await recordSpend({
     usd,
     cap: "generate",
     provider: "google",
@@ -69,15 +69,15 @@ const book = (usd: number, at: number) =>
     at,
   });
 
-test("1. budgetQuote({images: 16, now: T}) with $0.72 spent on 2 rows expiring at T+10s and T+20s", () => {
+test("1. budgetQuote({images: 16, now: T}) with $0.72 spent on 2 rows expiring at T+10s and T+20s", async () => {
   process.env[BUDGET_VAR] = "1.00";
   process.env[WINDOW_VAR] = "60000";
   const T = 1_000_000;
   // Two rows expiring at T+10s (T+10,000) and T+20s (T+20,000)
-  book(0.36, T - 50_000);
-  book(0.36, T - 40_000);
+  await book(0.36, T - 50_000);
+  await book(0.36, T - 40_000);
 
-  const quote = budgetQuote({ images: 16, now: T });
+  const quote = await budgetQuote({ images: 16, now: T });
   expect(quote.remainingUsd).toBe(0.28);
   expect(quote.estimateUsd).toBe(0.72);
   expect(quote.affordableImages).toBe(6);
@@ -85,49 +85,49 @@ test("1. budgetQuote({images: 16, now: T}) with $0.72 spent on 2 rows expiring a
   expect(quote.resumeAt).toBe(T + 20_000);
 });
 
-test("2. budgetQuote with $0.90 spent on 1 row expiring at T+60s", () => {
+test("2. budgetQuote with $0.90 spent on 1 row expiring at T+60s", async () => {
   process.env[BUDGET_VAR] = "1.00";
   process.env[WINDOW_VAR] = "120000";
   const T = 1_000_000;
-  book(0.90, T - 60_000);
+  await book(0.90, T - 60_000);
 
-  const quote = budgetQuote({ images: 16, now: T });
+  const quote = await budgetQuote({ images: 16, now: T });
   expect(quote.remainingUsd).toBe(0.10);
   expect(quote.affordableImages).toBe(2);
   expect(quote.verdict).toBe("partial");
   expect(quote.resumeAt).toBe(T + 60_000);
 });
 
-test("3. budgetQuote with $0.99 spent on 1 row expiring at T+30s", () => {
+test("3. budgetQuote with $0.99 spent on 1 row expiring at T+30s", async () => {
   process.env[BUDGET_VAR] = "1.00";
   process.env[WINDOW_VAR] = "60000";
   const T = 1_000_000;
-  book(0.99, T - 30_000);
+  await book(0.99, T - 30_000);
 
-  const quote = budgetQuote({ images: 16, now: T });
+  const quote = await budgetQuote({ images: 16, now: T });
   expect(quote.remainingUsd).toBe(0.01);
   expect(quote.affordableImages).toBe(0);
   expect(quote.verdict).toBe("blocked");
   expect(quote.resumeAt).toBe(T + 30_000);
 });
 
-test("4. budgetQuote with $0.10 spent on 1 row: fits and resumeAt is null", () => {
+test("4. budgetQuote with $0.10 spent on 1 row: fits and resumeAt is null", async () => {
   process.env[BUDGET_VAR] = "1.00";
   process.env[WINDOW_VAR] = "60000";
   const T = 1_000_000;
-  book(0.10, T - 10_000);
+  await book(0.10, T - 10_000);
 
-  const quote = budgetQuote({ images: 16, now: T });
+  const quote = await budgetQuote({ images: 16, now: T });
   expect(quote.remainingUsd).toBe(0.90);
   expect(quote.affordableImages).toBe(16);
   expect(quote.verdict).toBe("fits");
   expect(quote.resumeAt).toBeNull();
 });
 
-test("5. budgetQuote with no priced providers configured: verdict is 'unknown', estimateUsd is null, affordableImages is 16", () => {
+test("5. budgetQuote with no priced providers configured: verdict is 'unknown', estimateUsd is null, affordableImages is 16", async () => {
   process.env[BUDGET_VAR] = "1.00";
   const T = 1_000_000;
-  const quote = budgetQuote({
+  const quote = await budgetQuote({
     images: 16,
     now: T,
     overrideEstimate: { basis: "unpriced", note: "No priced providers configured" },
@@ -140,7 +140,7 @@ test("5. budgetQuote with no priced providers configured: verdict is 'unknown', 
 test("6. errorResponse(new ImagingError('budget', ...)) has HTTP status 402, code 'over-budget', retryAt, and Retry-After header", async () => {
   process.env[WINDOW_VAR] = "60000";
   const T = 1_000_000;
-  book(0.50, T - 30_000);
+  await book(0.50, T - 30_000);
 
   const err = new ImagingError("budget", "over-budget");
   const res = errorResponse(err, T);

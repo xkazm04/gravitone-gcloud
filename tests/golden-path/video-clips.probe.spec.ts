@@ -231,7 +231,7 @@ test("POST: 202 with a clip id; the record walks queued → rendering → done a
   expect(mid?.status, mid?.error ?? "").toBe("rendering");
   expect(mid?.vendorJobId).toBe("gen-fake-1");
   expect(mid?.costUsd).toBe(1.2);
-  expect(videoBudgetStats().held).toBeGreaterThan(0);
+  expect((await videoBudgetStats()).held).toBeGreaterThan(0);
   // The poll route reports the live run as live, not as interrupted.
   const polled = (await (await clipGET(get(`/api/video/clips/${clipId}`), { params: Promise.resolve({ id: clipId }) })).json()) as ClipRecord;
   expect(polled.status).toBe("rendering");
@@ -243,7 +243,7 @@ test("POST: 202 with a clip id; the record walks queued → rendering → done a
   expect(done.finishedAt).not.toBeNull();
   expect(held.calls).toEqual([body().motion]);
   // Money: the hold is gone and the vendor's figure is booked as served.
-  const s = videoBudgetStats();
+  const s = await videoBudgetStats();
   expect(s.held).toBe(0);
   expect(s.spent).toBe(1.2);
 
@@ -287,7 +287,7 @@ test("failed and refused are distinct terminal states, each with the vendor's wo
   expect(await readClipRecord(b.clipId)).toEqual(rr);
   // The failed one was charged at start and is booked as such; the refused one
   // carried no figure and books nothing — unpriced, counted, not free.
-  const s = videoBudgetStats();
+  const s = await videoBudgetStats();
   expect(s.held).toBe(0);
   expect(s.counters.bookedFailed).toBe(1);
   expect(s.counters.unpriced).toBe(1);
@@ -305,8 +305,8 @@ test("an adapter that throws closes the clip as failed and releases nothing it n
   const rec = await run.done;
   expect(rec.status).toBe("failed");
   expect(rec.error).toMatch(/socket hang up/);
-  expect(videoBudgetStats().held).toBe(0);
-  expect(videoBudgetStats().spent).toBe(0);
+  expect((await videoBudgetStats()).held).toBe(0);
+  expect((await videoBudgetStats()).spent).toBe(0);
 });
 
 test("a clip left rendering by a process that is gone reads as failed, not rendering forever", async () => {
@@ -336,7 +336,7 @@ test("over the ceiling: refused 402 BEFORE the adapter is called, nothing writte
   expect(b.message).toMatch(/Refused before the vendor was called/);
   expect(held.calls).toEqual([]);
   expect((await listClipRecords()).clips).toEqual([]);
-  expect(videoBudgetStats().counters.refusals).toBe(1);
+  expect((await videoBudgetStats()).counters.refusals).toBe(1);
 
   // And a ceiling with room for one hold admits one and refuses the next.
   process.env[VIDEO_BUDGET_VAR] = String(gateHoldUsd("kling-2-5", 5) + 0.01);
@@ -358,7 +358,7 @@ test("no key: the capability says so, and a POST is refused before anything is h
   const res = await post(body());
   expect(res.status).toBe(503);
   expect(((await res.json()) as Record<string, string>).message).toBe("No video vendor key on this server.");
-  expect(videoBudgetStats().held).toBe(0);
+  expect((await videoBudgetStats()).held).toBe(0);
 });
 
 test("bad bodies are 400 with the field named, before key or budget", async () => {

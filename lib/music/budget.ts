@@ -56,8 +56,10 @@
 // rendered. Still in memory and per process, exactly as "SERVER ONLY" above
 // says: a shared store is a store swap, and an operator's call.
 //
-// Every export kept its name and signature; the vars, the defaults and the
-// refusal sentence are the ones this file always had.
+// Every export kept its name and arguments; the vars, the defaults and the
+// refusal sentence are the ones this file always had. Since card IMG-A stage
+// 3a every export that reads or writes the ledger returns a promise: the store
+// behind the kernel may be a file another process shares, behind an async lock.
 // tests/golden-path/meter-conformance.probe.spec.ts runs the shared kit against
 // these exports.
 //
@@ -136,6 +138,14 @@ export interface MusicBudgetCounters {
   evicted: number;
   evictedSeconds: number;
   lastEvictionAt: number | null;
+  /** Holds reclaimed because their owner process died and their TTL ran out.
+   *  Never booked. Only a store shared across processes can see one. */
+  expiredHolds: number;
+  /** The seconds those reclaimed holds were reserving. */
+  expiredSeconds: number;
+  /** Settles and bookings that missed the ledger's lock and were applied by a
+   *  later transaction: late, never lost. */
+  lateWrites: number;
 }
 
 /** One greppable line, same `[music]` prefix as log.ts's call lines so a single
@@ -199,6 +209,8 @@ const meter = createMeter<MusicSpendEntry, MusicAxes, MusicCostBasis>(CLASS, {
       "bad-request",
       `Music spend cannot be reserved: ${String(amount)}s of audio is not a finite non-negative duration.`,
     ),
+  // The ledger's lock was held past its wait: nothing dispatched, a retry may pass.
+  busy: (message) => new MusicError("timeout", `Music spend could not be reserved. ${message}`),
   // The reset is the ONLY sanctioned way the total falls, so it says so out
   // loud: a total that fell without one of these lines is a bug, not a roll.
   evicted: ({ dropped, droppedAmount, remaining, windowMs }) =>
@@ -207,7 +219,7 @@ const meter = createMeter<MusicSpendEntry, MusicAxes, MusicCostBasis>(CLASS, {
 
 /** Seconds of audio requested inside the current window — booked rows only;
  *  renders still in flight are `musicBudgetStats().heldSeconds`. */
-export function currentMusicSeconds(now: number = Date.now()): number {
+export function currentMusicSeconds(now: number = Date.now()): Promise<number> {
   return meter.spent(now);
 }
 
@@ -217,7 +229,7 @@ export function currentMusicSeconds(now: number = Date.now()): number {
  * handed rather than re-deriving one, which is how a dashboard and an enforcer
  * end up disagreeing about the same screen. `counters` is a copy.
  */
-export function musicBudgetStats(now: number = Date.now()): {
+export async function musicBudgetStats(now: number = Date.now()): Promise<{
   ceilingSeconds: number;
   spentSeconds: number;
   /** Seconds reserved by renders in flight. They count against the ceiling
@@ -235,8 +247,8 @@ export function musicBudgetStats(now: number = Date.now()): {
   windowEnd: number;
   rows: number;
   counters: MusicBudgetCounters;
-} {
-  const s = meter.stats(now); // prunes first, so the counters are current
+}> {
+  const s = await meter.stats(now); // prunes first, so the counters are current
   const c = s.counters;
   return {
     ceilingSeconds: s.ceiling,
@@ -259,6 +271,9 @@ export function musicBudgetStats(now: number = Date.now()): {
       evicted: c.evicted,
       evictedSeconds: c.evictedAmount,
       lastEvictionAt: c.lastEvictionAt,
+      expiredHolds: c.expiredHolds,
+      expiredSeconds: c.expiredAmount,
+      lateWrites: c.lateWrites,
     },
   };
 }
@@ -279,21 +294,21 @@ export interface MusicHold {
  * `bad-request` instead and is never held. `now` is injectable so window
  * rollover is testable.
  */
-export function reserveMusic(seconds: number, now: number = Date.now()): MusicHold {
-  const h = meter.reserve(seconds, now);
+export async function reserveMusic(seconds: number, now: number = Date.now()): Promise<MusicHold> {
+  const h = await meter.reserve(seconds, now);
   return { id: h.id, seconds: h.amount };
 }
 
 /** Drop a hold without booking: the vendor rendered nothing it will bill. A
  *  hold already settled or released is a no-op. */
-export function releaseMusic(hold: MusicHold): void {
-  meter.release(hold);
+export function releaseMusic(hold: MusicHold): Promise<void> {
+  return meter.release(hold);
 }
 
 /** Replace a hold with what the vendor will bill. The hold is gone afterwards
  *  even if an entry throws while being read. */
-export function settleMusic(hold: MusicHold, entries: MusicSpendEntry | MusicSpendEntry[]): void {
-  meter.settle(hold, entries);
+export function settleMusic(hold: MusicHold, entries: MusicSpendEntry | MusicSpendEntry[]): Promise<void> {
+  return meter.settle(hold, entries);
 }
 
 /**
@@ -304,12 +319,13 @@ export function settleMusic(hold: MusicHold, entries: MusicSpendEntry | MusicSpe
  * the whole distinction this file is for: the meter refuses rather than bills.
  * `now` is injectable so window rollover is testable.
  *
- * Kept as a reserve that is released at once. It holds nothing, so a caller
- * that goes on to render must take its own hold (`reserveMusic`) — which is
- * what lib/music/elevenlabs.ts `metered()` does.
+ * The kernel's `check`: the verdict a reserve would give, counted the same
+ * way, in one transaction. It holds nothing, so a caller that goes on to render
+ * must take its own hold (`reserveMusic`) — which is what
+ * lib/music/elevenlabs.ts `metered()` does.
  */
-export function assertWithinMusicBudget(pendingSeconds: number, now: number = Date.now()): void {
-  releaseMusic(reserveMusic(pendingSeconds, now));
+export function assertWithinMusicBudget(pendingSeconds: number, now: number = Date.now()): Promise<void> {
+  return meter.check(pendingSeconds, now);
 }
 
 export interface MusicSpendEntry {
@@ -334,13 +350,13 @@ export interface MusicSpendEntry {
  * A non-positive or non-finite duration books nothing and is COUNTED, so the
  * window total reads as the lower bound it is.
  */
-export function recordMusicSpend(entry: MusicSpendEntry): void {
-  meter.book(entry);
+export function recordMusicSpend(entry: MusicSpendEntry): Promise<void> {
+  return meter.book(entry);
 }
 
 /** The window split by each axis the row carries — the same vocabulary log.ts
  *  emits, so the ledger and the log describe one call in one language. */
-export function musicSpendByAxis(now: number = Date.now()): {
+export async function musicSpendByAxis(now: number = Date.now()): Promise<{
   totalSeconds: number;
   byOp: Record<string, number>;
   byModel: Record<string, number>;
@@ -353,10 +369,10 @@ export function musicSpendByAxis(now: number = Date.now()): {
    *  today, and a booking path that forgot its axes shows up here as a number
    *  rather than as a silently smaller split. */
   unattributedSeconds: number;
-} {
-  const a = meter.byAxis(now);
+}> {
+  const a = await meter.byAxis(now);
   let unpricedSeconds = 0;
-  for (const r of meter.rows(now)) if (r.basis === "unpriced") unpricedSeconds += r.amount;
+  for (const r of await meter.rows(now)) if (r.basis === "unpriced") unpricedSeconds += r.amount;
   return {
     totalSeconds: a.total,
     byOp: a.byAxis.op,
@@ -370,8 +386,8 @@ export function musicSpendByAxis(now: number = Date.now()): {
 /** The window's rows, newest last. A copy — a reader cannot edit the ledger by
  *  mutating what it was shown. Credits and dollars are quoted here, on read
  *  (see the meter's comment for why that is exact today). */
-export function musicSpendRows(now: number = Date.now()): readonly MusicSpendRow[] {
-  return meter.rows(now).map((r) => {
+export async function musicSpendRows(now: number = Date.now()): Promise<readonly MusicSpendRow[]> {
+  return (await meter.rows(now)).map((r) => {
     const quote = priceCall({ op: r.axes.op, model: r.axes.model, seconds: r.amount });
     return {
       at: r.at,

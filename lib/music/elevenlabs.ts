@@ -102,14 +102,14 @@ async function metered<T>(
   // OUTSIDE the try on purpose: a budget refusal is not a call, so it must not
   // be booked or logged as one. budget.ts writes its own `[music] budget
   // refused ...` line, which is where a refusal belongs.
-  const hold = reserveMusic(seconds);
+  const hold = await reserveMusic(seconds);
 
   const started = Date.now();
   try {
     const out = await run();
     // A zero-second call (a free plan draft) asked for no audio: it books
     // nothing and is not counted as unmetered, as before holds existed.
-    if (seconds > 0) settleMusic(hold, { seconds, op, model, outcome: "served" });
+    if (seconds > 0) await settleMusic(hold, { seconds, op, model, outcome: "served" });
     const quote = priceCall({ op, model, seconds });
     logCall({
       op,
@@ -125,14 +125,14 @@ async function metered<T>(
     const err =
       e instanceof MusicError ? e : new MusicError("failed", `The ${op} call failed unexpectedly.`);
     if (seconds > 0 && BILLED_ON_FAILURE.has(err.kind))
-      settleMusic(hold, { seconds, op, model, outcome: "failed" });
+      await settleMusic(hold, { seconds, op, model, outcome: "failed" });
     logCall({ op, ms: Date.now() - started, seconds, kind: err.kind, message: err.message });
     throw err;
   } finally {
     // Whatever was not settled above rendered nothing the vendor bills: a
     // rejected key, a refusal, a rate limit, a request that never left. Its
     // seconds go back with nothing booked. After a settle this is a no-op.
-    releaseMusic(hold);
+    await releaseMusic(hold);
   }
 }
 

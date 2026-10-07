@@ -15,7 +15,10 @@
 //
 // BOOKING NEVER REACHES THE TURN. It runs at the settle point beside logTurn and
 // swallows its own failure: what reason() and retrieve() return or throw is
-// decided before this runs.
+// decided before this runs. The booking functions return a promise (card IMG-A
+// stage 3a: the store may be a file behind an async lock) that never rejects; a
+// booking that misses the lock is kept and applied late by the kernel, never
+// dropped (lib/spend/meter.ts).
 
 import { SPEND_CLASSES } from "../spend/classes";
 import { createMeter, type CountStats, type MeterAxes, type MeterRow } from "../spend/meter";
@@ -74,10 +77,12 @@ function errorCostUsd(err: unknown): number | undefined {
 }
 
 /** Book one served turn from its provenance. Never throws. */
-export function bookServedTurn(p: Pick<TextProvenance, "turn" | "provider" | "model" | "costUsd" | "costBasis">): void {
+export async function bookServedTurn(
+  p: Pick<TextProvenance, "turn" | "provider" | "model" | "costUsd" | "costBasis">,
+): Promise<void> {
   try {
     const vendor = p.costBasis === "vendor-reported" && finite(p.costUsd);
-    meter.book({
+    await meter.book({
       usd: vendor ? p.costUsd : undefined,
       turn: p.turn,
       provider: p.provider,
@@ -91,11 +96,11 @@ export function bookServedTurn(p: Pick<TextProvenance, "turn" | "provider" | "mo
 }
 
 /** Book a failed turn only if its error reports a vendor cost. Never throws. */
-export function bookFailedTurn(turn: string, err: unknown): void {
+export async function bookFailedTurn(turn: string, err: unknown): Promise<void> {
   try {
     const usd = errorCostUsd(err);
     if (usd === undefined) return;
-    meter.book({
+    await meter.book({
       usd,
       turn,
       provider: err instanceof TextError ? (err.provider ?? "unknown") : "unknown",
@@ -109,15 +114,15 @@ export function bookFailedTurn(turn: string, err: unknown): void {
 }
 
 /** The window's totals and counters. Count-only: no ceiling, no remaining. */
-export function textSpendStats(now?: number): CountStats {
+export function textSpendStats(now?: number): Promise<CountStats> {
   return meter.stats(now);
 }
 
 /** The window's spend by turn, provider and model, and by outcome. */
-export function textSpendByAxis(now?: number): MeterAxes {
+export function textSpendByAxis(now?: number): Promise<MeterAxes> {
   return meter.byAxis(now);
 }
 
-export function textSpendRows(now?: number): TextSpendRow[] {
+export function textSpendRows(now?: number): Promise<TextSpendRow[]> {
   return meter.rows(now);
 }

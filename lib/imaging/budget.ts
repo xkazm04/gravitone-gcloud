@@ -36,6 +36,12 @@
 // tests/golden-path/meter-conformance.probe.spec.ts runs the shared kit against
 // these exports.
 //
+// Every export that reads or writes the ledger returns a PROMISE since card
+// IMG-A stage 3a: the store behind the kernel may be a file another process
+// shares, and its lock is async. Names, arguments and refusal sentences are
+// unchanged. `seenSpendRows` is the one synchronous read left, for the 402
+// mapper (lib/imaging/api.ts) that cannot await.
+//
 // ── THE METER WATCHES ITSELF (added 2026-08-24) ────────────────────────────
 //
 // A ceiling that never reports its own activity is only half a limit. Two things
@@ -187,6 +193,14 @@ export interface BudgetCounters {
   evictedUsd: number;
   /** When the window last dropped anything, or null if it never has. */
   lastEvictionAt: number | null;
+  /** Holds reclaimed because their owner process died and their TTL ran out.
+   *  Never booked. Only a store shared across processes can see one. */
+  expiredHolds: number;
+  /** What those reclaimed holds were reserving. */
+  expiredUsd: number;
+  /** Settles and bookings that missed the ledger's lock and were applied by a
+   *  later transaction: late, never lost. */
+  lateWrites: number;
 }
 
 /** One greppable line, same `[imaging]` prefix as log.ts's call lines so a
@@ -234,6 +248,9 @@ const meter = createMeter<SpendEntry, ImagingAxes, SpendBasis>(CLASS, {
         `not a finite non-negative amount. Check the request's image count.`,
       "invalid-request",
     ),
+  // The ledger's lock was held past its wait. Not a budget verdict and not the
+  // caller's input: nothing was dispatched, so a retry may well pass.
+  busy: (message) => new ImagingError(`Imaging spend could not be reserved. ${message}`, "timeout"),
   // The reset is the ONLY sanctioned way spend leaves the window, so it says so
   // out loud: a total that fell without one of these lines is a bug, not a roll.
   evicted: ({ dropped, droppedAmount, remaining, windowMs }) =>
@@ -244,12 +261,12 @@ const meter = createMeter<SpendEntry, ImagingAxes, SpendBasis>(CLASS, {
 });
 
 /** Total currently reserved across all active holds. */
-export function heldUsd(): number {
+export function heldUsd(): Promise<number> {
   return meter.held();
 }
 
 /** Total spend inside the current window. */
-export function currentSpendUsd(now: number = Date.now()): number {
+export function currentSpendUsd(now: number = Date.now()): Promise<number> {
   return meter.spent(now);
 }
 
@@ -261,7 +278,7 @@ export function currentSpendUsd(now: number = Date.now()): number {
  * and an enforcer end up disagreeing about the same screen. `counters` is a
  * copy — a caller cannot reach in and reset the meter by mutating a snapshot.
  */
-export function budgetStats(now: number = Date.now()): {
+export async function budgetStats(now: number = Date.now()): Promise<{
   ceilingUsd: number;
   floorUsd: number;
   underFloor: boolean;
@@ -273,11 +290,11 @@ export function budgetStats(now: number = Date.now()): {
   windowEnd: number;
   rows: number;
   counters: BudgetCounters;
-} {
+}> {
   // The kernel prunes first, so the counters are current. `underFloor` is a
   // declared band, some traffic, and a total beneath the band's bottom — rows
   // must be non-zero: an idle window is not a thrifty one.
-  const s = meter.stats(now);
+  const s = await meter.stats(now);
   const c = s.counters;
   return {
     ceilingUsd: s.ceiling,
@@ -300,6 +317,9 @@ export function budgetStats(now: number = Date.now()): {
       evicted: c.evicted,
       evictedUsd: c.evictedAmount,
       lastEvictionAt: c.lastEvictionAt,
+      expiredHolds: c.expiredHolds,
+      expiredUsd: c.expiredAmount,
+      lateWrites: c.lateWrites,
     },
   };
 }
@@ -316,9 +336,9 @@ export function budgetStats(now: number = Date.now()): {
  * This is the raw fact only. The plan lives in the router, so the VERDICT — was
  * the preferred provider ever called — is computed there, against this.
  */
-export function reachByCapability(now: number = Date.now()): Record<string, ProviderId[]> {
+export async function reachByCapability(now: number = Date.now()): Promise<Record<string, ProviderId[]>> {
   const reach: Record<string, Set<ProviderId>> = {};
-  for (const { outcome, axes } of meter.rows(now)) {
+  for (const { outcome, axes } of await meter.rows(now)) {
     if (outcome !== "served" || !axes.cap || !axes.provider) continue;
     (reach[axes.cap] ??= new Set()).add(axes.provider);
   }
@@ -357,26 +377,27 @@ export function estimatePendingUsd(images: number = 1): number {
  * `invalid-request` ImagingError instead, and is never held: a NaN hold used to
  * be admitted and made every later comparison against the ceiling false.
  */
-export function reserve(amountUsd: number, now: number = Date.now()): Hold {
-  const h = meter.reserve(amountUsd, now);
+export async function reserve(amountUsd: number, now: number = Date.now()): Promise<Hold> {
+  const h = await meter.reserve(amountUsd, now);
   return { id: h.id, amountUsd: h.amount, createdAt: h.createdAt };
 }
 
 /**
  * Release a hold without recording spend (e.g. on unbilled failure or cancellation).
  */
-export function release(hold: Hold): void {
-  meter.release(hold);
+export function release(hold: Hold): Promise<void> {
+  return meter.release(hold);
 }
 
 /**
  * Refuse if spending `pendingUsd` now would exceed the window ceiling.
  * Throws an `over-budget` ImagingError; returns nothing when the call may
- * proceed. Kept as a reserve + release wrapper so existing callers continue to pass.
+ * proceed. It used to be a reserve and a release; it is now the kernel's
+ * `check`, the same verdict counted the same way in ONE transaction, so no
+ * await can leave a momentary hold for another caller to be refused against.
  */
-export function assertWithinBudget(pendingUsd: number, now: number = Date.now()): void {
-  const hold = reserve(pendingUsd, now);
-  release(hold);
+export function assertWithinBudget(pendingUsd: number, now: number = Date.now()): Promise<void> {
+  return meter.check(pendingUsd, now);
 }
 
 /** What a caller hands `recordSpend`. `at` defaults to now. */
@@ -394,8 +415,8 @@ export interface SpendEntry {
  * Settle a hold by removing the reservation and recording the actual spend.
  * The hold is gone afterwards even if an entry throws while being read.
  */
-export function settle(hold: Hold, entries: SpendEntry | SpendEntry[]): void {
-  meter.settle(hold, entries);
+export function settle(hold: Hold, entries: SpendEntry | SpendEntry[]): Promise<void> {
+  return meter.settle(hold, entries);
 }
 
 /**
@@ -423,8 +444,8 @@ export function settle(hold: Hold, entries: SpendEntry | SpendEntry[]): void {
  * same window total — the money is the same money and the ceiling must see it —
  * and carry `outcome: "failed"` so a reader can subtract them.
  */
-export function recordSpend(entry: SpendEntry): void {
-  meter.book(entry);
+export function recordSpend(entry: SpendEntry): Promise<void> {
+  return meter.book(entry);
 }
 
 /**
@@ -441,15 +462,15 @@ export function recordSpend(entry: SpendEntry): void {
  * path that does not is visible as a number rather than as a silently smaller
  * total.
  */
-export function spendByAxis(now: number = Date.now()): {
+export async function spendByAxis(now: number = Date.now()): Promise<{
   totalUsd: number;
   byCapability: Record<string, number>;
   byProvider: Record<string, number>;
   byModel: Record<string, number>;
   byOutcome: Record<SpendOutcome, number>;
   unattributedUsd: number;
-} {
-  const a = meter.byAxis(now);
+}> {
+  const a = await meter.byAxis(now);
   return {
     totalUsd: a.total,
     byCapability: a.byAxis.cap,
@@ -462,8 +483,19 @@ export function spendByAxis(now: number = Date.now()): {
 
 /** The window's rows, newest last. A copy — a reader cannot reach in and edit
  *  the ledger by mutating what it was shown. */
-export function spendRows(now: number = Date.now()): readonly SpendRow[] {
-  return meter.rows(now).map((r) => ({
+export async function spendRows(now: number = Date.now()): Promise<readonly SpendRow[]> {
+  return (await meter.rows(now)).map(asSpendRow);
+}
+
+/** The rows as this process last read them, unpruned, without waiting for the
+ *  ledger's lock. Only for a caller that cannot await and is answering a
+ *  refusal that has just read the ledger (budgetForecast.ts earliestExpiry). */
+export function seenSpendRows(): readonly SpendRow[] {
+  return meter.seenRows().map(asSpendRow);
+}
+
+function asSpendRow(r: { at: number; amount: number; outcome: SpendOutcome; basis: SpendBasis; axes: ImagingAxes }): SpendRow {
+  return {
     at: r.at,
     usd: r.amount,
     cap: r.axes.cap,
@@ -471,7 +503,7 @@ export function spendRows(now: number = Date.now()): readonly SpendRow[] {
     model: r.axes.model,
     outcome: r.outcome,
     basis: r.basis,
-  }));
+  };
 }
 
 /** Test hook — clear the window ledger AND the counters, so one probe's
