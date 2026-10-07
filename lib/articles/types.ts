@@ -105,6 +105,18 @@ export interface ArticleRejection {
   note: string;
 }
 
+/** The operator sent a draft at the gate back to be written again
+ *  (`awaiting-approval -> drafting`, lib/articles/engine.ts `reworkRun`). The
+ *  research, the sources and the outline are kept; the run re-does draft,
+ *  critique and check. `note` is the instruction the draft turn is given.
+ *  `count` is 1 for the first rework and rises by one for each later one, so a
+ *  run that was reworked three times says so. Absent on a run never reworked. */
+export interface ArticleRework {
+  at: string;
+  note: string;
+  count: number;
+}
+
 /** What the registry write-back did. Written while `landing`, completed at
  *  `landed`; on a failed gate it keeps the branch and the worktree so the
  *  operator can look. */
@@ -254,7 +266,18 @@ export interface ArticleRun {
   critique?: ArticleCritique;
   approval?: ArticleApproval;
   rejection?: ArticleRejection;
+  /** The latest rework; earlier ones are in `rework/<n>/` under the run's directory. */
+  rework?: ArticleRework;
   landing?: ArticleLanding;
+  /** WHEN THE POST LANDED, as an event: written once, by the `landed`
+   *  transition and by nothing else, and absent (not null, not "") before it.
+   *  It exists because a retention policy needs a clock that means one thing:
+   *  the canvas hides a landed article once it is more than 7 days old, and
+   *  `updatedAt` cannot say that, because every write of any kind restamps it.
+   *  `updatedAt` is "when did we last touch this", never "when did this land".
+   *  A run that landed before this field existed has none; a reader must say
+   *  so rather than substitute `updatedAt`. */
+  landedAt?: string;
 }
 
 /** One numbered source. `took` is what the post took from it, in a clause. */
@@ -431,3 +454,43 @@ export const RUN_COST_HINT = {
   turnsHigh: 32,
   measured: "2026-10",
 } as const;
+
+/* ── the status machine ────────────────────────────────────────────────────── */
+
+/**
+ * Every legal move. `failed` is reachable from every working state and leaves
+ * only through `resume`, which goes back to the state whose step failed —
+ * hence its wide row. `rejected` and `landed` are terminal.
+ *
+ * `approved` is reachable ONLY from `awaiting-approval` (the human's act) and
+ * from `failed` when the failure happened during landing (a resume re-lands;
+ * it never re-approves). Pushing to the registry is reachable only through
+ * `approved -> landing`, so nothing that has not passed the gate can land.
+ *
+ * `awaiting-approval -> drafting` is the rework edge: the operator sends the
+ * draft back with an instruction (`reworkRun`). It is the ONLY way back from
+ * the gate, and `rejected` stays terminal: a reject throws the piece away, a
+ * rework keeps the research and the outline and writes the post again.
+ *
+ * `critiquing` (scope amendment 1) sits between `drafting` and `checking` and
+ * is the only way to `checking`: no draft reaches the gate unreviewed. A
+ * critique that fails its quorum is `failed` with `critique-quorum`, and a
+ * resume goes back into `critiquing`.
+ */
+export const TRANSITIONS: Record<ArticleStatus, readonly ArticleStatus[]> = {
+  queued: ["researching", "failed"],
+  researching: ["drafting", "failed"],
+  drafting: ["critiquing", "failed"],
+  critiquing: ["checking", "failed"],
+  checking: ["awaiting-approval", "failed"],
+  "awaiting-approval": ["approved", "rejected", "drafting"],
+  approved: ["landing", "failed"],
+  landing: ["landed", "failed"],
+  landed: [],
+  rejected: [],
+  failed: ["queued", "researching", "drafting", "critiquing", "checking", "approved"],
+};
+
+export function canTransition(from: ArticleStatus, to: ArticleStatus): boolean {
+  return from === to || TRANSITIONS[from].includes(to);
+}

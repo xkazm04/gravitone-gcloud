@@ -14,7 +14,9 @@ inlines what it resolves on every run.
 
 ```
 queued -> researching -> drafting -> critiquing -> checking -> awaiting-approval -> approved -> landing -> landed
-            research     outline,draft  critique      check     (human gate)     \-> rejected
+            research     outline,draft  critique      check     (human gate)  |  \-> rejected
+                             ^                                                |
+                             \------------- rework (a note) -----------------/
 any working state -> failed -> resume -> the state whose step did not finish
 ```
 
@@ -22,7 +24,8 @@ The statuses and their legal moves live in `lib/articles/store.ts` (`TRANSITIONS
 `updateRun` refuses an illegal move before it writes. `landing` is reachable only from
 `approved`; `approved` only from `awaiting-approval` (the human) or from `failed` when the
 failure was in landing (a resume re-lands; it never re-approves). `checking` is reachable only
-from `critiquing`: no draft reaches the check unreviewed.
+from `critiquing`: no draft reaches the check unreviewed. `awaiting-approval -> drafting` is the
+rework edge (below) and the only way back from the gate; `rejected` and `landed` stay terminal.
 
 A run is a directory, `foundry-out/articles/<runId>/` (`ARTICLES_STORE_DIR` overrides the root).
 The publish store's conventions apply: JSON written tmp + rename, a per-run exclusive lock file
@@ -46,6 +49,7 @@ for every read-modify-write, and a corrupt `run.json` is refused, never replaced
 | `check.json`, `check/*.png` | check step | the deterministic report and screenshots at 390 and 1440 px (and 1440 dark) |
 | `agent/<step>.json`, `agent/<step>-prompt.md` | engine | each agent turn's outcome, turns, cost and the exact prompt sent |
 | `agent/<step>-out/` | engine | a failed turn's `out/`, kept for inspection |
+| `rework/<n>/before/` | rework | what the n-th rework made stale: the old `steps.json` (costs included), `critique-summary.json`, `critique/round-*`, `checks/`, `check.json`, `check/`, `agent/critique-*` and `agent/fix-*`, and copies of `post/` and the draft's receipt and prompt |
 | `medium/` | landing | `story.html`, `tags.txt`, `README.md`, `figures/*.png` |
 | `landing.log` | landing | the registry gates' output |
 | `.lock`, `.driver` | store | the write lock and the one-driver lease |
@@ -325,6 +329,60 @@ behind the prompt and check changes of 2026-10-06. For the next author of a run:
   read only the opening and the ending. The same rules live in the registry standard
   (`visual-cadence` and the preview, opening and closing techniques, recipe 0.2.0).
 
+## Rework: send the draft back
+
+At the gate the operator has three acts. Approve lands the post, reject ends the piece, and
+**rework** sends the draft back with an instruction when the thinking was fine and the writing is
+not. It is `reworkRun(id, note)` in `lib/articles/engine.ts`, and `awaiting-approval -> drafting` is
+the only edge it adds to the table in `lib/articles/store.ts` (`TRANSITIONS`). `rejected` is still
+terminal: a reject throws the piece away, a rework is one piece of work with one card.
+
+- **The record.** `ArticleRun.rework: {at, note, count}`. `count` is 1 for the first rework and
+  rises by one each time, so a run reworked three times says 3; `note` and `at` are the latest.
+  The key is absent on a run never reworked.
+- **The note.** 1 to 2000 characters after trimming (`NOTE_MAX_CHARS`). An empty note and one over
+  2000 are refused with 400 `bad-note`. A reject cuts a longer note at 2000; a rework refuses it,
+  because a cut instruction silently changes what was asked.
+- **What is kept.** Research, `sources.json`, `claims.json` and the outline are not touched, and no
+  research turn runs. What re-runs is the draft, the critique and the check.
+- **What is moved, not deleted.** Every later step resumes at file level and would find its own old
+  answers and skip itself, so the draft, critique and check step records leave `steps`, and the
+  critique's `round-*` directories, `checks/`, `check.json` and `check/` move to
+  `rework/<count>/before/` with the old step records (their costs are there, not in `steps`).
+  The reviewer panel snapshot (`critique/reviewers.json`) stays: a run keeps the panel it started
+  with. The old post stays in `post/` until the new draft replaces it, so a rework that fails
+  halfway still has a post. `ArticleRun.critique` is cleared and is rebuilt by the new critique.
+- **How the note reaches the writer.** The draft turn's prompt gets a section of its own after the
+  whole standing brief, headed `REWORK <n> OF THIS DRAFT: THE OPERATOR'S INSTRUCTION`
+  (`reworkSection` in the engine). It says the instruction decides what changes, that research and
+  sources are kept and not to be redone, and that the output contract and the check's bars still
+  bind. The old post is staged in the workspace as `inputs/previous-post/`. No other turn is given
+  the note. `agent/draft-prompt.md` holds the exact prompt.
+- **Cost.** No research turn, so no live web and none of the research phase. The draft turn is paid
+  again, and the whole critique (four reviewers, the writer's answer, and any revision) and the
+  check run again. On the runs of 2026-10 the critique was about three quarters of a run's cost
+  (see "Lessons from the first full run"), so a rework costs most of what a first run did, less
+  research and outline: plan on the order of three quarters of `RUN_COST_HINT`, not a draft's worth.
+  This is an inference from the step costs of those runs, not a measured rework.
+- **The drive.** Like approve and resume, the engine verb only moves the run; the caller drives it
+  (`driveRun`, or `launchRun` in the route). A rework is refused with 409 `busy` while a driver
+  still holds the run's lease, and with 409 `bad-transition` when the status is not
+  `awaiting-approval`. A rework that fails goes `failed` like any run and `resume` goes back to
+  `drafting`; the note stays on the run until the draft is done.
+
+`rework <runId> --note "<text>"` is the CLI form: it calls the verb and then drives the run to the
+gate again. Spending the operator's seat, it is the operator's act, as `resume` is.
+
+## `landedAt`
+
+`ArticleRun.landedAt` is an ISO time written once, by the `landed` transition at the end of
+`land()` in the engine, and by nothing else. The key is absent (not null, not empty) on every run
+that has not landed, and on every run that landed before the field existed. It is the event time a
+retention policy needs: the canvas hides a landed article once it is more than 7 days old, and
+`updatedAt` cannot say that, because every write of any kind restamps it. A reader meeting a
+landed run with no `landedAt` must say it does not know when it landed rather than use
+`updatedAt`.
+
 ## The gate and landing
 
 Approval is per post and per patch: `approve <runId> --patches p1,p2` (or the gate's Approve with
@@ -360,6 +418,7 @@ npx tsx pipeline/article.mts run (--subject <bundle/slug> | --topic "<text>") [-
 npx tsx pipeline/article.mts status [<runId>] [--json]
 npx tsx pipeline/article.mts approve <runId> [--patches p1,p2] [--json]
 npx tsx pipeline/article.mts reject <runId> --note "<text>" [--json]
+npx tsx pipeline/article.mts rework <runId> --note "<text>" [--json]
 npx tsx pipeline/article.mts resume <runId> [--reviewers <file>] [--json]
 ```
 
@@ -389,14 +448,23 @@ Leaving out one of the four `*_BIN` variables runs that real CLI.
 The engine exports what the routes call, so the CLI and the UI cannot disagree:
 `createRun`, `driveRun` / `launchRun` (fire-and-forget for a route), `getRun`, `getRunDetail`
 (run, sources, claims, outline, meta, check, patches with their diffs, post path),
-`listArticleRuns`, `approveRun`, `rejectRun`, `resumeRun`; `listTopicSubjects` (registryRead) feeds
-the topic picker. All of `lib/articles/` except `types.ts` is server-only; a client component may
+`listArticleRuns`, `approveRun`, `rejectRun`, `reworkRun`, `resumeRun`; `listTopicSubjects`
+(registryRead) feeds the topic picker, and `listUncoveredTopics` (loop.ts) the ranked, titled list. All of `lib/articles/` except `types.ts` is server-only; a client component may
 import `lib/articles/types.ts` and nothing else.
 
 Routes (contract): `POST /api/articles`, `GET /api/articles`, `GET /api/articles/[runId]`,
 `POST /api/articles/[runId]/approve` `{patches:[id]}`, `POST /api/articles/[runId]/reject` `{note}`,
-`POST /api/articles/[runId]/resume`. Errors are `ArticleError` with an HTTP-shaped `status` and a
-closed `code`.
+`POST /api/articles/[runId]/rework` `{note}`, `POST /api/articles/[runId]/resume`,
+`GET /api/articles/topics?limit=&bundle=`. Errors are `ArticleError` with an HTTP-shaped `status`
+and a closed `code`, answered as `{error, code}`.
+
+| Route | Door | Answers |
+|---|---|---|
+| `POST /api/articles/[runId]/rework` `{note}` | `guardRequest` (the drive restarts and spends the seat) | `{run}` with `status: "drafting"` and `rework`, and the drive started in the background. 409 `bad-transition` when the run is not at the gate, 409 `busy` while a driver holds it, 400 `bad-note` for an empty note or one over 2000 characters, 404 for no such run |
+| `GET /api/articles/topics` | `guardAccessOnly` (it reads the registry from disk and spends nothing) | exactly what `listUncoveredTopics` returns: `{topics, covered, claimed, remaining}` with `topics` the `TopicChoice` list (`bundle`, `slug`, `category`, `file`, `title`, `angle`), `covered` the `CoveredItem` list (`key`, `source`, `ref`, `status`), `claimed` the sorted list of in-flight topic keys and `remaining` the number of uncovered subjects. `?limit=` is clamped by the function (1 to 50, default 10); a non-numeric one is 400 `bad-limit`. Each `?bundle=` adds a bundle the ranking leaves out (`includeBundles`). `remaining` equals `topics --json`'s on the same tree |
+
+The route handlers, not the engine, start the drive: a route that calls `approveRun`, `reworkRun` or
+`resumeRun` follows it with `launchRun`.
 
 ## The /articles surface and the routes
 

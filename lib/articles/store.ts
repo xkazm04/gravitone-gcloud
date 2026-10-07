@@ -17,7 +17,7 @@
 import { mkdir, open, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ArticleRun, ArticleStatus } from "./types";
+import { canTransition as canTransitionData, type ArticleRun, type ArticleStatus } from "./types";
 
 export class ArticleError extends Error {
   constructor(
@@ -141,43 +141,24 @@ export async function readTextFile(file: string): Promise<string | undefined> {
   }
 }
 
-/* ── the status machine ────────────────────────────────────────────────────── */
+/* ── the status machine ──────────────────────────────────────── */
 
-/**
- * Every legal move. `failed` is reachable from every working state and leaves
- * only through `resume`, which goes back to the state whose step failed —
- * hence its wide row. `rejected` and `landed` are terminal.
- *
- * `approved` is reachable ONLY from `awaiting-approval` (the human's act) and
- * from `failed` when the failure happened during landing (a resume re-lands;
- * it never re-approves). Pushing to the registry is reachable only through
- * `approved -> landing`, so nothing that has not passed the gate can land.
- *
- * `critiquing` (scope amendment 1) sits between `drafting` and `checking` and
- * is the only way to `checking`: no draft reaches the gate unreviewed. A
- * critique that fails its quorum is `failed` with `critique-quorum`, and a
- * resume goes back into `critiquing`.
- */
-export const TRANSITIONS: Record<ArticleStatus, readonly ArticleStatus[]> = {
-  queued: ["researching", "failed"],
-  researching: ["drafting", "failed"],
-  drafting: ["critiquing", "failed"],
-  critiquing: ["checking", "failed"],
-  checking: ["awaiting-approval", "failed"],
-  "awaiting-approval": ["approved", "rejected"],
-  approved: ["landing", "failed"],
-  landing: ["landed", "failed"],
-  landed: [],
-  rejected: [],
-  failed: ["queued", "researching", "drafting", "critiquing", "checking", "approved"],
-};
-
-export function canTransition(from: ArticleStatus, to: ArticleStatus): boolean {
-  return from === to || TRANSITIONS[from].includes(to);
-}
+// THE TABLE ITSELF LIVES IN ./types.ts, and this is not tidying.
+//
+// A client surface has to know which moves are legal - the pipeline canvas
+// offers a drag only where the engine would accept it, and the alternative is
+// a second copy of the table on the client, which is a second bug: the day the
+// two disagree, the canvas offers a move the engine refuses and the operator
+// learns that the board lies. This module cannot be that home, because it
+// imports `node:fs/promises`. types.ts can: it is types and constants only.
+//
+// So the DATA lives there and is re-exported here, leaving every server call
+// site in this file and in engine.ts untouched. `assertTransition` stays,
+// because it throws ArticleError, which is this module's.
+export { TRANSITIONS, canTransition } from "./types";
 
 export function assertTransition(from: ArticleStatus, to: ArticleStatus): void {
-  if (!canTransition(from, to)) {
+  if (!canTransitionData(from, to)) {
     throw new ArticleError(`a run that is ${from} cannot become ${to}`, 409, "bad-transition");
   }
 }
