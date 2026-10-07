@@ -49,8 +49,7 @@
 // `history.replaceState` (the same door app/kit/KitView.tsx:58 uses). A
 // `router.replace` would be a navigation, and a navigation is the one thing that
 // could re-key this subtree and reload the board; flipping a direction changes
-// `skin` and nothing else. `useSearchParams` makes the subtree client-rendered
-// up to the nearest Suspense boundary, which FoundryView provides.
+// `skin` and nothing else.
 //
 // ── WHAT IS NOT HERE ───────────────────────────────────────────────────────
 //
@@ -62,10 +61,9 @@
 // them itself while an `aria-modal` dialog is up (`overlayOpen`), so a shell
 // handler here could only fight it.
 
-import { Suspense, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
 import { Maximize2, Minimize2, Unplug } from "lucide-react";
-import { useSearchParams } from "next/navigation";
 
 import { Segmented } from "@/components/ui/Field";
 import { Select, type SelectOption } from "@/components/ui/Select";
@@ -90,8 +88,8 @@ import { makeAudioSource } from "@/lib/board/sources/audio";
 import { PIPELINE_ARM_KEY } from "@/lib/identityEviction";
 
 import { PipelineCanvas, STAGE_TONE, type CanvasStatus, type PipelineHandle } from "./pipeline";
-import { VARIANTS, variantFrom, type VariantId } from "./pipeline/skins";
-import { DetailModal, DetailPane, DispatchConfirm, ReworkNote, type Arm, type OfferedMove } from "./pipelineModals";
+import { ledger } from "./pipeline/skins";
+import { DetailModal, DispatchConfirm, ReworkNote, type Arm, type OfferedMove } from "./pipelineModals";
 import { Glass, Label, Loading } from "./ui";
 
 /* ── the two media ────────────────────────────────────────────────────────── */
@@ -102,12 +100,6 @@ const MEDIA: ReadonlyArray<{ id: MediaId; label: string }> = [
   { id: "articles", label: "Articles" },
   { id: "audio", label: "Audio" },
 ];
-
-/* ── the four directions ──────────────────────────────────────────────────── */
-
-// `VARIANTS` is a RECORD keyed "1".."4", not a list, so the rail's order is
-// stated here once rather than left to object key order.
-const VARIANT_IDS = (Object.keys(VARIANTS) as VariantId[]).sort();
 
 /* ── the arm ──────────────────────────────────────────────────────────────── */
 
@@ -306,19 +298,16 @@ function CanvasMount({ children }: { children: React.ReactNode }) {
 
 /* ── the shell ────────────────────────────────────────────────────────────── */
 
+// NO SUSPENSE BOUNDARY ANY MORE, and that is a deletion rather than an omission.
+// It existed for `useSearchParams`, which read `?v=` to pick one of four
+// directions; with one direction there is no parameter to read, nothing in this
+// subtree suspends, and a boundary whose only job is gone is a fallback nobody
+// will ever see keeping a `Loading` import alive.
 export default function PipelineTab() {
-  return (
-    // The boundary `useSearchParams` needs, placed around the one component
-    // that reads it rather than around the view (app/calendar/page.tsx keeps
-    // the same rule one level up). app/foundry/page.tsx deliberately has none.
-    <Suspense fallback={<Loading label="reading the direction" />}>
-      <PipelineShell />
-    </Suspense>
-  );
+  return <PipelineShell />;
 }
 
 function PipelineShell() {
-  const params = useSearchParams();
   const announce = useAnnounce();
 
   /* sources: constructed ONCE each. The canvas memoises on source identity and
@@ -327,7 +316,6 @@ function PipelineShell() {
   const audio = useMemo(() => makeAudioSource(), []);
 
   const [media, setMedia] = useState<MediaId>("articles");
-  const [variant, setVariant] = useState<VariantId>(() => variantFrom(params.get("v")).id);
   const [arm, setArm] = useState<Arm>(currentArm);
   const [axisPick, setAxisPick] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
@@ -348,8 +336,6 @@ function PipelineShell() {
   const base = media === "articles" ? articles : audio;
   const source = useMemo(() => armSource(base, onStub), [base, onStub]);
 
-  const direction = VARIANTS[variant] ?? VARIANTS[VARIANT_IDS[0]];
-
   // A pick that belongs to the other medium is not an axis here: every source
   // declares its own, and `groupAxes` is already the POPULATED set by contract
   // (lib/board/pipeline.ts GroupAxis) — "an axis that reads blank for most items
@@ -364,13 +350,6 @@ function PipelineShell() {
     setStatus(null);
     setOpen(null);
     setOrder(null);
-  };
-
-  const pickVariant = (id: VariantId) => {
-    setVariant(id);
-    const p = new URLSearchParams(window.location.search);
-    p.set("v", id);
-    window.history.replaceState(null, "", `${window.location.pathname}?${p.toString()}`);
   };
 
   /* ── the deliberate move ────────────────────────────────────────────────── */
@@ -393,12 +372,12 @@ function PipelineShell() {
           needs: offer.needs,
           prompt: offer.prompt,
           ...(offer.cost ? { cost: offer.cost } : {}),
-          verb: band ? `${direction.skin.stageLabel?.[stage] ?? stage} · ${band}` : (direction.skin.stageLabel?.[stage] ?? stage),
+          verb: band ? `${ledger.stageLabel?.[stage] ?? stage} · ${band}` : (ledger.stageLabel?.[stage] ?? stage),
         });
       }
     }
     return out;
-  }, [open, source, direction]);
+  }, [open, source]);
 
   // WHERE FOCUS GOES WHEN AN ORDER DIALOG CLOSES. The button that opened it
   // lived inside the detail dialog and went with it, so `Modal`'s own
@@ -490,7 +469,7 @@ function PipelineShell() {
 
   /* ── render ─────────────────────────────────────────────────────────────── */
 
-  const word = useCallback((s: CanonStage) => direction.skin.stageLabel?.[s] ?? s, [direction]);
+  const word = useCallback((s: CanonStage) => ledger.stageLabel?.[s] ?? s, []);
   const choreo = status?.choreo;
   const axisOptions: SelectOption<string>[] = axes.map((a) => ({ value: a.id, label: a.label }));
   const detailActions = offers.map((o) => (
@@ -513,7 +492,21 @@ function PipelineShell() {
       style={full ? ({ "--text-label": "1.0625rem", "--text-content": "1.1875rem" } as React.CSSProperties) : undefined}
     >
       {/* ── the top bar ─────────────────────────────────────────────────── */}
-      <Glass className="flex flex-wrap items-center gap-x-5 gap-y-3 px-4 py-3">
+      {/* `relative z-20`, AND IT IS THE DROPDOWN'S FIX. `Select` opens its listbox
+          as an absolutely-positioned child with `z-50`, which only ever ranks it
+          INSIDE the nearest stacking context — and `Glass` draws a backdrop
+          blur, which creates one. So the listbox was confined to this bar, the
+          board is a later sibling, and the half of the options that hung below
+          the bar was painted over by the board: photographed, the fourth option
+          had "PROPOSED 20" showing through it. Raising the bar itself lifts the
+          whole context over the board. 20 stays well under `Modal` and
+          `ContextMenu` (both fixed z-50), which must still cover this.
+
+          `items-end` is the second half: `Segmented` draws a label above its
+          row of pills and `Select` carries its label inside the trigger, so
+          centring them put the group pill half a row higher than everything it
+          sits beside. Aligning the bottoms makes one line of controls. */}
+      <Glass className="relative z-20 flex flex-wrap items-end gap-x-5 gap-y-3 px-4 py-3">
         <Segmented label="media" value={media} options={MEDIA.map((m) => ({ id: m.id, label: m.label }))} onChange={pickMedia} />
 
         <Select label="group" value={axisId} onChange={setAxisPick} options={axisOptions} minWidth={180} testId="pipeline-axis" />
@@ -532,17 +525,6 @@ function PipelineShell() {
             (app/foundry/pipeline/MovePrompt.tsx:70), so without `armSource` a
             dragged confirm would spend whatever this switch said. */}
         <Hint tone="amber" label="what the arm covers">every write passes this arm, dragged or ordered</Hint>
-
-        <Segmented
-          label="direction"
-          value={variant}
-          options={VARIANT_IDS.map((id) => ({ id, label: VARIANTS[id].name }))}
-          onChange={pickVariant}
-        />
-        <Hint label={`what ${direction.name} bets`}>{direction.bet}</Hint>
-        <Hint variant="warn" tone="amber" label={`what ${direction.name} loses`}>
-          {direction.loses}
-        </Hint>
 
         <span className="ml-auto flex flex-wrap items-center gap-2">
           <button
@@ -598,18 +580,17 @@ function PipelineShell() {
             source={source}
             axisId={axisId}
             arm={arm}
-            skin={direction.skin}
+            skin={ledger}
             onOpen={setOpen}
             onStatus={setStatus}
             apiRef={api}
             className="absolute inset-0"
           />
         </CanvasMount>
-        {direction.inspector && <DetailPane entry={open} stageWord={word(open?.placement.stage ?? "proposed")} actions={detailActions} onClose={() => setOpen(null)} />}
       </div>
 
       {/* ── the dialogs ─────────────────────────────────────────────────── */}
-      {!direction.inspector && <DetailModal entry={order ? null : open} stageWord={word(open?.placement.stage ?? "proposed")} actions={detailActions} onClose={() => setOpen(null)} />}
+      {<DetailModal entry={order ? null : open} stageWord={word(open?.placement.stage ?? "proposed")} actions={detailActions} onClose={() => setOpen(null)} />}
 
       {/* An order dialog REPLACES the detail rather than stacking on it: two
           `aria-modal` panels on one Escape would both close, and a dialog whose

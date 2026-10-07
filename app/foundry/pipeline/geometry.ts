@@ -29,7 +29,11 @@ import {
 
 /* ── the grid's measurements (world units = CSS px at zoom 1) ──────────── */
 
-export const CARD_W = 272;
+/** +10 ON ROUND 1'S SECOND PASS. A one-line card truncates its title at the
+ *  width, and 272 was cutting it too short to read — the operator asked for ten
+ *  more and ten more is what this is. Every column, band and lane width is
+ *  derived from it (BAND_W below), so the board widens with the card. */
+export const CARD_W = 282;
 /** ROUND 1 CUT THIS FROM 80. A card held two rows — the title and a figure, then
  *  vendor / state / dwell under a rule — and the operator's verdict was that
  *  those four facts belong in the detail because they were costing the TITLE its
@@ -43,19 +47,35 @@ export const COL_PAD = 12;
 export const BAND_W = CARD_W + COL_PAD * 2;
 export const STAGE_GAP = 24;
 export const LANE_GAP = 14;
-export const LANE_PAD = 12;
+/** Shaved from 12. It is the gap between a lane's top edge and its first card,
+ *  and it stacks with whatever sits above the lane — under the column header row
+ *  that was the band labels plus the frame's own inset, which read as a band of
+ *  dead space right where the board's content is supposed to start. */
+export const LANE_PAD = 8;
 /** A lane is never shorter than this many rows. */
 export const LANE_MIN_ROWS = 1;
 
 /** The overlay furniture, in SCREEN px: the stage heads' strip along the top and
  *  the lane heads' strip down the left. `inset` is the breathing room between
  *  that furniture and the first cell when the board is framed. */
-/** `top` IS MEASURED FROM WHAT StageHeads DRAWS, not chosen. The strip holds the
- *  stage row (h-8 = 32) and, where a stage is banded, the band row beneath it
- *  (top-8 h-6 = 32..56), plus the flow hairline. 58 clears both. Cutting it to
- *  48 for the space clipped every band label to a sliver, which no gate saw and
- *  a screenshot did. */
-export const FRAME = { top: 58, left: 176, inset: 16 } as const;
+/**
+ * The overlay furniture, in SCREEN px.
+ *
+ * `top` IS MEASURED FROM WHAT StageHeads DRAWS, not chosen: the strip holds the
+ * stage row (h-8 = 32) and, where a stage is banded, the band row beneath it
+ * (top-8 h-6 = 32..56), plus the flow hairline. 58 clears both. Cutting it to 48
+ * for the space clipped every band label to a sliver, which no gate saw and a
+ * screenshot did.
+ *
+ * `insetX` and `insetY` were ONE number, and that is why the board had a band of
+ * dead space under its column headers: 16px of breathing room is right beside
+ * the lane heads, where it separates two things that would otherwise touch, and
+ * wrong under the stage heads, where it stacks with the band row's own height
+ * and the lane's padding to push the first card a long way below the header that
+ * names its column. Vertically the furniture IS the separation, so there is
+ * nothing left to insert — `insetY` is 0 on purpose, not by omission.
+ */
+export const FRAME = { top: 58, left: 176, insetX: 16, insetY: 0 } as const;
 
 export const ZOOM_MIN = 0.1;
 export const ZOOM_MAX = 1.6;
@@ -444,18 +464,18 @@ export function zoomAt(c: Camera, k2: number, px: number, py: number): Camera {
 /** The opening frame: all four stages across the viewport, anchored top-left. */
 export function frameCamera(l: Layout, w: number, h: number): Camera {
   void h;
-  const avail = w - FRAME.left - FRAME.inset * 2;
+  const avail = w - FRAME.left - FRAME.insetX * 2;
   const k = clampK(Math.min(avail / Math.max(1, l.width), 1));
-  return { k, x: FRAME.left + FRAME.inset, y: FRAME.top + FRAME.inset };
+  return { k, x: FRAME.left + FRAME.insetX, y: FRAME.top + FRAME.insetY };
 }
 
 /** Everything in view at once. */
 export function fitCamera(l: Layout, w: number, h: number): Camera {
-  const availW = w - FRAME.left - FRAME.inset * 2;
-  const availH = h - FRAME.top - FRAME.inset * 2;
+  const availW = w - FRAME.left - FRAME.insetX * 2;
+  const availH = h - FRAME.top - FRAME.insetY * 2;
   const k = clampK(Math.min(availW / Math.max(1, l.width), availH / Math.max(1, l.height), 1));
   // centred across the open width, so a narrow board is not pressed into a corner
-  return { k, x: FRAME.left + FRAME.inset + Math.max(0, (availW - l.width * k) / 2), y: FRAME.top + FRAME.inset };
+  return { k, x: FRAME.left + FRAME.insetX + Math.max(0, (availW - l.width * k) / 2), y: FRAME.top + FRAME.insetY };
 }
 
 /** The smallest camera move that brings a card fully into the open part of the

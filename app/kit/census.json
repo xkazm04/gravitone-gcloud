@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 553,
+  "files": 551,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -401,7 +401,6 @@
         "app/_phases/script/trailer/MovementSection.tsx",
         "app/_phases/script/trailer/PromiseLedger.tsx",
         "app/articles/ArticlesView.tsx",
-        "app/foundry/pipelineModals.tsx",
         "app/foundry/ui.tsx",
         "app/library/LibraryAtelier.tsx",
         "app/library/MoveDialog.tsx",
@@ -992,7 +991,6 @@
         "app/foundry/PipelineTab.tsx",
         "app/foundry/RunCards.tsx",
         "app/foundry/StylesShelf.tsx",
-        "app/foundry/pipeline/Frame.tsx",
         "app/foundry/pipelineModals.tsx",
         "app/playground/arrange/Board.tsx",
         "app/playground/hunt/Board.tsx",
@@ -1750,9 +1748,9 @@
       "suspectFiles": {}
     },
     "app/foundry": {
-      "files": 39,
+      "files": 37,
       "kitImports": 1,
-      "signalImports": 11,
+      "signalImports": 10,
       "parts": [
         "Button",
         "CHIP_CLASS",

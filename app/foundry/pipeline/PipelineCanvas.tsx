@@ -239,7 +239,7 @@ function PipelineCanvasImpl({ source, axisId, arm = "stub", skin = DEFAULT_SKIN,
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const worldRef = useRef<HTMLDivElement>(null);
-  const camRef = useRef<Camera>({ x: FRAME.left + FRAME.inset, y: FRAME.top + FRAME.inset, k: 1 });
+  const camRef = useRef<Camera>({ x: FRAME.left + FRAME.insetX, y: FRAME.top + FRAME.insetY, k: 1 });
   const sizeRef = useRef<{ w: number; h: number } | null>(null);
   const viewRef = useRef<{ rect: Rect; m: number; k: number } | null>(null);
   const mountedRef = useRef<readonly { id: string }[]>([]);
@@ -260,7 +260,7 @@ function PipelineCanvasImpl({ source, axisId, arm = "stub", skin = DEFAULT_SKIN,
   // and nothing else. The first key press adopts it as the cursor.
   const cursor = useRef<string | null>(null);
   const pointerFocus = useRef(false);
-  const heads = useMemo(() => createHeadRegistry({ x: FRAME.left + FRAME.inset, y: FRAME.top + FRAME.inset, k: 1 }), []);
+  const heads = useMemo(() => createHeadRegistry({ x: FRAME.left + FRAME.insetX, y: FRAME.top + FRAME.insetY, k: 1 }), []);
 
   /* ── state ──────────────────────────────────────────────────────────── */
 
@@ -1270,7 +1270,7 @@ function PipelineCanvasImpl({ source, axisId, arm = "stub", skin = DEFAULT_SKIN,
           ref={worldRef}
           data-pipeline-world
           className="absolute top-0 left-0 origin-top-left will-change-transform"
-          style={{ transform: `translate3d(${FRAME.left + FRAME.inset}px, ${FRAME.top + FRAME.inset}px, 0)` }}
+          style={{ transform: `translate3d(${FRAME.left + FRAME.insetX}px, ${FRAME.top + FRAME.insetY}px, 0)` }}
         >
           <CellLayer layout={layout} from={laneFrom} to={laneTo} preview={preview} names={names} />
           {world}

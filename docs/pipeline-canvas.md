@@ -1,6 +1,6 @@
 # The pipeline canvas
 
-`/foundry` → **Pipeline**. One board, two media, four directions. A card's POSITION is its
+`/foundry` → **Pipeline**. One board, two media, one skin. A card's POSITION is its
 state and moving it is the act — which is the question `/board` cannot ask, because to a
 verdict surface a run at the gate and a run being drafted are both "undecided".
 
@@ -23,7 +23,7 @@ number on a tab rail is worse than no number.
 | `app/foundry/PipelineTab.tsx` | the shell: top bar, stage strip, the board's height, the arm |
 | `app/foundry/pipelineModals.tsx` | the dispatch confirm, the rework note, the detail (two mounts) |
 | `app/foundry/pipeline/` | THE ENGINE — the board, the drag, the keyboard, two move dialogs |
-| `app/foundry/pipeline/skins/` | the four directions |
+| `app/foundry/pipeline/skins/` | the skin — `ledger`, round 1's winner |
 | `lib/board/pipeline.ts` | the contract: stages, placement, `admits`, `move`, the load notes |
 | `lib/board/sources/{articles,audio}.ts` | the two adapters |
 
@@ -39,7 +39,7 @@ through. It takes a `PipelineSource`, an `axisId` and a `skin`, and it hands bac
 **The shell draws everything around it, from that status.** Counts, totals, what is selected,
 whether the board is still choreographing, what the load could not do — all as state, never as
 prose. The shell owns the controls the canvas deliberately does not: which medium, which
-grouping axis, which direction, and whether a move writes.
+grouping axis and whether a move writes.
 
 The canvas **fills its parent**, so the parent carries an explicit height. There is no
 content-driven size here; a board that sizes to its cards has no viewport to pan.
@@ -84,41 +84,32 @@ own.
 
 ---
 
-## 4. The four directions (`?v=`)
+## 4. The skin (one, now)
 
-The direction lives in the URL, so a board can be linked and two directions can be compared
-by flipping between them. Changing it changes the **skin only**: the canvas does not remount
-and the data is not re-read.
+Round 1 ran **four directions** behind `?v=1|2|3|4` on the same live data — Dense ledger,
+Spatial field, Transit map, Workbench — so the look could be judged by flipping rather than by
+reading a description. The operator flipped them and answered: *"Dense ledger is the winner
+with couple of adjustments."* The other three are **deleted**, along with `?v=`, the variant
+registry and the docked inspector that was the Workbench's whole bet. What they proved is in
+`.vault/Masterpiece/exercises/01-pipeline-canvas.md`; what they cost to keep was three files of
+taste that every future change to the card contract would have to keep compiling.
 
-Each direction renames the canon in its own idiom and draws its own world layer behind the
-cards. Only the words and the drawing change — the four columns are the same four columns.
+**The seam survives the cull.** A skin is still `face(entry)` plus an optional `world(layout)`
+(`app/foundry/pipeline/types.ts`), still cannot reach the camera, add a column or move a card,
+and `skins/index.ts` still exports one name. A second direction is a new file and an import.
 
-| `?v=` | name | its four words | the bet | what it loses |
-| --- | --- | --- | --- | --- |
-| `1` | **Dense ledger — round 1's winner** | `PROPOSED · RUNNING · GATE · SETTLED` | rules and type do all the work | first impression — nothing to admire |
-| `2` | Spatial field | `PROPOSED · IN FLIGHT · NEEDS YOU · LANDED` | glass, depth and air; lanes implied by light | items per screen, and honesty at volume |
-| `3` | Transit map | `ORIGIN · TRANSIT · HELD · TERMINUS` | items ride continuous lines; stages are stations | dense lanes — a station with 498 trains |
-| `4` | Workbench | `STOCK · MACHINE · BENCH · FINISHED` | a docked inspector follows the selection; detail costs no modal | screen width — it spends space on chrome |
+**Dense ledger, and what the verdict changed.** The card carried the title and a figure, then
+vendor / state / dwell under a rule; the operator's reading was that those four facts were
+costing the TITLE its readability. The card is now the title alone — at `text-content`, 2px up
+from the rest of the board — plus, for an audio item, a play button. The four facts live in the
+detail, where `standing` was added because it was the one of them the detail did not already
+carry. The card fell from 80px to 48px with them, and `CARD_W` went 272 → 282 because a
+one-line card truncates its title at the width.
 
-**Round 1 picked `?v=1`, and the card changed with the verdict.** A ledger card carried the
-title and a figure, then vendor / state / dwell under a rule; the operator's reading was that
-those four facts were costing the TITLE its readability. So the card is now the title alone
-(at `text-content`, 2px up from the rest of the board) plus, for an audio item, a play button.
-The four facts live in the detail, where `standing` was added because it was the one of them
-the detail did not already carry. The card fell from 80px to 48px with them, which is most of
-the vertical space round 1 said the Y axis was eating.
+It renames two of the four canon stages in its own idiom (`working` → `running`, `done` →
+`settled`) and draws a `world` layer: one hairline in the middle of every row gap, as a
+repeating gradient per lane, so ruling a 500-row lane costs what ruling a 2-row one costs.
 
-Those two sentences per direction are **declared once**, beside the skin itself in
-`app/foundry/pipeline/skins/index.ts`, and the rail renders them as two disclosures. The table
-above is a reading of that registry, not a second authority: when a direction's claim changes,
-the rail changes with it and this table is what goes stale.
-
-Variant 4 is the only structural bet. `Variant.inspector` is what says so, and it is the
-reason `ItemDetail` is one component with two mounts (`DetailModal`, `DetailPane`): a
-direction that bets on the *layout* has to be drawing the same *content*, or the comparison
-is between two write-ups rather than two shapes. The pane is **not** a dialog — it traps
-nothing and takes no `aria-modal` — which is why the board keeps its keyboard while the pane
-is open (`overlayOpen` in `lib/board/keys.ts` reads `[aria-modal="true"]`).
 
 ---
 
@@ -239,8 +230,7 @@ together; writing sizes into the markup instead would mean one arbitrary size pe
 which is what `npm run check:type` exists to stop.
 
 An open `aria-modal` dialog disarms the canvas automatically, so the three dialogs here need no
-co-ordination with it. The docked inspector of variant 4 is not a dialog and deliberately does
-not disarm it.
+co-ordination with it.
 
 ---
 
@@ -259,8 +249,7 @@ to…"). The shell owns three, in `pipelineModals.tsx`:
    by construction and is not re-exported from the client's door, so the route's own refusal is
    what bounds the field and it is rendered verbatim.
 3. **Detail** — opened by `Enter`, a double-click or the card menu. The item's facts, its
-   media, its href, and the moves the authority will accept. A modal in directions 1–3, a
-   docked pane in direction 4.
+   media, its href, the moves the authority will accept, and how long it has been standing.
 
 All three: focus trapped, `Esc` closes, and focus returns to the board — the canvas's viewport,
 which carries `aria-activedescendant`, so the card is still the cursor. An order dialog

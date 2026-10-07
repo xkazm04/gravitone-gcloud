@@ -17,11 +17,14 @@
 //                    instruction, opened deliberately. The engine collects the
 //                    same note when the move is dragged; this is the other door
 //                    to the same write.
-//   ItemDetail       the item's own facts, media and href — mounted TWICE, as
-//                    `DetailModal` and as `DetailPane`. Variant 4's whole bet is
-//                    that the detail is a docked pane beside the board rather
-//                    than an overlay over it, and a bet is only readable if both
-//                    arms draw the same content.
+//   ItemDetail       the item's own facts, media and href. ONE component, and
+//                    until round 1 it had two mounts: this modal, and a docked
+//                    `DetailPane` beside the board, which was the whole bet of
+//                    the Workbench direction. That direction lost and its pane
+//                    went with it, so the modal is the only door now. The split
+//                    between the content and its mount is kept anyway — it costs
+//                    nothing and it is what made the bet testable in the first
+//                    place.
 //
 // THE DRY PATH IS A RESULT, NOT A SILENCE. `MoveResult` says so in
 // lib/board/pipeline.ts: `stub` rides on the SUCCESS variant, so a caller that
@@ -48,7 +51,7 @@ import { TextArea } from "@/components/ui/Field";
 import { NOTE_MAX_CHARS } from "@/lib/articles/types";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
-import { Ghost, Tally } from "@/components/ui/signal";
+import { Tally } from "@/components/ui/signal";
 import { isStubbedMove, type CanonStage, type MoveCost, type MoveResult, type PipelineEntry } from "@/lib/board/pipeline";
 
 import { costLine, STAGE_TONE } from "./pipeline";
@@ -443,43 +446,3 @@ export function DetailModal({
   );
 }
 
-/**
- * The same detail, docked beside the canvas. NOT a dialog: it traps nothing and
- * takes no `aria-modal`, which is exactly why variant 4 can keep the board's
- * keyboard alive while it is open (`overlayOpen` in lib/board/keys.ts reads
- * `[aria-modal="true"]`, so a pane does not disarm the canvas).
- */
-export function DetailPane({
-  entry,
-  stageWord,
-  actions,
-  onClose,
-}: {
-  entry: PipelineEntry | null;
-  stageWord: string;
-  actions?: React.ReactNode;
-  onClose: () => void;
-}) {
-  return (
-    <aside aria-label="card detail" className="flex w-[22rem] shrink-0">
-      <Glass className="flex min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex shrink-0 items-start justify-between gap-3 border-b border-white/8 px-4 py-3">
-          <div className="min-w-0">
-            <Label>{entry?.item.source ?? "detail"}</Label>
-            <h3 className="font-instrument mt-0.5 truncate text-xl text-white">{entry?.item.title ?? "—"}</h3>
-          </div>
-          {entry && (
-            <Button variant="ghost" size="sm" onClick={onClose} className="shrink-0">
-              Clear
-            </Button>
-          )}
-        </header>
-        <div className="scroll-y grow px-4 py-4">
-          {/* An absence drawn as the shape that will fill it, not as a sentence
-              about how to fill it (components/ui/signal/README.md). */}
-          {entry ? <ItemDetail entry={entry} stageWord={stageWord} actions={actions} /> : <Ghost shape="card" label="no card open" />}
-        </div>
-      </Glass>
-    </aside>
-  );
-}
