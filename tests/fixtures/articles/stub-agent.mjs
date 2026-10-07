@@ -36,6 +36,10 @@
 //   dash, which the check fails by name): "draft" the first post, "revise" a critique rewrite,
 //   "fix" the post a fix turn writes (so the fix does not meet the failure).
 // STUB_FIX_MODE=error — a fix turn fails (the other writer turns still work).
+// STUB_FIX_MODE=inplace — a fix turn edits the post seeded into out/post (dashes to commas) and
+//   writes nothing else; it fails when out/post is not seeded.
+// STUB_RESEARCH=badurl — a critique re-research whose first attempt has a source with no url and
+//   whose retry (its own files seeded into out/) corrects it.
 // STUB_AGENT_ARGV_LOG=<file> appends the engine, argv, cwd, the workspace's
 //   entries and whether a metered key or any credential-named variable
 //   reached this process.
@@ -335,6 +339,23 @@ const currentSources = () => {
 
 if (phase === "revise-research") {
   const before = currentSources();
+  if (process.env.STUB_RESEARCH === "badurl") {
+    // first attempt: a source with no url (the real ingest rejects it). The retry finds its own
+    // files already in out/ and corrects only what the rejection named.
+    const seeded = path.resolve("out", "sources.json");
+    if (fs.existsSync(seeded)) {
+      const prev = JSON.parse(fs.readFileSync(seeded, "utf8"));
+      for (const s of prev) if (!s.url) s.url = `https://example.org/new/${s.n}`;
+      write("sources.json", JSON.stringify(prev, null, 2));
+      console.log(claudeEnvelope("1 source corrected"));
+      process.exit(0);
+    }
+    const bad = [...before, { n: before.length + 1, url: "", title: "A newer measurement", publisher: "Example Lab", date: "2026-09-30", primary: true, counter: false, took: "a number" }];
+    write("sources.json", JSON.stringify(bad, null, 2));
+    write("claims.json", JSON.stringify(bad.map((s) => ({ text: `A sourced fact from ${s.title}.`, source: s.n })), null, 2));
+    console.log(claudeEnvelope("1 source added"));
+    process.exit(0);
+  }
   const next = [...before, { n: before.length + 1, url: `https://example.org/new/${before.length + 1}`, title: "A newer measurement", publisher: "Example Lab", date: "2026-09-30", primary: true, counter: false, took: "the current price" }];
   const sources = process.env.STUB_RESEARCH === "renumber" ? next.slice(1).map((s, i) => ({ ...s, n: i + 1 })) : next;
   write("sources.json", JSON.stringify(sources, null, 2));
@@ -353,6 +374,18 @@ if (phase === "fix") {
   if (process.env.STUB_FIX_MODE === "error") {
     console.log(claudeEnvelope("the stub was told to fail the fix", { subtype: "error_during_execution", is_error: true }));
     process.exit(1);
+  }
+  if (process.env.STUB_FIX_MODE === "inplace") {
+    // edits the seeded copy in out/post and touches nothing else; fails when it is not seeded
+    const md = path.resolve("out", "post", "post.md");
+    const html = path.resolve("out", "post", "index.html");
+    if (!fs.existsSync(md) || !fs.existsSync(html)) {
+      console.log(claudeEnvelope("out/post is not seeded", { subtype: "error_during_execution", is_error: true }));
+      process.exit(1);
+    }
+    for (const f of [md, html]) fs.writeFileSync(f, fs.readFileSync(f, "utf8").replace(/[\u2014\u2013]/g, ","));
+    console.log(claudeEnvelope("edited in place"));
+    process.exit(0);
   }
   const failures = JSON.parse(fs.readFileSync(path.resolve("inputs", "check-failures.json"), "utf8"));
   const words = writePost(currentSources(), undefined, defectIn("fix"));

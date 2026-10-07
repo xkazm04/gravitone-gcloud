@@ -210,3 +210,38 @@ test("panel: the agy reviewer's timeout is the shorter one", async () => {
   expect(by.gemini).toBe(14);
   expect(by.gemini).toBeLessThan(by.fable);
 });
+
+test("the fix edits the seeded copy in place: unflagged bytes survive,", async () => {
+  process.env.STUB_POST_DEFECT = "draft";
+  process.env.STUB_FIX_MODE = "inplace";
+  const run = await toGate();
+  expect(run.status, run.error).toBe("awaiting-approval");
+  const first = json<CheckPassRecord>(run.id, "checks/draft-1.json");
+  expect(first).toMatchObject({ failed: [{ id: "no-em-dash" }], fixed: true });
+  expect(json<CheckPassRecord>(run.id, "checks/draft-2.json")).toMatchObject({ failed: [], fixed: false });
+  expect(json<{ outcome: string }>(run.id, "agent/fix-draft-1.json").outcome).toBe("completed");
+  // the fix turn wrote no figures of its own: the post's figures are the draft's, carried over
+  const fixed = readFileSync(at(run.id, "post/post.md"), "utf8");
+  expect(fixed).not.toMatch(DASH);
+  expect(readdirSync(at(run.id, "post/figures")).length).toBeGreaterThanOrEqual(5);
+  // everything outside the seeded defect is the draft's text, byte for byte: the same post
+  // drafted without the defect is the fixed one minus the sentence the defect added
+  delete process.env.STUB_POST_DEFECT;
+  const clean = await toGate();
+  expect(fixed.replace(" A pause , and a dash.", "")).toBe(readFileSync(at(clean.id, "post/post.md"), "utf8"));
+});
+
+test("a rejected re-research retries once from its own files and is told only what was wrong", async () => {
+  process.env.STUB_CRITIQUE_DECISIONS = "research,keep";
+  process.env.STUB_RESEARCH = "badurl";
+  const run = await toGate();
+  expect(run.status, run.error).toBe("awaiting-approval");
+  const receipt = json<{ outcome: string; attempts: number }>(run.id, "agent/critique-r1-research.json");
+  expect(receipt).toMatchObject({ outcome: "completed", attempts: 2 });
+  // the first attempt's rejected files were kept (the source with no url), the retry corrected it
+  const kept = JSON.parse(readFileSync(at(run.id, "agent/critique-r1-research-out/sources.json"), "utf8")) as { url: string }[];
+  expect(kept.at(-1)?.url).toBe("");
+  const sources = json<{ n: number; url: string }[]>(run.id, "sources.json");
+  expect(sources.every((s) => /^https?:\/\//.test(s.url))).toBe(true);
+  expect(existsSync(at(run.id, "critique/round-1/researched.json"))).toBe(true);
+});
