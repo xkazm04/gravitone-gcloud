@@ -183,11 +183,11 @@ measured against):
 
 | Dimension | Measured |
 |---|---|
-| structure | content preview before the first `<h2>` listing the sections and stating no read time; no stated reading time anywhere (`read-time`); a summary table in the closing section (`closing-table`); no placeholders |
-| figures | at least 5 `<figure>`s, every one captioned, every caption citing a source that exists, images resolving inside the post, label-length text inside the SVGs; visual cadence (`visual-cadence`): no run of 3 or more prose paragraphs in `post.md` without an image, table, code block or callout |
+| structure | content preview before the first `<h2>` listing the sections and stating no read time; no stated reading time anywhere (`read-time`); a summary table in the closing section (`closing-table`); at most 450 words before the first section, preview included (`pre-section-words`); closing list items of at most 50 words (`closing-list-items`); no placeholders |
+| figures | at least 5 `<figure>`s, every one captioned, every caption citing a source that exists, images resolving inside the post, label-length text inside the SVGs; visual cadence (`visual-cadence`): no run of 3 or more prose paragraphs in `post.md` without an image, table, code block or callout, and in words (`prose-run-words`, at most 300 words of prose between visuals; `padding-paragraphs`, at most 30 percent of the prose in one-sentence paragraphs of 40 words or fewer) |
 | voice | first-person words in prose (outside code and quotes); no em or en dash in `post.md`, `index.html` or a figure (`no-em-dash`) |
 | medium-fidelity | no network resources (static and rendered), highlighted code, a dark scheme, smallest body type at 1440 (>= 18 px) and 390 (>= 17 px), smallest caption/chrome type (>= 13 px), no sideways scroll at 390 |
-| truth | >= 8 sources, >= 3 primary, >= 1 counter; every source dated with an http(s) URL; every `[n]` resolves; every claim's source exists; item `critique`: at least 2 reviewers completed every round, and every `blocker` `factual` finding has a disposition with a reason |
+| truth | >= 8 sources, >= 3 primary, >= 1 counter; every source dated with an http(s) URL; every `[n]` resolves; every claim's source exists; the Sources list and `sources.json` numbered 1 to N with no gap or repeat (`source-numbering`); item `critique`: at least 2 reviewers completed every round, and every `blocker` `factual` finding has a disposition with a reason |
 | storytelling, depth | not measured: the human's judgement, reported as such and never as a pass |
 
 The rendered items open `post/index.html` in Playwright's chromium with every http(s) request
@@ -208,8 +208,10 @@ it:
 2. If any failed and fewer than `MAX_FIX_PASSES` (2) fix turns have run for this label, a **fix
    turn** (writer phase `fix`, `article-critique-writer` class, no web) gets the post, sources and
    claims plus the failures twice: in the prompt (item id, dimension, measured value, bar, the
-   offending text) and in `inputs/check-failures.json`. It writes the whole post again; the
-   engine ingests it like any rewrite (`ingestPost`) and the loop checks again.
+   offending text) and in `inputs/check-failures.json`. `out/post/` is seeded with a copy of the
+   post, so the fix edits in place and carries every unflagged byte over (2026-10-07: a fix that
+   rewrote the whole post cost $4 a pass and changed text nobody had flagged); the engine ingests
+   the result like any rewrite (`ingestPost`) and the loop checks again.
 3. When the bound is reached with failures left, the run goes on to the next step and the gate;
    nothing is hidden: the last pass keeps its failures and the final `check` step reports them.
    A fix turn that fails (timeout, invalid output) is recorded as `fixError`, leaves the post as
@@ -221,6 +223,65 @@ loop's whole state, so a resume repeats no pass and no turn. The fix turns' rece
 `agent/fix-<label>-<pass>.json` and `-prompt.md`; their cost is added to the draft step or to the
 critique step. A check that cannot run at all (an exception) is logged and skipped between turns;
 the final check step surfaces it.
+
+## Topics, the loop and `/techwriter`
+
+Added 2026-10-07 from the first six runs (the `techwriter` skill, `.claude/skills/techwriter/`,
+is the operator's front door; the CLI verbs below are what it calls).
+
+```bash
+npx tsx pipeline/article.mts topics [--limit N] [--include-bundle <bundle>] [--json]
+npx tsx pipeline/article.mts loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3]
+    [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>] [--json]
+```
+
+**Covered topics** (`lib/articles/loop.ts`, `coverage`). A topic is covered when a run on it is at
+`awaiting-approval`, `approved`, `landing` or `landed`, or when the registry's `publications/` lane
+holds a post on it (`publication.json` `topic`; a landed run and its publication count once). A
+failed or rejected run does not cover its topic. A run still in flight is *claimed*: the loop will
+not start a second article on the subject, and a claimed run with no live driver is listed as
+`orphaned` in the loop report (resume it with `resume <runId>`).
+
+**`topics`** ranks the uncovered subjects of every bundle except `technical-writing` (the standard
+itself, circular as evidence; `--include-bundle technical-writing` opts in). The order is
+deterministic and spreads over bundles: bundles with the fewest covered topics first, then
+round-robin by category and slug. Each topic carries its title (the golden path's first heading) and
+a suggested angle that states the two rules every run needed said up front: say in the preview
+whether the evidence is first-party or third-party, and label our own conclusions Derived, Inference
+or assumption. `--json` gives `{topics, covered, claimed, remaining}`.
+
+**`loop`** drives runs to the human gate in this process (no child process of its own: the agent
+seam spawns the CLIs with its own argv fence and environment strip) until the target is met.
+`--target N` is the total number of covered topics, `--add N` is N more than are covered now.
+
+- **The budget is required.** `--budget-usd X`: there is no default. It counts reported cost, the
+  Claude seat's turns; Codex and agy report none, so real spend is higher (the report says so). The
+  loop stops launching when reported spend plus `--est-run-usd` (default 70, about the median of the
+  first six runs) would pass X, and once reported spend passes X the runs in flight are stopped at
+  their next agent turn (`budget-stopped`). A stopped run is `failed` and can be resumed by hand.
+- **Run ceilings**, checked before every agent turn, writer or reviewer: `--run-usd` (default 120,
+  above the dearest run so far at $92) and `--run-turns` (default 45; the runs used 26 to 32). A run
+  over either is refused its next turn, ends `failed` with `run-ceiling: ...` in its error, is
+  reported `ceiling-stopped` and is never resumed by the loop: it is marked for a human. `--turn-usd`
+  (default 30; the dearest turn so far was $17.61) is passed to the writer's CLI as
+  `--max-budget-usd`, so one runaway turn is stopped inside the turn.
+- **Resume bound.** A failed run is resumed up to `--max-resumes` (2) times, then it counts as a
+  failure; after `--max-failures` (3) failed topics the loop stops (`failure-stopped`).
+- **Stops**, in `loop.json` `stop`: `target-reached`, `budget-stopped`, `failure-stopped`,
+  `topics-exhausted`. Exit 0 only for `target-reached`.
+- **Report.** `<store parent>/article-loops/<loop id>/loop.json` (`article-loop/1`: options, covered
+  at start and now, reported spend, every run with its end, resumes, cost and turns, orphans, the
+  stop and why) and `events.log`, beside the article store so that `/articles` does not list it.
+  `--topics <file>` replaces the ranking with a JSON array of `"bundle/slug"` or `{subject, angle}`.
+
+The prompts and checks of 2026-10-07 carry the first six runs' lessons (`lib/articles/checks.ts`,
+`pipeline/ARTICLE-*-PROMPT.md`): the opening as one concrete incident, a cap on the words before the
+first section, the cadence rule counted in words, evidence scope stated in the preview, labelled
+constructs, stable source numbers (also as a check), the population of every number in research,
+the keep-existing-sources rule at the head of the re-research phase, a worked triage answer, a fix
+turn that edits in place, and one retry of a rejected re-research that starts from its own files.
+The thresholds were calibrated on the eight posts in the store; they fail the five posts that the
+reflections called a wall before the first section, and the two longest stretches between visuals.
 
 ## Lessons from the first full run
 
@@ -305,7 +366,8 @@ npx tsx pipeline/article.mts resume <runId> [--reviewers <file>] [--json]
 Exit 0 ok, 1 the run stopped somewhere else or the operation failed, 2 usage. `--json` prints one
 document on stdout; the per-turn `[agent]` log lines go to stderr. `run` and `status` print the
 critique: each reviewer with its outcome and error, the findings by disposition, and the decision.
-`run --json` carries `critique` beside `{runId, dir, status}`. The `article-run` skill wraps `run`
+`run --json` carries `critique` beside `{runId, dir, status}`. The `techwriter` skill is the dialogue and
+the loop; the `article-run` skill wraps `run`
 and `status` only and never approves.
 
 A dry run against a throwaway registry, spending nothing, with every engine stubbed:
