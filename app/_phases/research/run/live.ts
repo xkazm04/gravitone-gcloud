@@ -34,13 +34,43 @@
 // the engine, a valid notebook comes back, it is saved with its receipt, and it
 // is labelled as what it is. Everything past that is a surface nobody has
 // designed yet.
+//
+// ── A WATCHER, NOT A REQUEST (AIO-A stage 4b, 2026-10-07) ───────────────────
+//
+// The run is a TURN the server owns (lib/turns/kinds/research.ts). `startLive`
+// asks /api/research through the one client door, which answers 202 with a
+// turn id as soon as the ledger has the record; from there this store only
+// WATCHES the turn and lands what it settles to. A reload, or leaving the
+// step, drops the watcher and not the run, and the next mount asks the ledger
+// (`resumeLive`) and lands a settled turn it has not taken.
+//
+// THE NOTEBOOK IS WRITTEN ONCE PER TURN ID. The id this project last took is
+// kept here and on the `research-notebook` record itself (`turn`), so the
+// landing a watcher makes, the one a later mount makes and the one a reload
+// makes are one landing — and a Clear writes the id it saw, so a turn that was
+// already taken can never put a cleared notebook back.
 
 import { useCallback, useSyncExternalStore } from "react";
 
-import { accessHeader } from "@/lib/imagingClient";
 import type { SourceReceipt } from "@/lib/text/types";
+import {
+  cancelTurn,
+  getTurn,
+  isLiveTurn,
+  researchPreflight,
+  resumeTurn,
+  startResearch,
+  type TurnRecord,
+  type TurnSummary,
+} from "@/lib/turns/client";
 import type { Notebook } from "../../_shared/notebook/types";
-import { saveStep, type ResearchNotebookStepData } from "../../_shared/stepStore";
+import { onSaveIssued, saveStep, type ResearchNotebookStepData } from "../../_shared/stepStore";
+
+/** The turn kind the real run is (lib/turns/kinds/research.ts), which is also
+ *  its job kind in the bell. */
+export const LIVE_KIND = "research";
+/** The record a landed notebook is written to. */
+const PHASE = "research-notebook";
 
 /* ──────────────────────────────── the receipt ────────────────────────────── */
 
@@ -93,17 +123,27 @@ const IDLE: LiveState = { status: "idle" };
 
 const states = new Map<string, LiveState>();
 const subs = new Map<string, Set<() => void>>();
-/** The in-flight request per project. Held here for the same reason the state is:
- *  Abort has to still work after the creator has left the step and come back. */
-const flights = new Map<string, AbortController>();
-/** THE JOB THIS RUN IS REPORTING TO, held where the request is.
- *
- *  The same lesson `Run.jobId` records next door, and it cost a real bug there:
- *  a job id kept in component state is one lifetime too short, so Abort after
- *  leaving and returning aborted the work and then found no job to cancel — and
- *  the job sat `running` in the bell for ever. Cleared when the run lands, and
- *  handed back by `stopLive` so the caller can close it. */
-const jobIds = new Map<string, string>();
+/** The turn this store is watching per project, with the timer of its next
+ *  look. Held here for the same reason the state is: Stop has to still work
+ *  after the creator has left the step and come back. */
+type Watch = { turnId: string; topic: string; timer?: ReturnType<typeof setTimeout> };
+const watching = new Map<string, Watch>();
+/** The last turn per project whose answer was taken — landed, or found to have
+ *  nothing to land. Mirrored on the record as `turn`; see the header. */
+const consumed = new Map<string, string>();
+/** What this tab last knew of each project's `research-notebook` record — read
+ *  at hydration, then every save issued for it. A failed turn's id is merged
+ *  into it rather than written over it. */
+const records = new Map<string, ResearchNotebookStepData>();
+
+onSaveIssued((projectId, phase, data) => {
+  if (phase === PHASE && data && typeof data === "object") records.set(projectId, data as ResearchNotebookStepData);
+});
+
+/** How often a watched turn is asked about. The jobs provider polls the
+ *  project's list for the bell; this reads the single record, because only it
+ *  carries the notebook. */
+const LOOK_MS = 1500;
 
 const read = (projectId: string): LiveState => states.get(projectId) ?? IDLE;
 
@@ -122,6 +162,14 @@ function subscribe(projectId: string, f: () => void) {
   return () => void set!.delete(f);
 }
 
+/** What a hydrated record says about this project: the last turn it took, and
+ *  the record itself. Never over what this tab already knows, which is newer. */
+function seed(projectId: string, saved: ResearchNotebookStepData | undefined) {
+  if (!saved) return;
+  if (saved.turn && !consumed.has(projectId)) consumed.set(projectId, saved.turn);
+  if (!records.has(projectId)) records.set(projectId, saved);
+}
+
 /** Adopt a notebook read back off disk. Used by hydration, and refused while a
  *  run is live for the same reason the simulated engine's `load` is: adopting a
  *  saved result over a run in flight throws away work that is being paid for.
@@ -130,6 +178,7 @@ function subscribe(projectId: string, f: () => void) {
  *  a notebook away here, and putting it back on the next mount would undo their
  *  clear silently. */
 export function adoptSaved(projectId: string, saved: ResearchNotebookStepData | undefined) {
+  seed(projectId, saved);
   if (!saved?.notebook || !saved.engine) return;
   if (read(projectId).status === "running") return;
   write(projectId, {
@@ -178,128 +227,250 @@ export interface Preflight {
 let preflightOnce: Promise<Preflight | null> | null = null;
 
 export function preflight(): Promise<Preflight | null> {
-  preflightOnce ??= fetch("/api/research", { headers: accessHeader() })
-    .then((r) => (r.ok ? (r.json() as Promise<Preflight>) : null))
-    .catch(() => null);
+  // GATED (the route's GET discloses key-and-posture state), so it is asked
+  // through the one client door, which carries the access header.
+  preflightOnce ??= researchPreflight().then((p) => (p ?? null) as Preflight | null);
   return preflightOnce;
 }
 
 /* ─────────────────────────────── the run itself ──────────────────────────── */
 
-/** What a landing tells whoever started it — the bell round-trip, frozen at
- *  click time exactly as the simulated engine freezes its own ending. */
-type Ending = (final: LiveState) => void;
+const msOf = (iso: string | undefined): number => {
+  const t = iso ? Date.parse(iso) : NaN;
+  return Number.isFinite(t) ? t : Date.now();
+};
+
+/** Stop looking at this project's turn. The turn itself is untouched. */
+function unwatch(projectId: string) {
+  const w = watching.get(projectId);
+  if (w?.timer) clearTimeout(w.timer);
+  watching.delete(projectId);
+}
+
+/** Watch a live turn until it settles, then land it. A turn already watched is
+ *  not watched twice. */
+function watch(projectId: string, turnId: string, topic: string, startedAt: number) {
+  if (watching.get(projectId)?.turnId === turnId) return;
+  unwatch(projectId);
+  const w: Watch = { turnId, topic };
+  watching.set(projectId, w);
+  write(projectId, { status: "running", topic, startedAt });
+
+  const look = () => {
+    w.timer = setTimeout(() => {
+      // A hidden tab does not ask; it asks again on the next look.
+      if (typeof document !== "undefined" && document.visibilityState === "hidden") return look();
+      void getTurn(turnId)
+        .then((rec) => {
+          if (watching.get(projectId) !== w) return; // stopped, cleared or replaced
+          if (!rec) {
+            unwatch(projectId);
+            write(projectId, {
+              status: "failed",
+              topic,
+              detail: "The studio no longer has a record of this run, so its notebook cannot be read.",
+              code: "orphaned",
+            });
+            return;
+          }
+          if (isLiveTurn(rec.status)) return look();
+          landLive(projectId, rec);
+        })
+        .catch(() => {
+          // Offline for a moment is not an ending: the turn runs on the server.
+          if (watching.get(projectId) === w) look();
+        });
+    }, LOOK_MS);
+  };
+  look();
+}
 
 /**
- * Start a real run for this project. Returns false if one is already live here,
- * so the caller never opens a job nothing will settle.
+ * Take a settled turn onto the board — AT MOST ONCE PER TURN ID.
  *
- * SAVING HAPPENS HERE, not in a component effect, and that is the difference
- * between a notebook that survives and one that does not: the run outlives the
- * mount, so the only place guaranteed to be alive when the answer lands is this
- * closure. A component that unmounted at second 90 of a 200-second run would
- * otherwise have paid for a notebook and written nothing to disk.
+ * SAVING HAPPENS HERE, not in a component effect: the watcher outlives the
+ * mount, and a mount that lands a turn the watcher never saw (a reload) comes
+ * through here too. The consumed id is checked and set in one synchronous
+ * block, so two pick-ups of one turn cannot both write.
  */
-export function startLive(projectId: string, topic: string, jobId: string, onEnd: Ending): boolean {
-  if (read(projectId).status === "running") return false;
+export function landLive(projectId: string, rec: TurnRecord) {
+  const w = watching.get(projectId);
+  const topicSeen = w?.turnId === rec.id ? w.topic : "";
+  if (w?.turnId === rec.id) unwatch(projectId);
+  // Already taken: the first pick-up wrote the record and the state.
+  if (consumed.get(projectId) === rec.id) return;
+  consumed.set(projectId, rec.id);
 
-  const ac = new AbortController();
-  flights.set(projectId, ac);
-  jobIds.set(projectId, jobId);
-  write(projectId, { status: "running", topic, startedAt: Date.now() });
+  if (rec.status === "done") {
+    const result = (rec.result ?? {}) as { notebook?: Notebook; engine?: EngineReceipt };
+    const notebook = result.notebook as Notebook;
+    const engine = result.engine as EngineReceipt;
+    // parseNotebook re-stamped the topic, so the notebook is the authority on
+    // what was asked.
+    const topic = notebook?.topic ?? topicSeen;
+    const at = Date.now();
+    // Written before the state changes, so the board and the disk cannot
+    // disagree about whether a notebook exists.
+    void saveStep<ResearchNotebookStepData>(projectId, PHASE, { topic, notebook, engine, turn: rec.id, savedAt: at });
+    write(projectId, { status: "done", topic, notebook, engine, at });
+    return;
+  }
 
-  const land = (next: LiveState) => {
-    if (flights.get(projectId) === ac) flights.delete(projectId);
-    jobIds.delete(projectId);
-    write(projectId, next);
-    onEnd(next);
-  };
+  // Nothing to write but the fact that this turn was taken — merged into the
+  // record this tab knows, so the notebook already on it stays exactly as it
+  // was. With no record at all there is nothing to merge into, and a reload
+  // shows this failure once more, which is still the truth about the last run.
+  const known = records.get(projectId);
+  if (known) void saveStep<ResearchNotebookStepData>(projectId, PHASE, { ...known, turn: rec.id });
+  if (rec.status === "cancelled") {
+    write(projectId, { status: "idle" });
+    return;
+  }
+  write(projectId, {
+    status: "failed",
+    topic: topicSeen,
+    detail:
+      rec.error?.message ||
+      (rec.status === "orphaned"
+        ? "The server stopped before this run finished, so nothing was researched."
+        : "The research run failed and said nothing about why."),
+    code: rec.error?.kind ?? (rec.status === "orphaned" ? "orphaned" : undefined),
+    findings: rec.error?.findings?.length ? rec.error.findings : undefined,
+  });
+}
 
-  void (async () => {
-    try {
-      const res = await fetch("/api/research", {
-        method: "POST",
-        headers: { "content-type": "application/json", ...accessHeader() },
-        body: JSON.stringify({ topic }),
-        signal: ac.signal,
-      });
-      const json = await res.json().catch(() => ({}) as Record<string, unknown>);
-      if (!res.ok) {
-        land({
-          status: "failed",
-          topic,
-          detail:
-            typeof json.detail === "string" && json.detail
-              ? json.detail
-              : "The research run failed and said nothing about why.",
-          code: typeof json.code === "string" ? json.code : undefined,
-          findings: Array.isArray(json.findings) ? (json.findings as string[]) : undefined,
-        });
-        return;
-      }
-      const notebook = json.notebook as Notebook;
-      const engine = json.engine as EngineReceipt;
-      const at = Date.now();
-      // Written before the ending fires, so the bell and the disk cannot
-      // disagree about whether a notebook exists.
-      void saveStep<ResearchNotebookStepData>(projectId, "research-notebook", {
-        topic,
-        notebook,
-        engine,
-        savedAt: at,
-      });
-      land({ status: "done", topic, notebook, engine, at });
-    } catch (e) {
-      // An abort is not a failure: whoever aborted is standing right there and
-      // has already settled the job. Leaving the state alone is correct — `stop`
-      // below wrote the ending it wanted.
-      if (ac.signal.aborted || (e instanceof DOMException && e.name === "AbortError")) return;
-      land({
+/**
+ * Start a real run for this project. Resolves to the turn id the caller should
+ * track in the jobs provider — the new run's or, when another tab or device
+ * already holds this project's slot, THAT run's, which is watched instead of
+ * starting a second one. `null` when nothing runs: one was already live here,
+ * or the route refused (the reason is on the store's `failed` state).
+ */
+export async function startLive(projectId: string, topic: string): Promise<string | null> {
+  if (read(projectId).status === "running") return null;
+  // Locked from the click, before the 202: no turn id exists yet, and a second
+  // click must already lose.
+  const startedAt = Date.now();
+  const pending: LiveState = { status: "running", topic, startedAt };
+  write(projectId, pending);
+
+  let out: Awaited<ReturnType<typeof startResearch>>;
+  try {
+    out = await startResearch(projectId, topic);
+  } catch {
+    if (read(projectId) === pending)
+      write(projectId, {
         status: "failed",
         topic,
         detail: "The studio could not be reached, so nothing was researched.",
         code: "offline",
       });
-    }
-  })();
-
-  return true;
+    return null;
+  }
+  // Stopped or cleared between the click and the 202: the run started anyway,
+  // and is ended rather than watched.
+  if (read(projectId) !== pending) {
+    if (out.ok) void cancelTurn(out.turnId).catch(() => undefined);
+    return null;
+  }
+  if (out.ok) {
+    watch(projectId, out.turnId, topic, startedAt);
+    return out.turnId;
+  }
+  // The rule working, server-side: this project's slot is held.
+  if (out.status === 409 && out.holder) {
+    watch(projectId, out.holder, topic, startedAt);
+    return out.holder;
+  }
+  // Refused before any turn existed (401, an empty or over-long topic).
+  write(projectId, {
+    status: "failed",
+    topic,
+    detail: out.detail || "The research run failed and said nothing about why.",
+    code: out.code,
+  });
+  return null;
 }
 
-/** Pull the run, and hand back the job it was reporting to.
+/**
+ * What a mount does about this project's newest research turn once its record
+ * has been read: a live one is watched, a settled one it has not taken is
+ * landed. Resolves to the live turn the caller should track, or null.
  *
- *  Fires NO ending, by design and by the same rule the simulated engine's `stop`
- *  follows: the caller owns the job and is about to cancel it, and firing an
- *  ending too would race its own `cancel`. The id is RETURNED rather than
- *  cancelled here so that this module stays free of the jobs provider — it is a
- *  store, and a store that reached into React's context could not be called from
- *  the fetch closure that needs it. */
-export function stopLive(projectId: string): string | undefined {
-  const ac = flights.get(projectId);
-  const job = jobIds.get(projectId);
-  jobIds.delete(projectId);
-  if (!ac) return job;
-  flights.delete(projectId);
-  ac.abort();
+ * `saved` is the `research-notebook` record as hydration read it — the consumed
+ * id lives there. `topic` is what the run card shows for a turn this tab did
+ * not start (the ledger keeps a digest of the prompt, never the topic).
+ */
+export async function resumeLive(
+  projectId: string,
+  saved: ResearchNotebookStepData | undefined,
+  topic = "",
+): Promise<TurnSummary | null> {
+  seed(projectId, saved);
+  if (watching.has(projectId)) return null;
+  const l = await resumeTurn(projectId, LIVE_KIND, consumed.get(projectId) ?? null);
+  if (l.action === "watch") {
+    // A run started here between the ask and the answer is already watched.
+    if (!watching.has(projectId) && read(projectId).status !== "running")
+      watch(projectId, l.turn.id, topic, msOf(l.turn.startedAt));
+    return l.turn;
+  }
+  if (l.action === "land") landLive(projectId, l.turn);
+  return null;
+}
+
+/** Stop the run. On the server the record says `cancelled` and the engine's
+ *  process tree is ended (lib/turns/runner.ts). Resolves to the record the
+ *  cancel came back with, so the caller can fold it into the bell at once.
+ *
+ *  A cancel that lost the race to the turn's own ending finds it `done` or
+ *  `failed`: that answer was paid for, so it is landed rather than dropped. */
+export async function stopLive(projectId: string): Promise<TurnSummary | null> {
+  const w = watching.get(projectId);
+  unwatch(projectId);
   write(projectId, { status: "idle" });
-  return job;
+  if (!w) return null;
+  const out = await cancelTurn(w.turnId).catch(() => null);
+  const turn = out?.turn ?? null;
+  if (turn && (turn.status === "done" || turn.status === "failed")) {
+    const rec = await getTurn(w.turnId).catch(() => null);
+    if (rec) landLive(projectId, rec);
+  }
+  return turn;
 }
 
 /** Discard the live notebook — the Clear path. The saved record goes with it,
- *  because a cleared step that leaves a notebook on disk re-adopts it on the
- *  next mount and the creator's clear silently undoes itself. */
+ *  IN THE SAME TICK, because a cleared step that leaves a notebook on disk
+ *  re-adopts it on the next mount and the creator's clear silently undoes
+ *  itself. A run still going is stopped, and the record keeps the id of the
+ *  newest turn this tab knew of, so neither it nor one already taken can land
+ *  over the clear later. */
 export function resetLive(projectId: string) {
-  stopLive(projectId);
+  const w = watching.get(projectId);
+  unwatch(projectId);
+  if (w) consumed.set(projectId, w.turnId);
   write(projectId, { status: "idle" });
+  const turn = consumed.get(projectId);
   // An EMPTY RECORD, not an absent one. `saveStep` spreads what it is given, so
   // writing `null` would store `{savedAt}` and leave the next reader guessing;
   // and a key that is merely never written is "this project has never run" —
   // a different fact from "the creator cleared what was here".
-  void saveStep<ResearchNotebookStepData>(projectId, "research-notebook", {
+  void saveStep<ResearchNotebookStepData>(projectId, PHASE, {
     topic: "",
     notebook: null,
     engine: null,
+    ...(turn ? { turn } : {}),
   });
+  if (w) void cancelTurn(w.turnId).catch(() => undefined);
+}
+
+/** Forget everything this module holds, as a reload does. The ledger and the
+ *  step store are untouched. For probes. */
+export function __forgetLive() {
+  for (const p of [...watching.keys()]) unwatch(p);
+  states.clear();
+  consumed.clear();
+  records.clear();
 }
 
 /** One live run per project — the same rule the simulated engine keeps, and for
@@ -313,11 +484,8 @@ export function useLiveResearch(projectId: string) {
 
   return {
     state,
-    start: useCallback(
-      (topic: string, jobId: string, onEnd: Ending) => startLive(projectId, topic, jobId, onEnd),
-      [projectId],
-    ),
-    stop: useCallback((): string | undefined => stopLive(projectId), [projectId]),
+    start: useCallback((topic: string) => startLive(projectId, topic), [projectId]),
+    stop: useCallback(() => stopLive(projectId), [projectId]),
     reset: useCallback(() => resetLive(projectId), [projectId]),
   };
 }

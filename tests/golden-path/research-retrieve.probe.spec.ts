@@ -19,7 +19,15 @@
 // Nothing reaches a network or a model. The stream is a hand-written cassette
 // in the CLI's stream-json shape (tests/_engine/cassettes/research-retrieve.json),
 // replayed by the stand-in `claude` withFakeEngine puts first on PATH.
+//
+// SINCE AIO-A STAGE 4b the POST starts a server-owned `research` turn and
+// answers 202. The route cases here ask it with `?wait=1` and a `projectId`,
+// over a temp TEXT_TURN_DIR, and assert the SAME bodies they always did: the
+// synchronous answer is the route's contract for scripts and probes.
 import { createHash } from "node:crypto";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
@@ -30,6 +38,7 @@ import { retrievalEnabled } from "@/lib/text/env";
 import { TextError } from "@/lib/text/errors";
 import { parseRetrieveStream, runClaudeRetrieve } from "@/lib/text/providers/claudeCliRetrieve";
 import { retrieve } from "@/lib/text/router";
+import { whenIdle } from "@/lib/turns/runner";
 import type { Notebook } from "@/app/_phases/_shared/notebook/types";
 
 import {
@@ -50,9 +59,13 @@ keepEnv([
   "NEXT_PUBLIC_DEV_AUTH",
   "LIGHTTRACK_DISABLE",
   "TEXT_RETRIEVE",
+  "TEXT_TURN_DIR",
 ]);
 
+let dir = "";
 test.beforeEach(() => {
+  dir = mkdtempSync(join(tmpdir(), "gravitone-research-retrieve-"));
+  process.env.TEXT_TURN_DIR = dir;
   process.env.NEXT_PUBLIC_DEV_AUTH = "1";
   process.env.TEXT_ENV = "local";
   process.env.LOCAL_BINARIES = "on";
@@ -60,6 +73,11 @@ test.beforeEach(() => {
   delete process.env.GOOGLE_AI_API_KEY;
   process.env.LIGHTTRACK_DISABLE = "1";
   delete process.env.TEXT_RETRIEVE;
+});
+test.afterEach(async () => {
+  await whenIdle();
+  if (dir) rmSync(dir, { recursive: true, force: true });
+  dir = "";
 });
 
 const CLOCK = "2026-10-06T09:00:00.000Z";
@@ -88,14 +106,14 @@ const RESULT = TURN.stream[TURN.stream.length - 1]!;
 
 let ip = 0;
 const req = (method: "GET" | "POST", body?: unknown) =>
-  new Request("http://localhost/api/research", {
+  new Request(`http://localhost/api/research${method === "POST" ? "?wait=1" : ""}`, {
     method,
     headers: { "content-type": "application/json", "x-forwarded-for": `10.88.0.${++ip}` },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
 async function research(topic = "harbour dredging costs") {
-  const res = await POST(req("POST", { topic }));
+  const res = await POST(req("POST", { topic, projectId: "p-research-retrieve" }));
   return { status: res.status, json: (await res.json()) as Record<string, unknown> };
 }
 

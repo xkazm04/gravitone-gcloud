@@ -341,7 +341,9 @@ test("case 7: useVersions has no unmount path that aborts or cancels the run, an
 
 /* ── 8, scoped to turns: one client door ──────────────────────────────────── */
 
-test("acceptance 8: no raw fetch of /api/recalibrate or /api/turns outside lib/turns/client.ts", () => {
+// Research joined the door in AIO-A stage 4b: its POST and its gated pre-flight
+// GET were the last raw gated fetches in app/_phases/research/run/.
+test("acceptance 8: no raw fetch of /api/recalibrate, /api/research or /api/turns outside lib/turns/client.ts", () => {
   const ROOT = process.cwd();
   const files: string[] = [];
   const walk = (d: string) => {
@@ -352,20 +354,28 @@ test("acceptance 8: no raw fetch of /api/recalibrate or /api/turns outside lib/t
     }
   };
   for (const top of ["app", "components", "lib"]) walk(join(ROOT, top));
-  const RAW = /\bfetch\(\s*[`"'](\/api\/(?:recalibrate|turns)\b[^`"']*)/g;
+  const RAW = /\bfetch\(\s*[`"'](\/api\/(?:recalibrate|research|turns)\b[^`"']*)/g;
   const hits: string[] = [];
   let inDoor = 0;
+  const doorRoutes = new Set<string>();
+  const walked: string[] = [];
   for (const f of files) {
     const rel = relative(ROOT, f).split("\\").join("/");
+    walked.push(rel);
     const src = stripComments(readFileSync(f, "utf8"));
     for (const m of src.matchAll(RAW)) {
-      if (rel === "lib/turns/client.ts") inDoor++;
-      else hits.push(`${rel}:${src.slice(0, m.index).split("\n").length} ${m[1]}`);
+      if (rel === "lib/turns/client.ts") {
+        inDoor++;
+        doorRoutes.add(m[1]!.split(/[?$]/)[0]!);
+      } else hits.push(`${rel}:${src.slice(0, m.index).split("\n").length} ${m[1]}`);
     }
   }
   console.log(`[turn-recal] walked ${files.length} files; ${inDoor} turn fetches in the door, ${hits.length} outside`);
-  // The walk must have read the tree, and the matcher must see the door's own calls.
+  // The walk must have read the tree, the Research step's run directory among
+  // it, and the matcher must see the door's own calls, research among them.
   expect(files.length).toBeGreaterThan(200);
+  expect(walked, "the walk never reached app/_phases/research/run/").toContain("app/_phases/research/run/live.ts");
+  expect([...doorRoutes].sort()).toEqual(expect.arrayContaining(["/api/recalibrate", "/api/research", "/api/turns"]));
   expect(inDoor, "the matcher found none of the door's own fetches - it is blind").toBeGreaterThanOrEqual(4);
   expect(hits).toEqual([]);
 });

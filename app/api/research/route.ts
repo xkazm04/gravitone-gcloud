@@ -90,26 +90,45 @@
 //   · and it stays NARROW. The price half is `textPriceTable()` verbatim — the
 //     same committed literals, the same audit, no key, no environment.
 
+// ── A TURN, NOT A HELD-OPEN REQUEST (AIO-A stage 4b, 2026-10-07) ─────────────
+//
+// The POST used to await `retrieve()`/`reason()` in-request for minutes, and
+// the notebook was written by a client closure that a reload threw away with
+// the money already spent. It now admits the request and hands it to the turn
+// runner as the `research` kind (lib/turns/kinds/research.ts, the ONLY
+// dispatch path: prepare = the topic refusals and the prompt, dispatch = the
+// retrieval rung first with today's fallback rule, settle = parseNotebook and
+// the cross-check). It answers 202 `{ turnId }` as soon as the ledger has the
+// record; the run belongs to the server. A second run for the same project
+// while one is live is a 409 naming it.
+//
+// `?wait=1` holds the request until the turn settles and answers the
+// synchronous body this route always answered — 200 `{ notebook, engine }`, or
+// the refusal with its status, its code and every finding — for scripts and
+// probes. Everything said above about the prompt, the receipt and the surface
+// is now true of the kind module, which carries the same three places.
+
+import { after } from "next/server";
+
 import { guardRequest } from "@/lib/apiAuth";
-import {
-  crossCheckRetrieval,
-  NotebookError,
-  NOTEBOOK_SCHEMA,
-  parseNotebook,
-  RETRIEVE_NOTEBOOK_SCHEMA,
-} from "@/lib/notebook/validate";
-import { retrievalEnabled } from "@/lib/text/env";
-import { TextError, statusFor } from "@/lib/text/errors";
+import { TextError, statusFor, type TextErrorKind } from "@/lib/text/errors";
 import { textPriceTable } from "@/lib/text/pricing";
-import { engineStatus, reason, retrieve, retrievePlanFor } from "@/lib/text/router";
-import type { RerouteStep, TextResult } from "@/lib/text/types";
-import { MAX_TOPIC_CHARS, PromptUnavailable, reasonPrompt, retrievePrompt, topicRefusal } from "@/lib/turns/assemble/research";
+import { engineStatus, retrievePlanFor } from "@/lib/text/router";
+import { slotBusy, syncBody } from "@/lib/turns/answer";
+import { MAX_TOPIC_CHARS, PromptUnavailable, topicRefusal } from "@/lib/turns/assemble/research";
+import { RESEARCH_SPEC, ResearchRefused } from "@/lib/turns/kinds/research";
+import type { TurnRecord } from "@/lib/turns/ledger";
+import { startTurn } from "@/lib/turns/runner";
 
 export const runtime = "nodejs";
 /** A real run is minutes — nine phases and one large structured answer. Room to
  *  finish, and above the router's own 600s ceiling for a `research` turn so the
- *  engine gives up first and the creator gets a sentence. */
+ *  engine gives up first and the creator gets a sentence. `after()` and
+ *  `?wait=1` both live as long as the route may. */
 export const maxDuration = 800;
+
+/** The same project-id rule /api/turns holds. */
+const PROJECT_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,119}$/;
 
 /* ─────────────────────────────── the pre-flight ──────────────────────────── */
 
@@ -157,164 +176,74 @@ export async function POST(req: Request): Promise<Response> {
   const denied = await guardRequest(req);
   if (denied) return denied;
 
-  let body: { topic?: unknown };
+  let body: { topic?: unknown; projectId?: unknown };
   try {
     body = await req.json();
   } catch {
     return Response.json({ detail: "Request body was not valid JSON." }, { status: 400 });
   }
 
+  // The topic refusals first, in the order they always ran, and before any
+  // record exists. The kind's prepare asks the same function again.
   const checked = topicRefusal(body.topic);
   if (!checked.ok) return Response.json({ detail: checked.refusal.detail }, { status: checked.refusal.status });
-  const topic = checked.topic;
+  // The slot is per project: one live research run per project, decided
+  // against the ledger.
+  const projectId = body.projectId;
+  if (typeof projectId !== "string" || !PROJECT_ID_RE.test(projectId))
+    return Response.json({ detail: "`projectId` is required.", code: "bad-request" }, { status: 400 });
 
+  let out: Awaited<ReturnType<typeof startTurn>>;
   try {
-    // THE RETRIEVAL RUNG FIRST, and only when the operator opened it. Off, this
-    // block is skipped entirely and what follows is today's run, unchanged.
-    let retrieveTrail: readonly RerouteStep[] = [];
-    if (retrievalEnabled()) {
-      let served: TextResult | null = null;
-      try {
-        served = await retrieve({
-          prompt: await retrievePrompt(topic),
-          turn: "research",
-          schema: RETRIEVE_NOTEBOOK_SCHEMA,
-        });
-      } catch (e) {
-        // Fall back to reasoning ONLY when no retrieval engine was available —
-        // the availability kinds, or none planned here. A retrieval run that
-        // ran and failed (a fence breach, a timeout, a bad answer) is not
-        // quietly re-billed as a reasoning run; it answers as itself.
-        if (!(e instanceof TextError) || !(e.reroutable || e.kind === "unsupported")) throw e;
-        retrieveTrail = trailOf(e);
-      }
-      if (served) return retrievedAnswer(served, topic);
-    }
-
-    const prompt = await reasonPrompt(topic);
-
-    const run = await reason({ prompt, turn: "research", schema: NOTEBOOK_SCHEMA });
-
-    // VALIDATED, NEVER TRUSTED — and validated on both rungs for the reason
-    // /api/recalibrate states: a validator that only runs where the vendor
-    // cannot enforce a schema is a validator nobody tests. `parseNotebook`
-    // checks more than any schema can (the BUT/THEREFORE law, the claim budget,
-    // the mandatory steel-man and its provenance, the graph's ids) and re-stamps
-    // the topic so the notebook cannot be about something else.
-    const notebook = parseNotebook(run.json ?? run.text, topic);
-
-    return Response.json({
-      notebook,
-      engine: {
-        // The same receipt shape /api/recalibrate returns, so a client that has
-        // learned to read one reads the other. It is kept on what gets saved.
-        kind: run.provenance.transport === "local-subprocess" ? "local-claude-code" : "cloud-api",
-        provider: run.provenance.provider,
-        model: run.provenance.model,
-        rung: run.provenance.rung,
-        transport: run.provenance.transport,
-        schemaEnforcement: run.provenance.schemaEnforcement,
-        // The retrieval candidates that dropped out lead the descent, when the
-        // flag sent this run to one first. Off, the trail is empty and this is
-        // the reasoning router's own record, as it always was.
-        reroutedFrom: retrieveTrail.length
-          ? [...retrieveTrail, ...(run.provenance.reroutedFrom ?? [])]
-          : run.provenance.reroutedFrom,
-        sessionId: run.provenance.sessionId,
-        costUsd: run.provenance.costUsd,
-        costBasis: run.provenance.costBasis,
-        durationMs: run.provenance.durationMs,
-        promptChars: run.provenance.promptChars,
-        // THE FIELD THE OTHER ROUTES DO NOT HAVE. It rides on the receipt and is
-        // saved with the notebook, so a notebook read back in six months still
-        // says that nothing in it was looked up. See the header.
-        searched: false,
-      },
-    });
+    out = await startTurn(RESEARCH_SPEC as Parameters<typeof startTurn>[0], projectId, { topic: checked.topic });
   } catch (e) {
+    if (e instanceof ResearchRefused) return Response.json({ detail: e.message }, { status: e.status });
     // Before anything ran: a broken install, not a broken turn.
     if (e instanceof PromptUnavailable)
       return Response.json(
         { detail: `${e.message} The engine was never started, so nothing was researched.` },
         { status: 500 },
       );
-
-    // It answered, and what came back is not a notebook. `bad-response` is
-    // lib/text/errors.ts's own word for exactly this, so the status and the code
-    // come from there rather than from a number chosen here. Every finding
-    // travels: the fix is a prompt change, and one finding per run is a prompt
-    // edited five times for one run's worth of information.
-    if (e instanceof NotebookError)
-      return Response.json(
-        {
-          detail: `The engine answered, and what came back does not satisfy NOTEBOOK-SCHEMA. Nothing was saved. ${e.message}`,
-          code: "bad-response",
-          findings: e.findings,
-        },
-        { status: statusFor("bad-response") },
-      );
-
-    // One taxonomy, one status map. The message a TextError carries at the
-    // bottom of the ladder names every engine that was tried and why each
-    // dropped out — which is the sentence a creator with no key needs and the
-    // reason this route says nothing of its own about availability.
-    //
-    // THE MESSAGE STANDS ALONE, with nothing appended — which is a departure
-    // from /api/recalibrate next door and deliberate. That route adds "Nothing
-    // was changed." to every TextError, and lib/text/router.ts's rung-4 message
-    // ALREADY ENDS with that same sentence for every turn class (it is hardcoded
-    // there, in one caller's vocabulary, in a shared file). Measured here on
-    // 2026-09-08: "…see .env.example. Nothing was changed. Nothing was
-    // researched." Appending a second reassurance is also the wrong claim on a
-    // `timeout`, where a local run may have been billed for work we then threw
-    // away. The surface's own heading — "the real run did not produce a
-    // notebook" — carries the fact this route can honestly promise.
-    if (e instanceof TextError)
-      return Response.json({ detail: e.message, code: e.kind }, { status: statusFor(e.kind) });
-
-    console.error("[research]", e);
-    return Response.json({ detail: "The research run failed. Nothing was saved." }, { status: 502 });
+    if (e instanceof TextError) return Response.json({ detail: e.message, code: e.kind }, { status: statusFor(e.kind) });
+    throw e;
   }
+
+  if (!out.ok) return slotBusy("A research run", out.holder);
+
+  const settled = out.done;
+  try {
+    after(() => settled);
+  } catch {
+    // No request scope (a probe or a script calling the handler directly). The
+    // run is already under way as a detached promise.
+  }
+
+  if (new URL(req.url).searchParams.get("wait") === "1") return researchBody(await settled);
+  return Response.json({ turnId: out.turnId }, { status: 202 });
 }
 
-/* ──────────────────────────── the retrieval run ──────────────────────────── */
-
-/** The retrieval trail a refused `retrieve()` carried (router.ts puts it on
- *  `detail.trail`), or nothing. */
-function trailOf(e: TextError): readonly RerouteStep[] {
-  const d = e.detail as { trail?: unknown } | undefined;
-  return Array.isArray(d?.trail) ? (d.trail as RerouteStep[]) : [];
-}
-
-/** A retrieval run's answer: validated exactly as a reasoned one, then
- *  cross-checked against its receipts, with `searched` derived from them. */
-function retrievedAnswer(run: TextResult, topic: string): Response {
-  const receipts = run.receipts ?? [];
-  // NotebookError from either step goes to the POST's catch: the same
-  // `bad-response` answer, with every finding.
-  const checked = crossCheckRetrieval(parseNotebook(run.json ?? run.text, topic), receipts);
-  return Response.json({
-    notebook: checked.notebook,
-    engine: {
-      kind: run.provenance.transport === "local-subprocess" ? "local-claude-code" : "cloud-api",
-      provider: run.provenance.provider,
-      model: run.provenance.model,
-      rung: run.provenance.rung,
-      transport: run.provenance.transport,
-      schemaEnforcement: run.provenance.schemaEnforcement,
-      reroutedFrom: run.provenance.reroutedFrom,
-      sessionId: run.provenance.sessionId,
-      costUsd: run.provenance.costUsd,
-      costBasis: run.provenance.costBasis,
-      durationMs: run.provenance.durationMs,
-      promptChars: run.provenance.promptChars,
-      // DERIVED, never set: a run is `searched` because it fetched something,
-      // and the receipts are the proof. Zero receipts is `false` on the
-      // retrieval rung exactly as on the reasoning one.
-      searched: receipts.length > 0,
-      sources: receipts,
-      // What the cross-check changed and why — one line per downgraded fact.
-      crossCheck: checked.findings,
+/** The synchronous body, as this route always answered it.
+ *
+ *  A FAILED turn keeps this route's own manner rather than the shared mapping's
+ *  (lib/turns/answer.ts), in two places that were decided here on purpose: the
+ *  `bad-response` refusal carries its `code` beside every finding, and a
+ *  TextError's message STANDS ALONE, with nothing appended. The router's rung-4
+ *  message already ends "Nothing was changed." for every turn class, and a
+ *  second reassurance is the wrong claim on a `timeout`, where a local run may
+ *  have been billed for work that was then thrown away (measured 2026-09-08:
+ *  "…see .env.example. Nothing was changed. Nothing was researched."). The
+ *  surface's own heading carries the fact this route can honestly promise.
+ *  `done`, `cancelled` and `orphaned` answer exactly as the shared mapping does. */
+function researchBody(rec: TurnRecord): Response {
+  if (rec.status !== "failed") return syncBody(rec, "The research run failed. Nothing was saved.");
+  const err = rec.error ?? { kind: "failed", message: "" };
+  const kind = (err.kind || "failed") as TextErrorKind;
+  return Response.json(
+    {
+      detail: err.message || "The research run failed. Nothing was saved.",
+      code: kind,
+      ...(err.findings?.length ? { findings: err.findings } : {}),
     },
-  });
+    { status: statusFor(kind) ?? 502 },
+  );
 }

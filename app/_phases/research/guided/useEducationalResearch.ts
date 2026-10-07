@@ -52,7 +52,7 @@ import { useJobs } from "@/lib/jobs";
 import { useActiveNotebook } from "../../_shared/notebook/useActiveNotebook";
 import { saveStep, type ResearchNotebookStepData, type ResearchStepData } from "../../_shared/stepStore";
 import { useLoadFor, useStepFor } from "../../_shared/useLoadFor";
-import { adoptSaved, preflight, useLiveResearch, type Preflight } from "../run/live";
+import { adoptSaved, LIVE_KIND, preflight, resumeLive, useLiveResearch, type Preflight } from "../run/live";
 import { useResearchRun } from "../run/useResearchRun";
 
 export function useEducationalResearch(projectId: string) {
@@ -87,9 +87,21 @@ export function useEducationalResearch(projectId: string) {
   // reasoned this, for this topic, and here is what it cost". `adoptSaved`
   // refuses a cleared record and refuses to overwrite a run in flight — both
   // rules stated where the store is (run/live.ts).
-  const liveHydrated = useStepFor<ResearchNotebookStepData>(projectId, "research-notebook", (saved) =>
-    adoptSaved(projectId, saved),
-  );
+  //
+  // AND THEN THE LEDGER (AIO-A stage 4b). The real run is a server-owned turn,
+  // so once the record is read — it holds the last turn this project took — the
+  // project's newest research turn is asked for: a live one is watched (and
+  // tracked, so it is in the bell), a settled one not yet taken is landed,
+  // once. `track` is stable, so the closure this read keeps is never stale.
+  const { track } = jobs;
+  const liveHydrated = useStepFor<ResearchNotebookStepData>(projectId, "research-notebook", (saved) => {
+    adoptSaved(projectId, saved);
+    void resumeLive(projectId, saved)
+      .then((turn) => {
+        if (turn) track({ turnId: turn.id, projectId, kind: LIVE_KIND, label: "a real research run", record: turn });
+      })
+      .catch(() => undefined);
+  });
 
   // THE NOTEBOOK THE BOARD DEALS. Read on its own rather than off `live`: the
   // live store forgets the notebook while a second run is in flight or after
@@ -176,38 +188,35 @@ export function useEducationalResearch(projectId: string) {
    *  a person who has read what it will cost, and the sentence saying so is
    *  drawn beside the control that calls this (`spendNote`, run/live.ts).
    *
-   *  The job is the notification vehicle, exactly as it is for the simulated
-   *  run — this is minutes of real work and the creator is entitled to leave. */
+   *  THE RUN IS A TURN THE SERVER OWNS (AIO-A stage 4b). The job is TRACKED,
+   *  not started: the server minted its id, the jobs provider reads its ending
+   *  off the ledger, and the bell rings from the record. LEAVING THE STEP DOES
+   *  NOT CANCEL IT — the operator's 2026-10-06 rule for recalibrate and scene
+   *  direction, extended to research — and a reload re-attaches (`resumeLive`
+   *  above). Only `abortLiveResearch` stops it. */
   const startLiveResearch = useCallback(() => {
     const t = topic.trim();
     if (!t) return;
-    const j = jobs.start("research", projectId, t, { driven: true });
-    if (!j) return;
-    // Frozen at click time, deliberately, and for the reason the simulated
-    // path's own comment gives: this closure has to survive leaving the step.
-    const settle = jobs.settle;
-    const started = live.start(t, j.id, (final) => {
-      if (final.status === "done")
-        settle(
-          j.id,
-          "done",
-          `A notebook was reasoned for “${final.topic}”. Nothing in it was looked up — check its sources.`,
-        );
-      else if (final.status === "failed") settle(j.id, "failed", final.detail);
-    });
-    // A run was already live here. Don't leave a job nothing settles.
-    if (!started) jobs.cancel(j.id);
-  }, [projectId, topic, jobs, live]);
+    void live
+      .start(t)
+      .then((turnId) => {
+        if (turnId) track({ turnId, projectId, kind: LIVE_KIND, label: t });
+      })
+      .catch(() => undefined);
+  }, [projectId, topic, live, track]);
 
-  /** Pull the request. `stopLive` aborts the fetch, fires NO ending, and hands
-   *  back the job it was reporting to — this handler owns it from here, and
-   *  `cancel` is the one job exit with no bell event, because you already know
-   *  you stopped it. The id comes off the STORE rather than off this hook for
-   *  the lifetime reason run/live.ts states beside `jobIds`. */
+  /** Stop the run. The server ends the record `cancelled` and the engine's
+   *  process tree with it; the record the cancel answers is folded into the
+   *  bell at once rather than on the next poll. A cancel is the one ending
+   *  with no bell event, because you already know you stopped it. */
   const abortLiveResearch = useCallback(() => {
-    const open = live.stop();
-    if (open) jobs.cancel(open);
-  }, [live, jobs]);
+    void live
+      .stop()
+      .then((turn) => {
+        if (turn) track({ turnId: turn.id, projectId, kind: LIVE_KIND, label: "a real research run", record: turn });
+      })
+      .catch(() => undefined);
+  }, [projectId, live, track]);
 
   // CLEAR IS NOT HERE, deliberately. `doClear` stays in ResearchStep and names
   // every store's reset itself (`run.reset()`, `resetFollowUps(`, `api.reset()`)

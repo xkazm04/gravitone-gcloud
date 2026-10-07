@@ -80,6 +80,13 @@ export interface ResearchNotebookStepData {
   notebook: unknown | null;
   /** The run's receipt, or `null` alongside a cleared notebook. */
   engine: unknown | null;
+  /** The last research TURN this record took (landed, or found to have nothing
+   *  to land). The real run is a server-owned turn since AIO-A stage 4b, and a
+   *  mount lands a settled one it has not taken — so this is what makes
+   *  "written once per turn" survive a reload, and what keeps a Clear from
+   *  being undone by a turn that was already taken. Absent on every record
+   *  written before the turn existed. */
+  turn?: string;
   savedAt?: number;
 }
 
