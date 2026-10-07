@@ -28,6 +28,7 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
+import { outPath } from "../../fixtures/roots";
 import { withCatalogue } from "../catalogue";
 import { foundryFs } from "../fsPort";
 
@@ -51,7 +52,7 @@ import type {
   TrainingVerdicts,
 } from "./types";
 
-const OUT_ROOT = path.join(process.cwd(), "foundry-out", "training");
+const OUT_ROOT = outPath("training");
 /** Ledger `thumb` paths are repo-relative with forward slashes on every OS. */
 const THUMBS_REL = "pipeline/foundry/training/thumbs";
 

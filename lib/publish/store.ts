@@ -32,6 +32,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { exclusiveSection } from "../diskTx";
+import { outPath } from "../fixtures/roots";
 
 import type { MetricSnapshot, Publication, ScheduleSlot } from "./types";
 
@@ -62,7 +63,7 @@ export interface MetricsFile {
  *  directory with PUBLISH_STORE_DIR after this module was imported. */
 export function storeRoot(): string {
   const env = process.env.PUBLISH_STORE_DIR?.trim();
-  return env ? path.resolve(env) : path.join(process.cwd(), "foundry-out", "publish");
+  return env ? path.resolve(env) : outPath("publish");
 }
 
 export const planPath = (slotId: string) => path.join(storeRoot(), "plans", `${safeId(slotId)}.json`);

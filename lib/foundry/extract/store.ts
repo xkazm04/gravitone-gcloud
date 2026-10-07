@@ -35,6 +35,7 @@ import {
   runRoot,
   writeJsonAtomic,
 } from "../runStore";
+import { outPath } from "../../fixtures/roots";
 import type { Exemplar, StyleDef } from "../types";
 import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
 import type { EngineIO } from "./engine";
@@ -55,7 +56,7 @@ import type {
   StepResult,
 } from "./types";
 
-export const EXTRACT_ROOT = path.join(process.cwd(), "foundry-out", "extract");
+export const EXTRACT_ROOT = outPath("extract");
 
 const EXT: Record<ExtractUpload["mime"], string> = { "image/png": ".png", "image/jpeg": ".jpg", "image/webp": ".webp" };
 

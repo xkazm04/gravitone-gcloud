@@ -30,11 +30,12 @@ import path from "node:path";
 
 import { adExportRoot } from "@/lib/adExports";
 
+import { outPath } from "../fixtures/roots";
 import type { ExportRef } from "./types";
 
 export function exportsRoot(): string {
   const env = process.env.PUBLISH_EXPORTS_DIR?.trim();
-  return env ? path.resolve(env) : path.join(process.cwd(), "foundry-out", "music-video-exports");
+  return env ? path.resolve(env) : outPath("music-video-exports");
 }
 
 /** Every directory a finished export may sit in, music video first. */
