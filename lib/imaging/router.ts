@@ -302,14 +302,18 @@ async function run<T extends { provenance: Provenance }>(
    */
   const standInUsd = (): number | undefined =>
     cap === "recognize" ? undefined : estimatePendingUsd(pendingImages);
+  /** The request's CURRENT hold, or undefined once a billed failure has spent it
+   *  and no later vendor has been called yet. `finally` releases whichever one
+   *  this is when the request ends. */
   let hold: Hold | undefined;
   try {
     // SPEND CEILING (lib/imaging/budget.ts). Reserve a budget hold with the pre-call estimate
     // BEFORE any vendor is touched — once per request, not per candidate in the chain.
     // An `over-budget` throw here lands in the same catch/log path as any other failure
-    // and never reroutes.
+    // and never reroutes. A billed failure spends this hold; `walk` then takes the
+    // next one just before it calls another vendor (see "a billed failure spent the hold").
     hold = reserve(estimatePendingUsd(pendingImages));
-    return await walk(hold);
+    return await walk();
   } catch (e) {
     const err = e instanceof ImagingError ? e : null;
     logCall({
@@ -327,7 +331,7 @@ async function run<T extends { provenance: Provenance }>(
     if (hold) release(hold);
   }
 
-  async function walk(currentHold: Hold): Promise<T> {
+  async function walk(): Promise<T> {
     const chain = orderFor(cap, steer);
     /** The first thing that went wrong. It describes the vendor we MEANT to
      *  use, which is the honest headline when the whole chain comes up empty. */
@@ -370,6 +374,31 @@ async function run<T extends { provenance: Provenance }>(
         continue;
       }
 
+      // A BILLED FAILURE SPENT THE HOLD (card IMG-A stage 2, 2026-10-07).
+      //
+      // The catch below settles a billed failure into a failed row, and settling
+      // removes the hold. The request used to walk on to the next vendor holding
+      // the dead id: that vendor was called with no ceiling check, and while it
+      // ran `held` did not include it. Only `refused` is both billed and
+      // reroutable, so this reached the dev chains, the ones with a second entry.
+      //
+      // So the next vendor reserves its own estimate, and it does so HERE, after
+      // every skip above, not when the previous vendor failed. A chain whose
+      // remaining entries are all `no-key` or constraint drop-outs calls nobody,
+      // and it must end on that honest error rather than an `over-budget` for a
+      // call it was never going to make. A refusal ends the request: over-budget
+      // is not reroutable, and a ceiling with no room beats rerouting. The vendor
+      // it kept from being called goes in `trail` like every other elimination.
+      if (!hold) {
+        try {
+          hold = reserve(estimatePendingUsd(pendingImages));
+        } catch (e) {
+          trail.push({ provider: id, why: e instanceof ImagingError ? e.kind : "failed" });
+          throw e;
+        }
+      }
+      const current = hold;
+
       try {
         const out = call(provider);
         if (out === undefined) throw unsupported(id, cap);
@@ -380,7 +409,7 @@ async function run<T extends { provenance: Provenance }>(
         // Settle the budget hold against the window. Prefer the figure the call actually
         // carried (vendor-reported or estimated); fall back to the pre-call
         // estimate so an unreported cost still counts toward the next ceiling.
-        settle(currentHold, {
+        settle(current, {
           usd: served.provenance.costUsd ?? standInUsd(),
           cap,
           provider: served.provenance.provider,
@@ -426,7 +455,7 @@ async function run<T extends { provenance: Provenance }>(
         // process, and every one of the three is handled by a `continue` above
         // that does not reach this catch at all.
         if (billedOnFailure(err)) {
-          settle(currentHold, {
+          settle(current, {
             usd: standInUsd(),
             cap,
             provider: id,
@@ -437,6 +466,8 @@ async function run<T extends { provenance: Provenance }>(
             // nothing rather than inventing a number (see standInUsd).
             basis: "estimate",
           });
+          // Spent. A later vendor in this request reserves its own (above).
+          hold = undefined;
         }
         first ??= err;
         trail.push({ provider: id, why: err.kind });

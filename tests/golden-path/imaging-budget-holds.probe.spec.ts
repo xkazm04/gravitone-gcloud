@@ -16,6 +16,7 @@ import { test, expect } from "@playwright/test";
 import { keepEnv } from "./_helpers";
 import {
   budgetStats,
+  estimatePendingUsd,
   spendRows,
   __resetBudget,
   BUDGET_VAR,
@@ -322,4 +323,167 @@ test("8. recognize() under hold takes hold at estimate and releases at settle wi
   expect(stats.spentUsd).toBe(0);
   expect(stats.counters.unpriced).toBe(1);
   expect(stats.counters.booked).toBe(0);
+});
+
+// ── A BILLED REFUSAL SPENDS THE HOLD; THE NEXT VENDOR NEEDS ITS OWN ─────────
+//
+// Card IMG-A stage 2 (docs/concepts/moonshots-2026-10-05/critic-2026-10-07.md,
+// "C3 next stage"). The router reserved ONE hold per request and, when a vendor
+// answered `refused` (billed, because the model read the prompt; reroutable,
+// because another vendor may draw it), settled that hold into a failed row and
+// walked on to the next vendor holding nothing. That vendor was called with no
+// ceiling check, and while it ran `heldUsd` did not include it.
+//
+// Reach: only the dev chains have a second entry, so these drive dev generate
+// (agy → google → leonardo) with agy off (LOCAL_BINARIES=off). Google answers a
+// 200 carrying `promptFeedback.blockReason` and no image, which its adapter
+// raises as `refused`; Leonardo is the re-route target.
+
+test.describe("a billed refusal re-reserves before the next vendor", () => {
+  keepEnv(["LEONARDO_API_KEY"]);
+
+  const LEONARDO = "https://cloud.leonardo.ai/api/rest/v1";
+  // An IP literal, so the download guard (lib/imaging/safeUrl.ts) decides it
+  // without asking DNS: nothing here may leave the process.
+  const PLATE_URL = "https://93.184.216.34/plate.jpg";
+  const json = (body: unknown, status = 200) =>
+    new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+
+  interface Chain {
+    google: number;
+    leonardoPost: number;
+    /** Resolves the held Leonardo POST, when the stub was told to hold it. */
+    releasePost?: (r: Response) => void;
+  }
+
+  /** Google refuses; Leonardo answers its POST with `post()` (or holds it until
+   *  `releasePost`), then completes on the first poll. Every call is counted. */
+  function stubChain(post: "hold" | (() => Response)): Chain {
+    const chain: Chain = { google: 0, leonardoPost: 0 };
+    globalThis.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      const method = init?.method ?? "GET";
+      if (url.startsWith("https://generativelanguage.googleapis.com/")) {
+        chain.google++;
+        return json({ promptFeedback: { blockReason: "SAFETY" } });
+      }
+      if (url === `${LEONARDO}/generations` && method === "POST") {
+        chain.leonardoPost++;
+        if (post !== "hold") return post();
+        return new Promise<Response>((resolve) => {
+          chain.releasePost = resolve;
+        });
+      }
+      if (url.startsWith(`${LEONARDO}/generations/`) && method === "DELETE") return json({});
+      if (url.startsWith(`${LEONARDO}/generations/`))
+        return json({ generations_by_pk: { status: "COMPLETE", generated_images: [{ id: "img-1", url: PLATE_URL }] } });
+      if (url === PLATE_URL)
+        return new Response(new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4]), {
+          status: 200,
+          headers: { "content-type": "image/jpeg" },
+        });
+      throw new TypeError(`unexpected fetch in probe: ${method} ${url}`);
+    }) as typeof fetch;
+    return chain;
+  }
+
+  const until = async (cond: () => boolean, what: string) => {
+    for (let i = 0; i < 400 && !cond(); i++) await new Promise((r) => setTimeout(r, 5));
+    expect(cond(), what).toBe(true);
+  };
+
+  /** A start response with no generation id: Leonardo's adapter raises
+   *  `bad-response` at once, so a case that only needs the POST counted
+   *  finishes without waiting out a poll. */
+  const noGeneration = () => json({ sdGenerationJob: {} });
+
+  test.beforeEach(() => {
+    process.env.LEONARDO_API_KEY = "probe-leonardo-key";
+  });
+
+  test("9. (critic 1) while the re-route target is in flight, its estimate is held", async () => {
+    const estimate = estimatePendingUsd(1);
+    const chain = stubChain("hold");
+
+    const pending = generate({ prompt: "probe refused", aspect: "16:9", count: 1 }).catch((e) => e);
+    await until(() => chain.leonardoPost === 1, "the Leonardo POST was dispatched");
+
+    const s = budgetStats();
+    console.log(`[holds] google refused, leonardo in flight -> held=$${s.heldUsd} spent=$${s.spentUsd}`);
+    expect(chain.google).toBe(1);
+    // The refused call is booked (it ran); the call now in flight is HELD.
+    expect(s.spentUsd).toBeCloseTo(estimate, 9);
+    expect(s.heldUsd).toBeCloseTo(estimate, 9);
+
+    chain.releasePost!(noGeneration());
+    await pending;
+    expect(budgetStats().heldUsd).toBe(0);
+  });
+
+  test("10. (critic 2) room for one estimate: the refusal is booked and the re-route is over-budget, never dispatched", async () => {
+    const estimate = estimatePendingUsd(1);
+    process.env[BUDGET_VAR] = String(estimate * 1.5);
+    const chain = stubChain(noGeneration);
+
+    let err: unknown;
+    try {
+      await generate({ prompt: "probe refused", aspect: "16:9", count: 1 });
+    } catch (e) {
+      err = e;
+    }
+    const s = budgetStats();
+    console.log(
+      `[holds] ceiling=$${s.ceilingUsd} -> kind=${(err as ImagingError)?.kind} leonardoPost=${chain.leonardoPost} spent=$${s.spentUsd}`,
+    );
+    expect(err).toBeInstanceOf(ImagingError);
+    expect((err as ImagingError).kind).toBe("over-budget");
+    expect(chain.google).toBe(1);
+    expect(chain.leonardoPost, "the re-route target was called past the ceiling").toBe(0);
+    // The window never ends above the ceiling, and nothing is left held.
+    expect(s.spentUsd).toBeLessThanOrEqual(s.ceilingUsd);
+    expect(s.heldUsd).toBe(0);
+    expect(s.counters.refusals).toBe(1);
+    expect(spendRows().map((r) => `${r.provider}:${r.outcome}`)).toEqual(["google:failed"]);
+  });
+
+  test("11. (critic 3) refused → re-routed → served: one failed row, one served row, no hold left", async () => {
+    stubChain(() => json({ sdGenerationJob: { generationId: "gen-1" } }));
+
+    const served = await generate({ prompt: "probe refused", aspect: "16:9", count: 1 });
+    expect(served.provenance.provider).toBe("leonardo");
+    expect(served.provenance.reroutedFrom?.map((s) => `${s.provider}:${s.why}`)).toContain("google:refused");
+
+    const s = budgetStats();
+    const rows = spendRows();
+    console.log(`[holds] refused→served -> rows=${rows.map((r) => `${r.provider}:${r.outcome}`)} held=$${s.heldUsd}`);
+    expect(s.heldUsd).toBe(0);
+    expect(rows.map((r) => `${r.provider}:${r.outcome}`)).toEqual(["google:failed", "leonardo:served"]);
+    expect(s.counters.booked).toBe(2);
+    expect(s.counters.bookedFailed).toBe(1);
+  });
+
+  test("12. (critic 4) refused, then a chain with no keys left: the honest error, nothing held, nothing refused", async () => {
+    // Room for ONE estimate, so a re-reserve taken eagerly (before knowing a
+    // vendor is left to call) would be refused and would replace the true
+    // headline with a made-up `over-budget`.
+    process.env[BUDGET_VAR] = String(estimatePendingUsd(1) * 1.5);
+    delete process.env.LEONARDO_API_KEY;
+    const chain = stubChain(noGeneration);
+
+    let err: unknown;
+    try {
+      await generate({ prompt: "probe refused", aspect: "16:9", count: 1 });
+    } catch (e) {
+      err = e;
+    }
+    const s = budgetStats();
+    console.log(`[holds] refused then no keys -> kind=${(err as ImagingError)?.kind} refusals=${s.counters.refusals}`);
+    expect(err).toBeInstanceOf(ImagingError);
+    expect((err as ImagingError).kind).not.toBe("over-budget");
+    expect((err as ImagingError).kind).toBe("no-key");
+    expect(chain.leonardoPost).toBe(0);
+    expect(s.heldUsd).toBe(0);
+    expect(s.counters.refusals).toBe(0);
+    expect(spendRows().map((r) => `${r.provider}:${r.outcome}`)).toEqual(["google:failed"]);
+  });
 });
