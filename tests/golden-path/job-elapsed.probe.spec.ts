@@ -8,12 +8,19 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
+// STATIC, not `await import()`. A runtime import() goes around the runner's
+// CommonJS tsconfig-paths hook, so lib/jobs loads but its own transitive `@/`
+// imports do not resolve (lib/turns/client.ts → "@/lib/imagingClient": Cannot
+// find module) — whichever way the outer specifier is spelled. The same note
+// is in access-only-401 and deployment-cells.
+import * as jobs from "@/lib/jobs";
+
 import { stripComments } from "./_helpers";
 
 const read = (p: string) => stripComments(readFileSync(join(process.cwd(), p), "utf8"));
 
-test("formatElapsed uses the repo's m:ss convention from a minute up", async () => {
-  const mod = (await import("../../lib/jobs")) as Record<string, unknown>;
+test("formatElapsed uses the repo's m:ss convention from a minute up", () => {
+  const mod = jobs as Record<string, unknown>;
   const f = mod.formatElapsed as ((ms: number) => string) | undefined;
   expect(typeof f, "lib/jobs exports formatElapsed").toBe("function");
   expect([f!(0), f!(59_400), f!(60_000), f!(347_000), f!(-5)]).toEqual(["0s", "59s", "1:00", "5:47", "0s"]);
