@@ -170,6 +170,11 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     // The pipeline board's LIVE/STUB arm: evicted, not exempt, so an arm left
     // on LIVE cannot be inherited by the next account on the same browser.
     "app/foundry/PipelineTab.tsx": { evicted: "gravitone.pipeline.arm", symbol: "PIPELINE_ARM_KEY" },
+    // Which fixture bundle this browser holds. Evicted, and through the owner's
+    // binding rather than a literal of its own: the key it replaced was
+    // assembled from an imported constant, and a key assembled at runtime is one
+    // `evictIdentity` cannot name.
+    "lib/fixtures/seedBrowser.ts": { evicted: "gravitone.fixtures.seed", symbol: "FIXTURE_SEED_KEY" },
   };
 
   const writers = localStorageWriters();

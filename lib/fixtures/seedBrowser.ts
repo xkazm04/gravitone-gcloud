@@ -5,19 +5,20 @@
 // empty shelf and then re-reads a full one.
 //
 // IDEMPOTENT BY CONTENT. The bundle carries a `seedId` (hash of its contents);
-// it is remembered per database in localStorage, and an unchanged bundle is
-// skipped. A changed one re-writes every row it names with `put`, which
-// overwrites rather than duplicates — rows the bundle does not name (what a
+// it is remembered in localStorage against the uid that was seeded, and an
+// unchanged bundle for the same account is skipped. A changed one re-writes
+// every row it names with `put`, which overwrites rather than duplicates — rows the bundle does not name (what a
 // tester made by hand) are left alone.
 
 import { seedProjects } from "@/app/_studio/projectSeed";
 import { saveStep } from "@/app/_phases/_shared/stepStore";
+import { FIXTURE_SEED_KEY } from "@/lib/identityEviction";
+import { accessHeader } from "@/lib/imagingClient";
 
 import { putAssets, putUploads, readUploadPointer, type UploadRecord } from "../assets";
 import { addProjects } from "../projects";
 import { putTheme } from "../themes";
 import { UID_TOKEN, type BrowserBundle } from "./browserBundle";
-import { STUDIO_DB_NAME } from "./mode";
 
 /** The locked styles of browser.ts, assigned to the demo shelf so projects
  *  stand on a style the way a real one does. */
@@ -29,7 +30,15 @@ const PROJECT_THEMES: Record<string, string> = {
   "seed-glass-harbor-trailer": "th-fx-harbor-noir",
 };
 
-const stampKey = `gravitone.fixtures.seed.${STUDIO_DB_NAME}`;
+// ONE LITERAL, NOT A KEY BUILT AT RUNTIME. The stamp used to carry the database
+// name, which bought nothing - AuthGate calls this only in fixture mode, so the
+// database it names is always the fixture one - and cost the thing that matters:
+// lib/identityEviction.ts removes localStorage keys BY EXACT NAME (its own header
+// argues the case against matching a pattern), and a key assembled from an
+// imported constant is one the eviction owner cannot name. So the owner binds it
+// and this file writes through that binding, which is the arrangement that
+// cannot drift.
+const stampKey = FIXTURE_SEED_KEY;
 
 function stamp(): string | null {
   try {
@@ -59,7 +68,11 @@ export async function ensureBrowserFixtures(uid: string): Promise<void> {
   // localStorage "already offered" flag in useProjects must not decide this.
   await addProjects(seedProjects(uid).map((p) => ({ ...p, themeId: PROJECT_THEMES[p.id] }))).catch(() => undefined);
 
-  const res = await fetch("/api/fixtures/browser", { cache: "no-store" });
+  // accessHeader() because the route is behind the read door. In fixture mode it
+  // returns {} - a dev-auth session holds no ID token and the bundle holds no
+  // secret - and `devOpen()` admits the request anyway; it is sent because the
+  // door is what decides, not today's deployment (client-api-auth probe).
+  const res = await fetch("/api/fixtures/browser", { cache: "no-store", headers: accessHeader() });
   if (!res.ok) {
     const j = (await res.json().catch(() => ({}))) as { error?: string };
     throw new Error(j.error ?? `fixtures: HTTP ${res.status}`);

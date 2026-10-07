@@ -193,6 +193,10 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/capabilities/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/cut/export/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/cut/export/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
+  // The fixture bundle. Behind the read door, then 404 unless
+  // NEXT_PUBLIC_GRAVITONE_DATA=fixtures was set at build time - which no cell
+  // here sets, so every cell drives the 404 branch and not the read.
+  "app/api/fixtures/browser/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/foundry/extract/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
   "app/api/foundry/extract/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/foundry/extract/[id]/step/route.ts": { door: "money", ok: { POST: "4xx" } },
