@@ -7,6 +7,7 @@
 //   3  a seeded alternative equal to the active plate is not counted twice;
 //      stress clones (`~s`) are excluded
 //   4  score: active take in the store -> audio; no take -> `take-missing`;
+//      a take the store no longer holds -> `take-gone`;
 //      store unreachable -> score unavailable, frames still render
 //   5  no records -> every source empty, tally 0
 //   6  project A then B -> none of A's outputs
@@ -177,17 +178,17 @@ test("case 3: a seeded alternative equal to the active plate counts once; ~s sce
 
 /* ───────────────────────────────── case 4 ─────────────────────────────────── */
 
-test("case 4: an active take in the store is audio; no take is `take-missing`; an unreachable store makes score unavailable only", async () => {
+test("case 4: an active take in the store is audio; no take is `take-missing`; a take the store lost is `take-gone`; an unreachable store makes score unavailable only", async () => {
   await putFrames("p4", [frame("a", "ready")]);
   await saveStep("p4", "score", {
-    spots: [spot("s1", { activeTakeId: "t1", takeIds: ["t1", "t2"] }), spot("s2")],
+    spots: [spot("s1", { activeTakeId: "t1", takeIds: ["t1", "t2"] }), spot("s2"), spot("s3", { activeTakeId: "t-gone" })],
   });
   soundStore([{ id: "t1" }, { id: "t2" }]);
   const r = await readOutputs("p4");
   const audio = r.outputs.filter((o) => o.kind === "audio");
   expect(audio.filter((o) => o.state === "in-cut")).toHaveLength(1);
   expect(audio.filter((o) => o.state === "alternative")).toHaveLength(1);
-  expect(audio.filter((o) => o.state === "missing").map((o) => o.code)).toEqual(["take-missing"]);
+  expect(audio.filter((o) => o.state === "missing").map((o) => o.code)).toEqual(["take-missing", "take-gone"]);
   expect(r.count).toBe(1 + 2);
 
   soundDown();

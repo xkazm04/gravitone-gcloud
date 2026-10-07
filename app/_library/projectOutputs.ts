@@ -35,7 +35,9 @@ export interface Output {
   kind: OutputKind;
   title: string;
   state: OutputState;
-  /** A `missing` row's reason, the same code the step's verdict uses. */
+  /** A `missing` row's reason: the step's verdict code, except `take-gone`, which
+   *  is Outputs' own (a cue's take the store no longer holds) and which no
+   *  verdict claims. */
   code?: string;
   /** Absent on a missing row. */
   src?: string;

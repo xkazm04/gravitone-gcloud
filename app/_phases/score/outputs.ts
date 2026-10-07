@@ -6,8 +6,11 @@
 //   · a cue's active take, when the store has it, is the `in-cut` output;
 //   · the cue's other takes the store has are `alternative` outputs — or
 //     `unresolved` when the cue has no active take to be an alternative to;
-//   · a cue with no active take, or one the store does not hold, is a `missing`
-//     row with the code the verdict uses (`take-missing`).
+//   · a cue with no active take is a `missing` row with the code the verdict
+//     uses (`take-missing`);
+//   · a cue whose active take the store no longer holds is `missing` with
+//     Outputs' own code, `take-gone`. The verdict reads records alone and
+//     never sees the store, so it cannot claim that code.
 
 import type { Output } from "../../_library/projectOutputs";
 import type { ScoreSpot } from "./spots";
@@ -34,7 +37,7 @@ export function scoreOutputs(spots: readonly ScoreSpot[], takes: TakeIndex): Out
         kind: "audio",
         title: s.title,
         state: "missing",
-        code: "take-missing",
+        code: s.activeTakeId ? "take-gone" : "take-missing",
         provenance: { step: "score" },
       });
     for (const id of new Set(s.takeIds ?? [])) {
