@@ -36,7 +36,11 @@ say that approval happens at the gate and give the run id.
    npx tsx pipeline/article.mts topics --limit 8 --json
    ```
 
-   Each topic has `bundle`, `slug`, `title`, `category` and a suggested `angle`. The registry must
+   `topics` offers only the audience bundles (agent-operations, llm-observability,
+   software-engineering); `--include-bundle <b>` adds one. Each topic has `bundle`, `slug`, `title`,
+   `category` and a suggested `angle`. **The suggested angle is boilerplate: do not show it.** Read the
+   subject's golden path (`knowledge/<bundle>/.../<slug>`) and write each option's one-line hook
+   yourself, naming the concrete problem a reader of an agent-building blog has, and pass that as `--angle`. The registry must
    be reachable (`$AI_REGISTRY_DIR`, else `.ai/manifest.yaml` `registry.local`, else
    `../ai-registry`); in a git worktree set `AI_REGISTRY_DIR`. Say how many topics are covered,
    in flight and uncovered (`covered`, `claimed`, `remaining`).
@@ -172,6 +176,10 @@ discovered:
   they come from the page template, not the prose.
 - **Sources.** Keep every source's number and URL in a re-research; append a replacement as a new
   number. Gaps in the numbering survived two rounds in one post and are now a check.
+- **Topic choice (first /techwriter run).** The unfiltered ranking offered civic and grant topics with
+  identical boilerplate angles; `topics` now filters to the audience bundles and the angle is written
+  from the subject. A first run under the skill cost $58.3 reported, reached the gate in one pass, and
+  its check loop repaired visual cadence three times (draft, round 1, round 2).
 - **Not yet known.** Whether a fix turn that edits in place keeps the post's quality; whether the
   loop's budget gate is tight enough for a seat's usage window; how the new checks change the
   cost of a run. Report what the first runs under this skill show.

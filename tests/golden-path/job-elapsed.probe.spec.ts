@@ -8,15 +8,20 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-// STATIC, and it has to be. This read used to be `await import("../../lib/jobs")`
+// STATIC, and it stays static. This read used to be `await import("../../lib/jobs")`
 // so the test could assert the export exists at runtime, and it threw
 // `Cannot find module '@/lib/imagingClient'` from lib/turns/client.ts — a CJS
-// require stack. A runtime import() inside a test is resolved by Node, which
-// knows nothing about the `@/` alias, so the first aliased import ANYWHERE in the
-// loaded graph fails; a static import is transformed by Playwright with
-// tsconfig's `paths` applied. Driven both ways: `../../lib/jobs` and `@/lib/jobs`
-// both fail dynamically, the static form passes. The assertion below is also
-// stronger this way — a missing export now fails `tsc` as well.
+// require stack. A runtime import() inside a test is resolved by Node, which knows
+// nothing about the `@/` alias, so the FIRST aliased import anywhere in the loaded
+// graph fails; a static import is transformed by Playwright with tsconfig's `paths`
+// applied. Driven both ways: `../../lib/jobs` and `@/lib/jobs` both failed
+// dynamically, the static form passed.
+//
+// That particular import is gone — lib/turns/client.ts now reaches imagingClient
+// relatively (3b59052, from the CI lane, which fixed the same defect at the source
+// while this file fixed it at the reader). The shape is kept anyway: the next `@/`
+// import added anywhere under lib/jobs would bring the failure straight back, and
+// the assertion is stronger static, because a missing export now fails `tsc` too.
 import { formatElapsed } from "@/lib/jobs";
 
 import { stripComments } from "./_helpers";

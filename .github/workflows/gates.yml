@@ -358,6 +358,13 @@ jobs:
       - name: kit census
         run: npm run check:kit-census
 
+      # The browser the probes launch (hint-tap, the articles render and landing
+      # probes call chromium.launch()), at the version the committed lockfile
+      # pins. Without it those probes fail with "Executable doesn't exist" on a
+      # bare runner; the `live` job installs the same browser for the same reason.
+      - name: install chromium for the probes
+        run: npx playwright install --with-deps chromium
+
       # BLOCKING. Node-context probes. Not skipped when earlier steps are
       # green-but-uninteresting: this is the rung that refuses.
       - name: probes

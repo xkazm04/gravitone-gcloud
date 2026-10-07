@@ -15,7 +15,7 @@
 // node:crypto, so only its TYPES come across. The live-status set is restated
 // below rather than imported for the same reason.
 
-import { accessHeader } from "@/lib/imagingClient";
+import { accessHeader } from "../imagingClient";
 
 import type { TurnManifest } from "./assemble/manifest";
 import type { TurnRecord, TurnStatus } from "./ledger";
