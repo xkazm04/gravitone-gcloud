@@ -19,7 +19,8 @@
 // content was three sentences about why it is blank was the placeholder saying
 // out loud what the padlock says on sight.
 
-import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { Suspense, useState } from "react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
 import { TabRail } from "@/components/ui/signal";
@@ -42,12 +43,23 @@ interface Counts {
   audio?: number;
 }
 
+/** `useSearchParams` needs a boundary above it, and the page file is not this
+ *  module's to edit — so the boundary is drawn here. */
 export default function LibraryView() {
+  return (
+    <Suspense>
+      <LibraryShelf />
+    </Suspense>
+  );
+}
+
+function LibraryShelf() {
   const [module, setModule] = useState<ModuleId>("styles");
-  /** A style the Assets tab has just created and wants opened. Consumed as the
+  /** A style just created and wanted open: by the Assets tab, or — through
+   *  `?style=` — by a Foundry adoption. Consumed as the
    *  atelier's INITIAL selection: switching modules unmounts it, so the handoff
    *  needs no effect and cannot fight the user's later clicks. */
-  const [focusStyle, setFocusStyle] = useState<string | null>(null);
+  const [focusStyle, setFocusStyle] = useState<string | null>(useSearchParams().get("style"));
   const [counts, setCounts] = useState<Counts>({});
 
   return (

@@ -28,13 +28,16 @@
 // sentinel observed against the scroller it actually moves through.
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Modal from "@/components/ui/Modal";
 import { Tally } from "@/components/ui/signal";
+import { newTheme, putTheme } from "@/lib/themes";
+import { useAuth } from "@/lib/useAuth";
 import type { Catalogue, LedgerRow, StyleDef } from "@/lib/foundry/types";
 
-import { fetchCatalogue } from "./foundryClient";
+import { adoptStyle, fetchCatalogue } from "./foundryClient";
 import { exemplarUrl, familyCounts, familyOf, heroOf, keptFileUrl, keptRows, ledgerFor } from "./styleArt";
 import { Art, ErrorNote, Label, Loading, Rise, StatusChip, pct } from "./ui";
 import { refusedKey } from "./keyGuard";
@@ -249,6 +252,25 @@ function StyleSheet({
   onPrev?: () => void;
   onNext?: () => void;
 }) {
+  const { user } = useAuth();
+  const router = useRouter();
+  // The refusal belongs to the style it was read for: stepping to the next
+  // style must not carry it along.
+  const [adopting, setAdopting] = useState<{ id: string; state: "busy" | "failed"; reason?: string } | null>(null);
+  const adopt = async (s: StyleDef) => {
+    if (!user) return;
+    setAdopting({ id: s.id, state: "busy" });
+    try {
+      const draft = await adoptStyle(s.id);
+      if (draft.paletteMissing) return setAdopting({ id: s.id, state: "failed", reason: draft.reason });
+      const made = await putTheme(newTheme(user.uid, { name: draft.name, origin: "foundry", foundryStyleId: draft.styleId, block: draft.block, elements: [] }));
+      router.push(`/library?style=${encodeURIComponent(made.id)}`);
+    } catch (e) {
+      setAdopting({ id: s.id, state: "failed", reason: e instanceof Error ? e.message : "The style could not be adopted." });
+    }
+  };
+  const adoptNote = style && adopting?.id === style.id ? adopting : null;
+
   const kept = ledger.filter((r) => r.verdict === "keep");
   const craft = ledger.map((r) => r.craft).filter((x): x is number => typeof x === "number");
   const sty = ledger.map((r) => r.style_score).filter((x): x is number => typeof x === "number");
@@ -288,6 +310,17 @@ function StyleSheet({
         <div className="flex items-center gap-2">
           {nav(-1)}
           {nav(1)}
+          {style?.status === "proven" && (
+            <button
+              type="button"
+              disabled={!user || adoptNote?.state === "busy"}
+              onClick={() => void adopt(style)}
+              className="font-jetbrains cursor-pointer rounded-full border border-emerald-400/45 px-3 py-1 text-label text-emerald-100 transition hover:border-emerald-300 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 disabled:cursor-default disabled:opacity-40"
+            >
+              {adoptNote?.state === "busy" ? "adopting…" : "adopt into Library"}
+            </button>
+          )}
+          {adoptNote?.state === "failed" && <ErrorNote role="alert">{adoptNote.reason}</ErrorNote>}
           {style && <StatusChip className="ml-auto" kind={statusKind(style)} word={`${style.status} · kept on ${scenes} scene${scenes === 1 ? "" : "s"}`} />}
         </div>
       }

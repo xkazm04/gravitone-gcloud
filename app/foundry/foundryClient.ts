@@ -5,6 +5,7 @@
 // query parameter, through `withAccess` (see app/api/foundry/file/route.ts).
 
 import { accessHeader, withAccess } from "@/lib/imagingClient";
+import type { AdoptionDraft } from "@/lib/foundry/adopt";
 import type { Catalogue, CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdicts } from "@/lib/foundry/types";
 import type { StripCommitPlan, StripCommitResult, StripRunDetail, StripRunSummary } from "@/lib/foundry/strips/triage";
 import type { StripVerdicts } from "@/lib/foundry/strips/types";
@@ -46,6 +47,8 @@ export async function call<T>(path: string, init: RequestInit = {}): Promise<T> 
 export const fetchRuns = () => call<{ runs: RunSummary[] }>("/api/foundry/runs").then((r) => r.runs);
 export const fetchRun = (id: string) => call<RunDetail>(`/api/foundry/runs/${encodeURIComponent(id)}`);
 export const fetchCatalogue = () => call<Catalogue>("/api/foundry/styles");
+export const adoptStyle = (id: string) =>
+  call<AdoptionDraft>(`/api/foundry/styles/${encodeURIComponent(id)}/adopt`, { method: "POST" });
 export const saveVerdicts = (id: string, verdicts: Verdicts) =>
   call<{ ok: true }>(`/api/foundry/runs/${encodeURIComponent(id)}/verdicts`, {
     method: "PUT",
