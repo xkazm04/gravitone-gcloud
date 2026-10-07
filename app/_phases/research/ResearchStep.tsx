@@ -270,7 +270,7 @@ function EducationalFaces({
   const [fallback] = useState<Face>(defaultFace);
   const shown = face ?? fallback;
 
-  const { run, ready, live } = research;
+  const { run, live } = research;
   // WHAT THE MODALS, THE PILLS AND THE CLEAR DIALOG DRAW IS WHAT THE BOARD DEALS:
   // the creator's own notebook when one is saved, else the replay.
   const dealtSource = research.source;
