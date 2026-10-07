@@ -42,7 +42,7 @@
 // only correlated, and whether a numeral in the render traces to any fact. That
 // band is narrow and it is where every demonstrated failure in this repo lives.
 
-import { NOTEBOOK, UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
+import { fixtureSource, type NotebookSource } from "../_shared/notebook/source";
 import { conclusionIssues } from "../_shared/notebook/conclusions";
 import type { Conclusion } from "../_shared/notebook/conclusions";
 import type { Fact, ScaleConversion, Unknown } from "../_shared/notebook/types";
@@ -344,7 +344,7 @@ const PERSON_WORDS = /\b(people|person|investors?|believers?|holders who|familie
  *  imputed human intent. */
 export function checkScalePromotion(
   r: GateSubject,
-  scaleConversions: readonly ScaleConversion[] = NOTEBOOK.scaleConversions ?? [],
+  scaleConversions: readonly ScaleConversion[] = fixtureSource().notebook.scaleConversions ?? [],
 ): GateFinding[] {
   const out: GateFinding[] = [];
   for (const sc of scaleConversions) {
@@ -401,7 +401,7 @@ export function checkConclusions(
 export function checkTraceability(
   r: GateSubject,
   facts: Fact[],
-  scaleConversions: readonly ScaleConversion[] = NOTEBOOK.scaleConversions ?? [],
+  scaleConversions: readonly ScaleConversion[] = fixtureSource().notebook.scaleConversions ?? [],
 ): GateFinding[] {
   const corpus = facts.map((f) => f.claim).join(" ") +
     " " + scaleConversions.map((s) => `${s.raw} ${s.felt}`).join(" ");
@@ -531,12 +531,17 @@ export function runGate(
      *  move under a check their transcribed self-checks already claim; every
      *  composed chain is gated with it on. */
     connectors?: boolean;
+    /** The notebook the render is gated against: its facts, unknowns and felt
+     *  conversions. Absent = the replay's. An explicit `facts` / `unknowns` /
+     *  `scaleConversions` still wins, field by field. */
+    source?: NotebookSource;
   } = {},
 ): GateReport {
-  const facts = opts.facts ?? NOTEBOOK.facts;
-  const unknowns = opts.unknowns ?? Object.values(UNKNOWN_BY_ID);
+  const nb = (opts.source ?? fixtureSource()).notebook;
+  const facts = opts.facts ?? nb.facts;
+  const unknowns = opts.unknowns ?? nb.unknowns;
   const probes = opts.probes ?? PROBES;
-  const scaleConversions = opts.scaleConversions ?? NOTEBOOK.scaleConversions ?? [];
+  const scaleConversions = opts.scaleConversions ?? nb.scaleConversions ?? [];
 
   const findings = [
     ...checkConstraints(r, unknowns, probes),

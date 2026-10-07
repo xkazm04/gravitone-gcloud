@@ -35,8 +35,7 @@ import Modal from "@/components/ui/Modal";
 import { Hint, TabRail, UpstreamBreak, type TabDef, type TallyTone } from "@/components/ui/signal";
 import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/projects";
 
-import { CONCLUSIONS } from "../_shared/notebook/conclusions";
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
+import { useActiveNotebook } from "../_shared/notebook/useActiveNotebook";
 import { loadStep, readStep, type BeatPicksStepData, type StorageTrouble } from "../_shared/stepStore";
 import Notice from "../_shared/ui/Notice";
 import { usePhaseReport } from "../_shared/usePhaseReport";
@@ -261,8 +260,12 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
 
   // The same scope record the triage board writes, and the project's own note
   // and version history.
-  const scope = useScope(projectId);
-  const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope });
+  // The notebook the creator has, not the shipped one: the gate, the recalibrate
+  // payload and the wounds all read this same source.
+  const { source } = useActiveNotebook(projectId);
+  const nb = source.notebook;
+  const scope = useScope(projectId, source);
+  const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope, source });
 
   // Guided duel or expert columns — the stored choice, else a computed default
   // (guided only while nothing has been decided on this step; the inputs are
@@ -328,7 +331,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   // second `gateChains` call beside the button would be a second answer waiting
   // to disagree with this one. When a candidate is staged `reading` IS that
   // candidate, so this is the verdict on the chain about to be accepted.
-  const gate = useMemo(() => gateChains(chains, { conclusions: CONCLUSIONS }), [chains]);
+  const gate = useMemo(() => gateChains(chains, { source, conclusions: source.conclusions }), [chains, source]);
 
   if (trouble) return <ResearchReadTrouble trouble={trouble} />;
   if (researched === null) return <Skeleton />;
@@ -391,12 +394,12 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
         <div className="min-w-0 grow">
           <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">written against</p>
           <p className="font-jetbrains mt-1 text-content text-white/60">
-            {NOTEBOOK_COUNTS.facts} claims · {NOTEBOOK_COUNTS.loadBearing} load-bearing ·{" "}
-            {NOTEBOOK_COUNTS.mechanisms} mechanisms · {NOTEBOOK_COUNTS.reversals} reversals ·{" "}
-            <span className="text-amber-200">half-life {NOTEBOOK.currency.halfLife}</span>
+            {nb.facts.length} claims · {nb.facts.filter((f) => f.loadBearing).length} load-bearing ·{" "}
+            {nb.mechanisms.length} mechanisms · {nb.reversals.length} reversals ·{" "}
+            <span className="text-amber-200">half-life {nb.currency.halfLife}</span>
           </p>
           <p className="mt-1.5 text-content leading-relaxed text-slate-400">
-            tension strength — {NOTEBOOK.tension.strength}
+            tension strength — {nb.tension.strength}
           </p>
           {runtimeMismatch && (
             <p
@@ -510,6 +513,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
                         <HypothesisColumn
                           key={r.id}
                           render={r}
+                          source={source}
                           beats={chains[r.id]}
                           chainLabel={reading?.beats ? reading.label : undefined}
                           adopted={adoption.adoptedId === r.id}

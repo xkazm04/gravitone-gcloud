@@ -322,3 +322,87 @@ test("stage 2 (e): the fixture declares neither field, so it keeps its own table
     buildCards(fixtureSource()).map((c) => [c.id, c.kind, c.dimension, c.dependsOn.join(" "), c.optIn ? 1 : 0, c.required ? 1 : 0]),
   ).toEqual(TODAY);
 });
+
+// ───────────────────────────── stage 4: Step 2 reads the source, not the constants
+
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+
+import { gateChains, runGate } from "@/app/_phases/script/gate";
+import { RENDERS } from "@/app/_phases/script/renders";
+
+test("stage 4 (case 6): runGate over a live source never reads NOTEBOOK.facts, scaleConversions or unknowns", () => {
+  const live = sourceOf(raw() as unknown as Notebook, { kind: "reasoned" });
+  const reads: string[] = [];
+  const keys = ["facts", "scaleConversions", "unknowns"] as const;
+  const held = keys.map((k) => Object.getOwnPropertyDescriptor(NOTEBOOK, k));
+  keys.forEach((k, i) =>
+    Object.defineProperty(NOTEBOOK, k, {
+      configurable: true,
+      get() {
+        reads.push(k);
+        return held[i]!.value;
+      },
+    }),
+  );
+  try {
+    const beats = RENDERS[0]!.beats;
+    runGate({ id: "x", beats }, { source: live });
+    gateChains({ x: beats }, { source: live });
+  } finally {
+    keys.forEach((k, i) => Object.defineProperty(NOTEBOOK, k, held[i]!));
+  }
+  expect(reads).toEqual([]);
+});
+
+test("stage 4 (case 6): a live source's own unknowns and facts are what the gate tests", () => {
+  const live = sourceOf(raw() as unknown as Notebook, { kind: "reasoned" });
+  const report = runGate({ id: "x", beats: RENDERS[0]!.beats }, { source: live });
+  const fixtureIds = new Set(Object.keys(UNKNOWN_BY_ID));
+  expect(live.notebook.unknowns.some((u) => fixtureIds.has(u.id))).toBe(false);
+  expect(report.findings.some((f) => /u-yield-causality/.test(JSON.stringify(f)))).toBe(false);
+});
+
+test("stage 4: on the replay source the gate is the gate it was", () => {
+  for (const r of RENDERS) {
+    expect(runGate(r, { source: fixtureSource() }), r.id).toEqual(runGate(r));
+    expect(runGate(r, { source: fixtureSource(), conclusions: CONCLUSIONS }), r.id).toEqual(
+      runGate(r, { conclusions: CONCLUSIONS }),
+    );
+  }
+});
+
+/** Ratchet. Every file outside _shared/notebook/ that imports the NOTEBOOK or
+ *  CONCLUSIONS constant. The count may only fall, and each consumer that moves to the active source takes one off.
+ *  What remains are the renders' fixture readers (script-phase-A) and the engine
+ *  side (lib/, app/api/), which have no active notebook to read. */
+const PINNED_CONSTANT_IMPORTERS = 6; // 11 before stage 4. Left: ResearchStep + RunStage (the replay path),
+// script/constraints.ts + dispatchToggles.ts (fixture-render tables, script-phase-A), lib/notebook/validate.ts
+// and lib/turns/assemble/recalibrate.ts (engine side, outside this card's paths).
+
+function constantImporters(): string[] {
+  const root = process.cwd();
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      if (name === "node_modules" || name.startsWith(".")) continue;
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.(ts|tsx)$/.test(name)) {
+        const rel = relative(root, p).split(sep).join("/");
+        if (rel.startsWith("app/_phases/_shared/notebook/")) continue;
+        const src = readFileSync(p, "utf8");
+        const imports = src.match(/import\s+(?:type\s+)?\{[^}]*\}\s+from\s+["'][^"']*\/(?:notebook|conclusions)["']/g) ?? [];
+        if (imports.some((i) => /\b(NOTEBOOK|CONCLUSIONS)\b/.test(i.replace(/\bNOTEBOOK_\w+/g, "")))) out.push(rel);
+      }
+    }
+  };
+  for (const d of ["app", "components", "lib"]) walk(join(root, d));
+  return out.sort();
+}
+
+test("stage 4 (case 7): the files importing NOTEBOOK or CONCLUSIONS outside _shared/notebook/ only fall", () => {
+  const found = constantImporters();
+  console.log(`[ratchet] ${found.length} importers\n  ${found.join("\n  ")}`);
+  expect(found.length).toBeLessThanOrEqual(PINNED_CONSTANT_IMPORTERS);
+});

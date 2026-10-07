@@ -19,7 +19,7 @@ import { useMemo } from "react";
 
 import { RENDER_BY_ID } from "../renders";
 import { runGate, type GateFinding, type Verdict } from "../gate";
-import { CONCLUSIONS } from "../../_shared/notebook/conclusions";
+import type { NotebookSource } from "../../_shared/notebook/source";
 import type { Beat } from "../types";
 
 const MARK: Record<Verdict, { glyph: string; cls: string; label: string }> = {
@@ -37,17 +37,19 @@ const MARK: Record<Verdict, { glyph: string; cls: string; label: string }> = {
  *  between this panel and the ledger above it. */
 export default function GatePanel({
   renderId,
+  source,
   beats,
   chainLabel,
 }: {
   renderId: string;
+  source: NotebookSource;
   beats?: Beat[];
   chainLabel?: string;
 }) {
   const report = useMemo(() => {
     const chain = beats ?? RENDER_BY_ID[renderId]?.beats;
-    return chain ? runGate({ id: renderId, beats: chain }, { conclusions: CONCLUSIONS }) : null;
-  }, [renderId, beats]);
+    return chain ? runGate({ id: renderId, beats: chain }, { source, conclusions: source.conclusions }) : null;
+  }, [renderId, source, beats]);
 
   if (!report) return null;
 
