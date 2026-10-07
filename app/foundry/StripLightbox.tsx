@@ -32,6 +32,7 @@ import { useEffect, useRef, useState } from "react";
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/Primitives";
 import { CHIP_CLASS, Keycaps, TALLY_TONE } from "@/components/ui/signal";
+import { typing } from "@/lib/board/keys";
 import { STRIP_CHIPS_MAX, STRIP_NOTE_MAX } from "@/lib/foundry/strips/triage";
 import { STRIP_CHIPS, type StripCard, type StripChip, type StripGates, type StripRun, type StripVerdict } from "@/lib/foundry/strips/types";
 
@@ -105,9 +106,8 @@ export function StripLightbox({
     if (!card) return;
     const onKey = (e: KeyboardEvent) => {
       if (refusedKey(e)) return;
-      const t = e.target as HTMLElement | null;
       // The scrubber and the note own their own keys.
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (typing(e.target)) return;
       switch (e.key) {
         case "k":
         case "K":

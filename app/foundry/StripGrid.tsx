@@ -32,6 +32,7 @@ import { useEffect, useMemo } from "react";
 import { useRoving } from "@/components/kit/useRoving";
 import Clip from "@/components/ui/Clip";
 import { CHIP_CLASS, PipRow, Provenance, TALLY_TONE, Tally, type PipState } from "@/components/ui/signal";
+import { typing } from "@/lib/board/keys";
 import { JUDGEABLE } from "@/lib/foundry/strips/triage";
 import { STRIP_CHIPS, type Approach, type StripCard, type StripChip, type StripGates, type StripLane, type StripRun, type StripVerdict, type StripVerdicts } from "@/lib/foundry/strips/types";
 
@@ -141,8 +142,7 @@ export function StripGrid({
     if (!keysEnabled) return;
     const onKey = (e: KeyboardEvent) => {
       if (refusedKey(e)) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (typing(e.target)) return;
       const i = focused ? order.indexOf(focused) : -1;
       const step = (d: number) => {
         const n = Math.min(order.length - 1, Math.max(0, (i < 0 ? 0 : i) + d));
@@ -180,7 +180,7 @@ export function StripGrid({
           if (canJudge) onVerdict(focused!, null);
           return;
         case "Enter":
-          if (activatesOnEnter(t)) return;
+          if (activatesOnEnter(e.target as HTMLElement | null)) return;
           if (focused) {
             e.preventDefault();
             onOpen(focused);
