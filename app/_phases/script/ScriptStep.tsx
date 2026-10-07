@@ -262,7 +262,8 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   // and version history.
   // The notebook the creator has, not the shipped one: the gate, the recalibrate
   // payload and the wounds all read this same source.
-  const { source } = useActiveNotebook(projectId);
+  const active = useActiveNotebook(projectId);
+  const { source } = active;
   const nb = source.notebook;
   const scope = useScope(projectId, source);
   const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope, source });
@@ -356,7 +357,10 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   // Adoption and face are in the gate for the same reason scope is: rendering
   // the duel before its record lands would show "nothing adopted" over a
   // decision that is on disk, and the face default reads the adoption record.
-  const ready = scope.hydrated && versions.hydrated && adoption.hydrated && face.hydrated;
+  // The active notebook is in the gate too: until its record is read, the scope
+  // is dealt the replay and a live scope reads as orphaned, so a ScopePip click
+  // in that window would start a fresh fixture-digest scope over the creator's.
+  const ready = active.hydrated && scope.hydrated && versions.hydrated && adoption.hydrated && face.hydrated;
 
   // WHAT EACH TAB HOLDS — the state its caption was reaching for. Read off the
   // version on screen, and only once the records are on disk: a "0 conflicts"

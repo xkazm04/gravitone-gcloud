@@ -6,6 +6,9 @@
 // active-notebook.probe.spec.ts uses (tests/golden-path/_c1-harness.ts).
 import "fake-indexeddb/auto";
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { expect, test } from "@playwright/test";
 
 import { buildCards } from "@/app/_phases/_shared/notebook/cards";
@@ -15,7 +18,10 @@ import { readStep, saveStep, type ScopeStepData } from "@/app/_phases/_shared/st
 import { makeTriageSource } from "@/lib/board/sources/triage";
 import { addProjects } from "@/lib/projects";
 
+import { stripComments } from "./_helpers";
 import { landLive, OWN_CONCLUSION } from "./_c1-harness";
+
+const code = (rel: string) => stripComments(readFileSync(path.join(process.cwd(), rel), "utf8"));
 
 async function explainerProject(uid: string, id: string) {
   const now = Date.now();
@@ -109,4 +115,16 @@ test("case 9: a project with no record still deals the fixture board and writes 
   const row = rows.find((r) => !r.refuse.reject)!;
   await triage.decide(row.item.id, "reject");
   expect((await scopeOf(pid))?.digest).toBe(fixtureSource().digest);
+});
+
+/* ───────────────────── case 10: Script waits for the active notebook ─────────── */
+// No DOM in this lane, so this is read off the source: ScriptStep's skeleton
+// gate is `ready`, and the gate has to name the active notebook's `hydrated`.
+
+test("case 10: ScriptStep's ready waits for the active notebook, and the skeleton hangs on ready", () => {
+  const src = code("app/_phases/script/ScriptStep.tsx");
+  expect(src).toMatch(/const active = useActiveNotebook\(projectId\)/);
+  const ready = /const ready = ([^;]+);/.exec(src)?.[1] ?? "";
+  expect(ready, "ready does not wait for the active notebook").toContain("active.hydrated");
+  expect(src).toMatch(/\{!ready \? \(\s*<Skeleton \/>/);
 });
