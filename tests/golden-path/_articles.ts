@@ -85,10 +85,14 @@ export function articleSandbox(): ArticleSandbox {
   // worktree add: already exists", "the agent did not write out/sources.json".
   // os.tmpdir() reads these variables on every call, so a temp directory of its
   // own per sandbox takes the name out of the shared space (and cleanup()
-  // removes whatever the engine leaves in it).
+  // removes whatever the engine leaves in it, and puts the variables back: a
+  // probe that calls the sandbox without keepEnv(ARTICLE_ENV) must not leave a
+  // later file a temp directory that no longer exists).
+  const tmpVars = ["TMPDIR", "TEMP", "TMP"] as const;
+  const savedTmp = tmpVars.map((k) => process.env[k]);
   const tmp = path.join(dir, "tmp");
   mkdirSync(tmp, { recursive: true });
-  for (const k of ["TMPDIR", "TEMP", "TMP"]) process.env[k] = tmp;
+  for (const k of tmpVars) process.env[k] = tmp;
   process.env.AI_REGISTRY_DIR = registry;
   process.env.ARTICLES_STORE_DIR = store;
   process.env.ARTICLES_AGENT_BIN = `node|${STUB_AGENT}`;
@@ -116,6 +120,9 @@ export function articleSandbox(): ArticleSandbox {
     registry,
     origin,
     store,
-    cleanup: () => rmSync(dir, { recursive: true, force: true, maxRetries: 3 }),
+    cleanup: () => {
+      tmpVars.forEach((k, i) => (savedTmp[i] === undefined ? delete process.env[k] : (process.env[k] = savedTmp[i])));
+      rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+    },
   };
 }
