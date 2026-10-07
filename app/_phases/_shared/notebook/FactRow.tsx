@@ -1,7 +1,6 @@
 "use client";
 
 import { ConfidenceChip, EvidenceClassChip } from "./Chips";
-import { FACT_BY_ID } from "./notebook";
 import type { Fact } from "./types";
 
 /** THE SIDEWAYS EDGE, drawn. `contests` and `qualifies` were authored in the
@@ -13,11 +12,21 @@ import type { Fact } from "./types";
  *  This resolves the other end and prints it. It does NOT wound: `woundsOf()`
  *  still reads `dependsOn` only — see the note on `Fact.contests` in types.ts
  *  for what that costs and what would change it. */
-function Edge({ label, ids, tone }: { label: string; ids: string[]; tone: string }) {
+function Edge({
+  label,
+  ids,
+  tone,
+  facts,
+}: {
+  label: string;
+  ids: string[];
+  tone: string;
+  facts: Readonly<Record<string, Fact>>;
+}) {
   return (
     <>
       {ids.map((id) => {
-        const other = FACT_BY_ID[id];
+        const other = facts[id];
         return (
           <p key={id} className={`mt-1.5 text-content leading-relaxed ${tone}`}>
             <span className="font-jetbrains tracking-[0.12em] uppercase">{label} </span>
@@ -31,7 +40,9 @@ function Edge({ label, ids, tone }: { label: string; ids: string[]; tone: string
 }
 
 /** One fact, with everything that decides whether a script may use it. */
-export default function FactRow({ f }: { f: Fact }) {
+/** `facts` is the by-id index of the notebook the row belongs to
+ *  (`source.byId.facts`): an edge resolves against THAT notebook. */
+export default function FactRow({ f, facts }: { f: Fact; facts: Readonly<Record<string, Fact>> }) {
   const danger = f.loadBearing && f.confidence === "low";
   return (
     <li
@@ -91,8 +102,8 @@ export default function FactRow({ f }: { f: Fact }) {
           {f.confidenceNote ? ` — ${f.confidenceNote}` : ""}
         </p>
       )}
-      {!!f.contests?.length && <Edge label="contests" ids={f.contests} tone="text-violet-200/85" />}
-      {!!f.qualifies?.length && <Edge label="qualifies" ids={f.qualifies} tone="text-white/50" />}
+      {!!f.contests?.length && <Edge label="contests" ids={f.contests} tone="text-violet-200/85" facts={facts} />}
+      {!!f.qualifies?.length && <Edge label="qualifies" ids={f.qualifies} tone="text-white/50" facts={facts} />}
       {f.note && <p className="mt-1.5 text-content leading-relaxed text-white/55 italic">{f.note}</p>}
       {/* The row is already rose-bordered and already carries a `load-bearing`
           chip beside a `low` chip, so "load-bearing at low confidence" was the

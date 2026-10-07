@@ -43,7 +43,7 @@
 // deals is drawn on the board.
 
 import { Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
@@ -113,7 +113,10 @@ function Elapsed({ since }: { since: number }) {
   return <>{secs(Math.max(0, now - since))}</>;
 }
 
-export default function LiveResult({ state }: { state: LiveState }) {
+/** `actions`: the pills that open the notebook and its evidence log. They are
+ *  passed in because they live with the guided stage (guided/RunStage.tsx), which
+ *  imports this card. */
+export default function LiveResult({ state, actions }: { state: LiveState; actions?: ReactNode }) {
   if (state.status === "idle") return null;
 
   if (state.status === "running")
@@ -236,6 +239,8 @@ export default function LiveResult({ state }: { state: LiveState }) {
             {counts.gaps > 4 && <li className="text-white/35">…and {counts.gaps - 4} more.</li>}
           </ul>
         )}
+
+        {actions && <div className="mt-4 flex flex-wrap items-center gap-2.5">{actions}</div>}
 
         <div className="mt-4 border-t border-white/8 pt-3">
           <Receipt engine={state.engine} at={state.at} />

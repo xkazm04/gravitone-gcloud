@@ -52,7 +52,7 @@ import { getProject, type Discipline } from "@/lib/projects";
 
 import NotebookBody from "../_shared/notebook/NotebookBody";
 import EvidenceLog from "../_shared/notebook/EvidenceLog";
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
+import { countsOf, type NotebookCounts } from "../_shared/notebook/counts";
 import { saveStep, type GuidedModeStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
 import { usePhaseReport } from "../_shared/usePhaseReport";
@@ -271,6 +271,10 @@ function EducationalFaces({
   const shown = face ?? fallback;
 
   const { run, ready, live } = research;
+  // WHAT THE MODALS, THE PILLS AND THE CLEAR DIALOG DRAW IS WHAT THE BOARD DEALS:
+  // the creator's own notebook when one is saved, else the replay.
+  const dealtSource = research.source;
+  const counts = countsOf(dealtSource.notebook);
 
   // Everything the ClearDialog says is discarded, discarded. The follow-up
   // record is the third document this step owns — it lives above React so that
@@ -324,7 +328,7 @@ function EducationalFaces({
         <ExpertBoard
           api={api}
           projectId={projectId}
-          ready={ready}
+          counts={counts}
           dealt={research.dealt}
           onOpenNotebook={() => setArtifact("notebook")}
           onOpenEvidence={() => setArtifact("evidence")}
@@ -333,15 +337,15 @@ function EducationalFaces({
         />
       )}
 
-      <ClearDialog open={confirmClear} onClose={() => setConfirmClear(false)} onConfirm={doClear} />
+      <ClearDialog open={confirmClear} onClose={() => setConfirmClear(false)} onConfirm={doClear} source={dealtSource} />
 
       <Modal
         open={artifact === "notebook"}
         onClose={() => setArtifact(null)}
-        title="notebook · why-bitcoin-price-does-not-rise"
-        footer={`${NOTEBOOK_COUNTS.facts} facts · ${NOTEBOOK_COUNTS.mechanisms} mechanisms · ${NOTEBOOK_COUNTS.reversals} reversals · researched ${NOTEBOOK.researched}`}
+        title={`notebook · ${dealtSource.notebook.id}`}
+        footer={`${counts.facts} facts · ${counts.mechanisms} mechanisms · ${counts.reversals} reversals · researched ${dealtSource.notebook.researched}`}
       >
-        <NotebookBody />
+        <NotebookBody source={dealtSource} />
       </Modal>
 
       <Modal
@@ -355,13 +359,13 @@ function EducationalFaces({
         }
         footer={
           <p className="font-jetbrains text-content text-white/35">
-            {NOTEBOOK_COUNTS.flagged === 0
+            {counts.flagged === 0
               ? "no claim is both load-bearing and low-confidence"
-              : `${NOTEBOOK_COUNTS.flagged} claim(s) load-bearing at low confidence — flagged, not quietly used`}
+              : `${counts.flagged} claim(s) load-bearing at low confidence — flagged, not quietly used`}
           </p>
         }
       >
-        <EvidenceLog />
+        <EvidenceLog source={dealtSource} />
       </Modal>
 
     </div>
@@ -386,7 +390,7 @@ function EducationalFaces({
 function ExpertBoard({
   api,
   projectId,
-  ready,
+  counts,
   dealt,
   onOpenNotebook,
   onOpenEvidence,
@@ -395,9 +399,8 @@ function ExpertBoard({
 }: {
   api: ReturnType<typeof useScope>;
   projectId: string;
-  /** The simulated run landed — the replay's notebook and evidence log exist,
-   *  which is what the artifact pills open. */
-  ready: boolean;
+  /** The counts of the dealt notebook, which the artifact pills open. */
+  counts: NotebookCounts;
   /** There are cards: the replay landed, or the creator's own notebook is the
    *  active source. */
   dealt: boolean;
@@ -412,8 +415,9 @@ function ExpertBoard({
           board", ResearchTriageBoard's header) and two stacked eyebrows is the
           repetition this wave is removing. The row is the exits only. */}
       <div className="flex flex-wrap items-center justify-end gap-2.5">
-        {ready && (
+        {dealt && (
           <ArtifactPills
+            counts={counts}
             onOpenNotebook={onOpenNotebook}
             onOpenEvidence={onOpenEvidence}
             onClear={onClear}

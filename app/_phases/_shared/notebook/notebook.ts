@@ -6,6 +6,7 @@
 // 3 mechanisms, 4 reversals — which is exactly why the surface that shows it
 // must be a modal that scrolls, not a page section that overflows.
 
+import { countsOf } from "./counts";
 import { FACTS } from "./facts";
 import { UNKNOWNS } from "./unknowns";
 import type { Notebook } from "./types";
@@ -186,42 +187,4 @@ export const FACT_BY_ID = Object.fromEntries(NOTEBOOK.facts.map((f) => [f.id, f]
 /** Unknowns by id — what script/constraints.ts scores each render against. */
 export const UNKNOWN_BY_ID = Object.fromEntries(NOTEBOOK.unknowns.map((u) => [u.id, u]));
 
-export const NOTEBOOK_COUNTS = {
-  facts: NOTEBOOK.facts.length,
-  loadBearing: NOTEBOOK.facts.filter((f) => f.loadBearing).length,
-  lowConfidence: NOTEBOOK.facts.filter((f) => f.confidence === "low").length,
-  /** The flag that matters most: load-bearing AND low confidence. */
-  flagged: NOTEBOOK.facts.filter((f) => f.loadBearing && f.confidence === "low").length,
-  mechanisms: NOTEBOOK.mechanisms.length,
-  reversals: NOTEBOOK.reversals.length,
-  // `sources` and `factSourceStrings` count TWO UNRELATED POPULATIONS, and the
-  // names are deliberately not interchangeable so a caller cannot reach for
-  // the wrong one by habit:
-  //
-  //   · `sources` is NOTEBOOK.sources — the document-level bibliography,
-  //     hand-written as full citation strings ("coindesk.com — bitcoin's U.S.
-  //     reserve still a work in progress (2026-07-06)"). Measured on this
-  //     fixture: 11 entries.
-  //   · `factSourceStrings` is the DISTINCT set of `Fact.source` values across
-  //     the 21 rows in facts.ts, hand-written as short attributions
-  //     ("invezz, crypto.news, intellectia", "whitehouse.gov fact sheet").
-  //     Measured on this fixture: 20 distinct strings.
-  //
-  // Nothing links them — no code asserts a fact's `source` appears anywhere in
-  // NOTEBOOK.sources, and a naive substring match would misfire immediately:
-  // the bibliography writes "whitehouse.gov — fact sheet: Strategic Bitcoin
-  // Reserve (2025-03-06)" where the fact writes "whitehouse.gov fact sheet".
-  // They were authored by different people at different times for different
-  // readers (a bibliography vs. an attribution beside a claim), and forcing a
-  // reconciliation here would either hide real gaps behind a bad matcher or
-  // invent one that does not exist. So both counts are surfaced honestly,
-  // named for the population each one actually counts, and
-  // notebook-source-population.probe.spec.ts pins both numbers so a future
-  // edit that grows one list without the other is caught rather than silent.
-  sources: NOTEBOOK.sources.length,
-  factSourceStrings: new Set(NOTEBOOK.facts.map((f) => f.source)).size,
-  unknowns: NOTEBOOK.unknowns.length,
-  /** The count that actually constrains a script being written today. */
-  unknownsOpen: NOTEBOOK.unknowns.filter((u) => !u.resolvedBy).length,
-  gaps: NOTEBOOK.researchGaps.length,
-};
+export const NOTEBOOK_COUNTS = countsOf(NOTEBOOK);

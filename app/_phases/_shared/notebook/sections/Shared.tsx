@@ -7,14 +7,14 @@
 // and a reviewer asking 'can we actually say this?' are doing different jobs".
 // That justifies both SHOWING currency and sources. It never justified two
 // copies of the markup, which is what there was: the same five fields off the
-// same NOTEBOOK, in two files, differing only in heading and in whether the
+// same notebook, in two files, differing only in heading and in whether the
 // half-life was inlined.
 //
 // The heading stays with each host, because that is the part that legitimately
 // differs — Apparatus needs the anchor <H> the section rail jumps to, the
 // evidence log uses its own <Head>. What lives here is the body.
 
-import { NOTEBOOK } from "../notebook";
+import type { Notebook } from "../types";
 
 /** How long the notebook stays true.
  *
@@ -22,8 +22,8 @@ import { NOTEBOOK } from "../notebook";
  *  say it twice: the evidence log already gives half-life a stat tile at the top
  *  of the page, so inlining it here would print the same value a second time
  *  four sections later. The notebook body has no tile, so it inlines. */
-export function CurrencyBody({ withHalfLife = false }: { withHalfLife?: boolean }) {
-  const c = NOTEBOOK.currency;
+export function CurrencyBody({ n, withHalfLife = false }: { n: Notebook; withHalfLife?: boolean }) {
+  const c = n.currency;
   return (
     <>
       <p className="text-content leading-relaxed text-slate-300">
@@ -42,17 +42,17 @@ export function CurrencyBody({ withHalfLife = false }: { withHalfLife?: boolean 
   );
 }
 
-/** The document-level bibliography (NOTEBOOK.sources), in the order the
+/** The document-level bibliography (`Notebook.sources`), in the order the
  *  notebook lists them — NOT every source a fact cites. That is a separate,
  *  larger, unrelated population (`Fact.source` across facts.ts, distinct
  *  strings counted as `NOTEBOOK_COUNTS.factSourceStrings`); both hosts of this
  *  body now name their heading "bibliography" rather than bare "sources" so
  *  the two are not conflated. See the comment on NOTEBOOK_COUNTS in
  *  notebook.ts for the measurement and why no reconciliation is built. */
-export function SourcesBody() {
+export function SourcesBody({ n }: { n: Notebook }) {
   return (
     <ul className="space-y-1">
-      {NOTEBOOK.sources.map((s) => (
+      {n.sources.map((s) => (
         <li key={s} className="font-jetbrains text-label leading-relaxed text-white/45">
           {s}
         </li>

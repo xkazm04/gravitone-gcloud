@@ -5,7 +5,8 @@
 
 import Modal from "@/components/ui/Modal";
 import { Hint } from "@/components/ui/signal";
-import { NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
+import { countsOf } from "../../_shared/notebook/counts";
+import type { NotebookSource } from "../../_shared/notebook/source";
 import type { ScopeApi } from "../useScope";
 
 /** Confirming freezes the board as a CHECKPOINT, and says what that is worth.
@@ -91,23 +92,31 @@ export function ClearDialog({
   open,
   onClose,
   onConfirm,
+  source,
 }: {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
+  /** The notebook Clear destroys: the project's dealt one, which is the creator's
+   *  own when it has one (Clear wipes that record too). */
+  source: NotebookSource;
 }) {
+  const counts = countsOf(source.notebook);
+  const own = source.kind !== "replay";
   return (
     <Modal open={open} onClose={onClose} title="clear this research?" footer="">
       <div className="space-y-3 text-content leading-relaxed text-slate-300">
         <p>
-          This project has a notebook: <strong>{NOTEBOOK_COUNTS.facts} facts</strong>,{" "}
-          {NOTEBOOK_COUNTS.mechanisms} mechanisms and {NOTEBOOK_COUNTS.reversals} reversals, plus
-          every scoping decision on the board.
+          This project has a notebook{own ? <> on <strong>{source.notebook.topic}</strong></> : null}:{" "}
+          <strong>{counts.facts} facts</strong>, {counts.mechanisms} mechanisms and {counts.reversals}{" "}
+          reversals, plus every scoping decision on the board.
         </p>
         <p className="text-white/60">
-          Clearing discards all of it. The research itself cost six searches and cannot be recovered
-          from here — it would have to be run again, and a second run will not return the same
-          notebook.
+          Clearing discards all of it.{" "}
+          {own
+            ? "It cannot be recovered from here"
+            : "The research itself cost six searches and cannot be recovered from here"}{" "}
+          — it would have to be run again, and a second run will not return the same notebook.
         </p>
         <div className="flex flex-wrap justify-end gap-2 pt-2">
           <button

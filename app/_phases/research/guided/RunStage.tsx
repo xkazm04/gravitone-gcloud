@@ -23,7 +23,8 @@ import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/Primitives";
 import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "../../_shared/notebook/notebook";
+import { countsOf, type NotebookCounts } from "../../_shared/notebook/counts";
+import { NOTEBOOK } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
 import { RealRunControl, RunStatus, TopicField } from "../run/controls";
 import LiveResult from "../run/LiveResult";
@@ -42,10 +43,14 @@ const PILL =
   "font-jetbrains rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/75 transition hover:bg-white/5";
 
 export function ArtifactPills({
+  counts,
   onOpenNotebook,
   onOpenEvidence,
   onClear,
 }: {
+  /** The counts of the notebook the pills open (`countsOf(source.notebook)`):
+   *  the replay's, or the creator's own when that is what is dealt. */
+  counts: NotebookCounts;
   onOpenNotebook: () => void;
   onOpenEvidence: () => void;
   onClear: () => void;
@@ -56,9 +61,9 @@ export function ArtifactPills({
         notebook · the argument
       </button>
       <button data-testid="open-evidence" onClick={onOpenEvidence} className={PILL}>
-        evidence log · {NOTEBOOK_COUNTS.facts} claims
-        {NOTEBOOK_COUNTS.flagged > 0 && (
-          <span className="ml-1.5 text-rose-300">{NOTEBOOK_COUNTS.flagged} flagged</span>
+        evidence log · {counts.facts} claims
+        {counts.flagged > 0 && (
+          <span className="ml-1.5 text-rose-300">{counts.flagged} flagged</span>
         )}
       </button>
       <button
@@ -152,6 +157,21 @@ export default function RunStage({
   // decided, here is the record).
   const [openedReady] = useState(ready);
 
+  // WHAT THE PILLS OPEN IS WHAT THE BOARD DEALS. The replay card carries them
+  // while the replay is dealt; a creator's own notebook carries them on its own
+  // card, so a project with only its own notebook can still open it.
+  const dealtCounts = countsOf(research.source.notebook);
+  const replayCounts = countsOf(NOTEBOOK);
+  const livePills =
+    research.source.kind !== "replay" ? (
+      <ArtifactPills
+        counts={dealtCounts}
+        onOpenNotebook={onOpenNotebook}
+        onOpenEvidence={onOpenEvidence}
+        onClear={onClear}
+      />
+    ) : undefined;
+
   if (openedReady && run.state.status === "done") {
     return (
       // THE DEAD BAND UNDER THIS CARD IS NOT FIXABLE FROM HERE, and the attempt
@@ -197,26 +217,29 @@ export default function RunStage({
               {NOTEBOOK.topic}
             </h3>
             <p className="font-jetbrains mt-2 text-label text-white/40">
-              {NOTEBOOK_COUNTS.facts} facts · {NOTEBOOK_COUNTS.mechanisms} mechanisms ·{" "}
-              {NOTEBOOK_COUNTS.reversals} reversals · researched {NOTEBOOK.researched}
+              {replayCounts.facts} facts · {replayCounts.mechanisms} mechanisms ·{" "}
+              {replayCounts.reversals} reversals · researched {NOTEBOOK.researched}
             </p>
             <div className="mt-2">
               <StandInNote topic={topic} dealing={research.source.kind === "replay"} />
             </div>
-            <div className="mt-5 flex flex-wrap items-center gap-2.5">
-              <ArtifactPills
-                onOpenNotebook={onOpenNotebook}
-                onOpenEvidence={onOpenEvidence}
-                onClear={onClear}
-              />
-            </div>
+            {research.source.kind === "replay" && (
+              <div className="mt-5 flex flex-wrap items-center gap-2.5">
+                <ArtifactPills
+                  counts={dealtCounts}
+                  onOpenNotebook={onOpenNotebook}
+                  onOpenEvidence={onOpenEvidence}
+                  onClear={onClear}
+                />
+              </div>
+            )}
           </div>
         </div>
 
         {/* The creator's own notebook, if one has been reasoned for this
             project. It sits BESIDE the replay rather than replacing it: they are
             two different objects and the surface says which is which. */}
-        <LiveResult state={live.state} />
+        <LiveResult state={live.state} actions={livePills} />
       </div>
     );
   }
@@ -279,7 +302,7 @@ export default function RunStage({
       </div>
 
       {/* What a real run is doing, or produced, or failed to produce. */}
-      <LiveResult state={live.state} />
+      <LiveResult state={live.state} actions={livePills} />
 
       {run.state.status !== "idle" && (
         <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.02]">
@@ -364,9 +387,10 @@ export default function RunStage({
                 <StandInNote topic={topic} dealing={research.source.kind === "replay"} />
               </div>
             )}
-            {run.state.status === "done" && (
+            {run.state.status === "done" && research.source.kind === "replay" && (
               <div className="mt-4 flex flex-wrap items-center gap-2.5 border-t border-white/8 pt-4">
                 <ArtifactPills
+                  counts={dealtCounts}
                   onOpenNotebook={onOpenNotebook}
                   onOpenEvidence={onOpenEvidence}
                   onClear={onClear}

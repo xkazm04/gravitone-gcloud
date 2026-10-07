@@ -10,13 +10,13 @@
 
 import { useCallback, useState } from "react";
 
-import { NOTEBOOK } from "./notebook";
+import type { NotebookSource } from "./source";
 import ArgumentSections from "./sections/Argument";
 import ApparatusSections from "./sections/Apparatus";
-import { SECTION_LABEL, sectionRenders } from "./sections/H";
+import { sectionLabels, sectionRenders } from "./sections/H";
 import type { Notebook } from "./types";
 
-// THE ORDER; the names come from SECTION_LABEL in sections/H.tsx, which is the
+// THE ORDER; the names come from sectionLabels in sections/H.tsx, which is the
 // same map the headings themselves render. A pill and the heading it jumps to
 // were two separate expressions and drifted apart — the pill said
 // "mechanisms · 3" and the heading said "mechanisms — the beat chain,
@@ -37,11 +37,9 @@ const SECTION_ORDER = [
   "gaps",
 ] as const;
 
-const SECTIONS = SECTION_ORDER.map((id) => [id, SECTION_LABEL[id]] as const);
-
 /** Every section the rail knows about, in order — including the two that only
  *  render when they have content. */
-export const SECTION_IDS: readonly string[] = SECTIONS.map(([id]) => id);
+export const SECTION_IDS: readonly string[] = SECTION_ORDER;
 
 /** THE PILLS THIS NOTEBOOK ACTUALLY GETS.
  *
@@ -50,10 +48,13 @@ export const SECTION_IDS: readonly string[] = SECTIONS.map(([id]) => id);
  *  the rail below has exactly one way to build itself — a `.map` over the raw
  *  list is the defect, and the probe reads this file to say so. */
 export function railFor(n: Notebook): readonly (readonly [string, string])[] {
-  return SECTIONS.filter(([id]) => sectionRenders(n, id));
+  const labels = sectionLabels(n);
+  return SECTION_ORDER.filter((id) => sectionRenders(n, id)).map((id) => [id, labels[id]!] as const);
 }
 
-export default function NotebookBody() {
+/** `source` is the notebook being read — the project's dealt one, not the
+ *  shipped run. */
+export default function NotebookBody({ source }: { source: NotebookSource }) {
   // WHERE THE RAIL LAST SENT YOU. The rail had no state at all: eleven
   // identical pills, no `aria-current`, and a jump that moved the scroll
   // container without moving focus — so a keyboard user pressed "sources",
@@ -74,7 +75,7 @@ export default function NotebookBody() {
     target.focus({ preventScroll: true });
   }, []);
 
-  const n = NOTEBOOK;
+  const n = source.notebook;
 
   return (
     <div className="space-y-7">
@@ -118,8 +119,8 @@ export default function NotebookBody() {
         </p>
       </section>
 
-      <ArgumentSections />
-      <ApparatusSections />
+      <ArgumentSections n={n} />
+      <ApparatusSections n={n} facts={source.byId.facts} />
     </div>
   );
 }

@@ -5,15 +5,15 @@
 // case against the whole thing.
 
 import { ChainConnectorChip, ConnectorChip } from "../Chips";
-import { NOTEBOOK } from "../notebook";
-import { H, chainLink, sectionRenders } from "./H";
+import type { Notebook } from "../types";
+import { H, chainLink, sectionLabels, sectionRenders } from "./H";
 
-export default function ArgumentSections() {
-  const n = NOTEBOOK;
+export default function ArgumentSections({ n }: { n: Notebook }) {
+  const labels = sectionLabels(n);
   return (
     <>
       <section className="space-y-2">
-        <H id="tension" />
+        <H id="tension">{labels.tension}</H>
         <div className="grid gap-3 sm:grid-cols-2">
           <p className="rounded-xl border border-white/8 bg-white/[0.02] p-3 text-content leading-relaxed text-slate-300">
             <span className="font-jetbrains block text-label tracking-[0.14em] text-white/60 uppercase">expectation</span>
@@ -29,7 +29,7 @@ export default function ArgumentSections() {
       </section>
 
       <section className="space-y-3">
-        <H id="mechanisms" />
+        <H id="mechanisms">{labels.mechanisms}</H>
         {n.mechanisms.map((m) => (
           <div key={m.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
             <p className="text-content font-medium text-white">{m.name}</p>
@@ -83,7 +83,7 @@ export default function ArgumentSections() {
       </section>
 
       <section className="space-y-3">
-        <H id="reversals" />
+        <H id="reversals">{labels.reversals}</H>
         {n.reversals.map((r) => (
           <div key={r.id} className="rounded-xl border border-white/8 bg-white/[0.02] p-3.5">
             <p className="font-jetbrains text-content tracking-[0.14em] text-white/60 uppercase">
@@ -105,7 +105,7 @@ export default function ArgumentSections() {
       </section>
 
       <section className="space-y-2">
-        <H id="steelman" />
+        <H id="steelman">{labels.steelman}</H>
         <p className="text-content leading-relaxed text-slate-200">{n.steelMan.statement}</p>
         <p className="text-content leading-relaxed text-white/50">{n.steelMan.whyInclude}</p>
         <p className="font-jetbrains text-content text-white/55">evidence: {n.steelMan.evidence.join(", ")}</p>
@@ -127,7 +127,7 @@ export default function ArgumentSections() {
           renders its holder. */}
       {sectionRenders(n, "counters") && (
         <section className="space-y-2">
-          <H id="counters" />
+          <H id="counters">{labels.counters}</H>
           <ul className="space-y-2">
             {n.counterPositions.map((c, i) =>
               typeof c === "string" ? (
