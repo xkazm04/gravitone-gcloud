@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 543,
+  "files": 544,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -972,6 +972,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
         "app/_phases/_shared/notebook/EvidenceLog.tsx",
         "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
@@ -1325,14 +1326,15 @@
       "suspectFiles": {}
     },
     "app/_library": {
-      "files": 3,
+      "files": 4,
       "kitImports": 0,
       "signalImports": 1,
       "parts": [
         "CHIP_CLASS",
         "Ghost",
         "Provenance",
-        "TALLY_TONE"
+        "TALLY_TONE",
+        "Tally"
       ],
       "suspects": {
         "tab": 0,

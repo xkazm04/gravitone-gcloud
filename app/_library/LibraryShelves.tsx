@@ -15,11 +15,15 @@
 // of the product's most ambitious promise. A surface here may not draw what the
 // product cannot do.
 
-import { useMemo, useState } from "react";
-import { Music2, Search, SearchX } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BookmarkPlus, Music2, Search, SearchX } from "lucide-react";
 
-import { CHIP_CLASS, Ghost, Provenance, TALLY_TONE } from "@/components/ui/signal";
+import { CHIP_CLASS, Ghost, Provenance, TALLY_TONE, Tally } from "@/components/ui/signal";
+import { useAnnounce } from "@/lib/announcer";
+import { listAssets } from "@/lib/assets";
+import { useAuth } from "@/lib/useAuth";
 
+import { keepable, keepPlate, keptIndex, plateDigest } from "./keepPlate";
 import { useProjectOutputs } from "./useProjectOutputs";
 import type { Output, OutputKind, OutputStep, SourceRead } from "./projectOutputs";
 
@@ -38,6 +42,20 @@ const troubleOf = (s: SourceRead): { text: string; refused: boolean } | null => 
 
 export default function LibraryShelves({ projectId }: { projectId: string }) {
   const read = useProjectOutputs(projectId, true);
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+  const [kept, setKept] = useState<ReadonlyMap<string, string>>(new Map());
+  const refreshKept = useCallback(async () => {
+    if (uid) setKept(keptIndex(await listAssets(uid)));
+  }, [uid]);
+  useEffect(() => {
+    if (!uid) return;
+    let live = true;
+    void listAssets(uid).then((rows) => live && setKept(keptIndex(rows)));
+    return () => {
+      live = false;
+    };
+  }, [uid]);
   const [kind, setKind] = useState<OutputKind | null>(null);
   const [q, setQ] = useState("");
 
@@ -129,7 +147,7 @@ export default function LibraryShelves({ projectId }: { projectId: string }) {
           <ul className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {shown.map((o) => (
               <li key={o.id}>
-                <OutputCard output={o} />
+                <OutputCard output={o} uid={uid} projectId={projectId} kept={kept.get(o.id)} onKept={refreshKept} />
               </li>
             ))}
           </ul>
@@ -150,7 +168,19 @@ export default function LibraryShelves({ projectId }: { projectId: string }) {
   );
 }
 
-function OutputCard({ output: o }: { output: Output }) {
+function OutputCard({
+  output: o,
+  uid,
+  projectId,
+  kept,
+  onKept,
+}: {
+  output: Output;
+  uid: string | null;
+  projectId: string;
+  kept: string | undefined;
+  onKept: () => Promise<void>;
+}) {
   return (
     <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03]">
       {o.kind === "image" ? (
@@ -172,9 +202,79 @@ function OutputCard({ output: o }: { output: Output }) {
             step={o.provenance.step}
             cost={usd(o.provenance.costUsd)}
           />
+          {keepable(o) && uid && (
+            <KeepControl output={o} uid={uid} projectId={projectId} kept={kept} onKept={onKept} />
+          )}
         </div>
       </div>
     </div>
+  );
+}
+
+/** The keep control, and the mark that replaces it once THIS plate's bytes are
+ *  on the shelf. A regenerated plate has other bytes, so the mark goes and the
+ *  control comes back. A refusal is the store's own message, beside the card. */
+function KeepControl({
+  output: o,
+  uid,
+  projectId,
+  kept,
+  onKept,
+}: {
+  output: Output;
+  uid: string;
+  projectId: string;
+  kept: string | undefined;
+  onKept: () => Promise<void>;
+}) {
+  const announce = useAnnounce();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Keyed by the src it was read for, so a regenerated plate never wears the
+  // previous plate's digest while its own is being read.
+  const [read, setRead] = useState<{ src: string; digest: string } | null>(null);
+
+  useEffect(() => {
+    if (!kept || !o.src) return;
+    let live = true;
+    const src = o.src;
+    plateDigest(src).then((digest) => live && setRead({ src, digest }), () => {});
+    return () => {
+      live = false;
+    };
+  }, [kept, o.src]);
+
+  if (kept && read?.src === o.src && read?.digest === kept) return <Tally label="kept" value={1} tone="emerald" />;
+  return (
+    <>
+      <button
+        type="button"
+        disabled={busy}
+        aria-label={`Keep plate ${o.title}`}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await keepPlate(uid, projectId, o);
+            await onKept();
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            setError(msg);
+            announce({ key: `keep-failed-${o.id}-${Date.now()}`, text: `Could not keep ${o.title}: ${msg}` });
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="cursor-pointer rounded border border-white/15 p-1 text-white/60 transition hover:border-cyan-400/40 hover:text-cyan-200 disabled:opacity-40"
+      >
+        <BookmarkPlus className="h-3.5 w-3.5" aria-hidden />
+      </button>
+      {error && (
+        <p className="w-full text-label text-rose-300">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 
