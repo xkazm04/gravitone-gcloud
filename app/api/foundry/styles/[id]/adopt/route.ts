@@ -27,6 +27,13 @@ const liveAdoptIO: AdoptIO = {
       return null;
     }
   },
+  async readSidecar(run, rel) {
+    try {
+      return JSON.parse(await readFile(resolveInRun(run, rel), "utf8"));
+    } catch {
+      return null;
+    }
+  },
   async recognize(image, instruction, schema) {
     return (await recognize({ image, instruction, schema })).json;
   },

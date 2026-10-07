@@ -17,7 +17,7 @@
 // by foundry-adopt.probe).
 
 import type { ImageRef } from "@/lib/imaging/types";
-import type { ColorRole, PaletteColor, StyleBlock } from "@/lib/themes";
+import type { ColorRole, PaletteColor, Proof, StyleBlock } from "@/lib/themes";
 
 import { FoundryError } from "./runStore";
 import type { LedgerRow, StyleDef } from "./types";
@@ -30,6 +30,11 @@ export interface AdoptionDraft {
    *  the filesystem's own words. `block.palette` is then empty. */
   paletteMissing?: true;
   reason?: string;
+  /** The style's kept text-lane forge plates, as pending proofs. Empty when no
+   *  theme is made (`paletteMissing`) or no plate qualifies. */
+  proofs: Proof[];
+  /** Eligible plates the caps kept out, with the reason; absent when none. */
+  proofsLeftOut?: { count: number; reason: string };
 }
 
 /** What the draft needs from the world — injected, so a probe never touches a
@@ -37,6 +42,8 @@ export interface AdoptionDraft {
 export interface AdoptIO {
   /** The plate at a run-relative path, or null when the file is not here. */
   readPlate(run: string, rel: string): Promise<ImageRef | null>;
+  /** The parsed .json sidecar beside a candidate, or null when absent or unreadable. */
+  readSidecar(run: string, rel: string): Promise<unknown | null>;
   recognize(image: ImageRef, instruction: string, schema: Record<string, unknown>): Promise<unknown>;
 }
 
@@ -46,6 +53,82 @@ const ROLES: ColorRole[] = ["ground", "objects", "accent"];
  *  app/foundry/styleArt.ts keptPath. */
 export function plateRel(r: LedgerRow): string {
   return `scenes/${r.scene}/candidates/${r.style}--${r.mechanism}--s${r.seed}.png`;
+}
+
+/** Most plates one adoption seeds, and the most decoded image bytes across them. */
+export const SEED_CAP = 4;
+export const SEED_BYTE_CAP = 8_000_000;
+
+const decodedBytes = (b64: string): number =>
+  Math.floor((b64.length * 3) / 4) - (b64.endsWith("==") ? 2 : b64.endsWith("=") ? 1 : 0);
+
+/** The model a text-lane sidecar names, or null when it is not a text-lane
+ *  plate. Strict: `mechanism.reference` must be exactly false and `unet_name`
+ *  a non-empty string. Anything else fails closed. */
+function textLaneModel(sidecar: unknown): string | null {
+  const sc = sidecar as { mechanism?: { reference?: unknown }; workflow?: Record<string, { inputs?: { unet_name?: unknown } }> } | null;
+  if (sc?.mechanism?.reference !== false) return null;
+  const unet = sc.workflow?.["1"]?.inputs?.unet_name;
+  return typeof unet === "string" && unet ? unet : null;
+}
+
+const sidecarRel = (r: LedgerRow): string => plateRel(r).replace(/\.png$/, ".json");
+
+/** The style's kept text-lane forge plates as pending proofs, ledger order,
+ *  capped. Ref-early plates were conditioned on a franchise frame and approved
+ *  proofs become pinned references, so they are never seeded. A plate whose
+ *  PNG or sidecar does not read is skipped, never guessed. */
+export async function seedProofs(
+  ledger: LedgerRow[],
+  styleId: string,
+  io: AdoptIO,
+  now: number,
+): Promise<{ proofs: Proof[]; leftOut?: { count: number; reason: string } }> {
+  const seen = new Set<string>();
+  const eligible: Proof[] = [];
+  for (const r of ledger) {
+    if (r.style !== styleId || r.verdict !== "keep") continue;
+    const rel = plateRel(r);
+    const id = `forge:${r.run}/${rel}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    try {
+      const model = textLaneModel(await io.readSidecar(r.run, sidecarRel(r)));
+      if (!model) continue;
+      const plate = await io.readPlate(r.run, rel);
+      if (!plate) continue;
+      eligible.push({
+        id,
+        label: `${r.scene} · seed ${r.seed} · ${model}`,
+        base64: plate.base64,
+        mime: plate.mime,
+        state: "pending",
+        note: "A forge plate, not a render by the production model.",
+        model,
+        createdAt: now,
+      });
+    } catch {
+      continue;
+    }
+  }
+  const proofs: Proof[] = [];
+  let bytes = 0;
+  let byteHit = false;
+  for (const p of eligible) {
+    const size = decodedBytes(p.base64);
+    if (proofs.length >= SEED_CAP || bytes + size > SEED_BYTE_CAP) {
+      byteHit = proofs.length < SEED_CAP;
+      break;
+    }
+    proofs.push(p);
+    bytes += size;
+  }
+  const count = eligible.length - proofs.length;
+  if (!count) return { proofs };
+  const reason = byteHit
+    ? `the next plate would pass the ${SEED_BYTE_CAP.toLocaleString("en-US")}-byte image cap`
+    : `at most ${SEED_CAP} plates are seeded`;
+  return { proofs, leftOut: { count, reason } };
 }
 
 /** The one plate the palette is read from: the first kept row, ledger order. */
@@ -128,6 +211,7 @@ export async function adoptionDraft(style: StyleDef, ledger: LedgerRow[], io: Ad
     block: { technique, subject: "", palette: [], finish },
     paletteMissing: true,
     reason,
+    proofs: [],
   });
 
   const row = palettePlate(ledger, style.id);
@@ -149,9 +233,12 @@ export async function adoptionDraft(style: StyleDef, ledger: LedgerRow[], io: Ad
   }
   const read = readPalette(reply);
   if ("reason" in read) return missing(read.reason);
+  const seeded = await seedProofs(ledger, style.id, io, Date.now());
   return {
     styleId: style.id,
     name: style.name,
     block: { technique, subject: "", palette: read.palette, finish },
+    proofs: seeded.proofs,
+    ...(seeded.leftOut ? { proofsLeftOut: seeded.leftOut } : {}),
   };
 }

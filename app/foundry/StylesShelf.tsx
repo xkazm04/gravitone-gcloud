@@ -263,7 +263,10 @@ function StyleSheet({
     try {
       const draft = await adoptStyle(s.id);
       if (draft.paletteMissing) return setAdopting({ id: s.id, state: "failed", reason: draft.reason });
-      const made = await putTheme(newTheme(user.uid, { name: draft.name, origin: "foundry", foundryStyleId: draft.styleId, block: draft.block, elements: [] }));
+      const made = await putTheme({
+        ...newTheme(user.uid, { name: draft.name, origin: "foundry", foundryStyleId: draft.styleId, block: draft.block, elements: [] }),
+        proofs: draft.proofs,
+      });
       router.push(`/library?style=${encodeURIComponent(made.id)}`);
     } catch (e) {
       setAdopting({ id: s.id, state: "failed", reason: e instanceof Error ? e.message : "The style could not be adopted." });
