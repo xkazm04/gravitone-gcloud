@@ -1058,8 +1058,8 @@ function PipelineCanvasImpl({ source, axisId, skin = DEFAULT_SKIN, pollMs = 0, o
   /* ── what the shell can read and call ───────────────────────────────── */
 
   const status = useMemo<CanvasStatus>(
-    () => ({ loading: data.loading, error: data.error, total: layout.total, counts: layout.stageCounts, selected: selected.size, mounted: mounted.length, choreo }),
-    [data.loading, data.error, layout, selected, mounted.length, choreo],
+    () => ({ loading: data.loading, error: data.error, notes: data.notes, total: layout.total, counts: layout.stageCounts, selected: selected.size, mounted: mounted.length, choreo }),
+    [data.loading, data.error, data.notes, layout, selected, mounted.length, choreo],
   );
   const emitStatus = useEffectEvent((s: CanvasStatus) => onStatus?.(s));
   useEffect(() => {

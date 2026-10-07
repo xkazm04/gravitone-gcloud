@@ -18,10 +18,17 @@
 //     `alive` flag: unmounting is just one more bump.)
 //   · A FAILED LOAD KEEPS THE BOARD. The entries stay as they were and the
 //     error rides beside them, so a blip does not blank 500 cards.
+//   · THE SOURCE'S OWN ACCOUNT RIDES ALONG. `lastLoad()` is how an adapter says
+//     what it could not do: a column whose upstream is down (`degraded`), rows
+//     it is deliberately not showing (`hidden`), records it could not read
+//     (`damaged`). None of that is an exception - the load SUCCEEDED, partly -
+//     so none of it reaches `error`, and a board that dropped it would draw an
+//     empty column that looks like "no work" instead of "nobody could ask".
+//     Read once per load, beside the entries it describes.
 
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { PipelineEntry, PipelineItem, PipelineSource } from "@/lib/board/pipeline";
+import type { PipelineEntry, PipelineItem, PipelineLoadNotes, PipelineSource } from "@/lib/board/pipeline";
 
 export function reconcile(prev: readonly PipelineEntry[], next: readonly PipelineEntry[]): PipelineEntry[] {
   const byId = new Map<string, PipelineEntry>();
@@ -37,13 +44,16 @@ export interface PipelineData {
   /** `loadPipeline()` has not answered yet. */
   loading: boolean;
   error: string | null;
+  /** What the source says it could not do on the last load, or null if it does
+   *  not keep an account (`lastLoad` is optional on the contract). */
+  notes: PipelineLoadNotes | null;
   reload(): Promise<void>;
   /** Fold an authority-confirmed item back in. */
   apply(item: PipelineItem): void;
 }
 
 export function usePipelineData(source: PipelineSource, pollMs = 0): PipelineData {
-  const [state, setState] = useState<{ entries: readonly PipelineEntry[] | null; error: string | null }>({ entries: null, error: null });
+  const [state, setState] = useState<{ entries: readonly PipelineEntry[] | null; error: string | null; notes: PipelineLoadNotes | null }>({ entries: null, error: null, notes: null });
   const seq = useRef(0);
   const supersede = useCallback(() => {
     seq.current++;
@@ -53,11 +63,15 @@ export function usePipelineData(source: PipelineSource, pollMs = 0): PipelineDat
     const mine = ++seq.current;
     try {
       const next = await source.loadPipeline();
+      // Asked AFTER the load resolves and before anything is rendered: the
+      // adapters write their account during `loadPipeline()`.
+      const notes = source.lastLoad?.() ?? null;
       if (mine !== seq.current) return;
-      setState((s) => ({ entries: s.entries ? reconcile(s.entries, next) : next, error: null }));
+      setState((s) => ({ entries: s.entries ? reconcile(s.entries, next) : next, error: null, notes }));
     } catch (e) {
+      // The board is kept, so the account that described it is kept too.
       if (mine !== seq.current) return;
-      setState((s) => ({ entries: s.entries ?? [], error: e instanceof Error ? e.message : String(e) }));
+      setState((s) => ({ ...s, entries: s.entries ?? [], error: e instanceof Error ? e.message : String(e) }));
     }
   }, [source]);
 
@@ -84,7 +98,7 @@ export function usePipelineData(source: PipelineSource, pollMs = 0): PipelineDat
     });
   }, []);
 
-  return { entries: state.entries ?? EMPTY, loading: state.entries === null, error: state.error, reload, apply };
+  return { entries: state.entries ?? EMPTY, loading: state.entries === null, error: state.error, notes: state.notes, reload, apply };
 }
 
 const EMPTY: readonly PipelineEntry[] = [];

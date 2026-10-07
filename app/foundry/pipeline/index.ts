@@ -21,6 +21,14 @@
 //     glide are OFF; draw `<Tally value={visible} of={cap} tone="amber" />` when
 //     `reason === "cap"`.
 //   · `status.counts`, `status.total`, `status.selected`, `status.loading/error`.
+//   · `status.notes` — the SOURCE's account of the load, and the one channel
+//     that must not be dropped. `degraded` names a stage whose upstream could
+//     not be reached (the Articles `proposed` column needs the sibling
+//     knowledge registry, which is absent in every worktree), `hidden` names
+//     rows deliberately not drawn with the reason, `damaged` names records that
+//     would not read. All three are a SUCCESSFUL load, so none of them is
+//     `error`: draw the reason ON the column it belongs to, or the column reads
+//     as "no work" when the truth is "nobody could ask".
 //   · The axis chooser: the canvas takes `axisId`; the shell owns the control.
 //
 // THE CONTRACT WITH A SOURCE: `loadPipeline()` and `move()` are the canvas's only

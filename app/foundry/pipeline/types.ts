@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import type { CanonStage, MoveCost, MoveNeed, PipelineEntry } from "@/lib/board/pipeline";
+import type { CanonStage, MoveCost, MoveNeed, PipelineEntry, PipelineLoadNotes } from "@/lib/board/pipeline";
 
 import type { Camera } from "./geometry";
 
@@ -48,6 +48,13 @@ export interface CanvasStatus {
   /** Cards mounted right now — a count set by the viewport, not by `total`. */
   mounted: number;
   choreo: ChoreoState;
+  /** The source's own account of the last load: a column whose upstream is
+   *  down (`degraded`), rows deliberately not shown (`hidden`), records that
+   *  would not read (`damaged`). The load SUCCEEDED in each case, so none of
+   *  this is `error` — and a shell that draws none of it draws an empty column
+   *  that reads as "no work" when the truth is "nobody could ask". Null when
+   *  the source keeps no account. */
+  notes: PipelineLoadNotes | null;
 }
 
 /** One entry of the wave log: how many cards a mounting slice added, and how
