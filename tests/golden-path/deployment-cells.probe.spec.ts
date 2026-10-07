@@ -172,6 +172,7 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/foundry/runs/[id]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/foundry/runs/[id]/verdicts/route.ts": { door: "access", ok: { PUT: "4xx" } },
   "app/api/foundry/runs/route.ts": { door: "access", ok: { GET: "2xx" } },
+  "app/api/foundry/styles/[id]/adopt/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/foundry/styles/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/foundry/strips/[id]/commit/route.ts": { door: "access", ok: { GET: "4xx", POST: "4xx" } },
   "app/api/foundry/strips/[id]/page/route.ts": { door: "access", ok: { GET: "4xx" } },
