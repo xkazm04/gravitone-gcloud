@@ -184,11 +184,19 @@ function EducationalResearch({ projectId }: { projectId: string }) {
   // other the moment you switch. The wiring itself moved verbatim to
   // guided/useEducationalResearch.ts so neither face forks it.
   const research = useEducationalResearch(projectId);
-  const api = useScope(projectId);
+  // Dealt from the project's ACTIVE notebook — the creator's own when one is
+  // saved, else the replay (research-scope-board-A stage 3).
+  const api = useScope(projectId, research.source);
 
   // WHAT THIS SURFACE REPORTS TO THE SHELF. A notebook exists → in progress;
   // the scope checkpoint is taken → locked (the checkpoint IS the creator's
   // sign-off on what travels); the board has moved since → needs a call.
+  //
+  // Still gated on the REPLAY landing (`ready`), not on `dealt`: the pure
+  // verdict this report is held level with (verdict.ts, step-verdicts probe)
+  // reads `research.researched`, which only the replay writes. A project with
+  // only its own notebook reports nothing here until that verdict reads
+  // `research-notebook` too.
   usePhaseReport(
     projectId,
     "research",
@@ -220,7 +228,7 @@ function EducationalResearch({ projectId }: { projectId: string }) {
   if (!faceHydrated || !research.hydrated || !api.hydrated)
     return <p className="font-jetbrains text-label text-white/35">opening the step…</p>;
   const decided =
-    research.ready || Object.keys(api.scope).length > 0 || api.confirmed !== null;
+    research.dealt || Object.keys(api.scope).length > 0 || api.confirmed !== null;
 
   return (
     <EducationalFaces
@@ -274,7 +282,9 @@ function EducationalFaces({
   // is the one that also reaches DISK — the reasoned notebook has its own step
   // record — because a cleared step that leaves a notebook in the store
   // re-adopts it on the next mount and the creator's clear silently undoes
-  // itself. tests/golden-path/step-clear-completeness.probe.spec.ts walks this
+  // itself. That same write is what takes the creator's notebook off the board:
+  // useActiveNotebook hears it issued and falls back to the replay in the same
+  // tick. tests/golden-path/step-clear-completeness.probe.spec.ts walks this
   // function's body for each store's reset by name.
   //
   // WHERE A CLEAR LANDS YOU. It used to be `setTab("topic")` — back to the run
@@ -283,7 +293,7 @@ function EducationalFaces({
   // creator staring at the empty shape of the thing they just discarded. The
   // guided face is where a run is started now, so that is where a cleared step
   // goes. On the guided face this is a no-op it already agrees with: the wizard
-  // re-deals from stage 1 once `ready` is false.
+  // re-deals from stage 1 once `dealt` is false.
   const doClear = () => {
     run.reset();
     live.reset();
@@ -315,6 +325,7 @@ function EducationalFaces({
           api={api}
           projectId={projectId}
           ready={ready}
+          dealt={research.dealt}
           onOpenNotebook={() => setArtifact("notebook")}
           onOpenEvidence={() => setArtifact("evidence")}
           onClear={() => setConfirmClear(true)}
@@ -376,6 +387,7 @@ function ExpertBoard({
   api,
   projectId,
   ready,
+  dealt,
   onOpenNotebook,
   onOpenEvidence,
   onClear,
@@ -383,8 +395,12 @@ function ExpertBoard({
 }: {
   api: ReturnType<typeof useScope>;
   projectId: string;
-  /** The simulated run landed — there is a notebook, so there are cards. */
+  /** The simulated run landed — the replay's notebook and evidence log exist,
+   *  which is what the artifact pills open. */
   ready: boolean;
+  /** There are cards: the replay landed, or the creator's own notebook is the
+   *  active source. */
+  dealt: boolean;
   onOpenNotebook: () => void;
   onOpenEvidence: () => void;
   onClear: () => void;
@@ -406,7 +422,7 @@ function ExpertBoard({
         <FaceSwitch face="expert" onSwitch={onSwitchFace} />
       </div>
 
-      {ready ? (
+      {dealt ? (
         <>
           <ResearchTriageBoard api={api} />
           <FollowUpQueue api={api} projectId={projectId} />

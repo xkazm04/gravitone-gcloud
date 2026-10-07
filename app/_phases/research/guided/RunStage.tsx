@@ -82,8 +82,12 @@ export function ArtifactPills({
  *  beside the notebook's own — which is the same information the three
  *  branches of prose carried and does not have to be read to be seen. `landed`
  *  is gone with them: the notebook's topic is the notebook's topic before the
- *  run and after it, and the branch existed only to re-word the sentence. */
-export function StandInNote({ topic }: { topic: string }) {
+ *  run and after it, and the branch existed only to re-word the sentence.
+ *
+ *  `dealing` is whether the board deals this notebook. When the creator's own
+ *  notebook is the active source (research-scope-board-A stage 3) the cards
+ *  are not the Bitcoin run's, so the hint saying they are is not drawn. */
+export function StandInNote({ topic, dealing = true }: { topic: string; dealing?: boolean }) {
   const own = topic.trim() && topic.trim() !== NOTEBOOK.topic;
   return (
     <span data-testid="stand-in-note" className="flex flex-wrap items-center gap-1.5">
@@ -106,9 +110,11 @@ export function StandInNote({ topic }: { topic: string }) {
         <span className="sr-only">the notebook this run replays:</span>
         {NOTEBOOK.topic}
       </span>
-      <Hint variant="warn" tone="amber" label="Why the notebook names another topic">
-        every card is from the saved {NOTEBOOK.researched} Bitcoin run
-      </Hint>
+      {dealing && (
+        <Hint variant="warn" tone="amber" label="Why the notebook names another topic">
+          every card is from the saved {NOTEBOOK.researched} Bitcoin run
+        </Hint>
+      )}
     </span>
   );
 }
@@ -195,7 +201,7 @@ export default function RunStage({
               {NOTEBOOK_COUNTS.reversals} reversals · researched {NOTEBOOK.researched}
             </p>
             <div className="mt-2">
-              <StandInNote topic={topic} />
+              <StandInNote topic={topic} dealing={research.source.kind === "replay"} />
             </div>
             <div className="mt-5 flex flex-wrap items-center gap-2.5">
               <ArtifactPills
@@ -355,7 +361,7 @@ export default function RunStage({
             )}
             {run.state.status === "done" && (
               <div className="mt-3">
-                <StandInNote topic={topic} />
+                <StandInNote topic={topic} dealing={research.source.kind === "replay"} />
               </div>
             )}
             {run.state.status === "done" && (

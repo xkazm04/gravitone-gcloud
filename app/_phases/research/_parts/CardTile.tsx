@@ -278,7 +278,7 @@ function ScopeChip({ card, descoped }: { card: Card; descoped: boolean }) {
 }
 
 export default function CardTile({ card, api, wound }: { card: Card; api: ScopeApi; wound?: Wound }) {
-  const s = stateOf(api.scope, card.id);
+  const s = stateOf(api.scope, card.id, api.optIn);
   const locked = !!card.required;
 
   return (

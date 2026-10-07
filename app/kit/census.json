@@ -848,6 +848,7 @@
         "app/_landing/parts.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/frames/ads/parts.tsx",
+        "app/_phases/research/_parts/ScopeBar.tsx",
         "app/_phases/research/ads/AdsIdea.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/score/CueTakes.tsx",
@@ -1443,7 +1444,7 @@
     "app/_phases/research": {
       "files": 38,
       "kitImports": 1,
-      "signalImports": 13,
+      "signalImports": 14,
       "parts": [
         "Button",
         "CHIP_CLASS",

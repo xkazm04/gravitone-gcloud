@@ -18,6 +18,7 @@ import { Hint, Tally } from "@/components/ui/signal";
 import type { ScopeApi } from "./useScope";
 import { stateOf } from "./scope";
 import {
+  DIMENSIONS,
   UNTAGGED_DIMENSION_ID,
   columnsFor,
   emptyMeansOf,
@@ -25,6 +26,20 @@ import {
 } from "../_shared/notebook/dimensions";
 import CardTile from "./_parts/CardTile";
 import { Consequences, ScopeBar } from "./_parts/ScopeBar";
+
+/** THE COLUMNS OF THE NOTEBOOK BEING DEALT. A notebook that declares its own
+ *  columns (NOTEBOOK-SCHEMA, stage 2) is reviewed in them — but `buildCards`
+ *  files its counter-positions, steel-man and conclusions under `counter-case`
+ *  and `conclusions` whatever it declared, so those columns join whenever a
+ *  card sits in one. Without them the steel-man, the one card the board may
+ *  not cut, would be in no column at all. For the replay this is DIMENSIONS
+ *  exactly. */
+function boardColumns(api: ScopeApi): Dimension[] {
+  const own = api.source.dimensions;
+  const ids = new Set(own.map((d) => d.id));
+  const filed = new Set(api.cards.map((c) => c.dimension));
+  return [...own, ...DIMENSIONS.filter((d) => !ids.has(d.id) && filed.has(d.id))];
+}
 
 export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
   const [focus, setFocus] = useState<string | null>(null);
@@ -39,7 +54,7 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
    *  emptiness is its success condition, and drawing an always-empty alarm is
    *  how an alarm stops being read. */
   const hasUntagged = api.cards.some((c) => c.dimension === UNTAGGED_DIMENSION_ID);
-  const columns = columnsFor({ hasUntagged });
+  const columns = columnsFor({ derived: boardColumns(api), hasUntagged });
   const shown = focus ? columns.filter((d) => d.id === focus) : columns;
 
   /** `summary.byDim` is built from `DIMENSIONS` and so has no row for the
@@ -50,7 +65,7 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
     const inColumn = api.cards.filter((c) => c.dimension === d.id);
     return {
       total: inColumn.length,
-      kept: inColumn.filter((c) => !stateOf(api.scope, c.id).descoped).length,
+      kept: inColumn.filter((c) => !stateOf(api.scope, c.id, api.optIn).descoped).length,
     };
   };
 

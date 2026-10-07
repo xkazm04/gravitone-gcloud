@@ -62,7 +62,7 @@ export function FaceSwitch({ face, onSwitch }: { face: Face; onSwitch: (f: Face)
  *  moving. `pickedId` is unused (these are independent toggles, not a
  *  single-choice hand), so the default path never renders. */
 function ChoiceDeck({ cards, api }: { cards: Card[]; api: ScopeApi }) {
-  const specs = cards.map((c) => specOf(c, stateOf(api.scope, c.id)));
+  const specs = cards.map((c) => specOf(c, stateOf(api.scope, c.id, api.optIn)));
   const byId = useMemo(() => new Map(cards.map((c) => [c.id, c])), [cards]);
   return (
     <DeckStage
@@ -89,7 +89,7 @@ function ChoiceDeck({ cards, api }: { cards: Card[]; api: ScopeApi }) {
             />
           );
         }
-        const kept = !stateOf(api.scope, spec.id).descoped;
+        const kept = !stateOf(api.scope, spec.id, api.optIn).descoped;
         return (
           <DeckCard
             spec={spec}
@@ -124,18 +124,20 @@ export default function GuidedResearch({
    *  one click away through the FaceSwitch in the exit slot. */
   onFinish: () => void;
 }) {
-  const ready = research.ready;
+  // Cards exist: the replay landed, or the creator's own notebook is the active
+  // source (useEducationalResearch's `dealt`).
+  const dealt = research.dealt;
   // A notebook that already exists opens the wizard on stage 2 — stage 1 has
   // nothing to ask, only a record to show (RunStage's compact card).
-  const [active, setActive] = useState(() => (ready ? 1 : 0));
+  const [active, setActive] = useState(() => (dealt ? 1 : 0));
 
   const hot = useMemo(() => hotTakes(api.cards), [api.cards]);
   const steel = useMemo(() => steelManOf(api.cards), [api.cards]);
   const picks = useMemo(() => conclusionChoices(api.cards), [api.cards]);
 
   const takesHand = useMemo(() => [...hot, ...(steel ? [steel] : [])], [hot, steel]);
-  const hotKept = hot.filter((c) => !stateOf(api.scope, c.id).descoped).length;
-  const taken = picks.filter((c) => !stateOf(api.scope, c.id).descoped).length;
+  const hotKept = hot.filter((c) => !stateOf(api.scope, c.id, api.optIn).descoped).length;
+  const taken = picks.filter((c) => !stateOf(api.scope, c.id, api.optIn).descoped).length;
 
   const s = api.summary;
   const drifted = api.diverged.length;
@@ -165,14 +167,15 @@ export default function GuidedResearch({
       // so for a user the hint named a button that is not there. A gate that
       // points at a missing control is worse than one that says nothing.
       //
-      // AND IT IS THE SIMULATED RUN IT MEANS, deliberately. `done` here is the
-      // replay landing, not a real run: everything after this stage — the
-      // takes, the conclusions, the scope arithmetic — is dealt from the shipped
-      // fixture, so a reasoned notebook must not unlock a board that would then
-      // show somebody else's cards under the creator's topic.
+      // EITHER RUN OPENS IT (research-scope-board-A stage 3). This used to be
+      // the replay landing only, because everything after this stage was dealt
+      // from the shipped fixture and a reasoned notebook would have unlocked
+      // somebody else's cards under the creator's topic. The takes, the
+      // conclusions and the scope arithmetic are now dealt from the project's
+      // active notebook, so the creator's own notebook opens them as itself.
       blockedHint: "run the research to deal the takes",
-      done: ready,
-      summary: ready ? "notebook ready" : undefined,
+      done: dealt,
+      summary: dealt ? "notebook ready" : undefined,
       content: (
         <RunStage
           research={research}
@@ -189,7 +192,7 @@ export default function GuidedResearch({
       // READ decisions with an honest default — met as soon as the cards exist.
       // Not `true` outright: a fresh step would draw ✓ and a summary for cards
       // that do not exist yet, which is a checkmark over nothing.
-      done: ready,
+      done: dealt,
       summary: hot.length ? `hottest ${hotKept ? "taken" : "not taken"}` : "read",
       content: <ChoiceDeck cards={takesHand} api={api} />,
     },
@@ -197,7 +200,7 @@ export default function GuidedResearch({
       id: "conclusions",
       label: "conclusions",
       headline: "Which conclusions travel with the script?",
-      done: ready,
+      done: dealt,
       summary: `${taken}/${picks.length} taken`,
       content: <ChoiceDeck cards={picks} api={api} />,
     },
@@ -205,7 +208,7 @@ export default function GuidedResearch({
       id: "review",
       label: "review",
       headline: "What did your scope decisions cost?",
-      done: ready,
+      done: dealt,
       summary: api.confirmed
         ? drifted
           ? "moved since confirm"

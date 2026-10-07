@@ -2,13 +2,32 @@
 
 // The rollup, and what the scope decisions actually cost.
 
+import { StaleBadge } from "@/components/ui/signal";
+
 import Notice from "../../_shared/ui/Notice";
 import type { ScopeApi } from "../useScope";
 
 export function ScopeBar({ api }: { api: ScopeApi }) {
   const s = api.summary;
+  const orphan = api.orphaned;
   return (
     <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+      {/* A SCOPE DECIDED ON ANOTHER NOTEBOOK (useScope's digest rule). Its
+          verdicts are not applied — every count beside it is this notebook's
+          defaults — and the badge is what says the decisions exist. */}
+      {orphan && (
+        <span data-testid="scope-orphaned">
+          <StaleBadge
+            glyph="history"
+            words="scope orphaned"
+            why={
+              orphan.decisions > 0
+                ? `${orphan.decisions} card decision${orphan.decisions === 1 ? "" : "s"} made on another notebook — none applied`
+                : "confirmed on another notebook — not applied"
+            }
+          />
+        </span>
+      )}
       <Stat label="in scope" value={`${s.kept}/${s.total}`} />
       {/* Cut and never-taken are two different facts about the board and only
           one of them is a decision. Folding them together lit this stat amber

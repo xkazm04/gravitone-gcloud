@@ -31,6 +31,9 @@
 // The import below has a SIDE EFFECT and must come first.
 import "fake-indexeddb/auto";
 
+import { readFileSync } from "node:fs";
+import path from "node:path";
+
 import { test, expect } from "@playwright/test";
 import * as React from "react";
 
@@ -53,7 +56,9 @@ import { stateOf } from "@/app/_phases/research/scope";
 import { useScope } from "@/app/_phases/research/useScope";
 import { parseNotebook } from "@/lib/notebook/validate";
 
-import { loadCassette, type CassetteTurn } from "./_helpers";
+import { loadCassette, stripComments, type CassetteTurn } from "./_helpers";
+
+const ROOT = process.cwd();
 
 /* ────────────────────────────── the harness ───────────────────────────────── */
 // step-records.probe.spec.ts's dispatcher, plus `useSyncExternalStore` (read the
@@ -454,4 +459,13 @@ test("with no live notebook the board is today's board exactly, and the hook han
   expect(withSource.api.cards).toEqual(buildCards());
   expect(withSource.api.summary).toEqual(byDefault.summary);
   expect([...withSource.api.optIn].sort()).toEqual([...byDefault.optIn].sort());
+});
+
+/* ─────────────────────────── the wiring ──────────────────────────────────── */
+
+const code = (rel: string) => stripComments(readFileSync(path.join(ROOT, rel), "utf8")).replace(/\s+/g, "");
+
+test("wiring: the Research step deals the active notebook into its scope", () => {
+  expect(code("app/_phases/research/guided/useEducationalResearch.ts")).toContain("useActiveNotebook(projectId)");
+  expect(code("app/_phases/research/ResearchStep.tsx")).toContain("useScope(projectId,research.source)");
 });

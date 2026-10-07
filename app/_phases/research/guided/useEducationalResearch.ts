@@ -26,22 +26,30 @@
 // /api/research is the route; this hook is where the two paths meet, and it
 // keeps them APART rather than merging them:
 //
-//   · `ready`/`running` still mean the SIMULATED run, unchanged, because the
-//     whole board downstream (`useScope`, the triage columns, the conclusions
-//     deck) is built from the shipped fixture. A live notebook that flipped
-//     `ready` would deal Bitcoin cards under a creator's own topic — the exact
-//     defect the stand-in note exists to prevent, arriving through the fix.
+//   · `ready`/`running` still mean the SIMULATED run, unchanged: `ready` is
+//     what the `research` record persists as `researched`, which says "this
+//     project shows the replay", and four harness scripts drive it.
 //   · `live` is the real run, with its own state, its own record on disk and
 //     its own receipt. It is never the default and never fires by itself.
 //
-// The two are shown side by side rather than one winning, because they are two
-// different objects: a replay of somebody else's completed run, and a notebook
-// reasoned about the creator's topic just now.
+// The two RUN CARDS are shown side by side, because they are two different
+// objects: a replay of somebody else's completed run, and a notebook reasoned
+// about the creator's topic just now.
+//
+// THE BOARD DEALS ONE OF THEM (research-scope-board-A, stage 3). `source` is
+// the project's active notebook (_shared/notebook/useActiveNotebook.ts): the
+// live notebook when one is saved and not cleared, else the replay. The triage
+// board, the takes, the conclusions deck and the scope arithmetic are all dealt
+// from it — so a creator's own notebook is triaged as itself and not with
+// Bitcoin's cards behind its heading, the defect that kept `ready` blind to
+// `live` until the board could deal more than the fixture. `dealt` is "there
+// are cards to work": the replay landed, or a live notebook is the source.
 
 import { useCallback, useEffect, useState } from "react";
 
 import { useJobs } from "@/lib/jobs";
 
+import { useActiveNotebook } from "../../_shared/notebook/useActiveNotebook";
 import { saveStep, type ResearchNotebookStepData, type ResearchStepData } from "../../_shared/stepStore";
 import { useLoadFor, useStepFor } from "../../_shared/useLoadFor";
 import { adoptSaved, preflight, useLiveResearch, type Preflight } from "../run/live";
@@ -83,6 +91,11 @@ export function useEducationalResearch(projectId: string) {
     adoptSaved(projectId, saved),
   );
 
+  // THE NOTEBOOK THE BOARD DEALS. Read on its own rather than off `live`: the
+  // live store forgets the notebook while a second run is in flight or after
+  // one fails, and the record on disk — which is what wins — does not.
+  const active = useActiveNotebook(projectId);
+
   /* ------------------------------------------------- what a real run costs */
   // Asked ONCE per page load, before any button is pressed, because the answer
   // is what makes the spend button honest: who would bill, and whether this app
@@ -96,7 +109,9 @@ export function useEducationalResearch(projectId: string) {
   const [pf, setPf] = useState<Preflight | null | undefined>(undefined);
   useLoadFor("research-preflight", () => preflight(), (p) => void setPf(p));
 
-  const hydrated = topicHydrated && liveHydrated;
+  // The active notebook is in the gate: a face drawn before it is read would
+  // deal the replay for a beat and then re-deal the creator's own.
+  const hydrated = topicHydrated && liveHydrated && active.hydrated;
 
   /* ------------------------------------------------------------ persistence */
   useEffect(() => {
@@ -205,10 +220,15 @@ export function useEducationalResearch(projectId: string) {
     topic,
     setTopic,
     hydrated,
-    /** The SIMULATED path landed — the fixture notebook is on screen and the
-     *  board downstream can be built. Deliberately blind to `live`: see the
-     *  header. */
+    /** The SIMULATED path landed — the replay notebook is on screen. What the
+     *  `research` record persists; not whether the board has cards (`dealt`). */
     ready,
+    /** The notebook the board deals: the live one when saved and not cleared,
+     *  else the replay. Referentially stable per record. */
+    source: active.source,
+    /** There are cards to work: the replay landed, or a live notebook is the
+     *  source. */
+    dealt: ready || active.source.kind !== "replay",
     running,
     startResearch,
     abortResearch,

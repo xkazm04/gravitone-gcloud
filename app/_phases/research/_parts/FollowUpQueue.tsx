@@ -79,7 +79,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
 
   // Cards the creator marked `deepen`, with the reason the system can infer.
   const deepened: FollowUpRequest[] = api.cards
-    .filter((c) => stateOf(api.scope, c.id).deepen)
+    .filter((c) => stateOf(api.scope, c.id, api.optIn).deepen)
     .map((c) => {
       const existing = asked.find((a) => a.cardId === c.id);
       return (
