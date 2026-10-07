@@ -320,7 +320,7 @@ function StyleSheet({
               {adoptNote?.state === "busy" ? "adopting…" : "adopt into Library"}
             </button>
           )}
-          {adoptNote?.state === "failed" && <ErrorNote role="alert">{adoptNote.reason}</ErrorNote>}
+          {adoptNote?.state === "failed" && <ErrorNote>{adoptNote.reason}</ErrorNote>}
           {style && <StatusChip className="ml-auto" kind={statusKind(style)} word={`${style.status} · kept on ${scenes} scene${scenes === 1 ? "" : "s"}`} />}
         </div>
       }
