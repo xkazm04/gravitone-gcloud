@@ -244,6 +244,27 @@ nothing, because a blank that renders as nothing reads as clean.
 `{half_life, why, expires_first[], durable[], advice}` — `advice` should usually contain a phrasing
 trick that extends shelf life.
 
+### `dimensions[]`, `conclusions[]`, and `dimension` on each card
+
+*Added 2026-10-07 (research-scope-board-A, stage 2). Additive and optional: a notebook that carries
+none of these is every notebook stored before this revision and validates exactly as it did.*
+
+`dimensions[]` is `{id, label, purpose, empty_by_omission, not_applicable}`: the columns the cards of
+**this** topic are reviewed in, derived from the topic as Phase 1 derives its causal domains. Omit it
+and the notebook is dealt in the default market columns. Declare it and every `facts[]`,
+`mechanisms[]` and `reversals[]` entry carries `dimension`, the id of one declared column. A card with
+none is an `untagged` finding; a `dimension` naming an undeclared column is refused.
+
+`conclusions[]` is `{id, claim, reasoning, leap: near | moderate | far | unhinged, rests_on[],
+falsifiable_by, use_for}`: reasoned claims filed apart from the sourced facts, dealt as opt-in cards.
+Omit it and the notebook deals none. Each `rests_on` id must name a card of this notebook.
+
+A notebook that declares either field is checked against its own columns and conclusions. One that
+declares neither keeps the older rule: its untagged cards and any finding owned by a fixture
+conclusion are not reported, because the tables they would be checked against belong to run 1.
+
+(The TypeScript and JSON-schema spellings are camelCase: `emptyByOmission`, `restsOn`, `falsifiableBy`.)
+
 ### `sources[]`, `research_gaps[]`
 `research_gaps` is what the run did **not** do. A notebook claiming no gaps did not look hard enough.
 
