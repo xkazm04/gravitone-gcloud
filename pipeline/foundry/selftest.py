@@ -515,6 +515,13 @@ def test_dojo_study_beat_binning_153_frames_discrepancy():
     DS = load("dojo_study")
 
     manifests = list((HERE.parent / "vlm-probe" / "frames").glob("*-manifest.json"))
+    if not manifests:
+        # The frame manifests live under the gitignored /pipeline/vlm-probe/frames/*,
+        # so a clean checkout (CI) has no corpus to measure. The counts below are a
+        # measurement of that local corpus, not an invariant of the tree: asserting
+        # them against nothing failed the blocking python job on every push.
+        print("  skip  153-frame corpus discrepancy: no local frame manifests in this checkout")
+        return
     manifest_data = {}
     for m in manifests:
         manifest_data[m.stem.replace("-manifest", "")] = FM.read(m)

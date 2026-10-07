@@ -11,7 +11,7 @@ import path from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { citedNumbers, firstPersonHits, htmlProse, proseRuns, runCheck, staticItems, summarize, THRESHOLDS } from "@/lib/articles/checks";
+import { citedNumbers, closingListItemWords, firstPersonHits, htmlProse, proseRuns, proseStats, runCheck, sourceListProblems, staticItems, summarize, THRESHOLDS, wordsBeforeFirstSection } from "@/lib/articles/checks";
 import type { CheckItem, Source } from "@/lib/articles/types";
 
 const SOURCES: Source[] = Array.from({ length: 8 }, (_, i) => ({
@@ -44,7 +44,7 @@ ${figs}
 </main></body></html>`;
 }
 
-const md = `# Title\n\n*Sub*\n\n${PARA}\n\nThe measurement shows the gap holds across scripts [2].\n\n| Tool | Field |\n|---|---|\n| a | b |\n\n## Sources\n\n1. x\n`;
+const md = `# Title\n\n*Sub*\n\n${PARA} The count is a measured effect, not an estimate.\n\nThe measurement shows the gap holds across scripts [2]. It does not depend on the corpus.\n\n| Tool | Field |\n|---|---|\n| a | b |\n\n## Sources\n\n1. x\n`;
 const files = (n = 5) => new Set(Array.from({ length: n }, (_, i) => `figures/0${i + 1}-f.svg`));
 const svg = (words: string) => `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><text>${words}</text></svg>`;
 const figures = (n = 5, label = "Step one") => Array.from({ length: n }, (_, i) => ({ name: `0${i + 1}-f.svg`, svg: svg(label) }));
@@ -182,4 +182,79 @@ test("length ceiling: a post over the word ceiling fails it and says how far", (
   expect(item(long).status).toBe("fail");
   expect(String(item(long).value)).toMatch(/^70\d\d words/);
   expect(item(long).expected).toContain(String(THRESHOLDS.maxWords));
+});
+
+// What the paragraph-count cadence rule cannot see, and the other cheap measures added 2026-10-07
+// from the six reflections (the thresholds are calibrated on the posts in the store).
+test("words: stretches between visuals, one-line padding, the opening, closing list items, source numbers", () => {
+  const long = (n: number) => `${Array.from({ length: 80 }, (_, i) => `word${n}x${i}`).join(" ")}.`;
+  const fig = "![Figure 1](figures/01-f.png)\n*Figure 1. A caption [1].*";
+  // three paragraphs of 80 words are a 240 word stretch: fine; four are 320: over the 300 limit
+  const three = proseStats(`# T\n\n${long(1)}\n\n${long(2)}\n\n${long(3)}\n\n${fig}\n\n## Sources\n\n1. x\n`);
+  expect(three.longestRunWords).toBe(240);
+  const four = proseStats(`# T\n\n${long(1)}\n\n${long(2)}\n\n${long(3)}\n\n${long(4)}\n\n${fig}\n\n## Sources\n\n1. x\n`);
+  expect(four.longestRunWords).toBe(320);
+  expect(four.runExcerpt).toMatch(/^word1x0/);
+  // citations and images are not words
+  expect(proseStats(`${long(1)} [1] [2, 3]\n\n${fig}`).longestRunWords).toBe(80);
+
+  // padding: a paragraph split into one-liners shows up here, not in the paragraph count
+  const lines = (n: number) => Array.from({ length: n }, (_, i) => `Short claim number ${i} stands alone.`).join("\n\n");
+  const pad = proseStats(`${lines(4)}\n\n${fig}\n\n${long(9)}\n\n${fig}`);
+  expect(pad.oneLiners).toBe(4);
+  expect(pad.paragraphs).toBe(5);
+  expect(pad.share).toBeCloseTo(0.8, 5);
+  expect(proseStats(`${long(1)}\n\n${long(2)}`).oneLiners).toBe(0);
+
+  // the opening: title, subtitle and the rules fencing the preview do not count
+  const open = `# Title\n\n*A subtitle that does not count*\n\n${long(1)}\n\n---\n\n**What this is.** ${long(2)}\n\n---\n\n## One\n\n${long(3)}`;
+  expect(wordsBeforeFirstSection(open)).toBe(80 + 3 + 80);
+  expect(wordsBeforeFirstSection("# T\n\nno sections at all")).toBe(4);
+
+  // closing list items: only the last section before Sources, wrapped lines joined
+  const closing = `## One\n\n- early item ${long(1)}\n\n## Close\n\n- short one\n- ${long(2)}\n  and a wrapped line\n\n1. numbered short\n\n## Sources\n\n1. x\n`;
+  expect(closingListItemWords(closing)).toEqual([2, 84, 2]);
+
+  // source numbering: gaps and repeats in the list
+  expect(sourceListProblems("## Sources\n\n1. a\n2. b\n3. c\n")).toEqual({ listed: 3, gaps: [], repeats: [] });
+  expect(sourceListProblems("## Sources\n\n2. a\n3. b\n5. c\n5. d\n")).toMatchObject({ gaps: [1, 4], repeats: [5] });
+  expect(sourceListProblems("no sources here")).toMatchObject({ listed: 0, gaps: [] });
+});
+
+test("static: the cheap measures fail their own items and the stated limits are the thresholds", () => {
+  const base = { sources: SOURCES, claims: [{ text: "x", source: 1 }], figures: figures(), postFiles: files(), html: page() };
+  const long = (n: number) => `${Array.from({ length: 80 }, (_, i) => `w${n}x${i}`).join(" ")}.`;
+  const fig = "![Figure 1](figures/01-f.png)\n*Figure 1. A caption [1].*";
+  const sources = (n: number) => Array.from({ length: n }, (_, i) => `${i + 1}. s${i + 1}`).join("\n");
+
+  const wall = `# T\n\n*Sub*\n\n${long(1)}\n\n${long(2)}\n\n${long(3)}\n\n${long(4)}\n\n${fig}\n\n## Sources\n\n${sources(8)}\n`;
+  const r1 = byId(staticItems({ ...base, md: wall }), "prose-run-words");
+  expect(r1.status).toBe("fail");
+  expect(r1.detail!.join(" ")).toMatch(/w1x0/);
+  expect(r1.expected).toContain(String(THRESHOLDS.maxProseRunWords));
+  expect(byId(staticItems({ ...base, md: wall }), "visual-cadence").status).toBe("fail");
+
+  const split = `# T\n\n*Sub*\n\n${Array.from({ length: 6 }, (_, i) => `Claim ${i} stands alone.`).join("\n\n")}\n\n${fig}\n\n## Sources\n\n${sources(8)}\n`;
+  expect(byId(staticItems({ ...base, md: split }), "padding-paragraphs").status).toBe("fail");
+
+  const longOpen = `# T\n\n*Sub*\n\n${long(1)}\n\n${long(2)}\n\n${fig}\n\n${long(3)}\n\n${long(4)}\n\n${long(5)}\n\n${long(6)}\n\n## One\n\n${long(7)}\n\n${fig}\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n## Sources\n\n${sources(8)}\n`;
+  const pre = byId(staticItems({ ...base, md: longOpen }), "pre-section-words");
+  expect(pre).toMatchObject({ status: "fail", value: "480 words" });
+  expect(pre.expected).toContain(String(THRESHOLDS.maxWordsBeforeFirstSection));
+
+  const fatItem = `# T\n\n*Sub*\n\n## Close\n\n- ${long(1).split(" ").slice(0, 30).join(" ")}\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n## Sources\n\n${sources(8)}\n`;
+  expect(byId(staticItems({ ...base, md: fatItem }), "closing-list-items").status).toBe("pass");
+  const fatItem2 = fatItem.replace("- ", `- ${long(2)} `);
+  expect(byId(staticItems({ ...base, md: fatItem2 }), "closing-list-items").status).toBe("fail");
+
+  const gap = `# T\n\n*Sub*\n\n${PARA}\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n## Sources\n\n1. a\n2. b\n4. d\n`;
+  const sn = byId(staticItems({ ...base, md: gap }), "source-numbering");
+  expect(sn.status).toBe("fail");
+  expect(String(sn.value)).toMatch(/gaps in the list: 3/);
+  expect(byId(staticItems({ ...base, md: gap.replace("4. d", "3. d"), sources: SOURCES.filter((s) => s.n !== 5) }), "source-numbering").status).toBe("fail");
+  expect(byId(staticItems({ ...base, md: gap.replace("4. d", "3. d") }), "source-numbering").status).toBe("pass");
+
+  // the thresholds the prompts quote are the ones the checks use
+  expect(THRESHOLDS.maxWordsBeforeFirstSection).toBe(450);
+  expect(THRESHOLDS.maxProseRunWords).toBe(300);
 });

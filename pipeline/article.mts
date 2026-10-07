@@ -5,6 +5,14 @@
 //   npx tsx pipeline/article.mts approve <runId> [--patches p1,p2]
 //   npx tsx pipeline/article.mts reject <runId> --note "<text>"
 //   npx tsx pipeline/article.mts resume <runId> [--reviewers <file>]
+//   npx tsx pipeline/article.mts topics [--limit N] [--include-bundle <bundle>]
+//   npx tsx pipeline/article.mts loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3]
+//        [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]
+//
+//   topics lists the registry subjects no article covers yet, ranked, each with a suggested
+//   angle. loop runs articles to the human gate until N topics are covered (--target is the
+//   total, --add the number of new ones) and refuses to start without --budget-usd. See
+//   lib/articles/loop.ts for what stops it and what the ceilings do. Neither verb approves.
 //
 //   --reviewers <file> replaces pipeline/article-reviewers.json for a run whose
 //   critique has not started yet (it sets ARTICLES_REVIEWERS_FILE); a run that
@@ -55,6 +63,7 @@ const CALLER_CWD = process.cwd();
 process.chdir(ROOT);
 
 const { approveRun, createRun, driveRun, getRun, listArticleRuns, rejectRun, resumeRun } = await import("../lib/articles/engine");
+const { listUncoveredTopics, runLoop } = await import("../lib/articles/loop");
 const { ArticleError, runDir } = await import("../lib/articles/store");
 const { EFFORT_LEVELS } = await import("../lib/articles/types");
 type ArticleRun = import("../lib/articles/types").ArticleRun;
@@ -75,9 +84,11 @@ function usage(msg?: string): never {
   else {
     if (msg) console.error(`article: ${msg}\n`);
     console.error(
-      "usage: npx tsx pipeline/article.mts <run|status|approve|reject|resume> [--json]\n" +
+      "usage: npx tsx pipeline/article.mts <run|status|approve|reject|resume|topics|loop> [--json]\n" +
         '  run (--subject <bundle/slug> | --topic "<text>") [--angle "<text>"] [--model <id>] [--effort low|medium|high|xhigh|max] [--reviewers <file>]\n' +
-        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   resume <runId> [--reviewers <file>]",
+        "  status [<runId>]   approve <runId> [--patches p1,p2]   reject <runId> --note \"<text>\"   resume <runId> [--reviewers <file>]\n" +
+        "  topics [--limit N] [--include-bundle <bundle>]\n" +
+        "  loop (--target N | --add N) --budget-usd X [--concurrency 3] [--max-failures 3] [--max-resumes 2] [--run-usd 120] [--turn-usd 30] [--run-turns 45] [--est-run-usd 70] [--topics auto|<file>]",
     );
   }
   process.exit(2);
@@ -89,6 +100,15 @@ function flag(name: string): string | undefined {
   const v = args[i + 1];
   if (v === undefined || v.startsWith("--")) usage(`--${name} needs a value`);
   return v;
+}
+
+/** A positive number flag, or undefined when absent. */
+function numFlag(name: string): number | undefined {
+  const v = flag(name);
+  if (v === undefined) return undefined;
+  const n = Number(v);
+  if (!Number.isFinite(n) || n <= 0) usage(`--${name} must be a positive number`);
+  return n;
 }
 
 function positional(): string {
@@ -202,6 +222,55 @@ async function main() {
       const id = positional();
       const note = flag("note") ?? usage("reject needs --note \"<text>\"");
       return finish(await rejectRun(id, note), ["rejected"]);
+    }
+    case "topics": {
+      const limit = numFlag("limit");
+      const inc = flag("include-bundle");
+      const out = await listUncoveredTopics({ ...(limit ? { limit } : {}), ...(inc ? { includeBundles: [inc] } : {}) });
+      if (JSON_OUT) return emit(JSON.stringify(out, null, 2));
+      console.log(`  covered ${out.covered.length} · in flight ${out.claimed.length} · uncovered ${out.remaining}`);
+      for (const t of out.topics) console.log(`  ${`${t.bundle}/${t.slug}`.padEnd(64)} ${t.title}`);
+      return;
+    }
+    case "loop": {
+      const target = numFlag("target");
+      const add = numFlag("add");
+      if (!!target === !!add) usage("loop needs exactly one of --target N (total covered topics) and --add N (new ones)");
+      const budgetUsd = numFlag("budget-usd");
+      if (!budgetUsd) usage("loop needs --budget-usd X: there is no default, a loop spends until it is told where to stop");
+      const topicsArg = flag("topics");
+      let topics: { subject: string; angle?: string }[] | undefined;
+      if (topicsArg && topicsArg !== "auto") {
+        const at = path.resolve(CALLER_CWD, topicsArg);
+        if (!fs.existsSync(at)) usage(`--topics: no such file ${topicsArg}`);
+        const raw = JSON.parse(fs.readFileSync(at, "utf8")) as unknown;
+        if (!Array.isArray(raw)) usage("--topics file is a JSON array of \"bundle/slug\" or {subject, angle}");
+        topics = (raw as (string | { subject: string; angle?: string })[]).map((x) => (typeof x === "string" ? { subject: x } : x));
+        for (const t of topics) if (!/^[a-z0-9-]+\/[a-z0-9-]+$/.test(t.subject ?? "")) usage(`--topics: ${JSON.stringify(t.subject)} is not <bundle>/<slug>`);
+      }
+      const mr = flag("max-resumes");
+      const maxResumes = mr === undefined ? undefined : Number(mr);
+      if (maxResumes !== undefined && (!Number.isInteger(maxResumes) || maxResumes < 0)) usage("--max-resumes must be 0 or a positive integer");
+      const ceilings = { ...(numFlag("run-usd") ? { runUsd: numFlag("run-usd") } : {}), ...(numFlag("turn-usd") ? { turnUsd: numFlag("turn-usd") } : {}), ...(numFlag("run-turns") ? { runTurns: numFlag("run-turns") } : {}) };
+      const report = await runLoop({
+        ...(target ? { target } : { add }),
+        budgetUsd: budgetUsd!,
+        ...(numFlag("concurrency") ? { concurrency: numFlag("concurrency") } : {}),
+        ...(numFlag("max-failures") ? { maxFailures: numFlag("max-failures") } : {}),
+        ...(maxResumes !== undefined ? { maxResumes } : {}),
+        ...(numFlag("est-run-usd") ? { estRunUsd: numFlag("est-run-usd") } : {}),
+        ceilings: ceilings as Partial<import("../lib/articles/loop").Ceilings>,
+        ...(topics ? { topics } : {}),
+      }, undefined, (line) => console.error(`article: ${line}`));
+      if (JSON_OUT) emit(JSON.stringify(report));
+      else {
+        console.log(`${report.id}  ${report.stop}  ${report.reason ?? ""}`);
+        console.log(`  covered ${report.coveredAtStart} -> ${report.coveredNow} of ${report.options.target} · reported spend $${report.spentUsd.toFixed(2)} of $${report.options.budgetUsd}`);
+        for (const r of report.runs) console.log(`  ${r.topic.padEnd(56)} ${r.end.padEnd(16)} ${r.runId}  $${r.costUsd.toFixed(2)}  ${r.turns} turns${r.resumes ? `  ${r.resumes} resumes` : ""}${r.error ? `  ${r.error.slice(0, 80)}` : ""}`);
+        if (report.orphaned.length) console.log(`  orphaned (no driver, not finished): ${report.orphaned.join(", ")}`);
+        console.log(`  ${report.note}`);
+      }
+      process.exit(report.stop === "target-reached" ? 0 : 1);
     }
     case "resume": {
       const id = positional();
