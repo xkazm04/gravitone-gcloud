@@ -13,6 +13,14 @@ Contexts, in order: ai-orchestration · auth-persistence · cli-infrastructure-p
 **Context:** ai-orchestration · **Slot:** A architecture
 **Size:** XL · **Effort:** 8/10 · **Impact:** 9/10 · **Risk:** 6/10 · **Gate:** architecture
 **Registry:** software-engineering/durable-agent-operations#intent-mints-the-identity · software-engineering/background-jobs#startup-sweeps · software-engineering/background-jobs#job-progress-and-cancellation
+**App Master decisions (2026-10-07) - read before building AIO-A's open tail.**
+
+- **(a) A research run keeps running when the creator leaves the Research step.** **Constraint:** since stage 4b (`67beb3e`) the paid answer finishes on the server, and cancelling on unmount would throw away a result that has already been paid for. This extends the operator's 2026-10-06 rule for recalibrate and scene direction to research. **Alternative that lost:** cancel on leave. It also answers the Risks line below ("Leaving the step keeps spending ... offer an explicit cancel"): Stop (`stopLive`, `app/_phases/research/run/live.ts:428`, then `cancelTurn`) is that explicit cancel, and a cancel that loses the race to the turn's own ending lands the answer instead of dropping it.
+- **(b) A live research turn is tracked under the existing `JobKind` `research`, and its turn behaviour is keyed on the job having a `turnId`.** There is no new `JobKind`. **Constraint:** the replay run uses the same kind (`TURN_KINDS` membership means "may run as a turn", `lib/jobs.tsx:501-510`), and it must persist, settle and be interrupted by a reload exactly as before. A new kind would also touch `JOB_NOUN` (`lib/jobs.tsx:190`), `KIND_STEP` (`lib/jobLinks.ts:11`) and the bell-doors probe (`tests/golden-path/bell-doors.probe.spec.ts`). **Alternative that lost:** a separate `research-live` `JobKind`.
+- **(c) Two open points from 4b, recorded and not decided:**
+  - A failed live turn, on a project that has never saved a `research-notebook` record, shows its failure once more after a reload.
+  - A resumed turn that this tab did not start shows an empty topic until it lands, because the ledger keeps only the prompt digest (`promptDigest`, `lib/turns/ledger.ts:79`; `resumeLive`'s `topic` defaults to `""`, `live.ts:404-408`). Adding a topic field is a `lib/turns/` ledger change.
+
 
 **Summary.** Every minutes-long model turn (recalibrate, scene direction, poster, export, research) currently lives inside one browser tab's open `fetch` plus a localStorage record. If the tab reloads or the user leaves the step, the result is lost, and the engine process keeps running anyway. This card moves the job record and the run to the server: a durable turn ledger with a minted id, a cancel that actually kills the process tree, and a boot sweep. `lib/jobs.tsx` becomes a view of that ledger.
 
