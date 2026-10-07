@@ -5,7 +5,9 @@
 //   409 `{ detail, code, turn }`   it had already settled (`code: settled`),
 //                                  or another server is running it and this
 //                                  one holds no handle on its engine
-//                                  (`code: not-here`)
+//                                  (`code: not-here`), or it is a work kind
+//                                  nothing below can abort (`code:
+//                                  not-cancellable`) — the record is untouched
 //   404 / 400                      no such turn / not a turn id
 //
 // Gated, not rate-counted: a cancel stops spending, and the one request that
@@ -31,7 +33,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       detail:
         out.why === "settled"
           ? `Turn ${id} already ended as ${out.record.status}.`
-          : `Turn ${id} is running on another server process, which this one cannot stop.`,
+          : out.why === "not-cancellable"
+            ? `Turn ${id} cannot be cancelled: the vendor call under it cannot be aborted, and it is still running.`
+            : `Turn ${id} is running on another server process, which this one cannot stop.`,
       code: out.why,
       turn: out.record,
     },
