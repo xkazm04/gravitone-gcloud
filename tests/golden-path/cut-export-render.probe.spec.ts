@@ -168,7 +168,15 @@ async function fixture(opts: { takeGone?: boolean } = {}): Promise<Fixture> {
   return { dir, exportsDir, doc, takeId, plateLuma: { a: luma(pngA, null, dir), b: luma(pngB, null, dir) } };
 }
 
-const cleanup = (f: Fixture) => rmSync(f.dir, { recursive: true, force: true });
+// Each case is 1-2.5 s of ffmpeg on an idle machine and ran past the 30 s default
+// on a saturated one (every case timed out at 30.0 s with 2x-CPU busy loops and
+// --workers=4). A timeout ends the test while runCutExport's ffmpeg is still
+// writing into f.dir, and the `finally` below then removes the directory under
+// it: that is the EPERM. The timeout is the cause; maxRetries is the backstop
+// for the window in which a just-exited child's handle is still being released.
+test.describe.configure({ timeout: 120_000 });
+
+const cleanup = (f: Fixture) => rmSync(f.dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 
 /* ── cases ───────────────────────────────────────────────────────────────── */
 
