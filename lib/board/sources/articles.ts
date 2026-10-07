@@ -243,14 +243,6 @@ function targetStatus(from: ArticleStatus, to: CanonStage, band: string | null):
 
 const topicAddress = (t: TopicChoice) => `${t.bundle}/${t.slug}`;
 
-/** A read of a route other than /api/articles, with its own name in the unavailable sentence. */
-function mustAt<T>(r: Fetched<T>, path: string): T {
-  if (r.ok) return r.data;
-  if (r.kind === "unavailable") throw new SourceUnavailable(`${path} is not built here`);
-  if (r.status === 0 || r.status === 401 || r.status === 403) throw new SourceUnavailable(r.error);
-  throw new Error(r.error);
-}
-
 export function makeArticlesSource(opts: { now?: () => number } = {}): ArticlesPipelineSource {
   const now = opts.now ?? Date.now;
   const loadEntries = async (): Promise<BoardEntry[]> => {
@@ -263,9 +255,8 @@ export function makeArticlesSource(opts: { now?: () => number } = {}): ArticlesP
   /* ── pipeline state ─────────────────────────────────────────────────────── */
 
   const natives = new Map<string, Native>();
-  // `version` is bumped when the native record's signature changes, so a card
-  // re-renders for its own data and never for a sibling's.
-  const versions = new Map<string, { sig: string; v: number }>();
+  // `stamp` bumps an item's `version` when its native record's signature
+  // changes, so a card re-renders for its own data and never for a sibling's.
   const stamp = makeVersionStamp();
   let notes: PipelineLoadNotes = { hidden: [], damaged: [] };
 

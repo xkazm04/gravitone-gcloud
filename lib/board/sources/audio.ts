@@ -112,7 +112,6 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
   const laneOverride = new Map<string, string>();
   /** The vendor's sentence from a render that failed, kept on the card. */
   const failures = new Map<string, string>();
-  const versions = new Map<string, { sig: string; v: number }>();
   let groups: SoundGroups = { music: [], sfx: [] };
   let notes: PipelineLoadNotes = { hidden: [], damaged: [] };
   let seq = 0;
