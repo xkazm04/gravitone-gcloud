@@ -69,7 +69,7 @@
 // does not depend on log.ts).
 
 import { SPEND_CLASSES, ceilingOf, floorOf, windowMsOf } from "../spend/classes";
-import { createMeter } from "../spend/meter";
+import { createMeter, type MeterAxes, type MeterStats } from "../spend/meter";
 import { spendStoreFor } from "../spend/select";
 import type { SpendStoreKind } from "../spend/store";
 import { ImagingError, overBudget } from "./errors";
@@ -519,4 +519,11 @@ function asSpendRow(r: { at: number; amount: number; outcome: SpendOutcome; basi
  *  refusals never show up in the next one's reading. */
 export function __resetBudget(): void {
   meter.reset();
+}
+
+/** The window in the kernel's own vocabulary — stats and axes read at one
+ *  `now`, each under the ledger's lock. For lib/spendView.ts, which projects
+ *  every class into one view; budgetStats keeps this class's own names. Read-only. */
+export async function imagingSpendWindow(now: number = Date.now()): Promise<{ stats: MeterStats; axes: MeterAxes }> {
+  return { stats: await meter.stats(now), axes: await meter.byAxis(now) };
 }

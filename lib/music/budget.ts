@@ -69,7 +69,7 @@
 // this module deliberately does not depend on log.ts.
 
 import { SPEND_CLASSES, ceilingOf, windowMsOf } from "../spend/classes";
-import { createMeter } from "../spend/meter";
+import { createMeter, type MeterAxes, type MeterStats } from "../spend/meter";
 import { spendStoreFor } from "../spend/select";
 import type { SpendStoreKind } from "../spend/store";
 import { MusicError } from "./errors";
@@ -415,4 +415,11 @@ export async function musicSpendRows(now: number = Date.now()): Promise<readonly
  *  refusals never show up in the next one's reading. */
 export function __resetMusicBudget(): void {
   meter.reset();
+}
+
+/** The window in the kernel's own vocabulary — stats and axes read at one
+ *  `now`, each under the ledger's lock. For lib/spendView.ts, which projects
+ *  every class into one view; musicBudgetStats keeps this class's own names. Read-only. */
+export async function musicSpendWindow(now: number = Date.now()): Promise<{ stats: MeterStats; axes: MeterAxes }> {
+  return { stats: await meter.stats(now), axes: await meter.byAxis(now) };
 }
