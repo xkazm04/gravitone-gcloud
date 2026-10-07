@@ -27,6 +27,7 @@ import { TabRail } from "@/components/ui/signal";
 import AssetsBrowser from "./AssetsBrowser";
 import LibraryAtelier from "./LibraryAtelier";
 import AudioWorkbench from "./audio/AudioWorkbench";
+import { libraryArea } from "./areas";
 
 type ModuleId = "styles" | "assets" | "animations" | "audio";
 
@@ -79,7 +80,7 @@ export default function LibraryView() {
               {
                 id: "styles",
                 testId: "module-styles",
-                label: "Styles",
+                label: libraryArea("styles").label,
                 panelId: "library-panel",
                 // Locked-of-total, not total: the gate this whole page exists
                 // to enforce is "at least one locked style", so the ratio IS
@@ -98,21 +99,21 @@ export default function LibraryView() {
               {
                 id: "assets",
                 testId: "module-assets",
-                label: "Assets",
+                label: libraryArea("assets").label,
                 panelId: "library-panel",
                 ...(counts.assets === undefined ? {} : { tally: { value: counts.assets } }),
               },
               {
                 id: "animations",
                 testId: "module-animations",
-                label: "Animations",
-                disabled: true,
-                disabledReason: "no engine yet",
+                label: libraryArea("animations").label,
+                disabled: Boolean(libraryArea("animations").locked),
+                disabledReason: libraryArea("animations").locked,
               },
               {
                 id: "audio",
                 testId: "module-audio",
-                label: "Audio",
+                label: libraryArea("audio").label,
                 panelId: "library-panel",
                 ...(counts.audio === undefined ? {} : { tally: { value: counts.audio } }),
               },

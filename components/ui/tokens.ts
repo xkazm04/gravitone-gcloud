@@ -318,6 +318,31 @@ export const SIGNAL_DEFAULTS: Record<string, string> = {
   "--gt-working": "0",
 };
 
+/**
+ * THE PAPER COSMOS WORLD, scoped. Chosen 2026-10-07 from contest
+ * landing-universe (variant "Paper Cosmos"): the public landing drawn as a
+ * backlit cut-paper shadow-box. The owner's instruction was to keep the
+ * winner's OWN design rather than restyle it in this app's kit, so these are
+ * the winner's colours, carried here only so the colour-literal rule holds:
+ * chrome is spelled in this file and nowhere else. The landing's root opts in
+ * with `data-world="paper-cosmos"`; nothing else reads these.
+ *
+ * The CANVAS paint of the paper artwork (sheet colours, the dusk horizon, ream
+ * tones) is illustration content, not chrome, and lives with the drawing code
+ * in app/_landing/cosmos/engine, exempted by name in the colour-literal probe.
+ * Alpha variants are written at the use site as color-mix over these tokens.
+ */
+export const WORLD_PAPER_COSMOS: Record<string, string> = {
+  "--pc-ink": "#251a33",
+  "--pc-ink2": "#3b2a47",
+  "--pc-bone": "#f3e6cf",
+  "--pc-cream": "#fff3da",
+  "--pc-indigo": "#161b45",
+  "--pc-coral": "#ee7358",
+  "--pc-ochre": "#f0aa50",
+  "--pc-rust": "#c4553d",
+};
+
 /** The `:root { … }` rule <GravitoneTokens> injects. */
 export function tokensCss(): string {
   const decls = [
@@ -332,7 +357,10 @@ export function tokensCss(): string {
   const obsidianKit = Object.entries(WORLD_OBSIDIAN_KIT)
     .map(([k, v]) => `${k}:${v};`)
     .join("");
-  return `:root{${decls}}[data-world="almanac"]{${world}}[data-world="obsidian"]{${obsidianKit}}`;
+  const paperCosmos = Object.entries(WORLD_PAPER_COSMOS)
+    .map(([k, v]) => `${k}:${v};`)
+    .join("");
+  return `:root{${decls}}[data-world="almanac"]{${world}}[data-world="obsidian"]{${obsidianKit}}[data-world="paper-cosmos"]{${paperCosmos}}`;
 }
 
 // ── TYPE SCALE, BY REFERENCE ────────────────────────────────────────────────
