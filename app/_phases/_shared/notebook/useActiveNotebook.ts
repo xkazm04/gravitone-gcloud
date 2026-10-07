@@ -17,6 +17,11 @@
 //     null`, which is what `resetLive` writes), or a record the board cannot
 //     deal. A cleared notebook is never dealt: a clear that the board ignored
 //     would be the creator's clear silently undoing itself.
+//   · A record that HAS a notebook but cannot be dealt (not a notebook at all, or
+//     no receipt) is still the replay, and is never silent: the hook carries a
+//     `trouble` naming it (`refusalOf`), and the Research step draws it. The
+//     replay is what the board must deal, and the creator must still be told that
+//     the notebook they saved is not the one on screen.
 //   · `PIN_REPLAY` overrides both. It is the card's rollback: set it and every
 //     project deals the replay, which is the board exactly as it was before this
 //     stage.
@@ -59,6 +64,16 @@ function dealable(nb: unknown): nb is Notebook {
     !!n.steelMan &&
     typeof n.steelMan === "object"
   );
+}
+
+/** WHY a saved notebook is not dealt, or `null`. Only a record that HAS a
+ *  notebook can be refused: no record, and the cleared record (`notebook: null`,
+ *  what `resetLive` writes), are the replay by design and nobody's trouble. */
+export function refusalOf(record: ResearchNotebookStepData | null | undefined, pin: boolean = PIN_REPLAY): string | null {
+  if (pin || !record || record.notebook === null || record.notebook === undefined) return null;
+  if (!dealable(record.notebook)) return "the saved notebook is not a notebook this app can deal";
+  if (!record.engine || typeof record.engine !== "object") return "the saved notebook has no engine receipt";
+  return null;
 }
 
 const sources = new WeakMap<Notebook, NotebookSource>();
@@ -121,6 +136,9 @@ export interface ActiveNotebook {
   /** This mount has read the record. Before that `source` is whatever this tab
    *  already knew — the replay, for a project it has not seen. */
   hydrated: boolean;
+  /** Why a saved notebook is NOT the one `source` deals (it is the replay), or
+   *  `null`. Never silent: the board draws it (research/_parts/ScopeBar.tsx). */
+  trouble: string | null;
 }
 
 /** The project's active NotebookSource, kept current as runs land and clears
@@ -144,5 +162,5 @@ export function useActiveNotebook(projectId: string): ActiveNotebook {
     },
   );
 
-  return { source: activeSourceOf(record), hydrated };
+  return { source: activeSourceOf(record), hydrated, trouble: refusalOf(record) };
 }

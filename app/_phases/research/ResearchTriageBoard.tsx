@@ -41,7 +41,7 @@ function boardColumns(api: ScopeApi): Dimension[] {
   return [...own, ...DIMENSIONS.filter((d) => !ids.has(d.id) && filed.has(d.id))];
 }
 
-export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
+export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; trouble?: string | null }) {
   const [focus, setFocus] = useState<string | null>(null);
   const woundOf = (id: string) => api.summary.wounds.find((w) => w.cardId === id);
 
@@ -79,7 +79,7 @@ export default function ResearchTriageBoard({ api }: { api: ScopeApi }) {
             below is read off `columns`, so it cannot say the wrong number, and
             the grid IS the domains. */}
         <Eyebrow>triage board</Eyebrow>
-        <ScopeBar api={api} />
+        <ScopeBar api={api} trouble={trouble} />
       </header>
 
       {/* Column filter — the board's one navigation affordance. These are

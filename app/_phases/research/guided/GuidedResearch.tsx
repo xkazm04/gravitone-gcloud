@@ -217,7 +217,7 @@ export default function GuidedResearch({
       content: (
         <div className="mx-auto w-full max-w-3xl space-y-5">
           <div className="rounded-2xl border border-white/8 bg-white/[0.015] p-5">
-            <ScopeBar api={api} />
+            <ScopeBar api={api} trouble={research.trouble} />
           </div>
           <Consequences api={api} />
           <ConfirmScope api={api} />

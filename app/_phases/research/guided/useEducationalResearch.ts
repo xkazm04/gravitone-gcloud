@@ -226,6 +226,8 @@ export function useEducationalResearch(projectId: string) {
     /** The notebook the board deals: the live one when saved and not cleared,
      *  else the replay. Referentially stable per record. */
     source: active.source,
+    /** Why a saved notebook is not the one dealt, or null (useActiveNotebook). */
+    trouble: active.trouble,
     /** There are cards to work: the replay landed, or a live notebook is the
      *  source. */
     dealt: ready || active.source.kind !== "replay",

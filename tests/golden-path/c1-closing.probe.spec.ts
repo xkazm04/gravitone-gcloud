@@ -23,13 +23,13 @@ import { optInIds } from "@/app/_phases/research/scope";
 import { recalibrate } from "@/app/_phases/script/recalibrate";
 import { outWord } from "@/app/_phases/script/scopeConflicts";
 import { BASELINE, type Note } from "@/app/_phases/script/versions";
-import { readActiveNotebook } from "@/app/_phases/_shared/notebook/useActiveNotebook";
+import { readActiveNotebook, refusalOf, useActiveNotebook } from "@/app/_phases/_shared/notebook/useActiveNotebook";
 import { readStep, saveStep, type ScopeStepData } from "@/app/_phases/_shared/stepStore";
 import { makeTriageSource } from "@/lib/board/sources/triage";
 import { addProjects } from "@/lib/projects";
 
 import { stripComments } from "./_helpers";
-import { landLive, liveNotebook, OWN_CONCLUSION } from "./_c1-harness";
+import { harness, landLive, liveNotebook, OWN_CONCLUSION, RECEIPT } from "./_c1-harness";
 
 const code = (rel: string) => stripComments(readFileSync(path.join(process.cwd(), rel), "utf8"));
 
@@ -219,4 +219,39 @@ test("case 11: a canned transcript answers only on the replay source", async () 
   // What the sentence says is still true: it no longer claims one static document.
   expect(code("app/_phases/research/followup.ts")).not.toContain("one static document shared by every project");
   expect(code("app/_phases/research/_parts/FollowUpQueue.tsx")).toContain("resultFor(r, api.source)");
+});
+
+/* ───────────── case 13: a malformed record is the replay, and never silent ───── */
+
+test("case 13: a record that fails dealable resolves to the replay AND sets a trouble; the board draws a StaleBadge", async () => {
+  const pid = "c1-malformed";
+  const out = await saveStep(pid, "research-notebook", { topic: "harbour", notebook: { facts: "nope" }, engine: RECEIPT, savedAt: 1 });
+  expect(out.ok).toBe(true);
+  const h = harness(() => useActiveNotebook(pid));
+  const active = await h.settleUp();
+  expect(active.hydrated).toBe(true);
+  expect(active.source, "a malformed record must resolve to the replay").toBe(fixtureSource());
+  expect(active.trouble, "a malformed record was resolved silently").toMatch(/not a notebook/);
+  h.unmount();
+
+  // A receipt-less notebook is refused for its own reason.
+  const nb = liveNotebook();
+  await saveStep("c1-no-receipt", "research-notebook", { topic: "harbour", notebook: nb, engine: null, savedAt: 1 });
+  const h2 = harness(() => useActiveNotebook("c1-no-receipt"));
+  const second = await h2.settleUp();
+  expect(second.source).toBe(fixtureSource());
+  expect(second.trouble).toMatch(/receipt/);
+  h2.unmount();
+
+  // The three that are NOT trouble: no record, a cleared record, a good record.
+  expect(refusalOf(undefined)).toBeNull();
+  expect(refusalOf({ topic: "", notebook: null, engine: null })).toBeNull();
+  expect(refusalOf({ topic: "harbour", notebook: nb, engine: RECEIPT })).toBeNull();
+
+  // The board draws it.
+  const bar = code("app/_phases/research/_parts/ScopeBar.tsx");
+  expect(bar).toMatch(/\{trouble && \(\s*<span data-testid="notebook-refused">\s*<StaleBadge/);
+  expect(code("app/_phases/research/ResearchTriageBoard.tsx")).toContain("<ScopeBar api={api} trouble={trouble} />");
+  expect(code("app/_phases/research/guided/GuidedResearch.tsx")).toContain("trouble={research.trouble}");
+  expect(code("app/_phases/research/guided/useEducationalResearch.ts")).toContain("trouble: active.trouble");
 });

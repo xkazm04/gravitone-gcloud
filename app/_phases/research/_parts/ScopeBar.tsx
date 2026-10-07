@@ -7,7 +7,9 @@ import { StaleBadge } from "@/components/ui/signal";
 import Notice from "../../_shared/ui/Notice";
 import type { ScopeApi } from "../useScope";
 
-export function ScopeBar({ api }: { api: ScopeApi }) {
+/** `trouble`: why the project's saved notebook is not the one dealt
+ *  (`useActiveNotebook().trouble`); the board is the replay then. */
+export function ScopeBar({ api, trouble }: { api: ScopeApi; trouble?: string | null }) {
   const s = api.summary;
   const orphan = api.orphaned;
   return (
@@ -15,6 +17,11 @@ export function ScopeBar({ api }: { api: ScopeApi }) {
       {/* A SCOPE DECIDED ON ANOTHER NOTEBOOK (useScope's digest rule). Its
           verdicts are not applied — every count beside it is this notebook's
           defaults — and the badge is what says the decisions exist. */}
+      {trouble && (
+        <span data-testid="notebook-refused">
+          <StaleBadge glyph="history" words="notebook not dealt" why={`${trouble} — the stand-in is dealt instead`} />
+        </span>
+      )}
       {orphan && (
         <span data-testid="scope-orphaned">
           <StaleBadge

@@ -329,6 +329,7 @@ function EducationalFaces({
           api={api}
           projectId={projectId}
           counts={counts}
+          trouble={research.trouble}
           dealt={research.dealt}
           onOpenNotebook={() => setArtifact("notebook")}
           onOpenEvidence={() => setArtifact("evidence")}
@@ -391,6 +392,7 @@ function ExpertBoard({
   api,
   projectId,
   counts,
+  trouble,
   dealt,
   onOpenNotebook,
   onOpenEvidence,
@@ -401,6 +403,8 @@ function ExpertBoard({
   projectId: string;
   /** The counts of the dealt notebook, which the artifact pills open. */
   counts: NotebookCounts;
+  /** Why a saved notebook is not the one dealt, or null. */
+  trouble: string | null;
   /** There are cards: the replay landed, or the creator's own notebook is the
    *  active source. */
   dealt: boolean;
@@ -428,7 +432,7 @@ function ExpertBoard({
 
       {dealt ? (
         <>
-          <ResearchTriageBoard api={api} />
+          <ResearchTriageBoard api={api} trouble={trouble} />
           <FollowUpQueue api={api} projectId={projectId} />
           <ConfirmScope api={api} />
         </>
