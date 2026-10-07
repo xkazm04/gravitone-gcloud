@@ -27,7 +27,7 @@
 // the CLI and the server at once cannot spend twice.
 
 import { execFile } from "node:child_process";
-import { copyFile, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readdir, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -86,6 +86,7 @@ import {
 import {
   EFFORT_LEVELS,
   PATCH_KINDS,
+  type ArticleRework,
   type ArticleRun,
   type ArticleRunDetail,
   type ArticleStatus,
@@ -103,8 +104,7 @@ import {
   type ReviewerReceipt,
   type ReviewerSpec,
   type Source,
-  type StepName,
-} from "./types";
+  type StepName, NOTE_MAX_CHARS } from "./types";
 
 /* ── dependencies (injectable for the probes) ──────────────────────────────── */
 
@@ -273,17 +273,147 @@ export async function approveRun(id: string, patchIds: string[], deps: EngineDep
   );
 }
 
+/** The longest note a human act at the gate carries. */
+export { NOTE_MAX_CHARS } from "./types";
+
+/** A human's note at the gate: trimmed, and refused when there is nothing in it. The one place
+ *  the rule lives, so a reject and a rework cannot disagree about what an empty note is. */
+function trimmedNote(note: unknown, act: string): string {
+  const text = typeof note === "string" ? note.trim() : "";
+  if (!text) throw new ArticleError(`${act} needs a note`, 400, "bad-note");
+  return text;
+}
+
 export async function rejectRun(id: string, note: string, deps: EngineDeps = defaultDeps()): Promise<ArticleRun> {
-  const text = note?.trim();
-  if (!text) throw new ArticleError("a rejection needs a note", 400, "bad-note");
+  const text = trimmedNote(note, "a rejection");
   return updateRun(
     id,
     (r) => {
       if (r.status !== "awaiting-approval") throw new ArticleError(`only a run awaiting approval can be rejected; ${id} is ${r.status}`, 409, "bad-transition");
-      return { ...r, status: "rejected", rejection: { at: deps.now().toISOString(), note: text.slice(0, 2000) } };
+      return { ...r, status: "rejected", rejection: { at: deps.now().toISOString(), note: text.slice(0, NOTE_MAX_CHARS) } };
     },
     deps.now,
   );
+}
+
+/**
+ * SEND THE DRAFT BACK. The operator read the post at the gate; the thinking was
+ * fine and the writing is not. The run goes `awaiting-approval -> drafting` with
+ * `rework {at, note, count}`, keeps its research, sources, claims and outline,
+ * and re-does draft, critique and check. The caller then drives it
+ * (`driveRun`, or `launchRun` from a route), exactly as after `approveRun` or
+ * `resumeRun`: the engine does not start the drive itself.
+ *
+ * A REJECT IS NOT A REWORK. `rejected` stays terminal; rejecting throws the
+ * piece away. A rework is one piece of work with one card.
+ *
+ * What it undoes, because every later step resumes at file level and would
+ * otherwise find its own old answers and skip itself: the draft, critique and
+ * check step records, the critique's `round-*` directories, the between-turn
+ * `checks/`, `check.json` and its screenshots. They are MOVED to
+ * `rework/<count>/before/` (with the post and the old step records, costs
+ * included), never deleted. The reviewer panel snapshot (`critique/reviewers.json`)
+ * stays: a run keeps the panel it started with. The old post stays in `post/`
+ * until the new draft replaces it, so a rework that fails halfway still has one.
+ *
+ * What it costs: no research turn, so no live web; the draft turn plus a whole
+ * critique and check again. See docs/articles.md.
+ *
+ * `note` is 1 to NOTE_MAX_CHARS characters after trimming. A reject cuts a
+ * longer note; a rework REFUSES it, because a cut instruction silently changes
+ * what the operator asked for.
+ */
+export async function reworkRun(id: string, note: string, deps: EngineDeps = defaultDeps()): Promise<ArticleRun> {
+  const text = trimmedNote(note, "a rework");
+  if (text.length > NOTE_MAX_CHARS) throw new ArticleError(`a rework note is at most ${NOTE_MAX_CHARS} characters; this one is ${text.length}`, 400, "bad-note");
+  // The drive that stopped at the gate releases its lease a moment after the status changes;
+  // a rework launched inside that moment would find no driver to start.
+  if (await driverAlive(id)) throw new ArticleError(`run ${id} is being driven right now`, 409, "busy");
+  return updateRun(
+    id,
+    async (r) => {
+      if (r.status !== "awaiting-approval") throw new ArticleError(`only a run awaiting approval can be reworked; ${id} is ${r.status}`, 409, "bad-transition");
+      const count = (r.rework?.count ?? 0) + 1;
+      const at = deps.now().toISOString();
+      await archiveForRework(id, r, count);
+      const out: ArticleRun = {
+        ...r,
+        status: "drafting",
+        steps: r.steps.filter((s) => s.name === "research" || s.name === "outline"),
+        rework: { at, note: text, count } satisfies ArticleRework,
+      };
+      delete out.critique;
+      return out;
+    },
+    deps.now,
+  );
+}
+
+/** Move what a rework makes stale into `rework/<count>/before/`. */
+async function archiveForRework(id: string, run: ArticleRun, count: number): Promise<void> {
+  const dir = runDir(id);
+  const before = path.join(dir, "rework", String(count), "before");
+  await mkdir(before, { recursive: true });
+  await writeJsonAtomic(path.join(before, "steps.json"), run.steps);
+  if (run.critique) await writeJsonAtomic(path.join(before, "critique-summary.json"), run.critique);
+  const move = async (from: string, to: string) => {
+    if (await fileExists(from)) {
+      await mkdir(path.dirname(to), { recursive: true });
+      await rename(from, to);
+    }
+  };
+  for (const name of ["check.json", "check", "checks"]) await move(path.join(dir, name), path.join(before, name));
+  let rounds: string[] = [];
+  try {
+    rounds = (await readdir(path.join(dir, "critique"))).filter((n) => /^round-\d+$/.test(n));
+  } catch {
+    // no critique directory: nothing to move
+  }
+  for (const n of rounds) await move(path.join(dir, "critique", n), path.join(before, "critique", n));
+  let receipts: string[] = [];
+  try {
+    receipts = await readdir(path.join(dir, "agent"));
+  } catch {
+    // no agent directory
+  }
+  for (const n of receipts) {
+    if (/^(critique|fix)-/.test(n)) await move(path.join(dir, "agent", n), path.join(before, "agent", n));
+    // the draft's own receipt and prompt are overwritten by the redraft: keep a copy
+    else if (/^draft(-prompt)?\.(json|md)$/.test(n)) await copyFile(path.join(dir, "agent", n), path.join(before, "agent", n)).catch(() => undefined);
+  }
+  await copyDir(path.join(dir, "post"), path.join(before, "post"));
+}
+
+/**
+ * The draft prompt's rework section: the operator's instruction, named and
+ * set apart from the standing brief, appended after the whole of it. It says
+ * what stays fixed (research, sources, outline) and what still binds (the
+ * output contract and the check), so the instruction decides what changes and
+ * nothing else. Pure over the record.
+ *
+ * It lives here and not in `pipeline/ARTICLE-POST-PROMPT.md` because the
+ * rework work package could not touch the prompt file or prompt.ts; the
+ * cleaner home is a `rework` slot in the draft section.
+ */
+export function reworkSection(rework: ArticleRework): string {
+  return [
+    "",
+    "---",
+    "",
+    `REWORK ${rework.count} OF THIS DRAFT: THE OPERATOR'S INSTRUCTION`,
+    "",
+    "The operator read the previous draft at the gate and sent it back. This section is not part of the standing brief above; it is the instruction for this one rewrite, and it decides what changes.",
+    "",
+    "- The previous draft is in `inputs/previous-post/` (`index.html`, `post.md`, `meta.json`, `figures/`). It is reference: read it, keep what the instruction does not touch, and write the whole post again under `out/post/` to the contract above.",
+    "- The research is kept. `inputs/sources.json` and `inputs/claims.json` are unchanged and every source keeps its number; do not research again and do not invent a source. The outline is kept unless the instruction says to change it.",
+    "- The output contract and the deterministic check's bars above still bind. An instruction never excuses a missing figure, a missing citation or a font size under its bar.",
+    "",
+    "THE INSTRUCTION, in the operator's words:",
+    '"""',
+    rework.note,
+    '"""',
+    "",
+  ].join("\n");
 }
 
 /** Where a failed run goes back to: the state whose step did not finish. */
@@ -448,13 +578,15 @@ async function agentStep(id: string, name: WriterStep, deps: EngineDeps): Promis
     await stageInputs(ws, dir, name, std, registry, material ? { file: material.file, text: material.text } : undefined, run);
     const file = await loadPromptFile(deps.root);
     if (file.sha !== run.promptRef.sha) await updateRun(id, (r) => ({ ...r, promptRef: { file: PROMPT_FILE, sha: file.sha } }), deps.now);
-    const prompt = buildPrompt(file, plan.phase, {
+    const base = buildPrompt(file, plan.phase, {
       topic: run.topic,
       ...(material ? { topicMaterial: { file: material.file, text: material.text } } : {}),
       standard: standardText(std),
       standardAddress: `recipes/index.json#${std.recipe.slug}@${std.recipe.version}, knowledge/${std.standard.bundle}/index.json ${std.standard.bundleHash}`,
       today: now.toISOString().slice(0, 10),
     });
+    // A reworked run's draft turn carries the operator's instruction as its own section.
+    const prompt = name === "draft" && run.rework ? `${base}${reworkSection(run.rework)}` : base;
     await writeFileAtomic(path.join(dir, "agent", `${name}-prompt.md`), prompt);
 
     const result = await deps.runAgent({ cwd: ws, prompt, model: run.model, effort: run.effort, tools: plan.tools, timeoutMin: plan.timeoutMin, turn: plan.turn });
@@ -534,6 +666,8 @@ async function stageInputs(
   }
   if (name === "draft") {
     await copyFile(path.join(dir, "outline.md"), path.join(inputs, "outline.md"));
+    // A rework's draft reads the post it is replacing (still in post/ until this turn is ingested).
+    if (run.rework) await copyDir(path.join(dir, "post"), path.join(inputs, "previous-post"));
     // Read-only reference copies of the standard's files, at their registry
     // paths, so a proposed patch names the file it changes. Copies: the agent
     // can never write the registry itself.
@@ -1287,7 +1421,8 @@ async function land(id: string, deps: EngineDeps): Promise<void> {
       now: deps.now,
       progress: (l) => updateRun(id, (r) => ({ ...r, landing: { ...l, medium: "medium" } }), deps.now).then(() => undefined),
     });
-    await updateRun(id, (r) => ({ ...r, status: "landed", landing: { ...landing, medium: "medium" } }), deps.now);
+    // The ONE write of landedAt: the event time the canvas's 7-day expiry reads (types.ts).
+    await updateRun(id, (r) => ({ ...r, status: "landed", landedAt: deps.now().toISOString(), landing: { ...landing, medium: "medium" } }), deps.now);
   } catch (e) {
     const err = e as Error;
     if (e instanceof LandingError && e.output) await writeFile(path.join(dir, "landing.log"), e.output, "utf8").catch(() => undefined);

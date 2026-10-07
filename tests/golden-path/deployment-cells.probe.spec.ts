@@ -50,6 +50,7 @@ import { test, expect } from "@playwright/test";
 
 import { ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 import { CAPABILITY_ROUTES, HOSTED_CAPS, type Capabilities } from "@/lib/capabilities";
+import { resolveRegistryDir } from "@/lib/articles/registryRead";
 import { MANAGED_MARKERS } from "@/lib/deployment";
 import { serverCapabilities } from "@/lib/serverCapabilities";
 
@@ -139,13 +140,40 @@ function addressOf(rel: string): { url: string; params: Record<string, string | 
  * with `local-binaries-forbidden` wherever the posture forbids spawning
  * (lib/deployment.ts) — in those cells that refusal is the expected answer,
  * whatever its status, and invariant 1 then asks whether a capability hides it.
+ *
+ * `registry` names the methods that read the sibling knowledge registry, which
+ * is an OPTIONAL dependency of this tree rather than a cell property: it is
+ * absent wherever that checkout is not beside this one, and `registry.local`
+ * is a relative sibling path, so it is absent in EVERY WORKTREE — one sits
+ * three levels down, where `../ai-registry` names nothing. Where it is absent,
+ * `registry-unreachable` (lib/articles/registryRead.ts, 503) is the expected
+ * answer; where it is present the declared `ok` class stands. Presence is
+ * measured by asking `resolveRegistryDir`, the one authority on the question,
+ * so this declaration is right in a worktree and in the main checkout both.
  */
 type Ok = "2xx" | "4xx";
 interface Expectation {
   door: Door;
   ok: Partial<Record<Method, Ok>>;
   local?: Method[];
+  registry?: Method[];
 }
+
+/**
+ * Is the sibling knowledge registry beside this checkout? Asked of
+ * `resolveRegistryDir`, which is what the routes themselves ask, so the answer
+ * cannot drift from theirs. It throws when there is none — that IS the answer.
+ * False in every worktree (`registry.local` is a relative sibling path and a
+ * worktree sits three levels down), true in the main checkout.
+ */
+const REGISTRY_PRESENT = (() => {
+  try {
+    resolveRegistryDir();
+    return true;
+  } catch {
+    return false;
+  }
+})();
 
 const EXPECT: Record<string, Expectation> = {
   "app/api/ads/ideas/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
@@ -157,8 +185,11 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/articles/[runId]/file/[...path]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/articles/[runId]/reject/route.ts": { door: "access", ok: { POST: "4xx" } },
   "app/api/articles/[runId]/resume/route.ts": { door: "money", ok: { POST: "4xx" } },
+  // Rework restarts the drive, so it spends the seat the way resume does.
+  "app/api/articles/[runId]/rework/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/articles/[runId]/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/articles/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
+  "app/api/articles/topics/route.ts": { door: "access", ok: { GET: "2xx" }, registry: ["GET"] },
   "app/api/capabilities/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/cut/export/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/cut/export/route.ts": { door: "money", ok: { POST: "4xx" }, local: ["POST"] },
@@ -536,11 +567,14 @@ async function runCell(
                 for (const [m, h] of handlersOf(f)) {
                   const a = await drive(f, m, h, bearer);
                   const forbidden = posture !== "available" && want?.local?.includes(m);
+                  const noRegistry = !REGISTRY_PRESENT && want?.registry?.includes(m);
                   let verdict: string;
                   if (!want?.ok[m]) verdict = `no expectation for ${m} (answered ${a.status})`;
                   else if (a.status === 401) verdict = "an authorised caller got 401";
                   else if (forbidden)
                     verdict = a.code === "local-binaries-forbidden" ? "ok" : `the posture forbids spawning and it answered ${a.status} ${a.code}`;
+                  else if (noRegistry)
+                    verdict = a.code === "registry-unreachable" ? "ok" : `the sibling registry is absent and it answered ${a.status} ${a.code}`;
                   else verdict = classOf(a.status) === want.ok[m] ? "ok" : `expected ${want.ok[m]}, answered ${a.status} ${a.code}`;
                   if (verdict === "ok" && unhidden(f, a, caps)) {
                     unhiddenSeen.add(f);
@@ -668,6 +702,7 @@ test("routes: every exported method has an expectation, and every expectation na
     for (const m of exported) if (!EXPECT[f].ok[m]) off.push(`${f} ${m}: exported, no expectation`);
     for (const m of Object.keys(EXPECT[f].ok)) if (!exported.includes(m as Method)) off.push(`${f} ${m}: expected, not exported`);
     for (const m of EXPECT[f].local ?? []) if (!exported.includes(m)) off.push(`${f} ${m}: declared local, not exported`);
+    for (const m of EXPECT[f].registry ?? []) if (!exported.includes(m)) off.push(`${f} ${m}: declared registry, not exported`);
   }
   expect(off).toEqual([]);
 });

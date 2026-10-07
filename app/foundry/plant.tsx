@@ -21,7 +21,7 @@
 // loop over prompt recipes. A flow drawn in tab order would be a diagram of the
 // UI, not of the plant.
 
-import { Flame, Palette, Pipette, Swords } from "lucide-react";
+import { Flame, Palette, Pipette, Swords, Workflow } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 
 import type { ExtractSummary } from "@/lib/foundry/extract/types";
@@ -34,7 +34,11 @@ import { EXTRACT_LIVE, LIVE, STATUS_WORD, runKind } from "./parts";
 import { heroOf, keptRows } from "./styleArt";
 import { Art, Dot, TONE_TEXT, type Tone } from "./ui";
 
-export type Tab = "cull" | "extract" | "styles" | "dojo";
+// A FIFTH TAB, and nothing retires: the operator decided the four engines of
+// the forge coexist with the pipeline board. `ENGINE`, `lines()`, `useEngineArt`
+// and `station()` below are all `Record<Tab, …>`, so tsc names every place a new
+// member has to be answered for — which is the point of keeping the union here.
+export type Tab = "cull" | "extract" | "styles" | "dojo" | "pipeline";
 
 /* ── Reads ────────────────────────────────────────────────────────────────── */
 
@@ -155,7 +159,10 @@ export function useEngineArt(runs: RunSummary[] | null, plant: Plant, previews: 
     return out;
   }, [cat]);
   const cull = (runs ?? []).flatMap((r) => previews[r.id]?.thumbs ?? []).slice(0, 3);
-  return { cull, extract: plant.extractArt, styles, dojo: plant.dojoArt };
+  // The pipeline draws no art: its cards ARE the pictures, and they do not
+  // exist until the canvas has loaded. A placeholder strip here would be three
+  // washes pretending to be work.
+  return { cull, extract: plant.extractArt, styles, dojo: plant.dojoArt, pipeline: [] };
 }
 
 /* ── What each engine is doing, in a line ─────────────────────────────────── */
@@ -207,10 +214,15 @@ const ENGINE: Record<Tab, { name: string; icon: typeof Flame }> = {
   extract: { name: "Extract", icon: Pipette },
   styles: { name: "Styles", icon: Palette },
   dojo: { name: "Dojo", icon: Swords },
+  pipeline: { name: "Pipeline", icon: Workflow },
 };
 
 function lines(runs: RunSummary[] | null, plant: Plant): Record<Tab, EngineLine | null> {
-  return { cull: forgeLine(runs), extract: extractLine(plant.extract), styles: stylesLine(plant.catalogue), dojo: dojoLine(plant.cycles) };
+  // NULL FOR THE PIPELINE, deliberately. Its figures — cards per stage, how many
+  // are at the gate — come from `CanvasStatus`, which does not exist until the
+  // canvas has mounted inside the tab. `usePlant` reads three lists and none of
+  // them is the pipeline's. A wrong number on a tab rail is worse than no number.
+  return { cull: forgeLine(runs), extract: extractLine(plant.extract), styles: stylesLine(plant.catalogue), dojo: dojoLine(plant.cycles), pipeline: null };
 }
 
 /** Roving arrows for a hand-built tablist: the same manual-activation rule
@@ -254,7 +266,10 @@ export function PipelineHeader({
   const styleArt = art.styles;
   const forgeArt = art.cull;
 
-  const station = (t: Tab, allFigures: { n: number | undefined; label: string; tone?: Tone }[], art: string[], failed = false) => {
+  // `art: null` is an engine with no picture tray at all, which is not the same
+  // as a tray whose pictures have not arrived (that is `[]`, three washes). The
+  // pipeline has no tray: its cards ARE its output and they live in the tab.
+  const station = (t: Tab, allFigures: { n: number | undefined; label: string; tone?: Tone }[], art: string[] | null, failed = false) => {
     // A list that could not be read draws no figure (see usePlant), never a bare `…`.
     const figures = failed ? [] : allFigures;
     const on = t === tab;
@@ -293,18 +308,20 @@ export function PipelineHeader({
             {l?.pulse && <span className={`truncate ${TONE_TEXT[l.tone]}`}>{l.text}</span>}
           </span>
         </span>
-        <span aria-hidden className="flex shrink-0 items-center pr-1">
-          {[0, 1, 2].map((i) => (
-            <Art
-              key={i}
-              src={art[i]}
-              alt=""
-              state={art[i] ? "ready" : "blank"}
-              rounded="rounded-md"
-              className={`aspect-video w-16 shadow-[var(--gt-shadow-float)] ring-1 ring-black/50 transition duration-200 ${i ? "-ml-8 group-hover:-ml-5" : ""} ${on ? "" : "opacity-75 group-hover:opacity-100"}`}
-            />
-          ))}
-        </span>
+        {art !== null && (
+          <span aria-hidden className="flex shrink-0 items-center pr-1">
+            {[0, 1, 2].map((i) => (
+              <Art
+                key={i}
+                src={art[i]}
+                alt=""
+                state={art[i] ? "ready" : "blank"}
+                rounded="rounded-md"
+                className={`aspect-video w-16 shadow-[var(--gt-shadow-float)] ring-1 ring-black/50 transition duration-200 ${i ? "-ml-8 group-hover:-ml-5" : ""} ${on ? "" : "opacity-75 group-hover:opacity-100"}`}
+              />
+            ))}
+          </span>
+        )}
       </button>
     );
   };
@@ -348,6 +365,10 @@ export function PipelineHeader({
       )}
       <span aria-hidden className="mx-1 hidden w-px self-stretch bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
       {station("dojo", [{ n: plant.cycles?.length, label: plural(plant.cycles?.length, "cycle") }, { n: parked, label: "at the gate", tone: parked ? "amber" : undefined }], plant.dojoArt, plant.failed?.cycles)}
+      <span aria-hidden className="mx-1 hidden w-px self-stretch bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
+      {/* No figures and no art: see `lines()` above. The station is the name,
+          the icon and whether it is the open tab. */}
+      {station("pipeline", [], null)}
     </div>
   );
 }
