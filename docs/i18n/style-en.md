@@ -23,7 +23,7 @@ are checked by `npm run copy:check`.
 - **US English** (2026-09-14, operator). The extracted copy had no variant-marked word, so
   nothing needs migrating.
 - **No em dash** (2026-09-14, operator). At adoption 5 em dashes sat in gated strings, all
-  baselined; the layout description still carries its 3 as debt. The standalone no-data glyph
+  baselined; the last of them, in the layout description, was rewritten on 2026-10-08 and the baseline is now empty. The standalone no-data glyph
   and code comments are out of scope.
 - **"Gravitone" is the official product name** (2026-09-14, operator) and stays in every
   title. Page titles are `Page | Gravitone` (the separator is `|`, never a dash); the site
