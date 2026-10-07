@@ -75,7 +75,9 @@ export const RESEARCH_BEATS = defineRecord<BeatPicksStepData>({
   },
 });
 
-/** The creator's scope board and its confirmed checkpoint. */
+/** The creator's scope board and its confirmed checkpoint, and the digest of the
+ *  notebook it was decided on. Still v1: the digest is additive, and its absence
+ *  has a meaning (the fixture's — see ScopeStepData.digest). */
 export const RESEARCH_SCOPE = defineRecord<ScopeStepData>({
   key: "research-scope",
   owner: "research",
@@ -85,6 +87,7 @@ export const RESEARCH_SCOPE = defineRecord<ScopeStepData>({
     if (!isPlainObject(scope)) return malformed("research-scope.scope is not a map of cards");
     const confirmed = raw.confirmed ?? null;
     if (confirmed !== null && !isPlainObject(confirmed)) return malformed("research-scope.confirmed is not a map of cards");
+    if (raw.digest !== undefined && typeof raw.digest !== "string") return malformed("research-scope.digest is not text");
     return { ...raw, scope, confirmed } as ScopeStepData;
   },
 });

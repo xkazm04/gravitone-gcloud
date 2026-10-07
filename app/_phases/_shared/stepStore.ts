@@ -91,6 +91,15 @@ export interface ResearchNotebookStepData {
 export interface ScopeStepData {
   scope: Record<string, { descoped: boolean; liked: boolean; deepen: boolean }>;
   confirmed: Record<string, { descoped: boolean; liked: boolean; deepen: boolean }> | null;
+  /** The `digest` of the NotebookSource these decisions were made on
+   *  (_shared/notebook/source.ts), stamped on every save since
+   *  research-scope-board-A stage 3. A scope is a set of verdicts on card ids,
+   *  and two notebooks can share an id while meaning different cards — so a
+   *  scope whose digest is not the dealt source's is ORPHANED and applies
+   *  nothing (research/useScope.ts). Absent on every record written before the
+   *  stamp, and every one of those was written against the fixture: absent
+   *  means the fixture's digest. */
+  digest?: string;
   savedAt?: number;
 }
 
@@ -672,6 +681,30 @@ export async function loadStep<T = ResearchStepData>(
  *  Deleting it as unused would silently restore the ambiguity it exists to end. */
 export const SCHEMA_VERSION = 1;
 
+/* ───────────────────── saves, heard as they are issued (2026-10-07) ─────────
+ *
+ * A reader that mirrors one record in memory needs to hear a write at the
+ * moment it is ISSUED, not when it lands. Re-reading after the fact races the
+ * write: `readStep` is not in the issue-order chain above, and a read issued in
+ * the same tick as a save can open its transaction first and return what the
+ * save is about to replace. That is exactly the shape of the Research step's
+ * Clear (`resetLive` writes the cleared notebook record, and the board re-renders
+ * in the same tick), and _shared/notebook/useActiveNotebook.ts would deal the
+ * cleared notebook for as long as the stale read won.
+ *
+ * Fired synchronously, in issue order, with what was handed to `saveStep` —
+ * which, since the latest issued save is the one that lands, is what the disk
+ * will hold. Whole-record saves only: `patchStep` decides inside its own
+ * transaction, so what it will write is not known when it is issued. A watcher
+ * must not throw; it runs inside a save that promises never to reject. */
+export type SaveWatcher = (projectId: string, phase: string, data: unknown) => void;
+const saveWatchers = new Set<SaveWatcher>();
+
+export function onSaveIssued(watcher: SaveWatcher): () => void {
+  saveWatchers.add(watcher);
+  return () => void saveWatchers.delete(watcher);
+}
+
 export async function saveStep<T>(
   projectId: string,
   phase: string,
@@ -683,6 +716,7 @@ export async function saveStep<T>(
   // Ticket taken HERE — at call time, in issue order — not inside the write,
   // which would be the same race one layer down. See the block above.
   const slot = claimSaveSlot(projectId, phase);
+  saveWatchers.forEach((w) => w(projectId, phase, data));
   // An early out for the common overtaking case, so a superseded keystroke does
   // not even open the database. It is an optimisation, not the guard: the guard
   // is the check inside the transaction callback, which is the only one that
