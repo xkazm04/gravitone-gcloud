@@ -252,6 +252,9 @@ Replaces five spellings of the same disclosure: four native `<details>`
 `aria-expanded` button per surface (`app/_phases/frames/FramesAssembly.tsx:360`,
 `app/_projects/RaceSheet.tsx:501`, `app/playground/triage/Batch.tsx:73`).
 
+Waves 4–5 moved the articles pair and the foundry lightbox onto `Fold`; `SpecEditor`'s
+`<details>` is the one left.
+
 There is no `sub`, no `description` and no `blurb`: a title of one to four words,
 the count as `tally`, other state (a `PipRow`, a `StaleBadge`, a `Hint`) as
 `marks`. **A Fold is not where narration goes to hide.** Folding a paragraph about

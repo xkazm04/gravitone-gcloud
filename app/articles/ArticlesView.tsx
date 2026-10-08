@@ -2,20 +2,45 @@
 
 // /articles — every article run on this machine, newest first: its state, its
 // topic, what it has cost and when it started. A row opens the run.
+//
+// The store only grows (every run is a directory that stays), so the rows are
+// windowed (useWindow + Pager, 30 at a time) and the counts above them are
+// filters: what a visit is usually for is the runs at the gate. The filter is
+// remembered; the window starts again whenever it changes.
 
 import Link from "next/link";
 import { FileWarning, Plus, RotateCw } from "lucide-react";
 
+import { Pager, useWindow } from "@/components/kit";
 import { Button } from "@/components/ui/Primitives";
-import { Ghost, Tally } from "@/components/ui/signal";
+import { Ghost, Tally, type TallyTone } from "@/components/ui/signal";
+import { useRemembered } from "@/lib/useRemembered";
 import { SURFACE } from "@/components/ui/tokens";
 import { relTime } from "@/app/_projects/parts";
 
 import { PhaseChip } from "./parts";
-import { costOf, fmtUsd, phaseOf, topicLine } from "./runModel";
+import { costOf, fmtUsd, phaseOf, topicLine, type RunPhase } from "./runModel";
 import { useArticleRuns, START_GRACE_MS } from "./useArticles";
 
 const NEW_HREF = "/articles/new";
+const PAGE = 30;
+
+type Filter = "all" | "gate" | "working" | "stopped" | "done";
+const FILTERS: readonly Filter[] = ["all", "gate", "working", "stopped", "done"];
+const IN: Record<Exclude<Filter, "all">, readonly RunPhase[]> = {
+  gate: ["gate"],
+  working: ["running", "landing"],
+  stopped: ["stalled", "failed"],
+  done: ["landed", "rejected"],
+};
+const FILTER_LOOK: Record<Filter, { label: string; tone: TallyTone }> = {
+  all: { label: "runs", tone: "neutral" },
+  gate: { label: "at the gate", tone: "amber" },
+  working: { label: "running", tone: "cyan" },
+  stopped: { label: "stopped", tone: "rose" },
+  done: { label: "done", tone: "emerald" },
+};
+const matches = (f: Filter, phase: RunPhase) => f === "all" || IN[f].includes(phase);
 
 function NewLink() {
   return (
@@ -39,19 +64,40 @@ export default function ArticlesView() {
   const driving = new Set(load?.ok ? load.data.driving : []);
   const live = (id: string, updatedAt: string) => driving.has(id) || at - Date.parse(updatedAt) < START_GRACE_MS;
   const phases = runs?.map((r) => ({ r, phase: phaseOf(r, live(r.id, r.updatedAt)) })) ?? null;
-  const atGate = phases?.filter((p) => p.phase === "gate").length ?? 0;
-  const working = phases?.filter((p) => p.phase === "running" || p.phase === "landing").length ?? 0;
+  const [filter, setFilter] = useRemembered<Filter>("articles.filter", "all", FILTERS);
+  const count = (f: Filter) => phases?.filter((p) => matches(f, p.phase)).length ?? 0;
+  // A remembered filter that holds nothing today shows everything rather than
+  // an empty list that looks like a store with no runs.
+  const active: Filter = filter !== "all" && count(filter) === 0 ? "all" : filter;
+  const shown = phases?.filter((p) => matches(active, p.phase)) ?? [];
+  const win = useWindow(shown, { size: PAGE, key: active });
 
   return (
     <main tabIndex={-1} className="space-y-5 pt-1 pb-28" data-testid="articles-list">
       <h1 className="sr-only">Articles</h1>
       <div className="flex flex-wrap items-center gap-3">
         {phases && phases.length > 0 && (
-          <>
-            <Tally value={atGate} label="at the gate" tone={atGate ? "amber" : "neutral"} />
-            <Tally value={working} label="running" tone={working ? "cyan" : "neutral"} />
-            <Tally value={phases.length} label="runs" />
-          </>
+          <div role="group" aria-label="filter runs" className="flex flex-wrap items-center gap-2" data-testid="articles-filter">
+            {FILTERS.map((f) => {
+              const n = count(f);
+              if (f !== "all" && f !== "gate" && f !== "working" && n === 0) return null;
+              const look = FILTER_LOOK[f];
+              const on = active === f;
+              return (
+                <button
+                  key={f}
+                  type="button"
+                  aria-pressed={on}
+                  disabled={f !== "all" && n === 0}
+                  onClick={() => setFilter(on && f !== "all" ? "all" : f)}
+                  data-testid={`articles-filter-${f}`}
+                  className={`rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70 disabled:cursor-default ${on ? "ring-1 ring-white/40" : "opacity-75 hover:opacity-100"}`}
+                >
+                  <Tally value={n} label={look.label} tone={n && f !== "all" ? look.tone : "neutral"} />
+                </button>
+              );
+            })}
+          </div>
         )}
         <span className="ml-auto">
           <NewLink />
@@ -78,7 +124,7 @@ export default function ArticlesView() {
         <Ghost shape="row" count={3} label="no articles yet" action={<NewLink />} className="pt-4" />
       ) : (
         <ul className="space-y-2" data-testid="articles-rows">
-          {phases!.map(({ r, phase }) => {
+          {win.visible.map(({ r, phase }) => {
             const topic = topicLine(r);
             const cost = costOf(r);
             const started = Date.parse(r.createdAt);
@@ -108,6 +154,7 @@ export default function ArticlesView() {
           })}
         </ul>
       )}
+      {win.total > PAGE && <Pager shown={win.shown} total={win.total} onMore={win.more} onAll={win.all} step={PAGE} noun="runs" auto />}
 
       {load?.ok && load.data.damaged.length > 0 && (
         <p role="status" className="font-jetbrains text-label text-rose-200/85" data-testid="articles-damaged">

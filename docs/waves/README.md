@@ -170,3 +170,19 @@ Paged IndexedDB reads were looked for and not built: the asset rows are pointers
 - Undo in place of an immediate permanent remove on the shelf (soft delete in `lib/assets`).
 - An `assets.meta.projectId` index the next time `lib/studioDb.ts` bumps its version for another reason; then `listAssetsFor` becomes a keyed read.
 - Memoised ledger rows (needs stable handlers first); "keep the whole scene" bulk cull; opt-in auto-advance after K/X (changes keys the probes pin).
+
+### Wave 5 · workbench (2026-10-08)
+
+**Shipped.**
+- `/articles/[runId]`: the printed wall became levels. At the gate a summary row counts check fails, not-measured items, blockers the writer did not accept, unanswered findings and picked patches, each linked to its section; draft, outline (never shown before, now verbatim), critique, check, sources and patches are `Fold`s that open themselves when they hold a decision. Check passes and loop history fold away; reviewers fold to "completed of N" and open on a failure; findings fold per lens with blocker/unanswered counts. The refused-patches `Hint` (app narration) is deleted, its reason kept as a comment.
+- `/articles`: 30 runs at a time; the count chips are filters (gate, running, stopped, done) and the filter is remembered. `/articles/new` remembers kind, bundle, model and effort while each is offered; Ctrl/⌘+Enter starts the run.
+- `/calendar`: `[`/`]` (and ←/→ in the grid) change week, T this week, N the next slot needing a decision, Esc closes a slot; the last channel and the metrics sort are remembered. The week's days and stacks are memoised per schedule so a drag no longer re-buckets the week; metrics rows paged by 25 and memoised off the 30 s clock; export posters are grabbed near the viewport, two at a time, instead of every export downloading its video at first paint. Held by `workbench-keys.probe.spec.ts`.
+- `/kit` Parts: 32 group `Fold`s (remembered) whose specimens mount on open, 0 of 115 at first paint; search with `/` and Esc; open/close all; `#g-` deep links open then scroll. The ContextMenu specimen no longer mounts open and steals focus.
+- `/board`: roll totals computed once per load instead of per render per key; J/K and the loupe's arrows grow the 48-frame window to the selected frame and scroll it in; select-all, select-roll and Shift-ranges take drawn frames only; an empty sheet under All sources links to /projects.
+- `/playground`: triage queue and judged list paged by 30 and stretching to the open take; `Strengths` is `next/dynamic`; hunt's per-node take lookup built once, `LeafCard` and `MiniMap` memoised (a marquee drag or a keystroke no longer re-renders every card or rebuilds every thumbnail); arrange moves the drag ghost directly. Z undoes the last verdict (probe-held), a held key files one judgement, keys pause under a dialog.
+
+**Proposals (not built).**
+- Undo instead of the cancel confirm on a calendar slot (un-cancel in `lib/publish`); J/K between findings on a run; "pick all patches".
+- Shift+J/K to extend a board batch (needs `lib/board/keys.ts` to tell Shift apart); memoised board `Frame` cells and arrange `Card`s (need stable handlers); the board's per-roll "N more" onto `Pager`.
+- Triage N as "next unjudged" like the foundry's; Shift+X reject without a defect; J/K between hunt leaves.
+- The kit search field has no visible border until focused (the `k-ctl` skin).

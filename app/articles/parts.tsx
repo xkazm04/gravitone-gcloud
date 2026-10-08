@@ -22,12 +22,12 @@ import {
   type LucideIcon,
 } from "lucide-react";
 
-import { CHIP_CLASS, Hint, TALLY_TONE, Tally } from "@/components/ui/signal";
+import { CHIP_CLASS, Fold, TALLY_TONE, Tally, type TallyTone } from "@/components/ui/signal";
 import { SURFACE } from "@/components/ui/tokens";
 import type { CheckItem, CheckPassRecord, CheckReport, Claim, RegistryPatch, Source } from "@/lib/articles/types";
 
 import { runFileUrl } from "./articlesClient";
-import { checkCounts, checkOrder, fmtUsd, PHASE_LOOK, span, type NodeState, type RunPhase, type StepNode, type Tone } from "./runModel";
+import { checkOrder, fmtUsd, PHASE_LOOK, span, type NodeState, type RunPhase, type StepNode, type Tone } from "./runModel";
 
 /* ── tone ─────────────────────────────────────────────────────────────── */
 
@@ -61,26 +61,50 @@ export function PhaseChip({ phase, className = "" }: { phase: RunPhase; classNam
   );
 }
 
-/** A panel section's head: a caps name and, beside it, what it holds. */
-export function SectionHead({ id, title, children }: { id: string; title: string; children?: React.ReactNode }) {
+/**
+ * One of the gate's records — draft, critique, check, sources, patches — as a
+ * card whose body opens on demand (Wave 5, docs/waves/README.md). The closed
+ * header carries the record's STATE (`tally`, `marks`: counts, a verdict chip),
+ * so the run reads at a glance and the record itself is one press down; the
+ * caller opens it by default exactly when it holds the human's decision (a
+ * failing check, an unanswered finding, a patch to pick). A closed section
+ * mounts nothing: the draft's frame does not load and the sources table is not
+ * built until somebody asks for them.
+ *
+ * `id` lands on the card, so the gate summary's links can jump to it.
+ */
+export function Section({
+  id,
+  title,
+  tally,
+  marks,
+  defaultOpen = false,
+  remember,
+  children,
+}: {
+  id: string;
+  title: string;
+  tally?: { value: number; of?: number; tone?: TallyTone; label?: string };
+  marks?: React.ReactNode;
+  defaultOpen?: boolean;
+  remember?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div className="mb-3 flex flex-wrap items-center gap-2.5">
-      <h2 id={id} className="font-jetbrains text-label tracking-[0.18em] text-white/55 uppercase">
-        {title}
-      </h2>
-      {children}
+    <div id={id} className={`${SURFACE} scroll-mt-4 rounded-2xl px-5`} data-testid={`article-section-${id}`}>
+      <Fold
+        title={title}
+        level={2}
+        defaultOpen={defaultOpen}
+        {...(tally ? { tally } : {})}
+        {...(marks ? { marks: <span className="flex flex-wrap items-center justify-end gap-2">{marks}</span> } : {})}
+        {...(remember ? { remember } : {})}
+        testId={`article-fold-${id}`}
+        className="border-t-0!"
+      >
+        {children}
+      </Fold>
     </div>
-  );
-}
-
-export function Section({ id, title, aside, children, className = "" }: { id: string; title: string; aside?: React.ReactNode; children: React.ReactNode; className?: string }) {
-  return (
-    <section aria-labelledby={id} className={`${SURFACE} rounded-2xl p-5 ${className}`} data-testid={`article-section-${id}`}>
-      <SectionHead id={id} title={title}>
-        {aside}
-      </SectionHead>
-      {children}
-    </section>
   );
 }
 
@@ -213,24 +237,15 @@ function passLine(p: CheckPassRecord): string {
 }
 
 export function CheckView({ report, runId, passes }: { report: CheckReport; runId: string; passes?: CheckPassRecord[] }) {
-  const counts = checkCounts(report);
+  // The counts ride on the section's closed header (RunView), not twice.
   const items = checkOrder(report);
+  const passed = items.filter((it) => it.status === "pass");
+  // LAYERED: what failed and what nobody measured are the human's call, so they
+  // are the section's first read, each detail verbatim. The passes and the
+  // loop's history (what the writer was sent back to fix) are the record, one
+  // press down.
   return (
     <div className="space-y-4">
-      {passes && passes.length > 0 && (
-        <ul className="space-y-0.5" data-testid="article-check-passes">
-          {passes.map((p) => (
-            <li key={`${p.label}-${p.pass}`} className="font-jetbrains text-label break-words text-white/55">
-              {passLine(p)}
-            </li>
-          ))}
-        </ul>
-      )}
-      <div className="flex flex-wrap items-center gap-2" data-testid="article-check-counts">
-        <Tally value={counts.fail} label="fail" tone={counts.fail ? "rose" : "neutral"} />
-        <Tally value={counts.notMeasured} label="not measured" tone={counts.notMeasured ? "amber" : "neutral"} />
-        <Tally value={counts.pass} label="pass" tone="emerald" />
-      </div>
       <ul className="divide-y divide-white/[0.06]" data-testid="article-check-items">
         {items.filter((it) => it.status === "fail").map((it) => <CheckRow key={it.id} it={it} />)}
         {report.notMeasured.map((dim) => {
@@ -248,14 +263,37 @@ export function CheckView({ report, runId, passes }: { report: CheckReport; runI
             </li>
           );
         })}
-        {items.filter((it) => it.status !== "fail").map((it) => <CheckRow key={it.id} it={it} />)}
+        {items.filter((it) => it.status === "not-measured").map((it) => <CheckRow key={it.id} it={it} />)}
       </ul>
+      {passed.length > 0 && (
+        <Fold title="passed" tally={{ value: passed.length, tone: "emerald" }} level={3}>
+          <ul className="divide-y divide-white/[0.06]" data-testid="article-check-passed">
+            {passed.map((it) => <CheckRow key={it.id} it={it} />)}
+          </ul>
+        </Fold>
+      )}
+      {passes && passes.length > 0 && (
+        <Fold
+          title="check loop"
+          tally={{ value: passes.length, label: "passes" }}
+          marks={passes.some((p) => p.fixError) ? <Tally value={passes.filter((p) => p.fixError).length} label="fix failed" tone="rose" /> : undefined}
+          level={3}
+        >
+          <ul className="space-y-0.5" data-testid="article-check-passes">
+            {passes.map((p) => (
+              <li key={`${p.label}-${p.pass}`} className="font-jetbrains text-label break-words text-white/55">
+                {passLine(p)}
+              </li>
+            ))}
+          </ul>
+        </Fold>
+      )}
       {report.screenshots.length > 0 && (
         <div className="flex flex-wrap gap-3" data-testid="article-check-shots">
           {report.screenshots.map((s) => (
             <a key={s} href={runFileUrl(runId, s)} target="_blank" rel="noreferrer" className="group block w-44">
               {/* eslint-disable-next-line @next/next/no-img-element -- a run file through the article file seam */}
-              <img src={runFileUrl(runId, s)} alt={s} className="h-28 w-44 rounded-lg border border-white/10 object-cover object-top" />
+              <img src={runFileUrl(runId, s)} alt={s} loading="lazy" decoding="async" className="h-28 w-44 rounded-lg border border-white/10 object-cover object-top" />
               <span className="font-jetbrains mt-1 block truncate text-label text-white/50 group-hover:text-white/80">{s.split("/").pop()}</span>
             </a>
           ))}
@@ -380,20 +418,22 @@ export function PatchCard({
   );
 }
 
-/** Proposals the engine refused before they reached the gate. */
+/** Proposals the engine refused before they reached the gate: outside
+ *  knowledge/ or recipes/, unsourced, or identical to what is there. Each row
+ *  carries the engine's own reason verbatim, which is why the header needs no
+ *  gloss. */
 export function RefusedPatches({ refused }: { refused: { reason: string; target: string | null; id: string | null }[] }) {
   return (
-    <details className="rounded-xl border border-white/8 px-4 py-3" data-testid="article-refused-patches">
-      <summary className="font-jetbrains cursor-pointer text-label tracking-[0.12em] text-white/55 uppercase">
-        {refused.length} refused <Hint>proposals outside knowledge/ or recipes/, unsourced, or identical</Hint>
-      </summary>
-      <ul className="mt-2 space-y-1">
-        {refused.map((r, i) => (
-          <li key={i} className="font-jetbrains text-label text-white/60">
-            {[r.id, r.target].filter(Boolean).join(" · ") || "unnamed"} — <span className="text-amber-200/85">{r.reason}</span>
-          </li>
-        ))}
-      </ul>
-    </details>
+    <div data-testid="article-refused-patches">
+      <Fold title="refused" tally={{ value: refused.length, tone: "amber" }} level={3}>
+        <ul className="space-y-1">
+          {refused.map((r, i) => (
+            <li key={i} className="font-jetbrains text-label text-white/60">
+              {[r.id, r.target].filter(Boolean).join(" · ") || "unnamed"} — <span className="text-amber-200/85">{r.reason}</span>
+            </li>
+          ))}
+        </ul>
+      </Fold>
+    </div>
   );
 }

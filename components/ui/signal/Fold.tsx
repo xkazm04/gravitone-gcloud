@@ -10,6 +10,8 @@
 // surface (app/_phases/frames/FramesAssembly.tsx:360, app/_projects/RaceSheet.tsx
 // :501, app/playground/triage/Batch.tsx:73 …) — each with its own chevron, its
 // own spacing, and no memory of having been opened.
+// (The articles pair and the foundry lightbox have since adopted this; the
+// line numbers above are where they were.)
 //
 // THE HEADER HAS NO SLOT FOR A SENTENCE, and that absence is the component, for
 // the reason <TabRail> has none: a container with a slot for a paragraph will be

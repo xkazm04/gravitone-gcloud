@@ -389,6 +389,9 @@
         "app/_phases/script/_parts/GatePanel.tsx",
         "app/_phases/script/_parts/HypothesisColumn.tsx",
         "app/_phases/script/trailer/StructurePanel.tsx",
+        "app/articles/CritiquePanel.tsx",
+        "app/articles/RunView.tsx",
+        "app/articles/parts.tsx",
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/Lightbox.tsx"
@@ -474,7 +477,6 @@
         "app/_projects/ProjectDialog.tsx",
         "app/_projects/wizard/stages.tsx",
         "app/articles/new/NewArticle.tsx",
-        "app/articles/parts.tsx",
         "app/board/parts.tsx",
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/ExtractView.tsx",
@@ -514,6 +516,7 @@
         "app/_phases/motion/MotionStep.tsx",
         "app/_projects/ShelfHeader.tsx",
         "app/board/parts.tsx",
+        "app/calendar/BroadcastWeek.tsx",
         "app/foundry/DojoView.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/FoundryView.tsx",
@@ -661,11 +664,15 @@
       "adopters": [
         "app/_library/LibraryShelves.tsx",
         "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/articles/ArticlesView.tsx",
+        "app/calendar/MetricsTab.tsx",
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/StylesShelf.tsx",
         "app/library/assets/ShelfGallery.tsx",
-        "app/library/audio/Ledger.tsx"
+        "app/library/audio/Ledger.tsx",
+        "app/playground/hunt/Start.tsx",
+        "app/playground/triage/Judge.tsx"
       ]
     },
     "Panel": {
@@ -1305,10 +1312,13 @@
       "adopters": [
         "app/_library/LibraryShelves.tsx",
         "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/articles/ArticlesView.tsx",
+        "app/calendar/MetricsTab.tsx",
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/StylesShelf.tsx",
-        "app/library/assets/useShelf.ts"
+        "app/library/assets/useShelf.ts",
+        "app/playground/hunt/Start.tsx"
       ]
     }
   },
@@ -1722,21 +1732,24 @@
     },
     "app/articles": {
       "files": 13,
-      "kitImports": 0,
+      "kitImports": 1,
       "signalImports": 5,
       "parts": [
         "Button",
         "CHIP_CLASS",
         "Field",
+        "Fold",
         "Ghost",
         "Hint",
+        "Pager",
         "Provenance",
         "Segmented",
         "TALLY_TONE",
         "Tally",
         "TextArea",
         "TextInput",
-        "components/ui/Select#Select"
+        "components/ui/Select#Select",
+        "useWindow"
       ],
       "suspects": {
         "tab": 0,
@@ -1785,12 +1798,14 @@
     },
     "app/calendar": {
       "files": 16,
-      "kitImports": 0,
+      "kitImports": 1,
       "signalImports": 7,
       "parts": [
         "Button",
         "CHIP_CLASS",
         "Field",
+        "Keycaps",
+        "Pager",
         "Panel",
         "PipRow",
         "TALLY_TONE",
@@ -1798,7 +1813,8 @@
         "Tally",
         "TextArea",
         "TextInput",
-        "components/ui/Select#Select"
+        "components/ui/Select#Select",
+        "useWindow"
       ],
       "suspects": {
         "tab": 0,
@@ -2025,38 +2041,33 @@
     },
     "app/playground": {
       "files": 35,
-      "kitImports": 0,
+      "kitImports": 2,
       "signalImports": 12,
       "parts": [
         "CHIP_CLASS",
         "Ghost",
         "Hint",
         "Keycaps",
+        "Pager",
         "Panel",
         "PipRow",
         "Provenance",
         "TALLY_TONE",
         "TabRail",
         "Tally",
-        "components/ui/Select#Select"
+        "components/ui/Select#Select",
+        "useWindow"
       ],
       "suspects": {
         "tab": 1,
         "select": 0,
         "media": 0,
         "title": 0,
-        "typing": 3
+        "typing": 0
       },
       "suspectFiles": {
-        "app/playground/hunt/Audition.tsx": {
-          "typing": 1
-        },
         "app/playground/hunt/index.tsx": {
-          "tab": 1,
-          "typing": 1
-        },
-        "app/playground/triage/Judge.tsx": {
-          "typing": 1
+          "tab": 1
         }
       }
     },

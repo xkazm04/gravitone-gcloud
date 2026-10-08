@@ -87,3 +87,76 @@ export function activeSlotOf(
       (s.status === "scheduled" || s.status === "publishing" || s.status === "published"),
   );
 }
+
+/* ── moving through the weeks by key ──────────────────────────────────── */
+
+export type WeekKey = "prev" | "next" | "today" | "decide" | "close";
+
+/**
+ * What a key press means on the broadcast week, or null when it is not the
+ * week's. `[` / `]` page the weeks from anywhere on the tab; ← / → do the same
+ * only while focus is inside the week (`inWeek`), because everywhere else an
+ * arrow already belongs to something — the composer's radio rows, the tab
+ * rail, the date picker's grid. `T` is this week, `N` the next slot waiting on
+ * a decision, Esc closes the opened slot. Modified presses are the browser's.
+ * Pure, for the probe: the caller has already ruled out typing and overlays.
+ */
+export function weekKey(e: { key: string; ctrlKey?: boolean; metaKey?: boolean; altKey?: boolean }, inWeek: boolean): WeekKey | null {
+  if (e.ctrlKey || e.metaKey || e.altKey) return null;
+  switch (e.key) {
+    case "[":
+      return "prev";
+    case "]":
+      return "next";
+    case "ArrowLeft":
+      return inWeek ? "prev" : null;
+    case "ArrowRight":
+      return inWeek ? "next" : null;
+    case "t":
+    case "T":
+      return "today";
+    case "n":
+    case "N":
+      return "decide";
+    case "Escape":
+      return "close";
+    default:
+      return null;
+  }
+}
+
+const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** How many weeks from the week holding `now` to the week holding `iso`
+ *  (Monday-based, local). Rounded, so a daylight-saving hour inside the span
+ *  does not tip it. Null for an unparseable instant. */
+export function weekOffsetOf(iso: string, now: number): number | null {
+  const t = new Date(iso);
+  if (Number.isNaN(t.getTime())) return null;
+  const monday = (d: Date) => {
+    const s = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    s.setDate(s.getDate() - ((s.getDay() + 6) % 7));
+    return s.getTime();
+  };
+  return Math.round((monday(t) - monday(new Date(now))) / WEEK_MS);
+}
+
+/**
+ * The slot `N` opens: the first slot after `currentId` (in time order, id as
+ * the tiebreak) that `waits` says is waiting on a decision, wrapping round to
+ * the earliest; the earliest such slot when nothing is open. Undefined when no
+ * slot waits.
+ */
+export function nextWaiting<T extends Pick<ScheduleSlot, "id" | "publishAt">>(
+  slots: readonly T[],
+  currentId: string | null,
+  waits: (s: T) => boolean,
+): T | undefined {
+  const order = [...slots].sort((a, b) => a.publishAt.localeCompare(b.publishAt) || a.id.localeCompare(b.id));
+  const at = currentId === null ? -1 : order.findIndex((s) => s.id === currentId);
+  for (let i = 1; i <= order.length; i++) {
+    const s = order[(at + i + order.length) % order.length];
+    if (s && waits(s)) return s;
+  }
+  return undefined;
+}

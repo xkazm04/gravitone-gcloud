@@ -5,25 +5,32 @@
 // draft, the check report (failures first), the sources, the proposed patches,
 // then Approve and Reject. Approval is per post and per patch.
 //
+// LAYERED (Wave 5): the first read is the run's state — header, stepper, the
+// banner, and at the gate a summary of what the decision rests on (check
+// failures, overruled blockers, unanswered findings, patches picked), each a
+// link to its record. The records are sections that open on demand, the ones
+// holding the human's call open by themselves at the gate; the draft, every
+// finding and every check detail stay verbatim inside them.
+//
 // ABSENCE IS DRAWN AS ABSENCE. A section renders when the run directory holds
 // its file and not before: no sources table before research has finished, no
 // frame before the draft exists. A run that is still working says which step it
 // is on; it does not draw placeholders of the things it has not made.
 
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, FileWarning, GitPullRequest, RotateCw } from "lucide-react";
+import { ArrowLeft, ExternalLink, FileWarning, Gavel, GitPullRequest, RotateCw } from "lucide-react";
 import { useState } from "react";
 
 import { Field, TextArea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Primitives";
-import { CHIP_CLASS, Provenance, TALLY_TONE, Tally } from "@/components/ui/signal";
+import { CHIP_CLASS, Fold, Provenance, TALLY_TONE, Tally, type TallyTone } from "@/components/ui/signal";
 import { SURFACE } from "@/components/ui/tokens";
 import { STEP_NAMES, type ArticleRun } from "@/lib/articles/types";
 
 import { approveRun, rejectRun, resumeRun, runFileUrl, type RunDetail } from "./articlesClient";
 import { CritiqueView } from "./CritiquePanel";
 import { CheckView, DraftFrame, PatchCard, PhaseChip, RefusedPatches, Section, SourcesTable, Stepper } from "./parts";
-import { costOf, fmtUsd, nodesOf, phaseOf, resumeVerb, topicLine, type RunPhase } from "./runModel";
+import { costOf, fmtUsd, gateFigures, nodesOf, phaseOf, resumeVerb, topicLine, type GateFigures, type RunPhase } from "./runModel";
 import { useArticleRun } from "./useArticles";
 
 const MEDIUM_FILES = ["story.html", "tags.txt", "README.md"];
@@ -65,6 +72,7 @@ export default function RunView({ runId }: { runId: string }) {
   const atGate = phase === "gate";
   const approvedPatches = new Set(run.approval?.patches ?? []);
   const title = d.meta?.title ?? topicLine(run).text;
+  const gate = gateFigures(d);
 
   return (
     <main tabIndex={-1} className="space-y-5 pt-1 pb-28" data-testid="article-run" data-status={run.status}>
@@ -75,17 +83,39 @@ export default function RunView({ runId }: { runId: string }) {
       </div>
       <Banner run={run} detail={d} phase={phase} onRun={adopt} />
 
+      {atGate && <GateSummary detail={d} gate={gate} picked={picked.size} />}
+
+      {/* Each record below is a section that opens on demand. At the gate the
+          ones that hold the human's call open by themselves (the key remounts
+          them when a live run arrives there); before and after it the page is
+          the run's state, and every record is one press away. */}
+      {d.outline !== undefined && (
+        <Section id="outline" title="Outline" remember="articles.run.outline">
+          <pre className="font-jetbrains max-h-[60vh] overflow-auto pb-1 text-label leading-relaxed whitespace-pre-wrap text-white/75" data-testid="article-outline">
+            {d.outline || "(empty)"}
+          </pre>
+        </Section>
+      )}
+
       {d.post && (
-        <Section id="draft" title="Draft" aside={d.meta?.tags.length ? <span className="font-jetbrains text-label text-white/45">{d.meta.tags.join(" · ")}</span> : undefined}>
+        <Section
+          key={`draft-${atGate}`}
+          id="draft"
+          title="Draft"
+          defaultOpen={atGate}
+          marks={d.meta?.tags.length ? <span className="font-jetbrains text-label text-white/45">{d.meta.tags.join(" · ")}</span> : undefined}
+        >
           <DraftFrame runId={run.id} post={d.post} title={title} />
         </Section>
       )}
 
       {d.critique && (
         <Section
+          key={`critique-${atGate}`}
           id="critique"
           title="Critique"
-          aside={
+          defaultOpen={atGate && (gate.blockers > 0 || gate.unanswered > 0)}
+          marks={
             run.critique ? (
               <>
                 <Tally value={run.critique.reviewers.filter((x) => x.outcome === "completed").length} of={d.critique.reviewers.length} label="reviewed" tone="emerald" />
@@ -100,7 +130,19 @@ export default function RunView({ runId }: { runId: string }) {
       )}
 
       {d.check && (
-        <Section id="check" title="Check">
+        <Section
+          key={`check-${atGate}`}
+          id="check"
+          title="Check"
+          defaultOpen={atGate && (gate.fail > 0 || gate.notMeasured > 0)}
+          marks={
+            <>
+              {gate.fail > 0 && <Tally value={gate.fail} label="fail" tone="rose" />}
+              {gate.notMeasured > 0 && <Tally value={gate.notMeasured} label="not measured" tone="amber" />}
+              <Tally value={gate.pass} label="pass" tone="emerald" />
+            </>
+          }
+        >
           <CheckView report={d.check} runId={run.id} passes={d.checkPasses} />
         </Section>
       )}
@@ -109,7 +151,8 @@ export default function RunView({ runId }: { runId: string }) {
         <Section
           id="sources"
           title="Sources"
-          aside={
+          remember="articles.run.sources"
+          marks={
             <>
               <Tally value={d.sources.length} label="sources" />
               <Tally value={d.sources.filter((s) => s.primary).length} label="primary" tone="cyan" />
@@ -124,9 +167,11 @@ export default function RunView({ runId }: { runId: string }) {
 
       {(d.patches.length > 0 || (d.refused?.length ?? 0) > 0) && (
         <Section
+          key={`patches-${atGate}`}
           id="patches"
           title="Registry patches"
-          aside={
+          defaultOpen={atGate && d.patches.length > 0}
+          marks={
             atGate ? (
               <Tally value={picked.size} of={d.patches.length} label="approve" tone={picked.size ? "cyan" : "neutral"} />
             ) : run.approval ? (
@@ -340,10 +385,9 @@ function LandingFacts({ run }: { run: ArticleRun }) {
 
 function LandingLog({ log }: { log: string }) {
   return (
-    <details className="rounded-lg border border-white/8 px-3 py-2">
-      <summary className="font-jetbrains cursor-pointer text-label text-white/60">landing.log</summary>
-      <pre className="font-jetbrains mt-2 max-h-72 overflow-auto text-label whitespace-pre-wrap text-white/65">{log || "(empty)"}</pre>
-    </details>
+    <Fold title="landing.log" level={3}>
+      <pre className="font-jetbrains max-h-72 overflow-auto text-label whitespace-pre-wrap text-white/65">{log || "(empty)"}</pre>
+    </Fold>
   );
 }
 
@@ -371,6 +415,41 @@ function ResumeButton({ run, onRun }: { run: ArticleRun; onRun: (r: ArticleRun) 
       </Button>
       {error && <span className="font-jetbrains max-w-md text-right text-label break-words text-rose-200">{error}</span>}
     </span>
+  );
+}
+
+/* ── the gate, at a glance ────────────────────────────────────────────── */
+
+/** What the decision rests on, as counts that jump to their record: what the
+ *  check failed or could not measure, which blockers the writer overruled,
+ *  what is still unanswered, how many patches are picked. */
+function GateSummary({ detail, gate, picked }: { detail: RunDetail; gate: GateFigures; picked: number }) {
+  const marks: { href: string; key: string; value: number; of?: number; label: string; tone: TallyTone }[] = [];
+  if (detail.check) {
+    if (gate.fail) marks.push({ href: "#check", key: "fail", value: gate.fail, label: "check fail", tone: "rose" });
+    if (gate.notMeasured) marks.push({ href: "#check", key: "nm", value: gate.notMeasured, label: "not measured", tone: "amber" });
+    if (!gate.fail && !gate.notMeasured) marks.push({ href: "#check", key: "pass", value: gate.pass, label: "check pass", tone: "emerald" });
+  }
+  if (detail.critique) {
+    if (gate.blockers) marks.push({ href: "#critique", key: "blk", value: gate.blockers, label: "open blocker", tone: "rose" });
+    if (gate.unanswered) marks.push({ href: "#critique", key: "ua", value: gate.unanswered, label: "unanswered", tone: "amber" });
+  }
+  if (detail.patches.length) marks.push({ href: "#patches", key: "pt", value: picked, of: detail.patches.length, label: "patches", tone: picked ? "cyan" : "neutral" });
+  return (
+    <nav aria-label="gate summary" className="flex flex-wrap items-center gap-2 rounded-2xl border border-amber-300/25 bg-amber-400/[0.05] px-5 py-3" data-testid="article-gate-summary">
+      {marks.map((m) => (
+        <a key={m.key} href={m.href} className="rounded-full hover:brightness-125 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70">
+          <Tally value={m.value} {...(m.of !== undefined ? { of: m.of } : {})} label={m.label} tone={m.tone} />
+        </a>
+      ))}
+      <a
+        href="#gate"
+        className="font-jetbrains ml-auto inline-flex items-center gap-1.5 rounded-full border border-amber-300/40 px-3 py-1 text-label text-amber-100 transition hover:bg-amber-400/10 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/70"
+      >
+        <Gavel aria-hidden className="h-3.5 w-3.5" />
+        decide
+      </a>
+    </nav>
   );
 }
 

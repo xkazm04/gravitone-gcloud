@@ -293,3 +293,35 @@ export function topicLine(run: Pick<ArticleRun, "topic">): { address: string | n
   const t = run.topic;
   return { address: t.kind === "subject" && t.bundle && t.subject ? `${t.bundle}/${t.subject}` : null, text: t.text };
 }
+
+/* ── the gate, at a glance ────────────────────────────────────────────── */
+
+export interface GateFigures {
+  fail: number;
+  notMeasured: number;
+  pass: number;
+  /** Blocker findings of the latest round the writer did not accept: rejected,
+   *  deferred or unanswered. An accepted blocker was acted on; one the writer
+   *  overruled is exactly what the human has to weigh. */
+  blockers: number;
+  /** Findings of the latest round with no disposition yet. */
+  unanswered: number;
+}
+
+/** The figures the gate is decided on, read off the check report and the
+ *  critique's latest round. Zero where the file is absent. */
+export function gateFigures(d: { check?: Pick<CheckReport, "items" | "notMeasured">; critique?: CritiqueDetail }): GateFigures {
+  const c = d.check ? checkCounts(d.check) : { fail: 0, notMeasured: 0, pass: 0 };
+  let blockers = 0;
+  let unanswered = 0;
+  const round = d.critique?.rounds.find((r) => r.round === latestRound(d.critique!));
+  if (round) {
+    for (const g of findingGroups(round)) {
+      for (const x of g.rows) {
+        if (!x.disposition) unanswered++;
+        if (x.finding.severity === "blocker" && x.disposition?.disposition !== "accepted") blockers++;
+      }
+    }
+  }
+  return { ...c, blockers, unanswered };
+}

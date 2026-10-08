@@ -10,6 +10,10 @@
 // The week can hand it a PRESET — an hour clicked on the grid — as
 // `{ nonce, ... }`. A new nonce resets the
 // fields to that preset; the same nonce leaves the person's edits alone.
+//
+// The channel a slot was last scheduled on is remembered (lib/useRemembered.ts)
+// and is the next form's channel while it is still wired; a preset's channel,
+// or a press, still wins.
 
 import { Lock, Plus } from "lucide-react";
 import { useId, useState } from "react";
@@ -19,8 +23,9 @@ import { Button } from "@/components/ui/Primitives";
 import { Select } from "@/components/ui/Select";
 import { CHIP_CLASS, TALLY_TONE } from "@/components/ui/signal";
 import type { ChannelId, ExportRef, ScheduleSlot } from "@/lib/publish/types";
+import { useRemembered } from "@/lib/useRemembered";
 
-import { dayKey, fromLocalInput, nextFullHour, splitTags, timeLabel, toLocalInput } from "./calendarModel";
+import { CHANNEL_IDS, dayKey, fromLocalInput, nextFullHour, splitTags, timeLabel, toLocalInput } from "./calendarModel";
 import { Poster } from "./poster";
 import type { ChannelList, ExportList, Fetched, NewSlot } from "./publishClient";
 import { CHANNEL_STATUS_WORD, ChannelGlyph, CutAnExport, Refusal } from "./ui";
@@ -63,6 +68,7 @@ function ComposerForm({
   const id = useId();
   const [exportPick, setExportPick] = useState<string | null>(preset?.exportId ?? null);
   const [channelPick, setChannelPick] = useState<ChannelId | null>(preset?.channelId ?? null);
+  const [lastChannel, setLastChannel] = useRemembered<ChannelId>("calendar.channel", "youtube", CHANNEL_IDS);
   const [projectPick, setProjectPick] = useState("");
   const [when, setWhen] = useState<string | null>(preset?.when ?? null);
   const [title, setTitle] = useState<string | null>(null);
@@ -87,7 +93,7 @@ function ComposerForm({
   const firstFree = list.find((e) => !activeSlotOf(slots, e.id)) ?? list[0];
   const exportId = exportPick ?? firstFree?.id ?? "";
   const exp = list.find((e) => e.id === exportId) ?? null;
-  const channelId: ChannelId = channelPick ?? wired[0]?.id ?? "youtube";
+  const channelId: ChannelId = channelPick ?? (wired.some((c) => c.id === lastChannel) ? lastChannel : wired[0]?.id) ?? "youtube";
   const whenValue = when ?? (now === null ? "" : toLocalInput(nextFullHour(new Date(now))));
   const named = exp ? (projectTitle(exp.projectId, projects) ?? "") : "";
   const titleValue = title ?? named;
@@ -147,6 +153,7 @@ function ComposerForm({
       setRefusal(`${r.status || "network"} · ${r.error}`);
       return;
     }
+    setLastChannel(channelId);
     setTitle(null);
     setProjectPick("");
     setDescription("");
