@@ -22,7 +22,6 @@ import shutil
 import sys
 import time
 import subprocess
-import urllib.request
 from pathlib import Path
 
 HERE = Path(__file__).parent
@@ -31,6 +30,7 @@ ROOT = HERE.parent.parent
 sys.path.insert(0, str(PROBE))
 sys.path.insert(0, str(HERE))
 import guard  # noqa: E402
+import consistency  # noqa: E402
 from consistency import COMFY_OUT  # noqa: E402
 from probe import run_ollama  # noqa: E402
 import grade  # noqa: E402
@@ -64,29 +64,11 @@ def wan_workflow(prompt, seed, width, height, length, steps=20, cfg=5.0, prefix=
 
 def generate_video(workflow, timeout=1800):
     """Queue and wait; returns the saved video path. Longer ceiling than a
-    still — a 121-frame decode is minutes on its own."""
-    body = json.dumps({"prompt": workflow}).encode()
-    req = urllib.request.Request("http://127.0.0.1:8188/prompt", data=body,
-                                 headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=60) as r:
-        pid = json.loads(r.read())["prompt_id"]
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        time.sleep(6)
-        try:
-            with urllib.request.urlopen(f"http://127.0.0.1:8188/history/{pid}", timeout=30) as r:
-                hist = json.loads(r.read())
-        except Exception:  # noqa: BLE001
-            continue
-        if pid not in hist:
-            continue
-        for node in hist[pid].get("outputs", {}).values():
-            for key in ("images", "video", "gifs"):
-                for item in node.get(key, []):
-                    if str(item.get("filename", "")).endswith((".webm", ".mp4")):
-                        return COMFY_OUT / item.get("subfolder", "") / item["filename"]
-        raise RuntimeError(f"finished with no video: {hist[pid].get('status')}")
-    raise RuntimeError(f"comfyui did not finish {pid} in {timeout}s")
+    still -- a 121-frame decode is minutes on its own. The poll loop is
+    consistency.generate's (guard.COMFY host, a failed poll tolerated while the
+    card is busy, a vanished process named)."""
+    return consistency.generate(workflow, timeout=timeout,
+                                kinds=("images", "video", "gifs"), exts=(".webm", ".mp4"))
 
 
 def posters(video, outdir, stem):

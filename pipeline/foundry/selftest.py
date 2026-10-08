@@ -1176,6 +1176,44 @@ def test_identity_person_box_detects_each_frame_once():
     check("identity: a frame regenerated in place is detected again", len(calls), 4)
 
 
+def test_dojo_video_follows_guard_comfy_and_survives_a_busy_card():
+    """dojo_video.generate_video hard-coded 127.0.0.1:8188 while ComfyUI resolves
+    per machine through guard.COMFY, and carried a poll loop with neither of
+    consistency.generate's rules."""
+    import time as _time
+    import urllib.error
+    import urllib.request
+    spec = importlib.util.spec_from_file_location("dojo_video", HERE / "dojo_video.py")
+    DV = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(DV)
+    done = {"p1": {"outputs": {"10": {"images": [{"filename": "dojo-video_00001_.webm", "subfolder": ""}]}}}}
+    urls = []
+    polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req if isinstance(req, str) else req.full_url
+        urls.append(url)
+        if url.endswith("/prompt"):
+            return _bytes({"prompt_id": "p1"})
+        polls.append(url)
+        if len(polls) == 1:
+            raise urllib.error.URLError("timed out while the card was busy")
+        return _bytes(done)
+    saved = (urllib.request.urlopen, _time.sleep, DV.guard.COMFY, DV.guard.comfy_process_ids)
+    urllib.request.urlopen, _time.sleep = fake_urlopen, (lambda s: None)
+    DV.guard.COMFY = "http://sentinel-host:9999"
+    DV.guard.comfy_process_ids = lambda: [4242]
+    try:
+        got = DV.generate_video({"1": {}}, timeout=60).name
+    except Exception as e:
+        got = f"{type(e).__name__}: {e}"
+    finally:
+        urllib.request.urlopen, _time.sleep, DV.guard.COMFY, DV.guard.comfy_process_ids = saved
+    check("dojo_video: a failed poll on a busy card is survived", got, "dojo-video_00001_.webm")
+    check("dojo_video: every request goes to guard.COMFY",
+          sorted({u.split("/")[2] for u in urls}), ["sentinel-host:9999"])
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1211,6 +1249,7 @@ TESTS = [
     test_replicate_one_unreadable_reannotation_does_not_end_phase_2,
     test_identity_decision_functions_load_without_torch_or_pil,
     test_identity_person_box_detects_each_frame_once,
+    test_dojo_video_follows_guard_comfy_and_survives_a_busy_card,
 ]
 
 
