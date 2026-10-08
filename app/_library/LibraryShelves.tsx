@@ -18,6 +18,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { BookmarkPlus, Music2, Search, SearchX } from "lucide-react";
 
+import { Pager, useWindow } from "@/components/kit";
 import { CHIP_CLASS, Ghost, Provenance, TALLY_TONE, Tally } from "@/components/ui/signal";
 import { useAnnounce } from "@/lib/announcer";
 import { listAssets } from "@/lib/assets";
@@ -31,6 +32,11 @@ const KINDS: OutputKind[] = ["image", "audio"];
 const STEPS: OutputStep[] = ["frames", "score"];
 
 const usd = (n: number | undefined) => (n === undefined ? undefined : `$${n.toFixed(2)}`);
+
+// A page of cards. A plate is a data: URL of ~400 KB (frames/useFrames.ts), so
+// every card drawn is an image decoded; a project with alternatives per shot
+// reaches dozens. The first page is three full rows at the widest grid.
+const PAGE = 12;
 
 /** What a source has to say when it could not be read in full, in its own words. */
 const troubleOf = (s: SourceRead): { text: string; refused: boolean } | null => {
@@ -73,6 +79,13 @@ export default function LibraryShelves({ projectId }: { projectId: string }) {
       })
     : [];
   const nothing = !read || (shelf.length === 0 && missing.length === 0);
+  // `key`: a different filter or query is a different list, back to page one.
+  const page = useWindow(shown, { size: PAGE, key: `${kind ?? ""}|${q.trim().toLowerCase()}` });
+  const byKind = useMemo(() => {
+    const n: Record<OutputKind, number> = { image: 0, audio: 0 };
+    for (const o of shelf) n[o.kind]++;
+    return n;
+  }, [shelf]);
 
   return (
     // pb-8, not pb-28: the deep bottom padding existed to clear the fixed
@@ -89,7 +102,7 @@ export default function LibraryShelves({ projectId }: { projectId: string }) {
               <RailRow
                 key={k}
                 label={k}
-                count={shelf.filter((o) => o.kind === k).length}
+                count={byKind[k]}
                 active={kind === k}
                 onClick={() => setKind(kind === k ? null : k)}
               />
@@ -144,13 +157,26 @@ export default function LibraryShelves({ projectId }: { projectId: string }) {
             )}
           </div>
         ) : (
-          <ul className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {shown.map((o) => (
-              <li key={o.id}>
-                <OutputCard output={o} uid={uid} projectId={projectId} kept={kept.get(o.id)} onKept={refreshKept} />
-              </li>
-            ))}
-          </ul>
+          <>
+            <ul className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+              {page.visible.map((o) => (
+                <li key={o.id}>
+                  <OutputCard output={o} uid={uid} projectId={projectId} kept={kept.get(o.id)} onKept={refreshKept} />
+                </li>
+              ))}
+            </ul>
+            {page.total > PAGE && (
+              <Pager
+                shown={page.shown}
+                total={page.total}
+                onMore={page.more}
+                onAll={page.all}
+                step={PAGE}
+                noun="outputs"
+                auto
+              />
+            )}
+          </>
         )}
 
         {missing.length > 0 && (
@@ -185,7 +211,7 @@ function OutputCard({
     <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03]">
       {o.kind === "image" ? (
         // eslint-disable-next-line @next/next/no-img-element -- a plate is a data: URL or a public path, not an optimisable asset
-        <img src={o.src} alt={o.title} className="h-32 w-full object-cover" />
+        <img src={o.src} alt={o.title} loading="lazy" decoding="async" className="h-32 w-full object-cover" />
       ) : (
         <div className="flex h-32 flex-col items-center justify-center gap-3 bg-white/[0.02] px-3">
           <Music2 className="h-6 w-6 text-white/30" aria-hidden />

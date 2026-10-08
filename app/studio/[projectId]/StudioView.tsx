@@ -39,14 +39,17 @@
 // (see `pick`): the way back to the work is the same control the work is
 // navigated with, so the shelf can never become a room you are stuck in.
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import { Boxes, FileQuestion, Lock, LockOpen, X } from "lucide-react";
 
 import StudioFrame from "@/components/ui/StudioFrame";
+import { pendingPanel } from "@/components/ui/Pending";
 import { Button } from "@/components/ui/Primitives";
+import { Keycaps } from "@/components/ui/signal";
 import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useAuth } from "@/lib/useAuth";
 import {
@@ -63,10 +66,34 @@ import {
   type Project,
 } from "@/lib/projects";
 
-import LibraryShelves from "../../_library/LibraryShelves";
 import { useProjectOutputs } from "../../_library/useProjectOutputs";
 import { STEPS } from "./phases";
 import Stepper from "./Stepper";
+
+// THE SHELF IS A GLANCE SIDEWAYS, SO IT IS NOT IN THE STUDIO'S CHUNK. It renders
+// only while Outputs is pressed, and most visits never press it — but as a
+// static import it shipped the shelf grid, the keep control, the asset store's
+// reader and its card chrome with every project opened. Same pattern as the six
+// steps in phases.tsx: its own chunk, fetched on first open, with the fetch
+// started on hover/focus of the button that opens it.
+const loadShelves = () => import("../../_library/LibraryShelves");
+const LibraryShelves = dynamic(loadShelves, { loading: pendingPanel });
+const preloadShelves = () => void loadShelves().catch(() => {});
+
+// The rail's keymap. `[`/`]` are the studio's own; the cut binds the arrows,
+// Space and J/K/L to the window while it is mounted, so the step keys stay off
+// all of them. On the rail itself the arrows move focus only — the press is
+// still Enter, as on every TabRail in the app.
+const STEP_KEYS = [
+  { keys: ["[", "]"], does: "previous · next step" },
+  { keys: ["←", "→"], does: "along the rail" },
+];
+
+const typing = (el: EventTarget | null) => {
+  const n = el as HTMLElement | null;
+  if (!n || typeof n.tagName !== "string") return false;
+  return n.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(n.tagName);
+};
 
 /**
  * WHAT HAPPENED AT THE DOOR. Three different facts used to be one
@@ -251,7 +278,44 @@ export default function StudioView({ projectId }: { projectId: string }) {
     })();
   }, [wanted, door.kind, id, user]);
 
+  // `[` / `]` walk the rail from anywhere in the studio — the same move as a rail
+  // click, so it parks the project and closes Outputs exactly as `pick` does.
+  // Not while typing (a bracket in a field is a bracket), not with a modifier,
+  // and not when a surface has already claimed the key.
+  const pickRef = useRef(pick);
+  useEffect(() => {
+    pickRef.current = pick;
+  });
+  const openPhase = door.kind === "open" && project ? phaseKey : null;
+  useEffect(() => {
+    if (!openPhase) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+      // A dialog open over a step owns the keyboard; the rail must not move
+      // the step out from under it.
+      if (document.querySelector('[aria-modal="true"]')) return;
+      const by = e.key === "]" ? 1 : e.key === "[" ? -1 : 0;
+      if (!by) return;
+      const next = PHASES[PHASES.indexOf(openPhase) + by];
+      if (!next) return;
+      e.preventDefault();
+      STEPS.find((s) => s.key === next)?.preload();
+      pickRef.current(next);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [openPhase]);
+
   const step = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
+  // THE STEP IS A HEAVY SUBTREE AND THE SHELL RE-RENDERS FOR THINGS IT DOES NOT
+  // READ: the Outputs tally landing, the project record refreshed after a park,
+  // a sign-off. `render` builds a fresh element each call, so every one of those
+  // re-rendered the whole step — a research board or a frames sheet — for a
+  // prop that had not changed. Memoised on what the step does read (which step,
+  // which project), React bails out at the element and the step renders for its
+  // own state only.
+  const projectKey = project?.id ?? null;
+  const surface = useMemo(() => (projectKey ? step.render(projectKey) : null), [step, projectKey]);
   const isLocked = Boolean(project?.signedOff?.[phaseKey]);
   const blocker = project ? signOffBlocker(project, phaseKey) : null;
 
@@ -397,6 +461,8 @@ export default function StudioView({ projectId }: { projectId: string }) {
                   data-testid="studio-outputs"
                   aria-pressed={outputsOpen}
                   onClick={() => setOutputsOpen((open) => !open)}
+                  onPointerEnter={preloadShelves}
+                  onFocus={preloadShelves}
                   className={`font-jetbrains flex cursor-pointer items-center gap-2 rounded-full border px-3.5 py-1.5 text-label transition ${
                     outputsOpen
                       ? "border-cyan-400/45 bg-cyan-400/10 text-cyan-200"
@@ -489,14 +555,17 @@ export default function StudioView({ projectId }: { projectId: string }) {
                 glance sideways, not a place that replaced the studio. That is
                 also why the shelf never became a route. */}
             {project && (
-              <div className="mt-6">
-                <Stepper active={phaseKey} project={project} progress={project.progress} onPick={pick} />
+              <div className="mt-6 flex items-center gap-2">
+                <div className="min-w-0 flex-1">
+                  <Stepper active={phaseKey} project={project} progress={project.progress} onPick={pick} />
+                </div>
+                <Keycaps map={STEP_KEYS} label="Step keys" />
               </div>
             )}
             {/* LibraryShelves brings its own mt-8, so the section adds none
                 when it is the one rendering. */}
             <section className={outputsOpen ? undefined : "mt-8"}>
-              {!project ? null : outputsOpen ? <LibraryShelves projectId={project.id} /> : step.render(project.id)}
+              {!project ? null : outputsOpen ? <LibraryShelves projectId={project.id} /> : surface}
             </section>
           </>
         )}
