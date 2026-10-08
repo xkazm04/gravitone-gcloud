@@ -21,9 +21,9 @@ and still block. Pillow and numpy are imported INSIDE crop_letterbox and
 publish, so keep out of cases that call those; a case that needs a card belongs
 in a plan, not here.
 
-WHAT IT IS NOT. It is a courtesy, not yet a gate -- nothing invokes it. Running
-it is one command and it takes under a second; run it after touching anything
-in this directory.
+WHAT IT IS. A BLOCKING gate: the `python` job in .github/workflows/gates.yml
+runs it. It passes from any working directory (paths are anchored to HERE) and
+takes under a second; run it after touching anything in this directory.
 """
 
 import importlib.util
@@ -567,7 +567,7 @@ def test_lane_record_replay_argv_and_consistency_kwargs():
     LR = load_vlm("lane_record")
     C = load_vlm("consistency")
 
-    rec = LR.read("pipeline/vlm-probe/shots/reference-face-e25")
+    rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/shots/reference-face-e25")
     argv = LR.replay_argv(rec)
     want = ["consistency.py", "--lane", "reference", "--ref-crop", "face", "--late", "0.25", "--tag=-face-e25", "--steps", "20", "--seed", "770425"]
     check("replay_argv for reference-face-e25", argv, want)
@@ -593,7 +593,7 @@ def test_lane_record_replay_argv_and_consistency_kwargs():
 
 def test_lane_record_replay_argv_baseline_zoom():
     LR = load_vlm("lane_record")
-    rec = LR.read("pipeline/vlm-probe/shots/baseline-zoom")
+    rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/shots/baseline-zoom")
     argv = LR.replay_argv(rec)
     check("baseline-zoom replay_argv has --zoom", "--zoom" in argv, True)
     check("baseline-zoom replay_argv lane is baseline", "--lane" in argv and argv[argv.index("--lane") + 1] == "baseline", True)
@@ -613,7 +613,7 @@ def test_lane_record_reads_all_8_tracked_lanes():
         "pipeline/vlm-probe/clips/ref2va",
     ]
     for p in paths:
-        rec = LR.read(p)
+        rec = LR.read(HERE.parent.parent / p)
         check(f"read({p}) is not None", rec is not None, True)
         argv = LR.replay_argv(rec)
         check(f"replay_argv({p}) is non-empty", isinstance(argv, list) and len(argv) > 0, True)
@@ -786,7 +786,7 @@ def test_lane_record_record_clip_hero_repo_relative():
     )
     check("motion record hero is repo-relative", rec["hero"], "pipeline/vlm-probe/shots/reference/00-hero.png")
 
-    chain_rec = LR.read("pipeline/vlm-probe/clips/chain")
+    chain_rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/clips/chain")
     resolved_hero = Path(chain_rec["hero"])
     expected_hero = (ROOT / "pipeline" / "vlm-probe" / "shots" / "reference" / "00-hero.png").resolve()
     check("legacy clips/chain hero resolves to checkout root", resolved_hero, expected_hero)
