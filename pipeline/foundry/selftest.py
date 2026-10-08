@@ -1105,6 +1105,42 @@ def test_replicate_one_unreadable_reannotation_does_not_end_phase_2():
           (None, ["arcane-fights-002.jpg"]))
 
 
+def test_identity_decision_functions_load_without_torch_or_pil():
+    """identity.py owns the ruler that every published identity number is read
+    against, and its refusal (ruler_blindness) used to be unpinnable in CI
+    because torch and PIL were imported at module level."""
+    saved = {k: sys.modules.get(k) for k in ("torch", "PIL", "PIL.Image", "PIL.ImageDraw")}
+    for k in saved:
+        sys.modules[k] = None
+    try:
+        try:
+            I = load_vlm("identity")
+        except ImportError as e:
+            check("identity: loads with torch and PIL blocked", f"ImportError: {e}", "loaded")
+            return
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+    check("identity: loads with torch and PIL blocked", True, True)
+    inverted = {"id_within": 0.2, "id_floor": 0.5, "id_ceil": 0.4, "look_floor": 0.3}
+    sound = {"id_within": 0.2, "id_floor": 0.4, "id_ceil": 0.7, "look_floor": 0.3}
+    check("identity: an inverted scale is refused", isinstance(I.ruler_blindness(inverted), str), True)
+    check("identity: a sound scale is not refused", I.ruler_blindness(sound), None)
+    check("identity: a missing floor is refused",
+          isinstance(I.ruler_blindness({**sound, "id_floor": None}), str), True)
+    check("identity: no face reads as unscored", I.verdict(None, 0.1, sound), "unscored (no face detected)")
+    check("identity: at the ceiling reads as a different person",
+          I.verdict(0.7, 0.1, sound).startswith("READS AS A DIFFERENT PERSON"), True)
+    rows = [("floor", "a", "b", 0.3, 0.2, ""), ("hard-ceil", "a", "c", 0.6, 0.5, "")]
+    check("identity: scale_from reads floor and ceiling",
+          (I.scale_from(rows)["id_floor"], I.scale_from(rows)["id_ceil"]), (0.3, 0.6))
+    check("identity: missing_anchors names every absent still",
+          len(I.missing_anchors(tempfile.mkdtemp())), len(I.ANCHORS))
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1138,6 +1174,7 @@ TESTS = [
     test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on,
     test_reconcile_resume_is_per_annotator,
     test_replicate_one_unreadable_reannotation_does_not_end_phase_2,
+    test_identity_decision_functions_load_without_torch_or_pil,
 ]
 
 
