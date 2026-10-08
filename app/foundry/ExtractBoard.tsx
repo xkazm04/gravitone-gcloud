@@ -6,7 +6,8 @@
 // scene the gallery never showed. The verdict is on the ROW: "did this look
 // hold" is one decision, and the transfer is the tile that answers it.
 //
-// Keyboard: ↑/↓ move the focused row, K keeps, X throws, U clears. Any tile
+// Keyboard: ↑/↓ move the focused row, K keeps, X throws, U clears, N jumps to
+// the next row without a verdict. Any tile
 // opens the zoom, which shows the image with the words behind it — the
 // prompt, the critique, the readback — so a wrong-looking score can be
 // audited against what the grader actually read.
@@ -25,10 +26,12 @@
 // model that made and read the image (a round's are its own; the run's engines
 // line is only what served last).
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
+import { Pager, useWindow } from "@/components/kit";
 import Modal from "@/components/ui/Modal";
-import { Hint } from "@/components/ui/signal";
+import { Fold, Hint } from "@/components/ui/signal";
+import { typing } from "@/lib/board/keys";
 import { settleReason } from "@/lib/foundry/extract/engine";
 import type { ExtractManifest, ExtractVerdict, ExtractVerdicts, ExtractedStyle, ReplicaRound, SettleReason, Transfer } from "@/lib/foundry/extract/types";
 import { ABANDONED_SETTLES, OBSERVABLE_FIELDS } from "@/lib/foundry/extract/types";
@@ -36,7 +39,7 @@ import { ABANDONED_SETTLES, OBSERVABLE_FIELDS } from "@/lib/foundry/extract/type
 import { activatesOnEnter } from "./CullGrid";
 import { extractFileUrl } from "./extractClient";
 import { Art, ErrorNote, FlagPill, Glass, Label, ScorePill, VerdictButtons, VerdictStamp, pct } from "./ui";
-import { refusedKey } from "./keyGuard";
+import { nextUndecided, refusedKey } from "./keyGuard";
 
 interface Zoom {
   title: string;
@@ -123,6 +126,11 @@ function focusedZoom(style: ExtractedStyle, sources: Map<string, ExtractManifest
   };
 }
 
+/** Rows drawn at first, and per page after. A row is a style's whole evidence —
+ *  its sources, every replica round and the transfer, ten to twenty pictures —
+ *  so a sixty-image gallery's thirty styles were six hundred images on open. */
+const ROWS = 6;
+
 export function ExtractBoard({
   run,
   verdicts,
@@ -148,16 +156,37 @@ export function ExtractBoard({
 
   useEffect(() => onZoomChange(zoom !== null), [zoom, onZoomChange]);
 
+  const rows = useWindow(run.styles, { size: ROWS, key: run.id });
+  const { shown, more, all } = rows;
+  /** Draw a row before the keys land on it: a step past the window widens it by
+   *  a page, a jump (N) further than that opens the rest. */
+  const reveal = useCallback(
+    (id: string) => {
+      const at = order.indexOf(id);
+      if (at < shown) return;
+      if (at < shown + ROWS) more();
+      else all();
+    },
+    [order, shown, more, all],
+  );
+  const focusRow = useCallback(
+    (id: string) => {
+      reveal(id);
+      onFocus(id);
+    },
+    [reveal, onFocus],
+  );
+
   useEffect(() => {
     if (!keysEnabled) return;
     const onKey = (e: KeyboardEvent) => {
       if (refusedKey(e)) return;
+      if (typing(e.target)) return;
       const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
       const i = focused ? order.indexOf(focused) : -1;
       const step = (d: number) => {
         if (!order.length) return;
-        onFocus(order[Math.min(order.length - 1, Math.max(0, (i < 0 ? 0 : i) + d))]);
+        focusRow(order[Math.min(order.length - 1, Math.max(0, (i < 0 ? 0 : i) + d))]);
       };
       switch (e.key) {
         case "ArrowDown":
@@ -180,6 +209,12 @@ export function ExtractBoard({
         case "U":
           if (focused && !readOnly) onVerdict(focused, null);
           break;
+        case "n":
+        case "N": {
+          const next = nextUndecided(order, focused, (id) => !verdicts[id]);
+          if (next) focusRow(next);
+          break;
+        }
         case "Enter": {
           // Enter belongs to the focused element when that element activates on
           // it — the same rule, and the same defect, as CullGrid's grid. Nothing
@@ -205,7 +240,7 @@ export function ExtractBoard({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [keysEnabled, readOnly, focused, order, run.styles, sourcesById, onFocus, onVerdict]);
+  }, [keysEnabled, readOnly, focused, order, verdicts, run.styles, sourcesById, focusRow, onVerdict]);
 
   useEffect(() => {
     if (!focused) return;
@@ -244,7 +279,7 @@ export function ExtractBoard({
 
   return (
     <div className="flex flex-col gap-5">
-      {run.styles.map((st) => {
+      {rows.visible.map((st) => {
         const v = verdicts[st.id]?.verdict;
         const best = bestReplica(st);
         const transfer = meanScore(st.transfers.map((t) => t.score));
@@ -333,25 +368,49 @@ export function ExtractBoard({
                 </div>
               </Column>
 
+              {/* EACH REPLICA'S LAST ROUND, the rest one press down. The last
+                  round is where the critique loop stopped, and the settle chip
+                  beside it says why; the rounds before it are how it got there —
+                  the audit, not the verdict. All of a row's rounds were drawn
+                  before (replicas × rounds pictures per row, sixteen at the
+                  steppers' maximum). One remembered Fold per row, so a curator
+                  who reads the progression opens it once for every row. */}
               <Column label={`replicas · words only · ${run.options.rounds} round${run.options.rounds === 1 ? "" : "s"}`}>
                 <div className="flex flex-col gap-3">
-                  {st.replicas.map((rep) => {
-                    const settled = settleReason(run, rep.rounds);
-                    return (
-                      <div key={rep.source} className="flex flex-col gap-1.5">
-                        <span className="flex flex-wrap items-center justify-between gap-2">
-                          <span className="font-jetbrains text-label text-white/40">{rep.source}</span>
-                          {settled && <SettleChip reason={settled} />}
-                        </span>
-                        <div className="grid grid-cols-2 gap-2">
-                          {rep.rounds.map((r) => (
-                            <RoundThumb key={r.n} run={run.id} style={st} round={r} source={rep.source} onZoom={setZoom} />
-                          ))}
+                  <div className="grid grid-cols-2 gap-x-2 gap-y-3">
+                    {st.replicas.map((rep) => {
+                      const settled = settleReason(run, rep.rounds);
+                      const last = rep.rounds[rep.rounds.length - 1];
+                      return (
+                        <div key={rep.source} className="flex min-w-0 flex-col gap-1.5">
+                          <span className="flex flex-wrap items-center justify-between gap-1.5">
+                            <span className="font-jetbrains truncate text-label text-white/40">{rep.source}</span>
+                            {settled && <SettleChip reason={settled} />}
+                          </span>
+                          {last && <RoundThumb run={run.id} style={st} round={last} source={rep.source} onZoom={setZoom} />}
                         </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })}
+                  </div>
                   {!st.replicas.length && <Art alt="waiting for replicas" state="queued" className="aspect-video" />}
+                  {st.replicas.some((rep) => rep.rounds.length > 1) && (
+                    <Fold title="earlier rounds" tally={{ value: st.replicas.reduce((a, rep) => a + Math.max(0, rep.rounds.length - 1), 0) }} remember="foundry.extract.earlier" level={5}>
+                      <div className="flex flex-col gap-3">
+                        {st.replicas
+                          .filter((rep) => rep.rounds.length > 1)
+                          .map((rep) => (
+                            <div key={rep.source} className="flex flex-col gap-1.5">
+                              <span className="font-jetbrains text-label text-white/40">{rep.source}</span>
+                              <div className="grid grid-cols-2 gap-2">
+                                {rep.rounds.slice(0, -1).map((r) => (
+                                  <RoundThumb key={r.n} run={run.id} style={st} round={r} source={rep.source} onZoom={setZoom} />
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </Fold>
+                  )}
                 </div>
               </Column>
 
@@ -367,6 +426,7 @@ export function ExtractBoard({
           </section>
         );
       })}
+      {rows.total > ROWS && <Pager shown={rows.shown} total={rows.total} onMore={rows.more} onAll={rows.all} step={ROWS} noun="styles" auto />}
 
       <Modal open={zoom !== null} onClose={() => setZoom(null)} title={zoom?.title ?? ""} className="max-w-[min(1200px,94vw)]">
         {zoom && (

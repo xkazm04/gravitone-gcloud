@@ -56,6 +56,7 @@ import { Keycaps } from "@/components/ui/signal";
 import { calibrate, seriesKey } from "@/lib/foundry/calibration";
 import type { CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
+import { useRemembered } from "@/lib/useRemembered";
 
 import { CullGrid } from "./CullGrid";
 import { Lightbox } from "./Lightbox";
@@ -113,11 +114,21 @@ const CULL_KEYS = [
   { keys: ["K"], does: "keep" },
   { keys: ["X"], does: "reject" },
   { keys: ["U"], does: "clear" },
+  { keys: ["N"], does: "next undecided" },
   { keys: ["Enter"], does: "compare" },
 ];
 
+/** Every station, for the remembered tab: a value from an older build that is no
+ *  longer one of these reads as the cull. */
+const TABS: readonly Tab[] = ["cull", "extract", "styles", "dojo", "strips"];
+
 export default function FoundryView() {
-  const [tab, setTab] = useState<Tab>("cull");
+  // THE STATION IS REMEMBERED. An operator who works the Extract bench or the
+  // Dojo gate came back to the cull on every reload and walked over again; the
+  // panel they left is the one they open on (lib/useRemembered.ts, one evicted
+  // record). The cull's own state still loads underneath — its runs feed the
+  // header's figures whichever station is in front.
+  const [tab, setTab] = useRemembered<Tab>("foundry.tab", "cull", TABS);
   const plant = usePlant();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [runsError, setRunsError] = useState<string | null>(null);

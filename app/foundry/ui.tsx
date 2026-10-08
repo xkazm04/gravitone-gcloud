@@ -382,7 +382,7 @@ export function Art({
     <div className={`relative overflow-hidden bg-white/[0.03] ${rounded} ${className}`}>
       {src && shown === "ready" ? (
         // eslint-disable-next-line @next/next/no-img-element -- served off local disk through /api/foundry/file; nothing for next/image to optimise
-        <img src={src} alt={alt} loading="lazy" onError={() => setFailedSrc(src)} className={`absolute inset-0 h-full w-full ${fit === "cover" ? "object-cover" : "object-contain"}`} />
+        <img src={src} alt={alt} loading="lazy" decoding="async" onError={() => setFailedSrc(src)} className={`absolute inset-0 h-full w-full ${fit === "cover" ? "object-cover" : "object-contain"}`} />
       ) : (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center gap-1.5"

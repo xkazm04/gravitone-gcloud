@@ -29,13 +29,15 @@ import { ImagePlus, Minus, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/Primitives";
-import { Hint, Keycaps, Tally } from "@/components/ui/signal";
+import { Pager, useWindow } from "@/components/kit";
+import { Fold, Hint, Keycaps, Tally } from "@/components/ui/signal";
 import { foreignLease, hasFailures } from "@/lib/foundry/extract/engine";
 import type { ExtractCommitPlan, ExtractCommitResult, ExtractDetail, ExtractSummary, ExtractVerdict, ExtractVerdicts } from "@/lib/foundry/extract/types";
 import { usePolling } from "@/lib/usePolling";
+import { useRemembered } from "@/lib/useRemembered";
 
 import { ExtractBoard } from "./ExtractBoard";
-import { RailFrame, RailItem } from "./RunCards";
+import { RailFrame, RailItem, when } from "./RunCards";
 import { commitExtractRun, createExtractRun, fetchExtractRun, fetchExtractRuns, prepareUpload, previewExtractCommit, saveExtractVerdicts, stepExtractRun } from "./extractClient";
 import { EXTRACT_COMMITTABLE, EXTRACT_LIVE, EXTRACT_STATUS_WORD, extractKind } from "./parts";
 import { BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PlanFact, PrimaryAction, ProgressRail, SaveNote, StatusChip, useCommitPlan, type SaveKind } from "./ui";
@@ -150,19 +152,44 @@ export function ExtractView() {
     [adoptVerdicts],
   );
 
+  // THE EXTRACTION LEFT OPEN IS THE ONE THAT OPENS. Closing this tab pauses a
+  // run (the drive loop lives here), so coming back meant finding it in the rail
+  // to resume it, or to finish its cull; now the page opens on it, paused, with
+  // its resume / retry where they always were. "New extraction" is remembered
+  // the same way (as the empty string), so an operator who left on the upload
+  // form comes back to it. Applied once, on the first list that names the run.
+  const [lastRun, setLastRun] = useRemembered<string>("foundry.extract.run", "");
+  const lastRunRef = useRef(lastRun);
+  useEffect(() => {
+    lastRunRef.current = lastRun;
+  });
+  const restored = useRef(false);
+
   const loadRuns = useCallback(() => {
     fetchExtractRuns().then(
       (r) => {
         setRuns(r);
         setRunsError(null);
+        if (restored.current) return;
+        restored.current = true;
+        const id = lastRunRef.current;
+        if (!id || !r.some((x) => x.id === id)) return;
+        // Only onto an untouched page: a run the reader already picked wins.
+        setSelected((s) => {
+          if (s !== null) return s;
+          loadDetail(id, false);
+          return id;
+        });
       },
       (e) => setRunsError(e instanceof Error ? e.message : "failed"),
     );
-  }, []);
+  }, [loadDetail]);
   useEffect(loadRuns, [loadRuns]);
 
   const selectRun = useCallback(
     (id: string | null) => {
+      restored.current = true;
+      setLastRun(id ?? "");
       driveRef.current = false;
       setDriving(false);
       setDriveError(null);
@@ -174,7 +201,7 @@ export function ExtractView() {
       setSave("idle");
       if (id) loadDetail(id, false);
     },
-    [loadDetail, clearPlan],
+    [loadDetail, clearPlan, setLastRun],
   );
 
   /* ── The drive loop ───────────────────────────────────────────────────── */
@@ -414,6 +441,7 @@ export function ExtractView() {
                 { keys: ["K"], does: "keep" },
                 { keys: ["X"], does: "reject" },
                 { keys: ["U"], does: "clear" },
+                { keys: ["N"], does: "next undecided" },
                 { keys: ["Enter"], does: "inspect" },
               ]}
             />
@@ -564,7 +592,35 @@ function RunStrip({
           <ErrorNote>{run.error}</ErrorNote>
         </div>
       )}
+      {/* THE WHOLE LOG, one press down. The strip shows the last line while a
+          run moves; every unit the engine took, and every failure in its own
+          words, was in the manifest and on no surface. */}
+      {run.log.length > 0 && (
+        <Fold title="log" tally={{ value: run.log.length }} level={3} className="mt-4">
+          <RunLog log={run.log} runId={run.id} />
+        </Fold>
+      )}
     </Glass>
+  );
+}
+
+/** The engine's log, newest first, a page at a time — a long run writes one line
+ *  per unit, hundreds of them. */
+function RunLog({ log, runId }: { log: ExtractDetail["run"]["log"]; runId: string }) {
+  const newest = useMemo(() => [...log].reverse(), [log]);
+  const w = useWindow(newest, { size: 40, key: runId });
+  return (
+    <div className="flex flex-col gap-2">
+      <ol className="font-jetbrains flex flex-col gap-1 text-label">
+        {w.visible.map((l, i) => (
+          <li key={`${l.at}-${i}`} className="flex gap-3">
+            <span className="shrink-0 text-white/35 tabular-nums">{when(l.at)}</span>
+            <span className="min-w-0 break-words text-white/70">{l.msg}</span>
+          </li>
+        ))}
+      </ol>
+      {w.total > 40 && <Pager shown={w.shown} total={w.total} onMore={w.more} onAll={w.all} step={40} noun="log lines" />}
+    </div>
   );
 }
 
@@ -593,10 +649,24 @@ function NewRun({
 }) {
   const [slug, setSlug] = useState("");
   const [files, setFiles] = useState<File[]>([]);
-  const [rounds, setRounds] = useState(2);
-  const [replicas, setReplicas] = useState(2);
-  const [transfers, setTransfers] = useState(1);
-  const [singletons, setSingletons] = useState(false);
+  // THE LAST RUN'S SHAPE IS THE NEXT RUN'S DEFAULT. Rounds, replicas, transfers
+  // and the grouping switch are a per-operator habit (a budget, a GPU, a kind of
+  // gallery), set once and re-set on every run before this. One remembered value,
+  // `rounds/replicas/transfers/grouping`, clamped on read so a value from an
+  // older build with other bounds still lands inside the steppers.
+  const [shape, setShape] = useRemembered<string>("foundry.extract.shape", "2/2/1/0");
+  const [r0, p0, t0, g0] = shape.split("/").map((x) => Number.parseInt(x, 10));
+  const clamp = (n: number, lo: number, hi: number, d: number) => (Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d);
+  const rounds = clamp(r0, 1, 4, 2);
+  const replicas = clamp(p0, 1, 4, 2);
+  const transfers = clamp(t0, 0, 4, 1);
+  const singletons = g0 === 1;
+  const put = (o: { rounds?: number; replicas?: number; transfers?: number; singletons?: boolean }) =>
+    setShape(`${o.rounds ?? rounds}/${o.replicas ?? replicas}/${o.transfers ?? transfers}/${(o.singletons ?? singletons) ? 1 : 0}`);
+  const setRounds = (n: number) => put({ rounds: n });
+  const setReplicas = (n: number) => put({ replicas: n });
+  const setTransfers = (n: number) => put({ transfers: n });
+  const setSingletons = (b: boolean) => put({ singletons: b });
   const [dragging, setDragging] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
@@ -681,7 +751,7 @@ function NewRun({
               className="group relative aspect-square cursor-pointer overflow-hidden rounded-lg ring-1 ring-white/10 transition hover:ring-rose-400/60"
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- local object URL */}
-              <img src={p.url} alt="" className="h-full w-full object-cover" />
+              <img src={p.url} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
               <span aria-hidden className="absolute inset-0 grid place-items-center bg-black/60 opacity-0 transition group-hover:opacity-100">
                 <X className="h-5 w-5 text-rose-200" />
               </span>
