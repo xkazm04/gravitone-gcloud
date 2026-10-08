@@ -166,6 +166,8 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run", required=True)
     ap.add_argument("--frames", nargs="*", default=None)
+    ap.add_argument("--prefix", default="arcane-fights",
+                    help="without --frames, take frames whose name starts with this (as reconcile.py)")
     ap.add_argument("--limit", type=int, default=4)
     ap.add_argument("--seed", type=int, default=20260825)
     ap.add_argument("--annotator", default=ANNOTATOR)
@@ -183,7 +185,7 @@ def main():
     if args.frames:
         rows = [r for r in rows if r["frame"] in args.frames]
     else:
-        rows = [r for r in rows if r["frame"].startswith("arcane-fights")][:args.limit]
+        rows = [r for r in rows if r["frame"].startswith(args.prefix)][:args.limit]
     if not rows:
         sys.exit("no annotations selected")
 

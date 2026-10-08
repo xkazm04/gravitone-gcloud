@@ -1189,6 +1189,39 @@ def test_survey_rhythm_counts_the_opening_and_closing_shots():
     check("survey rhythm: a cut at 0 or at the end is not counted twice", edge["shots"], 4)
 
 
+def test_replicate_prefix_selects_a_non_default_corpus():
+    """replicate.main hard-coded startswith("arcane-fights") where reconcile.py
+    takes --prefix, so any other source's frames were unreachable without
+    listing each by name."""
+    R = load_vlm("replicate")
+    tmp = Path(tempfile.mkdtemp())
+    run_dir, reps = tmp / "r", tmp / "replicas"
+    run_dir.mkdir()
+    reps.mkdir()
+    craft = {"shot_size": "wide", "contrast": "high"}
+    frame = "matrix-bullets-001.jpg"
+    (run_dir / "results.jsonl").write_text(
+        json.dumps({"frame": frame, "model": R.ANNOTATOR, "ok": True, "parsed": craft}) + "\n",
+        encoding="utf-8")
+    (reps / f"replica-{Path(frame).stem}.png").write_bytes(b"png")
+    saved = (R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv)
+    R.OUT_ROOT, R.REPLICA_DIR = tmp, reps
+    R.run_ollama = lambda *a, **k: (json.dumps(craft), None)
+    R.guard.require_model = lambda *a, **k: None
+    sys.argv = ["replicate.py", "--run", "r", "--reuse-replicas", "--prefix", "matrix-bullets"]
+    err = None
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            R.main()
+    except BaseException as e:
+        err = str(e)
+    finally:
+        R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv = saved
+    out = run_dir / "replication.jsonl"
+    scored = [json.loads(l)["frame"] for l in out.read_text(encoding="utf-8").splitlines()] if out.exists() else []
+    check("replicate: --prefix selects another corpus's frames", (err, scored), (None, [frame]))
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1225,6 +1258,7 @@ TESTS = [
     test_motion_resume_refuses_a_different_hero,
     test_lane_record_check_resume_refuses_changed_ref_count,
     test_survey_rhythm_counts_the_opening_and_closing_shots,
+    test_replicate_prefix_selects_a_non_default_corpus,
 ]
 
 
