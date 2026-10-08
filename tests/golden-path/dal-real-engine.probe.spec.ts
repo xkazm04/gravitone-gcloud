@@ -54,12 +54,13 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
 /** Wipe every store between tests, through the real engine, so one probe's rows
- *  are never another's fixture. */
+ *  are never another's fixture. The store list is the ENGINE's: a hand-written
+ *  one named four stores and missed `uploads` when schema 5 added it. */
 async function clearAll() {
   const db = await openDb();
-  await runTx(db, [PROJECTS_STORE, STEPS_STORE, THEMES_STORE, ASSETS_STORE], "readwrite", (_s, tx) => {
-    for (const name of [PROJECTS_STORE, STEPS_STORE, THEMES_STORE, ASSETS_STORE])
-      tx.objectStore(name).clear();
+  const stores = [...db.objectStoreNames];
+  await runTx(db, stores, "readwrite", (_s, tx) => {
+    for (const name of stores) tx.objectStore(name).clear();
   });
 }
 
@@ -86,6 +87,21 @@ test("engine: the database really opens, with every store and index the code dec
   expect([...tx.objectStore(ASSETS_STORE).indexNames]).toContain(BY_UID);
   expect([...tx.objectStore(STEPS_STORE).indexNames]).toContain(BY_PROJECT);
   tx.abort();
+});
+
+test("engine: the per-test wipe empties EVERY store the engine has, not a list of them", async () => {
+  // clearAll is what makes "one probe's rows are never another's fixture" true,
+  // so it is held to the engine's own store list rather than a hand-written one.
+  const db = await openDb();
+  const stores = [...db.objectStoreNames];
+  await runTx(db, stores, "readwrite", (_s, tx) => {
+    for (const name of stores) tx.objectStore(name).put({ id: `seed-${name}`, uid: "u", projectId: "p" });
+  });
+  await clearAll();
+  const left: string[] = [];
+  for (const name of stores) if (await getRecord(db, name, `seed-${name}`)) left.push(name);
+  console.log(`[dal] wipe covered ${stores.length - left.length}/${stores.length} stores`);
+  expect(left, "stores the per-test wipe left rows in").toEqual([]);
 });
 
 // ── Round-trip fidelity ─────────────────────────────────────────────────────
