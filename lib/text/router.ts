@@ -58,6 +58,7 @@ import { currentTextEnv, isConfigured, KEY_VAR, RETRIEVE_FLAG, retrievalEnabled,
 import { noAlternative, noEngine, TextError, unsupported } from "./errors";
 import { parseAgainstSchema, schemaInstruction } from "./json";
 import { logTurn, type TurnLog } from "./log";
+import { bookFailedTurn, bookServedTurn } from "./spend";
 import { emitLightTrack } from "./lighttrack";
 import { claudeCliProvider } from "./providers/claudeCli";
 import { claudeCliRetrieveProvider } from "./providers/claudeCliRetrieve";
@@ -293,6 +294,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
     // lib/text/lighttrack.ts's own contract for why it can never throw here.
     logTurn(l);
     emitLightTrack(l);
+    await bookServedTurn(out.provenance);
     return out;
   } catch (e) {
     const err = e instanceof TextError ? e : null;
@@ -309,6 +311,7 @@ export async function reason(req: TextRequest): Promise<TextResult> {
     };
     logTurn(l);
     emitLightTrack(l);
+    await bookFailedTurn(req.turn, e);
     throw e;
   }
 
@@ -479,6 +482,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
     };
     logTurn(l);
     emitLightTrack(l);
+    await bookServedTurn(out.provenance);
     return out;
   } catch (e) {
     const err = e instanceof TextError ? e : null;
@@ -495,6 +499,7 @@ export async function retrieve(req: TextRequest): Promise<TextResult> {
     };
     logTurn(l);
     emitLightTrack(l);
+    await bookFailedTurn(req.turn, e);
     throw e;
   }
 

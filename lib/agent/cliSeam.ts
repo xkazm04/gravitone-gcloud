@@ -62,7 +62,7 @@ import { oneLine, scrub } from "@/lib/text/log";
  *  lib/text/types.ts's TurnClass and declared in .ai/use-cases.json as
  *  `text.<class>`. A separate union, not new TurnClass members: TurnClass keys
  *  the reasoning router's plan table, and these turns can never route there. */
-export type AgentTurnClass = "article-research" | "article-draft" | "article-review" | "article-critique-writer";
+export type AgentTurnClass = "article-research" | "article-draft" | "article-review" | "article-critique-writer" | "strip-author";
 
 export const AGENT_TOOLS = ["WebSearch", "WebFetch", "Read", "Write", "Edit"] as const;
 export type AgentTool = (typeof AGENT_TOOLS)[number];

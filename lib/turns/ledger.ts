@@ -48,6 +48,7 @@ import { hostname } from "node:os";
 import path from "node:path";
 
 import { readJson, writeJsonAtomic } from "../foundry/runStore";
+import type { Provenance } from "../imaging/types";
 import type { TextProvenance, TurnClass } from "../text/types";
 
 export type TurnStatus = "accepted" | "running" | "done" | "failed" | "cancelled" | "orphaned";
@@ -56,14 +57,33 @@ export type TurnStatus = "accepted" | "running" | "done" | "failed" | "cancelled
  *  never written over. */
 export const LIVE: ReadonlySet<TurnStatus> = new Set(["accepted", "running"]);
 
+/** What a WORK kind (lib/turns/runner.ts `WorkSpec`) leaves where a text turn
+ *  leaves its `TextProvenance`. A work kind books no text spend row, so it must
+ *  not carry a text receipt — that would be a forged one. The imaging lane
+ *  carries the imaging router's own `Provenance`; the local lane carries what a
+ *  local render can honestly say, its wall time. */
+export type WorkReceipt =
+  | { lane: "imaging"; provenance: Provenance }
+  | { lane: "local"; wallMs: number; detail?: Record<string, unknown> };
+
+/** What `TurnRecord.receipt` holds. A work receipt also names every text-receipt
+ *  key as absent, so a reader of the text fields (`rec.receipt.costUsd`) still
+ *  compiles and reads `undefined` on a work record — the widening is additive
+ *  for every existing reader, and a new reader tells the two apart by `lane`. */
+export type RecordReceipt = TextProvenance | (WorkReceipt & { [K in keyof TextProvenance]?: undefined });
+
+/** The `turn` a work kind's record carries, in place of a router turn class. */
+export type WorkTurn = "image-generate" | "local-render";
+
 export interface TurnRecord {
   v: 1;
   /** `tn-` + 12 hex, minted before anything is dispatched. */
   id: string;
   /** The job kind a client asked for ("recalibrate"). */
   kind: string;
-  /** The router's turn class it runs as ("edit-plan"). */
-  turn: TurnClass;
+  /** The router's turn class it runs as ("edit-plan"), or, for a work kind,
+   *  the lane's word for it. */
+  turn: TurnClass | WorkTurn;
   projectId: string;
   /** `${projectId}:${kind}` for a serialised kind — at most one live record may
    *  hold it — or null for a kind that may run in parallel. */
@@ -78,8 +98,12 @@ export interface TurnRecord {
   /** sha256 of the prompt as built. Never the prompt. */
   promptDigest: string;
   promptChars: number;
-  /** The router's provenance — rung, transport, cost and its basis. */
-  receipt?: TextProvenance;
+  /** The router's provenance — rung, transport, cost and its basis — or, on a
+   *  work kind, its `WorkReceipt` (told apart by the `lane` key). */
+  receipt?: RecordReceipt;
+  /** Set on a work kind that nothing below can abort: `cancelTurn` answers
+   *  `not-cancellable` and a watching tab draws no Stop. */
+  uncancellable?: true;
   /** The validated artifact the kind's settle hook returned. Only on `done`. */
   result?: unknown;
   error?: { kind: string; message: string; findings?: string[] };
@@ -118,10 +142,14 @@ export const digestOf = (s: string): string => createHash("sha256").update(s, "u
 export function newRecord(fields: {
   id: string;
   kind: string;
-  turn: TurnClass;
+  turn: TurnClass | WorkTurn;
   projectId: string;
   slot: string | null;
+  /** The text the digest covers. */
   prompt: string;
+  /** Its length, when that is not `prompt.length`. */
+  chars?: number;
+  uncancellable?: boolean;
 }): TurnRecord {
   const now = new Date().toISOString();
   return {
@@ -138,7 +166,8 @@ export function newRecord(fields: {
     startedAt: now,
     updatedAt: now,
     promptDigest: digestOf(fields.prompt),
-    promptChars: fields.prompt.length,
+    promptChars: fields.chars ?? fields.prompt.length,
+    ...(fields.uncancellable ? { uncancellable: true as const } : {}),
   };
 }
 

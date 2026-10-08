@@ -39,7 +39,10 @@ export function syncBody(rec: TurnRecord, failed: string): Response {
   // sentence already written; it answered 502 with `{ detail }` alone, and
   // still does.
   const plain = NOTHING_CHANGED.test(err.message ?? "") && err.kind === "bad-response";
-  return Response.json(plain ? { detail } : { detail, code: kind }, { status: statusFor(kind) });
+  // Every finding travels: the fix is a prompt change, and one finding per run
+  // is a prompt edited five times for one run's worth of information.
+  const findings = err.findings?.length ? { findings: err.findings } : {};
+  return Response.json({ ...(plain ? { detail } : { detail, code: kind }), ...findings }, { status: statusFor(kind) });
 }
 
 /** The 409 both routes answer when the project's slot is held. */

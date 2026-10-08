@@ -151,3 +151,293 @@ test("two different notebooks do not share a digest", () => {
   expect(other.digest).not.toBe(fixtureSource().digest);
   expect(sourceOf(NOTEBOOK, { kind: "reasoned" }).digest, "conclusions are part of what was dealt").not.toBe(fixtureSource().digest);
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// STAGE 2 - the notebook carries its own columns and conclusions.
+//
+// `dimensions[]`, `Fact/Mechanism/Reversal.dimension` and `conclusions[]` are
+// OPTIONAL fields of the contract (pipeline/NOTEBOOK-SCHEMA.md, Dimensions and
+// conclusions). A notebook that declares none of them is every notebook stored
+// before this change, and it must validate exactly as it did; one that declares
+// them is checked against its OWN columns and conclusions instead of the fixture
+// filters lib/notebook/validate.ts needed while the fixture's tables were the
+// only ones there were.
+// ═══════════════════════════════════════════════════════════════════════════
+
+import { notebookIssues } from "@/app/_phases/_shared/notebook/cards";
+import type { Conclusion } from "@/app/_phases/_shared/notebook/conclusions";
+import type { Notebook } from "@/app/_phases/_shared/notebook/types";
+import { NotebookError, parseNotebook } from "@/lib/notebook/validate";
+
+import { loadCassette, type CassetteTurn } from "./_helpers";
+
+/** A schema-valid notebook: the retrieval cassette's answer, which the shape half
+ *  accepts today (research-retrieve.probe.spec.ts parses it). */
+const RAW = (loadCassette("research-retrieve").turns[0]! as CassetteTurn).resultJson as Record<string, unknown>;
+const raw = () => structuredClone(RAW);
+
+const COLUMNS: Dimension[] = [
+  { id: "volume", label: "Volume", purpose: "How much moved.", emptyByOmission: "Nobody measured it.", notApplicable: "Nothing moved." },
+  { id: "rate", label: "Rate", purpose: "What it cost.", emptyByOmission: "Nobody priced it.", notApplicable: "Nothing was charged." },
+];
+
+/** The cassette notebook with every Fact/Mechanism/Reversal tagged to a column. */
+function declared(): Record<string, unknown> {
+  const nb = raw() as {
+    facts: { id: string; dimension?: string }[];
+    mechanisms: { dimension?: string }[];
+    reversals: { dimension?: string }[];
+  };
+  nb.facts.forEach((f, i) => (f.dimension = i % 2 ? "rate" : "volume"));
+  nb.mechanisms.forEach((m) => (m.dimension = "volume"));
+  nb.reversals.forEach((r) => (r.dimension = "rate"));
+  return { ...nb, dimensions: structuredClone(COLUMNS) };
+}
+
+const conclusion = (id: string): Conclusion => ({
+  id,
+  claim: `Claim ${id}`,
+  reasoning: "Because the dredging volume and the rate disagree.",
+  leap: "moderate",
+  restsOn: ["f-volume", "f-rate"],
+  falsifiableBy: "A harbour authority invoice.",
+  useFor: "thesis",
+});
+
+const kindsOf = (nb: Notebook) => notebookIssues(nb).map((i) => i.kind);
+
+function rejection(fn: () => unknown): string[] {
+  try {
+    fn();
+  } catch (e) {
+    expect(e).toBeInstanceOf(NotebookError);
+    return (e as NotebookError).findings;
+  }
+  throw new Error("accepted a notebook it should have refused");
+}
+
+// ------------------------------------- (a) a notebook with no fields is unchanged
+
+test("stage 2 (a): a notebook with no dimensions field validates as before - untagged is not reported", () => {
+  const nb = parseNotebook(raw(), "harbour dredging costs");
+  expect("dimensions" in nb, "the validator invented a field").toBe(false);
+  expect("conclusions" in nb).toBe(false);
+  // The graph WOULD call every card untagged against the fixture's table; the
+  // validator is what suppresses that for a notebook that never claimed columns.
+  expect(kindsOf(nb)).toContain("untagged");
+  // And it is dealt the way it always was: the fixture's conclusions and tags.
+  expect(buildCards(nb).some((c) => c.kind === "conclusion")).toBe(true);
+});
+
+// ------------------------------------- (b) declared dimensions, checked for real
+
+test("stage 2 (b): a notebook that tags every card has no untagged and no stale-tag finding", () => {
+  const nb = parseNotebook(declared(), "harbour dredging costs");
+  const kinds = kindsOf(nb);
+  expect(kinds.filter((k) => k === "untagged")).toEqual([]);
+  expect(kinds.filter((k) => k === "stale-tag")).toEqual([]);
+  expect(kinds, "a declared notebook has nothing else wrong with it either").toEqual([]);
+
+  const src = sourceOf(nb);
+  expect(src.dimensions.map((d) => d.id)).toEqual(["volume", "rate"]);
+  expect(src.tagOf("f-volume")).toBe("volume");
+  expect(src.tagOf("r-rate")).toBe("rate");
+  expect(untaggedIds(src)).toEqual([]);
+});
+
+test("stage 2 (b): one untagged card in a declaring notebook is exactly one finding, and the validator now says so", () => {
+  const nb = declared() as { facts: { id: string; dimension?: string }[] };
+  delete nb.facts[2].dimension;
+
+  const findings = rejection(() => parseNotebook(nb, "harbour dredging costs"));
+  expect(findings).toHaveLength(1);
+  expect(findings[0]).toMatch(/^\[untagged\]/);
+  expect(findings[0]).toContain(nb.facts[2].id);
+  expect(notebookIssues({ scaleConversions: [], analogyCandidates: [], counterPositions: [], ...nb } as unknown as Notebook).filter((i) => i.kind === "untagged").map((i) => i.ref)).toEqual([nb.facts[2].id]);
+});
+
+test("stage 2 (b): a tag naming a column the notebook did not declare is refused", () => {
+  const nb = declared() as { facts: { dimension?: string }[] };
+  nb.facts[0].dimension = "not-a-column";
+  expect(rejection(() => parseNotebook(nb, "x")).join(" ")).toMatch(/facts\[0\]\.dimension.*not-a-column/);
+});
+
+// ------------------------------------- (c) the notebook's own conclusions
+
+test("stage 2 (c): sourceOf deals the notebook's conclusions, and they are the opt-in set", () => {
+  const nb = parseNotebook({ ...declared(), conclusions: [conclusion("c-one"), conclusion("c-two")] }, "harbour dredging costs");
+  const src = sourceOf(nb);
+
+  expect(src.conclusions.map((c) => c.id)).toEqual(["c-one", "c-two"]);
+  expect([...optInIds(src)].sort()).toEqual(["c-one", "c-two"]);
+  expect(buildCards(src).filter((c) => c.kind === "conclusion").map((c) => c.id)).toEqual(["c-one", "c-two"]);
+  // The bare-notebook spelling means the same thing for a notebook that declares them.
+  expect(buildCards(nb).filter((c) => c.kind === "conclusion").map((c) => c.id)).toEqual(["c-one", "c-two"]);
+  expect(notebookIssues(nb)).toEqual([]);
+});
+
+test("stage 2 (c): a conclusion resting on a fact that does not exist is a dangling reference", () => {
+  const nb = { ...declared(), conclusions: [{ ...conclusion("c-one"), restsOn: ["f-no-such-fact"] }] };
+  expect(rejection(() => parseNotebook(nb, "x")).join(" ")).toMatch(/dangling-ref\] c-one\.dependsOn → f-no-such-fact/);
+});
+
+test("stage 2 (c): a fresh notebook with none gets no conclusion cards and no finding owned by the fixture's", () => {
+  const nb = parseNotebook(raw(), "harbour dredging costs");
+  const src = sourceOf(nb);
+  expect(buildCards(src).filter((c) => c.kind === "conclusion")).toEqual([]);
+
+  const ownedByFixture = new Set(CONCLUSIONS.map((c) => c.id));
+  const stray = notebookIssues(src).filter((i) => ownedByFixture.has(i.from.split(".")[0]));
+  expect(stray, "the fixture's conclusions rode in behind the notebook").toEqual([]);
+});
+
+// ------------------------------------- (d) the door
+
+test("stage 2 (d): parseNotebook accepts the optional fields and keeps them", () => {
+  const nb = parseNotebook({ ...declared(), conclusions: [conclusion("c-one")] }, "harbour dredging costs");
+  expect(nb.dimensions?.map((d) => d.id)).toEqual(["volume", "rate"]);
+  expect(nb.conclusions?.map((c) => c.id)).toEqual(["c-one"]);
+  expect(nb.facts[0].dimension).toBe("volume");
+});
+
+test("stage 2 (d): parseNotebook refuses a malformed dimensions or conclusions value", () => {
+  const bad = (patch: Record<string, unknown>) => rejection(() => parseNotebook({ ...declared(), ...patch }, "x")).join(" ");
+
+  expect(bad({ dimensions: "volume" })).toMatch(/`dimensions` must be an array/);
+  expect(bad({ dimensions: [{ id: "volume" }] })).toMatch(/dimensions\[0\]\.label/);
+  expect(bad({ dimensions: [{ ...COLUMNS[0] }, { ...COLUMNS[0] }] })).toMatch(/dimensions\[1\]\.id.*volume.*twice/);
+  expect(bad({ conclusions: {} })).toMatch(/`conclusions` must be an array/);
+  expect(bad({ conclusions: [{ ...conclusion("c-one"), claim: undefined }] })).toMatch(/conclusions\[0\]\.claim/);
+  expect(bad({ conclusions: [{ ...conclusion("c-one"), leap: "huge" }] })).toMatch(/conclusions\[0\]\.leap/);
+  expect(bad({ conclusions: [{ ...conclusion("c-one"), restsOn: "f-volume" }] })).toMatch(/conclusions\[0\]\.restsOn/);
+});
+
+// ------------------------------------- (e) the fixture is the control
+
+test("stage 2 (e): the fixture declares neither field, so it keeps its own tables and a clean graph", () => {
+  expect("dimensions" in NOTEBOOK).toBe(false);
+  expect("conclusions" in NOTEBOOK).toBe(false);
+  expect(notebookIssues()).toEqual([]);
+  expect(
+    buildCards(fixtureSource()).map((c) => [c.id, c.kind, c.dimension, c.dependsOn.join(" "), c.optIn ? 1 : 0, c.required ? 1 : 0]),
+  ).toEqual(TODAY);
+});
+
+// ───────────────────────────── stage 4: Step 2 reads the source, not the constants
+
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative, sep } from "node:path";
+
+import { gateChains, runGate } from "@/app/_phases/script/gate";
+import { RENDERS } from "@/app/_phases/script/renders";
+
+test("stage 4 (case 6): runGate over a live source never reads NOTEBOOK.facts, scaleConversions or unknowns", () => {
+  const live = sourceOf(raw() as unknown as Notebook, { kind: "reasoned" });
+  const reads: string[] = [];
+  const keys = ["facts", "scaleConversions", "unknowns"] as const;
+  const held = keys.map((k) => Object.getOwnPropertyDescriptor(NOTEBOOK, k));
+  keys.forEach((k, i) =>
+    Object.defineProperty(NOTEBOOK, k, {
+      configurable: true,
+      get() {
+        reads.push(k);
+        return held[i]!.value;
+      },
+    }),
+  );
+  try {
+    const beats = RENDERS[0]!.beats;
+    runGate({ id: "x", beats }, { source: live });
+    gateChains({ x: beats }, { source: live });
+  } finally {
+    keys.forEach((k, i) => Object.defineProperty(NOTEBOOK, k, held[i]!));
+  }
+  expect(reads).toEqual([]);
+});
+
+test("stage 4 (case 6): a live source's own unknowns and facts are what the gate tests", () => {
+  const live = sourceOf(raw() as unknown as Notebook, { kind: "reasoned" });
+  const report = runGate({ id: "x", beats: RENDERS[0]!.beats }, { source: live });
+  const fixtureIds = new Set(Object.keys(UNKNOWN_BY_ID));
+  expect(live.notebook.unknowns.some((u) => fixtureIds.has(u.id))).toBe(false);
+  expect(report.findings.some((f) => /u-yield-causality/.test(JSON.stringify(f)))).toBe(false);
+});
+
+test("stage 4: on the replay source the gate is the gate it was", () => {
+  for (const r of RENDERS) {
+    expect(runGate(r, { source: fixtureSource() }), r.id).toEqual(runGate(r));
+    expect(runGate(r, { source: fixtureSource(), conclusions: CONCLUSIONS }), r.id).toEqual(
+      runGate(r, { conclusions: CONCLUSIONS }),
+    );
+  }
+});
+
+/** Every name the shipped run is read through. The walk used to match only
+ *  `NOTEBOOK` and `CONCLUSIONS` imported from a path ending in `/notebook` or
+ *  `/conclusions`, so six consumers of the fixture that a creator's own notebook
+ *  reaches were never counted (useFrames, ScopeGate's ClearDialog, followup,
+ *  triage, and the Step 2 opt-in readers; critic-2026-10-07-script-chain, Part 1,
+ *  "What the ratchet cannot see"). */
+const FIXTURE_NAMES = [
+  "NOTEBOOK",
+  "NOTEBOOK_COUNTS",
+  "FACTS",
+  "FACT_BY_ID",
+  "UNKNOWN_BY_ID",
+  "CONCLUSIONS",
+  "CARD_DIMENSION",
+];
+const FIXTURE_MODULES = "notebook|facts|conclusions|dimensions|unknowns";
+
+/** Ratchet. Every file outside _shared/notebook/ that reads the shipped run by
+ *  any of its constant names (FIXTURE_NAMES). The count may only fall, and each
+ *  consumer that moves to the active source takes one off.
+ *
+ *  C1 closing stage: 9 when the walk was widened, 4 after it. What remains, and
+ *  why each is allowed to:
+ *    · guided/RunStage.tsx       - the replay's own compact card and chip
+ *                                  (StandInNote), labelled stand-in; legitimate
+ *    · research/followup.ts      - the CANNED replay plane, answered only on the
+ *                                  replay source; until research-scope-board-B
+ *    · script/constraints.ts     - the hand ledger over the fixture's unknowns;
+ *                                  until script-phase-A s2a
+ *    · lib/notebook/validate.ts  - the engine side's FIXTURE_CONCLUSION_IDS, for a
+ *                                  notebook that declares neither field; legitimate */
+const PINNED_CONSTANT_IMPORTERS = 4;
+const EXPECTED_IMPORTERS = [
+  "app/_phases/research/followup.ts",
+  "app/_phases/research/guided/RunStage.tsx",
+  "app/_phases/script/constraints.ts",
+  "lib/notebook/validate.ts",
+];
+
+function constantImporters(): string[] {
+  const root = process.cwd();
+  const out: string[] = [];
+  const walk = (dir: string) => {
+    for (const name of readdirSync(dir)) {
+      if (name === "node_modules" || name.startsWith(".")) continue;
+      const p = join(dir, name);
+      if (statSync(p).isDirectory()) walk(p);
+      else if (/\.(ts|tsx)$/.test(name)) {
+        const rel = relative(root, p).split(sep).join("/");
+        if (rel.startsWith("app/_phases/_shared/notebook/")) continue;
+        const src = readFileSync(p, "utf8");
+        const imports =
+          src.match(new RegExp(`import\\s+(?:type\\s+)?\\{[^}]*\\}\\s+from\\s+["'][^"']*\\/(?:${FIXTURE_MODULES})["']`, "g")) ?? [];
+        const names = new RegExp(`\\b(${FIXTURE_NAMES.join("|")})\\b`);
+        if (imports.some((i) => names.test(i))) out.push(rel);
+      }
+    }
+  };
+  for (const d of ["app", "components", "lib"]) walk(join(root, d));
+  return out.sort();
+}
+
+test("stage 4 (case 7, widened - C1 closing case 12): the files reading any fixture constant outside _shared/notebook/ only fall", () => {
+  const found = constantImporters();
+  console.log(`[ratchet] ${found.length} importers\n  ${found.join("\n  ")}`);
+  expect(found.length).toBeLessThanOrEqual(PINNED_CONSTANT_IMPORTERS);
+  // Named, so a swap (one leaves, another arrives) cannot hide inside the count.
+  expect(found).toEqual(EXPECTED_IMPORTERS);
+});

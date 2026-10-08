@@ -145,7 +145,7 @@ export async function startClip(req: VideoClipRequest, now: number = Date.now())
   if (image.length > MAX_IMAGE_BYTES) throw bad(`\`image\` is ${Math.round(image.length / 1048576)} MB; the ceiling is 20 MB.`);
 
   // THE PRE-GATE. Throws over-budget before anything is written or dispatched.
-  const hold = reserveVideo(gateHoldUsd(req.model, req.durationS), now);
+  const hold = await reserveVideo(gateHoldUsd(req.model, req.durationS), now);
 
   const clipId = mintClipId(now);
   const est = estimateClipUsd(req.model, req.durationS);
@@ -167,7 +167,7 @@ export async function startClip(req: VideoClipRequest, now: number = Date.now())
   try {
     await writeClipRecord(rec);
   } catch (e) {
-    releaseVideo(hold);
+    await releaseVideo(hold);
     throw e;
   }
   live.add(clipId);
@@ -215,7 +215,7 @@ async function run(
   // Money first, so a record write that throws below cannot leave a hold alive.
   const acc = accepted as VideoAccepted | null;
   if (acc) {
-    settleVideo(hold, {
+    await settleVideo(hold, {
       usd: acc.costUsd,
       project: rec.projectId,
       provider: a.id,
@@ -223,7 +223,7 @@ async function run(
       outcome: outcome.kind === "done" ? "served" : "failed",
       basis: acc.costBasis,
     });
-  } else releaseVideo(hold);
+  } else await releaseVideo(hold);
 
   const finished = Date.now();
   let out: ClipRecord;

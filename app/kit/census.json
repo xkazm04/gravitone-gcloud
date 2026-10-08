@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 551,
+  "files": 570,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -58,6 +58,7 @@
         "app/error.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/Lightbox.tsx",
+        "app/foundry/StripLightbox.tsx",
         "app/foundry/pipeline/MovePrompt.tsx",
         "app/foundry/pipelineModals.tsx",
         "app/foundry/ui.tsx",
@@ -78,6 +79,8 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
+        "app/_phases/_shared/notebook/SourceChip.tsx",
         "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/cut/parts/Inspector.tsx",
@@ -100,6 +103,9 @@
         "app/calendar/MetricsTab.tsx",
         "app/calendar/SlotSheet.tsx",
         "app/calendar/ui.tsx",
+        "app/foundry/StripGrid.tsx",
+        "app/foundry/StripLightbox.tsx",
+        "app/foundry/StripsView.tsx",
         "app/foundry/ui.tsx",
         "app/library/parts.tsx",
         "app/playground/hunt/Lesson.tsx"
@@ -386,6 +392,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/cut/parts/Inspector.tsx",
         "app/_phases/cut/parts/Lanes.tsx",
@@ -492,6 +499,8 @@
         "app/foundry/ExtractView.tsx",
         "app/foundry/FoundryView.tsx",
         "app/foundry/Lightbox.tsx",
+        "app/foundry/StripLightbox.tsx",
+        "app/foundry/StripsView.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/assets/ShelfGallery.tsx",
         "app/library/audio/Ledger.tsx",
@@ -573,6 +582,8 @@
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/FoundryView.tsx",
         "app/foundry/Lightbox.tsx",
+        "app/foundry/StripLightbox.tsx",
+        "app/foundry/StripsView.tsx",
         "app/foundry/StylesShelf.tsx",
         "app/foundry/pipeline/MovePrompt.tsx",
         "app/foundry/pipelineModals.tsx",
@@ -667,6 +678,7 @@
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/board/parts.tsx",
         "app/calendar/ChannelsTab.tsx",
+        "app/foundry/StripGrid.tsx",
         "app/library/parts.tsx",
         "app/playground/hunt/Inspector.tsx",
         "app/playground/hunt/index.tsx",
@@ -702,6 +714,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
         "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/motion/MotionStep.tsx",
         "app/_phases/motion/ads/AdsMotion.tsx",
@@ -709,6 +722,7 @@
         "app/_phases/score/ScoreSpotting.tsx",
         "app/_studio/assetParts.tsx",
         "app/articles/RunView.tsx",
+        "app/foundry/StripGrid.tsx",
         "app/playground/hunt/index.tsx"
       ]
     },
@@ -844,6 +858,7 @@
         "app/_landing/parts.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/frames/ads/parts.tsx",
+        "app/_phases/research/_parts/ScopeBar.tsx",
         "app/_phases/research/ads/AdsIdea.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/score/CueTakes.tsx",
@@ -895,6 +910,8 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
+        "app/_phases/_shared/notebook/SourceChip.tsx",
         "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
         "app/_phases/cut/parts/Inspector.tsx",
@@ -917,6 +934,9 @@
         "app/calendar/MetricsTab.tsx",
         "app/calendar/SlotSheet.tsx",
         "app/calendar/ui.tsx",
+        "app/foundry/StripGrid.tsx",
+        "app/foundry/StripLightbox.tsx",
+        "app/foundry/StripsView.tsx",
         "app/foundry/ui.tsx",
         "app/library/parts.tsx",
         "app/playground/hunt/Lesson.tsx"
@@ -958,6 +978,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_library/LibraryShelves.tsx",
         "app/_phases/_shared/notebook/EvidenceLog.tsx",
         "app/_phases/_shared/ui/DispatchStrip.tsx",
         "app/_phases/cut/ads/AdsFinish.tsx",
@@ -990,6 +1011,8 @@
         "app/foundry/ExtractView.tsx",
         "app/foundry/PipelineTab.tsx",
         "app/foundry/RunCards.tsx",
+        "app/foundry/StripGrid.tsx",
+        "app/foundry/StripsView.tsx",
         "app/foundry/StylesShelf.tsx",
         "app/foundry/pipelineModals.tsx",
         "app/playground/arrange/Board.tsx",
@@ -1239,7 +1262,8 @@
         "components/kit/index.ts"
       ],
       "adopters": [
-        "app/foundry/CullGrid.tsx"
+        "app/foundry/CullGrid.tsx",
+        "app/foundry/StripGrid.tsx"
       ]
     },
     "useToast": {
@@ -1314,23 +1338,33 @@
       "suspectFiles": {}
     },
     "app/_library": {
-      "files": 1,
+      "files": 4,
       "kitImports": 0,
-      "signalImports": 0,
-      "parts": [],
+      "signalImports": 1,
+      "parts": [
+        "CHIP_CLASS",
+        "Ghost",
+        "Provenance",
+        "TALLY_TONE",
+        "Tally"
+      ],
       "suspects": {
         "tab": 0,
         "select": 0,
-        "media": 0,
+        "media": 1,
         "title": 0,
         "typing": 0
       },
-      "suspectFiles": {}
+      "suspectFiles": {
+        "app/_library/LibraryShelves.tsx": {
+          "media": 1
+        }
+      }
     },
     "app/_phases/_shared": {
-      "files": 26,
+      "files": 29,
       "kitImports": 0,
-      "signalImports": 3,
+      "signalImports": 4,
       "parts": [
         "CHIP_CLASS",
         "HintPopover",
@@ -1378,7 +1412,7 @@
       }
     },
     "app/_phases/frames": {
-      "files": 29,
+      "files": 31,
       "kitImports": 0,
       "signalImports": 7,
       "parts": [
@@ -1439,7 +1473,7 @@
     "app/_phases/research": {
       "files": 38,
       "kitImports": 1,
-      "signalImports": 13,
+      "signalImports": 14,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1500,7 +1534,7 @@
       }
     },
     "app/_phases/score": {
-      "files": 13,
+      "files": 14,
       "kitImports": 0,
       "signalImports": 4,
       "parts": [
@@ -1645,7 +1679,7 @@
       "suspectFiles": {}
     },
     "app/api": {
-      "files": 73,
+      "files": 80,
       "kitImports": 0,
       "signalImports": 0,
       "parts": [],
@@ -1748,9 +1782,9 @@
       "suspectFiles": {}
     },
     "app/foundry": {
-      "files": 37,
-      "kitImports": 1,
-      "signalImports": 10,
+      "files": 40,
+      "kitImports": 2,
+      "signalImports": 13,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1758,6 +1792,8 @@
         "Hint",
         "Keycaps",
         "Modal",
+        "PipRow",
+        "Provenance",
         "Segmented",
         "StackBar",
         "TALLY_TONE",
@@ -1770,7 +1806,7 @@
       "suspects": {
         "tab": 1,
         "select": 0,
-        "media": 1,
+        "media": 2,
         "title": 1,
         "typing": 3
       },
@@ -1786,6 +1822,9 @@
         },
         "app/foundry/ExtractView.tsx": {
           "title": 1
+        },
+        "app/foundry/StripLightbox.tsx": {
+          "media": 1
         },
         "app/foundry/pipelineModals.tsx": {
           "media": 1

@@ -3,7 +3,7 @@
 import { StaleBadge } from "@/components/ui/signal";
 
 import { HazardLine } from "../../_shared/notebook/Chips";
-import { NOTEBOOK } from "../../_shared/notebook/notebook";
+import type { NotebookSource } from "../../_shared/notebook/source";
 import ConstraintLedger from "./ConstraintLedger";
 import GatePanel from "./GatePanel";
 import { BandMeter, CheckList } from "./Meters";
@@ -22,6 +22,7 @@ import type { Beat, ScriptRender } from "../types";
  *  they are labelled rather than silently reused. */
 export default function HypothesisColumn({
   render: r,
+  source,
   beats,
   chainLabel,
   adopted,
@@ -30,6 +31,7 @@ export default function HypothesisColumn({
   onToggle,
 }: {
   render: ScriptRender;
+  source: NotebookSource;
   beats?: Beat[];
   chainLabel?: string;
   adopted: boolean;
@@ -37,7 +39,7 @@ export default function HypothesisColumn({
   expanded: boolean;
   onToggle: () => void;
 }) {
-  const fit = NOTEBOOK.engineFit.find((e) => e.renderId === r.id);
+  const fit = source.notebook.engineFit.find((e) => e.renderId === r.id);
   const chain = beats ?? r.beats;
   const rewritten = chain !== r.beats;
   const words = rewritten
@@ -121,7 +123,7 @@ export default function HypothesisColumn({
         )}
         <p className="font-jetbrains text-content text-white/35">
           template {r.template}
-          {r.template !== NOTEBOOK.templateIntent && " — outside the notebook's intent, by design"}
+          {r.template !== source.notebook.templateIntent && " — outside the notebook's intent, by design"}
         </p>
         {/* "Shown as unmeasured rather than as a pass" was the second sentence
             defending the first. The em-dash IS the unmeasured mark — the same
@@ -158,7 +160,7 @@ export default function HypothesisColumn({
           the two disagree, the one that read the render is the true one. And
           only one of the two can follow a rewrite, which is the sharpest
           argument this surface makes for computed checks over typed ones. */}
-      <GatePanel renderId={r.id} beats={chain} chainLabel={chainLabel} />
+      <GatePanel renderId={r.id} source={source} beats={chain} chainLabel={chainLabel} />
 
       {(r.deviations.length > 0 || r.cutFacts.length > 0) && (
         <div className="mt-3 space-y-2 border-t border-white/8 pt-3">

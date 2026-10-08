@@ -123,7 +123,7 @@ export default function MatrixCoverage({
         );
       })}
 
-      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} />
+      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} optIn={api.optIn} />
     </div>
   );
 }
@@ -144,8 +144,8 @@ function Row({
   // "descoped" tints the row: it is a decision. "not-taken" does not: it is the
   // default state of every conclusion, and a tint on arrival is an alarm nobody
   // reads (scope.ts::scopeSummary says the same about the count).
-  const out = outWord(card, api.scope);
-  const conflict = stillSpoken(version, card, api.scope);
+  const out = outWord(card, api.scope, api.optIn);
+  const conflict = stillSpoken(version, card, api.scope, api.optIn);
   const total = totalIn(version, card.id);
   const baseTotal = totalIn(baseline, card.id);
   const moved = comparing && total !== baseTotal;

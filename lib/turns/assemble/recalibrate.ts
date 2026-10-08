@@ -41,7 +41,7 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
-import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
+import type { Conclusion } from "@/app/_phases/_shared/notebook/conclusions";
 import { EDIT_PLAN_SCHEMA } from "@/app/_phases/script/editPlan";
 import { rendersInScope } from "@/app/_phases/script/chainBase";
 import { ATTRIBUTION } from "@/app/_phases/script/impact";
@@ -53,6 +53,9 @@ export interface RecalibrateInput {
   notebook?: unknown;
   renders?: unknown;
   scope?: unknown;
+  /** The conclusions that go with `notebook`, beside it. Absent means none, as
+   *  /api/script reads it — never the fixture's. */
+  conclusions?: unknown;
   notes?: unknown;
   /** Render ids to send even though no note reaches them. */
   forceRenders?: unknown;
@@ -107,12 +110,14 @@ export async function recalibrateSystemPrompt(): Promise<string> {
  *      exist; this run edits them, it does not choose between engines.
  *    · sources   — a bibliography. Not a card, so nothing can cite it, and every
  *      fact already carries its own `source` field.
+ *    · conclusions — a notebook that declares its own carries them inside the
+ *      object; they travel in their own block, from the body's `conclusions`.
  *
  *  Everything else stays even where it only INFORMS writing — analogyCandidates,
  *  scaleConversions, currency, counterPositions, researchGaps — because a
  *  rewrite that cannot see the sanctioned analogy invents one, and inventing is
  *  the single thing RECALIBRATE-PROMPT.md forbids absolutely. */
-const NOTEBOOK_DROP = ["engineFit", "sources"];
+const NOTEBOOK_DROP = ["engineFit", "sources", "conclusions"];
 
 /** Render keys no edit op writes.
  *
@@ -169,9 +174,10 @@ function withAttribution(r: Loose): Loose {
  *  `f-*` id absent from it is kept (`research/scope.ts::OPT_IN_DEFAULT`, which
  *  owns this rule). That module is `"use client"` and cannot be imported here,
  *  so the rule is restated in one expression with its owner named. */
-function conclusionsFor(scope: unknown) {
-  const rec = (scope && typeof scope === "object" ? scope : {}) as Record<string, { descoped?: boolean } | undefined>;
-  return CONCLUSIONS.map((c) => ({ ...c, inScope: rec[c.id]?.descoped === false }));
+function conclusionsFor(body: RecalibrateInput) {
+  const rec = (body.scope && typeof body.scope === "object" ? body.scope : {}) as Record<string, { descoped?: boolean } | undefined>;
+  const own = (Array.isArray(body.conclusions) ? body.conclusions : []) as Conclusion[];
+  return own.filter((c) => c && typeof c.id === "string").map((c) => ({ ...c, inScope: rec[c.id]?.descoped === false }));
 }
 
 type ScopedConclusion = ReturnType<typeof conclusionsFor>[number];
@@ -240,7 +246,7 @@ export const MAX_RUN_CHARS = 1_000_000;
 /** Why this run's material is too large, or `null`. A pure predicate so the
  *  negative case can be asked without dispatching a run. */
 export function tooLarge(body: Record<string, unknown>): string | null {
-  const sizes = (["notebook", "renders", "scope", "notes"] as const).map((k) => [k, jsonSize(body[k])] as const);
+  const sizes = (["notebook", "conclusions", "renders", "scope", "notes"] as const).map((k) => [k, jsonSize(body[k])] as const);
   const total = sizes.reduce((n, [, s]) => n + s, 0);
   if (total <= MAX_RUN_CHARS) return null;
   const [biggest] = [...sizes].sort((a, b) => b[1] - a[1])[0]!;
@@ -300,7 +306,7 @@ export function assembleRecalibrate(body: RecalibrateInput, system: string): { p
   const notebookJson = JSON.stringify(without(body.notebook, NOTEBOOK_DROP));
   const sentJson = JSON.stringify(sent);
   const { whole: conclusions, held } = splitConclusions(
-    conclusionsFor(body.scope),
+    conclusionsFor(body),
     notes,
     notebookJson + sentJson,
     idsOf(body.forceConclusions),

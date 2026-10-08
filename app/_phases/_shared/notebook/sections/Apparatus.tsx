@@ -5,29 +5,33 @@
 // never looked at.
 
 import { HazardLine } from "../Chips";
+import { countsOf } from "../counts";
 import FactRow from "../FactRow";
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "../notebook";
-import { H, SECTION_LABEL, sectionRenders } from "./H";
+import type { Fact, Notebook } from "../types";
+import { H, sectionLabels, sectionRenders } from "./H";
 import { CurrencyBody, SourcesBody } from "./Shared";
 
-export default function ApparatusSections() {
-  const n = NOTEBOOK;
+/** `facts` is the notebook's by-id index (`source.byId.facts`), which a fact's
+ *  `contests`/`qualifies` edges resolve against. */
+export default function ApparatusSections({ n, facts }: { n: Notebook; facts: Readonly<Record<string, Fact>> }) {
+  const labels = sectionLabels(n);
+  const counts = countsOf(n);
   return (
     <>
       <section className="space-y-2">
         <H id="facts">
-          {SECTION_LABEL.facts} · {NOTEBOOK_COUNTS.loadBearing} load-bearing ·{" "}
-          {NOTEBOOK_COUNTS.lowConfidence} at low confidence
+          {labels.facts} · {counts.loadBearing} load-bearing ·{" "}
+          {counts.lowConfidence} at low confidence
         </H>
         <ul className="space-y-2">
           {n.facts.map((f) => (
-            <FactRow key={f.id} f={f} />
+            <FactRow key={f.id} f={f} facts={facts} />
           ))}
         </ul>
       </section>
 
       <section className="space-y-2">
-        <H id="numbers" />
+        <H id="numbers">{labels.numbers}</H>
         <ul className="space-y-1.5">
           {n.scaleConversions.map((s) => (
             <li key={s.raw} className="text-content leading-relaxed">
@@ -50,7 +54,7 @@ export default function ApparatusSections() {
       </section>
 
       <section className="space-y-2">
-        <H id="unknowns" />
+        <H id="unknowns">{labels.unknowns}</H>
         {n.unknowns.map((u) => {
           const resolved = !!u.resolvedBy;
           return (
@@ -100,7 +104,7 @@ export default function ApparatusSections() {
           dropping all five. */}
       {sectionRenders(n, "questions") && (
         <section className="space-y-2">
-          <H id="questions" />
+          <H id="questions">{labels.questions}</H>
           <ul className="space-y-1.5">
             {n.candidateQuestions.map((q) => (
               <li key={q} className="flex gap-2 text-content leading-relaxed text-slate-300">
@@ -113,7 +117,7 @@ export default function ApparatusSections() {
       )}
 
       <section className="space-y-2">
-        <H id="fit" />
+        <H id="fit">{labels.fit}</H>
         {n.engineFit.map((e) => (
           <div key={e.engine} className="flex gap-3 text-content leading-relaxed">
             <span
@@ -134,21 +138,21 @@ export default function ApparatusSections() {
       </section>
 
       <section className="space-y-1.5">
-        <H id="currency" />
+        <H id="currency">{labels.currency}</H>
         {/* Inlined here: this artifact has no stat tile to carry it. */}
-        <CurrencyBody withHalfLife />
+        <CurrencyBody n={n} withHalfLife />
       </section>
 
       <section className="space-y-1.5">
         {/* Named "bibliography", not "sources", and in step with the rail pill
-            by construction now — both read SECTION_LABEL in ./H.tsx, where the
+            by construction now — both read sectionLabels in ./H.tsx, where the
             reasoning lives. */}
-        <H id="sources" />
-        <SourcesBody />
+        <H id="sources">{labels.sources}</H>
+        <SourcesBody n={n} />
       </section>
 
       <section className="space-y-1.5">
-        <H id="gaps" />
+        <H id="gaps">{labels.gaps}</H>
         <ul className="space-y-1.5">
           {n.researchGaps.map((g) => (
             <li key={g} className="flex gap-2 text-content leading-relaxed text-amber-200/80">

@@ -341,6 +341,69 @@ export function assetFromUpload(
   };
 }
 
+/** What a kept plate is, as `keepPlate` hands it over. `digest` is the full
+ *  SHA-256 hex of `blob`'s bytes; the ids carry its first sixteen characters. */
+export interface KeptPlate {
+  blob: Blob;
+  mime: string;
+  digest: string;
+  projectTitle: string;
+  projectId: string;
+  /** `Output.id`, e.g. `frames:<unitId>[:<altId>]`. */
+  outputId: string;
+  /** The plate's title, the shelf entry's name. */
+  name: string;
+  /** `Output.provenance.run`. */
+  renderId?: string;
+  model?: string;
+  costUsd?: number;
+}
+
+const folderSegment = (s: string) =>
+  s
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "") || "untitled";
+
+/**
+ * A plate the user chose to keep, as a shelf entry that owns its bytes.
+ *
+ * Content-addressed like `promotedId`, for the same reason: keeping twice, or
+ * the same picture from two projects, overwrites one row rather than minting a
+ * second tile. A regenerate has different bytes, so it is a different row. The
+ * bytes are COPIED, never pointed at: `deleteProject` does not touch this store,
+ * but a plate's own `src` dies with the record that held it.
+ */
+export function assetFromKeptPlate(uid: string, kept: KeptPlate): { asset: Asset; upload: UploadRecord } {
+  const d16 = kept.digest.slice(0, 16);
+  const uploadId = `up-kept-${d16}`;
+  return {
+    asset: {
+      id: `as-kept-${d16}`,
+      uid,
+      path: ["kept", folderSegment(kept.projectTitle)],
+      name: kept.name,
+      src: uploadPointer(uploadId),
+      kind: "image",
+      meta: {
+        upload: true,
+        uploadId,
+        mime: kept.mime,
+        bytes: kept.blob.size,
+        kept: "plate",
+        digest: kept.digest,
+        projectId: kept.projectId,
+        outputId: kept.outputId,
+        renderId: kept.renderId,
+        model: kept.model,
+        costUsd: kept.costUsd,
+      },
+      createdAt: Date.now(),
+    },
+    upload: { id: uploadId, blob: kept.blob, mime: kept.mime, bytes: kept.blob.size },
+  };
+}
+
 /** Write the rows and their bytes together. ONE transaction over both stores,
  *  so an upload cannot commit as a shelf entry pointing at bytes that were
  *  never written — which would draw as a broken tile with no way to explain

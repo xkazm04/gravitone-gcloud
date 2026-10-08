@@ -8,8 +8,9 @@
 // (client-api-auth.probe). A rule spread across call sites is a rule some call
 // site forgets, so the calls live here and nowhere else —
 // tests/golden-path/turn-recalibrate.probe.spec.ts walks app/, components/ and
-// lib/ and fails on any raw fetch of /api/recalibrate or /api/turns outside
-// this file, and turn-frames.probe.spec.ts holds /api/frames to the same rule.
+// lib/ and fails on any raw fetch of /api/recalibrate, /api/research or
+// /api/turns outside this file, and turn-frames.probe.spec.ts holds
+// /api/frames to the same rule.
 //
 // NOT SERVER CODE, AND IT IMPORTS NONE: lib/turns/ledger.ts pulls node:fs and
 // node:crypto, so only its TYPES come across. The live-status set is restated
@@ -78,6 +79,34 @@ export async function startFrames(projectId: string, body: Record<string, unknow
   const json = await bodyOf(res);
   if (res.status === 202 && typeof json.turnId === "string") return { ok: true, turnId: json.turnId };
   return refusedOf(res, json);
+}
+
+/** Start a research run (AIO-A stage 4b). The same contract: the topic
+ *  refusals (400 empty or too long) before any record exists, 202 with the
+ *  turn id after, 409 naming the run that already holds this project's slot. */
+export async function startResearch(projectId: string, topic: string): Promise<StartOutcome> {
+  const res = await fetch("/api/research", {
+    method: "POST",
+    headers: { ...JSON_HEADERS, ...accessHeader() },
+    body: JSON.stringify({ topic, projectId }),
+  });
+  const json = await bodyOf(res);
+  if (res.status === 202 && typeof json.turnId === "string") return { ok: true, turnId: json.turnId };
+  return refusedOf(res, json);
+}
+
+/** What GET /api/research answers before any spend: who would serve a
+ *  research run here, and what this app knows about their price. GATED, like
+ *  the POST — it discloses which engines are reachable and why the others are
+ *  not — so it goes through this door too. The shape is the Research step's
+ *  (`Preflight`, app/_phases/research/run/live.ts); `null` on any failure. */
+export async function researchPreflight(): Promise<unknown | null> {
+  try {
+    const res = await fetch("/api/research", { headers: { ...accessHeader() } });
+    return res.ok ? ((await res.json()) as unknown) : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Start any registered turn kind through the generic door. */

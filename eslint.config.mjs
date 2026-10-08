@@ -31,6 +31,8 @@ const config = [
     // them would grade code this repo does not author.
     ignores: [
       "node_modules/**",
+      // Pinned third-party UMD builds a strip page inlines (pipeline/strips/vendor/README.md).
+      "pipeline/strips/vendor/**",
       // Contest and kit scratch: arena entries are throwaway prototypes, not product code.
       ".contest/**",
       ".kit/**",
@@ -64,6 +66,12 @@ const config = [
       "coverage/**",
       "test-results/**",
       "gauntlet/**",
+      // Foundry run output: forge candidates and strip workspaces holding staged
+      // copies of third-party vendor bundles. Gitignored and regenerable, and not
+      // code this repo authors. Without this entry any checkout that has run the
+      // foundry grades minified bundles and the ratchet goes red on output a
+      // fresh worktree never has.
+      "foundry-out/**",
       "imaging-probe-out/**",
       "frames-direction-out/**",
       "public/**",

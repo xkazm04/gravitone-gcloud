@@ -14,6 +14,14 @@ import { defineConfig } from "@playwright/test";
 // `tests/live/` there — so a file in the wrong directory runs in the wrong lane
 // and `git status` shows it.
 // ==============================================================================
+
+// SPEND STAYS IN MEMORY HERE. Off the managed posture every spend class defaults
+// to this machine's ledger file (lib/spend/select.ts), and a probe that books $4
+// must not leave $4 in foundry-out/spend/ for the next run, or the operator's
+// server, to be refused against. Workers inherit it; only
+// spend-ledger.probe.spec.ts opts into the file store, in temp directories.
+process.env.SPEND_STORE = "memory";
+
 export default defineConfig({
   testDir: "./tests/golden-path",
 

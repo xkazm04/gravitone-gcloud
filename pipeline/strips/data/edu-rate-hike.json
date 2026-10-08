@@ -1,0 +1,46 @@
+{
+  "case": "edu-rate-hike",
+  "title": "How a rate rise cools inflation",
+  "beat": "A central bank raises its policy rate, borrowing gets dearer, spending falls, and prices rise more slowly.",
+  "steps": [
+    "The central bank raises its policy rate",
+    "Banks charge more on loans and mortgages",
+    "Households and firms borrow and spend less",
+    "Demand for goods and services falls",
+    "Prices rise more slowly: inflation falls"
+  ],
+  "facts": [
+    {
+      "text": "A higher Bank Rate usually means dearer bank loans",
+      "source": "https://www.bankofengland.co.uk/monetary-policy/the-interest-rate-bank-rate",
+      "publisher": "Bank of England",
+      "quote": "when we raise the Bank Rate, banks will usually increase how much they charge their customers on loans and the interest they offer on savings"
+    },
+    {
+      "text": "Higher rates raise mortgage and loan payments",
+      "source": "https://www.bankofengland.co.uk/monetary-policy/the-interest-rate-bank-rate",
+      "publisher": "Bank of England",
+      "quote": "Higher interest rates mean higher payments on many mortgages and loans, meaning people must spend more on them and less on other things."
+    },
+    {
+      "text": "Less spending, slower price rises",
+      "source": "https://www.bankofengland.co.uk/monetary-policy/the-interest-rate-bank-rate",
+      "publisher": "Bank of England",
+      "quote": "When customers spend less, businesses are less willing or able to raise their prices. When prices don't go up so quickly, inflation falls."
+    },
+    {
+      "text": "The effect is neither direct nor immediate",
+      "source": "https://www.federalreserve.gov/faqs/money_12856.htm",
+      "publisher": "Board of Governors of the Federal Reserve System",
+      "quote": "while the linkages from monetary policy to both inflation and employment are not direct or immediate, monetary policy is an important factor"
+    }
+  ],
+  "countable": [
+    "exactly one policy-rate indicator, moving UP once at the start",
+    "five stages shown in the order of `steps`, left to right or top to bottom",
+    "the price line keeps rising but with a shallower slope at the end (inflation falls, prices do not fall)",
+    "a visible delay between the rate rise and the price slowdown (not instantaneous)"
+  ],
+  "notes": "Bank of England page last updated 18 September 2026; Federal Reserve FAQ last updated July 19, 2024 (dates as printed on the pages).",
+  "retrieved": "2026-10-06"
+}

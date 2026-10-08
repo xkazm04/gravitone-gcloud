@@ -1,7 +1,15 @@
-// GET /api/foundry/file?run=<id>&path=<run-relative>[&kind=extract|training] —
+// GET /api/foundry/file?run=<id>&path=<run-relative>[&kind=extract|training|strips] —
 // serve one run file. `kind` names the output root: the forge's runs (default),
-// the Extract module's (foundry-out/extract/), or the Dojo's
-// (foundry-out/training/). Same path discipline on all three.
+// the Extract module's (foundry-out/extract/), the Dojo's
+// (foundry-out/training/), or the code-rendered strips' (foundry-out/strips/).
+// Same path discipline on all four.
+//
+// VIDEO, FOR STRIPS ONLY. `kind=strips` also serves .mp4 and .webm, with one
+// `bytes=a-b` Range honoured as a 206 — what a <video> asks for to start and to
+// seek (lifted from app/api/video/clips/[id]/file/route.ts). Every other kind
+// keeps runStore's SERVABLE_EXTENSIONS, images and json only. A strip's
+// strip.html is never served here: it is code, and goes out only through
+// /api/foundry/strips/<id>/page under a sandbox CSP.
 //
 // foundry-out/ sits outside public/ on purpose (third-party reference frames,
 // never to be published), so the page reaches images through this seam. An
@@ -14,8 +22,9 @@
 import { guardAccessOnly } from "@/lib/apiAuth";
 import { FoundryError, fileStat } from "@/lib/foundry/store";
 import { extractFileStat } from "@/lib/foundry/extract/store";
+import { stripFileStat } from "@/lib/foundry/strips/store";
 import { trainingFileStat } from "@/lib/foundry/training/store";
-import { readFile } from "node:fs/promises";
+import { open, readFile } from "node:fs/promises";
 import path from "node:path";
 
 export const runtime = "nodejs";
@@ -26,7 +35,45 @@ const MIME: Record<string, string> = {
   ".jpeg": "image/jpeg",
   ".webp": "image/webp",
   ".json": "application/json",
+  ".mp4": "video/mp4",
+  ".webm": "video/webm",
 };
+
+const VIDEO = new Set([".mp4", ".webm"]);
+
+/** One file with one `bytes=a-b` range honoured (a suffix `bytes=-N` too);
+ *  anything else gets the whole file. 416 for a range past the end. */
+async function serveRanged(req: Request, abs: string, size: number, type: string): Promise<Response> {
+  const base = { "content-type": type, "accept-ranges": "bytes", "cache-control": "private, max-age=3600" };
+  const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get("range") ?? "");
+  let start = 0;
+  let end = size - 1;
+  let partial = false;
+  if (m && (m[1] || m[2])) {
+    if (m[1]) {
+      start = Number(m[1]);
+      if (m[2]) end = Math.min(Number(m[2]), size - 1);
+    } else {
+      start = Math.max(0, size - Number(m[2]));
+    }
+    if (start > end || start >= size) return new Response(null, { status: 416, headers: { ...base, "content-range": `bytes */${size}` } });
+    partial = true;
+  }
+  const len = Math.max(0, end - start + 1);
+  const buf = Buffer.alloc(len);
+  if (len > 0) {
+    const fh = await open(abs, "r");
+    try {
+      await fh.read(buf, 0, len, start);
+    } finally {
+      await fh.close();
+    }
+  }
+  return new Response(new Uint8Array(buf), {
+    status: partial ? 206 : 200,
+    headers: { ...base, "content-length": String(len), ...(partial ? { "content-range": `bytes ${start}-${end}/${size}` } : {}) },
+  });
+}
 
 export async function GET(req: Request) {
   const url = new URL(req.url);
@@ -44,9 +91,15 @@ export async function GET(req: Request) {
   const rel = url.searchParams.get("path") ?? "";
   try {
     const kind = url.searchParams.get("kind");
+    if (kind === "strips") {
+      const { abs, size } = await stripFileStat(run, rel);
+      const ext = path.extname(abs).toLowerCase();
+      if (VIDEO.has(ext)) return await serveRanged(req, abs, size, MIME[ext]);
+    }
     const { abs } =
       kind === "extract" ? await extractFileStat(run, rel)
       : kind === "training" ? await trainingFileStat(run, rel)
+      : kind === "strips" ? await stripFileStat(run, rel)
       : await fileStat(run, rel);
     const bytes = await readFile(abs);
     return new Response(new Uint8Array(bytes), {

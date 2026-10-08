@@ -52,7 +52,7 @@ import { getProject, type Discipline } from "@/lib/projects";
 
 import NotebookBody from "../_shared/notebook/NotebookBody";
 import EvidenceLog from "../_shared/notebook/EvidenceLog";
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
+import { countsOf, type NotebookCounts } from "../_shared/notebook/counts";
 import { saveStep, type GuidedModeStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
 import { usePhaseReport } from "../_shared/usePhaseReport";
@@ -184,11 +184,19 @@ function EducationalResearch({ projectId }: { projectId: string }) {
   // other the moment you switch. The wiring itself moved verbatim to
   // guided/useEducationalResearch.ts so neither face forks it.
   const research = useEducationalResearch(projectId);
-  const api = useScope(projectId);
+  // Dealt from the project's ACTIVE notebook — the creator's own when one is
+  // saved, else the replay (research-scope-board-A stage 3).
+  const api = useScope(projectId, research.source);
 
   // WHAT THIS SURFACE REPORTS TO THE SHELF. A notebook exists → in progress;
   // the scope checkpoint is taken → locked (the checkpoint IS the creator's
   // sign-off on what travels); the board has moved since → needs a call.
+  //
+  // Still gated on the REPLAY landing (`ready`), not on `dealt`: the pure
+  // verdict this report is held level with (verdict.ts, step-verdicts probe)
+  // reads `research.researched`, which only the replay writes. A project with
+  // only its own notebook reports nothing here until that verdict reads
+  // `research-notebook` too.
   usePhaseReport(
     projectId,
     "research",
@@ -220,7 +228,7 @@ function EducationalResearch({ projectId }: { projectId: string }) {
   if (!faceHydrated || !research.hydrated || !api.hydrated)
     return <p className="font-jetbrains text-label text-white/35">opening the step…</p>;
   const decided =
-    research.ready || Object.keys(api.scope).length > 0 || api.confirmed !== null;
+    research.dealt || Object.keys(api.scope).length > 0 || api.confirmed !== null;
 
   return (
     <EducationalFaces
@@ -262,7 +270,11 @@ function EducationalFaces({
   const [fallback] = useState<Face>(defaultFace);
   const shown = face ?? fallback;
 
-  const { run, ready, live } = research;
+  const { run, live } = research;
+  // WHAT THE MODALS, THE PILLS AND THE CLEAR DIALOG DRAW IS WHAT THE BOARD DEALS:
+  // the creator's own notebook when one is saved, else the replay.
+  const dealtSource = research.source;
+  const counts = countsOf(dealtSource.notebook);
 
   // Everything the ClearDialog says is discarded, discarded. The follow-up
   // record is the third document this step owns — it lives above React so that
@@ -274,7 +286,9 @@ function EducationalFaces({
   // is the one that also reaches DISK — the reasoned notebook has its own step
   // record — because a cleared step that leaves a notebook in the store
   // re-adopts it on the next mount and the creator's clear silently undoes
-  // itself. tests/golden-path/step-clear-completeness.probe.spec.ts walks this
+  // itself. That same write is what takes the creator's notebook off the board:
+  // useActiveNotebook hears it issued and falls back to the replay in the same
+  // tick. tests/golden-path/step-clear-completeness.probe.spec.ts walks this
   // function's body for each store's reset by name.
   //
   // WHERE A CLEAR LANDS YOU. It used to be `setTab("topic")` — back to the run
@@ -283,7 +297,7 @@ function EducationalFaces({
   // creator staring at the empty shape of the thing they just discarded. The
   // guided face is where a run is started now, so that is where a cleared step
   // goes. On the guided face this is a no-op it already agrees with: the wizard
-  // re-deals from stage 1 once `ready` is false.
+  // re-deals from stage 1 once `dealt` is false.
   const doClear = () => {
     run.reset();
     live.reset();
@@ -314,7 +328,9 @@ function EducationalFaces({
         <ExpertBoard
           api={api}
           projectId={projectId}
-          ready={ready}
+          counts={counts}
+          trouble={research.trouble}
+          dealt={research.dealt}
           onOpenNotebook={() => setArtifact("notebook")}
           onOpenEvidence={() => setArtifact("evidence")}
           onClear={() => setConfirmClear(true)}
@@ -322,15 +338,15 @@ function EducationalFaces({
         />
       )}
 
-      <ClearDialog open={confirmClear} onClose={() => setConfirmClear(false)} onConfirm={doClear} />
+      <ClearDialog open={confirmClear} onClose={() => setConfirmClear(false)} onConfirm={doClear} source={dealtSource} />
 
       <Modal
         open={artifact === "notebook"}
         onClose={() => setArtifact(null)}
-        title="notebook · why-bitcoin-price-does-not-rise"
-        footer={`${NOTEBOOK_COUNTS.facts} facts · ${NOTEBOOK_COUNTS.mechanisms} mechanisms · ${NOTEBOOK_COUNTS.reversals} reversals · researched ${NOTEBOOK.researched}`}
+        title={`notebook · ${dealtSource.notebook.id}`}
+        footer={`${counts.facts} facts · ${counts.mechanisms} mechanisms · ${counts.reversals} reversals · researched ${dealtSource.notebook.researched}`}
       >
-        <NotebookBody />
+        <NotebookBody source={dealtSource} />
       </Modal>
 
       <Modal
@@ -344,13 +360,13 @@ function EducationalFaces({
         }
         footer={
           <p className="font-jetbrains text-content text-white/35">
-            {NOTEBOOK_COUNTS.flagged === 0
+            {counts.flagged === 0
               ? "no claim is both load-bearing and low-confidence"
-              : `${NOTEBOOK_COUNTS.flagged} claim(s) load-bearing at low confidence — flagged, not quietly used`}
+              : `${counts.flagged} claim(s) load-bearing at low confidence — flagged, not quietly used`}
           </p>
         }
       >
-        <EvidenceLog />
+        <EvidenceLog source={dealtSource} />
       </Modal>
 
     </div>
@@ -375,7 +391,9 @@ function EducationalFaces({
 function ExpertBoard({
   api,
   projectId,
-  ready,
+  counts,
+  trouble,
+  dealt,
   onOpenNotebook,
   onOpenEvidence,
   onClear,
@@ -383,8 +401,13 @@ function ExpertBoard({
 }: {
   api: ReturnType<typeof useScope>;
   projectId: string;
-  /** The simulated run landed — there is a notebook, so there are cards. */
-  ready: boolean;
+  /** The counts of the dealt notebook, which the artifact pills open. */
+  counts: NotebookCounts;
+  /** Why a saved notebook is not the one dealt, or null. */
+  trouble: string | null;
+  /** There are cards: the replay landed, or the creator's own notebook is the
+   *  active source. */
+  dealt: boolean;
   onOpenNotebook: () => void;
   onOpenEvidence: () => void;
   onClear: () => void;
@@ -396,8 +419,9 @@ function ExpertBoard({
           board", ResearchTriageBoard's header) and two stacked eyebrows is the
           repetition this wave is removing. The row is the exits only. */}
       <div className="flex flex-wrap items-center justify-end gap-2.5">
-        {ready && (
+        {dealt && (
           <ArtifactPills
+            counts={counts}
             onOpenNotebook={onOpenNotebook}
             onOpenEvidence={onOpenEvidence}
             onClear={onClear}
@@ -406,9 +430,9 @@ function ExpertBoard({
         <FaceSwitch face="expert" onSwitch={onSwitchFace} />
       </div>
 
-      {ready ? (
+      {dealt ? (
         <>
-          <ResearchTriageBoard api={api} />
+          <ResearchTriageBoard api={api} trouble={trouble} />
           <FollowUpQueue api={api} projectId={projectId} />
           <ConfirmScope api={api} />
         </>

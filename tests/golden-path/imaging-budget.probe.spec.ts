@@ -47,8 +47,8 @@ const KEY_VARS = ["GOOGLE_AI_API_KEY", "LEONARDO_API_KEY", "QWEN_API_KEY"];
  *  The axes are asserted on their own further down; in the ceiling and window
  *  tests they are scaffolding, and this helper keeps those tests reading about
  *  the numbers they are actually about. */
-const book = (usd: number | undefined, at?: number) =>
-  recordSpend({
+const book = async (usd: number | undefined, at?: number) =>
+  await recordSpend({
     usd,
     cap: "generate",
     provider: "google",
@@ -87,19 +87,19 @@ test("estimate: pending cost is the dearest declared per-image rate, times count
   console.log(`[budget] perImage=$${perImage} -> pending(4)=$${estimatePendingUsd(4)}`);
 });
 
-test("gate: under the ceiling passes; the call that would cross it is refused", () => {
+test("gate: under the ceiling passes; the call that would cross it is refused", async () => {
   process.env[BUDGET_VAR] = "0.10";
   expect(budgetCeilingUsd()).toBe(0.1);
 
   // $0.045 pending, nothing spent yet — comfortably under $0.10.
-  expect(() => assertWithinBudget(estimatePendingUsd(1))).not.toThrow();
+  await expect(assertWithinBudget(estimatePendingUsd(1))).resolves.toBeUndefined();
 
   // Book $0.09. Now a $0.045 pending call would reach $0.135 > $0.10 → refuse.
-  book(0.09);
-  expect(currentSpendUsd()).toBeCloseTo(0.09, 6);
+  await book(0.09);
+  expect(await currentSpendUsd()).toBeCloseTo(0.09, 6);
   let err: unknown;
   try {
-    assertWithinBudget(estimatePendingUsd(1));
+    await assertWithinBudget(estimatePendingUsd(1));
   } catch (e) {
     err = e;
   }
@@ -108,59 +108,59 @@ test("gate: under the ceiling passes; the call that would cross it is refused", 
   console.log(`[budget] refused over ceiling: ${(err as ImagingError).message.slice(0, 60)}...`);
 });
 
-test("window: spend older than the window no longer counts (rolls over)", () => {
+test("window: spend older than the window no longer counts (rolls over)", async () => {
   process.env[BUDGET_VAR] = "1.00";
   process.env[WINDOW_VAR] = "60000"; // 1-minute window
   const t0 = 5_000_000;
 
-  book(0.9, t0);
+  await book(0.9, t0);
   // Immediately, $0.9 is in-window: a $0.045 call is fine, but pretend a $0.2
   // pending would cross $1.00.
-  expect(() => assertWithinBudget(0.2, t0)).toThrow(ImagingError);
-  expect(currentSpendUsd(t0)).toBeCloseTo(0.9, 6);
+  await expect(assertWithinBudget(0.2, t0)).rejects.toThrow(ImagingError);
+  expect(await currentSpendUsd(t0)).toBeCloseTo(0.9, 6);
 
   // 61s later the $0.9 has aged out of the 60s window → spend resets to 0.
   const later = t0 + 61_000;
-  expect(currentSpendUsd(later)).toBe(0);
-  expect(() => assertWithinBudget(0.2, later)).not.toThrow();
+  expect(await currentSpendUsd(later)).toBe(0);
+  await expect(assertWithinBudget(0.2, later)).resolves.toBeUndefined();
   console.log(`[budget] window rollover: 0.9 in-window at t0, 0 at t0+61s`);
 });
 
-test("default ceiling is a real bound, not unlimited", () => {
+test("default ceiling is a real bound, not unlimited", async () => {
   // With nothing configured, the ceiling is the safe default (5), and a spend
   // over it is refused — an unset budget is bounded, not an open tab.
   delete process.env[BUDGET_VAR];
   expect(budgetCeilingUsd()).toBe(5);
-  book(5.0);
-  expect(() => assertWithinBudget(estimatePendingUsd(1))).toThrow(ImagingError);
+  await book(5.0);
+  await expect(assertWithinBudget(estimatePendingUsd(1))).rejects.toThrow(ImagingError);
 });
 
 // ── The meter watches itself: refusals counted, window reset observable ──────
 
-test("counters: every refusal is counted, and what it saved is counted with it", () => {
+test("counters: every refusal is counted, and what it saved is counted with it", async () => {
   process.env[BUDGET_VAR] = "0.10";
-  expect(budgetStats().counters.refusals).toBe(0);
+  expect((await budgetStats()).counters.refusals).toBe(0);
 
-  book(0.09);
+  await book(0.09);
   // Two refusals in a row — the count is a count, not a boolean.
-  for (const _ of [0, 1]) expect(() => assertWithinBudget(0.05)).toThrow();
+  for (const _ of [0, 1]) await expect(assertWithinBudget(0.05)).rejects.toThrow();
 
-  const { counters } = budgetStats();
+  const { counters } = await budgetStats();
   console.log(`[budget] refusals=${counters.refusals} refusedUsd=$${counters.refusedUsd.toFixed(4)}`);
   expect(counters.refusals).toBe(2);
   expect(counters.refusedUsd).toBeCloseTo(0.1, 6);
   // A call that PASSES must not move the refusal count.
-  expect(() => assertWithinBudget(0.005)).not.toThrow();
-  expect(budgetStats().counters.refusals).toBe(2);
+  await expect(assertWithinBudget(0.005)).resolves.toBeUndefined();
+  expect((await budgetStats()).counters.refusals).toBe(2);
 });
 
-test("counters: a booked row and an unpriced booking are told apart", () => {
-  book(0.05);
-  book(undefined); // the vendor reported nothing
-  book(0); // and a zero is not spend either
-  book(Number.NaN);
+test("counters: a booked row and an unpriced booking are told apart", async () => {
+  await book(0.05);
+  await book(undefined); // the vendor reported nothing
+  await book(0); // and a zero is not spend either
+  await book(Number.NaN);
 
-  const { counters } = budgetStats();
+  const { counters } = await budgetStats();
   console.log(`[budget] booked=${counters.booked} unpriced=${counters.unpriced}`);
   expect(counters.booked).toBe(1);
   // Unpriced calls are UNPRICED, not free: dropping them silently is what makes
@@ -168,15 +168,15 @@ test("counters: a booked row and an unpriced booking are told apart", () => {
   expect(counters.unpriced).toBe(3);
 });
 
-test("counters: the window reset is observable — eviction is counted and sized", () => {
+test("counters: the window reset is observable — eviction is counted and sized", async () => {
   process.env[WINDOW_VAR] = "60000";
   const t0 = 5_000_000;
-  book(0.3, t0);
-  book(0.4, t0);
-  expect(budgetStats(t0).counters.evicted).toBe(0);
+  await book(0.3, t0);
+  await book(0.4, t0);
+  expect((await budgetStats(t0)).counters.evicted).toBe(0);
 
   const later = t0 + 61_000;
-  const stats = budgetStats(later);
+  const stats = await budgetStats(later);
   console.log(
     `[budget] evicted=${stats.counters.evicted} usd=$${stats.counters.evictedUsd.toFixed(4)} spent=$${stats.spentUsd}`,
   );
@@ -187,13 +187,13 @@ test("counters: the window reset is observable — eviction is counted and sized
   expect(stats.counters.lastEvictionAt).toBe(later);
 });
 
-test("counters: the window BOUNDARY travels with the total", () => {
+test("counters: the window BOUNDARY travels with the total", async () => {
   process.env[BUDGET_VAR] = "2.50";
   process.env[WINDOW_VAR] = "60000";
   const now = 9_000_000;
-  book(0.5, now);
+  await book(0.5, now);
 
-  const s = budgetStats(now);
+  const s = await budgetStats(now);
   console.log(`[budget] window=[${s.windowStart},${s.windowEnd}] spent=$${s.spentUsd} of $${s.ceilingUsd}`);
   // A consumer renders the window it was HANDED rather than deriving its own —
   // which is how a dashboard and an enforcer end up contradicting each other.
@@ -205,16 +205,16 @@ test("counters: the window BOUNDARY travels with the total", () => {
   expect(s.rows).toBe(1);
 });
 
-test("counters: enforcement is unchanged — the meter reads, it does not decide", () => {
+test("counters: enforcement is unchanged — the meter reads, it does not decide", async () => {
   // The regression this guards: counters added beside a gate must never become
   // a condition inside it. A window with a long refusal history admits exactly
   // what a fresh one admits.
   process.env[BUDGET_VAR] = "0.10";
-  for (let i = 0; i < 5; i++) expect(() => assertWithinBudget(1.0)).toThrow();
-  expect(budgetStats().counters.refusals).toBe(5);
+  for (let i = 0; i < 5; i++) await expect(assertWithinBudget(1.0)).rejects.toThrow();
+  expect((await budgetStats()).counters.refusals).toBe(5);
   // Still nothing spent, so a small call still passes.
-  expect(budgetStats().spentUsd).toBe(0);
-  expect(() => assertWithinBudget(0.05)).not.toThrow();
+  expect((await budgetStats()).spentUsd).toBe(0);
+  await expect(assertWithinBudget(0.05)).resolves.toBeUndefined();
 });
 
 // ── The chokepoint is actually wired: generate() enforces it BEFORE vendors ──
@@ -258,13 +258,13 @@ test("chokepoint: under the ceiling, generate() passes the budget (then dies on 
 // primary", "how much went on calls that produced nothing" — none had an answer,
 // and the server log line that DID carry those axes had no key to join on.
 
-test("attribution: spend splits by capability, provider, model and outcome", () => {
-  recordSpend({ usd: 0.10, cap: "generate", provider: "google", model: "nano-banana", outcome: "served", basis: "vendor" });
-  recordSpend({ usd: 0.20, cap: "generate", provider: "leonardo", model: "lucid-origin", outcome: "served", basis: "vendor" });
-  recordSpend({ usd: 0.04, cap: "recognize", provider: "qwen", model: "qwen-vl", outcome: "served", basis: "vendor" });
-  recordSpend({ usd: 0.05, cap: "generate", provider: "google", model: "nano-banana", outcome: "failed", basis: "estimate" });
+test("attribution: spend splits by capability, provider, model and outcome", async () => {
+  await recordSpend({ usd: 0.10, cap: "generate", provider: "google", model: "nano-banana", outcome: "served", basis: "vendor" });
+  await recordSpend({ usd: 0.20, cap: "generate", provider: "leonardo", model: "lucid-origin", outcome: "served", basis: "vendor" });
+  await recordSpend({ usd: 0.04, cap: "recognize", provider: "qwen", model: "qwen-vl", outcome: "served", basis: "vendor" });
+  await recordSpend({ usd: 0.05, cap: "generate", provider: "google", model: "nano-banana", outcome: "failed", basis: "estimate" });
 
-  const a = spendByAxis();
+  const a = await spendByAxis();
   expect(a.totalUsd).toBeCloseTo(0.39, 6);
   // "Which step spent this?" — the question the old row could not be asked.
   expect(a.byCapability["generate"]).toBeCloseTo(0.35, 6);
@@ -279,12 +279,12 @@ test("attribution: spend splits by capability, provider, model and outcome", () 
   console.log(`[budget] byCapability=${JSON.stringify(a.byCapability)} byOutcome=${JSON.stringify(a.byOutcome)}`);
 });
 
-test("attribution: the ledger row carries the SAME axes the log line does", () => {
+test("attribution: the ledger row carries the SAME axes the log line does", async () => {
   // The join key. Two records of one event, in one vocabulary — that is the whole
   // point of the widening, and it is asserted rather than assumed because a
   // rename on one side is otherwise invisible until someone tries to correlate.
-  recordSpend({ usd: 0.045, cap: "edit", provider: "google", model: "nano-banana", outcome: "served", basis: "vendor" });
-  const [row] = spendRows();
+  await recordSpend({ usd: 0.045, cap: "edit", provider: "google", model: "nano-banana", outcome: "served", basis: "vendor" });
+  const [row] = await spendRows();
   expect(row.cap).toBe("edit");
   expect(row.provider).toBe("google");
   expect(row.model).toBe("nano-banana");
@@ -293,11 +293,11 @@ test("attribution: the ledger row carries the SAME axes the log line does", () =
   expect(typeof row.at).toBe("number");
 });
 
-test("attribution: the returned rows are a COPY — a reader cannot edit the ledger", () => {
-  recordSpend({ usd: 1.0, cap: "generate", provider: "google", outcome: "served", basis: "vendor" });
-  const rows = spendRows();
+test("attribution: the returned rows are a COPY — a reader cannot edit the ledger", async () => {
+  await recordSpend({ usd: 1.0, cap: "generate", provider: "google", outcome: "served", basis: "vendor" });
+  const rows = await spendRows();
   (rows[0] as { usd: number }).usd = 999;
-  expect(currentSpendUsd()).toBeCloseTo(1.0, 6);
+  expect(await currentSpendUsd()).toBeCloseTo(1.0, 6);
 });
 
 // ── FAILED CALLS ARE BOOKED, AND ONLY THE ONES THAT COST ────────────────────
@@ -307,9 +307,9 @@ test("attribution: the returned rows are a COPY — a reader cannot edit the led
 // the vendor will bill and booked NOTHING. The meter therefore under-read most
 // during an incident — an under-count correlated with trouble.
 
-test("failure booking: a dispatched failure counts against the window", () => {
-  recordSpend({ usd: 0.045, cap: "generate", provider: "google", outcome: "failed", basis: "estimate" });
-  const s = budgetStats();
+test("failure booking: a dispatched failure counts against the window", async () => {
+  await recordSpend({ usd: 0.045, cap: "generate", provider: "google", outcome: "failed", basis: "estimate" });
+  const s = await budgetStats();
   expect(s.spentUsd).toBeCloseTo(0.045, 6);
   expect(s.counters.booked).toBe(1);
   expect(s.counters.bookedFailed).toBe(1);
@@ -358,7 +358,7 @@ test("failure booking: a no-key chain books NOTHING (the regression this must no
 
   await generate({ prompt: "probe", aspect: "16:9", count: 1 }).catch(() => {});
 
-  const s = budgetStats();
+  const s = await budgetStats();
   expect(s.spentUsd).toBe(0);
   expect(s.counters.booked).toBe(0);
   expect(s.counters.bookedFailed).toBe(0);
@@ -382,9 +382,9 @@ test("failure booking: a no-key chain books NOTHING (the regression this must no
 // evidence rather than a restatement of its own implementation.
 
 /** The window a thrifty run leaves behind: one cheap call, fallback vendor. */
-function thriftyWindow(): void {
+async function thriftyWindow(): Promise<void> {
   __resetBudget();
-  recordSpend({
+  await recordSpend({
     usd: 0.0257,
     cap: "generate",
     provider: "leonardo",
@@ -400,10 +400,10 @@ function thriftyWindow(): void {
  *  books against whichever provider that actually is rather than a frozen
  *  "google", which `unreachedPlanTops` (arm B, below) would then correctly
  *  report as the plan's top going UNSERVED even in the "healthy" window. */
-function healthyWindow(): void {
+async function healthyWindow(): Promise<void> {
   __resetBudget();
   for (let i = 0; i < 40; i++) {
-    recordSpend({
+    await recordSpend({
       usd: 0.045,
       cap: "generate",
       provider: "agy",
@@ -414,22 +414,22 @@ function healthyWindow(): void {
   }
 }
 
-test("thrifty run, arm A: the pre-change fields cannot tell it from a healthy one", () => {
+test("thrifty run, arm A: the pre-change fields cannot tell it from a healthy one", async () => {
   process.env[BUDGET_VAR] = "5";
 
   // The verdict a reader could reach BEFORE this lane existed: is anything in
   // the meter's own report a complaint? Refusals, failed bookings, unpriced
   // rows, an over-ceiling total. Everything the file offered as a health signal.
-  const armA = (s: ReturnType<typeof budgetStats>) =>
+  const armA = (s: Awaited<ReturnType<typeof budgetStats>>) =>
     s.counters.refusals > 0 ||
     s.counters.bookedFailed > 0 ||
     s.counters.unpriced > 0 ||
     s.spentUsd > s.ceilingUsd;
 
-  thriftyWindow();
-  const thrifty = armA(budgetStats());
-  healthyWindow();
-  const healthy = armA(budgetStats());
+  await thriftyWindow();
+  const thrifty = armA(await budgetStats());
+  await healthyWindow();
+  const healthy = armA(await budgetStats());
 
   // Both clean. That is the defect: the instrument returns the same verdict for
   // a run that did the work and a run that skipped the tier it was funded for.
@@ -439,18 +439,18 @@ test("thrifty run, arm A: the pre-change fields cannot tell it from a healthy on
   console.log(`[budget] arm A verdicts — thrifty=${thrifty} healthy=${healthy} (indistinguishable)`);
 });
 
-test("thrifty run, arm B: the floor and the unreached plan top separate them", () => {
+test("thrifty run, arm B: the floor and the unreached plan top separate them", async () => {
   process.env[BUDGET_VAR] = "5";
   // The band an operator declares when they raise a budget to buy a tier.
   process.env[FLOOR_VAR] = "0.5";
 
-  thriftyWindow();
-  const thriftyStats = budgetStats();
-  const thriftyUnreached = unreachedPlanTops(Date.now(), "dev");
+  await thriftyWindow();
+  const thriftyStats = await budgetStats();
+  const thriftyUnreached = await unreachedPlanTops(Date.now(), "dev");
 
-  healthyWindow();
-  const healthyStats = budgetStats();
-  const healthyUnreached = unreachedPlanTops(Date.now(), "dev");
+  await healthyWindow();
+  const healthyStats = await budgetStats();
+  const healthyUnreached = await unreachedPlanTops(Date.now(), "dev");
 
   // The thrifty window is named on BOTH new axes.
   expect(thriftyStats.underFloor).toBe(true);
@@ -477,37 +477,37 @@ test("thrifty run, arm B: the floor and the unreached plan top separate them", (
   );
 });
 
-test("the floor never refuses, and an idle window is not a thrifty one", () => {
+test("the floor never refuses, and an idle window is not a thrifty one", async () => {
   process.env[BUDGET_VAR] = "5";
   process.env[FLOOR_VAR] = "0.5";
 
   // An empty window is under the floor arithmetically and must NOT be reported:
   // never spending is not the same as spending too little on the wrong thing.
   __resetBudget();
-  expect(budgetStats().underFloor).toBe(false);
+  expect((await budgetStats()).underFloor).toBe(false);
 
   // And declaring a band changes nobody's fate at the gate — the whole point of
   // keeping this on the reporting side. Well under the ceiling, still allowed.
-  thriftyWindow();
-  expect(budgetStats().underFloor).toBe(true);
-  expect(() => assertWithinBudget(0.05)).not.toThrow();
+  await thriftyWindow();
+  expect((await budgetStats()).underFloor).toBe(true);
+  await expect(assertWithinBudget(0.05)).resolves.toBeUndefined();
 
   // With no band declared, the report is silent even on the thrifty window.
   delete process.env[FLOOR_VAR];
-  expect(budgetStats().floorUsd).toBe(0);
-  expect(budgetStats().underFloor).toBe(false);
+  expect((await budgetStats()).floorUsd).toBe(0);
+  expect((await budgetStats()).underFloor).toBe(false);
 });
 
-test("reach is per capability, and a failed call did not serve", () => {
+test("reach is per capability, and a failed call did not serve", async () => {
   __resetBudget();
   // Google served `recognize` but never `generate`. A flat by-provider view
   // (spendByAxis) says "google was called"; reach must not.
-  recordSpend({ usd: 0.01, cap: "recognize", provider: "google", outcome: "served", basis: "vendor" });
-  recordSpend({ usd: 0.02, cap: "generate", provider: "leonardo", outcome: "served", basis: "vendor" });
+  await recordSpend({ usd: 0.01, cap: "recognize", provider: "google", outcome: "served", basis: "vendor" });
+  await recordSpend({ usd: 0.02, cap: "generate", provider: "leonardo", outcome: "served", basis: "vendor" });
   // Reached google for generate and it fell over — reached is not served.
-  recordSpend({ usd: 0.04, cap: "generate", provider: "google", outcome: "failed", basis: "vendor" });
+  await recordSpend({ usd: 0.04, cap: "generate", provider: "google", outcome: "failed", basis: "vendor" });
 
-  const reach = reachByCapability();
+  const reach = await reachByCapability();
   expect(reach.generate).toEqual(["leonardo"]);
   expect(reach.recognize).toEqual(["google"]);
 
@@ -516,12 +516,12 @@ test("reach is per capability, and a failed call did not serve", () => {
   // the cloud eye while the local one (ollama, the plan's top, $0) went
   // uncalled. A flat by-provider view sees only "google was called" and cannot
   // raise either.
-  const unreached = unreachedPlanTops(Date.now(), "dev");
+  const unreached = await unreachedPlanTops(Date.now(), "dev");
   expect(unreached).toEqual([
     { cap: "recognize", top: "ollama", servedBy: ["google"] },
     // "agy", not "google" — see the note on the other unreachedPlanTops
     // assertion in this file.
     { cap: "generate", top: "agy", servedBy: ["leonardo"] },
   ]);
-  expect(spendByAxis().byProvider.google).toBeCloseTo(0.05, 6);
+  expect((await spendByAxis()).byProvider.google).toBeCloseTo(0.05, 6);
 });

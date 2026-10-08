@@ -9,6 +9,9 @@
 // to the Script step and live in app/_phases/script/types.ts. A type used by one
 // step is that step's business.
 
+import type { Conclusion } from "./conclusions";
+import type { Dimension } from "./dimensions";
+
 export type Confidence = "high" | "medium" | "low";
 
 /** HOW a claim is known — the axis `confidence` has never been able to say.
@@ -82,6 +85,10 @@ export interface FactSource {
  *  control. */
 export interface Fact {
   id: string;
+  /** The column this card files under: an id from the notebook's own `dimensions[]`.
+   *  Optional - run 1 predates it and its tags live in dimensions.ts::CARD_DIMENSION.
+   *  A notebook that declares `dimensions[]` tags every Fact, Mechanism and Reversal. */
+  dimension?: string;
   claim: string;
   loadBearing: boolean;
   /** @deprecated Use `sources[]`. Kept so the control fixture still compiles. */
@@ -200,6 +207,10 @@ export interface ChainStep {
  *  the other. */
 export interface Mechanism {
   id: string;
+  /** The column this card files under: an id from the notebook's own `dimensions[]`.
+   *  Optional - run 1 predates it and its tags live in dimensions.ts::CARD_DIMENSION.
+   *  A notebook that declares `dimensions[]` tags every Fact, Mechanism and Reversal. */
+  dimension?: string;
   name: string;
   chain: string[];
   /** The typed chain: same sequence, with the connector lifted out of the prose
@@ -219,6 +230,10 @@ export interface Mechanism {
 
 export interface Reversal {
   id: string;
+  /** The column this card files under: an id from the notebook's own `dimensions[]`.
+   *  Optional - run 1 predates it and its tags live in dimensions.ts::CARD_DIMENSION.
+   *  A notebook that declares `dimensions[]` tags every Fact, Mechanism and Reversal. */
+  dimension?: string;
   obviousReading: string;
   whyWrong: string;
   mechanismId: string | null;
@@ -497,4 +512,11 @@ export interface Notebook {
   /** What the run did NOT do. A notebook claiming no gaps did not look hard
    *  enough — so the UI must be able to render this non-empty. */
   researchGaps: string[];
+  /** The columns THIS notebook's cards are filed in (NOTEBOOK-SCHEMA.md, Dimensions
+   *  and conclusions). Optional and additive: a notebook without it is dealt in the
+   *  fixture's market columns, as every notebook stored before it was. */
+  dimensions?: Dimension[];
+  /** Reasoned claims this notebook carries, dealt as opt-in cards. Optional: a
+   *  notebook without it deals none of its own. */
+  conclusions?: Conclusion[];
 }

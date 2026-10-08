@@ -82,7 +82,7 @@ export type ThemeStatus = "draft" | "proofing" | "locked";
  *  already on the shelf — the block is the one that rendered it, copied at
  *  promotion time, so the fork starts from what a picture the user has SEEN was
  *  actually made from rather than from a description of it. */
-export type ThemeOrigin = "scratch" | "preset" | "screenshot" | "plate";
+export type ThemeOrigin = "scratch" | "preset" | "screenshot" | "plate" | "foundry";
 
 /** The name `newTheme` falls back to when a draft arrives without one, and the
  *  name the retired "From a brief" button stamped on every style it minted. */
@@ -99,6 +99,7 @@ export const ORIGIN_WORD: Record<ThemeOrigin, string> = {
   preset: "from a preset",
   screenshot: "from a screenshot",
   plate: "from a plate",
+  foundry: "from the Foundry",
 };
 
 export interface Theme {
@@ -108,6 +109,8 @@ export interface Theme {
   origin: ThemeOrigin;
   /** Set when origin is "preset" — which one it started from. */
   presetId?: string;
+  /** Set when origin is "foundry" — the proven style it was adopted from. */
+  foundryStyleId?: string;
   /** The kind of video this style was made for. UNTAGGED MEANS EVERY
    *  DISCIPLINE: a style from a brief, or one made before disciplines existed,
    *  is offered to every project, and `styleFits` is the one place that rule is
@@ -124,6 +127,7 @@ export interface Theme {
 export type ThemeDraft = Pick<Theme, "name" | "block" | "elements"> & {
   origin: ThemeOrigin;
   presetId?: string;
+  foundryStyleId?: string;
   discipline?: Discipline;
 };
 
@@ -146,6 +150,7 @@ export function newTheme(uid: string, draft: ThemeDraft): Theme {
     name: draft.name.trim() || UNTITLED,
     origin: draft.origin,
     presetId: draft.presetId,
+    foundryStyleId: draft.foundryStyleId,
     discipline: draft.discipline,
     block: draft.block,
     elements: draft.elements,

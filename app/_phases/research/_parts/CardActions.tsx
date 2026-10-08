@@ -75,7 +75,7 @@ function ActionMark({
 }
 
 export default function CardActions({ card, api, compact }: { card: Card; api: ScopeApi; compact?: boolean }) {
-  const s = stateOf(api.scope, card.id);
+  const s = stateOf(api.scope, card.id, api.optIn);
   // Square-ish now that the content is a 16px glyph rather than a word.
   const pad = compact ? "p-1.5" : "p-2";
   return (

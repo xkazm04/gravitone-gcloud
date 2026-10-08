@@ -494,11 +494,21 @@ export function applyClear(jobs: Job[], jobId: string): Job[] {
 // `e-<turnId>` — so a second poll, a second tab, or a reload cannot announce
 // one turn twice: there is nothing to append, only a record to read.
 //
-// Scene direction (`frames`) joined in stage 3. Other kinds (poster, export,
-// research — a later stage) keep the localStorage path above unchanged.
+// Scene direction (`frames`) joined in stage 3, and the REAL research run in
+// stage 4b. The music-video poster joined as the first WORK kind (lib/turns/
+// kinds/poster.ts, operator T1): its record says `uncancellable`, so no Stop is
+// drawn for it. The export keeps the localStorage path above unchanged.
+//
+// `research` IS TWO RUNS UNDER ONE KIND, and what makes a job turn-backed is
+// the job, not its kind: a job with a `turnId` came in through `track` and is
+// read from the ledger; a job without one came in through `start` and lives in
+// localStorage. The replay (guided/useEducationalResearch.ts, the simulated
+// 41-second trace) still calls `start("research", …)` and has no turn — so it
+// persists, finishes through `settle`, and is called `interrupted` by a reload
+// exactly as before. Membership here means "may run as a turn", never "is one".
 
-/** The kinds that run as server-owned turns. */
-export const TURN_KINDS: ReadonlySet<JobKind> = new Set<JobKind>(["recalibrate", "frames"]);
+/** The kinds that run (or, for `research`, may run) as server-owned turns. */
+export const TURN_KINDS: ReadonlySet<JobKind> = new Set<JobKind>(["recalibrate", "frames", "research", "poster-generate"]);
 
 export interface TurnFlag {
   turnId: string;
@@ -532,6 +542,9 @@ const TURN_FLAG_CAP = 50;
 const TURN_DONE_DETAIL: Partial<Record<JobKind, string>> = {
   recalibrate: "A recalibrated set of scripts is ready on the Script step — compare it, then accept or run again.",
   frames: "Scene direction for the cut is ready on the Frames step.",
+  // Only a turn-backed research job reaches this table; the replay's bell
+  // sentence is its own `settle` detail.
+  research: "A notebook for your topic is ready on the Research step — check its sources.",
 };
 
 const viewOf = (r: TurnView): TurnView => ({

@@ -5,12 +5,10 @@
 // attributed on. The meter (./meter.ts) is the same code for every class; the
 // class is the only thing that differs.
 //
-// ONE CLASS TODAY, BY DESIGN (card IMG-A stage 1). `imaging-usd` is the ledger
-// lib/imaging/budget.ts always kept, moved onto the kernel with no change in
-// behaviour. Music seconds and text USD join in later stages, each as one more
-// entry here — music with its own vars (lib/music/budget.ts), text with a new
-// one. A class nobody books against is a declared ceiling that enforces
-// nothing, so a class is added in the same change as its first adapter.
+// ONE CLASS AT A TIME, BY DESIGN (card IMG-A stage 1). `imaging-usd` is the
+// ledger lib/imaging/budget.ts always kept, moved onto the kernel with no
+// change in behaviour. A class nobody books against is a declared ceiling that
+// enforces nothing, so a class is added in the same change as its first adapter.
 //
 // `video-usd` (2026-10-06, spark ads-project-type WP3) is the second, and it
 // arrived that way: lib/imaging/video/budget.ts books every hosted
@@ -19,6 +17,20 @@
 // where a plate costs cents, and one ceiling over both would let a single
 // clip starve a whole storyboard of plates (or the other way round).
 //
+// `music-audio-s` (card IMG-A stage 2) is the third, and the first whose unit
+// is not money: lib/music/budget.ts has always metered SECONDS OF AUDIO
+// REQUESTED, because no credits-per-second rate has been measured and a ceiling
+// in a unit nobody can compute never fires. It keeps the vars and defaults that
+// file always read; only the floor var is new, and it is reporting only.
+//
+// `text-usd` (card IMG-A stage 3b) is the fourth, and the only one with NO
+// ceiling. The operator ruled on 2026-10-07 ("Count only, refuse nothing"):
+// lib/text/router.ts books what a vendor reported for a served turn, and no
+// text turn is ever refused for what text has spent. That is stated in the
+// class's shape, not in a large default: a `CountOnlyClassDef` has no ceiling
+// var and no ceiling, the meter reads its absence as count-only, and a
+// `reserve()` against it throws a programming error rather than admitting.
+//
 // ENV IS READ PER CALL, never cached at import: a probe or an operator changes a
 // ceiling after the module loaded and the next call must see it.
 //
@@ -26,23 +38,16 @@
 // default, never an open tab ("budget-defaults-unlimited"). `0` is a valid
 // ceiling meaning "spend nothing", not "disabled".
 
-export type SpendClass = "imaging-usd" | "video-usd";
+export type SpendClass = "imaging-usd" | "video-usd" | "music-audio-s" | "text-usd";
 
-export type SpendUnit = "usd";
+/** `audio-s`: seconds of audio requested from a music vendor. */
+export type SpendUnit = "usd" | "audio-s";
 
-export interface SpendClassDef {
-  readonly id: SpendClass;
+interface ClassCommon {
   readonly unit: SpendUnit;
-  /** The ceiling per window, in `unit`. */
-  readonly ceilingVar: string;
   /** The rolling window, in ms. */
   readonly windowVar: string;
-  /** The bottom of the expected band, in `unit`. Reporting only: nothing the
-   *  gate reads, so declaring a floor can never change who is refused. */
-  readonly floorVar: string;
-  readonly defaultCeiling: number;
   readonly defaultWindowMs: number;
-  readonly defaultFloor: number;
   /** The axes a booked row carries, in the order a surface lists them. */
   readonly axes: readonly string[];
   /** The axis whose absence makes a row `unattributed` — the honesty field a
@@ -50,7 +55,31 @@ export interface SpendClassDef {
   readonly attributionAxis: string;
 }
 
-export const SPEND_CLASSES: Readonly<Record<SpendClass, SpendClassDef>> = {
+/** A class with no ceiling, by operator decision: booked and reported, never
+ *  refused. It has no ceiling var, floor or default to fake one with. */
+export interface CountOnlyClassDef extends ClassCommon {
+  readonly id: "text-usd";
+  readonly countOnly: true;
+}
+
+export interface SpendClassDef extends ClassCommon {
+  readonly id: Exclude<SpendClass, "text-usd">;
+  readonly countOnly?: false;
+  /** The ceiling per window, in `unit`. */
+  readonly ceilingVar: string;
+  /** The bottom of the expected band, in `unit`. Reporting only: nothing the
+   *  gate reads, so declaring a floor can never change who is refused. */
+  readonly floorVar: string;
+  readonly defaultCeiling: number;
+  readonly defaultFloor: number;
+}
+
+/** Either shape; `SpendClassDef` alone is the one with a ceiling. */
+export type AnySpendClassDef = SpendClassDef | CountOnlyClassDef;
+
+export const isCountOnly = (def: AnySpendClassDef): def is CountOnlyClassDef => def.countOnly === true;
+
+export const SPEND_CLASSES: Readonly<{ [K in SpendClass]: K extends "text-usd" ? CountOnlyClassDef : SpendClassDef }> = {
   "imaging-usd": {
     id: "imaging-usd",
     unit: "usd",
@@ -85,6 +114,33 @@ export const SPEND_CLASSES: Readonly<Record<SpendClass, SpendClassDef>> = {
     axes: ["project", "provider", "model"],
     attributionAxis: "project",
   },
+  "music-audio-s": {
+    id: "music-audio-s",
+    unit: "audio-s",
+    ceilingVar: "MUSIC_BUDGET_SECONDS_PER_WINDOW",
+    windowVar: "MUSIC_BUDGET_WINDOW_MS",
+    floorVar: "MUSIC_BUDGET_FLOOR_SECONDS",
+    // 600 s of audio an hour: a POLICY CHOICE, not a measurement, and the one
+    // invented number in lib/music/budget.ts (its header says why). Unchanged
+    // by the move onto the kernel.
+    defaultCeiling: 600,
+    defaultWindowMs: 3_600_000, // one hour
+    defaultFloor: 0, // reporting only, as for imaging and video
+    // The axes lib/music/log.ts prints: what was asked for, and which model.
+    axes: ["op", "model"],
+    attributionAxis: "op",
+  },
+  "text-usd": {
+    id: "text-usd",
+    unit: "usd",
+    countOnly: true,
+    // Window for the stats only; nothing is refused on it. An hour, as the others.
+    windowVar: "TEXT_SPEND_WINDOW_MS",
+    defaultWindowMs: 3_600_000,
+    // A turn, who served it, and with which model.
+    axes: ["turn", "provider", "model"],
+    attributionAxis: "turn",
+  },
 };
 
 /** The ceiling. Unset/negative/NaN → the class default. */
@@ -100,7 +156,7 @@ export function floorOf(def: SpendClassDef): number {
 }
 
 /** The rolling window in ms. Unset/non-positive/NaN → the class default. */
-export function windowMsOf(def: SpendClassDef): number {
+export function windowMsOf(def: Pick<ClassCommon, "windowVar" | "defaultWindowMs">): number {
   const n = Number(process.env[def.windowVar]);
   return Number.isFinite(n) && n > 0 ? n : def.defaultWindowMs;
 }

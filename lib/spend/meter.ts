@@ -25,12 +25,28 @@
 // it (tests/golden-path/_meterKit.ts, "poison"). It is now the class's
 // `invalid` error, thrown before the store is touched.
 //
+// EVERY METHOD THAT TOUCHES STATE IS ASYNC (card IMG-A stage 3a), because a
+// store another process can share sits behind an async lock. Each check and
+// the write that depends on it still run inside ONE transaction: `reserve`
+// decides and holds in one, and `check` (what assertWithinBudget always was, a
+// reserve released at once) decides without holding in one, so no await can
+// let a second reservation slip between a verdict and its effect.
+//
+// A LOCK THAT CANNOT BE HAD (`SpendStoreBusy`) means two different things:
+//   · on a reservation, the call is refused with its own sentence (the class's
+//     `busy` hook) before any vendor is touched. Nothing is spent.
+//   · on a write that records what a vendor did (settle, book, release), the
+//     vendor has already been asked. Dropping the row would under-read the
+//     window, so it is logged, kept in this process, and applied at the head of
+//     the next transaction that gets the lock, which counts it in
+//     `counters.lateWrites`. The caller is never failed for it.
+//
 // WHAT THE KERNEL DOES NOT KNOW. Prices, vendors, log formats, error classes.
 // The adapter hands those in as hooks, so the lines an operator greps for and
 // the HTTP status a refusal maps to stay where they were.
 
-import { ceilingOf, floorOf, windowMsOf, type SpendClassDef } from "./classes";
-import { memoryStore, type Hold, type MeterCounters, type SpendState, type SpendStore } from "./store";
+import { ceilingOf, floorOf, isCountOnly, windowMsOf, type AnySpendClassDef, type CountOnlyClassDef, type SpendClassDef } from "./classes";
+import { memoryStore, SpendStoreBusy, type Hold, type MeterCounters, type SpendState, type SpendStore, type SpendStoreKind } from "./store";
 
 export type SpendOutcome = "served" | "failed";
 
@@ -85,6 +101,10 @@ export interface MeterHooks<E, X extends Axes, B extends string> {
   invalid(amount: number): Error;
   /** The window aged rows out. */
   evicted?(e: Eviction): void;
+  /** The error a reservation throws when the store's lock could not be had.
+   *  `message` is the kernel's sentence (busySentence). Defaults to a plain
+   *  Error named SpendStoreBusy carrying it. */
+  busy?(message: string): Error;
 }
 
 export interface MeterStats {
@@ -100,6 +120,11 @@ export interface MeterStats {
   windowEnd: number;
   rows: number;
   counters: MeterCounters;
+  /** Where these numbers live (SpendStore.kind). */
+  store: SpendStoreKind;
+  /** Why the class is on that store, when it is not the one this machine
+   *  would otherwise get (lib/spend/select.ts). Absent otherwise. */
+  storeReason?: string;
 }
 
 export interface MeterAxes {
@@ -118,20 +143,43 @@ export interface Meter<E, X extends Axes = Axes, B extends string = string> {
   floor(): number;
   windowMs(): number;
   /** Booked spend inside the window (prunes first). */
-  spent(now?: number): number;
+  spent(now?: number): Promise<number>;
   /** Total currently reserved across live holds. */
-  held(): number;
-  reserve(amount: number, now?: number): Hold;
+  held(): Promise<number>;
+  reserve(amount: number, now?: number): Promise<Hold>;
+  /** The verdict `reserve` would give, counted the same way, holding nothing.
+   *  One transaction, so nothing can slip between a verdict and a release. */
+  check(amount: number, now?: number): Promise<void>;
   /** Drop a hold without booking. A hold already settled or released is a no-op. */
-  release(hold: { readonly id: string }): void;
-  settle(hold: { readonly id: string }, entries: E | E[]): void;
-  book(entry: E): void;
-  stats(now?: number): MeterStats;
-  byAxis(now?: number): MeterAxes;
+  release(hold: { readonly id: string }): Promise<void>;
+  settle(hold: { readonly id: string }, entries: E | E[]): Promise<void>;
+  book(entry: E): Promise<void>;
+  stats(now?: number): Promise<MeterStats>;
+  byAxis(now?: number): Promise<MeterAxes>;
   /** The window's rows, oldest first, as copies. */
-  rows(now?: number): MeterRow<X, B>[];
+  rows(now?: number): Promise<MeterRow<X, B>[]>;
+  /** The rows as this process last saw them, unpruned, as copies, read without
+   *  a lock (SpendStore.lastSeen), for a caller that cannot await. */
+  seenRows(): MeterRow<X, B>[];
   reset(): void;
 }
+
+/** What a count-only class reports: the stats without any figure that needs a
+ *  ceiling. There is no `reserve`, `ceiling` or `remaining` to misread. */
+export type CountStats = Omit<MeterStats, "ceiling" | "floor" | "underFloor" | "remaining" | "held">;
+
+/** The meter over a class with no ceiling (`text-usd`): book and read, never
+ *  hold or refuse. `reserve` is absent from the type and throws if reached. */
+export type CountMeter<E, X extends Axes = Axes, B extends string = string> = Omit<
+  Meter<E, X, B>,
+  "def" | "reserve" | "check" | "ceiling" | "floor" | "held" | "stats" | "settle"
+> & { readonly def: CountOnlyClassDef; stats(now?: number): Promise<CountStats> };
+
+/** The sentence a reservation is refused with when the ledger's lock is held
+ *  past its wait. Adapters wrap it in their own error type. */
+export const busySentence = (cls: string, waitMs: number): string =>
+  `The ${cls} spend ledger is locked by another process and did not free in ${waitMs} ms. ` +
+  `Refused before any vendor was called; nothing was spent.`;
 
 const sumRows = (rows: readonly { amount: number }[]): number => rows.reduce((a, r) => a + r.amount, 0);
 
@@ -143,15 +191,33 @@ const sumHolds = (holds: Record<string, Hold>): number => {
 
 const priced = (n: number | undefined): n is number => typeof n === "number" && Number.isFinite(n) && n > 0;
 
+export type CountMeterHooks<E, X extends Axes, B extends string> = Omit<MeterHooks<E, X, B>, "refuse" | "invalid" | "busy">;
+
 export function createMeter<E, X extends Axes = Axes, B extends string = string>(
   def: SpendClassDef,
   hooks: MeterHooks<E, X, B>,
+  store?: SpendStore<MeterRow<X, B>>,
+): Meter<E, X, B>;
+export function createMeter<E, X extends Axes = Axes, B extends string = string>(
+  def: CountOnlyClassDef,
+  hooks: CountMeterHooks<E, X, B>,
+  store?: SpendStore<MeterRow<X, B>>,
+): CountMeter<E, X, B>;
+export function createMeter<E, X extends Axes = Axes, B extends string = string>(
+  def: AnySpendClassDef,
+  hooks: MeterHooks<E, X, B> | CountMeterHooks<E, X, B>,
   store: SpendStore<MeterRow<X, B>> = memoryStore<MeterRow<X, B>>(),
-): Meter<E, X, B> {
+): Meter<E, X, B> | CountMeter<E, X, B> {
+  // The overloads are the contract; inside, one body serves both shapes.
+  const full = hooks as MeterHooks<E, X, B>;
+  const counting = isCountOnly(def);
+  const limits = def as SpendClassDef;
   type Row = MeterRow<X, B>;
   type State = SpendState<Row>;
 
   // Hold ids are unique per meter instance and never reused, reset or not.
+  // They carry the pid, so two processes on one shared store never mint the
+  // same id.
   let holdSeq = 0;
 
   function prune(s: State, now: number): Eviction | null {
@@ -176,7 +242,7 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
   }
 
   const announce = (e: Eviction | null): void => {
-    if (e) hooks.evicted?.(e);
+    if (e) full.evicted?.(e);
   };
 
   function bookIn(s: State, e: MeterEntry<X, B> & { at: number }): Eviction | null {
@@ -196,7 +262,7 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
 
   /** The adapter's entry, read ONCE into plain data outside any transaction. */
   function normalize(entry: E): MeterEntry<X, B> & { at: number } {
-    const e = hooks.entry(entry);
+    const e = full.entry(entry);
     return {
       amount: e.amount,
       outcome: e.outcome,
@@ -206,26 +272,72 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
     };
   }
 
-  const meter: Meter<E, X, B> = {
-    def,
-    store,
-    ceiling: () => ceilingOf(def),
-    floor: () => floorOf(def),
-    windowMs: () => windowMsOf(def),
+  const copyRow = (r: Row): Row => ({ ...r, axes: { ...r.axes } });
 
-    spent(now = Date.now()) {
-      const { ev, spent } = store.transact((s) => ({ ev: prune(s, now), spent: sumRows(s.rows) }));
-      announce(ev);
-      return spent;
-    },
+  /** Writes that missed the lock, oldest first, each applied at the head of
+   *  the next transaction that gets it. Per process, never persisted. */
+  let late: ((s: State) => (Eviction | null)[])[] = [];
 
-    held: () => store.transact((s) => sumHolds(s.holds)),
+  /** One transaction: late writes first, then `fn`, which returns its value
+   *  and any evictions to announce once the store has committed. */
+  async function run<T>(fn: (s: State) => { value: T; evs: (Eviction | null)[] }): Promise<T> {
+    let taken: typeof late = [];
+    try {
+      const out = await store.transact((s) => {
+        // Taken INSIDE the transaction, so two runs in flight cannot both
+        // apply the same late write.
+        taken = late;
+        late = [];
+        const evs: (Eviction | null)[] = [];
+        for (const w of taken) {
+          evs.push(...w(s));
+          s.counters.lateWrites++;
+        }
+        const r = fn(s);
+        return { value: r.value, evs: [...evs, ...r.evs] };
+      });
+      for (const ev of out.evs) announce(ev);
+      return out.value;
+    } catch (e) {
+      // Nothing committed: whatever was taken goes back to the head.
+      late = [...taken, ...late];
+      throw e;
+    }
+  }
 
-    reserve(amount, now = Date.now()) {
-      if (!(Number.isFinite(amount) && amount >= 0)) throw hooks.invalid(amount);
-      const ceiling = ceilingOf(def);
-      const out = store.transact((s): { ev: Eviction | null; hold?: Hold; refusal?: Refusal } => {
-        const ev = prune(s, now);
+  /** A read that prunes first, so the counters it returns are current. */
+  const read = <T>(now: number, fn: (s: State) => T): Promise<T> =>
+    run((s) => {
+      const ev = prune(s, now);
+      return { value: fn(s), evs: [ev] };
+    });
+
+  /** A write that records what a vendor did. A held lock defers it; nothing
+   *  else is swallowed. */
+  async function write(what: string, amount: number, apply: (s: State) => (Eviction | null)[]): Promise<void> {
+    try {
+      await run((s) => ({ value: undefined, evs: apply(s) }));
+    } catch (e) {
+      if (!(e instanceof SpendStoreBusy)) throw e;
+      late.push(apply);
+      console.log(
+        `[spend] ${def.id} ${what} missed the ledger lock (${e.waitMs} ms); kept in this process for the ` +
+          `next transaction amount=${amount} pending=${late.length}`,
+      );
+    }
+  }
+
+  /** The ceiling's verdict, in one transaction. `take` holds what it admits. */
+  async function gate(amount: number, now: number, take: boolean): Promise<Hold | undefined> {
+    // A count-only class has nothing to hold against. Admitting would be a
+    // silent "yes" from a gate that does not exist, so it is a loud bug.
+    // (`reserve` throws this synchronously before reaching here.)
+    if (counting) throw new Error(`spend class ${def.id} is count-only: it has no ceiling and cannot be reserved against`);
+    if (!(Number.isFinite(amount) && amount >= 0)) throw full.invalid(amount);
+    const ceiling = ceilingOf(limits);
+    let out: { hold?: Hold; refusal?: Refusal };
+    try {
+      out = await read(now, (s): { hold?: Hold; refusal?: Refusal } => {
         const spent = sumRows(s.rows);
         const held = sumHolds(s.holds);
         if (spent + held + amount > ceiling) {
@@ -233,54 +345,94 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
           // the one path that does not return.
           s.counters.refusals++;
           s.counters.refused += amount;
-          return {
-            ev,
-            refusal: { amount, spent, held, ceiling, windowMs: windowMsOf(def), refusals: s.counters.refusals },
-          };
+          return { refusal: { amount, spent, held, ceiling, windowMs: windowMsOf(def), refusals: s.counters.refusals } };
         }
-        const hold: Hold = { id: `hold-${++holdSeq}-${now}`, amount, createdAt: now };
+        if (!take) return {};
+        const hold: Hold = { id: `hold-${process.pid}-${++holdSeq}-${now}`, amount, createdAt: now, pid: process.pid };
         s.holds[hold.id] = hold;
-        return { ev, hold };
+        return { hold };
       });
-      announce(out.ev);
-      if (out.refusal) throw hooks.refuse(out.refusal);
-      return { ...out.hold! };
+    } catch (e) {
+      if (!(e instanceof SpendStoreBusy)) throw e;
+      const sentence = busySentence(def.id, e.waitMs);
+      console.log(`[spend] ${def.id} reserve refused: ledger lock held past ${e.waitMs} ms amount=${amount}`);
+      throw full.busy ? full.busy(sentence) : Object.assign(new Error(sentence), { name: "SpendStoreBusy" });
+    }
+    if (out.refusal) throw full.refuse(out.refusal);
+    return out.hold ? { ...out.hold } : undefined;
+  }
+
+  const meter: Meter<E, X, B> = {
+    def: limits,
+    store,
+    ceiling: () => ceilingOf(limits),
+    floor: () => floorOf(limits),
+    windowMs: () => windowMsOf(def),
+
+    spent: (now = Date.now()) => read(now, (s) => sumRows(s.rows)),
+
+    held: () => run((s) => ({ value: sumHolds(s.holds), evs: [] })),
+
+    reserve(amount, now = Date.now()) {
+      // Thrown, not rejected: reserving against a count-only class is a
+      // programming error, and it stays loud at the call that made it.
+      if (counting) throw new Error(`spend class ${def.id} is count-only: it has no ceiling and cannot be reserved against`);
+      return gate(amount, now, true) as Promise<Hold>;
     },
 
-    release(hold) {
-      store.transact((s) => {
+    async check(amount, now = Date.now()) {
+      await gate(amount, now, false);
+    },
+
+    release: (hold) =>
+      write("release", 0, (s) => {
         delete s.holds[hold.id];
-      });
-    },
+        return [];
+      }),
 
-    settle(hold, entries) {
+    async settle(hold, entries) {
       let list: (MeterEntry<X, B> & { at: number })[];
       try {
         list = (Array.isArray(entries) ? entries : [entries]).map(normalize);
       } catch (e) {
         // A row that cannot be read must not strand the reservation it was
         // meant to replace: the hold goes, and the caller hears why.
-        meter.release(hold);
+        await meter.release(hold);
         throw e;
       }
-      const evs = store.transact((s) => {
+      const amount = list.reduce((a, e) => a + (priced(e.amount) ? e.amount : 0), 0);
+      await write("settle", amount, (s) => {
         delete s.holds[hold.id];
         return list.map((e) => bookIn(s, e));
       });
-      for (const ev of evs) announce(ev);
     },
 
-    book(entry) {
+    async book(entry) {
       const e = normalize(entry);
-      announce(store.transact((s) => bookIn(s, e)));
+      await write("book", priced(e.amount) ? e.amount : 0, (s) => [bookIn(s, e)]);
     },
 
     stats(now = Date.now()) {
-      const spent = meter.spent(now); // prunes first, so the counters are current
-      const ceiling = ceilingOf(def);
-      const floor = floorOf(def);
       const windowMs = windowMsOf(def);
-      return store.transact((s) => {
+      // Read after the transaction, so it names the store that answered.
+      const where = (): { store: SpendStoreKind; storeReason?: string } => {
+        const reason = store.reason?.();
+        return reason ? { store: store.kind, storeReason: reason } : { store: store.kind };
+      };
+      // ONE transaction: prune first, so the counters are current, then read.
+      if (counting)
+        return read(now, (s) => ({
+          spent: sumRows(s.rows),
+          windowMs,
+          windowStart: now - windowMs,
+          windowEnd: now,
+          rows: s.rows.length,
+          counters: { ...s.counters },
+        })).then((v) => ({ ...v, ...where() })) as Promise<MeterStats>;
+      const ceiling = ceilingOf(limits);
+      const floor = floorOf(limits);
+      return read(now, (s) => {
+        const spent = sumRows(s.rows);
         const held = sumHolds(s.holds);
         return {
           ceiling,
@@ -296,12 +448,11 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
           rows: s.rows.length,
           counters: { ...s.counters },
         };
-      });
+      }).then((v) => ({ ...v, ...where() }));
     },
 
-    byAxis(now = Date.now()) {
-      const { ev, out } = store.transact((s) => {
-        const ev = prune(s, now);
+    byAxis: (now = Date.now()) =>
+      read(now, (s) => {
         const byAxis: Record<string, Record<string, number>> = {};
         for (const a of def.axes) byAxis[a] = {};
         const byOutcome: Record<SpendOutcome, number> = { served: 0, failed: 0 };
@@ -316,22 +467,17 @@ export function createMeter<E, X extends Axes = Axes, B extends string = string>
             else if (a === def.attributionAxis) unattributed += r.amount;
           }
         }
-        return { ev, out: { total, byOutcome, byAxis, unattributed } };
-      });
-      announce(ev);
-      return out;
-    },
+        return { total, byOutcome, byAxis, unattributed };
+      }),
 
-    rows(now = Date.now()) {
-      const { ev, rows } = store.transact((s) => ({
-        ev: prune(s, now),
-        rows: s.rows.map((r) => ({ ...r, axes: { ...r.axes } })),
-      }));
-      announce(ev);
-      return rows;
-    },
+    rows: (now = Date.now()) => read(now, (s) => s.rows.map(copyRow)),
 
-    reset: () => store.reset(),
+    seenRows: () => (store.lastSeen?.().rows ?? []).map(copyRow),
+
+    reset: () => {
+      late = [];
+      store.reset();
+    },
   };
-  return meter;
+  return meter as Meter<E, X, B>;
 }

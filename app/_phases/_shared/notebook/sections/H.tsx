@@ -1,6 +1,6 @@
 "use client";
 
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "../notebook";
+import { countsOf } from "../counts";
 import type { Connector, Notebook } from "../types";
 
 /** ONE NAME PER SECTION, read by the rail pill AND by the heading it jumps to.
@@ -13,29 +13,35 @@ import type { Connector, Notebook } from "../types";
  *  for", "gaps — what this run did not do". The section IS the answer, and the
  *  reader has just pressed the pill that named it.
  *
- *  The counts stay: a count is a finding. The glosses went. */
-export const SECTION_LABEL: Record<string, string> = {
-  tension: "tension",
-  mechanisms: `mechanisms · ${NOTEBOOK_COUNTS.mechanisms}`,
-  reversals: `reversals · ${NOTEBOOK_COUNTS.reversals}`,
-  steelman: "steel-man",
-  counters: `counter-positions · ${NOTEBOOK.counterPositions.length}`,
-  facts: `facts · ${NOTEBOOK_COUNTS.facts}`,
-  numbers: "numbers made felt · analogies",
-  unknowns: `unknowns · ${NOTEBOOK_COUNTS.unknownsOpen} open`,
-  questions: `questions · ${NOTEBOOK.candidateQuestions.length}`,
-  fit: "engine fit",
-  currency: "currency",
-  // "sources" here is NOTEBOOK.sources, the hand-written bibliography — a
-  // SEPARATE, unrelated population from the distinct `Fact.source` strings the
-  // facts cite (`NOTEBOOK_COUNTS.factSourceStrings`). Named "bibliography"
-  // rather than bare "sources" so neither the pill nor the heading can be
-  // misread as a count of every source the notebook has; see the comment on
-  // NOTEBOOK_COUNTS in notebook.ts for the measurement and why the two lists
-  // are not reconciled.
-  sources: `bibliography · ${NOTEBOOK_COUNTS.sources}`,
-  gaps: `gaps · ${NOTEBOOK_COUNTS.gaps}`,
-};
+ *  The counts stay: a count is a finding. The glosses went.
+ *
+ *  A function of the notebook being drawn, not a constant built from the shipped
+ *  run at module load: a creator's own notebook is labelled with its own counts. */
+export function sectionLabels(n: Notebook): Record<string, string> {
+  const c = countsOf(n);
+  return {
+    tension: "tension",
+    mechanisms: `mechanisms · ${c.mechanisms}`,
+    reversals: `reversals · ${c.reversals}`,
+    steelman: "steel-man",
+    counters: `counter-positions · ${n.counterPositions.length}`,
+    facts: `facts · ${c.facts}`,
+    numbers: "numbers made felt · analogies",
+    unknowns: `unknowns · ${c.unknownsOpen} open`,
+    questions: `questions · ${n.candidateQuestions.length}`,
+    fit: "engine fit",
+    currency: "currency",
+    // "sources" here is NOTEBOOK.sources, the hand-written bibliography — a
+    // SEPARATE, unrelated population from the distinct `Fact.source` strings the
+    // facts cite (`counts.factSourceStrings`). Named "bibliography"
+    // rather than bare "sources" so neither the pill nor the heading can be
+    // misread as a count of every source the notebook has; see
+    // the comment in counts.ts for the measurement and why the two lists
+    // are not reconciled.
+    sources: `bibliography · ${c.sources}`,
+    gaps: `gaps · ${c.gaps}`,
+  };
+}
 
 /** Sections that render only when they have something in them.
  *
@@ -74,14 +80,14 @@ export function sectionRenders(n: Notebook, id: string): boolean {
  *  the button they pressed: the next Tab continues through the rail, and
  *  nothing they can perceive has changed. Not reachable by tabbing — -1 means
  *  programmatic focus only. */
-export function H({ id, children }: { id: string; children?: React.ReactNode }) {
+export function H({ id, children }: { id: string; children: React.ReactNode }) {
   return (
     <h3
       id={`nb-${id}`}
       tabIndex={-1}
       className="font-jetbrains scroll-mt-2 border-b border-white/8 pb-1.5 text-label tracking-[0.18em] text-cyan-300/80 uppercase focus-visible:outline-2 focus-visible:outline-offset-4"
     >
-      {children ?? SECTION_LABEL[id]}
+      {children}
     </h3>
   );
 }

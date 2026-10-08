@@ -99,7 +99,7 @@ export default function MatrixSpend({
         ))}
       </ul>
 
-      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} />
+      <MatrixFootnotes cards={api.cards} version={version} scope={api.scope} optIn={api.optIn} />
     </div>
   );
 }
@@ -119,7 +119,7 @@ function SpendRow({
   baseline: Version;
   comparing: boolean;
 }) {
-  const descoped = stateOf(api.scope, card.id).descoped;
+  const descoped = stateOf(api.scope, card.id, api.optIn).descoped;
   const total = totalIn(version, card.id);
   const baseTotal = totalIn(baseline, card.id);
   const d = total - baseTotal;

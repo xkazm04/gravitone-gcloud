@@ -1,7 +1,8 @@
 // THE FOUNDRY CATALOGUE'S ONE WRITE PATH — server only.
 //
-// pipeline/foundry/ holds three git-tracked indices — styles.json, ledger.json,
-// training-ledger.json — and FIVE writers: the forge, extract and Dojo commits
+// pipeline/foundry/ holds git-tracked indices — styles.json, ledger.json,
+// training-ledger.json, and the Strips commit's motion-styles.json and
+// strips-ledger.json — and SIX writers: the forge, extract, Dojo and Strips commits
 // here, acquire.py and `intake --acquire` (which shells out to acquire.py) in
 // Python. Each used to read-modify-write with nothing held between the read
 // and the write, so two that overlapped lost one write with a 200 on both, and
@@ -42,14 +43,15 @@ import { appendFile, readFile } from "node:fs/promises";
 import { DEFAULT_LOCK_TIMING, exclusiveSection, type LockTiming } from "../diskTx";
 import { foundryFs } from "./fsPort";
 import { FoundryError, foundryFile } from "./runStore";
+import type { MotionStylesDoc, StripsLedgerDoc } from "./strips/triage";
 import type { TrainingLedgerRow } from "./training/types";
 import type { LedgerRow, StyleDef } from "./types";
 
 export const CATALOGUE_LOCK = ".catalogue.lock";
 export const CATALOGUE_JOURNAL = "catalogue-journal.jsonl";
 
-/** The app's three commits; acquire.py journals as "acquire". */
-export type CatalogueOp = "forge-commit" | "extract-commit" | "dojo-commit";
+/** The app's four commits; acquire.py journals as "acquire". */
+export type CatalogueOp = "forge-commit" | "extract-commit" | "dojo-commit" | "strip-commit";
 
 export interface JournalLine {
   rev: number;
@@ -67,6 +69,12 @@ export interface CatalogueDocs {
   "styles.json": { styles: StyleDef[]; _rev?: number } & Record<string, unknown>;
   "ledger.json": { rows: LedgerRow[] } & Record<string, unknown>;
   "training-ledger.json": { rows: TrainingLedgerRow[] } & Record<string, unknown>;
+  // The Strips commit's two indices (lib/foundry/strips/store.ts). A code
+  // style is a module, not a prompt, so it is not a StyleDef and does not
+  // join styles.json — but it shares this lock and this journal, so there is
+  // still one revision history.
+  "motion-styles.json": MotionStylesDoc & Record<string, unknown>;
+  "strips-ledger.json": StripsLedgerDoc & Record<string, unknown>;
 }
 export type CatalogueIndex = keyof CatalogueDocs;
 
@@ -74,6 +82,15 @@ const EMPTY: { [K in CatalogueIndex]: () => CatalogueDocs[K] } = {
   "styles.json": () => ({ styles: [] }),
   "ledger.json": () => ({ rows: [] }),
   "training-ledger.json": () => ({ rows: [] }),
+  "motion-styles.json": () => ({
+    _purpose: "Code-rendered motion styles kept in the /foundry Strips triage: one entry per kept strip, its files under motion-styles/<id>/.",
+    styles: [],
+    _rev: 0,
+  }),
+  "strips-ledger.json": () => ({
+    _purpose: "One row per decided code-rendered strip (kept and rejected), with its reason chips.",
+    rows: [],
+  }),
 };
 
 let timing: LockTiming | null = null;

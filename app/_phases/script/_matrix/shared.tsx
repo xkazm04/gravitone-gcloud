@@ -55,7 +55,7 @@ export const TONE: Record<Usage["kind"], { cell: string; text: string; mark: str
 /** The scope control. Descoping here writes the record the triage board reads —
  *  this is not a Step 2 shadow copy. */
 export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi; size?: "sm" | "md" }) {
-  const out = outWord(card, api.scope);
+  const out = outWord(card, api.scope, api.optIn);
   const locked = card.required;
   const dims = size === "md" ? "h-5 w-5 text-label" : "h-4 w-4 text-label";
   return (
@@ -116,17 +116,27 @@ export function ScopePip({ card, api, size = "sm" }: { card: Card; api: ScopeApi
 
 
 
-export function MatrixFootnotes({ cards, version, scope }: { cards: Card[]; version: Version; scope?: Scope }) {
+export function MatrixFootnotes({
+  cards,
+  version,
+  scope,
+  optIn,
+}: {
+  cards: Card[];
+  version: Version;
+  scope?: Scope;
+  optIn?: ReadonlySet<string>;
+}) {
   const ids = new Set(cards.map((c) => c.id));
   const orphans = orphanedCuts(ids);
-  const conflictIds = scope ? conflictsIn(version, cards, scope) : [];
+  const conflictIds = scope ? conflictsIn(version, cards, scope, optIn) : [];
   const untouched = cards.filter((c) => RENDERS.every((r) => usageIn(version, r.id, c.id).kind === "unused"));
   const conclusions = untouched.filter((c) => c.kind === "conclusion").length;
 
   const notesCtx = useNotes();
   const existingNotes = notesCtx?.api.notes ?? [];
   const plan = scope
-    ? resolutionPlan(version, cards, scope, existingNotes)
+    ? resolutionPlan(version, cards, scope, existingNotes, optIn)
     : { stage: [], skipped: [], contested: [] };
 
   const handleResolveConflicts = () => {

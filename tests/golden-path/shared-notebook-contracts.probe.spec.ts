@@ -109,9 +109,16 @@ test("conclusions: the one consumer that serialises the notebook for a model sen
   // The payload is built by lib/turns/assemble/recalibrate.ts since AIO-B (the
   // route calls it), so that is the file whose imports are read.
   const route = stripComments(readFileSync(join(ROOT, "lib/turns/assemble/recalibrate.ts"), "utf8"));
+  // C1 closing stage: the conclusions are the BODY's (the dealt source's), never
+  // the fixture's, so the assembler reads `body.conclusions` and imports no
+  // fixture constant.
   expect(
     /import\s*\{[^}]*\bCONCLUSIONS\b[^}]*\}\s*from/.test(route),
-    "the recalibrate assembler no longer imports CONCLUSIONS - the model would be annotated about c-* cards it was never shown",
+    "the recalibrate assembler imports the fixture's CONCLUSIONS again - every notebook would be annotated with Bitcoin's",
+  ).toBe(false);
+  expect(
+    /\bbody\.conclusions\b/.test(route),
+    "the recalibrate assembler no longer reads the body's conclusions - the model would never see the notebook's c-* cards",
   ).toBe(true);
   expect(
     /\bconclusions\b/.test(route),
@@ -317,7 +324,7 @@ test("connections: every unclosed exemption still describes a file that leaks", 
 test("evidence log: the gaps line quotes the gap and points at no dialog it cannot open", () => {
   const src = stripComments(readFileSync(join(ROOT, "app/_phases/_shared/notebook/EvidenceLog.tsx"), "utf8"));
   expect(src, "a pointer to the notebook with no control to reach it").not.toMatch(/See the notebook/);
-  expect(src, "the gap count and the first gap stay rendered").toMatch(/NOTEBOOK_COUNTS\.gaps[\s\S]{0,200}researchGaps\[0\]/);
+  expect(src, "the gap count and the first gap stay rendered").toMatch(/counts\.gaps[\s\S]{0,200}researchGaps\[0\]/);
 });
 
 test("evidence log: facts, unknowns, bibliography and the resolved state carry the notebook's names", () => {
@@ -327,7 +334,7 @@ test("evidence log: facts, unknowns, bibliography and the resolved state carry t
   expect(log.length, "walk read nothing").toBeGreaterThan(0);
   expect(apparatus.length, "walk read nothing").toBeGreaterThan(0);
   for (const key of ["facts", "unknowns", "sources"]) {
-    expect(log, `head for ${key} reads SECTION_LABEL`).toContain(`SECTION_LABEL.${key}`);
+    expect(log, `head for ${key} reads sectionLabels`).toContain(`labels.${key}`);
   }
   expect(log, "second vocabulary for the same rows").not.toMatch(/["'`>]\s*(claims|constraints|lifted|bibliography)/);
   expect(log).toMatch(/label="facts"/);

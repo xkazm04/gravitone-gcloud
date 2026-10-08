@@ -156,6 +156,7 @@ const FLOOR: readonly string[] = [
   "DELETE app/api/sound/takes/route.ts",
   "GET app/api/sound/takes/[id]/file/route.ts",
   "PATCH app/api/sound/takes/[id]/route.ts",
+  "GET app/api/spend/route.ts",
   "POST app/api/turns/[id]/cancel/route.ts",
   "GET app/api/turns/[id]/route.ts",
   "GET app/api/video/clips/route.ts",

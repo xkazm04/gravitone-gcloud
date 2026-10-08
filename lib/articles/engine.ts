@@ -67,6 +67,7 @@ import {
   type ResolvedStandard,
 } from "./registryRead";
 import { LandingError, landRun, PATCHABLE_ROOTS } from "./registryWrite";
+import { uniqueDir } from "./tempDir";
 import {
   acquireDriver,
   ArticleError,
@@ -548,12 +549,16 @@ function finish(run: ArticleRun, name: StepName, status: "done" | "failed", deps
 
 /* ── the agent steps ───────────────────────────────────────────────────────── */
 
-async function makeWorkspace(id: string, name: string, now: Date): Promise<string> {
-  const ws = path.join(os.tmpdir(), "gravitone-article-ws", `${id}-${name}-${now.getTime()}`);
-  await rm(ws, { recursive: true, force: true });
+export async function makeWorkspace(id: string, name: string, now: Date): Promise<string> {
+  const ws = await uniqueDir(path.join(os.tmpdir(), "gravitone-article-ws"), `${id}-${name}-${now.getTime()}`);
   await mkdir(path.join(ws, "inputs"), { recursive: true });
   await mkdir(path.join(ws, "out"), { recursive: true });
   return ws;
+}
+
+/** A reviewer's workspace: the post and its sources, no inputs/ or out/. */
+export async function makeReviewerWorkspace(id: string, round: number, specId: string, attempt: number, now: Date): Promise<string> {
+  return uniqueDir(path.join(os.tmpdir(), "gravitone-article-ws"), `${id}-r${round}-${specId}-${attempt}-${now.getTime()}`);
 }
 
 async function agentStep(id: string, name: WriterStep, deps: EngineDeps): Promise<number | undefined> {
@@ -1076,10 +1081,9 @@ async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: E
   for (let attempt = 1; attempt <= 2 && !receipt; attempt++) {
     const text = prompt(note);
     if (attempt === 1) await writeFileAtomic(path.join(rd, "prompts", `${spec.id}.md`), text);
-    const ws = path.join(os.tmpdir(), "gravitone-article-ws", `${id}-r${round}-${spec.id}-${attempt}-${deps.now().getTime()}`);
+    let ws = "";
     try {
-      await rm(ws, { recursive: true, force: true });
-      await mkdir(ws, { recursive: true });
+      ws = await makeReviewerWorkspace(id, round, spec.id, attempt, deps.now());
       await copyDir(path.join(dir, "post"), path.join(ws, "post"));
       await copyFile(path.join(dir, "sources.json"), path.join(ws, "sources.json"));
       await writeFile(path.join(ws, REVIEW_MD), text, "utf8");
@@ -1117,7 +1121,7 @@ async function reviewOnce(id: string, round: number, spec: ReviewerSpec, deps: E
     } catch (e) {
       receipt = { id: spec.id, engine: spec.engine, model: spec.model, effort: spec.effort, round, attempts: attempt, turns, durationMs, outcome: "errored", errors: [(e as Error).message] };
     } finally {
-      await rm(ws, { recursive: true, force: true }).catch(() => undefined);
+      if (ws) await rm(ws, { recursive: true, force: true }).catch(() => undefined);
     }
   }
   if (receipt) await writeJsonAtomic(path.join(rd, "receipts", `${spec.id}.json`), receipt);

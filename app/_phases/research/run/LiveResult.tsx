@@ -30,21 +30,23 @@
 // machinery `StandInNote` uses for the replay — a chip and one clause — pointed
 // at a different, and newer, kind of dishonesty.
 //
-// ── WHAT THIS CARD DOES NOT DO ─────────────────────────────────────────────
+// ── WHAT THIS NOTEBOOK FEEDS ───────────────────────────────────────────────
 //
-// It does not feed the downstream cards, and the line at its foot says so. The
-// triage board (expert face), the takes (guided face), the conclusions deck and the scope arithmetic are all built from the
-// SHIPPED FIXTURE (`_shared/notebook/cards.ts`), so dealing them under a
-// creator's own topic would put Bitcoin cards behind their heading — the exact
-// substitution this step already fights. Wiring the board onto a live notebook
-// is real work in another file and is not smuggled in here.
+// The board. Once this notebook is saved (step record "research-notebook") it
+// is the project's ACTIVE notebook (_shared/notebook/useActiveNotebook.ts), and
+// the triage board (expert face), the takes (guided face), the conclusions deck
+// and the scope arithmetic are all dealt from it — its own cards, columns and
+// conclusions, none of the fixture's. Clearing it puts the replay back. This
+// card used to end on a line saying the takes still dealt from the stand-in,
+// which was true until stage 3 of research-scope-board-A and is not now; the
+// line went with the rule, and nothing replaces it, because what the board
+// deals is drawn on the board.
 
 import { Bell } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 
 import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
 
-import { NOTEBOOK } from "../../_shared/notebook/notebook";
 import Notice from "../../_shared/ui/Notice";
 import type { EngineReceipt, LiveState } from "./live";
 import { secs } from "./useResearchRun";
@@ -111,7 +113,10 @@ function Elapsed({ since }: { since: number }) {
   return <>{secs(Math.max(0, now - since))}</>;
 }
 
-export default function LiveResult({ state }: { state: LiveState }) {
+/** `actions`: the pills that open the notebook and its evidence log. They are
+ *  passed in because they live with the guided stage (guided/RunStage.tsx), which
+ *  imports this card. */
+export default function LiveResult({ state, actions }: { state: LiveState; actions?: ReactNode }) {
   if (state.status === "idle") return null;
 
   if (state.status === "running")
@@ -235,16 +240,10 @@ export default function LiveResult({ state }: { state: LiveState }) {
           </ul>
         )}
 
+        {actions && <div className="mt-4 flex flex-wrap items-center gap-2.5">{actions}</div>}
+
         <div className="mt-4 border-t border-white/8 pt-3">
           <Receipt engine={state.engine} at={state.at} />
-          {/* WHERE THIS NOTEBOOK CAN AND CANNOT GO, said plainly. It is saved
-              with the project (step record "research-notebook") and it carries
-              its own receipt; the triage board and everything after it are still
-              built from the shipped fixture, and pretending otherwise would be
-              the substitution this step exists to refuse. */}
-          <p className="font-jetbrains mt-1.5 text-label text-white/30">
-            saved with this project · the takes deal from the {NOTEBOOK.researched} stand-in
-          </p>
         </div>
       </div>
     </div>

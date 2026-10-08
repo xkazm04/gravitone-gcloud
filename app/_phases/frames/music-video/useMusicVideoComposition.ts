@@ -7,70 +7,32 @@
 // atomically (`patchRecord`), and never clobber a sibling field a different
 // work package owns.
 //
-// POSTER GENERATION IS AN ASYNC JOB (WP1's "poster-generate" kind), not a
-// synchronous request — `lib/jobs.tsx`'s own header measures the real call at
-// ~57s through `agy`, and the pattern this hook follows is
-// `research/guided/useEducationalResearch.ts`'s `startResearch`: claim a job
-// slot, do the work, settle it when the work resolves, regardless of whether
-// the component that started it is still mounted.
+// THE POSTER IS A SERVER WORK KIND (lib/turns/kinds/poster.ts, operator T1:
+// "keep what is paid for"). This hook only ASKS for it and shows it: the
+// start goes through the turns client door, the bell tracks the turn like
+// research's (`jobs.track`), and the landing — decode, upload, patch the record
+// — runs in `./posterLive.ts`, a module-level watcher, so it also happens after
+// the creator leaves the step and after a reload. The server builds the prompt
+// and owns the rights rule (never a track filename, ID3 data or an artist), so
+// the browser sends the creator's style line and nothing else about the track.
 //
-// THE ROUTER, NOT THE PROVIDER. `lib/imaging/router.ts` is explicitly
-// SERVER-ONLY (its own header: "Nothing here may be imported from a
-// component") — a client component cannot import it at all, let alone the
-// `agy` adapter underneath it, so this hook calls `generateImage` from
-// `lib/imagingClient.ts`, the browser-side wrapper that posts to
-// `POST /api/imaging/generate`, which is where `generate()` actually runs,
-// server-side, through the router's agy-then-cloud-fallback chain. This is
-// the same seam every other imaging surface in this app already uses
-// (`lib/imagingClient.ts`'s own header) — not a deviation invented for this
-// package.
+// SEED AND EFFECT PARAMS are set once, on a composition's first poster; that
+// rule now runs inside the record's transaction at landing (posterLive.ts).
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
-import { assetFromUpload, getAsset, getUploadBlobs, putUploads, readUploadPointer, type Asset } from "@/lib/assets";
-import { generateImage } from "@/lib/imagingClient";
+import { getAsset, getUploadBlobs, readUploadPointer, type Asset } from "@/lib/assets";
 import type { useJobs } from "@/lib/jobs";
 
 import { useRecord } from "../../_shared/records/useRecord";
 import type { MusicVideoSourceStepData } from "../../_shared/stepStore";
 import { MUSIC_VIDEO_SOURCE } from "../../research/records";
-import { DEFAULT_EFFECT_PARAMS, type EffectParams } from "./compositor";
+import type { EffectParams } from "./compositor";
+import { adoptPoster, readPoster, resumePoster, startPoster, subscribePoster, type PosterStatus } from "./posterLive";
 
-export type PosterStatus = "idle" | "generating" | "error";
+export type { PosterStatus };
 
-/** A 32-bit seed. `crypto.getRandomValues` where it exists (every real
- *  browser); `Math.random()` as the one honest fallback for an environment
- *  that somehow lacks it. Either way this is called exactly ONCE per
- *  composition, the first time a poster exists, and the result is persisted —
- *  nothing downstream ever re-seeds. */
-function makeSeed(): number {
-  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
-    return crypto.getRandomValues(new Uint32Array(1))[0];
-  }
-  return Math.floor(Math.random() * 0xffffffff);
-}
-
-function base64ToFile(base64: string, mime: string, name: string): File {
-  const binary = atob(base64);
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return new File([bytes], name, { type: mime });
-}
-
-/** The prompt sent to the imaging router. NEVER the track's filename, ID3
- *  metadata or artist/song information — the idea note's rights-and-
- *  provenance findings are about exactly this: an album poster generated FROM
- *  a prompt that leaked the real track's title would entangle a generic
- *  "image boosting" render with a specific commercial work's identity. The
- *  only track-derived input here is the creator's own freely-typed style
- *  line, which they wrote for this purpose. */
-function buildPrompt(style: string): string {
-  const base =
-    "A single cinematic album-poster-style still image for a music video. " +
-    "Dramatic lighting, rich detail, no text, no lyrics, no logos, no watermarks.";
-  const trimmed = style.trim();
-  return trimmed ? `${base} Visual direction: ${trimmed}.` : base;
-}
+const POSTER_LABEL = "Album poster";
 
 export function useMusicVideoComposition(
   projectId: string,
@@ -81,15 +43,21 @@ export function useMusicVideoComposition(
   const [posterAssetId, setPosterAssetId] = useState<string | undefined>(undefined);
   const [seed, setSeed] = useState<number | undefined>(undefined);
   const [effectParams, setEffectParams] = useState<EffectParams | undefined>(undefined);
-  const [status, setStatus] = useState<PosterStatus>("idle");
-  const [error, setError] = useState<string | null>(null);
-  const [provider, setProvider] = useState<string | null>(null);
+  // The poster's status, error and provider live in the module-level store, so
+  // they survive this component and are the same in a second mount.
+  const [live, setLive] = useState(() => readPoster(projectId));
+  useEffect(() => {
+    const sync = () => setLive(readPoster(projectId));
+    sync();
+    return subscribePoster(projectId, sync);
+  }, [projectId]);
 
   const { hydrated, patch } = useRecord(MUSIC_VIDEO_SOURCE, projectId, (saved) => {
     setStyle(saved?.style ?? "");
     setPosterAssetId(saved?.posterAssetId);
     setSeed(saved?.seed);
     setEffectParams((saved?.effectParams as EffectParams | undefined) ?? undefined);
+    adoptPoster(projectId, saved);
   });
 
   /** A merge into the shared record, never a replacement: Research owns the
@@ -104,56 +72,22 @@ export function useMusicVideoComposition(
   );
 
   const generatePoster = useCallback(async () => {
-    if (!uid || status === "generating") return;
+    if (!uid || live.status === "generating") return;
+    const turnId = await startPoster(projectId, uid, style);
+    if (turnId) jobs.track({ turnId, projectId, kind: "poster-generate", label: POSTER_LABEL });
+  }, [uid, live.status, jobs, projectId, style]);
 
-    const job = jobs.start("poster-generate", projectId, "Album poster", { driven: true });
-    if (!job) return; // another run is already in flight for this project
-
-    setStatus("generating");
-    setError(null);
-
-    try {
-      const result = await generateImage({ prompt: buildPrompt(style), aspect: "16:9", count: 1 });
-      const image = result.images[0];
-      if (!image) throw new Error("The imaging router returned no image.");
-
-      const file = base64ToFile(image.base64, image.mime, "poster.png");
-      const pair = assetFromUpload(uid, file, ["music-video", "poster"], "image");
-      await putUploads([pair]);
-
-      // THE SEED AND THE EFFECT PARAMS ARE SET ONCE, on the FIRST poster this
-      // composition ever gets, and never again. A re-generated poster (a
-      // creator who does not like the first result) keeps the existing seed —
-      // re-rolling the seed on every generation would be indistinguishable
-      // from the determinism bug the acceptance test exists to catch: two
-      // renders of "the same" composition producing different pixels because
-      // one of its inputs quietly moved.
-      const nextSeed = seed ?? makeSeed();
-      const nextParams: EffectParams = effectParams ?? { ...DEFAULT_EFFECT_PARAMS };
-
-      setPosterAssetId(pair.asset.id);
-      setSeed(nextSeed);
-      setEffectParams(nextParams);
-      setProvider(result.provenance.provider);
-      setStatus("idle");
-
-      // `MusicVideoSourceStepData.effectParams` is `Record<string, unknown>` —
-      // deliberately untyped at the store boundary (stepStore.ts's own
-      // comment: WP3's to shape). `EffectParams` is this package's own typed
-      // view of that bag; the cast is the one seam between them.
-      await write({
-        posterAssetId: pair.asset.id,
-        seed: nextSeed,
-        effectParams: nextParams as unknown as Record<string, unknown>,
-      });
-      jobs.settle(job.id, "done", `A poster generated via ${result.provenance.provider}.`);
-    } catch (e) {
-      const message = e instanceof Error ? e.message : String(e);
-      setStatus("error");
-      setError(message);
-      jobs.settle(job.id, "failed", message);
-    }
-  }, [uid, status, jobs, projectId, style, seed, effectParams, write]);
+  // A mount asks the ledger about this project's newest poster: a live one is
+  // watched and tracked, a settled one not yet taken is landed, once.
+  const { track } = jobs;
+  useEffect(() => {
+    if (!hydrated || !uid) return;
+    void resumePoster(projectId, uid)
+      .then((turn) => {
+        if (turn) track({ turnId: turn.id, projectId, kind: "poster-generate", label: POSTER_LABEL, record: turn });
+      })
+      .catch(() => undefined);
+  }, [hydrated, uid, projectId, track]);
 
   const setStyleText = useCallback(
     (text: string) => {
@@ -167,12 +101,13 @@ export function useMusicVideoComposition(
     hydrated,
     style,
     setStyle: setStyleText,
-    posterAssetId,
-    seed,
-    effectParams,
-    status,
-    error,
-    provider,
+    // A landing the store has just made is newer than what hydration read.
+    posterAssetId: live.landed?.posterAssetId ?? posterAssetId,
+    seed: live.landed?.seed ?? seed,
+    effectParams: (live.landed?.effectParams as EffectParams | undefined) ?? effectParams,
+    status: live.status,
+    error: live.error,
+    provider: live.provider,
     generatePoster,
   };
 }

@@ -43,6 +43,7 @@ import { POST as musicGeneratePOST } from "@/app/api/music/generate/route";
 import { POST as musicSfxPOST } from "@/app/api/music/sfx/route";
 import { POST as foundryExtractPOST } from "@/app/api/foundry/extract/route";
 import { POST as foundryStepPOST } from "@/app/api/foundry/extract/[id]/step/route";
+import { POST as foundryAdoptPOST } from "@/app/api/foundry/styles/[id]/adopt/route";
 import { POST as musicVideoExportPOST } from "@/app/api/music-video/export/route";
 import { POST as cutExportPOST } from "@/app/api/cut/export/route";
 import { POST as adIdeasPOST } from "@/app/api/ads/ideas/route";
@@ -109,6 +110,11 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
     "foundry/extract/step",
     "/api/foundry/extract/[id]/step",
     (r: Request) => foundryStepPOST(r, { params: Promise.resolve({ id: "no-such-run" }) }),
+  ],
+  [
+    "foundry/styles/adopt",
+    "/api/foundry/styles/[id]/adopt",
+    (r: Request) => foundryAdoptPOST(r, { params: Promise.resolve({ id: "no-such-style" }) }),
   ],
   // WP5's export route. The empty default body (`req()`'s own fallback) is
   // missing every required field, so an authed call 400s from

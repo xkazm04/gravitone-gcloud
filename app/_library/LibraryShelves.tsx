@@ -1,49 +1,78 @@
 "use client";
 
-// SHELVES — round 1's winner, consolidated as the LIBRARY view. An archive
-// room: every asset sits on a shelf, filterable by kind, collection and
-// search over the captions the library wrote.
+// SHELVES — the LIBRARY view of ONE project's outputs: the plates its frames
+// hold and the takes its cues use, read from its own records
+// (./projectOutputs.ts). Every output sits on a shelf, filterable by kind and
+// searchable by title.
 //
-// THE COMMISSION DOCK IS GONE, and its absence is the honest state. It was a
-// fixed bar across the bottom holding an input with no `value` and no
-// `onChange` beside a button with no `onClick` — you could type in it and press
-// it and nothing anywhere would happen. It drew the product's most ambitious
-// promise ("commission the studio") at the exact size and prominence of a
-// working feature, which is the one thing a surface here may not do: it may not
-// draw what the product cannot do. Rebuilding it as something that works is a
-// real piece of work and belongs to whoever does that work; until then the
-// shelves are what this screen is, and they are honest.
+// THE FIXTURE IS GONE. The shelf used to be Glass Harbor's thirty mock assets
+// for every project, with a collection rail and previews no record held. A
+// project with nothing made yet now shows the outline of a shelf, and a source
+// that cannot be read says so in the engine's own words beside the others.
+//
+// THE COMMISSION DOCK IS GONE too, and its absence is the honest state: it was
+// an input with no `value` beside a button with no `onClick`, drawn at the size
+// of the product's most ambitious promise. A surface here may not draw what the
+// product cannot do.
 
-import { useMemo, useState } from "react";
-import { RotateCw, Search, SearchX } from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { BookmarkPlus, Music2, Search, SearchX } from "lucide-react";
 
-import { ASSETS, COLLECTIONS } from "../_studio/assets";
-import type { AssetKind } from "../_studio/types";
-import { AssetDrawer } from "../_studio/AssetDrawer";
-import { KindGlyph, MockPreview, fmtDur } from "../_studio/assetParts";
+import { CHIP_CLASS, Ghost, Provenance, TALLY_TONE, Tally } from "@/components/ui/signal";
+import { useAnnounce } from "@/lib/announcer";
+import { listAssets } from "@/lib/assets";
+import { useAuth } from "@/lib/useAuth";
 
-const KINDS: AssetKind[] = ["image", "audio", "video", "script"];
+import { keepable, keepPlate, keptIndex, plateDigest } from "./keepPlate";
+import { useProjectOutputs } from "./useProjectOutputs";
+import type { Output, OutputKind, OutputStep, SourceRead } from "./projectOutputs";
 
-export default function LibraryShelves() {
-  const [kind, setKind] = useState<AssetKind | null>(null);
-  const [collection, setCollection] = useState<string | null>(null);
+const KINDS: OutputKind[] = ["image", "audio"];
+const STEPS: OutputStep[] = ["frames", "score"];
+
+const usd = (n: number | undefined) => (n === undefined ? undefined : `$${n.toFixed(2)}`);
+
+/** What a source has to say when it could not be read in full, in its own words. */
+const troubleOf = (s: SourceRead): { text: string; refused: boolean } | null => {
+  if (s.state === "unavailable") return { text: s.reason, refused: false };
+  if (s.state === "refused") return { text: `${s.refused}: ${s.reason}`, refused: true };
+  if (s.state === "loaded" && s.note) return { text: s.note, refused: false };
+  return null;
+};
+
+export default function LibraryShelves({ projectId }: { projectId: string }) {
+  const read = useProjectOutputs(projectId, true);
+  const { user } = useAuth();
+  const uid = user?.uid ?? null;
+  const [kept, setKept] = useState<ReadonlyMap<string, string>>(new Map());
+  const refreshKept = useCallback(async () => {
+    if (uid) setKept(keptIndex(await listAssets(uid)));
+  }, [uid]);
+  useEffect(() => {
+    if (!uid) return;
+    let live = true;
+    void listAssets(uid).then((rows) => live && setKept(keptIndex(rows)));
+    return () => {
+      live = false;
+    };
+  }, [uid]);
+  const [kind, setKind] = useState<OutputKind | null>(null);
   const [q, setQ] = useState("");
-  const [selected, setSelected] = useState<string | null>(null);
 
+  const shelf = useMemo(() => (read?.outputs ?? []).filter((o) => o.state !== "missing"), [read]);
+  const missing = useMemo(() => (read?.outputs ?? []).filter((o) => o.state === "missing"), [read]);
   const shown = useMemo(() => {
     const needle = q.trim().toLowerCase();
-    return ASSETS.filter(
-      (a) =>
-        (!kind || a.kind === kind) &&
-        (!collection || a.collection === collection) &&
-        (!needle ||
-          a.title.toLowerCase().includes(needle) ||
-          (a.caption ?? "").toLowerCase().includes(needle) ||
-          a.tags.some((t) => t.toLowerCase().includes(needle))),
-    );
-  }, [kind, collection, q]);
+    return shelf.filter((o) => (!kind || o.kind === kind) && (!needle || o.title.toLowerCase().includes(needle)));
+  }, [shelf, kind, q]);
 
-  const selectedAsset = selected ? ASSETS.find((a) => a.id === selected) : null;
+  const troubles = read
+    ? STEPS.flatMap((step) => {
+        const t = troubleOf(read.sources[step]);
+        return t ? [{ step, ...t }] : [];
+      })
+    : [];
+  const nothing = !read || (shelf.length === 0 && missing.length === 0);
 
   return (
     // pb-8, not pb-28: the deep bottom padding existed to clear the fixed
@@ -55,29 +84,14 @@ export default function LibraryShelves() {
         <div>
           <p className="font-jetbrains mb-2 text-content tracking-[0.14em] text-white/40 uppercase">kind</p>
           <ul className="space-y-1">
-            <RailRow label="everything" count={ASSETS.length} active={kind === null} onClick={() => setKind(null)} />
+            <RailRow label="everything" count={shelf.length} active={kind === null} onClick={() => setKind(null)} />
             {KINDS.map((k) => (
               <RailRow
                 key={k}
                 label={k}
-                icon={<KindGlyph kind={k} className="h-3.5 w-3.5 text-white/45" />}
-                count={ASSETS.filter((a) => a.kind === k).length}
+                count={shelf.filter((o) => o.kind === k).length}
                 active={kind === k}
                 onClick={() => setKind(kind === k ? null : k)}
-              />
-            ))}
-          </ul>
-        </div>
-        <div>
-          <p className="font-jetbrains mb-2 text-content tracking-[0.14em] text-white/40 uppercase">collections</p>
-          <ul className="space-y-1">
-            {COLLECTIONS.map((c) => (
-              <RailRow
-                key={c.name}
-                label={c.name.replace("Glass Harbor / ", "GH · ")}
-                count={c.count}
-                active={collection === c.name}
-                onClick={() => setCollection(collection === c.name ? null : c.name)}
               />
             ))}
           </ul>
@@ -86,32 +100,41 @@ export default function LibraryShelves() {
 
       {/* ——— the shelves ——— */}
       <section>
+        {troubles.length > 0 && (
+          <ul className="mb-4 flex flex-wrap gap-2" aria-label="Sources that could not be read">
+            {troubles.map((t) => (
+              <li key={t.step} className={`${CHIP_CLASS} ${t.refused ? TALLY_TONE.rose : TALLY_TONE.amber}`}>
+                <span className="uppercase opacity-80">{t.step}</span>
+                <span>{t.text}</span>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <label className="relative block">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-white/35" aria-hidden />
           <input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            aria-label="Search titles, captions and tags"
+            aria-label="Search titles"
             placeholder="Search"
             className="w-full rounded-xl border border-white/10 bg-white/[0.03] py-2.5 pr-4 pl-10 text-label text-white placeholder:text-white/30 focus:border-cyan-400/40"
           />
         </label>
 
-        {shown.length === 0 ? (
-          // A FILTER MISS, NOT AN EMPTY LIBRARY — and the way to say that is to
-          // hand back the control that undoes it. The sentence used to argue the
-          // distinction ("this is a filter over a library that exists"); the
-          // rail beside it already shows the counts, and a clear button is the
-          // reader's actual next move.
+        {nothing ? (
+          <Ghost shape="card" count={3} label={read ? "No outputs yet" : "Reading outputs"} className="mt-5" />
+        ) : shown.length === 0 && shelf.length > 0 ? (
+          // A FILTER MISS, NOT AN EMPTY SHELF — and the way to say that is to
+          // hand back the control that undoes it.
           <div className="mt-10 flex flex-col items-center gap-4">
             <SearchX className="h-8 w-8 text-white/25" aria-hidden />
             <p className="text-content text-slate-400">Nothing matches</p>
-            {(kind || collection || q.trim()) && (
+            {(kind || q.trim()) && (
               <button
                 type="button"
                 onClick={() => {
                   setKind(null);
-                  setCollection(null);
                   setQ("");
                 }}
                 className="font-jetbrains cursor-pointer rounded-full border border-white/15 px-3.5 py-1.5 text-label text-white/70 transition hover:border-cyan-400/40 hover:text-cyan-200"
@@ -122,55 +145,136 @@ export default function LibraryShelves() {
           </div>
         ) : (
           <ul className="mt-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-            {shown.map((a) => (
-              <li key={a.id}>
-                <button
-                  onClick={() => setSelected(a.id)}
-                  className="group w-full overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03] text-left transition hover:border-cyan-400/30"
-                >
-                  <MockPreview asset={a} className="h-32" />
-                  <div className="space-y-1.5 p-3.5">
-                    <p className="font-jetbrains flex items-center gap-2 text-content text-white/40">
-                      <KindGlyph kind={a.kind} className="h-3 w-3" />
-                      {a.kind}
-                      {a.durationS != null && <span>· {fmtDur(a.durationS)}</span>}
-                    </p>
-                    <p className="truncate text-content font-medium text-white">{a.title}</p>
-                    {/* THE CAPTION'S STATE, WHERE THE CAPTION WOULD BE. A
-                        pulsing rule is a caption on its way; an amber one with
-                        a retry glyph is a caption that did not arrive. Both
-                        used to be sentences occupying the line the caption is
-                        for — the app narrating its own queue. */}
-                    {a.captionStatus === "written" ? (
-                      <p className="line-clamp-2 text-content leading-snug text-slate-400">{a.caption}</p>
-                    ) : a.captionStatus === "pending" ? (
-                      <span
-                        role="img"
-                        aria-label="Caption still being written"
-                        className="block h-0.5 w-2/3 animate-pulse rounded bg-cyan-300/70"
-                      />
-                    ) : (
-                      <span
-                        className="flex items-center gap-1.5 text-content text-amber-300/90"
-                        role="img"
-                        aria-label="Caption failed — can be retried"
-                      >
-                        <RotateCw className="h-3.5 w-3.5" aria-hidden />
-                        <span aria-hidden className="h-0.5 w-1/2 rounded bg-amber-300/60" />
-                      </span>
-                    )}
-                  </div>
-                </button>
+            {shown.map((o) => (
+              <li key={o.id}>
+                <OutputCard output={o} uid={uid} projectId={projectId} kept={kept.get(o.id)} onKept={refreshKept} />
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {missing.length > 0 && (
+          <ul className="mt-6 flex flex-wrap gap-2" aria-label="Missing">
+            {missing.map((o) => (
+              <li key={o.id} className={`${CHIP_CLASS} ${TALLY_TONE.amber}`}>
+                <span>{o.title}</span>
+                <span className="opacity-80">{o.code}</span>
               </li>
             ))}
           </ul>
         )}
       </section>
-
-      {selectedAsset && (
-        <AssetDrawer asset={selectedAsset} onClose={() => setSelected(null)} onSelect={setSelected} />
-      )}
     </div>
+  );
+}
+
+function OutputCard({
+  output: o,
+  uid,
+  projectId,
+  kept,
+  onKept,
+}: {
+  output: Output;
+  uid: string | null;
+  projectId: string;
+  kept: string | undefined;
+  onKept: () => Promise<void>;
+}) {
+  return (
+    <div className="overflow-hidden rounded-2xl border border-white/8 bg-white/[0.03]">
+      {o.kind === "image" ? (
+        // eslint-disable-next-line @next/next/no-img-element -- a plate is a data: URL or a public path, not an optimisable asset
+        <img src={o.src} alt={o.title} className="h-32 w-full object-cover" />
+      ) : (
+        <div className="flex h-32 flex-col items-center justify-center gap-3 bg-white/[0.02] px-3">
+          <Music2 className="h-6 w-6 text-white/30" aria-hidden />
+          <audio controls preload="none" src={o.src} aria-label={o.title} className="w-full" />
+        </div>
+      )}
+      <div className="space-y-2 p-3.5">
+        <p className="truncate text-content font-medium text-white">{o.title}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className={`${CHIP_CLASS} ${o.state === "in-cut" ? TALLY_TONE.cyan : TALLY_TONE.neutral}`}>{o.state}</span>
+          <Provenance
+            model={o.provenance.model}
+            run={o.provenance.run}
+            step={o.provenance.step}
+            cost={usd(o.provenance.costUsd)}
+          />
+          {keepable(o) && uid && (
+            <KeepControl output={o} uid={uid} projectId={projectId} kept={kept} onKept={onKept} />
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** The keep control, and the mark that replaces it once THIS plate's bytes are
+ *  on the shelf. A regenerated plate has other bytes, so the mark goes and the
+ *  control comes back. A refusal is the store's own message, beside the card. */
+function KeepControl({
+  output: o,
+  uid,
+  projectId,
+  kept,
+  onKept,
+}: {
+  output: Output;
+  uid: string;
+  projectId: string;
+  kept: string | undefined;
+  onKept: () => Promise<void>;
+}) {
+  const announce = useAnnounce();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  // Keyed by the src it was read for, so a regenerated plate never wears the
+  // previous plate's digest while its own is being read.
+  const [read, setRead] = useState<{ src: string; digest: string } | null>(null);
+
+  useEffect(() => {
+    if (!kept || !o.src) return;
+    let live = true;
+    const src = o.src;
+    plateDigest(src).then((digest) => live && setRead({ src, digest }), () => {});
+    return () => {
+      live = false;
+    };
+  }, [kept, o.src]);
+
+  if (kept && read?.src === o.src && read?.digest === kept) return <Tally label="kept" value={1} tone="emerald" />;
+  return (
+    <>
+      <button
+        type="button"
+        disabled={busy}
+        aria-label={`Keep plate ${o.title}`}
+        onClick={async () => {
+          setBusy(true);
+          setError(null);
+          try {
+            await keepPlate(uid, projectId, o);
+            await onKept();
+          } catch (e) {
+            const msg = e instanceof Error ? e.message : String(e);
+            setError(msg);
+            announce({ key: `keep-failed-${o.id}-${Date.now()}`, text: `Could not keep ${o.title}: ${msg}` });
+          } finally {
+            setBusy(false);
+          }
+        }}
+        className="cursor-pointer rounded border border-white/15 p-1 text-white/60 transition hover:border-cyan-400/40 hover:text-cyan-200 disabled:opacity-40"
+      >
+        <BookmarkPlus className="h-3.5 w-3.5" aria-hidden />
+      </button>
+      {error && (
+        <p className="w-full text-label text-rose-300">
+          {error}
+        </p>
+      )}
+    </>
   );
 }
 
@@ -179,13 +283,11 @@ function RailRow({
   count,
   active,
   onClick,
-  icon,
 }: {
   label: string;
   count: number;
   active: boolean;
   onClick: () => void;
-  icon?: React.ReactNode;
 }) {
   return (
     <li>
@@ -197,10 +299,7 @@ function RailRow({
           active ? "bg-cyan-400/10 text-cyan-200" : "text-slate-400 hover:bg-white/5 hover:text-white"
         }`}
       >
-        <span className="flex min-w-0 items-center gap-2">
-          {icon}
-          <span className="truncate">{label}</span>
-        </span>
+        <span className="truncate">{label}</span>
         <span className="font-jetbrains text-label text-white/35">{count}</span>
       </button>
     </li>

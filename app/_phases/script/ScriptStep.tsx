@@ -35,8 +35,8 @@ import Modal from "@/components/ui/Modal";
 import { Hint, TabRail, UpstreamBreak, type TabDef, type TallyTone } from "@/components/ui/signal";
 import { getProject, templateOf, type Discipline, type TemplateId } from "@/lib/projects";
 
-import { CONCLUSIONS } from "../_shared/notebook/conclusions";
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "../_shared/notebook/notebook";
+import SourceChip from "../_shared/notebook/SourceChip";
+import { useActiveNotebook } from "../_shared/notebook/useActiveNotebook";
 import { loadStep, readStep, type BeatPicksStepData, type StorageTrouble } from "../_shared/stepStore";
 import Notice from "../_shared/ui/Notice";
 import { usePhaseReport } from "../_shared/usePhaseReport";
@@ -261,8 +261,13 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
 
   // The same scope record the triage board writes, and the project's own note
   // and version history.
-  const scope = useScope(projectId);
-  const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope });
+  // The notebook the creator has, not the shipped one: the gate, the recalibrate
+  // payload and the wounds all read this same source.
+  const active = useActiveNotebook(projectId);
+  const { source } = active;
+  const nb = source.notebook;
+  const scope = useScope(projectId, source);
+  const versions = useVersions(projectId, { cards: scope.cards, scope: scope.scope, source, optIn: scope.optIn });
 
   // Guided duel or expert columns — the stored choice, else a computed default
   // (guided only while nothing has been decided on this step; the inputs are
@@ -328,7 +333,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   // second `gateChains` call beside the button would be a second answer waiting
   // to disagree with this one. When a candidate is staged `reading` IS that
   // candidate, so this is the verdict on the chain about to be accepted.
-  const gate = useMemo(() => gateChains(chains, { conclusions: CONCLUSIONS }), [chains]);
+  const gate = useMemo(() => gateChains(chains, { source, conclusions: source.conclusions }), [chains, source]);
 
   if (trouble) return <ResearchReadTrouble trouble={trouble} />;
   if (researched === null) return <Skeleton />;
@@ -353,7 +358,10 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   // Adoption and face are in the gate for the same reason scope is: rendering
   // the duel before its record lands would show "nothing adopted" over a
   // decision that is on disk, and the face default reads the adoption record.
-  const ready = scope.hydrated && versions.hydrated && adoption.hydrated && face.hydrated;
+  // The active notebook is in the gate too: until its record is read, the scope
+  // is dealt the replay and a live scope reads as orphaned, so a ScopePip click
+  // in that window would start a fresh fixture-digest scope over the creator's.
+  const ready = active.hydrated && scope.hydrated && versions.hydrated && adoption.hydrated && face.hydrated;
 
   // WHAT EACH TAB HOLDS — the state its caption was reaching for. Read off the
   // version on screen, and only once the records are on disk: a "0 conflicts"
@@ -368,7 +376,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
   const weighed = versions.candidate && showing === "candidate" ? versions.candidate : versions.baseline;
   const state = ready
     ? {
-        conflicts: conflictsIn(weighed, scope.cards, scope.scope).length,
+        conflicts: conflictsIn(weighed, scope.cards, scope.scope, scope.optIn).length,
         overrun: RENDERS.filter((r) => coverageIn(weighed, r.id, cardIds).overrunS > 0).length,
         unused: scope.cards.filter((c) =>
           RENDERS.every((r) => usageIn(versions.baseline, r.id, c.id).kind === "unused"),
@@ -391,12 +399,12 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
         <div className="min-w-0 grow">
           <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">written against</p>
           <p className="font-jetbrains mt-1 text-content text-white/60">
-            {NOTEBOOK_COUNTS.facts} claims · {NOTEBOOK_COUNTS.loadBearing} load-bearing ·{" "}
-            {NOTEBOOK_COUNTS.mechanisms} mechanisms · {NOTEBOOK_COUNTS.reversals} reversals ·{" "}
-            <span className="text-amber-200">half-life {NOTEBOOK.currency.halfLife}</span>
+            {nb.facts.length} claims · {nb.facts.filter((f) => f.loadBearing).length} load-bearing ·{" "}
+            {nb.mechanisms.length} mechanisms · {nb.reversals.length} reversals ·{" "}
+            <span className="text-amber-200">half-life {nb.currency.halfLife}</span>
           </p>
           <p className="mt-1.5 text-content leading-relaxed text-slate-400">
-            tension strength — {NOTEBOOK.tension.strength}
+            tension strength — {nb.tension.strength}
           </p>
           {runtimeMismatch && (
             <p
@@ -414,13 +422,17 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
             </p>
           )}
         </div>
-        {/* A LINK, not a sentence about where a link would go. */}
-        <a
-          href={`/studio/${projectId}?step=research`}
-          className="font-jetbrains shrink-0 rounded-full border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-cyan-400/40 hover:text-cyan-200"
-        >
-          <span aria-hidden>←</span> step 1 · notebook
-        </a>
+        {/* A LINK, not a sentence about where a link would go — and the chip
+            says which notebook it leads to. */}
+        <div className="flex shrink-0 flex-wrap items-center gap-2">
+          <SourceChip source={source} />
+          <a
+            href={`/studio/${projectId}?step=research`}
+            className="font-jetbrains rounded-full border border-white/12 px-3 py-1 text-label text-white/45 transition hover:border-cyan-400/40 hover:text-cyan-200"
+          >
+            <span aria-hidden>←</span> step 1 · notebook
+          </a>
+        </div>
       </section>
 
       {/* A REAL TABLIST NOW. This row used to be four `aria-pressed` buttons,
@@ -469,7 +481,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
               to check what a note did. The pad is a fixed corner surface that
               belongs to the STEP, not to whichever grid happens to be under it,
               so it is mounted once and the tabs swap inside it. */}
-          <StickyNotebook api={versions} gate={gate} cards={scope.cards} scope={scope.scope}>
+          <StickyNotebook api={versions} gate={gate} cards={scope.cards} scope={scope.scope} optIn={scope.optIn}>
             <>
               {tab === "candidates" && (
                 <>
@@ -510,6 +522,7 @@ function ExplainerScript({ projectId, asked }: { projectId: string; asked: Asked
                         <HypothesisColumn
                           key={r.id}
                           render={r}
+                          source={source}
                           beats={chains[r.id]}
                           chainLabel={reading?.beats ? reading.label : undefined}
                           adopted={adoption.adoptedId === r.id}

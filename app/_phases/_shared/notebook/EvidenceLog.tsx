@@ -18,36 +18,40 @@
 
 import { Tally } from "@/components/ui/signal";
 
+import { countsOf } from "./counts";
 import FactRow from "./FactRow";
-import { NOTEBOOK, NOTEBOOK_COUNTS } from "./notebook";
-import { SECTION_LABEL } from "./sections/H";
+import { sectionLabels } from "./sections/H";
 import { CurrencyBody, SourcesBody } from "./sections/Shared";
+import type { NotebookSource } from "./source";
 
-export default function EvidenceLog() {
-  const n = NOTEBOOK;
+/** `source` is the notebook being audited — the project's dealt one. */
+export default function EvidenceLog({ source }: { source: NotebookSource }) {
+  const n = source.notebook;
+  const counts = countsOf(n);
+  const labels = sectionLabels(n);
   const open = n.unknowns.filter((u) => !u.resolvedBy);
   const resolved = n.unknowns.filter((u) => u.resolvedBy);
 
   return (
     <div className="space-y-7">
       <section className="grid gap-2 sm:grid-cols-3">
-        <Tile label="facts" value={`${NOTEBOOK_COUNTS.facts}`} note={`${NOTEBOOK_COUNTS.loadBearing} load-bearing`} />
+        <Tile label="facts" value={`${counts.facts}`} note={`${counts.loadBearing} load-bearing`} />
         <Tile
           label="low confidence"
-          value={`${NOTEBOOK_COUNTS.lowConfidence}`}
+          value={`${counts.lowConfidence}`}
           note={
-            NOTEBOOK_COUNTS.flagged === 0
+            counts.flagged === 0
               ? "none of them load-bearing"
-              : `${NOTEBOOK_COUNTS.flagged} ALSO load-bearing`
+              : `${counts.flagged} ALSO load-bearing`
           }
-          tone={NOTEBOOK_COUNTS.flagged > 0 ? "bad" : undefined}
+          tone={counts.flagged > 0 ? "bad" : undefined}
         />
         {/* No note: "then the numbers date" is what a half-life IS. */}
         <Tile label="half-life" value={n.currency.halfLife} tone="warn" />
       </section>
 
       <section className="space-y-2">
-        <Head>{SECTION_LABEL.unknowns}</Head>
+        <Head>{labels.unknowns}</Head>
         {open.map((u) => (
           <div key={u.id} data-testid={`evidence-constraint-${u.id}`} className="rounded-xl border border-amber-400/20 bg-amber-400/[0.04] p-3">
             <p className="text-content text-slate-200">{u.what}</p>
@@ -68,10 +72,10 @@ export default function EvidenceLog() {
       </section>
 
       <section className="space-y-2">
-        <Head>{SECTION_LABEL.facts}</Head>
+        <Head>{labels.facts}</Head>
         <ul className="space-y-2">
           {n.facts.map((f) => (
-            <FactRow key={f.id} f={f} />
+            <FactRow key={f.id} f={f} facts={source.byId.facts} />
           ))}
         </ul>
       </section>
@@ -81,7 +85,7 @@ export default function EvidenceLog() {
         {/* No half-life here — the stat tile at the top of this page already
             gives it, and printing it twice is how a number starts disagreeing
             with itself. */}
-        <CurrencyBody />
+        <CurrencyBody n={n} />
       </section>
 
       <section className="space-y-1.5">
@@ -89,10 +93,10 @@ export default function EvidenceLog() {
             hand-written document bibliography, while the 21 facts above cite 20
             DISTINCT source strings between them (`factSourceStrings`) that this
             list does not enumerate and that no code reconciles against it — see
-            NOTEBOOK_COUNTS in notebook.ts. Same wording as the notebook's own
-            heading and rail pill (SECTION_LABEL in sections/H.tsx). */}
-        <Head>{SECTION_LABEL.sources}</Head>
-        <SourcesBody />
+            counts in notebook.ts. Same wording as the notebook's own
+            heading and rail pill (sectionLabels in sections/H.tsx). */}
+        <Head>{labels.sources}</Head>
+        <SourcesBody n={n} />
         {/* The gap is READ, not retyped. The count beside it was already
             computed, and the sentence describing it was a literal about run 1
             ("this run did not reach primary on-chain data") — so any other
@@ -102,9 +106,9 @@ export default function EvidenceLog() {
             literal". One gap is quoted because this is the summary line; the
             notebook's own gaps section lists them all (no pointer to it: this
             modal has no control that opens the notebook). */}
-        {NOTEBOOK_COUNTS.gaps > 0 && (
+        {counts.gaps > 0 && (
           <p className="font-jetbrains pt-1 text-content leading-relaxed text-amber-200/70">
-            {NOTEBOOK_COUNTS.gaps} declared gap{NOTEBOOK_COUNTS.gaps === 1 ? "" : "s"} — {n.researchGaps[0]}
+            {counts.gaps} declared gap{counts.gaps === 1 ? "" : "s"} — {n.researchGaps[0]}
           </p>
         )}
       </section>

@@ -57,6 +57,7 @@
 
 import { notebookIssues, type GraphIssue } from "@/app/_phases/_shared/notebook/cards";
 import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
+import { declaresOwn } from "@/app/_phases/_shared/notebook/source";
 import type { Notebook } from "@/app/_phases/_shared/notebook/types";
 import type { SourceReceipt } from "@/lib/text/types";
 
@@ -152,6 +153,11 @@ export const NOTEBOOK_SCHEMA = {
           contests: { type: "array", items: { type: "string" }, description: "fact ids this one contradicts" },
           qualifies: { type: "array", items: { type: "string" } },
           note: { type: "string", description: "the argument, the numbers and every qualification" },
+          dimension: {
+            type: "string",
+            description:
+              "the id of a column in `dimensions[]` this card files under. Required on every fact, mechanism and reversal when `dimensions` is declared.",
+          },
         },
         required: ["id", "claim", "loadBearing", "confidence", "asOf", "sources"],
       },
@@ -185,6 +191,11 @@ export const NOTEBOOK_SCHEMA = {
           explains: { type: "string" },
           needsAnalogy: { type: "boolean" },
           note: { type: "string" },
+          dimension: {
+            type: "string",
+            description:
+              "the id of a column in `dimensions[]` this card files under. Required on every fact, mechanism and reversal when `dimensions` is declared.",
+          },
         },
         required: ["id", "name", "chain", "explains", "needsAnalogy"],
       },
@@ -204,6 +215,11 @@ export const NOTEBOOK_SCHEMA = {
           evidence: { type: "array", items: { type: "string" } },
           escalation: { type: "string" },
           note: { type: "string" },
+          dimension: {
+            type: "string",
+            description:
+              "the id of a column in `dimensions[]` this card files under. Required on every fact, mechanism and reversal when `dimensions` is declared.",
+          },
         },
         required: ["id", "obviousReading", "whyWrong", "evidence", "escalation"],
       },
@@ -327,6 +343,40 @@ export const NOTEBOOK_SCHEMA = {
       },
       required: ["halfLife", "why", "expiresFirst", "durable", "advice"],
     },
+    dimensions: {
+      type: "array",
+      description:
+        "OPTIONAL. The columns this topic's cards are reviewed in, derived from the topic. Omit to use the default market columns; declare them and every fact, mechanism and reversal carries a `dimension`.",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          label: { type: "string" },
+          purpose: { type: "string", description: "what this column is for, in the reviewer's terms" },
+          emptyByOmission: { type: "string", description: "what an empty column means when the run did not look here" },
+          notApplicable: { type: "string", description: "what an empty column means when there is nothing here to find" },
+        },
+        required: ["id", "label", "purpose", "emptyByOmission", "notApplicable"],
+      },
+    },
+    conclusions: {
+      type: "array",
+      description:
+        "OPTIONAL. Reasoned claims that go beyond the sourced facts, filed apart from them. Each rests on fact ids and states what would falsify it. Omit when there are none.",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          claim: { type: "string" },
+          reasoning: { type: "string" },
+          leap: { type: "string", enum: ["near", "moderate", "far", "unhinged"] },
+          restsOn: { type: "array", items: { type: "string" }, description: "fact or mechanism ids" },
+          falsifiableBy: { type: "string", description: "what a reader could go and look at that would settle it" },
+          useFor: { type: "string", enum: ["thesis", "reversal", "reframe", "steel-man", "colour", "boundary"] },
+        },
+        required: ["id", "claim", "reasoning", "leap", "restsOn", "falsifiableBy", "useFor"],
+      },
+    },
     sources: { type: "array", items: { type: "string" } },
     researchGaps: {
       type: "array",
@@ -385,6 +435,9 @@ const arr = (v: unknown): v is unknown[] => Array.isArray(v);
  *  trailing period". Run 1 shipped three-sentence claims and every reading
  *  surface has had to truncate them since, so this is a budget with a scar. */
 const CLAIM_MAX = 90;
+
+const LEAPS: readonly string[] = ["near", "moderate", "far", "unhinged"];
+const USES: readonly string[] = ["thesis", "reversal", "reframe", "steel-man", "colour", "boundary"];
 
 /** The link words a mechanism chain may use.
  *
@@ -550,6 +603,47 @@ function shapeFindings(nb: Record<string, unknown>): string[] {
         say(`engineFit[${i}].hazard is missing. Write "" for assessed, none found; a missing key means never asked.`);
     });
 
+  /* dimensions[] and conclusions[] - optional, additive (schema: Dimensions and conclusions) */
+  const declaredColumns = new Set<string>();
+  if (nb.dimensions !== undefined) {
+    if (!arr(nb.dimensions)) say("`dimensions` must be an array of columns when present.");
+    else {
+      nb.dimensions.forEach((raw, i) => {
+        const at = `dimensions[${i}]`;
+        if (!isObj(raw)) return say(`${at} is not an object.`);
+        for (const k of ["id", "label", "purpose", "emptyByOmission", "notApplicable"])
+          if (!str(raw[k])) say(`${at}.${k} is missing. A column that cannot say what its emptiness means is not finished.`);
+        if (str(raw.id)) {
+          if (declaredColumns.has(raw.id)) say(`${at}.id "${raw.id}" is declared twice.`);
+          declaredColumns.add(raw.id);
+        }
+      });
+      // A card tagged to a column nobody declared renders nowhere.
+      for (const key of ["facts", "mechanisms", "reversals"] as const) {
+        const rows = nb[key];
+        if (!arr(rows)) continue;
+        rows.forEach((row, i) => {
+          if (isObj(row) && row.dimension !== undefined && !(str(row.dimension) && declaredColumns.has(row.dimension)))
+            say(`${key}[${i}].dimension "${String(row.dimension)}" is not one of the declared dimensions (${[...declaredColumns].join(", ")}).`);
+        });
+      }
+    }
+  }
+  if (nb.conclusions !== undefined) {
+    if (!arr(nb.conclusions)) say("`conclusions` must be an array when present.");
+    else
+      nb.conclusions.forEach((raw, i) => {
+        const at = `conclusions[${i}]`;
+        if (!isObj(raw)) return say(`${at} is not an object.`);
+        for (const k of ["id", "claim", "reasoning"]) if (!str(raw[k])) say(`${at}.${k} is missing.`);
+        if (!LEAPS.includes(raw.leap as string)) say(`${at}.leap must be one of ${LEAPS.join(", ")}.`);
+        if (!arr(raw.restsOn)) say(`${at}.restsOn must be an array of fact ids.`);
+        if (!(str(raw.falsifiableBy) || isObj(raw.falsifiableBy)))
+          say(`${at}.falsifiableBy is missing. A conclusion that cannot be wrong is a vibe.`);
+        if (!USES.includes(raw.useFor as string)) say(`${at}.useFor must be one of ${USES.join(", ")}.`);
+      });
+  }
+
   /* gaps — Phase 9 */
   const gaps = nb.researchGaps;
   if (!arr(gaps) || gaps.length === 0)
@@ -597,9 +691,11 @@ function shapeFindings(nb: Record<string, unknown>): string[] {
  *
  * So findings OWNED BY a fixture conclusion are dropped, by owner rather than by
  * kind — `check-notebook.mts` still checks exactly those against the fixture,
- * where they belong. The honest fix is a `conclusions` argument on `buildCards`
- * so a caller can hand it the empty set; that is one file in the shared notebook
- * context and not this one, and until it exists this filter is the seam.
+ * where they belong.
+ *
+ * BOTH FILTERS NOW APPLY ONLY TO A NOTEBOOK THAT DECLARES NEITHER `dimensions`
+ * NOR `conclusions` (research-scope-board-A stage 2). One that declares them is
+ * dealt from its own data, so it is checked against that data, unfiltered.
  */
 const FIXTURE_COUPLED: ReadonlySet<GraphIssue["kind"]> = new Set(["untagged", "stale-tag"]);
 
@@ -608,9 +704,13 @@ const FIXTURE_COUPLED: ReadonlySet<GraphIssue["kind"]> = new Set(["untagged", "s
 const FIXTURE_CONCLUSION_IDS = new Set(CONCLUSIONS.map((c) => c.id));
 
 function graphFindings(nb: Notebook): string[] {
+  // A notebook that declares its own dimensions or conclusions is dealt from them
+  // (source.ts::asSource), so there is no fixture table or conclusion to filter
+  // out: an untagged card and a conclusion resting on nothing are its own defects.
+  const own = declaresOwn(nb);
   return notebookIssues(nb)
-    .filter((i) => !FIXTURE_COUPLED.has(i.kind))
-    .filter((i) => !FIXTURE_CONCLUSION_IDS.has(i.from.split(".")[0]))
+    .filter((i) => own || !FIXTURE_COUPLED.has(i.kind))
+    .filter((i) => own || !FIXTURE_CONCLUSION_IDS.has(i.from.split(".")[0]))
     .map((i) => `[${i.kind}] ${i.from} → ${i.ref} — ${i.detail}`);
 }
 

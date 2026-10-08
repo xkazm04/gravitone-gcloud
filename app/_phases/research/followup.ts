@@ -10,6 +10,7 @@
 // A follow-up UI that only knows how to render "here is more" is wrong.
 
 import { FACT_BY_ID, UNKNOWN_BY_ID } from "../_shared/notebook/notebook";
+import { fixtureSource, type NotebookSource } from "../_shared/notebook/source";
 import type { Confidence } from "../_shared/notebook/types";
 
 export type FollowUpKind = "deepen-card" | "question";
@@ -191,8 +192,9 @@ export interface Standing {
   landed: boolean;
 }
 
-const GLOBAL_NOTEBOOK =
-  "The notebook in this prototype is one static document shared by every project, so there is nowhere per-project to write it.";
+// What is still true once every project can hold its own notebook: the scope
+// records kept or cut, and no follow-up has a record to land its effect in.
+const GLOBAL_NOTEBOOK = "No effect has a record to land in.";
 
 export function standingOf(e: Effect, cardIds: ReadonlySet<string>): Standing {
   switch (e.kind) {
@@ -289,7 +291,13 @@ export function matchQuestion(q: string): string | null {
  *  the honest majority case: there are two transcribed answers and nothing else.
  *  One function so the queue cannot decide "answered" one way when it dispatches
  *  and another way when it resolves. */
-export function resultFor(r: Pick<FollowUpRequest, "kind" | "cardId" | "prompt">): FollowUpResult | undefined {
+export function resultFor(
+  r: Pick<FollowUpRequest, "kind" | "cardId" | "prompt">,
+  source: NotebookSource = fixtureSource(),
+): FollowUpResult | undefined {
+  // The two transcripts are Bitcoin's. On any other notebook "whale holders" is a
+  // question about a different topic, and answering it with them is wrong.
+  if (source.kind !== "replay") return undefined;
   const key = r.kind === "question" ? matchQuestion(r.prompt) : (r.cardId ?? null);
   return key ? CANNED[key] : undefined;
 }

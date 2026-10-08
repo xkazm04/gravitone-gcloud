@@ -1,0 +1,3880 @@
+{
+  "case": "intl-goals",
+  "title": "Most international goals in men's football, all time",
+  "hook": "Who has scored the most goals for his country?",
+  "unit": "goals",
+  "kind": "cumulative-race",
+  "source": {
+    "name": "Wikipedia per-player international goal lists, selected from the 50+ goals list (MediaWiki API)",
+    "url": "https://en.wikipedia.org/wiki/List_of_men's_footballers_with_50_or_more_international_goals",
+    "revid": 1378854116,
+    "retrieved": "2026-10-06",
+    "terms": "Wikipedia text is CC BY-SA 4.0; this derived data must credit Wikipedia contributors and carry the same licence.",
+    "notes": "Entities: the 20 players at or above the 20th-highest total (72 goals) in the 50+ list, plus the record holders named in its History section (Imre Schlosser, Ferenc Puskás, Mokhtar Dahari, Ali Daei, Cristiano Ronaldo). Vivian Woodward is named there only conditionally (\"would make him the first...\"; his total counts England amateur matches) and is not treated as a holder. Each series is counted goal by goal from the player's dated goal table at its revid (see perEntity). Goals before 1950 are carried into the 1950 value; the series stops at 2025-12-31, so players still active show fewer goals than their current totals. Excluded (no per-goal data, not interpolated): Vivian Woodward: contested total (75): the 50+ list counts England amateur matches for him and its History section names him only conditionally; footnote: \"Vivian Woodward scored 29 goals in 23 matches for the professional England team between 1903 and 1911, and 46 goals in 30 matches for the England amateur side between 1906 and 1914; all matches for the Amateur side were considered official internationals for their respective opponents.\". Mismatches against the 50+ list's current totals (built from goal table minus list): Imre Schlosser 58 vs 59 (-1). Left as the goal tables give them.",
+    "perEntity": [
+      {
+        "id": "cristiano-ronaldo",
+        "name": "Cristiano Ronaldo",
+        "nation": "Portugal",
+        "why": [
+          "top 20 (>= 72 goals)",
+          "record holder"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Cristiano_Ronaldo",
+        "revid": 1376549197,
+        "tables": 1,
+        "parsed": 146,
+        "undated": 0,
+        "listTotal": 146,
+        "careerFrom": 2003,
+        "careerTo": 2026
+      },
+      {
+        "id": "lionel-messi",
+        "name": "Lionel Messi",
+        "nation": "Argentina",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Lionel_Messi",
+        "revid": 1378547327,
+        "tables": 1,
+        "parsed": 125,
+        "undated": 0,
+        "listTotal": 125,
+        "careerFrom": 2005,
+        "careerTo": null
+      },
+      {
+        "id": "ali-daei",
+        "name": "Ali Daei",
+        "nation": "Iran",
+        "why": [
+          "top 20 (>= 72 goals)",
+          "record holder"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Ali_Daei",
+        "revid": 1335642834,
+        "tables": 1,
+        "parsed": 108,
+        "undated": 0,
+        "listTotal": 108,
+        "careerFrom": null,
+        "careerTo": null
+      },
+      {
+        "id": "sunil-chhetri",
+        "name": "Sunil Chhetri",
+        "nation": "India",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Sunil_Chhetri",
+        "revid": 1378874895,
+        "tables": 1,
+        "parsed": 95,
+        "undated": 0,
+        "listTotal": 95,
+        "careerFrom": 2005,
+        "careerTo": 2025
+      },
+      {
+        "id": "romelu-lukaku",
+        "name": "Romelu Lukaku",
+        "nation": "Belgium",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Romelu_Lukaku",
+        "revid": 1378714604,
+        "tables": 1,
+        "parsed": 94,
+        "undated": 0,
+        "listTotal": 94,
+        "careerFrom": 2010,
+        "careerTo": null
+      },
+      {
+        "id": "robert-lewandowski",
+        "name": "Robert Lewandowski",
+        "nation": "Poland",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Robert_Lewandowski",
+        "revid": 1378198782,
+        "tables": 1,
+        "parsed": 92,
+        "undated": 0,
+        "listTotal": 92,
+        "careerFrom": 2008,
+        "careerTo": null
+      },
+      {
+        "id": "harry-kane",
+        "name": "Harry Kane",
+        "nation": "England",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Harry_Kane",
+        "revid": 1378703597,
+        "tables": 1,
+        "parsed": 89,
+        "undated": 0,
+        "listTotal": 89,
+        "careerFrom": 2015,
+        "careerTo": null
+      },
+      {
+        "id": "mokhtar-dahari",
+        "name": "Mokhtar Dahari",
+        "nation": "Malaysia",
+        "why": [
+          "top 20 (>= 72 goals)",
+          "record holder"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Mokhtar_Dahari",
+        "revid": 1377430623,
+        "tables": 1,
+        "parsed": 89,
+        "undated": 0,
+        "listTotal": 89,
+        "careerFrom": 1972,
+        "careerTo": 1985
+      },
+      {
+        "id": "ali-mabkhout",
+        "name": "Ali Mabkhout",
+        "nation": "UAE",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Ali_Mabkhout",
+        "revid": 1358450986,
+        "tables": 1,
+        "parsed": 85,
+        "undated": 0,
+        "listTotal": 85,
+        "careerFrom": 2009,
+        "careerTo": 2024
+      },
+      {
+        "id": "ferenc-puskas",
+        "name": "Ferenc Puskás",
+        "nation": "Hungary",
+        "why": [
+          "top 20 (>= 72 goals)",
+          "record holder"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Ferenc_Pusk%C3%A1s",
+        "revid": 1358451945,
+        "tables": 1,
+        "parsed": 84,
+        "undated": 0,
+        "listTotal": 84,
+        "careerFrom": 1945,
+        "careerTo": 1962
+      },
+      {
+        "id": "neymar",
+        "name": "Neymar",
+        "nation": "Brazil",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Neymar",
+        "revid": 1377954777,
+        "tables": 1,
+        "parsed": 80,
+        "undated": 0,
+        "listTotal": 80,
+        "careerFrom": 2010,
+        "careerTo": 2026
+      },
+      {
+        "id": "godfrey-chitalu",
+        "name": "Godfrey Chitalu",
+        "nation": "Zambia",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Godfrey_Chitalu",
+        "revid": 1373996115,
+        "tables": 1,
+        "parsed": 79,
+        "undated": 0,
+        "listTotal": 79,
+        "careerFrom": 1968,
+        "careerTo": 1980
+      },
+      {
+        "id": "hussein-saeed",
+        "name": "Hussein Saeed",
+        "nation": "Iraq",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Hussein_Saeed",
+        "revid": 1305636612,
+        "tables": 1,
+        "parsed": 78,
+        "undated": 0,
+        "listTotal": 78,
+        "careerFrom": 1977,
+        "careerTo": 1990
+      },
+      {
+        "id": "pele",
+        "name": "Pelé",
+        "nation": "Brazil",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Pel%C3%A9",
+        "revid": 1367056613,
+        "tables": 1,
+        "parsed": 77,
+        "undated": 0,
+        "listTotal": 77,
+        "careerFrom": 1957,
+        "careerTo": 1971
+      },
+      {
+        "id": "sandor-kocsis",
+        "name": "Sándor Kocsis",
+        "nation": "Hungary",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_S%C3%A1ndor_Kocsis",
+        "revid": 1362987069,
+        "tables": 1,
+        "parsed": 75,
+        "undated": 0,
+        "listTotal": 75,
+        "careerFrom": 1948,
+        "careerTo": 1956
+      },
+      {
+        "id": "kunishige-kamamoto",
+        "name": "Kunishige Kamamoto",
+        "nation": "Japan",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Kunishige_Kamamoto",
+        "revid": 1360649287,
+        "tables": 1,
+        "parsed": 75,
+        "undated": 0,
+        "listTotal": 75,
+        "careerFrom": 1964,
+        "careerTo": 1977
+      },
+      {
+        "id": "bashar-abdullah",
+        "name": "Bashar Abdullah",
+        "nation": "Kuwait",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Bashar_Abdullah",
+        "revid": 1361401104,
+        "tables": 1,
+        "parsed": 75,
+        "undated": 0,
+        "listTotal": 75,
+        "careerFrom": 1996,
+        "careerTo": 2007
+      },
+      {
+        "id": "edin-dzeko",
+        "name": "Edin Džeko",
+        "nation": "Bosnia and Herzegovina",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Edin_D%C5%BEeko",
+        "revid": 1378112087,
+        "tables": 1,
+        "parsed": 73,
+        "undated": 0,
+        "listTotal": 73,
+        "careerFrom": 2007,
+        "careerTo": 2026
+      },
+      {
+        "id": "majed-abdullah",
+        "name": "Majed Abdullah",
+        "nation": "Saudi Arabia",
+        "why": [
+          "top 20 (>= 72 goals)"
+        ],
+        "page": "https://en.wikipedia.org/wiki/Majed_Abdullah#International goals",
+        "revid": 1375664398,
+        "tables": 1,
+        "parsed": 72,
+        "undated": 0,
+        "listTotal": 72,
+        "careerFrom": 1977,
+        "careerTo": 1994
+      },
+      {
+        "id": "imre-schlosser",
+        "name": "Imre Schlosser",
+        "nation": "Hungary",
+        "why": [
+          "record holder"
+        ],
+        "page": "https://en.wikipedia.org/wiki/List_of_international_goals_scored_by_Imre_Schlosser",
+        "revid": 1323609280,
+        "tables": 1,
+        "parsed": 58,
+        "undated": 0,
+        "listTotal": 59,
+        "careerFrom": 1906,
+        "careerTo": 1927
+      }
+    ],
+    "excluded": [
+      {
+        "name": "Vivian Woodward",
+        "reason": "contested total (75): the 50+ list counts England amateur matches for him and its History section names him only conditionally; footnote: \"Vivian Woodward scored 29 goals in 23 matches for the professional England team between 1903 and 1911, and 46 goals in 30 matches for the England amateur side between 1906 and 1914; all matches for the Amateur side were considered official internationals for their respective opponents.\""
+      }
+    ],
+    "crossCheck": [
+      {
+        "name": "Cristiano Ronaldo",
+        "built": 146,
+        "list": 146,
+        "diff": 0,
+        "builtToEnd": 143
+      },
+      {
+        "name": "Lionel Messi",
+        "built": 125,
+        "list": 125,
+        "diff": 0,
+        "builtToEnd": 115
+      },
+      {
+        "name": "Ali Daei",
+        "built": 108,
+        "list": 108,
+        "diff": 0,
+        "builtToEnd": 108
+      },
+      {
+        "name": "Sunil Chhetri",
+        "built": 95,
+        "list": 95,
+        "diff": 0,
+        "builtToEnd": 95
+      },
+      {
+        "name": "Romelu Lukaku",
+        "built": 94,
+        "list": 94,
+        "diff": 0,
+        "builtToEnd": 89
+      },
+      {
+        "name": "Robert Lewandowski",
+        "built": 92,
+        "list": 92,
+        "diff": 0,
+        "builtToEnd": 88
+      },
+      {
+        "name": "Harry Kane",
+        "built": 89,
+        "list": 89,
+        "diff": 0,
+        "builtToEnd": 78
+      },
+      {
+        "name": "Mokhtar Dahari",
+        "built": 89,
+        "list": 89,
+        "diff": 0,
+        "builtToEnd": 89
+      },
+      {
+        "name": "Ali Mabkhout",
+        "built": 85,
+        "list": 85,
+        "diff": 0,
+        "builtToEnd": 85
+      },
+      {
+        "name": "Ferenc Puskás",
+        "built": 84,
+        "list": 84,
+        "diff": 0,
+        "builtToEnd": 84
+      },
+      {
+        "name": "Neymar",
+        "built": 80,
+        "list": 80,
+        "diff": 0,
+        "builtToEnd": 79
+      },
+      {
+        "name": "Godfrey Chitalu",
+        "built": 79,
+        "list": 79,
+        "diff": 0,
+        "builtToEnd": 79
+      },
+      {
+        "name": "Hussein Saeed",
+        "built": 78,
+        "list": 78,
+        "diff": 0,
+        "builtToEnd": 78
+      },
+      {
+        "name": "Pelé",
+        "built": 77,
+        "list": 77,
+        "diff": 0,
+        "builtToEnd": 77
+      },
+      {
+        "name": "Sándor Kocsis",
+        "built": 75,
+        "list": 75,
+        "diff": 0,
+        "builtToEnd": 75
+      },
+      {
+        "name": "Kunishige Kamamoto",
+        "built": 75,
+        "list": 75,
+        "diff": 0,
+        "builtToEnd": 75
+      },
+      {
+        "name": "Bashar Abdullah",
+        "built": 75,
+        "list": 75,
+        "diff": 0,
+        "builtToEnd": 75
+      },
+      {
+        "name": "Edin Džeko",
+        "built": 73,
+        "list": 73,
+        "diff": 0,
+        "builtToEnd": 72
+      },
+      {
+        "name": "Majed Abdullah",
+        "built": 72,
+        "list": 72,
+        "diff": 0,
+        "builtToEnd": 72
+      },
+      {
+        "name": "Imre Schlosser",
+        "built": 58,
+        "list": 59,
+        "diff": -1,
+        "builtToEnd": 58
+      }
+    ]
+  },
+  "span": {
+    "start": 1950,
+    "end": 2025,
+    "step": "year"
+  },
+  "entities": [
+    {
+      "id": "cristiano-ronaldo",
+      "name": "Cristiano Ronaldo",
+      "group": "Portugal"
+    },
+    {
+      "id": "lionel-messi",
+      "name": "Lionel Messi",
+      "group": "Argentina"
+    },
+    {
+      "id": "ali-daei",
+      "name": "Ali Daei",
+      "group": "Iran"
+    },
+    {
+      "id": "sunil-chhetri",
+      "name": "Sunil Chhetri",
+      "group": "India"
+    },
+    {
+      "id": "romelu-lukaku",
+      "name": "Romelu Lukaku",
+      "group": "Belgium"
+    },
+    {
+      "id": "mokhtar-dahari",
+      "name": "Mokhtar Dahari",
+      "group": "Malaysia"
+    },
+    {
+      "id": "robert-lewandowski",
+      "name": "Robert Lewandowski",
+      "group": "Poland"
+    },
+    {
+      "id": "ali-mabkhout",
+      "name": "Ali Mabkhout",
+      "group": "UAE"
+    },
+    {
+      "id": "ferenc-puskas",
+      "name": "Ferenc Puskás",
+      "group": "Hungary"
+    },
+    {
+      "id": "neymar",
+      "name": "Neymar",
+      "group": "Brazil"
+    },
+    {
+      "id": "godfrey-chitalu",
+      "name": "Godfrey Chitalu",
+      "group": "Zambia"
+    },
+    {
+      "id": "harry-kane",
+      "name": "Harry Kane",
+      "group": "England"
+    },
+    {
+      "id": "hussein-saeed",
+      "name": "Hussein Saeed",
+      "group": "Iraq"
+    },
+    {
+      "id": "pele",
+      "name": "Pelé",
+      "group": "Brazil"
+    },
+    {
+      "id": "sandor-kocsis",
+      "name": "Sándor Kocsis",
+      "group": "Hungary"
+    },
+    {
+      "id": "kunishige-kamamoto",
+      "name": "Kunishige Kamamoto",
+      "group": "Japan"
+    },
+    {
+      "id": "bashar-abdullah",
+      "name": "Bashar Abdullah",
+      "group": "Kuwait"
+    },
+    {
+      "id": "edin-dzeko",
+      "name": "Edin Džeko",
+      "group": "Bosnia and Herzegovina"
+    },
+    {
+      "id": "majed-abdullah",
+      "name": "Majed Abdullah",
+      "group": "Saudi Arabia"
+    },
+    {
+      "id": "imre-schlosser",
+      "name": "Imre Schlosser",
+      "group": "Hungary"
+    }
+  ],
+  "series": {
+    "cristiano-ronaldo": [
+      [
+        2004,
+        7
+      ],
+      [
+        2005,
+        9
+      ],
+      [
+        2006,
+        15
+      ],
+      [
+        2007,
+        20
+      ],
+      [
+        2008,
+        21
+      ],
+      [
+        2009,
+        22
+      ],
+      [
+        2010,
+        25
+      ],
+      [
+        2011,
+        32
+      ],
+      [
+        2012,
+        37
+      ],
+      [
+        2013,
+        47
+      ],
+      [
+        2014,
+        52
+      ],
+      [
+        2015,
+        55
+      ],
+      [
+        2016,
+        68
+      ],
+      [
+        2017,
+        79
+      ],
+      [
+        2018,
+        85
+      ],
+      [
+        2019,
+        99
+      ],
+      [
+        2020,
+        102
+      ],
+      [
+        2021,
+        115
+      ],
+      [
+        2022,
+        118
+      ],
+      [
+        2023,
+        128
+      ],
+      [
+        2024,
+        135
+      ],
+      [
+        2025,
+        143
+      ]
+    ],
+    "lionel-messi": [
+      [
+        2006,
+        2
+      ],
+      [
+        2007,
+        8
+      ],
+      [
+        2008,
+        10
+      ],
+      [
+        2009,
+        13
+      ],
+      [
+        2010,
+        15
+      ],
+      [
+        2011,
+        19
+      ],
+      [
+        2012,
+        31
+      ],
+      [
+        2013,
+        37
+      ],
+      [
+        2014,
+        45
+      ],
+      [
+        2015,
+        49
+      ],
+      [
+        2016,
+        57
+      ],
+      [
+        2017,
+        61
+      ],
+      [
+        2018,
+        65
+      ],
+      [
+        2019,
+        70
+      ],
+      [
+        2020,
+        71
+      ],
+      [
+        2021,
+        80
+      ],
+      [
+        2022,
+        98
+      ],
+      [
+        2023,
+        106
+      ],
+      [
+        2024,
+        112
+      ],
+      [
+        2025,
+        115
+      ]
+    ],
+    "ali-daei": [
+      [
+        1993,
+        7
+      ],
+      [
+        1994,
+        7
+      ],
+      [
+        1995,
+        7
+      ],
+      [
+        1996,
+        29
+      ],
+      [
+        1997,
+        38
+      ],
+      [
+        1998,
+        47
+      ],
+      [
+        1999,
+        49
+      ],
+      [
+        2000,
+        68
+      ],
+      [
+        2001,
+        78
+      ],
+      [
+        2002,
+        80
+      ],
+      [
+        2003,
+        85
+      ],
+      [
+        2004,
+        102
+      ],
+      [
+        2005,
+        106
+      ],
+      [
+        2006,
+        108
+      ],
+      [
+        2007,
+        108
+      ],
+      [
+        2008,
+        108
+      ],
+      [
+        2009,
+        108
+      ],
+      [
+        2010,
+        108
+      ],
+      [
+        2011,
+        108
+      ],
+      [
+        2012,
+        108
+      ],
+      [
+        2013,
+        108
+      ],
+      [
+        2014,
+        108
+      ],
+      [
+        2015,
+        108
+      ],
+      [
+        2016,
+        108
+      ],
+      [
+        2017,
+        108
+      ],
+      [
+        2018,
+        108
+      ],
+      [
+        2019,
+        108
+      ],
+      [
+        2020,
+        108
+      ],
+      [
+        2021,
+        108
+      ],
+      [
+        2022,
+        108
+      ],
+      [
+        2023,
+        108
+      ],
+      [
+        2024,
+        108
+      ],
+      [
+        2025,
+        108
+      ]
+    ],
+    "sunil-chhetri": [
+      [
+        2005,
+        1
+      ],
+      [
+        2006,
+        1
+      ],
+      [
+        2007,
+        7
+      ],
+      [
+        2008,
+        15
+      ],
+      [
+        2009,
+        16
+      ],
+      [
+        2010,
+        19
+      ],
+      [
+        2011,
+        32
+      ],
+      [
+        2012,
+        36
+      ],
+      [
+        2013,
+        41
+      ],
+      [
+        2014,
+        44
+      ],
+      [
+        2015,
+        50
+      ],
+      [
+        2016,
+        52
+      ],
+      [
+        2017,
+        57
+      ],
+      [
+        2018,
+        65
+      ],
+      [
+        2019,
+        72
+      ],
+      [
+        2020,
+        72
+      ],
+      [
+        2021,
+        80
+      ],
+      [
+        2022,
+        84
+      ],
+      [
+        2023,
+        93
+      ],
+      [
+        2024,
+        94
+      ],
+      [
+        2025,
+        95
+      ]
+    ],
+    "romelu-lukaku": [
+      [
+        2010,
+        2
+      ],
+      [
+        2011,
+        2
+      ],
+      [
+        2012,
+        3
+      ],
+      [
+        2013,
+        5
+      ],
+      [
+        2014,
+        11
+      ],
+      [
+        2015,
+        11
+      ],
+      [
+        2016,
+        22
+      ],
+      [
+        2017,
+        31
+      ],
+      [
+        2018,
+        45
+      ],
+      [
+        2019,
+        52
+      ],
+      [
+        2020,
+        57
+      ],
+      [
+        2021,
+        68
+      ],
+      [
+        2022,
+        68
+      ],
+      [
+        2023,
+        83
+      ],
+      [
+        2024,
+        85
+      ],
+      [
+        2025,
+        89
+      ]
+    ],
+    "robert-lewandowski": [
+      [
+        2008,
+        2
+      ],
+      [
+        2009,
+        3
+      ],
+      [
+        2010,
+        9
+      ],
+      [
+        2011,
+        13
+      ],
+      [
+        2012,
+        15
+      ],
+      [
+        2013,
+        18
+      ],
+      [
+        2014,
+        23
+      ],
+      [
+        2015,
+        34
+      ],
+      [
+        2016,
+        42
+      ],
+      [
+        2017,
+        51
+      ],
+      [
+        2018,
+        55
+      ],
+      [
+        2019,
+        61
+      ],
+      [
+        2020,
+        63
+      ],
+      [
+        2021,
+        74
+      ],
+      [
+        2022,
+        78
+      ],
+      [
+        2023,
+        82
+      ],
+      [
+        2024,
+        84
+      ],
+      [
+        2025,
+        88
+      ]
+    ],
+    "harry-kane": [
+      [
+        2015,
+        3
+      ],
+      [
+        2016,
+        5
+      ],
+      [
+        2017,
+        12
+      ],
+      [
+        2018,
+        20
+      ],
+      [
+        2019,
+        32
+      ],
+      [
+        2020,
+        32
+      ],
+      [
+        2021,
+        48
+      ],
+      [
+        2022,
+        53
+      ],
+      [
+        2023,
+        62
+      ],
+      [
+        2024,
+        69
+      ],
+      [
+        2025,
+        78
+      ]
+    ],
+    "mokhtar-dahari": [
+      [
+        1972,
+        6
+      ],
+      [
+        1973,
+        20
+      ],
+      [
+        1974,
+        32
+      ],
+      [
+        1975,
+        42
+      ],
+      [
+        1976,
+        58
+      ],
+      [
+        1977,
+        70
+      ],
+      [
+        1978,
+        74
+      ],
+      [
+        1979,
+        82
+      ],
+      [
+        1980,
+        86
+      ],
+      [
+        1981,
+        89
+      ],
+      [
+        1982,
+        89
+      ],
+      [
+        1983,
+        89
+      ],
+      [
+        1984,
+        89
+      ],
+      [
+        1985,
+        89
+      ],
+      [
+        1986,
+        89
+      ],
+      [
+        1987,
+        89
+      ],
+      [
+        1988,
+        89
+      ],
+      [
+        1989,
+        89
+      ],
+      [
+        1990,
+        89
+      ],
+      [
+        1991,
+        89
+      ],
+      [
+        1992,
+        89
+      ],
+      [
+        1993,
+        89
+      ],
+      [
+        1994,
+        89
+      ],
+      [
+        1995,
+        89
+      ],
+      [
+        1996,
+        89
+      ],
+      [
+        1997,
+        89
+      ],
+      [
+        1998,
+        89
+      ],
+      [
+        1999,
+        89
+      ],
+      [
+        2000,
+        89
+      ],
+      [
+        2001,
+        89
+      ],
+      [
+        2002,
+        89
+      ],
+      [
+        2003,
+        89
+      ],
+      [
+        2004,
+        89
+      ],
+      [
+        2005,
+        89
+      ],
+      [
+        2006,
+        89
+      ],
+      [
+        2007,
+        89
+      ],
+      [
+        2008,
+        89
+      ],
+      [
+        2009,
+        89
+      ],
+      [
+        2010,
+        89
+      ],
+      [
+        2011,
+        89
+      ],
+      [
+        2012,
+        89
+      ],
+      [
+        2013,
+        89
+      ],
+      [
+        2014,
+        89
+      ],
+      [
+        2015,
+        89
+      ],
+      [
+        2016,
+        89
+      ],
+      [
+        2017,
+        89
+      ],
+      [
+        2018,
+        89
+      ],
+      [
+        2019,
+        89
+      ],
+      [
+        2020,
+        89
+      ],
+      [
+        2021,
+        89
+      ],
+      [
+        2022,
+        89
+      ],
+      [
+        2023,
+        89
+      ],
+      [
+        2024,
+        89
+      ],
+      [
+        2025,
+        89
+      ]
+    ],
+    "ali-mabkhout": [
+      [
+        2012,
+        5
+      ],
+      [
+        2013,
+        16
+      ],
+      [
+        2014,
+        21
+      ],
+      [
+        2015,
+        34
+      ],
+      [
+        2016,
+        37
+      ],
+      [
+        2017,
+        43
+      ],
+      [
+        2018,
+        45
+      ],
+      [
+        2019,
+        64
+      ],
+      [
+        2020,
+        66
+      ],
+      [
+        2021,
+        80
+      ],
+      [
+        2022,
+        81
+      ],
+      [
+        2023,
+        85
+      ],
+      [
+        2024,
+        85
+      ],
+      [
+        2025,
+        85
+      ]
+    ],
+    "ferenc-puskas": [
+      [
+        1950,
+        41
+      ],
+      [
+        1951,
+        45
+      ],
+      [
+        1952,
+        55
+      ],
+      [
+        1953,
+        61
+      ],
+      [
+        1954,
+        69
+      ],
+      [
+        1955,
+        79
+      ],
+      [
+        1956,
+        84
+      ],
+      [
+        1957,
+        84
+      ],
+      [
+        1958,
+        84
+      ],
+      [
+        1959,
+        84
+      ],
+      [
+        1960,
+        84
+      ],
+      [
+        1961,
+        84
+      ],
+      [
+        1962,
+        84
+      ],
+      [
+        1963,
+        84
+      ],
+      [
+        1964,
+        84
+      ],
+      [
+        1965,
+        84
+      ],
+      [
+        1966,
+        84
+      ],
+      [
+        1967,
+        84
+      ],
+      [
+        1968,
+        84
+      ],
+      [
+        1969,
+        84
+      ],
+      [
+        1970,
+        84
+      ],
+      [
+        1971,
+        84
+      ],
+      [
+        1972,
+        84
+      ],
+      [
+        1973,
+        84
+      ],
+      [
+        1974,
+        84
+      ],
+      [
+        1975,
+        84
+      ],
+      [
+        1976,
+        84
+      ],
+      [
+        1977,
+        84
+      ],
+      [
+        1978,
+        84
+      ],
+      [
+        1979,
+        84
+      ],
+      [
+        1980,
+        84
+      ],
+      [
+        1981,
+        84
+      ],
+      [
+        1982,
+        84
+      ],
+      [
+        1983,
+        84
+      ],
+      [
+        1984,
+        84
+      ],
+      [
+        1985,
+        84
+      ],
+      [
+        1986,
+        84
+      ],
+      [
+        1987,
+        84
+      ],
+      [
+        1988,
+        84
+      ],
+      [
+        1989,
+        84
+      ],
+      [
+        1990,
+        84
+      ],
+      [
+        1991,
+        84
+      ],
+      [
+        1992,
+        84
+      ],
+      [
+        1993,
+        84
+      ],
+      [
+        1994,
+        84
+      ],
+      [
+        1995,
+        84
+      ],
+      [
+        1996,
+        84
+      ],
+      [
+        1997,
+        84
+      ],
+      [
+        1998,
+        84
+      ],
+      [
+        1999,
+        84
+      ],
+      [
+        2000,
+        84
+      ],
+      [
+        2001,
+        84
+      ],
+      [
+        2002,
+        84
+      ],
+      [
+        2003,
+        84
+      ],
+      [
+        2004,
+        84
+      ],
+      [
+        2005,
+        84
+      ],
+      [
+        2006,
+        84
+      ],
+      [
+        2007,
+        84
+      ],
+      [
+        2008,
+        84
+      ],
+      [
+        2009,
+        84
+      ],
+      [
+        2010,
+        84
+      ],
+      [
+        2011,
+        84
+      ],
+      [
+        2012,
+        84
+      ],
+      [
+        2013,
+        84
+      ],
+      [
+        2014,
+        84
+      ],
+      [
+        2015,
+        84
+      ],
+      [
+        2016,
+        84
+      ],
+      [
+        2017,
+        84
+      ],
+      [
+        2018,
+        84
+      ],
+      [
+        2019,
+        84
+      ],
+      [
+        2020,
+        84
+      ],
+      [
+        2021,
+        84
+      ],
+      [
+        2022,
+        84
+      ],
+      [
+        2023,
+        84
+      ],
+      [
+        2024,
+        84
+      ],
+      [
+        2025,
+        84
+      ]
+    ],
+    "neymar": [
+      [
+        2010,
+        1
+      ],
+      [
+        2011,
+        8
+      ],
+      [
+        2012,
+        17
+      ],
+      [
+        2013,
+        27
+      ],
+      [
+        2014,
+        42
+      ],
+      [
+        2015,
+        46
+      ],
+      [
+        2016,
+        50
+      ],
+      [
+        2017,
+        53
+      ],
+      [
+        2018,
+        60
+      ],
+      [
+        2019,
+        61
+      ],
+      [
+        2020,
+        64
+      ],
+      [
+        2021,
+        70
+      ],
+      [
+        2022,
+        77
+      ],
+      [
+        2023,
+        79
+      ],
+      [
+        2024,
+        79
+      ],
+      [
+        2025,
+        79
+      ]
+    ],
+    "godfrey-chitalu": [
+      [
+        1968,
+        12
+      ],
+      [
+        1969,
+        15
+      ],
+      [
+        1970,
+        16
+      ],
+      [
+        1971,
+        25
+      ],
+      [
+        1972,
+        27
+      ],
+      [
+        1973,
+        31
+      ],
+      [
+        1974,
+        32
+      ],
+      [
+        1975,
+        32
+      ],
+      [
+        1976,
+        32
+      ],
+      [
+        1977,
+        43
+      ],
+      [
+        1978,
+        60
+      ],
+      [
+        1979,
+        67
+      ],
+      [
+        1980,
+        79
+      ],
+      [
+        1981,
+        79
+      ],
+      [
+        1982,
+        79
+      ],
+      [
+        1983,
+        79
+      ],
+      [
+        1984,
+        79
+      ],
+      [
+        1985,
+        79
+      ],
+      [
+        1986,
+        79
+      ],
+      [
+        1987,
+        79
+      ],
+      [
+        1988,
+        79
+      ],
+      [
+        1989,
+        79
+      ],
+      [
+        1990,
+        79
+      ],
+      [
+        1991,
+        79
+      ],
+      [
+        1992,
+        79
+      ],
+      [
+        1993,
+        79
+      ],
+      [
+        1994,
+        79
+      ],
+      [
+        1995,
+        79
+      ],
+      [
+        1996,
+        79
+      ],
+      [
+        1997,
+        79
+      ],
+      [
+        1998,
+        79
+      ],
+      [
+        1999,
+        79
+      ],
+      [
+        2000,
+        79
+      ],
+      [
+        2001,
+        79
+      ],
+      [
+        2002,
+        79
+      ],
+      [
+        2003,
+        79
+      ],
+      [
+        2004,
+        79
+      ],
+      [
+        2005,
+        79
+      ],
+      [
+        2006,
+        79
+      ],
+      [
+        2007,
+        79
+      ],
+      [
+        2008,
+        79
+      ],
+      [
+        2009,
+        79
+      ],
+      [
+        2010,
+        79
+      ],
+      [
+        2011,
+        79
+      ],
+      [
+        2012,
+        79
+      ],
+      [
+        2013,
+        79
+      ],
+      [
+        2014,
+        79
+      ],
+      [
+        2015,
+        79
+      ],
+      [
+        2016,
+        79
+      ],
+      [
+        2017,
+        79
+      ],
+      [
+        2018,
+        79
+      ],
+      [
+        2019,
+        79
+      ],
+      [
+        2020,
+        79
+      ],
+      [
+        2021,
+        79
+      ],
+      [
+        2022,
+        79
+      ],
+      [
+        2023,
+        79
+      ],
+      [
+        2024,
+        79
+      ],
+      [
+        2025,
+        79
+      ]
+    ],
+    "hussein-saeed": [
+      [
+        1977,
+        3
+      ],
+      [
+        1978,
+        13
+      ],
+      [
+        1979,
+        27
+      ],
+      [
+        1980,
+        31
+      ],
+      [
+        1981,
+        34
+      ],
+      [
+        1982,
+        46
+      ],
+      [
+        1983,
+        47
+      ],
+      [
+        1984,
+        60
+      ],
+      [
+        1985,
+        69
+      ],
+      [
+        1986,
+        72
+      ],
+      [
+        1987,
+        77
+      ],
+      [
+        1988,
+        77
+      ],
+      [
+        1989,
+        78
+      ],
+      [
+        1990,
+        78
+      ],
+      [
+        1991,
+        78
+      ],
+      [
+        1992,
+        78
+      ],
+      [
+        1993,
+        78
+      ],
+      [
+        1994,
+        78
+      ],
+      [
+        1995,
+        78
+      ],
+      [
+        1996,
+        78
+      ],
+      [
+        1997,
+        78
+      ],
+      [
+        1998,
+        78
+      ],
+      [
+        1999,
+        78
+      ],
+      [
+        2000,
+        78
+      ],
+      [
+        2001,
+        78
+      ],
+      [
+        2002,
+        78
+      ],
+      [
+        2003,
+        78
+      ],
+      [
+        2004,
+        78
+      ],
+      [
+        2005,
+        78
+      ],
+      [
+        2006,
+        78
+      ],
+      [
+        2007,
+        78
+      ],
+      [
+        2008,
+        78
+      ],
+      [
+        2009,
+        78
+      ],
+      [
+        2010,
+        78
+      ],
+      [
+        2011,
+        78
+      ],
+      [
+        2012,
+        78
+      ],
+      [
+        2013,
+        78
+      ],
+      [
+        2014,
+        78
+      ],
+      [
+        2015,
+        78
+      ],
+      [
+        2016,
+        78
+      ],
+      [
+        2017,
+        78
+      ],
+      [
+        2018,
+        78
+      ],
+      [
+        2019,
+        78
+      ],
+      [
+        2020,
+        78
+      ],
+      [
+        2021,
+        78
+      ],
+      [
+        2022,
+        78
+      ],
+      [
+        2023,
+        78
+      ],
+      [
+        2024,
+        78
+      ],
+      [
+        2025,
+        78
+      ]
+    ],
+    "pele": [
+      [
+        1957,
+        2
+      ],
+      [
+        1958,
+        11
+      ],
+      [
+        1959,
+        22
+      ],
+      [
+        1960,
+        26
+      ],
+      [
+        1961,
+        26
+      ],
+      [
+        1962,
+        34
+      ],
+      [
+        1963,
+        41
+      ],
+      [
+        1964,
+        43
+      ],
+      [
+        1965,
+        52
+      ],
+      [
+        1966,
+        57
+      ],
+      [
+        1967,
+        57
+      ],
+      [
+        1968,
+        61
+      ],
+      [
+        1969,
+        68
+      ],
+      [
+        1970,
+        76
+      ],
+      [
+        1971,
+        77
+      ],
+      [
+        1972,
+        77
+      ],
+      [
+        1973,
+        77
+      ],
+      [
+        1974,
+        77
+      ],
+      [
+        1975,
+        77
+      ],
+      [
+        1976,
+        77
+      ],
+      [
+        1977,
+        77
+      ],
+      [
+        1978,
+        77
+      ],
+      [
+        1979,
+        77
+      ],
+      [
+        1980,
+        77
+      ],
+      [
+        1981,
+        77
+      ],
+      [
+        1982,
+        77
+      ],
+      [
+        1983,
+        77
+      ],
+      [
+        1984,
+        77
+      ],
+      [
+        1985,
+        77
+      ],
+      [
+        1986,
+        77
+      ],
+      [
+        1987,
+        77
+      ],
+      [
+        1988,
+        77
+      ],
+      [
+        1989,
+        77
+      ],
+      [
+        1990,
+        77
+      ],
+      [
+        1991,
+        77
+      ],
+      [
+        1992,
+        77
+      ],
+      [
+        1993,
+        77
+      ],
+      [
+        1994,
+        77
+      ],
+      [
+        1995,
+        77
+      ],
+      [
+        1996,
+        77
+      ],
+      [
+        1997,
+        77
+      ],
+      [
+        1998,
+        77
+      ],
+      [
+        1999,
+        77
+      ],
+      [
+        2000,
+        77
+      ],
+      [
+        2001,
+        77
+      ],
+      [
+        2002,
+        77
+      ],
+      [
+        2003,
+        77
+      ],
+      [
+        2004,
+        77
+      ],
+      [
+        2005,
+        77
+      ],
+      [
+        2006,
+        77
+      ],
+      [
+        2007,
+        77
+      ],
+      [
+        2008,
+        77
+      ],
+      [
+        2009,
+        77
+      ],
+      [
+        2010,
+        77
+      ],
+      [
+        2011,
+        77
+      ],
+      [
+        2012,
+        77
+      ],
+      [
+        2013,
+        77
+      ],
+      [
+        2014,
+        77
+      ],
+      [
+        2015,
+        77
+      ],
+      [
+        2016,
+        77
+      ],
+      [
+        2017,
+        77
+      ],
+      [
+        2018,
+        77
+      ],
+      [
+        2019,
+        77
+      ],
+      [
+        2020,
+        77
+      ],
+      [
+        2021,
+        77
+      ],
+      [
+        2022,
+        77
+      ],
+      [
+        2023,
+        77
+      ],
+      [
+        2024,
+        77
+      ],
+      [
+        2025,
+        77
+      ]
+    ],
+    "sandor-kocsis": [
+      [
+        1950,
+        12
+      ],
+      [
+        1951,
+        18
+      ],
+      [
+        1952,
+        34
+      ],
+      [
+        1953,
+        35
+      ],
+      [
+        1954,
+        58
+      ],
+      [
+        1955,
+        68
+      ],
+      [
+        1956,
+        75
+      ],
+      [
+        1957,
+        75
+      ],
+      [
+        1958,
+        75
+      ],
+      [
+        1959,
+        75
+      ],
+      [
+        1960,
+        75
+      ],
+      [
+        1961,
+        75
+      ],
+      [
+        1962,
+        75
+      ],
+      [
+        1963,
+        75
+      ],
+      [
+        1964,
+        75
+      ],
+      [
+        1965,
+        75
+      ],
+      [
+        1966,
+        75
+      ],
+      [
+        1967,
+        75
+      ],
+      [
+        1968,
+        75
+      ],
+      [
+        1969,
+        75
+      ],
+      [
+        1970,
+        75
+      ],
+      [
+        1971,
+        75
+      ],
+      [
+        1972,
+        75
+      ],
+      [
+        1973,
+        75
+      ],
+      [
+        1974,
+        75
+      ],
+      [
+        1975,
+        75
+      ],
+      [
+        1976,
+        75
+      ],
+      [
+        1977,
+        75
+      ],
+      [
+        1978,
+        75
+      ],
+      [
+        1979,
+        75
+      ],
+      [
+        1980,
+        75
+      ],
+      [
+        1981,
+        75
+      ],
+      [
+        1982,
+        75
+      ],
+      [
+        1983,
+        75
+      ],
+      [
+        1984,
+        75
+      ],
+      [
+        1985,
+        75
+      ],
+      [
+        1986,
+        75
+      ],
+      [
+        1987,
+        75
+      ],
+      [
+        1988,
+        75
+      ],
+      [
+        1989,
+        75
+      ],
+      [
+        1990,
+        75
+      ],
+      [
+        1991,
+        75
+      ],
+      [
+        1992,
+        75
+      ],
+      [
+        1993,
+        75
+      ],
+      [
+        1994,
+        75
+      ],
+      [
+        1995,
+        75
+      ],
+      [
+        1996,
+        75
+      ],
+      [
+        1997,
+        75
+      ],
+      [
+        1998,
+        75
+      ],
+      [
+        1999,
+        75
+      ],
+      [
+        2000,
+        75
+      ],
+      [
+        2001,
+        75
+      ],
+      [
+        2002,
+        75
+      ],
+      [
+        2003,
+        75
+      ],
+      [
+        2004,
+        75
+      ],
+      [
+        2005,
+        75
+      ],
+      [
+        2006,
+        75
+      ],
+      [
+        2007,
+        75
+      ],
+      [
+        2008,
+        75
+      ],
+      [
+        2009,
+        75
+      ],
+      [
+        2010,
+        75
+      ],
+      [
+        2011,
+        75
+      ],
+      [
+        2012,
+        75
+      ],
+      [
+        2013,
+        75
+      ],
+      [
+        2014,
+        75
+      ],
+      [
+        2015,
+        75
+      ],
+      [
+        2016,
+        75
+      ],
+      [
+        2017,
+        75
+      ],
+      [
+        2018,
+        75
+      ],
+      [
+        2019,
+        75
+      ],
+      [
+        2020,
+        75
+      ],
+      [
+        2021,
+        75
+      ],
+      [
+        2022,
+        75
+      ],
+      [
+        2023,
+        75
+      ],
+      [
+        2024,
+        75
+      ],
+      [
+        2025,
+        75
+      ]
+    ],
+    "kunishige-kamamoto": [
+      [
+        1964,
+        1
+      ],
+      [
+        1965,
+        4
+      ],
+      [
+        1966,
+        10
+      ],
+      [
+        1967,
+        21
+      ],
+      [
+        1968,
+        28
+      ],
+      [
+        1969,
+        28
+      ],
+      [
+        1970,
+        31
+      ],
+      [
+        1971,
+        39
+      ],
+      [
+        1972,
+        54
+      ],
+      [
+        1973,
+        56
+      ],
+      [
+        1974,
+        61
+      ],
+      [
+        1975,
+        66
+      ],
+      [
+        1976,
+        75
+      ],
+      [
+        1977,
+        75
+      ],
+      [
+        1978,
+        75
+      ],
+      [
+        1979,
+        75
+      ],
+      [
+        1980,
+        75
+      ],
+      [
+        1981,
+        75
+      ],
+      [
+        1982,
+        75
+      ],
+      [
+        1983,
+        75
+      ],
+      [
+        1984,
+        75
+      ],
+      [
+        1985,
+        75
+      ],
+      [
+        1986,
+        75
+      ],
+      [
+        1987,
+        75
+      ],
+      [
+        1988,
+        75
+      ],
+      [
+        1989,
+        75
+      ],
+      [
+        1990,
+        75
+      ],
+      [
+        1991,
+        75
+      ],
+      [
+        1992,
+        75
+      ],
+      [
+        1993,
+        75
+      ],
+      [
+        1994,
+        75
+      ],
+      [
+        1995,
+        75
+      ],
+      [
+        1996,
+        75
+      ],
+      [
+        1997,
+        75
+      ],
+      [
+        1998,
+        75
+      ],
+      [
+        1999,
+        75
+      ],
+      [
+        2000,
+        75
+      ],
+      [
+        2001,
+        75
+      ],
+      [
+        2002,
+        75
+      ],
+      [
+        2003,
+        75
+      ],
+      [
+        2004,
+        75
+      ],
+      [
+        2005,
+        75
+      ],
+      [
+        2006,
+        75
+      ],
+      [
+        2007,
+        75
+      ],
+      [
+        2008,
+        75
+      ],
+      [
+        2009,
+        75
+      ],
+      [
+        2010,
+        75
+      ],
+      [
+        2011,
+        75
+      ],
+      [
+        2012,
+        75
+      ],
+      [
+        2013,
+        75
+      ],
+      [
+        2014,
+        75
+      ],
+      [
+        2015,
+        75
+      ],
+      [
+        2016,
+        75
+      ],
+      [
+        2017,
+        75
+      ],
+      [
+        2018,
+        75
+      ],
+      [
+        2019,
+        75
+      ],
+      [
+        2020,
+        75
+      ],
+      [
+        2021,
+        75
+      ],
+      [
+        2022,
+        75
+      ],
+      [
+        2023,
+        75
+      ],
+      [
+        2024,
+        75
+      ],
+      [
+        2025,
+        75
+      ]
+    ],
+    "bashar-abdullah": [
+      [
+        1996,
+        5
+      ],
+      [
+        1997,
+        15
+      ],
+      [
+        1998,
+        22
+      ],
+      [
+        1999,
+        22
+      ],
+      [
+        2000,
+        43
+      ],
+      [
+        2001,
+        46
+      ],
+      [
+        2002,
+        51
+      ],
+      [
+        2003,
+        59
+      ],
+      [
+        2004,
+        70
+      ],
+      [
+        2005,
+        74
+      ],
+      [
+        2006,
+        74
+      ],
+      [
+        2007,
+        75
+      ],
+      [
+        2008,
+        75
+      ],
+      [
+        2009,
+        75
+      ],
+      [
+        2010,
+        75
+      ],
+      [
+        2011,
+        75
+      ],
+      [
+        2012,
+        75
+      ],
+      [
+        2013,
+        75
+      ],
+      [
+        2014,
+        75
+      ],
+      [
+        2015,
+        75
+      ],
+      [
+        2016,
+        75
+      ],
+      [
+        2017,
+        75
+      ],
+      [
+        2018,
+        75
+      ],
+      [
+        2019,
+        75
+      ],
+      [
+        2020,
+        75
+      ],
+      [
+        2021,
+        75
+      ],
+      [
+        2022,
+        75
+      ],
+      [
+        2023,
+        75
+      ],
+      [
+        2024,
+        75
+      ],
+      [
+        2025,
+        75
+      ]
+    ],
+    "edin-dzeko": [
+      [
+        2007,
+        1
+      ],
+      [
+        2008,
+        6
+      ],
+      [
+        2009,
+        14
+      ],
+      [
+        2010,
+        17
+      ],
+      [
+        2011,
+        20
+      ],
+      [
+        2012,
+        26
+      ],
+      [
+        2013,
+        33
+      ],
+      [
+        2014,
+        38
+      ],
+      [
+        2015,
+        45
+      ],
+      [
+        2016,
+        49
+      ],
+      [
+        2017,
+        52
+      ],
+      [
+        2018,
+        55
+      ],
+      [
+        2019,
+        58
+      ],
+      [
+        2020,
+        59
+      ],
+      [
+        2021,
+        60
+      ],
+      [
+        2022,
+        64
+      ],
+      [
+        2023,
+        65
+      ],
+      [
+        2024,
+        67
+      ],
+      [
+        2025,
+        72
+      ]
+    ],
+    "majed-abdullah": [
+      [
+        1979,
+        7
+      ],
+      [
+        1980,
+        16
+      ],
+      [
+        1981,
+        20
+      ],
+      [
+        1982,
+        23
+      ],
+      [
+        1983,
+        23
+      ],
+      [
+        1984,
+        38
+      ],
+      [
+        1985,
+        41
+      ],
+      [
+        1986,
+        49
+      ],
+      [
+        1987,
+        49
+      ],
+      [
+        1988,
+        60
+      ],
+      [
+        1989,
+        62
+      ],
+      [
+        1990,
+        64
+      ],
+      [
+        1991,
+        64
+      ],
+      [
+        1992,
+        65
+      ],
+      [
+        1993,
+        71
+      ],
+      [
+        1994,
+        72
+      ],
+      [
+        1995,
+        72
+      ],
+      [
+        1996,
+        72
+      ],
+      [
+        1997,
+        72
+      ],
+      [
+        1998,
+        72
+      ],
+      [
+        1999,
+        72
+      ],
+      [
+        2000,
+        72
+      ],
+      [
+        2001,
+        72
+      ],
+      [
+        2002,
+        72
+      ],
+      [
+        2003,
+        72
+      ],
+      [
+        2004,
+        72
+      ],
+      [
+        2005,
+        72
+      ],
+      [
+        2006,
+        72
+      ],
+      [
+        2007,
+        72
+      ],
+      [
+        2008,
+        72
+      ],
+      [
+        2009,
+        72
+      ],
+      [
+        2010,
+        72
+      ],
+      [
+        2011,
+        72
+      ],
+      [
+        2012,
+        72
+      ],
+      [
+        2013,
+        72
+      ],
+      [
+        2014,
+        72
+      ],
+      [
+        2015,
+        72
+      ],
+      [
+        2016,
+        72
+      ],
+      [
+        2017,
+        72
+      ],
+      [
+        2018,
+        72
+      ],
+      [
+        2019,
+        72
+      ],
+      [
+        2020,
+        72
+      ],
+      [
+        2021,
+        72
+      ],
+      [
+        2022,
+        72
+      ],
+      [
+        2023,
+        72
+      ],
+      [
+        2024,
+        72
+      ],
+      [
+        2025,
+        72
+      ]
+    ],
+    "imre-schlosser": [
+      [
+        1950,
+        58
+      ],
+      [
+        1951,
+        58
+      ],
+      [
+        1952,
+        58
+      ],
+      [
+        1953,
+        58
+      ],
+      [
+        1954,
+        58
+      ],
+      [
+        1955,
+        58
+      ],
+      [
+        1956,
+        58
+      ],
+      [
+        1957,
+        58
+      ],
+      [
+        1958,
+        58
+      ],
+      [
+        1959,
+        58
+      ],
+      [
+        1960,
+        58
+      ],
+      [
+        1961,
+        58
+      ],
+      [
+        1962,
+        58
+      ],
+      [
+        1963,
+        58
+      ],
+      [
+        1964,
+        58
+      ],
+      [
+        1965,
+        58
+      ],
+      [
+        1966,
+        58
+      ],
+      [
+        1967,
+        58
+      ],
+      [
+        1968,
+        58
+      ],
+      [
+        1969,
+        58
+      ],
+      [
+        1970,
+        58
+      ],
+      [
+        1971,
+        58
+      ],
+      [
+        1972,
+        58
+      ],
+      [
+        1973,
+        58
+      ],
+      [
+        1974,
+        58
+      ],
+      [
+        1975,
+        58
+      ],
+      [
+        1976,
+        58
+      ],
+      [
+        1977,
+        58
+      ],
+      [
+        1978,
+        58
+      ],
+      [
+        1979,
+        58
+      ],
+      [
+        1980,
+        58
+      ],
+      [
+        1981,
+        58
+      ],
+      [
+        1982,
+        58
+      ],
+      [
+        1983,
+        58
+      ],
+      [
+        1984,
+        58
+      ],
+      [
+        1985,
+        58
+      ],
+      [
+        1986,
+        58
+      ],
+      [
+        1987,
+        58
+      ],
+      [
+        1988,
+        58
+      ],
+      [
+        1989,
+        58
+      ],
+      [
+        1990,
+        58
+      ],
+      [
+        1991,
+        58
+      ],
+      [
+        1992,
+        58
+      ],
+      [
+        1993,
+        58
+      ],
+      [
+        1994,
+        58
+      ],
+      [
+        1995,
+        58
+      ],
+      [
+        1996,
+        58
+      ],
+      [
+        1997,
+        58
+      ],
+      [
+        1998,
+        58
+      ],
+      [
+        1999,
+        58
+      ],
+      [
+        2000,
+        58
+      ],
+      [
+        2001,
+        58
+      ],
+      [
+        2002,
+        58
+      ],
+      [
+        2003,
+        58
+      ],
+      [
+        2004,
+        58
+      ],
+      [
+        2005,
+        58
+      ],
+      [
+        2006,
+        58
+      ],
+      [
+        2007,
+        58
+      ],
+      [
+        2008,
+        58
+      ],
+      [
+        2009,
+        58
+      ],
+      [
+        2010,
+        58
+      ],
+      [
+        2011,
+        58
+      ],
+      [
+        2012,
+        58
+      ],
+      [
+        2013,
+        58
+      ],
+      [
+        2014,
+        58
+      ],
+      [
+        2015,
+        58
+      ],
+      [
+        2016,
+        58
+      ],
+      [
+        2017,
+        58
+      ],
+      [
+        2018,
+        58
+      ],
+      [
+        2019,
+        58
+      ],
+      [
+        2020,
+        58
+      ],
+      [
+        2021,
+        58
+      ],
+      [
+        2022,
+        58
+      ],
+      [
+        2023,
+        58
+      ],
+      [
+        2024,
+        58
+      ],
+      [
+        2025,
+        58
+      ]
+    ]
+  },
+  "events": [
+    {
+      "date": "1950-01-01",
+      "text": "Imre Schlosser holds the record entering 1950: 58 goals",
+      "entity": "imre-schlosser"
+    },
+    {
+      "date": "1953-10-04",
+      "text": "Ferenc Puskás passes Imre Schlosser for the all-time record: 59 goals",
+      "entity": "ferenc-puskas"
+    },
+    {
+      "date": "1955-09-17",
+      "text": "Ferenc Puskás becomes the first of these players to 75 international goals",
+      "entity": "ferenc-puskas"
+    },
+    {
+      "date": "1980-10-27",
+      "text": "Mokhtar Dahari passes Ferenc Puskás for the all-time record: 85 goals",
+      "entity": "mokhtar-dahari"
+    },
+    {
+      "date": "2004-06-17",
+      "text": "Ali Daei passes Mokhtar Dahari for the all-time record: 90 goals",
+      "entity": "ali-daei"
+    },
+    {
+      "date": "2004-11-17",
+      "text": "Ali Daei becomes the first of these players to 100 international goals",
+      "entity": "ali-daei"
+    },
+    {
+      "date": "2021-06-23",
+      "text": "Cristiano Ronaldo passes Ali Daei for the all-time record: 109 goals",
+      "entity": "cristiano-ronaldo"
+    },
+    {
+      "date": "2023-10-13",
+      "text": "Cristiano Ronaldo becomes the first of these players to 125 international goals",
+      "entity": "cristiano-ronaldo"
+    }
+  ],
+  "topAtEnd": [
+    {
+      "id": "cristiano-ronaldo",
+      "name": "Cristiano Ronaldo",
+      "value": 143
+    },
+    {
+      "id": "lionel-messi",
+      "name": "Lionel Messi",
+      "value": 115
+    },
+    {
+      "id": "ali-daei",
+      "name": "Ali Daei",
+      "value": 108
+    },
+    {
+      "id": "sunil-chhetri",
+      "name": "Sunil Chhetri",
+      "value": 95
+    },
+    {
+      "id": "romelu-lukaku",
+      "name": "Romelu Lukaku",
+      "value": 89
+    },
+    {
+      "id": "mokhtar-dahari",
+      "name": "Mokhtar Dahari",
+      "value": 89
+    },
+    {
+      "id": "robert-lewandowski",
+      "name": "Robert Lewandowski",
+      "value": 88
+    },
+    {
+      "id": "ali-mabkhout",
+      "name": "Ali Mabkhout",
+      "value": 85
+    },
+    {
+      "id": "ferenc-puskas",
+      "name": "Ferenc Puskás",
+      "value": 84
+    },
+    {
+      "id": "neymar",
+      "name": "Neymar",
+      "value": 79
+    }
+  ]
+}

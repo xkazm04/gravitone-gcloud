@@ -1,9 +1,11 @@
 // LANE — METER CONFORMANCE (dynamic).
 //
 // Runs the one meter kit (./_meterKit.ts) against every spend meter this repo
-// has. Today that is the imaging USD ceiling, read through its PUBLIC exports
-// (lib/imaging/budget.ts) — the same names the router and the routes call — so
-// this file proves the adapter, not an internal.
+// has: the imaging USD ceiling, the music seconds ceiling and the video USD
+// ceiling, each read through its PUBLIC exports (lib/imaging/budget.ts,
+// lib/music/budget.ts, lib/imaging/video/budget.ts) — the same names the router,
+// the music adapter and the clip route call — so this file proves the adapters,
+// not an internal.
 //
 // Card IMG-A (docs/concepts/moonshots-2026-10-05/06-imaging-music.md), stage 1:
 // the kit was written against today's imaging API before the kernel existed, so
@@ -34,6 +36,39 @@ import {
 } from "@/lib/imaging/budget";
 import { ImagingError } from "@/lib/imaging/errors";
 import { generate } from "@/lib/imaging/router";
+import {
+  VIDEO_BUDGET_VAR,
+  VIDEO_FLOOR_VAR,
+  VIDEO_WINDOW_VAR,
+  __resetVideoBudget,
+  recordVideoSpend,
+  releaseVideo,
+  reserveVideo,
+  settleVideo,
+  videoBudgetStats,
+  videoSpendByAxis,
+  videoSpendRows,
+  type VideoHold,
+  type VideoSpendEntry,
+} from "@/lib/imaging/video/budget";
+import { VideoError } from "@/lib/imaging/video/errors";
+import {
+  MUSIC_BUDGET_VAR,
+  MUSIC_FLOOR_VAR,
+  MUSIC_WINDOW_VAR,
+  __resetMusicBudget,
+  musicBudgetStats,
+  musicSpendByAxis,
+  musicSpendRows,
+  recordMusicSpend,
+  releaseMusic,
+  reserveMusic,
+  settleMusic,
+  type MusicHold,
+  type MusicSpendEntry,
+  type MusicSpendRow,
+} from "@/lib/music/budget";
+import { MusicError } from "@/lib/music/errors";
 import { SPEND_CLASSES, type SpendClassDef } from "@/lib/spend/classes";
 import { createMeter } from "@/lib/spend/meter";
 
@@ -60,12 +95,12 @@ const imaging: MeterUnderTest = {
   defaultWindowMs: 3_600_000,
   attributionAxis: "cap",
   reset: __resetBudget,
-  reserve: (amount, now) => reserve(amount, now),
-  release: (h) => release(h as Hold),
-  settle: (h, rows) => settle(h as Hold, rows.map(entry)),
-  book: (r) => recordSpend(entry(r)),
-  stats: (now) => {
-    const s = budgetStats(now);
+  reserve: async (amount, now) => await reserve(amount, now),
+  release: async (h) => await release(h as Hold),
+  settle: async (h, rows) => await settle(h as Hold, rows.map(entry)),
+  book: async (r) => await recordSpend(entry(r)),
+  stats: async (now) => {
+    const s = await budgetStats(now);
     const c = s.counters;
     return {
       ceiling: s.ceilingUsd,
@@ -91,8 +126,8 @@ const imaging: MeterUnderTest = {
       },
     };
   },
-  byAxis: (now) => {
-    const a = spendByAxis(now);
+  byAxis: async (now) => {
+    const a = await spendByAxis(now);
     return {
       total: a.totalUsd,
       served: a.byOutcome.served,
@@ -101,13 +136,13 @@ const imaging: MeterUnderTest = {
       axes: { cap: a.byCapability, provider: a.byProvider, model: a.byModel },
     };
   },
-  rows: (now) => spendRows(now).map((r) => ({ at: r.at, amount: r.usd, outcome: r.outcome })),
-  tamper: () => {
-    const s = budgetStats();
+  rows: async (now) => (await spendRows(now)).map((r) => ({ at: r.at, amount: r.usd, outcome: r.outcome })),
+  tamper: async () => {
+    const s = await budgetStats();
     s.counters.booked = 0;
     s.spentUsd = 999;
-    for (const r of spendRows() as SpendRow[]) r.usd = 999;
-    const a = spendByAxis();
+    for (const r of await spendRows() as SpendRow[]) r.usd = 999;
+    const a = await spendByAxis();
     a.totalUsd = 999;
     for (const axis of [a.byCapability, a.byProvider, a.byModel, a.byOutcome] as Record<string, number>[])
       for (const k of Object.keys(axis)) axis[k] = 999;
@@ -117,6 +152,144 @@ const imaging: MeterUnderTest = {
 };
 
 meterConformance(imaging);
+
+// ── Music, in seconds of audio (card IMG-A stage 2) ───────────────────────
+//
+// The kit's figures sit on a ceiling of 1, which reads as one second as well as
+// it reads as one dollar. The defaults are music's own, restated rather than
+// read back from the class: 600 s an hour is what lib/music/budget.ts always
+// defaulted to, and a move onto the kernel that changed it must be red here.
+
+const musicEntry = (r: KitRow): MusicSpendEntry => ({
+  get seconds() {
+    return r.amount;
+  },
+  op: (r.attributed === false ? undefined : "generate") as MusicSpendEntry["op"],
+  model: "kit-model",
+  outcome: r.outcome,
+  at: r.at,
+});
+
+meterConformance({
+  name: "music-audio-s (lib/music/budget)",
+  ceilingVar: MUSIC_BUDGET_VAR,
+  windowVar: MUSIC_WINDOW_VAR,
+  floorVar: MUSIC_FLOOR_VAR,
+  defaultCeiling: 600,
+  defaultWindowMs: 3_600_000,
+  attributionAxis: "op",
+  reset: __resetMusicBudget,
+  reserve: async (amount, now) => await reserveMusic(amount, now),
+  release: async (h) => await releaseMusic(h as MusicHold),
+  settle: async (h, rows) => await settleMusic(h as MusicHold, rows.map(musicEntry)),
+  book: async (r) => await recordMusicSpend(musicEntry(r)),
+  stats: async (now) => {
+    const s = await musicBudgetStats(now);
+    const c = s.counters;
+    return {
+      ceiling: s.ceilingSeconds,
+      floor: s.floorSeconds,
+      underFloor: s.underFloor,
+      spent: s.spentSeconds,
+      held: s.heldSeconds,
+      remaining: s.remainingSeconds,
+      windowMs: s.windowMs,
+      windowStart: s.windowStart,
+      windowEnd: s.windowEnd,
+      rows: s.rows,
+      counters: {
+        refusals: c.refusals,
+        refused: c.refusedSeconds,
+        booked: c.booked,
+        bookedFailed: c.bookedFailed,
+        failed: c.failedSeconds,
+        unpriced: c.unmetered,
+        evicted: c.evicted,
+        evictedAmount: c.evictedSeconds,
+        lastEvictionAt: c.lastEvictionAt,
+      },
+    };
+  },
+  byAxis: async (now) => {
+    const a = await musicSpendByAxis(now);
+    return {
+      total: a.totalSeconds,
+      served: a.byOutcome.served,
+      failed: a.byOutcome.failed,
+      unattributed: a.unattributedSeconds,
+      axes: { op: a.byOp, model: a.byModel },
+    };
+  },
+  rows: async (now) => (await musicSpendRows(now)).map((r) => ({ at: r.at, amount: r.seconds, outcome: r.outcome })),
+  tamper: async () => {
+    const s = await musicBudgetStats();
+    s.counters.booked = 0;
+    s.spentSeconds = 999;
+    for (const r of await musicSpendRows() as MusicSpendRow[]) r.seconds = 999;
+    const a = await musicSpendByAxis();
+    a.totalSeconds = 999;
+    for (const axis of [a.byOp, a.byModel, a.byOutcome] as Record<string, number>[])
+      for (const k of Object.keys(axis)) axis[k] = 999;
+  },
+  isOverBudget: (e) => e instanceof MusicError && e.kind === "over-budget",
+  isInvalid: (e) => e instanceof MusicError && e.kind === "bad-request",
+});
+
+// ── Video clips, in USD ───────────────────────────────────────────────────
+//
+// `video-usd` came onto the kernel with the clip route (710240a) and was never
+// handed to the kit. Its defaults are restated for the same reason as music's.
+
+const videoEntry = (r: KitRow): VideoSpendEntry => ({
+  get usd() {
+    return r.amount;
+  },
+  project: (r.attributed === false ? undefined : "kit-project") as VideoSpendEntry["project"],
+  provider: "leonardo",
+  model: "kit-model",
+  outcome: r.outcome,
+  basis: "estimated",
+  at: r.at,
+});
+
+meterConformance({
+  name: "video-usd (lib/imaging/video/budget)",
+  ceilingVar: VIDEO_BUDGET_VAR,
+  windowVar: VIDEO_WINDOW_VAR,
+  floorVar: VIDEO_FLOOR_VAR,
+  defaultCeiling: 15,
+  defaultWindowMs: 3_600_000,
+  attributionAxis: "project",
+  reset: __resetVideoBudget,
+  reserve: async (amount, now) => await reserveVideo(amount, now),
+  release: async (h) => await releaseVideo(h as VideoHold),
+  settle: async (h, rows) => await settleVideo(h as VideoHold, rows.map(videoEntry)),
+  book: async (r) => await recordVideoSpend(videoEntry(r)),
+  stats: async (now) => {
+    const s = await videoBudgetStats(now);
+    return { ...s, counters: { ...s.counters } };
+  },
+  byAxis: async (now) => {
+    const a = await videoSpendByAxis(now);
+    return { total: a.total, served: a.byOutcome.served, failed: a.byOutcome.failed, unattributed: a.unattributed, axes: a.byAxis };
+  },
+  rows: async (now) => (await videoSpendRows(now)).map((r) => ({ at: r.at, amount: r.amount, outcome: r.outcome })),
+  tamper: async () => {
+    const s = await videoBudgetStats();
+    s.counters.booked = 0;
+    s.spent = 999;
+    for (const r of await videoSpendRows()) {
+      r.amount = 999;
+      r.axes.project = "tampered";
+    }
+    const a = await videoSpendByAxis();
+    a.total = 999;
+    a.byOutcome.served = 999;
+    for (const axis of Object.values(a.byAxis)) for (const k of Object.keys(axis)) axis[k] = 999;
+  },
+  isOverBudget: (e) => e instanceof VideoError && e.kind === "over-budget",
+  isInvalid: (e) => e instanceof VideoError && e.kind === "invalid",
+});
 
 // ── The bare kernel, on a class of its own ────────────────────────────────
 //
@@ -162,24 +335,24 @@ meterConformance({
   release: (h) => kernel.release(h),
   settle: (h, rows) => kernel.settle(h, rows),
   book: (r) => kernel.book(r),
-  stats: (now) => {
-    const s = kernel.stats(now);
+  stats: async (now) => {
+    const s = await kernel.stats(now);
     return { ...s, counters: { ...s.counters } };
   },
-  byAxis: (now) => {
-    const a = kernel.byAxis(now);
+  byAxis: async (now) => {
+    const a = await kernel.byAxis(now);
     return { total: a.total, served: a.byOutcome.served, failed: a.byOutcome.failed, unattributed: a.unattributed, axes: a.byAxis };
   },
   rows: (now) => kernel.rows(now),
-  tamper: () => {
-    const s = kernel.stats();
+  tamper: async () => {
+    const s = await kernel.stats();
     s.counters.booked = 0;
     s.spent = 999;
-    for (const r of kernel.rows()) {
+    for (const r of await kernel.rows()) {
       r.amount = 999;
       r.axes.cap = "tampered";
     }
-    const a = kernel.byAxis();
+    const a = await kernel.byAxis();
     a.total = 999;
     a.byOutcome.served = 999;
     for (const axis of Object.values(a.byAxis)) for (const k of Object.keys(axis)) axis[k] = 999;
@@ -233,6 +406,6 @@ test.describe("imaging chokepoint", () => {
     expect(fetches).toBe(0);
     expect(err).toBeInstanceOf(ImagingError);
     expect((err as ImagingError).kind).toBe("invalid-request");
-    expect(budgetStats().heldUsd).toBe(0);
+    expect((await budgetStats()).heldUsd).toBe(0);
   });
 });

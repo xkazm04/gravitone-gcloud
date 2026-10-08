@@ -61,6 +61,7 @@ import { Lightbox } from "./Lightbox";
 import PipelineTab from "./PipelineTab";
 import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
+import { StripsView } from "./StripsView";
 import { StylesShelf } from "./StylesShelf";
 import { commitRun, fetchRun, fetchRuns, previewCommit, saveVerdicts } from "./foundryClient";
 import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
@@ -91,6 +92,7 @@ import {
 //   Extract how many extraction runs exist
 //   Styles  how big the catalogue is
 //   Dojo    how many cycles are parked waiting for a human verdict
+//   Strips  how many code-rendered strip runs wait on a triage
 //
 // The facts the blurbs also carried are recorded where they are enforced
 // rather than where they were narrated: a cull DELETES the files it rejects
@@ -430,6 +432,8 @@ export default function FoundryView() {
             // app/foundry/page.tsx still needs none: the boundary sits around
             // the one component that reads a param, not around the view.
             <PipelineTab />
+          ) : tab === "strips" ? (
+            <StripsView />
           ) : (
             cull
           )}

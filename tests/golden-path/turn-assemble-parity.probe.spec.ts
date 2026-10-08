@@ -115,7 +115,7 @@ function staleInputs(g: Golden): string | null {
 /** The assembler's tail for a golden's body: its prompt minus the system prompt
  *  it was handed. */
 function assembled(g: Golden, system: string) {
-  return KIND(g) === "recalibrate" ? assembleRecalibrate(g.body, system) : assembleFrames(g.body, system);
+  return KIND(g) === "recalibrate" ? assembleRecalibrate({ ...g.body, conclusions: CONCLUSIONS }, system) : assembleFrames(g.body, system);
 }
 
 // RE-CAPTURE, ON PURPOSE ONLY. When a golden's INPUT moved (a conclusion edited,
@@ -182,7 +182,7 @@ for (const g of GOLDENS) {
         new Request(`http://localhost/api/${kind}?wait=1`, {
           method: "POST",
           headers: { "content-type": "application/json", "x-forwarded-for": `10.79.0.${++ip}` },
-          body: JSON.stringify({ ...g.body, projectId: "p-parity" }),
+          body: JSON.stringify({ ...g.body, ...(KIND(g) === "recalibrate" ? { conclusions: CONCLUSIONS } : {}), projectId: "p-parity" }),
         }),
       );
       const turns = engine.turns();

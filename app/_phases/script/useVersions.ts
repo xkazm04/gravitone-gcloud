@@ -26,7 +26,7 @@ import { dispatchBlock, getTurn, resumeTurn, startRecalibrate, type TurnRecord }
 import { useTurnPreview } from "@/lib/turns/usePreview";
 import { loadStep, saveStep } from "../_shared/stepStore";
 import { recalibrate, recalibrateFromPlan } from "./recalibrate";
-import { NOTEBOOK } from "../_shared/notebook/notebook";
+import type { NotebookSource } from "../_shared/notebook/source";
 import { renderPayloadFor } from "./chainBase";
 import { BASELINE, engineRunWith, type GateOverride, type Note, type NoteKind, type Version } from "./versions";
 import type { EditPlan } from "./editPlan";
@@ -63,7 +63,7 @@ interface Stored {
   savedAt?: number;
 }
 
-export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scope }) {
+export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scope; source: NotebookSource; optIn?: ReadonlySet<string> }) {
   const jobs = useJobs();
   const { busy, track, cancel: cancelJob } = jobs;
   const [notes, setNotes] = useState<Note[]>([]);
@@ -261,14 +261,17 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
    *  one the button dispatches. */
   const runInput = useMemo(
     () => ({
-      notebook: NOTEBOOK,
+      notebook: ctx.source.notebook,
       renders: renderPayloadFor(baseline),
       scope: ctx.scope,
+      // Beside the notebook, never in it: the source's own conclusions, so the turn
+      // rests edits on what this notebook reasoned and not on the fixture's seven.
+      conclusions: ctx.source.conclusions,
       notes,
       ...(forceRenders.length ? { forceRenders } : {}),
       ...(forceConclusions.length ? { forceConclusions } : {}),
     }),
-    [baseline, ctx.scope, notes, forceRenders, forceConclusions],
+    [baseline, ctx.scope, ctx.source, notes, forceRenders, forceConclusions],
   );
 
   /** What the next run would send and who would serve it — free, debounced,
@@ -413,6 +416,8 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       toggleForceRender,
       forceConclusions,
       toggleForceConclusion,
+      /** The conclusions the next run holds, in the notebook's own order. */
+      conclusions: ctx.source.conclusions,
       /** A candidate that was staged when this project was last closed and is now
        *  gone. Shown once, cleared by the next run. */
       lostCandidate,
@@ -440,6 +445,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       toggleForceRender,
       forceConclusions,
       toggleForceConclusion,
+      ctx.source.conclusions,
       lostCandidate,
     ],
   );

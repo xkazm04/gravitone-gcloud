@@ -8,6 +8,7 @@
  *  stopped short, broken, finished, and waiting on a gate. */
 export type PlantState = "live" | "ready" | "inc" | "failed" | "committed" | "gate";
 import type { ExtractStatus } from "@/lib/foundry/extract/types";
+import type { CardStatus, StripRun } from "@/lib/foundry/strips/types";
 import type { CycleStatus } from "@/lib/foundry/training/types";
 import type { RunStatus } from "@/lib/foundry/types";
 
@@ -77,4 +78,23 @@ export function extractKind(s: ExtractStatus): PlantState {
 
 export function cycleKind(s: CycleStatus): PlantState {
   return s === "awaiting-gate" ? "gate" : s === "failed" ? "failed" : s === "committed" ? "committed" : "live";
+}
+
+export const STRIP_STATUS_WORD: Record<StripRun["status"], string> = {
+  running: "rendering",
+  "awaiting-triage": "ready to triage",
+  committed: "committed",
+};
+
+/** A card's pipeline status, in the word a failed card shows instead of a player. */
+export const CARD_STATUS_WORD: Record<CardStatus, string> = {
+  pending: "authoring",
+  rendered: "rendered",
+  "lint-failed": "lint failed",
+  "render-failed": "render failed",
+  "author-failed": "author failed",
+};
+
+export function stripKind(s: StripRun["status"]): PlantState {
+  return s === "running" ? "live" : s === "awaiting-triage" ? "ready" : "committed";
 }

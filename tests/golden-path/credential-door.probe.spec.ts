@@ -319,6 +319,9 @@ test("source: exactly the media routes read a query credential, and only through
       "app/api/articles/[runId]/file/[...path]/route.ts",
       "app/api/cut/export/file/route.ts",
       "app/api/foundry/file/route.ts",
+      // 2026-10-06: a strip's authored page, for an <iframe sandbox> — which,
+      // like an <img>, cannot carry the header. GET only, a read-only byte serve.
+      "app/api/foundry/strips/[id]/page/route.ts",
       "app/api/music-video/export/file/route.ts",
       "app/api/sound/takes/[id]/file/route.ts",
       "app/api/video/clips/[id]/file/route.ts",

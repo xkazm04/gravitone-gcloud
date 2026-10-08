@@ -113,6 +113,11 @@ function harness<T>(run: () => T) {
     useContext() {
       return AUTH;
     },
+    // useFrames reads the active notebook through a store (useActiveNotebook);
+    // the snapshot is all this lane needs of it.
+    useSyncExternalStore(_subscribe: unknown, getSnapshot: () => unknown) {
+      return getSnapshot();
+    },
     useEffect(fn: () => void | (() => void), deps?: readonly unknown[]) {
       const k = ei++;
       const prev = committed[k];

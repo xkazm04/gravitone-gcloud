@@ -128,6 +128,9 @@ test("run to the gate: every file of the run contract, through the real seam", a
 });
 
 test("approve lands: branch pushed, publication written, approved patch applied, PR requested", async () => {
+  // Landing drives git worktree/push/gate children: 18-26 s idle, past the 120 s
+  // describe budget under saturating load. Inherent work, so a longer budget.
+  test.slow();
   process.env.STUB_GH_LOG = path.join(box.dir, "gh.log");
   const run = await toGate();
   await approveRun(run.id, ["p1"]);
@@ -167,6 +170,9 @@ test("approve lands: branch pushed, publication written, approved patch applied,
 });
 
 test("a gate failure leaves the branch local: nothing pushed, no PR, status failed with the gate output", async () => {
+  // Landing drives git worktree/push/gate children: 18-26 s idle, past the 120 s
+  // describe budget under saturating load. Inherent work, so a longer budget.
+  test.slow();
   process.env.STUB_GH_LOG = path.join(box.dir, "gh.log");
   const run = await toGate();
   // the stub gate fails any publication whose title asks it to

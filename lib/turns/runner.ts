@@ -20,6 +20,22 @@
 // its prompt. Stage 1 registers none: /api/recalibrate hands its assembly over
 // in stage 2.
 //
+// ── A WORK KIND IS THE OTHER SPEC SHAPE ─────────────────────────────────────
+//
+// Not every durable run is a text turn. A poster is an imaging call: its receipt
+// is the imaging router's `Provenance`, its spend books on the imaging meter, and
+// wrapping it as a `TextResult` would forge a text receipt. A `WorkSpec` has a
+// `lane` instead of a turn class, no `reason()` and no `settle`: `prepare`
+// validates and names what the digest covers, `work` does the run and hands back
+// `{ result, receipt }`, and the record is written `done` with both. Everything
+// else — the slot lock, `ifLive`, the boot sweep, the 202 — is shared, and
+// `startTurn`/`run` branch on the shape exactly once.
+//
+// `cancellable: false` is for a kind whose work nothing below can abort (the
+// imaging router takes no signal). `cancelTurn` then answers `not-cancellable`
+// and writes NOTHING: `cancelled` over a vendor call that is still billing would
+// be a lie about the money.
+//
 // ── SERIALISED, AND WHERE THAT RULE NOW LIVES ───────────────────────────────
 //
 // A serialised kind allows one live turn per project (lib/jobs.tsx's
@@ -44,6 +60,7 @@ import { TextError } from "../text/errors";
 import { reason } from "../text/router";
 import type { TextResult, TurnClass } from "../text/types";
 import {
+  digestOf,
   ensureSwept,
   LIVE,
   mintTurnId,
@@ -53,7 +70,11 @@ import {
   updateTurn,
   writeTurn,
   type TurnRecord,
+  type WorkReceipt,
+  type WorkTurn,
 } from "./ledger";
+
+export type { WorkReceipt };
 
 /** What a client sent that a kind cannot build a prompt from. Nothing has been
  *  written or dispatched. It carries the status every door answers it with —
@@ -83,16 +104,63 @@ export interface TurnSpec<I = unknown, R = unknown> {
   /** The kind's own door over the engine's answer. Its return value is the
    *  record's `result`; a throw fails the turn with the thrown message (and its
    *  `findings`, when the error carries them). */
-  settle(result: TextResult, input: I): R | Promise<R>;
+  settle(result: TextResult, input: I, via?: unknown): R | Promise<R>;
+  /** How the engine is asked, for a kind that is not one `reason()` call —
+   *  research tries a retrieval rung and falls back to reasoning, each with its
+   *  own prompt and schema. Absent, the runner calls `reason()` with the
+   *  prepared prompt and schema. It must go through the router (`reason` /
+   *  `retrieve`) and pass `ctx.signal` on, so a cancel reaches the engine's
+   *  tree and every served turn books its one spend row. It reports back the
+   *  prompt it ACTUALLY sent: the record's `promptDigest` covers that, never
+   *  the prepared prompt of a rung that was not used. `via` is handed to
+   *  `settle` as its third argument. */
+  dispatch?(ctx: DispatchContext<I>): Promise<Dispatched>;
 }
+
+export interface DispatchContext<I = unknown> {
+  prompt: string;
+  schema?: Record<string, unknown>;
+  input: I;
+  turn: TurnClass;
+  signal: AbortSignal;
+}
+
+export interface Dispatched {
+  served: TextResult;
+  /** The prompt that reached the engine that served. */
+  prompt: string;
+  via?: unknown;
+}
+
+/** A kind that is not a text turn (see the header). */
+export interface WorkSpec<I = unknown, R = unknown> {
+  kind: string;
+  /** Never "text": a text kind is a TurnSpec. */
+  lane: "imaging" | "local";
+  serialised: boolean;
+  /** false when nothing below the kind can be aborted. `cancelTurn` then
+   *  answers `not-cancellable` and writes nothing. */
+  cancellable: boolean;
+  /** Validate the input; name what the record's digest covers (a work kind's
+   *  record never holds it) and its length. Throws TurnInputError for a request
+   *  it cannot serve. Runs BEFORE the record exists. */
+  prepare(input: unknown): Promise<{ input: I; digestOf: string; chars: number }>;
+  /** The run. Its return value is the record's `result` and `receipt`; a throw
+   *  fails the turn with the thrown message. */
+  work(ctx: { input: I; signal: AbortSignal }): Promise<{ result: R; receipt: WorkReceipt }>;
+}
+
+export const isWorkSpec = (spec: TurnSpec | WorkSpec): spec is WorkSpec => "work" in spec;
+
+const WORK_TURN: Record<WorkSpec["lane"], WorkTurn> = { imaging: "image-generate", local: "local-render" };
 
 /* ── the registry ─────────────────────────────────────────────────────────── */
 
-const KINDS = new Map<string, TurnSpec>();
+const KINDS = new Map<string, TurnSpec | WorkSpec>();
 
 /** Register a kind. Returns the unregister. A second registration of one name
  *  is a bug — two owners of one prompt — and throws. */
-export function registerTurnKind(spec: TurnSpec): () => void {
+export function registerTurnKind(spec: TurnSpec | WorkSpec): () => void {
   if (KINDS.has(spec.kind)) throw new Error(`turn kind ${spec.kind} is already registered`);
   KINDS.set(spec.kind, spec);
   return () => {
@@ -100,7 +168,7 @@ export function registerTurnKind(spec: TurnSpec): () => void {
   };
 }
 
-export const turnKind = (kind: string): TurnSpec | undefined => KINDS.get(kind);
+export const turnKind = (kind: string): TurnSpec | WorkSpec | undefined => KINDS.get(kind);
 export const turnKinds = (): string[] => [...KINDS.keys()].sort();
 
 /* ── in-process state: who runs here, and the per-slot lock ───────────────── */
@@ -144,9 +212,13 @@ export type StartOutcome =
  * run whose failure nobody awaited would be an unhandled rejection, which in a
  * route handler is the server going down.
  */
-export async function startTurn(spec: TurnSpec, projectId: string, rawInput: unknown): Promise<StartOutcome> {
+export async function startTurn(spec: TurnSpec | WorkSpec, projectId: string, rawInput: unknown): Promise<StartOutcome> {
   await ensureSwept();
-  const { prompt, schema, input } = await spec.prepare(rawInput);
+  // The one branch on the spec's shape: what the record is minted from.
+  const plan = isWorkSpec(spec)
+    ? await spec.prepare(rawInput).then((p) => ({ prompt: p.digestOf, chars: p.chars, schema: undefined, input: p.input }))
+    : await spec.prepare(rawInput).then((p) => ({ ...p, chars: undefined }));
+  const { prompt, schema, input, chars } = plan;
   const slot = spec.serialised ? `${projectId}:${spec.kind}` : null;
 
   const claimed = await underLock(slot ?? `free:${projectId}:${spec.kind}`, async () => {
@@ -154,7 +226,16 @@ export async function startTurn(spec: TurnSpec, projectId: string, rawInput: unk
       const holder = await slotHolder(slot);
       if (holder) return { won: false, holder } as const;
     }
-    const rec = newRecord({ id: mintTurnId(), kind: spec.kind, turn: spec.turn, projectId, slot, prompt });
+    const rec = newRecord({
+      id: mintTurnId(),
+      kind: spec.kind,
+      turn: isWorkSpec(spec) ? WORK_TURN[spec.lane] : spec.turn,
+      projectId,
+      slot,
+      prompt,
+      chars,
+      uncancellable: isWorkSpec(spec) && !spec.cancellable,
+    });
     await writeTurn(rec);
     const ctl = new AbortController();
     shared.live.set(rec.id, ctl);
@@ -163,7 +244,7 @@ export async function startTurn(spec: TurnSpec, projectId: string, rawInput: unk
   if (!claimed.won) return { ok: false, holder: claimed.holder };
 
   const { rec, ctl } = claimed;
-  const done = run(spec, rec.id, prompt, schema, input, ctl);
+  const done = isWorkSpec(spec) ? runWork(spec, rec.id, input, ctl) : run(spec, rec.id, prompt, schema, input, ctl);
   shared.runs.set(rec.id, done);
   void done.then(() => shared.runs.delete(rec.id));
   return { ok: true, turnId: rec.id, record: rec, done };
@@ -185,10 +266,15 @@ async function run(
   try {
     await ifLive(id, () => ({ status: "running" }));
     if (ctl.signal.aborted) throw new TextError("The turn was cancelled before it was dispatched.", "cancelled");
-    const served = await reason({ prompt, turn: spec.turn, schema, signal: ctl.signal });
+    const { served, prompt: sent, via } = spec.dispatch
+      ? await spec.dispatch({ prompt, schema, input, turn: spec.turn, signal: ctl.signal })
+      : { served: await reason({ prompt, turn: spec.turn, schema, signal: ctl.signal }), prompt, via: undefined };
+    // The record was minted against the prepared prompt; when another one was
+    // sent, the record says which.
+    if (sent !== prompt) await ifLive(id, () => ({ promptDigest: digestOf(sent), promptChars: sent.length }));
     let result: unknown;
     try {
-      result = await spec.settle(served, input);
+      result = await spec.settle(served, input, via);
     } catch (e) {
       // The engine answered and the kind's door refused it. The receipt is
       // kept — the turn was paid for whether or not its answer was usable.
@@ -212,19 +298,40 @@ async function run(
       result,
     }));
   } catch (e) {
-    const cancelled = ctl.signal.aborted || (e instanceof TextError && e.kind === "cancelled");
-    await ifLive(id, () =>
-      cancelled
-        ? { status: "cancelled", endedAt: new Date().toISOString() }
-        : {
-            status: "failed",
-            endedAt: new Date().toISOString(),
-            error: {
-              kind: e instanceof TextError ? e.kind : "failed",
-              message: e instanceof Error ? e.message : String(e),
-            },
+    await settleThrown(id, ctl, e);
+  } finally {
+    shared.live.delete(id);
+  }
+  return (await readTurn(id).catch(() => null)) ?? ({ id, status: "failed" } as TurnRecord);
+}
+
+/** A run that threw: `cancelled` when the signal says it was asked to stop,
+ *  `failed` with the message otherwise. Written only over a LIVE record. */
+async function settleThrown(id: string, ctl: AbortController, e: unknown): Promise<void> {
+  const cancelled = ctl.signal.aborted || (e instanceof TextError && e.kind === "cancelled");
+  await ifLive(id, () =>
+    cancelled
+      ? { status: "cancelled", endedAt: new Date().toISOString() }
+      : {
+          status: "failed",
+          endedAt: new Date().toISOString(),
+          error: {
+            kind: e instanceof TextError ? e.kind : "failed",
+            message: e instanceof Error ? e.message : String(e),
           },
-    ).catch((err) => console.error("[turns] could not settle", id, err));
+        },
+  ).catch((err) => console.error("[turns] could not settle", id, err));
+}
+
+/** A work kind's run: no engine, no settle hook — the work's own result and
+ *  receipt are the record. */
+async function runWork(spec: WorkSpec, id: string, input: unknown, ctl: AbortController): Promise<TurnRecord> {
+  try {
+    await ifLive(id, () => ({ status: "running" }));
+    const { result, receipt } = await spec.work({ input, signal: ctl.signal });
+    await ifLive(id, () => ({ status: "done", endedAt: new Date().toISOString(), receipt, result }));
+  } catch (e) {
+    await settleThrown(id, ctl, e);
   } finally {
     shared.live.delete(id);
   }
@@ -236,7 +343,7 @@ async function run(
 export type CancelOutcome =
   | { ok: true; record: TurnRecord }
   | { ok: false; why: "not-found" }
-  | { ok: false; why: "settled" | "not-here"; record: TurnRecord };
+  | { ok: false; why: "settled" | "not-here" | "not-cancellable"; record: TurnRecord };
 
 /**
  * Cancel a live turn this process is running: the record says `cancelled`
@@ -250,6 +357,9 @@ export async function cancelTurn(id: string): Promise<CancelOutcome> {
   const cur = await readTurn(id);
   if (!cur) return { ok: false, why: "not-found" };
   if (!LIVE.has(cur.status)) return { ok: false, why: "settled", record: cur };
+  // A work kind nothing below can abort. Nothing is written: `cancelled` over a
+  // vendor call still billing would be a lie about the money.
+  if (cur.uncancellable) return { ok: false, why: "not-cancellable", record: cur };
   const ctl = shared.live.get(id);
   if (!ctl) return { ok: false, why: "not-here", record: cur };
 

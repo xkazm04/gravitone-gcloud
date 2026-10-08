@@ -1,0 +1,46 @@
+{
+  "case": "edu-radar",
+  "title": "How radar measures distance",
+  "beat": "Radar sends a short radio pulse at the speed of light, times how long the echo takes to come back, and halves the round trip: distance = c × t ÷ 2.",
+  "steps": [
+    "The transmitter sends a short radio pulse",
+    "The pulse travels at the speed of light and hits the aircraft",
+    "A weak echo reflects back to the receiver",
+    "The receiver times the round trip, t",
+    "Distance = speed of light × t ÷ 2"
+  ],
+  "facts": [
+    {
+      "text": "Radar pulses travel at the speed of light",
+      "source": "https://www.noaa.gov/jetstream/doppler/how-radar-works",
+      "publisher": "NOAA JetStream (National Weather Service)",
+      "quote": "Radar pulses are transmitted away from the radar at the speed of light, but they are very short in duration."
+    },
+    {
+      "text": "Distance = c × t ÷ 2",
+      "source": "https://en.wikipedia.org/w/index.php?title=Radar&oldid=1377855330",
+      "publisher": "Wikipedia (CC BY-SA 4.0)",
+      "quote": "The distance is one-half the round trip time multiplied by the speed of the signal."
+    },
+    {
+      "text": "1937: Bawdsey, the first fully operational radar station",
+      "source": "https://www.bawdseyradar.org.uk/history/",
+      "publisher": "Bawdsey Radar (museum at the first operational radar station)",
+      "quote": "On 24th September 1937, RAF Bawdsey became the first fully operational Radar station in the world."
+    },
+    {
+      "text": "September 1939: 21 Chain Home stations in operation",
+      "source": "https://en.wikipedia.org/w/index.php?title=Chain_Home&oldid=1374194580",
+      "publisher": "Wikipedia (CC BY-SA 4.0)",
+      "quote": "By the outbreak of war in September 1939, there were 21 operational Chain Home stations."
+    }
+  ],
+  "countable": [
+    "one aircraft, one transmitter/receiver site",
+    "exactly two paths per cycle: the pulse out and the echo back",
+    "the echo drawn weaker (smaller or fainter) than the outgoing pulse",
+    "the formula shows the ÷ 2 explicitly"
+  ],
+  "notes": "Britannica, the IWM and the Science Museum Group returned HTTP 403 to scripted fetches, so the Chain Home station count is quoted from Wikipedia and the 1937 first is quoted from the Bawdsey Radar museum site.",
+  "retrieved": "2026-10-06"
+}

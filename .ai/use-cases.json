@@ -105,6 +105,16 @@
       "owner": "gravity"
     },
     {
+      "key": "text.strip-author",
+      "name": "Author a code-rendered video strip",
+      "description": "An agent turn with Read/Write/Edit only (no web) in an isolated workspace: a brief with fetched data or facts, one artistic approach card and the strip contract (pipeline/strips/CONTRACT.md) in; a frame-pure strip.html and its style.json module out. Linted for frame purity and rendered headless by pipeline/strips before an operator triages it in /foundry; a fix turn reads the contact sheet and gate results, at most twice.",
+      "kind": "generation",
+      "status": "active",
+      "component": "pipeline/strips/author.mts::authorStrip -> lib/agent/cliSeam.ts::runAgent()",
+      "expected_models": ["claude-opus-5"],
+      "owner": "gravity"
+    },
+    {
       "key": "text.probe",
       "name": "Text engine availability probe",
       "description": "Zero-token health check that walks the text engine's provider chain to report which one would serve a given turn, without generating anything.",

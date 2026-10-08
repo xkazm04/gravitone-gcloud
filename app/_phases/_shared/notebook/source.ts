@@ -16,8 +16,9 @@
 //
 // STAGE 1 (research-scope-board-A): the type, the fixture adapter, and the board
 // and scope arithmetic reading it — behaviour identical on the fixture, pinned by
-// tests/golden-path/notebook-source.probe.spec.ts. Not yet: the schema fields a
-// live notebook would carry its own conclusions and tags in, picking the live
+// tests/golden-path/notebook-source.probe.spec.ts.
+// STAGE 2: the notebook may carry `dimensions[]`, `conclusions[]` and a
+// `dimension` on each card, and `sourceOf` reads them. Not yet: picking the live
 // notebook for a project, and Step 2's readers (gate, recalibrate payload).
 //
 // `indexNotebook` is phase-shared-B's idea: the by-id maps notebook.ts builds at
@@ -81,6 +82,22 @@ function fnv1a(text: string): string {
   return (h >>> 0).toString(16).padStart(8, "0");
 }
 
+/** Card id → column, read from the `dimension` each Fact, Mechanism and Reversal
+ *  carries. Empty for a notebook that tags nothing. */
+function tagsOf(nb: Notebook): Record<string, DimensionId> {
+  const tags: Record<string, DimensionId> = {};
+  for (const c of [...nb.facts, ...nb.mechanisms, ...nb.reversals]) if (c.dimension) tags[c.id] = c.dimension;
+  return tags;
+}
+
+/** Does this notebook bring its own columns or conclusions? Then the fixture's
+ *  tables and conclusions are not its to inherit, and it is checked against what
+ *  it declared. A notebook that declares neither is every notebook stored before
+ *  stage 2 and keeps the older meaning (`asSource`). */
+export function declaresOwn(nb: Notebook): boolean {
+  return nb.dimensions !== undefined || nb.conclusions !== undefined;
+}
+
 export interface SourceOptions {
   /** Defaults to `reasoned`: a notebook that is not the replay was reasoned by an
    *  engine, and nothing searches today. */
@@ -94,9 +111,11 @@ export interface SourceOptions {
 /** A source over any notebook. Unset fields are EMPTY rather than the fixture's:
  *  no conclusions, no tags (every card untagged), the incumbent market columns. */
 export function sourceOf(notebook: Notebook, opts: SourceOptions = {}): NotebookSource {
-  const conclusions = opts.conclusions ?? [];
-  const dimensions = opts.dimensions ?? DIMENSIONS;
-  const tags = opts.tags ?? {};
+  // What the caller passes wins; then what the notebook carries itself (stage 2);
+  // then empty. Never the fixture's.
+  const conclusions = opts.conclusions ?? notebook.conclusions ?? [];
+  const dimensions = opts.dimensions ?? notebook.dimensions ?? DIMENSIONS;
+  const tags = opts.tags ?? tagsOf(notebook);
   let digest: string | undefined;
   let byId: NotebookIndex | undefined;
   return {
@@ -137,12 +156,13 @@ export function isNotebookSource(x: NotebookSource | Notebook): x is NotebookSou
 }
 
 /** The older spelling: a bare Notebook means "this notebook, dealt with the
- *  fixture's conclusions and tags" — exactly what `buildCards(nb)` and
+ *  fixture's conclusions and tags" (unless it declares its own) — exactly what `buildCards(nb)` and
  *  `notebookIssues(nb)` did before sources existed. lib/notebook/validate.ts and
  *  the graph probes still call it that way; the fixture notebook itself resolves
  *  to the fixture source. */
 export function asSource(x: NotebookSource | Notebook = NOTEBOOK): NotebookSource {
   if (isNotebookSource(x)) return x;
   if (x === NOTEBOOK) return fixtureSource();
+  if (declaresOwn(x)) return sourceOf(x);
   return sourceOf(x, { conclusions: CONCLUSIONS, dimensions: DIMENSIONS, tags: CARD_DIMENSION });
 }

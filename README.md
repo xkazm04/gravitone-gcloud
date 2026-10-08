@@ -22,6 +22,8 @@ routes:
   Signed-in only, and it needs a project — `/studio` on its own is a redirect
   back to the shelf.
 
+### Auth and sessions
+
 **Auth is Google, and only Google** — Firebase Auth, ported from the parent
 project, same Firebase project (see `.env.example`; three public variables, no
 service account, no server). Every gated route fails CLOSED: no config means
@@ -48,6 +50,8 @@ there is no server. The cost is stated in full where the policy lives
 (`lib/firebase.ts`) and is worth repeating here: **a session left on a shared
 machine never ends on its own.** Re-introduce a ceiling before this holds
 anything that would matter if a second person opened the laptop.
+
+### Data and spend
 
 **Projects are real, and so is a growing share of what they contain.** A project
 record — name, logline, template, target runtime, per-step progress — is created
@@ -89,6 +93,8 @@ this app". That was true when it was written and is not true now:
 
 Everything else still follows the original plan: prototype the flow at the UI
 layer first, and only then decide what the backend and the providers have to be.
+
+### Deployment postures
 
 **Two postures, and one table that says which is which.** The studio is
 local-first: a `claude` seat, a local GPU rig (`pipeline/vlm-probe/`), desktop

@@ -79,7 +79,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
 
   // Cards the creator marked `deepen`, with the reason the system can infer.
   const deepened: FollowUpRequest[] = api.cards
-    .filter((c) => stateOf(api.scope, c.id).deepen)
+    .filter((c) => stateOf(api.scope, c.id, api.optIn).deepen)
     .map((c) => {
       const existing = asked.find((a) => a.cardId === c.id);
       return (
@@ -135,7 +135,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
 
     // Frozen at click time: what was dispatched cannot change under the run.
     const dispatched = pending;
-    const answered = dispatched.filter((r) => resultFor(r)).length;
+    const answered = dispatched.filter((r) => resultFor(r, api.source)).length;
 
     setAsked((prev) => {
       const next = [...prev];
@@ -151,7 +151,7 @@ export default function FollowUpQueue({ api, projectId }: { api: ScopeApi; proje
       setAsked((prev) =>
         prev.map((r) => {
           if (r.status !== "running") return r;
-          const result = resultFor(r);
+          const result = resultFor(r, api.source);
           return result
             ? { ...r, status: "returned" as const, result }
             : { ...r, status: "unanswered" as const };

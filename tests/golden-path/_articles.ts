@@ -7,7 +7,7 @@
 // tests/fixtures/articles/stub-gh.mjs. Nothing spends, nothing reaches the
 // network, and the real registry is never named.
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -42,6 +42,10 @@ export const ARTICLE_ENV = [
   "STUB_GH_LOG",
   "STUB_GH_FAIL",
   "ANTHROPIC_API_KEY",
+  // articleSandbox() points the temp directory at the sandbox.
+  "TMPDIR",
+  "TEMP",
+  "TMP",
   // articleSandbox() deletes these; keepEnv puts a hook's values back after.
   ...REPO_LOCATING_GIT_VARS,
 ] as const;
@@ -73,6 +77,22 @@ export function articleSandbox(): ArticleSandbox {
   // transform loads probes as CommonJS.
   const { registry, origin } = JSON.parse(execFileSync(process.execPath, [FIXTURE, path.join(dir, "reg")], { encoding: "utf8" })) as { registry: string; origin: string };
   const store = path.join(dir, "store");
+  // The engine names its agent workspaces and its landing worktree
+  // `<run id>-<ms>` under os.tmpdir(), and the run id is the date and the
+  // topic. Two processes that run the same topic in the same millisecond (a
+  // second `npm test`, --workers=4) were handed the same directory: one run's
+  // agent wrote into, or its cleanup removed, the other's workspace — "git
+  // worktree add: already exists", "the agent did not write out/sources.json".
+  // os.tmpdir() reads these variables on every call, so a temp directory of its
+  // own per sandbox takes the name out of the shared space (and cleanup()
+  // removes whatever the engine leaves in it, and puts the variables back: a
+  // probe that calls the sandbox without keepEnv(ARTICLE_ENV) must not leave a
+  // later file a temp directory that no longer exists).
+  const tmpVars = ["TMPDIR", "TEMP", "TMP"] as const;
+  const savedTmp = tmpVars.map((k) => process.env[k]);
+  const tmp = path.join(dir, "tmp");
+  mkdirSync(tmp, { recursive: true });
+  for (const k of tmpVars) process.env[k] = tmp;
   process.env.AI_REGISTRY_DIR = registry;
   process.env.ARTICLES_STORE_DIR = store;
   process.env.ARTICLES_AGENT_BIN = `node|${STUB_AGENT}`;
@@ -100,6 +120,9 @@ export function articleSandbox(): ArticleSandbox {
     registry,
     origin,
     store,
-    cleanup: () => rmSync(dir, { recursive: true, force: true, maxRetries: 3 }),
+    cleanup: () => {
+      tmpVars.forEach((k, i) => (savedTmp[i] === undefined ? delete process.env[k] : (process.env[k] = savedTmp[i])));
+      rmSync(dir, { recursive: true, force: true, maxRetries: 3 });
+    },
   };
 }

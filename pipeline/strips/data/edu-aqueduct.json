@@ -1,0 +1,45 @@
+{
+  "case": "edu-aqueduct",
+  "title": "How a Roman aqueduct crossed a valley",
+  "beat": "Gravity alone carries spring water 50 km to Nîmes down a very slight slope, about 25 cm per km on average, and a three-tier bridge, the Pont du Gard, keeps the channel high enough to cross the Gardon valley.",
+  "steps": [
+    "Spring water enters the channel near Uzès",
+    "The channel drops very gently, about 25 cm per km on average",
+    "At the Gardon valley a three-tier bridge carries the channel across, 49 m high",
+    "The water keeps flowing downhill by gravity to Nîmes, with no pumps"
+  ],
+  "facts": [
+    {
+      "text": "Average slope: 25 cm per kilometre",
+      "source": "https://pontdugard.fr/en/discover/history",
+      "publisher": "Pont du Gard site (official visitor site of the monument)",
+      "quote": "With an average gradient of 25 cm per kilometre, one of the lowest ever achieved at the time"
+    },
+    {
+      "text": "50 km from Uzès to Nîmes, by gravity alone",
+      "source": "https://pontdugard.fr/en/discover/history",
+      "publisher": "Pont du Gard site (official visitor site of the monument)",
+      "quote": "carried 30,000 to 40,000 m3 of running water per day by gravity from a spring in Uzès, over a distance of 50 kilometres"
+    },
+    {
+      "text": "Pont du Gard: 49 m high",
+      "source": "https://pontdugard.fr/en/discover/history",
+      "publisher": "Pont du Gard site (official visitor site of the monument)",
+      "quote": "At 49 metres high, the Pont du Gard is the highest Roman aqueduct bridge in the world."
+    },
+    {
+      "text": "The slope is not constant along the route",
+      "source": "https://en.wikipedia.org/w/index.php?title=Pont_du_Gard&oldid=1374421736",
+      "publisher": "Wikipedia (CC BY-SA 4.0)",
+      "quote": "It varies widely along its course, but is as little as 1 in 20,000 in some sections."
+    }
+  ],
+  "countable": [
+    "exactly three tiers of arches on the bridge (official site: \"It is the only example of an ancient 3-storey bridge still standing today.\")",
+    "water flows one way only, from the spring toward Nîmes; no pumps or wheels",
+    "the water rides in the covered channel on TOP of the bridge, not in the river below",
+    "if the slope is drawn visibly, it is labelled as exaggerated (25 cm per km is invisible to the eye)"
+  ],
+  "notes": "The brief asked for a 'constant' gradient: the sources contradict that. Wikipedia (Pont du Gard) says the gradient 'varies widely along its course', so the beat says 'average'. Total drop is left OFF on purpose: Wikipedia says the spring is 17 m higher than the Nîmes basin, while the official 25 cm/km over 50 km implies about 12.5 m, and Wikipedia's own average '1 in 3,000' (about 33 cm/km) disagrees with the official 25 cm/km. UNESCO (whc.unesco.org/en/list/344) and Britannica returned HTTP 403 to scripted fetches, so they could not be quote-verified.",
+  "retrieved": "2026-10-06"
+}

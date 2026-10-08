@@ -42,7 +42,7 @@ import {
   type StorageTrouble,
   type TrailerCutStepData,
 } from "../_shared/stepStore";
-import { FACTS } from "../_shared/notebook/facts";
+import { useActiveNotebook } from "../_shared/notebook/useActiveNotebook";
 import { ADOPTION_PHASE, resolveExplainerRender } from "../script/candidates/adoption";
 import {
   absentTrailerRender,
@@ -159,6 +159,14 @@ const derive = (source: FramesRender): Frame[] =>
 export function useFrames(projectId: string) {
   const { user } = useAuth();
   const { themes } = useThemes(user?.uid ?? null);
+
+  // THE FACTS ARE THE DEALT NOTEBOOK'S, not the shipped run's: the binding list
+  // the canvas offers, the brief the direction pass is sent, and the facts a
+  // landing is graded against all read the same array. The replay deals the
+  // fixture's own `FACTS`, so a project with no live notebook briefs exactly as
+  // it did before.
+  const active = useActiveNotebook(projectId);
+  const facts = active.source.notebook.facts;
 
   /* ── the style THIS project chose ───────────────────────────────────────── */
   // The record is read here for one field, `themeId`. It used to be ignored
@@ -630,9 +638,9 @@ export function useFrames(projectId: string) {
 
   // What a landing reads: the cut as it is when the answer arrives. Written in
   // an effect, never during render.
-  const live = useRef({ frames });
+  const live = useRef({ frames, facts });
   useEffect(() => {
-    live.current = { frames };
+    live.current = { frames, facts };
   });
 
   /** Take a settled direction turn onto the cut — at most once per turn. */
@@ -651,7 +659,7 @@ export function useFrames(projectId: string) {
     // The bill, before the parse — see addDirectionSpend.
     setDirection((d) => addDirectionSpend(d, result.engine, Date.now()));
     try {
-      const landing = landDirection(String(result.raw ?? ""), live.current.frames, FACTS);
+      const landing = landDirection(String(result.raw ?? ""), live.current.frames, live.current.facts);
       // Apply what survived. Rejected and unmentioned beats keep exactly what
       // they had — applySceneSpecs only touches frames it has a spec for.
       setFrames((fs) => applySceneSpecs(fs, landing.specs));
@@ -673,7 +681,10 @@ export function useFrames(projectId: string) {
   // step has not taken is applied, once. Gated on the step's own record having
   // been read, because that record is where the consumed id lives — and never
   // over a record that could not be read, whose save is disarmed.
-  const ready = stepLoaded && Boolean(source) && !loadTrouble;
+  // The active notebook is read too: a turn that settles on mount lands against
+  // the facts it is graded on, and before the live record is read those are the
+  // replay's.
+  const ready = stepLoaded && Boolean(source) && !loadTrouble && active.hydrated;
   useEffect(() => {
     if (!ready) return;
     let alive = true;
@@ -730,15 +741,15 @@ export function useFrames(projectId: string) {
       // and say so, rather than editing them toward a number.
       template: project?.template,
       targetS: project?.targetS,
-      facts: FACTS.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
+      facts: facts.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
       beats: frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device })),
     }),
-    [render.title, block, project?.template, project?.targetS, frames],
+    [render.title, block, project?.template, project?.targetS, frames, facts],
   );
 
   /** What the pass would send and who would serve it — free, debounced, and
    *  only while there is a pass to describe. */
-  const directionPreview = useTurnPreview(KIND, directionInput, frames.length > 0 && !directing);
+  const directionPreview = useTurnPreview(KIND, directionInput, frames.length > 0 && !directing && active.hydrated);
   const directionBlocked = dispatchBlock(directionPreview);
 
   /**
@@ -768,7 +779,7 @@ export function useFrames(projectId: string) {
       );
       return;
     }
-    if (directing || startingRef.current || directionBlocked) return;
+    if (!active.hydrated || directing || startingRef.current || directionBlocked) return;
     startingRef.current = true;
     setStarting(true);
     setError(null);
@@ -794,7 +805,7 @@ export function useFrames(projectId: string) {
       startingRef.current = false;
       setStarting(false);
     }
-  }, [frames, render.origin, projectId, directing, track, directionBlocked, directionInput]);
+  }, [frames, render.origin, projectId, directing, track, directionBlocked, directionInput, active.hydrated]);
 
   /** Stop the live pass. On the server: the record says `cancelled` and the
    *  engine's process tree is ended (lib/turns/runner.ts `cancelTurn`). */
@@ -817,10 +828,16 @@ export function useFrames(projectId: string) {
   const totalCost = plateCost + (direction?.costUsd ?? 0);
   /** Figures asserting something nobody sourced. The number that should be zero
    *  before this step is called done. */
-  const unboundFigures = useMemo(
-    () => frames.reduce((n, f) => n + f.texts.filter((t) => t.role === "figure" && !t.factId).length, 0),
-    [frames],
-  );
+  const unboundFigures = useMemo(() => {
+    // A binding to a fact this notebook does not have is not a source: on a
+    // reasoned project a figure bound to `f-ath` on an older cut cites a fact the
+    // project never had.
+    const known = new Set(facts.map((f) => f.id));
+    return frames.reduce(
+      (n, f) => n + f.texts.filter((t) => t.role === "figure" && (!t.factId || !known.has(t.factId))).length,
+      0,
+    );
+  }, [frames, facts]);
   /** How much of the cut knows what it does. Authored, not rendered — nothing
    *  here can render a clip, and the surfaces reading this say so. */
   const clipsAuthored = useMemo(() => authoredClipCount(frames), [frames]);
@@ -871,7 +888,9 @@ export function useFrames(projectId: string) {
 
   return {
     render,
-    facts: FACTS,
+    facts,
+    /** The notebook the facts come from, for the provenance chip. */
+    notebook: active.source,
     frames,
     /** Set when the step's own record could not be READ. The surface refuses to
      *  draw a ledger over it: an empty cut and an unreadable one look identical
