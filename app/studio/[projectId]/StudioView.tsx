@@ -39,6 +39,7 @@
 // (see `pick`): the way back to the work is the same control the work is
 // navigated with, so the shelf can never become a room you are stuck in.
 
+import { typing } from "@/lib/board/keys";
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
@@ -89,11 +90,6 @@ const STEP_KEYS = [
   { keys: ["←", "→"], does: "along the rail" },
 ];
 
-const typing = (el: EventTarget | null) => {
-  const n = el as HTMLElement | null;
-  if (!n || typeof n.tagName !== "string") return false;
-  return n.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(n.tagName);
-};
 
 /**
  * WHAT HAPPENED AT THE DOOR. Three different facts used to be one

@@ -511,7 +511,8 @@
         "app/playground/arrange/index.tsx",
         "app/playground/hunt/Audition.tsx",
         "app/playground/hunt/index.tsx",
-        "app/playground/triage/Judge.tsx"
+        "app/playground/triage/Judge.tsx",
+        "app/studio/[projectId]/StudioView.tsx"
       ]
     },
     "Kicker": {
@@ -642,7 +643,9 @@
       "surfaces": [
         "components/kit/index.ts"
       ],
-      "adopters": []
+      "adopters": [
+        "app/_library/LibraryShelves.tsx"
+      ]
     },
     "Panel": {
       "home": "components/ui/Primitives.tsx",
@@ -1276,7 +1279,9 @@
       "surfaces": [
         "components/kit/index.ts"
       ],
-      "adopters": []
+      "adopters": [
+        "app/_library/LibraryShelves.tsx"
+      ]
     }
   },
   "modules": {
@@ -1334,14 +1339,16 @@
     },
     "app/_library": {
       "files": 4,
-      "kitImports": 0,
+      "kitImports": 1,
       "signalImports": 1,
       "parts": [
         "CHIP_CLASS",
         "Ghost",
+        "Pager",
         "Provenance",
         "TALLY_TONE",
-        "Tally"
+        "Tally",
+        "useWindow"
       ],
       "suspects": {
         "tab": 0,
@@ -1639,7 +1646,7 @@
         "tab": 0,
         "select": 0,
         "media": 0,
-        "title": 4,
+        "title": 3,
         "typing": 1
       },
       "suspectFiles": {
@@ -1647,9 +1654,6 @@
           "title": 2
         },
         "app/_projects/ShelfHeader.tsx": {
-          "title": 1
-        },
-        "app/_projects/parts.tsx": {
           "title": 1
         },
         "app/_projects/useShelf.ts": {
@@ -2058,9 +2062,10 @@
     "app/studio": {
       "files": 5,
       "kitImports": 0,
-      "signalImports": 0,
+      "signalImports": 1,
       "parts": [
-        "Button"
+        "Button",
+        "Keycaps"
       ],
       "suspects": {
         "tab": 0,
@@ -2219,7 +2224,6 @@
     "NumberField",
     "OpenLink",
     "PageHead",
-    "Pager",
     "PanelBox",
     "Plate",
     "Prose",
@@ -2253,7 +2257,6 @@
     "Waveform",
     "components/ui/Primitives#Waveform",
     "gradeOf",
-    "pct",
-    "useWindow"
+    "pct"
   ]
 }

@@ -105,3 +105,19 @@ Paged IndexedDB reads were looked for and not built: the asset rows are pointers
 - Wave 6: `firebase/auth` (~110 KB raw) is in the root layout chunk of every route, including the landing; it gates every signed-in route, so moving it is an auth-architecture change, not a split.
 - The integrator, after `git add`: re-run `npx tsx pipeline/kit-census.mts` (the census walks tracked files only, so `Fold` enters `app/kit/census.json` once it is tracked; `kit-catalog` fails "every catalogued part is a census part" until then).
 
+
+### Wave 1 · entry, shelf, studio shell (2026-10-08)
+
+**Shipped.**
+- `/projects`: `ProjectDialog` and `ConfirmDelete` are `next/dynamic`, mounted only while open and preloaded on idle after the shelf paints, so the form and the wizard's stages leave the route chunk. Sort and group are remembered (`useRemembered`), a URL `s=`/`g=` still wins; filters and search deliberately are not.
+- `/projects/new`: a returning user is dealt their last discipline, template and style while each is still valid, and the wizard opens on the first unanswered stage (three clicks fewer on a repeat); Back still walks one stage at a time.
+- The demo mark lost its 100-character `title=` (the long-`title=` budget falls 5 → 4).
+- Studio shell: `LibraryShelves` split out (preloaded on Outputs hover/focus), the outputs count reader lazy-imported, the step surface memoised on step + project id, shelf cards paged by 12 with lazy-decoded plates, `[` / `]` move between steps from anywhere, the stepper takes ←/→/Home/End/Enter like `TabRail`.
+- `Modal` returns focus to the real opener when a child autofocuses on open (it recorded its own input, so closing quick-create dropped focus to `<main>`).
+
+**Measured.** The shelf was already windowed (`useVirtual`, render-budget probe) and `stepStore` reads and writes one key each with latest-wins; neither changed.
+
+**Proposals (not built).**
+- Bulk select and delete on the race sheet; an undo toast in place of the delete confirm (needs a soft delete in `lib/projects`).
+- An upstream-break mark between steps on the rail for what blocks the next step (today only `title=`/sr-only).
+- `listAssetsFor(uid, projectId)` so the outputs shelf's kept index stops reading the whole account (handed to Wave 4).

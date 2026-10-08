@@ -31,11 +31,13 @@ import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
 import DeckStage from "@/components/ui/deck/DeckStage";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { useAuth } from "@/lib/useAuth";
+import { useRemembered } from "@/lib/useRemembered";
 import { useProjects } from "@/lib/useProjects";
 import { useThemes } from "@/lib/useThemes";
 import { lockedOnly, newTheme, putTheme, styleFits, type Proof } from "@/lib/themes";
 import { PRESETS, thumbSrc, type Preset } from "@/app/library/presets";
 import {
+  DISCIPLINES,
   DISCIPLINE_LABEL,
   templateOf,
   templatesFor,
@@ -82,6 +84,12 @@ async function proofFromThumb(p: Preset): Promise<Proof> {
  *  is inserted. Kept in step with the `stages` array below. */
 const STAGE = { discipline: 0, template: 1, style: 2, name: 3 } as const;
 
+/** The three card answers of the last project this account created, kept in
+ *  the one remembered record (lib/useRemembered, evicted on identity flip — a
+ *  style id is the previous account's). "" is "nothing remembered". */
+const LAST = { discipline: "projects.new.discipline", template: "projects.new.template", style: "projects.new.style" };
+const NO_DISCIPLINE: readonly string[] = ["", ...DISCIPLINES];
+
 export default function CreateWizard() {
   const { user } = useAuth();
   const router = useRouter();
@@ -104,6 +112,45 @@ export default function CreateWizard() {
   // ownDuration latch, same rule).
   const [ownDuration, setOwnDuration] = useState(false);
   const [busy, setBusy] = useState(false);
+
+  // ── A RETURNING HAND IS DEALT ITS LAST ANSWERS (Wave 1, 2026-10-08) ──────
+  //
+  // Somebody who made an explainer in a style yesterday is, more often than
+  // not, making another one today, and the wizard asked them three card
+  // questions to get back to the form. Now the last create's discipline,
+  // template and style are picked on arrival — each only while it is still a
+  // legal answer (a template inside the discipline, a LOCKED style that fits
+  // it) — and the deck opens on the first stage still unanswered, which for a
+  // repeat is the name. The rail shows every pick with its summary and each is
+  // one click back, so a different video costs one click, not zero.
+  //
+  // A first-time account has nothing remembered and is dealt the full deck.
+  //
+  // Seeded once, the first render the account's styles are known (the style
+  // check needs them), and only if the user has not started answering —
+  // adjusted during render, the `prevQ` idiom, rather than in an effect.
+  const [lastDiscipline, setLastDiscipline] = useRemembered<string>(LAST.discipline, "", NO_DISCIPLINE);
+  const [lastTemplate, setLastTemplate] = useRemembered<string>(LAST.template, "");
+  const [lastStyle, setLastStyle] = useRemembered<string>(LAST.style, "");
+  const [seeded, setSeeded] = useState(false);
+  /** The stage a seed opened on; the effect below gives each skipped stage a
+   *  history entry so Back still walks one stage at a time. */
+  const [seededTo, setSeededTo] = useState(0);
+  if (!seeded && themes !== null) {
+    setSeeded(true);
+    const d = lastDiscipline as Discipline | "";
+    if (d && discipline === null && active === 0) {
+      const t = templatesFor(d).find((x) => x.id === lastTemplate)?.id ?? null;
+      const st = t ? (lockedThemes.find((x) => x.id === lastStyle && styleFits(x, d))?.id ?? null) : null;
+      setDiscipline(d);
+      setTemplate(t);
+      if (t) setTargetS(templateOf(t).defaultS);
+      setStyleId(st);
+      const to = st ? STAGE.name : t ? STAGE.style : STAGE.template;
+      setActive(to);
+      setSeededTo(to);
+    }
+  }
 
   // ── The stages ARE history entries ───────────────────────────────────────
   //
@@ -138,6 +185,15 @@ export default function CreateWizard() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  useEffect(() => {
+    if (seededTo === 0) return;
+    // Already stamped (a StrictMode re-run, or a remount on the same entry).
+    if ((window.history.state as { gtDeckStage?: number } | null)?.gtDeckStage === seededTo) return;
+    for (let i = 1; i <= seededTo; i++) {
+      window.history.pushState({ ...window.history.state, gtDeckStage: i }, "");
+    }
+  }, [seededTo]);
 
   const fittingThemes = useMemo(
     () => (discipline ? lockedThemes.filter((t) => styleFits(t, discipline)) : lockedThemes),
@@ -291,7 +347,12 @@ export default function CreateWizard() {
       });
       // Close on the answer: a falsy answer means nothing was stored — the
       // wizard stays, the draft stays, and the banner below says why.
-      if (made) router.push(`/studio/${made.id}`);
+      if (made) {
+        setLastDiscipline(discipline);
+        setLastTemplate(template);
+        setLastStyle(themeId);
+        router.push(`/studio/${made.id}`);
+      }
     } finally {
       setBusy(false);
     }
