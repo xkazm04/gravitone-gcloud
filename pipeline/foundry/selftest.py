@@ -1007,6 +1007,35 @@ def test_motion_chain_refuses_to_restart_from_the_hero():
     check("motion chain: ...and no clip after the first started on the hero", staged.count("hero.png"), 2)
 
 
+def test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on():
+    """The docstring says run it DETACHED, so the exit code is the only signal
+    anyone reads -- and a download abandoned after twelve attempts exited 0."""
+    import time as _time
+    import types
+    F = load_vlm("fetch_ref2va")
+    tmp = Path(tempfile.mkdtemp())
+
+    def refuse(**k):
+        raise OSError("stalled at 7 GB")
+    had = sys.modules.get("huggingface_hub")
+    saved = (F.COMFY_MODELS, _time.sleep, sys.argv)
+    sys.modules["huggingface_hub"] = types.SimpleNamespace(hf_hub_download=refuse)
+    F.COMFY_MODELS, _time.sleep, sys.argv = tmp, (lambda s: None), ["fetch_ref2va.py"]
+    code = "returned"
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            F.main()
+    except SystemExit as e:
+        code = e.code
+    finally:
+        F.COMFY_MODELS, _time.sleep, sys.argv = saved
+        if had is None:
+            sys.modules.pop("huggingface_hub", None)
+        else:
+            sys.modules["huggingface_hub"] = had
+    check("fetch_ref2va: a download it gave up on exits non-zero", code, 1)
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1037,6 +1066,7 @@ TESTS = [
     test_replicate_poll_survives_a_busy_card_and_names_a_dead_one,
     test_motion_collect_takes_the_newest_video_like_its_frames,
     test_motion_chain_refuses_to_restart_from_the_hero,
+    test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on,
 ]
 
 
