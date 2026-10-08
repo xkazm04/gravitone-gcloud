@@ -160,6 +160,7 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     "app/library/audio/soundMigration.ts": { evicted: `gravitone.sound-migrated.v1.${uid}` },
     "app/library/audio/bookStore.ts": { evicted: `gravitone.audio-book.${uid}` },
     "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
+    "lib/useRemembered.ts": { evicted: "gravitone.ui.v1" },
   };
 
   const writers = localStorageWriters();

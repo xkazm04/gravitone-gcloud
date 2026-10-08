@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 546,
+  "files": 551,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -373,6 +373,13 @@
       "home": "components/kit/ScoreChip.tsx",
       "surfaces": [
         "components/kit/index.ts"
+      ],
+      "adopters": []
+    },
+    "Fold": {
+      "home": "components/ui/signal/Fold.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
       ],
       "adopters": []
     },
@@ -1681,7 +1688,7 @@
       "suspectFiles": {}
     },
     "app/articles": {
-      "files": 11,
+      "files": 13,
       "kitImports": 0,
       "signalImports": 5,
       "parts": [
@@ -1858,6 +1865,7 @@
         "Figures",
         "Final",
         "FlagChip",
+        "Fold",
         "FolderTree",
         "Ghost",
         "Hint",
@@ -2048,7 +2056,7 @@
       }
     },
     "app/studio": {
-      "files": 4,
+      "files": 5,
       "kitImports": 0,
       "signalImports": 0,
       "parts": [
@@ -2073,7 +2081,7 @@
     "components/kit": {
       "files": 48,
       "kitImports": 13,
-      "signalImports": 4,
+      "signalImports": 5,
       "parts": [
         "ASTERISM_PATH",
         "ASTERISM_STARS",
@@ -2098,7 +2106,7 @@
       "suspectFiles": {}
     },
     "components/ui": {
-      "files": 17,
+      "files": 18,
       "kitImports": 1,
       "signalImports": 2,
       "parts": [
@@ -2147,9 +2155,9 @@
       "suspectFiles": {}
     },
     "components/ui/signal": {
-      "files": 12,
+      "files": 13,
       "kitImports": 0,
-      "signalImports": 4,
+      "signalImports": 5,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -2198,6 +2206,7 @@
     "Figures",
     "Final",
     "FlagChip",
+    "Fold",
     "FolderTree",
     "KeyRow",
     "Kicker",

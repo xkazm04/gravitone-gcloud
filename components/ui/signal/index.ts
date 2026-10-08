@@ -1,6 +1,6 @@
 // THE SIGNAL VOCABULARY — the barrel.
 //
-// Eleven components that draw what ~170 places in this app currently write a
+// Twelve components that draw what ~170 places in this app currently write a
 // sentence about. THE LAW they exist to serve is stated in ./README.md and it is
 // one line long: delete every sentence whose subject is the app; keep every
 // sentence whose subject is the work.
@@ -41,3 +41,6 @@ export type { ProvenanceFields } from "./Provenance";
 
 export { TabRail } from "./TabRail";
 export type { TabDef } from "./TabRail";
+
+export { Fold } from "./Fold";
+export type { FoldProps } from "./Fold";

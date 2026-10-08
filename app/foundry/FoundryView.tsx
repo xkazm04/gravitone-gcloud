@@ -47,7 +47,10 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import dynamic from "next/dynamic";
+
 import Modal from "@/components/ui/Modal";
+import { pendingPanel } from "@/components/ui/Pending";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Keycaps } from "@/components/ui/signal";
 import { calibrate, seriesKey } from "@/lib/foundry/calibration";
@@ -55,13 +58,9 @@ import type { CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdict, Ver
 import { usePolling } from "@/lib/usePolling";
 
 import { CullGrid } from "./CullGrid";
-import { DojoView } from "./DojoView";
-import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
 import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
-import { StripsView } from "./StripsView";
-import { StylesShelf } from "./StylesShelf";
 import { commitRun, fetchRun, fetchRuns, previewCommit, saveVerdicts } from "./foundryClient";
 import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
 import {
@@ -81,6 +80,15 @@ import {
   useCommitPlan,
   type SaveKind,
 } from "./ui";
+
+// ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
+// behind the tab rail, so each is its own chunk fetched when its tab is chosen
+// rather than all of them on first load (Wave 0, docs/waves/README.md).
+// The cull grid is the default tab and stays a static import.
+const StylesShelf = dynamic(() => import("./StylesShelf").then((m) => m.StylesShelf), { loading: pendingPanel });
+const ExtractView = dynamic(() => import("./ExtractView").then((m) => m.ExtractView), { loading: pendingPanel });
+const DojoView = dynamic(() => import("./DojoView").then((m) => m.DojoView), { loading: pendingPanel });
+const StripsView = dynamic(() => import("./StripsView").then((m) => m.StripsView), { loading: pendingPanel });
 
 // THE TABS CARRIED A BLURB AND SO THE BLURB GOT WRITTEN — up to 45 words per
 // tab, printed as a paragraph under the row. None of the three headers has a

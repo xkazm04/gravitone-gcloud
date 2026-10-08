@@ -22,12 +22,18 @@
 import { useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
 
+import dynamic from "next/dynamic";
+
+import { pendingPanel } from "@/components/ui/Pending";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { TabRail } from "@/components/ui/signal";
 
-import AssetsBrowser from "./AssetsBrowser";
-import LibraryAtelier from "./LibraryAtelier";
-import AudioWorkbench from "./audio/AudioWorkbench";
+// ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
+// behind the tab rail, so each is its own chunk fetched when its tab is chosen
+// rather than all of them on first load (Wave 0, docs/waves/README.md).
+const AssetsBrowser = dynamic(() => import("./AssetsBrowser"), { loading: pendingPanel });
+const LibraryAtelier = dynamic(() => import("./LibraryAtelier"), { loading: pendingPanel });
+const AudioWorkbench = dynamic(() => import("./audio/AudioWorkbench"), { loading: pendingPanel });
 
 type ModuleId = "styles" | "assets" | "animations" | "audio";
 

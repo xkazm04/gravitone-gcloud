@@ -108,6 +108,9 @@ import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 // root-mounted provider's live copy of it untouched, which is the half a user of
 // the next account can actually read.
 import { __announceIdentityEvicted, __identityEvictionListenerCount } from "@/lib/jobs";
+// Remembered UI choices (which fold was open, which tab was last): one record,
+// cleared wholesale like the job tray, and its in-memory copy with it.
+import { REMEMBERED_KEY, forgetRemembered } from "@/lib/useRemembered";
 
 /**
  * WHY the identity changed.
@@ -182,6 +185,7 @@ export function userScopedLocalKeys(uid: string): string[] {
     `gravitone.sound-migrated.v1.${uid}`, // app/library/audio/soundMigration.ts — "this account's audio rows moved to the sound store"
     `gravitone.audio-annex.${uid}`, // the Library's old per-browser annex — no longer written since its facts became SoundTake fields (r4 closeout); read once and removed by app/library/audio/soundMigration.ts#migrateAnnex, still evicted where a machine holds it
     JOBS_KEY, // lib/jobs.tsx — profile-wide, cleared wholesale (see above)
+    REMEMBERED_KEY, // lib/useRemembered.ts — open folds, last tabs; profile-wide, cleared wholesale: a remembered key can name a project id
   ];
 }
 
@@ -283,6 +287,9 @@ export async function evictIdentity(
   // different facts and the log has to be able to say which.
   // A dry run counts the listeners instead: announcing IS the wipe of that copy.
   report.trays = dry ? __identityEvictionListenerCount() : __announceIdentityEvicted();
+  // A tab whose storage write failed holds its remembered choices in memory
+  // only; the key removal above cannot reach that copy, this does.
+  if (!dry) forgetRemembered();
 
   if (typeof indexedDB === "undefined") return report;
 

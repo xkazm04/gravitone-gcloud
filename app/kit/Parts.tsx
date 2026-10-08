@@ -103,6 +103,7 @@ import { ASTERISM_PATH, ASTERISM_STARS, Mark, Wordmark } from "@/components/kit/
 import {
   BandTrack,
   CHIP_CLASS,
+  Fold,
   HintPopover,
   Keycaps,
   PipRow,
@@ -1096,6 +1097,16 @@ const DEMOS: Record<PartName, () => ReactNode> = {
     </div>
   ),
   Provenance: () => <Provenance model="flux-dev" run="run-0412" step="frames" vendor="Leonardo" cost="$0.04" />,
+  Fold: () => (
+    <div>
+      <Fold title="Sources" tally={{ value: 12 }} defaultOpen>
+        <Verbatim>Reuters, 2026-09-14 — the fleet order was cut from 40 to 26.</Verbatim>
+      </Fold>
+      <Fold title="Rejected" tally={{ value: 3, tone: "rose" }} marks={<StaleBadge />}>
+        <Verbatim>three candidates, each with its reason verbatim</Verbatim>
+      </Fold>
+    </div>
+  ),
   useHint: () => <DisclosureDemo />,
   HintPopover: () => <DisclosureDemo />,
   hintRootClass: () => <Verbatim>{hintRootClass}</Verbatim>,

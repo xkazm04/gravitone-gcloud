@@ -362,6 +362,41 @@ export async function listThemes(uid: string): Promise<Theme[]> {
   }
 }
 
+/**
+ * ONLY the themes named by `ids`, and only this account's — one readonly
+ * transaction of keyed gets, no index walk.
+ *
+ * A theme record carries its proof sheet as base64, rejections included (they
+ * are kept on purpose, see `Proof`), so `listThemes` pulls every picture of
+ * every style through IndexedDB. A caller that needs the bytes behind a handful
+ * of `proof:` pointers (lib/useAssets.ts#hydrateProofs) should not pay for the
+ * styles nothing points into. The uid filter keeps the answer identical to
+ * filtering `listThemes(uid)`: a pointer can never resolve into another
+ * account's theme by being read by key.
+ */
+export async function getThemes(uid: string, ids: Iterable<string>): Promise<Theme[]> {
+  const want = [...new Set(ids)];
+  if (!want.length) return [];
+  let db: IDBDatabase | null = null;
+  try {
+    db = await openDb();
+    const store = db.transaction(THEMES_STORE, "readonly").objectStore(THEMES_STORE);
+    const rows = await Promise.all(
+      want.map(
+        (id) =>
+          new Promise<Theme | undefined>((resolve, reject) => {
+            const req = store.get(id);
+            req.onsuccess = () => resolve(req.result as Theme | undefined);
+            req.onerror = () => reject(req.error ?? new Error("read failed"));
+          }),
+      ),
+    );
+    return rows.filter((t): t is Theme => t !== undefined && t.uid === uid);
+  } finally {
+    db?.close();
+  }
+}
+
 export async function getTheme(id: string): Promise<Theme | undefined> {
   let db: IDBDatabase | null = null;
   try {

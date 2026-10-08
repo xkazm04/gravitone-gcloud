@@ -2,6 +2,10 @@
   "name": "gravitone-gcloud",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": [
+    "*.css",
+    "./lib/turns/kinds/*.ts"
+  ],
   "scripts": {
     "dev": "next dev",
     "dev:inspect": "node pipeline/dev-guard.mjs DEV_INSPECT=1 DEV_GUARD_MAX_NODE=150 NEXT_DIST_DIR=.next-inspect next dev",

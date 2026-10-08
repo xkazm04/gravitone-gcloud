@@ -13,14 +13,21 @@
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
 
+import dynamic from "next/dynamic";
+
+import { pendingPanel } from "@/components/ui/Pending";
 import { TabRail, type TabDef } from "@/components/ui/signal";
 
 import { needsDecision } from "./calendarModel";
-import { ChannelsTab } from "./ChannelsTab";
-import { MetricsTab } from "./MetricsTab";
-import { ScheduleTab } from "./ScheduleTab";
 import { ModeChip, ToastTray, useToasts } from "./ui";
 import { useCalendar, useNow } from "./useCalendar";
+
+// ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
+// behind the tab rail, so each is its own chunk fetched when its tab is chosen
+// rather than all of them on first load (Wave 0, docs/waves/README.md).
+const ScheduleTab = dynamic(() => import("./ScheduleTab").then((m) => m.ScheduleTab), { loading: pendingPanel });
+const ChannelsTab = dynamic(() => import("./ChannelsTab").then((m) => m.ChannelsTab), { loading: pendingPanel });
+const MetricsTab = dynamic(() => import("./MetricsTab").then((m) => m.MetricsTab), { loading: pendingPanel });
 
 type Tab = "schedule" | "channels" | "metrics";
 const TABS: readonly Tab[] = ["schedule", "channels", "metrics"];

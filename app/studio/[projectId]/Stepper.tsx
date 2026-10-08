@@ -98,6 +98,9 @@ export default function Stepper({
           <li key={s.key} className={`min-w-0 flex-1 ${i > 0 ? "border-l border-white/8" : ""}`}>
             <button
               onClick={() => onPick(s.key)}
+              // Each step is its own chunk (phases.tsx); intent to click starts the fetch.
+              onPointerEnter={s.preload}
+              onFocus={s.preload}
               // Named for the step's ROLE in the production, never for its
               // position: the rail is reordered by editing STEPS in phases.ts,
               // and `step-3` would then point at a different surface while every

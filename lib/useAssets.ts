@@ -36,7 +36,7 @@ import {
   readUploadPointer,
   type Asset,
 } from "./assets";
-import { listThemes, type Proof, type Theme } from "./themes";
+import { getThemes, type Proof, type Theme } from "./themes";
 import { presetById } from "@/app/library/presets";
 
 const seededKey = (uid: string) => `gravitone.assets.seeded.${uid}`;
@@ -130,10 +130,12 @@ async function seedFromTrials(uid: string): Promise<Asset[]> {
 
 /** Read the bytes a promoted proof points at. Only pays for the theme read when
  *  something on the shelf actually needs it — a sheet is base64 in the record,
- *  so listing every theme is not free. */
+ *  so listing every theme is not free — and then reads only the themes the
+ *  pointers name (`getThemes`), not every style the account has. */
 async function hydrateProofs(uid: string, rows: Asset[]): Promise<Asset[]> {
-  if (!rows.some((a) => readProofPointer(a.src))) return rows;
-  return hydrateProofSrcs(rows, await listThemes(uid));
+  const themeIds = rows.map((a) => readProofPointer(a.src)?.themeId).filter((id): id is string => Boolean(id));
+  if (!themeIds.length) return rows;
+  return hydrateProofSrcs(rows, await getThemes(uid, themeIds));
 }
 
 /** A storage failure is CLASSIFIED and published to the shared channel the bell
