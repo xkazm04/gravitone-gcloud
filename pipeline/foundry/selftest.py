@@ -939,6 +939,29 @@ def test_replicate_poll_survives_a_busy_card_and_names_a_dead_one():
           "vanished" in got, True)
 
 
+def test_motion_collect_takes_the_newest_video_like_its_frames():
+    """collect() takes the NEWEST png per tag (hits[-1]) and took the OLDEST mp4
+    (first hit, then break), so a re-run lane paired fresh frames with the
+    previous run's video -- the one artefact the human check reads."""
+    M = load_vlm("motion")
+    tmp = Path(tempfile.mkdtemp())
+    out, dest = tmp / "comfy-out", tmp / "lane"
+    out.mkdir()
+    dest.mkdir()
+    for n in (1, 2):
+        (out / f"ref2va-01-turn_c-last_{n:05d}_.png").write_bytes(b"png %d" % n)
+        (out / f"ref2va-01-turn_{n:05d}_.mp4").write_bytes(b"mp4 %d" % n)
+    saved = M.COMFY_OUT
+    M.COMFY_OUT = out
+    try:
+        got = M.collect("ref2va-01-turn", dest, 73)
+    finally:
+        M.COMFY_OUT = saved
+    check("motion.collect: the frame is the newest run's", got["c-last"].read_bytes(), b"png 2")
+    check("motion.collect: ...and so is the video", sorted(p.name for p in dest.glob("*.mp4")),
+          ["ref2va-01-turn_00002_.mp4"])
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -967,6 +990,7 @@ TESTS = [
     test_dojo_gemini_key_travels_in_a_header_not_the_url,
     test_every_third_party_import_is_declared_in_requirements,
     test_replicate_poll_survives_a_busy_card_and_names_a_dead_one,
+    test_motion_collect_takes_the_newest_video_like_its_frames,
 ]
 
 

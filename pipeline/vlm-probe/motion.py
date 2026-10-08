@@ -183,9 +183,10 @@ def collect(prefix, dest, length):
             d = dest / f"{prefix.split('-', 1)[-1]}_{tag}.png"
             shutil.copyfile(hits[-1], d)
             got[tag] = d
-    for v in sorted(COMFY_OUT.rglob(f"{prefix}*.mp4")):
+    # Newest, like the frames above: ComfyUI's counter only grows, so on a
+    # re-run the first sorted hit is the PREVIOUS run's video.
+    for v in sorted(COMFY_OUT.rglob(f"{prefix}*.mp4"))[-1:]:
         shutil.copyfile(v, dest / v.name)
-        break
     return got
 
 
