@@ -15,7 +15,7 @@
 //                failed (status 0) — the message is the work, shown verbatim
 
 import { accessHeader, withAccess } from "@/lib/imagingClient";
-import type { ArticleRun, ArticleRunDetail, CreateRunInput } from "@/lib/articles/types";
+import type { ArticleRun, ArticleRunDetail, CreateRunInput, TopicSubject } from "@/lib/articles/types";
 
 export type Fetched<T> =
   | { ok: true; data: T }
@@ -36,6 +36,23 @@ export interface AgentReceipt {
   durationMs?: number;
   costUsd?: number;
   errors: string[];
+}
+
+/** One registry subject no article covers yet, as GET /api/articles/topics
+ *  answers it (lib/articles/loop.ts `TopicChoice`, restated here because that
+ *  module is server-only). `angle` is a default the operator may replace. */
+export interface TopicChoice extends TopicSubject {
+  title: string;
+  angle: string;
+}
+
+/** `listUncoveredTopics`, whole. `remaining` is every uncovered subject, not
+ *  just the `topics` returned: the difference is the part the limit hid. */
+export interface TopicList {
+  topics: TopicChoice[];
+  covered: { key: string; source: "run" | "publication"; ref: string; status: string }[];
+  claimed: string[];
+  remaining: number;
 }
 
 /** GET /api/articles/<id>: the engine's detail plus what the route reads off
@@ -86,6 +103,22 @@ export const approveRun = (id: string, patches: string[]) =>
 export const rejectRun = (id: string, note: string) =>
   call<{ run: ArticleRun }>(`${runPath(id)}/reject`, { method: "POST", body: JSON.stringify({ note }) });
 export const resumeRun = (id: string) => call<{ run: ArticleRun }>(`${runPath(id)}/resume`, { method: "POST" });
+
+/** The uncovered registry subjects, ranked (GET /api/articles/topics). `limit`
+ *  is the route's to clamp (1..50); each `bundle` adds one the ranking leaves out. */
+export function listTopics(opts: { limit?: number; bundles?: readonly string[] } = {}) {
+  const q = new URLSearchParams();
+  if (opts.limit !== undefined) q.set("limit", String(opts.limit));
+  for (const b of opts.bundles ?? []) q.append("bundle", b);
+  const s = q.toString();
+  return call<TopicList>(`/api/articles/topics${s ? `?${s}` : ""}`);
+}
+
+/** Send the draft at the gate back with an instruction (POST .../rework). The
+ *  run keeps its research and goes back to `drafting`; the drive restarts, so
+ *  this spends the operator's seat. */
+export const reworkRun = (id: string, note: string) =>
+  call<{ run: ArticleRun }>(`${runPath(id)}/rework`, { method: "POST", body: JSON.stringify({ note }) });
 
 /** A run file as a URL an <iframe> or <img> can load: the credential rides as
  *  `k` through `withAccess`, because neither can send a header

@@ -25,7 +25,7 @@ import { Field, TextArea } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Primitives";
 import { CHIP_CLASS, Fold, Provenance, TALLY_TONE, Tally, type TallyTone } from "@/components/ui/signal";
 import { SURFACE } from "@/components/ui/tokens";
-import { STEP_NAMES, type ArticleRun } from "@/lib/articles/types";
+import { NOTE_MAX_CHARS, STEP_NAMES, type ArticleRun } from "@/lib/articles/types";
 
 import { approveRun, rejectRun, resumeRun, runFileUrl, type RunDetail } from "./articlesClient";
 import { CritiqueView } from "./CritiquePanel";
@@ -507,7 +507,7 @@ function GatePanel({ run, patchCount, picked, onRun }: { run: ArticleRun; patchC
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-0 flex-1">
           <Field label="Rejection note" htmlFor="article-reject-note">
-            <TextArea id="article-reject-note" rows={2} value={note} maxLength={2000} onChange={(e) => setNote(e.target.value)} data-testid="article-reject-note" />
+            <TextArea id="article-reject-note" rows={2} value={note} maxLength={NOTE_MAX_CHARS} onChange={(e) => setNote(e.target.value)} data-testid="article-reject-note" />
           </Field>
         </div>
         <Button variant="danger" disabled={busy !== null || !note.trim()} onClick={reject} data-testid="article-reject">

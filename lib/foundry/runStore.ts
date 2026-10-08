@@ -11,6 +11,8 @@
 import { mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { catalogueDir } from "../fixtures/roots";
+
 export const RUN_ID_RE = /^[A-Za-z0-9][A-Za-z0-9._-]{0,120}$/;
 export const SERVABLE_EXTENSIONS = new Set([".png", ".jpg", ".jpeg", ".webp", ".json"]);
 
@@ -93,7 +95,7 @@ export async function writeJsonAtomic(file: string, data: unknown): Promise<void
 
 /** THE VERSIONED INDICES' ROOT, respecting process.env.FOUNDRY_DIR. */
 export function foundryFile(relPath: string): string {
-  return path.join(process.env.FOUNDRY_DIR || path.join(process.cwd(), "pipeline", "foundry"), relPath);
+  return path.join(catalogueDir(), relPath);
 }
 
 export interface ManifestWarning {

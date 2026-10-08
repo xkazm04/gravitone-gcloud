@@ -17,6 +17,11 @@
 //     required research card cannot be cut; a cancelled publish slot cannot
 //     return to missed. An adapter names the refusal per item rather than
 //     pretending the write happened.
+//
+// A source may ALSO carry a stage axis - see ./pipeline.ts `PipelineCapable`.
+// That half is OPTIONAL and additive: every adapter in this directory predates
+// it and not one had to change when it arrived. The pipeline canvas draws the
+// sources that implement it; the Board draws all of them, as before.
 
 import type { BoardItem, BoardSource, BoardSourceId, BoardVerdict } from "./types";
 

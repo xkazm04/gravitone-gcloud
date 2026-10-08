@@ -154,13 +154,28 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
   const evicted = new Set(userScopedLocalKeys(uid));
   const exempt = new Set(IDENTITY_INDEPENDENT_LOCAL_KEYS);
 
-  const table: Record<string, { evicted?: string; exempt?: string }> = {
+  // `symbol` is for a writer that does not SPELL its key but imports the owner's
+  // own exported constant. That is the stronger arrangement, not a dodge: a
+  // literal in the writer can always drift from the list (which is the defect
+  // this test exists for), whereas a writer that references the owner's binding
+  // cannot disagree with it. Such a row is checked harder, not softer — the
+  // writer must reference the identifier AND the owner must bind that identifier
+  // to exactly the key the table declares.
+  const table: Record<string, { evicted?: string; exempt?: string; symbol?: string }> = {
     "lib/useProjects.ts": { evicted: `gravitone.seeded.${uid}` },
     "lib/useAssets.ts": { evicted: `gravitone.assets.seeded.${uid}` },
     "app/library/audio/soundMigration.ts": { evicted: `gravitone.sound-migrated.v1.${uid}` },
     "app/library/audio/bookStore.ts": { evicted: `gravitone.audio-book.${uid}` },
     "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
     "lib/useRemembered.ts": { evicted: "gravitone.ui.v1" },
+    // The pipeline board's LIVE/STUB arm: evicted, not exempt, so an arm left
+    // on LIVE cannot be inherited by the next account on the same browser.
+    "app/foundry/PipelineTab.tsx": { evicted: "gravitone.pipeline.arm", symbol: "PIPELINE_ARM_KEY" },
+    // Which fixture bundle this browser holds. Evicted, and through the owner's
+    // binding rather than a literal of its own: the key it replaced was
+    // assembled from an imported constant, and a key assembled at runtime is one
+    // `evictIdentity` cannot name.
+    "lib/fixtures/seedBrowser.ts": { evicted: "gravitone.fixtures.seed", symbol: "FIXTURE_SEED_KEY" },
   };
 
   const writers = localStorageWriters();
@@ -175,11 +190,21 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     const key = row!.evicted ?? row!.exempt!;
     const src = readFileSync(resolve(__dirname, "../..", file), "utf8");
     // The key really is still written in that file...
-    const template = key.replace(uid, "${uid}");
-    expect(
-      src.includes(template) || src.includes(key),
-      `${file} no longer builds ${key} — the table is describing a key that moved`,
-    ).toBe(true);
+    if (row!.symbol) {
+      const sym = row!.symbol!;
+      expect(src.includes(sym), `${file} no longer references ${sym} — the table is describing a key that moved`).toBe(true);
+      const owner = readFileSync(resolve(__dirname, "../../lib/identityEviction.ts"), "utf8");
+      expect(
+        owner.includes(`export const ${sym} = "${key}";`),
+        `lib/identityEviction.ts no longer binds ${sym} to ${key}, which ${file} writes through it`,
+      ).toBe(true);
+    } else {
+      const template = key.replace(uid, "${uid}");
+      expect(
+        src.includes(template) || src.includes(key),
+        `${file} no longer builds ${key} — the table is describing a key that moved`,
+      ).toBe(true);
+    }
     // ...and the owner has it on the list the table says.
     if (row!.evicted) expect(evicted.has(key), `${file} writes ${key} and the eviction list misses it`).toBe(true);
     else expect(exempt.has(key), `${file} writes ${key} and the exception list misses it`).toBe(true);

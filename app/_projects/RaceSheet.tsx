@@ -605,6 +605,7 @@ export function Lane({
             key={k}
             type="button"
             tabIndex={-1}
+            data-testid={`cell-${p.id}-${k}`}
             onClick={(e) => {
               e.stopPropagation();
               onOpen(p, k);

@@ -60,6 +60,7 @@ import { useRemembered } from "@/lib/useRemembered";
 
 import { CullGrid } from "./CullGrid";
 import { Lightbox } from "./Lightbox";
+import PipelineTab from "./PipelineTab";
 import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
 import { commitRun, fetchRun, fetchRuns, previewCommit, saveVerdicts } from "./foundryClient";
@@ -434,7 +435,7 @@ export default function FoundryView() {
       <main tabIndex={-1} className="pb-36">
         <h1 className="sr-only">Foundry</h1>
         <header className="pt-2">
-          <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} previews={previews} />
+          <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} />
         </header>
 
         <section role="tabpanel" aria-label={tab} className="mt-4">
@@ -444,6 +445,12 @@ export default function FoundryView() {
             <ExtractView />
           ) : tab === "dojo" ? (
             <DojoView />
+          ) : tab === "pipeline" ? (
+            // The tab reads `?v=` through `useSearchParams` and carries its own
+            // Suspense boundary for it (./PipelineTab.tsx), which is why
+            // app/foundry/page.tsx still needs none: the boundary sits around
+            // the one component that reads a param, not around the view.
+            <PipelineTab />
           ) : tab === "strips" ? (
             <StripsView />
           ) : (

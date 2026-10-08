@@ -63,6 +63,7 @@ import {
   type Encoder,
 } from "./export/headless";
 import type { AudioEnvelope } from "./audioEnvelope";
+import { outPath as fixtureOutPath } from "./fixtures/roots";
 import type { EffectParams } from "@/app/_phases/frames/music-video/compositor";
 
 // The browser launch, scratch dir, encoder fallback, atomic landing and sidecar
@@ -118,7 +119,7 @@ export interface ExportResult {
   sizeBytes: number;
 }
 
-const OUT_ROOT = path.join(process.cwd(), "foundry-out", "music-video-exports");
+const OUT_ROOT = fixtureOutPath("music-video-exports");
 const AUDIO_EXT: Record<string, string> = {
   "audio/mpeg": "mp3",
   "audio/mp3": "mp3",
@@ -264,14 +265,61 @@ async function setUpRenderPage(page: Page, req: ExportRequest, width: number, he
   if (setupError) throw new ExportError(`Render page setup failed: ${setupError}`, "render-setup-failed");
 }
 
+/** The YouTube ingest target this export aims at: -14 LUFS integrated, true
+ *  peak at or under -1 dBTP. */
+const TARGET_LUFS = -14;
+const TARGET_TRUE_PEAK_DB = -1;
+
+/** ONE LINEAR GAIN FOR THE WHOLE TRACK, LIMITED BY PEAK HEADROOM — never a
+ *  dynamic normalizer. The effects were baked against this track's own
+ *  envelope (`lib/audioEnvelope.ts`): a chorus louder than its verse blooms
+ *  harder. ffmpeg's single-pass `loudnorm` is DYNAMIC — it rides the gain
+ *  through the track — and so is two-pass `linear=true` whenever the gain
+ *  the target asks for would push the true peak over its ceiling (it falls
+ *  back silently). Measured 2026-10-05 on a verse/chorus fixture at
+ *  -18.4 LUFS / -2.4 dBTP: single-pass took the verse-to-chorus contrast from
+ *  8.2 dB to 2.7 dB, two-pass linear to 3.0 dB, this gain kept all 8.2 dB at
+ *  -1.0 dBTP. So the gain is the smaller of "reach the target" and "keep the
+ *  peak under the ceiling": a master with headroom lands on -14, one without
+ *  lands as close as its peaks allow and keeps its dynamics. A track louder
+ *  than the target is turned down to it. Pure, so it is checkable without
+ *  ffmpeg. */
+export function peakLimitedGainDb(integratedLufs: number, truePeakDb: number): number {
+  if (!Number.isFinite(integratedLufs) || !Number.isFinite(truePeakDb)) return 0;
+  return Math.min(TARGET_LUFS - integratedLufs, TARGET_TRUE_PEAK_DB - truePeakDb);
+}
+
+/** Integrated loudness and true peak of the uploaded track, from ffmpeg's own
+ *  loudnorm measurement pass (`print_format=json`, printed on stderr). Returns
+ *  `null` when the measurement cannot be read, and the caller then muxes the
+ *  track untouched — a missing number must not become a guessed gain. */
+async function measureLoudness(audioPath: string): Promise<{ integratedLufs: number; truePeakDb: number } | null> {
+  try {
+    const { stderr } = await run(
+      "ffmpeg",
+      ["-hide_banner", "-nostats", "-i", audioPath,
+        "-af", `loudnorm=I=${TARGET_LUFS}:TP=${TARGET_TRUE_PEAK_DB}:print_format=json`, "-f", "null", "-"],
+      { maxBuffer: 1 << 26 },
+    );
+    const json = stderr.slice(stderr.lastIndexOf("{"), stderr.lastIndexOf("}") + 1);
+    const m = JSON.parse(json) as { input_i?: string; input_tp?: string };
+    const integratedLufs = Number(m.input_i);
+    const truePeakDb = Number(m.input_tp);
+    return Number.isFinite(integratedLufs) && Number.isFinite(truePeakDb) ? { integratedLufs, truePeakDb } : null;
+  } catch (e) {
+    console.warn("[music-video/export] loudness measurement failed; muxing the track untouched:", e instanceof Error ? e.message : e);
+    return null;
+  }
+}
+
 /** ffmpeg's `-i … -c:v h264_nvenc …` for one attempt; throws on a non-zero
  *  exit so the caller can fall back. `maxBuffer` is generous — `execFile`
  *  buffers ffmpeg's stderr in memory, and `-loglevel error` keeps that small
  *  regardless, but a bad mux can still print a lot on the way out. */
 async function muxOnce(opts: {
-  framesDir: string; fps: number; audioPath: string; outPath: string; encoder: Encoder;
+  framesDir: string; fps: number; audioPath: string; outPath: string; encoder: Encoder; gainDb: number;
 }): Promise<void> {
-  const { framesDir, fps, audioPath, outPath, encoder } = opts;
+  const { framesDir, fps, audioPath, outPath, encoder, gainDb } = opts;
   await run(
     "ffmpeg",
     [
@@ -282,18 +330,8 @@ async function muxOnce(opts: {
       ...videoArgs(encoder),
       "-pix_fmt", "yuv420p",
       "-c:a", "aac", "-b:a", "384k", "-ar", "48000",
-      // SINGLE-PASS loudnorm, not two-pass. Two-pass measures the real input
-      // loudness first and feeds it back as per-call correction terms, landing
-      // within ~0.1 LU of the -14 LUFS/-1dBTP YouTube target instead of
-      // single-pass's ~±0.5 LU — but it means decoding the whole track twice
-      // and running ffmpeg twice per attempt (once more per encoder fallback).
-      // This is a local, on-demand export tool with no broadcast QC gate
-      // downstream (the idea note's own target is "YouTube's recommended
-      // ingest", which re-normalizes on upload regardless) — the speed of one
-      // pass is worth more here than the last half a loudness unit of
-      // precision. A future mastering-grade export tier could switch this one
-      // line to two-pass without touching anything else in this file.
-      "-af", "loudnorm=I=-14:TP=-1:LRA=11",
+      // One linear gain, measured once per export (see `peakLimitedGainDb`).
+      "-af", `volume=${gainDb.toFixed(2)}dB`,
       "-shortest",
       "-movflags", "+faststart",
       outPath,
@@ -348,10 +386,12 @@ export async function runExport(req: ExportRequest): Promise<ExportResult> {
     const outPath = partialPath(OUT_ROOT, id);
 
     const muxStart = Date.now();
+    const loudness = await measureLoudness(audioPath);
+    const gainDb = loudness ? peakLimitedGainDb(loudness.integratedLufs, loudness.truePeakDb) : 0;
     // NVENC first, libx264 once if NVENC cannot start; the kernel logs the
     // NVENC failure and the result SAYS which encoder actually ran.
     const encoder = await withEncoderFallback("music-video/export", (enc) =>
-      muxOnce({ framesDir, fps: req.envelope.fps, audioPath, outPath, encoder: enc }),
+      muxOnce({ framesDir, fps: req.envelope.fps, audioPath, outPath, encoder: enc, gainDb }),
     );
     const muxMs = Date.now() - muxStart;
 

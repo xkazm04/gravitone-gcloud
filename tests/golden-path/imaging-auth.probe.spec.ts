@@ -60,6 +60,7 @@ import { POST as soundHuntLessonPOST } from "@/app/api/sound/hunts/[id]/lesson/r
 import { POST as articlesCreatePOST } from "@/app/api/articles/route";
 import { POST as articlesApprovePOST } from "@/app/api/articles/[runId]/approve/route";
 import { POST as articlesResumePOST } from "@/app/api/articles/[runId]/resume/route";
+import { POST as articlesReworkPOST } from "@/app/api/articles/[runId]/rework/route";
 import { POST as turnsPOST } from "@/app/api/turns/route";
 import { POST as turnCancelPOST } from "@/app/api/turns/[id]/cancel/route";
 import { POST as motionDirectPOST } from "@/app/api/motion/direct/route";
@@ -190,6 +191,12 @@ const ROUTES: [string, string, (r: Request) => Promise<Response>][] = [
     "articles/resume",
     "/api/articles/[runId]/resume",
     (r: Request) => articlesResumePOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
+  ],
+  // Rework restarts the drive, so it spends the seat the same way resume does.
+  [
+    "articles/rework",
+    "/api/articles/[runId]/rework",
+    (r: Request) => articlesReworkPOST(r, { params: Promise.resolve({ runId: "2026-10-05-no-such-run" }) }),
   ],
   // The turn ledger (AIO-A). Starting a turn spends the seat or a metered key;
   // an empty body is a 400 from the `kind` check before any kind's prompt is
