@@ -116,7 +116,21 @@ def _load(kind):
     return _m[kind]
 
 
+_boxes = {}
+
+
 def person_box(path, threshold=0.5):
+    """_detect_person, once per file: look_vec and contact_sheet both ask for
+    the same frame's box, and DETR is the expensive call. Keyed on the file's
+    mtime and size so a frame regenerated in place is detected again."""
+    st = Path(path).stat()
+    key = (str(path), threshold, st.st_mtime_ns, st.st_size)
+    if key not in _boxes:
+        _boxes[key] = _detect_person(path, threshold)
+    return _boxes[key]
+
+
+def _detect_person(path, threshold=0.5):
     """The most confident person in the frame, as (l, t, r, b), plus its score.
 
     Most confident rather than largest: on a wide shot the largest box is often

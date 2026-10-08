@@ -1141,6 +1141,41 @@ def test_identity_decision_functions_load_without_torch_or_pil():
           len(I.missing_anchors(tempfile.mkdtemp())), len(I.ANCHORS))
 
 
+def test_identity_person_box_detects_each_frame_once():
+    """look_vec and contact_sheet each ask person_box for the same frame; DETR
+    ran once per ASK. Pinned at the cache: 3 frames x 2 askers = 3 detections."""
+    saved = {k: sys.modules.get(k) for k in ("torch", "PIL", "PIL.Image", "PIL.ImageDraw")}
+    for k in saved:
+        sys.modules[k] = None
+    try:
+        I = load_vlm("identity")
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+    tmp = Path(tempfile.mkdtemp())
+    paths = []
+    for n in "abc":
+        f = tmp / f"{n}.jpg"
+        f.write_bytes(b"frame " + n.encode())
+        paths.append(f)
+    calls = []
+
+    def fake_detect(path, threshold=0.5):
+        calls.append(Path(path).name)
+        return (0, 0, 10, 10), 0.9
+    I._detect_person = fake_detect
+    first = [I.person_box(p) for p in paths]      # what look_vec asks
+    second = [I.person_box(p) for p in paths]     # what contact_sheet asks
+    check("identity: three frames asked twice are detected three times", len(calls), 3)
+    check("identity: the cached box is the detected box", second, first)
+    paths[0].write_bytes(b"frame a, regenerated in place")
+    I.person_box(paths[0])
+    check("identity: a frame regenerated in place is detected again", len(calls), 4)
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1175,6 +1210,7 @@ TESTS = [
     test_reconcile_resume_is_per_annotator,
     test_replicate_one_unreadable_reannotation_does_not_end_phase_2,
     test_identity_decision_functions_load_without_torch_or_pil,
+    test_identity_person_box_detects_each_frame_once,
 ]
 
 
