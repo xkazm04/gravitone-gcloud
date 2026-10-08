@@ -41,6 +41,12 @@ import { stripComments } from "./_helpers";
 
 const ROOT = resolve(__dirname, "../..");
 const read = (rel: string) => readFileSync(resolve(ROOT, rel), "utf8");
+// CODE, NOT PROSE. HarnessBridge's own header quotes its production guard
+// verbatim (`process.env.NODE_ENV === "production"`, line 8), and a raw
+// `indexOf` found that comment first: with the real guard deleted, the
+// "guard precedes the install" check still passed, reading a sentence. Every
+// matcher below reads the file with its comments stripped.
+const code = (rel: string) => stripComments(read(rel));
 
 const DEV_AUTH_TS = "lib/devAuth.ts";
 const BRIDGE_TSX = "components/ui/HarnessBridge.tsx";
@@ -64,7 +70,7 @@ const TRUTH_TABLE: Array<[Env, boolean, string]> = [
  *  supplied environment. Not a copy of it — a copy is what the defect would
  *  look like. */
 function gateFrom(file: string, pattern: RegExp, what: string): (env: Env) => unknown {
-  const m = read(file).match(pattern);
+  const m = code(file).match(pattern);
   expect(
     m,
     `could not find the ${what} expression in ${file}. If it was renamed or ` +
@@ -98,7 +104,7 @@ test("the API guard's no-secret door states the same gate, and folds shut in eve
 });
 
 test("the harness control surface states the same gate, in the form the bundler folds", () => {
-  const bridge = read(BRIDGE_TSX);
+  const bridge = code(BRIDGE_TSX);
 
   // 1. THE GUARDS ARE WRITTEN INLINE, not through the imported DEV_AUTH const.
   //    This is the whole reason the surface can be dropped from a production
