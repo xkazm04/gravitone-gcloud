@@ -128,6 +128,7 @@ def record_stills(
     character=None,
     location=None,
     shots=None,
+    ref_count=None,
 ):
     out_path = Path(out_dir)
     out_path.mkdir(parents=True, exist_ok=True)
@@ -151,6 +152,10 @@ def record_stills(
         "location": location or LOCATION,
         "shots": shots or {},
     }
+    if ref_count is not None:
+        # Intent, recorded up front: `references` stays [] until the lane
+        # finishes, so only this survives an interrupted run.
+        rec["ref_count"] = ref_count
     lane_file = out_path / "lane.json"
     lane_file.write_text(json.dumps(rec, indent=2), encoding="utf-8")
     rec["_dir"] = str(out_path.resolve())
@@ -284,6 +289,18 @@ def check_resume(record_or_path, current_kwargs):
             if old is not None and old != val:
                 raise SystemExit(
                     f"Refusing to resume lane with changed parameters: length {old} -> {val}"
+                )
+        elif key == "hero":
+            old = rec.get("hero")
+            if old and val and resolve_from_repo(old) != resolve_from_repo(val):
+                raise SystemExit(
+                    f"Refusing to resume lane with changed parameters: hero {old} -> {val}"
+                )
+        elif key == "ref_count":
+            old = rec.get("ref_count")
+            if old is not None and old != val:
+                raise SystemExit(
+                    f"Refusing to resume lane with changed parameters: ref_count {old} -> {val}"
                 )
         elif key == "lora":
             old = rec.get("lora")

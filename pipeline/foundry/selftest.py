@@ -1105,6 +1105,66 @@ def test_replicate_one_unreadable_reannotation_does_not_end_phase_2():
           (None, ["arcane-fights-002.jpg"]))
 
 
+def test_motion_resume_refuses_a_different_hero():
+    """`motion.py --lane ref2va --hero other.png` over an existing lane.json
+    silently resumed a lane held against a different hero: check_resume had
+    no branch for the hero key motion.run passes."""
+    M = load_vlm("motion")
+    tmp = Path(tempfile.mkdtemp())
+    hero_a, hero_b = tmp / "heroA.png", tmp / "heroB.png"
+    hero_a.write_bytes(b"a")
+    hero_b.write_bytes(b"b")
+
+    class PastTheCheck(Exception):
+        pass
+
+    def run(first, second):
+        saved = (M.CLIPS, M.guard.recycle_comfy)
+        M.CLIPS = Path(tempfile.mkdtemp())
+
+        def reached(*a):
+            raise PastTheCheck()
+        M.guard.recycle_comfy = reached
+        try:
+            M.lane_record.record_clip(out_dir=M.CLIPS / "ref2va", lane="ref2va", seed=M.SEED,
+                                      steps=4, lora=True, width=832, height=480,
+                                      length=73, fps=M.FPS, hero=first)
+            with contextlib.redirect_stdout(io.StringIO()):
+                M.run("ref2va", 832, 480, 73, 4, True, second)
+            return "resumed"
+        except SystemExit as e:
+            return str(e)
+        except PastTheCheck:
+            return "resumed"
+        finally:
+            M.CLIPS, M.guard.recycle_comfy = saved
+
+    check("motion resume (control): the same hero resumes", run(hero_a, hero_a), "resumed")
+    msg = run(hero_a, hero_b)
+    check("motion resume: a different hero is refused, naming hero",
+          "Refusing to resume" in msg and "hero" in msg, True)
+
+
+def test_lane_record_check_resume_refuses_changed_ref_count():
+    """A reference lane resumed with a different --refs mixes conditions. The
+    count is recorded as intent up front: `references` is [] until the lane
+    finishes, so comparing the staged list would refuse an interrupted lane."""
+    LR = load_vlm("lane_record")
+    out = Path(tempfile.mkdtemp())
+    LR.record_stills(out_dir=out, lane="reference", refs=[], ref_count=2)
+    LR.check_resume(out / "lane.json", {"ref_count": 2})
+    try:
+        LR.check_resume(out / "lane.json", {"ref_count": 3})
+        err = None
+    except SystemExit as e:
+        err = str(e)
+    check("lane_record: a changed ref_count is refused", err is not None and "ref_count" in err, True)
+    legacy = Path(tempfile.mkdtemp())
+    LR.record_stills(legacy, lane="reference", refs=["a.png"])
+    LR.check_resume(legacy / "lane.json", {"ref_count": 3})
+    check("lane_record: a record with no ref_count still resumes", True, True)
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1138,6 +1198,8 @@ TESTS = [
     test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on,
     test_reconcile_resume_is_per_annotator,
     test_replicate_one_unreadable_reannotation_does_not_end_phase_2,
+    test_motion_resume_refuses_a_different_hero,
+    test_lane_record_check_resume_refuses_changed_ref_count,
 ]
 
 

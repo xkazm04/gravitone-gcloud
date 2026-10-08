@@ -246,15 +246,17 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full"
     out = SHOTS / (lane + ("-zoom" if zoom else "") + tag)
     out.mkdir(parents=True, exist_ok=True)
     lane_json_path = out / "lane.json"
+    counted = {"ref_count": max(1, ref_count)} if lane == "reference" else {}
     if lane_json_path.exists():
         lane_record.check_resume(lane_json_path, {
             "lane": lane, "steps": steps, "seed": seed, "zoom": zoom,
-            "ref_crop": ref_crop, "reference_joins_at": late, "tag": tag
+            "ref_crop": ref_crop, "reference_joins_at": late, "tag": tag,
+            **counted
         })
     else:
         lane_record.record_stills(
             out_dir=out, lane=lane, seed=seed, steps=steps, refs=[],
-            ref_crop=ref_crop, late=late, zoom=zoom, tag=tag,
+            ref_crop=ref_crop, late=late, zoom=zoom, tag=tag, **counted,
             character=CHARACTER, location=LOCATION
         )
 
@@ -300,7 +302,7 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full"
     rec = lane_record.read(out) if lane_json_path.exists() else {}
     lane_record.record_stills(
         out_dir=out, lane=lane, seed=seed, steps=steps, refs=refs,
-        ref_crop=ref_crop, late=late, zoom=zoom, tag=tag,
+        ref_crop=ref_crop, late=late, zoom=zoom, tag=tag, **counted,
         character=CHARACTER, location=LOCATION, shots=rec.get("shots", {})
     )
     print(f"\n  lane written to {out}\n  now score it:  python identity.py --set shots/{lane}")
