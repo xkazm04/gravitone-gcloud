@@ -21,6 +21,7 @@
 import { stat } from "node:fs/promises";
 import path from "node:path";
 
+import { outPath } from "../fixtures/roots";
 import { foundryFs } from "./fsPort";
 
 import {
@@ -53,7 +54,7 @@ import { withCatalogue } from "./catalogue";
 import { planForgeCommit } from "./commitPlan";
 
 /** Exported for the disk probe, which writes a probe-prefixed run under it. */
-export const OUT_ROOT = path.join(process.cwd(), "foundry-out", "runs");
+export const OUT_ROOT = outPath("runs");
 
 function runDir(id: string): string {
   return runRoot(OUT_ROOT, id, "run");

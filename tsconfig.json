@@ -50,7 +50,9 @@
     ".next-cx-g1/types/**/*.ts",
     ".next-cx-g1/dev/types/**/*.ts",
     ".next-cx-g3/types/**/*.ts",
-    ".next-cx-g3/dev/types/**/*.ts"
+    ".next-cx-g3/dev/types/**/*.ts",
+    ".next-fixtures/types/**/*.ts",
+    ".next-fixtures/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules",

@@ -30,6 +30,7 @@
 import { mkdir, open, readFile, rename, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { outPath, soundLedgerFile } from "../fixtures/roots";
 import type { Hunt, HuntNode, Lesson, SoundGroups, SoundTake } from "./types";
 import type { LedgerVerdict } from "./ledger";
 
@@ -46,12 +47,12 @@ export class SoundError extends Error {
 
 export function storeRoot(): string {
   const env = process.env.SOUND_STORE_DIR?.trim();
-  return env ? path.resolve(env) : path.join(process.cwd(), "foundry-out", "sound");
+  return env ? path.resolve(env) : outPath("sound");
 }
 
 export function ledgerPath(): string {
   const env = process.env.SOUND_LEDGER_PATH?.trim();
-  return env ? path.resolve(env) : path.join(process.cwd(), "pipeline", "sound", "ledger.json");
+  return env ? path.resolve(env) : soundLedgerFile();
 }
 
 /** Ids are minted here (`st-` / `hn-` / `ls-` + 10 hex), but one also arrives

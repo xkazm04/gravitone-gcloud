@@ -13,10 +13,14 @@
 #   huggingface-hub   fetch_ref2va.py only
 #   transformers      identity.py only (inside the model loader)
 #   facenet-pytorch   identity.py only (inside the model loader)
-# torch is imported at module top by identity.py only.
+#   sentence-transformers, soundfile, torchaudio   embeddings/spike.py only
+# torch is imported at module top by identity.py and embeddings/spike.py.
 numpy
 Pillow
 huggingface-hub
 torch
 transformers
 facenet-pytorch
+sentence-transformers
+soundfile
+torchaudio

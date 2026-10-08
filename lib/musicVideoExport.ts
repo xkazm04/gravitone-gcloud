@@ -63,6 +63,7 @@ import {
   type Encoder,
 } from "./export/headless";
 import type { AudioEnvelope } from "./audioEnvelope";
+import { outPath as fixtureOutPath } from "./fixtures/roots";
 import type { EffectParams } from "@/app/_phases/frames/music-video/compositor";
 
 // The browser launch, scratch dir, encoder fallback, atomic landing and sidecar
@@ -118,7 +119,7 @@ export interface ExportResult {
   sizeBytes: number;
 }
 
-const OUT_ROOT = path.join(process.cwd(), "foundry-out", "music-video-exports");
+const OUT_ROOT = fixtureOutPath("music-video-exports");
 const AUDIO_EXT: Record<string, string> = {
   "audio/mpeg": "mp3",
   "audio/mp3": "mp3",

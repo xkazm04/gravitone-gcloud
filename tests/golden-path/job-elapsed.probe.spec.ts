@@ -8,22 +8,35 @@ import { join } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-// STATIC, not `await import()`. A runtime import() goes around the runner's
-// CommonJS tsconfig-paths hook, so lib/jobs loads but its own transitive `@/`
-// imports do not resolve (lib/turns/client.ts → "@/lib/imagingClient": Cannot
-// find module) — whichever way the outer specifier is spelled. The same note
-// is in access-only-401 and deployment-cells.
-import * as jobs from "@/lib/jobs";
+// STATIC, and it stays static. This read used to be `await import("../../lib/jobs")`
+// so the test could assert the export exists at runtime, and it threw
+// `Cannot find module '@/lib/imagingClient'` from lib/turns/client.ts — a CJS
+// require stack. A runtime import() inside a test is resolved by Node, which knows
+// nothing about the `@/` alias, so the FIRST aliased import anywhere in the loaded
+// graph fails; a static import is transformed by Playwright with tsconfig's `paths`
+// applied. Driven both ways: `../../lib/jobs` and `@/lib/jobs` both failed
+// dynamically, the static form passed.
+//
+// That particular import is gone — lib/turns/client.ts now reaches imagingClient
+// relatively (3b59052, from the CI lane, which fixed the same defect at the source
+// while this file fixed it at the reader). The shape is kept anyway: the next `@/`
+// import added anywhere under lib/jobs would bring the failure straight back, and
+// the assertion is stronger static, because a missing export now fails `tsc` too.
+import { formatElapsed } from "@/lib/jobs";
 
 import { stripComments } from "./_helpers";
 
 const read = (p: string) => stripComments(readFileSync(join(process.cwd(), p), "utf8"));
 
 test("formatElapsed uses the repo's m:ss convention from a minute up", () => {
-  const mod = jobs as Record<string, unknown>;
-  const f = mod.formatElapsed as ((ms: number) => string) | undefined;
-  expect(typeof f, "lib/jobs exports formatElapsed").toBe("function");
-  expect([f!(0), f!(59_400), f!(60_000), f!(347_000), f!(-5)]).toEqual(["0s", "59s", "1:00", "5:47", "0s"]);
+  expect(typeof formatElapsed, "lib/jobs exports formatElapsed").toBe("function");
+  expect([formatElapsed(0), formatElapsed(59_400), formatElapsed(60_000), formatElapsed(347_000), formatElapsed(-5)]).toEqual([
+    "0s",
+    "59s",
+    "1:00",
+    "5:47",
+    "0s",
+  ]);
 });
 
 test("useElapsed ticks via usePolling, enabled only while the job is running", () => {

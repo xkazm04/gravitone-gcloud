@@ -212,3 +212,7 @@ __pycache__/
 /smoke-*.mjs
 /smoke-*.cjs
 /smoke-*.ts
+
+# the generated fixture universe (npm run fixtures) — the generator is the source
+/fixtures-out/
+/.next-fixtures/

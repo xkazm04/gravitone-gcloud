@@ -172,6 +172,12 @@ const JOBS_KEY = "gravitone.jobs.v1";
  * surfaces on a shared machine. Exported so a probe can hold this list against
  * the modules that actually write those keys.
  */
+/** The pipeline board's LIVE/STUB arm. See the eviction note below. */
+export const PIPELINE_ARM_KEY = "gravitone.pipeline.arm";
+
+/** The fixture seeding stamp. See the eviction note below. */
+export const FIXTURE_SEED_KEY = "gravitone.fixtures.seed";
+
 export function userScopedLocalKeys(uid: string): string[] {
   return [
     `gravitone.seeded.${uid}`, // lib/useProjects.ts — "this account's shelf was seeded"
@@ -182,6 +188,23 @@ export function userScopedLocalKeys(uid: string): string[] {
     `gravitone.sound-migrated.v1.${uid}`, // app/library/audio/soundMigration.ts — "this account's audio rows moved to the sound store"
     `gravitone.audio-annex.${uid}`, // the Library's old per-browser annex — no longer written since its facts became SoundTake fields (r4 closeout); read once and removed by app/library/audio/soundMigration.ts#migrateAnnex, still evicted where a machine holds it
     JOBS_KEY, // lib/jobs.tsx — profile-wide, cleared wholesale (see above)
+    PIPELINE_ARM_KEY, // app/foundry/PipelineTab.tsx — evicted ON PURPOSE, and it is the
+    // one key here whose exemption would be a money bug rather than an
+    // inconvenience. It records whether the pipeline board may spend the
+    // operator's Claude seat ($47-92 a dispatch); it is profile-wide, like
+    // JOBS_KEY, so by shape it reads like an identity-independent preference.
+    // Left as an exception, a board someone armed to LIVE would stay armed
+    // across a sign-out and the next account on that browser would inherit
+    // it. Evicting it returns the arm to its safe default for whoever signs
+    // in next, which is the whole reason the default is STUB.
+    FIXTURE_SEED_KEY, // lib/fixtures/seedBrowser.ts - which fixture bundle this
+    // browser already holds. Profile-wide, like the two above. Its VALUE is
+    // `<uid>:<seedId>`, so a surviving stamp would not make the next account
+    // read the first one's shelf - the comparison misses and the seed re-runs.
+    // It is evicted for the smaller reason, which is still a reason: the value
+    // is the departed account's uid, left legible to whoever opens the console
+    // next, and the cost of removing it is one idempotent re-seed on a
+    // fixture-mode build.
   ];
 }
 
