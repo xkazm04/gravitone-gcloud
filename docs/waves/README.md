@@ -186,3 +186,14 @@ Paged IndexedDB reads were looked for and not built: the asset rows are pointers
 - Shift+J/K to extend a board batch (needs `lib/board/keys.ts` to tell Shift apart); memoised board `Frame` cells and arrange `Card`s (need stable handlers); the board's per-roll "N more" onto `Pager`.
 - Triage N as "next unjudged" like the foundry's; Shift+X reject without a defect; J/K between hunt leaves.
 - The kit search field has no visible border until focused (the `k-ctl` skin).
+
+### Wave 6 · integration (2026-10-08)
+
+**Shipped.**
+- Research expert board, card detail on demand (the Wave 2 proposal): a card shows its chips, the claim verbatim and any work warning ("load-bearing at low confidence — needs a second source…"); the fact's note (corrections, follow-ups), the pattern, "wrong if", sources with evidence class and locator, and the source line open per card (a `Details` control beside like/deepen, outside the scope overlay, `aria-expanded`) or board-wide with a remembered `details` switch. Measured at 1600px on the fixture: 10364px → 6344px with details off, 10341px with every card open, so nothing was removed, only moved one level down.
+
+**Measured.** Every gate in `npm run verify` passes except `probes`, whose only failures are the ten that also fail on the untouched base in this container (`hint-tap` ×4 and the `articles-checks` rendered case: the Playwright build expects a Chromium this image lacks; `articles-critique`/`-engine`/`-ui` ×5: git push and PR steps). Passing probes 1817 → 1832.
+
+**Proposals (not built).**
+- J/K card focus on the triage board with a key to expand the focused card (the board has no card focus today); a two-row layout for the seven-card Conclusions column (~1500px more).
+- Context map: the 15 new files all sit in directories existing contexts own (DRIFT none), but the map carries 18 stale paths that predate this branch; it needs a delta scan on the machine that owns it (project `d57f858b`).

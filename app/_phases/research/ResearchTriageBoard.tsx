@@ -11,11 +11,12 @@
 
 import { useState } from "react";
 
-import { CircleSlash } from "lucide-react";
+import { ChevronsUpDown, CircleSlash } from "lucide-react";
 
 import { Pager, useWindow } from "@/components/kit";
 import { Eyebrow } from "@/components/ui/Primitives";
 import { Hint, Tally } from "@/components/ui/signal";
+import { useRemembered } from "@/lib/useRemembered";
 import type { ScopeApi } from "./useScope";
 import { stateOf, type Card, type Wound } from "./scope";
 import {
@@ -48,6 +49,8 @@ function boardColumns(api: ScopeApi): Dimension[] {
  *  a scroll past every other column before the next one starts. */
 const COLUMN_WINDOW = 10;
 
+const DETAILS_MODES = ["off", "on"] as const;
+
 /** One column's cards, a window at a time (Wave 2). The window resets when the
  *  board is dealt from a different notebook (`api.source.digest`) — a new
  *  notebook is a different list, not a longer one. */
@@ -56,18 +59,20 @@ function ColumnCards({
   api,
   woundOf,
   label,
+  details,
 }: {
   cards: Card[];
   api: ScopeApi;
   woundOf: (id: string) => Wound | undefined;
   label: string;
+  details: boolean;
 }) {
   const w = useWindow(cards, { size: COLUMN_WINDOW, key: api.source.digest });
   return (
     <>
       <ul className="mt-3 space-y-2.5">
         {w.visible.map((c) => (
-          <CardTile key={c.id} card={c} api={api} wound={woundOf(c.id)} />
+          <CardTile key={c.id} card={c} api={api} wound={woundOf(c.id)} details={details} />
         ))}
       </ul>
       {w.total > COLUMN_WINDOW && (
@@ -86,6 +91,10 @@ function ColumnCards({
 
 export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; trouble?: string | null }) {
   const [focus, setFocus] = useState<string | null>(null);
+  /** Every card's record at once, for the expert who reads rather than sweeps.
+   *  Off by default: the board's first job is the sweep (CardTile.tsx, CardBody). */
+  const [detailsMode, setDetailsMode] = useRemembered("research.board.details", "off", DETAILS_MODES);
+  const details = detailsMode === "on";
   const woundOf = (id: string) => api.summary.wounds.find((w) => w.cardId === id);
 
   /** THE COLUMN THAT ONLY EXISTS WHEN IT HAS TO. `columnsFor` shipped with no
@@ -129,38 +138,52 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
           TOGGLES, so they carry `aria-pressed`: their only pressed signal is a
           cyan border, and every other toggle in this step already says it out
           loud (CardTile, beats/VariantTile). */}
-      <div className="font-jetbrains flex flex-wrap gap-1.5 text-label" role="group" aria-label="Filter columns">
+      <div className="font-jetbrains flex flex-wrap items-start gap-1.5 text-label">
+        <div className="flex flex-1 flex-wrap gap-1.5" role="group" aria-label="Filter columns">
+          <button
+            type="button"
+            onClick={() => setFocus(null)}
+            aria-pressed={focus === null}
+            className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
+              focus === null ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/40 hover:text-white/70"
+            }`}
+          >
+            all {columns.length}
+          </button>
+          {columns.map((d) => {
+            const n = countOf(d);
+            const orphan = d.id === UNTAGGED_DIMENSION_ID;
+            return (
+              <button
+                key={d.id}
+                type="button"
+                onClick={() => setFocus(focus === d.id ? null : d.id)}
+                aria-pressed={focus === d.id}
+                className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
+                  focus === d.id
+                    ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
+                    : orphan
+                      ? "border-amber-400/35 text-amber-200/85 hover:text-amber-100"
+                      : "border-white/10 text-white/40 hover:text-white/70"
+                }`}
+              >
+                {d.label} <span className={orphan ? "text-amber-200/50" : "text-white/30"}>{n.kept}/{n.total}</span>
+              </button>
+            );
+          })}
+        </div>
         <button
           type="button"
-          onClick={() => setFocus(null)}
-          aria-pressed={focus === null}
-          className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
-            focus === null ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/40 hover:text-white/70"
+          data-testid="board-details"
+          onClick={() => setDetailsMode(details ? "off" : "on")}
+          aria-pressed={details}
+          className={`ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
+            details ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200" : "border-white/10 text-white/40 hover:text-white/70"
           }`}
         >
-          all {columns.length}
+          <ChevronsUpDown className="h-3.5 w-3.5" aria-hidden />
+          details
         </button>
-        {columns.map((d) => {
-          const n = countOf(d);
-          const orphan = d.id === UNTAGGED_DIMENSION_ID;
-          return (
-            <button
-              key={d.id}
-              type="button"
-              onClick={() => setFocus(focus === d.id ? null : d.id)}
-              aria-pressed={focus === d.id}
-              className={`rounded-full border px-2.5 py-1 tracking-[0.1em] transition ${
-                focus === d.id
-                  ? "border-cyan-400/40 bg-cyan-400/10 text-cyan-200"
-                  : orphan
-                    ? "border-amber-400/35 text-amber-200/85 hover:text-amber-100"
-                    : "border-white/10 text-white/40 hover:text-white/70"
-              }`}
-            >
-              {d.label} <span className={orphan ? "text-amber-200/50" : "text-white/30"}>{n.kept}/{n.total}</span>
-            </button>
-          );
-        })}
       </div>
 
       {/* WHAT CHANGED, RATHER THAN EVERYTHING THERE IS. `aria-live="polite"`
@@ -286,7 +309,7 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
                       </Hint>
                     </div>
                   )}
-                  <ColumnCards cards={cards} api={api} woundOf={woundOf} label={d.label} />
+                  <ColumnCards cards={cards} api={api} woundOf={woundOf} label={d.label} details={details} />
                 </>
               )}
             </section>
