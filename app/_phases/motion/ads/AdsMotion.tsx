@@ -50,16 +50,15 @@ export default function AdsMotion({ projectId }: { projectId: string }) {
     !ctl.loaded || !ctl.picked || ctl.stale ? null : total > 0 && ctl.adoptedCount === total ? "done" : ctl.anyClip ? "working" : null,
   );
 
-  const adoptedIds = ctl.shots.flatMap((s) => {
-    const id = ctl.shotsData.shots[s.id]?.adoptedImage;
-    return id ? [id] : [];
-  });
-  const urls = useAssetUrls(adoptedIds);
+  const active = ctl.shots.find((s) => s.id === chosen) ?? ctl.shots[0];
+  // The adopted still of the shot ON SCREEN only — the panel draws one; every
+  // shot's used to be read and minted on open. useAssetUrls keeps what it has
+  // minted, so a shot opened once stays instant.
+  const adoptedId = active ? ctl.shotsData.shots[active.id]?.adoptedImage : undefined;
+  const urls = useAssetUrls(adoptedId ? [adoptedId] : []);
 
   if (!ctl.loaded) return <AdsLoading testId="AdsMotion-loading" />;
   if (ctl.refused || !ctl.picked) return <AdsGate base={ctl} projectId={projectId} current="motion" testId="AdsMotion-no-scenario" />;
-
-  const active = ctl.shots.find((s) => s.id === chosen) ?? ctl.shots[0];
 
   return (
     <div className="space-y-4" data-testid="AdsMotion" data-project={projectId}>
@@ -127,7 +126,7 @@ function ShotPanel({
             <figure className={`${frame} ${tall ? "w-56" : "w-full"} overflow-hidden rounded-xl border border-cyan-400/40 bg-white/[0.03]`}>
               {adoptedUrl && (
                 // eslint-disable-next-line @next/next/no-img-element -- a blob: URL from IndexedDB; next/image cannot optimise it
-                <img src={adoptedUrl} alt={`shot ${index + 1}, adopted key image`} className="h-full w-full object-cover" />
+                <img src={adoptedUrl} alt={`shot ${index + 1}, adopted key image`} decoding="async" className="h-full w-full object-cover" />
               )}
             </figure>
             {adoptedClip?.status === "done" && (

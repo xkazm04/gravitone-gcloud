@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 570,
+  "files": 579,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -378,6 +378,27 @@
       ],
       "adopters": []
     },
+    "Fold": {
+      "home": "components/ui/signal/Fold.tsx",
+      "surfaces": [
+        "components/ui/signal/index.ts"
+      ],
+      "adopters": [
+        "app/_phases/frames/ShotSheet.tsx",
+        "app/_phases/research/run/LiveResult.tsx",
+        "app/_phases/script/_notes/RecalibrateControl.tsx",
+        "app/_phases/script/_parts/ConstraintLedger.tsx",
+        "app/_phases/script/_parts/GatePanel.tsx",
+        "app/_phases/script/_parts/HypothesisColumn.tsx",
+        "app/_phases/script/trailer/StructurePanel.tsx",
+        "app/articles/CritiquePanel.tsx",
+        "app/articles/RunView.tsx",
+        "app/articles/parts.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/Lightbox.tsx"
+      ]
+    },
     "FolderTree": {
       "home": "components/kit/FolderTree.tsx",
       "surfaces": [
@@ -458,7 +479,6 @@
         "app/_projects/ProjectDialog.tsx",
         "app/_projects/wizard/stages.tsx",
         "app/articles/new/NewArticle.tsx",
-        "app/articles/parts.tsx",
         "app/board/parts.tsx",
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/ExtractView.tsx",
@@ -493,8 +513,13 @@
       ],
       "adopters": [
         "app/_phases/cut/parts/Transport.tsx",
+        "app/_phases/frames/FramesAssembly.tsx",
+        "app/_phases/frames/ads/AdsFrames.tsx",
+        "app/_phases/frames/alternatives/VariantContactSheet.tsx",
+        "app/_phases/motion/MotionStep.tsx",
         "app/_projects/ShelfHeader.tsx",
         "app/board/parts.tsx",
+        "app/calendar/BroadcastWeek.tsx",
         "app/foundry/DojoView.tsx",
         "app/foundry/ExtractView.tsx",
         "app/foundry/FoundryView.tsx",
@@ -507,7 +532,8 @@
         "app/playground/arrange/index.tsx",
         "app/playground/hunt/Audition.tsx",
         "app/playground/hunt/index.tsx",
-        "app/playground/triage/Judge.tsx"
+        "app/playground/triage/Judge.tsx",
+        "app/studio/[projectId]/StudioView.tsx"
       ]
     },
     "Kicker": {
@@ -640,7 +666,19 @@
       "surfaces": [
         "components/kit/index.ts"
       ],
-      "adopters": []
+      "adopters": [
+        "app/_library/LibraryShelves.tsx",
+        "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/articles/ArticlesView.tsx",
+        "app/calendar/MetricsTab.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/StylesShelf.tsx",
+        "app/library/assets/ShelfGallery.tsx",
+        "app/library/audio/Ledger.tsx",
+        "app/playground/hunt/Start.tsx",
+        "app/playground/triage/Judge.tsx"
+      ]
     },
     "Panel": {
       "home": "components/ui/Primitives.tsx",
@@ -674,6 +712,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/cut/parts/FinishLine.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/board/parts.tsx",
@@ -994,6 +1033,7 @@
         "app/_phases/research/MusicVideoResearch.tsx",
         "app/_phases/research/ResearchTriageBoard.tsx",
         "app/_phases/research/_parts/FollowUpResult.tsx",
+        "app/_phases/research/guided/GuidedResearch.tsx",
         "app/_phases/score/CueTakes.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
         "app/_phases/score/ads/AdsScore.tsx",
@@ -1281,7 +1321,17 @@
       "surfaces": [
         "components/kit/index.ts"
       ],
-      "adopters": []
+      "adopters": [
+        "app/_library/LibraryShelves.tsx",
+        "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/articles/ArticlesView.tsx",
+        "app/calendar/MetricsTab.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/StylesShelf.tsx",
+        "app/library/assets/useShelf.ts",
+        "app/playground/hunt/Start.tsx"
+      ]
     }
   },
   "modules": {
@@ -1339,14 +1389,16 @@
     },
     "app/_library": {
       "files": 4,
-      "kitImports": 0,
+      "kitImports": 1,
       "signalImports": 1,
       "parts": [
         "CHIP_CLASS",
         "Ghost",
+        "Pager",
         "Provenance",
         "TALLY_TONE",
-        "Tally"
+        "Tally",
+        "useWindow"
       ],
       "suspects": {
         "tab": 0,
@@ -1385,14 +1437,15 @@
       "suspectFiles": {}
     },
     "app/_phases/cut": {
-      "files": 24,
+      "files": 25,
       "kitImports": 0,
-      "signalImports": 6,
+      "signalImports": 7,
       "parts": [
         "CHIP_CLASS",
         "Ghost",
         "Hint",
         "Keycaps",
+        "PipRow",
         "StaleBadge",
         "TALLY_TONE",
         "Tally",
@@ -1403,13 +1456,9 @@
         "select": 0,
         "media": 0,
         "title": 0,
-        "typing": 1
+        "typing": 0
       },
-      "suspectFiles": {
-        "app/_phases/cut/parts/Transport.tsx": {
-          "typing": 1
-        }
-      }
+      "suspectFiles": {}
     },
     "app/_phases/frames": {
       "files": 31,
@@ -1418,8 +1467,10 @@
       "parts": [
         "Button",
         "CHIP_CLASS",
+        "Fold",
         "Ghost",
         "Hint",
+        "Keycaps",
         "StaleBadge",
         "TALLY_TONE",
         "TabRail",
@@ -1430,16 +1481,13 @@
         "tab": 0,
         "select": 1,
         "media": 0,
-        "title": 7,
+        "title": 5,
         "typing": 0
       },
       "suspectFiles": {
         "app/_phases/frames/FramesAssembly.tsx": {
           "select": 1,
           "title": 3
-        },
-        "app/_phases/frames/ShotSheet.tsx": {
-          "title": 2
         },
         "app/_phases/frames/alternatives/VariantContactSheet.tsx": {
           "title": 2
@@ -1454,6 +1502,7 @@
         "Button",
         "CHIP_CLASS",
         "Ghost",
+        "Keycaps",
         "Provenance",
         "TALLY_TONE",
         "Tally",
@@ -1471,9 +1520,9 @@
       "suspectFiles": {}
     },
     "app/_phases/research": {
-      "files": 38,
-      "kitImports": 1,
-      "signalImports": 14,
+      "files": 40,
+      "kitImports": 2,
+      "signalImports": 15,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1484,10 +1533,12 @@
         "Dropzone",
         "Eyebrow",
         "Field",
+        "Fold",
         "Ghost",
         "Hint",
         "HintPopover",
         "Modal",
+        "Pager",
         "Panel",
         "PipRow",
         "Provenance",
@@ -1497,7 +1548,8 @@
         "TextArea",
         "TextInput",
         "hintRootClass",
-        "useHint"
+        "useHint",
+        "useWindow"
       ],
       "suspects": {
         "tab": 0,
@@ -1534,7 +1586,7 @@
       }
     },
     "app/_phases/score": {
-      "files": 14,
+      "files": 15,
       "kitImports": 0,
       "signalImports": 4,
       "parts": [
@@ -1567,11 +1619,12 @@
     "app/_phases/script": {
       "files": 51,
       "kitImports": 0,
-      "signalImports": 15,
+      "signalImports": 17,
       "parts": [
         "Button",
         "DeckCard",
         "DeckStage",
+        "Fold",
         "Ghost",
         "Hint",
         "Modal",
@@ -1644,7 +1697,7 @@
         "tab": 0,
         "select": 0,
         "media": 0,
-        "title": 4,
+        "title": 3,
         "typing": 1
       },
       "suspectFiles": {
@@ -1652,9 +1705,6 @@
           "title": 2
         },
         "app/_projects/ShelfHeader.tsx": {
-          "title": 1
-        },
-        "app/_projects/parts.tsx": {
           "title": 1
         },
         "app/_projects/useShelf.ts": {
@@ -1693,22 +1743,25 @@
       "suspectFiles": {}
     },
     "app/articles": {
-      "files": 11,
-      "kitImports": 0,
+      "files": 13,
+      "kitImports": 1,
       "signalImports": 5,
       "parts": [
         "Button",
         "CHIP_CLASS",
         "Field",
+        "Fold",
         "Ghost",
         "Hint",
+        "Pager",
         "Provenance",
         "Segmented",
         "TALLY_TONE",
         "Tally",
         "TextArea",
         "TextInput",
-        "components/ui/Select#Select"
+        "components/ui/Select#Select",
+        "useWindow"
       ],
       "suspects": {
         "tab": 0,
@@ -1757,12 +1810,14 @@
     },
     "app/calendar": {
       "files": 16,
-      "kitImports": 0,
+      "kitImports": 1,
       "signalImports": 7,
       "parts": [
         "Button",
         "CHIP_CLASS",
         "Field",
+        "Keycaps",
+        "Pager",
         "Panel",
         "PipRow",
         "TALLY_TONE",
@@ -1770,7 +1825,8 @@
         "Tally",
         "TextArea",
         "TextInput",
-        "components/ui/Select#Select"
+        "components/ui/Select#Select",
+        "useWindow"
       ],
       "suspects": {
         "tab": 0,
@@ -1783,15 +1839,17 @@
     },
     "app/foundry": {
       "files": 40,
-      "kitImports": 2,
+      "kitImports": 5,
       "signalImports": 13,
       "parts": [
         "Button",
         "CHIP_CLASS",
+        "Fold",
         "Ghost",
         "Hint",
         "Keycaps",
         "Modal",
+        "Pager",
         "PipRow",
         "Provenance",
         "Segmented",
@@ -1801,25 +1859,17 @@
         "TextArea",
         "TextInput",
         "components/ui/Select#Select",
-        "useRoving"
+        "useRoving",
+        "useWindow"
       ],
       "suspects": {
         "tab": 1,
         "select": 0,
         "media": 2,
         "title": 1,
-        "typing": 3
+        "typing": 0
       },
       "suspectFiles": {
-        "app/foundry/CullGrid.tsx": {
-          "typing": 1
-        },
-        "app/foundry/DojoView.tsx": {
-          "typing": 1
-        },
-        "app/foundry/ExtractBoard.tsx": {
-          "typing": 1
-        },
         "app/foundry/ExtractView.tsx": {
           "title": 1
         },
@@ -1877,6 +1927,7 @@
         "Figures",
         "Final",
         "FlagChip",
+        "Fold",
         "FolderTree",
         "Ghost",
         "Hint",
@@ -1965,7 +2016,7 @@
     },
     "app/library": {
       "files": 40,
-      "kitImports": 4,
+      "kitImports": 7,
       "signalImports": 11,
       "parts": [
         "Button",
@@ -1975,6 +2026,7 @@
         "Hint",
         "Keycaps",
         "Modal",
+        "Pager",
         "Panel",
         "PipRow",
         "Player",
@@ -1984,23 +2036,22 @@
         "ToastTray",
         "WorldRoot",
         "clock",
-        "useToast"
+        "useToast",
+        "useWindow"
       ],
       "suspects": {
         "tab": 2,
         "select": 0,
         "media": 0,
         "title": 2,
-        "typing": 2
+        "typing": 0
       },
       "suspectFiles": {
         "app/library/AssetLightbox.tsx": {
-          "title": 1,
-          "typing": 1
+          "title": 1
         },
         "app/library/audio/AudioWorkbench.tsx": {
-          "tab": 2,
-          "typing": 1
+          "tab": 2
         },
         "app/library/parts.tsx": {
           "title": 1
@@ -2009,38 +2060,33 @@
     },
     "app/playground": {
       "files": 35,
-      "kitImports": 0,
+      "kitImports": 2,
       "signalImports": 12,
       "parts": [
         "CHIP_CLASS",
         "Ghost",
         "Hint",
         "Keycaps",
+        "Pager",
         "Panel",
         "PipRow",
         "Provenance",
         "TALLY_TONE",
         "TabRail",
         "Tally",
-        "components/ui/Select#Select"
+        "components/ui/Select#Select",
+        "useWindow"
       ],
       "suspects": {
         "tab": 1,
         "select": 0,
         "media": 0,
         "title": 0,
-        "typing": 3
+        "typing": 0
       },
       "suspectFiles": {
-        "app/playground/hunt/Audition.tsx": {
-          "typing": 1
-        },
         "app/playground/hunt/index.tsx": {
-          "tab": 1,
-          "typing": 1
-        },
-        "app/playground/triage/Judge.tsx": {
-          "typing": 1
+          "tab": 1
         }
       }
     },
@@ -2067,11 +2113,12 @@
       }
     },
     "app/studio": {
-      "files": 4,
+      "files": 5,
       "kitImports": 0,
-      "signalImports": 0,
+      "signalImports": 1,
       "parts": [
-        "Button"
+        "Button",
+        "Keycaps"
       ],
       "suspects": {
         "tab": 0,
@@ -2092,7 +2139,7 @@
     "components/kit": {
       "files": 48,
       "kitImports": 13,
-      "signalImports": 4,
+      "signalImports": 5,
       "parts": [
         "ASTERISM_PATH",
         "ASTERISM_STARS",
@@ -2117,7 +2164,7 @@
       "suspectFiles": {}
     },
     "components/ui": {
-      "files": 17,
+      "files": 18,
       "kitImports": 1,
       "signalImports": 2,
       "parts": [
@@ -2166,9 +2213,9 @@
       "suspectFiles": {}
     },
     "components/ui/signal": {
-      "files": 12,
+      "files": 13,
       "kitImports": 0,
-      "signalImports": 4,
+      "signalImports": 5,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -2229,7 +2276,6 @@
     "NumberField",
     "OpenLink",
     "PageHead",
-    "Pager",
     "PanelBox",
     "Plate",
     "Prose",
@@ -2263,7 +2309,6 @@
     "Waveform",
     "components/ui/Primitives#Waveform",
     "gradeOf",
-    "pct",
-    "useWindow"
+    "pct"
   ]
 }

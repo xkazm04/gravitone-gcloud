@@ -16,11 +16,13 @@
 // The face lives in the URL (`?view=strengths`) so a strengths table can be
 // linked to whoever is writing the next prompt.
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
+import dynamic from "next/dynamic";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Gavel, Grid3x3 } from "lucide-react";
 
+import { pendingPanel } from "@/components/ui/Pending";
 import { Ghost, Tally } from "@/components/ui/signal";
 import type { SoundKind } from "@/lib/sound/types";
 
@@ -28,8 +30,13 @@ import { ErrorLine } from "../shared/shell";
 
 import Judge from "./Judge";
 import { queueOrder } from "./model";
-import Strengths from "./Strengths";
 import { useTriage } from "./useTriage";
+
+// The judge face is the default and the one used daily; the strengths table
+// (its sort, pivot, lesson drafting and insights read) is fetched only when
+// that face is chosen or linked (Wave 0's pattern, docs/waves/README.md).
+const Strengths = dynamic(() => import("./Strengths"), { loading: pendingPanel });
+const preloadStrengths = () => void import("./Strengths");
 
 type View = "judge" | "strengths";
 
@@ -53,8 +60,9 @@ export default function TriageModule({ kind }: { kind: SoundKind }) {
     return () => clearInterval(t);
   }, []);
 
-  const waiting = queueOrder(data.takes, kind).length;
-  const judged = data.takes.filter((t) => t.verdict !== "unjudged").length;
+  // Off the minute clock's re-render: these sort and scan every take.
+  const waiting = useMemo(() => queueOrder(data.takes, kind).length, [data.takes, kind]);
+  const judged = useMemo(() => data.takes.filter((t) => t.verdict !== "unjudged").length, [data.takes]);
 
   return (
     <div data-module="triage" data-kind={kind} className="grid gap-4">
@@ -74,6 +82,8 @@ export default function TriageModule({ kind }: { kind: SoundKind }) {
               aria-checked={on}
               data-testid={`triage-${id}`}
               onClick={() => setView(id)}
+              onPointerEnter={id === "strengths" ? preloadStrengths : undefined}
+              onFocus={id === "strengths" ? preloadStrengths : undefined}
               className={`inline-flex cursor-pointer items-center gap-2 rounded-xl border px-3.5 py-1.5 font-jetbrains text-label transition ${
                 on
                   ? "border-white/15 bg-white/[0.06] text-white"

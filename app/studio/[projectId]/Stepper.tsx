@@ -35,6 +35,8 @@
 // navigate with, and it cost three lines of height that pushed the step itself
 // below the fold.
 
+import { useRef, type KeyboardEvent } from "react";
+
 import { Check } from "lucide-react";
 
 import {
@@ -89,6 +91,29 @@ export default function Stepper({
   onPick: (key: PhaseKey) => void;
 }) {
   const states = project ? phaseStates(project) : (progress ?? ({} as Record<PhaseKey, PhaseState>));
+  // ARROWS MOVE FOCUS ALONG THE RAIL; Enter or Space takes the step. Manual
+  // activation, like TabRail: arriving on a step mounts it and parks the
+  // project there, which is too much to do for a key held down on the way past.
+  // Focus is the cheap half — it already starts the step's chunk (`preload`),
+  // so the press lands on code that is fetched. preventDefault also keeps the
+  // cut's window-bound transport from reading the same arrow as a frame step.
+  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
+    const last = STEPS.length - 1;
+    const to =
+      e.key === "ArrowRight"
+        ? Math.min(last, i + 1)
+        : e.key === "ArrowLeft"
+          ? Math.max(0, i - 1)
+          : e.key === "Home"
+            ? 0
+            : e.key === "End"
+              ? last
+              : null;
+    if (to === null) return;
+    e.preventDefault();
+    buttons.current[to]?.focus();
+  };
   return (
     <ol className="scroll-x flex overflow-hidden rounded-xl border border-white/8 bg-white/[0.02]">
       {STEPS.map((s, i) => {
@@ -97,7 +122,14 @@ export default function Stepper({
         return (
           <li key={s.key} className={`min-w-0 flex-1 ${i > 0 ? "border-l border-white/8" : ""}`}>
             <button
+              ref={(el) => {
+                buttons.current[i] = el;
+              }}
               onClick={() => onPick(s.key)}
+              onKeyDown={(e) => onKeyDown(e, i)}
+              // Each step is its own chunk (phases.tsx); intent to click starts the fetch.
+              onPointerEnter={s.preload}
+              onFocus={s.preload}
               // Named for the step's ROLE in the production, never for its
               // position: the rail is reordered by editing STEPS in phases.ts,
               // and `step-3` would then point at a different surface while every

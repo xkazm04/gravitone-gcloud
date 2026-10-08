@@ -26,13 +26,14 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 
 import { Keycaps, Tally } from "@/components/ui/signal";
 import type { CycleManifest, CycleStatus, Improvement, PairResult, TrainingCommitResult, TrainingCycleSummary, TrainingVerdict, TrainingVerdicts } from "@/lib/foundry/training/types";
+import { typing } from "@/lib/board/keys";
 import { usePolling } from "@/lib/usePolling";
 
 import { RailFrame, RailItem, Wash } from "./RunCards";
 import { fetchTrainingCycle, fetchTrainingCycles, saveTrainingVerdicts, commitTrainingCycle, fileUrl } from "./foundryClient";
 import { DOJO_STATUS_WORD, cycleKind } from "./parts";
 import { Art, BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PrimaryAction, SaveNote, StatusChip, VerdictButtons, VerdictStamp, ScorePill, type SaveKind } from "./ui";
-import { refusedKey } from "./keyGuard";
+import { nextUndecided, refusedKey } from "./keyGuard";
 
 /** Statuses the loop is still working — the page only watches these. */
 const DOJO_LIVE: CycleStatus[] = ["planning", "generating", "judging"];
@@ -180,8 +181,7 @@ export function DojoView() {
     if (!detail || readOnly || confirm) return;
     const onKey = (e: KeyboardEvent) => {
       if (refusedKey(e)) return;
-      const t = e.target as HTMLElement | null;
-      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.isContentEditable)) return;
+      if (typing(e.target)) return;
       const i = focused ? order.indexOf(focused) : -1;
       const step = (d: number) => {
         const n = Math.min(order.length - 1, Math.max(0, (i < 0 ? 0 : i) + d));
@@ -210,11 +210,17 @@ export function DojoView() {
         case "U":
           if (focused) setVerdict(focused, null);
           break;
+        case "n":
+        case "N": {
+          const next = nextUndecided(order, focused, (id) => !verdicts[id]);
+          if (next) setFocused(next);
+          break;
+        }
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [detail, readOnly, confirm, focused, order, setVerdict]);
+  }, [detail, readOnly, confirm, focused, order, verdicts, setVerdict]);
 
   useEffect(() => {
     if (!focused) return;
@@ -350,6 +356,7 @@ export function DojoView() {
               { keys: ["K"], does: "approve" },
               { keys: ["X"], does: "reject" },
               { keys: ["U"], does: "clear" },
+              { keys: ["N"], does: "next undecided" },
             ]}
           />
           <span className="ml-auto flex items-center gap-3">

@@ -41,9 +41,12 @@
 //    falsifier, source) is muted so a column scans, but muted is not the same as
 //    unreadable — hovering a card brings every line up to full contrast on a
 //    linear transition, so "what is the pattern behind this conclusion?" is a
-//    hover away rather than a squint.
+//    hover away rather than a squint — once the card's record is open, which
+//    is one press down since 2026-10-08 (see `CardBody`).
 
-import { SignalHigh, SignalLow, SignalMedium, type LucideIcon } from "lucide-react";
+import { useId, useState } from "react";
+
+import { ChevronDown, SignalHigh, SignalLow, SignalMedium, type LucideIcon } from "lucide-react";
 
 import { EvidenceClassChip } from "../../_shared/notebook/Chips";
 import type { Leap } from "../../_shared/notebook/conclusions";
@@ -113,8 +116,57 @@ function ConfidenceMark({ c }: { c: Confidence }) {
   );
 }
 
-export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
+/** WHAT IS ON THE CARD AND WHAT IS ONE PRESS DOWN (2026-10-08).
+ *
+ *  The board printed every card's whole record — the fact's note (one runs to
+ *  ninety-odd words: a dated correction of an arithmetic error), each
+ *  conclusion's reasoning, precedent and falsifier, every source line with its
+ *  as-of — and a seven-column board of that read as one ten-thousand-pixel
+ *  column nobody could sweep. Sweeping is what the board is for.
+ *
+ *  So the card is layered, and the split is by what the TRIAGE decision reads:
+ *   · L1, always: the chips that rank the card (id, kind, load-bearing, holder,
+ *     confidence, hottest, required, a conclusion's leap / use / basis), the
+ *     claim verbatim, and every warning about the work — load-bearing at low
+ *     confidence, a wound from a descoped dependency. A warning hidden behind a
+ *     press is a warning nobody reads, which is how a sentence ships into three
+ *     scripts.
+ *   · L2, `open`: the record behind the claim — the fact's note, the full
+ *     reasoning (clamped to two lines on L1 for every kind but a fact, whose
+ *     note is ABOUT the record rather than part of the claim), the pattern, the
+ *     falsifier, the sources with class and locator, the as-of. Verbatim; only
+ *     the level moved.
+ *
+ *  Nothing is unmounted from the claim's side: the clamped reasoning is the
+ *  same element either way, so a screen reader hears it whole on L1. */
+/** Past this a two-line clamp may cut a non-fact's reasoning; under it the line
+ *  is drawn whole on L1 and is no reason for an expand control (a mechanism's
+ *  "explains" runs six to nine words, and a chevron that opens nothing is a lie). */
+const CLAMP_FROM = 110;
+
+const clamps = (card: Card) => card.kind !== "fact" && (card.detail?.length ?? 0) > CLAMP_FROM;
+
+export function hasDetail(card: Card): boolean {
+  return !!(
+    (card.kind === "fact" && card.detail) ||
+    clamps(card) ||
+    card.precedent ||
+    card.falsifiableBy ||
+    card.sources?.length ||
+    card.source
+  );
+}
+
+export function CardBody({ card, wound, open = true, detailId }: {
+  card: Card;
+  wound?: Wound;
+  /** L2 drawn. Defaults open, so a caller that only wants the record gets it. */
+  open?: boolean;
+  /** The id the card's expand control names in `aria-controls`. */
+  detailId?: string;
+}) {
   const risky = card.kind === "fact" && card.loadBearing && card.confidence === "low";
+  const factNote = card.kind === "fact";
   return (
     <>
       <div className="flex flex-wrap items-center gap-1.5">
@@ -156,81 +208,99 @@ export function CardBody({ card, wound }: { card: Card; wound?: Wound }) {
       <p className="mt-2 text-content leading-relaxed text-slate-300 transition-colors duration-200 ease-linear group-hover:text-slate-100">
         {card.title}
       </p>
-      {card.detail && (
-        <p className={lift("mt-1.5 text-content leading-relaxed text-white/45", "group-hover:text-white/80")}>
+      {card.detail && !factNote && (
+        <p
+          className={lift(
+            `mt-1.5 text-content leading-relaxed text-white/45 ${!open && clamps(card) ? "line-clamp-2" : ""}`,
+            "group-hover:text-white/80",
+          )}
+        >
           {card.detail}
         </p>
       )}
 
       {card.kind === "conclusion" && (
-        <div className="mt-2.5 space-y-2 border-l-2 border-violet-400/25 pl-3">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.1em] ${LEAP_TONE[card.leap ?? "moderate"]}`}>
-              {card.leap} leap
-            </span>
-            <span className={lift("font-jetbrains rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-label tracking-[0.1em] text-white/45", "group-hover:text-white/75")}>
-              would be the {card.useFor}
-            </span>
-            <span className={lift("font-jetbrains text-label text-white/30", "group-hover:text-white/60")}>
-              {card.hottest ? "speculation about motive — not reporting" : "no direct source — reasoned"}
-            </span>
-          </div>
-          {card.precedent && (
-            <p className={lift("text-content leading-relaxed text-white/55", "group-hover:text-white/85")}>
-              <span className="font-jetbrains text-label tracking-[0.12em] text-violet-200/80 uppercase transition-colors duration-200 ease-linear group-hover:text-violet-200">
-                pattern · {card.precedent.domain}
-              </span>
-              <br />
-              {card.precedent.note}
+        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 border-l-2 border-violet-400/25 pl-3">
+          <span className={`font-jetbrains rounded border px-1.5 py-0.5 text-label tracking-[0.1em] ${LEAP_TONE[card.leap ?? "moderate"]}`}>
+            {card.leap} leap
+          </span>
+          <span className={lift("font-jetbrains rounded border border-white/10 bg-white/[0.03] px-1.5 py-0.5 text-label tracking-[0.1em] text-white/45", "group-hover:text-white/75")}>
+            would be the {card.useFor}
+          </span>
+          <span className={lift("font-jetbrains text-label text-white/30", "group-hover:text-white/60")}>
+            {card.hottest ? "speculation about motive — not reporting" : "no direct source — reasoned"}
+          </span>
+        </div>
+      )}
+
+      {open && (
+        <div id={detailId} data-testid={`card-detail-${card.id}`}>
+          {card.detail && factNote && (
+            <p className={lift("mt-1.5 text-content leading-relaxed text-white/45", "group-hover:text-white/80")}>
+              {card.detail}
             </p>
           )}
-          {card.falsifiableBy && (
-            <p className={lift("text-content leading-relaxed text-white/50", "group-hover:text-white/80")}>
-              <span className={lift("font-jetbrains text-label tracking-[0.12em] text-white/35 uppercase", "group-hover:text-white/70")}>
-                wrong if
-              </span>
-              <br />
-              {card.falsifiableBy}
-            </p>
+
+          {card.kind === "conclusion" && (card.precedent || card.falsifiableBy) && (
+            <div className="mt-2.5 space-y-2 border-l-2 border-violet-400/25 pl-3">
+              {card.precedent && (
+                <p className={lift("text-content leading-relaxed text-white/55", "group-hover:text-white/85")}>
+                  <span className="font-jetbrains text-label tracking-[0.12em] text-violet-200/80 uppercase transition-colors duration-200 ease-linear group-hover:text-violet-200">
+                    pattern · {card.precedent.domain}
+                  </span>
+                  <br />
+                  {card.precedent.note}
+                </p>
+              )}
+              {card.falsifiableBy && (
+                <p className={lift("text-content leading-relaxed text-white/50", "group-hover:text-white/80")}>
+                  <span className={lift("font-jetbrains text-label tracking-[0.12em] text-white/35 uppercase", "group-hover:text-white/70")}>
+                    wrong if
+                  </span>
+                  <br />
+                  {card.falsifiableBy}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* STRUCTURED SOURCES, where the fact carries them. `buildCards` used to
+              write `source: f.source` and drop `sources` on the floor entirely, so
+              the one migrated row's evidence class never reached this board —
+              FactRow.tsx (the evidence log) could draw it and the triage board,
+              the surface that actually decides what a script may use, could not.
+              Compact by design: this is a dense board card, not the evidence log,
+              so one chip + name + locator per source rather than FactRow's fuller
+              layout (no confidenceNote line here). "A source a reader cannot
+              navigate to is a name, not a source" (FactRow.tsx) — absent is drawn
+              as absent, never omitted. Falls back to the legacy `card.source` line
+              below so the twenty unmigrated cards look exactly as before. */}
+          {card.sources?.length ? (
+            <ul className="mt-1.5 space-y-1">
+              {card.sources.map((s, i) => (
+                <li key={`${s.name}-${i}`} className="flex flex-wrap items-center gap-1.5">
+                  <EvidenceClassChip c={s.evidenceClass} interested={s.interested} />
+                  <span className={lift("font-jetbrains text-label text-white/45", "group-hover:text-white/75")}>
+                    {s.name}
+                  </span>
+                  <span className={lift("font-jetbrains text-label text-white/28", "group-hover:text-white/60")}>
+                    {s.locator ?? "no locator"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            card.source && (
+              <p className={lift("font-jetbrains mt-1.5 text-content text-white/28", "group-hover:text-white/60")}>
+                {card.source} · as of {card.asOf}
+              </p>
+            )
           )}
         </div>
       )}
 
-      {/* STRUCTURED SOURCES, where the fact carries them. `buildCards` used to
-          write `source: f.source` and drop `sources` on the floor entirely, so
-          the one migrated row's evidence class never reached this board —
-          FactRow.tsx (the evidence log) could draw it and the triage board,
-          the surface that actually decides what a script may use, could not.
-          Compact by design: this is a dense board card, not the evidence log,
-          so one chip + name + locator per source rather than FactRow's fuller
-          layout (no confidenceNote line here). "A source a reader cannot
-          navigate to is a name, not a source" (FactRow.tsx) — absent is drawn
-          as absent, never omitted. Falls back to the legacy `card.source` line
-          below so the twenty unmigrated cards look exactly as before. */}
-      {card.sources?.length ? (
-        <ul className="mt-1.5 space-y-1">
-          {card.sources.map((s, i) => (
-            <li key={`${s.name}-${i}`} className="flex flex-wrap items-center gap-1.5">
-              <EvidenceClassChip c={s.evidenceClass} interested={s.interested} />
-              <span className={lift("font-jetbrains text-label text-white/45", "group-hover:text-white/75")}>
-                {s.name}
-              </span>
-              <span className={lift("font-jetbrains text-label text-white/28", "group-hover:text-white/60")}>
-                {s.locator ?? "no locator"}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        card.source && (
-          <p className={lift("font-jetbrains mt-1.5 text-content text-white/28", "group-hover:text-white/60")}>
-            {card.source} · as of {card.asOf}
-          </p>
-        )
-      )}
-
       {risky && (
-        <p className="font-jetbrains mt-2 text-content text-rose-300">
+        <p className="font-jetbrains mt-2 text-label text-rose-300">
           load-bearing at low confidence — needs a second source before any script may state it
         </p>
       )}
@@ -277,9 +347,27 @@ function ScopeChip({ card, descoped }: { card: Card; descoped: boolean }) {
   );
 }
 
-export default function CardTile({ card, api, wound }: { card: Card; api: ScopeApi; wound?: Wound }) {
+export default function CardTile({
+  card,
+  api,
+  wound,
+  details = false,
+}: {
+  card: Card;
+  api: ScopeApi;
+  wound?: Wound;
+  /** The board's details switch: every card's L2 drawn by default. */
+  details?: boolean;
+}) {
   const s = stateOf(api.scope, card.id, api.optIn);
   const locked = !!card.required;
+  const detailId = useId();
+  // A card's own press wins until the board's switch is flipped again: the
+  // override remembers WHICH board setting it was made against, so flipping
+  // the switch re-deals every card to it instead of leaving strays open.
+  const [own, setOwn] = useState<{ open: boolean; against: boolean } | null>(null);
+  const open = own && own.against === details ? own.open : details;
+  const more = hasDetail(card);
 
   return (
     <li
@@ -321,7 +409,7 @@ export default function CardTile({ card, api, wound }: { card: Card; api: ScopeA
         />
       )}
 
-      <CardBody card={card} wound={wound} />
+      <CardBody card={card} wound={wound} open={open} detailId={detailId} />
 
       <div className="mt-2.5 flex flex-wrap items-center justify-between gap-2">
         <ScopeChip card={card} descoped={s.descoped} />
@@ -329,8 +417,32 @@ export default function CardTile({ card, api, wound }: { card: Card; api: ScopeA
             sweeping a column must never mark something "liked" by accident.
             This is what the stopPropagation wrapper used to buy, back when the
             actions were nested inside the target rather than beside it. */}
-        <div className="relative z-20">
+        <div className="relative z-20 flex items-center gap-1.5">
           <CardActions card={card} api={api} compact />
+          {/* L2 on demand. Beside like/deepen, above the overlay, for the same
+              reason they are: a button nested in the scope toggle would be
+              presentational and unreachable. Its name is stable and its state
+              is `aria-expanded`, the rule scope-toggle-name pins for toggles. */}
+          {more && (
+            <button
+              type="button"
+              data-testid={`card-expand-${card.id}`}
+              onClick={() => setOwn({ open: !open, against: details })}
+              aria-expanded={open}
+              aria-controls={open ? detailId : undefined}
+              aria-label={`Details: ${card.title}`}
+              className={`rounded-full border p-1.5 transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                open
+                  ? "border-white/25 bg-white/[0.06] text-white/80"
+                  : "border-white/12 text-white/40 hover:border-white/25 hover:text-white/75"
+              }`}
+            >
+              <ChevronDown
+                className={`h-4 w-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`}
+                aria-hidden
+              />
+            </button>
+          )}
         </div>
       </div>
     </li>

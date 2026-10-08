@@ -31,8 +31,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import { Pager, useWindow } from "@/components/kit";
 import Modal from "@/components/ui/Modal";
 import { Tally } from "@/components/ui/signal";
+import { useRemembered } from "@/lib/useRemembered";
 import { newTheme, putTheme } from "@/lib/themes";
 import { useAuth } from "@/lib/useAuth";
 import type { Catalogue, LedgerRow, StyleDef } from "@/lib/foundry/types";
@@ -80,7 +82,10 @@ function useSentinel(el: React.RefObject<HTMLElement | null>, onSeen: () => void
 export function StylesShelf() {
   const [cat, setCat] = useState<Catalogue | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [family, setFamily] = useState<string>("all");
+  // The family filter is remembered: a curator working one family (the inks,
+  // the paintings) came back to "all" on every visit. A remembered family the
+  // catalogue no longer has reads as "all" below rather than an empty page.
+  const [chosen, setFamily] = useRemembered<string>("foundry.styles.family", "all");
   const [shelves, setShelves] = useState(SHELVES);
   const [open, setOpen] = useState<string | null>(null);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -90,12 +95,16 @@ export function StylesShelf() {
   }, []);
 
   const families = useMemo(() => familyCounts(cat?.styles ?? []), [cat]);
+  const family = chosen === "all" || !cat || families.some(([f]) => f === chosen) ? chosen : "all";
   const groups = useMemo(() => families.filter(([f]) => family === "all" || f === family), [families, family]);
 
-  const pick = useCallback((f: string) => {
-    setFamily(f);
-    setShelves(SHELVES);
-  }, []);
+  const pick = useCallback(
+    (f: string) => {
+      setFamily(f);
+      setShelves(SHELVES);
+    },
+    [setFamily],
+  );
 
   // Down the page: the next few shelves when the last one comes near. No
   // spinner theatre — the data is already local.
@@ -285,6 +294,11 @@ function StyleSheet({
     for (const x of style.exemplars ?? []) images.push({ id: `${x.run}/${x.file}`, src: exemplarUrl(x), caption: `${x.role} · ${x.run}` });
   }
   const scenes = style ? new Set(style.evidence.filter((e) => e.verdict === "keep").map((e) => `${e.run}/${e.scene}`)).size : 0;
+  // A proven style's evidence only grows: every cull that keeps it adds a plate
+  // and a ledger row, and the document drew all of both on open. Both arrive a
+  // page at a time now, reset when ← / → steps to another style.
+  const plates = useWindow(images, { size: 12, key: style?.id });
+  const rows = useWindow(ledger, { size: 24, key: style?.id });
 
   const nav = (d: -1 | 1) => {
     const fn = d === -1 ? onPrev : onNext;
@@ -331,13 +345,16 @@ function StyleSheet({
       {style && (
         <div className="flex flex-col gap-7">
           {images.length > 0 && (
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              {images.map((im) => (
-                <figure key={im.id} className="flex flex-col gap-1.5">
-                  <Art src={im.src} alt={`${style.name} — ${im.caption}`} className="aspect-video" />
-                  <figcaption className="font-jetbrains truncate px-0.5 text-label text-white/40">{im.caption}</figcaption>
-                </figure>
-              ))}
+            <div className="flex flex-col gap-2">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                {plates.visible.map((im) => (
+                  <figure key={im.id} className="flex flex-col gap-1.5">
+                    <Art src={im.src} alt={`${style.name} — ${im.caption}`} className="aspect-video" />
+                    <figcaption className="font-jetbrains truncate px-0.5 text-label text-white/40">{im.caption}</figcaption>
+                  </figure>
+                ))}
+              </div>
+              {plates.total > 12 && <Pager shown={plates.shown} total={plates.total} onMore={plates.more} onAll={plates.all} step={12} noun="plates" />}
             </div>
           )}
           <section>
@@ -390,7 +407,7 @@ function StyleSheet({
                     </tr>
                   </thead>
                   <tbody>
-                    {ledger.map((r, i) => (
+                    {rows.visible.map((r, i) => (
                       <tr key={`${r.run}-${r.scene}-${r.mechanism}-${r.seed}-${i}`} className="border-t border-white/[0.05]">
                         <td className="font-jetbrains px-3 py-1.5 text-label text-white/70">{r.run}</td>
                         <td className="font-jetbrains px-3 py-1.5 text-label text-white/70">{r.scene}</td>
@@ -407,6 +424,7 @@ function StyleSheet({
                 </table>
               </div>
             )}
+            {rows.total > 24 && <Pager shown={rows.shown} total={rows.total} onMore={rows.more} onAll={rows.all} step={24} noun="ledger rows" />}
           </section>
         </div>
       )}

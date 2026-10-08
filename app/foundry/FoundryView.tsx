@@ -47,22 +47,22 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
+import dynamic from "next/dynamic";
+
 import Modal from "@/components/ui/Modal";
+import { pendingPanel } from "@/components/ui/Pending";
 import StudioFrame from "@/components/ui/StudioFrame";
 import { Keycaps } from "@/components/ui/signal";
 import { calibrate, seriesKey } from "@/lib/foundry/calibration";
 import type { CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdict, Verdicts } from "@/lib/foundry/types";
 import { usePolling } from "@/lib/usePolling";
+import { useRemembered } from "@/lib/useRemembered";
 
 import { CullGrid } from "./CullGrid";
-import { DojoView } from "./DojoView";
-import { ExtractView } from "./ExtractView";
 import { Lightbox } from "./Lightbox";
 import PipelineTab from "./PipelineTab";
 import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
-import { StripsView } from "./StripsView";
-import { StylesShelf } from "./StylesShelf";
 import { commitRun, fetchRun, fetchRuns, previewCommit, saveVerdicts } from "./foundryClient";
 import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
 import {
@@ -82,6 +82,15 @@ import {
   useCommitPlan,
   type SaveKind,
 } from "./ui";
+
+// ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
+// behind the tab rail, so each is its own chunk fetched when its tab is chosen
+// rather than all of them on first load (Wave 0, docs/waves/README.md).
+// The cull grid is the default tab and stays a static import.
+const StylesShelf = dynamic(() => import("./StylesShelf").then((m) => m.StylesShelf), { loading: pendingPanel });
+const ExtractView = dynamic(() => import("./ExtractView").then((m) => m.ExtractView), { loading: pendingPanel });
+const DojoView = dynamic(() => import("./DojoView").then((m) => m.DojoView), { loading: pendingPanel });
+const StripsView = dynamic(() => import("./StripsView").then((m) => m.StripsView), { loading: pendingPanel });
 
 // THE TABS CARRIED A BLURB AND SO THE BLURB GOT WRITTEN — up to 45 words per
 // tab, printed as a paragraph under the row. None of the three headers has a
@@ -106,11 +115,21 @@ const CULL_KEYS = [
   { keys: ["K"], does: "keep" },
   { keys: ["X"], does: "reject" },
   { keys: ["U"], does: "clear" },
+  { keys: ["N"], does: "next undecided" },
   { keys: ["Enter"], does: "compare" },
 ];
 
+/** Every station, for the remembered tab: a value from an older build that is no
+ *  longer one of these reads as the cull. */
+const TABS: readonly Tab[] = ["cull", "extract", "styles", "dojo", "strips"];
+
 export default function FoundryView() {
-  const [tab, setTab] = useState<Tab>("cull");
+  // THE STATION IS REMEMBERED. An operator who works the Extract bench or the
+  // Dojo gate came back to the cull on every reload and walked over again; the
+  // panel they left is the one they open on (lib/useRemembered.ts, one evicted
+  // record). The cull's own state still loads underneath — its runs feed the
+  // header's figures whichever station is in front.
+  const [tab, setTab] = useRemembered<Tab>("foundry.tab", "cull", TABS);
   const plant = usePlant();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [runsError, setRunsError] = useState<string | null>(null);

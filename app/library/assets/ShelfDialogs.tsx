@@ -15,20 +15,21 @@ export default function ShelfDialogs({ shelf }: { shelf: Shelf }) {
   const {
     openAsset, openIndex, shown, moving, menu, tree, picked, chosen, announce,
     setOpenId, setSelected, setMoving, setMenu, clearPicks, step, refile,
-    removeFromViewer, startStyleFrom, siblings, rename, removeTile,
+    removeFromViewer, startStyleFrom, siblings, rename, removeTile, draw, jump, search,
   } = shelf;
 
   return (
     <>
       {openAsset && (
         <AssetLightbox
-          asset={openAsset}
+          asset={draw(openAsset)}
           index={openIndex + 1}
           total={shown.length}
           onClose={() => setOpenId(null)}
           onStep={step}
+          onJump={jump}
           onRemove={() => removeFromViewer(openAsset)}
-          siblings={siblings}
+          siblings={siblings.map(draw)}
           // Jumping to a sibling takes its FOLDER with it. The viewer addresses
           // plates through `shown`, so landing on one filed elsewhere would put
           // it outside that list and close the dialog; following the plate into
@@ -36,7 +37,8 @@ export default function ShelfDialogs({ shelf }: { shelf: Shelf }) {
           // describing the same thing the user is looking at.
           onPickSibling={(s) => {
             setSelected(s.path);
-            clearPicks();
+            // And out of any search, which could hide the plate just picked.
+            search("");
             setOpenId(s.id);
           }}
           onStartStyle={

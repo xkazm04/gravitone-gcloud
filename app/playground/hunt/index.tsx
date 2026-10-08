@@ -13,7 +13,7 @@
 // screen; the open hunt rides in the URL (`?h=`) so a reload, or a link,
 // lands on the same map.
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Headphones, Network, X } from "lucide-react";
@@ -26,6 +26,7 @@ import {
   Provenance,
   Tally,
 } from "@/components/ui/signal";
+import { typing } from "@/lib/board/keys";
 import type { Hunt, HuntNode, SoundKind, SoundTake } from "@/lib/sound/types";
 
 import { dur } from "../shared/format";
@@ -87,11 +88,10 @@ export default function HuntModule({ kind }: { kind: SoundKind }) {
   );
 }
 
-const isField = (el: Element | null) =>
-  !!el &&
-  (/^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(el.tagName) ||
-    (el as HTMLElement).isContentEditable ||
-    !!el.closest('[role="listbox"]'));
+/** The shared typing guard, plus a focused button: A on a leaf's checkbox or
+ *  the render button is that control's, not "select every leaf". */
+const ownsKeys = (target: EventTarget | null) =>
+  typing(target) || (target as Element | null)?.tagName === "BUTTON";
 
 function HuntView({
   api,
@@ -112,17 +112,30 @@ function HuntView({
   const run = api.run?.huntId === hunt.id ? api.run : null;
 
   // A node's takes, newest first: the ids it lists, and any the store filed
-  // against it that the list has not caught up with.
-  const takesOf = (n: HuntNode): SoundTake[] => {
-    const ids = new Set(n.takeIds);
-    return api.takes
-      .filter(
-        (t) => ids.has(t.id) || (t.huntId === hunt.id && t.nodeId === n.id),
-      )
-      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  };
-  const takeOf = (n: HuntNode) => takesOf(n)[0] ?? null;
-  const heard = tree.leaves.filter((l) => l.state === "rendered" && takeOf(l));
+  // against it that the list has not caught up with. Indexed ONCE per change
+  // of the takes or the map: as a per-call filter it scanned every take for
+  // every leaf on every render, and the board re-renders on each pointer move
+  // of a marquee. The index also keeps `takeOf` stable, so a leaf card whose
+  // take did not change can skip its render (./Board.tsx#LeafCard).
+  const byNode = useMemo(() => {
+    const owner = new Map<string, string[]>();
+    for (const n of hunt.nodes)
+      for (const id of n.takeIds) owner.set(id, [...(owner.get(id) ?? []), n.id]);
+    const m = new Map<string, SoundTake[]>();
+    for (const t of api.takes) {
+      const to = new Set(owner.get(t.id) ?? []);
+      if (t.huntId === hunt.id && t.nodeId) to.add(t.nodeId);
+      for (const id of to) m.set(id, [...(m.get(id) ?? []), t]);
+    }
+    for (const list of m.values()) list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return m;
+  }, [api.takes, hunt.nodes, hunt.id]);
+  const takesOf = useCallback((n: HuntNode): SoundTake[] => byNode.get(n.id) ?? [], [byNode]);
+  const takeOf = useCallback((n: HuntNode) => byNode.get(n.id)?.[0] ?? null, [byNode]);
+  const heard = useMemo(
+    () => tree.leaves.filter((l) => l.state === "rendered" && takeOf(l)),
+    [tree, takeOf],
+  );
 
   // Heard takes with no peaks are measured once (shared/measure.ts dedupes by
   // id across modules) and the stored take replaces the local one.
@@ -140,7 +153,7 @@ function HuntView({
     const onKey = (e: KeyboardEvent) => {
       if (
         view !== "map" ||
-        isField(e.target as Element | null) ||
+        ownsKeys(e.target) ||
         e.ctrlKey ||
         e.metaKey ||
         e.altKey
@@ -157,6 +170,15 @@ function HuntView({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [view, order]);
+
+  // Stable, so a memoised leaf card is not re-rendered by a new closure.
+  const onLeaf = useCallback(
+    (id: string, mods: { shift: boolean; toggle: boolean }) => {
+      setSel((s) => clickSelect(s, order, id, mods));
+      setFocus(id);
+    },
+    [order],
+  );
 
   const focused = focus
     ? (hunt.nodes.find((n) => n.id === focus) ?? null)
@@ -348,10 +370,7 @@ function HuntView({
                 selected={sel.ids}
                 focus={focus}
                 takeOf={takeOf}
-                onLeaf={(id, mods) => {
-                  setSel((s) => clickSelect(s, order, id, mods));
-                  setFocus(id);
-                }}
+                onLeaf={onLeaf}
                 onBranch={(ids) => setSel((s) => toggleGroup(s, order, ids))}
                 onMarquee={(hits, add) =>
                   setSel((s) => marqueeSelect(s, order, hits, add))

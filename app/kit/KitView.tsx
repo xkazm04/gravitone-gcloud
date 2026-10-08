@@ -11,6 +11,9 @@ import { useEffect, useState } from "react";
 
 import { PageHead, TabRail, Tag } from "@/components/kit";
 import { Mark } from "@/components/kit/brand";
+import dynamic from "next/dynamic";
+
+import { pendingPanel } from "@/components/ui/Pending";
 import StudioFrame from "@/components/ui/StudioFrame";
 
 import type { Census } from "@/pipeline/kit-census.mjs";
@@ -18,10 +21,13 @@ import type { Census } from "@/pipeline/kit-census.mjs";
 import census from "./census.json";
 import { migrationGaps } from "./migrationMap";
 import { PART_COUNT, RULES, kitModuleForHash, type KitModuleId } from "./catalog";
-import { Identity } from "./Identity";
-import { Law } from "./Law";
-import { Migration } from "./Migration";
-import { Parts } from "./Parts";
+// ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
+// behind the tab rail, so each is its own chunk fetched when its tab is chosen
+// rather than all of them on first load (Wave 0, docs/waves/README.md).
+const Identity = dynamic(() => import("./Identity").then((m) => m.Identity), { loading: pendingPanel });
+const Law = dynamic(() => import("./Law").then((m) => m.Law), { loading: pendingPanel });
+const Migration = dynamic(() => import("./Migration").then((m) => m.Migration), { loading: pendingPanel });
+const Parts = dynamic(() => import("./Parts").then((m) => m.Parts), { loading: pendingPanel });
 import "./kit-route.css";
 
 type Module = KitModuleId;

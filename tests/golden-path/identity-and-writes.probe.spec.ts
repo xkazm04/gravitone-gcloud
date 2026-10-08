@@ -167,6 +167,7 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     "app/library/audio/soundMigration.ts": { evicted: `gravitone.sound-migrated.v1.${uid}` },
     "app/library/audio/bookStore.ts": { evicted: `gravitone.audio-book.${uid}` },
     "lib/jobs.tsx": { evicted: "gravitone.jobs.v1" },
+    "lib/useRemembered.ts": { evicted: "gravitone.ui.v1" },
     // The pipeline board's LIVE/STUB arm: evicted, not exempt, so an arm left
     // on LIVE cannot be inherited by the next account on the same browser.
     "app/foundry/PipelineTab.tsx": { evicted: "gravitone.pipeline.arm", symbol: "PIPELINE_ARM_KEY" },

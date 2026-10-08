@@ -15,9 +15,10 @@
 // This host keeps what is not the sheet's: storage, the dialogs, the demo
 // shelf, the style gap, and the dev-only synthetic shelf.
 
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { Upload, X, Zap } from "lucide-react";
 
@@ -34,11 +35,27 @@ import { lockedOnly } from "@/lib/themes";
 import { isSeeded } from "@/app/_studio/projectSeed";
 import type { Project, ProjectContents, ProjectDraft } from "@/lib/projects";
 
-import ProjectDialog, { ConfirmDelete } from "../_projects/ProjectDialog";
 import RaceSheet from "../_projects/RaceSheet";
 import { DemoChip, EmptyShelf } from "../_projects/parts";
 import type { SurfaceProps } from "../_projects/surface";
 import { isSynthetic, syntheticProjects } from "../_projects/synthetic";
+
+/* ── The two dialogs, out of the route chunk (Wave 1, 2026-10-08) ─────────
+ *
+ * The create/edit form and the delete confirm are on screen only once somebody
+ * presses quick-create, a row's pencil or a row's bin, and the form pulls the
+ * wizard's runtime band (./wizard/stages) in behind it. So they load as their
+ * own chunk, and the page fetches it when the main thread is idle after the
+ * shelf has painted — by the time a hand reaches a pencil it is already here.
+ *
+ * `loading: () => null`, not `pendingPanel`: a Modal holds no place in the
+ * page's flow (it portals over it), so there is no box to keep from
+ * collapsing, and a panel-sized placeholder in <main> would be a layout jump
+ * for a few milliseconds. Both mount only while open — Modal renders nothing
+ * closed, so an always-mounted closed dialog bought nothing but the import. */
+const loadDialogs = () => import("../_projects/ProjectDialog");
+const ProjectDialog = dynamic(loadDialogs, { loading: () => null });
+const ConfirmDelete = dynamic(() => loadDialogs().then((m) => m.ConfirmDelete), { loading: () => null });
 
 /** `?seed=N` is honoured only outside a production build. `NODE_ENV` is inlined
  *  at build time, so in production this is a constant 0 and the synthetic
@@ -120,6 +137,13 @@ export default function ProjectsView() {
   // resolves null and cleared whenever a dialog opens, so a stale read error
   // never leaks into a fresh one. The banner above sits under the Modal scrim.
   const [writeFailed, setWriteFailed] = useState(false);
+
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 600));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(() => void loadDialogs());
+    return () => cancel(id);
+  }, []);
 
   /* ── The demo shelf, said out loud ──────────────────────────────────────
    *
@@ -450,45 +474,49 @@ export default function ProjectsView() {
         )}
       </main>
 
-      <ProjectDialog
-        open={dialog.open}
-        project={dialog.project}
-        themes={allThemes}
-        onClose={() => setDialog({ open: false, project: null })}
-        onSubmit={submit}
-        error={writeFailed ? error : null}
-      />
-      <ConfirmDelete
-        project={doomed}
-        onClose={() => setDoomed(null)}
-        error={writeFailed ? error : null}
-        /**
-         * AWAIT THE REMOVAL, THEN CLOSE — because the ORDER decides where a
-         * keyboard user's focus lands, and this used to lose that race.
-         *
-         * `Modal#restoreFocus` hands focus back to the opener when it is still
-         * connected and to `<main>` when it is not. The opener here is the row's
-         * own delete button. `useProjects.remove` awaits the IndexedDB
-         * transaction BEFORE `setProjects`, so firing it and closing in the same
-         * commit left the row mounted at the moment the modal tore down: focus
-         * was restored onto a button that unmounted a tick later, and landed on
-         * `<body>`. Measured, after the Modal fix — which cannot see this,
-         * because from inside the dialog the opener is genuinely still there.
-         *
-         * Awaiting first makes the ordering true rather than lucky: by the time
-         * the dialog closes the row is gone, `isConnected` is false, and focus
-         * goes to the landmark. A failed delete keeps the row AND the dialog —
-         * `remove` returns null and reports through the error banner, and
-         * closing a confirmation over work that was not done is the same small
-         * lie as a button that does nothing.
-         */
-        onConfirm={async () => {
-          if (!doomed) return;
-          const took = await remove(doomed.id);
-          setWriteFailed(!took);
-          if (took) setDoomed(null);
-        }}
-      />
+      {dialog.open && (
+        <ProjectDialog
+          open={dialog.open}
+          project={dialog.project}
+          themes={allThemes}
+          onClose={() => setDialog({ open: false, project: null })}
+          onSubmit={submit}
+          error={writeFailed ? error : null}
+        />
+      )}
+      {doomed && (
+        <ConfirmDelete
+          project={doomed}
+          onClose={() => setDoomed(null)}
+          error={writeFailed ? error : null}
+          /**
+           * AWAIT THE REMOVAL, THEN CLOSE — because the ORDER decides where a
+           * keyboard user's focus lands, and this used to lose that race.
+           *
+           * `Modal#restoreFocus` hands focus back to the opener when it is still
+           * connected and to `<main>` when it is not. The opener here is the row's
+           * own delete button. `useProjects.remove` awaits the IndexedDB
+           * transaction BEFORE `setProjects`, so firing it and closing in the same
+           * commit left the row mounted at the moment the modal tore down: focus
+           * was restored onto a button that unmounted a tick later, and landed on
+           * `<body>`. Measured, after the Modal fix — which cannot see this,
+           * because from inside the dialog the opener is genuinely still there.
+           *
+           * Awaiting first makes the ordering true rather than lucky: by the time
+           * the dialog closes the row is gone, `isConnected` is false, and focus
+           * goes to the landmark. A failed delete keeps the row AND the dialog —
+           * `remove` returns null and reports through the error banner, and
+           * closing a confirmation over work that was not done is the same small
+           * lie as a button that does nothing.
+           */
+          onConfirm={async () => {
+            if (!doomed) return;
+            const took = await remove(doomed.id);
+            setWriteFailed(!took);
+            if (took) setDoomed(null);
+          }}
+        />
+      )}
     </StudioFrame>
   );
 }

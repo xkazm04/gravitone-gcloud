@@ -15,15 +15,22 @@
 // width — the one opened, else the one waiting on a decision, else the
 // earliest — with the rest drawn as the edges of the cards behind it and
 // counted on a `+N` that lists them.
+//
+// KEYS (./view.ts weekKey): `[` / `]` page the weeks, ← / → too while focus is
+// in the week, `T` comes back to this week, `N` opens the next slot waiting on
+// a decision — paging to its week and scrolling it into view — and Esc closes
+// the opened slot. The week grid and its stacks are derived once per schedule
+// and week, not on every pointer move of a drag or tick of the clock.
 
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { motion } from "motion/react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useId, useMemo, useRef, useState } from "react";
 
 import { usePrefersReducedMotion } from "@/components/ui/motionPreference";
 import { Panel } from "@/components/ui/Primitives";
-import { Tally } from "@/components/ui/signal";
+import { Keycaps, Tally, type KeyBinding } from "@/components/ui/signal";
 import { EASE } from "@/components/ui/tokens";
+import { overlayOpen, typing } from "@/lib/board/keys";
 import type { ScheduleSlot } from "@/lib/publish/types";
 
 import {
@@ -46,7 +53,7 @@ import type { ScheduleProps } from "./ScheduleTab";
 import { SlotSheet } from "./SlotSheet";
 import { ChannelGlyph, IconButton, LOOK, StatusDot, TONE_RULE, lookOf } from "./ui";
 import { usePointerDrag } from "./useDrag";
-import { atMinute, minuteOfDay, stackClusters } from "./view";
+import { atMinute, minuteOfDay, nextWaiting, stackClusters, weekKey, weekOffsetOf } from "./view";
 import { whenWords } from "./WhenPicker";
 
 const HOUR_H = 48;
@@ -54,6 +61,28 @@ const CARD_H = 72;
 const SPAN_MIN = (CARD_H / HOUR_H) * 60;
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const p2 = (n: number) => String(n).padStart(2, "0");
+
+const KEYS: KeyBinding[] = [
+  { keys: ["[", "]"], does: "week" },
+  { keys: ["←", "→"], does: "week (in grid)" },
+  { keys: ["T"], does: "this week" },
+  { keys: ["N"], does: "next to decide" },
+  { keys: ["Esc"], does: "close slot" },
+];
+
+/** The day the week `offset` weeks from `now` starts, as "YYYY-MM-DD". */
+const startKeyOf = (now: number, offset: number): string => dayKey(weekStart(new Date(now), offset));
+
+/** The week from the day it starts ("YYYY-MM-DD"): its days, its slots by day,
+ *  and each day's stacks. */
+function weekGrid(slots: readonly ScheduleSlot[], startKey: string) {
+  const [y, m, d] = startKey.split("-").map(Number);
+  const start = new Date(y, m - 1, d);
+  const days = daysFrom(start, 7);
+  const byDay = bucketByDay(slots, start);
+  const stacks = new Map(days.map((day) => [dayKey(day), stackClusters(byDay.get(dayKey(day)) ?? [], (s) => minuteOfDay(s.publishAt) ?? 0, SPAN_MIN)]));
+  return { start, days, byDay, inWeek: [...byDay.values()].flat(), stacks };
+}
 
 interface Landing {
   iso: string;
@@ -72,11 +101,12 @@ export function BroadcastWeek(p: ScheduleProps) {
   const cols = useRef<HTMLDivElement | null>(null);
 
   const today = new Date(now);
-  const start = weekStart(today, offset);
-  const days = daysFrom(start, 7);
-  const byDay = bucketByDay(slots, start);
-  const inWeek = [...byDay.values()].flat();
   const todayKey = dayKey(today);
+  // The week's shape depends on the schedule and on which week it is, never on
+  // the clock's minute or a drag's pointer: keyed on the day the week starts,
+  // so the 30-second tick and every pointermove of a drag reuse it.
+  const startKey = startKeyOf(now, offset);
+  const { start, days, byDay, inWeek, stacks } = useMemo(() => weekGrid(slots, startKey), [slots, startKey]);
   const nowMin = today.getHours() * 60 + today.getMinutes();
   const todayCol = days.findIndex((d) => dayKey(d) === todayKey);
   const selected = slots.find((s) => s.id === selectedId) ?? null;
@@ -94,6 +124,40 @@ export function BroadcastWeek(p: ScheduleProps) {
   useEffect(() => {
     if (scroller.current) scroller.current.scrollTop = Math.max(0, (firstMin / 60) * HOUR_H - 16);
   }, [firstMin, offset]);
+
+  // The opened slot, brought into view: `N` may have paged to its week and it
+  // can sit above or below the scrolled hours. Runs after the scroll above.
+  useEffect(() => {
+    if (!selectedId) return;
+    scroller.current?.querySelector(`[data-slot-id="${CSS.escape(selectedId)}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [selectedId, offset]);
+
+  const onKey = useEffectEvent((e: KeyboardEvent) => {
+    if (e.defaultPrevented || typing(e.target) || overlayOpen()) return;
+    const el = e.target as Element | null;
+    // the date picker's popover and grid own their keys, arrows included
+    if (el?.closest?.('[role="dialog"], [role="grid"]')) return;
+    const act = weekKey(e, Boolean(el?.closest?.("[data-calendar-week]")));
+    if (!act) return;
+    if (act === "close") {
+      if (!selectedId) return;
+      select(null);
+    } else if (act === "prev") setOffset((o) => o - 1);
+    else if (act === "next") setOffset((o) => o + 1);
+    else if (act === "today") setOffset(0);
+    else {
+      const s = nextWaiting(slots, selectedId, needsDecision);
+      const off = s ? weekOffsetOf(s.publishAt, now) : null;
+      if (!s || off === null) return;
+      setOffset(off);
+      select(s.id);
+    }
+    e.preventDefault();
+  });
+  useEffect(() => {
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const { drag, bind, endedDrag } = usePointerDrag<ScheduleSlot, Landing>({
     canDrag: canMove,
@@ -123,7 +187,7 @@ export function BroadcastWeek(p: ScheduleProps) {
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_26rem]">
       <Panel as="section" className="overflow-hidden" >
-        <div className="flex flex-wrap items-center gap-3 border-b border-white/6 px-5 py-3.5" data-testid="calendar-week">
+        <div className="flex flex-wrap items-center gap-3 border-b border-white/6 px-5 py-3.5" data-testid="calendar-week" data-calendar-week>
           <div className="flex items-center gap-1.5">
             <IconButton label="Previous week" onClick={() => setOffset((o) => o - 1)}>
               <ChevronLeft aria-hidden className="h-4 w-4" />
@@ -147,6 +211,7 @@ export function BroadcastWeek(p: ScheduleProps) {
             <Tally value={counts.scheduled} label="booked" tone={counts.scheduled ? "cyan" : "neutral"} />
             <Tally value={counts.missed} label="missed" tone={counts.missed ? "amber" : "neutral"} />
             <Tally value={counts.published} label="aired" tone={counts.published ? "emerald" : "neutral"} />
+            <Keycaps map={KEYS} label="Week keys" />
           </div>
         </div>
 
@@ -155,6 +220,7 @@ export function BroadcastWeek(p: ScheduleProps) {
           className="scroll-y relative h-[min(72vh,50rem)] overflow-y-auto"
           aria-label={`Week of ${rangeLabel(start)}`}
           tabIndex={0}
+          data-calendar-week
         >
           {/* day header, pinned */}
           <div className="sticky top-0 z-20 grid grid-cols-[4.25rem_repeat(7,minmax(0,1fr))] border-b border-white/8 bg-[var(--gt-ink)]/90 backdrop-blur-xl">
@@ -221,7 +287,6 @@ export function BroadcastWeek(p: ScheduleProps) {
                 const isToday = k === todayKey;
                 const pastDay = k < todayKey;
                 const weekend = d.getDay() === 0 || d.getDay() === 6;
-                const stacks = stackClusters(byDay.get(k) ?? [], (s) => minuteOfDay(s.publishAt) ?? 0, SPAN_MIN);
                 return (
                   <div
                     key={k}
@@ -255,7 +320,7 @@ export function BroadcastWeek(p: ScheduleProps) {
                       ),
                     )}
 
-                    {stacks.map((stack, i) => {
+                    {(stacks.get(k) ?? []).map((stack, i) => {
                       const s = stack.find((x) => x.id === selectedId) ?? stack.find(needsDecision) ?? stack[0];
                       const top = ((minuteOfDay(s.publishAt) ?? 0) / 60) * HOUR_H;
                       const key = `${k}:${stack[0].id}`;
@@ -399,6 +464,7 @@ function SlotCard({
       aria-pressed={selected}
       aria-label={`${s.title}, ${CHANNEL_NAME[s.channelId]}, ${timeLabel(s.publishAt)}, ${look === "drifted" ? "drifted" : STATUS_WORD[s.status]}`}
       data-testid={`calendar-week-slot-${s.id}`}
+      data-slot-id={s.id}
       className={`group absolute z-[5] touch-none overflow-hidden rounded-xl border text-left transition-[border-color,box-shadow] ${ring} ${
         movable ? "cursor-grab active:cursor-grabbing" : "cursor-pointer"
       } ${s.status === "cancelled" ? "opacity-60" : ""}`}

@@ -15,7 +15,7 @@ import { join, resolve } from "node:path";
 
 import { test, expect } from "@playwright/test";
 
-import { refusedKey } from "@/app/foundry/keyGuard";
+import { nextUndecided, refusedKey } from "@/app/foundry/keyGuard";
 
 import { stripComments } from "./_helpers";
 
@@ -55,4 +55,17 @@ test("every window keydown handler under app/foundry consults refusedKey before 
   }
   expect(handlers.length, "no window keydown handler found — the walk read nothing").toBeGreaterThanOrEqual(5);
   expect(unguarded).toEqual([]);
+});
+
+test("N: the next undecided item after the focus, wrapping round, skipping what cannot take a verdict", () => {
+  const order = ["a", "b", "c", "d"];
+  const open = new Set(["a", "c"]);
+  const isOpen = (id: string) => open.has(id);
+  expect(nextUndecided(order, "a", isOpen)).toBe("c");
+  expect(nextUndecided(order, "c", isOpen)).toBe("a"); // wraps
+  expect(nextUndecided(order, null, isOpen)).toBe("a"); // no focus: from the top
+  expect(nextUndecided(order, "gone", isOpen)).toBe("a"); // a focus no longer listed
+  expect(nextUndecided(order, "a", (id) => id === "a")).toBe("a"); // the only one left is itself
+  expect(nextUndecided(order, "b", () => false)).toBeNull();
+  expect(nextUndecided([], null, () => true)).toBeNull();
 });

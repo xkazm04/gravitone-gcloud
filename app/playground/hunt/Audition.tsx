@@ -15,6 +15,7 @@ import { Crown, Link2, X } from "lucide-react";
 
 import { Keycaps } from "@/components/ui/signal";
 import { EASE } from "@/components/ui/tokens";
+import { typing } from "@/lib/board/keys";
 import type { DefectCode, Hunt, HuntNode, SoundTake } from "@/lib/sound/types";
 
 import {
@@ -28,12 +29,6 @@ import { transport, usePlayState } from "../shared/transport";
 import { BTN_REJECT, CAPS } from "../shared/ui";
 import { PlayButton, TakeWave } from "../shared/Wave";
 import type { HuntApi } from "./useHunt";
-
-const isField = (el: Element | null) =>
-  !!el &&
-  (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) ||
-    (el as HTMLElement).isContentEditable ||
-    !!el.closest('[role="listbox"]'));
 
 export function Audition({
   api,
@@ -70,7 +65,7 @@ export function Audition({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (
-        isField(e.target as Element | null) ||
+        typing(e.target) ||
         e.ctrlKey ||
         e.metaKey ||
         e.altKey ||
@@ -91,8 +86,10 @@ export function Audition({
         transport.toggle(p.t.id, p.t.durationS);
       } else if (e.key === "w" || e.key === "W") {
         e.preventDefault();
+        // A held W crowns once; repeats would toggle the crown on and off.
+        if (e.repeat) return;
         void api.crown(hunt.id, p.n.id, p.t, !p.n.winner);
-      } else if (e.key === "l" || e.key === "L") setLinked((v) => !v);
+      } else if ((e.key === "l" || e.key === "L") && !e.repeat) setLinked((v) => !v);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);

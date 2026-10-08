@@ -17,9 +17,15 @@
 // a slate with the film glyph — rather than borrowing someone else's picture.
 // Requested of lib/publish's owner: a poster route of its own, so this grab
 // can retire (reported with this change).
+//
+// A GRAB IS A VIDEO DOWNLOAD, so it is spent on what is on screen and two at a
+// time (Wave 5). A <Poster> asks for its frame when it scrolls within reach of
+// the viewport — the composer's export strip and the hours of the week below
+// the fold no longer start a read each on first paint — and the asks queue
+// behind MAX_GRABS reads in flight rather than all opening at once.
 
 import { Film } from "lucide-react";
-import { useEffect, useSyncExternalStore } from "react";
+import { useEffect, useRef, useSyncExternalStore, type RefObject } from "react";
 
 import { withAccess } from "@/lib/imagingClient";
 
@@ -54,13 +60,34 @@ function fileUrl(id: string): string {
   return withAccess(`/api/music-video/export/file?id=${encodeURIComponent(id)}`);
 }
 
-function grab(id: string) {
+const MAX_GRABS = 2;
+const queue: string[] = [];
+let running = 0;
+
+/** Ask for an export's frame: answered from the cache, else queued. */
+function request(id: string) {
   if (done.has(id) || pending.has(id)) return;
   if (!UUID.test(id)) {
     settle(id, null);
     return;
   }
   pending.add(id);
+  queue.push(id);
+  pump();
+}
+
+function pump() {
+  while (running < MAX_GRABS && queue.length) {
+    const id = queue.shift()!;
+    running++;
+    grab(id, () => {
+      running--;
+      pump();
+    });
+  }
+}
+
+function grab(id: string, after: () => void) {
   const v = document.createElement("video");
   v.muted = true;
   v.playsInline = true;
@@ -73,6 +100,7 @@ function grab(id: string) {
     v.removeAttribute("src");
     v.load();
     settle(id, info);
+    after();
   };
   const timer = setTimeout(() => finish(null), 20_000);
   v.onloadeddata = () => {
@@ -102,16 +130,34 @@ function grab(id: string) {
   v.src = fileUrl(id);
 }
 
-/** undefined while the frame is being read; null when there is none to read. */
-export function usePoster(exportId: string | null): PosterInfo | null | undefined {
+/** undefined while the frame is being read; null when there is none to read.
+ *  With `near`, the read waits until that element is within reach of the
+ *  viewport; without it, it is asked for at once (the opened slot's sheet). */
+export function usePoster(exportId: string | null, near?: RefObject<Element | null>): PosterInfo | null | undefined {
   const info = useSyncExternalStore(
     subscribe,
     () => (exportId ? done.get(exportId) : null),
     () => undefined,
   );
   useEffect(() => {
-    if (exportId) grab(exportId);
-  }, [exportId]);
+    if (!exportId || done.has(exportId)) return;
+    const el = near?.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      request(exportId);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (es) => {
+        if (es.some((e) => e.isIntersecting)) {
+          io.disconnect();
+          request(exportId);
+        }
+      },
+      { rootMargin: "320px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [exportId, near]);
   return info;
 }
 
@@ -141,13 +187,14 @@ export function Poster({
   /** `contain` keeps a vertical film whole inside a landscape box */
   fit?: "cover" | "contain";
 }) {
-  const p = usePoster(exportId);
+  const box = useRef<HTMLSpanElement | null>(null);
+  const p = usePoster(exportId, box);
   const tone = dim ? "grayscale opacity-45" : "";
   // the layers inside need a positioned box; a caller that already placed this
   // one absolutely has given it one, and a second `relative` would undo that
   const pos = /\babsolute\b/.test(className) ? "" : "relative";
   if (p === undefined) {
-    return <span aria-hidden className={`block animate-pulse bg-white/[0.04] ${className}`} />;
+    return <span ref={box} aria-hidden className={`block animate-pulse bg-white/[0.04] ${className}`} />;
   }
   if (p === null) {
     return (

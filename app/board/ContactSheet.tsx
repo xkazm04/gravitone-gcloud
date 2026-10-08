@@ -14,7 +14,7 @@
 
 import { ArrowUpRight, CheckSquare, ChevronsDown, Lock, Sparkles, Square, Undo2, X } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { StackBar, Tally } from "@/components/ui/signal";
 import { SOURCE_LABEL } from "@/lib/board/registry";
@@ -32,6 +32,8 @@ const PER_GROUP = 48;
 const SHORT_ROLL = 3;
 const CELLS = "grid-cols-[repeat(auto-fill,minmax(13.5rem,14.75rem))]";
 
+const rollKey = (source: BoardSourceId, group: string | null) => `${source}\u0000${group ?? ""}`;
+
 interface Roll {
   key: string;
   source: BoardSourceId;
@@ -46,10 +48,85 @@ export default function ContactSheet(props: SheetProps) {
   const [open, setOpen] = useState<Record<string, number>>({});
   const live = api.query.st !== "rejected";
 
-  // A batch only ever holds what is on screen: a filter change that hides an
-  // item takes it out of the batch rather than deciding it unseen.
-  const visibleIds = useMemo(() => new Set(api.visible.map((e) => e.item.id)), [api.visible]);
-  const picked = useMemo(() => api.visible.filter((e) => batch.has(e.item.id)), [api.visible, batch]);
+  /** Rolls: by source, then by the run / project / theme the item belongs to,
+   *  in the queue's own order. The frame number runs across the whole sheet. */
+  const rolls = useMemo(() => {
+    const by = new Map<string, Roll>();
+    for (const e of api.visible) {
+      const key = rollKey(e.item.source, e.item.group);
+      let r = by.get(key);
+      if (!r) {
+        r = { key, source: e.item.source, group: e.item.group, entries: [] };
+        by.set(key, r);
+      }
+      r.entries.push(e);
+    }
+    const order = (s: BoardSourceId) => SOURCE_ORDER.indexOf(s);
+    return [...by.values()].sort((a, b) => order(a.source) - order(b.source));
+  }, [api.visible]);
+  const frameNo = useMemo(() => new Map(api.visible.map((e, i) => [e.item.id, i + 1])), [api.visible]);
+
+  // A frame J/K (or the loupe's arrows) lands on past a roll's drawn window
+  // grows that window to reach it — adjusted during render, so the frame is in
+  // the DOM by the time the effect below scrolls to it. Without this, J walked
+  // the selection off the end of a 48-frame roll into frames nobody could see.
+  const selId = api.selected?.item.id ?? null;
+  const [seenSel, setSeenSel] = useState(selId);
+  if (selId !== seenSel) {
+    setSeenSel(selId);
+    for (const r of rolls) {
+      const at = r.entries.findIndex((e) => e.item.id === selId);
+      if (at < 0) continue;
+      const limit = open[r.key] ?? PER_GROUP;
+      if (at >= limit) setOpen((o) => ({ ...o, [r.key]: Math.ceil((at + 1) / PER_GROUP) * PER_GROUP }));
+      break;
+    }
+  }
+  useEffect(() => {
+    if (!selId) return;
+    document.querySelector(`[data-board-selected="${CSS.escape(selId)}"]`)?.scrollIntoView({ block: "nearest" });
+  }, [selId]);
+
+  /** What each roll draws, and the drawn frames in sheet order. */
+  const drawn = useMemo(() => {
+    const out: BoardEntry[] = [];
+    const byRoll = new Map<string, BoardEntry[]>();
+    for (const r of rolls) {
+      const shown = r.entries.slice(0, open[r.key] ?? PER_GROUP);
+      byRoll.set(r.key, shown);
+      out.push(...shown);
+    }
+    return { all: out, byRoll };
+  }, [rolls, open]);
+
+  // A batch only ever holds what is DRAWN: a filter change that hides an item
+  // takes it out of the batch rather than deciding it unseen, and so does a
+  // roll's window — "select all", "select roll" and a Shift-range reach the
+  // frames on screen, never the ones behind "N more" (the shelf's rule,
+  // app/library, Wave 4).
+  const drawnIds = useMemo(() => new Set(drawn.all.map((e) => e.item.id)), [drawn]);
+  const picked = useMemo(() => drawn.all.filter((e) => batch.has(e.item.id)), [drawn, batch]);
+
+  // "7/18 decided" is about the run, so a roll's header counts the whole
+  // source as loaded, not the filtered slice. Once per load, not once per roll
+  // per render: J re-renders the sheet, and a roll re-scanning every entry of
+  // its source made each keypress quadratic in the size of a big cull.
+  const rollTotals = useMemo(() => {
+    const m = new Map<string, { all: number; kept: number; cut: number }>();
+    for (const id of SOURCE_ORDER) {
+      const s = api.states[id];
+      if (s.kind !== "loaded") continue;
+      for (const e of s.entries) {
+        const k = rollKey(id, e.item.group);
+        const t = m.get(k) ?? { all: 0, kept: 0, cut: 0 };
+        t.all++;
+        if (e.item.verdict === "approve") t.kept++;
+        else if (e.item.verdict === "reject") t.cut++;
+        m.set(k, t);
+      }
+    }
+    return m;
+  }, [api.states]);
 
   const base = defaultHandlers(props);
   useBoardKeys({
@@ -71,9 +148,9 @@ export default function ContactSheet(props: SheetProps) {
 
   const toggle = (id: string, range: boolean) => {
     setBatch((prev) => {
-      const next = new Set([...prev].filter((x) => visibleIds.has(x)));
+      const next = new Set([...prev].filter((x) => drawnIds.has(x)));
       if (range && anchor) {
-        const ids = api.visible.map((e) => e.item.id);
+        const ids = drawn.all.map((e) => e.item.id);
         const [a, b] = [ids.indexOf(anchor), ids.indexOf(id)].sort((x, y) => x - y);
         if (a >= 0) for (const x of ids.slice(a, b + 1)) next.add(x);
       } else if (next.has(id)) next.delete(id);
@@ -83,26 +160,8 @@ export default function ContactSheet(props: SheetProps) {
     setAnchor(id);
   };
 
-  /** Rolls: by source, then by the run / project / theme the item belongs to,
-   *  in the queue's own order. The frame number runs across the whole sheet. */
-  const rolls = useMemo(() => {
-    const by = new Map<string, Roll>();
-    for (const e of api.visible) {
-      const key = `${e.item.source}\u0000${e.item.group ?? ""}`;
-      let r = by.get(key);
-      if (!r) {
-        r = { key, source: e.item.source, group: e.item.group, entries: [] };
-        by.set(key, r);
-      }
-      r.entries.push(e);
-    }
-    const order = (s: BoardSourceId) => SOURCE_ORDER.indexOf(s);
-    return [...by.values()].sort((a, b) => order(a.source) - order(b.source));
-  }, [api.visible]);
-  const frameNo = useMemo(() => new Map(api.visible.map((e, i) => [e.item.id, i + 1])), [api.visible]);
-
   const { settling, absent } = scopeOf(api);
-  const allOn = api.visible.length > 0 && picked.length === api.visible.length;
+  const allOn = drawn.all.length > 0 && picked.length === drawn.all.length;
 
   return (
     <div className="pb-28">
@@ -110,14 +169,14 @@ export default function ContactSheet(props: SheetProps) {
         api={api}
         lead={<SourceSelect api={api} />}
         tail={
-          live && api.visible.length > 0 ? (
+          live && drawn.all.length > 0 ? (
             <button
               type="button"
-              onClick={() => setBatch(allOn ? new Set() : new Set(api.visible.map((e) => e.item.id)))}
+              onClick={() => setBatch(allOn ? new Set() : new Set(drawnIds))}
               className="font-jetbrains inline-flex h-9 items-center gap-2 rounded-full border border-white/10 px-3.5 text-label text-white/70 transition hover:border-white/25 hover:text-white"
             >
               {allOn ? <CheckSquare aria-hidden className="h-4 w-4 text-cyan-300" /> : <Square aria-hidden className="h-4 w-4" />}
-              {allOn ? "Deselect all" : `Select all ${api.visible.length}`}
+              {allOn ? "Deselect all" : `Select all ${drawn.all.length}`}
             </button>
           ) : null
         }
@@ -141,10 +200,10 @@ export default function ContactSheet(props: SheetProps) {
       <div className="grid gap-x-10 gap-y-8 lg:grid-cols-2">
         {rolls.map((roll, ri) => {
           const limit = open[roll.key] ?? PER_GROUP;
-          const shown = roll.entries.slice(0, limit);
+          const shown = drawn.byRoll.get(roll.key) ?? [];
           return (
             <section key={roll.key} aria-label={`${SOURCE_LABEL[roll.source]}${roll.group ? ` · ${roll.group}` : ""}`} className={`gt-rise min-w-0 ${roll.entries.length > SHORT_ROLL ? "lg:col-span-2" : ""}`} style={{ ["--gt-rise-delay" as string]: `${Math.min(ri, 6) * 40}ms` }}>
-              <RollHeader api={api} roll={roll} batch={batch} live={live} onPickAll={(ids, on) => setBatch((prev) => {
+              <RollHeader api={api} roll={roll} shown={shown} totals={rollTotals.get(roll.key)} batch={batch} live={live} onPickAll={(ids, on) => setBatch((prev) => {
                 const next = new Set(prev);
                 for (const id of ids) {
                   if (on) next.add(id);
@@ -200,7 +259,9 @@ export default function ContactSheet(props: SheetProps) {
           icon={api.query.src}
           title={api.query.st === "pending" && api.inView.length ? "All decided" : api.query.st === "rejected" ? "Nothing rejected" : "Nothing waiting"}
           label="sheet empty"
-          native={api.query.src ? api.nativeOf(api.query.src) : null}
+          // A clear sheet under "All sources" leads back to where work is
+          // made; one source's leads to that source's own surface.
+          native={api.query.src ? api.nativeOf(api.query.src) : { href: "/projects", label: "projects" }}
         />
       )}
 
@@ -257,24 +318,27 @@ function BatchButton({ tone, onClick, cap, children }: { tone: "approve" | "reje
 function RollHeader({
   api,
   roll,
+  shown,
+  totals,
   batch,
   live,
   onPickAll,
 }: {
   api: BoardApi;
   roll: Roll;
+  shown: BoardEntry[];
+  totals: { all: number; kept: number; cut: number } | undefined;
   batch: Set<string>;
   live: boolean;
   onPickAll: (ids: string[], on: boolean) => void;
 }) {
   const Icon = SOURCE_ICON[roll.source];
-  // Counted over the whole roll as loaded, not the filtered slice: "7/18
-  // decided" is about the run.
-  const s = api.states[roll.source];
-  const all = s.kind === "loaded" ? s.entries.filter((e) => e.item.group === roll.group) : roll.entries;
-  const kept = all.filter((e) => e.item.verdict === "approve").length;
-  const cut = all.filter((e) => e.item.verdict === "reject").length;
-  const ids = roll.entries.map((e) => e.item.id);
+  // Counted over the whole roll as loaded (ContactSheet's rollTotals); the
+  // filtered slice only when the source has not loaded.
+  const all = totals?.all ?? roll.entries.length;
+  const kept = totals?.kept ?? roll.entries.filter((e) => e.item.verdict === "approve").length;
+  const cut = totals?.cut ?? roll.entries.filter((e) => e.item.verdict === "reject").length;
+  const ids = shown.map((e) => e.item.id);
   const allIn = ids.every((id) => batch.has(id));
   return (
     <header className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 border-b border-white/6 pb-3 lg:flex-nowrap">
@@ -296,7 +360,7 @@ function RollHeader({
         segments={[
           { n: kept, tone: "emerald", label: "approved" },
           { n: cut, tone: "rose", label: "rejected" },
-          { n: all.length - kept - cut, tone: "neutral", label: "pending" },
+          { n: all - kept - cut, tone: "neutral", label: "pending" },
         ]}
       />
       <CommitLine api={api} source={roll.source} group={roll.group} />

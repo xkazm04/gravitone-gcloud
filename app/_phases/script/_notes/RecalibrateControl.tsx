@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Hint } from "@/components/ui/signal";
+import { Fold, Hint } from "@/components/ui/signal";
 
 import { RENDERS } from "../renders";
 import { overrideFrom, overrideLineOf, receiptOf } from "../versions";
@@ -313,19 +313,28 @@ export default function RecalibrateControl({
           data-testid="baseline-declined"
           className="mt-1 rounded-xl border border-white/10 bg-white/[0.02] p-2.5"
         >
-          <p className="font-jetbrains text-content tracking-[0.14em] text-white/45 uppercase">
-            {api.baseline.label}
-            {declinedBaseline > 0 ? ` · declined ${declinedBaseline}` : ""}
-          </p>
+          {/* The override stays on the surface — it is the loudest part of the
+              record. The engine's summary and the itemised refusals are the
+              long part, and in a corner pad they pushed Recalibrate out of
+              reach; they are one press down, counted on the header. */}
           {overrideLineOf(api.baseline) && (
-            <p data-testid="baseline-override" className="font-jetbrains mt-1 text-content leading-snug text-rose-200/90">
+            <p data-testid="baseline-override" className="font-jetbrains mb-1 text-content leading-snug text-rose-200/90">
               {overrideLineOf(api.baseline)}
             </p>
           )}
-          {api.baseline.summary && (
-            <p className="mt-1 text-content leading-snug text-slate-300">{api.baseline.summary}</p>
+          {(api.baseline.summary || declinedBaseline > 0) && (
+            <Fold
+              title={api.baseline.label}
+              level={4}
+              remember="script.baseline-record"
+              tally={declinedBaseline > 0 ? { value: declinedBaseline, label: "declined", tone: "amber" } : undefined}
+            >
+              {api.baseline.summary && (
+                <p className="text-content leading-snug text-slate-300">{api.baseline.summary}</p>
+              )}
+              <DeclinedList version={api.baseline} />
+            </Fold>
           )}
-          <DeclinedList version={api.baseline} />
         </div>
       )}
       {api.engineNote && (

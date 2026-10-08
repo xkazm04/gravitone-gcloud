@@ -151,6 +151,23 @@ export default function Modal({
 
   useEffect(() => setMounted(true), []);
 
+  // The last element focused OUTSIDE the panel. The open effect below runs after
+  // the commit, and a child's `autoFocus` (ProjectDialog's title field) is applied
+  // during it, so by the time the effect reads `document.activeElement` focus is
+  // already inside the dialog and the "opener" it recorded was its own input:
+  // closing quick-create on /projects sent focus to <main>, not back to the button.
+  // Tracking focusin keeps the real opener without reading the DOM during render.
+  const lastOutsideRef = useRef<Element | null>(null);
+  useEffect(() => {
+    const onFocusIn = (e: FocusEvent) => {
+      if (e.target instanceof Element && !panelRef.current?.contains(e.target)) {
+        lastOutsideRef.current = e.target;
+      }
+    };
+    document.addEventListener("focusin", onFocusIn, true);
+    return () => document.removeEventListener("focusin", onFocusIn, true);
+  }, []);
+
   // `mounted` is in the condition AND the deps, and both halves are load-bearing.
   // This component returns null until `mounted` flips, so on a first render with
   // `open` already true the effect used to run against a panel that did not
@@ -162,7 +179,9 @@ export default function Modal({
   // which is why nothing has hit it; the contract should not depend on that.
   useEffect(() => {
     if (!open || !mounted) return;
-    openerRef.current = document.activeElement;
+    const active = document.activeElement;
+    openerRef.current =
+      active && panelRef.current?.contains(active) ? lastOutsideRef.current : active;
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         // React hydrates on `document`, the same node as this listener, so a

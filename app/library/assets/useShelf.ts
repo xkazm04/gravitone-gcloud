@@ -14,15 +14,26 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { useWindow } from "@/components/kit";
 import { useAnnounce } from "@/lib/announcer";
+import { overlayOpen, typing } from "@/lib/board/keys";
+import { useRemembered } from "@/lib/useRemembered";
 import { DISCIPLINES, type Discipline } from "@/lib/projects";
 import { useAuth } from "@/lib/useAuth";
-import { useAssets } from "@/lib/useAssets";
+import { useAssets, useUploadSrcs } from "@/lib/useAssets";
 import { useThemes } from "@/lib/useThemes";
 import { assetsUnder, buildTree, pathKey, type Asset } from "@/lib/assets";
 
 import { readAssetFacts } from "../assetMeta";
-import { DEFAULT_UPLOAD_PATH, SIBLING_CAP, foldersWithChildren, shelfCount } from "./shelf";
+import {
+  DEFAULT_UPLOAD_PATH,
+  PAGE,
+  SIBLING_CAP,
+  foldersWithChildren,
+  matchesQuery,
+  readFolder,
+  shelfCount,
+} from "./shelf";
 
 export interface ShelfProps {
   /** Switch the library to Styles, optionally landing on one. */
@@ -43,7 +54,19 @@ export function useShelf({ onOpenStyles, onCount }: ShelfProps) {
   const announce = useAnnounce();
   const gridRef = useRef<HTMLDivElement>(null);
 
-  const [selected, setSelected] = useState<string[]>([]);
+  /**
+   * The folder on screen, REMEMBERED: the shelf reopens where the user left it
+   * (one record, lib/useRemembered.ts, cleared on an identity flip). A folder
+   * that no longer has a plate under it — emptied, renamed in another tab —
+   * reads as "all assets" rather than as a room nobody can find on the rail.
+   */
+  const [folderRaw, setFolderRaw] = useRemembered<string>("library.assets.folder", "[]");
+  const wanted = useMemo(() => readFolder(folderRaw), [folderRaw]);
+  const setSelected = (path: string[]) => setFolderRaw(JSON.stringify(path));
+  /** The search box. Not remembered: a query is a question about now, and a
+   *  shelf that reopened filtered would look like it had lost plates. */
+  const [query, setQuery] = useState("");
+  const searchRef = useRef<HTMLInputElement>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [menu, setMenu] = useState<{ x: number; y: number; asset: Asset } | null>(null);
   // The OPEN PLATE, held by id rather than by index. `shown` is recomputed from
@@ -93,7 +116,17 @@ export function useShelf({ onOpenStyles, onCount }: ShelfProps) {
 
   const rows = useMemo(() => assets ?? [], [assets]);
   const tree = useMemo(() => buildTree(rows), [rows]);
-  const shown = useMemo(() => assetsUnder(rows, selected), [rows, selected]);
+  const selected = useMemo(
+    () => (wanted.length && rows.length && !assetsUnder(rows, wanted).length ? [] : wanted),
+    [wanted, rows],
+  );
+  const shown = useMemo(
+    () => assetsUnder(rows, selected).filter((a) => matchesQuery(a, query)),
+    [rows, selected, query],
+  );
+  /** The tiles drawn now. A different folder or a different question is a
+   *  different list, so either resets the window to its first page. */
+  const win = useWindow(shown, { size: PAGE, key: `${folderRaw}\n${query}` });
 
   useEffect(() => {
     // Still reading, or the read failed: an unknown count is not 0.
@@ -129,6 +162,26 @@ export function useShelf({ onOpenStyles, onCount }: ShelfProps) {
       .slice(0, SIBLING_CAP);
   }, [openAsset, rows]);
 
+  /** Every row painted right now: the window, the open plate, its strip. Only
+   *  these have their uploaded bytes read (lib/useAssets.ts#useUploadSrcs). */
+  const painted = useMemo(
+    () => [...win.visible, ...(openAsset ? [openAsset, ...siblings] : [])],
+    [win.visible, openAsset, siblings],
+  );
+  const draw = useUploadSrcs(painted);
+
+  // `/` puts the cursor in the search box, as on the audio ledger — never from
+  // a field, and never under an open dialog.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || overlayOpen()) return;
+      e.preventDefault();
+      searchRef.current?.focus();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
+
   const clearPicks = () => {
     setPicked(new Set());
     setAnchor(null);
@@ -138,6 +191,13 @@ export function useShelf({ onOpenStyles, onCount }: ShelfProps) {
   const selectFolder = (path: string[]) => {
     setSelected(path);
     clearPicks();
+  };
+
+  /** Select every tile drawn — the window, not the folder: a bulk removal must
+   *  never reach a plate that is not on screen. */
+  const pickVisible = () => {
+    setPicked(new Set(win.visible.map((a) => a.id)));
+    setAnchor(null);
   };
 
   const togglePick = (id: string) => {
@@ -370,6 +430,18 @@ export function useShelf({ onOpenStyles, onCount }: ShelfProps) {
     setOpenId(shown[(openIndex + delta + shown.length) % shown.length].id);
   };
 
+  /** Home / End in the viewer: the first or the last plate of the folder. */
+  const jump = (to: "first" | "last") => {
+    if (!shown.length) return;
+    setOpenId(shown[to === "first" ? 0 : shown.length - 1].id);
+  };
+
+  /** A new question drops the selection, as a new folder does. */
+  const search = (q: string) => {
+    setQuery(q);
+    clearPicks();
+  };
+
   return {
     user,
     assets,
@@ -386,6 +458,13 @@ export function useShelf({ onOpenStyles, onCount }: ShelfProps) {
     gridRef,
     selected,
     setSelected,
+    query,
+    search,
+    searchRef,
+    win,
+    draw,
+    pickVisible,
+    jump,
     expanded,
     setExpanded,
     menu,

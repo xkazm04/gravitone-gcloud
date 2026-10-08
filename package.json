@@ -2,6 +2,10 @@
   "name": "gravitone-gcloud",
   "version": "0.1.0",
   "private": true,
+  "sideEffects": [
+    "*.css",
+    "./lib/turns/kinds/*.ts"
+  ],
   "scripts": {
     "dev": "next dev",
     "fixtures": "npx tsx pipeline/fixtures/generate.mts",

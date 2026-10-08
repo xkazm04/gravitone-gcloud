@@ -17,7 +17,7 @@
 import { AlertTriangle, Ban, Check, CircleDashed, ExternalLink, Hourglass, PauseCircle, PenLine, Search, type LucideIcon } from "lucide-react";
 import { useState } from "react";
 
-import { CHIP_CLASS, TALLY_TONE, Tally } from "@/components/ui/signal";
+import { CHIP_CLASS, Fold, TALLY_TONE, Tally } from "@/components/ui/signal";
 import type { ArticleCritique, CritiqueDetail, CritiqueRoundDetail } from "@/lib/articles/types";
 
 import {
@@ -151,55 +151,75 @@ function Findings({ round }: { round: CritiqueRoundDetail }) {
   if (!groups.length) {
     return <p className="font-jetbrains text-label text-white/50">{round.reviews.length ? "no findings this round" : "no review has arrived for this round"}</p>;
   }
+  // One fold per lens. Its header carries what the gate weighs — blockers, and
+  // findings the writer has not answered — and it opens by itself when either
+  // is there; a lens holding only answered minors is the record, one press down.
   return (
-    <div className="space-y-4" data-testid="critique-findings">
-      {groups.map((g) => (
-        <section key={g.kind} aria-label={`${g.kind} findings`} data-kind={g.kind}>
-          <h3 className="font-jetbrains mb-1.5 text-label tracking-[0.16em] text-white/45 uppercase">
-            {g.kind} · {g.rows.length}
-          </h3>
-          <ul className="divide-y divide-white/[0.06] rounded-xl border border-white/8">
-            {g.rows.map(({ reviewer, finding: f, disposition: d }) => {
-              const dTone = DISPOSITION_TONE[d?.disposition ?? "unanswered"];
-              return (
-                <li key={`${reviewer}-${f.id}`} className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]" data-testid={`critique-finding-${reviewer}-${f.id}`} data-disposition={d?.disposition ?? "unanswered"}>
-                  <div className="min-w-0 space-y-1">
-                    <p className="flex flex-wrap items-center gap-2">
-                      <Chip tone={SEVERITY_TONE[f.severity]}>{f.severity}</Chip>
-                      <span className="font-jetbrains text-label text-white/55">
-                        {reviewer} · {f.id} · {f.location}
-                      </span>
-                    </p>
-                    <p className="text-content text-white/85">{f.claim}</p>
-                    <p className="text-label text-white/60">→ {f.suggestion}</p>
-                    {f.evidence.length > 0 && (
-                      <p className="flex flex-wrap gap-x-3 gap-y-1">
-                        {f.evidence.map((u) => (
-                          <a key={u} href={u} target="_blank" rel="noreferrer noopener" className="font-jetbrains inline-flex items-center gap-1 text-label break-all text-cyan-200/80 hover:text-cyan-100">
-                            {u}
-                            <ExternalLink aria-hidden className="h-3 w-3 shrink-0" />
-                          </a>
-                        ))}
-                      </p>
-                    )}
-                  </div>
-                  <div className="min-w-0 space-y-1 md:border-l md:border-white/8 md:pl-3">
-                    <Chip tone={dTone}>{d?.disposition ?? "unanswered"}</Chip>
-                    {d ? (
-                      <>
-                        <p className="text-label text-white/75">{d.reason}</p>
-                        {d.action && <p className="text-label text-emerald-200/80">{d.action}</p>}
-                      </>
-                    ) : (
-                      <p className="text-label text-amber-200/80">the writer has not answered this round yet</p>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </section>
-      ))}
+    <div data-testid="critique-findings">
+      {groups.map((g) => {
+        const blockers = g.rows.filter((x) => x.finding.severity === "blocker").length;
+        const open = g.rows.filter((x) => !x.disposition).length;
+        return (
+          <div key={g.kind} data-kind={g.kind}>
+            <Fold
+              title={g.kind}
+              level={4}
+              tally={{ value: g.rows.length, label: "findings" }}
+              marks={
+                blockers || open ? (
+                  <>
+                    {blockers > 0 && <Tally value={blockers} label="blocker" tone="rose" />}
+                    {open > 0 && <Tally value={open} label="unanswered" tone="amber" />}
+                  </>
+                ) : undefined
+              }
+              defaultOpen={blockers > 0 || open > 0}
+              testId={`critique-kind-${g.kind}`}
+            >
+              <ul aria-label={`${g.kind} findings`} className="divide-y divide-white/[0.06] rounded-xl border border-white/8">
+                {g.rows.map(({ reviewer, finding: f, disposition: d }) => {
+                  const dTone = DISPOSITION_TONE[d?.disposition ?? "unanswered"];
+                  return (
+                    <li key={`${reviewer}-${f.id}`} className="grid gap-2 px-4 py-3 md:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]" data-testid={`critique-finding-${reviewer}-${f.id}`} data-disposition={d?.disposition ?? "unanswered"}>
+                      <div className="min-w-0 space-y-1">
+                        <p className="flex flex-wrap items-center gap-2">
+                          <Chip tone={SEVERITY_TONE[f.severity]}>{f.severity}</Chip>
+                          <span className="font-jetbrains text-label text-white/55">
+                            {reviewer} · {f.id} · {f.location}
+                          </span>
+                        </p>
+                        <p className="text-content text-white/85">{f.claim}</p>
+                        <p className="text-label text-white/60">→ {f.suggestion}</p>
+                        {f.evidence.length > 0 && (
+                          <p className="flex flex-wrap gap-x-3 gap-y-1">
+                            {f.evidence.map((u) => (
+                              <a key={u} href={u} target="_blank" rel="noreferrer noopener" className="font-jetbrains inline-flex items-center gap-1 text-label break-all text-cyan-200/80 hover:text-cyan-100">
+                                {u}
+                                <ExternalLink aria-hidden className="h-3 w-3 shrink-0" />
+                              </a>
+                            ))}
+                          </p>
+                        )}
+                      </div>
+                      <div className="min-w-0 space-y-1 md:border-l md:border-white/8 md:pl-3">
+                        <Chip tone={dTone}>{d?.disposition ?? "unanswered"}</Chip>
+                        {d ? (
+                          <>
+                            <p className="text-label text-white/75">{d.reason}</p>
+                            {d.action && <p className="text-label text-emerald-200/80">{d.action}</p>}
+                          </>
+                        ) : (
+                          <p className="text-label text-amber-200/80">the writer has not answered this round yet</p>
+                        )}
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Fold>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -212,18 +232,31 @@ export function CritiqueView({ detail, summary, live }: { detail: CritiqueDetail
   const current = picked !== null && detail.rounds.some((r) => r.round === picked) ? picked : last;
   const round = detail.rounds.find((r) => r.round === current);
   const rows = reviewerRows(detail, current, live && current === last);
+  const completed = rows.filter((r) => r.state === "completed").length;
+  // reviewing is not trouble; anything else that did not complete is
+  const trouble = rows.filter((r) => r.state !== "completed" && r.state !== "reviewing").length;
   return (
     <div className="space-y-5" data-testid="critique-panel" data-round={current}>
       {detail.rounds.length > 0 && <Timeline detail={detail} current={current} onPick={setPicked} live={live} />}
-      <div>
-        <h3 className="font-jetbrains mb-1 text-label tracking-[0.16em] text-white/45 uppercase">reviewers · round {current}</h3>
+      {/* The panel's outcomes are the first read of the round; who said what,
+          with which model, is the record. A reviewer that could not run opens
+          the list by itself: its error is the work, and absence stays absence. */}
+      <Fold
+        key={current}
+        title={`reviewers · round ${current}`}
+        level={4}
+        tally={{ value: completed, of: rows.length, label: "completed", tone: completed >= detail.minCompleted ? "emerald" : "rose" }}
+        marks={trouble > 0 ? <Tally value={trouble} label="not completed" tone="amber" /> : undefined}
+        defaultOpen={trouble > 0 || rows.some((r) => r.wrote)}
+        testId="critique-reviewers-fold"
+      >
         <ul className="divide-y divide-white/[0.06]" data-testid="critique-reviewers">
           {rows.map((r) => (
             <ReviewerItem key={r.spec.id} row={r} />
           ))}
         </ul>
-      </div>
-      {round && <Findings round={round} />}
+      </Fold>
+      {round && <Findings key={current} round={round} />}
       {summary && (
         <p className="font-jetbrains text-label text-white/50" data-testid="critique-summary">
           across {summary.rounds} round{summary.rounds === 1 ? "" : "s"} the writer answered {summary.findings.total} finding{summary.findings.total === 1 ? "" : "s"}: {summary.findings.accepted} accepted · {summary.findings.rejected} rejected · {summary.findings.deferred} deferred

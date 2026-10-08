@@ -11,6 +11,8 @@
 //   6  a refused transaction writes nothing; the store's message comes back whole
 //   7  the kept mark follows the bytes: a regenerate drops it, a re-keep adds a row
 //   8  no new prose: three hand-wired TALLY_TONE sites stay three; the name is a verb
+//   9  the shelf's kept index reads one project's rows (listAssetsFor), and
+//      only this account's
 import "fake-indexeddb/auto";
 
 import { readFileSync } from "node:fs";
@@ -23,7 +25,7 @@ import type { Frame } from "@/app/_phases/frames/frames";
 import { unitsFromFrames } from "@/app/_phases/frames/picture/unit";
 import { keepPlate, keepable, keptIndex, plateBlob, plateDigest } from "@/app/_library/keepPlate";
 import { readOutputs, type Output } from "@/app/_library/projectOutputs";
-import { getUploadBlobs, listAssets, assetFromKeptPlate, type UploadRecord } from "@/lib/assets";
+import { getUploadBlobs, listAssets, listAssetsFor, assetFromKeptPlate, putAssets, type UploadRecord } from "@/lib/assets";
 import { deleteProject, newProject, putProject } from "@/lib/projects";
 
 import { stripComments } from "./_helpers";
@@ -188,7 +190,7 @@ test("case 7: the kept mark follows the bytes", async () => {
   await putFrames(p.id, dataUrl(BYTES_A));
   const o = await plateOf(p.id);
   await keepPlate(UID, p.id, o);
-  const marked = async (out: Output) => keptIndex(await listAssets(UID)).get(out.id) === (await plateDigest(out.src!));
+  const marked = async (out: Output) => keptIndex(await listAssetsFor(UID, p.id)).get(out.id) === (await plateDigest(out.src!));
   expect(await marked(o)).toBe(true);
 
   await putFrames(p.id, dataUrl(BYTES_B));
@@ -218,4 +220,21 @@ test("case 8: no new prose; the control's name is a verb; assetFromKeptPlate is 
   });
   expect(pair.asset.id).toBe("as-kept-abababababababab");
   expect(pair.upload.id).toBe("up-kept-abababababababab");
+});
+
+test("case 9: listAssetsFor reads one project's rows, and only this account's", async () => {
+  const p1 = await project("Scoped One");
+  const p2 = await project("Scoped Two");
+  await putFrames(p1.id, dataUrl("\x89PNG\r\n\x1a\nscoped-1"));
+  await putFrames(p2.id, dataUrl("\x89PNG\r\n\x1a\nscoped-2"));
+  await keepPlate(UID, p1.id, await plateOf(p1.id));
+  await keepPlate(UID, p2.id, await plateOf(p2.id));
+  // Another account's row claiming the same project id must not leak in.
+  await putAssets([
+    { id: "as-other", uid: "uid-other", path: ["kept"], name: "theirs", src: "", kind: "image", meta: { projectId: p1.id }, createdAt: 1 },
+  ]);
+  const rows = await listAssetsFor(UID, p1.id);
+  expect(rows.length).toBeGreaterThan(0);
+  expect(rows.every((r) => r.uid === UID && r.meta?.projectId === p1.id)).toBe(true);
+  expect((await listAssets(UID)).some((r) => r.meta?.projectId === p2.id)).toBe(true);
 });

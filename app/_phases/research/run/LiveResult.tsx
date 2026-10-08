@@ -45,11 +45,15 @@
 import { Bell } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
-import { CHIP_CLASS, Hint, TALLY_TONE } from "@/components/ui/signal";
+import { CHIP_CLASS, Fold, Hint, TALLY_TONE } from "@/components/ui/signal";
 
 import Notice from "../../_shared/ui/Notice";
 import type { EngineReceipt, LiveState } from "./live";
 import { secs } from "./useResearchRun";
+
+/** How much of each long list the card itself carries; the rest is in a Fold. */
+const FINDINGS_SHOWN = 12;
+const GAPS_SHOWN = 4;
 
 /** THE PROVENANCE, DRAWN RATHER THAN NARRATED — `StandInNote`'s shape, for the
  *  other kind of notebook. The topic is NOT struck through here, because this
@@ -162,12 +166,33 @@ export default function LiveResult({ state, actions }: { state: LiveState; actio
             // The schema report. Long on purpose: the fix for a `bad-response`
             // is a prompt change, and one finding at a time is a prompt edited
             // five times for one run's worth of information.
-            <ul className="mt-2 list-disc space-y-1 pl-5 text-label opacity-80">
-              {state.findings.slice(0, 12).map((f, i) => (
-                <li key={i}>{f}</li>
-              ))}
-              {state.findings.length > 12 && <li>…and {state.findings.length - 12} more.</li>}
-            </ul>
+            //
+            // THE REST IS ONE PRESS DOWN, NOT GONE (Wave 2). The list used to
+            // stop at twelve with "…and N more." — a count of findings the
+            // reader could not open, on the report whose whole argument is that
+            // one-at-a-time costs a prompt edit per finding. The first twelve
+            // stay on the card; the remainder sit verbatim in a Fold.
+            <>
+              <ul className="mt-2 list-disc space-y-1 pl-5 text-label opacity-80">
+                {state.findings.slice(0, FINDINGS_SHOWN).map((f, i) => (
+                  <li key={i}>{f}</li>
+                ))}
+              </ul>
+              {state.findings.length > FINDINGS_SHOWN && (
+                <Fold
+                  title="more findings"
+                  tally={{ value: state.findings.length - FINDINGS_SHOWN }}
+                  level={4}
+                  className="mt-2"
+                >
+                  <ul className="list-disc space-y-1 pl-5 text-label opacity-80">
+                    {state.findings.slice(FINDINGS_SHOWN).map((f, i) => (
+                      <li key={i}>{f}</li>
+                    ))}
+                  </ul>
+                </Fold>
+              )}
+            </>
           )}
         </Notice>
       </div>
@@ -231,13 +256,24 @@ export default function LiveResult({ state, actions }: { state: LiveState; actio
             it did not do, and the first line of it on this path is always "no
             search was run". A notebook whose gaps are only in the JSON is a
             notebook whose gaps nobody reads. */}
+        {/* The first few are on the card; the rest are one press down,
+            verbatim — "…and N more." used to be the end of the line, a count of
+            declared gaps with no way to read them. */}
         {counts.gaps > 0 && (
           <ul className="font-hanken mt-2 list-disc space-y-1 pl-5 text-label leading-relaxed text-amber-200/70">
-            {nb.researchGaps.slice(0, 4).map((g, i) => (
+            {nb.researchGaps.slice(0, GAPS_SHOWN).map((g, i) => (
               <li key={i}>{g}</li>
             ))}
-            {counts.gaps > 4 && <li className="text-white/35">…and {counts.gaps - 4} more.</li>}
           </ul>
+        )}
+        {counts.gaps > GAPS_SHOWN && (
+          <Fold title="more gaps" tally={{ value: counts.gaps - GAPS_SHOWN, tone: "amber" }} level={4} className="mt-2">
+            <ul className="font-hanken list-disc space-y-1 pl-5 text-label leading-relaxed text-amber-200/70">
+              {nb.researchGaps.slice(GAPS_SHOWN).map((g, i) => (
+                <li key={i}>{g}</li>
+              ))}
+            </ul>
+          </Fold>
         )}
 
         {actions && <div className="mt-4 flex flex-wrap items-center gap-2.5">{actions}</div>}

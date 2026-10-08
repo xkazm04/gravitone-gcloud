@@ -73,3 +73,34 @@ export function shelfCount(a: { loaded: boolean; error: string | null; total: nu
   if (a.error && a.total === 0) return undefined;
   return a.total;
 }
+
+/** How many tiles the gallery draws before the pager. Two dozen fills a wide
+ *  screen twice over, and every tile past it was an image decoded (and, for an
+ *  upload, a blob read) for a plate nobody had scrolled to. */
+export const PAGE = 24;
+
+/** Does a plate answer the search box? Every word must appear somewhere the
+ *  user can see it named: the plate, its folder chain, its style, its brief, the
+ *  file it was uploaded as. */
+export function matchesQuery(a: Asset, query: string): boolean {
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
+  if (!words.length) return true;
+  const m = (a.meta ?? {}) as { styleName?: unknown; problem?: unknown; fileName?: unknown };
+  const hay = [a.name, ...a.path, m.styleName, m.problem, m.fileName]
+    .filter((x): x is string => typeof x === "string")
+    .join(" ")
+    .toLowerCase();
+  return words.every((w) => hay.includes(w));
+}
+
+/** A remembered folder, read back. Stored as JSON rather than a `/`-joined key
+ *  because a folder the user renamed may itself contain a slash. Anything that
+ *  does not parse as a list of strings is "all assets". */
+export function readFolder(raw: string): string[] {
+  try {
+    const v: unknown = JSON.parse(raw);
+    return Array.isArray(v) && v.every((x) => typeof x === "string") ? v : [];
+  } catch {
+    return [];
+  }
+}

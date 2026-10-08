@@ -258,7 +258,7 @@ export const KIT_GROUPS = [
     for: "a list that windows itself and shows how much lies beyond",
     parts: [
       { name: "Pager", api: "<Pager shown total onMore onAll? step? noun? auto?/>" },
-      { name: "useWindow", api: "useWindow(items, {size?, step?}) -> {visible, shown, total, remaining, more, all, reset}" },
+      { name: "useWindow", api: "useWindow(items, {size?, step?, key?}) -> {visible, shown, total, remaining, more, all, reset}; a new key resets" },
     ],
   },
   {
@@ -337,7 +337,7 @@ export const KIT_GROUPS = [
   {
     id: "signal",
     title: "Signal",
-    for: "pips, a value in its band, an upstream break, keys, staleness, provenance; Hint's parts (components/ui/signal)",
+    for: "pips, a value in its band, an upstream break, keys, staleness, provenance, a section opened on demand; Hint's parts (components/ui/signal)",
     parts: [
       { name: "PipRow", api: '<PipRow states=["filled"|"hollow"|"amber"|"rose"] max? label?/>' },
       { name: "BandTrack", api: "<BandTrack value min max band? unit? hatchBand? showBounds? label?/>" },
@@ -345,6 +345,7 @@ export const KIT_GROUPS = [
       { name: "Keycaps", api: "<Keycaps map=[{keys,does}] label?/>" },
       { name: "StaleBadge", api: '<StaleBadge words? why? glyph?="hourglass|history"/>' },
       { name: "Provenance", api: "<Provenance model? run? step? vendor? cost?/>" },
+      { name: "Fold", api: "<Fold title tally?={value,of?,tone?} marks? defaultOpen? open? onOpenChange? remember? level?>body</Fold>" },
       { name: "useHint", api: "const d = useHint() -> {hintId, open, show, hide, toggle, rootProps, triggerProps}" },
       { name: "HintPopover", api: "<HintPopover d={useHint()}>twelve words</HintPopover>" },
       { name: "hintRootClass", api: "the wrapper class a useHint disclosure positions against" },

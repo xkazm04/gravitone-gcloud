@@ -15,10 +15,11 @@
 // It also does the thing neither sibling can: RENDER EVERY MISSING PLATE in one
 // action, serially, because sixteen clicks is not a workflow.
 
-import { useEffect, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { AlertTriangle, ChevronDown, ChevronRight, Loader2, Sparkles, Trash2, Wand2 } from "lucide-react";
 
-import { Tally } from "@/components/ui/signal";
+import { Keycaps, Tally } from "@/components/ui/signal";
+import { typing } from "@/lib/board/keys";
 import { quoteBudget, type BudgetQuoteResult } from "@/lib/imagingClient";
 
 import { durationOf, humanMs, isComposed, type Frame, type FrameText, type LayerRef, type PlateState } from "./frames";
@@ -44,6 +45,7 @@ const ASSEMBLY_GRID = "grid-cols-[52px_1fr_244px_120px_86px]";
 
 export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFrames> }) {
   const { frames, render, busy, generatePlate, setSubject, plateCost, totalCost, direction } = ctl;
+  const { setMotion, setText, bindFact, removeText, addText, moveLayer, resizeElement, reorderLayer, toggleHidden, removeElement } = ctl;
   const [openId, setOpenId] = useState<string | null>(null);
   const [runningAll, setRunningAll] = useState(false);
   /** How many plates were still missing when a batch stopped itself. Null when
@@ -54,9 +56,76 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
   // One selection, shared by the canvas and the panel. Held here rather than in
   // either of them so they cannot disagree about what is selected.
   const [selected, setSelected] = useState<LayerRef>(null);
-  const now = useTicker(ctl.directingSince !== null);
 
-  const missing = frames.filter((f) => !isComposed(f));
+  const missing = useMemo(() => frames.filter((f) => !isComposed(f)), [frames]);
+
+  // THE ROW'S HANDLERS, ONCE. Every one of them is a stable callback in
+  // `useFrames` (generatePlate reads the cut through a ref), so this object is
+  // built once per cut and a memoised <Row> re-renders only when its own frame
+  // does. Before, each row was handed fresh closures on every render of the
+  // ledger — a pointer move dragging one caption re-rendered all sixteen rows,
+  // canvases and all.
+  const ops = useMemo<LedgerOps>(
+    () => ({
+      toggle: (id) => {
+        setOpenId((cur) => (cur === id ? null : id));
+        setSelected(null);
+      },
+      render: (id) => void generatePlate(id),
+      subject: setSubject,
+      motion: setMotion,
+      text: setText,
+      bind: bindFact,
+      removeText,
+      addText,
+      select: setSelected,
+      move: moveLayer,
+      resize: resizeElement,
+      reorder: reorderLayer,
+      toggleHidden,
+      removeLayer: (id, ref) => (ref.type === "element" ? removeElement(id, ref.id) : removeText(id, ref.id)),
+    }),
+    [generatePlate, setSubject, setMotion, setText, bindFact, removeText, addText, moveLayer, resizeElement, reorderLayer, toggleHidden, removeElement],
+  );
+
+  // THE LEDGER BY KEYBOARD — the Board's J/K/Esc, plus N for the question this
+  // view exists to answer: the next frame with no plate, opened. A sixteen-row
+  // pass used to be sixteen aims at a chevron. Ignored while typing (the subject
+  // box, a caption, the fact picker) and with any modifier held.
+  const rows = useRef<HTMLDivElement>(null);
+  const live = useRef({ frames, openId });
+  useEffect(() => {
+    live.current = { frames, openId };
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || typing(e.target)) return;
+      const { frames: fs, openId: cur } = live.current;
+      if (fs.length === 0) return;
+      const at = fs.findIndex((f) => f.id === cur);
+      const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
+      let next: string | null | undefined;
+      if (k === "j") next = fs[Math.min(fs.length - 1, at + 1)].id;
+      else if (k === "k") next = fs[Math.max(0, at === -1 ? 0 : at - 1)].id;
+      else if (k === "n") {
+        // From the row after the open one, wrapping, so N walks the gaps in order.
+        const order = [...fs.slice(at + 1), ...fs.slice(0, at + 1)];
+        next = order.find((f) => !isComposed(f))?.id;
+      } else if (k === "Escape" && cur !== null) next = null;
+      if (next === undefined) return;
+      e.preventDefault();
+      setOpenId(next);
+      setSelected(null);
+      if (next)
+        requestAnimationFrame(() =>
+          rows.current
+            ?.querySelector(`[data-frame-row="${CSS.escape(next)}"]`)
+            ?.scrollIntoView({ block: "nearest", behavior: "smooth" }),
+        );
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, []);
 
   const plan = planRender({
     missing: missing.length,
@@ -169,6 +238,14 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
           <span className="text-white/30"> · {ctl.clipsAuthored}/{frames.length} clips authored</span>
         </p>
         <div className="flex flex-wrap items-center gap-2">
+        <Keycaps
+          label="Ledger keys"
+          map={[
+            { keys: ["J", "K"], does: "next · previous" },
+            { keys: ["N"], does: "next missing plate" },
+            { keys: ["Esc"], does: "close" },
+          ]}
+        />
         <button
           onClick={() => void ctl.direct()}
           data-testid="direct-the-cut"
@@ -182,11 +259,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
           {ctl.directing ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden /> : <Wand2 className="h-3.5 w-3.5" aria-hidden />}
           {ctl.directing ? "directing…" : "direct the cut"}
           {/* By the ledger's clock, so a reload mid-pass picks up where it was. */}
-          {ctl.directingSince !== null && (
-            <span data-testid="direct-elapsed" className="font-jetbrains font-normal text-violet-100/55">
-              {humanMs(Math.max(0, now - ctl.directingSince))}
-            </span>
-          )}
+          {ctl.directingSince !== null && <Elapsed since={ctl.directingSince} />}
         </button>
         {/* The pass is the server's and outlives this step (2026-10-06), so
             stopping it is a deliberate act with its own control. It ends the
@@ -243,7 +316,7 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
       {/* Which notebook the binding list, the brief and the grade read. */}
       <SourceChip source={ctl.notebook} />
 
-      <div className="overflow-hidden rounded-xl border border-white/8">
+      <div ref={rows} className="overflow-hidden rounded-xl border border-white/8">
         <div className={`font-jetbrains grid ${ASSEMBLY_GRID} gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase`}>
           <span>at</span>
           <span>scene</span>
@@ -260,33 +333,34 @@ export default function FramesAssembly({ ctl }: { ctl: ReturnType<typeof useFram
             holdS={durationOf(frames, i, render.durationS)}
             open={openId === f.id}
             busy={busy.has(f.id)}
-            onToggle={() => {
-              setOpenId(openId === f.id ? null : f.id);
-              setSelected(null);
-            }}
-            onRender={() => void generatePlate(f.id)}
             rejection={ctl.rejections[f.at]}
-            onSubject={(v) => setSubject(f.id, v)}
-            onMotion={(v) => ctl.setMotion(f.id, v)}
             facts={ctl.facts}
-            onText={(tid, v) => ctl.setText(f.id, tid, v)}
-            onBind={(tid, fid) => ctl.bindFact(f.id, tid, fid)}
-            onRemoveText={(tid) => ctl.removeText(f.id, tid)}
-            onAddText={(role) => ctl.addText(f.id, role)}
             selected={openId === f.id ? selected : null}
-            onSelect={setSelected}
-            onMove={(ref, x, y) => ctl.moveLayer(f.id, ref, x, y)}
-            onResize={(elId, w, h) => ctl.resizeElement(f.id, elId, w, h)}
-            onReorder={(ref, dir) => ctl.reorderLayer(f.id, ref, dir)}
-            onToggleHidden={(ref) => ctl.toggleHidden(f.id, ref)}
-            onRemoveLayer={(ref) =>
-              ref.type === "element" ? ctl.removeElement(f.id, ref.id) : ctl.removeText(f.id, ref.id)
-            }
+            ops={ops}
           />
         ))}
       </div>
     </div>
   );
+}
+
+/** What a ledger row can do, each keyed by the frame it acts on. One object for
+ *  the whole ledger — see `ops` above. */
+interface LedgerOps {
+  toggle: (id: string) => void;
+  render: (id: string) => void;
+  subject: (id: string, v: string) => void;
+  motion: (id: string, v: string) => void;
+  text: (id: string, textId: string, v: string) => void;
+  bind: (id: string, textId: string, factId: string | undefined) => void;
+  removeText: (id: string, textId: string) => void;
+  addText: (id: string, role: FrameText["role"]) => void;
+  select: (ref: LayerRef) => void;
+  move: (id: string, ref: NonNullable<LayerRef>, x: number, y: number) => void;
+  resize: (id: string, elId: string, w: number, h: number) => void;
+  reorder: (id: string, ref: NonNullable<LayerRef>, dir: -1 | 1) => void;
+  toggleHidden: (id: string, ref: NonNullable<LayerRef>) => void;
+  removeLayer: (id: string, ref: NonNullable<LayerRef>) => void;
 }
 
 /** Keyed by `PlateState` rather than by `string`, so a sixth plate state is a
@@ -300,29 +374,16 @@ const PLATE_WORD: Record<PlateState, { word: string; cls: string }> = {
   empty: { word: "—", cls: "text-white/25" },
 };
 
-function Row({
+const Row = memo(function Row({
   frame,
   index,
   holdS,
   open,
   busy,
-  onToggle,
-  onRender,
   rejection,
-  onSubject,
-  onMotion,
   facts,
-  onText,
-  onBind,
-  onRemoveText,
-  onAddText,
   selected,
-  onSelect,
-  onMove,
-  onResize,
-  onReorder,
-  onToggleHidden,
-  onRemoveLayer,
+  ops,
 }: {
   frame: Frame;
   index: number;
@@ -331,28 +392,30 @@ function Row({
   holdS: number | null;
   open: boolean;
   busy: boolean;
-  onToggle: () => void;
-  onRender: () => void;
   /** Why the last direction pass refused this beat, if it did. */
   rejection?: string;
-  onSubject: (v: string) => void;
-  onMotion: (v: string) => void;
   facts: Fact[];
-  onText: (textId: string, v: string) => void;
-  onBind: (textId: string, factId: string | undefined) => void;
-  onRemoveText: (textId: string) => void;
-  onAddText: (role: FrameText["role"]) => void;
   selected: LayerRef;
-  onSelect: (ref: LayerRef) => void;
-  onMove: (ref: NonNullable<LayerRef>, x: number, y: number) => void;
-  onResize: (elId: string, w: number, h: number) => void;
-  onReorder: (ref: NonNullable<LayerRef>, dir: -1 | 1) => void;
-  onToggleHidden: (ref: NonNullable<LayerRef>) => void;
-  onRemoveLayer: (ref: NonNullable<LayerRef>) => void;
+  ops: LedgerOps;
 }) {
+  const id = frame.id;
+  const onToggle = () => ops.toggle(id);
+  const onRender = () => ops.render(id);
+  const onSubject = (v: string) => ops.subject(id, v);
+  const onMotion = (v: string) => ops.motion(id, v);
+  const onText = (textId: string, v: string) => ops.text(id, textId, v);
+  const onBind = (textId: string, factId: string | undefined) => ops.bind(id, textId, factId);
+  const onRemoveText = (textId: string) => ops.removeText(id, textId);
+  const onAddText = (role: FrameText["role"]) => ops.addText(id, role);
+  const onSelect = ops.select;
+  const onMove = (ref: NonNullable<LayerRef>, x: number, y: number) => ops.move(id, ref, x, y);
+  const onResize = (elId: string, w: number, h: number) => ops.resize(id, elId, w, h);
+  const onReorder = (ref: NonNullable<LayerRef>, dir: -1 | 1) => ops.reorder(id, ref, dir);
+  const onToggleHidden = (ref: NonNullable<LayerRef>) => ops.toggleHidden(id, ref);
+  const onRemoveLayer = (ref: NonNullable<LayerRef>) => ops.removeLayer(id, ref);
   const plate = PLATE_WORD[frame.plate.state];
   return (
-    <div className={`border-b border-white/6 last:border-0 ${open ? "bg-white/[0.02]" : ""}`}>
+    <div data-frame-row={frame.id} className={`border-b border-white/6 last:border-0 ${open ? "bg-white/[0.02]" : ""}`}>
       <div className={`grid ${ASSEMBLY_GRID} items-center gap-2 px-3 py-2`}>
         {/* Both halves of the row toggle the same panel, so both carry the
             state. Without it the chevron is the only thing that says whether
@@ -555,17 +618,23 @@ function Row({
       )}
     </div>
   );
-}
+});
 
-/** The wall clock, ticking once a second only while `on` — the direction
- *  pass's elapsed time. The clock is created and destroyed with the pass, and
- *  the only setState is inside the interval, never in the effect body. */
-function useTicker(on: boolean): number {
+/** The direction pass's elapsed time, by the ledger's clock — ticking once a
+ *  second, in a component of its own. The ticker used to live in the ledger,
+ *  so a pass that runs for minutes re-rendered every row, canvas and field once
+ *  a second for all of them; now the second hand is the only thing that moves.
+ *  Mounted only while a pass runs, and the only setState is inside the
+ *  interval, never in the effect body. */
+function Elapsed({ since }: { since: number }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!on) return;
     const iv = setInterval(() => setNow(Date.now()), 1_000);
     return () => clearInterval(iv);
-  }, [on]);
-  return now;
+  }, []);
+  return (
+    <span data-testid="direct-elapsed" className="font-jetbrains font-normal text-violet-100/55">
+      {humanMs(Math.max(0, now - since))}
+    </span>
+  );
 }

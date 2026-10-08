@@ -198,7 +198,10 @@ export function StageRailDemo() {
 // ── context menu ────────────────────────────────────────────────────────────
 
 export function ContextMenuDemo() {
-  const [at, setAt] = useState<{ x: number; y: number } | null>({ x: 210, y: 46 });
+  // Closed on mount. A menu takes focus when it opens (components/kit/
+  // ContextMenu.tsx), so a specimen drawn open stole the cursor from the sheet's
+  // search box the moment a query matched it.
+  const [at, setAt] = useState<{ x: number; y: number } | null>(null);
   const [said, setSaid] = useState("nothing chosen");
   const items: MenuItem[] = [
     { id: "open", label: "Open", onSelect: () => setSaid("Open"), keys: "Enter" },
