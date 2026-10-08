@@ -21,7 +21,7 @@ import { BookmarkPlus, Music2, Search, SearchX } from "lucide-react";
 import { Pager, useWindow } from "@/components/kit";
 import { CHIP_CLASS, Ghost, Provenance, TALLY_TONE, Tally } from "@/components/ui/signal";
 import { useAnnounce } from "@/lib/announcer";
-import { listAssets } from "@/lib/assets";
+import { listAssetsFor } from "@/lib/assets";
 import { useAuth } from "@/lib/useAuth";
 
 import { keepable, keepPlate, keptIndex, plateDigest } from "./keepPlate";
@@ -51,17 +51,20 @@ export default function LibraryShelves({ projectId }: { projectId: string }) {
   const { user } = useAuth();
   const uid = user?.uid ?? null;
   const [kept, setKept] = useState<ReadonlyMap<string, string>>(new Map());
+  // THIS PROJECT'S ROWS ONLY (Wave 4): the kept index used to read every asset
+  // the account owns — the trial grid, every promoted proof, every other
+  // project's kept plates — to mark the dozen outputs on this shelf.
   const refreshKept = useCallback(async () => {
-    if (uid) setKept(keptIndex(await listAssets(uid)));
-  }, [uid]);
+    if (uid) setKept(keptIndex(await listAssetsFor(uid, projectId)));
+  }, [uid, projectId]);
   useEffect(() => {
     if (!uid) return;
     let live = true;
-    void listAssets(uid).then((rows) => live && setKept(keptIndex(rows)));
+    void listAssetsFor(uid, projectId).then((rows) => live && setKept(keptIndex(rows)));
     return () => {
       live = false;
     };
-  }, [uid]);
+  }, [uid, projectId]);
   const [kind, setKind] = useState<OutputKind | null>(null);
   const [q, setQ] = useState("");
 

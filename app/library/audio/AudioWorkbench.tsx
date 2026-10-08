@@ -27,12 +27,16 @@
 
 import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 
+import dynamic from "next/dynamic";
+
 import { DemoChip } from "@/app/_projects/parts";
 import { ToastTray, WorldRoot, useToast } from "@/components/kit";
+import { pendingPanel } from "@/components/ui/Pending";
 import { Ghost } from "@/components/ui/signal";
+import { typing } from "@/lib/board/keys";
 import { useAuth } from "@/lib/useAuth";
 
-import { analyzeFile, type Stage } from "./analysis";
+import type { Stage } from "./analysis";
 import {
   RUBRIC,
   VORDER,
@@ -70,11 +74,16 @@ import { copyText } from "./clipboard";
 import { Engine } from "./engine";
 import { Composer, Drafts, Recipe, TakePanel, Variations, type ComposerState } from "./Inspector";
 import Ledger, { COLS, sortRows, visibleCols, type ColId, type Sort } from "./Ledger";
-import References, { type Analyzed } from "./References";
+import type { Analyzed } from "./References";
 import Terms from "./Terms";
 import { useAudioShelf } from "./useAudioShelf";
 
 import "./audio-workbench.css";
+
+// The References tab is behind the inspector's second tab, never on first
+// paint; it and its drop zone load when the tab is chosen. The decoder it
+// feeds (./analysis#analyzeFile) loads on the first file dropped.
+const References = dynamic(() => import("./References"), { loading: pendingPanel });
 
 type TypeFilter = "all" | "track" | "sfx";
 type Tab = "take" | "refs";
@@ -85,8 +94,9 @@ const TYPES: readonly [TypeFilter, string][] = [
   ["sfx", "Effects"],
 ];
 
-const isField = (el: Element | null) =>
-  !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || (el as HTMLElement).isContentEditable);
+/** A field has the keys (the shared guard: inputs, editables, an open
+ *  combobox). */
+const isField = (el: Element | null) => typing(el);
 
 const toggled = <T,>(set: ReadonlySet<T>, v: T): Set<T> => {
   const n = new Set(set);
@@ -381,6 +391,7 @@ export default function AudioWorkbench({ onCount }: { onCount?: (n: number) => v
     setAnalysis(null);
     let last: Stage = "decode";
     try {
+      const { analyzeFile } = await import("./analysis");
       const a = await analyzeFile(file, (s) => {
         last = s;
         setStages({ now: s });

@@ -5,12 +5,13 @@
 // Takes the shelf whole (useShelf.ts) rather than forty props. A prop list that
 // long is a second copy of the hook's return type, and the two drift.
 
-import { RotateCw } from "lucide-react";
+import { RotateCw, Search } from "lucide-react";
 
+import { Pager } from "@/components/kit";
 import { Keycaps } from "@/components/ui/signal";
 
 import EmptyShelf from "./EmptyShelf";
-import { galleryState } from "./shelf";
+import { PAGE, galleryState } from "./shelf";
 import Tile from "./Tile";
 import type { Shelf } from "./useShelf";
 
@@ -26,6 +27,7 @@ export default function ShelfGallery({
     gridRef, fileInput, error, reload, endDrag, setDragging, setFileOver,
     setMenu, setMoving, setOpenId, clearPicks, togglePick, pickRange,
     removeChosen, removeTile, takeFiles, isFileDrag,
+    query, search, searchRef, win, draw, pickVisible,
   } = shelf;
 
   return (
@@ -89,10 +91,32 @@ export default function ShelfGallery({
               `cursor-grab` says draggable, and the tile's own aria-label says
               all three to a screen reader. */}
           <div className="flex items-center gap-3">
+            {rows.length > 0 && (
+              <label className="flex items-center gap-1.5 rounded-full border border-white/12 px-3 py-1 focus-within:border-cyan-400/50">
+                <Search className="h-3.5 w-3.5 text-white/40" aria-hidden />
+                <input
+                  ref={searchRef}
+                  type="search"
+                  value={query}
+                  onChange={(e) => search(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape" && query) {
+                      e.preventDefault();
+                      search("");
+                    }
+                  }}
+                  placeholder="name, style, brief"
+                  aria-label="Search the shelf"
+                  data-testid="assets-search"
+                  className="font-jetbrains w-44 rounded-sm bg-transparent text-label text-white/85 outline-none placeholder:text-white/30 focus-visible:ring-1 focus-visible:ring-cyan-300/50"
+                />
+              </label>
+            )}
             {shown.length > 0 && (
               <Keycaps
                 label="Shelf shortcuts"
                 map={[
+                  { keys: ["/"], does: "search" },
                   { keys: ["Enter"], does: "open" },
                   { keys: ["X"], does: "select" },
                   { keys: ["Shift", "X"], does: "select a range" },
@@ -139,6 +163,15 @@ export default function ShelfGallery({
               {chosen.length} selected
             </p>
             <div className="ml-auto flex items-center gap-2">
+              {chosen.length < win.visible.length && (
+                <button
+                  type="button"
+                  onClick={pickVisible}
+                  className="font-jetbrains cursor-pointer rounded-full px-3 py-1.5 text-label text-cyan-100/70 transition hover:text-cyan-50"
+                >
+                  Select all {win.visible.length}
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setMoving(chosen)}
@@ -165,13 +198,19 @@ export default function ShelfGallery({
         )}
 
         {galleryState({ error, total: rows.length, shown: shown.length }) === "failed" ? null : shown.length === 0 ? (
-          <EmptyShelf hasAny={rows.length > 0} onOpenStyles={onOpenStyles} />
+          <EmptyShelf hasAny={rows.length > 0} query={query} onClearQuery={() => search("")} onOpenStyles={onOpenStyles} />
         ) : (
+          <>
           <div ref={gridRef} tabIndex={-1} className="grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-            {shown.map((a) => (
+            {/* THE WINDOW, NOT THE FOLDER. A folder of two hundred plates drew
+                two hundred tiles, and every uploaded one had its bytes read
+                and an object URL minted on arrival; now a page is drawn and
+                only its uploads are read (useShelf#draw). The pager widens it,
+                and on scroll by itself. */}
+            {win.visible.map((a) => (
               <Tile
                 key={a.id}
-                asset={a}
+                asset={draw(a)}
                 selected={picked.has(a.id)}
                 onActivate={(mod) => {
                   if (mod === "toggle") togglePick(a.id);
@@ -185,6 +224,10 @@ export default function ShelfGallery({
               />
             ))}
           </div>
+          {win.total > PAGE && (
+            <Pager shown={win.shown} total={win.total} onMore={win.more} onAll={win.all} step={PAGE} noun="plates" auto />
+          )}
+          </>
         )}
       </section>
   );

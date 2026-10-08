@@ -155,3 +155,18 @@ Paged IndexedDB reads were looked for and not built: the asset rows are pointers
 - "Direct all undirected plates" in Motion (a series of paid calls: needs a cost estimate first); "accept all proposals" (what happens to edited drafts is undecided); bulk "use this alternative" across scenes.
 - A studio-styled undo toast shared by Score and Cut (`kit/Toast` does not style the studio); a playhead on Score so G and J/K/L mean the same on both steps; collapse a long cue's "briefed from" chips.
 - At 1600px the frames ledger's breakdown column wraps its dots above the labels (pre-existing).
+
+### Wave 4 · library & foundry (2026-10-08)
+
+**Shipped.**
+- Library assets: the gallery draws 24 tiles at a time (`useWindow` + auto `Pager`, reset on folder or search). Upload bytes are read and minted as blob URLs only for rows on screen (`useUploadSrcs`: the window, the open plate and its strip), and revoked when they leave: 47 plates showed 24 blob images, 40 after one page. The Styles tab no longer reads any upload's bytes; adding files updates the list in place instead of reloading (which re-read every promoted proof's theme).
+- Library: a search box (name, folder, style, brief, file name) with `/` to focus and Esc to clear, and an empty state that names the query with "clear search"; "select all N" selects only drawn tiles, so a bulk remove never reaches a plate not on screen; Home/End in the plate viewer; the tab and the assets folder are remembered (`?style=` still wins).
+- Audio ledger: 50 rows per group, then a `Pager`; the window stretches to the selected take so `j`/`k` and a new take land on a drawn row. The References tab is `next/dynamic` and the decoder loads on the first file dropped.
+- `listAssetsFor(uid, projectId)` (cursor over the account's uid index, filtered as it goes) feeds the outputs shelf's kept index, which used to materialise every asset on the account. It is also more correct: the index is keyed by output id, so a same-id output kept in another project no longer marks this one kept.
+- Foundry: the extract board shows each replica's last round, earlier rounds in one remembered `Fold` per row; style rows windowed by 6; the engine log, once only its last line, is a `Fold` newest-first paged by 40; cull tiles are memoised so a K/X or arrow re-renders 1–2 tiles, not the sheet; kept plates and ledger rows on the style document are paged.
+- Foundry: N jumps to the next undecided item in cull, extract and dojo (`nextUndecided`, probe-held); the tab, the open extraction (reopens paused with resume in place), the run shape and the family filter are remembered. Three private typing guards replaced by the shared one.
+
+**Proposals (not built).**
+- Undo in place of an immediate permanent remove on the shelf (soft delete in `lib/assets`).
+- An `assets.meta.projectId` index the next time `lib/studioDb.ts` bumps its version for another reason; then `listAssetsFor` becomes a keyed read.
+- Memoised ledger rows (needs stable handlers first); "keep the whole scene" bulk cull; opt-in auto-advance after K/X (changes keys the probes pin).

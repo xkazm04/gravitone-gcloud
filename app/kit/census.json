@@ -388,7 +388,10 @@
         "app/_phases/script/_parts/ConstraintLedger.tsx",
         "app/_phases/script/_parts/GatePanel.tsx",
         "app/_phases/script/_parts/HypothesisColumn.tsx",
-        "app/_phases/script/trailer/StructurePanel.tsx"
+        "app/_phases/script/trailer/StructurePanel.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/Lightbox.tsx"
       ]
     },
     "FolderTree": {
@@ -657,7 +660,12 @@
       ],
       "adopters": [
         "app/_library/LibraryShelves.tsx",
-        "app/_phases/research/ResearchTriageBoard.tsx"
+        "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/StylesShelf.tsx",
+        "app/library/assets/ShelfGallery.tsx",
+        "app/library/audio/Ledger.tsx"
       ]
     },
     "Panel": {
@@ -1296,7 +1304,11 @@
       ],
       "adopters": [
         "app/_library/LibraryShelves.tsx",
-        "app/_phases/research/ResearchTriageBoard.tsx"
+        "app/_phases/research/ResearchTriageBoard.tsx",
+        "app/foundry/ExtractBoard.tsx",
+        "app/foundry/ExtractView.tsx",
+        "app/foundry/StylesShelf.tsx",
+        "app/library/assets/useShelf.ts"
       ]
     }
   },
@@ -1799,39 +1811,33 @@
     },
     "app/foundry": {
       "files": 19,
-      "kitImports": 2,
+      "kitImports": 5,
       "signalImports": 11,
       "parts": [
         "Button",
         "CHIP_CLASS",
+        "Fold",
         "Ghost",
         "Hint",
         "Keycaps",
         "Modal",
+        "Pager",
         "PipRow",
         "Provenance",
         "StackBar",
         "TALLY_TONE",
         "Tally",
-        "useRoving"
+        "useRoving",
+        "useWindow"
       ],
       "suspects": {
         "tab": 1,
         "select": 0,
         "media": 1,
         "title": 1,
-        "typing": 3
+        "typing": 0
       },
       "suspectFiles": {
-        "app/foundry/CullGrid.tsx": {
-          "typing": 1
-        },
-        "app/foundry/DojoView.tsx": {
-          "typing": 1
-        },
-        "app/foundry/ExtractBoard.tsx": {
-          "typing": 1
-        },
         "app/foundry/ExtractView.tsx": {
           "title": 1
         },
@@ -1975,7 +1981,7 @@
     },
     "app/library": {
       "files": 40,
-      "kitImports": 4,
+      "kitImports": 7,
       "signalImports": 11,
       "parts": [
         "Button",
@@ -1985,6 +1991,7 @@
         "Hint",
         "Keycaps",
         "Modal",
+        "Pager",
         "Panel",
         "PipRow",
         "Player",
@@ -1994,23 +2001,22 @@
         "ToastTray",
         "WorldRoot",
         "clock",
-        "useToast"
+        "useToast",
+        "useWindow"
       ],
       "suspects": {
         "tab": 2,
         "select": 0,
         "media": 0,
         "title": 2,
-        "typing": 2
+        "typing": 0
       },
       "suspectFiles": {
         "app/library/AssetLightbox.tsx": {
-          "title": 1,
-          "typing": 1
+          "title": 1
         },
         "app/library/audio/AudioWorkbench.tsx": {
-          "tab": 2,
-          "typing": 1
+          "tab": 2
         },
         "app/library/parts.tsx": {
           "title": 1

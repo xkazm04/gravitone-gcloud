@@ -25,6 +25,7 @@ import {
   getUploadBlobs,
   hydrateProofSrcs,
   hydrateUploadSrcs,
+  EMPTY_PLATE,
   listAssets,
   moveAssets,
   putUploads,
@@ -162,49 +163,12 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
   const [assets, setAssets] = useState<Asset[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  /**
-   * THE BLOB URLS THIS HOOK OWNS, RELEASED WHEN IT GOES.
-   *
-   * Same rule and same shape as app/playground/PlaygroundView.tsx: an object URL
-   * leaks until revoked, so ownership has to be stated. This hook mints one per
-   * uploaded plate it draws and owns every one of them; nothing downstream may
-   * revoke a `src` it was handed.
-   *
-   * The previous batch is released at the START of the next hydrate. Revoking a
-   * URL does not unload an image the browser has already decoded, so the tiles
-   * on screen survive it — only a fresh fetch would fail, and the rows carrying
-   * these URLs are being replaced in the same pass.
-   */
-  const owned = useRef<string[]>([]);
-  const releaseOwned = useCallback(() => {
-    for (const url of owned.current) URL.revokeObjectURL(url);
-    owned.current = [];
-  }, []);
-
-  /** Resolve `upload:` pointers to URLs this hook owns. Only opens the byte
-   *  store when a row on the shelf actually points into it. */
-  const hydrateUploads = useCallback(
-    async (rows: Asset[]): Promise<Asset[]> => {
-      const ids = rows.map((a) => readUploadPointer(a.src)).filter((id): id is string => Boolean(id));
-      // Released BEFORE the early return, not after it. Removing the last
-      // uploaded plate produces a reload with no pointers left, and returning
-      // early without this would hold that plate's URL — and its bytes — until
-      // the page was closed, on precisely the action the user took to free it.
-      releaseOwned();
-      if (!ids.length) return rows;
-      const blobs = await getUploadBlobs(ids);
-      const urls = new Map<string, string>();
-      for (const [id, blob] of blobs) {
-        const url = URL.createObjectURL(blob);
-        owned.current.push(url);
-        urls.set(id, url);
-      }
-      return hydrateUploadSrcs(rows, urls);
-    },
-    [releaseOwned],
-  );
-
-  useEffect(() => releaseOwned, [releaseOwned]);
+  // UPLOADS STAY POINTERS HERE (Wave 4). This hook used to mint an object URL
+  // for every uploaded plate on the shelf on every reload — the bytes of the
+  // whole upload store read and held, for a gallery that draws two dozen tiles
+  // at a time. The rows now keep their `upload:` pointer and the surface that
+  // DRAWS them resolves only what it shows, through `useUploadSrcs` below,
+  // which owns those URLs and releases them when the rows leave the screen.
 
   const reload = useCallback(async () => {
     if (!uid) return;
@@ -226,13 +190,13 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
       // inflated the Assets tally by the 160-row audio seed and drew as blank
       // tiles. Audio is read by its own module, never by this hook.
       rows = rows.filter((a) => a.kind !== "audio");
-      setAssets(await hydrateUploads(await hydrateProofs(uid, rows)));
+      setAssets(await hydrateProofs(uid, rows));
       setError(null);
     } catch (e) {
       setAssets([]);
       failed(setError, "read", e, "could not read your assets");
     }
-  }, [uid, seed, hydrateUploads]);
+  }, [uid, seed]);
 
   useEffect(() => {
     if (!uid) {
@@ -327,9 +291,10 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
    * case, and "some files were not added" is not something a user can act on —
    * the caller names them.
    *
-   * A reload follows the write instead of a local splice: hydration has to mint
-   * an object URL for each new row, and that allocation belongs to the one path
-   * that also records it as owned.
+   * A local splice follows the write, not a reload. The reload was there so
+   * hydration could mint each new row's object URL; rows keep their `upload:`
+   * pointer now (the drawer resolves it), and a reload would re-read every
+   * promoted proof's theme to show a file the user just handed over.
    */
   const addUploads = useCallback(
     async (files: File[], path: string[]): Promise<{ added: number; rejected: string[] }> => {
@@ -350,7 +315,12 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
       if (!pairs.length) return { added: 0, rejected };
       try {
         await putUploads(pairs);
-        await reload();
+        const fresh = new Map(pairs.map((p) => [p.asset.id, p.asset]));
+        setAssets((as) =>
+          [...(as ?? []).filter((a) => !fresh.has(a.id)), ...fresh.values()].sort(
+            (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+          ),
+        );
         setError(null);
         return { added: pairs.length, rejected };
       } catch (e) {
@@ -358,7 +328,7 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
         return { added: 0, rejected };
       }
     },
-    [uid, reload],
+    [uid],
   );
 
   /**
@@ -444,4 +414,99 @@ export function useAssets(uid: string | null, { seed = true }: { seed?: boolean 
     promote,
     removeFromTheme,
   };
+}
+
+
+/**
+ * Resolve the `upload:` pointers of the rows ON SCREEN, and nothing else.
+ *
+ * Returns a `draw(asset)` that hands back a row a gallery can paint: an
+ * uploaded plate with an object URL this hook owns, a plate whose bytes are
+ * gone renamed and marked (assets.ts#hydrateUploadSrcs, same as before), one
+ * still being read as an empty frame, and every other row untouched.
+ *
+ * THE BLOB URLS THIS HOOK OWNS, RELEASED WHEN THEIR ROWS GO. An object URL
+ * leaks until revoked, so ownership is stated (same rule as
+ * app/playground/PlaygroundView.tsx). The caller passes every row it draws —
+ * the window of the grid, the open plate, its siblings strip — and a URL is
+ * revoked in the effect after the commit in which its row stopped being among
+ * them, so nothing still mounted is holding it. A row that comes back (the
+ * user returns to the folder) is read again; the bytes are local, and holding
+ * every plate ever glanced at is the leak this replaces.
+ *
+ * Nothing downstream may revoke a `src` it was handed.
+ */
+export function useUploadSrcs(onScreen: readonly Asset[]): (a: Asset) => Asset {
+  /** What a render may draw: upload id -> URL, or null for bytes that are gone. */
+  const [table, setTable] = useState<ReadonlyMap<string, string | null>>(() => new Map());
+  /** What this hook has minted and must revoke. Touched only in effects. */
+  const owned = useRef(new Map<string, string>());
+  const gone = useRef(new Set<string>());
+
+  // A string, so the effect runs when the SET of ids changes, not on every
+  // render that rebuilt an equal array.
+  const key = [
+    ...new Set(onScreen.map((a) => readUploadPointer(a.src)).filter((id): id is string => Boolean(id))),
+  ]
+    .sort()
+    .join("\n");
+
+  useEffect(() => {
+    const need = new Set(key ? key.split("\n") : []);
+    for (const [id, url] of owned.current)
+      if (!need.has(id)) {
+        URL.revokeObjectURL(url);
+        owned.current.delete(id);
+      }
+    for (const id of gone.current) if (!need.has(id)) gone.current.delete(id);
+    const missing = [...need].filter((id) => !owned.current.has(id) && !gone.current.has(id));
+    let live = true;
+    const publish = () =>
+      setTable(new Map<string, string | null>([...owned.current, ...[...gone.current].map((id) => [id, null] as const)]));
+    // Always through the (async) read, even for nothing missing: the table is
+    // rebuilt after the revocations above, never in the same synchronous pass.
+    void getUploadBlobs(missing)
+      .then((blobs) => {
+        // A later window replaced this one while the read was out: mint
+        // nothing for it, or the URLs would belong to no one.
+        if (!live) return;
+        for (const id of missing) {
+          const blob = blobs.get(id);
+          if (blob) owned.current.set(id, URL.createObjectURL(blob));
+          else gone.current.add(id);
+        }
+        publish();
+      })
+      .catch((e: unknown) => {
+        // A failed byte read draws the rows as missing rather than as frames
+        // that wait forever, and the trouble channel hears it like any read.
+        if (!live) return;
+        reportStorageTrouble("read", "", "assets", e);
+        for (const id of missing) gone.current.add(id);
+        publish();
+      });
+    return () => {
+      live = false;
+    };
+  }, [key]);
+
+  useEffect(() => {
+    const mine = owned.current;
+    return () => {
+      for (const url of mine.values()) URL.revokeObjectURL(url);
+      mine.clear();
+    };
+  }, []);
+
+  return useCallback(
+    (a: Asset): Asset => {
+      const id = readUploadPointer(a.src);
+      if (!id) return a;
+      const url = table.get(id);
+      if (url) return { ...a, src: url };
+      if (url === null) return hydrateUploadSrcs([a], new Map())[0];
+      return { ...a, src: EMPTY_PLATE };
+    },
+    [table],
+  );
 }
