@@ -7,6 +7,8 @@
 
 import { Fragment } from "react";
 
+import { PipRow, type PipState } from "@/components/ui/signal";
+
 import { useCutCtx } from "../useCut";
 import type { Verdict } from "../finishLine";
 
@@ -135,5 +137,24 @@ export function NextAction({ className = "" }: { className?: string }) {
       <span className="truncate">{next.deny ?? next.label}</span>
       {next.owner && <span className="text-white/50">→ {next.owner}</span>}
     </button>
+  );
+}
+
+const PIP: Record<Verdict, PipState> = { pass: "filled", fail: "rose", unmeasured: "hollow" };
+
+/** THE FINISH LINE AT A GLANCE — one pip per check, in the table's order, for
+ *  the stage bar. Below xl the table itself drops under the monitor, so
+ *  without this the state of the cut is a scroll away from the transport. */
+export function FinishPips({ className = "" }: { className?: string }) {
+  const { checks } = useCutCtx();
+  if (checks.length === 0) return null;
+  const pass = checks.filter((c) => c.verdict === "pass").length;
+  const fail = checks.filter((c) => c.verdict === "fail").length;
+  return (
+    <PipRow
+      states={checks.map((c) => PIP[c.verdict])}
+      label={`finish line: ${pass} of ${checks.length} pass${fail ? `, ${fail} open` : ""}`}
+      className={className}
+    />
   );
 }

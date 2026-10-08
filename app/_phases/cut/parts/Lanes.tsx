@@ -21,6 +21,7 @@ import { Ghost, Tally } from "@/components/ui/signal";
 import { LANE_GUTTER, TimeRuler, spanStyle } from "../../../_studio/projectParts";
 import { timecode, useClockSelector, useClockWriter, type CutClock } from "../clock";
 import { LANES, turnOf, type CutClip } from "../deriveTimeline";
+import { snapTo } from "../edits";
 import { drawnStart, offsetFrom, shownStatus } from "../offsets";
 import { useCutCtx } from "../useCut";
 
@@ -34,9 +35,21 @@ export function useRenderCount(ref: React.RefObject<HTMLElement | null>): void {
   });
 }
 
+/** How close, in screen pixels, a Shift-scrub must come to an edit to land on
+ *  it. Pixels rather than seconds: on a 286s cut a second is three pixels wide,
+ *  and the snap is a question about where the pointer is on screen. */
+const SNAP_PX = 8;
+
 /** Press anywhere on a strip to seek; hold and drag to scrub. The geometry is
- *  read per move — a lane that scrolls or resizes mid-drag stays honest. */
-export function scrubFrom(e: React.PointerEvent<HTMLElement>, clock: CutClock, totalS: number): void {
+ *  read per move — a lane that scrolls or resizes mid-drag stays honest. With
+ *  Shift held (read per move, so it can be pressed mid-drag) the playhead
+ *  snaps to the nearest edit in `snap`, the NLE convention. */
+export function scrubFrom(
+  e: React.PointerEvent<HTMLElement>,
+  clock: CutClock,
+  totalS: number,
+  snap: readonly number[] = [],
+): void {
   if (e.button !== 0 || totalS <= 0) return;
   // A drag across the lanes otherwise SELECTS every label it crosses — the
   // first captures of this surface came back washed in selection blue. Both
@@ -47,12 +60,13 @@ export function scrubFrom(e: React.PointerEvent<HTMLElement>, clock: CutClock, t
   const prevSelect = body.style.userSelect;
   body.style.userSelect = "none";
   const el = e.currentTarget;
-  const at = (x: number) => {
+  const at = (x: number, shift: boolean) => {
     const r = el.getBoundingClientRect();
-    clock.seek(((x - r.left) / r.width) * totalS);
+    const t = ((x - r.left) / r.width) * totalS;
+    clock.seek(shift && snap.length && r.width > 0 ? snapTo(snap, t, (SNAP_PX / r.width) * totalS) : t);
   };
-  at(e.clientX);
-  const move = (ev: PointerEvent) => at(ev.clientX);
+  at(e.clientX, e.shiftKey);
+  const move = (ev: PointerEvent) => at(ev.clientX, ev.shiftKey);
   const up = () => {
     body.style.userSelect = prevSelect;
     window.removeEventListener("pointermove", move);
@@ -118,7 +132,7 @@ export function Lanes({
   waves?: boolean;
   className?: string;
 }) {
-  const { cut, clock, offsets, selected, select, takes, openStep } = useCutCtx();
+  const { cut, clock, edits, offsets, selected, select, takes, openStep } = useCutCtx();
   const total = cut.totalS > 0 ? cut.totalS : 1;
   const root = useRef<HTMLDivElement>(null);
   const col = useRef<HTMLDivElement>(null);
@@ -136,7 +150,7 @@ export function Lanes({
     total,
   );
 
-  const scrub = (e: React.PointerEvent<HTMLElement>) => scrubFrom(e, clock, cut.totalS);
+  const scrub = (e: React.PointerEvent<HTMLElement>) => scrubFrom(e, clock, cut.totalS, edits);
 
   const turn = turnOf(cut.scenes);
   const missing = cut.clips.filter((c) => c.status === "missing").length;
@@ -237,7 +251,7 @@ export function Lanes({
                         {thumbs && c.src && c.track === "video" && (
                           // A data: URL or a public path; next/image optimises files, not blobs.
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img src={c.src} alt="" draggable={false} className="absolute inset-0 h-full w-full object-cover opacity-70" />
+                          <img src={c.src} alt="" draggable={false} loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover opacity-70" />
                         )}
                         {thumbs && c.track === "video" && !c.src && cut.scenes.find((s) => s.id === c.ref)?.tone && (
                           <span

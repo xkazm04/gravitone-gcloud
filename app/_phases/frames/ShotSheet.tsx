@@ -29,9 +29,10 @@
 // let you read it. Prompt WORDING is deliberately unscored here — see the
 // header of ./shotPrompt and the named gaps at the bottom of the page.
 
-import { Unlock } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronRight, Unlock } from "lucide-react";
 
-import { CHIP_CLASS, Hint, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
+import { CHIP_CLASS, Fold, Hint, TALLY_TONE, Tally, UpstreamBreak } from "@/components/ui/signal";
 import type { PhaseKey } from "@/lib/projects";
 
 import type { FramesRender } from "./frames";
@@ -79,40 +80,58 @@ function CheckRow({ c }: { c: ShotCheck }) {
   );
 }
 
+const SHOT_GRID = "grid-cols-[38px_52px_60px_60px_88px_1fr_78px]";
+
+/** One shot: its staging at a glance, and the WHOLE proposed prompt one press
+ *  down. The prompt used to live in a `title=` on a truncated cell — readable
+ *  only by hovering a mouse over it, and not at all from a keyboard. It is the
+ *  work, so it is shown verbatim when asked for, in its own row. */
 function ShotRow({ s, prompt }: { s: Shot; prompt?: ShotPrompt }) {
+  const [open, setOpen] = useState(false);
+  const move = s.motion.trim();
   return (
-    <div className="grid grid-cols-[38px_52px_60px_60px_88px_1fr_78px] items-center gap-2 border-b border-white/5 px-3 py-1.5 last:border-b-0">
-      <span className="font-jetbrains text-label text-white/25">
-        {s.ordinal}/{s.ofBeat}
-      </span>
-      <span className="font-jetbrains text-label text-white/55">{s.holdS}s</span>
-      <span className={`font-jetbrains text-label ${PACE_STYLE[s.pace]}`}>{s.pace}</span>
-      {/* Absence, stated. An undeclared size is not "none", it is nobody's
-          decision yet — the same reading `Plate.state === "empty"` gets. */}
-      <span className="font-jetbrains text-label text-white/55">{s.size ?? "—"}</span>
-      <span className="font-jetbrains text-label text-white/35">
-        {s.direction.replace("screen-", "")}
-        {s.placement ? ` · ${s.placement}` : ""}
-      </span>
-      {/* The proposed action block, whole in the tooltip. The motion is the one
-          field this layer refuses to seed, so its absence is named on the row
-          rather than left blank. */}
-      <span className="truncate text-label text-white/25" title={prompt?.text ?? s.basis}>
-        {prompt?.action ?? "—"}
-      </span>
-      <span
-        className={`font-jetbrains text-right text-label ${
-          prompt?.subjectMissing ? "text-amber-200/80" : "text-white/25"
-        }`}
-        title={
-          s.motion.trim()
-            ? `move: ${s.motion.trim()}`
-            : "no move authored — this layer does not invent one"
-        }
-      >
-        {prompt ? `${prompt.chars}c` : ""}
-        {s.motion.trim() ? "" : " ·no move"}
-      </span>
+    <div className="border-b border-white/5 last:border-b-0">
+      <div className={`grid ${SHOT_GRID} items-center gap-2 px-3 py-1.5`}>
+        <span className="font-jetbrains text-label text-white/25">
+          {s.ordinal}/{s.ofBeat}
+        </span>
+        <span className="font-jetbrains text-label text-white/55">{s.holdS}s</span>
+        <span className={`font-jetbrains text-label ${PACE_STYLE[s.pace]}`}>{s.pace}</span>
+        {/* Absence, stated. An undeclared size is not "none", it is nobody's
+            decision yet — the same reading `Plate.state === "empty"` gets. */}
+        <span className="font-jetbrains text-label text-white/55">{s.size ?? "—"}</span>
+        <span className="font-jetbrains text-label text-white/35">
+          {s.direction.replace("screen-", "")}
+          {s.placement ? ` · ${s.placement}` : ""}
+        </span>
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          aria-expanded={open}
+          className="flex min-w-0 items-center gap-1 text-left text-label text-white/30 transition hover:text-white/60"
+        >
+          <ChevronRight aria-hidden className={`h-3 w-3 shrink-0 transition-transform ${open ? "rotate-90" : ""}`} />
+          <span className="truncate">{prompt?.action ?? "—"}</span>
+        </button>
+        {/* The motion is the one field this layer refuses to seed, so its
+            absence is named on the row rather than left blank. */}
+        <span
+          className={`font-jetbrains text-right text-label ${
+            prompt?.subjectMissing ? "text-amber-200/80" : "text-white/25"
+          }`}
+        >
+          {prompt ? `${prompt.chars}c` : ""}
+          {move ? "" : " ·no move"}
+        </span>
+      </div>
+      {open && (
+        <div className="space-y-1 pr-3 pb-2 pl-12">
+          <p className="font-hanken text-label leading-snug whitespace-pre-wrap text-white/60">
+            {prompt?.text ?? s.basis}
+          </p>
+          {move && <p className="font-jetbrains text-label text-cyan-200/70">move · {move}</p>}
+        </div>
+      )}
     </div>
   );
 }
@@ -140,6 +159,24 @@ export default function ShotSheet({
    *  Read off the project record by `useFrames`, never guessed here. */
   donePhases: PhaseKey[];
 }) {
+  // Derived once per chain and style, not on every render of the step around
+  // it: decomposition, a prompt per shot and the review are each a walk over
+  // the whole cut, and the step re-renders on every change above this sheet.
+  // Empty for the two absences below, which never read it.
+  const applies = render.origin !== "no-spine" && isTrailerFormat(render.template);
+  const sheet = useMemo(() => {
+    if (!applies) return null;
+    const shots = shotsFromRender(render);
+    const prompts = promptsForShots(shots, block);
+    return {
+      shots,
+      groups: shotsByBeat(shots),
+      unplaceable: unplaceableBeats(render.beats),
+      byShot: new Map(prompts.map((p) => [p.shotId, p])),
+      report: reviewShotList(shots, prompts, block),
+    };
+  }, [applies, render, block]);
+
   // A TRAILER PROJECT WITH NOTHING COMPOSED. Absence, named, with the step that
   // ends it — not an empty grid, and not the explainer's fixture standing in.
   if (render.origin === "no-spine") {
@@ -185,18 +222,17 @@ export default function ShotSheet({
     );
   }
 
-  const shots = shotsFromRender(render);
-  const groups = shotsByBeat(shots);
+  // `applies` is exactly the two branches above, so the sheet is here.
+  if (!sheet) return null;
   // The style half is the project's and is restated in every prompt — the law
   // is `style-is-restated-not-remembered`, and `promptsForShots` cannot be
   // called without a block, which is how it is honoured rather than remembered.
   // Beats whose timecode does not parse derive no shots at all. Named here
   // rather than quietly missing from the table — a shot list short by two rows
   // and silent about it is the failure mode this page exists against.
-  const unplaceable = unplaceableBeats(render.beats);
-  const prompts = promptsForShots(shots, block);
-  const byShot = new Map(prompts.map((p) => [p.shotId, p]));
-  const report = reviewShotList(shots, prompts, block);
+  const { groups, unplaceable, byShot, report } = sheet;
+  const violations = report.checks.filter((c) => c.verdict === "violation").length;
+  const unmeasured = report.checks.filter((c) => c.verdict === "unmeasured").length;
 
   return (
     <div className="space-y-4">
@@ -213,6 +249,9 @@ export default function ShotSheet({
         <Tally label="shots" value={report.shots} />
         <Tally label="beats" value={report.beats} />
         <Tally label="checks" value={report.engaged} of={report.checks.length} />
+        {/* The review's verdict on the first level; its rows are one press down. */}
+        {violations > 0 && <Tally label="violations" value={violations} tone="rose" />}
+        {unmeasured > 0 && <Tally label="unmeasured" value={unmeasured} tone="amber" />}
         <span className={`${CHIP_CLASS} ${TALLY_TONE.neutral}`}>
           {render.origin === "trailer-cut" ? (
             <>
@@ -264,7 +303,7 @@ export default function ShotSheet({
       )}
 
       <div className="overflow-hidden rounded-xl border border-white/8">
-        <div className="font-jetbrains grid grid-cols-[38px_52px_60px_60px_88px_1fr_78px] gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase">
+        <div className={`font-jetbrains grid ${SHOT_GRID} gap-2 border-b border-white/8 bg-white/[0.02] px-3 py-2 text-label tracking-[0.14em] text-white/35 uppercase`}>
           <span>#</span>
           <span>holds</span>
           <span>pace</span>
@@ -292,26 +331,41 @@ export default function ShotSheet({
         ))}
       </div>
 
-      <div className="overflow-hidden rounded-xl border border-white/8">
-        <p className="font-jetbrains border-b border-white/8 bg-white/[0.02] px-3 py-2 text-content tracking-[0.14em] text-white/35 uppercase">
-          review · verdict · sites examined
-        </p>
-        {report.checks.map((c) => (
-          <CheckRow key={c.rule} c={c} />
-        ))}
-      </div>
+      {/* THE REVIEW AND ITS GAPS, one press down, each headed by its own
+          state. Every check's test and detail stay verbatim inside; the review
+          opens itself when a rule is violated, because that is the one state
+          that asks for the rows. */}
+      <div>
+        <Fold
+          title="review"
+          tally={
+            violations > 0
+              ? { value: violations, label: "violations", tone: "rose" }
+              : { value: report.engaged, of: report.checks.length, label: "examined" }
+          }
+          defaultOpen={violations > 0}
+        >
+          <div className="overflow-hidden rounded-xl border border-white/8">
+            <p className="font-jetbrains border-b border-white/8 bg-white/[0.02] px-3 py-2 text-content tracking-[0.14em] text-white/35 uppercase">
+              rule · test · verdict · sites examined
+            </p>
+            {report.checks.map((c) => (
+              <CheckRow key={c.rule} c={c} />
+            ))}
+          </div>
+        </Fold>
 
-      {/* The gaps, on the page rather than in a file nobody opens. A green
-          report is only worth what this list does not contain. */}
-      <div className="rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3">
-        <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">not checked</p>
-        <ul className="mt-2 space-y-1.5">
-          {report.notChecked.map((n) => (
-            <li key={n} className="text-label leading-snug text-white/35">
-              · {n}
-            </li>
-          ))}
-        </ul>
+        {/* The gaps, on the page rather than in a file nobody opens. A green
+            report is only worth what this list does not contain. */}
+        <Fold title="not checked" tally={{ value: report.notChecked.length, tone: "amber" }}>
+          <ul className="space-y-1.5">
+            {report.notChecked.map((n) => (
+              <li key={n} className="text-label leading-snug text-white/35">
+                · {n}
+              </li>
+            ))}
+          </ul>
+        </Fold>
       </div>
     </div>
   );

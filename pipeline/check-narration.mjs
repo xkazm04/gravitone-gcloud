@@ -76,7 +76,7 @@ const TITLE_BUDGET = 4;
  * the commit that added it: 8 sites, 6 after Chips.tsx moved to <Hint> (the
  * 6 are frozen, not blessed). LOWER, never raise.
  */
-const TITLE_EXPR_BUDGET = 6;
+const TITLE_EXPR_BUDGET = 5;
 
 /**
  * Words allowed inside a <Hint>. The README's number.

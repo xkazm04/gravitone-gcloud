@@ -19,12 +19,18 @@ import { accessHeader } from "@/lib/imagingClient";
 import type { Frame } from "../frames/frames";
 import type { FramesStepData } from "../frames/useFrames";
 import { useRecord } from "../_shared/records/useRecord";
-import { isPlainObject } from "../_shared/records/registry";
 import { patchStep, readStep, type StorageTrouble } from "../_shared/stepStore";
 import { useLoadFor } from "../_shared/useLoadFor";
 import { usePhaseReport } from "../_shared/usePhaseReport";
 
-import { motionReport, plateImage, plateSig, withAcceptedMotion, type MotionOutcome } from "./direction";
+import {
+  acceptIntoFramesRecord,
+  motionReport,
+  plateImage,
+  plateSig,
+  withAcceptedMotion,
+  type MotionOutcome,
+} from "./direction";
 import { MOTION_DIRECTION, type MotionOutcomeOnFile } from "./records";
 
 const FRAMES_KEY = "frames";
@@ -119,12 +125,7 @@ export function useMotion(projectId: string) {
   /** Write `motion` onto the frame — the proposal as accepted, or as edited. */
   const accept = useCallback(
     async (frameId: string, motion: string) => {
-      const r = await patchStep(projectId, FRAMES_KEY, (stored) => {
-        if (!isPlainObject(stored) || !Array.isArray(stored.frames)) return { skip: "no frames record" };
-        const before = stored.frames as Frame[];
-        const after = withAcceptedMotion(before, frameId, motion);
-        return after === before ? { skip: "unchanged" } : { put: { ...stored, frames: after } };
-      });
+      const r = await patchStep(projectId, FRAMES_KEY, (stored) => acceptIntoFramesRecord(stored, frameId, motion));
       // A failed write has already reached the bell through the store's own
       // trouble channel; the frame simply keeps the line it had.
       if (!r.ok) return;

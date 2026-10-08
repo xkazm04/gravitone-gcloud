@@ -138,3 +138,20 @@ Paged IndexedDB reads were looked for and not built: the asset rows are pointers
 - B-005 rest: the evidence-log modal mounted on Script; B-007: lock facts→beats while an adoption exists; C-003: the gate refuses a candidate that speaks a scope exclusion. All cross the research/script seam or change gate behaviour.
 - B-003 (visible glossary lines under chips) was not built: it contradicts the narration law as written, so it is the operator's call.
 - M-001 fires: `guided/` changed, so `compose-from-scratch` L2 should be re-run for Priyanka, Kwame and Marco.
+
+### Wave 3 · frames, motion, score, cut (2026-10-08)
+
+**Shipped.**
+- Motion, a data-loss fix: accepting a motion line wrote it to the `frames` copy only, not to `units`, which is what Frames reads, so the line vanished on the next Frames open and was erased by its next save. `useMotion.accept` writes both.
+- Frames: the shot sheet's review rows and "not checked" list sit behind `Fold`s with counts (the review opens itself on a violation); each shot's full proposed prompt and move, reachable only by mouse-hover `title=`, is shown verbatim on expanding the row. Contact sheet, shot sheet, ads and music-video views and the effects studio are `next/dynamic`. `generatePlate` is stable across edits; ledger rows are memoised so a layer drag re-renders one row, and the direction pass's one-second clock is its own component instead of re-rendering the ledger every second. The contact sheet's scroll updates once per frame; plates lazy-decode; Ads Frames/Motion load the image data of the shot on screen, not every take of every shot; `useAssetUrls` refetches after a remount instead of holding revoked URLs.
+- Frames keys: J/K rows, N next frame with no plate, ←/→ scenes and ↑/↓ cycle the kept alternative on the contact sheet, 1–9 adopt a take and N next un-adopted shot in Ads Frames, Ctrl/⌘+Enter accepts in Motion, each listed in `Keycaps`.
+- Score: an amber `gaps N` tally on the coverage row; "add a cue" lands on the first uncovered run and focuses its title; deleting a cue shows an undo chip (Ctrl/⌘+Z); ←/→/Home/End walk cues. Scene layout, coverage and gaps are memoised.
+- Cut: `PipRow` of finish-line checks beside "next"; ↑/↓ jump between edit points on any lane, G / ⇧G between music gaps, Shift-drag snaps the playhead within 8px, Ctrl/⌘+Z undoes sync nudges; Space ignored under a dialog. Takes' `<audio>` start at `preload="metadata"` and go `auto` within 6 s of the playhead, so opening a cut no longer downloads every stored take. `AdsScore`, `AdsFinish`, `MusicVideoExport` are `next/dynamic`.
+- New pure seams `cut/edits.ts` and `score/gaps.ts`, held by `tests/golden-path/cut-edits.probe.spec.ts`. The long `title={expr}` budget falls 6 → 5.
+
+**Measured.** The Cut's lanes already stay out of React during playback (render counter flat at 3 over 1.5 s of play), so the clock was left alone.
+
+**Proposals (not built).**
+- "Direct all undirected plates" in Motion (a series of paid calls: needs a cost estimate first); "accept all proposals" (what happens to edited drafts is undecided); bulk "use this alternative" across scenes.
+- A studio-styled undo toast shared by Score and Cut (`kit/Toast` does not style the studio); a playhead on Score so G and J/K/L mean the same on both steps; collapse a long cue's "briefed from" chips.
+- At 1600px the frames ledger's breakdown column wraps its dots above the labels (pre-existing).

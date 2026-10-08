@@ -15,7 +15,10 @@ import { ChevronLeft, ChevronRight, Pause, Play, Volume2, VolumeX } from "lucide
 
 import { Hint, Keycaps, Tally } from "@/components/ui/signal";
 
+import { overlayOpen, typing } from "@/lib/board/keys";
+
 import { timecode, useClockSelector, useClockWriter, stepBy, FPS, type CutClock } from "../clock";
+import { nextEdit, nextGap, type Gap } from "../edits";
 import { useCutCtx } from "../useCut";
 
 const KEYS = [
@@ -23,29 +26,60 @@ const KEYS = [
   { keys: ["J", "K", "L"], does: "reverse · stop · forward" },
   { keys: ["←", "→"], does: "one frame" },
   { keys: ["⇧", "←/→"], does: "one second" },
+  { keys: ["↑", "↓"], does: "previous · next edit" },
+  { keys: ["G"], does: "next music gap" },
+  { keys: ["⇧", "G"], does: "previous music gap" },
+  { keys: ["⇧", "drag"], does: "snap to an edit" },
   { keys: ["Home", "End"], does: "head · tail" },
+  { keys: ["Ctrl/⌘", "Z"], does: "undo sync" },
 ];
 
-const typing = (el: EventTarget | null) => {
-  const n = el as HTMLElement | null;
-  if (!n) return false;
-  return n.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(n.tagName);
-};
+/** What the jumps land on — read off the cut by ../edits.ts. Optional so a
+ *  surface with no lanes can still bind the transport. */
+export interface TransportMarks {
+  edits: readonly number[];
+  gaps: readonly Gap[];
+  /** Take back the last sync change; absent where nothing is undoable. */
+  undo?: () => void;
+}
 
 /** One key handler for the surface, bound to the window while the cut is
  *  mounted. Ignored while the creator is typing — a space in a field is a
- *  space. */
-export function useTransportKeys(clock: CutClock): void {
+ *  space — and while a dialog is open over the cut, which owns the keyboard
+ *  (the studio's step keys hold the same rule). The typing test is the shared
+ *  one (lib/board/keys), so an open combobox counts as typing here too. */
+export function useTransportKeys(clock: CutClock, marks?: TransportMarks): void {
+  // The marks change with every nudge; the listener should not. Read through
+  // a ref written after render, the shape useClockWriter already uses.
+  const latest = useRef(marks);
+  useEffect(() => {
+    latest.current = marks;
+  });
   useEffect(() => {
     const on = (e: KeyboardEvent) => {
-      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
-      const s = clock.get();
+      if (e.defaultPrevented || e.altKey || typing(e.target) || overlayOpen()) return;
+      const m = latest.current;
       const k = e.key.toLowerCase();
+      if (e.metaKey || e.ctrlKey) {
+        // Undo is the only chord the cut binds, and only with no Shift: ⇧⌘Z
+        // is redo everywhere else and there is no redo here to give it.
+        if (k !== "z" || e.shiftKey || !m?.undo) return;
+        m.undo();
+        e.preventDefault();
+        return;
+      }
+      const s = clock.get();
       if (e.key === " ") clock.toggle();
       else if (k === "j" || k === "k" || k === "l") clock.shuttle(k);
       else if (e.key === "ArrowLeft") clock.seek(e.shiftKey ? s.t - 1 : stepBy(s.t, -1, s.duration));
       else if (e.key === "ArrowRight") clock.seek(e.shiftKey ? s.t + 1 : stepBy(s.t, 1, s.duration));
-      else if (e.key === "Home") clock.seek(0);
+      else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && m)
+        clock.seek(nextEdit(m.edits, s.t, e.key === "ArrowDown" ? 1 : -1));
+      else if (k === "g" && m) {
+        const at = nextGap(m.gaps, s.t, e.shiftKey ? -1 : 1);
+        if (at === null) return;
+        clock.seek(at);
+      } else if (e.key === "Home") clock.seek(0);
       else if (e.key === "End") clock.seek(s.duration);
       else return;
       e.preventDefault();

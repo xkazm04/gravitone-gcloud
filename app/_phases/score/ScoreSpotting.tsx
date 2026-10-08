@@ -36,6 +36,7 @@
 // spot was unspottable; live the moment a spot could be placed.
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 
 import { MessageSquareDashed, Timer } from "lucide-react";
 
@@ -74,20 +75,27 @@ import type { MusicProvenance } from "@/lib/music/types";
 import { absenceReason, soundStoreListed } from "@/lib/capabilities";
 import { useCapabilities } from "@/lib/useCapabilities";
 
+import { pendingPanel } from "@/components/ui/Pending";
+
 import { readStep, type StorageTrouble } from "../_shared/stepStore";
 import { useLoadFor } from "../_shared/useLoadFor";
 import Notice from "../_shared/ui/Notice";
-import AdsScore from "./ads/AdsScore";
 import { usePhaseReport } from "../_shared/usePhaseReport";
 import type { Frame } from "../frames/frames";
 import type { FramesStepData } from "../frames/useFrames";
 import CueTakes from "./CueTakes";
 import { pictureFromFrames } from "./picture";
 import SpotList from "./SpotList";
+import { gapRuns } from "./gaps";
 import { toCueSpots } from "./spots";
 import { bindTake, cueTakeRequest } from "./takes";
 import { useCueTakes } from "./useCueTakes";
 import { useScoreSpots, type SpotOrigin } from "./useSpots";
+
+/** THE AD BED, FETCHED ONLY FOR AN AD. The router below reads the discipline
+ *  before anything mounts, so a trailer or an explainer — the projects that
+ *  spot — never carries the ad bed's planner in its chunk. */
+const AdsScore = dynamic(() => import("./ads/AdsScore"), { loading: pendingPanel });
 
 /** Step 3's key in the step store — read here, never written. `useFrames.ts` is
  *  the only writer, and a downstream step that seeded an upstream step's record
@@ -664,7 +672,11 @@ function StandardScore({ projectId }: { projectId: string }) {
   // derived from the same walk — the picture lane and the music lane can no
   // longer disagree about where a scene starts, and neither can now be about a
   // different film from the one the creator made.
-  const sceneCells = sceneClock(picture?.scenes ?? []);
+  //
+  // Memoised with everything the coverage block below derives from it: a click
+  // on a span, a keystroke's debounced patch and every take state change used
+  // to re-walk the clock and re-intersect every spot with every cue.
+  const sceneCells = useMemo(() => sceneClock(picture?.scenes ?? []), [picture]);
   /** The seconds of film on screen. Every span and every tick is measured
    *  against this one number — see `DerivedPicture.totalS` for why it is the
    *  sum of the scenes' own holds rather than the project's target runtime. */
@@ -698,15 +710,43 @@ function StandardScore({ projectId }: { projectId: string }) {
    * store backs them (they survive a reload, so the count may), and only THIS
    * session's where it does not — a count that survived a reload there would be
    * a claim about audio that did not (see `Take`). */
-  const spottedSceneIds = new Set(
-    (session.spots ?? []).filter((s) => cues.some((c) => c.id === s.id)).flatMap((s) => s.sceneIds),
-  );
-  const spottedS = (picture?.scenes ?? [])
-    .filter((s) => spottedSceneIds.has(s.id))
-    .reduce((n, s) => n + s.targetS, 0);
+  const { spottedSceneIds, spottedS, gaps } = useMemo(() => {
+    const cueIds = new Set(cues.map((c) => c.id));
+    const ids = new Set((session.spots ?? []).filter((s) => cueIds.has(s.id)).flatMap((s) => s.sceneIds));
+    const scenes = picture?.scenes ?? [];
+    return {
+      spottedSceneIds: ids,
+      spottedS: scenes.filter((s) => ids.has(s.id)).reduce((n, s) => n + s.targetS, 0),
+      /** Runs of scenes with no cue over them, in film order (./gaps.ts). */
+      gaps: gapRuns(scenes, ids),
+    };
+  }, [cues, session.spots, picture]);
   const takesHeld = storeBacked
     ? (session.spots ?? []).reduce((n, s) => n + (s.takeIds?.length ?? 0), 0)
     : Object.values(takes).filter((t) => t.state === "done").length;
+  /** ←/→ ALONG THE MUSIC LANE, Home/End to its ends — the Cut's transport
+   *  moves its playhead on the same keys, so time runs the same way under the
+   *  creator's hands on both steps. Bound to the lane rather than the window:
+   *  this step has no playhead, and a window-level arrow would take the page's
+   *  scroll for a surface that is mostly fields. The spans are walked in clock
+   *  order, which is not the session list's order once a cue has been added. */
+  const walkCues = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    const from = (e.target as HTMLElement).closest<HTMLElement>("[data-cue]")?.dataset.cue;
+    if (!from || e.altKey || e.ctrlKey || e.metaKey) return;
+    const order = [...cues].sort((a, b) => a.startS - b.startS || a.durS - b.durS);
+    const i = order.findIndex((c) => c.id === from);
+    const to =
+      e.key === "ArrowRight" ? order[i + 1]
+      : e.key === "ArrowLeft" ? order[i - 1]
+      : e.key === "Home" ? order[0]
+      : e.key === "End" ? order[order.length - 1]
+      : undefined;
+    if (!to) return;
+    e.preventDefault();
+    setFocus(to.id);
+    e.currentTarget.querySelector<HTMLElement>(`[data-cue="${CSS.escape(to.id)}"]`)?.focus();
+  };
+
   /** The spot behind the open cue — whose pointers ./CueTakes.tsx draws. */
   const spot = cue ? (session.spots ?? []).find((s) => s.id === cue.id) : undefined;
 
@@ -838,7 +878,7 @@ function StandardScore({ projectId }: { projectId: string }) {
           <span className={`font-jetbrains ${LANE_GUTTER} text-right text-label tracking-[0.12em] text-white/40 uppercase`}>
             music
           </span>
-          <div className="relative h-11 flex-1">
+          <div className="relative h-11 flex-1" onKeyDown={walkCues}>
             {/* SPOTS, BUT NONE OF THEM ON THIS PICTURE — hatched across the
                 whole lane rather than written out underneath it. Every spot in
                 the session names scenes this project does not have, so not one
@@ -865,6 +905,8 @@ function StandardScore({ projectId }: { projectId: string }) {
               return (
                 <button
                   key={c.id}
+                  data-cue={c.id}
+                  aria-keyshortcuts="ArrowLeft ArrowRight Home End"
                   onClick={() => setFocus(c.id)}
                   style={spanStyle(c.startS, c.durS, clockS)}
                   title={proposed ? `${c.title} — proposed from the script, not yet yours` : c.title}
@@ -930,8 +972,14 @@ function StandardScore({ projectId }: { projectId: string }) {
           <span className="font-jetbrains text-content text-white/40">
             <span className="text-cyan-300/80">{spottedS}s</span> / {clockS}s
           </span>
-          {cues.length === 0 && session.spots.length > 0 && (
+          {cues.length === 0 && session.spots.length > 0 ? (
             <Tally label="covered" value={0} of={picture.scenes.length} tone="amber" />
+          ) : (
+            cues.length > 0 && gaps.length > 0 && (
+              // The holes the rail draws, counted — each run of uncovered
+              // scenes is one, and "add a cue" lands on the first of them.
+              <Tally label="gaps" value={gaps.length} tone="amber" />
+            )
           )}
           {takesHeld > 0 && (
             <Tally
@@ -969,7 +1017,12 @@ function StandardScore({ projectId }: { projectId: string }) {
         onFocus={setFocus}
         onPatch={session.patchSpot}
         onRemove={session.removeSpot}
+        onRestore={session.restoreSpot}
         onAdd={session.addSpot}
+        // The whole first hole when cues bound it — that is filling a gap.
+        // With no cue anywhere the hole is the film, and a first cue over all
+        // of it is not a spotting decision; it starts on the first scene.
+        nextGap={gaps[0] ? (cues.length ? gaps[0] : gaps[0].slice(0, 1)) : null}
       />
 
       {/* SPOTS, BUT NONE OF THEM ON THIS PICTURE, has no card here any more: the

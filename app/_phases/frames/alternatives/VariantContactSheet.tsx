@@ -14,10 +14,10 @@
 // toggle) it is the only readable shape — which is why the rail is virtualized
 // by hand and the scrubber above it is O(n) divs rather than O(n) images.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Plus, Trash2 } from "lucide-react";
 
-import { Ghost, Tally } from "@/components/ui/signal";
+import { Ghost, Keycaps, Tally } from "@/components/ui/signal";
 
 import { canRemoveAlt, type AltsColumn, type AltsCtl, type SceneAlt } from "./alts";
 import type { Frame } from "../frames";
@@ -36,6 +36,28 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
   const rail = useRef<HTMLDivElement>(null);
   const [scrollLeft, setScrollLeft] = useState(0);
   const [width, setWidth] = useState(0);
+  /** The scene the keyboard is on. Drawn only while the rail has focus. */
+  const [cursor, setCursor] = useState(0);
+
+  // One state write per FRAME, not per scroll event. A trackpad fling fires
+  // scroll several times a frame and each write re-rendered the sheet and its
+  // hundred-cell scrubber; the window only needs the position the next paint
+  // will show.
+  const scrollFrame = useRef<number | null>(null);
+  const onScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (scrollFrame.current !== null) return;
+    scrollFrame.current = requestAnimationFrame(() => {
+      scrollFrame.current = null;
+      setScrollLeft(el.scrollLeft);
+    });
+  }, []);
+  useEffect(
+    () => () => {
+      if (scrollFrame.current !== null) cancelAnimationFrame(scrollFrame.current);
+    },
+    [],
+  );
 
   useEffect(() => {
     const el = rail.current;
@@ -68,6 +90,42 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
     rail.current?.scrollTo({ left: Math.max(0, i * STRIDE - STRIDE), behavior: "smooth" });
   }, []);
 
+  // Stable per-scene verbs for the memoised columns: scrolling the rail changes
+  // which columns are mounted, never what any of them shows.
+  const { select, remove, generate } = alts;
+  const onSelect = useCallback((frameId: string, altId: string) => select(frameId, altId), [select]);
+  const onRemove = useCallback((frameId: string, altId: string) => remove(frameId, altId), [remove]);
+  const onGenerate = useCallback((frameId: string) => void generate(frameId), [generate]);
+
+  // PICKING BY KEYBOARD. ←/→ walk the scenes, ↑/↓ put the previous or next
+  // kept picture of the scene in the cut — free, the alternatives are already
+  // paid for — so comparing a scene's takes is a flick of one key rather than a
+  // click per candidate. The rail is the focus target (it is a scroll region,
+  // and a scroll region a keyboard cannot reach is its own defect).
+  const at = Math.min(cursor, Math.max(0, cols.length - 1));
+  const onKey = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.ctrlKey || e.metaKey || e.altKey || cols.length === 0) return;
+    let to = at;
+    if (e.key === "ArrowRight") to = Math.min(cols.length - 1, at + 1);
+    else if (e.key === "ArrowLeft") to = Math.max(0, at - 1);
+    else if (e.key === "Home") to = 0;
+    else if (e.key === "End") to = cols.length - 1;
+    else if (e.key === "ArrowUp" || e.key === "ArrowDown") {
+      e.preventDefault();
+      const col = cols[at];
+      if (col.alts.length < 2) return;
+      const i = col.alts.findIndex((a) => a.id === col.activeId);
+      const j = (i + (e.key === "ArrowDown" ? 1 : -1) + col.alts.length) % col.alts.length;
+      onSelect(col.frame.id, col.alts[j].id);
+      return;
+    } else return;
+    e.preventDefault();
+    setCursor(to);
+    // Only when the scene is not already readable, so walking within the
+    // viewport does not drag the rail under the reader's eye.
+    if (to < seen.from || to >= seen.to) scrollTo(to);
+  };
+
   if (!alts.loaded) {
     return (
       <p className="font-jetbrains py-16 text-center text-content tracking-[0.18em] text-white/30 uppercase">
@@ -80,11 +138,27 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
     <div className="space-y-3">
       {/* Cost, stress and errors live on the host header — the variant only
           owns the sheet itself. */}
-      <Scrubber cols={cols} busy={alts.busy} from={seen.from} to={seen.to} onGo={scrollTo} />
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <Scrubber cols={cols} busy={alts.busy} from={seen.from} to={seen.to} onGo={scrollTo} />
+        </div>
+        <Keycaps
+          label="Contact sheet keys"
+          map={[
+            { keys: ["←", "→"], does: "scene" },
+            { keys: ["↑", "↓"], does: "put in the cut" },
+            { keys: ["Home", "End"], does: "first · last" },
+          ]}
+        />
+      </div>
 
       <div
         ref={rail}
-        onScroll={(e) => setScrollLeft(e.currentTarget.scrollLeft)}
+        tabIndex={0}
+        role="group"
+        aria-label="contact sheet"
+        onKeyDown={onKey}
+        onScroll={onScroll}
         // A mouse wheel only emits deltaY; on a rail the axis it means is X.
         // Trackpads already emit deltaX and keep their native feel — only a
         // pure vertical tick is re-aimed.
@@ -92,7 +166,7 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
           if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) e.currentTarget.scrollLeft += e.deltaY;
         }}
         style={{ height: "68vh" }}
-        className="scroll-x scroll-rail flex gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3"
+        className="group/rail scroll-x scroll-rail flex gap-3 rounded-xl border border-white/8 bg-white/[0.02] p-3 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-300/50"
       >
         {/* Spacers stand in for the unmounted columns. They carry one GAP less
             than the runs they replace, because the flex gap between the spacer
@@ -103,10 +177,11 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
             key={col.frame.id}
             col={col}
             index={first + k}
+            cursor={first + k === at}
             busy={alts.busy.has(col.frame.id)}
-            onSelect={(altId) => alts.select(col.frame.id, altId)}
-            onRemove={(altId) => alts.remove(col.frame.id, altId)}
-            onGenerate={() => void alts.generate(col.frame.id)}
+            onSelect={onSelect}
+            onRemove={onRemove}
+            onGenerate={onGenerate}
           />
         ))}
         {last < cols.length - 1 && (
@@ -126,7 +201,7 @@ export default function VariantContactSheet({ alts }: { alts: AltsCtl }) {
 
 /** One cell per scene, whatever the count. This is the "where am I in a hundred
  *  scenes" answer, and it is cheap divs on purpose — no images, no canvases. */
-function Scrubber({
+const Scrubber = memo(function Scrubber({
   cols,
   busy,
   from,
@@ -163,29 +238,39 @@ function Scrubber({
       />
     </div>
   );
-}
+});
 
 /* ── One scene ────────────────────────────────────────────────────────────── */
 
-function SheetColumn({
+const SheetColumn = memo(function SheetColumn({
   col,
   index,
+  cursor,
   busy,
-  onSelect,
-  onRemove,
-  onGenerate,
+  onSelect: select,
+  onRemove: remove,
+  onGenerate: generate,
 }: {
   col: AltsColumn;
   index: number;
+  /** The scene the keyboard is on; ringed while the rail has focus. */
+  cursor: boolean;
   busy: boolean;
-  onSelect: (altId: string) => void;
-  onRemove: (altId: string) => void;
-  onGenerate: () => void;
+  onSelect: (frameId: string, altId: string) => void;
+  onRemove: (frameId: string, altId: string) => void;
+  onGenerate: (frameId: string) => void;
 }) {
+  const id = col.frame.id;
+  const onSelect = (altId: string) => select(id, altId);
+  const onRemove = (altId: string) => remove(id, altId);
+  const onGenerate = () => generate(id);
   return (
     <section
       style={{ width: COL_W }}
-      className="gt-rise flex h-full shrink-0 flex-col rounded-xl border border-white/8 bg-white/[0.02]"
+      aria-current={cursor || undefined}
+      className={`gt-rise flex h-full shrink-0 flex-col rounded-xl border border-white/8 bg-white/[0.02] ${
+        cursor ? "group-focus-visible/rail:border-cyan-300/60" : ""
+      }`}
     >
       <header className="space-y-1.5 border-b border-white/8 px-2.5 py-2">
         <div className="flex items-center gap-2">
@@ -243,7 +328,7 @@ function SheetColumn({
       </div>
     </section>
   );
-}
+});
 
 function AltCard({
   frame,

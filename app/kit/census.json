@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 553,
+  "files": 555,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -382,6 +382,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/frames/ShotSheet.tsx",
         "app/_phases/research/run/LiveResult.tsx",
         "app/_phases/script/_notes/RecalibrateControl.tsx",
         "app/_phases/script/_parts/ConstraintLedger.tsx",
@@ -504,6 +505,10 @@
       ],
       "adopters": [
         "app/_phases/cut/parts/Transport.tsx",
+        "app/_phases/frames/FramesAssembly.tsx",
+        "app/_phases/frames/ads/AdsFrames.tsx",
+        "app/_phases/frames/alternatives/VariantContactSheet.tsx",
+        "app/_phases/motion/MotionStep.tsx",
         "app/_projects/ShelfHeader.tsx",
         "app/board/parts.tsx",
         "app/foundry/DojoView.tsx",
@@ -687,6 +692,7 @@
         "components/ui/signal/index.ts"
       ],
       "adopters": [
+        "app/_phases/cut/parts/FinishLine.tsx",
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/research/beats/SlotColumn.tsx",
         "app/board/parts.tsx",
@@ -1397,14 +1403,15 @@
       "suspectFiles": {}
     },
     "app/_phases/cut": {
-      "files": 24,
+      "files": 25,
       "kitImports": 0,
-      "signalImports": 6,
+      "signalImports": 7,
       "parts": [
         "CHIP_CLASS",
         "Ghost",
         "Hint",
         "Keycaps",
+        "PipRow",
         "StaleBadge",
         "TALLY_TONE",
         "Tally",
@@ -1415,13 +1422,9 @@
         "select": 0,
         "media": 0,
         "title": 0,
-        "typing": 1
+        "typing": 0
       },
-      "suspectFiles": {
-        "app/_phases/cut/parts/Transport.tsx": {
-          "typing": 1
-        }
-      }
+      "suspectFiles": {}
     },
     "app/_phases/frames": {
       "files": 31,
@@ -1430,8 +1433,10 @@
       "parts": [
         "Button",
         "CHIP_CLASS",
+        "Fold",
         "Ghost",
         "Hint",
+        "Keycaps",
         "StaleBadge",
         "TALLY_TONE",
         "TabRail",
@@ -1442,16 +1447,13 @@
         "tab": 0,
         "select": 1,
         "media": 0,
-        "title": 7,
+        "title": 5,
         "typing": 0
       },
       "suspectFiles": {
         "app/_phases/frames/FramesAssembly.tsx": {
           "select": 1,
           "title": 3
-        },
-        "app/_phases/frames/ShotSheet.tsx": {
-          "title": 2
         },
         "app/_phases/frames/alternatives/VariantContactSheet.tsx": {
           "title": 2
@@ -1466,6 +1468,7 @@
         "Button",
         "CHIP_CLASS",
         "Ghost",
+        "Keycaps",
         "Provenance",
         "TALLY_TONE",
         "Tally",
@@ -1549,7 +1552,7 @@
       }
     },
     "app/_phases/score": {
-      "files": 14,
+      "files": 15,
       "kitImports": 0,
       "signalImports": 4,
       "parts": [

@@ -416,6 +416,16 @@ export function useFrames(projectId: string) {
     };
   }, [frames, direction, consumed, stepLoaded, loadTrouble, projectId, source]);
 
+  /** The cut as of the last commit, for the callbacks that read ONE frame by id.
+   *  `generatePlate` used to close over `frames`, so it was a new function on
+   *  every edit — every keystroke in a caption and every pointer move of a drag
+   *  — and so was every ledger row it was handed to. Read through this ref it is
+   *  stable, and a drag re-renders the row being dragged, not the whole cut. */
+  const framesNow = useRef<Frame[]>(frames);
+  useEffect(() => {
+    framesNow.current = frames;
+  }, [frames]);
+
   const patch = useCallback((id: string, fn: (f: Frame) => Frame) => {
     setFrames((fs) => fs.map((f) => (f.id === id ? fn(f) : f)));
   }, []);
@@ -433,7 +443,7 @@ export function useFrames(projectId: string) {
    */
   const generatePlate = useCallback(
     async (id: string): Promise<PlateResult> => {
-      const frame = frames.find((f) => f.id === id);
+      const frame = framesNow.current.find((f) => f.id === id);
       if (!frame) return { outcome: "failed" };
       const subject = frame.plate.subject?.trim() || subjectFor(frame);
 
@@ -485,7 +495,7 @@ export function useFrames(projectId: string) {
         });
       }
     },
-    [frames, block, references, patch],
+    [block, references, patch],
   );
 
   /* ── layers ─────────────────────────────────────────────────────────────── */
@@ -716,6 +726,19 @@ export function useFrames(projectId: string) {
     };
   }, [ready, endedTurn, consumed, land]);
 
+  /** The beats the pass is briefed with — the at, kind, label, line and device
+   *  of each frame, none of which an edit on this step touches. Keyed on their
+   *  serialisation, so a caption typed or a layer dragged leaves the brief (and
+   *  the pre-flight's own serialisation of it) exactly where it was. */
+  const beatsJson = useMemo(
+    () => JSON.stringify(frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device }))),
+    [frames],
+  );
+  const beats = useMemo(
+    () => JSON.parse(beatsJson) as { at: string; kind: string; label: string; text: string; device?: string }[],
+    [beatsJson],
+  );
+
   /** THE ONE BODY the direction pass sends and the pre-flight reads (AIO-B),
    *  so the strip beside the button cannot describe a different payload. */
   const directionInput = useMemo(
@@ -742,9 +765,9 @@ export function useFrames(projectId: string) {
       template: project?.template,
       targetS: project?.targetS,
       facts: facts.map((f) => ({ id: f.id, claim: f.claim, confidence: f.confidence, loadBearing: f.loadBearing })),
-      beats: frames.map((f) => ({ at: f.at, kind: f.kind, label: f.title, text: f.line, device: f.device })),
+      beats,
     }),
-    [render.title, block, project?.template, project?.targetS, frames, facts],
+    [render.title, block, project?.template, project?.targetS, beats, facts],
   );
 
   /** What the pass would send and who would serve it — free, debounced, and

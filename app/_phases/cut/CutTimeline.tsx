@@ -33,13 +33,23 @@
 // imports what it always imported. The music-video branch is untouched.
 
 import { useState } from "react";
+import dynamic from "next/dynamic";
 
+import { pendingPanel } from "@/components/ui/Pending";
 import { getProject, type Discipline } from "@/lib/projects";
 
 import { useLoadFor } from "../_shared/useLoadFor";
 import CutWorkbench from "./CutWorkbench";
-import AdsFinish from "./ads/AdsFinish";
-import MusicVideoExport from "./music-video/MusicVideoExport";
+
+/* THE TWO OTHER DISCIPLINES' FINISHES, FETCHED ONLY FOR THEIR OWN PROJECTS.
+   The router below decides on the discipline before anything mounts, so a
+   trailer or an explainer — the projects that reach the sequencer — never
+   needs the ad finish (aspects, supers, the render queue) or the music-video
+   export in its chunk, and those two never need each other. The workbench
+   stays static: it is the branch most projects take, and a second fetch after
+   the step's own chunk would only add a waterfall to the common case. */
+const AdsFinish = dynamic(() => import("./ads/AdsFinish"), { loading: pendingPanel });
+const MusicVideoExport = dynamic(() => import("./music-video/MusicVideoExport"), { loading: pendingPanel });
 
 export { nudgeOffsets, offsetFrom, type Offsets } from "./offsets";
 

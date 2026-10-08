@@ -20,9 +20,10 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { Unlink } from "lucide-react";
+import { Undo2, Unlink } from "lucide-react";
 
 import { Hint } from "@/components/ui/signal";
+import { overlayOpen, typing } from "@/lib/board/keys";
 
 import type { Scene } from "../../_studio/projectTypes";
 
@@ -230,9 +231,11 @@ export default function SpotList({
   spots,
   scenes,
   focusId,
+  nextGap,
   onFocus,
   onPatch,
   onRemove,
+  onRestore,
   onAdd,
 }: {
   spots: ScoreSpot[];
@@ -240,26 +243,88 @@ export default function SpotList({
    *  controls speak are positions in THIS array. */
   scenes: Scene[];
   focusId: string;
+  /** The first run of scenes no cue covers (./gaps.ts), or null when every
+   *  scene is spotted. Where "add a cue" lands. */
+  nextGap: string[] | null;
   onFocus: (id: string) => void;
   onPatch: (id: string, patch: Partial<Omit<ScoreSpot, "id">>) => void;
   onRemove: (id: string) => void;
+  onRestore: (spot: ScoreSpot, index: number) => void;
   onAdd: (sceneIds: string[]) => void;
 }) {
+  /** THE LAST DELETE, held for one undo. Delete never had a confirm and does
+   *  not get one: a spot is a few fields, and taking it back is cheaper than
+   *  being asked. One level, the last row deleted — a second delete replaces
+   *  it, and a restore spends it. */
+  const [undo, setUndo] = useState<{ spot: ScoreSpot; index: number } | null>(null);
+  const restore = () => {
+    if (!undo) return;
+    onRestore(undo.spot, undo.index);
+    onFocus(undo.spot.id);
+    setUndo(null);
+  };
+  const restoreRef = useRef(restore);
+  useEffect(() => {
+    restoreRef.current = restore;
+  });
+  const canUndo = undo !== null;
+  useEffect(() => {
+    if (!canUndo) return;
+    // Ctrl/⌘+Z outside a field — inside one, the field's own undo is the
+    // right one. The cut's transport binds the same chord to its sync undo.
+    const on = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.altKey || e.shiftKey || !(e.metaKey || e.ctrlKey)) return;
+      if (e.key.toLowerCase() !== "z" || typing(e.target) || overlayOpen()) return;
+      e.preventDefault();
+      restoreRef.current();
+    };
+    window.addEventListener("keydown", on);
+    return () => window.removeEventListener("keydown", on);
+  }, [canUndo]);
+
+  /** A new row takes the caret in its title: "new cue" is a placeholder the
+   *  creator is about to replace, and the row lands at the bottom of a list
+   *  that may be longer than the screen. */
+  const list = useRef<HTMLUListElement>(null);
+  const added = useRef(false);
+  useEffect(() => {
+    if (!added.current) return;
+    added.current = false;
+    const title = list.current?.lastElementChild?.querySelector<HTMLInputElement>('input[aria-label="cue title"]');
+    title?.focus();
+    title?.select();
+  }, [spots.length]);
+
   return (
     <div data-testid="spot-list" className="mt-4 rounded-2xl border border-white/8 bg-white/[0.02] p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h3 className="font-jetbrains text-label tracking-[0.14em] text-white/40 uppercase">
           the spotting session
         </h3>
-        <p className="font-jetbrains text-label text-white/35">
-          {spots.length} spot{spots.length === 1 ? "" : "s"} on {scenes.length} scene
-          {scenes.length === 1 ? "" : "s"} of picture
-        </p>
+        <div className="flex flex-wrap items-baseline gap-3">
+          {undo && (
+            <button
+              type="button"
+              data-testid="spot-undo"
+              onClick={restore}
+              aria-label={`undo delete of "${undo.spot.title}"`}
+              aria-keyshortcuts="Control+Z Meta+Z"
+              className="font-jetbrains inline-flex items-center gap-1 rounded-lg border border-white/12 px-2 py-0.5 text-label text-white/70 transition hover:border-white/25 hover:text-white"
+            >
+              <Undo2 className="h-3.5 w-3.5" aria-hidden />
+              <span className="max-w-48 truncate">{undo.spot.title}</span>
+            </button>
+          )}
+          <p className="font-jetbrains text-label text-white/35">
+            {spots.length} spot{spots.length === 1 ? "" : "s"} on {scenes.length} scene
+            {scenes.length === 1 ? "" : "s"} of picture
+          </p>
+        </div>
       </div>
 
       {spots.length > 0 && (
-        <ul className="mt-3 grid gap-2">
-          {spots.map((spot) => (
+        <ul ref={list} className="mt-3 grid gap-2">
+          {spots.map((spot, index) => (
             <SpotRow
               key={spot.id}
               spot={spot}
@@ -267,7 +332,10 @@ export default function SpotList({
               focused={focusId === spot.id}
               onFocus={() => onFocus(spot.id)}
               onPatch={(patch) => onPatch(spot.id, patch)}
-              onRemove={() => onRemove(spot.id)}
+              onRemove={() => {
+                setUndo({ spot, index });
+                onRemove(spot.id);
+              }}
             />
           ))}
         </ul>
@@ -276,9 +344,14 @@ export default function SpotList({
       <button
         type="button"
         data-testid="spot-add"
-        // The first scene, so a new spot is ON the picture from the moment it
-        // exists — an empty range would draw nothing and read as a broken row.
-        onClick={() => onAdd(scenes.length ? [scenes[0].id] : [])}
+        // ON THE PICTURE FROM THE MOMENT IT EXISTS, and on the first stretch
+        // of it no cue covers — that is what adding a cue is nearly always
+        // for. With every scene spotted it falls back to the first scene: an
+        // empty range would draw nothing and read as a broken row.
+        onClick={() => {
+          added.current = true;
+          onAdd(nextGap ?? (scenes.length ? [scenes[0].id] : []));
+        }}
         disabled={scenes.length === 0}
         className="font-jetbrains mt-3 rounded-lg border border-cyan-400/30 bg-cyan-400/[0.08] px-3 py-1.5 text-label font-medium text-cyan-200/90 transition hover:bg-cyan-400/[0.14] disabled:cursor-not-allowed disabled:opacity-40"
       >
