@@ -891,6 +891,54 @@ def test_every_third_party_import_is_declared_in_requirements():
     check("requirements guard: a missing name is caught", got, ["pipeline/vlm-probe/identity.py: facenet_pytorch"])
 
 
+def _bytes(obj):
+    return io.BytesIO(json.dumps(obj).encode())
+
+
+def test_replicate_poll_survives_a_busy_card_and_names_a_dead_one():
+    """consistency.generate learned that a /history poll failing while the card
+    is busy is expected, and that a poll failing because the PROCESS is gone is
+    not. replicate.py carried its own copy of the loop with neither rule: one
+    slow poll failed the replica and recycled ComfyUI under a running job."""
+    import time as _time
+    import urllib.error
+    import urllib.request
+    R = load_vlm("replicate")
+    done = {"p1": {"outputs": {"13": {"images": [{"filename": "replica_00001_.png", "subfolder": ""}]}}}}
+
+    def run(alive, history):
+        polls = []
+
+        def fake_urlopen(req, timeout=None):
+            url = req if isinstance(req, str) else req.full_url
+            if url.endswith("/prompt"):
+                return _bytes({"prompt_id": "p1"})
+            polls.append(url)
+            return history(len(polls))
+        saved = (urllib.request.urlopen, _time.sleep, R.guard.comfy_process_ids)
+        urllib.request.urlopen, _time.sleep = fake_urlopen, (lambda s: None)
+        R.guard.comfy_process_ids = lambda: [4242] if alive else []
+        try:
+            return R.comfy_generate("a prompt", 7, timeout=60).name
+        except Exception as e:
+            return f"{type(e).__name__}: {e}"
+        finally:
+            urllib.request.urlopen, _time.sleep, R.guard.comfy_process_ids = saved
+
+    def busy_once(n):
+        if n == 1:
+            raise urllib.error.URLError("timed out while the card was busy")
+        return _bytes(done)
+    check("replicate: one failed poll on a busy card is not a failed replica",
+          run(True, busy_once), "replica_00001_.png")
+
+    def never(n):
+        raise urllib.error.URLError("connection refused")
+    got = run(False, never)
+    check("replicate: a vanished ComfyUI is named, not reported as a poll error",
+          "vanished" in got, True)
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -918,6 +966,7 @@ TESTS = [
     test_lane_record_check_detects_tampering,
     test_dojo_gemini_key_travels_in_a_header_not_the_url,
     test_every_third_party_import_is_declared_in_requirements,
+    test_replicate_poll_survives_a_busy_card_and_names_a_dead_one,
 ]
 
 

@@ -32,12 +32,11 @@ import argparse
 import json
 import shutil
 import sys
-import time
-import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import guard  # noqa: E402
+from consistency import flux_workflow, generate  # noqa: E402
 from probe import run_ollama  # noqa: E402
 from schema import ORDINAL  # noqa: E402
 
@@ -45,8 +44,6 @@ HERE = Path(__file__).parent
 FRAMES_DIR = HERE / "frames"
 REPLICA_DIR = HERE / "replicas"
 OUT_ROOT = HERE.parent.parent / "vlm-probe-out"
-COMFY = guard.COMFY
-COMFY_OUT = Path(guard.COMFY_DIR) / "output"
 
 ANNOTATOR = "qwen3.8:27b"
 
@@ -144,50 +141,16 @@ def compose_prompt(a, style=None):
     return " ".join(p for p in parts if p and p.strip(" ."))
 
 
-def flux_workflow(prompt, seed, width=1280, height=720, steps=20):
-    return {
-        "1": {"class_type": "UNETLoader",
-              "inputs": {"unet_name": "flux2_dev_fp8mixed.safetensors", "weight_dtype": "default"}},
-        "2": {"class_type": "CLIPLoader",
-              "inputs": {"clip_name": "mistral_3_small_flux2_fp8.safetensors",
-                         "type": "flux2", "device": "default"}},
-        "3": {"class_type": "VAELoader", "inputs": {"vae_name": "flux2-vae.safetensors"}},
-        "4": {"class_type": "CLIPTextEncode", "inputs": {"clip": ["2", 0], "text": prompt}},
-        "5": {"class_type": "FluxGuidance", "inputs": {"conditioning": ["4", 0], "guidance": 4.0}},
-        "6": {"class_type": "EmptyFlux2LatentImage",
-              "inputs": {"width": width, "height": height, "batch_size": 1}},
-        "7": {"class_type": "Flux2Scheduler",
-              "inputs": {"steps": steps, "width": width, "height": height}},
-        "8": {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler"}},
-        "9": {"class_type": "RandomNoise", "inputs": {"noise_seed": seed}},
-        "10": {"class_type": "BasicGuider", "inputs": {"model": ["1", 0], "conditioning": ["5", 0]}},
-        "11": {"class_type": "SamplerCustomAdvanced",
-               "inputs": {"noise": ["9", 0], "guider": ["10", 0], "sampler": ["8", 0],
-                          "sigmas": ["7", 0], "latent_image": ["6", 0]}},
-        "12": {"class_type": "VAEDecode", "inputs": {"samples": ["11", 0], "vae": ["3", 0]}},
-        "13": {"class_type": "SaveImage",
-               "inputs": {"images": ["12", 0], "filename_prefix": "replica"}},
-    }
-
-
 def comfy_generate(prompt, seed, timeout=600):
-    body = json.dumps({"prompt": flux_workflow(prompt, seed)}).encode()
-    req = urllib.request.Request(f"{COMFY}/prompt", data=body,
-                                 headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=60) as r:
-        pid = json.loads(r.read())["prompt_id"]
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        time.sleep(5)
-        with urllib.request.urlopen(f"{COMFY}/history/{pid}", timeout=30) as r:
-            hist = json.loads(r.read())
-        if pid in hist:
-            outs = hist[pid].get("outputs", {})
-            for node in outs.values():
-                for img in node.get("images", []):
-                    return COMFY_OUT / img.get("subfolder", "") / img["filename"]
-            raise RuntimeError(f"finished with no image: {hist[pid].get('status')}")
-    raise TimeoutError("comfyui did not finish in time")
+    """A replica from the stills lane's own Flux 2 graph and poll loop.
+
+    This file used to carry a byte-identical copy of both. The copy's poll had
+    neither of the rules consistency.generate learned: a /history poll failing
+    while the card is busy is expected, and one failing because the process is
+    gone must say so -- so one slow poll here failed the replica and the caller
+    recycled ComfyUI under a job the GPU was still running.
+    """
+    return generate(flux_workflow(prompt, seed, prefix="replica"), timeout=timeout)
 
 
 def credit(field, got, want):
