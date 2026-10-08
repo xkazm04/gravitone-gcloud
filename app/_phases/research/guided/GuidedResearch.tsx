@@ -25,35 +25,20 @@ import { useMemo, useState } from "react";
 import Deck, { type DeckStageDef } from "@/components/ui/deck/Deck";
 import DeckCard from "@/components/ui/deck/DeckCard";
 import DeckStage from "@/components/ui/deck/DeckStage";
+import { Tally } from "@/components/ui/signal";
 
-import type { GuidedModeStepData } from "../../_shared/stepStore";
 import { ConfirmScope } from "../_parts/ScopeGate";
 import { Consequences, ScopeBar } from "../_parts/ScopeBar";
 import { stateOf, type Card } from "../scope";
 import type { ScopeApi } from "../useScope";
 import { conclusionChoices, hotTakes, specOf, steelManOf } from "./passes";
+import { FaceSwitch, type Face } from "./FaceSwitch";
 import RunStage from "./RunStage";
 import type { EducationalResearchApi } from "./useEducationalResearch";
 
-export type Face = GuidedModeStepData["mode"];
-
-/** The way to the other face, on BOTH faces, discarding nothing — the
- *  ModeChooser doctrine, one step over. One face is mounted at a time, so the
- *  testid stays unique on the page. */
-export function FaceSwitch({ face, onSwitch }: { face: Face; onSwitch: (f: Face) => void }) {
-  const other: Face = face === "guided" ? "expert" : "guided";
-  const word = other === "expert" ? "the expert board" : "the guided wizard";
-  return (
-    <button
-      type="button"
-      data-testid="research-face-switch"
-      onClick={() => onSwitch(other)}
-      className="font-jetbrains rounded-full border border-white/12 px-2.5 py-1 text-label tracking-[0.1em] text-white/45 transition hover:border-white/25 hover:text-white/75"
-    >
-      switch to {word}
-    </button>
-  );
-}
+// The face switch lives in ./FaceSwitch.tsx so the expert face can draw it
+// without pulling this wizard into its chunk (ResearchStep's split).
+export { FaceSwitch, type Face };
 
 /* ── a stage of keep/cut cards over the live scope ────────────────────────── */
 
@@ -142,6 +127,25 @@ export default function GuidedResearch({
   const s = api.summary;
   const drifted = api.diverged.length;
 
+  // WHAT THE REVIEW STAGE CONFIRMS THAT THE WIZARD NEVER SHOWED (B-002, the
+  // interim of C-001 — docs/product/concepts/guided-research-hand.md). The
+  // wizard deals the takes and the conclusions; the facts, mechanisms,
+  // reversals and counters are in scope by default and are never on its table.
+  // `confirm scope` then signs off on all of them, which a fact-vetter read as
+  // "confirmed 29 cards after dealing me 8" (uat 2026-09-05, PR-L1-5). So the
+  // review stage counts what it did not deal, by kind, and the way to see them
+  // is the button beside the count — the expert board, where every card is.
+  const unseen = useMemo(() => {
+    const dealtIds = new Set([...takesHand, ...picks].map((c) => c.id));
+    return api.cards.filter((c) => !dealtIds.has(c.id));
+  }, [api.cards, takesHand, picks]);
+  const unseenKept = unseen.filter((c) => !stateOf(api.scope, c.id, api.optIn).descoped).length;
+  const unseenByKind = useMemo(() => {
+    const n = new Map<Card["kind"], number>();
+    for (const c of unseen) n.set(c.kind, (n.get(c.kind) ?? 0) + 1);
+    return [...n].map(([kind, count]) => `${count} ${kind}${count === 1 ? "" : "s"}`).join(" · ");
+  }, [unseen]);
+
   // NO STAGE CARRIES A `sub`, AND THAT IS THE POINT. All four did, and each was
   // a manual for the cards directly beneath it — the run stage re-explained the
   // background job the run log states while it is running; the takes stage
@@ -220,6 +224,28 @@ export default function GuidedResearch({
             <ScopeBar api={api} trouble={research.trouble} />
           </div>
           <Consequences api={api} />
+          {unseen.length > 0 && (
+            <div
+              data-testid="review-undealt"
+              className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-amber-400/20 bg-amber-400/[0.03] px-5 py-3.5"
+            >
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Tally label="dealt" value={api.cards.length - unseen.length} of={api.cards.length} />
+                <Tally label="not dealt" value={unseen.length} tone="amber" />
+                <span className="font-jetbrains text-label text-white/45">
+                  {unseenByKind} · {unseenKept} in scope
+                </span>
+              </div>
+              <button
+                type="button"
+                data-testid="review-undealt-board"
+                onClick={() => onSwitchFace("expert")}
+                className="font-jetbrains rounded-full border border-amber-400/35 px-3.5 py-1.5 text-label text-amber-200 transition hover:bg-amber-400/10 focus-visible:outline-2 focus-visible:outline-offset-2"
+              >
+                review them on the expert board →
+              </button>
+            </div>
+          )}
           <ConfirmScope api={api} />
         </div>
       ),

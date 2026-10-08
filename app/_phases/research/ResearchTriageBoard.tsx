@@ -13,10 +13,11 @@ import { useState } from "react";
 
 import { CircleSlash } from "lucide-react";
 
+import { Pager, useWindow } from "@/components/kit";
 import { Eyebrow } from "@/components/ui/Primitives";
 import { Hint, Tally } from "@/components/ui/signal";
 import type { ScopeApi } from "./useScope";
-import { stateOf } from "./scope";
+import { stateOf, type Card, type Wound } from "./scope";
 import {
   DIMENSIONS,
   UNTAGGED_DIMENSION_ID,
@@ -39,6 +40,48 @@ function boardColumns(api: ScopeApi): Dimension[] {
   const ids = new Set(own.map((d) => d.id));
   const filed = new Set(api.cards.map((c) => c.dimension));
   return [...own, ...DIMENSIONS.filter((d) => !ids.has(d.id) && filed.has(d.id))];
+}
+
+/** How many cards a column draws before its pager. The shipped notebook's
+ *  fullest column holds seven, so the replay never meets it; a creator's own
+ *  notebook can file twenty facts under one domain, and a column that long is
+ *  a scroll past every other column before the next one starts. */
+const COLUMN_WINDOW = 10;
+
+/** One column's cards, a window at a time (Wave 2). The window resets when the
+ *  board is dealt from a different notebook (`api.source.digest`) — a new
+ *  notebook is a different list, not a longer one. */
+function ColumnCards({
+  cards,
+  api,
+  woundOf,
+  label,
+}: {
+  cards: Card[];
+  api: ScopeApi;
+  woundOf: (id: string) => Wound | undefined;
+  label: string;
+}) {
+  const w = useWindow(cards, { size: COLUMN_WINDOW, key: api.source.digest });
+  return (
+    <>
+      <ul className="mt-3 space-y-2.5">
+        {w.visible.map((c) => (
+          <CardTile key={c.id} card={c} api={api} wound={woundOf(c.id)} />
+        ))}
+      </ul>
+      {w.total > COLUMN_WINDOW && (
+        <Pager
+          shown={w.shown}
+          total={w.total}
+          onMore={w.more}
+          onAll={w.all}
+          step={COLUMN_WINDOW}
+          noun={`${label} cards`}
+        />
+      )}
+    </>
+  );
 }
 
 export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; trouble?: string | null }) {
@@ -243,11 +286,7 @@ export default function ResearchTriageBoard({ api, trouble }: { api: ScopeApi; t
                       </Hint>
                     </div>
                   )}
-                  <ul className="mt-3 space-y-2.5">
-                    {cards.map((c) => (
-                      <CardTile key={c.id} card={c} api={api} wound={woundOf(c.id)} />
-                    ))}
-                  </ul>
+                  <ColumnCards cards={cards} api={api} woundOf={woundOf} label={d.label} />
                 </>
               )}
             </section>

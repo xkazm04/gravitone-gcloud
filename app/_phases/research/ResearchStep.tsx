@@ -43,33 +43,69 @@
 // lose the exits that were riding on them.
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 
 import { BookOpenCheck } from "lucide-react";
 
 import Modal from "@/components/ui/Modal";
+import { pendingPanel } from "@/components/ui/Pending";
 import { getProject, type Discipline } from "@/lib/projects";
 
-import NotebookBody from "../_shared/notebook/NotebookBody";
-import EvidenceLog from "../_shared/notebook/EvidenceLog";
 import { countsOf, type NotebookCounts } from "../_shared/notebook/counts";
 import { saveStep, type GuidedModeStepData } from "../_shared/stepStore";
 import { useStepFor } from "../_shared/useLoadFor";
 import { usePhaseReport } from "../_shared/usePhaseReport";
 
-import ResearchTriageBoard from "./ResearchTriageBoard";
-import FollowUpQueue from "./_parts/FollowUpQueue";
 import { ClearDialog, ConfirmScope } from "./_parts/ScopeGate";
 import { useScope } from "./useScope";
 import { resetFollowUps } from "./useFollowUps";
-import BeatVariantBoard from "./beats/BeatVariantBoard";
 import ModeChooser, { ModeSwitch } from "./beats/ModeChooser";
 import { useBeatPicks } from "./beats/useBeatPicks";
-import GuidedResearch, { FaceSwitch, type Face } from "./guided/GuidedResearch";
-import { ArtifactPills } from "./guided/RunStage";
+import { ArtifactPills } from "./guided/ArtifactPills";
+import { FaceSwitch, type Face } from "./guided/FaceSwitch";
 import { useEducationalResearch } from "./guided/useEducationalResearch";
-import AdsIdea from "./ads/AdsIdea";
-import MusicVideoResearch from "./MusicVideoResearch";
+
+// ONE FACE IS DRAWN AT A TIME, SO ONE FACE IS FETCHED (Wave 2, 2026-10-08).
+//
+// The step's chunk used to carry both faces whole: the guided wizard (the deck
+// engine, the run stage, the trace ledger, the real-run client) and the expert
+// board (the triage columns, every card tile, the follow-up queue and its
+// transcribed results) — for a surface that mounts exactly one of them. A fresh
+// project opens on the guided face and never needed the board's code; a
+// project with decisions opens on the board and never needed the deck's. So
+// each face's heavy body is `next/dynamic` from here (a "use client" file,
+// which is where the split takes effect — Next's lazy-loading guide), and the
+// pieces both faces draw (FaceSwitch, ArtifactPills) moved into their own small
+// modules so importing them does not drag the other face back in.
+//
+// The two notebook modals go the same way: Modal returns null while closed, so
+// NotebookBody and EvidenceLog are fetched on the first press of a pill and not
+// before. The JSX below still reads `<NotebookBody source={dealtSource} />` and
+// `<EvidenceLog source={dealtSource} />` — notebook-surfaces.probe pins those.
+//
+// The face NOT shown is fetched once the browser is idle, so the switch between
+// them does not wait on the network; `import()` is memoised by the bundler, so
+// that preload and the dynamic below are one request. The follow-up queue has
+// no placeholder of its own: it arrives with the board's, and two stacked
+// pending panels would be one more shape on screen than there is to wait for.
+const loadGuided = () => import("./guided/GuidedResearch");
+const loadBoard = () => import("./ResearchTriageBoard");
+const loadQueue = () => import("./_parts/FollowUpQueue");
+const GuidedResearch = dynamic(loadGuided, { loading: pendingPanel });
+const ResearchTriageBoard = dynamic(loadBoard, { loading: pendingPanel });
+const FollowUpQueue = dynamic(loadQueue);
+const NotebookBody = dynamic(() => import("../_shared/notebook/NotebookBody"), { loading: pendingPanel });
+const EvidenceLog = dynamic(() => import("../_shared/notebook/EvidenceLog"), { loading: pendingPanel });
+
+// The other disciplines, likewise. An educational project (most of them, and
+// the seeded one) never draws the ads brief, the music-video track or the beat
+// board, and used to carry all three — the trailer fixture with them — in this
+// step's chunk. Each now arrives only for the project whose discipline routes
+// to it.
+const AdsIdea = dynamic(() => import("./ads/AdsIdea"), { loading: pendingPanel });
+const MusicVideoResearch = dynamic(() => import("./MusicVideoResearch"), { loading: pendingPanel });
+const BeatVariantBoard = dynamic(() => import("./beats/BeatVariantBoard"), { loading: pendingPanel });
 
 export default function ResearchStep({ projectId }: { projectId: string }) {
   // The project record, read the way StudioView reads it (`getProject` in an
@@ -269,6 +305,16 @@ function EducationalFaces({
   // The frozen default — what this step looked like when it was opened.
   const [fallback] = useState<Face>(defaultFace);
   const shown = face ?? fallback;
+
+  useEffect(() => {
+    const idle = window.requestIdleCallback ?? ((cb: () => void) => window.setTimeout(cb, 600));
+    const cancel = window.cancelIdleCallback ?? window.clearTimeout;
+    const id = idle(() => {
+      if (shown === "guided") void Promise.all([loadBoard(), loadQueue()]).catch(() => {});
+      else void loadGuided().catch(() => {});
+    });
+    return () => cancel(id);
+  }, [shown]);
 
   const { run, live } = research;
   // WHAT THE MODALS, THE PILLS AND THE CLEAR DIALOG DRAW IS WHAT THE BOARD DEALS:

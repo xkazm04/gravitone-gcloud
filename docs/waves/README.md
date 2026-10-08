@@ -121,3 +121,20 @@ Paged IndexedDB reads were looked for and not built: the asset rows are pointers
 - Bulk select and delete on the race sheet; an undo toast in place of the delete confirm (needs a soft delete in `lib/projects`).
 - An upstream-break mark between steps on the rail for what blocks the next step (today only `title=`/sr-only).
 - `listAssetsFor(uid, projectId)` so the outputs shelf's kept index stops reading the whole account (handed to Wave 4).
+
+### Wave 2 · research & script (2026-10-08)
+
+**Shipped.**
+- Research: only the face on screen is fetched. The guided wizard (deck engine, run stage, live client) and the expert board (triage board, card tiles, follow-up queue) are separate `next/dynamic` chunks, the other preloaded on idle; `NotebookBody` and `EvidenceLog` load on first open; the ads, music-video and beat-variant faces leave the chunk of educational projects. `FaceSwitch` and `ArtifactPills` moved to their own files (re-exported) to make the split possible.
+- Research, B-002 (interim of C-001): the guided review stage prints `DEALT 8/39 · NOT DEALT 31` with the class breakdown and a way to the expert board before `confirm scope`, which used to sign off on 39 cards after showing 8.
+- Research: a failed run's findings and the notebook's declared gaps used to end at "…and N more." with no way to read them; the rest now sit verbatim in a `Fold`. Triage columns show 10 cards, then a `Pager`.
+- Script: gate findings, the constraint ledger, craft checks, the recalibrate summary and the trailer's advisory rules sit behind `Fold`s whose headers carry the verdict and counts (the gate's opens itself when it blocks); details and quotes stay verbatim one press down. The tab rail shows the gate's state (`N blocking` / `N not checked`) instead of a constant "3 renders". TrailerScript (with its 1.3k-line structure checker), AdsScenario, the three grid tabs and the expert columns are `next/dynamic`; the expert face stops re-running the gate three times and reads the rollup. The step tab is remembered. B-005 (part): the guided duel shows a render's cut facts verbatim.
+
+**Measured.** The gate memo was already stable and trailer typing already debounced (400 ms); neither changed. No version-history list exists in Script to window.
+
+**Proposals (not built).**
+- C-001 option 1: reversals dealt with the facts they rest on, as their own guided stage (design call; concept open).
+- Research cards show the claim only, with precedent / wrong-if / sources per card on demand (needs its own pass over CardTile's overlay-button a11y).
+- B-005 rest: the evidence-log modal mounted on Script; B-007: lock facts→beats while an adoption exists; C-003: the gate refuses a candidate that speaks a scope exclusion. All cross the research/script seam or change gate behaviour.
+- B-003 (visible glossary lines under chips) was not built: it contradicts the narration law as written, so it is the operator's call.
+- M-001 fires: `guided/` changed, so `compose-from-scratch` L2 should be re-run for Priyanka, Kwame and Marco.

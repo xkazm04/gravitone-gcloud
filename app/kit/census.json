@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 551,
+  "files": 553,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -381,7 +381,14 @@
       "surfaces": [
         "components/ui/signal/index.ts"
       ],
-      "adopters": []
+      "adopters": [
+        "app/_phases/research/run/LiveResult.tsx",
+        "app/_phases/script/_notes/RecalibrateControl.tsx",
+        "app/_phases/script/_parts/ConstraintLedger.tsx",
+        "app/_phases/script/_parts/GatePanel.tsx",
+        "app/_phases/script/_parts/HypothesisColumn.tsx",
+        "app/_phases/script/trailer/StructurePanel.tsx"
+      ]
     },
     "FolderTree": {
       "home": "components/kit/FolderTree.tsx",
@@ -644,7 +651,8 @@
         "components/kit/index.ts"
       ],
       "adopters": [
-        "app/_library/LibraryShelves.tsx"
+        "app/_library/LibraryShelves.tsx",
+        "app/_phases/research/ResearchTriageBoard.tsx"
       ]
     },
     "Panel": {
@@ -998,6 +1006,7 @@
         "app/_phases/research/MusicVideoResearch.tsx",
         "app/_phases/research/ResearchTriageBoard.tsx",
         "app/_phases/research/_parts/FollowUpResult.tsx",
+        "app/_phases/research/guided/GuidedResearch.tsx",
         "app/_phases/score/CueTakes.tsx",
         "app/_phases/score/ScoreSpotting.tsx",
         "app/_phases/score/ads/AdsScore.tsx",
@@ -1280,7 +1289,8 @@
         "components/kit/index.ts"
       ],
       "adopters": [
-        "app/_library/LibraryShelves.tsx"
+        "app/_library/LibraryShelves.tsx",
+        "app/_phases/research/ResearchTriageBoard.tsx"
       ]
     }
   },
@@ -1473,9 +1483,9 @@
       "suspectFiles": {}
     },
     "app/_phases/research": {
-      "files": 38,
-      "kitImports": 1,
-      "signalImports": 14,
+      "files": 40,
+      "kitImports": 2,
+      "signalImports": 15,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1486,10 +1496,12 @@
         "Dropzone",
         "Eyebrow",
         "Field",
+        "Fold",
         "Ghost",
         "Hint",
         "HintPopover",
         "Modal",
+        "Pager",
         "Panel",
         "PipRow",
         "Provenance",
@@ -1499,7 +1511,8 @@
         "TextArea",
         "TextInput",
         "hintRootClass",
-        "useHint"
+        "useHint",
+        "useWindow"
       ],
       "suspects": {
         "tab": 0,
@@ -1569,11 +1582,12 @@
     "app/_phases/script": {
       "files": 51,
       "kitImports": 0,
-      "signalImports": 15,
+      "signalImports": 17,
       "parts": [
         "Button",
         "DeckCard",
         "DeckStage",
+        "Fold",
         "Ghost",
         "Hint",
         "Modal",
@@ -2211,7 +2225,6 @@
     "Figures",
     "Final",
     "FlagChip",
-    "Fold",
     "FolderTree",
     "KeyRow",
     "Kicker",
