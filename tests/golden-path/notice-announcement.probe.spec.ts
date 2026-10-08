@@ -102,3 +102,12 @@ test("every warning/info Notice is announced or declared on-load", () => {
   // cases announced of cases that should be (action-triggered sites)
   expect(announced).toBe(7);
 });
+
+test("kit Loading is not a pre-filled live region, and speaks through useAnnounce", () => {
+  const src = stripComments(readFileSync(join(ROOT, "components/kit/Notice.tsx"), "utf8"));
+  const loading = src.slice(src.indexOf("export function Loading"), src.indexOf("export function Command"));
+  expect(loading.length).toBeGreaterThan(20);
+  expect(loading).not.toMatch(/role=/);
+  expect(loading).toMatch(/useAnnounce/);
+  expect(loading).toMatch(/say\(/);
+});

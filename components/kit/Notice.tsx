@@ -1,3 +1,9 @@
+"use client";
+
+import { useEffect, useId } from "react";
+
+import { useAnnounce } from "@/lib/announcer";
+
 // THE THREE THINGS A LIST CAN BE INSTEAD OF A LIST: unreachable, loading, or empty.
 //
 //   ErrorBox  a real failure, verbatim, in Antares. `role="alert"` by default.
@@ -26,8 +32,18 @@ export function ErrorBox({
   );
 }
 
+/** `role="status"` on the element that already holds "loading…" announces
+ *  nowhere: a live region has to exist EMPTY and then be mutated
+ *  (lib/announcer.tsx, rule 1). So the word is plain text and the announcer,
+ *  whose region was mounted empty with the shell, speaks it. The key is per
+ *  mount: each load is its own event, a re-render is not. */
 export function Loading() {
-  return <p className="k-muted" role="status">loading…</p>;
+  const say = useAnnounce();
+  const key = useId();
+  useEffect(() => {
+    say({ key: `loading:${key}`, text: "loading…" });
+  }, [say, key]);
+  return <p className="k-muted">loading…</p>;
 }
 
 export function Command({ label, children }: { label: string; children: string }) {
