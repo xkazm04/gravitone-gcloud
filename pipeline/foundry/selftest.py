@@ -1036,6 +1036,39 @@ def test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on():
     check("fetch_ref2va: a download it gave up on exits non-zero", code, 1)
 
 
+def test_reconcile_resume_is_per_annotator():
+    """reconciled.jsonl carries an `annotator` per row, but resume keyed on the
+    frame alone -- so adjudicating a second annotator's answers in the same run
+    skipped every frame the first one had covered and reported success."""
+    Rc = load_vlm("reconcile")
+    tmp = Path(tempfile.mkdtemp())
+    run_dir = tmp / "r"
+    run_dir.mkdir()
+    frame = "arcane-fights-001.jpg"
+    (run_dir / "results.jsonl").write_text("".join(
+        json.dumps({"frame": frame, "model": m, "ok": True, "parsed": {}}) + "\n"
+        for m in ("qwen", "gemma")), encoding="utf-8")
+    (run_dir / "reconciled.jsonl").write_text(
+        json.dumps({"frame": frame, "annotator": "qwen"}) + "\n", encoding="utf-8")
+
+    def go(annotator):
+        saved = (Rc.OUT_ROOT, Rc.judge, sys.argv)
+        Rc.OUT_ROOT = tmp
+        Rc.judge = lambda *a, **k: ({"corrected": {}, "corrections": [], "unanswerable": []}, {}, 0.0)
+        sys.argv = ["reconcile.py", "--run", "r", "--annotator", annotator]
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                Rc.main()
+        finally:
+            Rc.OUT_ROOT, Rc.judge, sys.argv = saved
+        rows = [json.loads(l) for l in (run_dir / "reconciled.jsonl").read_text(encoding="utf-8").splitlines()]
+        return sorted(r["annotator"] for r in rows)
+
+    check("reconcile: a second annotator's frame is adjudicated", go("gemma"), ["gemma", "qwen"])
+    check("reconcile (control): a frame already judged for its annotator is skipped",
+          go("qwen"), ["gemma", "qwen"])
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1067,6 +1100,7 @@ TESTS = [
     test_motion_collect_takes_the_newest_video_like_its_frames,
     test_motion_chain_refuses_to_restart_from_the_hero,
     test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on,
+    test_reconcile_resume_is_per_annotator,
 ]
 
 

@@ -209,10 +209,14 @@ def main():
     done = set()
     if out_path.exists():
         # Resume rather than re-adjudicate: a 36-frame batch outlives most
-        # command timeouts, and re-judging a frame is pure waste.
+        # command timeouts, and re-judging a frame is pure waste. Keyed by
+        # annotator too: a frame judged for one annotator's answers says
+        # nothing about another's, and both land in this one file.
         for line in out_path.read_text(encoding="utf-8").splitlines():
             if line.strip():
-                done.add(json.loads(line)["frame"])
+                row = json.loads(line)
+                if row.get("annotator") == args.annotator:
+                    done.add(row["frame"])
         if done:
             print(f"  ({len(done)} already adjudicated, skipping)")
 
