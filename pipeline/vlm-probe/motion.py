@@ -233,6 +233,12 @@ def run(lane, width, height, length, steps, lora, hero, timeout=7200):
             wf = ref2va_workflow(prompt_for(beat, ref_tag=True), ref_name,
                                  width, height, length, steps, prefix, lora)
         else:
+            if i > 0 and prev_last is None:
+                # Starting on the hero here would record a reference-start clip
+                # as a chain result -- the one claim this lane exists to test.
+                raise RuntimeError(
+                    f"chain broken before {name}: the previous clip left no last frame "
+                    f"in {out}. Re-run it; never start {name} on the hero.")
             src = hero if prev_last is None else prev_last
             wf = chain_workflow(prompt_for(beat), stage_reference(src),
                                 width, height, length, steps, prefix, lora)

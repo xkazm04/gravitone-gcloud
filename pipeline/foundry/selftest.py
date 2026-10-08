@@ -962,6 +962,51 @@ def test_motion_collect_takes_the_newest_video_like_its_frames():
           ["ref2va-01-turn_00002_.mp4"])
 
 
+def test_motion_chain_refuses_to_restart_from_the_hero():
+    """The chain lane's whole claim is "clip N starts on clip N-1's last frame".
+    When a clip's last frame was not collected, the next clip silently started
+    on the HERO instead -- a ref-start clip recorded as a chain result."""
+    import types
+    M = load_vlm("motion")
+    tmp = Path(tempfile.mkdtemp())
+    hero = tmp / "hero.png"
+    hero.write_bytes(b"hero")
+    last = tmp / "01-turn_c-last.png"
+    last.write_bytes(b"last")
+
+    def run(collected):
+        staged = []
+        saved = (M.CLIPS, M.lane_record, M.stage_reference, M.generate, M.collect,
+                 M.guard.recycle_comfy, M.guard.vram_ok)
+        M.CLIPS = Path(tempfile.mkdtemp())
+        M.lane_record = types.SimpleNamespace(
+            check_resume=lambda *a, **k: None, record_clip=lambda **k: None,
+            read=lambda *a: {}, write_shot=lambda *a, **k: None)
+        M.stage_reference = lambda p: staged.append(Path(p).name) or Path(p).name
+        M.generate = lambda wf, timeout=0: None
+        M.collect = lambda prefix, dest, length: collected(prefix)
+        M.guard.recycle_comfy = lambda *a: True
+        M.guard.vram_ok = lambda: True
+        try:
+            with contextlib.redirect_stdout(io.StringIO()):
+                M.run("chain", 832, 480, 73, 4, True, hero)
+            err = None
+        except Exception as e:
+            err = str(e)
+        finally:
+            (M.CLIPS, M.lane_record, M.stage_reference, M.generate, M.collect,
+             M.guard.recycle_comfy, M.guard.vram_ok) = saved
+        return staged, err
+
+    # control: a collected last frame IS what the next clip starts on
+    staged, err = run(lambda prefix: {"c-last": last})
+    check("motion chain (control): clip 2 starts on clip 1's last frame", (staged[2], err),
+          ("01-turn_c-last.png", None))
+    staged, err = run(lambda prefix: {})
+    check("motion chain: a missing last frame stops the lane", err is not None and "02-walk" in err, True)
+    check("motion chain: ...and no clip after the first started on the hero", staged.count("hero.png"), 2)
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -991,6 +1036,7 @@ TESTS = [
     test_every_third_party_import_is_declared_in_requirements,
     test_replicate_poll_survives_a_busy_card_and_names_a_dead_one,
     test_motion_collect_takes_the_newest_video_like_its_frames,
+    test_motion_chain_refuses_to_restart_from_the_hero,
 ]
 
 
