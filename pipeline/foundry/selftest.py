@@ -1069,6 +1069,42 @@ def test_reconcile_resume_is_per_annotator():
           go("qwen"), ["gemma", "qwen"])
 
 
+def test_replicate_one_unreadable_reannotation_does_not_end_phase_2():
+    """Phase 2 parsed each re-annotation with a bare json.loads, so one
+    malformed reply from the annotator ended the run and every frame after it
+    went unscored -- the phase reconcile.py already survives per frame."""
+    R = load_vlm("replicate")
+    tmp = Path(tempfile.mkdtemp())
+    run_dir, reps = tmp / "r", tmp / "replicas"
+    run_dir.mkdir()
+    reps.mkdir()
+    craft = {"shot_size": "wide", "contrast": "high"}
+    frames = ["arcane-fights-001.jpg", "arcane-fights-002.jpg"]
+    (run_dir / "results.jsonl").write_text("".join(
+        json.dumps({"frame": f, "model": R.ANNOTATOR, "ok": True, "parsed": craft}) + "\n"
+        for f in frames), encoding="utf-8")
+    for f in frames:
+        (reps / f"replica-{Path(f).stem}.png").write_bytes(b"png")
+    replies = iter(["the model wrote prose instead", json.dumps(craft)])
+    saved = (R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv)
+    R.OUT_ROOT, R.REPLICA_DIR = tmp, reps
+    R.run_ollama = lambda *a, **k: (next(replies), None)
+    R.guard.require_model = lambda *a, **k: None
+    sys.argv = ["replicate.py", "--run", "r", "--reuse-replicas"]
+    err = None
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            R.main()
+    except BaseException as e:
+        err = type(e).__name__
+    finally:
+        R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv = saved
+    out = run_dir / "replication.jsonl"
+    scored = [json.loads(l)["frame"] for l in out.read_text(encoding="utf-8").splitlines()] if out.exists() else []
+    check("replicate: phase 2 finishes past an unreadable re-annotation", (err, scored),
+          (None, ["arcane-fights-002.jpg"]))
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1101,6 +1137,7 @@ TESTS = [
     test_motion_chain_refuses_to_restart_from_the_hero,
     test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on,
     test_reconcile_resume_is_per_annotator,
+    test_replicate_one_unreadable_reannotation_does_not_end_phase_2,
 ]
 
 

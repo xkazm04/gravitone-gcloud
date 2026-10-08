@@ -273,11 +273,20 @@ def main():
     for r, replica, prompt in made:
         original = r["parsed"]
         b64 = base64.b64encode(replica.read_bytes()).decode("ascii")
-        text, _ = run_ollama(args.annotator, b64, "image/png")
-        redo = json.loads(text)
+        # One frame's failure is that frame's, as in reconcile.py: a bare
+        # json.loads here ended the phase and left every later replica unscored.
+        try:
+            text, _ = run_ollama(args.annotator, b64, "image/png")
+            redo = json.loads(text)
+        except Exception as e:
+            print(f"  {r['frame']:24s} FAILED: {type(e).__name__}: {str(e)[:70]}")
+            continue
 
         per = {f: credit(f, redo.get(f), original.get(f)) for f in CRAFT_FIELDS
                if original.get(f) is not None}
+        if not per:
+            print(f"  {r['frame']:24s} unscored: the source annotation has no craft field")
+            continue
         score = sum(per.values()) / len(per)
         scores.append((r["frame"], score, per))
         misses = [f"{f}({original.get(f)}->{redo.get(f)})" for f, v in per.items() if v == 0]
@@ -292,6 +301,8 @@ def main():
                                 ensure_ascii=False) + "\n")
 
     # --- which fields survive the round trip, and which never do ------------
+    if not scores:
+        sys.exit(f"no replica could be scored ({len(made)} re-annotation(s) failed)")
     print(f"\nmean craft fidelity {100*sum(s for _, s, _ in scores)/len(scores):.0f}% "
           f"over {len(scores)} frame(s)\n")
     print("per-field transfer rate (does this word survive the round trip?):")
