@@ -21,9 +21,9 @@ and still block. Pillow and numpy are imported INSIDE crop_letterbox and
 publish, so keep out of cases that call those; a case that needs a card belongs
 in a plan, not here.
 
-WHAT IT IS NOT. It is a courtesy, not yet a gate -- nothing invokes it. Running
-it is one command and it takes under a second; run it after touching anything
-in this directory.
+WHAT IT IS. A BLOCKING gate: the `python` job in .github/workflows/gates.yml
+runs it. It passes from any working directory (paths are anchored to HERE) and
+takes under a second; run it after touching anything in this directory.
 """
 
 import importlib.util
@@ -567,7 +567,7 @@ def test_lane_record_replay_argv_and_consistency_kwargs():
     LR = load_vlm("lane_record")
     C = load_vlm("consistency")
 
-    rec = LR.read("pipeline/vlm-probe/shots/reference-face-e25")
+    rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/shots/reference-face-e25")
     argv = LR.replay_argv(rec)
     want = ["consistency.py", "--lane", "reference", "--ref-crop", "face", "--late", "0.25", "--tag=-face-e25", "--steps", "20", "--seed", "770425"]
     check("replay_argv for reference-face-e25", argv, want)
@@ -593,7 +593,7 @@ def test_lane_record_replay_argv_and_consistency_kwargs():
 
 def test_lane_record_replay_argv_baseline_zoom():
     LR = load_vlm("lane_record")
-    rec = LR.read("pipeline/vlm-probe/shots/baseline-zoom")
+    rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/shots/baseline-zoom")
     argv = LR.replay_argv(rec)
     check("baseline-zoom replay_argv has --zoom", "--zoom" in argv, True)
     check("baseline-zoom replay_argv lane is baseline", "--lane" in argv and argv[argv.index("--lane") + 1] == "baseline", True)
@@ -613,7 +613,7 @@ def test_lane_record_reads_all_8_tracked_lanes():
         "pipeline/vlm-probe/clips/ref2va",
     ]
     for p in paths:
-        rec = LR.read(p)
+        rec = LR.read(HERE.parent.parent / p)
         check(f"read({p}) is not None", rec is not None, True)
         argv = LR.replay_argv(rec)
         check(f"replay_argv({p}) is non-empty", isinstance(argv, list) and len(argv) > 0, True)
@@ -786,7 +786,7 @@ def test_lane_record_record_clip_hero_repo_relative():
     )
     check("motion record hero is repo-relative", rec["hero"], "pipeline/vlm-probe/shots/reference/00-hero.png")
 
-    chain_rec = LR.read("pipeline/vlm-probe/clips/chain")
+    chain_rec = LR.read(HERE.parent.parent / "pipeline/vlm-probe/clips/chain")
     resolved_hero = Path(chain_rec["hero"])
     expected_hero = (ROOT / "pipeline" / "vlm-probe" / "shots" / "reference" / "00-hero.png").resolve()
     check("legacy clips/chain hero resolves to checkout root", resolved_hero, expected_hero)
@@ -1222,6 +1222,115 @@ def test_replicate_prefix_selects_a_non_default_corpus():
     check("replicate: --prefix selects another corpus's frames", (err, scored), (None, [frame]))
 
 
+def test_identity_decision_functions_load_without_torch_or_pil():
+    """identity.py owns the ruler that every published identity number is read
+    against, and its refusal (ruler_blindness) used to be unpinnable in CI
+    because torch and PIL were imported at module level."""
+    saved = {k: sys.modules.get(k) for k in ("torch", "PIL", "PIL.Image", "PIL.ImageDraw")}
+    for k in saved:
+        sys.modules[k] = None
+    try:
+        try:
+            I = load_vlm("identity")
+        except ImportError as e:
+            check("identity: loads with torch and PIL blocked", f"ImportError: {e}", "loaded")
+            return
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+    check("identity: loads with torch and PIL blocked", True, True)
+    inverted = {"id_within": 0.2, "id_floor": 0.5, "id_ceil": 0.4, "look_floor": 0.3}
+    sound = {"id_within": 0.2, "id_floor": 0.4, "id_ceil": 0.7, "look_floor": 0.3}
+    check("identity: an inverted scale is refused", isinstance(I.ruler_blindness(inverted), str), True)
+    check("identity: a sound scale is not refused", I.ruler_blindness(sound), None)
+    check("identity: a missing floor is refused",
+          isinstance(I.ruler_blindness({**sound, "id_floor": None}), str), True)
+    check("identity: no face reads as unscored", I.verdict(None, 0.1, sound), "unscored (no face detected)")
+    check("identity: at the ceiling reads as a different person",
+          I.verdict(0.7, 0.1, sound).startswith("READS AS A DIFFERENT PERSON"), True)
+    rows = [("floor", "a", "b", 0.3, 0.2, ""), ("hard-ceil", "a", "c", 0.6, 0.5, "")]
+    check("identity: scale_from reads floor and ceiling",
+          (I.scale_from(rows)["id_floor"], I.scale_from(rows)["id_ceil"]), (0.3, 0.6))
+    check("identity: missing_anchors names every absent still",
+          len(I.missing_anchors(tempfile.mkdtemp())), len(I.ANCHORS))
+
+
+def test_identity_person_box_detects_each_frame_once():
+    """look_vec and contact_sheet each ask person_box for the same frame; DETR
+    ran once per ASK. Pinned at the cache: 3 frames x 2 askers = 3 detections."""
+    saved = {k: sys.modules.get(k) for k in ("torch", "PIL", "PIL.Image", "PIL.ImageDraw")}
+    for k in saved:
+        sys.modules[k] = None
+    try:
+        I = load_vlm("identity")
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+    tmp = Path(tempfile.mkdtemp())
+    paths = []
+    for n in "abc":
+        f = tmp / f"{n}.jpg"
+        f.write_bytes(b"frame " + n.encode())
+        paths.append(f)
+    calls = []
+
+    def fake_detect(path, threshold=0.5):
+        calls.append(Path(path).name)
+        return (0, 0, 10, 10), 0.9
+    I._detect_person = fake_detect
+    first = [I.person_box(p) for p in paths]      # what look_vec asks
+    second = [I.person_box(p) for p in paths]     # what contact_sheet asks
+    check("identity: three frames asked twice are detected three times", len(calls), 3)
+    check("identity: the cached box is the detected box", second, first)
+    paths[0].write_bytes(b"frame a, regenerated in place")
+    I.person_box(paths[0])
+    check("identity: a frame regenerated in place is detected again", len(calls), 4)
+
+
+def test_dojo_video_follows_guard_comfy_and_survives_a_busy_card():
+    """dojo_video.generate_video hard-coded 127.0.0.1:8188 while ComfyUI resolves
+    per machine through guard.COMFY, and carried a poll loop with neither of
+    consistency.generate's rules."""
+    import time as _time
+    import urllib.error
+    import urllib.request
+    spec = importlib.util.spec_from_file_location("dojo_video", HERE / "dojo_video.py")
+    DV = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(DV)
+    done = {"p1": {"outputs": {"10": {"images": [{"filename": "dojo-video_00001_.webm", "subfolder": ""}]}}}}
+    urls = []
+    polls = []
+
+    def fake_urlopen(req, timeout=None):
+        url = req if isinstance(req, str) else req.full_url
+        urls.append(url)
+        if url.endswith("/prompt"):
+            return _bytes({"prompt_id": "p1"})
+        polls.append(url)
+        if len(polls) == 1:
+            raise urllib.error.URLError("timed out while the card was busy")
+        return _bytes(done)
+    saved = (urllib.request.urlopen, _time.sleep, DV.guard.COMFY, DV.guard.comfy_process_ids)
+    urllib.request.urlopen, _time.sleep = fake_urlopen, (lambda s: None)
+    DV.guard.COMFY = "http://sentinel-host:9999"
+    DV.guard.comfy_process_ids = lambda: [4242]
+    try:
+        got = DV.generate_video({"1": {}}, timeout=60).name
+    except Exception as e:
+        got = f"{type(e).__name__}: {e}"
+    finally:
+        urllib.request.urlopen, _time.sleep, DV.guard.COMFY, DV.guard.comfy_process_ids = saved
+    check("dojo_video: a failed poll on a busy card is survived", got, "dojo-video_00001_.webm")
+    check("dojo_video: every request goes to guard.COMFY",
+          sorted({u.split("/")[2] for u in urls}), ["sentinel-host:9999"])
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1259,6 +1368,9 @@ TESTS = [
     test_lane_record_check_resume_refuses_changed_ref_count,
     test_survey_rhythm_counts_the_opening_and_closing_shots,
     test_replicate_prefix_selects_a_non_default_corpus,
+    test_identity_decision_functions_load_without_torch_or_pil,
+    test_identity_person_box_detects_each_frame_once,
+    test_dojo_video_follows_guard_comfy_and_survives_a_busy_card,
 ]
 
 

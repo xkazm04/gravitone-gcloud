@@ -173,15 +173,16 @@ def flux_workflow(prompt, seed, refs=(), width=1280, height=720, steps=20, prefi
     return w
 
 
-def generate(workflow, timeout=900):
-    """Queue a workflow and return the saved image path.
+def generate(workflow, timeout=900, kinds=("images",), exts=None):
+    """Queue a workflow and return the saved image path (or, with kinds/exts,
+    the first saved output of those kinds whose name ends in one of exts).
 
     Every failure in this stack presents as silence -- a stalled queue, a closed
     socket, a vanished process -- so a timeout here means "go read ComfyUI's
     stderr", not "retry and hope".
     """
     body = json.dumps({"prompt": workflow}).encode()
-    req = urllib.request.Request(f"{COMFY}/prompt", data=body,
+    req = urllib.request.Request(f"{guard.COMFY}/prompt", data=body,
                                  headers={"Content-Type": "application/json"}, method="POST")
     with urllib.request.urlopen(req, timeout=60) as r:
         pid = json.loads(r.read())["prompt_id"]
@@ -189,7 +190,7 @@ def generate(workflow, timeout=900):
     while time.time() < deadline:
         time.sleep(4)
         try:
-            with urllib.request.urlopen(f"{COMFY}/history/{pid}", timeout=30) as r:
+            with urllib.request.urlopen(f"{guard.COMFY}/history/{pid}", timeout=30) as r:
                 hist = json.loads(r.read())
         except Exception:
             # A poll that fails is expected while the server is busy. A poll
@@ -204,9 +205,11 @@ def generate(workflow, timeout=900):
         if pid not in hist:
             continue
         for node in hist[pid].get("outputs", {}).values():
-            for img in node.get("images", []):
-                return COMFY_OUT / img.get("subfolder", "") / img["filename"]
-        raise RuntimeError(f"finished with no image: {hist[pid].get('status')}")
+            for kind in kinds:
+                for img in node.get(kind, []):
+                    if exts is None or str(img.get("filename", "")).endswith(exts):
+                        return COMFY_OUT / img.get("subfolder", "") / img["filename"]
+        raise RuntimeError(f"finished with no {'image' if exts is None else 'video'}: {hist[pid].get('status')}")
     raise TimeoutError(f"comfyui did not finish {pid} in {timeout}s -- read its stderr")
 
 
