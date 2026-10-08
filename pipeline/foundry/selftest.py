@@ -1165,6 +1165,30 @@ def test_lane_record_check_resume_refuses_changed_ref_count():
     check("lane_record: a record with no ref_count still resumes", True, True)
 
 
+def test_survey_rhythm_counts_the_opening_and_closing_shots():
+    """rhythm() counted only the gaps BETWEEN cuts, so the opening shot and the
+    closing hold were never shots: [1,2,3] over 10s reported 2 shots for a
+    4-shot film and dropped the 7s closing hold from the held-shot share.
+    Scene detection never reports t=0, so the edges are implied."""
+    import types
+    stub = types.SimpleNamespace(FRAMES_DIR=None, download=None, extract=None,
+                                 keep_or_throw=None, probe_duration=None)
+    had = sys.modules.get("ingest")
+    sys.modules["ingest"] = stub  # the real one imports numpy and Pillow
+    try:
+        S = load_vlm("survey")
+    finally:
+        if had is None:
+            sys.modules.pop("ingest", None)
+        else:
+            sys.modules["ingest"] = had
+    r = S.rhythm([1, 2, 3], 10)
+    check("survey rhythm: opening and closing shots are counted", r["shots"], 4)
+    check("survey rhythm: the 7s closing hold is a held shot", r["share_time_in_shots_over_4s"], 0.7)
+    edge = S.rhythm([0, 1, 2, 3, 10], 10)
+    check("survey rhythm: a cut at 0 or at the end is not counted twice", edge["shots"], 4)
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1200,6 +1224,7 @@ TESTS = [
     test_replicate_one_unreadable_reannotation_does_not_end_phase_2,
     test_motion_resume_refuses_a_different_hero,
     test_lane_record_check_resume_refuses_changed_ref_count,
+    test_survey_rhythm_counts_the_opening_and_closing_shots,
 ]
 
 
