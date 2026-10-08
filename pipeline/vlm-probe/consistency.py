@@ -227,9 +227,15 @@ def face_reference(hero_path, out_path, margin=1.9, size=512):
     x1, y1, x2, y2 = boxes[0]
     cx, cy = (x1 + x2) / 2, (y1 + y2) / 2
     half = max(x2 - x1, y2 - y1) * margin / 2
-    crop = im.crop((int(cx - half), int(cy - half), int(cx + half), int(cy + half)))
-    canvas = Image.new("RGB", (size, size), (118, 118, 118))
-    canvas.paste(crop.resize((size, size)))
+    left, top = int(cx - half), int(cy - half)
+    side = int(cx + half) - left
+    # Crop only what the frame holds: im.crop past an edge fills BLACK, and a
+    # resized crop pasted over the canvas would leave no neutral field at all.
+    cl, ct = max(left, 0), max(top, 0)
+    cr, cb = min(left + side, im.width), min(top + side, im.height)
+    square = Image.new("RGB", (side, side), (118, 118, 118))
+    square.paste(im.crop((cl, ct, cr, cb)), (cl - left, ct - top))
+    canvas = square.resize((size, size))
     canvas.save(out_path)
     return out_path
 
@@ -246,15 +252,17 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full"
     out = SHOTS / (lane + ("-zoom" if zoom else "") + tag)
     out.mkdir(parents=True, exist_ok=True)
     lane_json_path = out / "lane.json"
+    counted = {"ref_count": max(1, ref_count)} if lane == "reference" else {}
     if lane_json_path.exists():
         lane_record.check_resume(lane_json_path, {
             "lane": lane, "steps": steps, "seed": seed, "zoom": zoom,
-            "ref_crop": ref_crop, "reference_joins_at": late, "tag": tag
+            "ref_crop": ref_crop, "reference_joins_at": late, "tag": tag,
+            **counted
         })
     else:
         lane_record.record_stills(
             out_dir=out, lane=lane, seed=seed, steps=steps, refs=[],
-            ref_crop=ref_crop, late=late, zoom=zoom, tag=tag,
+            ref_crop=ref_crop, late=late, zoom=zoom, tag=tag, **counted,
             character=CHARACTER, location=LOCATION
         )
 
@@ -300,7 +308,7 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full"
     rec = lane_record.read(out) if lane_json_path.exists() else {}
     lane_record.record_stills(
         out_dir=out, lane=lane, seed=seed, steps=steps, refs=refs,
-        ref_crop=ref_crop, late=late, zoom=zoom, tag=tag,
+        ref_crop=ref_crop, late=late, zoom=zoom, tag=tag, **counted,
         character=CHARACTER, location=LOCATION, shots=rec.get("shots", {})
     )
     print(f"\n  lane written to {out}\n  now score it:  python identity.py --set shots/{lane}")

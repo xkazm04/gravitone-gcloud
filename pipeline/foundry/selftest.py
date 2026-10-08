@@ -1105,6 +1105,123 @@ def test_replicate_one_unreadable_reannotation_does_not_end_phase_2():
           (None, ["arcane-fights-002.jpg"]))
 
 
+def test_motion_resume_refuses_a_different_hero():
+    """`motion.py --lane ref2va --hero other.png` over an existing lane.json
+    silently resumed a lane held against a different hero: check_resume had
+    no branch for the hero key motion.run passes."""
+    M = load_vlm("motion")
+    tmp = Path(tempfile.mkdtemp())
+    hero_a, hero_b = tmp / "heroA.png", tmp / "heroB.png"
+    hero_a.write_bytes(b"a")
+    hero_b.write_bytes(b"b")
+
+    class PastTheCheck(Exception):
+        pass
+
+    def run(first, second):
+        saved = (M.CLIPS, M.guard.recycle_comfy)
+        M.CLIPS = Path(tempfile.mkdtemp())
+
+        def reached(*a):
+            raise PastTheCheck()
+        M.guard.recycle_comfy = reached
+        try:
+            M.lane_record.record_clip(out_dir=M.CLIPS / "ref2va", lane="ref2va", seed=M.SEED,
+                                      steps=4, lora=True, width=832, height=480,
+                                      length=73, fps=M.FPS, hero=first)
+            with contextlib.redirect_stdout(io.StringIO()):
+                M.run("ref2va", 832, 480, 73, 4, True, second)
+            return "resumed"
+        except SystemExit as e:
+            return str(e)
+        except PastTheCheck:
+            return "resumed"
+        finally:
+            M.CLIPS, M.guard.recycle_comfy = saved
+
+    check("motion resume (control): the same hero resumes", run(hero_a, hero_a), "resumed")
+    msg = run(hero_a, hero_b)
+    check("motion resume: a different hero is refused, naming hero",
+          "Refusing to resume" in msg and "hero" in msg, True)
+
+
+def test_lane_record_check_resume_refuses_changed_ref_count():
+    """A reference lane resumed with a different --refs mixes conditions. The
+    count is recorded as intent up front: `references` is [] until the lane
+    finishes, so comparing the staged list would refuse an interrupted lane."""
+    LR = load_vlm("lane_record")
+    out = Path(tempfile.mkdtemp())
+    LR.record_stills(out_dir=out, lane="reference", refs=[], ref_count=2)
+    LR.check_resume(out / "lane.json", {"ref_count": 2})
+    try:
+        LR.check_resume(out / "lane.json", {"ref_count": 3})
+        err = None
+    except SystemExit as e:
+        err = str(e)
+    check("lane_record: a changed ref_count is refused", err is not None and "ref_count" in err, True)
+    legacy = Path(tempfile.mkdtemp())
+    LR.record_stills(legacy, lane="reference", refs=["a.png"])
+    LR.check_resume(legacy / "lane.json", {"ref_count": 3})
+    check("lane_record: a record with no ref_count still resumes", True, True)
+
+
+def test_survey_rhythm_counts_the_opening_and_closing_shots():
+    """rhythm() counted only the gaps BETWEEN cuts, so the opening shot and the
+    closing hold were never shots: [1,2,3] over 10s reported 2 shots for a
+    4-shot film and dropped the 7s closing hold from the held-shot share.
+    Scene detection never reports t=0, so the edges are implied."""
+    import types
+    stub = types.SimpleNamespace(FRAMES_DIR=None, download=None, extract=None,
+                                 keep_or_throw=None, probe_duration=None)
+    had = sys.modules.get("ingest")
+    sys.modules["ingest"] = stub  # the real one imports numpy and Pillow
+    try:
+        S = load_vlm("survey")
+    finally:
+        if had is None:
+            sys.modules.pop("ingest", None)
+        else:
+            sys.modules["ingest"] = had
+    r = S.rhythm([1, 2, 3], 10)
+    check("survey rhythm: opening and closing shots are counted", r["shots"], 4)
+    check("survey rhythm: the 7s closing hold is a held shot", r["share_time_in_shots_over_4s"], 0.7)
+    edge = S.rhythm([0, 1, 2, 3, 10], 10)
+    check("survey rhythm: a cut at 0 or at the end is not counted twice", edge["shots"], 4)
+
+
+def test_replicate_prefix_selects_a_non_default_corpus():
+    """replicate.main hard-coded startswith("arcane-fights") where reconcile.py
+    takes --prefix, so any other source's frames were unreachable without
+    listing each by name."""
+    R = load_vlm("replicate")
+    tmp = Path(tempfile.mkdtemp())
+    run_dir, reps = tmp / "r", tmp / "replicas"
+    run_dir.mkdir()
+    reps.mkdir()
+    craft = {"shot_size": "wide", "contrast": "high"}
+    frame = "matrix-bullets-001.jpg"
+    (run_dir / "results.jsonl").write_text(
+        json.dumps({"frame": frame, "model": R.ANNOTATOR, "ok": True, "parsed": craft}) + "\n",
+        encoding="utf-8")
+    (reps / f"replica-{Path(frame).stem}.png").write_bytes(b"png")
+    saved = (R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv)
+    R.OUT_ROOT, R.REPLICA_DIR = tmp, reps
+    R.run_ollama = lambda *a, **k: (json.dumps(craft), None)
+    R.guard.require_model = lambda *a, **k: None
+    sys.argv = ["replicate.py", "--run", "r", "--reuse-replicas", "--prefix", "matrix-bullets"]
+    err = None
+    try:
+        with contextlib.redirect_stdout(io.StringIO()):
+            R.main()
+    except BaseException as e:
+        err = str(e)
+    finally:
+        R.OUT_ROOT, R.REPLICA_DIR, R.run_ollama, R.guard.require_model, sys.argv = saved
+    out = run_dir / "replication.jsonl"
+    scored = [json.loads(l)["frame"] for l in out.read_text(encoding="utf-8").splitlines()] if out.exists() else []
+    check("replicate: --prefix selects another corpus's frames", (err, scored), (None, [frame]))
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1138,6 +1255,10 @@ TESTS = [
     test_fetch_ref2va_exit_code_reports_a_download_it_gave_up_on,
     test_reconcile_resume_is_per_annotator,
     test_replicate_one_unreadable_reannotation_does_not_end_phase_2,
+    test_motion_resume_refuses_a_different_hero,
+    test_lane_record_check_resume_refuses_changed_ref_count,
+    test_survey_rhythm_counts_the_opening_and_closing_shots,
+    test_replicate_prefix_selects_a_non_default_corpus,
 ]
 
 
