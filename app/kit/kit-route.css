@@ -110,3 +110,7 @@
   [data-world="almanac"] .kr-ident { grid-template-columns: minmax(0, 1fr); }
   [data-world="almanac"] .kr-cons { max-width: 440px; }
 }
+
+/* ---------- the specimen's find row ---------- */
+[data-world="almanac"] .kr-find { margin: 6px 0 14px; }
+[data-world="almanac"] .kr-find .k-ctl { width: min(100%, 320px); }

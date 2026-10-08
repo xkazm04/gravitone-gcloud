@@ -10,7 +10,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import {
   Bar,
@@ -115,6 +115,9 @@ import {
   useHint,
   type TallyTone,
 } from "@/components/ui/signal";
+
+import { overlayOpen, typing } from "@/lib/board/keys";
+import { useRemembered } from "@/lib/useRemembered";
 
 import { KIT_GROUPS, PART_COUNT, type PartName } from "./catalog";
 import { BellDemo, PagerDemo, RovingDemo, StepsConstDemo, StepsDemo, TableDemo, UserDemo, WindowDemo } from "./PartsWorkbench";
@@ -1150,7 +1153,93 @@ const WIDE: ReadonlySet<PartName> = new Set<PartName>([
   "UpstreamBreak", "BandTrack", "CHIP_CLASS",
 ]);
 
+// THE SHEET IS LAYERED. It drew every specimen at once — the Deck, the
+// Player, the Timeline and their fixtures included — so a builder who came to
+// check one part paid for every other. Now the first level is the groups, each
+// a <Fold> with its part count, and a group's specimens mount when it is first
+// opened (Fold's lazy body). Which groups are open is remembered, one record.
+// A search over name, call shape and group lands on the matches directly, every
+// matching group drawn open; `/` focuses it and Esc clears it, as on the
+// library shelf. A #g-<group> deep link opens its group before scrolling to it.
+const GROUP_IDS: readonly string[] = KIT_GROUPS.map((g) => g.id);
+const SEARCH_ID = "kr-parts-q";
+
+function partMatches(q: string, group: (typeof KIT_GROUPS)[number], part: { name: string; api: string }): boolean {
+  return part.name.toLowerCase().includes(q) || part.api.toLowerCase().includes(q) || group.title.toLowerCase().includes(q);
+}
+
 export function Parts() {
+  const [stored, setStored] = useRemembered<string>("kit.parts.open", "");
+  const open = useMemo(() => new Set(stored.split(",").filter((id) => GROUP_IDS.includes(id))), [stored]);
+  const setOpen = (next: Set<string>) => setStored(GROUP_IDS.filter((id) => next.has(id)).join(","));
+  const toggle = (id: string, on: boolean) => {
+    const next = new Set(open);
+    if (on) next.add(id);
+    else next.delete(id);
+    setOpen(next);
+  };
+  const allOpen = open.size === GROUP_IDS.length;
+
+  const [query, setQuery] = useState("");
+  const q = query.trim().toLowerCase();
+  const hits = useMemo(
+    () =>
+      q
+        ? KIT_GROUPS.map((g) => ({ g, parts: g.parts.filter((p) => partMatches(q, g, p)) })).filter((x) => x.parts.length > 0)
+        : [],
+    [q],
+  );
+  const hitCount = hits.reduce((n, x) => n + x.parts.length, 0);
+
+  // `/` focuses the search — never from a field, never under a dialog (the
+  // shared guards in lib/board/keys.ts). The deep link opens its group first:
+  // this panel is a dynamic chunk, so KitView's own scroll can run before the
+  // group exists, and a closed Fold has no specimens to scroll to.
+  const openRef = useRef(open);
+  const setStoredRef = useRef(setStored);
+  useEffect(() => {
+    openRef.current = open;
+    setStoredRef.current = setStored;
+  });
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.ctrlKey || e.metaKey || e.altKey || typing(e.target) || overlayOpen()) return;
+      e.preventDefault();
+      document.getElementById(SEARCH_ID)?.focus();
+    };
+    const fromHash = () => {
+      const h = window.location.hash.replace("#", "");
+      const id = h.startsWith("g-") ? h.slice(2) : "";
+      if (!GROUP_IDS.includes(id)) return;
+      setQuery("");
+      if (!openRef.current.has(id)) {
+        const next = new Set(openRef.current).add(id);
+        setStoredRef.current(GROUP_IDS.filter((x) => next.has(x)).join(","));
+      }
+      requestAnimationFrame(() => requestAnimationFrame(() => document.getElementById(h)?.scrollIntoView()));
+    };
+    fromHash();
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("hashchange", fromHash);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("hashchange", fromHash);
+    };
+  }, []);
+
+  const specs = (g: (typeof KIT_GROUPS)[number], parts: readonly { name: string; api: string }[]) => (
+    <>
+      <p className="k-muted">{g.for}</p>
+      <div className="kr-specs">
+        {parts.map((p) => (
+          <Spec key={p.name} name={p.name} api={p.api} wide={WIDE.has(p.name as PartName)}>
+            {DEMOS[p.name as PartName]()}
+          </Spec>
+        ))}
+      </div>
+    </>
+  );
+
   return (
     <div className="kr-page">
       <section className="kr-section" aria-labelledby="kr-parts-h">
@@ -1158,26 +1247,54 @@ export function Parts() {
         <h2 id="kr-parts-h">
           Every export, in each of its states <small className="k-num">{PART_COUNT} parts · {KIT_GROUPS.length} groups</small>
         </h2>
-        <nav className="kr-jump k-caps" aria-label="Part groups">
-          {KIT_GROUPS.map((g) => (
-            <a key={g.id} href={`#g-${g.id}`}>{g.title}</a>
-          ))}
-        </nav>
-        {KIT_GROUPS.map((g) => (
-          <div key={g.id} id={`g-${g.id}`} style={{ scrollMarginTop: 140 }}>
-            <h3 className="kr-sub k-caps">
-              {g.title}
-              <span className="k-muted" style={{ textTransform: "none", letterSpacing: 0 }}>{g.for}</span>
-            </h3>
-            <div className="kr-specs">
-              {g.parts.map((p) => (
-                <Spec key={p.name} name={p.name} api={p.api} wide={WIDE.has(p.name)}>
-                  {DEMOS[p.name]()}
-                </Spec>
-              ))}
+        <div className="kr-row kr-find">
+          <TextInput
+            id={SEARCH_ID}
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape" && query) {
+                e.preventDefault();
+                setQuery("");
+              }
+            }}
+            placeholder="part, prop or group"
+            aria-label="Find a part"
+            autoComplete="off"
+          />
+          {q ? (
+            <Tally value={hitCount} of={PART_COUNT} label="parts" tone={hitCount ? "neutral" : "amber"} />
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => setOpen(allOpen ? new Set() : new Set(GROUP_IDS))}>
+              {allOpen ? "Close all" : "Open all"}
+            </Button>
+          )}
+          <Keycaps map={[{ keys: ["/"], does: "find" }, { keys: ["Esc"], does: "clear" }]} label="Specimen keys" />
+        </div>
+        {q ? (
+          hits.length === 0 ? (
+            <Ghost shape="row" label={`no part matches “${query.trim()}”`} action={<Button variant="ghost" size="sm" onClick={() => setQuery("")}>Clear search</Button>} />
+          ) : (
+            hits.map(({ g, parts }) => (
+              <div key={g.id} style={{ scrollMarginTop: 140 }}>
+                <h3 className="kr-sub k-caps">
+                  {g.title}
+                  <Tally value={parts.length} of={g.parts.length} />
+                </h3>
+                {specs(g, parts)}
+              </div>
+            ))
+          )
+        ) : (
+          KIT_GROUPS.map((g) => (
+            <div key={g.id} id={`g-${g.id}`} style={{ scrollMarginTop: 140 }}>
+              <Fold title={g.title} tally={{ value: g.parts.length, label: "parts" }} open={open.has(g.id)} onOpenChange={(on) => toggle(g.id, on)}>
+                {specs(g, g.parts)}
+              </Fold>
             </div>
-          </div>
-        ))}
+          ))
+        )}
       </section>
     </div>
   );
