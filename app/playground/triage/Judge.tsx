@@ -22,9 +22,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Check, ChevronDown, Terminal, X } from "lucide-react";
 
+import { Pager } from "@/components/kit";
 import { Panel } from "@/components/ui/Primitives";
 import { Ghost, Keycaps, Tally } from "@/components/ui/signal";
 import { EASE } from "@/components/ui/tokens";
+import { overlayOpen, typing } from "@/lib/board/keys";
 import type { DefectCode, SoundKind, SoundTake } from "@/lib/sound/types";
 
 import { DefectChips, DefectPicker, OriginChip, ProviderChip, TechniqueChips, TermChips, VerdictChip } from "../shared/Chips";
@@ -39,11 +41,15 @@ import Batch from "./Batch";
 import { KEYMAP, nextAfter, queueOrder, resolveKey, step, type KeyMode } from "./model";
 import type { TriageData } from "./useTriage";
 
-const isField = (el: Element | null) =>
-  !!el &&
-  (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) ||
-    (el as HTMLElement).isContentEditable ||
-    !!el.closest('[role="combobox"],[role="listbox"]'));
+/** Rows a queue list draws before its pager. Agents land takes by the batch
+ *  (pipeline/sound.mts generate), and every row is a play button, a waveform
+ *  and a layout-animated <li>; past this the list is drawn a page at a time. */
+const QUEUE_PAGE = 30;
+
+/** Actions that FILE something. A held key must decide one take, never the
+ *  next ones the queue advances to while the key is still down (the shared
+ *  board guard's REPEAT rule, lib/board/keys.ts). Seeking and walking may repeat. */
+const NO_REPEAT: ReadonlySet<string> = new Set(["keep", "reject", "confirm", "clear", "undo", "score", "defect", "play"]);
 
 const OP_WORD: Record<SoundTake["op"], string> = {
   compose: "compose",
@@ -59,7 +65,9 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
   const queue = useMemo(() => queueOrder(data.takes, kind), [data.takes, kind]);
   const byId = useMemo(() => new Map(data.takes.map((t) => [t.id, t])), [data.takes]);
   const [session, setSession] = useState<string[]>([]);
-  const judged = session.map((id) => byId.get(id)).filter((t): t is SoundTake => !!t);
+  // Memoised so `rail` below is too: rebuilt per render, it was a new array
+  // every time and the rail's memo never held.
+  const judged = useMemo(() => session.map((id) => byId.get(id)).filter((t): t is SoundTake => !!t), [session, byId]);
   const [pick, setPick] = useState<string | null>(null);
   const active = (pick && byId.get(pick)) || queue[0] || null;
   const [dimPick, setDim] = useState<string | null>(null);
@@ -73,6 +81,17 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
   const measure = useMeasureOnOpen(active, (t) => data.upsert([t], { keepLocal: true }));
 
   const rail = useMemo(() => [...queue.map((t) => t.id), ...judged.map((t) => t.id)], [queue, judged]);
+
+  // Both lists are windowed, and each window always reaches the OPEN take:
+  // N/P walk `rail` across every row, so a step past the window widens it
+  // rather than opening a take whose row is not drawn. A local cap rather than
+  // kit useWindow for the reason app/library/audio/Ledger.tsx#GroupRows gives:
+  // that hook widens from its own count, so a window already stretched to the
+  // open take would spend a press of "more" adding nothing visible.
+  const [queueCap, setQueueCap] = useState(QUEUE_PAGE);
+  const [judgedCap, setJudgedCap] = useState(QUEUE_PAGE);
+  const queueN = Math.min(queue.length, Math.max(queueCap, queue.findIndex((t) => t.id === active?.id) + 1));
+  const judgedN = Math.min(judged.length, Math.max(judgedCap, judged.findIndex((t) => t.id === active?.id) + 1));
 
   const open = (id: string | null) => {
     if (id === active?.id) return;
@@ -101,6 +120,18 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
     } else if (wasPlaying) transport.pause();
   };
 
+  /** Take back the newest verdict filed here: it goes back to the queue and
+   *  opens, so a K pressed a beat early costs one key, not a hunt through
+   *  "judged here" for the row and a U on it. */
+  const undo = () => {
+    const id = session[0];
+    const t = id ? byId.get(id) : null;
+    if (!t) return;
+    if (t.verdict !== "unjudged") data.patch(t.id, () => ({ verdict: "unjudged", reasons: [], note: null }));
+    setSession((s) => s.slice(1));
+    open(t.id);
+  };
+
   const rate = (t: SoundTake, d: string, v: number) => {
     data.patch(t.id, (cur) => ({ ratings: { ...cur.ratings, [d]: v } }));
   };
@@ -108,10 +139,20 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
   // ── the keys ──
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey || !active) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
       const target = e.target as Element | null;
       const inNote = target === noteRef.current;
-      if (isField(target) && !(inNote && (e.key === "Enter" || e.key === "Escape"))) return;
+      if (typing(target) && !(inNote && (e.key === "Enter" || e.key === "Escape"))) return;
+      if (overlayOpen()) return;
+      // Z works with nothing open: the queue clears on the last verdict, and
+      // that verdict is exactly the one most worth taking back.
+      if (!active) {
+        if (!e.repeat && mode === "judge" && e.key.toLowerCase() === "z" && session[0]) {
+          e.preventDefault();
+          undo();
+        }
+        return;
+      }
       // Tab moves the rubric dimension only while focus is nowhere in
       // particular (the page itself, or the judge pane) — never out of a
       // control, so Tab still walks the page for anyone not judging by keys.
@@ -125,6 +166,7 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
       const a = resolveKey(e.key, mode, e.shiftKey);
       if (!a) return;
       e.preventDefault();
+      if (e.repeat && NO_REPEAT.has(a.type)) return;
       switch (a.type) {
         case "play":
           if (active.file) transport.toggle(active.id, active.durationS);
@@ -173,6 +215,9 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
         case "clear":
           if (active.verdict !== "unjudged") data.patch(active.id, () => ({ verdict: "unjudged", reasons: [], note: null }));
           break;
+        case "undo":
+          undo();
+          break;
       }
     };
     window.addEventListener("keydown", onKey);
@@ -194,7 +239,7 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
             </div>
           ) : (
             <ol className="grid gap-1">
-              {queue.map((t, i) => (
+              {queue.slice(0, queueN).map((t, i) => (
                 <QueueRow
                   key={t.id}
                   take={t}
@@ -206,6 +251,18 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
               ))}
             </ol>
           )}
+          {queueN < queue.length && (
+            <div className="px-2">
+              <Pager
+                shown={queueN}
+                total={queue.length}
+                onMore={() => setQueueCap(queueN + QUEUE_PAGE)}
+                onAll={() => setQueueCap(queue.length)}
+                step={QUEUE_PAGE}
+                noun="takes waiting"
+              />
+            </div>
+          )}
           {judged.length > 0 && (
             <>
               <div className="flex items-center justify-between gap-2 px-2 pb-1 pt-3">
@@ -213,10 +270,22 @@ export default function Judge({ data, kind, now }: { data: TriageData; kind: Sou
                 <Tally value={judged.filter((t) => t.verdict === "kept").length} of={judged.length} label="kept" tone="emerald" />
               </div>
               <ol className="grid gap-1">
-                {judged.map((t) => (
+                {judged.slice(0, judgedN).map((t) => (
                   <QueueRow key={t.id} take={t} on={t.id === active?.id} onOpen={() => open(t.id)} groupHead={null} reduce={!!reduce} done />
                 ))}
               </ol>
+              {judgedN < judged.length && (
+                <div className="px-2">
+                  <Pager
+                    shown={judgedN}
+                    total={judged.length}
+                    onMore={() => setJudgedCap(judgedN + QUEUE_PAGE)}
+                    onAll={() => setJudgedCap(judged.length)}
+                    step={QUEUE_PAGE}
+                    noun="takes judged here"
+                  />
+                </div>
+              )}
             </>
           )}
         </Panel>
