@@ -10,6 +10,8 @@
 // toward malformed and are drawn in their own group so nobody reads a promise
 // row as a structural failure.
 
+import { Fold } from "@/components/ui/signal";
+
 import type { Verdict } from "../gate";
 
 import { ADVISORY_RULES, type StructureReport, type StructureRule } from "./structure";
@@ -99,14 +101,20 @@ export default function StructurePanel({ report, cut }: { report: StructureRepor
 
       <ul className="mt-3 space-y-3">{structural.map(renderGroup)}</ul>
 
+      {/* ADVISORY, ONE PRESS DOWN. `promise` and `efficacy` never count toward
+          malformed, so they are not the panel's verdict; their rows are kept
+          whole behind the fold, its title and amber count standing where the
+          dashed amber divider stood. */}
       {advisory.length > 0 && (
-        <div className="mt-4 border-t border-dashed border-amber-400/25 pt-3">
-          {/* The dashed amber divider above IS "never counts toward
-              malformed" — it is the only divider on this panel. */}
-          <p className="font-jetbrains text-label tracking-[0.14em] text-amber-200/70 uppercase">
-            advisory
-          </p>
-          <ul className="mt-2 space-y-3">{advisory.map(renderGroup)}</ul>
+        <div className="mt-4">
+          <Fold
+            title="advisory"
+            level={4}
+            remember="script.structure-advisory"
+            tally={{ value: advisory.reduce((n, g) => n + g.findings.length, 0), tone: "amber" }}
+          >
+            <ul className="space-y-3">{advisory.map(renderGroup)}</ul>
+          </Fold>
         </div>
       )}
     </section>

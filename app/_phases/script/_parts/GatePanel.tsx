@@ -17,8 +17,10 @@
 
 import { useMemo } from "react";
 
+import { Fold } from "@/components/ui/signal";
+
 import { RENDER_BY_ID } from "../renders";
-import { runGate, type GateFinding, type Verdict } from "../gate";
+import { runGate, type GateFinding, type GateReport, type Verdict } from "../gate";
 import type { NotebookSource } from "../../_shared/notebook/source";
 import type { Beat } from "../types";
 
@@ -40,36 +42,64 @@ export default function GatePanel({
   source,
   beats,
   chainLabel,
+  report: given,
 }: {
   renderId: string;
   source: NotebookSource;
   beats?: Beat[];
   chainLabel?: string;
+  /** The report ScriptStep's `gateChains` already computed for this chain.
+   *  Given, it is drawn as is: the column used to re-run `runGate` over the
+   *  same chain the rollup had just read — three gate passes per render of the
+   *  expert face, and a second answer beside the pad's. */
+  report?: GateReport;
 }) {
-  const report = useMemo(() => {
+  const computed = useMemo(() => {
+    if (given) return null;
     const chain = beats ?? RENDER_BY_ID[renderId]?.beats;
     return chain ? runGate({ id: renderId, beats: chain }, { source, conclusions: source.conclusions }) : null;
-  }, [renderId, source, beats]);
+  }, [given, renderId, source, beats]);
+  const report = given ?? computed;
 
   if (!report) return null;
 
   const shown: GateFinding[] = report.findings.filter((f) => f.verdict !== "not-engaged");
 
+  // LAYERED: the verdict and its figures are the column's first read; the
+  // findings — every detail and quote verbatim — are one press down, and open
+  // by themselves when the gate blocks, because then they are the decision.
   return (
-    <div className="mt-3 border-t border-white/8 pt-3" data-testid={`gate-${renderId}`}>
-      <p className="font-jetbrains flex items-baseline justify-between text-content tracking-[0.14em] uppercase">
-        <span className="text-white/35">render gate · computed</span>
-        <span
-          data-testid={`gate-verdict-${renderId}`}
-          className={report.blocked ? "text-rose-300" : "text-emerald-300"}
-        >
-          {report.blocked ? `${report.violations} blocking` : "clear"}
-        </span>
-      </p>
+    <div className="mt-3" data-testid={`gate-${renderId}`}>
+      <Fold
+        title="render gate"
+        level={4}
+        defaultOpen={report.blocked}
+        tally={shown.length ? { value: shown.length, label: "findings" } : undefined}
+        marks={
+          <>
+          {/* The enforced figure and the untested count stay on the closed
+              header: "how much of this was actually checked" is the first read,
+              and amber is as loud as the verdict beside it. */}
+          <span className="font-jetbrains text-label text-white/60">{report.enforced}% enforced</span>
+          {report.unmeasured > 0 && (
+            <span className="font-jetbrains text-label text-amber-300">
+              <span aria-hidden>{report.unmeasured}?</span>
+              <span className="sr-only">{report.unmeasured} not checked</span>
+            </span>
+          )}
+          <span
+            data-testid={`gate-verdict-${renderId}`}
+            className={`font-jetbrains text-label tracking-[0.14em] uppercase ${report.blocked ? "text-rose-300" : "text-emerald-300"}`}
+          >
+            {report.blocked ? `${report.violations} blocking` : "clear"}
+          </span>
+          </>
+        }
+      >
 
       {/* The honest headline. A creator reading a green tick deserves to know
           what fraction of the declared rules were executable at all. */}
-      <p className="font-jetbrains mt-1.5 text-content text-white/40">
+      <p className="font-jetbrains text-content text-white/40">
         <span className="text-white/70">{report.enforced}% enforced</span>
         {" · "}
         {report.passes} checked · {report.violations} failed
@@ -122,6 +152,7 @@ export default function GatePanel({
           violation here, because a constraint with no probe is a rule nobody is
           enforcing and the hand-written ledger above will happily call it
           honoured — lives in this file's header. */}
+      </Fold>
     </div>
   );
 }

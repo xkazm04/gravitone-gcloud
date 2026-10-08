@@ -1,12 +1,13 @@
 "use client";
 
-import { StaleBadge } from "@/components/ui/signal";
+import { Fold, StaleBadge } from "@/components/ui/signal";
 
 import { HazardLine } from "../../_shared/notebook/Chips";
 import type { NotebookSource } from "../../_shared/notebook/source";
 import ConstraintLedger from "./ConstraintLedger";
 import GatePanel from "./GatePanel";
 import { BandMeter, CheckList } from "./Meters";
+import type { GateReport } from "../gate";
 import { RENDER_BY_ID, mmss } from "../renders";
 import type { Beat, ScriptRender } from "../types";
 
@@ -24,6 +25,7 @@ export default function HypothesisColumn({
   render: r,
   source,
   beats,
+  report,
   chainLabel,
   adopted,
   onAdopt,
@@ -33,6 +35,8 @@ export default function HypothesisColumn({
   render: ScriptRender;
   source: NotebookSource;
   beats?: Beat[];
+  /** This chain's report from ScriptStep's one `gateChains` pass. */
+  report?: GateReport;
   chainLabel?: string;
   adopted: boolean;
   onAdopt: () => void;
@@ -137,22 +141,31 @@ export default function HypothesisColumn({
         )}
       </div>
 
-      <div className="mt-3 border-t border-white/8 pt-3">
-        <p className="font-jetbrains text-content tracking-[0.14em] text-white/35 uppercase">
-          craft checks
-        </p>
-        <div className="mt-2">
+      {/* Of the three check blocks in this column only the gate below reads
+          the script on screen — which is the argument this surface makes, and
+          it is made by the badge on the two that cannot, not by a sentence
+          saying so under each. The rows are one press down; the header carries
+          how many passed and the badge. */}
+      <div className="mt-3">
+        <Fold
+          title="craft checks"
+          level={4}
+          tally={{
+            value: r.checks.filter((c) => c.state === "pass").length,
+            of: r.checks.length,
+            label: "pass",
+            tone: r.checks.some((c) => c.state === "fail") ? "rose" : "neutral",
+          }}
+          marks={
+            rewritten && (
+              <span data-testid={`checks-original-${r.id}`}>
+                <StaleBadge words="not re-run" why="typed by hand against the original chain" />
+              </span>
+            )
+          }
+        >
           <CheckList rows={r.checks} />
-        </div>
-        {/* Of the three check blocks in this column only the gate below reads
-            the script on screen — which is the argument this surface makes, and
-            it is made by the badge on the two that cannot, not by a sentence
-            saying so under each. */}
-        {rewritten && (
-          <p data-testid={`checks-original-${r.id}`} className="mt-2">
-            <StaleBadge words="not re-run" why="typed by hand against the original chain" />
-          </p>
-        )}
+        </Fold>
       </div>
 
       <ConstraintLedger renderId={r.id} stale={rewritten} />
@@ -160,7 +173,7 @@ export default function HypothesisColumn({
           the two disagree, the one that read the render is the true one. And
           only one of the two can follow a rewrite, which is the sharpest
           argument this surface makes for computed checks over typed ones. */}
-      <GatePanel renderId={r.id} source={source} beats={chain} chainLabel={chainLabel} />
+      <GatePanel renderId={r.id} source={source} beats={chain} report={report} chainLabel={chainLabel} />
 
       {(r.deviations.length > 0 || r.cutFacts.length > 0) && (
         <div className="mt-3 space-y-2 border-t border-white/8 pt-3">
