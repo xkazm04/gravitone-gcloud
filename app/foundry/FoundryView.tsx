@@ -119,9 +119,26 @@ const CULL_KEYS = [
   { keys: ["Enter"], does: "compare" },
 ];
 
-/** Every station, for the remembered tab: a value from an older build that is no
- *  longer one of these reads as the cull. */
-const TABS: readonly Tab[] = ["cull", "extract", "styles", "dojo", "strips"];
+/**
+ * Every station, for the remembered tab: a value from an older build that is no
+ * longer one of these reads as the cull.
+ *
+ * DERIVED FROM A RECORD, NOT TYPED AS AN ARRAY, and the difference is a tab that
+ * could not be opened for 30 hours. `readonly Tab[]` only says every ENTRY is a
+ * Tab; it says nothing about every Tab having an entry, so when the remembered
+ * tab landed (657f76d) this list was written with five of the six and tsc had no
+ * objection. `useRemembered` validates the stored value against it, so clicking
+ * Pipeline wrote "pipeline", failed the check on the way back out, and fell to
+ * the fallback — the station was on the rail, highlighted on hover, and simply
+ * would not open.
+ *
+ * A `Record<Tab, true>` is exhaustive by construction: the next member of the
+ * union fails to compile here until it is answered for. That is the same reason
+ * `ENGINE`, `lines()` and `station()` in ./plant.tsx are all `Record<Tab, …>`,
+ * stated in that file's own header — this one line had opted out of it.
+ */
+const TAB_SET: Record<Tab, true> = { cull: true, extract: true, styles: true, dojo: true, pipeline: true, strips: true };
+const TABS = Object.keys(TAB_SET) as readonly Tab[];
 
 export default function FoundryView() {
   // THE STATION IS REMEMBERED. An operator who works the Extract bench or the
