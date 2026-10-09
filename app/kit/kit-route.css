@@ -49,7 +49,6 @@
 [data-world="almanac"] .kr-t-body { font-family: var(--k-sans); font-size: var(--k-fs-c); line-height: 1.5; }
 [data-world="almanac"] .kr-t-label { font-family: var(--k-sans); font-size: var(--k-fs); text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500; font-variant-numeric: tabular-nums lining-nums; }
 [data-world="almanac"] .kr-t-2nd { font-family: var(--k-sans); font-size: var(--k-fs); color: var(--al-vellum); }
-[data-world="almanac"] .kr-t-door { font-family: var(--k-sans); font-size: clamp(14px, 0.7vw, 16px); font-weight: 500; text-transform: uppercase; letter-spacing: 0.1em; font-variant-numeric: tabular-nums lining-nums; }
 [data-world="almanac"] .kr-t-mono { font-family: var(--k-mono); font-size: var(--k-fs); color: var(--al-gold); }
 [data-world="almanac"] .kr-measured { font-family: var(--k-mono); color: var(--al-vellum); white-space: nowrap; }
 

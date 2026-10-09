@@ -5,6 +5,11 @@
 // (public/presets, public/deck-art). The figures drawn around them (a lyre, a
 // prism, a pair of dividers, a balance) are STYLISED and the door says so in
 // the accessible name; they are not product output.
+//
+// The door itself was retired on 2026-10-07 (the landing is now the Paper
+// Cosmos, ./cosmos). This file stays because the brand kit's identity sheet
+// (app/kit/Identity.tsx) still draws the atlas from it; "the door" below means
+// that drawing.
 
 /** A constellation's tint is a CSS value, never a hex: it resolves through the
  *  world's tokens. `--al-tint-*` are the four hues the design gives the four

@@ -424,7 +424,6 @@ export const TYPE_ROLES: readonly TypeRole[] = [
   { role: "Body", family: "font-hanken", spelling: "text-content · k-world", size: "18px, 450, white", where: "anything a person reads", sample: "Seed-matched, pick marked.", className: "kr-t-body" },
   { role: "Secondary", family: "font-hanken", spelling: "k-muted · vellum", size: "16px, 450, vellum", where: "facts, metadata, captions, crumbs", sample: "flux-dev · seed 3 · 36 candidates", className: "kr-t-2nd" },
   { role: "Label", family: "font-hanken", spelling: "k-caps · text-label", size: "16px caps, 500, 0.1em", where: "kickers, column heads, counts, steps", sample: "GRV·07 · Templates", className: "kr-t-label" },
-  { role: "Door label", family: "font-hanken", spelling: "door.module.css .sc", size: "14–16px fluid caps, 500, 0.1em", where: "chart labels, crumbs, steps on the door", sample: "Templates · 5 stars", className: "kr-t-door" },
   { role: "Mono", family: "font-jetbrains", spelling: "font-jetbrains · code", size: "16px", where: "tokens, ids, commands, verbatim", sample: "--al-ease", className: "kr-t-mono" },
 ];
 
@@ -437,12 +436,11 @@ export interface MotionBeat {
 export const MOTION: readonly MotionBeat[] = [
   { beat: "Ease", value: "--al-ease · cubic-bezier(0.2, 0.7, 0.1, 1)", where: "every kit transition and animation" },
   { beat: "Arrival, dialog", value: "scrim 450ms · panel rise 550ms", where: "ConfirmDialog, Sheet" },
-  { beat: "Arrival, door", value: "3.4s, skippable by any press; the cut draws last", where: "the door (app/_landing)" },
   { beat: "Pick", value: "ring draws 700ms · flare 1.1s", where: "Tile kept" },
   { beat: "Occult", value: "disc slides 800ms · picture to ash 600ms", where: "Tile rejected" },
   { beat: "Return", value: "focus corners close 350ms · tile lift 400ms", where: "Tile focused" },
   { beat: "Progress", value: "meridian 600ms · rail 500ms · tab rule 700ms", where: "Meridian, StackBar, TabRail" },
-  { beat: "Only loops", value: "live ring 6s · reticle while hovered", where: "StatusGlyph live, door star hover" },
+  { beat: "Only loops", value: "live ring 6s · reticle while hovered", where: "StatusGlyph live" },
   { beat: "Reduced motion", value: "no animation · transitions 200ms", where: "prefers-reduced-motion: reduce" },
 ];
 
@@ -466,7 +464,7 @@ export const RULES: readonly LawRule[] = [
   { rule: "One red means a person decided.", gate: "Aldebaran on keep, pick, Cut only" },
   { rule: "Antares appears on working surfaces only.", gate: "TOKEN_ROLES surface: working" },
   { rule: "Colour is a token. A missing hue is a report.", gate: "chrome-colour-literals probe" },
-  { rule: "Nothing below 16px; the door's chart labels are 14px.", gate: "check:type; the type-pass audit for the door" },
+  { rule: "Nothing below 16px; a world stylesheet's caps labels are 14px.", gate: "check:type (world CSS floor)" },
   { rule: "No italics: the display voice is Instrument Serif upright.", gate: "type-pass audit (italic nodes = 0); the diff" },
   { rule: `One muting level: white, then vellum, both ${MUTING_FLOOR}:1 or better on every ground.`, gate: "/kit contrast table, computed from WORLD_ALMANAC" },
   { rule: "No grey text: ash is for rings and rules; a hue as text is lightened toward white, never faded.", gate: "type-pass audit (ash text = 0, text under 7:1 counted); the diff" },

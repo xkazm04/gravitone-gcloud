@@ -261,7 +261,7 @@ function TypeSpec() {
         items={[
           { n: "18px", label: "body" },
           { n: "16px", label: "secondary · floor, check:type" },
-          { n: "14px", label: "door floor · chart labels" },
+          { n: "14px", label: "world CSS floor · caps labels" },
           { n: "0", label: "italics" },
         ]}
       />

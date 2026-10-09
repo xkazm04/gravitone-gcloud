@@ -29,6 +29,8 @@ import StudioFrame from "@/components/ui/StudioFrame";
 import { TabRail } from "@/components/ui/signal";
 import { useRemembered } from "@/lib/useRemembered";
 
+import { libraryArea } from "./areas";
+
 // ONE TAB ON SCREEN, ONE TAB IN THE BUNDLE. Each panel below is shown alone,
 // behind the tab rail, so each is its own chunk fetched when its tab is chosen
 // rather than all of them on first load (Wave 0, docs/waves/README.md).
@@ -105,7 +107,7 @@ function LibraryShelf() {
               {
                 id: "styles",
                 testId: "module-styles",
-                label: "Styles",
+                label: libraryArea("styles").label,
                 panelId: "library-panel",
                 // Locked-of-total, not total: the gate this whole page exists
                 // to enforce is "at least one locked style", so the ratio IS
@@ -124,21 +126,21 @@ function LibraryShelf() {
               {
                 id: "assets",
                 testId: "module-assets",
-                label: "Assets",
+                label: libraryArea("assets").label,
                 panelId: "library-panel",
                 ...(counts.assets === undefined ? {} : { tally: { value: counts.assets } }),
               },
               {
                 id: "animations",
                 testId: "module-animations",
-                label: "Animations",
-                disabled: true,
-                disabledReason: "no engine yet",
+                label: libraryArea("animations").label,
+                disabled: Boolean(libraryArea("animations").locked),
+                disabledReason: libraryArea("animations").locked,
               },
               {
                 id: "audio",
                 testId: "module-audio",
-                label: "Audio",
+                label: libraryArea("audio").label,
                 panelId: "library-panel",
                 ...(counts.audio === undefined ? {} : { tally: { value: counts.audio } }),
               },

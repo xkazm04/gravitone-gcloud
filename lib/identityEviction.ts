@@ -68,7 +68,9 @@
 // `IDENTITY_INDEPENDENT_LOCAL_KEYS` below so a probe can walk every module that
 // writes localStorage and demand each key be on ONE of the two lists.
 //
-// That list is EMPTY again as of 2026-09-08. Its one member was
+// That list holds one member again since 2026-10-07: the landing's device tier
+// (`gravitone.cosmos-tier.v1`), a fact about the machine's renderer, with its
+// reason on the entry. Before that it was empty from 2026-09-08; its earlier member was
 // `gravitone.deck.art` (components/ui/deck/useArtVariant.ts) — which art variant
 // the deck cards drew with, a per-browser display preference that said nothing
 // about who was signed in. The operator ordered the art switcher removed from
@@ -219,9 +221,12 @@ export function userScopedLocalKeys(uid: string): string[] {
  * that holds `userScopedLocalKeys` against the writers.
  */
 export const IDENTITY_INDEPENDENT_LOCAL_KEYS: readonly string[] = [
-  // Empty since 2026-09-08 — see the header. Empty is a legitimate state, not a
-  // stub: the probe's job is that every WRITER is accounted for, and today all
-  // three writers are user-scoped.
+  // The landing's quality tier (app/_landing/cosmos/engine/perf.ts, 2026-10-07):
+  // which renderer this MACHINE has and whether the frame governor had to step
+  // it down. A fact about the device, written before anyone signs in, and the
+  // same for every account on it - evicting it on a flip would only make the
+  // next visit re-measure the same GPU.
+  "gravitone.cosmos-tier.v1",
 ];
 
 /**

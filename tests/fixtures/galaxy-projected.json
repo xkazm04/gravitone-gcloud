@@ -1,0 +1,3597 @@
+{
+  "scale": "full",
+  "synthetic": true,
+  "types": [
+    {
+      "id": "educational",
+      "label": "Educational video",
+      "real": true,
+      "art": "/deck-art/discipline-educational.webp"
+    },
+    {
+      "id": "trailer",
+      "label": "Movie · game trailer",
+      "real": true,
+      "art": "/deck-art/discipline-trailer.webp"
+    },
+    {
+      "id": "free",
+      "label": "Any video",
+      "real": true,
+      "art": "/deck-art/discipline-free.webp"
+    },
+    {
+      "id": "music-video",
+      "label": "Music video",
+      "real": true,
+      "art": null
+    },
+    {
+      "id": "ads",
+      "label": "Ad",
+      "real": true,
+      "art": null
+    },
+    {
+      "id": "documentary",
+      "label": "Documentary",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast",
+      "label": "Podcast video",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic",
+      "label": "Game cinematic",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo",
+      "label": "Product demo",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series",
+      "label": "Social series",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course",
+      "label": "Course",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news",
+      "label": "News explainer",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film",
+      "label": "Brand film",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event",
+      "label": "Event",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting",
+      "label": "Recruiting",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids",
+      "label": "Kids story",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate",
+      "label": "Property tour",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness",
+      "label": "Fitness",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe",
+      "label": "Recipe",
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report",
+      "label": "Data report",
+      "real": false,
+      "art": null
+    }
+  ],
+  "templates": [
+    {
+      "id": "short-form-clip",
+      "label": "Short-form clip",
+      "type": "educational",
+      "seconds": 30,
+      "real": true,
+      "art": "/deck-art/template-short-form-clip.webp"
+    },
+    {
+      "id": "short-educational-video",
+      "label": "Short educational",
+      "type": "educational",
+      "seconds": 120,
+      "real": true,
+      "art": "/deck-art/template-short-educational-video.webp"
+    },
+    {
+      "id": "mid-educational-video",
+      "label": "Mid-length educational",
+      "type": "educational",
+      "seconds": 300,
+      "real": true,
+      "art": "/deck-art/template-mid-educational-video.webp"
+    },
+    {
+      "id": "teaser",
+      "label": "Teaser",
+      "type": "trailer",
+      "seconds": 60,
+      "real": true,
+      "art": "/deck-art/template-teaser.webp"
+    },
+    {
+      "id": "trailer",
+      "label": "Trailer",
+      "type": "trailer",
+      "seconds": 120,
+      "real": true,
+      "art": "/deck-art/template-trailer.webp"
+    },
+    {
+      "id": "cinematic",
+      "label": "Cinematic",
+      "type": "trailer",
+      "seconds": 120,
+      "real": true,
+      "art": "/deck-art/template-cinematic.webp"
+    },
+    {
+      "id": "free-form",
+      "label": "Free form",
+      "type": "free",
+      "seconds": 90,
+      "real": true,
+      "art": "/deck-art/template-free-form.webp"
+    },
+    {
+      "id": "music-video",
+      "label": "Music video",
+      "type": "music-video",
+      "seconds": 120,
+      "real": true,
+      "art": null
+    },
+    {
+      "id": "ad-social-15",
+      "label": "Social vertical",
+      "type": "ads",
+      "seconds": 15,
+      "real": true,
+      "art": null
+    },
+    {
+      "id": "ad-spot-30",
+      "label": "Spot",
+      "type": "ads",
+      "seconds": 30,
+      "real": true,
+      "art": null
+    },
+    {
+      "id": "documentary-1",
+      "label": "Short documentary",
+      "type": "documentary",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-2",
+      "label": "Feature essay",
+      "type": "documentary",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-3",
+      "label": "Archive collage",
+      "type": "documentary",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-4",
+      "label": "Interview cut",
+      "type": "documentary",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-5",
+      "label": "Observational",
+      "type": "documentary",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-6",
+      "label": "Investigative",
+      "type": "documentary",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-7",
+      "label": "Profile",
+      "type": "documentary",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-8",
+      "label": "Docuseries episode",
+      "type": "documentary",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-9",
+      "label": "Short documentary 16:9",
+      "type": "documentary",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-10",
+      "label": "Feature essay 16:9",
+      "type": "documentary",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-11",
+      "label": "Archive collage 16:9",
+      "type": "documentary",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-12",
+      "label": "Interview cut 16:9",
+      "type": "documentary",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-13",
+      "label": "Observational 16:9",
+      "type": "documentary",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-14",
+      "label": "Investigative 16:9",
+      "type": "documentary",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-15",
+      "label": "Profile 16:9",
+      "type": "documentary",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-16",
+      "label": "Docuseries episode 16:9",
+      "type": "documentary",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-17",
+      "label": "Short documentary 1:1",
+      "type": "documentary",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "documentary-18",
+      "label": "Feature essay 1:1",
+      "type": "documentary",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-1",
+      "label": "Clip",
+      "type": "podcast",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-2",
+      "label": "Full episode",
+      "type": "podcast",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-3",
+      "label": "Audiogram",
+      "type": "podcast",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-4",
+      "label": "Highlight reel",
+      "type": "podcast",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-5",
+      "label": "Guest teaser",
+      "type": "podcast",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-6",
+      "label": "Chapter cut",
+      "type": "podcast",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-7",
+      "label": "Clip 16:9",
+      "type": "podcast",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-8",
+      "label": "Full episode 16:9",
+      "type": "podcast",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-9",
+      "label": "Audiogram 16:9",
+      "type": "podcast",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-10",
+      "label": "Highlight reel 16:9",
+      "type": "podcast",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-11",
+      "label": "Guest teaser 16:9",
+      "type": "podcast",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-12",
+      "label": "Chapter cut 16:9",
+      "type": "podcast",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-13",
+      "label": "Clip 1:1",
+      "type": "podcast",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-14",
+      "label": "Full episode 1:1",
+      "type": "podcast",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-15",
+      "label": "Audiogram 1:1",
+      "type": "podcast",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-16",
+      "label": "Highlight reel 1:1",
+      "type": "podcast",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-17",
+      "label": "Guest teaser 1:1",
+      "type": "podcast",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-18",
+      "label": "Chapter cut 1:1",
+      "type": "podcast",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-19",
+      "label": "Clip 4:5",
+      "type": "podcast",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-20",
+      "label": "Full episode 4:5",
+      "type": "podcast",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-21",
+      "label": "Audiogram 4:5",
+      "type": "podcast",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-22",
+      "label": "Highlight reel 4:5",
+      "type": "podcast",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-23",
+      "label": "Guest teaser 4:5",
+      "type": "podcast",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-24",
+      "label": "Chapter cut 4:5",
+      "type": "podcast",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "podcast-25",
+      "label": "Clip 9:16",
+      "type": "podcast",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-1",
+      "label": "Cutscene",
+      "type": "game-cinematic",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-2",
+      "label": "Launch reveal",
+      "type": "game-cinematic",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-3",
+      "label": "Gameplay montage",
+      "type": "game-cinematic",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-4",
+      "label": "Story trailer",
+      "type": "game-cinematic",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-5",
+      "label": "Patch notes",
+      "type": "game-cinematic",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-6",
+      "label": "Character reveal",
+      "type": "game-cinematic",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-7",
+      "label": "Season pass",
+      "type": "game-cinematic",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-8",
+      "label": "Cutscene 16:9",
+      "type": "game-cinematic",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-9",
+      "label": "Launch reveal 16:9",
+      "type": "game-cinematic",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-10",
+      "label": "Gameplay montage 16:9",
+      "type": "game-cinematic",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-11",
+      "label": "Story trailer 16:9",
+      "type": "game-cinematic",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-12",
+      "label": "Patch notes 16:9",
+      "type": "game-cinematic",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-13",
+      "label": "Character reveal 16:9",
+      "type": "game-cinematic",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-14",
+      "label": "Season pass 16:9",
+      "type": "game-cinematic",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-15",
+      "label": "Cutscene 1:1",
+      "type": "game-cinematic",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-16",
+      "label": "Launch reveal 1:1",
+      "type": "game-cinematic",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-17",
+      "label": "Gameplay montage 1:1",
+      "type": "game-cinematic",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-18",
+      "label": "Story trailer 1:1",
+      "type": "game-cinematic",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-19",
+      "label": "Patch notes 1:1",
+      "type": "game-cinematic",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-20",
+      "label": "Character reveal 1:1",
+      "type": "game-cinematic",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-21",
+      "label": "Season pass 1:1",
+      "type": "game-cinematic",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-22",
+      "label": "Cutscene 4:5",
+      "type": "game-cinematic",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-23",
+      "label": "Launch reveal 4:5",
+      "type": "game-cinematic",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-24",
+      "label": "Gameplay montage 4:5",
+      "type": "game-cinematic",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-25",
+      "label": "Story trailer 4:5",
+      "type": "game-cinematic",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "game-cinematic-26",
+      "label": "Patch notes 4:5",
+      "type": "game-cinematic",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-1",
+      "label": "Feature tour",
+      "type": "product-demo",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-2",
+      "label": "Onboarding walk",
+      "type": "product-demo",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-3",
+      "label": "Release notes",
+      "type": "product-demo",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-4",
+      "label": "Comparison",
+      "type": "product-demo",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-5",
+      "label": "How-it-works",
+      "type": "product-demo",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-6",
+      "label": "Integration spotlight",
+      "type": "product-demo",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-7",
+      "label": "Pricing explainer",
+      "type": "product-demo",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-8",
+      "label": "Feature tour 16:9",
+      "type": "product-demo",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-9",
+      "label": "Onboarding walk 16:9",
+      "type": "product-demo",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-10",
+      "label": "Release notes 16:9",
+      "type": "product-demo",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-11",
+      "label": "Comparison 16:9",
+      "type": "product-demo",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-12",
+      "label": "How-it-works 16:9",
+      "type": "product-demo",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-13",
+      "label": "Integration spotlight 16:9",
+      "type": "product-demo",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-14",
+      "label": "Pricing explainer 16:9",
+      "type": "product-demo",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-15",
+      "label": "Feature tour 1:1",
+      "type": "product-demo",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-16",
+      "label": "Onboarding walk 1:1",
+      "type": "product-demo",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-17",
+      "label": "Release notes 1:1",
+      "type": "product-demo",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-18",
+      "label": "Comparison 1:1",
+      "type": "product-demo",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-19",
+      "label": "How-it-works 1:1",
+      "type": "product-demo",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-20",
+      "label": "Integration spotlight 1:1",
+      "type": "product-demo",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-21",
+      "label": "Pricing explainer 1:1",
+      "type": "product-demo",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-22",
+      "label": "Feature tour 4:5",
+      "type": "product-demo",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "product-demo-23",
+      "label": "Onboarding walk 4:5",
+      "type": "product-demo",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-1",
+      "label": "Episode",
+      "type": "social-series",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-2",
+      "label": "Recap",
+      "type": "social-series",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-3",
+      "label": "Cold open",
+      "type": "social-series",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-4",
+      "label": "Behind the scenes",
+      "type": "social-series",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-5",
+      "label": "Q&A",
+      "type": "social-series",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-6",
+      "label": "Duet reply",
+      "type": "social-series",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-7",
+      "label": "Countdown",
+      "type": "social-series",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-8",
+      "label": "Episode 16:9",
+      "type": "social-series",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-9",
+      "label": "Recap 16:9",
+      "type": "social-series",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-10",
+      "label": "Cold open 16:9",
+      "type": "social-series",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-11",
+      "label": "Behind the scenes 16:9",
+      "type": "social-series",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-12",
+      "label": "Q&A 16:9",
+      "type": "social-series",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-13",
+      "label": "Duet reply 16:9",
+      "type": "social-series",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-14",
+      "label": "Countdown 16:9",
+      "type": "social-series",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-15",
+      "label": "Episode 1:1",
+      "type": "social-series",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-16",
+      "label": "Recap 1:1",
+      "type": "social-series",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-17",
+      "label": "Cold open 1:1",
+      "type": "social-series",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-18",
+      "label": "Behind the scenes 1:1",
+      "type": "social-series",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-19",
+      "label": "Q&A 1:1",
+      "type": "social-series",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-20",
+      "label": "Duet reply 1:1",
+      "type": "social-series",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-21",
+      "label": "Countdown 1:1",
+      "type": "social-series",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "social-series-22",
+      "label": "Episode 4:5",
+      "type": "social-series",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-1",
+      "label": "Lesson",
+      "type": "course",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-2",
+      "label": "Module intro",
+      "type": "course",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-3",
+      "label": "Quiz recap",
+      "type": "course",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-4",
+      "label": "Worked example",
+      "type": "course",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-5",
+      "label": "Lab walkthrough",
+      "type": "course",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-6",
+      "label": "Certificate trailer",
+      "type": "course",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-7",
+      "label": "Glossary short",
+      "type": "course",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-8",
+      "label": "Lesson 16:9",
+      "type": "course",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-9",
+      "label": "Module intro 16:9",
+      "type": "course",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-10",
+      "label": "Quiz recap 16:9",
+      "type": "course",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-11",
+      "label": "Worked example 16:9",
+      "type": "course",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "course-12",
+      "label": "Lab walkthrough 16:9",
+      "type": "course",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-1",
+      "label": "Daily brief",
+      "type": "news",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-2",
+      "label": "Breaking card",
+      "type": "news",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-3",
+      "label": "Map story",
+      "type": "news",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-4",
+      "label": "Timeline",
+      "type": "news",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-5",
+      "label": "Fact check",
+      "type": "news",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-6",
+      "label": "Data story",
+      "type": "news",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-7",
+      "label": "Daily brief 16:9",
+      "type": "news",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-8",
+      "label": "Breaking card 16:9",
+      "type": "news",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-9",
+      "label": "Map story 16:9",
+      "type": "news",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-10",
+      "label": "Timeline 16:9",
+      "type": "news",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-11",
+      "label": "Fact check 16:9",
+      "type": "news",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-12",
+      "label": "Data story 16:9",
+      "type": "news",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-13",
+      "label": "Daily brief 1:1",
+      "type": "news",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-14",
+      "label": "Breaking card 1:1",
+      "type": "news",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-15",
+      "label": "Map story 1:1",
+      "type": "news",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-16",
+      "label": "Timeline 1:1",
+      "type": "news",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-17",
+      "label": "Fact check 1:1",
+      "type": "news",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-18",
+      "label": "Data story 1:1",
+      "type": "news",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-19",
+      "label": "Daily brief 4:5",
+      "type": "news",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-20",
+      "label": "Breaking card 4:5",
+      "type": "news",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-21",
+      "label": "Map story 4:5",
+      "type": "news",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-22",
+      "label": "Timeline 4:5",
+      "type": "news",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-23",
+      "label": "Fact check 4:5",
+      "type": "news",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-24",
+      "label": "Data story 4:5",
+      "type": "news",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "news-25",
+      "label": "Daily brief 9:16",
+      "type": "news",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-1",
+      "label": "Manifesto",
+      "type": "brand-film",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-2",
+      "label": "Origin story",
+      "type": "brand-film",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-3",
+      "label": "Values piece",
+      "type": "brand-film",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-4",
+      "label": "Culture film",
+      "type": "brand-film",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-5",
+      "label": "Anniversary",
+      "type": "brand-film",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-6",
+      "label": "Founder letter",
+      "type": "brand-film",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-7",
+      "label": "Manifesto 16:9",
+      "type": "brand-film",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-8",
+      "label": "Origin story 16:9",
+      "type": "brand-film",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-9",
+      "label": "Values piece 16:9",
+      "type": "brand-film",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-10",
+      "label": "Culture film 16:9",
+      "type": "brand-film",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-11",
+      "label": "Anniversary 16:9",
+      "type": "brand-film",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "brand-film-12",
+      "label": "Founder letter 16:9",
+      "type": "brand-film",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-1",
+      "label": "Keynote cut",
+      "type": "event",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-2",
+      "label": "Speaker reel",
+      "type": "event",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-3",
+      "label": "Aftermovie",
+      "type": "event",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-4",
+      "label": "Countdown",
+      "type": "event",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-5",
+      "label": "Session recap",
+      "type": "event",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-6",
+      "label": "Sponsor loop",
+      "type": "event",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-7",
+      "label": "Keynote cut 16:9",
+      "type": "event",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-8",
+      "label": "Speaker reel 16:9",
+      "type": "event",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "event-9",
+      "label": "Aftermovie 16:9",
+      "type": "event",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-1",
+      "label": "Day in the life",
+      "type": "recruiting",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-2",
+      "label": "Team intro",
+      "type": "recruiting",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-3",
+      "label": "Role pitch",
+      "type": "recruiting",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-4",
+      "label": "Office tour",
+      "type": "recruiting",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-5",
+      "label": "Benefits explainer",
+      "type": "recruiting",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-6",
+      "label": "Day in the life 16:9",
+      "type": "recruiting",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-7",
+      "label": "Team intro 16:9",
+      "type": "recruiting",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-8",
+      "label": "Role pitch 16:9",
+      "type": "recruiting",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-9",
+      "label": "Office tour 16:9",
+      "type": "recruiting",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-10",
+      "label": "Benefits explainer 16:9",
+      "type": "recruiting",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recruiting-11",
+      "label": "Day in the life 1:1",
+      "type": "recruiting",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-1",
+      "label": "Bedtime story",
+      "type": "kids",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-2",
+      "label": "Sing-along",
+      "type": "kids",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-3",
+      "label": "Counting song",
+      "type": "kids",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-4",
+      "label": "Animal facts",
+      "type": "kids",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-5",
+      "label": "Alphabet",
+      "type": "kids",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-6",
+      "label": "Bedtime story 16:9",
+      "type": "kids",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-7",
+      "label": "Sing-along 16:9",
+      "type": "kids",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-8",
+      "label": "Counting song 16:9",
+      "type": "kids",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-9",
+      "label": "Animal facts 16:9",
+      "type": "kids",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-10",
+      "label": "Alphabet 16:9",
+      "type": "kids",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-11",
+      "label": "Bedtime story 1:1",
+      "type": "kids",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-12",
+      "label": "Sing-along 1:1",
+      "type": "kids",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-13",
+      "label": "Counting song 1:1",
+      "type": "kids",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-14",
+      "label": "Animal facts 1:1",
+      "type": "kids",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-15",
+      "label": "Alphabet 1:1",
+      "type": "kids",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-16",
+      "label": "Bedtime story 4:5",
+      "type": "kids",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-17",
+      "label": "Sing-along 4:5",
+      "type": "kids",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-18",
+      "label": "Counting song 4:5",
+      "type": "kids",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-19",
+      "label": "Animal facts 4:5",
+      "type": "kids",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "kids-20",
+      "label": "Alphabet 4:5",
+      "type": "kids",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-1",
+      "label": "Walkthrough",
+      "type": "real-estate",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-2",
+      "label": "Neighbourhood",
+      "type": "real-estate",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-3",
+      "label": "Floor plan story",
+      "type": "real-estate",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-4",
+      "label": "Drone reveal",
+      "type": "real-estate",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-5",
+      "label": "Open house",
+      "type": "real-estate",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-6",
+      "label": "Walkthrough 16:9",
+      "type": "real-estate",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-7",
+      "label": "Neighbourhood 16:9",
+      "type": "real-estate",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-8",
+      "label": "Floor plan story 16:9",
+      "type": "real-estate",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-9",
+      "label": "Drone reveal 16:9",
+      "type": "real-estate",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-10",
+      "label": "Open house 16:9",
+      "type": "real-estate",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-11",
+      "label": "Walkthrough 1:1",
+      "type": "real-estate",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-12",
+      "label": "Neighbourhood 1:1",
+      "type": "real-estate",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-13",
+      "label": "Floor plan story 1:1",
+      "type": "real-estate",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-14",
+      "label": "Drone reveal 1:1",
+      "type": "real-estate",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-15",
+      "label": "Open house 1:1",
+      "type": "real-estate",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-16",
+      "label": "Walkthrough 4:5",
+      "type": "real-estate",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-17",
+      "label": "Neighbourhood 4:5",
+      "type": "real-estate",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-18",
+      "label": "Floor plan story 4:5",
+      "type": "real-estate",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-19",
+      "label": "Drone reveal 4:5",
+      "type": "real-estate",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-20",
+      "label": "Open house 4:5",
+      "type": "real-estate",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-21",
+      "label": "Walkthrough 9:16",
+      "type": "real-estate",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-22",
+      "label": "Neighbourhood 9:16",
+      "type": "real-estate",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-23",
+      "label": "Floor plan story 9:16",
+      "type": "real-estate",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "real-estate-24",
+      "label": "Drone reveal 9:16",
+      "type": "real-estate",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-1",
+      "label": "Workout",
+      "type": "fitness",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-2",
+      "label": "Form guide",
+      "type": "fitness",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-3",
+      "label": "Progress story",
+      "type": "fitness",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-4",
+      "label": "Challenge",
+      "type": "fitness",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-5",
+      "label": "Warm-up",
+      "type": "fitness",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-6",
+      "label": "Workout 16:9",
+      "type": "fitness",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-7",
+      "label": "Form guide 16:9",
+      "type": "fitness",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-8",
+      "label": "Progress story 16:9",
+      "type": "fitness",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-9",
+      "label": "Challenge 16:9",
+      "type": "fitness",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-10",
+      "label": "Warm-up 16:9",
+      "type": "fitness",
+      "seconds": 60,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-11",
+      "label": "Workout 1:1",
+      "type": "fitness",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-12",
+      "label": "Form guide 1:1",
+      "type": "fitness",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-13",
+      "label": "Progress story 1:1",
+      "type": "fitness",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-14",
+      "label": "Challenge 1:1",
+      "type": "fitness",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-15",
+      "label": "Warm-up 1:1",
+      "type": "fitness",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-16",
+      "label": "Workout 4:5",
+      "type": "fitness",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-17",
+      "label": "Form guide 4:5",
+      "type": "fitness",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-18",
+      "label": "Progress story 4:5",
+      "type": "fitness",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-19",
+      "label": "Challenge 4:5",
+      "type": "fitness",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "fitness-20",
+      "label": "Warm-up 4:5",
+      "type": "fitness",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-1",
+      "label": "Top-down recipe",
+      "type": "recipe",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-2",
+      "label": "One-pan",
+      "type": "recipe",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-3",
+      "label": "Technique",
+      "type": "recipe",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-4",
+      "label": "Menu story",
+      "type": "recipe",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-5",
+      "label": "Plating",
+      "type": "recipe",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-6",
+      "label": "Top-down recipe 16:9",
+      "type": "recipe",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-7",
+      "label": "One-pan 16:9",
+      "type": "recipe",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-8",
+      "label": "Technique 16:9",
+      "type": "recipe",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-9",
+      "label": "Menu story 16:9",
+      "type": "recipe",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-10",
+      "label": "Plating 16:9",
+      "type": "recipe",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-11",
+      "label": "Top-down recipe 1:1",
+      "type": "recipe",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-12",
+      "label": "One-pan 1:1",
+      "type": "recipe",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-13",
+      "label": "Technique 1:1",
+      "type": "recipe",
+      "seconds": 45,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-14",
+      "label": "Menu story 1:1",
+      "type": "recipe",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-15",
+      "label": "Plating 1:1",
+      "type": "recipe",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-16",
+      "label": "Top-down recipe 4:5",
+      "type": "recipe",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-17",
+      "label": "One-pan 4:5",
+      "type": "recipe",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-18",
+      "label": "Technique 4:5",
+      "type": "recipe",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-19",
+      "label": "Menu story 4:5",
+      "type": "recipe",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-20",
+      "label": "Plating 4:5",
+      "type": "recipe",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-21",
+      "label": "Top-down recipe 9:16",
+      "type": "recipe",
+      "seconds": 120,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-22",
+      "label": "One-pan 9:16",
+      "type": "recipe",
+      "seconds": 15,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "recipe-23",
+      "label": "Technique 9:16",
+      "type": "recipe",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-1",
+      "label": "Annual report",
+      "type": "data-report",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-2",
+      "label": "Quarterly numbers",
+      "type": "data-report",
+      "seconds": 6,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-3",
+      "label": "Survey story",
+      "type": "data-report",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-4",
+      "label": "Benchmark",
+      "type": "data-report",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-5",
+      "label": "Index launch",
+      "type": "data-report",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-6",
+      "label": "Chart reel",
+      "type": "data-report",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-7",
+      "label": "Annual report 16:9",
+      "type": "data-report",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-8",
+      "label": "Quarterly numbers 16:9",
+      "type": "data-report",
+      "seconds": 600,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-9",
+      "label": "Survey story 16:9",
+      "type": "data-report",
+      "seconds": 180,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-10",
+      "label": "Benchmark 16:9",
+      "type": "data-report",
+      "seconds": 90,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-11",
+      "label": "Index launch 16:9",
+      "type": "data-report",
+      "seconds": 30,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-12",
+      "label": "Chart reel 16:9",
+      "type": "data-report",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    },
+    {
+      "id": "data-report-13",
+      "label": "Annual report 1:1",
+      "type": "data-report",
+      "seconds": 300,
+      "real": false,
+      "art": null
+    }
+  ],
+  "library": [
+    {
+      "id": "styles",
+      "label": "Styles",
+      "status": "live",
+      "categories": [
+        {
+          "id": "styles-1",
+          "label": "Paper",
+          "items": 7
+        },
+        {
+          "id": "styles-2",
+          "label": "Ink",
+          "items": 206
+        },
+        {
+          "id": "styles-3",
+          "label": "Neon",
+          "items": 168
+        },
+        {
+          "id": "styles-4",
+          "label": "Neon II",
+          "items": 28
+        },
+        {
+          "id": "styles-5",
+          "label": "Neon III",
+          "items": 136
+        },
+        {
+          "id": "styles-6",
+          "label": "Clay",
+          "items": 37
+        },
+        {
+          "id": "styles-7",
+          "label": "Clay II",
+          "items": 113
+        },
+        {
+          "id": "styles-8",
+          "label": "Clay III",
+          "items": 225
+        },
+        {
+          "id": "styles-9",
+          "label": "Blueprint",
+          "items": 213
+        },
+        {
+          "id": "styles-10",
+          "label": "Chalk",
+          "items": 9
+        },
+        {
+          "id": "styles-11",
+          "label": "Watercolour",
+          "items": 56
+        },
+        {
+          "id": "styles-12",
+          "label": "Watercolour II",
+          "items": 76
+        },
+        {
+          "id": "styles-13",
+          "label": "Pixel",
+          "items": 63
+        },
+        {
+          "id": "styles-14",
+          "label": "Pixel II",
+          "items": 197
+        },
+        {
+          "id": "styles-15",
+          "label": "Pixel III",
+          "items": 152
+        },
+        {
+          "id": "styles-16",
+          "label": "Risograph",
+          "items": 68
+        },
+        {
+          "id": "styles-17",
+          "label": "Risograph II",
+          "items": 141
+        },
+        {
+          "id": "styles-18",
+          "label": "Noir",
+          "items": 215
+        },
+        {
+          "id": "styles-19",
+          "label": "Noir II",
+          "items": 35
+        },
+        {
+          "id": "styles-20",
+          "label": "Pastel",
+          "items": 234
+        },
+        {
+          "id": "styles-21",
+          "label": "Brutalist",
+          "items": 92
+        },
+        {
+          "id": "styles-22",
+          "label": "Brutalist II",
+          "items": 231
+        },
+        {
+          "id": "styles-23",
+          "label": "Brutalist III",
+          "items": 119
+        },
+        {
+          "id": "styles-24",
+          "label": "Glass",
+          "items": 151
+        },
+        {
+          "id": "styles-25",
+          "label": "Glass II",
+          "items": 210
+        },
+        {
+          "id": "styles-26",
+          "label": "Glass III",
+          "items": 233
+        },
+        {
+          "id": "styles-27",
+          "label": "Collage",
+          "items": 109
+        },
+        {
+          "id": "styles-28",
+          "label": "Collage II",
+          "items": 213
+        },
+        {
+          "id": "styles-29",
+          "label": "Collage III",
+          "items": 236
+        },
+        {
+          "id": "styles-30",
+          "label": "Woodcut",
+          "items": 35
+        },
+        {
+          "id": "styles-31",
+          "label": "Woodcut II",
+          "items": 138
+        },
+        {
+          "id": "styles-32",
+          "label": "Woodcut III",
+          "items": 40
+        },
+        {
+          "id": "styles-33",
+          "label": "Halftone",
+          "items": 132
+        },
+        {
+          "id": "styles-34",
+          "label": "Halftone II",
+          "items": 6
+        },
+        {
+          "id": "styles-35",
+          "label": "Halftone III",
+          "items": 225
+        },
+        {
+          "id": "styles-36",
+          "label": "Vapor",
+          "items": 200
+        },
+        {
+          "id": "styles-37",
+          "label": "Vapor II",
+          "items": 48
+        },
+        {
+          "id": "styles-38",
+          "label": "Line art",
+          "items": 3
+        },
+        {
+          "id": "styles-39",
+          "label": "Line art II",
+          "items": 200
+        },
+        {
+          "id": "styles-40",
+          "label": "Line art III",
+          "items": 206
+        },
+        {
+          "id": "styles-41",
+          "label": "Isometric",
+          "items": 46
+        },
+        {
+          "id": "styles-42",
+          "label": "Cel",
+          "items": 123
+        }
+      ]
+    },
+    {
+      "id": "characters",
+      "label": "Characters",
+      "status": "live",
+      "categories": [
+        {
+          "id": "characters-1",
+          "label": "Narrators",
+          "items": 187
+        },
+        {
+          "id": "characters-2",
+          "label": "Narrators II",
+          "items": 32
+        },
+        {
+          "id": "characters-3",
+          "label": "Narrators III",
+          "items": 144
+        },
+        {
+          "id": "characters-4",
+          "label": "Hosts",
+          "items": 85
+        },
+        {
+          "id": "characters-5",
+          "label": "Mascots",
+          "items": 134
+        },
+        {
+          "id": "characters-6",
+          "label": "Mascots II",
+          "items": 137
+        },
+        {
+          "id": "characters-7",
+          "label": "Mascots III",
+          "items": 144
+        },
+        {
+          "id": "characters-8",
+          "label": "Experts",
+          "items": 202
+        },
+        {
+          "id": "characters-9",
+          "label": "Experts II",
+          "items": 200
+        },
+        {
+          "id": "characters-10",
+          "label": "Animals",
+          "items": 228
+        },
+        {
+          "id": "characters-11",
+          "label": "Robots",
+          "items": 16
+        },
+        {
+          "id": "characters-12",
+          "label": "Robots II",
+          "items": 65
+        },
+        {
+          "id": "characters-13",
+          "label": "Robots III",
+          "items": 50
+        },
+        {
+          "id": "characters-14",
+          "label": "Kids",
+          "items": 12
+        },
+        {
+          "id": "characters-15",
+          "label": "Kids II",
+          "items": 199
+        },
+        {
+          "id": "characters-16",
+          "label": "Crowds",
+          "items": 131
+        },
+        {
+          "id": "characters-17",
+          "label": "Silhouettes",
+          "items": 145
+        },
+        {
+          "id": "characters-18",
+          "label": "Silhouettes II",
+          "items": 9
+        },
+        {
+          "id": "characters-19",
+          "label": "Historical",
+          "items": 115
+        }
+      ]
+    },
+    {
+      "id": "worlds",
+      "label": "Worlds",
+      "status": "live",
+      "categories": [
+        {
+          "id": "worlds-1",
+          "label": "Cities",
+          "items": 158
+        },
+        {
+          "id": "worlds-2",
+          "label": "Cities II",
+          "items": 131
+        },
+        {
+          "id": "worlds-3",
+          "label": "Interiors",
+          "items": 133
+        },
+        {
+          "id": "worlds-4",
+          "label": "Interiors II",
+          "items": 53
+        },
+        {
+          "id": "worlds-5",
+          "label": "Interiors III",
+          "items": 179
+        },
+        {
+          "id": "worlds-6",
+          "label": "Labs",
+          "items": 117
+        },
+        {
+          "id": "worlds-7",
+          "label": "Labs II",
+          "items": 132
+        },
+        {
+          "id": "worlds-8",
+          "label": "Space",
+          "items": 208
+        },
+        {
+          "id": "worlds-9",
+          "label": "Space II",
+          "items": 124
+        },
+        {
+          "id": "worlds-10",
+          "label": "Space III",
+          "items": 131
+        },
+        {
+          "id": "worlds-11",
+          "label": "Forests",
+          "items": 180
+        },
+        {
+          "id": "worlds-12",
+          "label": "Oceans",
+          "items": 226
+        },
+        {
+          "id": "worlds-13",
+          "label": "Oceans II",
+          "items": 226
+        },
+        {
+          "id": "worlds-14",
+          "label": "Oceans III",
+          "items": 239
+        },
+        {
+          "id": "worlds-15",
+          "label": "Deserts",
+          "items": 238
+        },
+        {
+          "id": "worlds-16",
+          "label": "Deserts II",
+          "items": 145
+        },
+        {
+          "id": "worlds-17",
+          "label": "Offices",
+          "items": 217
+        },
+        {
+          "id": "worlds-18",
+          "label": "Classrooms",
+          "items": 37
+        },
+        {
+          "id": "worlds-19",
+          "label": "Classrooms II",
+          "items": 108
+        },
+        {
+          "id": "worlds-20",
+          "label": "Studios",
+          "items": 102
+        },
+        {
+          "id": "worlds-21",
+          "label": "Ruins",
+          "items": 82
+        },
+        {
+          "id": "worlds-22",
+          "label": "Ruins II",
+          "items": 20
+        },
+        {
+          "id": "worlds-23",
+          "label": "Markets",
+          "items": 63
+        },
+        {
+          "id": "worlds-24",
+          "label": "Markets II",
+          "items": 111
+        },
+        {
+          "id": "worlds-25",
+          "label": "Markets III",
+          "items": 20
+        }
+      ]
+    },
+    {
+      "id": "props",
+      "label": "Props",
+      "status": "live",
+      "categories": [
+        {
+          "id": "props-1",
+          "label": "Devices",
+          "items": 173
+        },
+        {
+          "id": "props-2",
+          "label": "Charts",
+          "items": 202
+        },
+        {
+          "id": "props-3",
+          "label": "Charts II",
+          "items": 33
+        },
+        {
+          "id": "props-4",
+          "label": "Vehicles",
+          "items": 185
+        },
+        {
+          "id": "props-5",
+          "label": "Food",
+          "items": 171
+        },
+        {
+          "id": "props-6",
+          "label": "Food II",
+          "items": 95
+        },
+        {
+          "id": "props-7",
+          "label": "Food III",
+          "items": 38
+        },
+        {
+          "id": "props-8",
+          "label": "Tools",
+          "items": 228
+        },
+        {
+          "id": "props-9",
+          "label": "Tools II",
+          "items": 37
+        },
+        {
+          "id": "props-10",
+          "label": "Documents",
+          "items": 58
+        },
+        {
+          "id": "props-11",
+          "label": "Documents II",
+          "items": 193
+        },
+        {
+          "id": "props-12",
+          "label": "Furniture",
+          "items": 103
+        },
+        {
+          "id": "props-13",
+          "label": "Instruments",
+          "items": 43
+        },
+        {
+          "id": "props-14",
+          "label": "Instruments II",
+          "items": 172
+        },
+        {
+          "id": "props-15",
+          "label": "Weapons",
+          "items": 43
+        },
+        {
+          "id": "props-16",
+          "label": "Plants",
+          "items": 112
+        },
+        {
+          "id": "props-17",
+          "label": "Plants II",
+          "items": 133
+        },
+        {
+          "id": "props-18",
+          "label": "Plants III",
+          "items": 105
+        }
+      ]
+    },
+    {
+      "id": "audio",
+      "label": "Audio",
+      "status": "live",
+      "categories": [
+        {
+          "id": "audio-1",
+          "label": "Beds",
+          "items": 109
+        },
+        {
+          "id": "audio-2",
+          "label": "Beds II",
+          "items": 52
+        },
+        {
+          "id": "audio-3",
+          "label": "Stingers",
+          "items": 83
+        },
+        {
+          "id": "audio-4",
+          "label": "Stingers II",
+          "items": 25
+        },
+        {
+          "id": "audio-5",
+          "label": "Voices",
+          "items": 95
+        },
+        {
+          "id": "audio-6",
+          "label": "Voices II",
+          "items": 6
+        },
+        {
+          "id": "audio-7",
+          "label": "Voices III",
+          "items": 88
+        },
+        {
+          "id": "audio-8",
+          "label": "Ambiences",
+          "items": 119
+        },
+        {
+          "id": "audio-9",
+          "label": "Ambiences II",
+          "items": 114
+        },
+        {
+          "id": "audio-10",
+          "label": "Ambiences III",
+          "items": 182
+        },
+        {
+          "id": "audio-11",
+          "label": "Foley",
+          "items": 100
+        },
+        {
+          "id": "audio-12",
+          "label": "Risers",
+          "items": 134
+        },
+        {
+          "id": "audio-13",
+          "label": "Risers II",
+          "items": 161
+        },
+        {
+          "id": "audio-14",
+          "label": "Drones",
+          "items": 133
+        },
+        {
+          "id": "audio-15",
+          "label": "Drones II",
+          "items": 18
+        },
+        {
+          "id": "audio-16",
+          "label": "Choirs",
+          "items": 237
+        },
+        {
+          "id": "audio-17",
+          "label": "Percussion",
+          "items": 226
+        },
+        {
+          "id": "audio-18",
+          "label": "Jingles",
+          "items": 23
+        }
+      ]
+    },
+    {
+      "id": "motion",
+      "label": "Motion",
+      "status": "live",
+      "categories": [
+        {
+          "id": "motion-1",
+          "label": "Camera moves",
+          "items": 71
+        },
+        {
+          "id": "motion-2",
+          "label": "Camera moves II",
+          "items": 12
+        },
+        {
+          "id": "motion-3",
+          "label": "Transitions",
+          "items": 71
+        },
+        {
+          "id": "motion-4",
+          "label": "Kinetic type",
+          "items": 211
+        },
+        {
+          "id": "motion-5",
+          "label": "Particles",
+          "items": 219
+        },
+        {
+          "id": "motion-6",
+          "label": "Particles II",
+          "items": 235
+        },
+        {
+          "id": "motion-7",
+          "label": "Morphs",
+          "items": 211
+        },
+        {
+          "id": "motion-8",
+          "label": "Morphs II",
+          "items": 68
+        },
+        {
+          "id": "motion-9",
+          "label": "Morphs III",
+          "items": 105
+        },
+        {
+          "id": "motion-10",
+          "label": "Loops",
+          "items": 139
+        },
+        {
+          "id": "motion-11",
+          "label": "Lower thirds",
+          "items": 148
+        },
+        {
+          "id": "motion-12",
+          "label": "Lower thirds II",
+          "items": 128
+        },
+        {
+          "id": "motion-13",
+          "label": "Lower thirds III",
+          "items": 181
+        },
+        {
+          "id": "motion-14",
+          "label": "Reveals",
+          "items": 24
+        },
+        {
+          "id": "motion-15",
+          "label": "Reveals II",
+          "items": 73
+        }
+      ]
+    },
+    {
+      "id": "type",
+      "label": "Typography",
+      "status": "live",
+      "categories": [
+        {
+          "id": "type-1",
+          "label": "Display",
+          "items": 206
+        },
+        {
+          "id": "type-2",
+          "label": "Captions",
+          "items": 48
+        },
+        {
+          "id": "type-3",
+          "label": "Captions II",
+          "items": 110
+        },
+        {
+          "id": "type-4",
+          "label": "Captions III",
+          "items": 231
+        },
+        {
+          "id": "type-5",
+          "label": "Supers",
+          "items": 70
+        },
+        {
+          "id": "type-6",
+          "label": "End cards",
+          "items": 164
+        },
+        {
+          "id": "type-7",
+          "label": "Titles",
+          "items": 207
+        },
+        {
+          "id": "type-8",
+          "label": "Subtitles",
+          "items": 23
+        },
+        {
+          "id": "type-9",
+          "label": "Subtitles II",
+          "items": 157
+        }
+      ]
+    },
+    {
+      "id": "footage",
+      "label": "Footage",
+      "status": "live",
+      "categories": [
+        {
+          "id": "footage-1",
+          "label": "Archive",
+          "items": 19
+        },
+        {
+          "id": "footage-2",
+          "label": "Stock",
+          "items": 222
+        },
+        {
+          "id": "footage-3",
+          "label": "Stock II",
+          "items": 33
+        },
+        {
+          "id": "footage-4",
+          "label": "Screen captures",
+          "items": 4
+        },
+        {
+          "id": "footage-5",
+          "label": "Screen captures II",
+          "items": 88
+        },
+        {
+          "id": "footage-6",
+          "label": "Drone",
+          "items": 108
+        },
+        {
+          "id": "footage-7",
+          "label": "Drone II",
+          "items": 239
+        },
+        {
+          "id": "footage-8",
+          "label": "Drone III",
+          "items": 236
+        },
+        {
+          "id": "footage-9",
+          "label": "Macro",
+          "items": 161
+        },
+        {
+          "id": "footage-10",
+          "label": "Macro II",
+          "items": 35
+        },
+        {
+          "id": "footage-11",
+          "label": "Timelapse",
+          "items": 136
+        }
+      ]
+    },
+    {
+      "id": "brand-kits",
+      "label": "Brand kits",
+      "status": "live",
+      "categories": [
+        {
+          "id": "brand-kits-1",
+          "label": "Logos",
+          "items": 63
+        },
+        {
+          "id": "brand-kits-2",
+          "label": "Logos II",
+          "items": 30
+        },
+        {
+          "id": "brand-kits-3",
+          "label": "Logos III",
+          "items": 43
+        },
+        {
+          "id": "brand-kits-4",
+          "label": "Palettes",
+          "items": 14
+        },
+        {
+          "id": "brand-kits-5",
+          "label": "Palettes II",
+          "items": 48
+        },
+        {
+          "id": "brand-kits-6",
+          "label": "Fonts",
+          "items": 240
+        },
+        {
+          "id": "brand-kits-7",
+          "label": "Voice guides",
+          "items": 162
+        },
+        {
+          "id": "brand-kits-8",
+          "label": "Voice guides II",
+          "items": 80
+        },
+        {
+          "id": "brand-kits-9",
+          "label": "Templates",
+          "items": 196
+        },
+        {
+          "id": "brand-kits-10",
+          "label": "Templates II",
+          "items": 54
+        },
+        {
+          "id": "brand-kits-11",
+          "label": "Templates III",
+          "items": 76
+        }
+      ]
+    },
+    {
+      "id": "data",
+      "label": "Data",
+      "status": "live",
+      "categories": [
+        {
+          "id": "data-1",
+          "label": "Maps",
+          "items": 130
+        },
+        {
+          "id": "data-2",
+          "label": "Maps II",
+          "items": 174
+        },
+        {
+          "id": "data-3",
+          "label": "Datasets",
+          "items": 71
+        },
+        {
+          "id": "data-4",
+          "label": "Chart kits",
+          "items": 207
+        },
+        {
+          "id": "data-5",
+          "label": "Chart kits II",
+          "items": 6
+        },
+        {
+          "id": "data-6",
+          "label": "Icons",
+          "items": 11
+        },
+        {
+          "id": "data-7",
+          "label": "Icons II",
+          "items": 5
+        },
+        {
+          "id": "data-8",
+          "label": "Timelines",
+          "items": 189
+        }
+      ]
+    },
+    {
+      "id": "research",
+      "label": "Research",
+      "status": "live",
+      "categories": [
+        {
+          "id": "research-1",
+          "label": "Sources",
+          "items": 143
+        },
+        {
+          "id": "research-2",
+          "label": "Sources II",
+          "items": 50
+        },
+        {
+          "id": "research-3",
+          "label": "Sources III",
+          "items": 133
+        },
+        {
+          "id": "research-4",
+          "label": "Claims",
+          "items": 64
+        },
+        {
+          "id": "research-5",
+          "label": "Claims II",
+          "items": 116
+        },
+        {
+          "id": "research-6",
+          "label": "Quotes",
+          "items": 170
+        },
+        {
+          "id": "research-7",
+          "label": "Studies",
+          "items": 112
+        },
+        {
+          "id": "research-8",
+          "label": "Studies II",
+          "items": 170
+        },
+        {
+          "id": "research-9",
+          "label": "Studies III",
+          "items": 128
+        },
+        {
+          "id": "research-10",
+          "label": "Interviews",
+          "items": 215
+        },
+        {
+          "id": "research-11",
+          "label": "Interviews II",
+          "items": 229
+        },
+        {
+          "id": "research-12",
+          "label": "Interviews III",
+          "items": 102
+        }
+      ]
+    },
+    {
+      "id": "animations",
+      "label": "Animations",
+      "status": "locked",
+      "categories": [
+        {
+          "id": "animations-1",
+          "label": "Rigs",
+          "items": 0
+        },
+        {
+          "id": "animations-2",
+          "label": "Rigs II",
+          "items": 0
+        },
+        {
+          "id": "animations-3",
+          "label": "Rigs III",
+          "items": 0
+        },
+        {
+          "id": "animations-4",
+          "label": "Lip sync",
+          "items": 0
+        },
+        {
+          "id": "animations-5",
+          "label": "Lip sync II",
+          "items": 0
+        },
+        {
+          "id": "animations-6",
+          "label": "Walk cycles",
+          "items": 0
+        },
+        {
+          "id": "animations-7",
+          "label": "Walk cycles II",
+          "items": 0
+        },
+        {
+          "id": "animations-8",
+          "label": "Walk cycles III",
+          "items": 0
+        },
+        {
+          "id": "animations-9",
+          "label": "Expressions",
+          "items": 0
+        }
+      ]
+    }
+  ],
+  "studioSteps": [
+    "research",
+    "script",
+    "frames",
+    "motion",
+    "score",
+    "cut"
+  ],
+  "presets": [
+    {
+      "id": "blueprint",
+      "label": "Blueprint",
+      "art": "/presets/blueprint.jpg"
+    },
+    {
+      "id": "chalk-argument",
+      "label": "Chalk argument",
+      "art": "/presets/chalk-argument.jpg"
+    },
+    {
+      "id": "data-neon",
+      "label": "Data neon",
+      "art": "/presets/data-neon.jpg"
+    },
+    {
+      "id": "newsprint-cutout",
+      "label": "Newsprint cutout",
+      "art": "/presets/newsprint-cutout.jpg"
+    },
+    {
+      "id": "paper-relief",
+      "label": "Paper relief",
+      "art": "/presets/paper-relief.jpg"
+    },
+    {
+      "id": "signal-ledger",
+      "label": "Signal ledger",
+      "art": "/presets/signal-ledger.jpg"
+    }
+  ],
+  "scriptEngines": [
+    {
+      "id": "reversal-chain",
+      "art": "/deck-art/engine-reversal-chain.webp"
+    },
+    {
+      "id": "adjudication",
+      "art": "/deck-art/engine-adjudication.webp"
+    },
+    {
+      "id": "derived-short",
+      "art": "/deck-art/engine-derived-short.webp"
+    }
+  ]
+}

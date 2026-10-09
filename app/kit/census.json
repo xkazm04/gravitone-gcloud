@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 579,
+  "files": 608,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -577,7 +577,6 @@
         "components/kit/brand/index.ts"
       ],
       "adopters": [
-        "app/_landing/Door.tsx",
         "components/ui/StudioFrame.tsx"
       ]
     },
@@ -1206,7 +1205,6 @@
         "components/kit/brand/index.ts"
       ],
       "adopters": [
-        "app/_landing/Door.tsx",
         "components/ui/StudioFrame.tsx"
       ]
     },
@@ -1370,13 +1368,11 @@
       }
     },
     "app/_landing": {
-      "files": 5,
-      "kitImports": 1,
+      "files": 33,
+      "kitImports": 0,
       "signalImports": 1,
       "parts": [
-        "Mark",
-        "StaleBadge",
-        "Wordmark"
+        "StaleBadge"
       ],
       "suspects": {
         "tab": 0,
@@ -2015,7 +2011,7 @@
       "suspectFiles": {}
     },
     "app/library": {
-      "files": 40,
+      "files": 41,
       "kitImports": 7,
       "signalImports": 11,
       "parts": [
