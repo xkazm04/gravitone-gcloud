@@ -184,42 +184,77 @@ export async function quoteBudget(images?: number): Promise<BudgetQuoteResult> {
   return json as BudgetQuoteResult;
 }
 
-async function post<T>(path: string, body: unknown): Promise<T> {
-  let res: Response;
-  try {
-    res = await fetch(path, {
-      method: "POST",
-      headers: { "content-type": "application/json", ...accessHeader() },
-      body: JSON.stringify(body),
-    });
-  } catch {
-    throw new ImagingRequestError("The studio could not be reached.", "offline", 0);
-  }
+/** The header a paid call carries its idempotency key in. The server keeps the
+ *  result as a short-lived receipt under it (lib/imaging/receipts.ts), so a
+ *  duplicate joins the call in flight or replays it instead of paying again. */
+export const IDEMPOTENCY_HEADER = "idempotency-key";
 
-  const json = await res.json().catch(() => ({}) as Record<string, unknown>);
-  if (!res.ok) {
-    const detail = typeof json.detail === "string" ? json.detail : "The imaging call failed.";
-    const code = typeof json.code === "string" ? json.code : "failed";
-    const retryAt = typeof json.retryAt === "number" ? json.retryAt : undefined;
-    const provider = typeof json.provider === "string" ? json.provider : undefined;
-    throw new ImagingRequestError(detail, code, res.status, retryAt, provider);
-  }
-  return json as T;
+/** Options for the two paid calls. `key` names ONE logical render: a surface
+ *  that persists it beside its job can re-issue after a reload and be handed
+ *  the pixels it already paid for. Omitted, one is minted per call. */
+export interface PaidCallOptions {
+  key?: string;
 }
 
-export const generateImage = (body: ClientSteer & {
-  prompt: string;
-  negativePrompt?: string;
-  aspect: "16:9" | "9:16" | "1:1" | "4:5";
-  count?: number;
-  references?: ClientImage[];
-}) => post<GenerateResult>("/api/imaging/generate", body);
+/** A 502/504 with no JSON `code` is a proxy or gateway, not our server: the
+ *  render may still be running, and the same key will join or replay it. A
+ *  CODED failure came from the router, was billed, and is never re-sent. */
+const gatewayLost = (status: number, code: unknown) => (status === 502 || status === 504) && typeof code !== "string";
 
-export const editImage = (body: ClientSteer & {
-  image: ClientImage;
-  instruction: string;
-  references?: ClientImage[];
-}) => post<GenerateResult>("/api/imaging/edit", body);
+async function post<T>(path: string, body: unknown, key?: string): Promise<T> {
+  const headers: Record<string, string> = { "content-type": "application/json", ...accessHeader() };
+  if (key) headers[IDEMPOTENCY_HEADER] = key;
+  const payload = JSON.stringify(body);
+  // A keyed call gets ONE more go with the same key and the same bytes; an
+  // unkeyed one (recognize) has no receipt to land on, so it gets none.
+  const tries = key ? 2 : 1;
+
+  for (let attempt = 1; ; attempt++) {
+    let res: Response;
+    try {
+      res = await fetch(path, { method: "POST", headers, body: payload });
+    } catch {
+      if (attempt < tries) continue;
+      throw new ImagingRequestError("The studio could not be reached.", "offline", 0);
+    }
+
+    const json = await res.json().catch(() => ({}) as Record<string, unknown>);
+    if (!res.ok) {
+      if (attempt < tries && gatewayLost(res.status, json.code)) continue;
+      const detail = typeof json.detail === "string" ? json.detail : "The imaging call failed.";
+      const code = typeof json.code === "string" ? json.code : "failed";
+      const retryAt = typeof json.retryAt === "number" ? json.retryAt : undefined;
+      const provider = typeof json.provider === "string" ? json.provider : undefined;
+      throw new ImagingRequestError(detail, code, res.status, retryAt, provider);
+    }
+    return json as T;
+  }
+}
+
+/** One key per logical call. `randomUUID` exists only in a secure context, and
+ *  a dev server opened over a LAN address is not one. */
+export const mintKey = (): string =>
+  globalThis.crypto?.randomUUID?.() ?? `k-${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+
+export const generateImage = (
+  body: ClientSteer & {
+    prompt: string;
+    negativePrompt?: string;
+    aspect: "16:9" | "9:16" | "1:1" | "4:5";
+    count?: number;
+    references?: ClientImage[];
+  },
+  opts: PaidCallOptions = {},
+) => post<GenerateResult>("/api/imaging/generate", body, opts.key ?? mintKey());
+
+export const editImage = (
+  body: ClientSteer & {
+    image: ClientImage;
+    instruction: string;
+    references?: ClientImage[];
+  },
+  opts: PaidCallOptions = {},
+) => post<GenerateResult>("/api/imaging/edit", body, opts.key ?? mintKey());
 
 export const recognizeImage = (body: ClientSteer & {
   image: ClientImage;

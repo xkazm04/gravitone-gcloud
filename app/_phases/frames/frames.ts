@@ -75,7 +75,17 @@ export interface Plate {
   /** What was asked for — the subject clause, not the whole style block. */
   subject?: string;
   note?: string;
+  /** The idempotency key of the render in flight, held ONLY while `state` is
+   *  "generating". It is saved with the cut, so a reload that finds a plate
+   *  still generating re-issues under the same key and is handed the pixels
+   *  the server already paid for (lib/imaging/receipts.ts). Dropped when the
+   *  call settles: a deliberate re-render is a new paid call. */
+  receipt?: string;
 }
+
+/** The key to re-issue a plate's render under, or `undefined` for a fresh one. */
+export const pendingReceipt = (plate: Plate): string | undefined =>
+  plate.state === "generating" ? plate.receipt : undefined;
 
 /* ── The clip ─────────────────────────────────────────────────────────────── */
 

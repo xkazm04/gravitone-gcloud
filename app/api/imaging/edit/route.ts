@@ -1,7 +1,7 @@
 // POST /api/imaging/edit — an image and an instruction in, the adjusted image
 // out. Nano Banana 2 Lite in both environments; Leonardo has no equivalent.
 
-import { asImage, asImages, asSteer, asString, errorResponse, readJson } from "@/lib/imaging/api";
+import { asImage, asImages, asSteer, asString, errorResponse, readJson, respondKeyed } from "@/lib/imaging/api";
 import { edit } from "@/lib/imaging/router";
 import { guardRequest } from "@/lib/apiAuth";
 
@@ -14,14 +14,15 @@ export async function POST(req: Request) {
   if (denied) return denied;
   try {
     const body = await readJson(req);
-    const out = await edit({
+    const request = {
       ...asSteer(body),
       image: asImage(body.image, "image"),
       instruction: asString(body.instruction, "instruction"),
       // One slot of the reference window is spent on the subject itself.
       references: asImages(body.references, "references", 13),
-    });
-    return Response.json(out);
+    };
+    // Keyed like generate: a duplicate joins or replays (lib/imaging/receipts.ts).
+    return await respondKeyed(req, "edit", request, () => edit(request));
   } catch (e) {
     return errorResponse(e);
   }

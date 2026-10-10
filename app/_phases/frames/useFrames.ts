@@ -16,7 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { generateImage, imgSrc, ImagingRequestError } from "@/lib/imagingClient";
+import { generateImage, imgSrc, ImagingRequestError, mintKey } from "@/lib/imagingClient";
 import { useJobs } from "@/lib/jobs";
 import { dispatchBlock, getTurn, resumeTurn, startFrames, type TurnRecord } from "@/lib/turns/client";
 import { useTurnPreview } from "@/lib/turns/usePreview";
@@ -51,6 +51,7 @@ import {
   emptyClip,
   explainerRender,
   framesLane,
+  pendingReceipt,
   subjectFor,
   trailerRender,
   type DirectionSpend,
@@ -447,18 +448,33 @@ export function useFrames(projectId: string) {
       if (!frame) return { outcome: "failed" };
       const subject = frame.plate.subject?.trim() || subjectFor(frame);
 
+      // A plate that is STILL generating when this runs is one a reload cut
+      // off: its render was paid for under the key stored on it, and re-issuing
+      // under that key is handed the same pixels instead of paying twice.
+      const persisted = pendingReceipt(frame.plate);
+      const key = persisted ?? mintKey();
+
       setBusy((b) => new Set(b).add(id));
       setError(null);
-      patch(id, (f) => ({ ...f, plate: { ...f.plate, state: "generating", subject } }));
+      patch(id, (f) => ({ ...f, plate: { ...f.plate, state: "generating", subject, receipt: key } }));
 
       try {
-        const res = await generateImage({
+        const body = {
           prompt: compilePrompt(block, subject),
           negativePrompt: NEGATIVE_PROMPT,
-          aspect: "16:9",
+          aspect: "16:9" as const,
           count: 1,
           references: references.length ? references : undefined,
-        });
+        };
+        let res;
+        try {
+          res = await generateImage(body, { key });
+        } catch (e) {
+          // The stored key named a different request — the subject or the style
+          // changed since the reload. That render is not this one: a new key, once.
+          if (!(persisted && e instanceof ImagingRequestError && e.code === "idempotency-conflict")) throw e;
+          res = await generateImage(body, { key: mintKey() });
+        }
         const img = res.images[0];
         patch(id, (f) => ({
           ...f,
@@ -480,7 +496,14 @@ export function useFrames(projectId: string) {
 
         patch(id, (f) => ({
           ...f,
-          plate: { ...f.plate, state: refused ? "refused" : "empty", subject, note: e instanceof Error ? e.message : undefined },
+          plate: {
+            ...f.plate,
+            state: refused ? "refused" : "empty",
+            subject,
+            note: e instanceof Error ? e.message : undefined,
+            // A failure is never retained server-side, so the key is spent.
+            receipt: undefined,
+          },
         }));
         setError(e instanceof Error ? e.message : "The plate could not be generated.");
         if (isOverBudget) {
