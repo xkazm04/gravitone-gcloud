@@ -139,6 +139,9 @@ export function leonardoProvider(): ImagingProvider {
 
       const start = await requestJson<StartResponse>("leonardo", `${BASE}/generations`, {
         method: "POST",
+        // One start per call, as the video adapter already does: a re-sent start
+        // after a 5xx may leave a generation whose id deleteGeneration never sees.
+        billable: true,
         headers,
         body: {
           prompt: req.prompt,

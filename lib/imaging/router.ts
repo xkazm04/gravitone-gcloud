@@ -23,7 +23,7 @@
 // fallback when the preferred vendor has no key; what it may never do is leave
 // anyone unable to find out that it did.
 
-import { ImagingError, noAlternative, noKey, unsupported } from "./errors";
+import { ImagingError, noAlternative, noKey, presumedBilled, unsupported } from "./errors";
 import {
   estimatePendingUsd,
   reachByCapability,
@@ -211,60 +211,16 @@ interface Constraint {
 }
 
 /**
- * Did this failure cost money?
+ * Did this failure cost money? The rule and its enumerated table live in
+ * errors.ts (`presumedBilled`), because http.ts reads the same rule to decide
+ * whether a vendor work request may be re-sent: the meter and the transport
+ * must not disagree about which attempts were billed.
  *
- * The rule is: the vendor is presumed to have billed only where it is presumed
- * to have DONE WORK. Erring in either direction has a cost, and they are not
- * symmetric — an over-count refuses calls the operator could afford, an
- * under-count is a ceiling that lets an incident run. The kinds are enumerated
- * rather than defaulted so that a new kind added to the taxonomy fails to
- * compile here instead of silently landing on whichever side is written last.
- *
- *   timeout        BILLED. The request was in flight when our clock ran out. The
- *                  vendor very likely finished and will invoice it; the one thing
- *                  we know for certain is that we cannot know, and a spend guard
- *                  that guesses should guess high.
- *   bad-response   BILLED. The vendor answered. It ran.
- *   refused        BILLED. A safety block is a decision the model makes AFTER
- *                  reading the prompt, and the adapters raise it from a 200 body
- *                  (see http.ts's header) — inference happened.
- *   failed         BILLED ONLY IF DISPATCHED. This kind covers both a 4xx the
- *                  vendor answered and a host that could not be reached at all.
- *                  Only http.ts knows which, and it says so on the error.
- *
- *   rate-limited    NOT billed. A 429 is the door refusing before anything ran.
- *   invalid-request NOT billed. An adapter checked one of the vendor's own
- *                   limits and refused to dispatch. Nothing left the process.
- *   no-key         NOT billed. Rejected at authentication, or never attempted.
- *   unsupported    NOT billed. A routing-table fact; no call is made.
- *   no-alternative NOT billed. The chain emptied before a vendor was chosen.
- *   over-budget    NOT billed. Refused by our own ceiling, before any vendor.
- *
- * The last three cannot reach this function anyway — each is a `continue` or a
- * throw upstream of the try block — and they are listed so the reasoning is
- * complete rather than because the branch is live.
- *
- * Exported so the probe suite asserts THIS predicate rather than restating the
- * table, which is the same reason planFor and orderFor are exported: a second
- * copy of a decision is a second authority for it.
+ * Re-exported under this name so the probe suite asserts THIS predicate rather
+ * than restating the table, which is the same reason planFor and orderFor are
+ * exported: a second copy of a decision is a second authority for it.
  */
-export function billedOnFailure(err: ImagingError): boolean {
-  switch (err.kind) {
-    case "timeout":
-    case "bad-response":
-    case "refused":
-      return true;
-    case "failed":
-      return err.dispatched;
-    case "rate-limited":
-    case "invalid-request":
-    case "no-key":
-    case "unsupported":
-    case "no-alternative":
-    case "over-budget":
-      return false;
-  }
-}
+export const billedOnFailure: (err: ImagingError) => boolean = presumedBilled;
 
 async function run<T extends { provenance: Provenance }>(
   cap: Capability,
