@@ -21,6 +21,7 @@
 import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import { estimatePerImage } from "@/lib/imaging/pricing";
 import { generate, recognize } from "@/lib/imaging/router";
 import type { ImageRef } from "@/lib/imaging/types";
 import { reason } from "@/lib/text/router";
@@ -37,7 +38,7 @@ import {
 } from "../runStore";
 import { outPath } from "../../fixtures/roots";
 import type { Exemplar, StyleDef } from "../types";
-import { foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
+import { DEFAULT_CALL_ESTIMATE_USD, clampCeiling, foreignLease, newManifest, pruneFailures, settleReason, step } from "./engine";
 import type { EngineIO } from "./engine";
 import { imageDims, nearestAspect } from "./imageDims";
 import { withCatalogue } from "../catalogue";
@@ -180,6 +181,7 @@ export async function listExtractRuns(): Promise<ExtractSummary[]> {
       styles: m.styles.length,
       decided: Object.keys(v).length,
       kept: Object.values(v).filter((r) => r.verdict === "keep").length,
+      ...(m.spend ? { spendUsd: m.spend.usd } : {}),
     };
   });
   return items.sort((a, b) => (a.created < b.created ? 1 : -1));
@@ -208,7 +210,19 @@ const MIME_OF: Record<string, ImageRef["mime"]> = { ".png": "image/png", ".jpg":
  *  tabs are open — the in-process lock below serialises those. */
 export type DriverOwner = "app" | "cli";
 
+/** Test seam: wraps the live IO for one run, so a probe can swap the vendor
+ *  calls and keep the real disk. Null restores the live IO. */
+let __ioOverride: ((id: string, live: EngineIO) => EngineIO) | null = null;
+export function __setExtractIO(f: ((id: string, live: EngineIO) => EngineIO) | null): void {
+  __ioOverride = f;
+}
+
 export function liveIO(id: string, owner: DriverOwner): EngineIO {
+  const base = liveIOBase(id, owner);
+  return __ioOverride ? __ioOverride(id, base) : base;
+}
+
+function liveIOBase(id: string, owner: DriverOwner): EngineIO {
   const dir = runDir(id);
   return {
     async readImage(rel) {
@@ -223,16 +237,20 @@ export function liveIO(id: string, owner: DriverOwner): EngineIO {
     },
     async recognize(image, instruction, schema) {
       const r = await recognize({ image, instruction, schema });
-      return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}` };
+      return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}`, costUsd: r.provenance.costUsd, basis: r.provenance.costBasis };
     },
     async generate(prompt, negativePrompt, aspect, seed) {
       const g = await generate({ prompt, negativePrompt, aspect, count: 1, seed });
-      return { value: g.images[0], model: `${g.provenance.provider}/${g.provenance.model}` };
+      return { value: g.images[0], model: `${g.provenance.provider}/${g.provenance.model}`, costUsd: g.provenance.costUsd, basis: g.provenance.costBasis };
     },
     async reason(prompt, schema) {
       const r = await reason({ prompt, schema, turn: "style-synthesis" });
-      return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}` };
+      return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}`, costUsd: r.provenance.costUsd, basis: r.provenance.costBasis };
     },
+    // A generate is estimated at the imaging layer's own per-image figure (it
+    // errs high on purpose); vision and reasoning turns have no declared
+    // per-call rate, so they take the engine's defaults.
+    estimateUsd: (kind) => (kind === "generate" ? (estimatePerImage().usd ?? DEFAULT_CALL_ESTIMATE_USD.generate) : DEFAULT_CALL_ESTIMATE_USD[kind]),
     save: (m) => {
       const terminal = m.status === "done" || m.status === "failed" || m.status === "committed";
       if (terminal) delete m.lease;
@@ -263,7 +281,11 @@ export function __liveStepLocks(): number {
   return locks.size;
 }
 
-export async function stepRun(id: string, units = 1, retry = false): Promise<StepResult> {
+/** `ceilingUsd` sets (or raises) the run's own spend ceiling; it is applied
+ *  with a retry, which is also what clears a money stop. */
+export type StepRunOptions = { ceilingUsd?: number };
+
+export async function stepRun(id: string, units = 1, retry = false, opts: StepRunOptions = {}): Promise<StepResult> {
   const prev = locks.get(id) ?? Promise.resolve();
   const mine = prev.then(async () => {
     const m = await readManifest(id);
@@ -275,6 +297,11 @@ export async function stepRun(id: string, units = 1, retry = false): Promise<Ste
     // stage; the loop below then takes them again. On a run with nothing
     // failed it is a no-op.
     if (retry) {
+      const ceiling = clampCeiling(opts.ceilingUsd);
+      if (ceiling !== undefined) {
+        m.options.ceilingUsd = ceiling;
+        m.log.push({ at: io.now(), msg: `ceiling set to $${ceiling.toFixed(2)}` });
+      }
       const n = pruneFailures(m);
       m.log.push({ at: io.now(), msg: `retry: ${n} failed unit(s) pruned` });
       await io.save(m);
@@ -449,7 +476,15 @@ export async function commitExtractRun(
     await tx.write("styles.json");
 
     run.status = "committed";
-    run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
+    // Cost per usable: what the whole run spent over what survived the cull.
+    const spendUsd = run.spend?.usd;
+    run.committed = {
+      at,
+      kept: kept.map((s) => s.id),
+      rejected: rejected.map((s) => s.id),
+      written,
+      ...(spendUsd !== undefined ? { spendUsd, costPerKeptUsd: Math.round((spendUsd / kept.length) * 1e6) / 1e6 } : {}),
+    };
     run.log.push({ at, msg: `committed: ${written.join(", ")} → styles.json` });
     await fs.writeJsonAtomic(path.join(dir, "run.json"), run);
     return { kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };

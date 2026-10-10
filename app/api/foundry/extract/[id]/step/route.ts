@@ -1,7 +1,8 @@
 // POST /api/foundry/extract/<id>/step — perform ONE unit of the run (or a
 // few: `{ units: n }`, capped), and return where it stands. `{ retry: true }`
 // first prunes every failed element (a tripped breaker, a refused frame) so
-// the loop takes it again.
+// the loop takes it again. `{ retry: true, ceilingUsd: n }` also sets or
+// raises the run's own spend ceiling — the way a run stopped by it resumes.
 //
 // This is the whole reason the engine is a step machine: on a managed
 // platform a handler has a duration ceiling and nothing survives the
@@ -31,20 +32,22 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
   const { id } = await params;
   let units = 1;
   let retry = false;
+  let ceilingUsd: number | undefined;
   try {
     const body = await req.json();
     if (typeof body?.units === "number") units = Math.min(MAX_UNITS, Math.max(1, Math.round(body.units)));
     retry = body?.retry === true;
+    if (typeof body?.ceilingUsd === "number") ceilingUsd = body.ceilingUsd;
   } catch {
     /* an empty body is one unit */
   }
   try {
-    return Response.json(await stepRun(id, units, retry));
+    return Response.json(await stepRun(id, units, retry, { ceilingUsd }));
   } catch (e) {
     if (e instanceof FoundryError) return Response.json({ detail: e.message }, { status: e.status });
     // A vendor failure inside a unit is recorded on the element by the engine
     // and does not reach here; what does is a failure BEFORE any unit could
-    // start — an over-budget refusal, a missing key — and those carry their
+    // start — a missing key, a refusal outside any unit — and those carry their
     // own status and a sentence already written for a person.
     if (e instanceof ImagingError) return Response.json({ detail: scrub(e.message), code: e.kind }, { status: imagingStatus(e.kind) });
     if (e instanceof TextError) return Response.json({ detail: scrub(e.message), code: e.kind }, { status: textStatus(e.kind) });

@@ -30,7 +30,7 @@
 // — the state machine's order is the thing worth pinning, and it is the same
 // whether the images are real.
 
-import type { Aspect, ImageRef } from "@/lib/imaging/types";
+import type { Aspect, CostBasis, ImageRef } from "@/lib/imaging/types";
 
 import { NO_TEXT, TRANSFER_SCENES, critiqueInstruction, readbackInstruction, replicaPrompt, singletonInstruction, synthesisPrompt, transferPrompt } from "./prompts";
 import type {
@@ -38,10 +38,12 @@ import type {
   SettleReason,
   ExtractManifest,
   ExtractOptions,
+  ExtractStop,
   ExtractedStyle,
   Observables,
   Readback,
   ReplicaRound,
+  SpendStage,
   StepResult,
   Transfer,
 } from "./types";
@@ -54,7 +56,22 @@ export interface Served<T> {
   value: T;
   /** Which model served, for the manifest's `engines` block. */
   model: string;
+  /** What the call cost, from the serving provenance. Undefined is UNPRICED,
+   *  never free: the engine books the call's pre-call estimate instead. */
+  costUsd?: number;
+  /** How to read `costUsd` (lib/imaging/types.ts CostBasis). */
+  basis?: CostBasis;
 }
+
+/** The three vendor calls a unit can make, priced separately. */
+export type CallKind = "recognize" | "generate" | "reason";
+
+/** Pre-call estimates when the IO declares none: what the ceiling compares
+ *  against before a unit starts, and what an unpriced call is booked at. */
+export const DEFAULT_CALL_ESTIMATE_USD: Readonly<Record<CallKind, number>> = { recognize: 0.002, generate: 0.04, reason: 0.01 };
+
+/** Largest per-run ceiling accepted; anything above is clamped to it. */
+export const MAX_CEILING_USD = 10_000;
 
 export interface EngineIO {
   /** Read a run-relative image. */
@@ -67,6 +84,9 @@ export interface EngineIO {
   generate(prompt: string, negative: string, aspect: Aspect, seed: number): Promise<Served<ImageRef>>;
   /** Reasoning: a prompt → JSON satisfying `schema`. */
   reason(prompt: string, schema: Record<string, unknown>): Promise<Served<unknown>>;
+  /** The pre-call estimate for one call of this kind, in USD. Optional; the
+   *  engine falls back to DEFAULT_CALL_ESTIMATE_USD. */
+  estimateUsd?(kind: CallKind): number | undefined;
   /** Persist the manifest. Called after every unit. */
   save(m: ExtractManifest): Promise<void>;
   now(): string;
@@ -108,8 +128,13 @@ export function foreignLease(m: ExtractManifest, owner: string, nowMs: number): 
 
 /** Consecutive vendor failures before the run stops. Three, because one is a
  *  refused frame (normal), two is bad luck, and three in a row is a wall —
- *  a bad parameter, an expired key, a budget ceiling — that every further
- *  unit would also hit. */
+ *  a bad parameter, an expired key — that every further unit would also hit.
+ *
+ *  A BUDGET CEILING IS NOT ONE OF THEM. It used to be named here, and an
+ *  `over-budget` refusal went through tripped() like any vendor throw: an
+ *  errored round appended, the streak bumped, and after three the run read
+ *  "3 consecutive vendor failures". A refusal by our own meter is a named
+ *  stop (`stopFor`, `m.stopped`), never a failure; see the spend section. */
 export const BREAKER_LIMIT = 3;
 
 function tripped(m: ExtractManifest, io: EngineIO, what: string): boolean {
@@ -152,13 +177,77 @@ export function pruneFailures(m: ExtractManifest): number {
     st.transfers = st.transfers.filter((t) => t.file);
     n += before - st.transfers.length;
   }
-  if (n === 0) return 0;
+  // A MONEY STOP leaves nothing to prune — a run-ceiling stop is taken before
+  // the unit starts, and a period-ceiling refusal leaves no errored element —
+  // so `stopped` is itself a resumable state, cleared here.
+  if (n === 0 && !m.stopped) return 0;
+  delete m.stopped;
   m.fail_streak = 0;
   delete m.error;
   delete m.finished;
   if (m.status === "failed" || m.status === "done") m.status = m.styles.length ? "replicating" : "reading";
   m.progress = { stage: m.status, done: doneUnits(m), total: totalUnits(m) };
   return n;
+}
+
+/* ── Spend ────────────────────────────────────────────────────────────────── */
+
+/** Micro-dollar rounding, so a ceiling of $0.10 is not crossed by 1e-17. */
+const usd6 = (x: number) => Math.round(x * 1e6) / 1e6;
+
+function callEstimate(io: EngineIO, kind: CallKind): number {
+  const v = io.estimateUsd?.(kind);
+  return typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : DEFAULT_CALL_ESTIMATE_USD[kind];
+}
+
+/** What a unit is expected to cost before it starts: the calls it makes. */
+function unitEstimate(m: ExtractManifest, u: Unit, io: EngineIO): number {
+  switch (u.kind) {
+    case "read":
+      return callEstimate(io, "recognize");
+    case "group":
+      return m.options.grouping === "none" ? 0 : callEstimate(io, "reason");
+    case "replica":
+    case "transfer":
+      return usd6(callEstimate(io, "generate") + callEstimate(io, "recognize"));
+    case "finish":
+      return 0;
+  }
+}
+
+/** Book one SERVED call under its stage. A call with no cost books its
+ *  estimate and is counted unpriced; a refused or failed call was not served
+ *  and books nothing. */
+function book(m: ExtractManifest, io: EngineIO, stage: SpendStage, kind: CallKind, s: Served<unknown>) {
+  const sp = (m.spend ??= { usd: 0, by_stage: {}, unpriced: 0, basis: "reported" });
+  let usd = s.costUsd;
+  let estimated = s.basis === "estimated";
+  if (typeof usd !== "number" || !Number.isFinite(usd) || usd < 0) {
+    usd = callEstimate(io, kind);
+    sp.unpriced++;
+    estimated = true;
+  }
+  if (estimated) sp.basis = "estimate";
+  sp.usd = usd6(sp.usd + usd);
+  sp.by_stage[stage] = usd6((sp.by_stage[stage] ?? 0) + usd);
+}
+
+/** An `over-budget` refusal from the imaging meter (lib/imaging/errors.ts).
+ *  Matched by kind, not class, so the engine stays free of the vendor layer. */
+const isOverBudget = (e: unknown) => !!e && typeof e === "object" && (e as { kind?: unknown }).kind === "over-budget";
+
+/** Stop the run for money. Not a failure: the breaker is left alone. */
+function stopFor(m: ExtractManifest, io: EngineIO, by: ExtractStop["by"], detail: string) {
+  m.status = "failed";
+  m.stopped = { by, spentUsd: m.spend?.usd ?? 0, ...(by === "run-ceiling" && m.options.ceilingUsd !== undefined ? { ceilingUsd: m.options.ceilingUsd } : {}), at: io.now() };
+  m.error = detail;
+  log(m, io, `stopped: ${detail}`);
+}
+
+/** Clamp a requested per-run ceiling; undefined (unlimited) for anything that
+ *  is not a positive finite number. */
+export function clampCeiling(v: unknown): number | undefined {
+  return typeof v === "number" && Number.isFinite(v) && v > 0 ? Math.min(MAX_CEILING_USD, v) : undefined;
 }
 
 /* ── Units ────────────────────────────────────────────────────────────────── */
@@ -303,6 +392,20 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
   const unit = next(m);
   if (!unit) return { unit: null, status: m.status, progress: m.progress };
 
+  // THE RUN CEILING. Checked before the unit starts, against its estimate: a
+  // unit that would cross the line is not taken, so nothing is spent past it.
+  const ceiling = m.options.ceilingUsd;
+  if (ceiling !== undefined) {
+    const est = unitEstimate(m, unit, io);
+    const spent = m.spend?.usd ?? 0;
+    if (est > 0 && usd6(spent + est) > ceiling) {
+      stopFor(m, io, "run-ceiling", `Run ceiling reached: $${spent.toFixed(4)} of $${ceiling.toFixed(2)} spent, and ${unitLabel(unit)} is estimated at $${est.toFixed(4)}. Raise the ceiling and retry to continue.`);
+      m.progress = { stage: m.status, done: doneUnits(m), total: totalUnits(m) };
+      await io.save(m);
+      return { unit: null, status: m.status, progress: m.progress };
+    }
+  }
+
   switch (unit.kind) {
     case "read": {
       setStage(m, "reading");
@@ -311,11 +414,16 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
       try {
         const img = await io.readImage(s.file);
         const r = await io.recognize(img, singleton ? singletonInstruction() : readbackInstruction(), singleton ? SINGLETON_SCHEMA : READBACK_SCHEMA);
+        book(m, io, "read", "recognize", r);
         if (!isReadback(r.value)) throw new Error("the readback did not carry every observable");
         s.readback = { ...r.value, dominant_colours: Array.isArray(r.value.dominant_colours) ? r.value.dominant_colours.slice(0, 5).map(String) : [] };
         m.engines.vision = r.model;
         log(m, io, `read ${s.id} (${s.name}): ${s.readback.render_mode}, ${s.readback.palette_strategy}`);
       } catch (e) {
+        if (isOverBudget(e)) {
+          stopFor(m, io, "period-ceiling", `The spend window refused ${unitLabel(unit)}: ${msg(e)}`);
+          break;
+        }
         s.error = msg(e);
         log(m, io, `read ${s.id} failed: ${s.error}`);
         if (tripped(m, io, s.error)) break;
@@ -366,6 +474,7 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
       let styles: Omit<ExtractedStyle, "replicas" | "transfers">[] | null = null;
       try {
         const r = await io.reason(synthesisPrompt(readable, hint), SYNTHESIS_SCHEMA);
+        book(m, io, "group", "reason", r);
         m.engines.reasoner = r.model;
         const v = validateSynthesis(r.value, readable.map((s) => s.id));
         if ("styles" in v) {
@@ -416,11 +525,20 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
       const seed = m.options.seed + hash(`${st.id}/${src.id}`) * 10 + unit.round;
       try {
         const g = await io.generate(prompt, st.negative, src.aspect, seed);
+        book(m, io, "replica", "generate", g);
         await io.writeImage(file, g.value);
         round.file = file;
         round.generator = g.model;
         m.engines.generator = g.model;
       } catch (e) {
+        if (isOverBudget(e)) {
+          // Nothing was drawn and nothing billed: the round is withdrawn, not
+          // left behind as an errored one for a retry to prune.
+          rep.rounds.pop();
+          if (!rep.rounds.length) st.replicas.splice(st.replicas.indexOf(rep), 1);
+          stopFor(m, io, "period-ceiling", `The spend window refused ${unitLabel(unit)}: ${msg(e)}`);
+          break;
+        }
         round.error = `generate: ${msg(e)}`;
         log(m, io, `${unitLabel(unit)} — ${round.error}`);
         tripped(m, io, round.error);
@@ -429,6 +547,7 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
       try {
         const img = await io.readImage(file);
         const c = await io.recognize(img, critiqueInstruction(st, recipe), CRITIQUE_SCHEMA);
+        book(m, io, "replica", "recognize", c);
         if (!isReadback(c.value)) throw new Error("the critique did not carry every observable");
         round.critique = c.value as Critique;
         round.vision = c.model;
@@ -445,7 +564,9 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
       } catch (e) {
         round.error = `critique: ${msg(e)}`;
         log(m, io, `${unitLabel(unit)} — ${round.error}`);
-        tripped(m, io, round.error);
+        // The pixels exist and are kept; a refused critique stops, not trips.
+        if (isOverBudget(e)) stopFor(m, io, "period-ceiling", `The spend window refused the critique of ${unitLabel(unit)}: ${msg(e)}`);
+        else tripped(m, io, round.error);
       }
       break;
     }
@@ -461,10 +582,16 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
       const seed = m.options.seed + hash(`${st.id}/transfer`) * 10 + unit.scene;
       try {
         const g = await io.generate(prompt, st.negative, "16:9", seed);
+        book(m, io, "transfer", "generate", g);
         await io.writeImage(file, g.value);
         t.file = file;
         t.generator = g.model;
       } catch (e) {
+        if (isOverBudget(e)) {
+          st.transfers.pop();
+          stopFor(m, io, "period-ceiling", `The spend window refused ${unitLabel(unit)}: ${msg(e)}`);
+          break;
+        }
         t.error = `generate: ${msg(e)}`;
         log(m, io, `${unitLabel(unit)} — ${t.error}`);
         tripped(m, io, t.error);
@@ -473,6 +600,7 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
       try {
         const img = await io.readImage(file);
         const r = await io.recognize(img, readbackInstruction(), READBACK_SCHEMA);
+        book(m, io, "transfer", "recognize", r);
         if (!isReadback(r.value)) throw new Error("the readback did not carry every observable");
         t.readback = r.value;
         t.vision = r.model;
@@ -484,7 +612,8 @@ export async function step(m: ExtractManifest, io: EngineIO): Promise<StepResult
       } catch (e) {
         t.error = `readback: ${msg(e)}`;
         log(m, io, `${unitLabel(unit)} — ${t.error}`);
-        tripped(m, io, t.error);
+        if (isOverBudget(e)) stopFor(m, io, "period-ceiling", `The spend window refused the readback of ${unitLabel(unit)}: ${msg(e)}`);
+        else tripped(m, io, t.error);
       }
       break;
     }
@@ -585,6 +714,9 @@ export function newManifest(
     target: typeof options.target === "number" && options.target > 0 && options.target <= 1 ? options.target : DEFAULT_OPTIONS.target,
     seed: Number.isInteger(options.seed) ? (options.seed as number) : DEFAULT_OPTIONS.seed,
   };
+  // Absent stays absent: an unset ceiling is unlimited, and the key is not written.
+  const ceilingUsd = clampCeiling(options.ceilingUsd);
+  if (ceilingUsd !== undefined) opts.ceilingUsd = ceilingUsd;
   const m: ExtractManifest = {
     id,
     slug,
