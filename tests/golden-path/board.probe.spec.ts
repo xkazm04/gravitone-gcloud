@@ -378,3 +378,14 @@ test("board: adoption + triage write through the real step store and read back",
   const back = await triage.loadEntries();
   expect(back.find((c) => c.item.id === cuttable.item.id)?.item.verdict).toBe(null);
 });
+
+test("board keys: an open shell layer (bell tray, account panel) owns the keys, and its Escape is not the Board's", () => {
+  const root = { querySelectorAll: () => [] };
+  // The tray is role=group, so the DOM sniff alone never saw it.
+  expect(overlayOpen(root, [])).toBe(false);
+  expect(overlayOpen(root, [{ id: "bell", kind: "tray" }])).toBe(true);
+  expect(boardKeyAction(press("a"), overlayOpen(root, [{ id: "bell", kind: "tray" }]))).toBe(null);
+  expect(boardKeyAction(press("Escape"), false, [{ id: "bell", kind: "tray" }])).toBe(null);
+  expect(boardKeyAction({ ...press("Escape"), defaultPrevented: true }, false, [])).toBe(null);
+  expect(boardKeyAction(press("Escape"), false, [])).toBe("close");
+});

@@ -16,6 +16,12 @@
 //   · REPEAT — a held key decides ONE item, never the next ones the view
 //     advances to while the key is still down. Navigation may repeat.
 //   · A MODIFIER — Ctrl/Cmd/Alt+letter belongs to the browser and the OS.
+//
+// "An overlay" has two sources. The DOM sniff below sees aria-modal dialogs;
+// the shell's layer stack (components/ui/layers.ts) sees what the sniff cannot:
+// the bell tray and the account panel, which are role="group" disclosures.
+
+import { claimsKeys, openLayers, type LayerEntry } from "@/components/ui/layers";
 
 export type BoardAction = "approve" | "reject" | "clear" | "next" | "prev" | "loupe" | "close" | "undo";
 
@@ -26,6 +32,8 @@ export interface KeyLike {
   altKey: boolean;
   repeat: boolean;
   target: EventTarget | null;
+  /** Set when the layer stack already spent this key (a dismissing Escape). */
+  defaultPrevented?: boolean;
 }
 
 /** Anything a test can stand in for a DOM node with. */
@@ -58,8 +66,13 @@ interface RootLike {
   querySelectorAll(selector: string): ArrayLike<{ querySelector(selector: string): unknown; hasAttribute?(n: string): boolean }>;
 }
 
-/** Is a dialog open that is not the Board's loupe? `root` is a seam for tests. */
-export function overlayOpen(root: RootLike | null = typeof document === "undefined" ? null : document): boolean {
+/** Is a dialog or a shell layer open that is not the Board's loupe? `root` and
+ *  `layers` are seams for tests; callers pass neither. */
+export function overlayOpen(
+  root: RootLike | null = typeof document === "undefined" ? null : document,
+  layers: readonly LayerEntry[] = openLayers(),
+): boolean {
+  if (claimsKeys(layers)) return true;
   if (!root) return false;
   const list = root.querySelectorAll(BLOCKERS);
   for (let i = 0; i < list.length; i++) {
@@ -78,12 +91,14 @@ const MOVES: Record<string, BoardAction> = { j: "next", k: "prev" };
  * What a key press means on the Board, or null when it is not the Board's.
  * `overlay` is the result of `overlayOpen()` — passed in so this stays pure.
  */
-export function boardKeyAction(e: KeyLike, overlay: boolean): BoardAction | null {
+export function boardKeyAction(e: KeyLike, overlay: boolean, layers: readonly LayerEntry[] = openLayers()): BoardAction | null {
   if (e.ctrlKey || e.metaKey || e.altKey) return null;
   if (typing(e.target)) return null;
-  // Escape is honoured even with an overlay up: closing is never a decision,
-  // and the overlay's own Escape handling will run as well.
-  if (e.key === "Escape") return "close";
+  // Escape is honoured past a DOM-sniffed dialog (closing is never a decision),
+  // but not past the layer stack: one press closes ONE thing. A layer still
+  // open will take it; a layer the stack already popped preventDefaulted it on
+  // the document, before this window-level guard runs.
+  if (e.key === "Escape") return e.defaultPrevented || layers.length > 0 ? null : "close";
   if (overlay) return null;
   const k = e.key.length === 1 ? e.key.toLowerCase() : e.key;
   if (k in DECISIONS) return e.repeat ? null : DECISIONS[k];
