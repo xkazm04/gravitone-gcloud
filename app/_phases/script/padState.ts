@@ -185,7 +185,7 @@ export function padReduce(s: PadState, a: PadAction): PadState {
       const r = a.record;
       const notes = r?.notes ?? [];
       const accepted = r?.accepted ?? [];
-      return {
+      return settle({
         ...padInit(),
         notes,
         accepted,
@@ -194,8 +194,10 @@ export function padReduce(s: PadState, a: PadAction): PadState {
         // Seeded past every stored ordinal, so a reload cannot collide.
         seq: notes.reduce((n, x) => Math.max(n, Number.isFinite(x.at) ? x.at + 1 : 0), 0),
         digest: r ? stampOf({ notes, accepted, digest: r.digest }) : undefined,
-        dealt: a.dealt,
-      };
+        // The ledger and the dealt notebook are `sync`'s, not the record's.
+        dealt: a.dealt ?? s.dealt,
+        live: s.live,
+      });
     }
 
     case "sync": {

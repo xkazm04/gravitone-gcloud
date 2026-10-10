@@ -8,8 +8,12 @@
 // written against, so a ledger from another notebook is HELD as an orphan the
 // way the scope already is (research/useScope.ts orphanOf).
 
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { test, expect } from "@playwright/test";
 
+import { stripComments } from "./_helpers";
 import { padBasis, padInit, padRecordOf, padReduce, type PadAction, type PadState } from "@/app/_phases/script/padState";
 import { SCRIPT_VERSIONS } from "@/app/_phases/script/records";
 import { RecordRefusal } from "@/app/_phases/_shared/records/registry";
@@ -134,6 +138,17 @@ test("case 8: the record's reader refuses a digest that is not text, and accepts
   expect((bad as RecordRefusal).detail).toContain("script-versions.digest");
   expect(SCRIPT_VERSIONS.parse({ notes: [], accepted: [] })).not.toBeInstanceOf(RecordRefusal);
   expect(SCRIPT_VERSIONS.parse({ notes: [], accepted: [], digest: "D1" })).not.toBeInstanceOf(RecordRefusal);
+});
+
+test("case 9: the live hook runs on the reducer — not beside it", () => {
+  const src = stripComments(readFileSync(join(process.cwd(), "app/_phases/script/useVersions.ts"), "utf8"));
+  expect(src, "useVersions does not run on padReduce").toMatch(/useReducer\(padReduce/);
+  expect(src, "useVersions does not read its ledger through padBasis with the dealt digest").toMatch(
+    /padBasis\([^)]*ctx\.source\.digest/,
+  );
+  expect(src, "notes are still a useState cell").not.toContain("useState<Note[]>");
+  expect(src, "exactly-once is still held in a ref").not.toMatch(/consumedRef|useRef<string \| null>\(null\)/);
+  expect(src, "rule 2 is still restated as a guard in a callback").not.toMatch(/if \(running\)|if \(!running\)/);
 });
 
 test("case 10: a write on an orphaned pad starts this notebook's ledger instead of editing the other one", () => {

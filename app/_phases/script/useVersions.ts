@@ -19,161 +19,55 @@
 // provider. A second click in this tab, another tab or another device meets
 // the server's 409, which names the turn already holding the slot.
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from "react";
 
 import { useJobs } from "@/lib/jobs";
 import { dispatchBlock, getTurn, resumeTurn, startRecalibrate, type TurnRecord } from "@/lib/turns/client";
 import { useTurnPreview } from "@/lib/turns/usePreview";
 import { loadStep, saveStep } from "../_shared/stepStore";
-import { recalibrate, recalibrateFromPlan } from "./recalibrate";
 import type { NotebookSource } from "../_shared/notebook/source";
 import { renderPayloadFor } from "./chainBase";
-import { BASELINE, engineRunWith, type GateOverride, type Note, type NoteKind, type Version } from "./versions";
-import type { EditPlan } from "./editPlan";
+import { padBasis, padInit, padRecordOf, padReduce, type PadRecord } from "./padState";
+import type { GateOverride, Note, NoteKind, Version } from "./versions";
 import type { Card } from "../_shared/notebook/cards";
 import type { Scope } from "../research/scope";
 
 const PHASE = "script-versions";
 const KIND = "recalibrate";
+const NO_VERSIONS: Version[] = [];
 
-/** `ids` with `id` added, or removed if it was there. */
-const flip = (ids: string[], id: string) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
+export type { LostCandidate, PadOrphan } from "./padState";
 
-/** The receipt for a candidate that was staged when the project last closed.
- *
- *  Staging itself is deliberately NOT persisted — a version the creator never
- *  accepted is not a version, and restoring one would put an unreviewed result
- *  back on the pad as if it had been decided. What persists is the fact that one
- *  was lost, so the reload can say so instead of quietly emptying the pad and
- *  leaving the creator to wonder whether the run ever happened. */
-export interface LostCandidate {
-  label: string;
-  at: number;
-  notes: number;
-}
-
-interface Stored {
-  notes: Note[];
-  /** Accepted versions, oldest first. The baseline itself is never stored. */
-  accepted: Version[];
-  staged?: LostCandidate;
-  /** The last turn whose answer this pad took (staged, or found to have
-   *  nothing to stage). A mount never takes it a second time. */
-  turn?: string;
-  savedAt?: number;
-}
-
+// THE RULES LIVE IN padState.ts. This hook is the React shell around them:
+// loading and saving the record, the turn ledger, and the pre-flight. Every
+// transition - rule 2's lock included - is a `padReduce` case, so the probe
+// lane executes it (tests/golden-path/script-pad-state.probe.spec.ts).
 export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scope; source: NotebookSource; optIn?: ReadonlySet<string> }) {
   const jobs = useJobs();
   const { busy, track, cancel: cancelJob } = jobs;
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [accepted, setAccepted] = useState<Version[]>([]);
-  const [candidate, setCandidate] = useState<Version | null>(null);
-  // Keyed to the project rather than a boolean reset in the effect. The reset
-  // was a synchronous setState inside an effect body — the area's own ratcheted
-  // lint finding — and "hydrated for THIS id" is also the stronger guard: the
-  // flag stayed true for one commit after `projectId` changed, which is the
-  // commit the save effect below runs in. Third hook in this family to take the
-  // shape; research/useScope.ts and research/beats/useBeatPicks.ts hold the
-  // other two, and useBeatPicks wrote down why first.
+  const [pad, dispatch] = useReducer(padReduce, undefined, padInit);
+  // Keyed to the project rather than a boolean reset in the effect: "hydrated
+  // for THIS id" is the stronger guard (research/useScope.ts, useBeatPicks).
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
   const hydrated = hydratedFor === projectId;
-  const [lostCandidate, setLostCandidate] = useState<LostCandidate | null>(null);
-  /** The last turn this pad took — persisted, so "exactly once" survives a
-   *  reload. The ref is the synchronous guard; the state is what is saved. */
-  const [consumed, setConsumed] = useState<string | null>(null);
-  const consumedRef = useRef<string | null>(null);
-  /** Between the click and the 202: no turn id exists yet, and the pad must
-   *  already be locked. */
-  const [starting, setStarting] = useState(false);
-  const startingRef = useRef(false);
 
-  /** THE NOTE ORDINAL, AND IT MUST NOT REWIND.
-   *
-   *  Both the id and `Note.at` used to be minted from `notes.length`, which goes
-   *  DOWN when a note is removed. Stack two "more focus" bullets on one track,
-   *  delete the first, stack another: the third is minted `n-<card>-more-focus-1`,
-   *  which the second already holds. `removeNote` filters by id, so one ✕ then
-   *  deletes both, and React draws two list children under one key. A counter
-   *  that only ever climbs cannot do that — and it is seeded past whatever the
-   *  stored notes already used, so a reload cannot collide with them either. */
-  const seq = useRef(0);
+  // THE LEDGER AND THE DEALT NOTEBOOK, fed in during render - the adjust-state-
+  // while-rendering shape, so no frame is committed with a pad that disagrees
+  // with either. A turn started in another tab locks this pad through here.
+  const live = busy(projectId, KIND);
+  if (pad.live !== live || pad.dealt !== ctx.source.digest) dispatch({ type: "sync", live, dealt: ctx.source.digest });
 
+  // What a landing reads of the board when the answer arrives - the guards in
+  // recalibrate.ts need the cards and scope as they are THEN. Written in an
+  // effect, never during render.
+  const board = useRef({ cards: ctx.cards, scope: ctx.scope, optIn: ctx.optIn });
   useEffect(() => {
-    let alive = true;
-    void loadStep<Stored>(projectId, PHASE).then((s) => {
-      if (!alive) return;
-      const loaded = s?.notes ?? [];
-      seq.current = loaded.reduce((n, x) => Math.max(n, Number.isFinite(x.at) ? x.at + 1 : 0), 0);
-      setNotes(loaded);
-      setAccepted(s?.accepted ?? []);
-      setCandidate(null);
-      setLostCandidate(s?.staged ?? null);
-      consumedRef.current = s?.turn ?? null;
-      setConsumed(s?.turn ?? null);
-      setHydratedFor(projectId);
-    });
-    return () => { alive = false; };
-  }, [projectId]);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    void saveStep<Stored>(projectId, PHASE, {
-      notes,
-      accepted,
-      staged: candidate
-        ? { label: candidate.label, at: candidate.createdAt, notes: candidate.notes.length }
-        : undefined,
-      ...(consumed ? { turn: consumed } : {}),
-    });
-  }, [projectId, notes, accepted, candidate, consumed, hydrated]);
-
-  /** What Candidates and Tracks read: the latest ACCEPTED version. */
-  const baseline = useMemo(() => accepted[accepted.length - 1] ?? BASELINE, [accepted]);
-
-  /** This project's newest turn-backed recalibration, as the ledger reports it. */
-  const turnJob = jobs.jobs.find((j) => j.turnId && j.projectId === projectId && j.kind === KIND);
-  const running = busy(projectId, KIND) || starting;
-
-  const [engineNote, setEngineNote] = useState<string | null>(null);
-
-  // What a landing reads: the pad as it is when the answer arrives. The pad is
-  // locked while the turn is live (rule 2), so these are the notes the run was
-  // started from. Written in an effect, never during render.
-  const live = useRef({ notes, baseline, accepted, ctx });
-  useEffect(() => {
-    live.current = { notes, baseline, accepted, ctx };
+    board.current = { cards: ctx.cards, scope: ctx.scope, optIn: ctx.optIn };
   });
 
-  /** Take a settled turn's answer onto the pad — at most once per turn. */
-  const land = useCallback((rec: TurnRecord) => {
-    if (consumedRef.current === rec.id) return;
-    consumedRef.current = rec.id;
-    setConsumed(rec.id);
-    const { notes: runNotes, baseline: base, accepted: acc, ctx: c } = live.current;
-    const id = `v${acc.length + 2}`;
-    if (rec.status === "done") {
-      const { plan, engine, manifest } = (rec.result ?? {}) as { plan?: EditPlan; engine?: unknown; manifest?: unknown };
-      if (!plan) return;
-      setEngineNote(null);
-      setLostCandidate(null);
-      // The receipt is attached here rather than inside the transform: what a
-      // run cost is a fact about the TURN, not about the edit plan, and the
-      // transform is shared with the path that never makes one.
-      // The manifest rides on it (AIO-B): what the engine actually read.
-      setCandidate({ ...recalibrateFromPlan(base, runNotes, plan, id, Date.now(), c), engineRun: engineRunWith(engine, manifest) });
-      return;
-    }
-    if (rec.status === "failed") {
-      // The engine could not serve, or served a plan the guards refused. The
-      // sentence is the server's; the simulated candidate is the fallback the
-      // pad has always staged beside it.
-      const why = rec.error?.message || "The recalibration failed. Nothing was changed.";
-      setEngineNote(why);
-      setCandidate(recalibrate(base, runNotes, id, Date.now(), c));
-    }
-    // cancelled or orphaned: nothing came back, and nothing is staged.
-  }, []);
+  /** Take a settled turn's answer onto the pad - at most once per turn (the
+   *  reducer's `consumed` check). */
+  const land = useCallback((rec: TurnRecord) => dispatch({ type: "land", turn: rec, at: Date.now(), ctx: board.current }), []);
 
   // LEAVING THE STEP NO LONGER STOPS THE RUN — operator decision, 2026-10-06
   // (AIO-A stage 2). The old rule aborted the fetch on unmount and settled the
@@ -184,24 +78,48 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
   // picked up: on mount, the project's newest recalibration is asked for. A
   // live one is watched (the pad stays locked and offers a stop that really
   // ends the engine); a settled one this pad has not taken is staged, once.
+  // The record loads first, so the ask carries the last turn this pad took.
   useEffect(() => {
-    if (!hydrated) return;
     let alive = true;
-    void resumeTurn(projectId, KIND, consumedRef.current)
-      .then((l) => {
-        if (!alive) return;
-        if (l.action === "watch") track({ turnId: l.turn.id, projectId, kind: KIND, label: "recalibration", record: l.turn });
-        else if (l.action === "land") land(l.turn);
-      })
-      .catch(() => undefined);
+    void loadStep<PadRecord>(projectId, PHASE).then((s) => {
+      if (!alive) return;
+      dispatch({ type: "hydrate", record: s });
+      setHydratedFor(projectId);
+      void resumeTurn(projectId, KIND, s?.turn ?? null)
+        .then((l) => {
+          if (!alive) return;
+          if (l.action === "watch") track({ turnId: l.turn.id, projectId, kind: KIND, label: "recalibration", record: l.turn });
+          else if (l.action === "land") land(l.turn);
+        })
+        .catch(() => undefined);
+    });
     return () => { alive = false; };
-  }, [hydrated, projectId, track, land]);
+  }, [projectId, track, land]);
+
+  /** What the pad shows on the notebook in front of it: a ledger written on
+   *  another notebook is held, not applied (padState.ts). */
+  const basis = useMemo(() => padBasis(pad, ctx.source.digest), [pad, ctx.source.digest]);
+  const { baseline, notes, orphan } = basis;
+  const accepted = orphan ? NO_VERSIONS : pad.accepted;
+  const { candidate, engineNote, forceRenders, forceConclusions, lost: lostCandidate } = pad;
+  const running = pad.phase === "starting" || pad.phase === "running";
+
+  // Never before hydration, and never over an orphan - it belongs to another
+  // notebook and stays on disk until this one is written.
+  const record = useMemo(() => padRecordOf(pad), [pad]);
+  useEffect(() => {
+    if (!hydrated || orphan) return;
+    void saveStep<PadRecord>(projectId, PHASE, record);
+  }, [projectId, record, hydrated, orphan]);
+
+  /** This project's newest turn-backed recalibration, as the ledger reports it. */
+  const turnJob = jobs.jobs.find((j) => j.turnId && j.projectId === projectId && j.kind === KIND);
 
   // The watched turn ENDING while the pad is mounted: read its whole record
   // (the list the provider polls carries no result) and land it.
   const endedTurn = turnJob && turnJob.status !== "running" ? turnJob.id : null;
   useEffect(() => {
-    if (!hydrated || !endedTurn || endedTurn === consumed) return;
+    if (!hydrated || !endedTurn || endedTurn === pad.consumed) return;
     let alive = true;
     void getTurn(endedTurn)
       .then((rec) => {
@@ -209,52 +127,26 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       })
       .catch(() => undefined);
     return () => { alive = false; };
-  }, [hydrated, endedTurn, consumed, land]);
+  }, [hydrated, endedTurn, pad.consumed, land]);
 
+  // RULE 2 is padReduce's: these hand it the action and it refuses one while a
+  // run is starting or live. `addNote` reports whether the note was taken.
   const addNote = useCallback(
     (cardId: string, kind: NoteKind, text?: string) => {
-      if (running) return false; // rule 2 — stated as a rule, not just a disabled button
-      // Taken here rather than inside the updater: a state updater is invoked
-      // twice under StrictMode, and a counter incremented in one would skip.
-      const at = seq.current++;
-      setNotes((n) => [...n, { id: `n-${cardId}-${kind}-${at}`, cardId, kind, text, at }]);
+      if (padReduce(pad, { type: "add-note", cardId, kind, text }) === pad) return false;
+      dispatch({ type: "add-note", cardId, kind, text });
       return true;
     },
-    [running],
+    [pad],
   );
+  const removeNote = useCallback((id: string) => dispatch({ type: "remove-note", id }), []);
+  const clearNotes = useCallback(() => dispatch({ type: "clear-notes" }), []);
 
-  const removeNote = useCallback(
-    (id: string) => { if (!running) setNotes((n) => n.filter((x) => x.id !== id)); },
-    [running],
-  );
-
-  const clearNotes = useCallback(() => { if (!running) setNotes([]); }, [running]);
-
-  /** Renders the creator put back into the run (AIO-B). The assembler sends
-   *  only the renders the notes touch and names the rest as NOT SENT; a forced
-   *  one goes in whole, and the stray guard reads the widened scope. Not
-   *  persisted: it is a decision about the NEXT run, and accepting answers it. */
-  const [forceRenders, setForceRenders] = useState<string[]>([]);
-  const toggleForceRender = useCallback(
-    (id: string) => {
-      if (running) return; // rule 2
-      setForceRenders((f) => flip(f, id));
-    },
-    [running],
-  );
-
-  /** Conclusions the creator put back into the run — the same decision about
-   *  the other cut. A held conclusion travels as its id, `useFor` and `leap`
-   *  only, and the blind guard refuses a plan that names it; a forced one goes
-   *  in whole and the guard reads it as visible. */
-  const [forceConclusions, setForceConclusions] = useState<string[]>([]);
-  const toggleForceConclusion = useCallback(
-    (id: string) => {
-      if (running) return; // rule 2
-      setForceConclusions((f) => flip(f, id));
-    },
-    [running],
-  );
+  /** Renders and conclusions the creator put back into the run (AIO-B). The
+   *  assembler sends only what the notes touch; a forced one goes in whole.
+   *  Decisions about the NEXT run: not persisted, and accepting answers them. */
+  const toggleForceRender = useCallback((id: string) => dispatch({ type: "force-render", id }), []);
+  const toggleForceConclusion = useCallback((id: string) => dispatch({ type: "force-conclusion", id }), []);
 
   /** THE ONE BODY a click sends and the preview reads. Built once, here, so
    *  the strip beside the button cannot describe a different payload from the
@@ -286,47 +178,32 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
    *  provider's poll, not this closure, is what ends it, so leaving the step,
    *  reloading or closing the tab changes nothing about the run. */
   const run = useCallback(() => {
-    if (running || startingRef.current || !notes.length || blocked) return;
-    startingRef.current = true;
-    setStarting(true);
-    setLostCandidate(null);
+    if (padReduce(pad, { type: "run", blocked: Boolean(blocked) }) === pad) return;
+    dispatch({ type: "run", blocked: Boolean(blocked) });
 
-    // Frozen at click time, for the one path that stages from here: a run the
-    // server refused before any turn existed.
-    const runNotes = notes;
-    const body = runInput;
-    const base = baseline;
-    const id = `v${accepted.length + 2}`;
-    const c = live.current.ctx;
-    const label = `${runNotes.length} note${runNotes.length === 1 ? "" : "s"}`;
-    const fallback = (why: string) => {
-      setEngineNote(why);
-      setCandidate(recalibrate(base, runNotes, id, Date.now(), c));
-    };
+    const label = `${notes.length} note${notes.length === 1 ? "" : "s"}`;
+    const refused = (why: string) => dispatch({ type: "refused", why, at: Date.now(), ctx: board.current });
 
-    void startRecalibrate(projectId, body)
+    void startRecalibrate(projectId, runInput)
       .then((out) => {
         if (out.ok) {
-          setEngineNote(null);
+          dispatch({ type: "started" });
           track({ turnId: out.turnId, projectId, kind: KIND, label });
           return;
         }
         // The rule working, server-side: another tab or device holds the slot.
         // Watch that turn instead of starting a second one.
         if (out.status === 409 && out.holder) {
+          dispatch({ type: "started" });
           track({ turnId: out.holder, projectId, kind: KIND, label: "recalibration" });
           return;
         }
         // Refused before any turn existed (401, 413, no notes, a missing prompt
         // file): the simulated fallback, with the server's sentence beside it.
-        fallback(out.detail || "The recalibration could not be started.");
+        refused(out.detail || "The recalibration could not be started.");
       })
-      .catch(() => fallback("The recalibration request failed. Nothing was changed."))
-      .finally(() => {
-        startingRef.current = false;
-        setStarting(false);
-      });
-  }, [running, notes, baseline, accepted.length, projectId, track, blocked, runInput]);
+      .catch(() => refused("The recalibration request failed. Nothing was changed."));
+  }, [pad, notes.length, projectId, track, blocked, runInput]);
 
   /** Stop the live turn. On the server: the record says `cancelled` and the
    *  engine's process tree is ended (lib/turns/runner.ts `cancelTurn`). */
@@ -343,18 +220,11 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
    *  an override that outlives the version it describes is worse than none.
    *  Call it explicitly — `onClick={api.accept}` would hand it a MouseEvent. */
   const accept = useCallback(
-    (override?: GateOverride) => {
-      if (!candidate) return;
-      setAccepted((a) => [...a, override ? { ...candidate, override } : candidate]);
-      setCandidate(null);
-      setNotes([]);
-      setForceRenders([]);
-      setForceConclusions([]);
-    },
-    [candidate],
+    (override?: GateOverride) => dispatch({ type: "accept", override, digest: ctx.source.digest }),
+    [ctx.source.digest],
   );
 
-  const discard = useCallback(() => setCandidate(null), []);
+  const discard = useCallback(() => dispatch({ type: "discard" }), []);
 
   const notesFor = useCallback((cardId: string) => notes.filter((n) => n.cardId === cardId), [notes]);
 
@@ -421,6 +291,8 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       /** A candidate that was staged when this project was last closed and is now
        *  gone. Shown once, cleared by the next run. */
       lostCandidate,
+      /** A ledger written on another notebook: held, not applied. */
+      orphan,
     }),
     [
       hydrated,
@@ -447,6 +319,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       toggleForceConclusion,
       ctx.source.conclusions,
       lostCandidate,
+      orphan,
     ],
   );
 }

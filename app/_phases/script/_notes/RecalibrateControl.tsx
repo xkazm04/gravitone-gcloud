@@ -18,7 +18,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Fold, Hint } from "@/components/ui/signal";
+import { Fold, Hint, StaleBadge } from "@/components/ui/signal";
 
 import { RENDERS } from "../renders";
 import { overrideFrom, overrideLineOf, receiptOf } from "../versions";
@@ -289,6 +289,16 @@ export default function RecalibrateControl({
       </div>
       {inert > 0 && (
         <p className="font-jetbrains text-content text-white/35">{inert} will not move a bar</p>
+      )}
+
+      {/* A ledger written on another notebook: held on disk, applied to nothing
+          here, and replaced by this notebook's first note (padState.ts). */}
+      {api.orphan && (
+        <p data-testid="pad-orphan" className="font-jetbrains flex flex-wrap items-center gap-1.5 text-content text-white/40">
+          <StaleBadge words="other notebook" glyph="history" why="written on another notebook; held, not applied" />
+          {api.orphan.accepted} version{api.orphan.accepted === 1 ? "" : "s"} · {api.orphan.notes} note
+          {api.orphan.notes === 1 ? "" : "s"} held
+        </p>
       )}
 
       {/* A candidate is staged, never persisted — accepting is what makes a
