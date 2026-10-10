@@ -86,7 +86,7 @@ import {
   type Layout,
   type Rect,
 } from "./geometry";
-import { startGesture, type Exit } from "./gesture";
+import type { Exit } from "./gesture";
 import { pipelineKeyAction } from "./keymap";
 import { buildVerdicts, requestFor, type Verdicts } from "./moves";
 import type { CanvasStatus, ChoreoState, PipelineHandle, PipelineSkin, Verdict, WaveSample } from "./types";
@@ -832,36 +832,33 @@ function PipelineCanvasImpl({ source, axisId, arm = "stub", skin = DEFAULT_SKIN,
     });
   };
 
-  const pressPan = (e: React.PointerEvent<HTMLDivElement>) => {
+  /**
+   * A PRESS ON THE BACKGROUND TAKES FOCUS AND MOVES NOTHING.
+   *
+   * It used to drag the camera, and the operator's reading was that the whole
+   * board wandering under a stray drag is not a feature — the only thing that
+   * should travel when you pull on it is a CARD. A board that drifts also loses
+   * the one thing the stage and lane heads buy you, which is knowing where you
+   * are without looking.
+   *
+   * Reaching what is off-screen is the wheel's job and already was: a plain
+   * wheel or two-finger scroll moves the board the way it moves any long page,
+   * Shift makes it horizontal, and Ctrl/Cmd zooms (`onWheelEvent` above). None
+   * of that changed; what went is the pointer-drag path into the same camera.
+   *
+   * The FOCUS half stays, and it is not incidental: the viewport carries
+   * `aria-activedescendant`, so a click on the board is how a pointer user hands
+   * themselves the keyboard. `pointerFocus` records that the focus came from a
+   * pointer rather than a Tab, which is what suppresses the focus ring.
+   */
+  const pressBackground = (e: React.PointerEvent<HTMLDivElement>) => {
     const vp = viewportRef.current;
     if (!vp) return;
-    const from = { x: e.clientX, y: e.clientY, cx: camRef.current.x, cy: camRef.current.y };
-    let moved = false;
+    void e;
     camAnim.current?.stop();
     swallow.current = false;
     pointerFocus.current = document.activeElement !== vp;
     vp.focus({ preventScroll: true });
-    const g = startGesture({
-      pointerId: e.pointerId,
-      onMove(ev) {
-        const dx = ev.clientX - from.x;
-        const dy = ev.clientY - from.y;
-        if (!moved) {
-          if (Math.hypot(dx, dy) < 4) return;
-          moved = true;
-          g.engage(vp);
-          vp.dataset.mode = "pan";
-        }
-        setCam({ k: camRef.current.k, x: from.cx + dx, y: from.cy + dy });
-      },
-      onEnd() {
-        delete vp.dataset.mode;
-        if (moved) {
-          swallow.current = true;
-          window.setTimeout(() => (swallow.current = false), 150);
-        }
-      },
-    });
   };
 
   /* ── audition: ONE Audio element for the whole board ────────────────── */
@@ -946,7 +943,7 @@ function PipelineCanvasImpl({ source, axisId, arm = "stub", skin = DEFAULT_SKIN,
     if (t.closest(NODRAG)) return;
     const card = t.closest<HTMLElement>("[data-card]");
     if (card) pressCard(e, card.dataset.card!);
-    else pressPan(e);
+    else pressBackground(e);
   };
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {

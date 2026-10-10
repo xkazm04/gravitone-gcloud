@@ -171,7 +171,11 @@ export const StageHeads = memo(function StageHeads({
   const totals = useMemo(() => columnTotals(layout), [layout]);
   const banded = layout.stages.some((s) => s.banded);
   return (
-    <div className="pointer-events-none absolute top-0 right-0 overflow-hidden" style={{ left: FRAME.left, height: FRAME.top }}>
+    // `right` is the room BoardControls says it needs (--gt-board-gutter, written
+    // by that component from its own measured width). The heads scroll with the
+    // camera and the controls do not, so nothing lays them out relative to each
+    // other; this is how the two stop colliding.
+    <div className="pointer-events-none absolute top-0 overflow-hidden" style={{ left: FRAME.left, right: "var(--gt-board-gutter, 0px)", height: FRAME.top }}>
       {layout.stages.map((s: StageSpan) => {
         const word = names[s.stage] ?? s.stage;
         const total = layout.stageCounts[s.stage];
