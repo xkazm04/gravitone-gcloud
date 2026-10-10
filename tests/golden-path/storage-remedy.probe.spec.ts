@@ -197,3 +197,15 @@ test("[guard] case 8: troubleAnnouncement is unchanged for all six kinds", () =>
   };
   for (const kind of Object.keys(said) as StorageFailure[]) expect(troubleAnnouncement(kind, "script")).toBe(said[kind]);
 });
+
+test("case 9 (wiring): the live bell reads the ledger and the remedy, and dismiss no longer erases the trouble", () => {
+  const s = stripComments(readFileSync(join(process.cwd(), "components/ui/NotificationBell.tsx"), "utf8"));
+  expect(s).toMatch(/from\s+["']\.\/storageRemedy["']/);
+  expect(s).toContain("useTroubleLedger(");
+  expect(s).toContain("remedyFor(");
+  expect(s).toContain("deferTrouble(");
+  expect(s).not.toContain("clearStorageTrouble");
+  // The measured quota is drawn as a Tally, not a sentence.
+  expect(s).toContain("<Tally");
+  expect(s).toMatch(/navigator\.storage\??\.estimate/);
+});
