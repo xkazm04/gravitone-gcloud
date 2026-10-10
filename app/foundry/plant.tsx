@@ -32,7 +32,7 @@ import type { Catalogue, RunSummary } from "@/lib/foundry/types";
 import { extractFileUrl, fetchExtractRun, fetchExtractRuns } from "./extractClient";
 import { fetchCatalogue, fetchRun, fetchStripRun, fetchStripRuns, fetchTrainingCycle, fetchTrainingCycles, fileUrl } from "./foundryClient";
 import { EXTRACT_LIVE, LIVE, STATUS_WORD, runKind } from "./parts";
-import { Dot, TONE_TEXT, type Tone } from "./ui";
+import type { Tone } from "./ui";
 
 // A FIFTH AND A SIXTH TAB, and nothing retires: the operator decided the four
 // engines of the forge coexist with the pipeline board, and Strips landed beside
@@ -158,9 +158,7 @@ export function useRunPreviews(runs: RunSummary[] | null, limit = 8): Record<str
 
 /* ── What each engine is doing, in a line ─────────────────────────────────── */
 
-const plural = (n: number | undefined, one: string, many = `${one}s`) => (n === 1 ? one : many);
-
-interface EngineLine {
+export interface EngineLine {
   tone: Tone;
   pulse?: boolean;
   text: string;
@@ -208,7 +206,10 @@ function stripsLine(runs: StripRunSummary[] | undefined): EngineLine | null {
   return { tone: "neutral", text: runs.length ? `${runs.length} run${runs.length === 1 ? "" : "s"}` : "no strips yet" };
 }
 
-const ENGINE: Record<Tab, { name: string; icon: typeof Flame }> = {
+/** Each station's name and glyph. Exported for ./FoundrySubnav, which draws
+ *  the row; this file keeps the table because `Record<Tab, …>` here is what makes
+ *  tsc name every place a new station has to be answered for. */
+export const ENGINE: Record<Tab, { name: string; icon: typeof Flame }> = {
   cull: { name: "Forge · Cull", icon: Flame },
   extract: { name: "Extract", icon: Pipette },
   styles: { name: "Styles", icon: Palette },
@@ -217,187 +218,44 @@ const ENGINE: Record<Tab, { name: string; icon: typeof Flame }> = {
   strips: { name: "Strips", icon: Clapperboard },
 };
 
-function lines(runs: RunSummary[] | null, plant: Plant): Record<Tab, EngineLine | null> {
+export function engineLines(runs: RunSummary[] | null, plant: Plant): Record<Tab, EngineLine | null> {
   // NULL FOR THE PIPELINE, deliberately. Its figures — cards per stage, how many
   // are at the gate — come from `CanvasStatus`, which does not exist until the
   // canvas has mounted inside the tab. `usePlant` reads three lists and none of
   // them is the pipeline's. A wrong number on a tab rail is worse than no number.
+  //
+  // A FAILED READ IS NOT A LOADING READ, and that distinction now lives here.
+  // It used to live in the station row, which drew no FIGURE for a list that
+  // could not be read — `failed ? [] : allFigures` — so a refusal read as an
+  // absence rather than as the ellipsis of a read still in flight. The row and
+  // its figures are gone (./FoundrySubnav.tsx draws names and a dot), and with
+  // them went the only place that told the two apart: an undefined list and a
+  // refused one both produced no line and therefore no dot. So a refusal gets a
+  // line of its own, in the one tone nothing else here uses. `unreadable` is the
+  // work's word, not the app's: the list was asked for and the answer was no.
+  const refused = (t: "extract" | "catalogue" | "cycles"): EngineLine | null =>
+    plant.failed?.[t] ? { tone: "rose", text: "unreadable" } : null;
   return {
     cull: forgeLine(runs),
-    extract: extractLine(plant.extract),
-    styles: stylesLine(plant.catalogue),
-    dojo: dojoLine(plant.cycles),
+    extract: refused("extract") ?? extractLine(plant.extract),
+    styles: refused("catalogue") ?? stylesLine(plant.catalogue),
+    dojo: refused("cycles") ?? dojoLine(plant.cycles),
     strips: stripsLine(plant.strips),
     pipeline: null,
   };
 }
 
-/** Roving arrows for a hand-built tablist: the same manual-activation rule
- *  TabRail keeps (components/ui/signal/TabRail.tsx) — arrows move focus,
- *  Enter/Space select. */
-function tabKeys(e: React.KeyboardEvent<HTMLElement>) {
-  const list = e.currentTarget.closest('[role="tablist"]');
-  if (!list) return;
-  const tabs = Array.from(list.querySelectorAll<HTMLElement>('[role="tab"]'));
-  const i = tabs.indexOf(e.currentTarget);
-  const to = e.key === "ArrowRight" ? i + 1 : e.key === "ArrowLeft" ? i - 1 : e.key === "Home" ? 0 : e.key === "End" ? tabs.length - 1 : null;
-  if (to === null) return;
-  e.preventDefault();
-  tabs[(to + tabs.length) % tabs.length]?.focus();
-}
-
 /* ── The stations ─────────────────────────────────────────────────────────── */
 
-// ONE ROW, LITERALLY (round 1 of the pipeline exercise). Round 3 claimed "one
-// row tall" and meant one CARD tall: inside it the name and the figures were two
-// stacked lines, so a station stood ~80px and five of them took the top of the
-// page away from the board below — which is what the operator's round-1 verdict
-// on the pipeline canvas named first. Now the four things a station says sit on
-// ONE line in the operator's own order: icon, title, status dot, figures.
+// THE ROW ITSELF MOVED OUT, to ./FoundrySubnav.tsx, and what moved with it was
+// three rounds of trying to make a station carry its own figures: a column with
+// a picture tray (~180px), then one row of glass cards, then one row with two
+// figures and a floor under the name. Each was smaller than the last and each
+// still spent the top of the page on navigation. The operator's answer was to
+// stop designing it — the app header already draws "which place am I in", and
+// these are the same kind of thing one level down.
 //
-// The picture tray is GONE, and that reverses a round-2 decision deliberately.
-// It was why this direction was picked then; on one line it is what the figures
-// were losing their width to, and a station whose numbers are cut mid-glyph has
-// stopped being navigation. The pictures are not lost — every engine's own tab
-// opens on its output, larger than a 48px thumb ever showed it.
+// What stays here is the DATA behind that row: `ENGINE` (name and glyph) and
+// `engineLines()` (each station's one live fact). Both are `Record<Tab, …>` on
+// purpose, so tsc names every place a new station must be answered for.
 
-export function PipelineHeader({
-  tab,
-  onSelect,
-  runs,
-  plant,
-}: {
-  tab: Tab;
-  onSelect: (t: Tab) => void;
-  runs: RunSummary[] | null;
-  plant: Plant;
-}) {
-  const ln = lines(runs, plant);
-  const cat = plant.catalogue;
-
-  const station = (t: Tab, allFigures: { n: number | undefined; label: string; tone?: Tone }[], failed = false) => {
-    // A list that could not be read draws no figure (see usePlant), never a bare `…`.
-    // TWO FIGURES, ACTIONABLE FIRST, and the number is measured rather than
-    // chosen: at 1920px a station has about 276px for its name and its figures,
-    // "Forge · Cull" takes 100 of it, and three figures ("6 runs · 3 to cull ·
-    // 20 kept") want 254 more. Photographed, the third ran through the card's
-    // edge and printed over the station beside it. A toned figure is one that
-    // wants something — `to cull`, `at the gate`, `proven` — so those are the
-    // ones kept when only two fit, and the plain total is what gives way. The
-    // original order survives, because a station whose figures reorder as the
-    // numbers change is a station nobody can read at a glance.
-    const picked = failed ? [] : allFigures;
-    const wanted = picked.filter((f) => f.tone);
-    const keep = new Set([...wanted, ...picked.filter((f) => !f.tone)].slice(0, 2));
-    const figures = picked.filter((f) => keep.has(f));
-    const on = t === tab;
-    const E = ENGINE[t];
-    const l = ln[t];
-    return (
-      <button
-        key={t}
-        type="button"
-        role="tab"
-        aria-selected={on}
-        tabIndex={on ? 0 : -1}
-        data-testid={`foundry-tab-${t}`}
-        onClick={() => onSelect(t)}
-        onKeyDown={tabKeys}
-        className={`group relative flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-2xl border px-3.5 py-2 text-left backdrop-blur-[14px] transition focus-visible:outline-2 focus-visible:outline-offset-2 ${
-          on
-            ? "border-cyan-400/45 bg-gradient-to-b from-cyan-400/[0.10] to-cyan-400/[0.02] shadow-[0_0_0_1px_var(--gt-ring-cyan),var(--gt-shadow-glow)]"
-            : "border-white/8 bg-gradient-to-b from-white/[0.05] to-white/[0.015] hover:border-white/15"
-        }`}
-      >
-        <span className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden">
-          <E.icon aria-hidden className={`h-4 w-4 shrink-0 ${on ? "text-cyan-200" : "text-white/50"}`} />
-          {/* A FLOOR ON THE NAME, because the cut before this one let it reach
-              zero: the Forge station rendered as an icon, a dot and figures with
-              no word at all, and the Dojo's read `D…`. A figure clipped at the
-              card's edge is a number you can still mostly read; a name clipped
-              to nothing is a station you have to hover to identify. 4.5rem is
-              about seven characters — enough for "Forge ·…", "Extract", "Dojo". */}
-          <span className={`font-instrument min-w-[4.5rem] truncate text-content ${on ? "text-white" : "text-white/85"}`}>{E.name}</span>
-          {l && <Dot tone={l.tone} pulse={l.pulse} />}
-          {/* THE TITLE GIVES UP ITS WIDTH, NOT THE FIGURES — and the pictures gave
-              up the row. Two cuts of this were photographed before it fit. With
-              `shrink-0` on the name the figures were squeezed to about 135px and
-              cut MID-GLYPH: the Forge station read `Forge · Cull ● ( : : g`,
-              which is not a truncated figure, it is rubbish. Reversing it made
-              the figures whole and pushed them straight through the card's edge,
-              over the thumbnails and into the next station. Neither is a layout
-              bug — five stations across 1920px simply have no room for a name, a
-              dot, three figures AND three 16:9 thumbnails, and the operator's
-              round-1 list for this row is title, icon, status dot, data stats.
-              The thumbnails are what the data was losing to, so they went; each
-              engine's own tab shows its output at a size worth looking at. */}
-          <span className="font-jetbrains flex min-w-0 items-baseline gap-x-3 overflow-hidden text-label whitespace-nowrap">
-            {figures.map((f) => (
-              <span key={f.label} className="text-white/45">
-                <span className={`tabular-nums ${f.tone ? TONE_TEXT[f.tone] : "text-white/85"}`}>{f.n ?? "…"}</span> {f.label}
-              </span>
-            ))}
-            {/* The engine's line only when it says something the figures do
-                not: a run in motion. A parked count is already a figure. */}
-            {l?.pulse && <span className={`truncate ${TONE_TEXT[l.tone]}`}>{l.text}</span>}
-          </span>
-        </span>
-      </button>
-    );
-  };
-
-  const arrow = (
-    <span aria-hidden className="hidden shrink-0 items-center self-center lg:flex">
-      <span className="h-px w-5 bg-gradient-to-r from-white/10 to-cyan-300/50" />
-      <span className="h-0 w-0 border-y-[5px] border-l-[7px] border-y-transparent border-l-cyan-300/60" />
-    </span>
-  );
-
-  const proven = cat?.styles.filter((s) => s.status === "proven").length;
-  const kept = runs?.reduce((a, r) => a + r.kept, 0);
-  const toCull = runs?.filter((r) => ["ready", "inc"].includes(runKind(r.status))).length;
-  const exToCull = plant.extract?.filter((r) => r.status === "done").length;
-  const found = plant.extract?.reduce((a, r) => a + r.styles, 0);
-  const parked = plant.cycles?.filter((c) => c.status === "awaiting-gate").length;
-  const toTriage = plant.strips?.filter((r) => r.status === "awaiting-triage").length;
-  const stripsKept = plant.strips?.reduce((a, r) => a + r.kept, 0);
-  return (
-    <div role="tablist" aria-label="foundry stations" className="flex flex-col gap-3 lg:flex-row lg:items-stretch">
-      {station(
-        "extract",
-        [
-          { n: plant.extract?.length, label: plural(plant.extract?.length, "run") },
-          { n: exToCull, label: "to cull", tone: exToCull ? "amber" : undefined },
-          { n: found, label: plural(found, "style") + " found" },
-        ],
-        plant.failed?.extract,
-      )}
-      {arrow}
-      {station("styles", [{ n: cat?.styles.length, label: plural(cat?.styles.length, "style") }, { n: proven, label: "proven", tone: proven ? "emerald" : undefined }], plant.failed?.catalogue)}
-      {arrow}
-      {station(
-        "cull",
-        [
-          { n: runs?.length, label: plural(runs?.length, "run") },
-          { n: toCull, label: "to cull", tone: toCull ? "amber" : undefined },
-          { n: kept, label: "kept", tone: kept ? "emerald" : undefined },
-        ],
-      )}
-      <span aria-hidden className="mx-1 hidden w-px self-stretch bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
-      {station("dojo", [{ n: plant.cycles?.length, label: plural(plant.cycles?.length, "cycle") }, { n: parked, label: "at the gate", tone: parked ? "amber" : undefined }], plant.failed?.cycles)}
-      {station(
-        "strips",
-        [
-          { n: plant.strips?.length, label: plural(plant.strips?.length, "run") },
-          { n: toTriage, label: "to triage", tone: toTriage ? "amber" : undefined },
-          { n: stripsKept, label: "kept", tone: stripsKept ? "emerald" : undefined },
-        ],
-        plant.failed?.strips,
-      )}
-      <span aria-hidden className="mx-1 hidden w-px self-stretch bg-gradient-to-b from-transparent via-white/12 to-transparent lg:block" />
-      {/* No figures: see `lines()` above. The station is the name, the icon and
-          whether it is the open tab. */}
-      {station("pipeline", [])}
-    </div>
-  );
-}

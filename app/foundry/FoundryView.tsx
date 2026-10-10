@@ -60,8 +60,9 @@ import { useRemembered } from "@/lib/useRemembered";
 
 import { CullGrid } from "./CullGrid";
 import { Lightbox } from "./Lightbox";
-import PipelineTab from "./PipelineTab";
-import { PipelineHeader, usePlant, useRunPreviews, type Tab } from "./plant";
+import FoundrySubnav from "./FoundrySubnav";
+import PipelineTab, { MEDIA, type MediaId } from "./PipelineTab";
+import { engineLines, usePlant, useRunPreviews, type Tab } from "./plant";
 import { ForgeEmpty, RunBar, RunStrip } from "./RunCards";
 import { commitRun, fetchRun, fetchRuns, previewCommit, saveVerdicts } from "./foundryClient";
 import { COMMITTABLE, LIVE, STATUS_WORD } from "./parts";
@@ -147,6 +148,7 @@ export default function FoundryView() {
   // record). The cull's own state still loads underneath — its runs feed the
   // header's figures whichever station is in front.
   const [tab, setTab] = useRemembered<Tab>("foundry.tab", "cull", TABS);
+  const [media, setMedia] = useState<MediaId>("articles");
   const plant = usePlant();
   const [runs, setRuns] = useState<RunSummary[] | null>(null);
   const [runsError, setRunsError] = useState<string | null>(null);
@@ -452,7 +454,16 @@ export default function FoundryView() {
       <main tabIndex={-1} className="pb-36">
         <h1 className="sr-only">Foundry</h1>
         <header className="pt-2">
-          <PipelineHeader tab={tab} onSelect={selectTab} runs={runs} plant={plant} />
+          {/* THE MEDIA CHOICE LIVES HERE, not in the tab, because the row that
+              shows it is this view's. It is the same kind of question as the
+              station beside it — which body of work am I looking at — and
+              hoisting it is what let the Pipeline's own top bar be deleted. */}
+          <FoundrySubnav
+            tab={tab}
+            onSelect={selectTab}
+            lines={engineLines(runs, plant)}
+            media={tab === "pipeline" ? { value: media, options: MEDIA, onChange: setMedia } : undefined}
+          />
         </header>
 
         <section role="tabpanel" aria-label={tab} className="mt-4">
@@ -467,7 +478,7 @@ export default function FoundryView() {
             // Suspense boundary for it (./PipelineTab.tsx), which is why
             // app/foundry/page.tsx still needs none: the boundary sits around
             // the one component that reads a param, not around the view.
-            <PipelineTab />
+            <PipelineTab media={media} />
           ) : tab === "strips" ? (
             <StripsView />
           ) : (

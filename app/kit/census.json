@@ -482,7 +482,6 @@
         "app/board/parts.tsx",
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/ExtractView.tsx",
-        "app/foundry/PipelineTab.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/Playground.tsx",
         "app/playground/arrange/Board.tsx",
@@ -823,7 +822,6 @@
         "app/_phases/script/trailer/WithholdingPanel.tsx",
         "app/_projects/ProjectDialog.tsx",
         "app/articles/new/NewArticle.tsx",
-        "app/foundry/PipelineTab.tsx",
         "app/library/LibraryAtelier.tsx"
       ]
     },
@@ -1048,7 +1046,6 @@
         "app/calendar/MetricsTab.tsx",
         "app/foundry/DojoView.tsx",
         "app/foundry/ExtractView.tsx",
-        "app/foundry/PipelineTab.tsx",
         "app/foundry/RunCards.tsx",
         "app/foundry/StripGrid.tsx",
         "app/foundry/StripsView.tsx",
@@ -1255,7 +1252,6 @@
         "app/articles/new/NewArticle.tsx",
         "app/board/shared.tsx",
         "app/calendar/Composer.tsx",
-        "app/foundry/PipelineTab.tsx",
         "app/playground/triage/Batch.tsx",
         "app/playground/triage/Strengths.tsx"
       ]
@@ -1836,7 +1832,7 @@
     "app/foundry": {
       "files": 40,
       "kitImports": 5,
-      "signalImports": 13,
+      "signalImports": 12,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1848,18 +1844,16 @@
         "Pager",
         "PipRow",
         "Provenance",
-        "Segmented",
         "StackBar",
         "TALLY_TONE",
         "Tally",
         "TextArea",
         "TextInput",
-        "components/ui/Select#Select",
         "useRoving",
         "useWindow"
       ],
       "suspects": {
-        "tab": 1,
+        "tab": 0,
         "select": 0,
         "media": 2,
         "title": 1,
@@ -1874,9 +1868,6 @@
         },
         "app/foundry/pipelineModals.tsx": {
           "media": 1
-        },
-        "app/foundry/plant.tsx": {
-          "tab": 1
         }
       }
     },

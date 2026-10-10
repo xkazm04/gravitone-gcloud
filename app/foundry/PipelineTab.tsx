@@ -63,23 +63,17 @@
 
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
-import { Maximize2, Minimize2, Unplug } from "lucide-react";
 
-import { Segmented } from "@/components/ui/Field";
-import { Select, type SelectOption } from "@/components/ui/Select";
-import { Hint, Tally } from "@/components/ui/signal";
+import type { SelectOption } from "@/components/ui/Select";
 import { useAnnounce } from "@/lib/announcer";
 import { typing } from "@/lib/board/keys";
 
 import { refusedKey } from "./keyGuard";
-import { RUN_COST_HINT } from "@/lib/articles/types";
 import {
-  CANON_STAGES,
   type CanonStage,
   type MoveRequest,
   type MoveResult,
   type PipelineEntry,
-  type PipelineLoadNotes,
   type PipelineSource,
 } from "@/lib/board/pipeline";
 import { makeArticlesSource } from "@/lib/board/sources/articles";
@@ -87,16 +81,23 @@ import { makeAudioSource } from "@/lib/board/sources/audio";
 
 import { PIPELINE_ARM_KEY } from "@/lib/identityEviction";
 
-import { PipelineCanvas, STAGE_TONE, type CanvasStatus, type PipelineHandle } from "./pipeline";
+import { PipelineCanvas, type CanvasStatus, type PipelineHandle } from "./pipeline";
+import BoardControls from "./pipeline/BoardControls";
 import { ledger } from "./pipeline/skins";
 import { DetailModal, DispatchConfirm, ReworkNote, type Arm, type OfferedMove } from "./pipelineModals";
 import { Glass, Label, Loading } from "./ui";
 
 /* ── the two media ────────────────────────────────────────────────────────── */
 
-type MediaId = "articles" | "audio";
+/** How much bigger full screen draws everything. ~20%: enough to read the board
+ *  from further back, small enough that a lane of cards still fits the width it
+ *  fitted before. Applied to the camera (content) and to the two type tokens
+ *  (chrome) — see the note on `full` below. */
+const FULL_SCALE = 1.2;
 
-const MEDIA: ReadonlyArray<{ id: MediaId; label: string }> = [
+export type MediaId = "articles" | "audio";
+
+export const MEDIA: ReadonlyArray<{ id: MediaId; label: string }> = [
   { id: "articles", label: "Articles" },
   { id: "audio", label: "Audio" },
 ];
@@ -164,74 +165,6 @@ function armSource(base: PipelineSource, onStub: (wouldCall: string) => void): P
 
 /* ── the status strip ─────────────────────────────────────────────────────── */
 
-/**
- * The four canon stages with what the last load said about each of them.
- *
- * THIS IS WHERE `notes.degraded` LANDS. The canvas draws the in-world column
- * heads from `layout` and `skin.stageLabel` alone (app/foundry/pipeline/Frame.tsx
- * `StageHeads`) and has no slot for a per-stage note, so the shell's own stage
- * cells are the column as the shell can draw it. The reason is rendered
- * VERBATIM on the cell it names: an empty `proposed` column with no reason
- * reads as "no topics to write about" when the truth is "nobody could ask".
- *
- * `degraded` is amber, never rose. The load SUCCEEDED; a stage whose upstream is
- * absent is a limit, not a failure — the same call `StaleBadge` makes.
- */
-function StageStrip({
-  counts,
-  notes,
-  word,
-}: {
-  counts: Readonly<Record<CanonStage, number>>;
-  notes: PipelineLoadNotes | null;
-  word: (s: CanonStage) => string;
-}) {
-  // ONLY THE STAGES WITH SOMETHING THE BOARD CANNOT SAY. This was a permanent
-  // four-up grid of dot + word + count, and the canvas draws a dot, the same
-  // word and the same count across the top of the board itself (Frame.tsx
-  // `StageHeads`). Photographed side by side, the two rows sat directly on top
-  // of each other saying PROPOSED 20 / RUNNING 0 / GATE 9 / SETTLED 0 twice, for
-  // about 110px of the board's height — and round 1's complaint was that the
-  // board had no height. The counts stay where they are anchored to the columns
-  // they count; what is left here is what the heads have no room for and no way
-  // to say: a stage whose upstream is DOWN, and rows a load deliberately did not
-  // draw. Both are silent when there is nothing wrong, which is most of the time.
-  const flagged = CANON_STAGES.map((s) => ({
-    s,
-    down: notes?.degraded?.find((d) => d.stage === s) ?? null,
-    hidden: notes?.hidden.filter((h) => h.stage === s) ?? [],
-  })).filter((r) => r.down || r.hidden.length > 0);
-  if (flagged.length === 0) return null;
-  return (
-    <div className="grid gap-2 sm:grid-cols-2">
-      {flagged.map(({ s, down, hidden }) => {
-        const tone = STAGE_TONE[s];
-        return (
-          <div key={s} className={`flex min-w-0 flex-col gap-1.5 rounded-xl border px-3 py-2 ${down ? "border-amber-300/35 bg-amber-300/[0.05]" : tone.cell}`}>
-            <div className="flex items-center gap-2">
-              <span aria-hidden className={`h-2 w-2 shrink-0 rounded-full ${tone.dot}`} />
-              <span className={`font-jetbrains text-label tracking-[0.12em] uppercase ${tone.head}`}>{word(s)}</span>
-              <span className="ml-auto flex items-center gap-1.5">
-                <Tally value={counts[s]} tone={s === "gate" && counts[s] > 0 ? "amber" : "neutral"} label={s === "gate" ? "yours" : undefined} />
-                {hidden.map((h) => (
-                  <Tally key={h.why} label="hidden" value={h.count} tone="amber" hint={<Hint tone="amber">{h.why}</Hint>} />
-                ))}
-              </span>
-            </div>
-            {down && (
-              <div className="flex items-start gap-2 border-t border-amber-300/25 pt-1.5">
-                <Unplug aria-hidden className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
-                <span className="font-jetbrains min-w-0 text-label break-words text-amber-100/90" data-testid={`pipeline-degraded-${s}`}>
-                  {down.reason}
-                </span>
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 /* ── the mount counter ────────────────────────────────────────────────────── */
 
@@ -303,11 +236,20 @@ function CanvasMount({ children }: { children: React.ReactNode }) {
 // directions; with one direction there is no parameter to read, nothing in this
 // subtree suspends, and a boundary whose only job is gone is a fallback nobody
 // will ever see keeping a `Loading` import alive.
-export default function PipelineTab() {
-  return <PipelineShell />;
+export default function PipelineTab({ media }: { media: MediaId }) {
+  // KEYED ON THE MEDIA, so switching it REMOUNTS this shell. Everything the old
+  // medium left behind goes with it — an axis the next adapter may not offer, a
+  // status read off the old board, an open detail and an order aimed at an item
+  // the new source has never heard of. The alternative was four `setState` calls
+  // in an effect keyed on the prop, which `react-hooks/set-state-in-effect`
+  // refuses and is right to: that is a remount spelled by hand, one state at a
+  // time, and the one somebody forgets to add is the stale one. A remount per
+  // media switch is also exactly what WP4a measured and allowed — once per
+  // switch, never per render (`__gtPipelineMounts`).
+  return <PipelineShell key={media} media={media} />;
 }
 
-function PipelineShell() {
+function PipelineShell({ media }: { media: MediaId }) {
   const announce = useAnnounce();
 
   /* sources: constructed ONCE each. The canvas memoises on source identity and
@@ -315,7 +257,6 @@ function PipelineShell() {
   const articles = useMemo(() => makeArticlesSource(), []);
   const audio = useMemo(() => makeAudioSource(), []);
 
-  const [media, setMedia] = useState<MediaId>("articles");
   const [arm, setArm] = useState<Arm>(currentArm);
   const [axisPick, setAxisPick] = useState<string | null>(null);
   const [status, setStatus] = useState<CanvasStatus | null>(null);
@@ -343,14 +284,6 @@ function PipelineShell() {
   const axes = source.groupAxes;
   const axisId = axes.some((a) => a.id === axisPick) ? axisPick! : axes[0].id;
 
-  const pickMedia = (m: MediaId) => {
-    if (m === media) return;
-    setMedia(m);
-    setAxisPick(null);
-    setStatus(null);
-    setOpen(null);
-    setOrder(null);
-  };
 
   /* ── the deliberate move ────────────────────────────────────────────────── */
 
@@ -389,13 +322,27 @@ function PipelineShell() {
   // should, and until it does this is the seam.
   const boardRef = useRef<HTMLDivElement>(null);
   const boardH = useFillHeight(boardRef);
-  // FULL SCREEN with PROMOTED TYPE, both from round 1: a larger screen should buy
-  // board, and the type should grow with it. The promotion is +1px on the two
-  // scale tokens and nothing else — `--text-label` 16→17, `--text-content` 18→19
-  // — so every `text-label` and `text-content` under this root moves together and
-  // not one className changes. Writing sizes into the markup instead would mean
-  // an arbitrary size per element, which is what `npm run check:type` exists to
-  // stop and what the 631 hand-tuned sizes of 2026-08-28 actually were.
+  // FULL SCREEN BUYS SIZE, NOT JUST AREA — and the first cut of it only bought
+  // area. Filling the screen gave the board 173 more pixels of height and left
+  // every card and every label exactly as big as they were at a third of the
+  // width, which is a bigger spreadsheet rather than a better one. A wider
+  // screen should be legible from further away.
+  //
+  // So full screen scales BOTH halves by `FULL_SCALE`, and they are two
+  // mechanisms because the board has two coordinate systems:
+  //
+  //   the CONTENT rides the camera. The world is one element under
+  //   `translate3d(x,y,0) scale(k)`, so a card and the type inside it scale
+  //   together with `k` — one `zoomBy` is the whole of it, and nothing in the
+  //   skin or the layout has to know.
+  //
+  //   the CHROME is in screen space — the stage heads, the lane heads, these
+  //   controls — and does not ride the camera by design (a head that scaled
+  //   with the board would stop being a fixed reference). It moves by
+  //   redefining the two scale tokens on this root, so every `text-label` and
+  //   `text-content` under it grows together and not one className changes.
+  //   Writing sizes into the markup instead would mean an arbitrary size per
+  //   element, which is what `npm run check:type` exists to stop.
   const [full, setFull] = useState(false);
   const closeOrder = useCallback(() => {
     setOrder(null);
@@ -431,7 +378,6 @@ function PipelineShell() {
   // by a guard here. An effect EVENT, so the only dependency is the identity
   // string — the arrays are rebuilt every render and would re-fire on each one.
   const degraded = status?.notes?.degraded ?? [];
-  const damaged = status?.notes?.damaged ?? [];
   const degradedKey = degraded.map((d) => `${d.stage}:${d.reason}`).join("|");
   const sayDegraded = useEffectEvent(() => {
     for (const d of status?.notes?.degraded ?? []) announce({ key: `pipeline-degraded:${d.stage}:${d.reason}`, text: `${d.stage}: ${d.reason}` });
@@ -445,6 +391,18 @@ function PipelineShell() {
   // (app/foundry/pipeline/keymap.ts) — and a second listener taking it would
   // collapse the board and clear the selection on one press. `f` is free: the
   // canvas's keymap returns null for it.
+  // THE CAMERA FOLLOWS THE FLAG, in an effect rather than in each of the two
+  // callers that can flip it (the key and the button), so the two cannot drift
+  // and a flip from anywhere else later is covered for free. `skip` holds the
+  // first run: on mount `full` is false and there is nothing to undo, and
+  // zooming out by a factor nobody zoomed in by would shrink the opening frame.
+  const zoomed = useRef(false);
+  useEffect(() => {
+    if (zoomed.current === full) return;
+    zoomed.current = full;
+    api.current?.zoomBy(full ? FULL_SCALE : 1 / FULL_SCALE);
+  }, [full]);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       // `refusedKey` FIRST, and it is the board's own guard rather than a second
@@ -470,7 +428,6 @@ function PipelineShell() {
   /* ── render ─────────────────────────────────────────────────────────────── */
 
   const word = useCallback((s: CanonStage) => ledger.stageLabel?.[s] ?? s, []);
-  const choreo = status?.choreo;
   const axisOptions: SelectOption<string>[] = axes.map((a) => ({ value: a.id, label: a.label }));
   const detailActions = offers.map((o) => (
     <button
@@ -489,77 +446,18 @@ function PipelineShell() {
   return (
     <div
       className={`flex flex-col gap-3 ${full ? "fixed inset-0 z-40 overflow-y-auto bg-[var(--gt-ink)] p-3" : ""}`}
-      style={full ? ({ "--text-label": "1.0625rem", "--text-content": "1.1875rem" } as React.CSSProperties) : undefined}
+      style={full ? ({ "--text-label": `${FULL_SCALE}rem`, "--text-content": `${1.125 * FULL_SCALE}rem` } as React.CSSProperties) : undefined}
     >
       {/* ── the top bar ─────────────────────────────────────────────────── */}
-      {/* `relative z-20`, AND IT IS THE DROPDOWN'S FIX. `Select` opens its listbox
-          as an absolutely-positioned child with `z-50`, which only ever ranks it
-          INSIDE the nearest stacking context — and `Glass` draws a backdrop
-          blur, which creates one. So the listbox was confined to this bar, the
-          board is a later sibling, and the half of the options that hung below
-          the bar was painted over by the board: photographed, the fourth option
-          had "PROPOSED 20" showing through it. Raising the bar itself lifts the
-          whole context over the board. 20 stays well under `Modal` and
-          `ContextMenu` (both fixed z-50), which must still cover this.
+      {/* NO TOP BAR. Three rows stood between the page title and the board —
+          the station rail, this bar, and a strip of stage counts — and the
+          operator cut all three. The media choice went up to the foundry
+          submenu, the arm, the group and the counters went INTO the board
+          (./pipeline/BoardControls.tsx), and the stage counts were already
+          drawn across the top of the canvas by its own heads, one row above
+          themselves. What is left here is what cannot be drawn on a board:
+          a load that failed outright. */}
 
-          `items-end` is the second half: `Segmented` draws a label above its
-          row of pills and `Select` carries its label inside the trigger, so
-          centring them put the group pill half a row higher than everything it
-          sits beside. Aligning the bottoms makes one line of controls. */}
-      <Glass className="relative z-20 flex flex-wrap items-end gap-x-5 gap-y-3 px-4 py-3">
-        <Segmented label="media" value={media} options={MEDIA.map((m) => ({ id: m.id, label: m.label }))} onChange={pickMedia} />
-
-        <Select label="group" value={axisId} onChange={setAxisPick} options={axisOptions} minWidth={180} testId="pipeline-axis" />
-
-        <Segmented
-          label="arm"
-          value={arm}
-          options={[
-            { id: "stub", label: "STUB" },
-            { id: "live", label: `LIVE · $${RUN_COST_HINT.usdLow}–${RUN_COST_HINT.usdHigh} · ${RUN_COST_HINT.turnsLow}–${RUN_COST_HINT.turnsHigh} turns` },
-          ]}
-          onChange={flipArm}
-        />
-        {/* WHAT THE ARM COVERS, and it is the work rather than narration: the
-            engine's own drag-confirm sets `live: true` itself
-            (app/foundry/pipeline/MovePrompt.tsx:70), so without `armSource` a
-            dragged confirm would spend whatever this switch said. */}
-        <Hint tone="amber" label="what the arm covers">every write passes this arm, dragged or ordered</Hint>
-
-        <span className="ml-auto flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setFull((v) => !v)}
-            aria-pressed={full}
-            aria-label={full ? "Leave full screen" : "Fill the screen"}
-            data-testid="pipeline-full"
-            className="font-jetbrains flex cursor-pointer items-center gap-2 rounded-full border border-white/15 px-3 py-1.5 text-label text-white/75 transition hover:border-cyan-300/50 hover:text-cyan-200 focus-visible:outline-2 focus-visible:outline-offset-2 aria-pressed:border-cyan-400/45 aria-pressed:text-cyan-200"
-          >
-            {full ? <Minimize2 aria-hidden className="h-4 w-4" /> : <Maximize2 aria-hidden className="h-4 w-4" />}
-            {/* The cap, not a <Keycaps>: that one renders a <Hint>, which is a
-                disclosure button, and a button cannot contain a button. A key and
-                its control is the whole binding here, so there is no table to
-                open. */}
-            <kbd aria-hidden className="font-jetbrains rounded border border-white/15 px-1 text-label text-white/55">F</kbd>
-          </button>
-          <Tally label="cards" value={status?.total ?? 0} />
-          <Tally label="drawn" value={status?.mounted ?? 0} />
-          {(status?.selected ?? 0) > 0 && <Tally label="picked" value={status!.selected} tone="cyan" />}
-          {choreo?.reason === "cap" && <Tally value={choreo.visible} of={choreo.cap} tone="amber" label="choreo" />}
-          {damaged.length > 0 && <Tally label="damaged" value={damaged.length} tone="rose" hint={<Hint tone="rose">{damaged.join(" · ")}</Hint>} />}
-          {stub && (
-            <span className="flex items-center gap-2">
-              <Tally label="dry" value={stub.n} tone="amber" />
-              <span className="font-jetbrains max-w-[22rem] truncate text-label text-amber-100/80" data-testid="pipeline-would-call">
-                {stub.wouldCall}
-              </span>
-            </span>
-          )}
-        </span>
-      </Glass>
-
-      {/* ── the columns, as the shell can draw them ─────────────────────── */}
-      {status && <StageStrip counts={status.counts} notes={status.notes} word={word} />}
       {status?.loading && !status.total && <Loading label="reading the pipeline" />}
       {status?.error && (
         <Glass className="px-4 py-3">
@@ -585,6 +483,18 @@ function PipelineShell() {
             onStatus={setStatus}
             apiRef={api}
             className="absolute inset-0"
+          />
+          <BoardControls
+            arm={arm}
+            onArm={flipArm}
+            axisId={axisId}
+            axisOptions={axisOptions}
+            onAxis={setAxisPick}
+            status={status}
+            stub={stub}
+            full={full}
+            onFull={() => setFull((v) => !v)}
+            word={word}
           />
         </CanvasMount>
       </div>
