@@ -254,7 +254,8 @@ nrow = next(l for l in out[i:] if l.startswith("| n |"))
 assert [c.strip() for c in nrow.strip("|").split("|")][1:4] == ["3", "3", "3"], nrow
 for lane in ("baseline", "reference", "reference-face-e25"):
     assert any(lane + "--01-wide.png" in l and "dictated+confirmed" in l for l in out), lane
-late = [l for l in out if "reference-face-late--01-wide.png" in l]
+sec2 = out[i:next((k for k in range(i + 1, len(out)) if out[k].startswith("## ")), len(out))]
+late = [l for l in sec2 if "reference-face-late--01-wide.png" in l]
 assert late and all("unscored" in l for l in late), late
 comp = [l for l in out if l.lower().startswith("generator compliance")]
 assert comp and "1" in comp[0] and "reference-face-only--01-wide.png" in comp[0], comp

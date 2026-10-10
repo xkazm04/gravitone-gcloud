@@ -48,6 +48,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+import craft_spec  # noqa: E402
 import guard  # noqa: E402
 import lane_record  # noqa: E402
 
@@ -81,27 +82,37 @@ LOCATION = (
 # hard. Those three matched easily and the match meant almost nothing. A
 # trailer cuts between camera *positions*, so each setup below moves the camera
 # to somewhere the others cannot see from.
+#
+# Each entry is (name, clause, labels). The labels (craft_spec.LABELS) name the
+# schema value each phrase of the clause dictates; the clause is never rebuilt
+# from them, because a reworded clause moves the pixels under the fixed seed.
 SHOTS_SPEC = [
     ("01-wide", "Extreme wide shot from the far end of the hangar, the figure small and "
                 "off-centre in the lower third of the frame, dwarfed by the roof structure, "
-                "seen from behind a foreground crate. Low camera near the floor. Deep focus."),
+                "seen from behind a foreground crate. Low camera near the floor. Deep focus.",
+     craft_spec.LABELS["shots"]["01-wide"]),
     ("02-medium", "Medium shot from her right side, profile to three-quarter, cut at the waist, "
                   "the rusted wall close behind her and the light shaft out of frame. "
-                  "Camera slightly above eye level looking down."),
+                  "Camera slightly above eye level looking down.",
+     craft_spec.LABELS["shots"]["02-medium"]),
     ("03-close", "Tight close-up from her left, low angle looking up at her face against the "
                  "torn roof and open sky, the shaft of light blown out behind her head. "
-                 "Shallow focus."),
+                 "Shallow focus.",
+     craft_spec.LABELS["shots"]["03-close"]),
 ]
 
 # Kept from the first run, where the three setups differed only in focal length.
 # Reported separately: it is the easy version of the same question.
 ZOOM_SPEC = [
     ("01-wide", "Wide shot. She stands small against the height of the hangar, full body visible, "
-                "the shaft of light behind her. Camera at eye level, deep focus."),
+                "the shaft of light behind her. Camera at eye level, deep focus.",
+     craft_spec.LABELS["zoom"]["01-wide"]),
     ("02-medium", "Medium shot, cut at the waist. She turns her head toward the light, "
-                  "one hand resting on a crate. Camera at eye level."),
+                  "one hand resting on a crate. Camera at eye level.",
+     craft_spec.LABELS["zoom"]["02-medium"]),
     ("03-close", "Close-up of her face filling the frame, three-quarter angle, "
-                 "the shaft of light raking one cheek. Shallow focus."),
+                 "the shaft of light raking one cheek. Shallow focus.",
+     craft_spec.LABELS["zoom"]["03-close"]),
 ]
 
 HERO = ("Neutral three-quarter portrait, plain mid-grey studio background, flat even light, "
@@ -295,8 +306,9 @@ def run_lane(lane, **overrides):
         refs = [stage_reference(hero_path)] * params["ref_count"]
         print(f"  referencing {len(refs)} copy/copies of the hero still")
 
+    spec_set = "zoom" if params["zoom"] else "shots"
     spec = ZOOM_SPEC if params["zoom"] else SHOTS_SPEC
-    for name, clause in spec:
+    for name, clause, labels in spec:
         dest = out / f"{name}.png"
         prompt = prompt_for(clause)
         if dest.exists():
@@ -309,7 +321,11 @@ def run_lane(lane, **overrides):
                                      steps=steps, prefix=f"{lane}-{name}", late=late))
         shutil.copyfile(src, dest)
         lane_record.write_shot(out, name, dest, prompt,
-                               steps=steps, seed=seed, late=late, prefix=f"{lane}-{name}")
+                               steps=steps, seed=seed, late=late, prefix=f"{lane}-{name}",
+                               spec_digest=craft_spec.digest(labels))
+        # Beside the shot, named for the lane, so probe.py's "<lane>--<shot>"
+        # row finds it and three lanes' 01-wide never share one truth.
+        craft_spec.write_sidecar(out, name, spec_set, seed=seed)
         print(f"  {name}: {time.time() - t:.0f}s -> {dest}")
 
     rec = lane_record.read(out) if lane_json_path.exists() else {}
