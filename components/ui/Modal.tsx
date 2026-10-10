@@ -29,6 +29,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
+import { useLayer } from "./layers";
 import { WorldProvider, portalWorld, useWorld, useWorldScoped } from "./world";
 
 /**
@@ -86,6 +87,38 @@ function restoreFocus(opener: Element | null): void {
   main.focus({ preventScroll: true });
 }
 
+/**
+ * Focus trap: Tab must not walk out of the dialog into the page behind it,
+ * which is the difference between a modal and a decorative overlay. The layer
+ * stack calls this for the TOP modal only.
+ */
+function trapTab(panel: HTMLElement | null, e: KeyboardEvent): void {
+  if (e.key !== "Tab" || !panel) return;
+  // The disabled guard has to cover every control type, not just buttons.
+  // This selector read `button:not([disabled]),input,select,textarea`, so a
+  // disabled input — or an `input[type="hidden"]`, which matches `input` and
+  // can never take focus — could be picked as `first` or `last`. Then
+  // `first.focus()` is a silent no-op and the wrap does not happen: Tab walks
+  // out of the dialog into the page behind it, which is precisely the
+  // difference this block exists to enforce. The sr-only radios <Segmented>
+  // renders are still matched — they are clipped, not disabled or hidden.
+  const items = panel.querySelectorAll<HTMLElement>(
+    'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),' +
+      'select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
+  );
+  if (items.length === 0) return;
+  const first = items[0];
+  const last = items[items.length - 1];
+  const active = document.activeElement;
+  if (!e.shiftKey && (active === last || !panel.contains(active))) {
+    e.preventDefault();
+    first.focus();
+  } else if (e.shiftKey && (active === first || active === panel)) {
+    e.preventDefault();
+    last.focus();
+  }
+}
+
 export default function Modal({
   open,
   onClose,
@@ -135,7 +168,7 @@ export default function Modal({
   const panelRef = useRef<HTMLDivElement>(null);
   const openerRef = useRef<Element | null>(null);
 
-  // The lock effect below must run ONCE per open, and it used to key on
+  // The layer below must be pushed ONCE per open, and the lock effect used to key on
   // `[open, onClose]` while every single consumer passes an inline arrow for
   // onClose. So any unrelated re-render of the owning surface — a job tick, a
   // keystroke in a field behind the dialog — tore down the keydown listener,
@@ -168,82 +201,48 @@ export default function Modal({
     return () => document.removeEventListener("focusin", onFocusIn, true);
   }, []);
 
-  // `mounted` is in the condition AND the deps, and both halves are load-bearing.
-  // This component returns null until `mounted` flips, so on a first render with
-  // `open` already true the effect used to run against a panel that did not
-  // exist: `panelRef.current?.focus()` silently no-opped, `open` never changed,
-  // and the effect never ran again — so a Modal MOUNTED open never received
-  // focus, against this file's own contract four comment-lines above ("focus
-  // moves into the dialog on open"). It also locked the page scroll for a dialog
-  // that was not on screen yet. Every consumer today mounts closed and toggles,
-  // which is why nothing has hit it; the contract should not depend on that.
+  // ESCAPE, THE TAB TRAP AND THE SCROLL LOCK belong to the layer stack
+  // (./layers.ts). Each Modal used to add its own document keydown and capture
+  // its own `prev` overflow, so two nested dialogs both closed on one Escape and
+  // closing them out of order restored `overflow: ''` under the one still open.
+  // The stack routes Escape to the TOP layer only, the Tab trap to the top
+  // modal only, and reference-counts the lock.
+  //
+  // `mounted` is in the condition, and it is load-bearing: this component
+  // returns null until `mounted` flips, so a Modal MOUNTED open would otherwise
+  // lock the page for a dialog that is not on screen yet.
+  useLayer(open && mounted, {
+    kind: "modal",
+    panelRef,
+    onDismiss: (_reason, e) => {
+      if (e && e.key === "Escape") {
+        // React hydrates on `document`, the same node as the stack's listener,
+        // so a child's stopPropagation() (Hint popover, a rename field) cannot
+        // stop it - it only sets cancelBubble. The stack yields to that before
+        // it gets here; this is the dialog's own statement of the same rule:
+        // the innermost thing closes first, the dialog only when nothing else
+        // claimed the key.
+        if (e.cancelBubble) return;
+        onCloseRef.current();
+      }
+    },
+    onKey: (e) => trapTab(panelRef.current, e as KeyboardEvent),
+  });
+
+  // `mounted` is in the condition AND the deps, and both halves are
+  // load-bearing: on a first render with `open` already true the effect used to
+  // run against a panel that did not exist, `panelRef.current?.focus()` silently
+  // no-opped, `open` never changed, and the effect never ran again — so a Modal
+  // MOUNTED open never received focus, against this file's own contract ("focus
+  // moves into the dialog on open"). Every consumer today mounts closed and
+  // toggles, which is why nothing has hit it.
   useEffect(() => {
     if (!open || !mounted) return;
     const active = document.activeElement;
     openerRef.current =
       active && panelRef.current?.contains(active) ? lastOutsideRef.current : active;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        // React hydrates on `document`, the same node as this listener, so a
-        // child's stopPropagation() (Hint popover, a rename field) cannot stop
-        // us - it only sets cancelBubble. Honour it: the innermost thing
-        // closes first, the dialog only when nothing else claimed the key.
-        if (e.cancelBubble || e.defaultPrevented) return;
-        onCloseRef.current();
-        return;
-      }
-      // Focus trap: Tab must not walk out of the dialog into the page behind
-      // it, which is the difference between a modal and a decorative overlay.
-      if (e.key !== "Tab" || !panelRef.current) return;
-      // The disabled guard has to cover every control type, not just buttons.
-      // This selector read `button:not([disabled]),input,select,textarea`, so a
-      // disabled input — or an `input[type="hidden"]`, which matches `input` and
-      // can never take focus — could be picked as `first` or `last`. Then
-      // `first.focus()` is a silent no-op and the wrap does not happen: Tab walks
-      // out of the dialog into the page behind it, which is precisely the
-      // difference this block exists to enforce. The sr-only radios <Segmented>
-      // renders are still matched — they are clipped, not disabled or hidden.
-      const items = panelRef.current.querySelectorAll<HTMLElement>(
-        'a[href],button:not([disabled]),input:not([disabled]):not([type="hidden"]),' +
-          'select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])',
-      );
-      if (items.length === 0) return;
-      const first = items[0];
-      const last = items[items.length - 1];
-      const active = document.activeElement;
-      if (!e.shiftKey && (active === last || !panelRef.current.contains(active))) {
-        e.preventDefault();
-        first.focus();
-      } else if (e.shiftKey && (active === first || active === panelRef.current)) {
-        e.preventDefault();
-        last.focus();
-      }
-    };
-    document.addEventListener("keydown", onKey);
-    // Scroll lock. `document.body` alone is NOT enough: on this page the scroll
-    // container is documentElement (body is height-auto inside it), so locking
-    // body left the page scrolling freely behind the open dialog — measured at
-    // 1465px of background travel on one wheel gesture, which lands you somewhere
-    // else when you close. Lock BOTH, and pad for the scrollbar that disappears
-    // with it so the layout behind doesn't jump.
-    const html = document.documentElement;
-    const prev = {
-      html: html.style.overflow,
-      body: document.body.style.overflow,
-      pad: document.body.style.paddingRight,
-    };
-    const gap = window.innerWidth - html.clientWidth;
-    html.style.overflow = "hidden";
-    document.body.style.overflow = "hidden";
-    if (gap > 0) document.body.style.paddingRight = `${gap}px`;
     panelRef.current?.focus();
-    return () => {
-      document.removeEventListener("keydown", onKey);
-      html.style.overflow = prev.html;
-      document.body.style.overflow = prev.body;
-      document.body.style.paddingRight = prev.pad;
-      restoreFocus(openerRef.current);
-    };
+    return () => restoreFocus(openerRef.current);
   }, [open, mounted]);
 
   if (!mounted || !open) return null;

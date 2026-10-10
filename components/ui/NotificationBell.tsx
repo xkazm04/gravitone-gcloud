@@ -28,6 +28,8 @@ import {
 import { JobElapsed, jobNoun, useJobs } from "@/lib/jobs";
 import { trayModel } from "@/lib/jobLinks";
 import { politenessFor, useAnnounce } from "@/lib/announcer";
+
+import { useLayer } from "./layers";
 import { Ghost } from "@/components/ui/signal";
 import { useWorld } from "@/components/ui/world";
 
@@ -99,7 +101,6 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
   const announce = useAnnounce();
   const [open, setOpen] = useState(defaultOpen);
   const panelId = useId();
-  const ref = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const seeded = useRef(defaultOpen);
@@ -166,21 +167,23 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
     // and a visible ring at every stop — which it now has.
     // A tray seeded open (the /kit specimen) must not steal focus and scroll the page to itself.
     if (!seeded.current) panelRef.current?.focus();
-    const onDoc = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("mousedown", onDoc);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("mousedown", onDoc);
-      document.removeEventListener("keydown", onKey);
-    };
   }, [open]);
+
+  // Escape and the outside press come from the layer stack (./layers.ts), which
+  // is also how the app's key guards learn the tray is up: it is role="group",
+  // so the aria-modal sniff never saw it, and A on /board approved the picked
+  // batch behind an open, focused tray. A press on the bell itself is the
+  // trigger's own toggle and is left to its onClick.
+  useLayer(open, {
+    kind: "tray",
+    panelRef,
+    anchorRef: triggerRef,
+    claimsKeys: () => !seeded.current,
+    onDismiss: (reason) => {
+      setOpen(false);
+      if (reason === "escape") triggerRef.current?.focus();
+    },
+  });
 
   const count = unread.length;
 
@@ -208,7 +211,7 @@ export default function NotificationBell({ defaultOpen = false }: { defaultOpen?
   const empty = EMPTY_TONE_INFO[emptyTone] ?? EMPTY_TONE_INFO.idle;
 
   return (
-    <div ref={ref} className="relative">
+    <div className="relative">
       <button
         type="button"
         ref={triggerRef}
