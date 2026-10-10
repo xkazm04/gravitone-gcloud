@@ -231,3 +231,9 @@ before matching, the population walked off the filesystem rather than listed, an
   When several fixes share that one test file, land them one commit each by writing each
   intermediate tree from a scratch script (finals saved, later cases cut out) and asserting
   the `N cases green` line per step. Do not try to split hunks; `git add -p` is unavailable here.
+- **2026-10-10 - challenge builders in one checkout need their own Playwright `--output`.** Four
+  builders running `npx playwright test` at once share `test-results/`, which each run wipes at start.
+  Brief every builder to pass `--output="$TEMP/pw-<card>"`; this run did and saw no cross-builder noise.
+  Also: `pipeline/kit-census.mts` walks `git ls-files` but reads WORKING-TREE content, so a builder that
+  regenerates `app/kit/census.json` bakes a concurrent session's uncommitted edits into a commit. Keep the
+  census coordinator-owned and regenerate it once per wave, only when `git status -- app components` is clean.
