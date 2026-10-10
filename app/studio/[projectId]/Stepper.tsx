@@ -40,6 +40,7 @@ import { useRef, type KeyboardEvent } from "react";
 import { Check } from "lucide-react";
 
 import {
+  PHASES,
   PHASE_STATE_WORD,
   phaseStates,
   type PhaseKey,
@@ -48,6 +49,7 @@ import {
 } from "@/lib/projects";
 
 import { STEPS } from "./phases";
+import { neighbour } from "./studioNav";
 
 /** The tone each state's mark is drawn in. Applied to the mark only; selection,
  *  not state, sets the title's weight. */
@@ -98,21 +100,22 @@ export default function Stepper({
   // so the press lands on code that is fetched. preventDefault also keeps the
   // cut's window-bound transport from reading the same arrow as a frame step.
   const buttons = useRef<(HTMLButtonElement | null)[]>([]);
-  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, i: number) => {
-    const last = STEPS.length - 1;
+  // Adjacency is studioNav's `neighbour`, the same rule `[`/`]` walk by; the
+  // rail CLAMPS where the brackets stop, so focus stays put at either end.
+  const onKeyDown = (e: KeyboardEvent<HTMLButtonElement>, key: PhaseKey) => {
     const to =
       e.key === "ArrowRight"
-        ? Math.min(last, i + 1)
+        ? (neighbour(key, 1) ?? key)
         : e.key === "ArrowLeft"
-          ? Math.max(0, i - 1)
+          ? (neighbour(key, -1) ?? key)
           : e.key === "Home"
-            ? 0
+            ? PHASES[0]
             : e.key === "End"
-              ? last
+              ? PHASES.at(-1)
               : null;
-    if (to === null) return;
+    if (!to) return;
     e.preventDefault();
-    buttons.current[to]?.focus();
+    buttons.current[STEPS.findIndex((s) => s.key === to)]?.focus();
   };
   return (
     <ol className="scroll-x flex overflow-hidden rounded-xl border border-white/8 bg-white/[0.02]">
@@ -126,7 +129,7 @@ export default function Stepper({
                 buttons.current[i] = el;
               }}
               onClick={() => onPick(s.key)}
-              onKeyDown={(e) => onKeyDown(e, i)}
+              onKeyDown={(e) => onKeyDown(e, s.key)}
               // Each step is its own chunk (phases.tsx); intent to click starts the fetch.
               onPointerEnter={s.preload}
               onFocus={s.preload}

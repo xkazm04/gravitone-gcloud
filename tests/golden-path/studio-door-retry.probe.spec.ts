@@ -29,5 +29,6 @@ test("the storage door re-runs the open; the absent door does not", () => {
   expect(absent).not.toMatch(/Try again/);
 
   // The open effect must depend on the retry nonce or the click re-runs nothing.
-  expect(src).toMatch(/\[id, user, router, attempt\]/);
+  // (`dispatch` is studioNav's stable door, listed for exhaustive-deps.)
+  expect(src).toMatch(/\[id, user, router, attempt(, dispatch)?\]/);
 });

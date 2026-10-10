@@ -40,7 +40,7 @@
 // navigated with, so the shelf can never become a room you are stuck in.
 
 import { typing } from "@/lib/board/keys";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -55,7 +55,6 @@ import { reportStorageTrouble } from "@/app/_phases/_shared/stepStore";
 import { useAuth } from "@/lib/useAuth";
 import {
   DISCIPLINE_LABEL,
-  PHASES,
   disciplineOf,
   getProject,
   parkAt,
@@ -64,12 +63,12 @@ import {
   signOffBlocker,
   templateOf,
   type PhaseKey,
-  type Project,
 } from "@/lib/projects";
 
 import { useProjectOutputs } from "../../_library/useProjectOutputs";
 import { STEPS } from "./phases";
 import Stepper from "./Stepper";
+import { initialNav, neighbour, step, type NavEffect, type NavEvent, type NavState } from "./studioNav";
 
 // THE SHELF IS A GLANCE SIDEWAYS, SO IT IS NOT IN THE STUDIO'S CHUNK. It renders
 // only while Outputs is pressed, and most visits never press it — but as a
@@ -91,38 +90,6 @@ const STEP_KEYS = [
 ];
 
 
-/**
- * WHAT HAPPENED AT THE DOOR. Three different facts used to be one
- * `.catch(() => router.replace("/projects"))`, which threw away the message
- * lib/studioDb.ts had carefully built (quota, blocked tab, unavailable) and
- * bounced the user with no explanation — while the identical failure one route
- * over, on /projects, gets a banner.
- *
- * `absent` COVERS TWO CASES ON PURPOSE: no such project, and a project owned by
- * another account on this browser. They are presented identically, and the
- * choice is deliberate rather than lazy:
- *
- *  · There is no secret to keep from a determined reader. lib/projects.ts says
- *    it out loud — the uid scoping is a data-shape decision, not a security
- *    boundary, and any code on this page can read the whole store.
- *  · But the case that scoping exists for is TWO PEOPLE ON ONE MACHINE, and
- *    "this project belongs to someone else" is the one sentence that turns a
- *    shared laptop into a disclosure. It confirms a stranger's work exists to
- *    somebody with no claim on it.
- *  · And it buys the user nothing. Either way there is nothing here for THEM to
- *    open and the next move is the same. So the copy names both possibilities
- *    and refuses to say which — true, and it leaks nothing.
- *
- * `storage` is not merged into that, because it is the one of the three that is
- * NOT the user's fault, the work is on disk and merely out of reach, and the
- * thing to do about it is different.
- */
-type Door =
-  | { kind: "opening" }
-  | { kind: "open" }
-  | { kind: "absent" }
-  | { kind: "storage"; message: string };
-
 export default function StudioView({ projectId }: { projectId: string }) {
   const { user } = useAuth();
   const router = useRouter();
@@ -130,10 +97,27 @@ export default function StudioView({ projectId }: { projectId: string }) {
   // `?step=` is a deep link from the shelf's matrix — open AT that column. It is
   // a hint, not identity: an unknown value falls back to the project's own
   // parked step rather than erroring, so an old link keeps working.
-  const wanted = useSearchParams().get("step");
+  const search = useSearchParams();
+  const wanted = search.get("step");
 
-  const [project, setProject] = useState<Project | null>(null);
-  const [door, setDoor] = useState<Door>({ kind: "opening" });
+  // THE ONE DOOR. Every navigation is an event folded by studioNav's `step`;
+  // this component only runs the effects it returns. A ref-backed dispatch
+  // rather than useReducer: the effects come back with the state, two events in
+  // one tick must not drop each other's, and a reducer StrictMode calls twice
+  // must not park twice.
+  const [nav, setNav] = useState<NavState>(() => initialNav(wanted));
+  const navRef = useRef(nav);
+  // Stamped on every record read or write when it is ISSUED; studioNav drops a
+  // result older than the one already applied.
+  const seqRef = useRef(0);
+  const runRef = useRef<(effects: NavEffect[]) => void>(() => {});
+  const dispatch = useCallback((event: NavEvent) => {
+    const next = step(navRef.current, event);
+    navRef.current = next.state;
+    setNav(next.state);
+    runRef.current(next.effects);
+  }, []);
+  const { door, project, active: phaseKey } = nav;
   // Bumped by the storage door's "Try again": the open effect re-runs getProject
   // in place, so a cleared condition (the other tab closed) does not cost a
   // reload.
@@ -147,7 +131,6 @@ export default function StudioView({ projectId }: { projectId: string }) {
   // to ~300 ms), under the 50 ms line the card set. While the shelf is open it
   // reads for itself, so this read pauses and keeps its last count.
   const outputs = useProjectOutputs(id, Boolean(project) && !outputsOpen);
-  const [phaseKey, setPhaseKey] = useState<PhaseKey>("script");
 
   useEffect(() => {
     // No project in the URL is not an error state, it is a wrong door: the
@@ -158,22 +141,17 @@ export default function StudioView({ projectId }: { projectId: string }) {
       return;
     }
     let alive = true;
+    const seq = ++seqRef.current;
     void getProject(id)
       .then((p) => {
         if (!alive) return;
         if (!p || p.uid !== user.uid) {
-          setDoor({ kind: "absent" });
+          dispatch({ type: "door", door: { kind: "absent" } });
           return;
         }
-        setProject(p);
-        setDoor({ kind: "open" });
-        // Open on the step the work is parked at — see `pick` below for what
-        // moves that bookmark, and for the reasoning this replaces.
-        setPhaseKey(
-          wanted && (PHASES as readonly string[]).includes(wanted)
-            ? (wanted as PhaseKey)
-            : p.phase,
-        );
+        // Open on the `?step=` the address holds NOW, else the step the work is
+        // parked at — see `pick` below for what moves that bookmark.
+        dispatch({ type: "opened", project: p, url: navRef.current.url, seq });
       })
       .catch((e: unknown) => {
         if (!alive) return;
@@ -181,15 +159,15 @@ export default function StudioView({ projectId }: { projectId: string }) {
         // "IndexedDB unavailable", the browser's own quota error. It is the
         // only thing that knows which of those happened, so it is carried
         // through rather than replaced with a generic apology.
-        setDoor({
-          kind: "storage",
-          message: e instanceof Error ? e.message : "could not read this project",
+        dispatch({
+          type: "door",
+          door: { kind: "storage", message: e instanceof Error ? e.message : "could not read this project" },
         });
       });
     return () => {
       alive = false;
     };
-  }, [id, user, router, attempt]);
+  }, [id, user, router, attempt, dispatch]);
 
   /**
    * Moving along the rail.
@@ -217,71 +195,69 @@ export default function StudioView({ projectId }: { projectId: string }) {
    * time you look back at it.
    */
   const pick = (key: PhaseKey) => {
-    setPhaseKey(key);
     // A rail click is a return to the work, whether or not the step changed —
     // so it is also how the Outputs shelf closes. The shelf keeps the rail
     // visible precisely so this is true; there is no state in which the primary
     // navigation of the studio is off screen.
     setOutputsOpen(false);
-    if (!id || !user) return;
-    void (async () => {
-      try {
-        await parkAt(id, key);
-        const fresh = await getProject(id);
-        if (fresh && fresh.uid === user.uid) setProject(fresh);
-      } catch (e) {
-        // The bookmark did not land, or the re-read did not answer. Neither is
-        // worth interrupting the user mid-navigation over: the step they asked
-        // for is already on screen, and the rail keeps showing the states it
-        // last read rather than inventing fresher ones.
-        //
-        // SILENT IN THIS SURFACE IS NOT THE SAME AS UNOBSERVABLE, and it used to
-        // be both. A failed bookmark does not deserve a banner; it does deserve
-        // to exist somewhere. It goes to the shared trouble channel, which the
-        // bell already draws — so a user whose quota is full learns that from
-        // one place, whether it was a notebook, a plate or this that could not
-        // be written.
-        reportStorageTrouble("write", id, "bookmark", e);
-      }
-    })();
+    dispatch({ type: "railPicked", key });
   };
+
+  // THE EFFECT EXECUTOR — the only place navigation touches the router or the
+  // store. Re-pointed every render so it closes over the current id, user and
+  // query.
+  useEffect(() => {
+    runRef.current = (effects) => {
+      for (const fx of effects) {
+        if (fx.kind === "replaceUrl") {
+          // Replace, never push: the address mirrors the step on screen, and a
+          // rail walk is not a history the Back button should replay. Every
+          // other query param rides along.
+          const params = new URLSearchParams(search.toString());
+          params.set("step", fx.key);
+          router.replace(`/studio/${id}?${params}`, { scroll: false });
+        }
+      }
+      const park = effects.find((fx) => fx.kind === "park");
+      if (!park && !effects.some((fx) => fx.kind === "reread")) return;
+      if (!id || !user) return;
+      const uid = user.uid;
+      void (async () => {
+        try {
+          if (park) await parkAt(id, park.key);
+          const seq = ++seqRef.current;
+          const fresh = await getProject(id);
+          if (fresh && fresh.uid === uid) dispatch({ type: "refreshed", project: fresh, seq });
+        } catch (e) {
+          // The bookmark did not land, or the re-read did not answer. Neither is
+          // worth interrupting the user mid-navigation over: the step they asked
+          // for is already on screen, and the rail keeps showing the states it
+          // last read rather than inventing fresher ones.
+          //
+          // SILENT IN THIS SURFACE IS NOT THE SAME AS UNOBSERVABLE, and it used to
+          // be both. A failed bookmark does not deserve a banner; it does deserve
+          // to exist somewhere. It goes to the shared trouble channel, which the
+          // bell already draws — so a user whose quota is full learns that from
+          // one place, whether it was a notebook, a plate or this that could not
+          // be written.
+          reportStorageTrouble("write", id, "bookmark", e);
+        }
+      })();
+    };
+  });
 
   // A `?step=` that CHANGES while the studio is open is the user moving the
   // rail from inside a step (a wizard's "Go to Step 2" hands off this way), so
-  // it moves the rail AND parks like a rail click. The initial deep link is
-  // still read once above and does not park — that rule is unchanged. The rail
-  // move is a derive-from-props adjustment (no effect); the park is the same
-  // async write `pick` makes, in a callback.
-  const initialWanted = useRef(wanted);
-  const [seenWanted, setSeenWanted] = useState(wanted);
-  if (wanted !== seenWanted) {
-    setSeenWanted(wanted);
-    if (door.kind === "open" && wanted && (PHASES as readonly string[]).includes(wanted))
-      setPhaseKey(wanted as PhaseKey);
-  }
+  // it moves the rail AND parks like a rail click. The echo of our own replace
+  // is recognised by studioNav and does nothing.
   useEffect(() => {
-    if (door.kind !== "open" || !id || !user) return;
-    if (!wanted || wanted === initialWanted.current) return;
-    if (!(PHASES as readonly string[]).includes(wanted)) return;
-    void (async () => {
-      try {
-        await parkAt(id, wanted as PhaseKey);
-        const fresh = await getProject(id);
-        if (fresh && fresh.uid === user.uid) setProject(fresh);
-      } catch (e) {
-        reportStorageTrouble("write", id, "bookmark", e);
-      }
-    })();
-  }, [wanted, door.kind, id, user]);
+    dispatch({ type: "urlChanged", url: wanted });
+  }, [wanted, dispatch]);
 
   // `[` / `]` walk the rail from anywhere in the studio — the same move as a rail
   // click, so it parks the project and closes Outputs exactly as `pick` does.
   // Not while typing (a bracket in a field is a bracket), not with a modifier,
   // and not when a surface has already claimed the key.
-  const pickRef = useRef(pick);
-  useEffect(() => {
-    pickRef.current = pick;
-  });
   const openPhase = door.kind === "open" && project ? phaseKey : null;
   useEffect(() => {
     if (!openPhase) return;
@@ -292,17 +268,18 @@ export default function StudioView({ projectId }: { projectId: string }) {
       if (document.querySelector('[aria-modal="true"]')) return;
       const by = e.key === "]" ? 1 : e.key === "[" ? -1 : 0;
       if (!by) return;
-      const next = PHASES[PHASES.indexOf(openPhase) + by];
+      const next = neighbour(openPhase, by);
       if (!next) return;
       e.preventDefault();
       STEPS.find((s) => s.key === next)?.preload();
-      pickRef.current(next);
+      setOutputsOpen(false);
+      dispatch({ type: "bracket", by });
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [openPhase]);
+  }, [openPhase, dispatch]);
 
-  const step = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
+  const current = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
   // THE STEP IS A HEAVY SUBTREE AND THE SHELL RE-RENDERS FOR THINGS IT DOES NOT
   // READ: the Outputs tally landing, the project record refreshed after a park,
   // a sign-off. `render` builds a fresh element each call, so every one of those
@@ -311,15 +288,16 @@ export default function StudioView({ projectId }: { projectId: string }) {
   // which project), React bails out at the element and the step renders for its
   // own state only.
   const projectKey = project?.id ?? null;
-  const surface = useMemo(() => (projectKey ? step.render(projectKey) : null), [step, projectKey]);
+  const surface = useMemo(() => (projectKey ? current.render(projectKey) : null), [current, projectKey]);
   const isLocked = Boolean(project?.signedOff?.[phaseKey]);
   const blocker = project ? signOffBlocker(project, phaseKey) : null;
 
   const handleSignOff = async () => {
     if (!project || blocker) return;
     try {
+      const seq = ++seqRef.current;
       const updated = await signOff(project.id, phaseKey);
-      if (updated) setProject(updated);
+      if (updated) dispatch({ type: "lockResult", project: updated, seq });
     } catch (e) {
       reportStorageTrouble("write", project.id, "signOff", e);
     }
@@ -328,8 +306,9 @@ export default function StudioView({ projectId }: { projectId: string }) {
   const handleReopen = async () => {
     if (!project) return;
     try {
+      const seq = ++seqRef.current;
       const updated = await reopen(project.id, phaseKey);
-      if (updated) setProject(updated);
+      if (updated) dispatch({ type: "lockResult", project: updated, seq });
     } catch (e) {
       reportStorageTrouble("write", project.id, "reopen", e);
     }
@@ -529,7 +508,7 @@ export default function StudioView({ projectId }: { projectId: string }) {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setDoor({ kind: "opening" });
+                  dispatch({ type: "door", door: { kind: "opening" } });
                   setAttempt((n) => n + 1);
                 }}
               >
