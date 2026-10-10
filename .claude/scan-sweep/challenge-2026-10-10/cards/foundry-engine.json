@@ -1,0 +1,126 @@
+[
+ {
+  "context": "foundry-engine",
+  "slot": "A",
+  "lens": "architecture-challenger",
+  "title": "One verdict kernel for four gates: keyed PATCH on a rev, run-locked, logged",
+  "size": "L",
+  "effort": 7,
+  "impact": 8,
+  "risk": 6,
+  "write_set": [
+   "lib/foundry/verdictLog.ts",
+   "lib/foundry/store.ts",
+   "lib/foundry/extract/store.ts",
+   "lib/foundry/training/store.ts",
+   "lib/foundry/strips/store.ts",
+   "lib/foundry/types.ts",
+   "lib/foundry/extract/types.ts",
+   "lib/foundry/commitPlan.ts",
+   "app/api/foundry/runs/[id]/verdicts/route.ts",
+   "app/api/foundry/extract/[id]/verdicts/route.ts",
+   "app/api/foundry/training/[id]/verdicts/route.ts",
+   "app/api/foundry/strips/[id]/verdicts/route.ts",
+   "tests/golden-path/foundry-verdict-patch.probe.spec.ts"
+  ],
+  "new_files": [
+   "lib/foundry/verdictLog.ts",
+   "tests/golden-path/foundry-verdict-patch.probe.spec.ts"
+  ],
+  "shared_surfaces": [],
+  "file_classes": {
+   "lib/foundry/verdictLog.ts": "hand",
+   "lib/foundry/store.ts": "hand",
+   "lib/foundry/extract/store.ts": "hand",
+   "lib/foundry/training/store.ts": "hand",
+   "lib/foundry/strips/store.ts": "hand",
+   "lib/foundry/types.ts": "hand",
+   "lib/foundry/extract/types.ts": "hand",
+   "lib/foundry/commitPlan.ts": "hand",
+   "app/api/foundry/runs/[id]/verdicts/route.ts": "hand",
+   "app/api/foundry/extract/[id]/verdicts/route.ts": "hand",
+   "app/api/foundry/training/[id]/verdicts/route.ts": "hand",
+   "app/api/foundry/strips/[id]/verdicts/route.ts": "hand",
+   "tests/golden-path/foundry-verdict-patch.probe.spec.ts": "hand",
+   "foundry-out/**/verdicts.json, foundry-out/**/verdicts.log.jsonl": "runtime data written by the kernel (gitignored; probes use OUT_ROOT/FOUNDRY_DIR temp roots, never the real tree)"
+  },
+  "acceptance": [
+   "patchVerdicts(forge run, {set:{c1:{verdict:'keep'}}, baseRev:0, by:'human', surface:'foundry'}) then patchVerdicts(same run, {set:{c2:{verdict:'reject'}}, baseRev:0}) -> second throws FoundryError 409 carrying currentRev 1; the map holds only c1; verdicts.log.jsonl holds exactly 1 line",
+   "two patches on an extract run with correct revs in sequence (baseRev 0 then 1) -> both keys in the map, rev 2, log has 2 lines each with by, surface and the key it changed",
+   "extract patch {set:{styleA:{verdict:'reject', reasons:['style'], note:'too flat'}}} -> getExtractRun(id).verdicts.styleA keeps reasons and note (today putExtractVerdicts drops note at lib/foundry/extract/store.ts:309) and the log line carries reasons",
+   "RACE (tests/golden-path/_effects.ts Interleaver holds commitExtractRun at its styles.json write; a patch is issued; hold released), driven in both orders -> exactly two legal histories: patch first -> run.committed.kept reflects the patch; commit first -> patch 409 'committed'. Never: patch 200 AND verdicts.json disagreeing with run.committed.kept (today the PUT path takes no lock the commit holds)",
+   "legacy verdicts.json with no revision on all four stores (forge, extract, dojo, strips) -> GET returns rev 0; the first PATCH with baseRev 0 writes rev 1 and the existing keys survive",
+   "dojo patch {clear:['imp-1'], baseRev:n} -> key removed, log line op 'clear'; strips patch with a chip outside STRIP_CHIPS -> 400 and nothing written or logged (same refusal as today's PUT)",
+   "a forge style kept on two scenes where one keep has by:'model' -> commitRun and previewCommit (commitPlan.ts) both leave status 'candidate'; with both keeps by:'human' or by absent (legacy) -> 'proven' in both, and preview equals commit",
+   "[guard] PUT on all four routes still accepts a whole map, now written through the kernel (bumps rev, appends one log line per CHANGED key, zero for an identical map); foundry-run-store, foundry-routes, foundry-strips, foundry-training-store, foundry-commit-plan and board probes stay green"
+  ],
+  "premise": [
+   "app/api/foundry/runs/[id]/verdicts/route.ts:3-5 - 'Whole-map on purpose ... a last-writer-wins replace'; app/api/foundry/training/[id]/verdicts/route.ts:3-5 and app/api/foundry/strips/[id]/verdicts/route.ts:3-4 restate it; app/api/foundry/extract/[id]/verdicts/route.ts:2 'Whole-map replace'",
+   "lib/foundry/store.ts:128-139, lib/foundry/extract/store.ts:301-312, lib/foundry/training/store.ts:127-139, lib/foundry/strips/store.ts:214-220 - four putXVerdicts, each read manifest -> filter -> writeJsonAtomic of the whole map, none under any lock",
+   "lib/foundry/extract/store.ts:309 - clean[sid] = { verdict, at } drops note; lib/foundry/extract/types.ts:259-262 ExtractVerdictRecord has no note or reasons field",
+   "lib/foundry/types.ts:163-167 - VerdictRecord {verdict, at, note?}: no by, no surface; lib/foundry/training/types.ts:72 - the Dojo verdict is a bare string",
+   "lib/foundry/extract/store.ts:352-417 - commitExtractRun reads verdicts (:359) inside withCatalogue and stamps committed at :414-417; the PUT path (:301-312) never takes that lock, so a PUT that reads status 'done' before :414 lands after the commit decided",
+   "lib/board/sources/cull.ts:3-7 - the Board works around whole-map replace client-side ('read-fresh -> change one key -> write ... the /foundry tab may have autosaved since'); lib/board/verdicts.ts:67-71 carries reasons inside the free-text note",
+   "lib/foundry/store.ts:287-288 and lib/foundry/commitPlan.ts:110 - proven is minted from any keep, with no record of who kept it",
+   "docs/concepts/moonshots-2026-10-05/README.md:218 - foundry-engine-B 'Verdicts become keyed, revisioned patches with an append-only gate log' is OPEN; docs/concepts/moonshots-2026-10-05/critic-2026-10-07.md:698-704 folds the by-field slice into it. Since then a FOURTH whole-map gate (strips, 22b439f) landed"
+  ],
+  "rollback": "Two commits (test, then refactor). verdictLog.ts is additive and each putXVerdicts becomes a thin adapter over it, so reverting the refactor commit restores the four functions as they were. The revision and verdicts.log.jsonl are additive: the map file keeps its current shape (rev lives in a sibling verdicts.rev or is read from the log tail - case 5 pins whichever the builder picks), so old readers such as listRuns' decided/kept counts never see a foreign key.",
+  "gate": "contract",
+  "runner_up": "Commit as an intent file (commit.intent.json + a recovery pass on next read) so a crash between the index write and the unlinks resumes instead of relying on retry idempotence - the 2026-10-05 engine-A runner-up, still unbuilt.",
+  "registry": "software-engineering/sync-replication#conflict-detection-and-policy; software-engineering/concurrency-guards#race-catalog-with-two-histories, #fence-inside-write-transaction; media-generation/review-iteration-loops#gate-record-outlives-the-media. ADOPTS open card foundry-engine-B (docs/concepts/moonshots-2026-10-05/05-asset-management.md:162-209) with the critic's by-field fold (critic-2026-10-07.md:698-704), widened to the strips gate that landed after it.",
+  "body": "## Summary\nFour foundry gates (forge cull, extract, Dojo, strips) each carry a copy of the same verdict writer. Each one reads the manifest, filters the map and replaces verdicts.json whole: last writer wins, with no lock and no history. Replace the four with one kernel, lib/foundry/verdictLog.ts. It applies keyed PATCHes against a revision and answers 409 on a stale base. It runs under a per-run lock that the commit also holds. Every decision is appended to verdicts.log.jsonl with who made it and from which surface.\n\n## Description\nThis adopts the open foundry-engine-B card and the 2026-10-07 critic's fold-in of `by`, and widens both: the strips gate (22b439f) made it four copies. The kernel is generic over the record shape: patchVerdicts<R>(spec, id, {set, clear, baseRev, by, surface}). `spec` is each store's {dir, known(manifest), clean(record) or refuse, isCommitted(manifest)}. The four putXVerdicts become adapters a few lines long. PUT stays as a deprecated whole-map write: it diffs against the current map and logs only the keys that changed. The per-run lock comes from lib/diskTx.ts (exclusiveSection on <runDir>/.verdicts.lock). commitRun, commitExtractRun, commitCycle and commitStripRun take it before withCatalogue, so there is one lock order (run, then catalogue) and the window where a verdict write lands between a commit's read and its committed stamp closes. ExtractVerdictRecord gains note and reasons. VerdictRecord gains by?: 'human'|'model'. `proven` counts human keeps only, in both commitRun and planForgeCommit, so preview still equals commit. GET returns rev.\n\n## Flow\n- PATCH {set|clear, baseRev, by, surface}: the route validates the shape; the kernel takes the run lock, reads the manifest (committed gives 409), then reads {rev, map} (baseRev not equal to rev gives 409 {rev})\n- each key goes through the store's clean(); one log line is appended per changed key; the map is written at rev+1; the lock is released\n- commit: run lock, then withCatalogue, then read verdicts, plan, write and stamp committed, then release both. A PATCH that was waiting on the lock sees committed and gets 409\n- PUT: the same path with baseRev = current and set = the diff\n\n## Expected impact\n- One rule replaces four drifting copies.\n- The Board's client-side read-fresh workaround (lib/board/sources/cull.ts:3-7) stops being load-bearing. Moving foundryClient to PATCH is a small follow-up in foundry-curation.\n- Extract reject reasons stop being dropped.\n- The gate's decision history (who, from which surface, in what order) survives the commit that deletes the media. That is the data calibration needs, and its card (foundry-curation-B) is held for lack of it.\n- A model keep can no longer promote a style to proven.\n\n## Evaluation\nClaim: verdict writes are keyed, revisioned, logged and fenced against commit on all four gates\nBefore: 0 of 8 acceptance cases pass (case 8 is a [guard] on the PUT half)\nAfter: 8 of 8\nMethod: gate - tests/golden-path/foundry-verdict-patch.probe.spec.ts on OUT_ROOT/FOUNDRY_DIR temp roots, the race driven in both orders by the tests/golden-path/_effects.ts Interleaver, plus the existing foundry-* and board probes, then npm run typecheck\nResult: better\nGate: contract (in-tree: the request shape of four routes, verified by foundry-routes and the new probe; the only external caller, app/foundry/foundryClient.ts, keeps working on PUT)",
+  "evidence": "grep -rn 'export async function put.*Verdicts' lib/foundry ->\n  lib/foundry/store.ts:128 putVerdicts\n  lib/foundry/extract/store.ts:301 putExtractVerdicts\n  lib/foundry/training/store.ts:127 putTrainingVerdicts\n  lib/foundry/strips/store.ts:214 putStripVerdicts\neach ends in a whole-map writeJsonAtomic of verdicts.json (store.ts:138, extract/store.ts:311, training/store.ts:137, strips/store.ts:218); none of the four bodies calls acquireLock, exclusiveSection or withCatalogue.\nlib/foundry/extract/store.ts:309  clean[sid] = { verdict: rec.verdict, at: rec.at || new Date().toISOString() };   // note dropped\nlib/foundry/extract/store.ts:358-359  if (verdictsIn) await putExtractVerdicts(id, verdictsIn); const verdicts = await readVerdicts(id);   // inside withCatalogue; the PUT route path is not\ndocs/concepts/moonshots-2026-10-05/README.md:218  | foundry-engine-B | ... | contract |  | open |\nThe four verdict routes are 32+30+32+33 = 127 lines restating one handler."
+ },
+ {
+  "context": "foundry-engine",
+  "slot": "B-architecture (no UI surface)",
+  "lens": "architecture-challenger",
+  "title": "Extract runs meter their own spend: per-run ceiling, budget stop parks not trips",
+  "size": "M",
+  "effort": 6,
+  "impact": 7,
+  "risk": 5,
+  "write_set": [
+   "lib/foundry/extract/engine.ts",
+   "lib/foundry/extract/types.ts",
+   "lib/foundry/extract/store.ts",
+   "app/api/foundry/extract/[id]/step/route.ts",
+   "tests/golden-path/extract-spend.probe.spec.ts"
+  ],
+  "new_files": [
+   "tests/golden-path/extract-spend.probe.spec.ts"
+  ],
+  "shared_surfaces": [],
+  "file_classes": {
+   "lib/foundry/extract/engine.ts": "hand",
+   "lib/foundry/extract/types.ts": "hand",
+   "lib/foundry/extract/store.ts": "hand",
+   "app/api/foundry/extract/[id]/step/route.ts": "hand",
+   "tests/golden-path/extract-spend.probe.spec.ts": "hand"
+  },
+  "acceptance": [
+   "runToEnd with a fake EngineIO whose Served results carry costUsd (recognize 0.002, generate 0.04, reason 0.01) -> m.spend.usd equals the exact sum of every served call, m.spend.by_stage has read/group/replica/transfer subtotals that sum to it, m.spend.unpriced is 0",
+   "same fake with options.ceilingUsd 0.10 -> no unit is started once spend.usd + that unit's declared estimate would exceed the ceiling: status 'failed', m.stopped = {by:'run-ceiling', spentUsd, ceilingUsd}, spend.usd <= 0.10, zero Served calls after the stop, fail_streak unchanged",
+   "fake generate throws ImagingError kind 'over-budget' on the first replica -> run stops with m.stopped.by 'period-ceiling', NO ReplicaRound is appended, fail_streak stays 0, m.error does not say 'consecutive vendor failures' (today engine.ts:423-427 appends an errored round and tripped() counts it toward BREAKER_LIMIT)",
+   "a run stopped by 'run-ceiling' with no failed unit -> stepRun(id, 1, true, {ceilingUsd: 0.50}) on a temp EXTRACT_ROOT resumes: status back to a live stage, stopped cleared, one unit performed (today pruneFailures returns 0 at engine.ts:155 and the run stays 'failed' with no way back)",
+   "a Served result with costUsd undefined -> spend.unpriced increments and spend.usd adds that unit's pre-call estimate with basis 'estimate', so an unpriced vendor cannot run past the ceiling for free",
+   "listExtractRuns() summaries carry spendUsd; commitExtractRun writes run.committed.spendUsd and costPerKeptUsd = spendUsd / kept.length",
+   "[guard] options without ceilingUsd -> the unit order from next() and every manifest field except spend are identical to today; style-extract, extract-refinish and extract-step-lock probes stay green"
+  ],
+  "premise": [
+   "lib/foundry/extract/store.ts:213-224 - liveIO's recognize/generate/reason return only {value, model}; r.provenance.costUsd is discarded on every call",
+   "lib/imaging/types.ts:168-178 - imaging provenance carries costUsd and costBasis; lib/text/types.ts:335 - TextProvenance.costUsd likewise",
+   "lib/foundry/training/types.ts:66 (cycle costUsd) and lib/foundry/strips/types.ts:95-97 (costUsd per card and per asset) - the two sibling gates meter; grep costUsd lib/foundry/extract -> 0 hits",
+   "lib/foundry/extract/engine.ts:109-122 - the BREAKER_LIMIT comment names 'a budget ceiling' as a wall and tripped() counts it as a vendor failure; :423-427 and :467-471 send every generate throw, including ImagingError 'over-budget' (lib/imaging/errors.ts:48, :156), into tripped()",
+   "lib/foundry/extract/engine.ts:136-161 - pruneFailures returns 0 and leaves a failed run untouched when nothing failed, so a run stopped for money with clean units has no resume path; lib/foundry/extract/store.ts:266-270 retry is the only resume",
+   "app/api/foundry/extract/[id]/step/route.ts:45-50 - the comment says an over-budget refusal arrives BEFORE any unit; one raised inside a unit is caught by the engine and never reaches this branch",
+   "docs/concepts/moonshots-2026-10-05/05-asset-management.md:204 - spend on extract runs was foundry-engine-B's runner-up on 2026-10-05; never carded, never built"
+  ],
+  "rollback": "Two commits (test, then feat). spend and stopped are optional manifest fields: an old manifest reads as unmetered and an absent ceiling is explicitly unlimited, so reverting the feat commit leaves every run on disk readable. The ceiling is opt-in per run (options.ceilingUsd); the default path does not change behaviour (case 7).",
+  "gate": "none",
+  "runner_up": "Turn the extract step machine into a server-side drain job on the local posture (lease-holding loop, browser-driven only on Cloud Run) so closing the tab stops nothing - weaker, because the lease plus the CLI loop already cover long runs.",
+  "registry": "software-engineering/cost-metering#budget-enforcement (per-run scope; a refusal names the scope that refused), #spend-attribution, #usage-ledgers (failed and unpriced calls still get a row); media-generation/generative-provider-routing#cost-per-usable-economics",
+  "body": "## Summary\nThe extract engine is the one foundry gate that spends money without counting it. liveIO throws away every call's costUsd and the manifest has no spend field. A refusal from the period budget is booked as a vendor failure, so it trips the breaker, and a run stopped for money cannot be resumed. The move: meter spend on the manifest, enforce a per-run ceiling in the scheduler, and treat a budget refusal as a named stop instead of a failure.\n\n## Description\nThe engine's Served<T> gains costUsd? and basis, and liveIO passes them through from provenance. step() books every served call into m.spend = {usd, by_stage, unpriced, basis}. ExtractOptions gains ceilingUsd?, clamped in newManifest; absent means unlimited, and the code says so explicitly. Before performing a unit, the scheduler compares spend.usd plus the unit's declared estimate against the ceiling. A unit that would cross it is not started, and the run stops with stopped = {by:'run-ceiling', spentUsd, ceilingUsd}. An over-budget ImagingError or TextError caught inside a unit no longer goes to tripped(). It stops the run with stopped.by = 'period-ceiling' and leaves no failed element behind. The resume path clears stopped, and /step accepts {retry, ceilingUsd} to raise the ceiling and continue. The commit stamps spendUsd and costPerKeptUsd, the number cost-per-usable-economics asks for.\n\n## Flow\n- a liveIO call returns Served{value, model, costUsd, basis}; step books the spend under its stage (an unpriced call books its estimate and bumps a counter)\n- the scheduler picks the next unit; if spend + estimate > ceiling it calls stop(run-ceiling), otherwise it performs the unit\n- a vendor throw of kind over-budget calls stop(period-ceiling) and leaves fail_streak alone; any other throw goes to tripped() as today\n- POST /step {retry:true, ceilingUsd} clears stopped, raises the ceiling and continues at the next unit\n- the commit records committed.spendUsd and costPerKeptUsd\n\n## Expected impact\nAn operator can start a sixty-image extraction with a dollar ceiling and know it stops there. A budget wall no longer reads as three vendor failures, and it no longer burns rounds that a retry then has to prune. Extract joins Dojo and Strips in recording what a kept style cost, so a later cull can rank by cost per keep.\n\n## Evaluation\nClaim: extract spend is metered and ceilinged per run, and a budget refusal stops the run cleanly and resumably\nBefore: 0 of 7 cases pass (case 7 is [guard], green before by design)\nAfter: 7 of 7\nMethod: gate - tests/golden-path/extract-spend.probe.spec.ts drives engine step/runToEnd with a priced fake EngineIO (the style-extract probe's pattern) and stepRun on a temp EXTRACT_ROOT for case 4; then npm run typecheck and the existing extract/foundry probes\nResult: better\nGate: none\n\nSequencing note: shares lib/foundry/extract/store.ts and lib/foundry/extract/types.ts with this context's slot-A card (different functions: liveIO/stepRun vs putExtractVerdicts). Do not put both in one wave.",
+  "evidence": "lib/foundry/extract/store.ts:213-224\n  async recognize(image, instruction, schema) { const r = await recognize({ image, instruction, schema }); return { value: r.json, model: `${r.provenance.provider}/${r.provenance.model}` }; }\n  async generate(...) { const g = await generate({...}); return { value: g.images[0], model: `${g.provenance.provider}/${g.provenance.model}` }; }\ngrep -rn costUsd lib/foundry -> lib/foundry/strips/types.ts:95, :97; lib/foundry/training/types.ts:66; lib/foundry/extract: 0 hits\nlib/foundry/extract/engine.ts:423-427  } catch (e) { round.error = `generate: ${msg(e)}`; log(...); tripped(m, io, round.error); break; }\nlib/foundry/extract/engine.ts:155  if (n === 0) return 0;   // a money-stopped run with no failed unit stays 'failed'\nlib/imaging/errors.ts:48  | \"over-budget\"   and :156  new ImagingError(message, \"over-budget\")"
+ }
+]

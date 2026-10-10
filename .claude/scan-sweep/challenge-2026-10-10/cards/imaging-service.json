@@ -1,0 +1,117 @@
+[
+  {
+    "context": "imaging-service",
+    "slot": "A",
+    "lens": "architecture-challenger",
+    "title": "Only a free call may be retried: one billed-attempt rule for http and router",
+    "size": "M",
+    "effort": 6,
+    "impact": 8,
+    "risk": 5,
+    "write_set": [
+      "lib/imaging/errors.ts",
+      "lib/imaging/http.ts",
+      "lib/imaging/router.ts",
+      "lib/imaging/providers/google.ts",
+      "lib/imaging/providers/leonardo.ts",
+      "tests/golden-path/imaging-billed-attempts.probe.spec.ts"
+    ],
+    "new_files": [
+      "tests/golden-path/imaging-billed-attempts.probe.spec.ts"
+    ],
+    "shared_surfaces": [],
+    "file_classes": {
+      "lib/imaging/errors.ts": "hand",
+      "lib/imaging/http.ts": "hand",
+      "lib/imaging/router.ts": "hand",
+      "lib/imaging/providers/google.ts": "hand",
+      "lib/imaging/providers/leonardo.ts": "hand",
+      "tests/golden-path/imaging-billed-attempts.probe.spec.ts": "hand (new probe; kit census counts tracked files, so regenerate the census AFTER the commit that adds it: pipeline/kit-census.mts is generated-by-census and owned by the coordinator)"
+    },
+    "acceptance": [
+      "google generate (dev, agy off, LOCAL_BINARIES=off, leonardo no key), fetch always answers HTTP 500 -> exactly 1 fetch dispatch to the Interactions endpoint (today 3), error kind `failed` with dispatched=true, spendRows() has exactly 1 row with outcome `failed` and basis `estimate`",
+      "google generate, fetch rejects with an AbortError (the timeout path) on every call -> exactly 1 dispatch (today 3), error kind `timeout`, exactly 1 `failed` row booked at $0.045",
+      "google generate, fetch answers 500 then 200-with-image -> INVARIANT: the number of booked rows equals the number of presumed-billed dispatches. Today: 2 dispatches, 1 served row, so the first billed attempt is never booked. After: 1 dispatch, 1 failed row, and the request fails `failed` without a blind second call",
+      "IMAGING_BUDGET_USD_PER_WINDOW=0.05, google generate count=1, fetch answers 500 every time -> at most one vendor dispatch runs under the single $0.045 hold. Today three dispatches run under one hold that the ceiling only checked once",
+      "leonardo generate (prod-irrelevant; dev with google+agy unconfigured), the POST /generations start answers 500 -> exactly 1 POST to /generations (today 3, and each accepted-then-5xx start can leave a remote generation that deleteGeneration never learns the id of)",
+      "[guard] google generate, fetch answers 429 then 200-with-image -> 2 dispatches, served, 1 served row and 0 failed rows. A 429 is the door refusing before work, so http may still retry it",
+      "fetch answers 503 on all three attempts -> the error kind is `rate-limited` (capacity refusal, unbilled, reroutable) and 0 rows are booked. Today it is `failed`/502 with 1 failed row booked, because a 5xx is presumed billed",
+      "[guard] leonardo poll GET /generations/:id (idempotent read) with one transient 500 then COMPLETE -> still served. Read-only polls keep their retries"
+    ],
+    "premise": [
+      "lib/imaging/http.ts:42 - every requestJson defaults to `attempts = 3`, including billable POSTs",
+      "lib/imaging/http.ts:67-73 - a non-2xx response gets `err.dispatched = true`, then `if (err.retryable || res.status >= 500)` sleeps and re-sends the same POST",
+      "lib/imaging/http.ts:96-100 - a timeout is marked `last.dispatched = true` ('the vendor may well have finished the work and will bill for it') and is then re-sent anyway unless it was the last attempt",
+      "lib/imaging/router.ts:223-233 + :251-266 - billedOnFailure says `timeout` is BILLED and `failed` is billed iff dispatched. So the router's rule is that these attempts cost money, and http.ts repeats them for free",
+      "lib/imaging/router.ts:457-471 - the router books ONE failed row per candidate, whatever number of dispatches http.ts made beneath it. On success (:412-413) it books only the served figure, so earlier billed attempts inside the same requestJson are never booked",
+      "lib/imaging/router.ts:315 - one hold is reserved per request. http.ts's re-sends run under it with no further ceiling check",
+      "lib/imaging/providers/google.ts:306-312 - generate fans out n parallel requestJson POSTs with timeoutMs 180_000 and no `attempts` override. Worst case is 3 x 180 s + backoff, about 541 s per call, against app/api/imaging/generate/route.ts:23 `maxDuration = 300`",
+      "lib/imaging/providers/leonardo.ts:140-154 - the still adapter's billable start POST /generations uses default attempts. Cleanup only knows the generationId returned to the attempt that succeeded (:154, :188)",
+      "lib/imaging/video/leonardo.ts:184-190 - the SAME vendor's video start POST already says '2. start - ONE attempt' with `attempts: 1`. The directory holds two answers to one question",
+      "lib/imaging/errors.ts:81-83 - `retryable` includes `timeout`, the one kind the router presumes billed",
+      "tests/golden-path/imaging-budget-holds.probe.spec.ts:198-224 - test 5 drives an HTTP 500 and asserts one failed row, but it never counts dispatches. Its fetch stub is called 3 times"
+    ],
+    "rollback": "Two commits (test, then refactor). Reverting the refactor commit restores http.ts's blind retry and kindForStatus, and the new probe goes red again. No persisted shape changes and no wire contract changes: error kinds stay inside the existing taxonomy, and 503 moves from `failed` to `rate-limited`, both of which already exist.",
+    "gate": "policy-tighten",
+    "runner_up": "Plan-aware hold pricing: reserve the candidate's own price row instead of the table's dearest rate. A recognize on the $0 local eye holds $0.045 today, and imaging-budget-holds.probe.spec.ts:290-326 pins that.",
+    "registry": "software-engineering/retry-backoff#error-classification-for-retry (one authority; an ambiguous timeout means unknown side effects) · software-engineering/cost-metering#usage-ledgers, #budget-enforcement · media-generation/generative-provider-routing#refusal-reroute-hop ('what may re-route, and what must not')",
+    "body": "## Summary\nOne rule decides whether a failed vendor attempt cost money, and both the transport retry in http.ts and the router's meter read it. A retry is allowed only for a call the rule says was free.\n\n## Description\nThe router has a careful, enumerated answer to 'did this failure cost money' (`billedOnFailure`: timeout billed, dispatched failure billed, 429 not). One layer down, http.ts answers a different question, 'is it worth another go', and repeats exactly the attempts the router calls billed: a 5xx after the vendor answered, and a timeout it has itself marked `dispatched`. The result is three dispatches under one hold, one row in the ledger, and a meter that under-reads by up to 3x during an incident, which is the shape budget.ts's header calls the worst one a meter can have. On Leonardo it also re-POSTs a generation start, and that can leave remote generations no cleanup knows about. The video adapter in the same directory already made the opposite call (`attempts: 1` on its start).\n\nThe move: `presumedBilled(err)` lives in errors.ts as the single authority. `billedOnFailure` in router.ts becomes a re-export so the probe suite keeps asserting the same predicate. requestJson takes `billable: true` on vendor work requests (google interactions POSTs, leonardo start), and for those it retries only failures the authority says are free: 429, 503-as-capacity (kindForStatus maps 503 to `rate-limited`) and connect failures, which are never dispatched. Idempotent GET polls and DELETE cleanup keep their ladder. The router is unchanged in what it books. It now books every billed dispatch, because there is only ever one per candidate.\n\n## Flow\n- errors.ts: add `presumedBilled(err)` and move the enumerated switch here with its comment block\n- router.ts: `billedOnFailure = presumedBilled` (still exported)\n- http.ts: add the `billable` option. In the retry branches, `if (billable && presumedBilled(err)) throw err`. kindForStatus maps 503 to `rate-limited`\n- google.ts: `billable: true` on the generate, edit and recognize POSTs. leonardo.ts: `billable: true` on POST /generations\n- probe: a fetch stub that counts dispatches per URL. Cases 1-8\n\n## Expected impact\nLedger rows equal billed dispatches (today up to 1 in 3). The ceiling sees every dispatch it admits. The worst-case wall time of a google generate drops from about 541 s to 180 s, inside the route's 300 s maxDuration. Leonardo can no longer create a generation the cleanup never sees. The cost is a transient 500 that used to heal silently: it now surfaces as `failed` and the surface's own retry is one visible, metered call. That is the trade the router's own billing rule already chose.\n\n## Evaluation\nClaim: no vendor attempt the router presumes billed is ever repeated without a ledger row and a hold\nBefore: 0 of 6 non-guard acceptance cases pass (2 guards green)\nAfter: 8 of 8\nMethod: gate - tests/golden-path/imaging-billed-attempts.probe.spec.ts (Node probe lane, fetch stubbed, dispatches counted per URL), then the full `npm test` (imaging-budget-holds case 5 must stay green unchanged)\nResult: better\nGate: policy-tighten (fewer automatic vendor calls; no ceiling, price or route contract loosened)",
+    "evidence": "lib/imaging/http.ts:42   const { method = \"GET\", headers = {}, body, timeoutMs = 120_000, attempts = 3 } = opts;\nlib/imaging/http.ts:67           err.dispatched = true;\nlib/imaging/http.ts:69           if (err.retryable || res.status >= 500) {\nlib/imaging/http.ts:99           last.dispatched = true;\nlib/imaging/http.ts:100          if (attempt >= attempts) throw last;\nlib/imaging/router.ts:253-258    case \"timeout\": case \"bad-response\": case \"refused\": return true; case \"failed\": return err.dispatched;\nlib/imaging/router.ts:315        hold = await reserve(estimatePendingUsd(pendingImages));   // once per request\nlib/imaging/router.ts:457        if (billedOnFailure(err)) { await settle(current, {... outcome: \"failed\" ...}) }   // once per candidate\nlib/imaging/providers/google.ts:307-311  requestJson<Interaction>(\"google\", ENDPOINT, { method: \"POST\", headers, body, timeoutMs: 180_000 })   // no attempts override\nlib/imaging/providers/leonardo.ts:140    const start = await requestJson<StartResponse>(\"leonardo\", `${BASE}/generations`, {   // no attempts override\nlib/imaging/video/leonardo.ts:184-190   // 2. start - ONE attempt. ... attempts: 1,\napp/api/imaging/generate/route.ts:23     export const maxDuration = 300;\ngrep 'attempts' lib/imaging/providers/*.ts -> leonardo.ts:218 (poll, 1), :268 (delete, 2), qwen.ts:94 (1); google.ts and leonardo start: none (default 3)"
+  },
+  {
+    "context": "imaging-service",
+    "slot": "B-architecture (no UI surface)",
+    "lens": "architecture-challenger",
+    "title": "A paid render outlives its request: keyed receipts that join and replay",
+    "size": "M",
+    "effort": 6,
+    "impact": 7,
+    "risk": 5,
+    "write_set": [
+      "lib/imaging/receipts.ts",
+      "lib/imaging/api.ts",
+      "app/api/imaging/generate/route.ts",
+      "app/api/imaging/edit/route.ts",
+      "lib/imagingClient.ts",
+      "tests/golden-path/imaging-receipts.probe.spec.ts"
+    ],
+    "new_files": [
+      "lib/imaging/receipts.ts",
+      "tests/golden-path/imaging-receipts.probe.spec.ts"
+    ],
+    "shared_surfaces": [],
+    "file_classes": {
+      "lib/imaging/receipts.ts": "hand (new, server-only like the rest of lib/imaging)",
+      "lib/imaging/api.ts": "hand",
+      "app/api/imaging/generate/route.ts": "hand",
+      "app/api/imaging/edit/route.ts": "hand",
+      "lib/imagingClient.ts": "hand",
+      "tests/golden-path/imaging-receipts.probe.spec.ts": "hand (new probe; two new tracked files change the kit census, which is generated by pipeline/kit-census.mts AFTER the commit and owned by the coordinator)"
+    },
+    "acceptance": [
+      "receipts: two concurrent generate calls with the same (scope, key, body) -> the vendor fetch is dispatched once, both callers get byte-identical images, spendRows() has exactly 1 served row, and heldUsd while in flight equals one $0.045 estimate, not two",
+      "same (scope, key, body) again within the TTL after success -> 0 new dispatches, 0 new spend rows, and the result is marked replayed (response header `x-imaging-receipt: replayed`; the provenance is the original one, unchanged)",
+      "same (scope, key) with a different body hash -> 409 with code `idempotency-conflict`, 0 dispatches, nothing reserved",
+      "same key under a different principal scope -> treated as unrelated: it dispatches again and never returns the other scope's images",
+      "an owner call that fails (`refused`, `over-budget` or `no-key`) -> every in-flight joiner receives the same error kind. Nothing is retained, so the same key afterwards dispatches again (a 402 can pass after the window rolls)",
+      "an injected clock past the TTL, or the byte cap exceeded -> the receipt is evicted (oldest first) and the next call dispatches. The total retained base64 never exceeds the cap",
+      "imagingClient.generateImage with a fetch stub that throws a TypeError once and then answers 200 -> exactly 2 POSTs carrying the SAME `idempotency-key` header and identical bodies, and the call resolves. Today it throws `offline` after 1 POST",
+      "[guard] a POST without an `idempotency-key` header -> behaviour identical to today: dispatched, booked, no receipt retained"
+    ],
+    "premise": [
+      "docs/concepts/moonshots-2026-10-05/critic-2026-10-07-m1-tails.md:405-417 - verified: no route under app/api reads req.signal, and /api/imaging/generate awaits generate() with no signal. After a reload 'the paid image is generated, billed and thrown away'",
+      "app/api/imaging/generate/route.ts:25-41 and app/api/imaging/edit/route.ts:11-24 - the response is the only place the paid result lives. Nothing retains it past the request",
+      "lib/imagingClient.ts:187-197 - `post` turns any transport failure into `ImagingRequestError('The studio could not be reached.', 'offline', 0)` with no retry and no way to reattach. The only recovery is a fresh call, which bills again",
+      "app/_phases/frames/useFrames.ts:455-461, app/_phases/frames/alternatives/useAlternatives.ts:167-173, app/_phases/frames/ads/useAdsFrames.ts:39-45, app/library/Playground.tsx:213 - four surfaces call generateImage directly, so a client-level change reaches all four without editing any of them",
+      "lib/imaging/router.ts:315 + lib/imaging/budget.ts:389-392 - every dispatch reserves a hold. Two identical concurrent calls hold and book twice",
+      "lib/principal.ts:154 - `principalRateKey(resolution)` already yields a per-person key (the rate limiter uses it at lib/apiAuth.ts:488), so a receipt scope needs no new identity code",
+      "app/api/imaging/generate/route.ts:23 - maxDuration 300 bounds how long a joiner may wait on an owner"
+    ],
+    "rollback": "Additive. Without the header the routes take the old path (guard case 8). Reverting the series removes receipts.ts and the header handling, and the client stops minting keys. No persisted data: receipts are in-memory with a TTL. Nothing outside this context is edited.",
+    "gate": "contract",
+    "runner_up": "Stage as a request field: draft/proof/final picks image_size per call, instead of the module-load GOOGLE_IMAGE_SIZE at lib/imaging/providers/google.ts:53 (resolution-as-stage-property). Held because the 0.5K and 2K rows in pricing.ts are unmeasured and would book unpriced.",
+    "registry": "software-engineering/concurrency-guards#idempotency-by-design, #guard-key-design, #cache-value-not-handle, #single-flight-primitives · software-engineering/retry-backoff#error-classification-for-retry ('a timed-out write ... needs an idempotency story before it needs a ladder') · software-engineering/cost-metering#reversible-debit-and-settle",
+    "body": "## Summary\nEvery money call carries an idempotency key. The server keeps the paid result as a short-lived receipt keyed by (principal, key, body hash). A duplicate request joins the call in flight or replays the result instead of paying again.\n\n## Description\nThe imaging seam is fire-and-forget at the wrong layer. The server always finishes a render it started and bills it, but the only copy of the pixels is the HTTP response. A dropped connection, a dev reload, laptop sleep or a proxy idle timeout during a 60-180 s render therefore leaves a paid image on the server that nobody can claim. The client reports 'offline', and the user's next click pays a second time. The m1-tails critic proved this for the poster, and that one kind got a turn (lib/turns/kinds/poster.ts). This card fixes it once, at the imaging seam, for every caller: frames plates, alternatives, ads takes and Playground.\n\n`lib/imaging/receipts.ts` is a keyed single-flight with a value cache. The key is (scope, key) and the entry stores a body hash. A miss claims the entry and runs the router. A hit with a settled value replays it. A hit in flight joins it, with the wait bounded by maxDuration. A body mismatch is a 409. Failures are never retained, so the money semantics of a refusal or a 402 do not change. Retention is bounded by TTL (15 min) and by bytes (64 MB of base64, oldest first), and stays per-process. On a scaled-out deploy, a retry that lands on another instance misses and degrades to today's behaviour. That is a safe failure, and the file/GCS store the spend kernel uses is the stated next step. The client mints `crypto.randomUUID()` per logical call, sends it as `idempotency-key`, and retries once with the same key on a transport failure or a 502/504 without a JSON code. It also exposes an optional `key` so a surface can later persist one and reattach after a reload.\n\n## Flow\n- receipts.ts: `withReceipt({scope, key, bodyHash, now}, run)` returns `{value, replayed}`, plus `__resetReceipts()` for probes\n- api.ts: `asIdempotencyKey(header)` (1-128 printable chars, else 400), `bodyHash(validatedRequest)` (sha256 over canonical JSON including reference bytes), and a 409 mapping in errorResponse\n- generate and edit routes: after guardRequest, resolve the scope (principalRateKey ?? clientIp), wrap generate()/edit() in withReceipt when the header is present, and set `x-imaging-receipt: replayed|joined|fresh`\n- imagingClient.ts: the key header and the single same-key retry\n- probe: cases 1-8, routes driven directly with the dev fixture (as imaging-auth.probe does)\n\n## Expected impact\nA transport failure during a render no longer costs a second render. Accidental double-submits are deduplicated server-side (one hold, one row). A surface gains a primitive to reattach to a paid render after a reload without a per-kind turn. This is the frames/alternatives/ads equivalent of what the poster got from turns, at one seam.\n\n## Evaluation\nClaim: an identical keyed request never dispatches or books a second vendor call while its first result is held\nBefore: 0 of 7 non-guard acceptance cases pass (1 guard green)\nAfter: 8 of 8\nMethod: gate - tests/golden-path/imaging-receipts.probe.spec.ts (Node probe lane, fetch stubbed, dispatches and spendRows counted), then the full `npm test` and `npm run typecheck`\nResult: better\nGate: contract (an optional request header and a 409 code on the in-tree /api/imaging money routes; the verifier is the new probe; no other repo consumes these routes)",
+    "evidence": "app/api/imaging/generate/route.ts:28-41   const denied = await guardRequest(req); ... const out = await generate({...}); return Response.json(out);   // no retention, no req.signal\nlib/imagingClient.ts:187-197   async function post<T>(...) { try { res = await fetch(path, {...}) } catch { throw new ImagingRequestError(\"The studio could not be reached.\", \"offline\", 0); }\ncritic-2026-10-07-m1-tails.md:407-417  'The server does not stop. No route under app/api/ reads req.signal (grep: none). ... The poster's paid image is generated, billed and thrown away.'\ngrep -rn \"idempoten\" lib app --include=*.ts --include=*.tsx -> only lib/foundry/catalogue.ts:29 (a comment); nothing in lib/imaging or app/api/imaging\ngrep generateImage callers -> app/library/Playground.tsx:213, app/_phases/frames/ads/useAdsFrames.ts:39, app/_phases/frames/alternatives/useAlternatives.ts:167, app/_phases/frames/useFrames.ts:455\nlib/principal.ts:154  export function principalRateKey(r: Resolution): string | null {"
+  }
+]

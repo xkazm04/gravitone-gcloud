@@ -1,0 +1,116 @@
+[
+ {
+  "context": "probe-frame-data",
+  "slot": "A",
+  "lens": "architecture-challenger",
+  "title": "Lane parameters declared once: argparse, record, resume guard and replay derived",
+  "size": "M",
+  "effort": 6,
+  "impact": 7,
+  "risk": 5,
+  "write_set": [
+   "pipeline/vlm-probe/lane_record.py",
+   "pipeline/vlm-probe/consistency.py",
+   "pipeline/vlm-probe/motion.py",
+   "tests/golden-path/lane-params.probe.spec.ts"
+  ],
+  "new_files": [
+   "tests/golden-path/lane-params.probe.spec.ts"
+  ],
+  "shared_surfaces": [
+   "pipeline/vlm-probe/consistency.py (argparse + run_lane out-dir only; owned by character-consistency-testing)",
+   "pipeline/vlm-probe/motion.py (argparse only; same owner)",
+   "tests/golden-path/lane-record.probe.spec.ts (read, must stay green)",
+   "pipeline/foundry/selftest.py:566-600 (read, must stay green)"
+  ],
+  "file_classes": {
+   "pipeline/vlm-probe/lane_record.py": "hand (unmapped; the module that owns this context's lane.json schema)",
+   "pipeline/vlm-probe/consistency.py": "hand",
+   "pipeline/vlm-probe/motion.py": "hand",
+   "tests/golden-path/lane-params.probe.spec.ts": "hand"
+  },
+  "acceptance": [
+   "lane_record.record_stills(dir, 'reference', refs=[], ref_count=3, tag='-x') (an interrupted lane) -> replay_argv(read(dir)) contains ['--refs','3'] (today: ['consistency.py','--lane','reference','--tag=-x','--steps','20','--seed','770425'], no --refs, so the replayed command is refused by check_resume's ref_count branch)",
+   "record_clip(dir, 'chain', hero='pipeline/vlm-probe/shots/reference-face-e25/00b-hero-face.png') -> replay_argv contains '--hero' with that repo-relative path (today hero is recorded but never replayed, so a replay resumes against motion's default hero and check_resume refuses)",
+   "Round-trip property over the declared table: for EVERY param marked cli in LANE_PARAMS[kind] and one non-default value each, parse(build_arg_parser(kind), replay_argv(record(**{p: v})))[p] == v, for kind in {stills, clips}; the test iterates the table, so a param added without replay support fails",
+   "Resume guard covers the table: for every param marked strict, check_resume(record(p=v1), {p: v2}) raises SystemExit naming p (today fps, guidance, sampler and stills width/height are recorded but never compared; motion.py:198-201 passes no seed or fps)",
+   "lane_record.record_stills(dir, 'baseline') with no location -> rec['location'] == consistency.LOCATION (today lane_record.py:24-28 holds a different hangar - 'rust-stained concrete floor ... high clerestory windows' - so a defaulted record describes a scene no lane rendered)",
+   "lane_dir(kind='stills', lane='reference', zoom=True, tag='-x') == 'reference-zoom-x' and read() of that dir yields zoom=True, tag='-x'; consistency.run_lane and lane_record.read call this one pair instead of consistency.py:255 (forward) and lane_record.py:92-104 (inverse)",
+   "[guard] all 8 tracked lane.json files read and replay to the same argv they produce on b08bc7e (snapshot captured before the change)",
+   "[guard] tests/golden-path/lane-record.probe.spec.ts Cases 1-8 stay green"
+  ],
+  "premise": [
+   "pipeline/vlm-probe/lane_record.py:238-310 - check_resume is 12 hand-written elif branches, one per key, each restating record key, legacy alias and default",
+   "pipeline/vlm-probe/lane_record.py:346-387 - replay_argv is a second hand list of the same params, mapping record keys back to CLI flags",
+   "pipeline/vlm-probe/consistency.py:320-330 and pipeline/vlm-probe/motion.py:271-281 - the CLI flags are a third and fourth copy with their own defaults (motion --width 1344 vs record_clip width=832 at lane_record.py:171)",
+   "pipeline/vlm-probe/lane_record.py:383-385 - replay reads refs/references only; references stays [] until a lane finishes (lane_record.py:155-158 says so), so ref_count never replays",
+   "pipeline/vlm-probe/lane_record.py:346-360 - clip replay emits width/height/length/steps/--no-lora, never --hero, though motion.py:280 accepts it and check_resume compares it (lane_record.py:293-298)",
+   "pipeline/vlm-probe/lane_record.py:24-28 vs pipeline/vlm-probe/consistency.py:71-75 - two LOCATION constants that differ (measured: LOCATION equal False, CHARACTER equal True)",
+   "pipeline/vlm-probe/consistency.py:255 builds the lane dir name; pipeline/vlm-probe/lane_record.py:92-104 parses it back - one rule written forwards and backwards in two modules",
+   "pipeline/vlm-probe/motion.py:198-201 and pipeline/vlm-probe/consistency.py:260-264 each hand-pick a different subset of keys for check_resume"
+  ],
+  "rollback": "One commit series touching lane_record.py plus the argparse blocks of consistency.py/motion.py; no tracked lane.json is rewritten (records stay additive lane-record/2, legacy v1 still reads), so git revert restores the hand lists with no data migration.",
+  "gate": "architecture",
+  "runner_up": "Legacy v1 -> v2 lane.json upgrade that re-derives each prompt from consistency.prompt_for and records basis 'prompt-only', so 24 verbatim CHARACTER copies stop being the record of truth",
+  "registry": "software-engineering/quality-gates#policy-projection (one authority, projections derived); software-engineering/test-input-generation#exhaustive-when-bounded (iterate the whole param table); software-engineering/reversible-transform-pipelines#refuse-with-recorded-reasons (resume refusal names the param)",
+  "body": "## Summary\nThe lane record is the only reproducibility contract for gitignored pixels, and its parameter set is written four times: two argparse blocks, check_resume's 12 elif branches and replay_argv. The copies already disagree. An interrupted reference lane replays without --refs, a clip lane never replays its --hero, and the module's own default LOCATION describes a different hangar. Declare the params once in a LANE_PARAMS table (record key, legacy aliases, CLI flag, type, default, strict-on-resume, kind). Derive argparse, the record writer, the resume guard, replay_argv and the lane directory name from it.\n\n## Description\nlane_record.py gains LANE_PARAMS = {'stills': [...], 'clips': [...]}, add_lane_args(ap, kind), lane_dir(kind, **p) / params_from_dir, and a table-driven check_resume and replay_argv. Its CHARACTER/LOCATION copies are deleted. Records take the scene clauses from the caller, and a missing clause fails loudly. consistency.build_arg_parser and motion.main call add_lane_args, and run_lane calls lane_dir. Flags that are not lane params (--timeout) stay local. No tracked lane.json is rewritten.\n\n## Flow\n- Snapshot today's replay_argv for the 8 tracked lanes ([guard] case).\n- Write the 6 behaviour cases red in lane-params.probe.spec.ts (python -c spawn, the lane-record.probe.spec.ts pattern).\n- Introduce LANE_PARAMS. Derive replay_argv first (cases 1-3), then check_resume (case 4), then scene defaults and lane_dir (cases 5-6).\n- Swap the two argparse blocks to add_lane_args; re-run selftest.py and both lane probes.\n\n## Expected impact\nThe next lane knob becomes one table row instead of four synchronized edits. Every recorded param is guaranteed to replay and to be guarded on resume. Two silent replay refusals and one false scene description close, and check_resume shrinks from 73 lines to a loop.\n\n## Evaluation\nClaim: lane parameters have one authority and every recorded param round-trips through replay and resume.\nBefore: 0 of 6 behaviour cases pass (2 guards green)\nAfter: 6 of 6, guards still green\nMethod: gate - tests/golden-path/lane-params.probe.spec.ts in the Node probe lane, plus python pipeline/foundry/selftest.py\nResult: better\nGate: architecture",
+  "evidence": "python from repo root (b08bc7e):\n  LOCATION equal: False CHARACTER equal: True\n  replay interrupted ref_count=3: ['consistency.py', '--lane', 'reference', '--tag=-x', '--steps', '20', '--seed', '770425']\nlane_record.py:238-310 check_resume = 12 elif branches; :346-387 replay_argv; consistency.py:320-330 and motion.py:271-281 argparse.\nconsistency.py:255 `out = SHOTS / (lane + (\"-zoom\" if zoom else \"\") + tag)` vs lane_record.py:92-104 inverse parse."
+ },
+ {
+  "context": "probe-frame-data",
+  "slot": "B-architecture (no UI surface)",
+  "lens": "architecture-challenger",
+  "title": "Adopt C11 stage 1: labelled shot clauses mint lane-qualified truth sidecars",
+  "size": "M",
+  "effort": 6,
+  "impact": 8,
+  "risk": 5,
+  "write_set": [
+   "pipeline/vlm-probe/craft_spec.py",
+   "pipeline/vlm-probe/consistency.py",
+   "pipeline/vlm-probe/score.py",
+   "tests/golden-path/truth-sidecar.probe.spec.ts"
+  ],
+  "new_files": [
+   "pipeline/vlm-probe/craft_spec.py",
+   "tests/golden-path/truth-sidecar.probe.spec.ts"
+  ],
+  "shared_surfaces": [
+   "pipeline/vlm-probe/consistency.py (SHOTS_SPEC/ZOOM_SPEC tuples and run_lane sidecar write; owned by character-consistency-testing; also in slot A's write set - build A and B serially, not as siblings)",
+   "pipeline/vlm-probe/score.py (the one coupled file; owned by vlm-frame-annotation - VLM-A edits it later)",
+   "pipeline/vlm-probe/frames/truth/*.json (read only; the house shape the sidecars copy: graded fields plus _ungraded with reasons)"
+  ],
+  "file_classes": {
+   "pipeline/vlm-probe/craft_spec.py": "hand",
+   "pipeline/vlm-probe/consistency.py": "hand",
+   "pipeline/vlm-probe/score.py": "hand",
+   "tests/golden-path/truth-sidecar.probe.spec.ts": "hand",
+   "pipeline/vlm-probe/shots/<lane>/<shot>.truth.json": "generated-by-consistency.run_lane at render time (not written by the build)"
+  },
+  "acceptance": [
+   "craft_spec.validate({'camera_angle': 'low'}) -> ValueError naming camera_angle; {'camera_angle': 'low-angle'} passes (critic defect 1: 'low' is not in schema.CAMERA_ANGLE)",
+   "For every (name, clause, spec) in consistency.SHOTS_SPEC and ZOOM_SPEC, each labelled phrase is a substring of its clause, and prompt_for(clause) byte-equals the prompt recorded in the six tracked shots/*/lane.json (labelled, not compiled - critic defect 2; the experiment's pixels cannot move)",
+   "Stubbed run_lane (guard/generate monkeypatched as in lane-record.probe.spec.ts Case 4) on lane 'reference' tag '-face-e25' -> writes shots/reference-face-e25/01-wide.truth.json with shot_size 'extreme-wide', depth_of_field 'deep', basis 'dictated', seed 770425, spec_digest == craft_spec.digest(spec), truth_id 'reference-face-e25--01-wide', and no absolute path",
+   "The 02-medium sidecar has no depth_of_field key, and its 'slightly above eye level' camera_angle sits under _ungraded with the phrase as the reason; 03-close's 'Tight close-up' shot_size likewise (the critic's open question goes to the existing _ungraded convention instead of being guessed)",
+   "score.py over a fixture results.jsonl whose rows name 'baseline--01-wide.png' and 'reference--01-wide.png' -> each resolves to its own sidecar (critic defect 3: score.py:97 keys truth by bare stem, so every lane's 01-wide collided); a bare '01-wide.png' row resolves to none",
+   "score.py with 3 sidecars of basis 'dictated+confirmed' reports n=3 per graded field with basis per row; 'dictated' and 'dictated-disputed' sidecars are excluded from accuracy, and disputed ones are counted under a generator-compliance line",
+   "A sidecar whose spec_digest differs from the current SHOTS_SPEC entry -> unscored and named in the report, never silently used",
+   "[guard] frames/truth/arcane.json and duel-keyframe.json still resolve by stem and score exactly as on b08bc7e; lane-record.probe.spec.ts Cases 1-8 stay green"
+  ],
+  "premise": [
+   "docs/concepts/moonshots-2026-10-05/critic-2026-10-07.md:45 - probe-frame-data-B verdict 'build, with three acceptance defects fixed', stage 1 'label clauses, write sidecars, score.py reads them', shape decided; :896-948 spell the stage. Unbuilt: pipeline/vlm-probe/craft_spec.py does not exist on b08bc7e",
+   "pipeline/vlm-probe/frames/truth/arcane.json:11-13 grades 3 fields and pipeline/vlm-probe/frames/truth/duel-keyframe.json:10-14 grades 5 - the entire accuracy population",
+   "pipeline/vlm-probe/score.py:95-99 - truth loaded as TRUTH_DIR / (Path(frame).stem + '.json'); pipeline/vlm-probe/probe.py:233 records only frame.name",
+   "pipeline/vlm-probe/consistency.py:84-105 - SHOTS_SPEC and ZOOM_SPEC dictate shot size, angle and focus in prose; nothing persists them as labels",
+   "pipeline/vlm-probe/schema.py:23-26 - CAMERA_ANGLE has 'low-angle', not 'low'; schema.py:130 ENUM_FIELDS is the closed vocabulary to validate against",
+   "pipeline/vlm-probe/replicate.py:99-104 - an enum->phrase table already exists and its phrases match none of the consistency clauses, which is why labelling beats compiling",
+   "pipeline/vlm-probe/shots/*/lane.json - 18 recorded shot prompts share 3 shot names (01-wide, 02-medium, 03-close) across 6 lanes"
+  ],
+  "rollback": "Additive: a new module, new sidecar files at render time, and score.py's sidecar read layered beside the existing truth dict. Reverting the series leaves frames/truth/ scoring byte-identical; no tracked lane.json or truth file is edited.",
+  "gate": "architecture",
+  "runner_up": "lane_record check() is vacuous: on every tracked v1 lane (shots are strings, no sha256), and even with zero PNGs on disk, it prints 'OK: all recorded pixels match checksums' - make it report 'unverifiable: 0 of 3 checksummed' and exit distinctly",
+  "registry": "media-generation/generated-output-grading#vision-model-grading-schema, #two-grader-disagreement-rule; software-engineering/test-input-generation#model-based-oracle; software-engineering/quality-gates#vacuous-by-evaluation (a spec-digest mismatch is a named finding, not empty success)",
+  "body": "## Summary\nThis card adopts the decided, unbuilt C11 next stage (critic-2026-10-07.md:45, :896-948), fixes all three acceptance defects the critic recorded and answers both of its open questions. Accuracy, as distinct from agreement, rests on two hand-written truth files. The consistency lanes already dictate shot size, angle and focus for every render and throw the labels away. This stage turns each dictated clause into a labelled spec, has run_lane mint a lane-qualified truth sidecar per shot, and has score.py read sidecars by truth_id so labels stop colliding across lanes.\n\n## Description\nNew stdlib-only craft_spec.py: validate(spec) against the schema.FIELDS enums, a phrase->value lexicon whose contested phrases route to _ungraded, digest(spec) and truth_id(lane_dir, shot). In consistency.py, SHOTS_SPEC/ZOOM_SPEC become (name, clause, spec) with each clause byte-identical. run_lane writes <lane-dir>/<shot>.truth.json in the frames/truth house shape, plus basis, seed, spec_digest and truth_id, and adds spec_digest to the write_shot params (additive to lane-record/2). score.py still resolves truth from frames/truth/<stem>.json and now also from sidecars by truth_id. It shows basis per row, scores only dictated+confirmed and counts disputed under generator compliance. Blind admission (truth_admit.py) stays stage 2 because it spends the seat.\n\n## Flow\n- Write cases 1-7 red in truth-sidecar.probe.spec.ts (python -c spawn, no GPU).\n- craft_spec.py: validate, lexicon, digest, truth_id (cases 1, 4).\n- Label SHOTS_SPEC/ZOOM_SPEC and assert byte-identical prompts against the six tracked lanes (case 2).\n- run_lane sidecar write (case 3), then score.py resolution and basis tables (cases 5-7).\n\n## Expected impact\nThe truth population grows from 2 frames x <=5 fields to 3 graded fields on every generated shot of every future lane, at zero labelling cost. Each label is admitted only through confirmation, so a request is never scored as a label. Generator disobedience and annotator error become separate numbers, and lanes stop overwriting each other's truth.\n\n## Evaluation\nClaim: generated shots mint lane-qualified, digest-pinned truth that score.py reads without collisions or silent staleness.\nBefore: 0 of 7 behaviour cases pass (guard green)\nAfter: 7 of 7, guard green\nMethod: gate - tests/golden-path/truth-sidecar.probe.spec.ts in the Node probe lane, plus python pipeline/foundry/selftest.py\nResult: better\nGate: architecture",
+  "evidence": "ls pipeline/vlm-probe/craft_spec.py -> No such file or directory (stage unbuilt)\ncritic-2026-10-07.md:45 `| probe-frame-data-B | C11 | ... | **build**, with three acceptance defects fixed | stage 1: label clauses, write sidecars, score.py reads them | decided |`\nscore.py:97 `tp = TRUTH_DIR / (Path(frame).stem + \".json\")`; probe.py:233 `\"frame\": frame.name`\ngit ls-files pipeline/vlm-probe/frames -> 2 truth files; all 14 mapped manifests are absent on disk (gitignored, .gitignore:109-111)\ngit log --since=2026-10-03 -- pipeline/vlm-probe: no commit touches truth, a craft spec or score.py's truth loading"
+ }
+]

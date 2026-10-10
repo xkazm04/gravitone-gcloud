@@ -1,0 +1,119 @@
+[
+  {
+    "context": "studio-workspace",
+    "slot": "A",
+    "lens": "architecture-challenger",
+    "title": "Studio navigation through one door: a pure nav reducer, the URL holds the step",
+    "size": "M",
+    "effort": 6,
+    "impact": 7,
+    "risk": 5,
+    "write_set": [
+      "app/studio/[projectId]/StudioView.tsx",
+      "app/studio/[projectId]/Stepper.tsx",
+      "app/studio/[projectId]/studioNav.ts",
+      "tests/golden-path/studio-nav.probe.spec.ts",
+      "tests/golden-path/studio-door-retry.probe.spec.ts"
+    ],
+    "new_files": [
+      "app/studio/[projectId]/studioNav.ts",
+      "tests/golden-path/studio-nav.probe.spec.ts"
+    ],
+    "shared_surfaces": [
+      "app/kit/census.json"
+    ],
+    "file_classes": {
+      "app/studio/[projectId]/StudioView.tsx": "hand",
+      "app/studio/[projectId]/Stepper.tsx": "hand",
+      "app/studio/[projectId]/studioNav.ts": "hand (new)",
+      "tests/golden-path/studio-nav.probe.spec.ts": "hand (new)",
+      "tests/golden-path/studio-door-retry.probe.spec.ts": "hand - source ratchet that pins `[id, user, router, attempt]` and `setAttempt`; edit only if the open effect's deps move into the runner",
+      "app/kit/census.json": "generated-by pipeline/kit-census.mts (`npx tsx pipeline/kit-census.mts`); regenerate after `git add` of the new files, never hand-edit"
+    },
+    "acceptance": [
+      "opened{project.phase:'script', url:'research'} -> active 'research', effects [] (a deep link that opened the studio does not park) [guard]",
+      "opened{project.phase:'script', url:'bogus'} -> active 'script' (the bookmark), effects []; then urlChanged('bogus') -> state unchanged, effects []",
+      "from opened{url:'research'}: railPicked('score') -> active 'score', effects exactly [park('score'), replaceUrl('score'), reread]; a following urlChanged('score') (the echo of our own replace) -> effects [] (no second park)",
+      "THE SWALLOWED HANDOFF: opened{url:'research'} -> railPicked('script') -> urlChanged('research') (ScriptStep's 'Open Research' Link) -> active 'research' and effects include park('research'). Today the Link lands on the URL already showing, `wanted` does not change and the rail does not move (StudioView.tsx:257)",
+      "RETURN TO THE FIRST STEP PARKS: opened{url:'research'} -> urlChanged('script') -> urlChanged('research') -> effects include park('research'). Today StudioView.tsx:264 returns early because wanted === initialWanted",
+      "RELOAD AFTER A RAIL MOVE: opened{url:'research'} -> railPicked('frames') -> state.url === 'frames', so a re-open with that url resolves to 'frames', not the stale 'research' the address kept before",
+      "neighbour(key, by) is the ONE rail-adjacency rule: neighbour('cut', +1) === null, neighbour('research', -1) === null, neighbour('frames', +1) === 'motion', and Stepper's End maps to PHASES.at(-1); the bracket handler and Stepper.onKeyDown both import it (source ratchet: no `PHASES.indexOf(` arithmetic left in StudioView.tsx or Stepper.tsx)",
+      "refreshed(project, seq:1) arriving after refreshed(project', seq:2) -> state.project stays project' (a slow re-read never overwrites a newer sign-off/park result)"
+    ],
+    "premise": [
+      "app/studio/[projectId]/StudioView.tsx:133 - `const wanted = useSearchParams().get(\"step\")`: the step lives in the query",
+      "app/studio/[projectId]/StudioView.tsx:172-176 - the open prefers `wanted` over `p.phase`",
+      "app/studio/[projectId]/StudioView.tsx:219-247 - `pick` sets phaseKey, parks and re-reads, and never writes the URL (the file's only router call is router.replace('/projects') at :157), so `?step=` goes stale after the first rail click",
+      "app/studio/[projectId]/StudioView.tsx:255-261 - the rail follows the URL only when `wanted !== seenWanted`; a Link to the address already showing changes nothing",
+      "app/studio/[projectId]/StudioView.tsx:264 - `if (!wanted || wanted === initialWanted.current) return;` - a handoff back to the originally deep-linked step moves the rail (:259-260) but never parks it",
+      "app/studio/[projectId]/StudioView.tsx:226-246 and :266-274 - park + re-read + reportStorageTrouble('bookmark') written twice",
+      "app/studio/[projectId]/StudioView.tsx:293-299 and app/studio/[projectId]/Stepper.tsx:101-116 - rail adjacency computed twice ([ ] vs arrows/Home/End)",
+      "app/studio/[projectId]/StudioView.tsx:231, :322, :332 - three setProject writers with no ordering token; whichever promise resolves last wins",
+      "24 producers of `?step=` hand-offs outside app/studio (e.g. app/_phases/script/ScriptStep.tsx:245, app/_phases/research/ResearchStep.tsx:371, app/_phases/cut/useCut.ts:231-233, app/_phases/motion/MotionStep.tsx:78) - all routed through the code paths above",
+      "tests/live/golden-path.live.spec.ts:127-131 - the live lane's own contract: the project holds the path, 'the step is a VIEW and holds the query'",
+      "tests/golden-path/studio-door-retry.probe.spec.ts:32 - pins the open effect's dependency list by source text"
+    ],
+    "rollback": "Two commits (test, then refactor) touching only app/studio/[projectId]/* plus the new probe; `git revert` of the refactor restores the in-component handlers byte-for-byte, and the new probe goes with its own commit. No record shape, store or route changes.",
+    "gate": "architecture",
+    "runner_up": "Adopt WORKSPACE-A stage 2a (onSaveCommitted seam + research verdict on the active notebook, critic-2026-10-07-step-record-shell.md:311-385, decided and unbuilt) - passed over only because its whole write set sits in app/_phases/_shared and research, outside this context's paths.",
+    "registry": "software-engineering/app-shell#navigation-model (one navigate door; deep links resolve through the same door; a corrected location replaces, never pushes) · software-engineering/client-state#async-race-guards, #status-fsms · software-engineering/session-resume#layered-place-restoration (route layer validated on entry)",
+    "body": "## Summary\nThe studio's step navigation has four writers (rail click, `[`/`]`, a `?step=` that changes, the initial open) and two stores of 'where am I' (component state and the address) that drift apart. Move every transition into one pure reducer, `studioNav.ts`, and make the address the mirror of the active step, so the 24 in-step hand-offs land every time and a reload returns to the step you chose.\n\n## Description\nToday the active step is `phaseKey` state, the URL keeps whatever `?step=` the studio was opened with, and three hand-written code paths try to reconcile them with `seenWanted` and `initialWanted` refs. Three defects follow, all on b08bc7e: (1) after any rail click the address still names the deep-linked step, so a reload opens the wrong step and contradicts the bookmark just parked; (2) a hand-off Link to the step the address already names (ScriptStep's 'Open Research' after arriving at ?step=research) changes no search param and is swallowed; (3) a hand-off back to the originally deep-linked step moves the rail but is refused a park by the `initialWanted` early return. The adjacency rule and the park-reread-report block are each written twice, and three `setProject` writers race without an ordering token.\n\nThe move: `studioNav.ts` exports `NavState {door, active, url, project, seq}`, `NavEvent` (opened, failed, railPicked, bracket, urlChanged, refreshed, lockResult) and `step(state, event) -> {state, effects}` with effects `park(key) | replaceUrl(key) | reread`. It is React-free and imports only lib/projects. StudioView becomes a runner: `useReducer` over `step`, one effect executor (park + reread + reportStorageTrouble once; `router.replace` with the other query params preserved and `scroll:false`), and the window key handler dispatching `bracket`. Stepper imports `neighbour`. `router.replace`, not push: this card changes no history semantics.\n\n## Flow\n- Write the 8 cases against the not-yet-existing `studioNav.ts`; watch them fail (module missing, then wrong effects).\n- Build the reducer; port StudioView's open/pick/urlChanged/bracket/sign-off results onto dispatch; delete seenWanted/initialWanted/pickRef.\n- Stepper.onKeyDown uses `neighbour`; keep `data-testid=step-<key>`, aria-current and preload untouched.\n- Keep the door retry's `attempt` nonce and update studio-door-retry's source pin only if the deps move.\n- Regenerate the kit census; run the full suite and build.\n\n## Expected impact\nEvery in-step hand-off (24 producers) lands and parks; reload and copy-link name the step on screen; the bookmark and the address can no longer disagree. StudioView loses ~60 lines of reconciliation. WORKSPACE-A 2b's eventual 'progress changed' notification gets a single place to land (`refreshed` with seq) instead of a fourth setProject writer.\n\n## Evaluation\nClaim: studio navigation becomes one pure transition function and the three hand-off defects close.\nBefore: 0 of 8 acceptance cases pass (the module does not exist; cases 4-6 describe live defects)\nAfter: 8 of 8\nMethod: gate - tests/golden-path/studio-nav.probe.spec.ts (Node probe lane, no DOM) plus step-sign-off, studio-door-retry, project-outputs probes unchanged, `npm run typecheck`, `npm test`, `npm run build`, `npm run check:kit-census`\nResult: better\nGate: architecture",
+    "evidence": "$ git rev-parse --short HEAD -> b08bc7e\nStudioView.tsx:133  const wanted = useSearchParams().get(\"step\");\nStudioView.tsx:173-175  wanted && (PHASES as readonly string[]).includes(wanted) ? (wanted as PhaseKey) : p.phase,\nStudioView.tsx:229-231  await parkAt(id, key); const fresh = await getProject(id); if (fresh && fresh.uid === user.uid) setProject(fresh);\nStudioView.tsx:255-260  const initialWanted = useRef(wanted); const [seenWanted, setSeenWanted] = useState(wanted); if (wanted !== seenWanted) { ... setPhaseKey(wanted as PhaseKey); }\nStudioView.tsx:264  if (!wanted || wanted === initialWanted.current) return;\nStudioView.tsx:268-272  await parkAt(id, wanted as PhaseKey); const fresh = await getProject(id); ... reportStorageTrouble(\"write\", id, \"bookmark\", e);\nStudioView.tsx:295  const next = PHASES[PHASES.indexOf(openPhase) + by];\nStepper.tsx:103-112  ArrowRight/ArrowLeft/Home/End -> Math.min(last, i + 1) ...\n$ grep -n \"router.replace\\|router.push\" app/studio/[projectId]/ -> only StudioView.tsx:157 router.replace(\"/projects\")\n$ grep -rn \"?step=\\|p.set(\\\"step\\\"\" app | grep -v ^app/studio/ | wc -l -> 24\nScriptStep.tsx:245  action={{ label: \"Open Research\", href: `/studio/${projectId}?step=research` }}\nUpstreamBreak.tsx:159-160  <Link href={action.href}> (soft navigation: same URL -> no search-param change)"
+  },
+  {
+    "context": "studio-workspace",
+    "slot": "B",
+    "lens": "ux-elevation",
+    "title": "The studio names your next move: the shelf's verb on the title line, one press",
+    "size": "M",
+    "effort": 5,
+    "impact": 7,
+    "risk": 4,
+    "write_set": [
+      "app/studio/[projectId]/StudioView.tsx",
+      "app/studio/[projectId]/nextMove.ts",
+      "app/studio/[projectId]/NextMove.tsx",
+      "tests/golden-path/studio-next-move.probe.spec.ts"
+    ],
+    "new_files": [
+      "app/studio/[projectId]/nextMove.ts",
+      "app/studio/[projectId]/NextMove.tsx",
+      "tests/golden-path/studio-next-move.probe.spec.ts"
+    ],
+    "shared_surfaces": [
+      "app/kit/census.json"
+    ],
+    "file_classes": {
+      "app/studio/[projectId]/StudioView.tsx": "hand",
+      "app/studio/[projectId]/nextMove.ts": "hand (new)",
+      "app/studio/[projectId]/NextMove.tsx": "hand (new)",
+      "tests/golden-path/studio-next-move.probe.spec.ts": "hand (new)",
+      "app/kit/census.json": "generated-by pipeline/kit-census.mts; regenerate after `git add`, never hand-edit"
+    },
+    "acceptance": [
+      "studioNext(seed 'seed-glass-harbor', active 'research') -> {verb:'Decide Frames', step:'frames', tone:'you'}",
+      "studioNext(seed 'seed-glass-harbor', active 'frames') -> null (you are standing on the first thing that needs you; no chip)",
+      "project{research:'working', rest 'empty'}, active 'research' -> null; the same record after signOff(research) re-read -> {verb:'Start Script', step:'script'} (Lock hands you on)",
+      "project{script:'working', score:'blocked'}, active 'script' -> {verb:'Unblock Score', step:'score', tone:'blocked'} (worst news first, from the step you are on)",
+      "project with all six steps signedOff, any active -> null ('Delivered' is not a move)",
+      "[guard] for every seedProjects() row and every PhaseKey a: studioNext(p, a) is null or deep-equals nextAction(p) from app/_projects/shelf.ts - the studio never grows a second precedence",
+      "source ratchet: NextMove's press routes through StudioView's `pick(` (parks and closes Outputs), and STEP_KEYS lists the next-move key; the chip carries an accessible name '<verb>' and never relies on hue alone (ArrowRight glyph + verb)",
+      "[guard] tests/golden-path/step-sign-off.probe.spec.ts case 10 stays green: the sign-off button keeps aria-disabled + aria-describedby and id=\"studio-signoff-blocker\" renders {blocker}"
+    ],
+    "premise": [
+      "app/_projects/shelf.ts:188-197 - `nextAction(p)` already decides, worst-news-first, which step wants the user and in what verb ('Unblock Frames', 'Decide Score', 'Start Script')",
+      "app/_projects/RaceSheet.tsx:397-411 - the shelf draws that verb as a one-press 'Up next' button that opens the studio on the step",
+      "app/studio/[projectId]/StudioView.tsx - no reference to nextAction (grep empty): inside the studio the user reads six marks on the rail (Stepper.tsx:54-60, :119-170) and decides alone which to open",
+      "app/studio/[projectId]/StudioView.tsx:318-326 - handleSignOff sets the record and nothing else: locking a step leaves you on it with no hand-on",
+      "app/_studio/projectSeed.ts:64-72 - Glass Harbor parks at frames with frames, motion and score all 'review' - three decisions, one visible only as identical lozenges",
+      "app/studio/[projectId]/StudioView.tsx:88-91 - STEP_KEYS is the studio's keymap (Keycaps at :558); the cut owns arrows/Space/J/K/L, so the next-move key must avoid them",
+      "tests/golden-path/step-sign-off.probe.spec.ts:336-345 - case 10 pins the sign-off button's shape by source"
+    ],
+    "rollback": "Additive: one new pure module, one new chip component, one header insertion and one STEP_KEYS row. Reverting the feature commit removes the chip; no record, store or route changes.",
+    "gate": "direction",
+    "runner_up": "Back/Forward walk the steps (a rail move pushes a history entry instead of replacing) - the navigation-model rule that a switch replacing the viewport reads as a page; cheap once card A lands, held as a history-semantics direction call.",
+    "registry": "media-generation/production-pipeline-phasing#worst-news-first-progress (progress is navigation: 'where does this project need me') · software-engineering/session-resume#resume-affordances (offer, never impose: a chip, not an auto-jump) · software-engineering/status-vocabulary",
+    "body": "## Summary\nThe shelf already knows each project's next move and offers it as one press; the studio, where the work actually happens, does not. Put the same verb on the project's title line, derived from the same rule, so locking a step hands you to the next one and a blocked step elsewhere is one press away.\n\n## Description\n`nextAction` (shelf.ts:188) is the product's worst-news-first answer to 'where does this project need me'. The race sheet draws it ('Up next', RaceSheet.tsx:397-411). Once inside the studio the answer disappears: the rail shows marks but a blocked Score while you work on Script is a small triangle you must notice, and after 'Lock step' nothing moves - you scan six marks and choose. The move is a pure `studioNext(project, active)` in `nextMove.ts` that returns `nextAction(project)` unless it names the step you are standing on or is 'Delivered' (then null), and a `NextMove` chip beside 'Lock step' that draws the verb with the step's tone and an arrow glyph. Pressing it, or the next-move key, calls `pick(step)` - the same door as a rail click, so it parks the bookmark and closes Outputs. No auto-jump: the chip offers, the user moves. No prose: the chip is a verb and a step name (the law in CLAUDE.md), tone from the existing state classes so obsidian and almanac both read it, and the accessible name is the verb.\n\n## Flow\n- Write the 8 cases; watch the pure ones fail (module missing) and the ratchet fail (no chip).\n- `nextMove.ts`: `studioNext` over `nextAction` - imports shelf.ts read-only, no second precedence.\n- `NextMove.tsx`: one button, verb + ArrowRight, `data-testid=\"studio-next-move\"`, hidden when null.\n- StudioView: render it in the title-line control group; bind one key (not arrows, Space, J/K/L, [ ]) with the bracket handler's guards; add the row to STEP_KEYS.\n- Census, full suite, build; photograph `studio-*` screens with cx-capture in both themes.\n\n## Expected impact\nLock-then-advance goes from 'lock, scan six marks, click' to 'lock, press'. A blocked or awaiting-decision step anywhere in the project is named on the screen you are on, in the shelf's own words, so the shelf and the studio can never disagree about what is next.\n\n## Evaluation\nClaim: the studio offers the project's next move, derived from the shelf's rule, actionable in one press.\nBefore: 0 of 8 acceptance cases pass (module and chip absent; guards run against the new module)\nAfter: 8 of 8\nMethod: gate - tests/golden-path/studio-next-move.probe.spec.ts (Node probe lane: pure studioNext over seedProjects + mkProject, plus a source ratchet), step-sign-off probe unchanged, typecheck, npm test, check:narration, check:kit-census, build\nResult: better\nGate: direction",
+    "evidence": "$ grep -rn nextAction app/studio -> (no output)\nshelf.ts:188  export function nextAction(p: Project): NextAction {\nshelf.ts:190  if (blocked) return { verb: `Unblock ${PHASE_TITLE[blocked]}`, step: blocked, tone: \"blocked\" };\nshelf.ts:192  if (review) return { verb: `Decide ${PHASE_TITLE[review]}`, step: review, tone: \"you\" };\nshelf.ts:194  if (!open) return { verb: \"Delivered\", step: \"cut\", tone: \"done\" };\nRaceSheet.tsx:398  const next = p ? nextAction(p) : null;\nRaceSheet.tsx:406  onClick={() => onOpen(p, next.step)}\nStudioView.tsx:318-322  const handleSignOff = async () => { if (!project || blocker) return; ... if (updated) setProject(updated);\nprojectSeed.ts:64-71  phase: \"frames\", progress: { research: \"done\", script: \"done\", frames: \"review\", motion: \"review\", score: \"review\", cut: \"working\" }\n$ grep -n \"^import\" app/_projects/shelf.ts -> only lib/projects (cheap to import into the studio chunk)"
+  }
+]

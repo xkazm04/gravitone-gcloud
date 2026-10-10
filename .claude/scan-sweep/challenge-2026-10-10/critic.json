@@ -1,0 +1,877 @@
+{
+ "run": "challenge-2026-10-10",
+ "base": "b08bc7e",
+ "critic": "claude-opus-5-5 (independent of the scouts; 6 sub-readers, one per card file, merged and floor/never-re-propose checked by the critic)",
+ "cards": [
+  {
+   "context": "foundry-engine",
+   "slot": "A",
+   "title": "One verdict kernel for four gates: keyed PATCH on a rev, run-locked, logged",
+   "premise_checks": [
+    {
+     "cite": "app/api/foundry/{runs,training,strips,extract}/[id]/verdicts/route.ts:2-5",
+     "holds": true,
+     "note": "All four say whole-map / last-writer-wins; 32+32+33+30=127 lines, near-identical handlers."
+    },
+    {
+     "cite": "lib/foundry/store.ts:128-139, extract/store.ts:301-312, training/store.ts:127-139, strips/store.ts:214-220",
+     "holds": true,
+     "note": "Four putXVerdicts, each readManifest -> clean -> writeJsonAtomic whole map; none calls acquireLock/exclusiveSection/withCatalogue."
+    },
+    {
+     "cite": "lib/foundry/extract/store.ts:309; extract/types.ts:259-262",
+     "holds": true,
+     "note": "clean[sid]={verdict,at} drops note; ExtractVerdictRecord is lines 260-263 (off by one), no note/reasons."
+    },
+    {
+     "cite": "lib/foundry/types.ts:163-167; training/types.ts:72",
+     "holds": true,
+     "note": "VerdictRecord {verdict,at,note?} has no by/surface; TrainingVerdicts is Record<string,'approve'|'reject'|null> at :72."
+    },
+    {
+     "cite": "lib/foundry/extract/store.ts:352-417 race",
+     "holds": true,
+     "note": "commitExtractRun reads verdicts at :359 inside withCatalogue, stamps committed at :415; the PUT path takes no lock (the in-process locks map at :246 is the step lock, unused by PUT). Window is real: PUT reads status 'done', commit stamps, PUT then writes verdicts.json."
+    },
+    {
+     "cite": "lib/board/sources/cull.ts:3-7; lib/board/verdicts.ts:67-71",
+     "holds": true,
+     "note": "Read-fresh workaround comment and reasons-in-note convention both present (verdicts.ts 66-71)."
+    },
+    {
+     "cite": "lib/foundry/store.ts:287-288; commitPlan.ts:110",
+     "holds": true,
+     "note": "proven minted at keptScenes>=2 regardless of who kept; commitPlan.ts:110 same in planForgeCommit."
+    },
+    {
+     "cite": "docs/concepts/moonshots-2026-10-05/README.md:218; critic-2026-10-07.md:698-704; 22b439f",
+     "holds": true,
+     "note": "foundry-engine-B listed open; critic folds the by-field slice into it; 22b439f is the strips commit."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "L/7/8/6 ok. Write set at the ceiling: 13 declared, 16 after the revise, est. 800-1000 lines - demotion risk; keep the dojo/strips stores thin adapters over the kernel. Gate contract, in-tree. Adopts OPEN moonshot foundry-engine-B (README:218), cited - allowed. | write set: Missing: lib/foundry/runStore.ts (FoundryError lives there; case 1 needs a 409 carrying currentRev - extend or subclass); lib/foundry/training/types.ts and lib/foundry/strips/types.ts (case 5 'GET returns rev' on dojo and strips needs rev on their detail types). Possibly GET detail routes if they shape responses. No generated files listed. Size: kernel ~200 + 4 adapters + 4 commit lock wirings + 4 routes gaining PATCH + an 8-case probe with a two-order race -> ~800-1000 lines, at/over the 800 line. | Acceptance 'today' claims hold: no PATCH/rev/log exists, so 1-6 fail; case 7 fails today because by:'model' keeps still promote (and putVerdicts drops `by`). Case 7 names previewCommit (store.ts:203, exists); the plan fn is planForgeCommit. Race case is feasible: extract store writes via the foundryFs() port and tests/golden-path/_effects.ts exports Interleaver/interleavedPort (foundry-commit-race probe is precedent). Unflagged hazard: commitExtractRun (:358) and the forge commit accept inline verdicts and call putXVerdicts INSIDE the commit; if both take the new run lock, a non-reentrant exclusiveSection self-deadlocks until LockTimeout - the kernel needs an unlocked inner write for the commit path.",
+   "rereproposal": null,
+   "ambition": 4,
+   "ambition_why": "Collapses four drifting gate writers into one revisioned, fenced, logged kernel and closes a real commit/verdict race - a principal-level contract move adopted from a vetted open card.",
+   "grounding": 5,
+   "grounding_why": "Every cite holds on b08bc7e, at most off by one line; the race window is real.",
+   "falsifiability": 4,
+   "falsifiability_why": "Concrete rev/409/log-line counts and a two-order Interleaver race would catch a lockless or diff-less build; slight softness where case 5 lets the builder pick where rev lives.",
+   "verdict": "revise",
+   "revise_change": "Add lib/foundry/runStore.ts, lib/foundry/training/types.ts and lib/foundry/strips/types.ts to write_set, and state in Flow that commit paths accepting inline verdicts (commitExtractRun :358, forge commit) use the kernel's unlocked inner write under the already-held run lock, so the run lock is never re-acquired re-entrantly.",
+   "void_reason": null
+  },
+  {
+   "context": "foundry-engine",
+   "slot": "B-architecture (no UI surface)",
+   "title": "Extract runs meter their own spend: per-run ceiling, budget stop parks not trips",
+   "premise_checks": [
+    {
+     "cite": "lib/foundry/extract/store.ts:213-224",
+     "holds": true,
+     "note": "liveIO recognize/generate/reason return only {value, model}; provenance.costUsd discarded."
+    },
+    {
+     "cite": "lib/imaging/types.ts:168-178; lib/text/types.ts:335",
+     "holds": true,
+     "note": "costUsd at :168, costBasis :178; TextProvenance.costUsd at :335."
+    },
+    {
+     "cite": "training/types.ts:66; strips/types.ts:95-97; grep costUsd lib/foundry/extract -> 0",
+     "holds": true,
+     "note": "Confirmed; 0 hits in extract."
+    },
+    {
+     "cite": "lib/foundry/extract/engine.ts:109-122, :423-427, :467-471; imaging/errors.ts:48, :156",
+     "holds": true,
+     "note": "BREAKER comment names 'a budget ceiling' as a wall; generate catch blocks push errored round/transfer then tripped(); over-budget kind at :48, overBudget() at :155-156."
+    },
+    {
+     "cite": "lib/foundry/extract/engine.ts:136-161 - money-stopped run has no resume path",
+     "holds": false,
+     "note": "False about today. An over-budget generate today leaves an errored round with no file, which pruneFailures DOES prune (n>0), so retry resumes. pruneFailures returning 0 only bites the NEW run-ceiling stop this card introduces - a design requirement, not a present bug. Body's 'a run stopped for money cannot be resumed' overclaims. Not load-bearing: metering and breaker misclassification stand on their own."
+    },
+    {
+     "cite": "app/api/foundry/extract/[id]/step/route.ts:45-50",
+     "holds": true,
+     "note": "Comment says over-budget arrives before any unit; in-unit throws are caught by the engine. Accurate."
+    },
+    {
+     "cite": "docs/concepts/moonshots-2026-10-05/05-asset-management.md:204",
+     "holds": true,
+     "note": "Runner-up: record spend on extract runs with a per-run ceiling."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/7/5 ok; 5 files, ~400-600 lines. Gate none. Runner-up of foundry-engine-B on 2026-10-05, never carded - not a restatement. | write set: engine.ts (609 lines), store.ts, types.ts, step route and the new probe cover the change; ~400-600 lines. No generated files. Correctly flags overlap with card A on extract/store.ts and extract/types.ts - do not co-wave. | Cases 1,2,3,5,6 fail today (no spend field, no ceiling option, over-budget counted by tripped with an appended round). Case 4's 'today' note is miscast: a run-ceiling stop cannot exist today; it fails only because stepRun takes no ceilingUsd. Case 7 guard correctly green-before. Description's 'over-budget TextError' is phantom: lib/text/errors.ts TextErrorKind has no over-budget kind. 'Unit's declared estimate' does not exist in engine.ts; builder must source it (lib/imaging/pricing.ts estimatePerImage / budget.ts estimatePendingUsd) - implied, not named. Title says 'parks' yet case 2 sets status 'failed' - wording only.",
+   "rereproposal": null,
+   "ambition": 3,
+   "ambition_why": "Solid metering + ceiling + error-classification move bringing extract to parity with Dojo/Strips; feature-grade, not structural.",
+   "grounding": 4,
+   "grounding_why": "Core claims (discarded costUsd, over-budget tripping the breaker) hold; the 'cannot be resumed today' premise and TextError over-budget are wrong.",
+   "falsifiability": 5,
+   "falsifiability_why": "Priced fake EngineIO with exact sums, ceiling arithmetic, zero calls after stop, fail_streak and round-count assertions, plus a guard on unchanged unit order, would catch a wrong build.",
+   "verdict": "revise",
+   "revise_change": "Rewrite premise 5 and case 4's 'today' note to say: today an over-budget stop resumes only because its errored rounds get pruned; the new run-ceiling stop leaves nothing to prune, so the resume path (clear stopped, raise ceiling) must be built with it - and drop the TextError over-budget mention.",
+   "void_reason": null
+  },
+  {
+   "context": "imaging-service",
+   "slot": "A",
+   "title": "Only a free call may be retried: one billed-attempt rule for http and router",
+   "premise_checks": [
+    {
+     "cite": "lib/imaging/http.ts:42",
+     "holds": true,
+     "note": "attempts = 3 default, applies to every method including POST."
+    },
+    {
+     "cite": "lib/imaging/http.ts:67-73",
+     "holds": true,
+     "note": "err.dispatched=true at :67, then `err.retryable || res.status >= 500` sleeps and continues at :69-73. Traced the inner throw at :76 to the catch at :88-89; a 500 on attempt 3 rethrows. A 500 stub really gets 3 fetches."
+    },
+    {
+     "cite": "lib/imaging/http.ts:96-100",
+     "holds": true,
+     "note": "AbortError path sets last.dispatched=true at :99 and loops unless attempt>=attempts at :100, then sleeps at :109."
+    },
+    {
+     "cite": "lib/imaging/router.ts:223-233 + :251-266",
+     "holds": true,
+     "note": "billedOnFailure: timeout/bad-response/refused true, failed -> err.dispatched, the rest false. Exact."
+    },
+    {
+     "cite": "lib/imaging/router.ts:457-471, :412-413",
+     "holds": true,
+     "note": "One settle per candidate in the catch. The success path books only served.provenance.costUsd, so earlier billed attempts inside the same requestJson are never booked."
+    },
+    {
+     "cite": "lib/imaging/router.ts:315",
+     "holds": true,
+     "note": "One reserve per request, and per later candidate at :392-399. No check per http attempt."
+    },
+    {
+     "cite": "lib/imaging/providers/google.ts:306-312",
+     "holds": true,
+     "note": "n parallel requestJson POSTs with timeoutMs 180_000 and no attempts override. 3*180 + 0.4 + 0.8 = ~541 s against maxDuration 300 (generate route :23)."
+    },
+    {
+     "cite": "lib/imaging/providers/leonardo.ts:140-154",
+     "holds": true,
+     "note": "Start POST uses default attempts. That an accepted-then-5xx start leaves an orphan generation is plausible but unproven: a 5xx gives no id either way."
+    },
+    {
+     "cite": "lib/imaging/video/leonardo.ts:184-190",
+     "holds": true,
+     "note": "'2. start - ONE attempt' with attempts: 1 at :190."
+    },
+    {
+     "cite": "lib/imaging/errors.ts:81-83",
+     "holds": true,
+     "note": "retryable = rate-limited || timeout."
+    },
+    {
+     "cite": "tests/golden-path/imaging-budget-holds.probe.spec.ts:198-224",
+     "holds": true,
+     "note": "Test 5 drives 500 and asserts 1 failed row, with no dispatch count. Env is LOCAL_BINARIES=off plus a google key, so the stub is hit 3 times today."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/8/5 ok; 6 files. Gate policy-tighten holds only after the revise: the 503->rate-limited remap opens a new reroute edge (a loosening in disguise). Not a restatement of IMG-A (spend kernel, landed) or the 2026-10-04 budget-forecast card. | write set: All files are small (http 203, router 532, errors 182, google 403, leonardo 279 lines). Nothing generated in the write set. The kit census regen is correctly kept with the coordinator. qwen.ts and ollama.ts are touched behaviourally by the kindForStatus change but are not in the write set. That only matters if the 503 remap stays. | Cases 1-5 fail today as claimed: 3 dispatches, and the 500-then-200 case gives 2 dispatches with 1 served row. Guards 6 and 8 are green today. In guard 8 the poll is attempts:1, but poll() catches and continues (leonardo.ts:214-221), so it is served either way. Case 7 (503 -> rate-limited, 0 rows) is the problem. ImagingError.reroutable includes rate-limited (errors.ts:108), so remapping 503 makes it REROUTABLE. In dev, google 503 then walks to Leonardo when a Leonardo key exists. errors.ts:88-102 argues against exactly that: Leonardo reads no style references, so it gives a silent wrong-style image. The 503 case also changes qwen rotation (qwen.ts:138) and the HTTP status (502 -> 429, errors.ts:174-175). That loosens reroute policy under a 'policy-tighten' gate label, and case 7 only passes when Leonardo has no key, so it hides the reroute. errors.ts:91-94's comment ('http.ts makes three attempts ... every 5xx') also needs rewriting. errors.ts is in the write set, so that is fine.",
+   "rereproposal": null,
+   "ambition": 4,
+   "ambition_why": "Unifies two contradictory authorities on 'did this attempt cost money' into one predicate the transport obeys. That is a real structural correction, not a tidy-up.",
+   "grounding": 5,
+   "grounding_why": "Every cite holds at or near its line. The 3x under-read and the 541 s worst case are arithmetically true.",
+   "falsifiability": 4,
+   "falsifiability_why": "Counting dispatches per URL plus spendRows pins the invariant tightly. Case 7 is environment-rigged (Leonardo unkeyed), so a build that newly reroutes 503s to Leonardo would pass.",
+   "verdict": "revise",
+   "revise_change": "Drop the kindForStatus 503 -> rate-limited remap and acceptance case 7. A 503 then stays `failed`/dispatched/billed and is not retried on a billable POST. Replace it with a guard case: dev with a Leonardo key, google answers 503 -> 0 Leonardo dispatches. The card then really is policy-tighten, with no new reroute edge.",
+   "void_reason": null
+  },
+  {
+   "context": "imaging-service",
+   "slot": "B-architecture (no UI surface)",
+   "title": "A paid render outlives its request: keyed receipts that join and replay",
+   "premise_checks": [
+    {
+     "cite": "docs/concepts/moonshots-2026-10-05/critic-2026-10-07-m1-tails.md:405-417",
+     "holds": true,
+     "note": "Says verbatim: no route reads req.signal, generate is awaited with no signal, the poster's paid image is 'generated, billed and thrown away'. Line range ~403-417."
+    },
+    {
+     "cite": "app/api/imaging/generate/route.ts:25-41, edit/route.ts:11-24",
+     "holds": true,
+     "note": "Response.json(out) is the only home of the result. Nothing is retained."
+    },
+    {
+     "cite": "lib/imagingClient.ts:187-197",
+     "holds": true,
+     "note": "post() catches any fetch throw into ImagingRequestError('offline', 0) with no retry."
+    },
+    {
+     "cite": "useFrames.ts:455, useAlternatives.ts:167, useAdsFrames.ts:39, Playground.tsx:213",
+     "holds": true,
+     "note": "These are exactly the four generateImage callers outside the client. editImage callers are not listed, but the client change reaches them too."
+    },
+    {
+     "cite": "lib/imaging/router.ts:315 + budget.ts:389-392",
+     "holds": true,
+     "note": "One reserve per request, so two identical concurrent requests hold and book twice."
+    },
+    {
+     "cite": "lib/principal.ts:154, lib/apiAuth.ts:488",
+     "holds": true,
+     "note": "Holds, but principalRateKey is non-null only for firebase. Fixture, local and secret callers fall back to clientIp, so every local caller shares one scope (the card's `?? clientIp` handles this). The route must call resolvePrincipal itself, because guardRequest returns only a denial. resolvePrincipal and clientIp are exported, so no apiAuth edit is needed."
+    },
+    {
+     "cite": "app/api/imaging/generate/route.ts:23",
+     "holds": true,
+     "note": "maxDuration = 300."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/7/5 ok; 6 files (+useFrames.ts after revise). Gate contract, in-tree (new request header). Grows out of critic-2026-10-07-m1-tails; the landed poster work kind covers a different surface - not a restatement. | write set: receipts.ts is new, api.ts is 145 lines, the two routes are under 50 lines each, imagingClient is 231 lines. Everything fits well under 800. Nothing generated, and the census is kept with the coordinator. The honesty gap is in the claims, not the files: delivering the reload/double-submit benefit would need at least one surface (e.g. app/_phases/frames/useFrames.ts) in the write set to persist or reuse a key. | All 7 non-guard cases fail today as claimed: no header handling, no 409, no client retry. Case 7 really throws offline after 1 POST today. The headline OVERREACHES, though. (1) The cited premise is the RELOAD case, and it is not fixed: the client mints crypto.randomUUID() per call in memory, a reload loses it, and the card itself defers persistence ('a surface can later persist one'). No surface in the write set persists a key. (2) 'Accidental double-submits are deduplicated server-side (one hold, one row)' is false as built: two clicks call generateImage twice and mint two different keys. Acceptance case 1 tests same-key concurrency that no in-tree caller can produce. What the build actually buys is narrower: a same-page transport drop mid-render retries once with the same key and joins the owner. It also needs the second request to land on the same process.",
+   "rereproposal": null,
+   "ambition": 4,
+   "ambition_why": "An idempotency-keyed single-flight with a value cache at the money seam is a principal-level primitive, and it generalises the poster turn's fix.",
+   "grounding": 3,
+   "grounding_why": "Every cited line holds. But the motivating harms (reload loses the paid image, double-submit pays twice) are not addressed by a per-call in-memory key, so the stated impact rests on a follow-up the card does not build.",
+   "falsifiability": 4,
+   "falsifiability_why": "Dispatch, spendRows and heldUsd counts, the 409, scope isolation, eviction and the same-key client retry would each catch a wrong receipts build. No case proves the user-facing claims (reload replay, or double-click dedupe through the real client).",
+   "verdict": "revise",
+   "revise_change": "Add app/_phases/frames/useFrames.ts to the write set. Persist each plate job's idempotency key in its stored job record and pass it as generateImage's `key`. Add an acceptance case: a fresh client module (simulated reload) re-issues with the persisted key within the TTL -> `x-imaging-receipt: replayed`, 0 new dispatches, 0 new rows. Without this, delete the reload and double-submit claims from Description and Expected impact.",
+   "void_reason": null
+  },
+  {
+   "context": "probe-frame-data",
+   "slot": "A",
+   "title": "Lane parameters declared once: argparse, record, resume guard and replay derived",
+   "premise_checks": [
+    {
+     "cite": "lane_record.py:238-310 check_resume 12 elif branches",
+     "holds": true,
+     "note": "Counted: steps, seed, ref_crop, late/reference_joins_at, zoom, tag, width, height, length, hero, ref_count, lora = 12."
+    },
+    {
+     "cite": "lane_record.py:346-387 replay_argv second hand list",
+     "holds": true,
+     "note": "Exact range."
+    },
+    {
+     "cite": "consistency.py:320-330 / motion.py:271-281 argparse copies; motion --width 1344 vs record_clip width=832 (:171)",
+     "holds": true,
+     "note": "motion add_argument at 273-280. The default disagreement is real but harmless today, since run() always passes width explicitly."
+    },
+    {
+     "cite": "lane_record.py:383-385 ref_count never replays",
+     "holds": true,
+     "note": "Reproduced: record_stills(ref_count=3, refs=[]) gives a replay with no --refs. Parsing it yields refs=1, and check_resume raises 'ref_count 3 -> 1'."
+    },
+    {
+     "cite": "lane_record.py:346-360 clip replay never emits --hero",
+     "holds": true,
+     "note": "Reproduced: the argv has no --hero. motion's default hero is shots/reference/00-hero.png, so a face-hero lane is refused on resume (check_resume :293-298)."
+    },
+    {
+     "cite": "lane_record.py:24-28 vs consistency.py:71-75 LOCATION differ",
+     "holds": true,
+     "note": "Measured: LOCATION equal False, CHARACTER equal True. All 8 tracked lane.json files carry consistency's LOCATION, and both callers pass location explicitly, so the wrong default is latent rather than recorded anywhere."
+    },
+    {
+     "cite": "consistency.py:255 forward dir name vs lane_record.py:92-104 inverse",
+     "holds": true,
+     "note": "Exact."
+    },
+    {
+     "cite": "motion.py:198-201 and consistency.py:260-264 hand-pick different key subsets",
+     "holds": true,
+     "note": "True. seed and fps are module constants in motion with no CLI flag, so 'never compared' only matters if the constant is edited between runs."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/7/5 ok; 4 files. Gate architecture. Scope: probe-frame-data owns only JSON; every file this card writes belongs to character-consistency-testing or is unmapped (lane_record.py) - same pipeline, outside the host's file set. Builds on 2b5b912 (2026-10-04 lane_record v2) and eb5ea21 (closed lanes row 'check_resume ignores hero/refs'); the replay-side gap and the declared table are new, so not a restatement. | write set: lane_record.py (418 lines), the argparse blocks of consistency.py and motion.py, and one new probe spec are what the change needs. Everything stays well under 800 lines. selftest.py is read-only, and it already has lane cases that must stay green. | Ownership: consistency.py and motion.py belong to character-consistency-testing (correct). lane_record.py and lane-record.probe.spec.ts are unmapped (correct). probe-frame-data owns only JSON (the lane.json files). The 'architecture' gate fits loosely, as the schema module of this context's data, but the card writes no file the context owns. The [guard] count of 8 tracked lane.json files holds. The selftest.py:566-600 cite holds, though the lane tests run on to about :800. DEFECT: acceptance case 5 contradicts the Description. The Description deletes lane_record's CHARACTER/LOCATION and says a missing clause fails loudly. Case 5 instead expects a defaulted record to equal consistency.LOCATION, and that would also force a lane_record -> consistency import cycle (consistency imports lane_record at :52, plus guard). MISSED BUG in the card's own area: motion.run's final record_clip (motion.py ~258) passes beats=rec.get('beats'), but write_shot stores clips under 'shots', so every per-clip sha256 is erased when a clip lane finishes. Reproduced: the final record has no 'shots' key. The card derives the record writer from the table and still would not catch this. | Side finding (not in the card): motion.run's final record_clip passes beats=rec.get('beats') while write_shot stores clips under 'shots', so a finished clip lane loses its per-clip checksums - reproduced.",
+   "rereproposal": null,
+   "ambition": 3,
+   "ambition_why": "Collapsing four copies into one table that the other three derive from is a real authority move with two live replay bugs attached, but it is still a refactor of a 400-line module.",
+   "grounding": 5,
+   "grounding_why": "Every cite reproduces on the tree, including both replay refusals and the LOCATION mismatch.",
+   "falsifiability": 4,
+   "falsifiability_why": "The round-trip and resume cases iterate the table, so a missing param fails. Case 4's 'strict' set is defined by the builder's own table, though, and case 5 is self-contradictory.",
+   "verdict": "revise",
+   "revise_change": "Rewrite acceptance case 5 to match the Description: lane_record.record_stills(dir,'baseline') with no character/location raises (ValueError naming 'location'), and lane_record.py no longer defines LOCATION/CHARACTER. Drop the expectation that the default equals consistency.LOCATION, which needs a lane_record->consistency import cycle.",
+   "void_reason": null
+  },
+  {
+   "context": "probe-frame-data",
+   "slot": "B-architecture (no UI surface)",
+   "title": "Adopt C11 stage 1: labelled shot clauses mint lane-qualified truth sidecars",
+   "premise_checks": [
+    {
+     "cite": "critic-2026-10-07.md:45 probe-frame-data-B build/decided; :896-948 stage spelled; craft_spec.py absent",
+     "holds": true,
+     "note": "Row at :45 confirmed. The stage section runs about :894-938. README:254 status reads 'open - next: stage 1 labelled clauses + sidecars'. craft_spec.py does not exist. Since 2026-10-03, no commit touches truth, sidecars or score.py truth loading. The nearest is eb5ea21 'resume refuses a changed hero or --refs', which is unrelated."
+    },
+    {
+     "cite": "frames/truth/arcane.json:11-13 grades 3; duel-keyframe.json:10-14 grades 5",
+     "holds": true,
+     "note": "Exact."
+    },
+    {
+     "cite": "score.py:95-99 truth by stem; probe.py:233 frame.name only",
+     "holds": true,
+     "note": "Exact (score.py:97, probe.py:233)."
+    },
+    {
+     "cite": "consistency.py:84-105 SHOTS_SPEC/ZOOM_SPEC prose, no labels",
+     "holds": true,
+     "note": "Exact."
+    },
+    {
+     "cite": "schema.py:23-26 CAMERA_ANGLE has low-angle not low; :130 ENUM_FIELDS",
+     "holds": true,
+     "note": "Exact."
+    },
+    {
+     "cite": "replicate.py:99-104 phrase table matches no clause",
+     "holds": true,
+     "note": "No full phrase from the table appears in any clause. Note that the critic's write set says the lexicon should be SHARED with replicate.compose_prompt, and the card silently drops that."
+    },
+    {
+     "cite": "shots/*/lane.json 18 prompts, 3 names x 6 lanes",
+     "holds": true,
+     "note": "6 stills lanes, each with 01-wide/02-medium/03-close."
+    },
+    {
+     "cite": "Body: 'answers both of its open questions'",
+     "holds": false,
+     "note": "Only the second (arguable values go to _ungraded). The first, how shot PNGs reach probe.py under lane-qualified names, is not answered. probe.py is not in the write set, and shots are written as <lane>/01-wide.png, so nothing ever produces the 'baseline--01-wide.png' rows that case 5 resolves. The score.py resolution would be reachable only from a hand-made fixture."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/8/5 ok; 4 files (+probe.py after revise). Gate architecture, inside scope (truth sidecars are named in the context description). Adopts OPEN moonshot probe-frame-data-B / C11 stage 1 (README:254), cited - allowed. | write set: Missing the lane-qualified naming seam, either probe.py (frame name -> truth_id) or a shot-export step that copies <lane>/<shot>.png to <lane>--<shot>.png. Without it, case 5 passes on a fixture while no real run ever resolves a sidecar. All files plausibly stay under 800 lines. | Ownership: consistency.py -> character-consistency-testing, score.py -> vlm-frame-annotation (both correct). The generated sidecars are exactly what probe-frame-data's description names ('ground-truth annotation sidecars for frames generated with known camera and lighting specifications'), so the context and the 'architecture' gate fit well. Deviation from the decided stage: the critic put the cases in pipeline/foundry/selftest.py (stdlib, CI-blocking), and the card moves them to a Node probe spec that spawns python. That is acceptable given the lane-record.probe.spec.ts precedent, but it should be stated. Case 6's digest check needs score.py to get the current spec without importing consistency (which imports guard and urllib), so the spec table or digest should live in craft_spec or be read from the sidecar.",
+   "rereproposal": null,
+   "ambition": 4,
+   "ambition_why": "It turns accuracy measurement from n=2 hand files into truth minted by construction on every future render, which is a principal-level change to what the eval can claim.",
+   "grounding": 4,
+   "grounding_why": "Every code cite holds and the stage is genuinely open and unbuilt. The claim to close both open questions is false.",
+   "falsifiability": 4,
+   "falsifiability_why": "Cases pin the enum validation, byte-identical prompts, sidecar content, collisions, basis filtering and digest staleness. None of them exercises a real probe.py row name, so the end-to-end join is untested.",
+   "verdict": "revise",
+   "revise_change": "Add pipeline/vlm-probe/probe.py to the write set so that a frame under shots/<lane-dir>/<shot>.png is recorded as frame '<lane-dir>--<shot>.png' (= truth_id + '.png'). Add a case: probe.py's row-naming function on shots/reference-face-e25/01-wide.png returns 'reference-face-e25--01-wide.png', and score.py resolves that row to the sidecar run_lane wrote. This closes the critic's first open question instead of claiming it.",
+   "void_reason": null
+  },
+  {
+   "context": "script-phase",
+   "slot": "A",
+   "title": "The notes pad becomes a pure, notebook-stamped state machine (padState.ts)",
+   "premise_checks": [
+    {
+     "cite": "app/_phases/script/useVersions.ts:69-89,138,237,250",
+     "holds": true,
+     "note": "Exactly 10 useState cells at 69,70,71,79,81,84,88,138,237,250. The hook has FOUR refs, not three: consumedRef, startingRef, live, plus seq (:100, the note ordinal). seq is load-bearing (monotonic note ids) and the reducer must take it over too."
+    },
+    {
+     "cite": "app/_phases/script/useVersions.ts:216,227,231,240,253,289",
+     "holds": true,
+     "note": "Six guards: 216/240/253 `if (running) return`, 227/231 `if (!running)`, 289 `if (running || startingRef.current ...)`. Count holds."
+    },
+    {
+     "cite": "app/_phases/script/useVersions.ts:149-152 (exactly-once held twice; 'use client' hook)",
+     "holds": true,
+     "note": "consumedRef + setConsumed at 150-152, file starts with \"use client\" and imports React. versions.ts, chainBase.ts, recalibrate.ts and source.ts carry no 'use client', so a pure padState.ts importing them is runnable in the Node probe lane."
+    },
+    {
+     "cite": "tests/golden-path/c1-closing.probe.spec.ts:202, turn-recalibrate.probe.spec.ts:334-339",
+     "holds": true,
+     "note": "Both are source-text greps (toContain / toMatch /resumeTurn\\(/). Card says 'the only tests that touch useVersions' - grep also hits client-api-auth, dispatch-strip and shared-notebook-contracts probes; none executes a pad rule, so the load-bearing claim (no probe runs a pad rule) holds."
+    },
+    {
+     "cite": "useVersions.ts:55-64, records.ts:25-30, useScope.ts:12-47",
+     "holds": true,
+     "note": "Stored and ScriptVersionsData have no digest; useScope carries digestOf/orphanOf with the legacy-fixture rule exactly as the card's guard case mirrors."
+    },
+    {
+     "cite": "useVersions.ts:132,262-275",
+     "holds": true,
+     "note": "baseline = last accepted regardless of source; runInput sends renderPayloadFor(baseline) beside ctx.source.notebook. Notebook-switch hole is real."
+    },
+    {
+     "cite": "app/_phases/_shared/notebook/source.ts:60,131-132",
+     "holds": true,
+     "note": "readonly digest at :60, lazy fnv1a getter at ~:131."
+    },
+    {
+     "cite": "docs/concepts/moonshots-2026-10-05/critic-2026-10-07-script-chain.md:530-545",
+     "holds": true,
+     "note": "Lines are the stage-3 Compose write set; supports 'compose unbuilt', the per-notebook-renders consequence is an inference, not stated verbatim. Non-load-bearing."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/7/5 ok; 7 files incl. generated census (regeneration stated). Gate architecture. Not script-phase-A (ScriptDraft, partial) or -B (compose); the digest stamp prepares compose stage 3. | write set: Files plausible; useVersions shrinks from 455. ScriptStep/StickyNotebook/NotesContext need no edits if API is additive. app/kit/census.json is generated by `npx tsx pipeline/kit-census.mts` (check via `npm run check:kit-census`, in verify:serial); the card's file_classes says 'regenerate after git add' but never names the command - minor. Overlap with B: useVersions.ts, records.ts, RecalibrateControl.tsx, census.json and the persisted record shape; card declares A-before-B ordering. | All 8 'today' claims fail before the build (padState.ts absent; parse ignores digest so case 8's digest:7 currently parses ok). BUT records.ts SCRIPT_VERSIONS.parse is not on the hook's load path: useVersions loads via loadStep (raw IndexedDB read, no registry parse); the parser is only read by stepContract/verdict. Case 8 is therefore a reader-side test, fine but not proof the hook honours the stamp. Bigger gap: every case targets the pure module; none asserts useVersions is actually rewired (useReducer(padReduce), padBasis(..., ctx.source.digest) on load, digest on accept). A build that ships a perfect padState.ts and leaves the hook on ten useState cells passes 8/8. Also: 'returned API shape does not change' contradicts RecalibrateControl rendering the orphan - the api must gain an `orphan` field (harmless, but the card should say so). Land needs ctx (cards/scope) and a timestamp for recalibrate/recalibrateFromPlan; the action must carry them or the reducer is impure.",
+   "rereproposal": null,
+   "ambition": 4,
+   "ambition_why": "Turning a guard-scattered hook into an executable transition table and closing a real notebook-switch hole is a principal-level structural move, not a tidy-up.",
+   "grounding": 5,
+   "grounding_why": "Every count and cite checks out on b08bc7e; only slips are 3-vs-4 refs (seq missed) and 'only tests' being loose.",
+   "falsifiability": 3,
+   "falsifiability_why": "The reducer cases are sharp, but nothing catches a build that never wires the hook to the reducer or never passes ctx.source.digest on load/accept.",
+   "verdict": "revise",
+   "revise_change": "Add a ninth acceptance case to script-pad-state.probe.spec.ts that reads stripComments(useVersions.ts) and asserts it matches /useReducer\\(padReduce/, matches /padBasis\\([^)]*ctx\\.source\\.digest/, and contains no `useState<Note[]>` / `useRef<string | null>(null)` for consumedRef - so a build that ships padState.ts without rewiring the hook fails.",
+   "void_reason": null
+  },
+  {
+   "context": "script-phase",
+   "slot": "B",
+   "title": "Walkable version history: staged runs survive reload, any version restores forward",
+   "premise_checks": [
+    {
+     "cite": "app/_phases/script/useVersions.ts:42-53",
+     "holds": true,
+     "note": "Comment and LostCandidate interface as quoted; save at :124-126 persists only {label,at,notes}."
+    },
+    {
+     "cite": "useVersions.ts:149-152,127,190-195 + lib/turns/client.ts:244 + lib/turns/ledger.ts:20-22",
+     "holds": true,
+     "note": "Traced: land sets consumed before staging -> saved as `turn` -> reload seeds consumedRef -> resumeTurn returns {action:'none'} because latest.id === consumed. Ledger keeps the result. Paid plan is unreachable from the pad after reload. Holds."
+    },
+    {
+     "cite": "_notes/RecalibrateControl.tsx:297-304",
+     "holds": true,
+     "note": "Lost line at ~:298-303, no action attached."
+    },
+    {
+     "cite": "versions.ts:291-328",
+     "holds": true,
+     "note": "receiptOf carries cost/duration/model/transport."
+    },
+    {
+     "cite": "useVersions.ts:345-355",
+     "holds": true,
+     "note": "accept only appends, clears notes/forceRenders/forceConclusions. Only writers of accepted are :109 load and :348."
+    },
+    {
+     "cite": "_matrix/VersionBar.tsx:60-73",
+     "holds": true,
+     "note": "No-candidate branch shows baseline label/receipt/override only. ScriptStep reads accepted only for length and [length-2]; no history list anywhere."
+    },
+    {
+     "cite": "versions.ts:291-293",
+     "holds": true,
+     "note": "null (no basedOn) and 'simulated locally' branches; a third must precede the engine!=='model' check."
+    },
+    {
+     "cite": "ScriptStep.tsx:329-349, RecalibrateControl.tsx:172-186",
+     "holds": true,
+     "note": "reading = candidate ?? baseline; accept button carries the two-click override. A restored candidate flows through the same gate unchanged."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/8/5 ok; 8 files incl. generated census (regeneration stated). Gate none. Not a restatement; the 2026-10-04 script card (scope-conflict resolve, e9a88a7) is a different surface. | write set: ScriptStep.tsx not needed (VersionBar receives the whole api at ScriptStep.tsx:495; restore rides on it). Line budgets fine (useVersions 455, RecalibrateControl 365, VersionBar 119, versions 424). census.json generated by `npx tsx pipeline/kit-census.mts` (`npm run check:kit-census` verifies); command not named in the card. Heavy overlap with A (useVersions, records, RecalibrateControl, persisted record shape; B would persist a full candidate into A's 'staged' phase) - declared B-after-A, which is correct; B should then also guard resume on A's digest. | All 7 'today' claims fail before the build (history.ts absent). Weak spots: (1) case 1 pins only beats/attribution/impact; a restoreAs that leaves budget, refusals, conflicts, unsupported, engine or summary from the wrong version passes - and budget drives the Coverage overrun tally. (2) Case 6's parse guard exercises SCRIPT_VERSIONS.parse, which is NOT on the hook's load path (useVersions loads raw via loadStep; parse is only read by stepContract/verdict); resumeStaged(malformed) covers the hook side, so tolerable. (3) No case pins hook wiring (save writes stagedOf, load calls resumeStaged, restore refused while running). (4) Design gap unaddressed: accept() clears pad notes, so accepting a restored candidate silently wipes unrelated pending notes; and staged resume is guarded on baselineId only, not notebook digest - after A, a staged candidate from another notebook would resume. Neither breaks the premise.",
+   "rereproposal": null,
+   "ambition": 4,
+   "ambition_why": "Recovering a paid, lost answer and making accept reversible via forward-only restore through the existing gate is a genuine product-level move.",
+   "grounding": 5,
+   "grounding_why": "The reload-loses-the-plan chain traces end to end through client.ts:244 exactly as claimed.",
+   "falsifiability": 3,
+   "falsifiability_why": "Pure-function cases are concrete, but restoreAs is under-pinned (budget/refusals/conflicts/engine unchecked) and hook wiring is untested.",
+   "verdict": "revise",
+   "revise_change": "Strengthen acceptance case 1 to: restoreAs(v2, v4, 'v5', 9) deep-equals {...omit(v2, ['engineRun','override']), id:'v5', basedOn:'v4', restoredFrom:'v2', notes:[], createdAt:9} - i.e. budget, refusals, conflicts, unsupported, engine, summary and modelRefusals all carried from v2 - so a partial copy fails.",
+   "void_reason": null
+  },
+  {
+   "context": "studio-workspace",
+   "slot": "A",
+   "title": "Studio navigation through one door: a pure nav reducer, the URL holds the step",
+   "premise_checks": [
+    {
+     "cite": "StudioView.tsx:133 wanted = useSearchParams().get('step')",
+     "holds": true,
+     "note": "exact"
+    },
+    {
+     "cite": "StudioView.tsx:172-176 open prefers wanted over p.phase",
+     "holds": true,
+     "note": "setPhaseKey at 172-176 inside getProject.then"
+    },
+    {
+     "cite": "StudioView.tsx:219-247 pick never writes URL; only router call is :157",
+     "holds": true,
+     "note": "grep: router.replace('/projects') at 157 is the only router call. Traced: open ?step=research, rail->score parks score, URL still research; reload re-enters the open path which prefers wanted -> research, contradicting the bookmark just parked. Real."
+    },
+    {
+     "cite": "StudioView.tsx:255-261 rail follows URL only when wanted !== seenWanted",
+     "holds": true,
+     "note": "Traced swallowed handoff: open ?step=research, rail->script (URL unchanged), ScriptStep:245 UpstreamBreak Link to ?step=research -> search param value unchanged -> no setPhaseKey, no park. Real."
+    },
+    {
+     "cite": "StudioView.tsx:264 initialWanted early return",
+     "holds": true,
+     "note": "Traced: open ?step=research, handoff ?step=script (rail moves + parks script), handoff ?step=research -> rail moves (259-260) but effect returns at 264; bookmark stays script while the user stands on research. Real."
+    },
+    {
+     "cite": "StudioView.tsx:226-246 and :266-274 park+reread+report duplicated",
+     "holds": true,
+     "note": "verbatim duplicate"
+    },
+    {
+     "cite": "StudioView.tsx:293-299 + Stepper.tsx:101-116 adjacency twice",
+     "holds": true,
+     "note": "bracket at 295 uses PHASES.indexOf; Stepper onKeyDown ~101-115 uses Math.min/max. They differ: Stepper clamps and moves focus, brackets return null at the ends and activate - neighbour() must keep that clamp-vs-null distinction"
+    },
+    {
+     "cite": "StudioView.tsx:231,:322,:332 three setProject writers race",
+     "holds": true,
+     "note": "Undercounted: five writers (168 open, 231 pick reread, 270 urlChanged reread, 322 signOff, 332 reopen). Race is plausible: a reread issued before a signOff write can resolve after it and drop the lock from the rail. Strengthens the claim."
+    },
+    {
+     "cite": "24 producers of ?step= outside app/studio, all routed through these paths",
+     "holds": true,
+     "note": "grep count 24 reproduces, but it counts lines, not producers: 4 are comments (ResearchStep:370, ScoreSpotting:460, shelf.ts:167, surface.ts:10), ProjectsView:338 is the shelf's entry (initial open, not an in-step handoff), AdsFinish:137 is a plain <a> (full load -> initial-open path, never parks). About 18 in-step soft handoffs. Overstated, not load-bearing; ScriptStep:245, ResearchStep:371, useCut:231-233, MotionStep:78 all verified."
+    },
+    {
+     "cite": "tests/live/golden-path.live.spec.ts:127-131 the step is a VIEW and holds the query",
+     "holds": true,
+     "note": "exact"
+    },
+    {
+     "cite": "tests/golden-path/studio-door-retry.probe.spec.ts:32 pins deps by source",
+     "holds": true,
+     "note": "at :33, regex /\\[id, user, router, attempt\\]/"
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/7/5 ok; 5 files. Gate architecture. Not WORKSPACE-A (step contracts) or WORKSPACE-B (Outputs). Census listed in shared_surfaces with its regeneration command. | write set: Overlaps card B on StudioView.tsx. app/kit/census.json is generated by pipeline/kit-census.mts over `git ls-files -- app components` (.ts/.tsx), so the new app/studio/[projectId]/studioNav.ts changes it; regenerate with `npx tsx pipeline/kit-census.mts` after git add, verified by `npm run check:kit-census` (in verify:serial). Correctly classed. Test files are outside the census population. studio-door-retry is listed conditionally, which is honest. | All three live defects reproduce by trace on b08bc7e. Acceptance 'today' claims: cases 1-2 describe current behaviour correctly (guards); cases 4-6 match the traced defects. Weakness: every case runs against the pure reducer. A wrong build whose runner ignores replaceUrl, drops ?v= or other params, or double-parks on the real router echo still passes 8/8, so the headline defect (stale URL after a rail click) is proven only in reducer state, not in the address bar. Card B's source ratchet names `pick(`; if A lands first and pick is removed or renamed, B's ratchet must follow. Sequence A then B, or phrase B's ratchet as 'the same handler Stepper's onPick receives'.",
+   "rereproposal": null,
+   "ambition": 4,
+   "ambition_why": "Collapses four navigation writers and two sources of truth into one pure transition function with the URL as mirror: a structural move, not a tidy-up.",
+   "grounding": 4,
+   "grounding_why": "All three defects and both duplications hold under trace; the '24 producers' and 'three writers' counts are off (about 18 real handoffs, five writers) without changing the case.",
+   "falsifiability": 3,
+   "falsifiability_why": "The reducer cases pin transitions precisely, but nothing checks that the runner actually writes the address, so the headline defect could survive a wrong build.",
+   "verdict": "revise",
+   "revise_change": "Add one case to studio-nav.probe.spec.ts, a source ratchet on stripComments(StudioView.tsx), asserting that the effect executor handles 'replaceUrl' via router.replace(`/studio/${id}?${params}`, { scroll: false }) with params built from the current URLSearchParams and step set. A runner that drops the URL write or the other query params then fails.",
+   "void_reason": null
+  },
+  {
+   "context": "studio-workspace",
+   "slot": "B",
+   "title": "The studio names your next move: the shelf's verb on the title line, one press",
+   "premise_checks": [
+    {
+     "cite": "app/_projects/shelf.ts:188-197 nextAction worst-news-first",
+     "holds": true,
+     "note": "exact; blocked > review > Delivered > Continue > Start, via stateOf"
+    },
+    {
+     "cite": "app/_projects/RaceSheet.tsx:397-411 'Up next' one-press button",
+     "holds": true,
+     "note": "UpNext at ~396-411, onClick onOpen(p, next.step)"
+    },
+    {
+     "cite": "StudioView.tsx has no nextAction reference",
+     "holds": true,
+     "note": "grep empty across app/studio"
+    },
+    {
+     "cite": "StudioView.tsx:318-326 handleSignOff only sets the record",
+     "holds": true,
+     "note": "setProject(updated) at 322; no hand-on"
+    },
+    {
+     "cite": "app/_studio/projectSeed.ts:64-72 Glass Harbor frames/motion/score review",
+     "holds": true,
+     "note": "phase 'frames', three steps in review, cut working"
+    },
+    {
+     "cite": "StudioView.tsx:88-91 STEP_KEYS, Keycaps :558; cut owns arrows/Space/J/K/L",
+     "holds": true,
+     "note": "exact"
+    },
+    {
+     "cite": "step-sign-off.probe.spec.ts:336-345 case 10",
+     "holds": true,
+     "note": "exact"
+    },
+    {
+     "cite": "Stepper.tsx:54-60, :119-170 marks on the rail",
+     "holds": true,
+     "note": "TONE at 54-60; rail map from ~119"
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/5/7/4 - exactly at the effort and risk floors. Gate direction, INSIDE studio-workspace's declared scope (the workspace that surfaces the right step and lands users on it). Not UI-SHELL-B (shell palette) nor the 2026-10-04 sign-off card. Repo law: a verb+step chip is work, not narration, provided no Hint or subtitle rides with it. | write set: Overlaps card A on StudioView.tsx (header + STEP_KEYS + key handler vs A's navigation rewrite of the same component). New nextMove.ts/NextMove.tsx under app change census.json; it is generated by pipeline/kit-census.mts, regenerated after git add and checked by check:kit-census. shelf.ts is imported read-only and correctly absent from the write set. | Acceptance values checked against lib/projects stateOf/signOffBlocker. Case 1: Decide Frames/you (first review in PHASES order, nothing blocked), true. Case 2: null by design. Case 3: a 'working' research is signable (signOffBlocker refuses only blocked/empty); Continue Research equals the active step -> null; after sign-off stateOf is done -> Start Script, true. Case 4: Unblock Score/blocked, true. Case 5: Delivered -> null. Case 6 is a guard that pins one precedence. Gate 'direction': the chip falls inside the studio-workspace context's declared scope (the workspace at /studio/<projectId>, the stepper rail, the bookmark). It is a header control in StudioView that reads app/_projects/shelf.ts (projects context) read-only. The direction call is about product taste, not scope. Narration law: a verb plus a step name with an arrow is the WORK (the shelf's own action, same as RaceSheet's Up next), not the app describing itself, and no explanatory slot is added. It conforms as long as no Hint or subtitle comes with it. The ratchet on `pick(` couples to card A: sequence A first, or name the handler rather than the identifier.",
+   "rereproposal": null,
+   "ambition": 3,
+   "ambition_why": "A sound, well-scoped UX elevation that reuses an existing rule; valuable, but it adds to a surface rather than moving a structure.",
+   "grounding": 5,
+   "grounding_why": "Every cite holds on b08bc7e and the acceptance values compute exactly from nextAction/stateOf.",
+   "falsifiability": 4,
+   "falsifiability_why": "The pure cases plus the deep-equal guard catch a second precedence or a wrong suppression; the press path is only source-ratcheted, and the visual needs cx-capture.",
+   "verdict": "build",
+   "revise_change": null,
+   "void_reason": null
+  },
+  {
+   "context": "ui-shell",
+   "slot": "A",
+   "title": "One layer stack: Modal, bell and account own Escape, outside-press, keys",
+   "premise_checks": [
+    {
+     "cite": "lib/board/keys.ts:55",
+     "holds": true,
+     "note": "BLOCKERS is exactly '[data-keys-block], dialog[open], [aria-modal=\"true\"]'. But 'the app's four key guards' is an undercount: overlayOpen() is read at 13 call sites (useBoardKeys:25, BroadcastWeek:136, gesture.ts:95, PipelineCanvas x3 at b08bc7e:515/941/1075, kit/Parts:1206, library/useShelf:177, playground/triage/Judge:146, cut/Transport:60, score/SpotList:277). Changing the default arg reaches all of them, which widens blast radius beyond what shared_surfaces names."
+    },
+    {
+     "cite": "lib/board/keys.ts:84-87",
+     "holds": true,
+     "note": "Escape returns 'close' before the overlay check, with the quoted comment. board.probe.spec.ts:253 asserts boardKeyAction(Escape, true) === 'close' today, so case 2 deliberately flips a guarded behaviour (board.probe is in write_set - consistent)."
+    },
+    {
+     "cite": "components/ui/NotificationBell.tsx:260,168",
+     "holds": true,
+     "note": "Tray is role=group, tabIndex=-1, no aria-modal/data-keys-block; :168 focuses it on open; typing() returns false for a plain div. /board renders StudioFrame which mounts the bell, so with tray open+focused and a nonempty pick, A reaches useBoardKeys -> decideBatch('approve'). Bug is real."
+    },
+    {
+     "cite": "app/board/ContactSheet.tsx:132-140",
+     "holds": true,
+     "note": "approve/reject/clear -> decideBatch over picked; close -> setBatch(new Set()) unless loupeOpen. Bell's Escape listener is on document (no stopPropagation), Board's on window, so both run on one press: tray closes AND multi-pick empties. Verified."
+    },
+    {
+     "cite": "components/ui/NotificationBell.tsx:169-182; UserMenu.tsx:47-53,60-71",
+     "holds": true,
+     "note": "Two hand-wired copies. UserMenu mousedown effect has deps [] so it is attached for the component lifetime, even while closed."
+    },
+    {
+     "cite": "components/ui/Modal.tsx:186-194,222",
+     "holds": true,
+     "note": "Escape yields only to cancelBubble/defaultPrevented, calls onCloseRef.current() without preventDefault/stopPropagation; per-instance document keydown at :222. Two nested Modals both register on document; the outer (registered first) closes first, the inner still runs -> both close. Structurally true; no nested-Modal call site was shown, so impact is latent."
+    },
+    {
+     "cite": "components/ui/Modal.tsx:228-245",
+     "holds": true,
+     "note": "prev overflow captured per instance and restored on cleanup; out-of-order close restores '' under a still-open dialog. LIFO-only, as claimed."
+    },
+    {
+     "cite": "tree counts: 37 Escape comparisons, 6 mousedown listeners",
+     "holds": true,
+     "note": "grep gives 37; addEventListener('mousedown') in exactly the 6 named files."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "L/7/8/6 ok; 5 files + 2 new, diff mostly deletions, fits <800. Gate architecture. Not UI-SHELL-A (roles not worlds) nor SIGNAL-A (one keymap), but adjacent to SIGNAL-A's guard - the builder must not grow into the keymap kernel. | write set: Uses the same convention as card B: new files go in new_files (layers.ts, layer-stack.probe), edits go in write_set. board.probe.spec.ts belongs in write_set because :253 must flip. Size fits: Modal 338 + Bell 541 + UserMenu 237 + keys 105 lines of existing code, and the diff is mostly deletions plus a ~150-line module and probe, well under 800. useBoardKeys, calendar and pipeline need no edit because the default arg changes. But they and 8 other overlayOpen readers change behaviour silently: a pointerdown on the pipeline canvas with the tray open now ends as 'dialog'. Those readers should be named in shared_surfaces. It overlaps card B on NotificationBell.tsx, so the two must be built one after the other. No generated files. | All acceptance 'today' claims hold (1: tray invisible to guard; 2: double-acting Escape; 3: nested close; 4: LIFO lock). But every case is a pure Node probe over layers.ts plus a source ratchet. The real bug is listener ORDER: if the stack's document listener pops 'bell' synchronously on Escape, the Board's window listener then sees overlayOpen()===false and still runs close -> setBatch(new Set()). A build like that passes all 8 cases and keeps bug 2. Nothing pins the hand-off between the layer dismissal and the window-level guards.",
+   "rereproposal": null,
+   "ambition": 4,
+   "ambition_why": "Replaces DOM-sniffing with an owned layer stack that every key guard can query; a real structural move, though it stops at three adopters.",
+   "grounding": 4,
+   "grounding_why": "Every bug traced holds on the tree; only the 'four key guards' count is wrong (13 readers), which understates the reach rather than undermining the case.",
+   "falsifiability": 3,
+   "falsifiability_why": "Pure stack queries are well specified, but no case pins the document-vs-window ordering that is the actual double-Escape bug, so a synchronously-popping build passes green.",
+   "verdict": "revise",
+   "revise_change": "Add an acceptance case and rule: the layer stack's keydown listener calls e.preventDefault() when it dismisses a layer, and boardKeyAction returns null for Escape when e.defaultPrevented. Assert boardKeyAction({key:'Escape', defaultPrevented:true}, false) -> null, plus a source ratchet that layers.ts preventDefaults on dismiss. Bug 2 then stays closed however fast the stack pops. While editing, fix shared_surfaces to list all 13 overlayOpen readers.",
+   "void_reason": null
+  },
+  {
+   "context": "ui-shell",
+   "slot": "B",
+   "title": "Storage trouble becomes a remedy: per-kind fix, all steps at risk, self-clearing",
+   "premise_checks": [
+    {
+     "cite": "components/ui/NotificationBell.tsx:37-45",
+     "holds": true,
+     "note": "TROUBLE_WORD.quota at :38 verbatim."
+    },
+    {
+     "cite": "components/ui/NotificationBell.tsx:295-326 (dismiss :304-313)",
+     "holds": true,
+     "note": "The card's only button is 'dismiss', which calls clearStorageTrouble() (:307)."
+    },
+    {
+     "cite": "app/_phases/_shared/stepStore.ts:301",
+     "holds": true,
+     "note": "'`quota` means stop and export, `blocked` means close the other tab' - verbatim."
+    },
+    {
+     "cite": "app/_phases/_shared/stepStore.ts:352,401-404",
+     "holds": true,
+     "note": "Single `let latest`, report() overwrites it. reportStorageTrouble (:423) writes the same slot."
+    },
+    {
+     "cite": "app/_phases/_shared/stepStore.ts:374-379,617",
+     "holds": true,
+     "note": "clearStorageTrouble has one caller (the bell's dismiss). withStore's success return at :617 clears nothing."
+    },
+    {
+     "cite": "components/ui/SignOutDialog.tsx:50,56; UserMenu.tsx:142-160",
+     "holds": true,
+     "note": "buildArchive/saveArchive exist (lines 50/56 off by one, fact holds). The only non-dialog door is LocalArchiveItem under LOCAL_MODE (UserMenu:209). exportProject in studioArchive has no caller."
+    },
+    {
+     "cite": "lib/jobLinks.ts:118",
+     "holds": true,
+     "note": "badge = count + (trouble ? 1 : 0)."
+    },
+    {
+     "cite": "grep storage.estimate -> 0",
+     "holds": true,
+     "note": "0 hits in app/components/lib."
+    }
+   ],
+   "floors_ok": true,
+   "floor_notes": "M/6/8/5 ok; 2 files + 2 new. Gate none. Adjacent to C5/AUP-B (archive, partial ef42e6f) - reuses buildArchive/saveArchive rather than restating it. | write set: write_set lists only NotificationBell.tsx and stepStore.ts; storageRemedy.ts and storage-remedy.probe are in new_files. That matches card A's convention, so it is honest. SignOutDialog is imported, not edited. The bell will also need a uid (useAuth) for the archive action, which stays inside the listed file. It overlaps card A on NotificationBell.tsx, so the two must be built one after the other. No generated files. Small enough for M. | Every 'today' claim holds. The flaw is in the self-clearing design, and the cases do not probe it. Write troubles reach the one slot from many stores through reportStorageTrouble: assets (useAssets:152, the big blobs most likely to hit quota), themes, projects, bookmark/signOff, sign-out eviction. noteStorageOk('write') on ANY withStore success would clear a quota trouble raised by an asset blob write as soon as a tiny step record saves. The card would then announce 'Saving again' while the large writes still fail. That is the same false resolution the card accuses dismiss of. The troubleReducer 'ok' -> 'clear' also drops every accumulated phase when one phase recovers.",
+   "rereproposal": null,
+   "ambition": 3,
+   "ambition_why": "Turns a dead-end error card into an actionable, evidence-cleared remedy; a solid UX elevation, not an architectural move.",
+   "grounding": 4,
+   "grounding_why": "All cited facts hold on the tree; the gap is an unexamined consequence (multi-producer slot), not a false premise.",
+   "falsifiability": 3,
+   "falsifiability_why": "The pure reducer and remedy cases are sharp. No case covers a success in one scope clearing a trouble from another, so the false-clear build passes.",
+   "verdict": "revise",
+   "revise_change": "Scope self-clearing: noteStorageOk(op, projectId, phase) clears only a trouble with the same op, projectId and phase. troubleReducer's ok event removes only that phase and goes to 'clear' when phases are empty. Add the case: reportStorageTrouble('write','','assets',QuotaExceededError) then noteStorageOk('write','p1','script') -> lastStorageTrouble() unchanged.",
+   "void_reason": null
+  }
+ ],
+ "overlaps": [
+  {
+   "files": [
+    "lib/foundry/extract/store.ts",
+    "lib/foundry/extract/types.ts"
+   ],
+   "cards": [
+    "foundry-engine/A",
+    "foundry-engine/B"
+   ],
+   "wave_rule": "serial; A first (B's spend fields ride on A's store write path)"
+  },
+  {
+   "files": [
+    "app/_phases/script/useVersions.ts",
+    "app/_phases/script/records.ts",
+    "app/_phases/script/_notes/RecalibrateControl.tsx",
+    "app/kit/census.json"
+   ],
+   "cards": [
+    "script-phase/A",
+    "script-phase/B"
+   ],
+   "wave_rule": "serial; A first, B rebases; B's resumeStaged should also check the notebook digest A adds"
+  },
+  {
+   "files": [
+    "app/studio/[projectId]/StudioView.tsx"
+   ],
+   "cards": [
+    "studio-workspace/A",
+    "studio-workspace/B"
+   ],
+   "wave_rule": "serial; A first. B's source ratchet names `pick(`, which A may rename - ratchet on the rail's onPick handler instead"
+  },
+  {
+   "files": [
+    "components/ui/NotificationBell.tsx"
+   ],
+   "cards": [
+    "ui-shell/A",
+    "ui-shell/B"
+   ],
+   "wave_rule": "serial; A first (moves the bell's Escape/outside-press into the layer stack)"
+  },
+  {
+   "files": [
+    "pipeline/vlm-probe/consistency.py"
+   ],
+   "cards": [
+    "probe-frame-data/A",
+    "probe-frame-data/B"
+   ],
+   "wave_rule": "serial (both cards already say so)"
+  },
+  {
+   "files": [
+    "lib/board/keys.ts (overlayOpen, 13 call sites)"
+   ],
+   "cards": [
+    "ui-shell/A"
+   ],
+   "wave_rule": "changes a signature others call - alone/first in its wave"
+  },
+  {
+   "files": [
+    "lib/imaging/http.ts+router.ts (A) / lib/imaging/api.ts+lib/imagingClient.ts (B)"
+   ],
+   "cards": [
+    "imaging-service/A",
+    "imaging-service/B"
+   ],
+   "wave_rule": "disjoint files, same dispatch path; co-wave allowed only if integration re-runs imaging-budget-holds and both new probes"
+  },
+  {
+   "files": [
+    "app/kit/census.json"
+   ],
+   "cards": [
+    "script-phase/A",
+    "script-phase/B",
+    "studio-workspace/A",
+    "studio-workspace/B",
+    "ui-shell/A",
+    "ui-shell/B"
+   ],
+   "wave_rule": "shared generated surface - coordinator regenerates once per wave, never a builder hand-edit"
+  }
+ ],
+ "generated_touches": [
+  {
+   "file": "app/kit/census.json",
+   "cards": [
+    "script-phase/A",
+    "script-phase/B",
+    "studio-workspace/A",
+    "studio-workspace/B"
+   ],
+   "regeneration_stated": true,
+   "how": "npx tsx pipeline/kit-census.mts after git add; npm run check:kit-census verifies"
+  },
+  {
+   "file": "app/kit/census.json (implicit, not declared)",
+   "cards": [
+    "ui-shell/A",
+    "ui-shell/B"
+   ],
+   "regeneration_stated": false,
+   "how": "new components/ui/layers.ts and storageRemedy.ts are tracked .ts under components/, so the census changes; the cards do not name it - coordinator regenerates"
+  },
+  {
+   "file": "app/kit/census.json (implicit)",
+   "cards": [
+    "imaging-service/A",
+    "imaging-service/B"
+   ],
+   "regeneration_stated": true,
+   "how": "file_classes hand it to the coordinator after the commit"
+  },
+  {
+   "file": "pipeline/vlm-probe/shots/<lane>/<shot>.truth.json",
+   "cards": [
+    "probe-frame-data/B"
+   ],
+   "regeneration_stated": true,
+   "how": "runtime output of consistency.run_lane, never written by the build"
+  }
+ ],
+ "premise_false": 0,
+ "false_cites_not_load_bearing": [
+  "foundry-engine/B: engine.ts:136-161 'a money-stopped run has no resume path' - false today (an over-budget generate leaves an errored round that pruneFailures prunes, so retry resumes); true only of the new run-ceiling stop",
+  "probe-frame-data/B: body claims it answers both of the critic's open questions - it answers only the second; lane-qualified frame naming in probe.py is unaddressed"
+ ],
+ "void": 0,
+ "revised": 11,
+ "build": 1,
+ "mean": {
+  "ambition": 3.67,
+  "grounding": 4.42,
+  "falsifiability": 3.67
+ },
+ "pattern": "5 of 11 revisions are one defect: every acceptance case tests a new pure module, so a build that ships the module but never rewires the live surface passes N/N (script-phase A, studio-workspace A, ui-shell A, probe-frame-data B, imaging-service B). Require one wiring case per card."
+}

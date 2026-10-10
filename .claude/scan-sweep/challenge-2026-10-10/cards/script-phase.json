@@ -1,0 +1,121 @@
+[
+ {
+  "context": "script-phase",
+  "slot": "A",
+  "lens": "architecture-challenger",
+  "title": "The notes pad becomes a pure, notebook-stamped state machine (padState.ts)",
+  "size": "M",
+  "effort": 6,
+  "impact": 7,
+  "risk": 5,
+  "write_set": [
+   "app/_phases/script/padState.ts",
+   "app/_phases/script/useVersions.ts",
+   "app/_phases/script/records.ts",
+   "app/_phases/script/_notes/RecalibrateControl.tsx",
+   "tests/golden-path/script-pad-state.probe.spec.ts",
+   "tests/golden-path/turn-recalibrate.probe.spec.ts",
+   "app/kit/census.json"
+  ],
+  "new_files": ["app/_phases/script/padState.ts", "tests/golden-path/script-pad-state.probe.spec.ts"],
+  "shared_surfaces": [
+   "app/_phases/script/useVersions.ts (also in this context's slot-B write set: build A first, B rebases)",
+   "app/kit/census.json"
+  ],
+  "file_classes": {
+   "app/_phases/script/padState.ts": "hand",
+   "app/_phases/script/useVersions.ts": "hand",
+   "app/_phases/script/records.ts": "hand",
+   "app/_phases/script/_notes/RecalibrateControl.tsx": "hand",
+   "tests/golden-path/script-pad-state.probe.spec.ts": "hand",
+   "tests/golden-path/turn-recalibrate.probe.spec.ts": "hand (the one coupled file: case 7 at :334-339 greps useVersions source for resumeTurn; keep it green, edit only if the call moves)",
+   "app/kit/census.json": "generated-by-kit-census (regenerate after git add of the new files)"
+  },
+  "acceptance": [
+   "padReduce({phase:'running', notes:[n1], ...}, {type:'add-note', cardId:'c', kind:'descope'}) -> the same state reference back; likewise remove-note, clear-notes, force-render and force-conclusion while phase is 'starting' or 'running'. Rule 2 becomes one transition table instead of six `if (running)` guards",
+   "padReduce(running, {type:'land', turn:{id:'tn-aaaaaaaaaaaa', status:'done', result:{plan}}}) -> phase 'staged', candidate.basedOn === baseline.id, consumed === 'tn-aaaaaaaaaaaa'. Applying the same land action a second time -> state unchanged. Exactly-once now lives in the reducer, not in a ref",
+   "padReduce(running, land with status 'failed' and error.message 'engine down') -> phase 'staged', candidate.engine 'simulated', engineNote 'engine down'. land with status 'cancelled' -> phase 'idle' and no candidate",
+   "padReduce(staged, {type:'accept', digest:'D1'}) -> accepted grows by one; notes, forceRenders and forceConclusions are all []; padRecordOf(state).digest === 'D1'",
+   "padBasis({accepted:[v2], notes:[n1], digest:'D1'}, 'D2') -> {baseline: BASELINE, notes: [], orphan: {digest:'D1', accepted:1, notes:1}}. The stored record is returned untouched: held, never deleted (the useScope orphan rule)",
+   "renderPayloadFor(padBasis(orphanedRecord, 'D2').baseline) deep-equals renderPayloadFor(BASELINE). An orphaned v2's beats are never sent beside another notebook",
+   "[guard] a stored record with no digest, written before the stamp, reads as fixtureSource().digest: padBasis(legacy, fixtureSource().digest).orphan === null and the baseline is its last accepted version",
+   "SCRIPT_VERSIONS.parse({notes:[], accepted:[], digest:7}) -> malformed naming 'script-versions.digest'. A record with no digest parses ok"
+  ],
+  "premise": [
+   "app/_phases/script/useVersions.ts:69-89,138,237,250 - one state machine is held in ten useState cells (notes, accepted, candidate, hydratedFor, lostCandidate, consumed, starting, engineNote, forceRenders, forceConclusions) plus the refs consumedRef, startingRef and live",
+   "app/_phases/script/useVersions.ts:216,227,231,240,253,289 - rule 2 (nothing may be edited while a run is live) is restated as six separate `if (running)` guards",
+   "app/_phases/script/useVersions.ts:149-152 - exactly-once landing is held twice, as a ref (consumedRef) and as a persisted copy (consumed). The module is a 'use client' hook, so the Node probe lane cannot execute it",
+   "tests/golden-path/c1-closing.probe.spec.ts:202 and tests/golden-path/turn-recalibrate.probe.spec.ts:334-339 - the only tests that touch useVersions read its SOURCE TEXT with toContain/toMatch. No probe runs a pad rule",
+   "app/_phases/script/useVersions.ts:55-64 and app/_phases/script/records.ts:25-30 - the script-versions record carries no notebook digest. The scope it stacks on does (app/_phases/research/useScope.ts:12-47, digestOf/orphanOf)",
+   "app/_phases/script/useVersions.ts:132,262-275 - the baseline is the last accepted version whatever notebook is active, and runInput sends renderPayloadFor(baseline) beside ctx.source.notebook. So a v2 accepted on the replay goes out as the base chain for the creator's own reasoned notebook",
+   "app/_phases/_shared/notebook/source.ts:60,131-132 - every NotebookSource already carries a stable digest, so the stamp costs nothing to compute",
+   "docs/concepts/moonshots-2026-10-05/critic-2026-10-07-script-chain.md:530-545 - compose (script-phase-B stage 3, unbuilt) makes renders per-notebook data. A version ledger with no base stamp cannot tell which draft its accepted chains edited"
+  ],
+  "rollback": "Two commits: (1) padState.ts and its probe, (2) rewiring useVersions, records and RecalibrateControl. Reverting (2) restores the hook verbatim. The new `digest` field on the record is optional and the old parser ignores it, so stored projects read unchanged in both directions.",
+  "gate": "architecture",
+  "runner_up": "One pure scriptLens(tab, versions, showing) derivation to replace the five hand-picked version variables in ScriptStep.tsx:329-389 (reading/replaced/comparing/shown/weighed), a rule 9327af7 already had to fix once.",
+  "registry": "media-generation/review-iteration-loops (edit-plan-over-regeneration, gate-record-outlives-the-media); software-engineering/versioning-snapshots (version-identity, snapshot-scope); software-engineering/session-resume (content-freshness-states)",
+  "body": "## Summary\nThe notes-and-versions pad (useVersions.ts, 455 lines) is a state machine written as ten useState cells, three refs and six `if (running)` guards. Nothing stamps it: its accepted chains do not record which notebook they were written against. This card moves every transition into a pure `padState.ts` reducer with four phases (idle, starting, running, staged). The hook becomes a thin shell over it for persistence and the turn ledger. The record is stamped with the active source's digest, so a ledger written on another notebook is held as an orphan, the same way the scope already is.\n\n## Description\nThe hook's header promises three rules: feedback aggregates; one run at a time, with no notes added mid-flight; and a candidate is not the baseline until it is accepted. Today guard clauses scattered through the callbacks enforce them, and a ref enforces exactly-once landing. The Node probe lane can execute none of this; the two existing tests of the hook grep its source text. The reducer turns the rules into a transition table the lane can drive. The hook keeps only what must be React: load and save, the resumeTurn/getTurn effects, and the preview.\n\nThe digest stamp closes a hole the C1 work left open. The scope is digest-stamped and orphan-aware (useScope.ts:34-47), but the version ledger stacked on it is not. A creator who accepts v2 on the replay and then reasons their own notebook keeps v2 as the baseline, keeps pad notes keyed to the old cards, and the next recalibration sends v2's chain beside the new notebook. The stamp is also the seam compose (script-phase-B stage 3) will need: once renders are per-notebook, a ledger has to say which base it edits.\n\n## Flow\n- padState.ts: `PadState`, `PadAction`, `padReduce`, `padRecordOf`, and `padBasis(record, digest)` returning {baseline, notes, orphan}.\n- useVersions.ts: a single `useReducer(padReduce)`. Load runs the stored record through padBasis with `ctx.source.digest`. Accept dispatches with the digest. land, run and cancel each dispatch an action. The returned API shape does not change, so StickyNotebook, VersionBar, ScriptStep and NotesContext need no edits.\n- records.ts: adds `ScriptVersionsData.digest?: string`. parse rejects a digest that is not a string.\n- RecalibrateControl.tsx: an orphaned ledger renders as one line with a `<StaleBadge>` carrying the count of held versions and notes. No prose slot.\n\n## Expected impact\nThe pad's rules become test cases rather than comments. A whole class of defect (a guard missed in one callback) closes, and so does the notebook-switch hole. Compose gets a ledger it can key to its draft.\n\n## Evaluation\nClaim: every pad rule, and the orphan rule, is executable as a pure transition.\nBefore: 0 of 8 acceptance cases pass (padState.ts does not exist; the record has no digest)\nAfter: 8 of 8\nMethod: gate - write tests/golden-path/script-pad-state.probe.spec.ts first; keep the turn-recalibrate, c1-closing, recalibration-stacks, script-sticky-pad, chain-break-reaches-the-reviewer and step-verdicts probes green, along with npm run typecheck and check:kit-census\nResult: better\nGate: architecture",
+  "evidence": "useVersions.ts:216 `if (running) return false; // rule 2`\nuseVersions.ts:227 `(id: string) => { if (!running) setNotes((n) => n.filter((x) => x.id !== id)); }`\nuseVersions.ts:231 `const clearNotes = useCallback(() => { if (!running) setNotes([]); }, [running]);`\nuseVersions.ts:240 and :253 `if (running) return; // rule 2`\nuseVersions.ts:289 `if (running || startingRef.current || !notes.length || blocked) return;`\nuseVersions.ts:150 `if (consumedRef.current === rec.id) return;`\nuseState cells at useVersions.ts:69,70,71,79,81,84,88,138,237,250 (10)\nrecords.ts:25-30 `interface ScriptVersionsData { notes: Note[]; accepted: Version[]; savedAt?: number; }` - no digest\nuseScope.ts:42-43 `export function orphanOf(held: Held, digest: string): Orphan | null { if (held.digest === undefined || held.digest === digest) return null;`\nturn-recalibrate.probe.spec.ts:335 `const src = stripComments(readFileSync(join(process.cwd(), \"app/_phases/script/useVersions.ts\"), \"utf8\"));`\nc1-closing.probe.spec.ts:202 `expect(code(\"app/_phases/script/useVersions.ts\")).toContain(\"conclusions: ctx.source.conclusions\");`"
+ },
+ {
+  "context": "script-phase",
+  "slot": "B",
+  "lens": "ux-elevation",
+  "title": "Walkable version history: staged runs survive reload, any version restores forward",
+  "size": "M",
+  "effort": 6,
+  "impact": 8,
+  "risk": 5,
+  "write_set": [
+   "app/_phases/script/history.ts",
+   "app/_phases/script/versions.ts",
+   "app/_phases/script/useVersions.ts",
+   "app/_phases/script/records.ts",
+   "app/_phases/script/_matrix/VersionBar.tsx",
+   "app/_phases/script/_notes/RecalibrateControl.tsx",
+   "tests/golden-path/script-version-history.probe.spec.ts",
+   "app/kit/census.json"
+  ],
+  "new_files": ["app/_phases/script/history.ts", "tests/golden-path/script-version-history.probe.spec.ts"],
+  "shared_surfaces": [
+   "app/_phases/script/useVersions.ts and records.ts (also in slot A: if both are built, B goes after A and rebases)",
+   "app/kit/census.json"
+  ],
+  "file_classes": {
+   "app/_phases/script/history.ts": "hand",
+   "app/_phases/script/versions.ts": "hand",
+   "app/_phases/script/useVersions.ts": "hand",
+   "app/_phases/script/records.ts": "hand",
+   "app/_phases/script/_matrix/VersionBar.tsx": "hand",
+   "app/_phases/script/_notes/RecalibrateControl.tsx": "hand",
+   "tests/golden-path/script-version-history.probe.spec.ts": "hand",
+   "app/kit/census.json": "generated-by-kit-census (regenerate after git add of the new files)"
+  },
+  "acceptance": [
+   "restoreAs(v2, baseline=v4, 'v5', 9) -> {id:'v5', basedOn:'v4', restoredFrom:'v2', notes:[], createdAt:9}, with beats, attribution and impact each deep-equal to v2's, and no override and no engineRun",
+   "restoreAs(BASELINE, baseline=v3, 'v4', 9) -> a candidate with no `beats` and impact deep-equal to IMPACT, so chainOf(candidate, 'reversal-chain') equals the fixture chain. Going back to the original renders mints a forward version; it does not rewind",
+   "restoreAs(v4, baseline=v4, 'v5', 9) -> null. The current baseline cannot be restored onto itself",
+   "receiptOf(restoreAs(v2, v4, 'v5', 9)) === 'restored from v2 · no model call', not the 'simulated locally' line a fallback gets",
+   "stagedOf(candidate, 'v3') round-trips through SCRIPT_VERSIONS.parse, and resumeStaged(parsed.staged, {baselineId:'v3'}) returns a Version deep-equal to the candidate, engineRun and manifest included",
+   "resumeStaged(staged built on 'v3', {baselineId:'v4'}) -> {lost:'baseline-moved', label, notes}. resumeStaged(malformed staged) -> {lost:'unreadable'}. [guard] SCRIPT_VERSIONS.parse of that malformed record still returns its accepted versions",
+   "acceptInto([v2, v3], restoreAs(v2, v3, 'v4', 9)) -> [v2, v3, v4] with v4.restoredFrom === 'v2'. History only grows; nothing is truncated"
+  ],
+  "premise": [
+   "app/_phases/script/useVersions.ts:42-53 - a staged candidate is deliberately not persisted; only a LostCandidate receipt is. A reload throws the staged answer away",
+   "app/_phases/script/useVersions.ts:149-152,127,190-195 - landing marks the turn consumed and persists its id. After a reload, resumeTurn answers 'none' (lib/turns/client.ts:244) and the paid plan is never staged again, although the turn record still holds it (lib/turns/ledger.ts:20-22, 'The RESULT is kept')",
+   "app/_phases/script/_notes/RecalibrateControl.tsx:297-304 - what the reload leaves is the line '{label} · staged, never accepted · lost', and no action goes with it",
+   "app/_phases/script/versions.ts:291-328 - a run is a paid model turn whose cost, duration and model the receipt carries. That cost is what a reload discards",
+   "app/_phases/script/useVersions.ts:345-355 - accept only appends to `accepted`, and nothing leads back to an earlier version. Accepting also clears the notes that produced it",
+   "app/_phases/script/_matrix/VersionBar.tsx:60-73 - with no candidate staged, the bar names only the current baseline. The accepted list (useVersions.ts:57) is never drawn as a history",
+   "app/_phases/script/versions.ts:291-293 - receiptOf has two branches for versions with no model call and cannot say 'restored'",
+   "app/_phases/script/ScriptStep.tsx:329-349 and _notes/RecalibrateControl.tsx:172-186 - a staged candidate is already re-gated (`reading` is the candidate) and accept already carries the two-click override receipt, so a restored version passes the same gate with no new gate code"
+  ],
+  "rollback": "Three commits: (1) history.ts and its probe, (2) the versions and records fields, (3) the hook and the two surfaces. `staged` and `restoredFrom` are optional fields that an older build ignores. Reverting (3) returns the LostCandidate line, and stored records stay readable.",
+  "gate": "none",
+  "runner_up": "Let VersionBar pick any two accepted versions to compare on Coverage and Spend, not only baseline against the staged candidate.",
+  "registry": "software-engineering/versioning-snapshots (restore-semantics, version-identity); software-engineering/undo-history (undo-model-selection, checkpoint-restore); software-engineering/session-resume (resume-affordances); media-generation/review-iteration-loops (gate-record-outlives-the-media)",
+  "body": "## Summary\nThe one loop in this step that costs money has two blind spots. A recalibration the creator has not yet accepted vanishes on reload: what remains is a 'lost' line with no action, although the plan still sits in the turn ledger. And accepting is one-way: once v3 is the baseline, nothing leads back to v2. This card persists the staged candidate against the baseline it was built on, and adds forward-only restore. Restoring vN stages it as a new candidate, which goes through the same gate and accept/override path as any run.\n\n## Description\nThe comment at useVersions.ts:42-48 refused to persist staging because restoring one 'would put an unreviewed result back on the pad as if it had been decided'. That reason holds for restoring it as a BASELINE. Restoring it as the staged CANDIDATE leaves it undecided: the candidate bar, the re-run gate and the two-click override still stand between it and the baseline. The only guard it needs is that the baseline it was built on has not moved. If it has, the candidate is reported lost, with that reason.\n\nRestore follows the registry's restore-semantics rule. Restoring vN mints vM with `restoredFrom: vN`, staged as a candidate, and nothing is truncated. A restore can be undone by another restore, so the version list becomes somewhere to try things, and the 'accepted over the gate' receipts on later versions are kept.\n\n## Flow\n- history.ts (pure): `restoreAs(v, baseline, id, at)`, `stagedOf(candidate, baselineId)`, `resumeStaged(staged, {baselineId})`, `acceptInto(accepted, v)`.\n- versions.ts: adds `Version.restoredFrom?: string`, and gives `receiptOf` a third no-model branch.\n- records.ts: parses `ScriptVersionsData.staged?`. A damaged staged entry is dropped and reported, and `accepted` is kept.\n- useVersions.ts: the save writes `stagedOf(candidate)` and the load resumes it through `resumeStaged`. A new `restore(id)` is exposed and refused while a run is live.\n- VersionBar.tsx: with no candidate staged, the accepted versions render as a row of chips. Each chip shows its label, its restored-from provenance as a `<Provenance>`, and its receipt and override lines, and every chip except the current one has a restore action. No explanatory slot.\n- RecalibrateControl.tsx: the 'lost' line remains only for a staged run that could not be resumed, and now gives its reason (baseline moved, or unreadable).\n\n## Expected impact\nA reload no longer loses a paid, minutes-long answer. Undoing an accept takes one click, and that click can itself be undone. Creators can step through versions on Coverage and Spend instead of being locked to the newest one.\n\n## Evaluation\nClaim: a staged run survives a reload, and any accepted version can be restored forward through the existing gate.\nBefore: 0 of 7 acceptance cases pass (history.ts does not exist; there is no staged persistence and no restoredFrom)\nAfter: 7 of 7\nMethod: gate - write tests/golden-path/script-version-history.probe.spec.ts first; keep the recalibration-stacks, turn-recalibrate, script-sticky-pad, script-tab-tallies and chain-break-reaches-the-reviewer probes green, along with typecheck, check:narration and check:kit-census; capture the studio-script screen in both worlds with cx-capture\nResult: better\nGate: none",
+  "evidence": "useVersions.ts:44-47 'Staging itself is deliberately NOT persisted — a version the creator never accepted is not a version, and restoring one would put an unreviewed result back on the pad as if it had been decided.'\nuseVersions.ts:150-152 `if (consumedRef.current === rec.id) return; consumedRef.current = rec.id; setConsumed(rec.id);` -> saved as `turn` at :127\nlib/turns/client.ts:244 `if (latest.id === consumed || (latest.status !== \"done\" && latest.status !== \"failed\")) return { action: \"none\", turn: latest };`\nlib/turns/ledger.ts:21-22 'The RESULT is kept: it is the validated artifact (a plan, scene specs), which is what the record exists to hold.'\nRecalibrateControl.tsx:299 `{api.lostCandidate.label} · staged, never accepted · lost`\nuseVersions.ts:348 `setAccepted((a) => [...a, override ? { ...candidate, override } : candidate]);` is the only writer of accepted other than load (:109)\ngrep -rn 'restore' app/_phases/script -> 2 hits, both comments (adoption.ts:17, recalibrate.ts:332); there is no restore path"
+ }
+]
