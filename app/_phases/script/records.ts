@@ -26,6 +26,9 @@ export interface ScriptVersionsData {
   notes: Note[];
   /** Accepted versions, oldest first. The baseline itself is never stored. */
   accepted: Version[];
+  /** The digest of the notebook the ledger was written against (padState.ts).
+   *  Absent on a ledger stored before the stamp, which reads as the fixture's. */
+  digest?: string;
   savedAt?: number;
 }
 
@@ -38,6 +41,7 @@ export const SCRIPT_VERSIONS = defineRecord<ScriptVersionsData>({
     const notes = raw.notes ?? [];
     if (!Array.isArray(accepted)) return malformed("script-versions.accepted is not a list");
     if (!Array.isArray(notes)) return malformed("script-versions.notes is not a list");
+    if (raw.digest !== undefined && typeof raw.digest !== "string") return malformed("script-versions.digest is not text");
     return { ...raw, accepted, notes } as ScriptVersionsData;
   },
 });
