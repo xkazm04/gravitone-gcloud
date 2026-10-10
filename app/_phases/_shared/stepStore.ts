@@ -377,6 +377,41 @@ export function clearStorageTrouble(): void {
   listeners.forEach((l) => l());
 }
 
+/* ─────────────────────── and when it stops going wrong ──────────────────── */
+
+export type StorageOkListener = (op: "read" | "write", projectId: string, phase: string) => void;
+const okListeners = new Set<StorageOkListener>();
+
+/** Hear every successful store operation. For a surface that has accumulated
+ *  troubles of its own (the bell's ledger, components/ui/storageRemedy.ts) and
+ *  must learn which of them a success resolves — the `latest` slot holds one. */
+export function onStorageOk(listener: StorageOkListener): () => void {
+  okListeners.add(listener);
+  return () => void okListeners.delete(listener);
+}
+
+/**
+ * Evidence that a scope works again: an operation of this `op` on this project
+ * and step just succeeded. Clears the published trouble ONLY when it is the same
+ * op, project and step, and only a storage-shaped one.
+ *
+ * SCOPED, NOT GLOBAL, because the slot has many producers: an asset blob that
+ * hit the quota (reportStorageTrouble from lib/assets, projectId "") must not be
+ * declared fixed by a 200-byte step record saving somewhere else — that would be
+ * the same false resolution `dismiss` used to commit, made by a keystroke. And
+ * `non-storage` is never resolved by a save: nothing about it was a save.
+ *
+ * Called on withStore's success path, so it runs on every keystroke's write. The
+ * cost is one Set walk and three string compares.
+ */
+export function noteStorageOk(op: "read" | "write", projectId: string, phase: string): void {
+  okListeners.forEach((l) => l(op, projectId, phase));
+  const t = latest;
+  if (!t || t.kind === "non-storage" || t.op !== op || t.projectId !== projectId || t.phase !== phase) return;
+  latest = null;
+  listeners.forEach((l) => l());
+}
+
 /** The whole subscription, for a surface that wants to say so. A user editing
  *  for an hour against a full quota finds out from this, before they close the
  *  tab — mounting it anywhere in the tree is enough. */
@@ -614,7 +649,9 @@ async function withStore<T>(
     db = await openDb();
     if (!db.objectStoreNames.contains(STEPS_STORE))
       return trouble("missing-store", `The "${STEPS_STORE}" store is not in this database.`);
-    return { ok: true, value: await fn(db) };
+    const value = await fn(db);
+    noteStorageOk(op, projectId, phase);
+    return { ok: true, value };
   } catch (e) {
     return trouble(classify(e), e instanceof Error ? e.message : String(e));
   } finally {
