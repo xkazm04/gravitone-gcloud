@@ -63,6 +63,8 @@
 
 import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 
+import dynamic from "next/dynamic";
+
 
 import type { SelectOption } from "@/components/ui/Select";
 import { useAnnounce } from "@/lib/announcer";
@@ -71,20 +73,34 @@ import { typing } from "@/lib/board/keys";
 import { refusedKey } from "./keyGuard";
 import {
   type CanonStage,
-  type MoveRequest,
   type MoveResult,
   type PipelineEntry,
-  type PipelineSource,
 } from "@/lib/board/pipeline";
 import { makeArticlesSource } from "@/lib/board/sources/articles";
 import { makeAudioSource } from "@/lib/board/sources/audio";
 
-import { PIPELINE_ARM_KEY } from "@/lib/identityEviction";
 
 import { PipelineCanvas, type CanvasStatus, type PipelineHandle } from "./pipeline";
+import { armSource, currentArm, setLiveArm } from "./pipeline/arm";
 import BoardControls from "./pipeline/BoardControls";
+import { CanvasMount, useFillHeight } from "./pipeline/boardMount";
 import { ledger } from "./pipeline/skins";
-import { DetailModal, DispatchConfirm, ReworkNote, type Arm, type OfferedMove } from "./pipelineModals";
+
+// THE DIALOGS ARE LAZY, and they are the right things to make lazy: none of the
+// three is on screen when the board loads, two of them are reachable only after
+// a deliberate order, and together they pull in Modal, the field primitives and
+// the article cost table. The board's own chunk is what decides how fast the
+// first 500 cards appear, so nothing that a user may never open belongs in it.
+// Same `dynamic()` rule app/library/LibraryView.tsx keeps for its panels.
+//
+// No `loading:` state on purpose: each renders INSIDE a modal that is already
+// mounted by the click, so the fallback would be a flash of a spinner inside a
+// box that is itself appearing. `ssr: false` is implied — this is a client
+// component and these never render on the server.
+const DispatchConfirm = dynamic(() => import("./pipeline/modals/DispatchConfirm").then((m) => m.DispatchConfirm));
+const ReworkNote = dynamic(() => import("./pipeline/modals/ReworkNote").then((m) => m.ReworkNote));
+const DetailModal = dynamic(() => import("./pipeline/modals/ItemDetail").then((m) => m.DetailModal));
+import type { Arm, OfferedMove } from "./pipelineModals";
 import { Glass, Label, Loading } from "./ui";
 
 /* ── the two media ────────────────────────────────────────────────────────── */
@@ -102,132 +118,8 @@ export const MEDIA: ReadonlyArray<{ id: MediaId; label: string }> = [
   { id: "audio", label: "Audio" },
 ];
 
-/* ── the arm ──────────────────────────────────────────────────────────────── */
-
-// The key itself lives with the eviction list that must know about it: a key
-// spelled here and listed there is two copies, and the copy that drifts is
-// the one that stops being wiped on sign-out.
-const ARM_KEY = PIPELINE_ARM_KEY;
-
-/** STUB unless the operator has said otherwise, and STUB whenever storage
- *  cannot be read: the default of a switch that spends money is the side that
- *  does not. */
-function readArm(): Arm {
-  if (typeof window === "undefined") return "stub";
-  try {
-    return window.localStorage.getItem(ARM_KEY) === "live" ? "live" : "stub";
-  } catch {
-    return "stub";
-  }
-}
-
-/** THE ARM AT THE MOMENT A MOVE IS SUBMITTED.
- *
- *  Module state rather than a ref: `armSource` has to read it when `move()` is
- *  CALLED, and the React Compiler rule `react-hooks/refs` forbids handing a ref
- *  to a function during render (the warning buckets in lint-baseline.json are a
- *  two-way ratchet, so a second one is a failed gate, not a note). There is one
- *  pipeline board per document and one arm on it; `localStorage` is the
- *  authority across reloads and this is the live copy.
- *
- *  `null` means nobody has asked yet, so the first read is the stored one. */
-let liveArm: Arm | null = null;
-
-const currentArm = (): Arm => (liveArm ??= readArm());
-
-function setLiveArm(a: Arm): void {
-  liveArm = a;
-  try {
-    window.localStorage.setItem(ARM_KEY, a);
-  } catch {
-    // A browser with storage blocked keeps the arm for this page's life only.
-    // Failing closed on the next load is the right direction to fail in.
-  }
-}
-
-/**
- * The source with the arm applied to every write, however the write was ordered.
- *
- * Identity is stable for the life of one media choice — the arm is read from the
- * ref when `move()` is CALLED — so flipping the arm does not re-key the canvas
- * and does not reload the board.
- */
-function armSource(base: PipelineSource, onStub: (wouldCall: string) => void): PipelineSource {
-  return {
-    ...base,
-    async move(req: MoveRequest): Promise<MoveResult> {
-      const r = await base.move({ ...req, live: currentArm() === "live" && req.live === true });
-      if (r.ok && r.stub) onStub(r.wouldCall ?? "");
-      return r;
-    },
-  };
-}
-
 /* ── the status strip ─────────────────────────────────────────────────────── */
 
-
-/* ── the mount counter ────────────────────────────────────────────────────── */
-
-// WP4a acceptance 2: the canvas mounts once per MEDIA switch, not per render.
-// The counter lives on the canvas's parent with `[]` deps, so it counts mounts
-// and nothing else. Kept in the tree rather than deleted after the measurement:
-// it is three lines, it costs one effect, and the claim it proves is the one a
-// re-render-happy shell breaks first. Read it off the console, or off
-// `window.__gtPipelineMounts` in a driven browser.
-declare global {
-  interface Window {
-    __gtPipelineMounts?: number;
-  }
-}
-
-/**
- * THE BOARD'S HEIGHT, MEASURED — not `calc(100vh - 34rem)`.
- *
- * The canvas is `absolute inset-0` inside its parent, so the parent needs a real
- * height and not a content-driven one. That was spelled as a viewport
- * subtraction, and 34rem is 544px: on a 1080p screen the board got 536px and
- * over half the window was reserved for the chrome above it. Round 1's first
- * sentence was that the canvas is barely visible, and this number is most of the
- * reason — it was correct for the chrome of the day it was written and nothing
- * re-derived it when that chrome changed.
- *
- * So it is read off the element: whatever sits above the board, the board runs
- * from where it starts to the bottom of the viewport. A ResizeObserver on the
- * document element catches the chrome above growing or shrinking (the top bar
- * wraps at narrow widths, the degraded strip appears and disappears) without
- * this needing to know what any of it is.
- */
-function useFillHeight(ref: React.RefObject<HTMLElement | null>, gutter = 12): number {
-  const [h, setH] = useState(520);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    // FLOOR, not a clamp for tidiness: on a short viewport, or mid-layout when
-    // the chrome above has not settled, the subtraction can go to nothing, and a
-    // board of 0px reads as a board that failed to load.
-    const measure = () => setH(Math.max(280, Math.round(window.innerHeight - el.getBoundingClientRect().top - gutter)));
-    measure();
-    const ro = new ResizeObserver(measure);
-    ro.observe(document.documentElement);
-    window.addEventListener("resize", measure);
-    return () => {
-      ro.disconnect();
-      window.removeEventListener("resize", measure);
-    };
-  }, [ref, gutter]);
-  return h;
-}
-
-function CanvasMount({ children }: { children: React.ReactNode }) {
-  useEffect(() => {
-    const n = (window.__gtPipelineMounts ?? 0) + 1;
-    window.__gtPipelineMounts = n;
-    // The counter is kept in both builds (it is one number and a driven browser
-    // can read it); only the console line is dev's.
-    if (process.env.NODE_ENV !== "production") console.log(`[pipeline] canvas parent mounted ${n}x`);
-  }, []);
-  return <div className="relative h-full w-full">{children}</div>;
-}
 
 /* ── the shell ────────────────────────────────────────────────────────────── */
 

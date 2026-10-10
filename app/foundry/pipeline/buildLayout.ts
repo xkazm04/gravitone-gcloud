@@ -1,3 +1,9 @@
+// NOT NAMED `layout.ts`, AND IT CANNOT BE. Every directory under app/ is a
+// potential route segment, so `layout.ts` there is the SEGMENT'S LAYOUT and Next
+// type-checks it as one — it asked this file for a default export and said so.
+// The same trap waits for `page`, `route`, `template`, `error`, `loading`,
+// `not-found` and `default`.
+//
 // BUILDING THE BOARD — entries in, a Layout out, once per data or axis change.
 //
 // This is the only thing in the geometry that ALLOCATES. Everything else reads

@@ -5,11 +5,11 @@
 // existing `from "./geometry"` keeps working:
 //
 //   ./grid     the measurements (and the reason each is that number) and the types
-//   ./layout   buildLayout — the only thing here that allocates
+//   ./buildLayout  the only thing here that allocates — the only thing here that allocates
 //   ./cells    where a card is, what is on screen, what an arrow walks to
 //   ./camera   the camera as arithmetic, with no browser in it
 
 export * from "./grid";
-export * from "./layout";
+export * from "./buildLayout";
 export * from "./cells";
 export * from "./camera";
