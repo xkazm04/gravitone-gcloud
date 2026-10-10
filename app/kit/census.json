@@ -1,6 +1,6 @@
 {
   "$generated": "pipeline/kit-census.mts — do not edit. `npx tsx pipeline/kit-census.mts` rewrites it; `--check` diffs it against the tree.",
-  "files": 608,
+  "files": 631,
   "parts": {
     "ASTERISM_PATH": {
       "home": "components/kit/brand/asterism.ts",
@@ -60,7 +60,8 @@
         "app/foundry/Lightbox.tsx",
         "app/foundry/StripLightbox.tsx",
         "app/foundry/pipeline/MovePrompt.tsx",
-        "app/foundry/pipelineModals.tsx",
+        "app/foundry/pipeline/modals/DispatchConfirm.tsx",
+        "app/foundry/pipeline/modals/ReworkNote.tsx",
         "app/foundry/ui.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/MoveDialog.tsx",
@@ -482,6 +483,7 @@
         "app/board/parts.tsx",
         "app/foundry/ExtractBoard.tsx",
         "app/foundry/ExtractView.tsx",
+        "app/foundry/pipeline/BoardControls.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/Playground.tsx",
         "app/playground/arrange/Board.tsx",
@@ -610,7 +612,9 @@
         "app/foundry/StripsView.tsx",
         "app/foundry/StylesShelf.tsx",
         "app/foundry/pipeline/MovePrompt.tsx",
-        "app/foundry/pipelineModals.tsx",
+        "app/foundry/pipeline/modals/DispatchConfirm.tsx",
+        "app/foundry/pipeline/modals/ItemDetail.tsx",
+        "app/foundry/pipeline/modals/ReworkNote.tsx",
         "app/foundry/ui.tsx",
         "app/library/AssetLightbox.tsx",
         "app/library/MoveDialog.tsx",
@@ -899,6 +903,7 @@
         "app/_phases/research/beats/BeatVariantBoard.tsx",
         "app/_phases/score/CueTakes.tsx",
         "app/_phases/score/ads/AdsScore.tsx",
+        "app/_phases/script/_notes/RecalibrateControl.tsx",
         "app/_phases/script/_parts/BaselineOnlyNote.tsx",
         "app/_phases/script/_parts/HypothesisColumn.tsx",
         "app/_phases/script/ads/AdsScenario.tsx",
@@ -1050,7 +1055,8 @@
         "app/foundry/StripGrid.tsx",
         "app/foundry/StripsView.tsx",
         "app/foundry/StylesShelf.tsx",
-        "app/foundry/pipelineModals.tsx",
+        "app/foundry/pipeline/BoardControls.tsx",
+        "app/foundry/pipeline/modals/ItemDetail.tsx",
         "app/playground/arrange/Board.tsx",
         "app/playground/hunt/Board.tsx",
         "app/playground/hunt/Lesson.tsx",
@@ -1078,7 +1084,7 @@
         "app/articles/new/NewArticle.tsx",
         "app/calendar/Composer.tsx",
         "app/foundry/pipeline/MovePrompt.tsx",
-        "app/foundry/pipelineModals.tsx"
+        "app/foundry/pipeline/modals/ReworkNote.tsx"
       ]
     },
     "TextField": {
@@ -1252,6 +1258,7 @@
         "app/articles/new/NewArticle.tsx",
         "app/board/shared.tsx",
         "app/calendar/Composer.tsx",
+        "app/foundry/pipeline/BoardControls.tsx",
         "app/playground/triage/Batch.tsx",
         "app/playground/triage/Strengths.tsx"
       ]
@@ -1609,7 +1616,7 @@
       }
     },
     "app/_phases/script": {
-      "files": 51,
+      "files": 52,
       "kitImports": 0,
       "signalImports": 17,
       "parts": [
@@ -1830,9 +1837,9 @@
       "suspectFiles": {}
     },
     "app/foundry": {
-      "files": 40,
+      "files": 60,
       "kitImports": 5,
-      "signalImports": 12,
+      "signalImports": 13,
       "parts": [
         "Button",
         "CHIP_CLASS",
@@ -1849,6 +1856,7 @@
         "Tally",
         "TextArea",
         "TextInput",
+        "components/ui/Select#Select",
         "useRoving",
         "useWindow"
       ],
@@ -1866,7 +1874,7 @@
         "app/foundry/StripLightbox.tsx": {
           "media": 1
         },
-        "app/foundry/pipelineModals.tsx": {
+        "app/foundry/pipeline/modals/ItemDetail.tsx": {
           "media": 1
         }
       }
@@ -2100,7 +2108,7 @@
       }
     },
     "app/studio": {
-      "files": 5,
+      "files": 6,
       "kitImports": 0,
       "signalImports": 1,
       "parts": [
@@ -2151,7 +2159,7 @@
       "suspectFiles": {}
     },
     "components/ui": {
-      "files": 18,
+      "files": 19,
       "kitImports": 1,
       "signalImports": 2,
       "parts": [
