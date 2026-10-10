@@ -38,16 +38,9 @@ import { animate, useMotionValue, useSpring, type AnimationPlaybackControls } fr
 import { X } from "lucide-react";
 
 import { usePrefersReducedMotion } from "@/components/ui/motionPreference";
-import { EASE } from "@/components/ui/tokens";
 import { useAnnounce } from "@/lib/announcer";
 import { overlayOpen } from "@/lib/board/keys";
-import {
-  CHOREO_MAX_CARDS,
-  type MoveNeed,
-  type MoveResult,
-  type PipelineEntry,
-  type PipelineItem,
-  type PipelineSource, isStubbedMove, } from "@/lib/board/pipeline";
+import { CHOREO_MAX_CARDS, isStubbedMove, type MoveResult, type PipelineEntry, type PipelineSource } from "@/lib/board/pipeline";
 
 import { Card } from "./Card";
 import ContextMenu, { type MenuItem } from "./ContextMenu";
@@ -90,40 +83,25 @@ import type { Exit } from "./gesture";
 import { pipelineKeyAction } from "./keymap";
 import { buildVerdicts, requestFor, type Verdicts } from "./moves";
 import type { CanvasStatus, ChoreoState, PipelineHandle, PipelineSkin, Verdict, WaveSample } from "./types";
+import { useAudition } from "./useAudition";
 import { usePipelineData } from "./usePipelineData";
 
-/* ── tunables, each with the reason it is that number ──────────────────── */
-
-/** Screen px of cards mounted beyond the viewport on every side. One pitch is
- *  the minimum for a card to be in the DOM before it is on screen; this is a
- *  few, so a flick of the wheel does not outrun the mount. It must stay larger
- *  than QUANT_PX, which eats into it. */
-const OVERSCAN_PX = 320;
-/** The culling rectangle snaps outward to a grid of about this many SCREEN px
- *  (a whole number of card pitches in world units): a pan step shorter than the
- *  grid usually crosses no line and re-renders nothing at all. Snapping to one
- *  pitch in WORLD units — the first version — crossed a line on every wheel
- *  step once the board was zoomed out, because a pitch is nine screen pixels at
- *  a tenth of the zoom. */
-const QUANT_PX = 96;
-const quantum = (k: number): number => Math.max(PITCH, Math.round(QUANT_PX / k / PITCH) * PITCH);
-const WAVE_FIRST = 24;
-const WAVE_MIN = 8;
-const WAVE_MAX = 160;
-/** One frame and a little: a slice that fits runs the next one bigger. */
-const WAVE_BUDGET_MS = 20;
-/** A view that overlaps the last by less than this, or whose zoom moved by more
- *  than e^JUMP_LN, is a JUMP (a fit, a big zoom): its new cards mount in waves.
- *  A pan or a wheel-zoom step overlaps almost entirely and mounts at once. */
-const JUMP_OVERLAP = 0.4;
-const JUMP_LN = 0.3;
-const NODRAG =
-  "[data-nodrag],button,a,input,textarea,select,summary,[contenteditable],[role=slider],[role=menuitem],[role=textbox]";
-const EDGE_PX = 70;
-const EDGE_SPEED = 18;
-const EASE4 = [...EASE] as [number, number, number, number];
-const NONE: ReadonlySet<string> = new Set();
-const NO_NAMES: Partial<Record<string, string>> = {};
+import {
+  EASE4,
+  EDGE_PX,
+  EDGE_SPEED,
+  JUMP_LN,
+  JUMP_OVERLAP,
+  NO_NAMES,
+  NODRAG,
+  NONE,
+  OVERSCAN_PX,
+  quantum,
+  WAVE_BUDGET_MS,
+  WAVE_FIRST,
+  WAVE_MAX,
+  WAVE_MIN,
+} from "./tunables";
 
 export interface PipelineCanvasProps {
   source: PipelineSource;
@@ -160,57 +138,7 @@ export interface PipelineCanvasProps {
   className?: string;
 }
 
-interface DragState {
-  ids: string[];
-  lead: string;
-  verdicts: Verdicts;
-  over: { lane: number; col: number } | null;
-  verdict: Verdict | null;
-  /** The pointer has not yet resolved to anything. */
-  fresh: boolean;
-}
-
-interface Flight {
-  ids: string[];
-  lead: string;
-  phase: GhostPhase;
-  kind: GhostKind;
-}
-
-interface PromptState {
-  ids: string[];
-  laneKey: string;
-  col: number;
-  need: MoveNeed;
-  prompt: string;
-  cost?: Extract<Verdict, { kind: "needs" }>["cost"];
-  title: string;
-  verb: string;
-  flight: boolean;
-}
-
-interface Notice {
-  ids: string[];
-  text: string;
-  retry?: () => void;
-}
-
-/** `stubbed` counts the moves the authority answered but did not act on, so a
- *  caller can tell "it moved" from "it would have". */
-type Outcome = { ok: true; stubbed: number } | { ok: false; reason: string; retryable: boolean; failed: string[] };
-
-interface Live {
-  layout: Layout;
-  source: PipelineSource;
-  selected: ReadonlySet<string>;
-  active: string | null;
-  notice: Notice | null;
-  apply(item: PipelineItem): void;
-  names: Partial<Record<string, string>>;
-  calm: boolean;
-  onOpen?: (entry: PipelineEntry) => void;
-  onWave?: (w: WaveSample) => void;
-}
+import type { DragState, Flight, Live, Notice, Outcome, PromptState } from "./canvasTypes";
 
 const DEFAULT_SKIN: PipelineSkin = {};
 
@@ -861,79 +789,9 @@ function PipelineCanvasImpl({ source, axisId, arm = "stub", skin = DEFAULT_SKIN,
     vp.focus({ preventScroll: true });
   };
 
-  /* ── audition: ONE Audio element for the whole board ────────────────── */
+  /* ── audition ───────────────────────────────────────────────────────── */
 
-  // A skin may put `data-play data-src` on a control inside a card (ledger does,
-  // for audio takes). Five hundred cards must not mean five hundred media
-  // elements, and a card may not hold a callback, so the playing is done here:
-  // one detached Audio, found through the same delegated listener as everything
-  // else. The button's state is written as ATTRIBUTES on its own node rather
-  // than lifted into React state — a `playing` prop would re-render a memoised
-  // card on every play, which is the one thing Card.tsx's contract forbids.
-  const audio = useRef<HTMLAudioElement | null>(null);
-  const playBtn = useRef<HTMLElement | null>(null);
-
-  const markPlay = (btn: HTMLElement | null) => {
-    const was = playBtn.current;
-    // `isConnected`: the card holding the previous button may have been culled
-    // while its take played on, and an attribute written to a detached node is
-    // harmless but pointless.
-    if (was && was !== btn && was.isConnected) {
-      was.removeAttribute("data-playing");
-      was.setAttribute("aria-pressed", "false");
-    }
-    playBtn.current = btn;
-    if (btn) {
-      btn.setAttribute("data-playing", "");
-      btn.setAttribute("aria-pressed", "true");
-    }
-  };
-
-  const playFromCard = (btn: HTMLElement) => {
-    const src = btn.dataset.src;
-    if (!src) return;
-    let el = audio.current;
-    if (!el) {
-      el = new Audio();
-      el.preload = "none";
-      // ONE listener, and `ended` ONLY. A `pause` listener here looked right and
-      // was a race: assigning `el.src` while something is playing makes the
-      // browser fire `pause`, asynchronously, AFTER this function has already
-      // marked the new button — so pressing a second card's play released the
-      // first (correct), marked the second, and was then cleared by the first's
-      // own pause event. Nothing played, and both buttons read idle. Driven:
-      // first press plays, second press used to leave silence, now it hands over.
-      // Every deliberate stop marks itself below, so `pause` has no work to do.
-      el.addEventListener("ended", () => markPlay(null));
-      audio.current = el;
-    }
-    // The same source pressed again is a stop, which is what a toggle means.
-    if (playBtn.current === btn && !el.paused) {
-      el.pause();
-      markPlay(null);
-      return;
-    }
-    if (el.src !== new URL(src, window.location.href).href) el.src = src;
-    el.currentTime = 0;
-    markPlay(btn);
-    // A refused play (no gesture, a 404, a codec) must leave the button honest
-    // rather than stuck showing a pause glyph over silence.
-    void el.play().catch(() => markPlay(null));
-  };
-
-  useEffect(
-    () => () => {
-      const el = audio.current;
-      if (el) {
-        el.pause();
-        el.removeAttribute("src");
-        el.load();
-      }
-      audio.current = null;
-      playBtn.current = null;
-    },
-    [],
-  );
+  const playFromCard = useAudition();
 
   /* ── pointer, delegated: one listener, the card found by closest() ──── */
 
