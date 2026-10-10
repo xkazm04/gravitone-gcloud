@@ -61,11 +61,14 @@ import {
   reopen,
   signOff,
   signOffBlocker,
+  stateOf,
   templateOf,
   type PhaseKey,
 } from "@/lib/projects";
 
 import { useProjectOutputs } from "../../_library/useProjectOutputs";
+import NextMoveChip from "./NextMoveChip";
+import { studioNext } from "./nextMove";
 import { STEPS } from "./phases";
 import Stepper from "./Stepper";
 import { initialNav, neighbour, step, type NavEffect, type NavEvent, type NavState } from "./studioNav";
@@ -84,8 +87,13 @@ const preloadShelves = () => void loadShelves().catch(() => {});
 // Space and J/K/L to the window while it is mounted, so the step keys stay off
 // all of them. On the rail itself the arrows move focus only — the press is
 // still Enter, as on every TabRail in the app.
+//
+// `}` is the project's next move (nextMove.ts) — Shift+`]`, the bigger step:
+// the cut owns J/K/L/G and Frames owns N, so no letter was free on every step.
+const NEXT_MOVE_KEY = "}";
 const STEP_KEYS = [
   { keys: ["[", "]"], does: "previous · next step" },
+  { keys: ["}"], does: "next move" },
   { keys: ["←", "→"], does: "along the rail" },
 ];
 
@@ -194,14 +202,14 @@ export default function StudioView({ projectId }: { projectId: string }) {
    * read — and it means the number you just changed is tinted correctly by the
    * time you look back at it.
    */
-  const pick = (key: PhaseKey) => {
+  const pick = useCallback((key: PhaseKey) => {
     // A rail click is a return to the work, whether or not the step changed —
     // so it is also how the Outputs shelf closes. The shelf keeps the rail
     // visible precisely so this is true; there is no state in which the primary
     // navigation of the studio is off screen.
     setOutputsOpen(false);
     dispatch({ type: "railPicked", key });
-  };
+  }, [dispatch]);
 
   // THE EFFECT EXECUTOR — the only place navigation touches the router or the
   // store. Re-pointed every render so it closes over the current id, user and
@@ -278,6 +286,26 @@ export default function StudioView({ projectId }: { projectId: string }) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [openPhase, dispatch]);
+
+  // THE PROJECT'S NEXT MOVE — the shelf's own verb, offered, never auto-jumped
+  // to. A lock re-renders this with the locked record, so locking a step hands
+  // you on to the next one in one press. The key is the same press as the chip.
+  const move = door.kind === "open" && project ? studioNext(project, phaseKey) : null;
+  const moveStep = move?.step ?? null;
+  useEffect(() => {
+    if (!moveStep) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.defaultPrevented || e.metaKey || e.ctrlKey || e.altKey || typing(e.target)) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
+      if (e.key === "}") {
+        e.preventDefault();
+        STEPS.find((s) => s.key === moveStep)?.preload();
+        pick(moveStep);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [moveStep, pick]);
 
   const current = STEPS.find((s) => s.key === phaseKey) ?? STEPS[0];
   // THE STEP IS A HEAVY SUBTREE AND THE SHELL RE-RENDERS FOR THINGS IT DOES NOT
@@ -399,6 +427,12 @@ export default function StudioView({ projectId }: { projectId: string }) {
                 no shelves, and the toggle used to render (and open!) over both. */}
             {door.kind === "open" && project && (
               <div className="flex items-center gap-2">
+                <NextMoveChip
+                  move={move}
+                  state={move ? stateOf(project, move.step) : "empty"}
+                  shortcut={NEXT_MOVE_KEY}
+                  onGo={pick}
+                />
                 <button
                   type="button"
                   data-testid="studio-step-signoff"
