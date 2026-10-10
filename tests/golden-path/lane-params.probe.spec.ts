@@ -193,7 +193,8 @@ def calls(path, fn):
     f = next(n for n in ast.walk(tree) if isinstance(n, ast.FunctionDef) and n.name == fn)
     return {ast.unparse(n.func) for n in ast.walk(f) if isinstance(n, ast.Call)}
 assert "lane_record.lane_dir" in calls("pipeline/vlm-probe/consistency.py", "run_lane")
-assert "lane_record.lane_dir" in calls("pipeline/vlm-probe/motion.py", "run")
+# motion binds the name at import, so a stubbed lane_record module cannot unhook it
+assert calls("pipeline/vlm-probe/motion.py", "run") & {"lane_record.lane_dir", "lane_dir"}
 assert "params_from_dir" in calls("pipeline/vlm-probe/lane_record.py", "read")
 src = Path("pipeline/vlm-probe/consistency.py").read_text(encoding="utf-8")
 consts = [n.value for n in ast.walk(ast.parse(src)) if isinstance(n, ast.Constant)]

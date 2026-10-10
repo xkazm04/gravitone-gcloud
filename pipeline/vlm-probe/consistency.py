@@ -58,7 +58,7 @@ COMFY_DIR = Path(guard.COMFY_DIR)
 COMFY_OUT = COMFY_DIR / "output"
 COMFY_IN = COMFY_DIR / "input"
 
-SEED = 770425
+SEED = lane_record.SEED
 
 # One clause, reused byte-for-byte in every shot of every lane. If it is ever
 # paraphrased between shots the lane stops measuring what it claims to.
@@ -251,23 +251,26 @@ def stage_reference(path):
     return dest.name
 
 
-def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full", late=0.0, tag=""):
-    out = SHOTS / (lane + ("-zoom" if zoom else "") + tag)
+def run_lane(lane, **overrides):
+    """`overrides` are LANE_PARAMS["stills"] names (ref_count, steps, seed, zoom,
+    ref_crop, late, tag); everything else comes from the table's defaults."""
+    if lane != "reference":
+        # Only a reference lane chains copies of the hero; a baseline lane
+        # resumed with a different --refs renders the same pixels.
+        overrides.pop("ref_count", None)
+    params = lane_record.fill("stills", lane=lane, character=CHARACTER, location=LOCATION,
+                              **overrides)
+    if lane == "reference":
+        params["ref_count"] = max(1, params.get("ref_count", 1))
+    steps, seed, late = params["steps"], params["seed"], params["late"]
+    width, height = params["width"], params["height"]
+    out = SHOTS / lane_record.lane_dir("stills", lane=lane, zoom=params["zoom"], tag=params["tag"])
     out.mkdir(parents=True, exist_ok=True)
     lane_json_path = out / "lane.json"
-    counted = {"ref_count": max(1, ref_count)} if lane == "reference" else {}
     if lane_json_path.exists():
-        lane_record.check_resume(lane_json_path, {
-            "lane": lane, "steps": steps, "seed": seed, "zoom": zoom,
-            "ref_crop": ref_crop, "reference_joins_at": late, "tag": tag,
-            **counted
-        })
+        lane_record.check_resume(lane_json_path, params)
     else:
-        lane_record.record_stills(
-            out_dir=out, lane=lane, seed=seed, steps=steps, refs=[],
-            ref_crop=ref_crop, late=late, zoom=zoom, tag=tag, **counted,
-            character=CHARACTER, location=LOCATION
-        )
+        lane_record.record_stills(out_dir=out, refs=[], **params)
 
     if not guard.start_comfy():
         raise RuntimeError("comfyui would not come up")
@@ -282,16 +285,17 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full"
             print("  hero still reused from the first reference lane")
         if not hero_path.exists():
             print("  hero still (the thing every shot will reference)")
-            src = generate(flux_workflow(prompt_for(HERO), seed, prefix="hero", steps=steps))
+            src = generate(flux_workflow(prompt_for(HERO), seed, prefix="hero", steps=steps,
+                                         width=width, height=height))
             shutil.copyfile(src, hero_path)
             print(f"    -> {hero_path}")
-        if ref_crop == "face":
+        if params["ref_crop"] == "face":
             hero_path = face_reference(hero_path, out / "00b-hero-face.png")
             print(f"    face-only reference -> {hero_path}")
-        refs = [stage_reference(hero_path)] * max(1, ref_count)
+        refs = [stage_reference(hero_path)] * params["ref_count"]
         print(f"  referencing {len(refs)} copy/copies of the hero still")
 
-    spec = ZOOM_SPEC if zoom else SHOTS_SPEC
+    spec = ZOOM_SPEC if params["zoom"] else SHOTS_SPEC
     for name, clause in spec:
         dest = out / f"{name}.png"
         prompt = prompt_for(clause)
@@ -301,7 +305,7 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full"
         if not guard.headroom_ok():
             guard.recycle_comfy("headroom dropped mid-lane")
         t = time.time()
-        src = generate(flux_workflow(prompt, seed, refs=refs,
+        src = generate(flux_workflow(prompt, seed, refs=refs, width=width, height=height,
                                      steps=steps, prefix=f"{lane}-{name}", late=late))
         shutil.copyfile(src, dest)
         lane_record.write_shot(out, name, dest, prompt,
@@ -309,33 +313,18 @@ def run_lane(lane, ref_count=1, steps=20, seed=SEED, zoom=False, ref_crop="full"
         print(f"  {name}: {time.time() - t:.0f}s -> {dest}")
 
     rec = lane_record.read(out) if lane_json_path.exists() else {}
-    lane_record.record_stills(
-        out_dir=out, lane=lane, seed=seed, steps=steps, refs=refs,
-        ref_crop=ref_crop, late=late, zoom=zoom, tag=tag, **counted,
-        character=CHARACTER, location=LOCATION, shots=rec.get("shots", {})
-    )
+    lane_record.record_stills(out_dir=out, refs=refs, shots=rec.get("shots", {}), **params)
     print(f"\n  lane written to {out}\n  now score it:  python identity.py --set shots/{lane}")
 
 
 def build_arg_parser():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--lane", required=True, choices=["baseline", "reference"])
-    ap.add_argument("--refs", type=int, default=1, help="how many copies of the hero to chain")
-    ap.add_argument("--steps", type=int, default=20)
-    ap.add_argument("--seed", type=int, default=SEED)
-    ap.add_argument("--zoom", action="store_true", help="the easy setups: focal length only")
-    ap.add_argument("--ref-crop", choices=["full", "face"], default="full")
-    ap.add_argument("--late", type=float, default=0.0,
-                    help="fraction of denoising the text gets alone before the reference joins")
-    ap.add_argument("--tag", default="", help="suffix for the output directory")
-    return ap
+    # The lane flags are LANE_PARAMS["stills"]; declaring one here instead is
+    # how a knob ends up recorded but never replayed.
+    return lane_record.add_lane_args(argparse.ArgumentParser(), "stills")
 
 
 def main():
-    ap = build_arg_parser()
-    args = ap.parse_args()
-    run_lane(args.lane, ref_count=args.refs, steps=args.steps, seed=args.seed,
-             zoom=args.zoom, ref_crop=args.ref_crop, late=args.late, tag=args.tag)
+    run_lane(**vars(build_arg_parser().parse_args()))
 
 
 if __name__ == "__main__":

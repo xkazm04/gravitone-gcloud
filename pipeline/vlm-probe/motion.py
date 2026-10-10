@@ -53,10 +53,10 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import guard  # noqa: E402
 import lane_record  # noqa: E402
+from lane_record import lane_dir  # noqa: E402
 from consistency import CHARACTER, LOCATION, SEED, generate, stage_reference  # noqa: E402
 
 HERE = Path(__file__).parent
-SHOTS = HERE / "shots"
 CLIPS = HERE / "clips"
 COMFY_OUT = Path(guard.COMFY_DIR) / "output"
 
@@ -72,8 +72,8 @@ AUDIO_VAE = "minimax_h3_audio_vae_fp32.safetensors"
 # max(5, round(s*24)) + (5 - (n % 17)) % 17, only ever lands there. 73 frames is
 # a little over three seconds at 24 fps, long enough for drift to show and short
 # enough to run several lanes in an evening.
-LENGTH = 73
-FPS = 24
+LENGTH = lane_record.param("clips", "length").default
+FPS = lane_record.param("clips", "fps").default
 
 # Three beats in one place. Clip 1 is what the chain lane is good at -- a single
 # continuous move. Clips 2 and 3 are hard cuts to camera positions the previous
@@ -191,20 +191,16 @@ def collect(prefix, dest, length):
 
 
 def run(lane, width, height, length, steps, lora, hero, timeout=7200):
-    out = CLIPS / lane
+    params = {"lane": lane, "width": width, "height": height, "length": length,
+              "steps": steps, "lora": lora, "hero": hero, "seed": SEED, "fps": FPS,
+              "character": CHARACTER, "location": LOCATION}
+    out = CLIPS / lane_dir("clips", lane=lane)
     out.mkdir(parents=True, exist_ok=True)
     lane_json_path = out / "lane.json"
     if lane_json_path.exists():
-        lane_record.check_resume(lane_json_path, {
-            "lane": lane, "width": width, "height": height, "length": length,
-            "steps": steps, "lora": lora, "hero": hero
-        })
+        lane_record.check_resume(lane_json_path, params)
     else:
-        lane_record.record_clip(
-            out_dir=out, lane=lane, seed=SEED, steps=steps, lora=lora,
-            width=width, height=height, length=length, fps=FPS, hero=hero,
-            character=CHARACTER, location=LOCATION
-        )
+        lane_record.record_clip(out_dir=out, **params)
 
     # Flux 2 and H3 cannot co-reside. Start from a clean engine rather than
     # discovering it the slow way, as a stalled queue with no exception.
@@ -260,33 +256,25 @@ def run(lane, width, height, length, steps, lora, hero, timeout=7200):
               f"{' + video' if any(out.glob(prefix + '*.mp4')) else ''}")
 
     rec = lane_record.read(out) if lane_json_path.exists() else {}
-    lane_record.record_clip(
-        out_dir=out, lane=lane, seed=SEED, steps=steps, lora=lora,
-        width=width, height=height, length=length, fps=FPS, hero=hero,
-        character=CHARACTER, location=LOCATION, beats=rec.get("beats", {})
-    )
+    # Per-clip checksums are under "shots" (write_shot's key). Passing "beats"
+    # here once rewrote the record without them the moment a lane finished.
+    lane_record.record_clip(out_dir=out, shots=rec.get("shots", {}), **params)
     print(f"\n  lane written to {out}\n  now score it:  python identity.py --set clips/{lane}")
 
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--lane", required=True, choices=["ref2va", "chain"])
-    ap.add_argument("--width", type=int, default=1344)
-    ap.add_argument("--height", type=int, default=768)
-    ap.add_argument("--length", type=int, default=LENGTH)
-    ap.add_argument("--steps", type=int, default=4)
+    lane_record.add_lane_args(ap, "clips")
+    # Not a lane param: how long to wait says nothing about the pixels.
     ap.add_argument("--timeout", type=int, default=7200, help="seconds per clip")
-    ap.add_argument("--no-lora", action="store_true", help="full steps, no turbo LoRA")
-    ap.add_argument("--hero", default=str(SHOTS / "reference" / "00-hero.png"),
-                    help="the still every clip is held against")
     args = ap.parse_args()
     if args.length % 17 != 5:
         print(f"  warning: H3 lengths are 5 mod 17; {args.length} is not "
               f"({args.length % 17}). Nearest valid: "
               f"{args.length - (args.length % 17) + 5}")
     run(args.lane, args.width, args.height, args.length,
-        args.steps if not args.no_lora else max(args.steps, 20),
-        not args.no_lora, Path(args.hero), timeout=args.timeout)
+        args.steps if args.lora else max(args.steps, 20),
+        args.lora, args.hero, timeout=args.timeout)
 
 
 if __name__ == "__main__":
