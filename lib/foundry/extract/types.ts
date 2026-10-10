@@ -260,6 +260,10 @@ export type ExtractVerdict = "keep" | "reject";
 export interface ExtractVerdictRecord {
   verdict: ExtractVerdict;
   at: string;
+  /** Why a style was rejected, as short tags; kept verbatim, never folded into the note. */
+  reasons?: string[];
+  note?: string;
+  by?: "human" | "model";
 }
 /** Keyed by style id. Absent = undecided. */
 export type ExtractVerdicts = Record<string, ExtractVerdictRecord>;
@@ -279,6 +283,8 @@ export interface ExtractSummary {
 export interface ExtractDetail {
   run: ExtractManifest;
   verdicts: ExtractVerdicts;
+  /** The verdict map's revision (lib/foundry/verdictLog.ts); a PATCH's baseRev. */
+  rev?: number;
 }
 
 /** What one `step` call did. `unit` is null when there was nothing left. */

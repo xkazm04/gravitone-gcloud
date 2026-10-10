@@ -40,7 +40,6 @@ import {
   readJson,
   readManifestFile,
   runRoot,
-  writeJsonAtomic,
 } from "../runStore";
 import type {
   CycleManifest,
@@ -49,8 +48,18 @@ import type {
   TrainingCommitResult,
   TrainingCycleDetail,
   TrainingCycleSummary,
+  TrainingVerdict,
   TrainingVerdicts,
 } from "./types";
+import {
+  patchVerdictMap,
+  readVerdictState,
+  replaceVerdictMap,
+  withRunLock,
+  type VerdictPatch,
+  type VerdictSpec,
+  type VerdictState,
+} from "../verdictLog";
 
 const OUT_ROOT = outPath("training");
 /** Ledger `thumb` paths are repo-relative with forward slashes on every OS. */
@@ -108,8 +117,8 @@ export async function listCycles(): Promise<TrainingCycleSummary[]> {
 }
 
 export async function getCycle(id: string): Promise<TrainingCycleDetail> {
-  const [cycle, verdicts] = await Promise.all([readCycle(id), readTrainingVerdicts(id)]);
-  return { cycle, verdicts };
+  const [cycle, { verdicts, rev }] = await Promise.all([readCycle(id), readVerdictState<TrainingVerdict | null>(cycleDir(id))]);
+  return { cycle, verdicts, rev };
 }
 
 export async function trainingFileStat(id: string, rel: string): Promise<{ abs: string; size: number }> {
@@ -124,18 +133,26 @@ export async function trainingFileStat(id: string, rel: string): Promise<{ abs: 
 
 /* ── writes ───────────────────────────────────────────────────────────────── */
 
+/** The Dojo's gate rules for the verdict kernel (verdictLog.ts): a known
+ *  improvement, approve / reject / null. The record is a bare string, so who
+ *  decided lives on the log line only. */
+function verdictSpec(id: string): VerdictSpec<CycleManifest, TrainingVerdict | null> {
+  return {
+    dir: cycleDir(id),
+    readManifest: () => readCycle(id),
+    committed: (m) => (m.status === "committed" ? "This cycle is committed; its verdicts are final." : null),
+    clean: (m, key, v) => (m.improvements.some((i) => i.id === key) && (v === "approve" || v === "reject" || v === null) ? v : undefined),
+  };
+}
+
+/** PUT: the whole map, written through the kernel as the diff it amounts to. */
 export async function putTrainingVerdicts(id: string, verdicts: TrainingVerdicts): Promise<TrainingVerdicts> {
-  const cycle = await readCycle(id);
-  if (cycle.status === "committed") throw new FoundryError("This cycle is committed; its verdicts are final.", 409);
-  const known = new Set(cycle.improvements.map((i) => i.id));
-  const clean: TrainingVerdicts = {};
-  for (const [iid, v] of Object.entries(verdicts)) {
-    if (!known.has(iid)) continue;
-    if (v !== "approve" && v !== "reject" && v !== null) continue;
-    clean[iid] = v;
-  }
-  await writeJsonAtomic(path.join(cycleDir(id), "verdicts.json"), clean);
-  return clean;
+  return (await replaceVerdictMap(verdictSpec(id), verdicts)).verdicts;
+}
+
+/** PATCH: keyed changes against a revision; 409 on a stale base. */
+export function patchTrainingVerdicts(id: string, patch: VerdictPatch): Promise<VerdictState<TrainingVerdict | null>> {
+  return patchVerdictMap(verdictSpec(id), patch);
 }
 
 /** Fraction of an improvement's pairs where the chokepoint picked the challenger. */
@@ -190,7 +207,9 @@ function mediaFiles(ref: MediaRef): string[] {
  *  to lose a row — the lock makes the read and the write one step. */
 export async function commitCycle(id: string): Promise<TrainingCommitResult> {
   const dir = cycleDir(id);
-  return withCatalogue({ op: "dojo-commit", run: id }, async (tx) => {
+  // Run lock first, then the catalogue (verdictLog.ts): a verdict write that
+  // arrives mid-commit waits, then sees `committed`.
+  return withRunLock(dir, () => withCatalogue({ op: "dojo-commit", run: id }, async (tx) => {
     // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
     const fs = foundryFs();
     const cycle = await readCycle(id);
@@ -283,5 +302,5 @@ export async function commitCycle(id: string): Promise<TrainingCommitResult> {
     await fs.writeJsonAtomic(path.join(dir, "cycle.json"), cycle);
 
     return { deleted, thumbs, ledger_rows: decided.length };
-  });
+  }));
 }

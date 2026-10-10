@@ -52,9 +52,20 @@ import type {
   ExtractSource,
   ExtractSummary,
   ExtractUpload,
+  ExtractVerdictRecord,
   ExtractVerdicts,
   StepResult,
 } from "./types";
+import {
+  patchVerdictMap,
+  readVerdictState,
+  replaceVerdictMap,
+  replaceVerdictMapHeld,
+  withRunLock,
+  type VerdictPatch,
+  type VerdictSpec,
+  type VerdictState,
+} from "../verdictLog";
 
 export const EXTRACT_ROOT = outPath("extract");
 
@@ -175,8 +186,8 @@ export async function listExtractRuns(): Promise<ExtractSummary[]> {
 }
 
 export async function getExtractRun(id: string): Promise<ExtractDetail> {
-  const [run, verdicts] = await Promise.all([readManifest(id), readVerdicts(id)]);
-  return { run, verdicts };
+  const [run, { verdicts, rev }] = await Promise.all([readManifest(id), readVerdictState<ExtractVerdictRecord>(runDir(id))]);
+  return { run, verdicts, rev };
 }
 
 export async function extractFileStat(id: string, rel: string): Promise<{ abs: string; size: number }> {
@@ -298,17 +309,38 @@ export async function stepRun(id: string, units = 1, retry = false): Promise<Ste
 
 /* ── Verdicts and commit ──────────────────────────────────────────────────── */
 
+/** The extractor's gate rules for the verdict kernel (verdictLog.ts): a known
+ *  style, keep or reject, and the reasons and note a reject carries. */
+function verdictSpec(id: string): VerdictSpec<ExtractManifest, ExtractVerdictRecord> {
+  return {
+    dir: runDir(id),
+    readManifest: () => readManifest(id),
+    committed: (m) => (m.status === "committed" ? "This run is committed; its verdicts are final." : null),
+    clean: (m, key, raw, by) => {
+      if (!m.styles.some((s) => s.id === key)) return undefined;
+      const rec = raw as Partial<ExtractVerdictRecord> | null;
+      if (!rec || (rec.verdict !== "keep" && rec.verdict !== "reject")) return undefined;
+      const reasons = Array.isArray(rec.reasons) ? rec.reasons.filter((r): r is string => typeof r === "string" && !!r).slice(0, 8) : [];
+      const who = rec.by === "human" || rec.by === "model" ? rec.by : by;
+      return {
+        verdict: rec.verdict,
+        at: rec.at || new Date().toISOString(),
+        ...(reasons.length ? { reasons } : {}),
+        ...(typeof rec.note === "string" && rec.note.trim() ? { note: rec.note.slice(0, 500) } : {}),
+        ...(who ? { by: who } : {}),
+      };
+    },
+  };
+}
+
+/** PUT: the whole map, written through the kernel as the diff it amounts to. */
 export async function putExtractVerdicts(id: string, verdicts: ExtractVerdicts): Promise<void> {
-  const run = await readManifest(id);
-  if (run.status === "committed") throw new FoundryError("This run is committed; its verdicts are final.", 409);
-  const known = new Set(run.styles.map((s) => s.id));
-  const clean: ExtractVerdicts = {};
-  for (const [sid, rec] of Object.entries(verdicts)) {
-    if (!known.has(sid)) continue;
-    if (rec.verdict !== "keep" && rec.verdict !== "reject") continue;
-    clean[sid] = { verdict: rec.verdict, at: rec.at || new Date().toISOString() };
-  }
-  await foundryFs().writeJsonAtomic(path.join(runDir(id), "verdicts.json"), clean);
+  await replaceVerdictMap(verdictSpec(id), verdicts);
+}
+
+/** PATCH: keyed changes against a revision; 409 on a stale base. */
+export function patchExtractVerdicts(id: string, patch: VerdictPatch): Promise<VerdictState<ExtractVerdictRecord>> {
+  return patchVerdictMap(verdictSpec(id), patch);
 }
 
 /** Preview what an extract commit will do without writing to styles.json. */
@@ -349,13 +381,18 @@ export async function commitExtractRun(
   // One catalogue transaction (lib/foundry/catalogue.ts): the status check,
   // the plan, its token comparison and the styles.json write share one lock,
   // so a forge commit or a second extract commit cannot land in between.
-  return withCatalogue({ op: "extract-commit", run: id }, async (tx) => {
+  //
+  // The run lock (verdictLog.ts) is taken FIRST, then the catalogue: a verdict
+  // write that arrives while this decides waits, then sees `committed`. Inline
+  // verdicts are written under the lock already held, never re-taking it.
+  const dir = runDir(id);
+  return withRunLock(dir, () => withCatalogue({ op: "extract-commit", run: id }, async (tx) => {
     // Every disk effect below goes through the port (lib/foundry/fsPort.ts).
     const fs = foundryFs();
     const run = await readManifest(id);
     if (run.status === "committed") throw new FoundryError("This run is already committed.", 409);
     if (run.status !== "done") throw new FoundryError("The run is not finished.", 409);
-    if (verdictsIn) await putExtractVerdicts(id, verdictsIn);
+    if (verdictsIn) await replaceVerdictMapHeld(verdictSpec(id), run, verdictsIn, "commit");
     const verdicts = await readVerdicts(id);
 
     const catalogue = await tx.read("styles.json");
@@ -414,7 +451,7 @@ export async function commitExtractRun(
     run.status = "committed";
     run.committed = { at, kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
     run.log.push({ at, msg: `committed: ${written.join(", ")} → styles.json` });
-    await fs.writeJsonAtomic(path.join(runDir(id), "run.json"), run);
+    await fs.writeJsonAtomic(path.join(dir, "run.json"), run);
     return { kept: kept.map((s) => s.id), rejected: rejected.map((s) => s.id), written };
-  });
+  }));
 }

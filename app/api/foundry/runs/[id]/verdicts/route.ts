@@ -1,32 +1,61 @@
-// PUT /api/foundry/runs/<id>/verdicts — the whole verdict map, replaced.
+// /api/foundry/runs/<id>/verdicts — the human's verdict per item.
 //
-// Whole-map on purpose: the page autosaves after every keystroke of the cull,
-// and a last-writer-wins replace of one small file cannot half-apply the way
-// per-candidate patches could.
+// PATCH {set, clear, baseRev, by, surface} is the write: keyed, against the
+// revision GET returned, a 409 {rev} on a stale base or a committed run.
+// PUT (a whole map) is kept for older callers; the kernel writes it as the
+// diff it amounts to. Both go through lib/foundry/verdictLog.ts — one lock
+// shared with the commit, one log line per changed key.
 
 import { guardAccessOnly } from "@/lib/apiAuth";
-import { FoundryError, putVerdicts } from "@/lib/foundry/store";
+import { putVerdicts, patchVerdicts } from "@/lib/foundry/store";
 import type { Verdicts } from "@/lib/foundry/types";
+import { parseVerdictPatch, verdictErrorResponse } from "@/lib/foundry/verdictLog";
 
 export const runtime = "nodejs";
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+type Ctx = { params: Promise<{ id: string }> };
+
+async function readBody(req: Request): Promise<Record<string, unknown> | Response> {
+  try {
+    const body = await req.json();
+    if (body && typeof body === "object" && !Array.isArray(body)) return body as Record<string, unknown>;
+  } catch {
+    /* falls through to the 400 */
+  }
+  return Response.json({ detail: "Request body was not a JSON object." }, { status: 400 });
+}
+
+export async function PUT(req: Request, { params }: Ctx) {
   const denied = await guardAccessOnly(req);
   if (denied) return denied;
   const { id } = await params;
-  let body: { verdicts?: Verdicts };
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ detail: "Request body was not valid JSON." }, { status: 400 });
-  }
-  if (!body.verdicts || typeof body.verdicts !== "object")
+  const body = await readBody(req);
+  if (body instanceof Response) return body;
+  if (!body.verdicts || typeof body.verdicts !== "object" || Array.isArray(body.verdicts))
     return Response.json({ detail: "No verdicts were sent." }, { status: 400 });
   try {
-    await putVerdicts(id, body.verdicts);
+    await putVerdicts(id, body.verdicts as Verdicts);
     return Response.json({ ok: true });
   } catch (e) {
-    if (e instanceof FoundryError) return Response.json({ detail: e.message }, { status: e.status });
+    const res = verdictErrorResponse(e);
+    if (res) return res;
+    throw e;
+  }
+}
+
+export async function PATCH(req: Request, { params }: Ctx) {
+  const denied = await guardAccessOnly(req);
+  if (denied) return denied;
+  const { id } = await params;
+  const body = await readBody(req);
+  if (body instanceof Response) return body;
+  const patch = parseVerdictPatch(body);
+  if (typeof patch === "string") return Response.json({ detail: patch }, { status: 400 });
+  try {
+    return Response.json(await patchVerdicts(id, patch));
+  } catch (e) {
+    const res = verdictErrorResponse(e);
+    if (res) return res;
     throw e;
   }
 }

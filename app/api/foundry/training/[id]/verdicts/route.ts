@@ -1,32 +1,60 @@
-// PUT /api/foundry/training/<id>/verdicts — the whole verdict map, replaced.
+// /api/foundry/training/<id>/verdicts — the human's verdict per item.
 //
-// Whole-map on purpose, same as the cull's: the gate autosaves after every
-// decision, and a last-writer-wins replace of one small file cannot half-apply
-// the way per-improvement patches could.
+// PATCH {set, clear, baseRev, by, surface} is the write: keyed, against the
+// revision GET returned, a 409 {rev} on a stale base or a committed cycle.
+// PUT (a whole map) is kept for older callers; the kernel writes it as the
+// diff it amounts to. Both go through lib/foundry/verdictLog.ts — one lock
+// shared with the commit, one log line per changed key.
 
 import { guardAccessOnly } from "@/lib/apiAuth";
-import { FoundryError } from "@/lib/foundry/store";
-import { putTrainingVerdicts } from "@/lib/foundry/training/store";
+import { putTrainingVerdicts, patchTrainingVerdicts } from "@/lib/foundry/training/store";
 import type { TrainingVerdicts } from "@/lib/foundry/training/types";
+import { parseVerdictPatch, verdictErrorResponse } from "@/lib/foundry/verdictLog";
 
 export const runtime = "nodejs";
 
-export async function PUT(req: Request, { params }: { params: Promise<{ id: string }> }) {
+type Ctx = { params: Promise<{ id: string }> };
+
+async function readBody(req: Request): Promise<Record<string, unknown> | Response> {
+  try {
+    const body = await req.json();
+    if (body && typeof body === "object" && !Array.isArray(body)) return body as Record<string, unknown>;
+  } catch {
+    /* falls through to the 400 */
+  }
+  return Response.json({ detail: "Request body was not a JSON object." }, { status: 400 });
+}
+
+export async function PUT(req: Request, { params }: Ctx) {
   const denied = await guardAccessOnly(req);
   if (denied) return denied;
   const { id } = await params;
-  let body: { verdicts?: TrainingVerdicts };
-  try {
-    body = await req.json();
-  } catch {
-    return Response.json({ detail: "Request body was not valid JSON." }, { status: 400 });
-  }
-  if (!body.verdicts || typeof body.verdicts !== "object")
+  const body = await readBody(req);
+  if (body instanceof Response) return body;
+  if (!body.verdicts || typeof body.verdicts !== "object" || Array.isArray(body.verdicts))
     return Response.json({ detail: "No verdicts were sent." }, { status: 400 });
   try {
-    return Response.json({ verdicts: await putTrainingVerdicts(id, body.verdicts) });
+    return Response.json({ verdicts: await putTrainingVerdicts(id, body.verdicts as TrainingVerdicts) });
   } catch (e) {
-    if (e instanceof FoundryError) return Response.json({ detail: e.message }, { status: e.status });
+    const res = verdictErrorResponse(e);
+    if (res) return res;
+    throw e;
+  }
+}
+
+export async function PATCH(req: Request, { params }: Ctx) {
+  const denied = await guardAccessOnly(req);
+  if (denied) return denied;
+  const { id } = await params;
+  const body = await readBody(req);
+  if (body instanceof Response) return body;
+  const patch = parseVerdictPatch(body);
+  if (typeof patch === "string") return Response.json({ detail: patch }, { status: 400 });
+  try {
+    return Response.json(await patchTrainingVerdicts(id, patch));
+  } catch (e) {
+    const res = verdictErrorResponse(e);
+    if (res) return res;
     throw e;
   }
 }

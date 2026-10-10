@@ -32,7 +32,6 @@ import {
   readJson,
   readManifestFile,
   runRoot,
-  writeJsonAtomic,
 } from "./runStore";
 
 export { FoundryError, foundryFile };
@@ -48,10 +47,20 @@ import type {
   RunSummary,
   StyleDef,
   Verdict,
+  VerdictRecord,
   Verdicts,
 } from "./types";
 import { withCatalogue } from "./catalogue";
-import { planForgeCommit } from "./commitPlan";
+import { humanKeep, planForgeCommit } from "./commitPlan";
+import {
+  patchVerdictMap,
+  readVerdictState,
+  replaceVerdictMap,
+  withRunLock,
+  type VerdictPatch,
+  type VerdictSpec,
+  type VerdictState,
+} from "./verdictLog";
 
 /** Exported for the disk probe, which writes a probe-prefixed run under it. */
 export const OUT_ROOT = outPath("runs");
@@ -98,8 +107,8 @@ export async function listRuns(): Promise<RunSummary[]> {
 }
 
 export async function getRun(id: string): Promise<RunDetail> {
-  const [run, verdicts] = await Promise.all([readManifest(id), readVerdicts(id)]);
-  return { run, verdicts };
+  const [run, { verdicts, rev }] = await Promise.all([readManifest(id), readVerdictState<VerdictRecord>(runDir(id))]);
+  return { run, verdicts, rev };
 }
 
 export async function getCatalogue(): Promise<Catalogue> {
@@ -125,17 +134,31 @@ export async function fileStat(id: string, rel: string): Promise<{ abs: string; 
 
 /* ── writes ───────────────────────────────────────────────────────────────── */
 
+/** The cull's gate rules for the verdict kernel (verdictLog.ts): a known
+ *  candidate, keep or reject, the note verbatim, and who decided. */
+function verdictSpec(id: string): VerdictSpec<RunManifest, VerdictRecord> {
+  return {
+    dir: runDir(id),
+    readManifest: () => readManifest(id),
+    committed: (m) => (m.status === "committed" ? "This run is committed; its verdicts are final." : null),
+    clean: (m, key, raw, by) => {
+      if (!m.candidates.some((c) => c.id === key)) return undefined;
+      const rec = raw as Partial<VerdictRecord> | null;
+      if (!rec || (rec.verdict !== "keep" && rec.verdict !== "reject")) return undefined;
+      const who = rec.by === "human" || rec.by === "model" ? rec.by : by;
+      return { verdict: rec.verdict, at: rec.at || new Date().toISOString(), ...(rec.note ? { note: rec.note } : {}), ...(who ? { by: who } : {}) };
+    },
+  };
+}
+
+/** PUT: the whole map, written through the kernel as the diff it amounts to. */
 export async function putVerdicts(id: string, verdicts: Verdicts): Promise<void> {
-  const run = await readManifest(id);
-  if (run.status === "committed") throw new FoundryError("This run is committed; its verdicts are final.", 409);
-  const known = new Set(run.candidates.map((c) => c.id));
-  const clean: Verdicts = {};
-  for (const [cid, rec] of Object.entries(verdicts)) {
-    if (!known.has(cid)) continue;
-    if (rec.verdict !== "keep" && rec.verdict !== "reject") continue;
-    clean[cid] = { verdict: rec.verdict, at: rec.at || new Date().toISOString(), ...(rec.note ? { note: rec.note } : {}) };
-  }
-  await writeJsonAtomic(path.join(runDir(id), "verdicts.json"), clean);
+  await replaceVerdictMap(verdictSpec(id), verdicts);
+}
+
+/** PATCH: keyed changes against a revision; 409 on a stale base. */
+export function patchVerdicts(id: string, patch: VerdictPatch): Promise<VerdictState<VerdictRecord>> {
+  return patchVerdictMap(verdictSpec(id), patch);
 }
 
 function mean(xs: (number | null | undefined)[]): number | null {
@@ -217,7 +240,9 @@ export async function previewCommit(id: string, undecidedAs: "reject" | "leave" 
  *  run and no other catalogue writer can land between the check and the write. */
 export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "reject", token?: string): Promise<CommitResult> {
   const dir = runDir(id);
-  return withCatalogue({ op: "forge-commit", run: id }, async (tx) => {
+  // Run lock first, then the catalogue (verdictLog.ts): a verdict write that
+  // arrives mid-commit waits, then sees `committed`.
+  return withRunLock(dir, () => withCatalogue({ op: "forge-commit", run: id }, async (tx) => {
     // Every disk effect below goes through the port (lib/foundry/fsPort.ts) -
     // the real fs unless a probe installed a recorder.
     const fs = foundryFs();
@@ -282,9 +307,11 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
       // explain.
       s.evidence = s.evidence.filter((e) => e.run !== id);
       for (const c of decided.filter((c) => c.style === s.id)) {
-        s.evidence.push({ run: id, scene: c.scene, mechanism: c.mechanism, verdict: verdicts[c.id].verdict as Verdict, at });
+        const by = verdicts[c.id].by;
+        s.evidence.push({ run: id, scene: c.scene, mechanism: c.mechanism, verdict: verdicts[c.id].verdict as Verdict, at, ...(by ? { by } : {}) });
       }
-      const keptScenes = new Set(s.evidence.filter((e) => e.verdict === "keep").map((e) => `${e.run}/${e.scene}`));
+      // `proven` is a human's claim: a keep by:"model" is evidence, not a vote.
+      const keptScenes = new Set(s.evidence.filter(humanKeep).map((e) => `${e.run}/${e.scene}`));
       if (keptScenes.size >= 2) s.status = "proven";
     }
     await tx.write("styles.json");
@@ -314,5 +341,5 @@ export async function commitRun(id: string, undecidedAs: "reject" | "leave" = "r
     await fs.writeJsonAtomic(path.join(dir, "run.json"), run);
 
     return { deleted, kept, undecided, findings };
-  });
+  }));
 }

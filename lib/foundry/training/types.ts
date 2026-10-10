@@ -107,4 +107,6 @@ export interface TrainingCommitResult {
 export interface TrainingCycleDetail {
   cycle: CycleManifest;
   verdicts: TrainingVerdicts;
+  /** The verdict map's revision (lib/foundry/verdictLog.ts); a PATCH's baseRev. */
+  rev?: number;
 }
