@@ -23,29 +23,31 @@
 // digest is not the dealt one is an ORPHAN — the same rule, and the same legacy
 // reading, as the scope's (research/useScope.ts orphanOf): held, never deleted,
 // and replaced only when the creator writes on the notebook in front of them.
+//
+// THE HISTORY IS WALKED FORWARD (history.ts): a staged run is saved whole and
+// resumed on reload if its baseline and notebook have not moved, and `restore`
+// stages any earlier version as a new candidate — idle ──restore──▶ staged —
+// through the same accept path a run takes.
 
 import { fixtureSource } from "../_shared/notebook/source";
 import { recalibrate, recalibrateFromPlan, type ScopeCtx } from "./recalibrate";
 import type { EditPlan } from "./editPlan";
+import { acceptInto, restoreAs, resumeStaged, stagedOf, type LostCandidate } from "./history";
 import { BASELINE, engineRunWith, type GateOverride, type Note, type NoteKind, type Version } from "./versions";
 
 export type PadPhase = "idle" | "starting" | "running" | "staged";
 
-/** The receipt for a candidate that was staged when the project last closed.
- *  Staging is deliberately not persisted — an unaccepted version is not a
- *  version — but the fact that one was lost is, so the reload can say so. */
-export interface LostCandidate {
-  label: string;
-  at: number;
-  notes: number;
-}
+export type { LostCandidate } from "./history";
 
 /** The pad as it is stored (phase key `script-versions`). */
 export interface PadRecord {
   notes: Note[];
   /** Accepted versions, oldest first. The baseline itself is never stored. */
   accepted: Version[];
-  staged?: LostCandidate;
+  /** The staged candidate, against what it was built on (history.ts
+   *  StagedRecord). `unknown` because a stored one is read, never trusted —
+   *  an older build wrote a bare {label, at, notes} receipt here. */
+  staged?: unknown;
   /** The last turn whose answer this pad took. A mount never takes it twice. */
   turn?: string;
   /** The digest of the notebook the ledger was written against. Absent on a
@@ -107,6 +109,7 @@ export type PadAction =
   | { type: "refused"; why: string; at: number; ctx: ScopeCtx }
   | { type: "land"; turn: LandedTurn; at: number; ctx: ScopeCtx }
   | { type: "accept"; override?: GateOverride; digest: string }
+  | { type: "restore"; id: string; at: number }
   | { type: "discard" };
 
 export function padInit(): PadState {
@@ -146,12 +149,13 @@ export function padBasis(
   return { baseline: record.accepted[record.accepted.length - 1] ?? BASELINE, notes: record.notes, orphan: null };
 }
 
-/** The record to save. */
+/** The record to save. A staged candidate is saved WHOLE, against the
+ *  baseline and notebook it was built on, so a reload can resume it. */
 export function padRecordOf(s: PadState): PadRecord {
   return {
     notes: s.notes,
     accepted: s.accepted,
-    staged: s.candidate ? { label: s.candidate.label, at: s.candidate.createdAt, notes: s.candidate.notes.length } : undefined,
+    staged: s.candidate ? stagedOf(s.candidate, padBasis(s, s.dealt).baseline.id, s.digest ?? s.dealt) : undefined,
     ...(s.consumed ? { turn: s.consumed } : {}),
     ...(s.digest !== undefined ? { digest: s.digest } : {}),
   };
@@ -185,17 +189,24 @@ export function padReduce(s: PadState, a: PadAction): PadState {
       const r = a.record;
       const notes = r?.notes ?? [];
       const accepted = r?.accepted ?? [];
+      const dealt = a.dealt ?? s.dealt;
+      // The staged run, resumed only onto the baseline and notebook it was
+      // built on. On an orphan it is the other notebook's, and stays on disk.
+      const basis = padBasis({ notes, accepted, digest: r?.digest }, dealt);
+      const resumed = r?.staged === undefined || basis.orphan ? null : resumeStaged(r.staged, { baselineId: basis.baseline.id, digest: dealt });
+      const candidate = resumed && !("lost" in resumed) ? resumed : null;
       return settle({
         ...padInit(),
         notes,
         accepted,
-        lost: r?.staged ?? null,
+        candidate,
+        lost: resumed && "lost" in resumed ? resumed : null,
         consumed: r?.turn ?? null,
         // Seeded past every stored ordinal, so a reload cannot collide.
         seq: notes.reduce((n, x) => Math.max(n, Number.isFinite(x.at) ? x.at + 1 : 0), 0),
         digest: r ? stampOf({ notes, accepted, digest: r.digest }) : undefined,
         // The ledger and the dealt notebook are `sync`'s, not the record's.
-        dealt: a.dealt ?? s.dealt,
+        dealt,
         live: s.live,
       });
     }
@@ -278,19 +289,33 @@ export function padReduce(s: PadState, a: PadAction): PadState {
     case "accept": {
       // RULE 3: accepting is the only thing that changes the baseline. The
       // notes that produced the candidate travel with it — they are answered.
+      // A RESTORE was produced by no note on the pad, so it answers none of
+      // them: the pad's notes and forced inputs stay for the next run.
       if (!s.candidate) return s;
       const o = owned({ ...s, dealt: s.dealt ?? a.digest });
       const v = a.override ? { ...s.candidate, override: a.override } : s.candidate;
+      const answered = !v.restoredFrom;
       return settle({
         ...o,
-        accepted: [...o.accepted, v],
+        accepted: acceptInto(o.accepted, v),
         candidate: null,
-        notes: [],
-        forceRenders: [],
-        forceConclusions: [],
+        notes: answered ? [] : o.notes,
+        forceRenders: answered ? [] : o.forceRenders,
+        forceConclusions: answered ? [] : o.forceConclusions,
         digest: a.digest,
         dealt: s.dealt,
       });
+    }
+
+    case "restore": {
+      // Only from rest: never while a run is starting or live (rule 2), and
+      // never over a staged candidate — that would throw a run away unasked.
+      if (s.phase !== "idle") return s;
+      const { baseline, orphan } = padBasis(s, s.dealt);
+      if (orphan) return s;
+      const from = a.id === BASELINE.id ? BASELINE : s.accepted.find((v) => v.id === a.id);
+      const candidate = from ? restoreAs(from, baseline, nextId(s), a.at) : null;
+      return candidate ? settle({ ...s, candidate, lost: null, engineNote: null }) : s;
     }
 
     case "discard":

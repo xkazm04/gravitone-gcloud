@@ -27,11 +27,19 @@ import { MODEL } from "@/lib/model";
 import DeclinedList, { declinedCount } from "./DeclinedList";
 import DispatchStrip from "../../_shared/ui/DispatchStrip";
 import { dispatchToggles } from "../dispatchToggles";
+import type { LostReason } from "../history";
 import type { Card } from "../../_shared/notebook/cards";
 import type { Scope } from "../../research/scope";
 import { conflictDelta } from "../scopeConflicts";
 import type { GateRollup } from "../gate";
 import type { VersionsApi } from "../useVersions";
+
+/** Why a staged run was not resumed, as the lost line names it. */
+const LOST_WHY: Record<LostReason, string> = {
+  "baseline-moved": "baseline moved",
+  "notebook-moved": "other notebook",
+  unreadable: "unreadable",
+};
 
 /** Elapsed, in the unit the number deserves. Minutes-long work should read as
  *  minutes, not as a three-digit second count. */
@@ -301,12 +309,17 @@ export default function RecalibrateControl({
         </p>
       )}
 
-      {/* A candidate is staged, never persisted — accepting is what makes a
-          version real. So closing the project throws one away, and saying so is
-          the difference between "my run vanished" and "I never accepted it". */}
+      {/* A staged run is saved and resumed on load (history.ts) — this line is
+          only for one that could not be: its baseline or notebook moved, or the
+          stored run was unreadable. The reason is the finding. */}
       {api.lostCandidate && (
         <p data-testid="lost-candidate" className="font-jetbrains text-content leading-snug text-amber-200/90">
           {api.lostCandidate.label} · staged, never accepted · lost
+          {api.lostCandidate.lost && (
+            <span data-testid="lost-candidate-why" className="ml-1.5">
+              · {LOST_WHY[api.lostCandidate.lost]}
+            </span>
+          )}
           <span className="ml-1.5 text-white/40">
             {api.lostCandidate.notes} note{api.lostCandidate.notes === 1 ? "" : "s"} still on the pad
           </span>

@@ -226,6 +226,12 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
 
   const discard = useCallback(() => dispatch({ type: "discard" }), []);
 
+  /** Stage an earlier version — or the original renders, `BASELINE.id` — as a
+   *  NEW candidate (history.ts restoreAs). It goes through the same gate and
+   *  accept as a run; the reducer refuses it while a run is live or a
+   *  candidate is staged. */
+  const restore = useCallback((id: string) => dispatch({ type: "restore", id, at: Date.now() }), []);
+
   const notesFor = useCallback((cardId: string) => notes.filter((n) => n.cardId === cardId), [notes]);
 
   /** When the live run started, so a surface can show elapsed time. Null when
@@ -277,6 +283,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       cancel,
       accept,
       discard,
+      restore,
       /** Why the simulated engine ran, when it did. Null on a real model result. */
       engineNote,
       /** The pre-flight read for the next run, and why it may not dispatch. */
@@ -288,8 +295,8 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       toggleForceConclusion,
       /** The conclusions the next run holds, in the notebook's own order. */
       conclusions: ctx.source.conclusions,
-      /** A candidate that was staged when this project was last closed and is now
-       *  gone. Shown once, cleared by the next run. */
+      /** A staged run that could not be resumed on load, and `lost` says why
+       *  (history.ts). Shown once, cleared by the next run. */
       lostCandidate,
       /** A ledger written on another notebook: held, not applied. */
       orphan,
@@ -310,6 +317,7 @@ export function useVersions(projectId: string, ctx: { cards: Card[]; scope: Scop
       cancel,
       accept,
       discard,
+      restore,
       engineNote,
       preview,
       blocked,

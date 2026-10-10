@@ -12,7 +12,7 @@
 // returned the cost — it was simply thrown away at the fetch. Where it is not
 // known it says so; a figure the engine did not report is never drawn as zero.
 
-import { overrideLineOf, receiptOf } from "../versions";
+import { BASELINE, overrideLineOf, receiptOf } from "../versions";
 import type { Version } from "../versions";
 import type { VersionsApi } from "../useVersions";
 
@@ -43,6 +43,62 @@ function Override({ v }: { v: Version }) {
   );
 }
 
+/** THE HISTORY, AS A ROW. Every version this pad has accepted, the original
+ *  renders first; the current one is marked, every other one restores FORWARD
+ *  as a new candidate (history.ts) — so it meets the gate like a run, and a
+ *  restore is undone by another. A version accepted over the gate keeps its
+ *  flag here, and a restored one names its source. */
+function History({ api }: { api: VersionsApi }) {
+  const all = [BASELINE, ...api.accepted];
+  return (
+    <ol data-testid="version-history" aria-label="Version history" className="flex flex-wrap items-center gap-1">
+      {all.map((v) => {
+        const current = v.id === api.baseline.id;
+        const body = (
+          <>
+            {v.label}
+            {v.restoredFrom && (
+              <span className="text-white/35">
+                <span aria-hidden> ↺ {v.restoredFrom}</span>
+                <span className="sr-only">, restored from {v.restoredFrom}</span>
+              </span>
+            )}
+            {v.override && (
+              <span className="text-rose-300/80">
+                <span aria-hidden> ⚑</span>
+                <span className="sr-only">, accepted over the gate</span>
+              </span>
+            )}
+          </>
+        );
+        return (
+          <li key={v.id}>
+            {current ? (
+              <span
+                data-testid={`history-${v.id}`}
+                aria-current="true"
+                className="font-jetbrains inline-flex rounded-full border border-cyan-400/40 bg-cyan-400/10 px-2.5 py-0.5 text-label text-cyan-100"
+              >
+                {body}
+              </span>
+            ) : (
+              <button
+                data-testid={`restore-${v.id}`}
+                onClick={() => api.restore(v.id)}
+                disabled={api.running}
+                aria-label={`Restore ${v.label} as a new candidate`}
+                className="font-jetbrains inline-flex rounded-full border border-white/12 px-2.5 py-0.5 text-label text-white/50 transition hover:border-cyan-400/40 hover:text-cyan-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                {body}
+              </button>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 export default function VersionBar({
   api,
   showing,
@@ -61,6 +117,7 @@ export default function VersionBar({
     if (api.accepted.length === 0 && !receiptOf(api.baseline) && !overrideLineOf(api.baseline)) return null;
     return (
       <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+        {api.accepted.length > 0 && <History api={api} />}
         {api.accepted.length > 0 && (
           <p className="font-jetbrains text-content text-white/35">
             {api.baseline.label} · accepted from {api.baseline.notes.length} note

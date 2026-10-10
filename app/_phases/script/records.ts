@@ -7,6 +7,7 @@ import { defineRecord, isPlainObject, malformed } from "../_shared/records/regis
 import type { ScriptAdoptionStepData, TrailerCutStepData } from "../_shared/stepStore";
 
 import { ADOPTION_PHASE } from "./candidates/adoption";
+import { isStagedRecord, type StagedRecord } from "./history";
 import type { Note, Version } from "./versions";
 
 /** Which candidate render this project adopted. `""` is "cleared here" and is
@@ -29,6 +30,12 @@ export interface ScriptVersionsData {
   /** The digest of the notebook the ledger was written against (padState.ts).
    *  Absent on a ledger stored before the stamp, which reads as the fixture's. */
   digest?: string;
+  /** The candidate staged when the pad was last saved, against the baseline it
+   *  was built on (history.ts). Absent when nothing was staged. */
+  staged?: StagedRecord;
+  /** Set by the reader when a stored `staged` could not be read: why it was
+   *  dropped. The accepted versions are kept either way. */
+  stagedDropped?: string;
   savedAt?: number;
 }
 
@@ -42,6 +49,12 @@ export const SCRIPT_VERSIONS = defineRecord<ScriptVersionsData>({
     if (!Array.isArray(accepted)) return malformed("script-versions.accepted is not a list");
     if (!Array.isArray(notes)) return malformed("script-versions.notes is not a list");
     if (raw.digest !== undefined && typeof raw.digest !== "string") return malformed("script-versions.digest is not text");
+    // A damaged staged run costs only itself, never the ledger beside it.
+    if (raw.staged !== undefined && !isStagedRecord(raw.staged)) {
+      const rest = { ...raw };
+      delete rest.staged;
+      return { ...rest, accepted, notes, stagedDropped: "script-versions.staged is not a staged run" } as ScriptVersionsData;
+    }
     return { ...raw, accepted, notes } as ScriptVersionsData;
   },
 });
