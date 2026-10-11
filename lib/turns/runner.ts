@@ -278,7 +278,7 @@ async function run(
     } catch (e) {
       // The engine answered and the kind's door refused it. The receipt is
       // kept — the turn was paid for whether or not its answer was usable.
-      const findings = (e as { findings?: unknown }).findings;
+      const { findings, items, draft } = e as { findings?: unknown; items?: unknown; draft?: unknown };
       await ifLive(id, () => ({
         status: "failed",
         endedAt: new Date().toISOString(),
@@ -287,6 +287,8 @@ async function run(
           kind: "bad-response",
           message: e instanceof Error ? e.message : String(e),
           ...(Array.isArray(findings) ? { findings: findings.map(String) } : {}),
+          ...(Array.isArray(items) && items.length ? { items: items as NonNullable<TurnRecord["error"]>["items"] } : {}),
+          ...(draft !== undefined ? { draft } : {}),
         },
       }));
       return (await readTurn(id))!;

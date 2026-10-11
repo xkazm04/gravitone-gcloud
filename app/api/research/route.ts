@@ -114,7 +114,7 @@ import { guardRequest } from "@/lib/apiAuth";
 import { TextError, statusFor, type TextErrorKind } from "@/lib/text/errors";
 import { textPriceTable } from "@/lib/text/pricing";
 import { engineStatus, retrievePlanFor } from "@/lib/text/router";
-import { slotBusy, syncBody } from "@/lib/turns/answer";
+import { repairable, slotBusy, syncBody } from "@/lib/turns/answer";
 import { MAX_TOPIC_CHARS, PromptUnavailable, topicRefusal } from "@/lib/turns/assemble/research";
 import { RESEARCH_SPEC, ResearchRefused } from "@/lib/turns/kinds/research";
 import type { TurnRecord } from "@/lib/turns/ledger";
@@ -243,6 +243,7 @@ function researchBody(rec: TurnRecord): Response {
       detail: err.message || "The research run failed. Nothing was saved.",
       code: kind,
       ...(err.findings?.length ? { findings: err.findings } : {}),
+      ...repairable(err),
     },
     { status: statusFor(kind) ?? 502 },
   );

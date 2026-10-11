@@ -106,7 +106,17 @@ export interface TurnRecord {
   uncancellable?: true;
   /** The validated artifact the kind's settle hook returned. Only on `done`. */
   result?: unknown;
-  error?: { kind: string; message: string; findings?: string[] };
+  error?: {
+    kind: string;
+    message: string;
+    findings?: string[];
+    /** The same findings addressed by path, when the kind's door can say where. */
+    items?: { path: string; rule: string; observed: string }[];
+    /** The refused answer itself, kept so a repair turn can fix the listed paths
+     *  instead of the run starting over. Only on a `bad-response` whose kind
+     *  hands one back. */
+    draft?: unknown;
+  };
 }
 
 export const TURN_DIR_VAR = "TEXT_TURN_DIR";

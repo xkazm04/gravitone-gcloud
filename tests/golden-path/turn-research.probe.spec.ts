@@ -184,14 +184,21 @@ test("a notebook that fails parseNotebook ends failed/bad-response with every fi
     expect(done.error?.message).toContain("NOTEBOOK-SCHEMA");
     for (const f of done.error!.findings!) expect(done.error!.message, f).toContain(f.split(" · ")[0]!.slice(0, 20));
     expect(done.result).toBeUndefined();
+    // The refused answer is kept, with the findings addressed by path, so a
+    // repair turn can fix those paths instead of the run starting over.
+    expect(done.error?.draft, "the refused answer was dropped").toBeTruthy();
+    expect(done.error?.items?.length).toBe(done.error!.findings!.length);
+    for (const it of done.error!.items!) expect(typeof it.path).toBe("string");
     // The receipt is kept: the turn was paid for whether or not its answer was usable.
     expect(done.receipt?.costUsd).toBe(0.2);
 
     // `?wait=1`'s mapping (lib/turns/answer.ts) over the settled record.
     const res = syncBody(done, "The research run failed. Nothing was saved.");
-    const body = (await res.json()) as { detail: string; findings?: string[] };
+    const body = (await res.json()) as { detail: string; findings?: string[]; items?: unknown[]; draft?: unknown };
     expect(res.status).toBe(502);
     expect(body.findings).toEqual(done.error!.findings);
+    expect(body.items).toEqual(done.error!.items);
+    expect(body.draft).toEqual(done.error!.draft);
   });
 });
 

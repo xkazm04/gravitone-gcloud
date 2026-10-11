@@ -58,15 +58,42 @@
 
 import type { Notebook } from "@/app/_phases/_shared/notebook/types";
 import { graphFindings } from "./graph";
-import { NotebookError } from "./failure";
+import { NotebookError, type NotebookFinding } from "./failure";
 import { shapeFindings } from "./shape";
 import { isObj } from "./shape-helpers";
 
 export { NOTEBOOK_SCHEMA } from "./schema";
-export { NotebookError } from "./failure";
+export { NotebookError, type NotebookFinding } from "./failure";
 export { crossCheckRetrieval, RETRIEVE_NOTEBOOK_SCHEMA, sameAddress } from "./retrieval";
 
 /* ────────────────────────────────── the door ─────────────────────────────── */
+
+/**
+ * Every reason a model's answer is not a notebook, addressed by path — or an
+ * empty list when it is one. The non-throwing half of `parseNotebook`, so a
+ * repair turn can re-check an answer without a try/catch.
+ *
+ * THE SHAPE HALF RUNS FIRST AND SHORT-CIRCUITS. `notebookIssues` reaches into
+ * `nb.facts.map`, `nb.steelMan.evidence` and `nb.currency.expiresFirst` without
+ * guarding any of them — correctly, because its only other caller hands it a
+ * typed fixture — so running it over an answer that is missing `currency` throws
+ * a TypeError out of a validator instead of a finding out of one.
+ */
+export function notebookFindings(raw: unknown, expectedTopic: string): NotebookFinding[] {
+  if (!isObj(raw))
+    return [{ path: "", rule: "The engine returned something that is not a JSON object.", observed: typeof raw }];
+
+  const shape = shapeFindings(raw);
+  if (shape.length) return shape;
+
+  // NORMALISED BEFORE THE GRAPH PASS, NOT AFTER, and the order is load-bearing.
+  // `notebookIssues` reaches `nb.scaleConversions.forEach` and
+  // `nb.analogyCandidates.forEach` unguarded — correctly, because its only other
+  // caller hands it a typed fixture where both exist. Neither is in this
+  // schema's `required` (a short-form notebook legitimately has no analogy), so
+  // checking the graph first would throw a TypeError out of a validator.
+  return graphFindings(normalise(raw as unknown as Notebook, expectedTopic));
+}
 
 /**
  * Accept a model's answer as a notebook, or refuse it with every reason.
@@ -75,30 +102,13 @@ export { crossCheckRetrieval, RETRIEVE_NOTEBOOK_SCHEMA, sameAddress } from "./re
  * already shallow-checked against the schema's top-level `required` by
  * lib/text/json.ts, which is a different and much weaker check than this one.
  *
- * THE SHAPE HALF RUNS FIRST AND SHORT-CIRCUITS. `notebookIssues` reaches into
- * `nb.facts.map`, `nb.steelMan.evidence` and `nb.currency.expiresFirst` without
- * guarding any of them — correctly, because its only other caller hands it a
- * typed fixture — so running it over an answer that is missing `currency` throws
- * a TypeError out of a validator instead of a finding out of one.
+ * The refusal carries the answer as `draft`: it was paid for, and a repair turn
+ * can fix the listed paths instead of the run starting over.
  */
 export function parseNotebook(raw: unknown, expectedTopic: string): Notebook {
-  if (!isObj(raw)) throw new NotebookError(["The engine returned something that is not a JSON object."]);
-
-  const shape = shapeFindings(raw);
-  if (shape.length) throw new NotebookError(shape);
-
-  // NORMALISED BEFORE THE GRAPH PASS, NOT AFTER, and the order is load-bearing.
-  // `notebookIssues` reaches `nb.scaleConversions.forEach` and
-  // `nb.analogyCandidates.forEach` unguarded — correctly, because its only other
-  // caller hands it a typed fixture where both exist. Neither is in this
-  // schema's `required` (a short-form notebook legitimately has no analogy), so
-  // checking the graph first would throw a TypeError out of a validator.
-  const nb = normalise(raw as unknown as Notebook, expectedTopic);
-
-  const graph = graphFindings(nb);
-  if (graph.length) throw new NotebookError(graph);
-
-  return nb;
+  const found = notebookFindings(raw, expectedTopic);
+  if (found.length) throw new NotebookError(found, isObj(raw) ? raw : undefined);
+  return normalise(raw as unknown as Notebook, expectedTopic);
 }
 
 /**

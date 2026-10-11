@@ -211,7 +211,7 @@ function rejection(fn: () => unknown): string[] {
     fn();
   } catch (e) {
     expect(e).toBeInstanceOf(NotebookError);
-    return (e as NotebookError).findings;
+    return (e as NotebookError).messages;
   }
   throw new Error("accepted a notebook it should have refused");
 }

@@ -6,6 +6,8 @@ import { CONCLUSIONS } from "@/app/_phases/_shared/notebook/conclusions";
 import { declaresOwn } from "@/app/_phases/_shared/notebook/source";
 import type { Notebook } from "@/app/_phases/_shared/notebook/types";
 
+import type { NotebookFinding } from "./failure";
+
 /* ─────────────────────────────── the graph half ──────────────────────────── */
 
 /**
@@ -57,7 +59,7 @@ const FIXTURE_COUPLED: ReadonlySet<GraphIssue["kind"]> = new Set(["untagged", "s
  *  the shipped conclusions layer rather than about the notebook under test. */
 const FIXTURE_CONCLUSION_IDS = new Set(CONCLUSIONS.map((c) => c.id));
 
-export function graphFindings(nb: Notebook): string[] {
+export function graphFindings(nb: Notebook): NotebookFinding[] {
   // A notebook that declares its own dimensions or conclusions is dealt from them
   // (source.ts::asSource), so there is no fixture table or conclusion to filter
   // out: an untagged card and a conclusion resting on nothing are its own defects.
@@ -65,5 +67,32 @@ export function graphFindings(nb: Notebook): string[] {
   return notebookIssues(nb)
     .filter((i) => own || !FIXTURE_COUPLED.has(i.kind))
     .filter((i) => own || !FIXTURE_CONCLUSION_IDS.has(i.from.split(".")[0]))
-    .map((i) => `[${i.kind}] ${i.from} → ${i.ref} — ${i.detail}`);
+    .map((i) => ({
+      path: pathOfId(nb, i.from.split(".")[0]),
+      rule: `[${i.kind}] ${i.from} → ${i.ref} — ${i.detail}`,
+      observed: i.ref,
+    }));
+}
+
+/** The arrays whose members carry an `id` a graph finding can name. */
+const ID_ARRAYS = ["facts", "mechanisms", "reversals", "scaleConversions", "analogyCandidates", "conclusions"] as const;
+
+/**
+ * Where in the notebook a card id lives, as a JSON path (`facts[3]`).
+ *
+ * A graph finding names a CARD (`from`), not a field, so the address is the
+ * card's own element. An id that is in no array (it is only referenced) has no
+ * address and yields the id itself, which matches no path in the answer: a
+ * repair turn then has nothing it may edit for that finding, which is the
+ * honest outcome rather than a licence to edit anywhere.
+ */
+function pathOfId(nb: Notebook, id: string): string {
+  const bag = nb as unknown as Record<string, unknown>;
+  for (const key of ID_ARRAYS) {
+    const rows = bag[key];
+    if (!Array.isArray(rows)) continue;
+    const at = rows.findIndex((r) => typeof r === "object" && r !== null && (r as { id?: unknown }).id === id);
+    if (at >= 0) return `${key}[${at}]`;
+  }
+  return id;
 }

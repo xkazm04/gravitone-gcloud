@@ -99,7 +99,7 @@ export function judge(raw: unknown): { verdict: MemberVerdict; accepted: ReturnT
   } catch (e) {
     if (!(e instanceof NotebookError)) throw e;
     return {
-      verdict: { dialect, verdict: "rejected", findings: tally(e.findings.map(ruleOf)), unmapped },
+      verdict: { dialect, verdict: "rejected", findings: tally(e.messages.map(ruleOf)), unmapped },
       accepted: null,
     };
   }

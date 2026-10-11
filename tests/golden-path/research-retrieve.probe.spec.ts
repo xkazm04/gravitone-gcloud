@@ -235,7 +235,7 @@ test("retrieve cross-check: zero receipts still requires researchGaps[0] to name
     err = e;
   }
   expect(err, "a no-search run whose gaps do not say so was accepted").toBeInstanceOf(NotebookError);
-  expect((err as NotebookError).findings.join(" ")).toMatch(/researchGaps\[0\]/);
+  expect((err as NotebookError).messages.join(" ")).toMatch(/researchGaps\[0\]/);
 
   const honest: Notebook = { ...nb, researchGaps: ["No search was run in this session; every source is recalled", ...nb.researchGaps] };
   const { notebook, findings } = crossCheckRetrieval(honest, []);
