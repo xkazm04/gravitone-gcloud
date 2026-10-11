@@ -475,6 +475,15 @@ Two rules an agent session must keep: a `run` spends the operator's Claude seat 
 `ARTICLES_AGENT_BIN`, for anything that is not the real thing), and `approve` is never an agent's
 act: it pushes a branch and opens a PR in another repository.
 
+## Reading `.ai/registry-map.json`
+
+The ranking is lexical; you choose the governing subject. A pair's `score` counts shared
+tokens between a context and a subject, so it can put a subject that does not apply above the
+one that does (measured: for asset-library, `generated-music-acceptance` 389 and `agent-memory` 361
+outrank `visual-style-locking` 348, the one that actually governs it). Read the context's code, pick the
+subjects that fit, and do not record a clean `/conform` verdict from a subject you did not first
+confirm applies. The map is generated; do not hand-edit it.
+
 ## Git policy (harness-enforced)
 
 **Commit on the current branch; never push.** The owner pushes after reading the log. Do not push, force-push, or open a pull request unless this session's prompt asks for it. This line exists because the harness's own default for an unattended session is to push and open a draft PR when the file says nothing (measured 2026-09-08: without such a line the agent pushed; with it the agent stopped at the commit). The gate bypass is denied to agents at the permission layer (`.claude/settings.json` `permissions.deny`: `--no-verify`, force-push, `GRAVITONE_SKIP_GATE=1`) - do not work around it; if a gate is red, fix the tree.
