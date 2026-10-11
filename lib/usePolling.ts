@@ -30,8 +30,25 @@ import { useEffect, useRef } from "react";
  * `react-hooks/refs` objects to and objects correctly — so a caller may pass an
  * inline closure without restarting the interval on every render. Only `ms` and
  * `enabled` restart it.
+ *
+ * IN-FLIGHT GUARD. If `fn` returns a promise, the next tick is SKIPPED while that
+ * promise is pending, so a slow response stops multiplying requests against the
+ * rate limiter (lib/apiAuth.ts). A promise that never settles must not stall the
+ * poll forever: a pending call older than `IN_FLIGHT_CAP_MS` is abandoned and
+ * the tick proceeds. A synchronous `fn` is never skipped.
  */
-export function usePolling(fn: () => void, ms: number, enabled: boolean = true): void {
+export const IN_FLIGHT_CAP_MS = 30_000;
+
+/** Pure decision, exported for tests: may a tick run given when the last call began? */
+export function mayTick(startedAt: number | null, now: number, cap: number = IN_FLIGHT_CAP_MS): boolean {
+  return startedAt === null || now - startedAt >= cap;
+}
+
+export function usePolling(
+  fn: () => void | Promise<unknown>,
+  ms: number,
+  enabled: boolean = true,
+): void {
   const fnRef = useRef(fn);
   useEffect(() => {
     fnRef.current = fn;
@@ -41,6 +58,30 @@ export function usePolling(fn: () => void, ms: number, enabled: boolean = true):
     if (!enabled) return;
 
     let id: number | undefined;
+    let startedAt: number | null = null;
+    let generation = 0;
+    const run = () => {
+      if (!mayTick(startedAt, Date.now())) return;
+      let result: void | Promise<unknown>;
+      try {
+        result = fnRef.current();
+      } catch (e) {
+        startedAt = null;
+        throw e;
+      }
+      if (!result || typeof (result as Promise<unknown>).then !== "function") {
+        startedAt = null;
+        return;
+      }
+      // A newer call (after the cap) bumps the generation, so the abandoned
+      // one settling late cannot clear the newer one's in-flight mark.
+      const mine = ++generation;
+      startedAt = Date.now();
+      const settle = () => {
+        if (mine === generation) startedAt = null;
+      };
+      (result as Promise<unknown>).then(settle, settle);
+    };
     const stop = () => {
       if (id !== undefined) {
         window.clearInterval(id);
@@ -48,7 +89,7 @@ export function usePolling(fn: () => void, ms: number, enabled: boolean = true):
       }
     };
     const start = () => {
-      if (id === undefined) id = window.setInterval(() => fnRef.current(), ms);
+      if (id === undefined) id = window.setInterval(run, ms);
     };
     const onVisibility = () => {
       if (document.hidden) {
@@ -57,7 +98,7 @@ export function usePolling(fn: () => void, ms: number, enabled: boolean = true):
       }
       // Catch up first, then resume the cadence. A tab returned to after five
       // minutes should not show a five-minute-old run for another four seconds.
-      fnRef.current();
+      run();
       start();
     };
 

@@ -223,7 +223,7 @@ export default function FoundryView() {
       // On a 4s poll, a foundry that cannot be reached tells a screen-reader
       // user their studio is not saving. `loadRuns` in this same file has
       // always had its handler; this one did not.
-      fetchRun(id).then(
+      return fetchRun(id).then(
         (d) => {
           if (ticket !== detailTicket.current) return;
           setDetail(d);
@@ -257,7 +257,7 @@ export default function FoundryView() {
   );
 
   const loadRuns = useCallback(() => {
-    fetchRuns().then(
+    return fetchRuns().then(
       (r) => {
         setRuns(r);
         setRunsError(null);
@@ -270,7 +270,9 @@ export default function FoundryView() {
       (e) => setRunsError(e instanceof Error ? e.message : "failed"),
     );
   }, [loadDetail]);
-  useEffect(loadRuns, [loadRuns]);
+  useEffect(() => {
+    void loadRuns();
+  }, [loadRuns]);
 
   // A live run rewrites its manifest after every candidate; poll it — but
   // keep the local verdicts, which are the human's and never the forge's.
@@ -282,8 +284,7 @@ export default function FoundryView() {
   usePolling(
     () => {
       if (!selected) return;
-      loadDetail(selected, true);
-      loadRuns();
+      return Promise.all([loadDetail(selected, true), loadRuns()]);
     },
     4000,
     Boolean(selected) && live,

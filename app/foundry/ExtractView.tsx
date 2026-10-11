@@ -166,7 +166,7 @@ export function ExtractView() {
   const restored = useRef(false);
 
   const loadRuns = useCallback(() => {
-    fetchExtractRuns().then(
+    return fetchExtractRuns().then(
       (r) => {
         setRuns(r);
         setRunsError(null);
@@ -184,7 +184,9 @@ export function ExtractView() {
       (e) => setRunsError(e instanceof Error ? e.message : "failed"),
     );
   }, [loadDetail]);
-  useEffect(loadRuns, [loadRuns]);
+  useEffect(() => {
+    void loadRuns();
+  }, [loadRuns]);
 
   const selectRun = useCallback(
     (id: string | null) => {
@@ -281,8 +283,7 @@ export function ExtractView() {
   usePolling(
     () => {
       if (!selected) return;
-      void loadDetail(selected, true);
-      loadRuns();
+      return Promise.all([loadDetail(selected, true), loadRuns()]);
     },
     4000,
     Boolean(selected) && live && !driving,

@@ -96,7 +96,7 @@ export function DojoView() {
       // With a rejection path — an unhandled rejection here is not silence,
       // GlobalErrorBridge reports it as a SAVE failure (see the twin comment
       // in ExtractView.loadDetail).
-      fetchTrainingCycle(id).then(
+      return fetchTrainingCycle(id).then(
         (d) => {
           if (ticket !== detailTicket.current) return;
           setDetail(d.cycle);
@@ -113,7 +113,7 @@ export function DojoView() {
   );
 
   const loadCycles = useCallback(() => {
-    fetchTrainingCycles().then(
+    return fetchTrainingCycles().then(
       (r) => {
         setCycles(r);
         setListError(null);
@@ -121,7 +121,9 @@ export function DojoView() {
       (e) => setListError(e instanceof Error ? e.message : "failed"),
     );
   }, []);
-  useEffect(loadCycles, [loadCycles]);
+  useEffect(() => {
+    void loadCycles();
+  }, [loadCycles]);
 
   const selectCycle = useCallback(
     (id: string) => {
@@ -141,8 +143,7 @@ export function DojoView() {
   usePolling(
     () => {
       if (!selected) return;
-      loadDetail(selected, true);
-      loadCycles();
+      return Promise.all([loadDetail(selected, true), loadCycles()]);
     },
     4000,
     Boolean(selected) && live,
