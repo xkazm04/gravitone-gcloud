@@ -15,14 +15,15 @@
 // still paid for the run would be worse than no check.
 import { test, expect } from "@playwright/test";
 
-import { keepEnv } from "./_helpers";
+import { FAKE_ENGINE_ENV, keepEnv } from "./_helpers";
+import { withVendor } from "./_vendor";
 
 import { POST, tooLarge } from "@/app/api/frames/route";
 import { __resetRateLimit, ACCESS_SECRET_VAR } from "@/lib/apiAuth";
 
 const SECRET = "probe-secret-value";
 
-keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH"]);
+keepEnv([ACCESS_SECRET_VAR, "NEXT_PUBLIC_DEV_AUTH", "LOCAL_BINARIES", ...FAKE_ENGINE_ENV]);
 
 test.beforeEach(() => {
   __resetRateLimit();
@@ -48,15 +49,21 @@ const beat = (i: number) => ({ at: `0:${String(i).padStart(2, "0")}`, text: `bea
 const STYLE = { technique: "flat vector", palette: [] };
 
 test("a run with too many beats is refused, and never reaches the engine", async () => {
-  const started = Date.now();
-  const res = await POST(req({ beats: Array.from({ length: 5_000 }, (_, i) => beat(i)), style: STYLE }, "10.9.0.1"));
-  const body = (await res.json()) as { code?: string; detail?: string };
-  console.log(`[frames] 5000 beats -> ${res.status} ${body.code} in ${Date.now() - started}ms`);
-  expect(res.status).toBe(413);
-  expect(body.code).toBe("too-large");
-  // A real dispatch spawns `claude` and takes seconds at minimum. Returning in
-  // well under a second is the evidence that nothing was run.
-  expect(Date.now() - started, "the run appears to have been dispatched").toBeLessThan(2_000);
+  // Counted at the vendor boundary (_vendor.ts), with local binaries ON so a
+  // `claude` spawn is possible and would be recorded. This used to assert that
+  // the refusal came back in under 2 s - a stopwatch standing in for "nothing
+  // was run", which a slow machine fails and a fast dispatch passes.
+  await withVendor(
+    async (v) => {
+      const res = await POST(req({ beats: Array.from({ length: 5_000 }, (_, i) => beat(i)), style: STYLE }, "10.9.0.1"));
+      const body = (await res.json()) as { code?: string; detail?: string };
+      console.log(`[frames] 5000 beats -> ${res.status} ${body.code}, ${v.dispatches().length} dispatch(es)`);
+      expect(res.status).toBe(413);
+      expect(body.code).toBe("too-large");
+      expect(v.dispatches(), "the run appears to have been dispatched").toEqual([]);
+    },
+    { localBinaries: "on" },
+  );
 });
 
 test("a run whose MATERIAL is oversized is refused even when the counts are fine", async () => {
