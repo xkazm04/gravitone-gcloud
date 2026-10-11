@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Wordmark } from "./Primitives";
 import UserMenu from "./UserMenu";
 import NotificationBell from "./NotificationBell";
+import ShellPalette from "./shell/ShellPalette";
 import { DEV_AUTH } from "@/lib/devAuth";
 import { LOCAL_MODE } from "@/lib/localMode";
 import { Bar } from "@/components/kit/Bar";
@@ -122,6 +123,7 @@ export default function StudioFrame({
           ))}
           right={
             <>
+              <ShellPalette places={MODULES} />
               <NotificationBell />
               <UserMenu />
             </>
@@ -207,6 +209,7 @@ export default function StudioFrame({
             </div>
           </div>
           <div className="flex items-center gap-3">
+            <ShellPalette places={MODULES} />
             <NotificationBell />
             <UserMenu />
           </div>

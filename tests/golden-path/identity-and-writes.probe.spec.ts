@@ -183,6 +183,9 @@ test("keys: EVERY module that writes localStorage is on one of the owner's two l
     // list being empty was itself once the accident, so it is named here with
     // its reason rather than left to look like an oversight.
     "app/_landing/cosmos/engine/perf.ts": { exempt: "gravitone.cosmos-tier.v1" },
+    // Recent palette destinations: per account and evicted with the rest, so a
+    // stranger on the same browser does not inherit where the last one went.
+    "components/ui/shell/palette.ts": { evicted: `gravitone.palette.recents.${uid}` },
   };
 
   const writers = localStorageWriters();

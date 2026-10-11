@@ -176,4 +176,12 @@ export const MUTANTS: Mutant[] = [
     replace: "forbidOnly: !!process.env.CI,",
     why: "A committed test.only reduces the pre-push gate to one test and exits 0.",
   },
+  {
+    id: "palette-keeps-zero-count-decisions",
+    probe: "shell-palette.probe.spec.ts",
+    file: "components/ui/shell/palette.ts",
+    find: "if (n <= 0) continue;",
+    replace: "if (n < 0) continue;",
+    why: "The palette lists a Board source with nothing waiting as a destination worth a keystroke.",
+  },
 ];
