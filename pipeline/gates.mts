@@ -154,6 +154,13 @@ export const GATES: readonly Gate[] = [
     rationale: "app/kit/census.json recomputed from an AST walk of app/ and components/ and diffed: the /kit migration map cannot go stale, and hand-rolled suspects only ratchet down.",
   },
   {
+    id: "vocab",
+    npmScript: "check:vocab",
+    class: "blocking",
+    outcomes: "012",
+    rationale: "pipeline/vocab/cinematography.json is the one cinematography vocabulary: every enum has an evidence entry, no derived file re-declares a literal, and schema.py/style.py still emit the recorded snapshot. Needs python for the snapshot; its absence is could-not-run, never a pass.",
+  },
+  {
     id: "probes",
     npmScript: "test",
     class: "blocking",

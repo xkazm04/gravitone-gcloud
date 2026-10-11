@@ -1079,6 +1079,18 @@
    "brows",
    "gaze",
    "face_light"
+  ],
+  "craft_study": [
+   "shot_size",
+   "camera_angle",
+   "composition",
+   "exposure",
+   "depth_of_field",
+   "lighting_key",
+   "lighting_direction",
+   "lighting_quality",
+   "contrast",
+   "subject_scale"
   ]
  }
 }

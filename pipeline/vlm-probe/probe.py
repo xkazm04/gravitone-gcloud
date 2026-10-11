@@ -28,6 +28,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 from craft_spec import truth_id  # noqa: E402
 from schema import PROMPT, gemini_schema, json_schema  # noqa: E402
+import vocab  # noqa: E402  (schema.py puts pipeline/vocab on sys.path)
 
 HERE = Path(__file__).parent
 FRAMES_DIR = HERE / "frames"
@@ -266,6 +267,7 @@ def main():
                     row = {
                         "run_id": run_id, "frame": name, "model": model,
                         "repeat": rep + 1, "bytes": len(raw),
+                        "vocabVersion": vocab.version(),
                     }
                     try:
                         if model in REMOTE_MODELS or model.startswith("gemini"):

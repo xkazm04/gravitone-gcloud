@@ -358,6 +358,15 @@ jobs:
       - name: kit census
         run: npm run check:kit-census
 
+      # BLOCKING, new with the cinematography vocabulary. One versioned vocab file
+      # feeds schema.py, style.py, the foundry vocabulary, the cull grid and the
+      # dojo study; this fails any enum literal re-declared outside it, any enum
+      # value without an evidence entry, and a schema that moved without a version
+      # bump. Needs python3 for the snapshot (preinstalled on ubuntu runners) and
+      # exits 2, could-not-run, without it - never a silent pass.
+      - name: vocab
+        run: npm run check:vocab
+
       # The browser the probes launch (hint-tap, the articles render and landing
       # probes call chromium.launch()), at the version the committed lockfile
       # pins. Without it those probes fail with "Executable doesn't exist" on a

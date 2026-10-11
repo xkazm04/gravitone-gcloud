@@ -43,9 +43,7 @@ import vocab  # noqa: E402
 # ("close-up", "extreme-close-up"), and size_idx matched by substring, so
 # "medium-close" landed on "medium" and "extreme-close-up" on "close".
 SIZE_ORDER = vocab.enum("shot_size")
-FIELDS = ["shot_size", "camera_angle", "composition", "exposure", "depth_of_field",
-          "lighting_key", "lighting_direction", "lighting_quality", "contrast", "subject_scale"]
-assert all(f in vocab.fields("craft_frame") for f in FIELDS), "dojo_study names a field the vocabulary does not declare"
+FIELDS = vocab.fields("craft_study")
 
 
 def load(prefixes):

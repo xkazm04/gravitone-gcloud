@@ -144,6 +144,7 @@ def main():
         for model in args.models:
             t0 = time.time()
             row = {"source": slug, "model": model, "frames": len(b64s),
+                   "vocabVersion": vocab.version(),
                    "sampling": sampling, "measured_palette": measured,
                    "frame_names": [p.name for p in picked]}
             try:

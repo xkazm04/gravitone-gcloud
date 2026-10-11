@@ -37,6 +37,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import craft_spec  # noqa: E402
+import vocab  # noqa: E402  (schema.py puts pipeline/vocab on sys.path)
 from schema import ENUM_FIELDS, FIELDS, LIST_FIELDS, ORDINAL, REQUIRED, TEXT_FIELDS  # noqa: E402
 
 HERE = Path(__file__).parent
@@ -56,6 +57,15 @@ def load_rows(run_id):
     if not path.exists():
         sys.exit(f"no results at {path}")
     return [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def version_split(rows):
+    """{vocabVersion or None: row count}, oldest first. More than one key means
+    the rows were annotated against different vocabularies."""
+    counts = defaultdict(int)
+    for r in rows:
+        counts[r.get("vocabVersion")] += 1
+    return dict(sorted(counts.items(), key=lambda kv: (kv[0] is not None, kv[0] or 0)))
 
 
 def load_truth(frame):
@@ -137,9 +147,25 @@ def main():
     ap.add_argument("--run", required=True)
     ap.add_argument("--reference", default="gemini-3.7-flash")
     ap.add_argument("--show-disagreements", action="store_true")
+    ap.add_argument("--cross-version", action="store_true",
+                    help="compare rows annotated under different vocabulary versions (prints the changed fields)")
     args = ap.parse_args()
 
     rows = load_rows(args.run)
+    split = version_split(rows)
+    if len(split) > 1 and not args.cross_version:
+        sys.exit("refusing to compare rows across vocabulary versions: "
+                 + ", ".join(f"{v} ({n} rows)" for v, n in split.items())
+                 + ". Scores under different vocabularies are not like-for-like; "
+                   "re-run the older rows or pass --cross-version.")
+    if len(split) > 1:
+        nums = sorted(v for v in split if isinstance(v, int))
+        print(f"> cross-version comparison: vocabulary versions {', '.join(str(v) for v in split)}")
+        if len(nums) > 1:
+            print("> fields changed between them: " + (", ".join(vocab.changed_fields(nums[0], nums[-1])) or "none recorded"))
+        if None in split:
+            print("> rows without vocabVersion predate the stamp; their delta is unknown")
+        print()
     models = sorted({r["model"] for r in rows}, key=lambda m: (m == args.reference, m))
     frames = sorted({r["frame"] for r in rows})
 

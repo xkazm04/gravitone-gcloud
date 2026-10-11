@@ -30,6 +30,16 @@ def version():
     return load()["version"]
 
 
+def changed_fields(lo, hi):
+    """Fields whose evidence records a change in versions (lo, hi] -- what a
+    cross-version comparison has to treat as not like-for-like."""
+    out = []
+    for n, f in load()["fields"].items():
+        if any(lo < e.get("version", 1) <= hi for e in f.get("evidence", [])):
+            out.append(n)
+    return out
+
+
 def fields(subset):
     """Field names of a named subset, in the order the pass asks for them."""
     return list(load()["subsets"][subset])
