@@ -1348,6 +1348,52 @@ def test_dojo_video_follows_guard_comfy_and_survives_a_busy_card():
           sorted({u.split("/")[2] for u in urls}), ["sentinel-host:9999"])
 
 
+def test_truth_admit_confirms_disputes_and_refuses_stale_digest():
+    CS = load_vlm("craft_spec")
+    TA = load_vlm("truth_admit")
+    try:
+        CS.validate({"shot_size": "enormous"})
+        got = "no error"
+    except ValueError as e:
+        got = "shot_size" in str(e)
+    check("craft_spec rejects an off-vocabulary value naming the field", got, True)
+    try:
+        CS.validate({"not_a_field": "x"})
+        got = "no error"
+    except ValueError as e:
+        got = "not_a_field" in str(e)
+    check("craft_spec rejects an unknown field naming it", got, True)
+    sc = CS.sidecar("lane-a", "01-wide", "shots", seed=1)
+    r = {"shot_size": "extreme-wide", "camera_angle": "low-angle", "depth_of_field": "deep"}
+    agree = {"m1": r, "m2": dict(r)}
+    check("two agreeing blind reads confirm", TA.judge(sc, agree)[0], "dictated+confirmed")
+    check("one read is short of min_reads", TA.judge(sc, {"m1": r})[0], "dictated")
+    wrong = {k: dict(v, shot_size="close-up") for k, v in agree.items()}
+    basis, verdicts = TA.judge(sc, wrong)
+    check("reads that contradict the dictation dispute it", basis, "dictated-disputed")
+    check("only the contradicted field is disputed", verdicts["camera_angle"]["verdict"], "confirmed")
+    split = {"m1": r, "m2": dict(r, shot_size="close-up")}
+    check("a split read stays undecided", TA.judge(sc, split)[0], "dictated")
+    try:
+        TA.judge(dict(sc, spec_digest="0" * 64), agree)
+        got = "admitted"
+    except ValueError:
+        got = "refused"
+    check("a spec-digest mismatch is refused, never admitted", got, "refused")
+
+
+def test_score_admit_excludes_disputed_and_unscored():
+    S = load_vlm("score")
+    CS = load_vlm("craft_spec")
+    ok = dict(CS.sidecar("l", "01-wide", "shots", 1), basis="dictated+confirmed")
+    bad = dict(ok, basis="dictated-disputed")
+    stale = dict(ok, spec_digest="0" * 64)
+    scored, unscored, disputed = S.admit({"a": ok, "b": bad, "c": stale, "d": {"shot_size": "wide"}})
+    check("scored = confirmed sidecar + hand truth", sorted(scored), ["a", "d"])
+    check("disputed counted as compliance", disputed, ["b"])
+    check("stale digest is unscored", [f for f, _ in unscored], ["c"])
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1389,6 +1435,8 @@ TESTS = [
     test_identity_decision_functions_load_without_torch_or_pil,
     test_identity_person_box_detects_each_frame_once,
     test_dojo_video_follows_guard_comfy_and_survives_a_busy_card,
+    test_truth_admit_confirms_disputes_and_refuses_stale_digest,
+    test_score_admit_excludes_disputed_and_unscored,
 ]
 
 

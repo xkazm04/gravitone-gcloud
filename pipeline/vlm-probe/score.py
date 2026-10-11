@@ -234,6 +234,15 @@ def main():
             emit()
             emit(f"generator compliance: {len(disputed)} of {len(dictated)} dictated shot(s) disputed"
                  + (": " + ", ".join(f"`{f}`" for f in disputed) if disputed else ""))
+            rows_c = [(f, fld, v) for f in disputed
+                      for fld, v in loaded[f].get("_admission", {}).get("fields", {}).items()
+                      if v.get("verdict") == "disputed"]
+            if rows_c:
+                emit()
+                emit("| shot | field | dictated | blind reads |")
+                emit("|---|---|---|---|")
+                for f, fld, v in rows_c:
+                    emit(f"| `{f}` | {fld} | `{loaded[f].get(fld)}` | {', '.join(map(str, v['reads']))} |")
         emit()
         emit("`+` exact  `~` one step off on an ordinal scale  `X` wrong")
         emit()
