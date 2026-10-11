@@ -151,6 +151,23 @@ def test_resume_regrades_an_unmeasured_candidate():
           regraded, ["flaky", "ok-one"])
 
 
+def test_resume_writes_provenance_for_an_adopted_plate():
+    """A plate adopted on --resume used to keep no sidecar and no `prompt`:
+    the survivors of a crash were the candidates that could not say which
+    recipe made them."""
+    F = load("forge")
+    m = manifest_with(candidate("lost", "pending"))
+    m["styles"]["st"]["recipe"] = "ink wash."
+    run_dir = staged_run(m)
+    F.stage_generate(m, run_dir, recycle_every=6)
+    c = m["candidates"][0]
+    sc = json.loads((run_dir / c["sidecar"]).read_text(encoding="utf-8"))
+    check("adopted plate gets a sidecar naming its prompt", sc["prompt"], c["prompt"])
+    check("the prompt leads with the style recipe", c["prompt"].startswith("ink wash."), True)
+    check("the sidecar says it was adopted", sc["adopted"], True)
+    check("no generate_s is invented", "generate_s" in c.get("timings", {}), False)
+
+
 def test_a_run_that_gave_up_mid_generation_does_not_report_done():
     """stage_generate `break`s out of the candidate loop when ComfyUI cannot be
     recycled after a failure, leaving the rest of the plan `pending` -- and
@@ -1337,6 +1354,7 @@ TESTS = [
     test_ungradable_candidate_does_not_kill_the_run,
     test_scoreless_source_annotation_does_not_kill_the_run,
     test_resume_regrades_an_unmeasured_candidate,
+    test_resume_writes_provenance_for_an_adopted_plate,
     test_a_run_that_gave_up_mid_generation_does_not_report_done,
     test_a_grade_names_the_grader_version_not_just_the_model,
     test_list_survives_a_row_from_another_schema,

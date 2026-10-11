@@ -295,6 +295,27 @@ def stage_annotate(manifest, run_dir, model):
     save(run_dir, manifest)
 
 
+def adopt_plate(manifest, run_dir, c, mech, scenes):
+    """Give a plate adopted on resume the provenance a generated one carries.
+
+    The PNG is a finished generation, but the sidecar and `prompt` are written
+    only by the generation branch -- so every candidate that survived a crash
+    was the one with no record of its recipe. The prompt is a pure function of
+    the manifest (annotation + style), so it is rebuilt, not guessed. What was
+    never measured stays absent: no `generate_s` (nobody timed it) and no
+    `workflow` (its reference filename was staged by the dead process).
+    `adopted: true` says the record was reconstructed, not captured."""
+    prompt = candidate_prompt(scenes[c["scene"]]["annotation"], manifest["styles"][c["style"]])
+    c["prompt"] = prompt
+    sidecar = run_dir / c["sidecar"]
+    if not sidecar.exists():
+        sidecar.parent.mkdir(parents=True, exist_ok=True)
+        sidecar.write_text(json.dumps(
+            {"id": c["id"], "prompt": prompt, "mechanism": mech[c["mechanism"]], "seed": c["seed"],
+             "style": c["style"], "workflow": None, "adopted": True},
+            indent=2, ensure_ascii=False), encoding="utf-8")
+
+
 def stage_generate(manifest, run_dir, recycle_every):
     plan = manifest["plan"]
     mech = {m["id"]: m for m in plan["mechanisms"]}
@@ -304,6 +325,7 @@ def stage_generate(manifest, run_dir, recycle_every):
     for c in todo:
         if (run_dir / c["file"]).exists():
             c["status"] = "generated"
+            adopt_plate(manifest, run_dir, c, mech, scenes)
     todo = [c for c in todo if c["status"] != "generated"]
     set_stage(manifest, run_dir, "generating", 0, len(todo))
     if not todo:
