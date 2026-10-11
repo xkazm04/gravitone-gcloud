@@ -69,6 +69,8 @@ from probe import run_ollama  # noqa: E402
 from replicate import compose_prompt  # noqa: E402
 
 import grade  # noqa: E402
+import frame_manifest  # noqa: E402
+import refs  # noqa: E402
 
 NL = chr(10)
 ANNOTATOR = "qwen3.8:27b"
@@ -157,10 +159,9 @@ def cached_annotation(frame_name, model):
 
 
 def resolve_source(spec):
-    p = Path(spec)
-    if not p.is_absolute():
-        p = PROBE / "frames" / spec
-    return p
+    """`frame:<name>` / `lane:<lane>/<file>` or a bare filename under frames/.
+    An absolute path raises `non-portable reference` (refs.py)."""
+    return refs.resolve_spec(spec, PROBE / "frames")
 
 
 # ── prompts and workflows ───────────────────────────────────────────────────
@@ -266,6 +267,11 @@ def stage_annotate(manifest, run_dir, model):
     todo = [s for s in manifest["scenes"] if not s["annotation"]]
     set_stage(manifest, run_dir, "annotating", 0, len(todo))
     need_gpu = []
+    for s in manifest["scenes"]:  # which pixels were read -- also for scenes resumed with an annotation
+        if not s.get("source_sha256"):
+            src = resolve_source(s["frame"])
+            if src.exists():
+                s["source_sha256"] = frame_manifest.sha256_file(src)
     for s in todo:
         src = resolve_source(s["frame"])
         if not src.exists():

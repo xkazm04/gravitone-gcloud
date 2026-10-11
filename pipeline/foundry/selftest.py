@@ -30,6 +30,8 @@ import importlib.util
 import io
 import json
 import contextlib
+import re
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -1394,6 +1396,153 @@ def test_score_admit_excludes_disputed_and_unscored():
     check("stale digest is unscored", [f for f, _ in unscored], ["c"])
 
 
+DRIVE_PATH = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]")
+
+
+def drive_letter_hits(root, files):
+    hits = []
+    for f in files:
+        text = (Path(root) / f).read_text(encoding="utf-8", errors="replace")
+        if DRIVE_PATH.search(text):
+            hits.append(f)
+    return hits
+
+
+def test_no_tracked_pipeline_json_holds_a_drive_letter_path():
+    repo = HERE.parent.parent
+    # the detector itself must fire on both spellings, or a green run below proves nothing
+    with tempfile.TemporaryDirectory() as d:
+        (Path(d) / "bad.json").write_text(json.dumps({"hero": "C:\\Users\\x\\a.png"}), encoding="utf-8")
+        (Path(d) / "bad2.json").write_text('{"hero": "D:/clone/a.png"}', encoding="utf-8")
+        (Path(d) / "ok.json").write_text('{"u": "https://example.com/a", "p": "shots/a.png"}', encoding="utf-8")
+        check("detector fires on both spellings, spares URLs",
+              drive_letter_hits(d, ["bad.json", "bad2.json", "ok.json"]), ["bad.json", "bad2.json"])
+    tracked = subprocess.run(["git", "ls-files", "pipeline/*.json"], cwd=repo, capture_output=True,
+                             text=True).stdout.split()
+    check("tracked pipeline json found", len(tracked) > 0, True)
+    check("tracked pipeline json with a drive-letter path", drive_letter_hits(repo, tracked), [])
+
+
+def _refusal(fn, *a):
+    try:
+        fn(*a)
+        return ""
+    except ValueError as e:
+        return str(e)
+
+
+def test_refs_resolve_logical_names_and_refuse_absolute_paths():
+    refs = load_vlm("refs")
+    check("frame ref", refs.resolve("frame:lotr-scene-008").name, "lotr-scene-008.jpg")
+    check("frame ref with extension", refs.resolve("frame:lotr-scene-008.jpg").parent.name, "frames")
+    check("lane ref", refs.resolve("lane:reference/00-hero.png").as_posix().endswith("shots/reference/00-hero.png"), True)
+    for bad in ("C:\\Users\\x\\a.png", "D:/x/a.png", "/home/x/a.png", "\\\\host\\share\\a.png"):
+        check(f"absolute {bad!r} refused", "non-portable reference" in _refusal(refs.resolve, bad), True)
+    check("bare plan filename still resolves", refs.resolve_spec("a.jpg").name, "a.jpg")
+
+
+def test_materialize_dry_lists_missing_and_flags_a_corrupt_frame():
+    from PIL import Image
+    fm, mat = load_vlm("frame_manifest"), load_vlm("materialize")
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        Image.effect_noise((64, 64), 60).convert("RGB").save(d / "a-001.jpg", quality=90)
+        Image.linear_gradient("L").convert("RGB").save(d / "a-002.jpg", quality=90)
+        rows = [{"frame": "a-001.jpg", "source": "a.mp4", "t_seconds": 1.0},
+                {"frame": "a-002.jpg", "source": "a.mp4", "t_seconds": 2.0},
+                {"frame": "a-003.jpg", "source": "a.mp4", "t_seconds": 3.0}]
+        fm.stamp_frames(rows, d, source_id="vid")
+        check("stamp adds sha256, phash, source_id", [k in rows[0] for k in ("sha256", "phash", "source_id")], [True] * 3)
+        rows[2].update(sha256="0" * 64, phash="0" * 16)  # a frame this clone does not have
+        fm.write(d / "a-manifest.json", "a", 10, "scene", 0.3, [], rows)
+        lock = fm.build_lock(d)
+        check("lock covers every stamped frame", sorted(lock["frames"]), ["a-001.jpg", "a-002.jpg", "a-003.jpg"])
+        check("lock entry fields", sorted(lock["frames"]["a-001.jpg"]),
+              ["extractor", "phash", "sha256", "slug", "source_id", "t_seconds"])
+        check("lock holds no pixels", max(len(json.dumps(v)) for v in lock["frames"].values()) < 400, True)
+        lp = d / "corpus.lock.json"
+        lp.write_text(json.dumps(lock), encoding="utf-8")
+        (d / "a-001.jpg").unlink()
+        (d / "a-002.jpg").unlink()
+        (d / "a-manifest.json").unlink()
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            rc = mat.main(["--dry", "--lock", str(lp), "--frames", str(d)])
+        check("--dry on an empty clone: 3 missing, exit 0", (rc, "missing 3" in out.getvalue()), (0, True))
+        Image.linear_gradient("L").convert("RGB").save(d / "a-001.jpg", quality=90)  # wrong pixels under a-001's name
+        with contextlib.redirect_stdout(io.StringIO()) as out:
+            rc = mat.main(["--dry", "--lock", str(lp), "--frames", str(d)])
+        check("wrong picture: mismatch row, exit 1", (rc, "mismatch a-001.jpg" in out.getvalue()), (1, True))
+        (d / "a-001.jpg").write_bytes(b"not a jpg")
+        with contextlib.redirect_stdout(io.StringIO()):
+            rc = mat.main(["--dry", "--lock", str(lp), "--frames", str(d)])
+        check("corrupt jpg: exit 1", rc, 1)
+
+
+def test_fetch_missing_keeps_exact_and_discards_a_foreign_extraction():
+    from PIL import Image
+    fm, mat = load_vlm("frame_manifest"), load_vlm("materialize")
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        good = d / "src.jpg"
+        Image.effect_noise((64, 64), 60).convert("RGB").save(good, quality=90)
+        row = [{"frame": "s-001.jpg", "source": "s.mp4", "t_seconds": 1.0}]
+        fm.stamp_frames(row, d)
+        row[0]["sha256"] = fm.sha256_file(good)
+        row[0]["phash"] = fm.phash_file(good)
+        entry = {"slug": "s", "t_seconds": 1.0, "sha256": row[0]["sha256"], "phash": row[0]["phash"]}
+        corpus = d / "corpus.json"
+        corpus.write_text(json.dumps({"sources": [{"slug": "s", "url": "u"}]}), encoding="utf-8")
+        out_dir = d / "frames"
+
+        def extract_good(video, t, dest):
+            Path(dest).write_bytes(good.read_bytes())
+            return True
+
+        def extract_foreign(video, t, dest):
+            Image.linear_gradient("L").convert("RGB").save(dest, quality=90)
+            return True
+
+        r = mat.fetch_missing([("s-001.jpg", entry, "missing")], out_dir, corpus, lambda u: "v.mp4", extract_good)
+        check("re-extracted identical bytes -> exact", r[0][2], "exact")
+        (out_dir / "s-001.jpg").unlink()
+        r = mat.fetch_missing([("s-001.jpg", entry, "missing")], out_dir, corpus, lambda u: "v.mp4", extract_foreign)
+        check("a different picture -> mismatch and not kept", (r[0][2], (out_dir / "s-001.jpg").exists()),
+              ("mismatch", False))
+
+
+def test_manifest_gitignore_reincludes_manifests_but_not_pixels():
+    repo = HERE.parent.parent
+
+    def ignored(p):
+        return subprocess.run(["git", "check-ignore", "-q", p], cwd=repo).returncode == 0
+
+    check("manifest not ignored", ignored("pipeline/vlm-probe/frames/lotr-scene-manifest.json"), False)
+    check("frame jpg still ignored", ignored("pipeline/vlm-probe/frames/x.jpg"), True)
+
+
+def test_forge_stamps_the_hash_of_the_frame_it_read():
+    from PIL import Image
+    F = load("forge")
+    check("forge refuses an absolute frame spec",
+          "non-portable reference" in _refusal(F.resolve_source, "C:\\x\\a.jpg"), True)
+    with tempfile.TemporaryDirectory() as d:
+        d = Path(d)
+        src = d / "f.jpg"
+        Image.effect_noise((64, 64), 60).convert("RGB").save(src, quality=90)
+        m = {"scenes": [{"id": "s", "frame": "f.jpg", "annotation": {"x": 1}}], "progress": {}, "log": []}
+        saved = (F.resolve_source, F.set_stage, F.save)
+        F.resolve_source = lambda spec: src
+        F.set_stage = lambda *a, **k: None
+        F.save = lambda *a, **k: None
+        try:
+            (d / "scenes" / "s").mkdir(parents=True)
+            F.stage_annotate(m, d, "model")
+        finally:
+            F.resolve_source, F.set_stage, F.save = saved
+        check("run.json scene carries source_sha256",
+              m["scenes"][0].get("source_sha256"), load_vlm("frame_manifest").sha256_file(src))
+
+
 TESTS = [
     test_palette_is_measured_and_the_sample_is_declared,
     test_frozen_is_a_number_not_a_poster_impression,
@@ -1437,6 +1586,12 @@ TESTS = [
     test_dojo_video_follows_guard_comfy_and_survives_a_busy_card,
     test_truth_admit_confirms_disputes_and_refuses_stale_digest,
     test_score_admit_excludes_disputed_and_unscored,
+    test_no_tracked_pipeline_json_holds_a_drive_letter_path,
+    test_refs_resolve_logical_names_and_refuse_absolute_paths,
+    test_materialize_dry_lists_missing_and_flags_a_corrupt_frame,
+    test_fetch_missing_keeps_exact_and_discards_a_foreign_extraction,
+    test_manifest_gitignore_reincludes_manifests_but_not_pixels,
+    test_forge_stamps_the_hash_of_the_frame_it_read,
 ]
 
 

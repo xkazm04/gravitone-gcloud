@@ -14,9 +14,12 @@ Provides:
   - shot_index(t, cuts) -> 0-based cut interval containing t
   - beat_of(t, duration_s) -> beat bin ('setup(0-25%)', 'build(25-55%)', 'peak(55-85%)', 'tail(85-100%)')
   - upgrade(manifest_path, rhythm_path, cuts_path) -> upgrades v1 manifest to v2 with .v1.json backup
+  - sha256_file / phash_file / stamp_frames -> additive identity fields (sha256, phash, source_id) on frame rows
+  - build_lock(manifests_dir, corpus_path) -> corpus.lock.json content (names -> {slug, t_seconds, sha256, phash, extractor})
 """
 import argparse
 import bisect
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -128,6 +131,61 @@ def upgrade(manifest_path, rhythm_path=None, cuts_path=None):
         frames=frames,
     )
     return upgraded
+
+
+def sha256_file(path):
+    h = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1 << 20), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def phash_file(path, size=8):
+    """64-bit difference hash as 16 hex chars; survives re-encoding, not a different shot."""
+    import numpy as np
+    from PIL import Image
+    with Image.open(path) as img:
+        g = np.asarray(img.convert("L").resize((size + 1, size)), dtype=np.int16)
+    bits = (g[:, 1:] > g[:, :-1]).flatten()
+    return format(int("".join("1" if b else "0" for b in bits), 2), "016x")
+
+
+def hamming_hex(a, b):
+    return bin(int(a, 16) ^ int(b, 16)).count("1")
+
+
+def stamp_frames(frames, frames_dir, source_id=None):
+    """Add sha256 + phash (+ source_id) to each frame row whose jpg exists. Additive on v2."""
+    for row in frames:
+        p = Path(frames_dir) / row["frame"]
+        if p.exists():
+            row["sha256"] = sha256_file(p)
+            row["phash"] = phash_file(p)
+        if source_id:
+            row["source_id"] = source_id
+    return frames
+
+
+def build_lock(manifests_dir, corpus_path=None):
+    """Lockfile content from the tracked manifests. Hash-addressed, no pixels."""
+    ids = {}
+    if corpus_path and Path(corpus_path).exists():
+        for s in json.loads(Path(corpus_path).read_text(encoding="utf-8")).get("sources", []):
+            ids[s["slug"]] = s.get("id")
+    entries = {}
+    for mf in sorted(Path(manifests_dir).glob("*-manifest.json")):
+        m = read(mf)
+        extractor = f"{m.get('strategy')}@{m.get('threshold')}"
+        for row in m["frames"]:
+            if not row.get("sha256"):
+                continue
+            entries[row["frame"]] = {
+                "slug": m["slug"], "source_id": row.get("source_id") or ids.get(m["slug"]),
+                "t_seconds": row["t_seconds"], "sha256": row["sha256"],
+                "phash": row.get("phash"), "extractor": extractor,
+            }
+    return {"schema": "corpus-lock/1", "frames": dict(sorted(entries.items()))}
 
 
 def main():
