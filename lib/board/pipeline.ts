@@ -74,6 +74,12 @@ export type PipelineItem = BoardItem & {
   lane: string;
   placement: PipelinePlacement;
   version: number;
+  /** Set only while a machine is working on THIS item right now (the active
+   *  queue job). `phase` is the word the card shows ("creating v6 wild");
+   *  `startedAt` (epoch ms) is what its elapsed clock counts from. Omitted -
+   *  never null - on every item nothing is working on, including a job that is
+   *  queued but not yet started. */
+  progress?: { phase: string; startedAt: number };
 };
 
 export type PipelineEntry = BoardEntry & {
@@ -243,7 +249,46 @@ export interface PipelineCapable {
   /** What the last `loadPipeline()` hid, and which stages it could not read.
    *  Optional so a fixture source need not keep books. */
   lastLoad?(): PipelineLoadNotes;
+  /** Verbs for a right-click on an empty or populated CELL (lane x stage x
+   *  band). `lane` is the lane key under `axis`. An empty list means no menu. */
+  cellVerbs?(target: VerbTarget): BoardVerb[];
+  /** Verbs a source adds to a CARD's menu, after the engine's own. */
+  cardVerbs?(itemId: string): BoardVerb[];
+  /** Perform one verb. The canvas reloads after any `ok`. */
+  runVerb?(verbId: string, target: VerbTarget, input?: VerbInput): Promise<VerbResult>;
+  /** How often the canvas should re-read while this source has live work;
+   *  read after every load. 0 (or absent) = load on mount + explicit reload. */
+  pollMs?(): number;
 }
+
+/** Where a verb was asked for. A card verb carries `itemId`; a cell verb
+ *  carries `lane` + `stage` (+ `band`). `axis` is the group axis the lane key
+ *  belongs to, so a source can read "row" vs "genre". */
+export interface VerbTarget {
+  axis: string;
+  lane?: string;
+  stage?: CanonStage;
+  band?: string | null;
+  itemId?: string;
+}
+
+/** A verb's input form. `suno-fields` opens the prompt writer (title, style,
+ *  lyrics, exclude); `count` asks for a small integer. `initial` pre-fills it. */
+export type VerbInputKind = "suno-fields" | "count";
+
+export interface BoardVerb {
+  id: string;
+  label: string;
+  input?: { kind: VerbInputKind; initial?: VerbInput };
+  /** Present = the verb is shown but inert, with this as its reason. */
+  disabled?: string;
+}
+
+export type VerbInput =
+  | { kind: "suno-fields"; title?: string; style: string; lyrics?: string; exclude?: string }
+  | { kind: "count"; count: number };
+
+export type VerbResult = { ok: true; announce: string } | { ok: false; reason: string };
 
 export type PipelineSource = BoardSourceExt & PipelineCapable;
 
