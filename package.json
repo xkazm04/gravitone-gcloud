@@ -14,6 +14,7 @@
     "dev:inspect:webpack": "node pipeline/dev-guard.mjs DEV_INSPECT=1 DEV_INSPECT_BUNDLER=webpack DEV_GUARD_MAX_NODE=150 NEXT_DIST_DIR=.next-inspect next dev --webpack",
     "build": "next build",
     "start": "next start",
+    "scan:probe-gaps": "node pipeline/probe-gap-scan.mjs",
     "check:notebook": "npx tsx pipeline/check-notebook.mts",
     "check:manifest": "node pipeline/check-manifest.mjs",
     "copy:check": "node .claude/skills/native-copy/scripts/copy-check.mjs",
