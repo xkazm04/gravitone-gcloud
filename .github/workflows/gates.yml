@@ -442,6 +442,48 @@ jobs:
           if-no-files-found: ignore
 
   # ============================================================================
+  # THE WINDOWS SANDBOX LEG — the one file whose premise only exists on win32.
+  #
+  # tests/golden-path/cli-sandbox-args.probe.spec.ts pins the cmd.exe behaviour
+  # (`spawn(..., {shell: true})` drops an empty argv element) that lib/claudeCli.ts
+  # builds its `--allowed-tools ""` restriction around. Its premise case is
+  # `test.skip(!USES_SHELL)`, so on ubuntu-latest it is skipped and Playwright
+  # still exits 0: the guard against re-losing the sandbox ran only on the
+  # maintainer's box. This job runs that ONE file on windows-latest (not the whole
+  # suite: runner cost) and refuses to pass if any case of it was skipped, so a
+  # green run states that the platform half executed.
+  #
+  # BLOCKING. Input: the committed tree and the lockfile, plus a stand-in engine
+  # the probe writes itself; no network, no vendor. Independent of `gates`, like
+  # `live` and `python`, so its finding is not hidden behind another job's.
+  # Not mirrored in verify-ci-parity: that probe holds only the `gates` job to the
+  # registry's set, and this job is a platform leg, not a gate.
+  # ============================================================================
+  windows-sandbox:
+    runs-on: windows-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: install
+        run: npm ci
+
+      - name: sandbox args probe (win32 half)
+        shell: bash
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: sandbox-report.json
+        run: |
+          npx playwright test cli-sandbox-args --reporter=json || status=$?
+          node -e "const r=require('./sandbox-report.json').stats;console.log('sandbox lane:',JSON.stringify(r));if(r.skipped>0||r.expected<3||r.unexpected>0)process.exit(1)"
+          exit ${status:-0}
+
+  # ============================================================================
   # THE PYTHON LANE — the repository's second language, executed at last.
   #
   # BLOCKING; graded in the header above. Its own job because it needs a
