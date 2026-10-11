@@ -9,6 +9,7 @@ import type { AdoptionDraft } from "@/lib/foundry/adopt";
 import type { Catalogue, CommitResult, ForgeCommitPlan, RunDetail, RunSummary, Verdicts } from "@/lib/foundry/types";
 import type { StripCommitPlan, StripCommitResult, StripRunDetail, StripRunSummary } from "@/lib/foundry/strips/triage";
 import type { StripVerdicts } from "@/lib/foundry/strips/types";
+import type { BlindEdit, BlindState } from "@/lib/foundry/training/blind";
 import type { TrainingCommitResult, TrainingCycleDetail, TrainingCycleSummary, TrainingVerdicts } from "@/lib/foundry/training/types";
 
 export class FoundryRequestError extends Error {
@@ -148,6 +149,8 @@ export const fetchTrainingCycle = (id: string) =>
   call<TrainingCycleDetail>(`/api/foundry/training/${encodeURIComponent(id)}`).then((d) => noteVerdicts("training", id, d));
 export const saveTrainingVerdicts = (id: string, verdicts: TrainingVerdicts, surface = "foundry") =>
   patchVerdictsTo("training", id, verdicts, surface);
+export const saveTrainingBlind = (id: string, edits: BlindEdit[]) =>
+  call<{ blind: BlindState }>(`/api/foundry/training/${encodeURIComponent(id)}/blind`, { method: "PATCH", body: JSON.stringify({ edits }) }).then((r) => r.blind);
 export const commitTrainingCycle = (id: string) =>
   call<TrainingCommitResult>(`/api/foundry/training/${encodeURIComponent(id)}/commit`, { method: "POST" });
 

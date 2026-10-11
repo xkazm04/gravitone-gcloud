@@ -17,6 +17,13 @@
 // are removed rather than left to fail quietly. The loop's live statuses are
 // only WATCHED here, on the same 4s visible-tab poll the other tabs use.
 //
+// THE GATE IS BLIND FIRST (lib/foundry/training/blind.ts). An improvement opens
+// with its pairs shuffled into anonymous A/B — no arm names, no judge pick, no
+// reason — and the human picks A, B or tie per pair (keys 1, 2, 0). Only when
+// every pair is picked does the card unmask: arm names, the judges' picks and
+// per-pair agreement appear, and only then is the claim verdict taken. "Skip
+// blind" exists and is recorded as anchored.
+//
 // Drawn in the app's own idiom (./ui.tsx) since the round-2 UI pass
 // (2026-10-05). Round 3 drew what the loop writes and the gate had never
 // shown: the recipe edit itself (RecipeDiff), each judge's agreement with the
@@ -25,12 +32,30 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { Keycaps, Tally } from "@/components/ui/signal";
+import {
+  BLIND_FLOOR,
+  applyBlindEdit,
+  armInSlotA,
+  blindComplete,
+  blindKey,
+  blindPairView,
+  claimAllowed,
+  emptyBlind,
+  measureBlind,
+  pickToArm,
+  pickedCount,
+  type Arm,
+  type BlindEdit,
+  type BlindPick,
+  type BlindState,
+  type ImprovementBlind,
+} from "@/lib/foundry/training/blind";
 import type { CycleManifest, CycleStatus, Improvement, PairResult, TrainingCommitResult, TrainingCycleSummary, TrainingVerdict, TrainingVerdicts } from "@/lib/foundry/training/types";
 import { typing } from "@/lib/board/keys";
 import { usePolling } from "@/lib/usePolling";
 
 import { RailFrame, RailItem, Wash } from "./RunCards";
-import { fetchTrainingCycle, fetchTrainingCycles, saveTrainingVerdicts, commitTrainingCycle, fileUrl } from "./foundryClient";
+import { fetchTrainingCycle, fetchTrainingCycles, saveTrainingBlind, saveTrainingVerdicts, commitTrainingCycle, fileUrl } from "./foundryClient";
 import { DOJO_STATUS_WORD, cycleKind } from "./parts";
 import { Art, BarCount, CommitDialog, DecisionBar, ErrorNote, Glass, Label, Loading, LockNote, PrimaryAction, SaveNote, StatusChip, VerdictButtons, VerdictStamp, ScorePill, type SaveKind } from "./ui";
 import { nextUndecided, refusedKey } from "./keyGuard";
@@ -60,6 +85,9 @@ function geminiAgreement(imp: Improvement): number | undefined {
 const toKit = (v: TrainingVerdict | null | undefined) => (v === "approve" ? "keep" : v === "reject" ? "reject" : null);
 const fromKit = (v: "keep" | "reject" | null): TrainingVerdict | null => (v === "keep" ? "approve" : v);
 
+/** The blind keys: 1 picks A, 2 picks B, 0 calls a tie. */
+const BLIND_KEYS: Record<string, BlindPick> = { "1": "A", "2": "B", "0": "tie" };
+
 export function DojoView() {
   const [cycles, setCycles] = useState<TrainingCycleSummary[] | null>(null);
   const [listError, setListError] = useState<string | null>(null);
@@ -79,6 +107,14 @@ export function DojoView() {
   /** The latest verdict map, readable synchronously — same law as the Cull
    *  tab: a burst of keystrokes must never read a stale map. */
   const verdictsRef = useRef<TrainingVerdicts>({});
+  /** The blind picks and A/B map; the ref has the same job as verdictsRef. */
+  const [blind, setBlind] = useState<BlindState>(emptyBlind);
+  const blindRef = useRef<BlindState>(emptyBlind());
+
+  const adoptBlind = useCallback((b: BlindState) => {
+    blindRef.current = b;
+    setBlind(b);
+  }, []);
 
   const adoptVerdicts = useCallback((v: TrainingVerdicts) => {
     verdictsRef.current = v;
@@ -100,7 +136,10 @@ export function DojoView() {
         (d) => {
           if (ticket !== detailTicket.current) return;
           setDetail(d.cycle);
-          if (!keepVerdicts) adoptVerdicts(d.verdicts);
+          if (!keepVerdicts) {
+            adoptVerdicts(d.verdicts);
+            adoptBlind(d.blind);
+          }
           setListError(null);
         },
         (e) => {
@@ -109,7 +148,7 @@ export function DojoView() {
         },
       );
     },
-    [adoptVerdicts],
+    [adoptVerdicts, adoptBlind],
   );
 
   const loadCycles = useCallback(() => {
@@ -173,6 +212,32 @@ export function DojoView() {
     [selected, readOnly, adoptVerdicts],
   );
 
+  /** One blind edit: applied at once from the ref, written behind it. A failed
+   *  write re-reads the cycle, so the screen never keeps a pick the disk refused. */
+  const sendBlind = useCallback(
+    (edit: BlindEdit) => {
+      if (!selected || readOnly) return;
+      adoptBlind(applyBlindEdit(blindRef.current, edit));
+      setSave("saving");
+      const cycleId = selected;
+      saveTrainingBlind(cycleId, [edit]).then(
+        () => setSave("saved"),
+        () => {
+          setSave("error");
+          void loadDetail(cycleId, false);
+        },
+      );
+    },
+    [selected, readOnly, adoptBlind, loadDetail],
+  );
+
+  /** Blind until every pair is picked or the improvement is anchored; a decided
+   *  claim and a committed cycle are always shown unmasked. */
+  const isBlind = useCallback(
+    (imp: Improvement) => !readOnly && !verdicts[imp.id] && !claimAllowed(imp, blind.improvements[imp.id]),
+    [readOnly, verdicts, blind],
+  );
+
   /* ── Keyboard — the CullGrid law, one card at a time ─────────────────── */
 
   const order = useMemo(() => detail?.improvements.map((i) => i.id) ?? [], [detail]);
@@ -184,6 +249,11 @@ export function DojoView() {
       if (refusedKey(e)) return;
       if (typing(e.target)) return;
       const i = focused ? order.indexOf(focused) : -1;
+      /** The claim keys do nothing while the focused card is still blind. */
+      const blindFocused = () => {
+        const imp = detail.improvements.find((x) => x.id === focused);
+        return imp ? isBlind(imp) : false;
+      };
       const step = (d: number) => {
         const n = Math.min(order.length - 1, Math.max(0, (i < 0 ? 0 : i) + d));
         setFocused(order[n]);
@@ -199,13 +269,23 @@ export function DojoView() {
           e.preventDefault();
           step(-1);
           break;
+        case "1":
+        case "2":
+        case "0": {
+          // The next unpicked pair of the focused improvement, in wall order.
+          const imp = detail.improvements.find((x) => x.id === focused);
+          if (!imp || !isBlind(imp)) break;
+          const pair = (imp.pairs ?? []).find((p) => blind.improvements[imp.id]?.picks[p.id] === undefined);
+          if (pair) sendBlind({ imp: imp.id, pair: pair.id, pick: BLIND_KEYS[e.key] });
+          break;
+        }
         case "k":
         case "K":
-          if (focused) setVerdict(focused, "approve");
+          if (focused && !blindFocused()) setVerdict(focused, "approve");
           break;
         case "x":
         case "X":
-          if (focused) setVerdict(focused, "reject");
+          if (focused && !blindFocused()) setVerdict(focused, "reject");
           break;
         case "u":
         case "U":
@@ -221,7 +301,7 @@ export function DojoView() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [detail, readOnly, confirm, focused, order, verdicts, setVerdict]);
+  }, [detail, readOnly, confirm, focused, order, verdicts, setVerdict, blind, isBlind, sendBlind]);
 
   useEffect(() => {
     if (!focused) return;
@@ -330,6 +410,9 @@ export function DojoView() {
                   cycleId={detail.id}
                   imp={imp}
                   verdict={verdicts[imp.id] ?? null}
+                  blind={blind}
+                  masked={isBlind(imp)}
+                  onBlind={sendBlind}
                   focused={focused === imp.id}
                   readOnly={readOnly}
                   onFocus={() => setFocused(imp.id)}
@@ -354,6 +437,7 @@ export function DojoView() {
             label="Gate shortcuts"
             map={[
               { keys: ["↑", "↓"], does: "cards" },
+              { keys: ["1", "2", "0"], does: "blind pick A / B / tie" },
               { keys: ["K"], does: "approve" },
               { keys: ["X"], does: "reject" },
               { keys: ["U"], does: "clear" },
@@ -494,6 +578,9 @@ function ImprovementEntry({
   cycleId,
   imp,
   verdict,
+  blind,
+  masked,
+  onBlind,
   focused,
   readOnly,
   onFocus,
@@ -502,6 +589,10 @@ function ImprovementEntry({
   cycleId: string;
   imp: Improvement;
   verdict: TrainingVerdict | null;
+  blind: BlindState;
+  /** The blind phase: no arm names, no judge chrome, no claim verdict yet. */
+  masked: boolean;
+  onBlind: (edit: BlindEdit) => void;
   focused: boolean;
   readOnly: boolean;
   onFocus: () => void;
@@ -511,6 +602,11 @@ function ImprovementEntry({
   const gem = geminiAgreement(imp);
   const challengerPicks = (imp.pairs ?? []).filter((p) => p.judge_pick === "challenger").length;
   const kit = toKit(verdict);
+  const entry = blind.improvements[imp.id];
+  const picked = pickedCount(imp, entry);
+  const total = (imp.pairs ?? []).length;
+  const measure = measureBlind(imp, entry, blind.map);
+  const slotOf = (pairId: string): Arm => blind.map[blindKey(imp.id, pairId)] ?? armInSlotA(cycleId, imp.id, pairId);
   return (
     <section
       id={`imp-${imp.id.replace(/[^A-Za-z0-9_-]/g, "_")}`}
@@ -530,23 +626,126 @@ function ImprovementEntry({
           <span className="font-jetbrains text-label text-white/40">challenges · {imp.standard}</span>
           <RecipeDiff baseline={imp.baseline_recipe} challenger={imp.challenger_recipe} />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <ScorePill label={`judge ${challengerPicks}/${(imp.pairs ?? []).length}`} value={rate} />
-          {gem !== undefined && <ScorePill label="gemini agrees" value={gem} />}
-          {!readOnly && <VerdictButtons value={kit} keepWord="Approve" subject={imp.technique} clear onVerdict={(v) => onVerdict(fromKit(v))} />}
-        </div>
+        {masked ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Tally label="blind picks" value={picked} of={total} tone="cyan" zero="keep" />
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onBlind({ imp: imp.id, anchored: true });
+              }}
+              className="font-jetbrains cursor-pointer rounded-md border border-white/10 px-2 py-1 text-label text-white/60 transition hover:border-amber-300/40 hover:text-amber-200"
+            >
+              Skip blind
+            </button>
+          </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <ScorePill label={`judge ${challengerPicks}/${total}`} value={rate} />
+            {gem !== undefined && <ScorePill label="gemini agrees" value={gem} />}
+            {entry?.anchored ? (
+              <Tally label="anchored" value={0} tone="amber" zero="keep" />
+            ) : picked > 0 && blindComplete(imp, entry) ? (
+              <>
+                <ScorePill label="you vs chokepoint" value={measure.chokepoint_vs_human} />
+                {measure.gemini_vs_human !== undefined && <ScorePill label="you vs gemini" value={measure.gemini_vs_human} />}
+              </>
+            ) : null}
+            {!readOnly && <VerdictButtons value={kit} keepWord="Approve" subject={imp.technique} clear onVerdict={(v) => onVerdict(fromKit(v))} />}
+          </div>
+        )}
       </div>
+      {!masked && !readOnly && !entry?.anchored && picked > 0 && measure.pairs_n < BLIND_FLOOR && (
+        <label className="font-jetbrains mt-3 flex cursor-pointer items-center gap-2 rounded-lg border border-amber-400/25 bg-amber-400/[0.06] px-3 py-2 text-label text-amber-100/90">
+          <input
+            type="checkbox"
+            checked={Boolean(entry?.floorOverride)}
+            onChange={(e) => onBlind({ imp: imp.id, floorOverride: e.target.checked })}
+          />
+          {measure.pairs_n} blind pair{measure.pairs_n === 1 ? "" : "s"} is below the floor of {BLIND_FLOOR}: the ledger row reads unmeasurable unless you override.
+        </label>
+      )}
       {/* The pair wall — the evidence, one seed-matched duo per pair. */}
       <div className="mt-5 grid gap-4 xl:grid-cols-2 2xl:grid-cols-3">
         {(imp.pairs ?? []).map((pair) => (
-          <PairDuo key={pair.id} cycleId={cycleId} pair={pair} />
+          masked ? (
+            <BlindPairDuo
+              key={pair.id}
+              cycleId={cycleId}
+              view={blindPairView(pair, slotOf(pair.id))}
+              pick={entry?.picks[pair.id]}
+              onPick={(pick) => onBlind({ imp: imp.id, pair: pair.id, pick })}
+            />
+          ) : (
+            <PairDuo key={pair.id} cycleId={cycleId} pair={pair} human={humanArm(entry, pair.id, slotOf(pair.id))} />
+          )
         ))}
       </div>
     </section>
   );
 }
 
-function PairDuo({ cycleId, pair }: { cycleId: string; pair: PairResult }) {
+/** The arm the human picked blind for a pair; undefined when they never did. */
+function humanArm(entry: ImprovementBlind | undefined, pairId: string, slotA: Arm): Arm | "tie" | undefined {
+  const pick = entry?.picks[pairId];
+  return pick ? pickToArm(pick, slotA) : undefined;
+}
+
+/** The blind phase's pair: two anonymous images and the three picks. Nothing
+ *  here knows which arm is which, what the judge chose, or why. */
+function BlindPairDuo({
+  cycleId,
+  view,
+  pick,
+  onPick,
+}: {
+  cycleId: string;
+  view: ReturnType<typeof blindPairView>;
+  pick: BlindPick | undefined;
+  onPick: (pick: BlindPick | null) => void;
+}) {
+  const slot = (label: "A" | "B", ref_: PairResult["baseline"]) => (
+    <figure className="flex min-w-0 flex-col gap-1.5">
+      <div className={`rounded-xl ${pick === label ? "ring-2 ring-cyan-300/70" : "ring-1 ring-white/10"}`}>
+        <Art src={fileUrl(cycleId, ref_.poster ?? ref_.file, "training")} state="ready" alt={`option ${label}`} className="aspect-video" />
+      </div>
+      <figcaption className={`font-jetbrains px-0.5 text-label ${pick === label ? "text-cyan-200" : "text-white/45"}`}>{label}</figcaption>
+    </figure>
+  );
+  const choice = (value: BlindPick, text: string) => (
+    <button
+      key={value}
+      type="button"
+      aria-pressed={pick === value}
+      onClick={(e) => {
+        e.stopPropagation();
+        onPick(pick === value ? null : value);
+      }}
+      className={`font-jetbrains cursor-pointer rounded-md border px-2.5 py-1 text-label transition ${
+        pick === value ? "border-cyan-300/70 bg-cyan-300/15 text-cyan-100" : "border-white/10 text-white/60 hover:border-white/25"
+      }`}
+    >
+      {text}
+    </button>
+  );
+  return (
+    <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-white/8 bg-black/20 p-3">
+      <div className="font-jetbrains truncate text-label text-white/45">{view.scene}</div>
+      <div className="grid grid-cols-2 gap-2">
+        {slot("A", view.a)}
+        {slot("B", view.b)}
+      </div>
+      <div className="flex gap-2">
+        {choice("A", "A")}
+        {choice("B", "B")}
+        {choice("tie", "tie")}
+      </div>
+    </div>
+  );
+}
+
+function PairDuo({ cycleId, pair, human }: { cycleId: string; pair: PairResult; human?: Arm | "tie" }) {
   const disagrees = pair.gemini_pick !== undefined && pair.gemini_pick !== pair.judge_pick;
   const arm = (name: "baseline" | "challenger", ref_: PairResult["baseline"]) => {
     const picked = pair.judge_pick === name;
@@ -583,6 +782,11 @@ function PairDuo({ cycleId, pair }: { cycleId: string; pair: PairResult }) {
       <p className="font-hanken text-label leading-snug text-white/70">
         <span className={`font-jetbrains ${pair.judge_pick === "tie" ? "text-white/55" : "text-cyan-200"}`}>judge: {pair.judge_pick}</span> — {pair.reason}
       </p>
+      {human !== undefined && (
+        <p className={`font-jetbrains text-label ${human === pair.judge_pick ? "text-emerald-200/80" : "text-amber-200/80"}`}>
+          you: {human} — {human === pair.judge_pick ? "agrees with the chokepoint" : "differs from the chokepoint"}
+        </p>
+      )}
       {/* THE SECOND JUDGE, all three of its outcomes. Round 2 drew only a
           disagreement, so an agreeing Gemini and an absent one read the same,
           and a FAILED call — an outage, which the type keeps out of agreement

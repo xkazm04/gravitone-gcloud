@@ -6,6 +6,8 @@
 // manifest; this file is the TypeScript reading of it, and a field added on one
 // side without the other is how the gate ends up rendering `undefined`.
 
+import type { BlindState } from "./blind";
+
 export type CycleStatus = "planning" | "generating" | "judging" | "awaiting-gate" | "committed" | "failed";
 
 /** One generated artefact. `file`/`poster` are cycle-relative; a video MediaRef
@@ -93,6 +95,16 @@ export interface TrainingLedgerRow {
   verdict: "better" | "not-better" | "unmeasurable";
   judge_pick_rate: number;
   gemini_agreement?: number;
+  /** The blind gate's measurement (lib/foundry/training/blind.ts): the human's
+   *  per-pair picks scored against each judge. Absent on rows gated before the
+   *  blind phase existed. */
+  judge_agreement?: { chokepoint_vs_human: number; gemini_vs_human?: number };
+  /** Fraction of blind-picked pairs where the human chose the challenger. */
+  human_pick_rate?: number;
+  /** How many pairs the human picked blind; below the floor the row is `unmeasurable`. */
+  pairs_n?: number;
+  /** "blind" = measured; "anchored" = decided with the judges in view ("skip blind"). */
+  basis?: "blind" | "anchored";
   thumb?: string;
   reflected: false | string;
   at: string;
@@ -107,6 +119,8 @@ export interface TrainingCommitResult {
 export interface TrainingCycleDetail {
   cycle: CycleManifest;
   verdicts: TrainingVerdicts;
+  /** The blind gate's picks and the A/B map (lib/foundry/training/blind.ts). */
+  blind: BlindState;
   /** The verdict map's revision (lib/foundry/verdictLog.ts); a PATCH's baseRev. */
   rev?: number;
 }
