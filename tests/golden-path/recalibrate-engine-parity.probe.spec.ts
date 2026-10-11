@@ -22,7 +22,7 @@ import { buildCards } from "@/app/_phases/_shared/notebook/cards";
 import type { EditPlan } from "@/app/_phases/script/editPlan";
 
 const ctx = () => ({ cards: buildCards(), scope: {} });
-const emptyPlan = (): EditPlan => ({ edits: [], refusals: [], unchanged: [], summary: "no edits" });
+const emptyPlan = (): EditPlan => ({ edits: [], refusals: [], summary: "no edits" });
 
 /** Every (render, fact) pair the fixtures declare as a deliberate exclusion. */
 const declaredCuts = () =>
@@ -68,7 +68,6 @@ test("parity: an edit that speaks a previously-cut fact WINS over the stale decl
   const plan: EditPlan = {
     edits: [{ renderId: r.id, op: "rewrite", beatAt, text: "reinstated", cards: [cut.factId], why: "bring it back" }],
     refusals: [],
-    unchanged: [],
     summary: "reinstate one cut fact",
   };
   const mod = recalibrateFromPlan(BASELINE, [], plan, "v-mod", 1, ctx());

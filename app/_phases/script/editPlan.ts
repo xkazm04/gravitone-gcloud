@@ -40,7 +40,6 @@ export interface Edit {
 export interface EditPlan {
   edits: Edit[];
   refusals: { note: string; why: string }[];
-  unchanged: string[];
   summary: string;
 }
 
@@ -94,10 +93,9 @@ export function editPlanSchema(draft: { renders: readonly { id: string }[] }) {
           additionalProperties: false,
         },
       },
-      unchanged: { type: "array", items: { type: "string" } },
       summary: { type: "string" },
     },
-    required: ["edits", "refusals", "unchanged", "summary"],
+    required: ["edits", "refusals", "summary"],
     additionalProperties: false,
   } as const;
 }
@@ -440,7 +438,6 @@ export function parseEditPlan(
   return {
     edits,
     refusals: Array.isArray(o.refusals) ? (o.refusals as EditPlan["refusals"]) : [],
-    unchanged: Array.isArray(o.unchanged) ? (o.unchanged as string[]) : [],
     summary: o.summary,
   };
 }

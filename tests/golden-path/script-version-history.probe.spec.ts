@@ -34,7 +34,6 @@ const note = (cardId: string, kind: Note["kind"], at: number): Note => ({ id: `n
 const plan: EditPlan = {
   edits: [{ renderId: "reversal-chain", op: "cut", beatAt: "1:45", why: "cut beat at 1:45" }],
   refusals: [],
-  unchanged: [],
   summary: "cut 1:45",
 };
 const engineRun = engineRunWith(

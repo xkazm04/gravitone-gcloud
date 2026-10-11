@@ -19,7 +19,7 @@ const RID = "reversal-chain"; // a real RENDERS id
 // parse was passing on a plan the app could not actually have applied.
 const AT = "0:00"; // reversal-chain's opening beat
 const okEdit = { renderId: RID, op: "retime", beatAt: AT, seconds: 6, why: "tighten the turn" };
-const okPlan = () => ({ edits: [okEdit], refusals: [], unchanged: [], summary: "one retime" });
+const okPlan = () => ({ edits: [okEdit], refusals: [], summary: "one retime" });
 
 test("Lane2b/editPlan: a valid plan parses", () => {
   const p = parseEditPlan(JSON.stringify(okPlan()));

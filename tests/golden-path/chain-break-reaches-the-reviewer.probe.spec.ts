@@ -37,7 +37,6 @@ test("the fixture still has the seam this probe is about", () => {
 const cutPlan = (): EditPlan => ({
   edits: [{ renderId: RENDER, op: "cut", beatAt: "0:12", why: "the note asked for this beat to go" }],
   refusals: [],
-  unchanged: [],
   summary: "one cut",
 });
 
@@ -68,7 +67,7 @@ test("an empty plan breaks no seam — the check does not cry wolf on the versio
   const clean = recalibrateFromPlan(
     BASELINE,
     [],
-    { edits: [], refusals: [], unchanged: [], summary: "no edits" },
+    { edits: [], refusals: [], summary: "no edits" },
     "v-clean",
     1,
     ctx(),

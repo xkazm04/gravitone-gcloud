@@ -29,7 +29,6 @@ const n1: Note = { id: "n-c-descope-0", cardId: "c", kind: "descope", at: 0 };
 const plan: EditPlan = {
   edits: [{ renderId: "reversal-chain", op: "cut", beatAt: "1:45", why: "cut beat at 1:45" }],
   refusals: [],
-  unchanged: [],
   summary: "cut 1:45",
 };
 const v2: Version = recalibrateFromPlan(BASELINE, [n1], plan, "v2", 1, ctx());

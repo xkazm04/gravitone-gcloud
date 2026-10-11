@@ -353,7 +353,6 @@ test("case 6: the composed draft names its renders to the edit-plan schema and p
     JSON.stringify({
       edits: [{ renderId: "rc-own-clock", op: "retime", beatAt: mark, seconds: 12, why: "hold the complication" }],
       refusals: [],
-      unchanged: ["adj-own-clock"],
       summary: "One retime.",
     }),
     { draft },
@@ -362,7 +361,7 @@ test("case 6: the composed draft names its renders to the edit-plan schema and p
   // And a fixture render is no longer a render this project has.
   expect(() =>
     parseEditPlan(
-      JSON.stringify({ edits: [{ renderId: "reversal-chain", op: "cut", beatAt: "0:00", why: "x" }], refusals: [], unchanged: [], summary: "x" }),
+      JSON.stringify({ edits: [{ renderId: "reversal-chain", op: "cut", beatAt: "0:00", why: "x" }], refusals: [], summary: "x" }),
       { draft },
     ),
   ).toThrow(PlanError);

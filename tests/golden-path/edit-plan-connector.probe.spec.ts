@@ -37,7 +37,7 @@ const insert = (connector?: unknown) => ({
   ...(connector === undefined ? {} : { connector }),
 });
 const plan = (e: object) =>
-  JSON.stringify({ edits: [e], refusals: [], unchanged: [], summary: "one insert" });
+  JSON.stringify({ edits: [e], refusals: [], summary: "one insert" });
 
 /** Where the inserted beat lands, and what it claims about its predecessor. */
 const landed = (e: Edit) => {

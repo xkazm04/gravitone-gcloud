@@ -8,7 +8,7 @@
     {
       "match": {
         "heading": "# RECALIBRATE-PROMPT",
-        "schemaSha256": "532bdd5adc8891da4411a6b6c1c958d4f4133a6b77d7643edac091b676c4d6d5"
+        "schemaSha256": "d0bfadd10ccffc83569ea1b48a91de779056550a904f8158805f8c1216ad41f0"
       },
       "prompt": null,
       "mode": "ok",
@@ -47,7 +47,6 @@
           }
         ],
         "refusals": [],
-        "unchanged": ["derived-short"],
         "summary": "Two retimes, one of them on a render the run never read."
       }
     }
