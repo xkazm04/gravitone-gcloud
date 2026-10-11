@@ -47,11 +47,23 @@ export function containedIn(dir: string, rel: string, servableOnly = false, noun
 export async function readJson<T>(file: string): Promise<T | null>;
 export async function readJson<T>(file: string, fallback: T): Promise<T>;
 export async function readJson<T>(file: string, fallback: T | null = null): Promise<T | null> {
-  try {
-    return JSON.parse(await readFile(file, "utf8")) as T;
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === "ENOENT") return fallback;
-    throw e;
+  // A concurrent writer's rename can make the read fail transiently with
+  // EPERM/EBUSY/EACCES on Windows. Retry briefly (mirror of writeJsonAtomic);
+  // the last attempt still throws, so a genuinely unreadable file surfaces.
+  for (let attempt = 0; ; attempt++) {
+    let text: string;
+    try {
+      text = await readFile(file, "utf8");
+    } catch (e) {
+      const code = (e as NodeJS.ErrnoException).code;
+      if (code === "ENOENT") return fallback;
+      if ((code === "EPERM" || code === "EBUSY" || code === "EACCES") && attempt < 9) {
+        await new Promise((r) => setTimeout(r, 5 * (attempt + 1)));
+        continue;
+      }
+      throw e;
+    }
+    return JSON.parse(text) as T;
   }
 }
 
