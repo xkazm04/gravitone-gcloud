@@ -282,6 +282,10 @@ export interface BoardVerb {
   input?: { kind: VerbInputKind; initial?: VerbInput };
   /** Present = the verb is shown but inert, with this as its reason. */
   disabled?: string;
+  /** The verb bills a vendor (e.g. queues Suno creates). The canvas's arm
+   *  wrapper (app/foundry/pipeline/arm.ts) answers it dry while STUB, so a
+   *  source never sees a spending verb the money switch did not allow. */
+  spends?: true;
 }
 
 export type VerbInput =
