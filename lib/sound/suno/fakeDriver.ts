@@ -4,10 +4,10 @@
 // song ids are counted, not random, so a probe can name them.
 //
 // It touches no browser, no network and no vendor. `FAKE_SUNO` is the probe's
-// handle: its health, a failure to throw for a given create, the delay, and a
-// log of every create it was asked for.
+// handle: its health, a failure to throw for a given create, the delay, a log
+// of every create it was asked for, and the library listSunoLibrary answers.
 
-import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoModel, SunoPhase } from "@/lib/suno/types";
+import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoLibraryClip, SunoModel, SunoPhase } from "@/lib/suno/types";
 
 const PHASES: readonly SunoPhase[] = ["attaching", "composing", "creating", "rendering", "collecting"];
 
@@ -22,6 +22,33 @@ export interface FakeSunoControl {
   /** Hold every create at "creating" until this resolves (crash-resume probes). */
   hold: Promise<void> | null;
   seq: number;
+  /** What listSunoLibrary answers, in order (newest first, as Suno lists). */
+  library: SunoLibraryClip[];
+  /** How many times the library was listed. */
+  libraryReads: number;
+}
+
+/** The fake library: two hand-made songs and one that shares its song id with
+ *  the FIRST clip a fake create mints (`fake-0001`), so a probe can show a
+ *  queue-made clip is not imported twice. */
+export function fakeLibrary(): SunoLibraryClip[] {
+  const at = Date.parse("2026-10-01T12:00:00.000Z");
+  const song = (songId: string, i: number, prompt: SunoFields, model: string, audio: boolean): SunoLibraryClip => ({
+    songId,
+    url: `https://suno.com/song/${songId}`,
+    audioUrl: audio ? `https://cdn1.suno.ai/${songId}.m4a` : null,
+    imageUrl: `https://cdn2.suno.ai/image_large_${songId}.jpeg`,
+    title: prompt.title ?? "",
+    durationS: audio ? 180 + i : null,
+    model,
+    prompt,
+    createdAt: at - i * 60_000,
+  });
+  return [
+    song("lib-0001", 0, { title: "The Shape of Leaving", style: "trip-hop, grunge, cello, male vocal", lyrics: "[Verse 1]\nYou left the kettle cold again" }, "v6", true),
+    song("lib-0002", 1, { style: "roots dub, melodica, tape echo", lyrics: "[Instrumental]", exclude: "vocals" }, "v4.5", true),
+    song("fake-0001", 2, { title: "Gravitone probe", style: "warm synthwave, analog pads" }, "v6-wild", false),
+  ];
 }
 
 export const FAKE_SUNO: FakeSunoControl = {
@@ -31,6 +58,8 @@ export const FAKE_SUNO: FakeSunoControl = {
   calls: [],
   hold: null,
   seq: 0,
+  library: fakeLibrary(),
+  libraryReads: 0,
 };
 
 export function resetFakeSuno(): void {
@@ -40,6 +69,15 @@ export function resetFakeSuno(): void {
   FAKE_SUNO.calls = [];
   FAKE_SUNO.hold = null;
   FAKE_SUNO.seq = 0;
+  FAKE_SUNO.library = fakeLibrary();
+  FAKE_SUNO.libraryReads = 0;
+}
+
+export async function fakeListSunoLibrary(onPage?: (n: number, total: number | null) => void): Promise<SunoLibraryClip[]> {
+  FAKE_SUNO.libraryReads++;
+  await sleep(FAKE_SUNO.delayMs);
+  onPage?.(FAKE_SUNO.library.length, null);
+  return FAKE_SUNO.library.map((c) => ({ ...c, prompt: { ...c.prompt } }));
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));

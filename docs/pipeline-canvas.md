@@ -352,3 +352,26 @@ prop is the floor a shell may still set.
 calls `reload()` once per batch that resolved anything: a move may return a different item (a
 proposal queued becomes a job under a new id) or land somewhere the request did not name, and
 only the source's own account knows what it became.
+
+## 13. The Suno queue (audio)
+
+Audio's working column is a serial Suno queue (`lib/sound/suno/queue.ts`, store
+`foundry-out/sound/suno.json`): one job renders at a time, FIFO, persisted, every job on both
+models (`v6`, `v6-wild`), two clips each. A prompt (`proposed`) moved to `working` under LIVE
+enqueues it; under STUB the move is dry. A queued job moved back to `proposed` cancels it; the
+active one is refused ("rendering now - it lands in triage when Suno finishes"). Finished clips
+land in `gate / triage` with no verdict; `pending` is keep; drop takes the clip off the board
+(counted under `hidden`). A clip's card links to its Suno song page. Hunt leaves dropped on
+`working` become one Suno proposal each. The driver is `lib/suno/` (see `docs/suno-driver.md`);
+a driver that is down pauses the queue and reports `degraded` on `working`.
+
+**The Suno library.** Right-click any `gate / triage` cell → **Import Suno library** (free:
+no `spends`, the arm passes it in STUB too) reads every finished, untrashed song in the
+operator's Suno library into triage as clips with `origin: "library"` — Suno URL, title, model
+label, and the prompt (style tags, lyrics, negative tags) shown whole in the detail pane. It is
+idempotent by song id against every clip already stored, queue-made ones included; the
+announcement is `Suno library: added N, skipped M`. A library clip has no job and no lane: it
+draws in the **ungrouped** lane under every axis until it is moved. Dropping a clip in another
+lane (any gate band) writes its `lane` (`{ axis, value }`, the axis the board is grouped by)
+through `PATCH /api/sound/suno/clips/[id]`, and that lane wins over the job's from then on.
+The same import runs without the app: `npm run suno:import`.

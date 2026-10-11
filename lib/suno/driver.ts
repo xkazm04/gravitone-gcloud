@@ -13,7 +13,7 @@
 // work ("suno refused the create: …"), never the mechanism.
 
 import type { Page, Request, Response } from "playwright";
-import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoModel, SunoPhase } from "./types";
+import type { SunoClipRef, SunoDriverHealth, SunoFields, SunoLibraryClip, SunoModel, SunoPhase } from "./types";
 import { SUNO_CDP_PORT, SUNO_MODEL_LABEL } from "./types";
 import { attach, isSignedIn, profileContext } from "./browser";
 import { normalizeModelLabel, SELECTORS } from "./selectors";
@@ -58,7 +58,20 @@ interface RawClip {
   image_url?: string;
   image_large_url?: string;
   media_urls?: { url?: string }[];
-  metadata?: { duration?: number | null; error_message?: string | null };
+  metadata?: {
+    duration?: number | null;
+    error_message?: string | null;
+    tags?: string | null;
+    prompt?: string | null;
+    negative_tags?: string | null;
+    gpt_description_prompt?: string | null;
+    make_instrumental?: boolean | null;
+    model_badges?: Record<string, { display_name?: string } | undefined> | null;
+  };
+  major_model_version?: string | null;
+  model_name?: string | null;
+  created_at?: string | null;
+  is_trashed?: boolean | null;
 }
 
 function audioOf(c: RawClip): string | null {
@@ -335,5 +348,138 @@ async function fetchClip(page: Page, id: string, headers: Record<string, string>
     ) as RawClip | null;
   } catch {
     return null;
+  }
+}
+
+// ── the library (read-only) ──────────────────────────────────────────────────
+//
+// READ-ONLY BY CONSTRUCTION. The only request this makes is the library page's
+// own feed query (POST /api/feed/v3 is a search, not a write), from a tab it
+// opens and closes. Nothing is clicked: no create, no edit, no trash.
+
+const text = (v: unknown): string => (typeof v === "string" ? v.trim() : "");
+
+/** Suno's label for the model a clip was made on. The library's own chip
+ *  ("V6", "V6-WILD") first: v6 and v6-wild share major_model_version "v6" and
+ *  model_name "chirp-hawk", and only the badge tells them apart. */
+export function libraryModelLabel(c: RawClip): string {
+  const badges = c.metadata?.model_badges ?? {};
+  const badge = text(badges.songrow?.display_name) || text(badges.songcard?.display_name);
+  if (badge) return normalizeModelLabel(badge);
+  return normalizeModelLabel(text(c.major_model_version) || text(c.model_name) || "unknown");
+}
+
+/** One library clip, or null when it is not a finished song (trashed,
+ *  rendering, failed). Optional SunoFields keys are omitted when Suno holds
+ *  nothing for them; an instrumental with no lyrics reads "[Instrumental]",
+ *  the queue's own spelling. */
+export function toLibraryClip(c: RawClip): SunoLibraryClip | null {
+  if (!c.id || c.status !== "complete" || c.is_trashed) return null;
+  const m = c.metadata ?? {};
+  const title = text(c.title);
+  const prompt: SunoFields = { style: text(m.tags) || text(m.gpt_description_prompt) };
+  if (title) prompt.title = title;
+  const lyrics = text(m.prompt);
+  if (lyrics) prompt.lyrics = lyrics;
+  else if (m.make_instrumental) prompt.lyrics = "[Instrumental]";
+  const exclude = text(m.negative_tags);
+  if (exclude) prompt.exclude = exclude;
+  const at = Date.parse(text(c.created_at));
+  return { ...toRef(c.id, c, ""), title, model: libraryModelLabel(c), prompt, createdAt: Number.isFinite(at) ? at : Date.now() };
+}
+
+type FeedAnswer = { status: number; clips: RawClip[]; next: string | null; more: boolean };
+
+/** Every finished, untrashed clip in the operator's Suno library, newest
+ *  first, deduped by song id. `onPage(n, total)` after each page: n clips read
+ *  so far; total is null (the feed does not say). Free: it spends no credits. */
+export async function listSunoLibrary(onPage?: (n: number, total: number | null) => void): Promise<SunoLibraryClip[]> {
+  const browser = await attach({ spawn: true });
+  const ctx = profileContext(browser);
+  if (!(await isSignedIn(ctx))) throw new Error("not signed in to suno");
+
+  const page = await ctx.newPage();
+  let headers: Record<string, string> = {};
+  let query: { filters?: unknown } | null = null;
+  const onRequest = (r: Request) => {
+    if (!r.url().startsWith(SELECTORS.api.base)) return;
+    const h = r.headers();
+    if (h.authorization) {
+      headers = { authorization: h.authorization };
+      if (h["browser-token"]) headers["browser-token"] = h["browser-token"];
+      if (h["device-id"]) headers["device-id"] = h["device-id"];
+    }
+    if (!query && r.method() === "POST" && SELECTORS.api.feed.test(r.url())) {
+      try {
+        query = r.postDataJSON() as { filters?: unknown };
+      } catch {
+        /* an unreadable body is the same as no query seen */
+      }
+    }
+  };
+  page.on("request", onRequest);
+
+  /** Wait for the page to make its own feed call (and so hand us a token). */
+  const awaitQuery = async (ms: number) => {
+    const until = Date.now() + ms;
+    while (!(query && headers.authorization) && Date.now() < until) await page.waitForTimeout(250);
+  };
+
+  try {
+    await page.goto(SELECTORS.page.libraryUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+    if (page.url().includes(SELECTORS.page.signInPath)) throw new Error("not signed in to suno");
+    await awaitQuery(30_000);
+    const q = query as { filters?: unknown } | null;
+    if (!q?.filters || !headers.authorization) throw new Error("suno library did not load");
+    const filters = q.filters;
+
+    const fetchPage = (cursor: string | null) =>
+      page.evaluate(
+        async ({ url, headers, body }) => {
+          const r = await fetch(url, { method: "POST", headers: { ...headers, "content-type": "application/json" }, body });
+          if (!r.ok) return { status: r.status, clips: [], next: null, more: false };
+          const j = (await r.json()) as { clips?: unknown[]; next_cursor?: string | null; has_more?: boolean };
+          return { status: r.status, clips: Array.isArray(j.clips) ? j.clips : [], next: j.next_cursor ?? null, more: j.has_more === true };
+        },
+        { url: SELECTORS.api.base + SELECTORS.api.feedUrl, headers, body: JSON.stringify({ cursor, limit: SELECTORS.api.feedPageSize, filters }) },
+      ) as Promise<FeedAnswer>;
+
+    const out = new Map<string, SunoLibraryClip>();
+    let read = 0;
+    let cursor: string | null = null;
+    for (let pageNo = 0; pageNo < 1000; pageNo++) {
+      let answer: FeedAnswer | null = null;
+      for (let attempt = 0; attempt < 6; attempt++) {
+        answer = await fetchPage(cursor);
+        if (answer.status === 429) {
+          await page.waitForTimeout(2_000 * 2 ** attempt);
+          continue;
+        }
+        if (answer.status === 401 || answer.status === 403) {
+          // The page's token expired mid-run: a reload makes the page fetch
+          // its feed again with a fresh one.
+          query = null;
+          await page.reload({ waitUntil: "domcontentloaded", timeout: 45_000 });
+          await awaitQuery(30_000);
+          continue;
+        }
+        break;
+      }
+      const a = answer as FeedAnswer | null;
+      if (!a || a.status >= 400) throw new Error(`suno library answered HTTP ${a?.status ?? "nothing"} on page ${pageNo + 1}`);
+      read += a.clips.length;
+      for (const raw of a.clips) {
+        const clip = toLibraryClip(raw);
+        if (clip && !out.has(clip.songId)) out.set(clip.songId, clip);
+      }
+      onPage?.(read, null);
+      if (!a.more || !a.next || a.next === cursor) break;
+      cursor = a.next;
+      await page.waitForTimeout(SELECTORS.api.feedGapMs);
+    }
+    return [...out.values()];
+  } finally {
+    page.off("request", onRequest);
+    await page.close().catch(() => {});
   }
 }

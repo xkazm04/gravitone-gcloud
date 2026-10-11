@@ -74,7 +74,15 @@ const ROOT = process.cwd();
 const METHODS = ["GET", "POST", "PUT", "PATCH", "DELETE"] as const;
 type Method = (typeof METHODS)[number];
 
-keepEnv([...new Set([...cellAxes(), ...storeRootVars(), ...FAKE_ENGINE_ENV])]);
+keepEnv([...new Set([...cellAxes(), ...storeRootVars(), ...FAKE_ENGINE_ENV, "SUNO_DRIVER"])]);
+
+/** The Suno driver attaches to the operator's own signed-in Chrome over a
+ *  loopback debugging port (lib/suno/browser.ts). Like the claude CLI, that is
+ *  a local machine dependency, not a property of a cell, so the lane stands it
+ *  in with the queue's fake driver (lib/sound/suno/fakeDriver.ts): the
+ *  snapshot GET answers without a fetch to 127.0.0.1:9334, and no cell can
+ *  reach the operator's browser. */
+const SUNO_STAND_IN = { SUNO_DRIVER: "fake" } as const;
 
 /* ── the population ──────────────────────────────────────────────────────── */
 
@@ -250,6 +258,18 @@ const EXPECT: Record<string, Expectation> = {
   "app/api/sound/hunts/route.ts": { door: "money", ok: { GET: "2xx", POST: "4xx" } },
   "app/api/sound/insights/route.ts": { door: "access", ok: { GET: "2xx" } },
   "app/api/sound/lessons/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx" } },
+  // The Suno queue (spark audio-queue-suno). The snapshot GET reads the store
+  // and asks the driver whether a signed-in Suno answers (never launches one);
+  // every write is guardRequest and refuses an empty body or an id that names
+  // nothing before the store, the browser or a model is reached.
+  "app/api/sound/suno/route.ts": { door: "access", ok: { GET: "2xx" } },
+  "app/api/sound/suno/clips/[id]/route.ts": { door: "money", ok: { PATCH: "4xx" } },
+  "app/api/sound/suno/library/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/proposals/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
+  "app/api/sound/suno/proposals/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/propose/route.ts": { door: "money", ok: { POST: "4xx" } },
+  "app/api/sound/suno/queue/[id]/route.ts": { door: "money", ok: { DELETE: "4xx" } },
+  "app/api/sound/suno/queue/route.ts": { door: "money", ok: { POST: "4xx" } },
   "app/api/sound/takes/[id]/file/route.ts": { door: "access", ok: { GET: "4xx" } },
   "app/api/sound/takes/[id]/route.ts": { door: "access", ok: { PATCH: "4xx" } },
   "app/api/sound/takes/route.ts": { door: "access", ok: { GET: "2xx", POST: "4xx", DELETE: "4xx" } },
@@ -548,6 +568,7 @@ async function runCell(
   const files = routeFiles();
   const scratch = mkdtempSync(path.join(tmpdir(), `cells-${cell.name}-`));
   const restore = applyCell(cell, scratch);
+  Object.assign(process.env, SUNO_STAND_IN);
   const lines: string[] = [];
   const failures: string[] = [];
   const unhiddenSeen = new Set<string>();

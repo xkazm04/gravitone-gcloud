@@ -4,7 +4,7 @@
 // `{ ok: false, status, error }`, the error being the engine's own words.
 
 import { accessHeader, withAccess } from "@/lib/imagingClient";
-import type { SunoClip, SunoFields, SunoJob, SunoLane, SunoProposal, SunoSnapshot, SunoVerdict } from "@/lib/suno/types";
+import type { SunoClip, SunoFields, SunoImportResult, SunoJob, SunoLane, SunoProposal, SunoSnapshot, SunoVerdict } from "@/lib/suno/types";
 
 import type {
   GenerateRequest,
@@ -145,3 +145,10 @@ export const cancelSunoJob = (id: string) => call<{ job: SunoJob }>(`/api/sound/
 
 export const setSunoVerdict = (id: string, verdict: SunoVerdict | null) =>
   call<{ clip: SunoClip }>(`/api/sound/suno/clips/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify({ verdict }) });
+
+/** A clip's verdict and/or lane in one write; a lane wins over its job's. */
+export const patchSunoClip = (id: string, patch: { verdict?: SunoVerdict | null; lane?: SunoLane | null }) =>
+  call<{ clip: SunoClip }>(`/api/sound/suno/clips/${encodeURIComponent(id)}`, { method: "PATCH", body: JSON.stringify(patch) });
+
+/** Read the operator's whole Suno library into triage. Free; idempotent by song id. */
+export const importSunoLibraryClips = () => call<SunoImportResult>("/api/sound/suno/library", { method: "POST", body: JSON.stringify({ all: true }) });

@@ -17,14 +17,14 @@
 // job. A driver that is not ok PAUSES the loop (no job is failed for it); the
 // next enqueue or snapshot read starts it again.
 
-import { createSunoTracks as realCreate, probeSuno as realProbe } from "@/lib/suno/driver";
-import { SUNO_MODELS, type SunoClip, type SunoClipRef, type SunoDriverHealth, type SunoFields, type SunoJob, type SunoLane, type SunoModel, type SunoPhase, type SunoSnapshot } from "@/lib/suno/types";
+import { createSunoTracks as realCreate, listSunoLibrary as realList, probeSuno as realProbe } from "@/lib/suno/driver";
+import { SUNO_MODELS, type SunoClip, type SunoClipRef, type SunoDriverHealth, type SunoFields, type SunoJob, type SunoLane, type SunoLibraryClip, type SunoModel, type SunoPhase, type SunoSnapshot } from "@/lib/suno/types";
 
 import { UNGROUPED_LANE } from "@/lib/board/pipeline";
 
 import { readHunts, safeId, SoundError } from "../store";
 import type { Hunt, HuntNode } from "../types";
-import { fakeCreateSunoTracks, fakeProbeSuno } from "./fakeDriver";
+import { fakeCreateSunoTracks, fakeListSunoLibrary, fakeProbeSuno } from "./fakeDriver";
 import { clip, EXCLUDE_MAX, INSTRUMENTAL, isCandidate, isLiveJob, mintSunoId, readSuno, STYLE_MAX, TITLE_MAX, withSuno, type SunoFile } from "./store";
 
 /* ── the driver ───────────────────────────────────────────────────────────── */
@@ -32,10 +32,12 @@ import { clip, EXCLUDE_MAX, INSTRUMENTAL, isCandidate, isLiveJob, mintSunoId, re
 export interface SunoDriver {
   probe(): Promise<SunoDriverHealth>;
   create(fields: SunoFields, model: SunoModel, onPhase: (phase: SunoPhase) => void): Promise<SunoClipRef[]>;
+  /** The operator's Suno library, read-only (lib/sound/suno/library.ts). */
+  listLibrary(onPage?: (n: number, total: number | null) => void): Promise<SunoLibraryClip[]>;
 }
 
-const REAL: SunoDriver = { probe: realProbe, create: realCreate };
-const FAKE: SunoDriver = { probe: fakeProbeSuno, create: fakeCreateSunoTracks };
+const REAL: SunoDriver = { probe: realProbe, create: realCreate, listLibrary: realList };
+const FAKE: SunoDriver = { probe: fakeProbeSuno, create: fakeCreateSunoTracks, listLibrary: fakeListSunoLibrary };
 
 /** Read per call, so a probe can switch it after import. */
 export const sunoDriver = (): SunoDriver => (process.env.SUNO_DRIVER?.trim() === "fake" ? FAKE : REAL);
@@ -244,7 +246,7 @@ async function runOne(driver: SunoDriver, id: string): Promise<void> {
       await patchJob(id, (j, f) => {
         const now = Date.now();
         for (const r of refs) {
-          const c: SunoClip = { ...r, id: mintSunoId("sc"), jobId: id, model, createdAt: now, verdict: null };
+          const c: SunoClip = { ...r, id: mintSunoId("sc"), origin: "queue", jobId: id, model, createdAt: now, verdict: null, prompt: { ...job.fields } };
           f.clips.push(c);
           j.clipIds.push(c.id);
         }

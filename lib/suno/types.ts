@@ -87,13 +87,48 @@ export interface SunoClipRef {
 
 export type SunoVerdict = "keep" | "drop";
 
+/** Where a clip came from: rendered by our queue, or imported from the
+ *  operator's Suno library (made by hand on suno.com, or before the queue). */
+export type SunoClipOrigin = "queue" | "library";
+
 export type SunoClip = SunoClipRef & {
   id: string;
-  jobId: string;
-  model: SunoModel;
+  origin: SunoClipOrigin;
+  /** The job that rendered it; null for a library clip. */
+  jobId: string | null;
+  /** One of ours for a queue clip; Suno's own label for a library clip
+   *  ("v6", "v6-wild", "v4.5", ...). Read it through sunoModelLabel(). */
+  model: SunoModel | (string & {});
   createdAt: number;
   verdict: SunoVerdict | null;
+  /** What it was made from: the job's fields for a queue clip, Suno's stored
+   *  title / style tags / lyrics / negative tags for a library clip. `style`
+   *  is "" when Suno holds none (an upload, a cover with no tags). */
+  prompt?: SunoFields;
+  /** Set when the operator moves the clip to another lane; wins over the
+   *  job's lane. A library clip without one is ungrouped. */
+  lane?: SunoLane;
 };
+
+/** What the driver reads per clip of the operator's Suno library. */
+export interface SunoLibraryClip extends SunoClipRef {
+  /** Suno's label for the model, normalised ("v6", "v6-wild", "v4.5"). */
+  model: string;
+  prompt: SunoFields;
+  /** Suno's created_at, epoch ms. */
+  createdAt: number;
+}
+
+/** POST /api/sound/suno/library */
+export interface SunoImportResult {
+  added: number;
+  skipped: number;
+  /** Clips the library listed (complete, not trashed). */
+  total: number;
+}
+
+/** A model's visible label: ours from SUNO_MODEL_LABEL, a library clip's raw. */
+export const sunoModelLabel = (model: string): string => (SUNO_MODEL_LABEL as Record<string, string>)[model] ?? model;
 
 export type SunoDriverHealth = { ok: true } | { ok: false; reason: string };
 

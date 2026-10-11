@@ -17,8 +17,10 @@
 //   working   Suno jobs, queued (with their place, "#2") or active (with
 //             `progress`: the driver's phase on the model it is on, and the
 //             start the card's clock counts from)
-//   gate      `triage`: takes with no verdict and Suno clips with none; then
-//             `pending` (kept takes and kept clips), `remaster`, `edit`
+//   gate      `triage`: takes with no verdict and Suno clips with none - queue
+//             clips and clips imported from the operator's Suno library
+//             (`suno.import-library`, a triage cell verb; free, idempotent);
+//             then `pending` (kept takes and kept clips), `remaster`, `edit`
 //   done      a take's stage finalized
 //
 // THE QUEUE IS SUNO-ONLY. A hunt leaf dropped on `working` - an ElevenLabs one
@@ -35,6 +37,10 @@
 // instead) or that has a Suno proposal (the proposal, job or clips are drawn
 // instead); a dropped Suno clip. `lastLoad().hidden` counts them.
 //
+// A CLIP'S LANE: its own `lane` when the operator moved it (persisted through
+// PATCH /api/sound/suno/clips/[id]), else its job's. A library clip has no job:
+// until it is moved it draws in the ungrouped lane under EVERY axis.
+//
 // A FAILED SUNO READ IS A DEGRADED STAGE, NOT A FAILED LANE. The takes and hunts
 // still draw; proposed, working and gate say the queue could not be read.
 
@@ -45,8 +51,10 @@ import {
   enqueueSuno,
   getGroups,
   getSuno,
+  importSunoLibraryClips,
   listHunts,
   listTakes,
+  patchSunoClip,
   patchTake,
   proposeSuno,
   setSunoVerdict,
@@ -54,7 +62,7 @@ import {
   type Result,
 } from "@/lib/sound/client";
 import type { Hunt, HuntNode, SoundGroups, SoundKind, SoundTake, Stage, TakePatch } from "@/lib/sound/types";
-import { SUNO_MODEL_LABEL, SUNO_PHASE_WORD, type SunoClip, type SunoJob, type SunoLane, type SunoProposal, type SunoSnapshot } from "@/lib/suno/types";
+import { SUNO_MODEL_LABEL, SUNO_PHASE_WORD, sunoModelLabel, type SunoClip, type SunoJob, type SunoLane, type SunoProposal, type SunoSnapshot } from "@/lib/suno/types";
 import { stackVersions, suggestLabel } from "@/app/playground/arrange/model";
 
 import type {
@@ -245,9 +253,14 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     return { kind: "job", job: j, position, item };
   };
 
-  const clipItem = (c: SunoClip, lane: SunoLane | null): ClipNative => {
+  /** The job's lane a clip falls back to; a library clip has none. */
+  const jobLaneOf = (c: SunoClip): SunoLane | null => (c.jobId ? (suno?.jobs.find((j) => j.id === c.jobId)?.lane ?? null) : null);
+
+  const clipItem = (c: SunoClip, jobLane: SunoLane | null): ClipNative => {
     const id = itemId("audio", `suno:clip:${c.id}`);
+    const lane = c.lane ?? jobLane;
     const base = sunoBase(id, lane, { style: c.title || c.songId }, c.createdAt);
+    const p = c.prompt;
     const band = c.verdict === "keep" ? "pending" : "triage";
     // An audio entry with no `src` is a clip Suno has not exposed a stream for
     // yet: the skin draws no live play button for it.
@@ -255,12 +268,18 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
     const item: PipelineItem = {
       ...base,
       title: c.title || c.songId,
-      media: [audio, ...(c.imageUrl ? [{ kind: "image" as const, src: c.imageUrl }] : [])],
+      // Lyrics ride as text media: the detail pane prints them whole, with
+      // their line breaks (the style is a fact); a card face draws only audio.
+      media: [
+        audio,
+        ...(c.imageUrl ? [{ kind: "image" as const, src: c.imageUrl }] : []),
+        ...(p?.lyrics && p.lyrics !== "[Instrumental]" ? [{ kind: "text" as const, text: p.lyrics }] : []),
+      ],
       machinePick: null,
       verdict: c.verdict === "keep" ? "approve" : null,
       note: null,
       placement: { stage: "gate", band, lane: base.lane },
-      version: stamp(id, [c.verdict, c.audioUrl, c.title, c.durationS, base.lane].join("|")),
+      version: stamp(id, [c.verdict, c.audioUrl, c.title, c.durationS, base.lane, lane?.axis, lane?.value, p?.style, p?.lyrics].join("|")),
     };
     return { kind: "clip", clip: c, lane, item };
   };
@@ -302,13 +321,19 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
           { name: "style", value: n.job.fields.style },
           { name: "models", value: n.job.models.map((m) => SUNO_MODEL_LABEL[m]).join(" + ") },
         ];
-      case "clip":
+      case "clip": {
+        const p = n.clip.prompt;
         return [
           // The MODEL leads: it is the chip a clip card carries.
-          { name: "model", value: SUNO_MODEL_LABEL[n.clip.model] },
+          { name: "model", value: sunoModelLabel(n.clip.model) },
           ...(n.clip.durationS !== null ? [{ name: "length", value: `${Math.round(n.clip.durationS)} s` }] : []),
+          { name: "origin", value: n.clip.origin === "library" ? "suno library" : "queue" },
+          ...(p?.style ? [{ name: "style", value: p.style }] : []),
+          ...(p?.lyrics ? [{ name: "lyrics", value: p.lyrics === "[Instrumental]" ? "instrumental" : "written" }] : []),
+          ...(p?.exclude ? [{ name: "exclude", value: p.exclude }] : []),
           { name: "song", value: n.clip.songId },
         ];
+      }
     }
   };
 
@@ -342,12 +367,15 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
    *  axis's honest reading of a Suno item otherwise. */
   const sunoUnder = (n: SunoNative, axis: string, otherwise: string): string => {
     const lane = laneOfSuno(n);
-    return lane && lane.axis === axis && lane.value ? lane.value : otherwise;
+    if (lane && lane.axis === axis && lane.value) return lane.value;
+    // A library clip has no job, no proposal and no reading of its own under
+    // any axis: ungrouped until the operator gives it a lane.
+    return n.kind === "clip" && n.clip.origin === "library" ? UNGROUPED_LANE : otherwise;
   };
   const isSuno = (n: Native | undefined): n is SunoNative => !!n && (n.kind === "proposal" || n.kind === "job" || n.kind === "clip");
   const originOfSuno = (n: SunoNative): string => {
     if (n.kind === "proposal") return n.proposal.origin;
-    const pid = n.kind === "job" ? n.job.proposalId : suno?.jobs.find((j) => j.id === n.clip.jobId)?.proposalId;
+    const pid = n.kind === "job" ? n.job.proposalId : n.clip.jobId ? suno?.jobs.find((j) => j.id === n.clip.jobId)?.proposalId : undefined;
     return suno?.proposals.find((p) => p.id === pid)?.origin ?? UNGROUPED_LANE;
   };
 
@@ -523,7 +551,24 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
       return r;
     }
 
-    if (n.kind === "proposal" || n.kind === "job" || n.kind === "clip") {
+    if (n.kind === "clip") {
+      // A clip moves between lanes (any gate band) and between triage and
+      // pending, in one PATCH: the lane is written under the axis the board is
+      // grouped by, and wins over the job's from then on.
+      const ax = axis ?? "group";
+      const under = axisById(ax).of(n.item);
+      const lane: SunoLane | undefined = req.lane !== undefined && req.lane !== under ? { axis: ax, value: req.lane } : undefined;
+      if (sameCell && !lane) return { ok: true, item: n.item };
+      const r = await patchSunoClip(n.clip.id, {
+        ...(sameCell ? {} : { verdict: req.band === "pending" ? ("keep" as const) : null }),
+        ...(lane ? { lane } : {}),
+      });
+      if (!r.ok) return failMove(r.error, r.status === 0);
+      remember([], [], [r.data.clip]);
+      return { ok: true, item: settle(clipItem(r.data.clip, jobLaneOf(r.data.clip))) };
+    }
+
+    if (n.kind === "proposal" || n.kind === "job") {
       if (laneMoved) return failMove(AUDIO_SUNO_LANE_REFUSAL);
       if (sameCell) return { ok: true, item: n.item };
       if (n.kind === "proposal") {
@@ -539,10 +584,6 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         if (!p) return failMove("cancelled; its proposal was not in the last read - reload");
         return { ok: true, item: settle(proposalItem(p)) };
       }
-      const r = await setSunoVerdict(n.clip.id, req.band === "pending" ? "keep" : null);
-      if (!r.ok) return failMove(r.error, r.status === 0);
-      remember([], [], [r.data.clip]);
-      return { ok: true, item: settle(clipItem(r.data.clip, n.lane)) };
     }
 
     if (req.lane !== undefined && axis !== undefined && axis !== "group") return failMove(`only the row axis is written; ${axis} is read off the take`);
@@ -581,6 +622,8 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
   };
 
   const cellVerbs = (target: VerbTarget): BoardVerb[] => {
+    // Reading the library is free: no `spends`, so the arm does not hold it.
+    if (target.stage === "gate" && target.band === "triage") return [{ id: "suno.import-library", label: "Import Suno library" }];
     if (target.stage !== "proposed" || target.lane === undefined) return [];
     const n = cellCandidates(target).length;
     return [
@@ -697,6 +740,11 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
         remember([], [], [r.data.clip]);
         return ok(`"${n.item.title}" ${verdict === "keep" ? "kept" : verdict === "drop" ? "dropped" : "back in triage"}`);
       }
+      case "suno.import-library": {
+        const r = await importSunoLibraryClips();
+        if (!r.ok) return no(r.error);
+        return ok(`Suno library: added ${r.data.added}, skipped ${r.data.skipped}`);
+      }
       case "suno.cancel": {
         if (n?.kind !== "job") return no("only a queued prompt is cancelled");
         const r = await cancelSunoJob(n.job.id);
@@ -783,7 +831,7 @@ export function makeAudioSource(opts: { now?: () => number } = {}): AudioPipelin
           dropped++;
           continue;
         }
-        const n = clipItem(c, laneOfJob.get(c.jobId) ?? null);
+        const n = clipItem(c, c.jobId ? (laneOfJob.get(c.jobId) ?? null) : null);
         next.set(n.item.id, n);
       }
       if (!suno.driver.ok && suno.jobs.some((j) => j.state === "queued")) {

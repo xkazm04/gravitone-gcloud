@@ -9,8 +9,10 @@ the credits and the session are the operator's.
 | `lib/suno/types.ts` | wire types, `SUNO_MODEL_LABEL`, `SUNO_CDP_PORT` (9334). Client-reachable: no `node:`, no env names. |
 | `lib/suno/browser.ts` | `attach()`, the Chrome launch, the signed-in check. Server-only. |
 | `lib/suno/selectors.ts` | `SELECTORS` — every DOM selector, API path and cookie name, each with its recon date. |
-| `lib/suno/driver.ts` | `probeSuno()`, `probeSunoOn(port)` (test seam), `createSunoTracks()`. |
+| `lib/suno/driver.ts` | `probeSuno()`, `probeSunoOn(port)` (test seam), `createSunoTracks()`, `listSunoLibrary()`. |
+| `lib/sound/suno/library.ts` | `importSunoLibrary()` — the library into the store, deduped by song id. |
 | `pipeline/suno-browser.mjs` | `npm run suno:browser` — opens the profile. |
+| `pipeline/suno-import.mts` | `npm run suno:import` — the library import without the app. |
 
 ## Launching the profile and signing in
 
@@ -81,6 +83,37 @@ Errors, shown to the operator verbatim: `not signed in to suno`, `suno browser n
 `suno <field> field not found`, `suno did not answer the create`, `suno failed the clip: <reason>`,
 `suno did not finish rendering in 6 min (songs …)`.
 
+## Library import
+
+`listSunoLibrary(onPage?)` reads every clip in the operator's library; `importSunoLibrary()`
+(`lib/sound/suno/library.ts`, route `POST /api/sound/suno/library {all:true}`, CLI
+`npm run suno:import`) stores the new ones as `SunoClip`s with `origin: "library"`,
+`jobId: null`, no verdict, no lane. It spends nothing and is read-only on Suno:
+
+- It opens its own tab on **`https://suno.com/me`** (the library, every workspace) and waits for
+  the page's own `POST /api/feed/v3`. That request supplies the bearer token and the **filters**,
+  which are reused verbatim: `disliked "False"`, `trashed "False"`, stems and studio-project
+  clips excluded, `user {presence "True", userId}`. So the import lists what the library page
+  lists. Nothing is clicked.
+- Pages of 50 (`SELECTORS.api.feedPageSize`) by `next_cursor` until `has_more` is false,
+  600 ms apart. Suno answers **429** to a burst (seen in recon after about eight back-to-back pages):
+  a 429 backs off 2 s, 4 s, 8 s… (6 tries); a 401/403 reloads the tab for a fresh token.
+- Kept: `status === "complete"` and not `is_trashed`; deduped by id. Mapped: `title`, `url`
+  `https://suno.com/song/<id>`, `audioUrl` (as for a create), `imageUrl`, `durationS`,
+  `createdAt` (Suno's `created_at`), `prompt.style` = `metadata.tags` (else
+  `gpt_description_prompt`, else `""`), `prompt.lyrics` = `metadata.prompt` (`[Instrumental]`
+  when empty and `make_instrumental`), `prompt.exclude` = `metadata.negative_tags`,
+  `prompt.title` = the title when there is one.
+- **Model label**: the library's own chip, `metadata.model_badges.songrow.display_name`,
+  normalised (`"V6-WILD"` → `"v6-wild"`). `major_model_version` and `model_name` cannot tell
+  v6 from v6-wild (both `"v6"` / `"chirp-hawk"`); they are only the fallback.
+- Dedupe is by `songId` against **every** stored clip, so a song the queue rendered is not
+  imported again and a re-run adds 0.
+
+First live run, 2026-10-11, operator's account: 149 clips (73 `v6`, 61 `v6-wild`, 15
+`v6-mini`), 3 pages; a second run added 0. Seven songs made earlier that day (the four
+`Gravitone probe` smoke clips among them) were trashed by then and are, correctly, not imported.
+
 ## Models
 
 The live picker (2026-10-11) lists, under ALL MODELS: **`v6`**, **`v6-wild`**, `v6-mini`.
@@ -105,5 +138,6 @@ Everything Suno-shaped is in `lib/suno/selectors.ts`. Symptom → entry:
 Re-running the recon: attach with `chromium.connectOverCDP("http://127.0.0.1:9334")`, open a NEW
 tab on `/create`, dump visible `input, textarea, [contenteditable], button[aria-label]`, open the
 model picker and read `[role=dialog] [role=row]`, and log `studio-api-prod.suno.com` responses.
-Never press Create during recon — every create spends the operator's credits. Date every
+Never press Create during recon — every create spends the operator's credits. For the library,
+open `/me` and read the page's own `POST /api/feed/v3` body and answer. Date every
 selector you change.

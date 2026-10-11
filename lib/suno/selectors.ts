@@ -19,6 +19,10 @@ export const SELECTORS = {
     createUrl: "https://suno.com/create",
     /** 2026-10-11 — a signed-out visit lands on a URL containing this. */
     signInPath: "/sign-in",
+    /** 2026-10-11 — the operator's own library ("My songs", every workspace). On load
+     *  it POSTs its feed query with the user id in the filters; the import reuses
+     *  that exact query, so it lists what the library page lists. */
+    libraryUrl: "https://suno.com/me",
   },
   form: {
     /** 2026-10-11 — the Simple/Advanced switch; tabs are <button role=tab>. Advanced is the custom form. */
@@ -51,6 +55,15 @@ export const SELECTORS = {
     generate: /\/api\/generate\/v2-web\/?(\?|$)/,
     /** 2026-10-11 — one clip by id; answers 200 with the clip JSON. */
     clip: (id: string) => `/api/clip/${encodeURIComponent(id)}`,
+    /** 2026-10-11 — the library feed: POST {cursor, limit, filters} -> {clips, next_cursor,
+     *  has_more}. A query, not a write. The /me page's filters are disliked/trashed "False",
+     *  stems and studio-project clips excluded, user {presence "True", userId}. */
+    feed: /\/api\/feed\/v3\/?(\?|$)/,
+    feedUrl: "/api/feed/v3",
+    /** 2026-10-11 — 50 per page is honoured; the API answers 429 to a burst (seen after
+     *  ~8 pages back to back), so pages are spaced and a 429 backs off. */
+    feedPageSize: 50,
+    feedGapMs: 600,
     /** 2026-10-11 — credits: {credits, monthly_usage, monthly_limit}. */
     billing: /\/api\/billing\/info\/?(\?|$)/,
     /** 2026-10-11 — a complete clip's audio_url is this sentinel; the real file is in media_urls. */

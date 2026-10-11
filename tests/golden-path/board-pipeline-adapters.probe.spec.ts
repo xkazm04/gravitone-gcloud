@@ -528,6 +528,7 @@ const job = (id: string, proposalId: string, extra: Partial<SunoJob> = {}): Suno
 });
 const sunoClip = (id: string, jobId: string, extra: Partial<SunoClip> = {}): SunoClip => ({
   id,
+  origin: "queue",
   jobId,
   model: "v6-wild",
   songId: `song-${id}`,

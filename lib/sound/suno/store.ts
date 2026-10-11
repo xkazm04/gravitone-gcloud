@@ -61,8 +61,19 @@ export async function readSuno(): Promise<SunoFile> {
     version: 1,
     proposals: Array.isArray(parsed.proposals) ? parsed.proposals : [],
     jobs: Array.isArray(parsed.jobs) ? parsed.jobs.map((j) => ({ ...j, clipIds: Array.isArray(j.clipIds) ? j.clipIds : [] })) : [],
-    clips: Array.isArray(parsed.clips) ? parsed.clips : [],
+    clips: Array.isArray(parsed.clips) ? parsed.clips.map((c) => backfillClip(c, parsed.jobs)) : [],
   };
+}
+
+/** A clip written before library import existed has no `origin` and no
+ *  `prompt`: it is a queue clip, and its prompt is its job's fields. Filled on
+ *  read; the next write of the file persists it. */
+function backfillClip(c: SunoClip, jobs: SunoJob[] | undefined): SunoClip {
+  if (c.origin && (c.origin === "library" || c.prompt)) return c;
+  const out: SunoClip = { ...c, origin: c.origin ?? "queue", jobId: c.jobId ?? null };
+  const job = out.jobId && Array.isArray(jobs) ? jobs.find((j) => j.id === out.jobId) : undefined;
+  if (!out.prompt && job?.fields) out.prompt = { ...job.fields };
+  return out;
 }
 
 /** Read-modify-write under the sound store's lock. `fn` mutates the file in
@@ -191,12 +202,26 @@ export async function deleteProposal(id: string): Promise<void> {
 }
 
 export async function setClipVerdict(id: string, verdict: SunoClip["verdict"]): Promise<SunoClip> {
+  return patchClip(id, { verdict });
+}
+
+export interface ClipPatch {
+  verdict?: SunoClip["verdict"];
+  /** A lane wins over the job's; null clears it (a library clip goes back to
+   *  ungrouped, a queue clip back to its job's lane). */
+  lane?: SunoLane | null;
+}
+
+/** The gate's writes on one clip: its verdict, its lane, or both at once. */
+export async function patchClip(id: string, patch: ClipPatch): Promise<SunoClip> {
   safeId(id);
   if (!(await readSuno()).clips.some((c) => c.id === id)) throw new SoundError(`no Suno clip ${id}`, 404);
   return withSuno((f) => {
     const c = f.clips.find((x) => x.id === id);
     if (!c) throw new SoundError(`no Suno clip ${id}`, 404);
-    c.verdict = verdict;
+    if (patch.verdict !== undefined) c.verdict = patch.verdict;
+    if (patch.lane === null) delete c.lane;
+    else if (patch.lane) c.lane = { ...patch.lane };
     return { ...c };
   });
 }
