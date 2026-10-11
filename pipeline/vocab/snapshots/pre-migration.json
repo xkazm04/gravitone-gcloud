@@ -1,4 +1,5 @@
 {
+ "vocabVersion": 1,
  "craft_json_schema": {
   "type": "object",
   "properties": {

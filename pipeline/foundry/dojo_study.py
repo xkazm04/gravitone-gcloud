@@ -34,11 +34,18 @@ FRAMES_DIR = HERE.parent / "vlm-probe" / "frames"
 PROBE_OUT = HERE.parent.parent / "vlm-probe-out"
 
 sys.path.insert(0, str(HERE.parent / "vlm-probe"))
+sys.path.insert(0, str(HERE.parent / "vocab"))
 import frame_manifest  # noqa: E402
+import vocab  # noqa: E402
 
-SIZE_ORDER = ["extreme-wide", "wide", "full", "medium-full", "medium", "medium-close", "close", "extreme-close"]
+# The ladder is the vocabulary's shot_size scale (enum order IS the scale). It was a
+# hand copy with "close"/"extreme-close", which the annotator never emits
+# ("close-up", "extreme-close-up"), and size_idx matched by substring, so
+# "medium-close" landed on "medium" and "extreme-close-up" on "close".
+SIZE_ORDER = vocab.enum("shot_size")
 FIELDS = ["shot_size", "camera_angle", "composition", "exposure", "depth_of_field",
           "lighting_key", "lighting_direction", "lighting_quality", "contrast", "subject_scale"]
+assert all(f in vocab.fields("craft_frame") for f in FIELDS), "dojo_study names a field the vocabulary does not declare"
 
 
 def load(prefixes):
@@ -61,10 +68,7 @@ def load(prefixes):
 
 
 def size_idx(v):
-    for i, s in enumerate(SIZE_ORDER):
-        if v and s in str(v):
-            return i
-    return None
+    return SIZE_ORDER.index(v) if v in SIZE_ORDER else None
 
 
 def analyze(per_source):

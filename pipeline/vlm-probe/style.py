@@ -34,6 +34,8 @@ from collections import defaultdict
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "vocab"))
+import vocab  # noqa: E402
 from palette_measure import measure_frames, pick_evenly  # noqa: E402
 from probe import (GEMINI_BASE, OLLAMA, extract_json, load_env,  # noqa: E402
                    post)
@@ -43,37 +45,9 @@ FRAMES_DIR = HERE / "frames"
 OUT_ROOT = HERE.parent.parent / "vlm-probe-out"
 CORPUS = HERE / "corpus.json"
 
-RENDER_MODE = ["photographic", "photoreal-cg", "stylised-realistic",
-               "painterly", "cel-shaded", "graphic-abstract"]
-DETAIL_DENSITY = ["sparse", "moderate", "dense", "hyper-dense"]
-SURFACE_REALISM = ["flat", "simplified", "plausible", "physically-convincing"]
-ATMOSPHERICS = ["none", "light-haze", "heavy-haze", "particulate", "volumetric-shafts"]
-PALETTE_STRATEGY = ["monochrome", "duotone", "complementary-split",
-                    "desaturated-naturalistic", "saturated-vivid", "warm-cool-split"]
-BLACK_HANDLING = ["crushed", "deep-neutral", "lifted-milky"]
-EDGE_TREATMENT = ["crisp", "soft", "bloom-heavy", "diffused"]
-MOTION_TREATMENT = ["frozen-crisp", "motion-blur", "strobed", "mixed"]
-
-
-def _enum(v, d):
-    return {"type": "string", "enum": list(v), "description": d}
-
-
-FIELDS = {
-    "render_mode": _enum(RENDER_MODE, "How the images are made, judged from surfaces and edges rather than subject matter."),
-    "detail_density": _enum(DETAIL_DENSITY, "How much incidental detail fills the frame -- set dressing, wear, background business."),
-    "surface_realism": _enum(SURFACE_REALISM, "How convincingly materials behave: skin, metal, cloth, stone."),
-    "atmospherics": _enum(ATMOSPHERICS, "Particulate and haze in the air across these frames."),
-    "palette_strategy": _enum(PALETTE_STRATEGY, "How colour is organised across the set."),
-    "black_handling": _enum(BLACK_HANDLING, "What happens in the darkest areas."),
-    "edge_treatment": _enum(EDGE_TREATMENT, "How edges and highlights resolve."),
-    "motion_treatment": _enum(MOTION_TREATMENT, "How movement is rendered where visible."),
-    "consistency_across_frames": _enum(
-        ["uniform", "mostly-uniform", "varied"],
-        "Whether these frames look like one production. A source whose own style varies is a finding."),
-    "signature": {"type": "string", "description": "What makes this look distinctive, under 25 words. Name properties, not titles or franchises."},
-    "imitable_recipe": {"type": "string", "description": "How you would instruct an image generator to reproduce this look, under 40 words. Concrete visual instructions only -- no proper nouns, no studio or franchise names."},
-}
+# The observables live in pipeline/vocab/cinematography.json (subset
+# `style_source`); this pass reads them, it does not re-declare them.
+FIELDS = vocab.schema_props("style_source")
 REQUIRED = list(FIELDS)
 
 

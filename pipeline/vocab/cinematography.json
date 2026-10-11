@@ -1,0 +1,1084 @@
+{
+ "$comment": "THE cinematography vocabulary. schema.py, style.py, dojo_study.py, dojo_measure.py (Python, via pipeline/vocab/vocab.py) and vocabulary.ts, CullGrid.tsx (TypeScript, via lib/vocab/cinematography.ts) derive from this file; pipeline/check-vocab.mjs enforces it. Bump `version` whenever an enum, weight or field set changes; every enum value must be covered by an `evidence` entry (the measured reason it exists). For an ordinal field the enum order IS the scale.",
+ "version": 1,
+ "groups": {
+  "craft": {
+   "description": "Per-frame camera, lens, light and composition annotation (schema.py)."
+  },
+  "style": {
+   "description": "Art-style observables, read per source set or per image (style.py, foundry extractor)."
+  },
+  "face_state": {
+   "description": "The performer's face: closed enums for the state-freeze probe (dojo_measure.py)."
+  }
+ },
+ "fields": {
+  "shot_size": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "extreme-wide",
+    "wide",
+    "full",
+    "medium-full",
+    "medium",
+    "medium-close",
+    "close-up",
+    "extreme-close-up"
+   ],
+   "ordinal": true,
+   "weight": 1,
+   "description": "How much of the main subject the frame holds.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lifted verbatim from the ai-registry media-generation / visual-generation / cinematic-language subject, so an annotation that validates is already registry-shaped.",
+     "values": [
+      "extreme-wide",
+      "wide",
+      "full",
+      "medium-full",
+      "medium",
+      "medium-close",
+      "close-up",
+      "extreme-close-up"
+     ]
+    }
+   ]
+  },
+  "camera_angle": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "eye-level",
+    "low-angle",
+    "extreme-low-angle",
+    "high-angle",
+    "extreme-high-angle",
+    "overhead",
+    "dutch"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Where the camera sits relative to the subject's eyeline.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lifted verbatim from the ai-registry media-generation / visual-generation / cinematic-language subject, so an annotation that validates is already registry-shaped.",
+     "values": [
+      "eye-level",
+      "low-angle",
+      "extreme-low-angle",
+      "high-angle",
+      "extreme-high-angle",
+      "overhead",
+      "dutch"
+     ]
+    }
+   ]
+  },
+  "angle_evidence": {
+   "group": "craft",
+   "kind": "text",
+   "description": "The visual cue that proves the angle, in under 15 words (converging verticals, visible ceiling, ground plane height).",
+   "weight": 1
+  },
+  "lens_impression": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "ultra-wide",
+    "wide-angle",
+    "normal",
+    "telephoto",
+    "macro",
+    "indeterminate"
+   ],
+   "ordinal": true,
+   "weight": 1,
+   "description": "The lens register the image reads as -- from perspective stretch and edge behaviour, NOT a guessed focal length. Answer 'indeterminate' unless the frame actually shows a cue: visible edge distortion, stretched foreground, or compressed background separation. A tight shot with no visible depth cues is indeterminate, and saying so is correct.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lifted verbatim from the ai-registry media-generation / visual-generation / cinematic-language subject, so an annotation that validates is already registry-shaped.",
+     "values": [
+      "ultra-wide",
+      "wide-angle",
+      "normal",
+      "telephoto",
+      "macro"
+     ]
+    },
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Measured 2026-08-25 on a 36-frame animation corpus the field answered 'wide-angle' 34 times out of 36, including on every extreme close-up where nothing reveals a lens register; a field that returns the same value regardless of input carries no information, so the model needs a legitimate way to decline.",
+     "values": [
+      "indeterminate"
+     ]
+    }
+   ]
+  },
+  "lens_evidence": {
+   "group": "craft",
+   "kind": "text",
+   "description": "The cue behind the lens call, under 15 words (edge distortion, background compression, foreground exaggeration). If indeterminate, say what is missing.",
+   "weight": 1
+  },
+  "depth_of_field": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "deep",
+    "moderate",
+    "shallow"
+   ],
+   "ordinal": true,
+   "weight": 1,
+   "description": "How much of the depth is in focus.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lifted verbatim from the ai-registry media-generation / visual-generation / cinematic-language subject, so an annotation that validates is already registry-shaped.",
+     "values": [
+      "deep",
+      "moderate",
+      "shallow"
+     ]
+    }
+   ]
+  },
+  "subject_scale": {
+   "group": "craft",
+   "kind": "text",
+   "description": "How large the main subject sits in frame, as a fraction of height, e.g. 'about one third'.",
+   "weight": 1
+  },
+  "composition": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "centered",
+    "symmetrical",
+    "rule-of-thirds",
+    "diagonal",
+    "frame-within-frame",
+    "off-center-negative-space"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How the subject is placed in the rectangle.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Added for the replication lane: layers and light alone do not pin a frame down, and a replica that gets light and lens right but composition wrong has not understood the shot.",
+     "values": [
+      "centered",
+      "symmetrical",
+      "rule-of-thirds",
+      "diagonal",
+      "frame-within-frame",
+      "off-center-negative-space"
+     ]
+    }
+   ]
+  },
+  "exposure": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "dark",
+    "dim",
+    "mid",
+    "bright",
+    "blown"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Overall brightness of the frame. This is the BRIGHTNESS question -- answer it here, not in lighting_key.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Added so lighting_key can stop being a brightness detector: in the 2026-08-25 run 22 of 36 frames came back both high-key and high-contrast while a luma check showed the field tracking mean brightness almost perfectly (143 vs 68).",
+     "values": [
+      "dark",
+      "dim",
+      "mid",
+      "bright",
+      "blown"
+     ]
+    }
+   ]
+  },
+  "true_black_share": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "none",
+    "small",
+    "large"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How much of the frame is true black holding no detail at all. Look at the darkest regions and estimate their area: none, a small portion, or a large portion.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "An observable, not a term of art: if the model cannot reason from shadow depth to the high-key/low-key label, the label is derived in code from how much of the frame is true black.",
+     "values": [
+      "none",
+      "small",
+      "large"
+     ]
+    }
+   ]
+  },
+  "lighting_key": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "high-key",
+    "low-key",
+    "neutral"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "The key-to-fill RATIO, which is about shadow depth and NOT about brightness. high-key = shadows filled in, few dark areas, gentle falloff. low-key = shadows left unfilled, much of the frame falling to black. A bright frame with deep black shadows is LOW-key; a dim frame lit evenly with no true blacks is HIGH-key. Judge the darkest areas, not the brightest.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Redefined as the key-to-fill ratio (shadow depth), not brightness; exposure now carries the brightness answer.",
+     "values": [
+      "high-key",
+      "low-key",
+      "neutral"
+     ]
+    }
+   ]
+  },
+  "lighting_direction": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "front",
+    "side",
+    "back-rim",
+    "top",
+    "under",
+    "mixed"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Dominant direction the key light comes from.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lifted verbatim from the ai-registry media-generation / visual-generation / cinematic-language subject, so an annotation that validates is already registry-shaped.",
+     "values": [
+      "front",
+      "side",
+      "back-rim",
+      "top",
+      "under",
+      "mixed"
+     ]
+    }
+   ]
+  },
+  "lighting_quality": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "hard",
+    "soft",
+    "mixed"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Shadow edge character.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lifted verbatim from the ai-registry media-generation / visual-generation / cinematic-language subject, so an annotation that validates is already registry-shaped.",
+     "values": [
+      "hard",
+      "soft",
+      "mixed"
+     ]
+    }
+   ]
+  },
+  "contrast": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "low",
+    "moderate",
+    "high",
+    "extreme"
+   ],
+   "ordinal": true,
+   "weight": 1,
+   "description": "Distance between the brightest and darkest areas that carry detail.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lifted verbatim from the ai-registry media-generation / visual-generation / cinematic-language subject, so an annotation that validates is already registry-shaped.",
+     "values": [
+      "low",
+      "moderate",
+      "high",
+      "extreme"
+     ]
+    }
+   ]
+  },
+  "light_sources": {
+   "group": "craft",
+   "kind": "list",
+   "maxItems": 6,
+   "description": "Light sources visible or clearly implied IN the frame (practical lamps, fire, screens, sun, emissive props).",
+   "weight": 1
+  },
+  "palette": {
+   "group": "craft",
+   "kind": "text",
+   "description": "The colour scheme in under 12 words.",
+   "weight": 1
+  },
+  "foreground": {
+   "group": "craft",
+   "kind": "text",
+   "description": "What occupies the foreground layer, under 20 words. 'empty' if nothing.",
+   "weight": 1
+  },
+  "midground": {
+   "group": "craft",
+   "kind": "text",
+   "description": "What occupies the midground layer -- usually the subject -- under 20 words.",
+   "weight": 1
+  },
+  "background": {
+   "group": "craft",
+   "kind": "text",
+   "description": "What occupies the background layer, under 20 words.",
+   "weight": 1
+  },
+  "subjects": {
+   "group": "craft",
+   "kind": "list",
+   "maxItems": 6,
+   "description": "The people or creatures in frame and what each is doing.",
+   "weight": 1
+  },
+  "surrounding_objects": {
+   "group": "craft",
+   "kind": "list",
+   "maxItems": 6,
+   "description": "Notable set objects and props that establish the place.",
+   "weight": 1
+  },
+  "texture": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "film-grain",
+    "digital-clean",
+    "painterly",
+    "cel-animated",
+    "3d-rendered",
+    "glossy-cg"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Surface character of the image itself.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Per-frame texture later collapsed to glossy-cg on 86-93% of frames for four of six sources, which is why style moved to the per-source pass (style group).",
+     "values": [
+      "film-grain",
+      "digital-clean",
+      "painterly",
+      "cel-animated",
+      "3d-rendered",
+      "glossy-cg"
+     ]
+    }
+   ]
+  },
+  "genre_register": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "noir",
+    "horror-slow-burn",
+    "horror-slasher",
+    "psychological-thriller",
+    "action-chaos",
+    "action-precision",
+    "romance",
+    "sci-fi-sterile",
+    "sci-fi-used-future",
+    "sci-fi-neon",
+    "period-drama",
+    "western",
+    "documentary-verite",
+    "commercial-product",
+    "coming-of-age",
+    "other"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "The genre contract the frame's light, camera and palette belong to.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lifted verbatim from the ai-registry media-generation / visual-generation / cinematic-language subject, so an annotation that validates is already registry-shaped.",
+     "values": [
+      "noir",
+      "horror-slow-burn",
+      "horror-slasher",
+      "psychological-thriller",
+      "action-chaos",
+      "action-precision",
+      "romance",
+      "sci-fi-sterile",
+      "sci-fi-used-future",
+      "sci-fi-neon",
+      "period-drama",
+      "western",
+      "documentary-verite",
+      "commercial-product",
+      "coming-of-age",
+      "other"
+     ]
+    }
+   ]
+  },
+  "confidence": {
+   "group": "craft",
+   "kind": "enum",
+   "enum": [
+    "low",
+    "medium",
+    "high"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How sure you are overall.",
+   "evidence": [
+    {
+     "date": "2026-08-25",
+     "version": 1,
+     "finding": "Lets a labeller flag a frame it could not read instead of hiding the doubt in prose.",
+     "values": [
+      "low",
+      "medium",
+      "high"
+     ]
+    }
+   ]
+  },
+  "render_mode": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "photographic",
+    "photoreal-cg",
+    "stylised-realistic",
+    "painterly",
+    "cel-shaded",
+    "graphic-abstract"
+   ],
+   "ordinal": false,
+   "weight": 2,
+   "description": "How the images are made, judged from surfaces and edges rather than subject matter.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "Observable vocabulary shared by pipeline/vlm-probe/style.py and the foundry extractor, so an extracted style and a read-back one compare field by field.",
+     "values": [
+      "photographic",
+      "photoreal-cg",
+      "stylised-realistic",
+      "painterly",
+      "cel-shaded",
+      "graphic-abstract"
+     ]
+    }
+   ],
+   "passDescriptions": {
+    "style_image": "How the image is made, judged from surfaces and edges rather than subject matter."
+   }
+  },
+  "detail_density": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "sparse",
+    "moderate",
+    "dense",
+    "hyper-dense"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How much incidental detail fills the frame -- set dressing, wear, background business.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "Observable vocabulary shared by pipeline/vlm-probe/style.py and the foundry extractor, so an extracted style and a read-back one compare field by field.",
+     "values": [
+      "sparse",
+      "moderate",
+      "dense",
+      "hyper-dense"
+     ]
+    }
+   ],
+   "passDescriptions": {
+    "style_image": "How much incidental detail fills the frame — set dressing, wear, background business."
+   }
+  },
+  "surface_realism": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "flat",
+    "simplified",
+    "plausible",
+    "physically-convincing"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How convincingly materials behave: skin, metal, cloth, stone.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "Observable vocabulary shared by pipeline/vlm-probe/style.py and the foundry extractor, so an extracted style and a read-back one compare field by field.",
+     "values": [
+      "flat",
+      "simplified",
+      "plausible",
+      "physically-convincing"
+     ]
+    }
+   ]
+  },
+  "atmospherics": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "none",
+    "light-haze",
+    "heavy-haze",
+    "particulate",
+    "volumetric-shafts"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Particulate and haze in the air across these frames.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "Observable vocabulary shared by pipeline/vlm-probe/style.py and the foundry extractor, so an extracted style and a read-back one compare field by field.",
+     "values": [
+      "none",
+      "light-haze",
+      "heavy-haze",
+      "particulate",
+      "volumetric-shafts"
+     ]
+    }
+   ],
+   "passDescriptions": {
+    "style_image": "Haze, fog and volumetric light in the air — the air itself."
+   }
+  },
+  "palette_strategy": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "monochrome",
+    "duotone",
+    "complementary-split",
+    "desaturated-naturalistic",
+    "saturated-vivid",
+    "warm-cool-split"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How colour is organised across the set.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "Observable vocabulary shared by pipeline/vlm-probe/style.py and the foundry extractor, so an extracted style and a read-back one compare field by field.",
+     "values": [
+      "monochrome",
+      "duotone",
+      "complementary-split",
+      "desaturated-naturalistic",
+      "saturated-vivid",
+      "warm-cool-split"
+     ]
+    }
+   ],
+   "passDescriptions": {
+    "style_image": "How colour is organised across the frame."
+   }
+  },
+  "black_handling": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "crushed",
+    "deep-neutral",
+    "lifted-milky"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "What happens in the darkest areas.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "Observable vocabulary shared by pipeline/vlm-probe/style.py and the foundry extractor, so an extracted style and a read-back one compare field by field.",
+     "values": [
+      "crushed",
+      "deep-neutral",
+      "lifted-milky"
+     ]
+    }
+   ]
+  },
+  "edge_treatment": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "crisp",
+    "soft",
+    "bloom-heavy",
+    "diffused"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How edges and highlights resolve.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "Observable vocabulary shared by pipeline/vlm-probe/style.py and the foundry extractor, so an extracted style and a read-back one compare field by field.",
+     "values": [
+      "crisp",
+      "soft",
+      "bloom-heavy",
+      "diffused"
+     ]
+    }
+   ]
+  },
+  "motion_treatment": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "frozen-crisp",
+    "motion-blur",
+    "strobed",
+    "mixed"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How movement is rendered where visible.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "style.py's own ninth observable: how movement is rendered where visible.",
+     "values": [
+      "frozen-crisp",
+      "motion-blur",
+      "strobed",
+      "mixed"
+     ]
+    }
+   ]
+  },
+  "consistency_across_frames": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "uniform",
+    "mostly-uniform",
+    "varied"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Whether these frames look like one production. A source whose own style varies is a finding.",
+   "evidence": [
+    {
+     "date": "2026-08-26",
+     "version": 1,
+     "finding": "A source whose own style varies is a finding, so the per-source pass records whether the frames look like one production.",
+     "values": [
+      "uniform",
+      "mostly-uniform",
+      "varied"
+     ]
+    }
+   ]
+  },
+  "signature": {
+   "group": "style",
+   "kind": "text",
+   "description": "What makes this look distinctive, under 25 words. Name properties, not titles or franchises.",
+   "weight": 1
+  },
+  "imitable_recipe": {
+   "group": "style",
+   "kind": "text",
+   "description": "How you would instruct an image generator to reproduce this look, under 40 words. Concrete visual instructions only -- no proper nouns, no studio or franchise names.",
+   "weight": 1
+  },
+  "medium": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "photograph",
+    "3d-render",
+    "2d-digital-painting",
+    "traditional-paint",
+    "line-drawing",
+    "mixed-media"
+   ],
+   "ordinal": false,
+   "weight": 2,
+   "description": "What the image physically IS: a photograph; a 3D render (modelled forms, consistent specular, CG hair/cloth); a 2D digital painting (brushed or airbrushed shading on flat forms, painted hair as shapes); traditional paint on a real surface; a line drawing (pencil, ink); or mixed media.",
+   "evidence": [
+    {
+     "date": "2026-08-27",
+     "version": 1,
+     "finding": "Added 2026-08-27 after the first live run: a smooth 2D painting and a stylised 3D render are both stylised-realistic / plausible / soft in the original seven, so a replica that slipped from painting to render scored 0.875 while the eye said the medium was wrong.",
+     "values": [
+      "photograph",
+      "3d-render",
+      "2d-digital-painting",
+      "traditional-paint",
+      "line-drawing",
+      "mixed-media"
+     ]
+    }
+   ]
+  },
+  "particle_fx": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "none",
+    "subtle-dust",
+    "heavy-debris",
+    "energy-glow"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Floating debris IN the air, distinct from haze: none; subtle dust motes; heavy environmental debris (embers, snow, sparks, ash); or glowing energy effects. A clean studio render and an ember-swept action frame differ HERE.",
+   "evidence": [
+    {
+     "date": "2026-08-27",
+     "version": 1,
+     "finding": "Fidelity axis added 2026-08-27: airborne debris distinct from haze, so a clean studio render and an ember-swept action frame differ here.",
+     "values": [
+      "none",
+      "subtle-dust",
+      "heavy-debris",
+      "energy-glow"
+     ]
+    }
+   ]
+  },
+  "finish": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "clean-smooth",
+    "weathered-gritty",
+    "painterly-textured"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Micro-texture of surfaces: pristine and smooth; weathered with dirt, scratches and grit; or visibly brush-painted.",
+   "evidence": [
+    {
+     "date": "2026-08-27",
+     "version": 1,
+     "finding": "Fidelity axis added 2026-08-27 after the first run's cull merged clean studio renders with gritty ember-swept key art; nothing in the vocabulary could see grit.",
+     "values": [
+      "clean-smooth",
+      "weathered-gritty",
+      "painterly-textured"
+     ]
+    }
+   ]
+  },
+  "focus": {
+   "group": "style",
+   "kind": "enum",
+   "enum": [
+    "deep-focus",
+    "shallow-bokeh",
+    "motion-blurred"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Lens behaviour: sharp front to back; a shallow photographic depth of field with blurred bokeh background; or dominated by motion blur.",
+   "evidence": [
+    {
+     "date": "2026-08-27",
+     "version": 1,
+     "finding": "Fidelity axis added 2026-08-27: true shallow-focus photography merged with deep-focus renders because nothing could see lens behaviour.",
+     "values": [
+      "deep-focus",
+      "shallow-bokeh",
+      "motion-blurred"
+     ]
+    }
+   ]
+  },
+  "mouth": {
+   "group": "face_state",
+   "kind": "enum",
+   "enum": [
+    "wide-open-smile",
+    "closed-smile",
+    "neutral-closed",
+    "pressed-flat",
+    "open-slack",
+    "open-shouting",
+    "not-visible"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "What the subject's mouth is doing.",
+   "evidence": [
+    {
+     "date": "2026-09-05",
+     "version": 1,
+     "finding": "dojo_measure's performer channel: neither the craft schema nor the style read has a field for the face, so a state freeze walked through both. Closed enums so the probe's outcome is a count of landings.",
+     "values": [
+      "wide-open-smile",
+      "closed-smile",
+      "neutral-closed",
+      "pressed-flat",
+      "open-slack",
+      "open-shouting",
+      "not-visible"
+     ]
+    }
+   ]
+  },
+  "eyes": {
+   "group": "face_state",
+   "kind": "enum",
+   "enum": [
+    "wide-whites-showing",
+    "narrowed-creased",
+    "neutral-open",
+    "lids-low",
+    "closed",
+    "in-shadow",
+    "not-visible"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "What the subject's eyes are doing.",
+   "evidence": [
+    {
+     "date": "2026-09-05",
+     "version": 1,
+     "finding": "dojo_measure's performer channel: neither the craft schema nor the style read has a field for the face, so a state freeze walked through both. Closed enums so the probe's outcome is a count of landings.",
+     "values": [
+      "wide-whites-showing",
+      "narrowed-creased",
+      "neutral-open",
+      "lids-low",
+      "closed",
+      "in-shadow",
+      "not-visible"
+     ]
+    }
+   ]
+  },
+  "brows": {
+   "group": "face_state",
+   "kind": "enum",
+   "enum": [
+    "raised-together",
+    "raised-apart",
+    "neutral",
+    "lowered-level",
+    "not-visible"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "What the subject's brows are doing.",
+   "evidence": [
+    {
+     "date": "2026-09-05",
+     "version": 1,
+     "finding": "dojo_measure's performer channel: neither the craft schema nor the style read has a field for the face, so a state freeze walked through both. Closed enums so the probe's outcome is a count of landings.",
+     "values": [
+      "raised-together",
+      "raised-apart",
+      "neutral",
+      "lowered-level",
+      "not-visible"
+     ]
+    }
+   ]
+  },
+  "gaze": {
+   "group": "face_state",
+   "kind": "enum",
+   "enum": [
+    "to-camera",
+    "off-camera-left",
+    "off-camera-right",
+    "down",
+    "up",
+    "not-visible"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "Where the subject is looking.",
+   "evidence": [
+    {
+     "date": "2026-09-05",
+     "version": 1,
+     "finding": "dojo_measure's performer channel: neither the craft schema nor the style read has a field for the face, so a state freeze walked through both. Closed enums so the probe's outcome is a count of landings.",
+     "values": [
+      "to-camera",
+      "off-camera-left",
+      "off-camera-right",
+      "down",
+      "up",
+      "not-visible"
+     ]
+    }
+   ]
+  },
+  "face_light": {
+   "group": "face_state",
+   "kind": "enum",
+   "enum": [
+    "front-lit",
+    "side-lit",
+    "rim-only-face-in-shadow",
+    "flat",
+    "not-visible"
+   ],
+   "ordinal": false,
+   "weight": 1,
+   "description": "How light falls on the subject's face.",
+   "evidence": [
+    {
+     "date": "2026-09-05",
+     "version": 1,
+     "finding": "dojo_measure's performer channel: neither the craft schema nor the style read has a field for the face, so a state freeze walked through both. Closed enums so the probe's outcome is a count of landings.",
+     "values": [
+      "front-lit",
+      "side-lit",
+      "rim-only-face-in-shadow",
+      "flat",
+      "not-visible"
+     ]
+    }
+   ]
+  }
+ },
+ "subsets": {
+  "craft_frame": [
+   "shot_size",
+   "camera_angle",
+   "angle_evidence",
+   "lens_impression",
+   "lens_evidence",
+   "depth_of_field",
+   "subject_scale",
+   "composition",
+   "exposure",
+   "true_black_share",
+   "lighting_key",
+   "lighting_direction",
+   "lighting_quality",
+   "contrast",
+   "light_sources",
+   "palette",
+   "foreground",
+   "midground",
+   "background",
+   "subjects",
+   "surrounding_objects",
+   "texture",
+   "genre_register",
+   "confidence"
+  ],
+  "craft_summary": [
+   "shot_size",
+   "camera_angle",
+   "composition",
+   "lighting_key",
+   "lighting_direction",
+   "depth_of_field"
+  ],
+  "style_source": [
+   "render_mode",
+   "detail_density",
+   "surface_realism",
+   "atmospherics",
+   "palette_strategy",
+   "black_handling",
+   "edge_treatment",
+   "motion_treatment",
+   "consistency_across_frames",
+   "signature",
+   "imitable_recipe"
+  ],
+  "style_image": [
+   "render_mode",
+   "medium",
+   "detail_density",
+   "surface_realism",
+   "atmospherics",
+   "particle_fx",
+   "palette_strategy",
+   "black_handling",
+   "edge_treatment",
+   "finish",
+   "focus"
+  ],
+  "face_state": [
+   "mouth",
+   "eyes",
+   "brows",
+   "gaze",
+   "face_light"
+  ]
+ }
+}
