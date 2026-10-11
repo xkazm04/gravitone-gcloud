@@ -127,6 +127,30 @@ async function patchVerdictsNow<V>(kind: VerdictKind, id: string, next: Record<s
   return state.verdicts;
 }
 
+/** The `pagehide` door: the same keyed PATCH, sent with `keepalive` so the
+ *  browser finishes it after the page is gone. Fire-and-forget on purpose: a
+ *  closing page cannot read a 409 or retry, so it names only the keys it
+ *  changed against the last revision this client saw, and a stale base simply
+ *  loses to the server (nothing is overwritten). Returns false when there was
+ *  nothing to base it on. */
+export function patchVerdictsKeepalive<V>(kind: VerdictKind, id: string, changes: ReadonlyMap<string, V | null>, surface: string): boolean {
+  const base = synced.get(syncKey(kind, id));
+  if (!base || !changes.size) return false;
+  const set: Record<string, V> = {};
+  const clear: string[] = [];
+  for (const [k, v] of changes) {
+    if (v === null) clear.push(k);
+    else set[k] = v;
+  }
+  void fetch(`/api/foundry/${kind}/${encodeURIComponent(id)}/verdicts`, {
+    method: "PATCH",
+    keepalive: true,
+    headers: { "content-type": "application/json", ...accessHeader() },
+    body: JSON.stringify({ set, clear, baseRev: base.rev, by: "human", surface }),
+  }).catch(() => undefined);
+  return true;
+}
+
 export const fetchRuns = () => call<{ runs: RunSummary[] }>("/api/foundry/runs").then((r) => r.runs);
 export const fetchRun = (id: string) => call<RunDetail>(`/api/foundry/runs/${encodeURIComponent(id)}`).then((d) => noteVerdicts("runs", id, d));
 export const fetchCatalogue = () => call<Catalogue>("/api/foundry/styles");
