@@ -25,6 +25,6 @@ test("a call pending past the cap is abandoned: the tick runs", () => {
 test("the foundry polls hand the hook their promises", () => {
   for (const f of ["FoundryView", "ExtractView", "DojoView", "StripsView"]) {
     const src = readFileSync(join(process.cwd(), `app/foundry/${f}.tsx`), "utf8");
-    expect(src, f).toMatch(/return Promise\.all\(\[loadDetail\(selected, true\)/);
+    expect(src, f).toMatch(/return Promise\.all\(\[(?:loadDetail|gate\.load)\(selected, true\)/);
   }
 });

@@ -34,7 +34,9 @@ import { stripComments } from "./_helpers";
 const code = (rel: string) => stripComments(readFileSync(join(process.cwd(), rel), "utf8"));
 
 const SURFACES = [
-  { view: "app/foundry/FoundryView.tsx", commit: "commitRun(" },
+  // The Cull commits through the gate kernel (app/foundry/gate/useGate.ts), which
+  // flushes queued verdicts and then calls the adapter's commitRun.
+  { view: "app/foundry/FoundryView.tsx", commit: "gate.commit(" },
   { view: "app/foundry/ExtractView.tsx", commit: "commitExtractRun(" },
 ] as const;
 

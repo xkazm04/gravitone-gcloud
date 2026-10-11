@@ -93,6 +93,7 @@ export function CullGrid({
   onOpen,
   keysEnabled,
   calibration = null,
+  onUndo,
 }: {
   run: RunManifest;
   verdicts: Verdicts;
@@ -105,6 +106,8 @@ export function CullGrid({
   keysEnabled: boolean;
   /** The grader measured against the human ledger (lib/foundry/calibration.ts). */
   calibration?: Calibration | null;
+  /** Z: walk the last decision back (the gate kernel's undo). Absent = nothing to undo. */
+  onUndo?: () => void;
 }) {
   const columns = useMemo(
     () => run.plan.mechanisms.flatMap((m) => run.plan.seeds.map((seed) => ({ mechanism: m, seed }))),
@@ -181,6 +184,10 @@ export function CullGrid({
         case "U":
           if (focused && !readOnly && artStateOf(byId.get(focused), false) === "ready") onVerdict(focused, null);
           break;
+        case "z":
+        case "Z":
+          if (!readOnly && onUndo) onUndo();
+          break;
         case "n":
         case "N": {
           // A drawn, ready, undecided tile — the same three conditions K/X need.
@@ -202,7 +209,7 @@ export function CullGrid({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [keysEnabled, readOnly, focused, order, byId, drawn, verdicts, columns.length, onFocus, onVerdict, onOpen]);
+  }, [keysEnabled, readOnly, focused, order, byId, drawn, verdicts, columns.length, onFocus, onVerdict, onOpen, onUndo]);
 
   useEffect(() => {
     if (!focused) return;

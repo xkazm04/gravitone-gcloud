@@ -142,10 +142,11 @@ export function patchVerdictsKeepalive<V>(kind: VerdictKind, id: string, changes
     if (v === null) clear.push(k);
     else set[k] = v;
   }
-  void fetch(`/api/foundry/${kind}/${encodeURIComponent(id)}/verdicts`, {
+  // Through `call`, the one request rule (access header, error shape); its init
+  // is spread into `fetch`, so `keepalive` rides along.
+  void call(`/api/foundry/${kind}/${encodeURIComponent(id)}/verdicts`, {
     method: "PATCH",
     keepalive: true,
-    headers: { "content-type": "application/json", ...accessHeader() },
     body: JSON.stringify({ set, clear, baseRev: base.rev, by: "human", surface }),
   }).catch(() => undefined);
   return true;
