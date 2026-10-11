@@ -110,6 +110,9 @@ export function foundryFile(relPath: string): string {
   return path.join(catalogueDir(), relPath);
 }
 
+/** Runs read at once while listing a run directory. */
+const LIST_CONCURRENCY = 16;
+
 export interface ManifestWarning {
   id: string;
   reason: string;
@@ -128,20 +131,35 @@ export async function listManifests<T, S>(
     if ((e as NodeJS.ErrnoException).code === "ENOENT") return { items: [], warnings: [] };
     throw e;
   }
+  const runNames = names.filter((n) => RUN_ID_RE.test(n));
+  // Bounded fan-out: each run's reads are independent, so they overlap, but a
+  // large directory must not open every descriptor at once. Results land in
+  // their directory slot so items and warnings keep readdir order.
+  const slots: Array<{ item?: S; warning?: ManifestWarning }> = new Array(runNames.length);
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < runNames.length) {
+      const i = next++;
+      const name = runNames[i];
+      const m = await readManifestFile<T>(path.join(dir, name, fileName), name);
+      if (m === undefined) {
+        slots[i] = { warning: { id: name, reason: `${fileName} is unreadable` } };
+        continue;
+      }
+      if (!m) continue;
+      const item = await summarise(name, m);
+      if (item != null) slots[i] = { item };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(LIST_CONCURRENCY, runNames.length) }, worker));
   const items: S[] = [];
   const warnings: ManifestWarning[] = [];
-  for (const name of names) {
-    if (!RUN_ID_RE.test(name)) continue;
-    const m = await readManifestFile<T>(path.join(dir, name, fileName), name);
-    if (m === undefined) {
-      const reason = `${fileName} is unreadable`;
-      console.warn(`[foundry] ${name}: ${reason} — skipped from the list`);
-      warnings.push({ id: name, reason });
-      continue;
-    }
-    if (!m) continue;
-    const item = await summarise(name, m);
-    if (item != null) items.push(item);
+  for (const slot of slots) {
+    if (!slot) continue;
+    if (slot.warning) {
+      console.warn(`[foundry] ${slot.warning.id}: ${slot.warning.reason} — skipped from the list`);
+      warnings.push(slot.warning);
+    } else if (slot.item !== undefined) items.push(slot.item);
   }
   return { items, warnings };
 }
