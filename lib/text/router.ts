@@ -633,8 +633,14 @@ function trailReason(e: TextError): RerouteStep["why"] {
  *
  * For a diagnostics surface and for a route that wants to fail fast with a good
  * sentence rather than after a minutes-long attempt. It walks the same plan the
- * router walks and asks the same two gates, so it cannot report an availability
- * the router disagrees with.
+ * router walks and asks the same two gates, with ONE deliberate difference: it
+ * probes EVERY unblocked candidate, where the router's walk probes only keyless
+ * providers (a key-holding provider's 401 is fast there, so the router skips
+ * the probe). A diagnostics surface should report what a provider can really
+ * do, not assume it from key presence. Today the two agree because the
+ * key-holding adapter's probe is a free key-presence check; if such a probe
+ * ever reaches the vendor, this surface may report a provider down that the
+ * router would still try, or spend a call the router would not.
  */
 export async function engineStatus(turn: TurnClass = "edit-plan"): Promise<{
   env: TextEnv;
