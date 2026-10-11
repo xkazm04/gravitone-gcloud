@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+
 import { BOX, CONS, FIGURES } from "@/app/_landing/sky";
 import {
   Chip,
@@ -19,6 +20,7 @@ import {
   Kicker,
   Magnitude,
   Stats,
+  TabRail,
   StatusGlyph,
   StatusPill,
   Tag,
@@ -27,10 +29,10 @@ import {
   type StatusKind,
 } from "@/components/kit";
 import { ASTERISM_PATH, ASTERISM_STARS, Mark, Wordmark } from "@/components/kit/brand";
-import { WORLD_ALMANAC } from "@/components/ui/tokens";
+import { CSS_TOKENS, WORLD_ALMANAC, WORLD_OBSIDIAN_KIT } from "@/components/ui/tokens";
 
 import { MOTION, MUTING_FLOOR, MUTING_TOKENS, NON_COLOUR, TOKEN_ROLES, TYPE_ROLES } from "./catalog";
-import { contrast, mixHex, resolve, tierOf } from "./contrast";
+import { contrast, contrastOver, mixHex, paintOver, resolve, tierOf, type Colour } from "./contrast";
 
 const ZOOM = 19;
 const pct = (v: number) => `${(((v + ZOOM) / (2 * ZOOM)) * 100).toFixed(2)}%`;
@@ -125,15 +127,32 @@ function Logo() {
 }
 
 const GROUND = ["--al-night", "--al-deep", "--al-field"];
-const tokenKeys = Object.keys(WORLD_ALMANAC);
-/** A token's flat colour, resolving the colour-mix text variants; null for gradients and curves. */
-const flat = (k: string) => resolve(WORLD_ALMANAC[k], WORLD_ALMANAC);
 
-function ratioCell(a: string, against: string) {
+type WorldId = "almanac" | "obsidian-kit";
+/** The worlds the tables can be read in. Obsidian-kit is the remap Foundry, Calendar and AudioWorkbench ship with: its `var(--gt-*)` sides resolve through the Obsidian CSS_TOKENS. */
+const WORLDS: { id: WorldId; label: string; tokens: Record<string, string> }[] = [
+  { id: "almanac", label: "Almanac", tokens: WORLD_ALMANAC },
+  { id: "obsidian-kit", label: "Obsidian kit", tokens: { ...CSS_TOKENS, ...WORLD_OBSIDIAN_KIT } },
+];
+/** The page ground every translucent token is composited over when it is measured. */
+const nightOf = (tokens: Record<string, string>) => resolve(tokens["--al-night"], tokens)!.rgb;
+/** A token's colour with its alpha, resolving the colour-mix text variants; null for gradients and curves. */
+const flat = (tokens: Record<string, string>, k: string) => (k in tokens ? resolve(tokens[k], tokens) : null);
+/** A ground token as the opaque hex it paints over the world's night. */
+const groundHex = (tokens: Record<string, string>, k: string) => {
+  const c = flat(tokens, k);
+  return c ? paintOver(c, nightOf(tokens)) : null;
+};
+const cssColour = (c: Colour) => {
+  const n = parseInt(c.rgb.slice(1), 16);
+  return `rgba(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255}, ${c.alpha})`;
+};
+
+function ratioCell(tokens: Record<string, string>, a: string, against: string) {
   if (NON_COLOUR.includes(a)) return "—";
   if (GROUND.includes(a)) return <span className="k-caps k-muted">ground</span>;
-  const [fg, bg] = [flat(a), flat(against)];
-  const r = fg && bg ? contrast(fg, bg) : null;
+  const [fg, bg] = [flat(tokens, a), groundHex(tokens, against)];
+  const r = fg && bg ? contrastOver(fg, bg) : null;
   if (r === null || a === against) return "—";
   const t = tierOf(r);
   // A token that is not a text colour prints its ratio as a fact about the fill, not a grade.
@@ -147,14 +166,14 @@ function ratioCell(a: string, against: string) {
 }
 
 /** A hue drawn as text is `hue` mixed toward white; the raw hue and the mix are both measured, on all three grounds. */
-function TextOnHue() {
-  const white = flat("--al-white")!;
+function TextOnHue({ tokens }: { tokens: Record<string, string> }) {
+  const white = flat(tokens, "--al-white")!.rgb;
   const hues: { name: string; from: string; mix: number; recipe: string }[] = [
     { name: "Aldebaran", from: "--al-ald", mix: 65, recipe: "--al-ald-t · 65% + white" },
     { name: "Antares", from: "--al-ant", mix: 70, recipe: "--al-ant-t · 70% + white" },
     ...CONS.map((c) => ({ name: `${c.name} tint`, from: `--al-tint-${c.id}`, mix: 70, recipe: "70% + white" })),
-  ];
-  const on = (fg: string) => GROUND.map((g) => contrast(fg, flat(g)!)!);
+  ].filter((h) => flat(tokens, h.from));
+  const on = (fg: string) => GROUND.map((g) => contrast(fg, groundHex(tokens, g)!)!);
   const cell = (r: number, key: string) => (
     <span key={key} className="kr-tier">
       <b>{r.toFixed(1)}</b>
@@ -165,7 +184,7 @@ function TextOnHue() {
     <DataTable
       head={["Hue", "Raw on night", "Raw on deep", "Raw on field", "As text", "On night", "On deep", "On field"]}
       rows={hues.map((h) => {
-        const raw = flat(h.from)!;
+        const raw = flat(tokens, h.from)!.rgb;
         const as = mixHex(raw, white, h.mix);
         const [r, t] = [on(raw), on(as)];
         return [
@@ -183,30 +202,31 @@ function TextOnHue() {
   );
 }
 
-function Palette() {
-  const rows = tokenKeys.map((k) => {
+function Palette({ tokens }: { tokens: Record<string, string> }) {
+  const rows = Object.keys(WORLD_ALMANAC).filter((k) => k in tokens).map((k) => {
     const role = TOKEN_ROLES[k];
     const ease = k === "--al-ease";
+    const colour = flat(tokens, k);
     return [
-      ease ? <span key="s" className="k-caps k-muted">curve</span> : <span key="s" className="kr-sw" style={{ background: `var(${k})` }} aria-hidden="true" />,
+      ease ? <span key="s" className="k-caps k-muted">curve</span> : <span key="s" className="kr-sw" style={{ background: colour ? cssColour(colour) : `var(${k})` }} aria-hidden="true" />,
       <span key="n">
         <code>{k}</code>
         <br />
         <span className="k-muted">{role.name}</span>
       </span>,
-      <span key="v" className="kr-out">{WORLD_ALMANAC[k].length > 26 ? "gradient" : WORLD_ALMANAC[k]}</span>,
+      <span key="v" className="kr-out">{tokens[k].length > 26 ? "gradient" : tokens[k]}</span>,
       role.role,
       role.surface === "all" ? role.use : `${role.use} · ${role.surface === "working" ? "working surfaces only" : "figure and label only"}`,
-      ratioCell(k, "--al-night"),
-      ratioCell(k, "--al-deep"),
-      ratioCell(k, "--al-field"),
+      ratioCell(tokens, k, "--al-night"),
+      ratioCell(tokens, k, "--al-deep"),
+      ratioCell(tokens, k, "--al-field"),
     ];
   });
   return (
     <>
       <DataTable head={["", "Token", "Value", "Role", "Where", "On night", "On deep", "On field"]} rows={rows} />
       <h3 className="kr-sub k-caps">A hue as text</h3>
-      <TextOnHue />
+      <TextOnHue tokens={tokens} />
       <h3 className="kr-sub k-caps">The single red</h3>
       <div className="kr-one">
         <div>
@@ -355,6 +375,18 @@ function Motion() {
   );
 }
 
+/** The palette read in the world a part ships in: the contrast columns follow the tab, composited over that world's own night. */
+function PaletteWorlds() {
+  const [id, setId] = useState<WorldId>("almanac");
+  const world = WORLDS.find((w) => w.id === id)!;
+  return (
+    <>
+      <TabRail label="world" tabs={WORLDS.map((w) => ({ id: w.id, label: w.label }))} active={id} onSelect={setId} />
+      <Palette tokens={world.tokens} />
+    </>
+  );
+}
+
 export function Identity() {
   return (
     <div className="kr-page">
@@ -366,7 +398,7 @@ export function Identity() {
       <section className="kr-section" aria-labelledby="kr-palette">
         <Kicker>Palette</Kicker>
         <h2 id="kr-palette">Night, gold, one red</h2>
-        <Palette />
+        <PaletteWorlds />
       </section>
       <section className="kr-section" aria-labelledby="kr-type">
         <Kicker>Type</Kicker>
