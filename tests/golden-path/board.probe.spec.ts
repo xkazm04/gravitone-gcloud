@@ -288,34 +288,39 @@ test("board url: parse is defensive and write keeps foreign params", () => {
 
 /* ── adapters over their real writers ─────────────────────────────────────── */
 
-test("board: the cull adapter reads FRESH and PUTs the whole map with one key changed", async () => {
+test("board: the cull adapter reads FRESH and PATCHes only the one key it changed", async () => {
   const disk: Record<string, { verdict: "keep" | "reject"; at: string; note?: string }> = {
-    // Written by the /foundry tab after the Board loaded — must survive.
+    // Written by the /foundry tab after the Board loaded: must survive.
     "harbor/ink--words--s1": { verdict: "keep", at: "t0" },
   };
-  const puts: unknown[] = [];
+  let rev = 3;
+  const patches: { set: Record<string, unknown>; clear: string[]; baseRev: number; surface: string; by: string }[] = [];
   const real = globalThis.fetch;
   globalThis.fetch = (async (url: string | URL, init?: RequestInit) => {
     const u = String(url);
-    if (init?.method === "PUT") {
+    if (init?.method === "PATCH") {
       const body = JSON.parse(String(init.body));
-      puts.push(body);
-      Object.assign(disk, body.verdicts);
-      for (const k of Object.keys(disk)) if (!(k in body.verdicts)) delete disk[k];
-      return new Response(JSON.stringify({ ok: true }));
+      patches.push(body);
+      Object.assign(disk, body.set);
+      for (const k of body.clear) delete disk[k];
+      rev += 1;
+      return new Response(JSON.stringify({ rev, verdicts: { ...disk } }));
     }
     if (u.endsWith("/api/foundry/runs/fx-run"))
-      return new Response(JSON.stringify({ run: { id: "fx-run", candidates: [] }, verdicts: { ...disk } }));
+      return new Response(JSON.stringify({ run: { id: "fx-run", candidates: [] }, verdicts: { ...disk }, rev }));
     return new Response(JSON.stringify({ detail: "no" }), { status: 404 });
   }) as typeof fetch;
   try {
     const src = makeCullSource();
     await src.decide("cull:fx-run::harbor/blueprint--ref--s1", "reject", ["subject"]);
-    expect(puts).toHaveLength(1);
+    expect(patches).toHaveLength(1);
+    expect(Object.keys(patches[0].set)).toEqual(["harbor/blueprint--ref--s1"]);
+    expect(patches[0]).toMatchObject({ clear: [], baseRev: 3, surface: "board", by: "human" });
     expect(disk["harbor/ink--words--s1"]).toEqual({ verdict: "keep", at: "t0" });
     expect(disk["harbor/blueprint--ref--s1"].verdict).toBe("reject");
     expect(disk["harbor/blueprint--ref--s1"].note).toBe("reasons: subject");
     await src.decide("cull:fx-run::harbor/blueprint--ref--s1", null);
+    expect(patches[1]).toMatchObject({ set: {}, clear: ["harbor/blueprint--ref--s1"], baseRev: 4 });
     expect(disk).not.toHaveProperty("harbor/blueprint--ref--s1");
     // A route that is not there is UNAVAILABLE, not an error page.
     await expect(src.count()).rejects.toMatchObject({ name: "SourceUnavailable" });

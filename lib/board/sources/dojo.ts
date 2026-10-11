@@ -105,7 +105,7 @@ export function makeDojoSource(): BoardSourceExt {
     async decide(id: string, verdict: BoardVerdict, reasons: string[] = []) {
       const { cycle, iid } = split(keyOfItem(id));
       const fresh = await read(() => fetchTrainingCycle(cycle));
-      await saveTrainingVerdicts(cycle, { ...fresh.verdicts, [iid]: toTraining(verdict) });
+      await saveTrainingVerdicts(cycle, { ...fresh.verdicts, [iid]: toTraining(verdict) }, "board");
       if (verdict === "reject" && reasons.length) sessionReasons.set(id, reasons);
       else sessionReasons.delete(id);
     },

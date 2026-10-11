@@ -100,7 +100,7 @@ export function makeCullSource(): BoardSourceExt {
       // A note the Board did not author survives a Board decision.
       const kept = note ?? decodeNote(fresh.verdicts[cid]?.note).note;
       const next = withCullVerdict(fresh.verdicts, cid, verdict, reasons, kept);
-      await saveVerdicts(run, next);
+      await saveVerdicts(run, next, "board");
     },
   };
 }
