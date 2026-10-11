@@ -12,7 +12,7 @@
  *  labels live in SUNO_MODEL_LABEL and are confirmed against the live page. */
 export type SunoModel = "v6" | "v6-wild";
 export const SUNO_MODELS: readonly SunoModel[] = ["v6", "v6-wild"];
-export const SUNO_MODEL_LABEL: Record<SunoModel, string> = { v6: "v6", "v6-wild": "v6 wild" };
+export const SUNO_MODEL_LABEL: Record<SunoModel, string> = { v6: "v6", "v6-wild": "v6-wild" };
 
 /** What a Suno custom create takes. Instrumental = lyrics "[Instrumental]". */
 export interface SunoFields {
