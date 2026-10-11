@@ -47,7 +47,6 @@ dry run exists to answer:
 import argparse
 import base64
 import json
-import os
 import shutil
 import sys
 import time
@@ -60,6 +59,8 @@ ROOT = HERE.parent.parent
 OUT_ROOT = ROOT / "foundry-out" / "runs"
 PROBE_OUT = ROOT / "vlm-probe-out"
 STYLES = HERE / "styles.json"
+
+from atomic import replace_with_retry  # noqa: E402  (before PROBE joins sys.path)
 
 sys.path.insert(0, str(PROBE))
 import guard  # noqa: E402
@@ -84,7 +85,7 @@ def now():
 def save(run_dir, manifest):
     """Atomic: the page polls this file while the forge writes it.
 
-    AND THE REPLACE IS RETRIED, because on Windows it is not unconditional.
+    The replace is retried (atomic.py has the measurement). On Windows
     os.replace raises PermissionError while any other handle to the destination
     is open, and "the page polls this file" is a description of a handle being
     open a great deal of the time. This function is called after every
@@ -97,14 +98,7 @@ def save(run_dir, manifest):
     """
     tmp = run_dir / "run.json.tmp"
     tmp.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
-    for attempt in range(20):
-        try:
-            os.replace(tmp, run_dir / "run.json")
-            return
-        except PermissionError:
-            if attempt == 19:
-                raise
-            time.sleep(0.01)
+    replace_with_retry(tmp, run_dir / "run.json")
 
 
 def log(manifest, run_dir, msg):
