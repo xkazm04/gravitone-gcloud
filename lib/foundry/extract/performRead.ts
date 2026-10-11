@@ -5,7 +5,7 @@
 import type { EngineIO } from "./engine";
 import { tripped } from "./breaker";
 import { log } from "./journal";
-import { isReadback, msg, setStage } from "./performCommon";
+import { isReadback, logOffVocabulary, msg, setStage } from "./performCommon";
 import { readbackInstruction, singletonInstruction } from "./prompts";
 import { READBACK_SCHEMA, SINGLETON_SCHEMA } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
@@ -23,6 +23,7 @@ export async function performRead(m: ExtractManifest, io: EngineIO, unit: Extrac
     if (!isReadback(r.value)) throw new Error("the readback did not carry every observable");
     s.readback = { ...r.value, dominant_colours: Array.isArray(r.value.dominant_colours) ? r.value.dominant_colours.slice(0, 5).map(String) : [] };
     m.engines.vision = r.model;
+    logOffVocabulary(m, io, `read ${s.id}`, s.readback);
     log(m, io, `read ${s.id} (${s.name}): ${s.readback.render_mode}, ${s.readback.palette_strategy}`);
   } catch (e) {
     if (isOverBudget(e)) {

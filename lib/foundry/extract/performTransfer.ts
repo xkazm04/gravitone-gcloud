@@ -7,7 +7,7 @@ import type { EngineIO } from "./engine";
 import { tripped } from "./breaker";
 import { log } from "./journal";
 import { hash } from "./helpers";
-import { isReadback, msg, setStage } from "./performCommon";
+import { isReadback, logOffVocabulary, msg, setStage } from "./performCommon";
 import { TRANSFER_SCENES, readbackInstruction, transferPrompt } from "./prompts";
 import { READBACK_SCHEMA, styleScore } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
@@ -50,6 +50,7 @@ export async function performTransfer(m: ExtractManifest, io: EngineIO, unit: Ex
     const sc = styleScore(st.observables, t.readback);
     t.score = sc.score;
     t.per_field = sc.per_field;
+    logOffVocabulary(m, io, unitLabel(unit), t.readback);
     log(m, io, `${unitLabel(unit)}: ${Math.round((t.score ?? 0) * 100)}%${t.readback.has_text ? " TEXT" : ""}`);
     m.fail_streak = 0;
   } catch (e) {

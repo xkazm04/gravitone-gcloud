@@ -7,7 +7,7 @@ import type { EngineIO } from "./engine";
 import { tripped } from "./breaker";
 import { log } from "./journal";
 import { bestRound, hash, scoreOf } from "./helpers";
-import { isReadback, msg, setStage } from "./performCommon";
+import { isReadback, logOffVocabulary, msg, setStage } from "./performCommon";
 import { critiqueInstruction, replicaPrompt } from "./prompts";
 import { CRITIQUE_SCHEMA, styleScore, usableFix } from "./vocabulary";
 import { book, isOverBudget, stopFor } from "./spend";
@@ -79,6 +79,7 @@ export async function performReplica(m: ExtractManifest, io: EngineIO, unit: Ext
     // replica of this style — the recipe in force is a measurement.
     const best = bestRound(st);
     if (best && best.recipe !== st.recipe && (best.score ?? 0) > (scoreOf(st, st.recipe) ?? -1)) st.recipe = best.recipe;
+    logOffVocabulary(m, io, unitLabel(unit), round.critique);
     log(m, io, `${unitLabel(unit)}: ${Math.round((round.score ?? 0) * 100)}%${round.critique.has_text ? " TEXT" : ""}${round.critique.critique ? ` — ${round.critique.critique.slice(0, 90)}` : ""}`);
     m.fail_streak = 0;
   } catch (e) {
