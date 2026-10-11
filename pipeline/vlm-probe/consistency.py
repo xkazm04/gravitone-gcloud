@@ -40,17 +40,17 @@ headroom is checked between shots and the engine is recycled when it drops.
 """
 
 import argparse
-import json
 import shutil
 import sys
 import time
-import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import craft_spec  # noqa: E402
 import guard  # noqa: E402
 import lane_record  # noqa: E402
+import comfy as comfy_client  # noqa: E402  (pipeline/gpu, put on sys.path by guard)
+import lease as gpu_lease  # noqa: E402
 
 HERE = Path(__file__).parent
 SHOTS = HERE / "shots"
@@ -60,6 +60,8 @@ COMFY_OUT = COMFY_DIR / "output"
 COMFY_IN = COMFY_DIR / "input"
 
 SEED = lane_record.SEED
+# How long a lane waits for the card before giving up with LeaseTimeout (s).
+LEASE_WAIT_S = 3600
 
 # One clause, reused byte-for-byte in every shot of every lane. If it is ever
 # paraphrased between shots the lane stops measuring what it claims to.
@@ -188,40 +190,16 @@ def generate(workflow, timeout=900, kinds=("images",), exts=None):
     """Queue a workflow and return the saved image path (or, with kinds/exts,
     the first saved output of those kinds whose name ends in one of exts).
 
-    Every failure in this stack presents as silence -- a stalled queue, a closed
-    socket, a vanished process -- so a timeout here means "go read ComfyUI's
-    stderr", not "retry and hope".
+    The loop is pipeline/gpu/comfy.py's, shared by every tenant; this is the
+    seam that points it at THIS module's ComfyUI host, output tree and process
+    probe, each read at call time. Every failure in this stack presents as
+    silence -- a stalled queue, a closed socket, a vanished process -- so a
+    timeout means "go read ComfyUI's stderr", not "retry and hope", and a
+    vanished process raises comfy.ComfyVanished at the first failed poll.
     """
-    body = json.dumps({"prompt": workflow}).encode()
-    req = urllib.request.Request(f"{guard.COMFY}/prompt", data=body,
-                                 headers={"Content-Type": "application/json"}, method="POST")
-    with urllib.request.urlopen(req, timeout=60) as r:
-        pid = json.loads(r.read())["prompt_id"]
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        time.sleep(4)
-        try:
-            with urllib.request.urlopen(f"{guard.COMFY}/history/{pid}", timeout=30) as r:
-                hist = json.loads(r.read())
-        except Exception:
-            # A poll that fails is expected while the server is busy. A poll
-            # that fails because the PROCESS is gone is not: the job died with
-            # it, and waiting out the budget (900 s here, 7200 s per clip from
-            # motion.py) reports it as a timeout two hours after the fact.
-            if not guard.comfy_process_ids():
-                raise RuntimeError(
-                    f"comfyui process vanished while {pid} was queued -- the job died "
-                    f"with it. Read its stderr; guard.start_comfy() brings it back.")
-            continue
-        if pid not in hist:
-            continue
-        for node in hist[pid].get("outputs", {}).values():
-            for kind in kinds:
-                for img in node.get(kind, []):
-                    if exts is None or str(img.get("filename", "")).endswith(exts):
-                        return COMFY_OUT / img.get("subfolder", "") / img["filename"]
-        raise RuntimeError(f"finished with no {'image' if exts is None else 'video'}: {hist[pid].get('status')}")
-    raise TimeoutError(f"comfyui did not finish {pid} in {timeout}s -- read its stderr")
+    return comfy_client.generate(workflow, timeout=timeout, kinds=kinds, exts=exts,
+                                 host=guard.COMFY, out_dir=COMFY_OUT,
+                                 alive=lambda: guard.comfy_process_ids())
 
 
 def face_reference(hero_path, out_path, margin=1.9, size=512):
@@ -283,6 +261,19 @@ def run_lane(lane, **overrides):
     else:
         lane_record.record_stills(out_dir=out, refs=[], **params)
 
+    # The card is ours for the lane: one holder, written on disk, so a recycle
+    # below is the holder's own and a foreign tenant is named, not guessed at.
+    # Waits (FIFO) behind another tenant rather than racing it.
+    # ttl covers the longest gap between polls (an engine restart is minutes);
+    # a crashed lane is reclaimed at once by its dead pid, not by the ttl.
+    with gpu_lease.acquire(f"consistency/{lane}", "comfy", 20, wait=LEASE_WAIT_S, ttl_s=900,
+                           job_prefix=",".join(guard.MY_PREFIXES)):
+        _run_lane_on_card(lane, params, out, lane_json_path)
+
+
+def _run_lane_on_card(lane, params, out, lane_json_path):
+    steps, seed, late = params["steps"], params["seed"], params["late"]
+    width, height = params["width"], params["height"]
     if not guard.start_comfy():
         raise RuntimeError("comfyui would not come up")
 
